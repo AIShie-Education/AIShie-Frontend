@@ -1,8 +1,9 @@
 <script setup lang="ts">
-// course.seat_instructor: how a course gets its first member. The actor is
-// looked up first (actor.get), so that the administrator sees who they are
+// course.seat_instructor: how a course gets its first member. The instructor
+// is found in the directory (actor.list) by a piece of their name or email,
+// or by a pasted ID (actor.get), so that the administrator sees who they are
 // about to seat.
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isApiError, read } from '@/api/http'
 import type { Actor } from '@/api/types'
@@ -11,76 +12,78 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
 import IdText from '@/components/IdText.vue'
+import StatusTag from '@/components/StatusTag.vue'
 import ActorSummary from './ActorSummary.vue'
-import { useRecentActors } from './adminShared'
 
 const props = defineProps<{ courseId: string; disabled?: boolean }>()
 const emit = defineEmits<{ seated: [memberId: string, actorId: string] }>()
 const { t } = useI18n()
 const session = useSessionStore()
-const { recent, remember } = useRecentActors()
 
-const actorId = ref('')
+const MATCHES = 20
+
+const selectedId = ref('')
 const found = ref<Actor | null>(null)
-const lookupError = ref<string | null>(null)
-const looking = ref(false)
+const options = ref<Actor[]>([])
+const searching = ref(false)
+const searchError = ref<string | null>(null)
+const pickError = ref<string | null>(null)
 const seated = ref<{ memberId: string; name: string } | null>(null)
 const { run, pending } = useWrite('course.seat_instructor')
 
-watch(actorId, (v) => {
-  if (found.value && found.value.id !== v.trim().toLowerCase()) found.value = null
-  lookupError.value = null
-})
+// Typing fast starts one search after another: only the latest counts.
+let searchSeq = 0
 
-interface Suggestion {
-  value: string
-  name: string
-  kind: string
-}
-function suggest(q: string, cb: (items: Suggestion[]) => void) {
-  const needle = q.trim().toLowerCase()
-  cb(
-    recent.value
-      .filter((a) => a.kind !== 'system')
-      .filter((a) => !needle || `${a.display_name} ${a.id}`.toLowerCase().includes(needle))
-      .map((a) => ({ value: a.id, name: a.display_name, kind: a.kind })),
-  )
-}
-
-// Picking one suggestion and then another starts two look-ups: only the
-// latest counts, and only while the field still holds the id it asked for,
-// since "Seat as instructor" seats whoever was found.
-let lookupSeq = 0
-const current = () => actorId.value.trim().toLowerCase()
-
-async function lookUp() {
-  const seq = ++lookupSeq
-  const id = current()
-  found.value = null
-  lookupError.value = null
-  if (!isUuid(id)) {
-    looking.value = false
-    lookupError.value = t('admin.seat.invalidId')
-    return
-  }
-  looking.value = true
+async function search(query: string) {
+  const seq = ++searchSeq
+  const needle = query.trim()
+  searching.value = true
+  searchError.value = null
   try {
-    const a = await read('actor.get', { actor_id: id })
-    remember(a)
-    if (seq === lookupSeq && a.id === current()) found.value = a
+    let list: Actor[]
+    if (isUuid(needle)) {
+      list = await read('actor.get', { actor_id: needle.toLowerCase() }).then(
+        (a) => [a],
+        (e) => {
+          if (isApiError(e) && e.isNotFound) return []
+          throw e
+        },
+      )
+    } else {
+      list = (await read('actor.list', { search: needle || undefined, limit: MATCHES })).actors ?? []
+    }
+    if (seq === searchSeq) options.value = list
   } catch (e) {
-    if (seq === lookupSeq && id === current()) {
-      lookupError.value = isApiError(e) && e.isNotFound ? t('admin.seat.notFound') : errorMessage(e)
+    if (seq === searchSeq) {
+      options.value = []
+      searchError.value = errorMessage(e)
     }
   } finally {
-    if (seq === lookupSeq) looking.value = false
+    if (seq === searchSeq) searching.value = false
   }
 }
 
-function pickMe() {
+/** The first time the list opens, it shows the start of the directory. */
+function onVisible(open: boolean) {
+  if (open && !options.value.length && !searching.value) void search('')
+}
+
+function pick(id: string | undefined) {
+  pickError.value = null
+  found.value = (id && options.value.find((a) => a.id === id)) || null
+}
+
+async function pickMe() {
   if (!session.me) return
-  actorId.value = session.me.id
-  void lookUp()
+  pickError.value = null
+  try {
+    const me = await read('actor.get', { actor_id: session.me.id })
+    options.value = [me, ...options.value.filter((a) => a.id !== me.id)]
+    selectedId.value = me.id
+    found.value = me
+  } catch (e) {
+    pickError.value = errorMessage(e)
+  }
 }
 
 const blocker = computed(() => {
@@ -94,12 +97,15 @@ const blocker = computed(() => {
 async function seat() {
   const a = found.value
   if (!a || blocker.value) return
-  const out = await run({ course_id: props.courseId, actor_id: a.id }, { success: t('admin.seat.done', { name: a.display_name }) })
+  const out = await run(
+    { course_id: props.courseId, actor_id: a.id },
+    { success: t('admin.seat.done', { name: a.display_name }) },
+  )
   if (!out) return
   if (out.status === 'executed') {
     seated.value = { memberId: out.result.member_id, name: a.display_name }
     emit('seated', out.result.member_id, a.id)
-    actorId.value = ''
+    selectedId.value = ''
     found.value = null
   }
 }
@@ -110,7 +116,14 @@ async function seat() {
     <h2 class="app-card__title">{{ t('admin.seat.title') }}</h2>
     <p class="app-muted seat__intro">{{ t('admin.seat.intro') }}</p>
 
-    <el-alert v-if="disabled" type="info" :closable="false" show-icon :title="t('admin.seat.archived')" class="seat__alert" />
+    <el-alert
+      v-if="disabled"
+      type="info"
+      :closable="false"
+      show-icon
+      :title="t('admin.seat.archived')"
+      class="seat__alert"
+    />
 
     <el-alert v-if="seated" type="success" show-icon class="seat__alert" @close="seated = null">
       <template #title>{{ t('admin.seat.done', { name: seated.name }) }}</template>
@@ -121,38 +134,42 @@ async function seat() {
       <div class="seat__done-hint">{{ t('admin.seat.doneHint') }}</div>
     </el-alert>
 
-    <form class="seat__form" @submit.prevent="lookUp">
-      <label class="seat__label" for="seat-actor-id">{{ t('admin.seat.actorId') }}</label>
-      <div class="seat__row">
-        <div class="seat__input">
-          <el-autocomplete
-            id="seat-actor-id"
-            v-model="actorId"
-            :fetch-suggestions="suggest"
-            :placeholder="t('admin.seat.placeholder')"
-            :disabled="disabled"
-            clearable
-            @select="lookUp"
-          >
-            <template #default="{ item }">
-              <div class="seat__suggestion">
-                <span>{{ item.name }}</span>
-                <span class="app-muted seat__suggestion-kind">{{ t(`enums.actorKind.${item.kind}`) }}</span>
-              </div>
-            </template>
-          </el-autocomplete>
-        </div>
-        <el-button native-type="submit" :loading="looking" :disabled="disabled || !actorId.trim()">
-          <el-icon><Search /></el-icon>
-          <span>{{ t('admin.seat.lookUp') }}</span>
-        </el-button>
-        <el-button v-if="session.me" text :disabled="disabled" @click="pickMe">{{ t('admin.seat.me') }}</el-button>
-      </div>
-      <div v-if="lookupError" class="seat__error">
-        {{ lookupError }}
-        <router-link :to="{ name: 'admin-actors' }">{{ t('admin.seat.registerFirst') }}</router-link>
-      </div>
-    </form>
+    <label class="seat__label" for="seat-actor">{{ t('admin.seat.who') }}</label>
+    <div class="seat__row">
+      <el-select
+        id="seat-actor"
+        v-model="selectedId"
+        filterable
+        remote
+        remote-show-suffix
+        clearable
+        :remote-method="search"
+        :loading="searching"
+        :placeholder="t('admin.seat.placeholder')"
+        :disabled="disabled"
+        class="seat__select"
+        @change="pick"
+        @visible-change="onVisible"
+      >
+        <el-option v-for="a in options" :key="a.id" :value="a.id" :label="a.display_name">
+          <div class="seat__option">
+            <span class="seat__option-name">{{ a.display_name }}</span>
+            <span class="seat__option-meta">
+              <StatusTag v-if="a.status !== 'active'" vocab="actorStatus" :value="a.status" />
+              <span>{{ a.email ?? t(`enums.actorKind.${a.kind}`) }}</span>
+            </span>
+          </div>
+        </el-option>
+        <template #empty>
+          <div class="seat__empty">
+            <span>{{ searchError ?? t('admin.seat.noMatch') }}</span>
+            <router-link :to="{ name: 'admin-actors' }">{{ t('admin.seat.registerFirst') }}</router-link>
+          </div>
+        </template>
+      </el-select>
+      <el-button v-if="session.me" text :disabled="disabled" @click="pickMe">{{ t('admin.seat.me') }}</el-button>
+    </div>
+    <div v-if="pickError" class="seat__error">{{ pickError }}</div>
 
     <div v-if="found" class="seat__found">
       <ActorSummary :actor="found" link />
@@ -209,28 +226,44 @@ async function seat() {
   flex-wrap: wrap;
   align-items: center;
 }
-.seat__input {
+.seat__select {
   flex: 1 1 280px;
   min-width: 0;
 }
-.seat__input :deep(.el-autocomplete) {
-  width: 100%;
-}
-.seat__suggestion {
+.seat__option {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
+  min-width: 0;
 }
-.seat__suggestion-kind {
+.seat__option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.seat__option-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.seat__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 .seat__error {
   margin-top: 6px;
   font-size: 13px;
   color: var(--el-color-danger);
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 .seat__found {
   margin-top: 16px;

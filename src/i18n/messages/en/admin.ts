@@ -34,14 +34,16 @@ export default {
     termDates: '{from} – {to}',
     setupFailed: {
       terms: "The terms could not be loaded, so no course can be created and the list cannot show each course's term.",
-      depts: "The departments could not be loaded, so no course can be created and the list cannot show each course's department.",
+      depts:
+        "The departments could not be loaded, so no course can be created and the list cannot show each course's department.",
       both: 'The terms and departments could not be loaded, so no course can be created and the list cannot show them.',
     },
   },
 
   create: {
     title: 'New course',
-    intro: 'One offering of a course in one term: another section is another course. It starts as a draft with no members; seat its first instructor next.',
+    intro:
+      'One offering of a course in one term: another section is another course. It starts as a draft with no members; seat its first instructor next.',
     dept: 'Department',
     term: 'Term',
     code: 'Code',
@@ -80,29 +82,32 @@ export default {
     reopen: 'Reopen',
     activated: 'The course is active',
     reopenTitle: 'Reopen {code}?',
-    reopenConfirm: 'Its members can work in it again. Seats that expired, proposals that went stale and due dates that passed while it was archived are dealt with now.',
+    reopenConfirm:
+      'Its members can work in it again. Seats that expired, proposals that went stale and due dates that passed while it was archived are dealt with now.',
     archive: 'Archive',
     archiveTitle: 'Archive {code}?',
-    archiveConfirm: 'From then on the course refuses every write, from everyone, agents included: no material, submissions, grades or approvals, and no changes here. Everything in it stays readable, and it can be reopened later.',
+    archiveConfirm:
+      'From then on the course refuses every write, from everyone, agents included: no material, submissions, grades or approvals, and no changes here. Everything in it stays readable, and it can be reopened later.',
     archived: 'The course is archived',
     statusHelp: {
-      draft: 'A draft: its instructor can seat members and prepare material before it opens. Activate it when it starts.',
+      draft:
+        'A draft: its instructor can seat members and prepare material before it opens. Activate it when it starts.',
       active: 'Active: open for work.',
       archived: 'Archived: it refuses every write, these settings included. Reopen it to change anything.',
     },
     openCourse: 'Open course',
     seatedAs: 'You are seated in this course as {role}.',
-    notSeated: 'You are not seated in this course, so its own pages will refuse you: platform administrators govern courses from here, not from inside. Seat yourself as instructor below to work in it.',
+    notSeated:
+      'You are not seated in this course, so its own pages will refuse you: platform administrators govern courses from here, not from inside. Seat yourself as instructor below to work in it.',
   },
 
   seat: {
     title: 'Seat the instructor',
-    intro: "A new course has no members. Seat its first instructor here: they get the built-in instructor preset, and add everyone else from the course's Members page.",
-    actorId: 'Actor ID',
-    placeholder: 'Paste an actor ID, or pick someone seen recently',
-    lookUp: 'Look up',
-    invalidId: 'This is not an actor ID.',
-    notFound: 'No actor has this ID.',
+    intro:
+      "A new course has no members. Seat its first instructor here: they get the built-in instructor preset, and add everyone else from the course's Members page.",
+    who: 'Instructor',
+    placeholder: 'Search by name or email, or paste an ID',
+    noMatch: 'No one matches.',
     suspended: 'This actor is suspended, and Core does not seat a suspended actor. Reactivate them first.',
     system: 'The system actor runs background jobs and is never seated in a course.',
     agent: 'This is an agent. Seated as instructor, it holds every permission of the instructor preset.',
@@ -117,23 +122,37 @@ export default {
 
   actors: {
     title: 'People & agents',
-    subtitle: 'Register people and agents, and manage their standing and credentials',
+    subtitle:
+      'Everyone registered on the platform: find them, register someone new, and manage their standing and how they sign in',
     register: 'Register',
-    noDirectory: 'There is no directory to browse: Core looks actors up by ID, and otherwise knows them through the courses they are seated in. Those you register or look up here are remembered in this browser, below.',
-    lookUpTitle: 'Look up an actor',
-    lookUpPlaceholder: 'Actor ID',
-    lookUp: 'Open',
-    invalidId: 'This is not an actor ID.',
+    search: 'Search',
+    searchPlaceholder: 'Search by name or email, or paste an ID',
+    allKinds: 'All kinds',
+    anyStatus: 'Any status',
+    kinds: {
+      human: 'People',
+      agent: 'Agents',
+    },
+    col: {
+      name: 'Name',
+      kind: 'Kind',
+      email: 'Email',
+      status: 'Status',
+      role: 'Platform role',
+      signIn: 'Sign-in',
+    },
+    empty: 'No one is registered yet.',
+    emptyFiltered: 'No one matches.',
+    byId: 'Found by ID. Press Enter to open their page.',
     notFound: 'No actor has this ID.',
-    myRecord: 'My own record',
-    recentTitle: 'Seen recently',
-    recentHint: 'Names and IDs only, kept in this browser for you.',
-    recentEmpty: 'No one yet. Actors you register or look up appear here.',
-    clearRecent: 'Clear list',
-    clearConfirm: 'Forget every actor on this list? Nothing changes in Core.',
-    forget: 'Remove from this list',
-    seen: 'Seen',
-    registeredHere: 'Registered here',
+  },
+
+  signIn: {
+    password: 'Password',
+    sso: 'Single sign-on',
+    invitedUntil: 'Invited until {date}',
+    inviteExpired: 'Invitation expired',
+    cannot: 'Cannot sign in yet',
   },
 
   registered: {
@@ -143,9 +162,13 @@ export default {
     dismiss: 'Dismiss',
     nextSteps: 'Next steps',
     human: {
-      signIn: 'Let them sign in: link their single sign-on identity, or issue them a token to sign in with once and set a password on their Account page.',
-      noEmail: 'They have no email, so they cannot sign in with a password: link single sign-on, or give them a token.',
+      invite:
+        'Create an invitation link on their page and send it to them: with it they choose a password and are signed in. Where single sign-on is used, you can link their identity there instead.',
+      email:
+        'Give them an email first, on their page: a password is always entered with one. Then create an invitation link there. Where single sign-on is used, you can link their identity instead.',
       seat: "Seat them in a course: as its first instructor from the course's administration page, or ask the course's instructor to add them.",
+      inviteButton: 'Create an invitation link',
+      emailButton: 'Give them an email',
     },
     agent: {
       token: 'Issue it an API token on its page. The token is shown once.',
@@ -161,7 +184,7 @@ export default {
       'An administrator manages the platform (courses, people and agents, terms, departments and presets) without any seat. Inside a course they can do nothing until they are seated, like anyone else.',
     kind: 'Kind',
     kindHelp: {
-      human: 'Signs in with single sign-on, a password or a token.',
+      human: 'Signs in with a password they choose from an invitation link, or with single sign-on.',
       agent: 'Runs elsewhere and connects with an API token. No endpoint, model or prompt is stored here.',
     },
     displayName: 'Display name',
@@ -170,12 +193,14 @@ export default {
       agent: 'grader-v2',
     },
     email: 'Email',
-    emailHint: 'Needed to sign in with a password, and it cannot be added later. An email belongs to one actor only.',
+    emailHint:
+      'What they sign in with, with the password they choose from an invitation. It can be given or changed later, not removed. An email belongs to one actor only.',
     admin: 'Platform administrator',
     adminHint:
       'Administrators create courses and register and manage actors. Inside courses they are governed by their seats like anyone else. It can be given only now, when registering.',
     adminRootOnly: 'Only root can make an administrator.',
-    permanent: 'Nothing entered here can be changed after registering: Core has no way to edit an actor. Check it before registering.',
+    permanent:
+      'The kind and the platform role cannot be changed after registering. The name and the email can be corrected on their page.',
     submit: 'Register',
     done: '{name} is registered',
   },
@@ -194,12 +219,16 @@ export default {
     created: 'Registered',
     createdBy: 'Registered by',
     noCreator: 'Nobody: created when the platform was installed',
+    signIn: 'How they sign in',
+    edit: 'Edit',
     you: 'This is you.',
-    seatsHint: "Seats are given per course: as a course's first instructor from its administration page, or by the course's instructor on its Members page.",
+    seatsHint:
+      "Seats are given per course: as a course's first instructor from its administration page, or by the course's instructor on its Members page.",
     suspend: 'Suspend',
     reactivate: 'Reactivate',
     suspendTitle: 'Suspend {name}?',
-    suspendConfirm: 'Every call they make is denied from now on, in every course, and they cannot sign in; this goes for agents too. Their seats, history and credentials are kept, and reactivating restores them as they were.',
+    suspendConfirm:
+      'Every call they make is denied from now on, in every course, and they cannot sign in; this goes for agents too. Their seats, history and credentials are kept, and reactivating restores them as they were.',
     suspended: '{name} is suspended',
     reactivateTitle: 'Reactivate {name}?',
     reactivateConfirm: 'Their seats and credentials work again as they were.',
@@ -214,7 +243,8 @@ export default {
 
   token: {
     title: 'API token',
-    intro: 'Issue a token so this actor can call Core: this is how an agent gets its first credential, since it cannot sign in to ask for one. The token is shown once; Core keeps only its hash.',
+    intro:
+      'Issue a token so this actor can call Core: this is how an agent gets its first credential, since it cannot sign in to ask for one. The token is shown once; Core keeps only its hash.',
     introSelf: 'A token for your own account. Your tokens are also on your Account page.',
     label: 'Label',
     labelPlaceholder: 'grader for CS101, autumn term',
@@ -230,7 +260,8 @@ export default {
     suspendedNote: 'This actor is suspended: a token issued now is refused until they are reactivated.',
     revealTitle: 'Copy the token now',
     once: 'This is the only time the token is shown. Core keeps only its hash: if it is lost, issue a new one.',
-    replayed: 'This repeated an earlier request, so the token is not shown again. If it was not copied, issue a new one.',
+    replayed:
+      'This repeated an earlier request, so the token is not shown again. If it was not copied, issue a new one.',
     token: 'Token',
     prefix: 'Prefix',
     credential: 'Credential ID',
@@ -239,17 +270,72 @@ export default {
     mcpTitle: 'Connecting over MCP',
     mcpEndpoint: 'Endpoint (streamable HTTP)',
     mcpHeader: 'Header',
-    mcpNotes: 'Tool names are the catalogue\'s with the dot turned into an underscore (grade_submit). A result whose status is "proposed" is not an error: the action waits for a person, and the agent learns the decision from event_list.',
-    humanHint: 'A person can sign in with this token (Sign in → Use an API token), then set a password on their Account page.',
+    mcpNotes:
+      'Tool names are the catalogue\'s with the dot turned into an underscore (grade_submit). A result whose status is "proposed" is not an error: the action waits for a person, and the agent learns the decision from event_list.',
+    humanHint:
+      'A person can sign in with this token (Sign in → Use an API token). To let them choose a password, create an invitation link on their page instead.',
     uncopiedTitle: 'Close without copying?',
     uncopied: 'The token has not been copied, and it will not be shown again.',
     closeAnyway: 'Close anyway',
     doneCopying: 'Done',
   },
 
+  edit: {
+    title: 'Edit registration',
+    intro: 'Correct their name, or give them an email to sign in with. The kind and the platform role do not change.',
+    displayName: 'Display name',
+    email: 'Email',
+    emailHint: 'What they sign in with. It can be changed, not removed. An email belongs to one actor only.',
+    emailChanged: 'From now on they sign in with the new email. Their password, if they have one, stays as it is.',
+    withdrawsInvite:
+      'Changing the email withdraws the invitation link waiting, which went to the old one: create a new one afterwards.',
+    nothingChanged: 'Nothing was changed.',
+    saved: 'Saved',
+    blocked: {
+      system: 'The system actor runs background jobs: its registration does not change.',
+    },
+  },
+
+  invite: {
+    title: 'Invitation link',
+    intro:
+      'A link for them to choose a password with: opening it, they choose one and are signed in. It works once, and making another replaces it.',
+    pending: 'A link made earlier works until',
+    pendingNote: 'Making a new one replaces it.',
+    expired: 'The last link expired unused on',
+    hasPassword:
+      'They have a password already. Taking up a link replaces it: this is how a forgotten password is reset.',
+    days: 'The link works for',
+    dayOption: '{n} day | {n} days',
+    submit: {
+      first: 'Create invitation link',
+      renew: 'Create a new link',
+      reset: 'Create a link to reset their password',
+    },
+    blocked: {
+      self: 'This is your own account: set your password on your Account page.',
+      selfLink: 'Open my account',
+      system: 'The system actor never signs in.',
+      agent: 'Agents connect with API tokens, not passwords: issue it a token instead.',
+      suspended: 'They are suspended. Reactivate them to invite them.',
+      noEmail: 'They have no email, which is what they would sign in with. Give them one first.',
+      giveEmail: 'Give them an email',
+    },
+    revealTitle: 'Copy the invitation link now',
+    once: 'This is the only time the link is shown. If it is lost, create a new one: that replaces this one.',
+    replayed:
+      'This repeated an earlier request, so the link is not shown again. If it was not copied, create a new one.',
+    link: 'Invitation link',
+    email: 'They sign in with',
+    expires: 'Works until',
+    send: 'Send it to them yourself, in a way you trust: whoever opens it chooses the password. It works once.',
+    uncopied: 'The link has not been copied, and it will not be shown again.',
+  },
+
   sso: {
     title: 'Single sign-on',
-    intro: "Link this person's account at the identity provider so they can sign in with it. Signing in creates nobody: until this is done, someone the provider vouches for is still nobody here.",
+    intro:
+      "Link this person's account at the identity provider so they can sign in with it. Signing in creates nobody: until this is done, someone the provider vouches for is still nobody here.",
     provider: 'Provider',
     providerHint: "This installation's name for the identity provider.",
     subject: 'Account (UPN)',

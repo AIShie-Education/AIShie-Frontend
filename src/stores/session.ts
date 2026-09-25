@@ -17,7 +17,12 @@ import { useCourseStore } from './course'
 
 export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut'
 
-/** Where the administration pages keep each administrator's actors seen recently. */
+/**
+ * Where earlier versions of the administration pages kept, in this browser,
+ * each administrator's actors seen recently, before Core had a list of
+ * actors. Nothing writes there now; what those versions left is still
+ * deleted when the caller goes.
+ */
 const RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
 
 export const useSessionStore = defineStore('session', () => {
@@ -129,9 +134,9 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   /**
-   * Drops the lists views keep in this browser for one caller, so that none
-   * outlives a sign-out or the session's end: the administration pages'
-   * actors seen recently (adminShared's useRecentActors).
+   * Drops the lists kept in this browser for one caller, so that none
+   * outlives a sign-out or the session's end: the actors seen recently that
+   * earlier versions of the administration pages kept (RECENT_ACTORS_PREFIX).
    */
   function forgetStoredLists() {
     try {

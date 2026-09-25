@@ -68,9 +68,16 @@ end; the "works around it" notes say what the front end does meanwhile.
 - **An administrator cannot read one course by id.** `course.get` needs a seat and `course.list`
   has no id filter. *Works around it:* `course.list` with `after` set to the id just before and
   `limit=1`, which depends on the list's id ordering.
-- **No actor directory.** `actor.get` is admin-only and there is no list or search, so seating
-  someone depends on an administrator passing actor ids out of band. *Works around it:* a
-  per-browser "seen recently" list on the administration pages.
+- **No actor directory** (resolved). `actor.get` was admin-only with no list or search, so seating
+  someone depended on an administrator passing actor ids out of band, and the front end kept a
+  per-browser "seen recently" list. Core's `actor.list` (with `actor.update` and `actor.invite`)
+  now lets the administration pages list and search everyone, and the list is gone; what earlier
+  versions kept in a browser is still deleted at sign-out.
+- **An invitation cannot be checked before it is taken up.** `POST /v1/auth/invite` is the only
+  thing that reads one, and it wants the password too, so the welcome page learns that a link was
+  used, replaced or has expired only after the person has chosen a password. (A weak password is
+  refused after the invitation is checked, so an empty one would tell; the page does not rely on
+  that order, and each try spends the address's sign-in allowance.)
 - **`event.list` only reads forward** over a platform-wide sequence, with no newest-first read and
   no head cursor, so "the latest 20 events" means searching for the head. Events also carry no
   actor, and `action.get` is decider-only, so a non-decider can never be told who did something.
