@@ -8,12 +8,13 @@ import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import type { FormInstance, FormRules } from 'element-plus'
 import { read, type ApiError, type ToolIn } from '@/api/http'
-import { ROLES, type AutonomyLevel, type Perm, type PermLevels, type Preset } from '@/api/types'
+import { ROLES, type Actor, type AutonomyLevel, type Perm, type PermLevels, type Preset } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
+import ActorIdInput from '@/components/ActorIdInput.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -59,6 +60,7 @@ const preset = computed(() => props.presets.find((p) => p.id === form.presetId) 
 const baseline = computed<PermLevels>(() => (preset.value ? fullPerms(preset.value.perms) : {}))
 
 function reset() {
+  picked = null
   form.actorId = ''
   form.presetId = builtIn.value.find((p) => p.name === 'student')?.id ?? props.presets[0]?.id ?? ''
   form.students = []
@@ -121,17 +123,29 @@ const problems = computed(() =>
     : [],
 )
 
-// --- The actor, looked up where the caller may (platform administrators) ------
+// --- The actor, found or looked up where the caller may (platform administrators) --
+// actor.list and actor.get answer administrators only. Anyone else seats
+// someone by the actor id an administrator gives them, as before.
 type ActorInfo = { display_name: string; kind: string; status: string } | 'missing' | null
 const actorInfo = ref<ActorInfo>(null)
 const actorLooking = ref(false)
+/** The one picked from the search, who needs no look-up. */
+let picked: Actor | null = null
+function onPick(a: Actor) {
+  picked = a
+}
 let lookupTimer: ReturnType<typeof setTimeout> | undefined
 watch(
   () => form.actorId,
   (id) => {
     actorInfo.value = null
     clearTimeout(lookupTimer)
+    actorLooking.value = false
     if (!session.isAdmin || !isUuid(id)) return
+    if (picked?.id === id.trim().toLowerCase()) {
+      actorInfo.value = picked
+      return
+    }
     lookupTimer = setTimeout(async () => {
       actorLooking.value = true
       try {
@@ -222,15 +236,17 @@ function capToMine() {
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <!-- Who -->
       <el-form-item :label="t('members.add.actor')" prop="actorId">
-        <el-input
+        <ActorIdInput
           v-model="form.actorId"
+          :searchable="session.isAdmin"
           :placeholder="t('members.add.actorPlaceholder')"
-          class="app-mono"
-          clearable
           name="actor_id"
           autocomplete="off"
+          @pick="onPick"
         />
-        <div class="app-form-hint">{{ t('members.add.actorHelp') }}</div>
+        <div class="app-form-hint">
+          {{ session.isAdmin ? t('members.add.actorHelpAdmin') : t('members.add.actorHelp') }}
+        </div>
         <div v-if="session.isAdmin && (actorLooking || actorInfo)" class="add-member__actor">
           <span v-if="actorLooking" class="app-muted">{{ t('common.labels.loading') }}</span>
           <span v-else-if="actorInfo === 'missing'" class="add-member__actor-missing">

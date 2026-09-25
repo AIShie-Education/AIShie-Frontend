@@ -1,24 +1,25 @@
 <script setup lang="ts">
 // course.seat_instructor: how a course gets its first member. The actor is
-// looked up first (actor.get), so that the administrator sees who they are
-// about to seat.
+// found by name or email (actor.list) or by a pasted id (actor.get) first, so
+// that the administrator sees who they are about to seat.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isApiError, read } from '@/api/http'
 import type { Actor } from '@/api/types'
+import { useActorList } from '@/composables/useActorList'
 import { useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
+import ActorIdInput from '@/components/ActorIdInput.vue'
 import IdText from '@/components/IdText.vue'
 import ActorSummary from './ActorSummary.vue'
-import { useRecentActors } from './adminShared'
 
 const props = defineProps<{ courseId: string; disabled?: boolean }>()
 const emit = defineEmits<{ seated: [memberId: string, actorId: string] }>()
 const { t } = useI18n()
 const session = useSessionStore()
-const { recent, remember } = useRecentActors()
+const directory = useActorList()
 
 const actorId = ref('')
 const found = ref<Actor | null>(null)
@@ -32,26 +33,20 @@ watch(actorId, (v) => {
   lookupError.value = null
 })
 
-interface Suggestion {
-  value: string
-  name: string
-  kind: string
-}
-function suggest(q: string, cb: (items: Suggestion[]) => void) {
-  const needle = q.trim().toLowerCase()
-  cb(
-    recent.value
-      .filter((a) => a.kind !== 'system')
-      .filter((a) => !needle || `${a.display_name} ${a.id}`.toLowerCase().includes(needle))
-      .map((a) => ({ value: a.id, name: a.display_name, kind: a.kind })),
-  )
-}
-
-// Picking one suggestion and then another starts two look-ups: only the
-// latest counts, and only while the field still holds the id it asked for,
-// since "Seat as instructor" seats whoever was found.
+// Picking one suggestion and then another, or looking one up while another
+// look-up is on its way, starts two: only the latest counts, and only while
+// the field still holds the id it asked for, since "Seat as instructor"
+// seats whoever was found.
 let lookupSeq = 0
 const current = () => actorId.value.trim().toLowerCase()
+
+/** Someone picked from the search: actor.list gave what actor.get would. */
+function onPick(a: Actor) {
+  lookupSeq++
+  looking.value = false
+  lookupError.value = null
+  if (a.id === current()) found.value = a
+}
 
 async function lookUp() {
   const seq = ++lookupSeq
@@ -60,13 +55,14 @@ async function lookUp() {
   lookupError.value = null
   if (!isUuid(id)) {
     looking.value = false
-    lookupError.value = t('admin.seat.invalidId')
+    // Words in the field are a search that nobody was picked from.
+    lookupError.value =
+      id && directory.available.value !== false ? t('admin.seat.pickOrPaste') : t('admin.seat.invalidId')
     return
   }
   looking.value = true
   try {
     const a = await read('actor.get', { actor_id: id })
-    remember(a)
     if (seq === lookupSeq && a.id === current()) found.value = a
   } catch (e) {
     if (seq === lookupSeq && id === current()) {
@@ -122,25 +118,19 @@ async function seat() {
     </el-alert>
 
     <form class="seat__form" @submit.prevent="lookUp">
-      <label class="seat__label" for="seat-actor-id">{{ t('admin.seat.actorId') }}</label>
+      <label class="seat__label" for="seat-actor-id">{{ t('admin.seat.who') }}</label>
       <div class="seat__row">
         <div class="seat__input">
-          <el-autocomplete
+          <ActorIdInput
             id="seat-actor-id"
             v-model="actorId"
-            :fetch-suggestions="suggest"
+            searchable
             :placeholder="t('admin.seat.placeholder')"
             :disabled="disabled"
-            clearable
-            @select="lookUp"
-          >
-            <template #default="{ item }">
-              <div class="seat__suggestion">
-                <span>{{ item.name }}</span>
-                <span class="app-muted seat__suggestion-kind">{{ t(`enums.actorKind.${item.kind}`) }}</span>
-              </div>
-            </template>
-          </el-autocomplete>
+            autocomplete="off"
+            @pick="onPick"
+            @enter="lookUp"
+          />
         </div>
         <el-button native-type="submit" :loading="looking" :disabled="disabled || !actorId.trim()">
           <el-icon><Search /></el-icon>
@@ -207,22 +197,11 @@ async function seat() {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
 }
 .seat__input {
   flex: 1 1 280px;
   min-width: 0;
-}
-.seat__input :deep(.el-autocomplete) {
-  width: 100%;
-}
-.seat__suggestion {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-.seat__suggestion-kind {
-  font-size: 12px;
 }
 .seat__error {
   margin-top: 6px;

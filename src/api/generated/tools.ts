@@ -251,6 +251,49 @@ export interface ActorLinkSsoOut {
   credential_id: string
 }
 
+/** actor.list (read): Every actor on the platform — people, agents and the system actor — in the order they were registered, optionally narrowed by q (part of a name or an email address), kind, status or platform role. This is how someone registered earlier is found again; for one actor by id, use actor.get. */
+export interface ActorListIn {
+  /**
+   * the id of the last item already seen
+   */
+  after?: null | string
+  /**
+   * human, agent or system
+   */
+  kind?: null | string
+  /**
+   * at most this many items; default 50, maximum 200
+   */
+  limit?: number
+  /**
+   * root, admin, or none for the actors who hold neither
+   */
+  platform_role?: null | string
+  /**
+   * part of a display name or an email address, matched in any case; % and _ mean themselves. At most 254 characters
+   */
+  q?: null | string
+  /**
+   * active or suspended
+   */
+  status?: null | string
+}
+export interface ActorListOut {
+  actors:
+    | null
+    | {
+        created_at: string
+        created_by_actor_id?: null | string
+        display_name: string
+        email?: null | string
+        id: string
+        kind: string
+        platform_role?: null | string
+        status: string
+      }[]
+  next?: null | string
+}
+
 /** actor.reactivate (write): Lift a suspension. The actor's memberships and credentials work again as they were. */
 export interface ActorReactivateIn {
   actor_id: string
@@ -1834,6 +1877,7 @@ export interface ToolMap {
   'actor.get': { in: ActorGetIn; out: ActorGetOut; kind: 'read' }
   'actor.issue_token': { in: ActorIssueTokenIn; out: ActorIssueTokenOut; kind: 'write' }
   'actor.link_sso': { in: ActorLinkSsoIn; out: ActorLinkSsoOut; kind: 'write' }
+  'actor.list': { in: ActorListIn; out: ActorListOut; kind: 'read' }
   'actor.reactivate': { in: ActorReactivateIn; out: ActorReactivateOut; kind: 'write' }
   'actor.register': { in: ActorRegisterIn; out: ActorRegisterOut; kind: 'write' }
   'actor.suspend': { in: ActorSuspendIn; out: ActorSuspendOut; kind: 'write' }
@@ -1915,6 +1959,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'actor.get': { method: 'GET', path: '/v1/actors/{actor_id}', kind: 'read' },
   'actor.issue_token': { method: 'POST', path: '/v1/actors/{actor_id}/tokens', kind: 'write' },
   'actor.link_sso': { method: 'POST', path: '/v1/actors/{actor_id}/sso', kind: 'write' },
+  'actor.list': { method: 'GET', path: '/v1/actors', kind: 'read' },
   'actor.reactivate': { method: 'POST', path: '/v1/actors/{actor_id}/reactivate', kind: 'write' },
   'actor.register': { method: 'POST', path: '/v1/actors', kind: 'write' },
   'actor.suspend': { method: 'POST', path: '/v1/actors/{actor_id}/suspend', kind: 'write' },

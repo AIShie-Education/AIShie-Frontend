@@ -73,6 +73,8 @@ export default {
     actorPlaceholder: '例如 01a0d79f-13c6-70da-a7cc-f009b1efe423',
     actorHelp:
       '每位人員和每個代理都由平台管理員登記一次，管理員可以告訴你他們的參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
+    actorHelpAdmin:
+      '你是平台管理員，可以按名稱或電子郵件搜尋。其他人新增成員時，則須使用平台管理員提供的參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
     actorInvalid: '參與者 ID 的格式類似 01a0d79f-13c6-70da-a7cc-f009b1efe423。',
     actorMissing: '找不到此 ID 的參與者。',
     preset: '權限預設',

@@ -4,7 +4,7 @@
 // What an administrator may do to whom is Core's rule, mirrored here to say
 // why a control is off: not to yourself, only root to a holder of a platform
 // role, and nobody to the system actor.
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
@@ -20,13 +20,12 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import IssueTokenCard from './components/IssueTokenCard.vue'
 import LinkSsoCard from './components/LinkSsoCard.vue'
-import { useCanonicalId, useRecentActors } from './components/adminShared'
+import { useCanonicalId } from './components/adminShared'
 
 const props = defineProps<{ actorId: string }>()
 const { t } = useI18n()
 const session = useSessionStore()
 const narrow = useNarrow()
-const { remember } = useRecentActors()
 /** The actor's id as Core writes it, whatever the address says. */
 const id = useCanonicalId(() => props.actorId, 'actorId')
 
@@ -40,7 +39,6 @@ const state = useAsync(
   { watch: [id], keepData: true },
 )
 const actor = computed(() => (state.data.value?.id === id.value ? state.data.value : undefined))
-watch(actor, (a) => a && remember(a))
 
 // Who registered them, by name where they can be read.
 const creatorId = computed(() => actor.value?.created_by_actor_id ?? null)

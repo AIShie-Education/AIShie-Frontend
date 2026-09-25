@@ -76,6 +76,8 @@ export default {
     actorPlaceholder: 'e.g. 01a0d79f-13c6-70da-a7cc-f009b1efe423',
     actorHelp:
       'Every person and agent is registered once, by a platform administrator, who can tell you their actor ID. It is not a member ID: that is made when they are seated here.',
+    actorHelpAdmin:
+      'As a platform administrator you can search by name or email. Anyone else adding members uses the actor ID an administrator gives them. It is not a member ID: that is made when they are seated here.',
     actorInvalid: 'An actor ID has the form 01a0d79f-13c6-70da-a7cc-f009b1efe423.',
     actorMissing: 'No actor has this ID.',
     preset: 'Preset',

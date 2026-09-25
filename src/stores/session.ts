@@ -17,10 +17,32 @@ import { useCourseStore } from './course'
 
 export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut'
 
-/** Where the administration pages keep each administrator's actors seen recently. */
-const RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
+/**
+ * Where the administration pages used to keep, in this browser, each
+ * administrator's actors seen recently: names and ids, for want of a
+ * directory. actor.list replaced the list, and nothing writes these keys
+ * now; the ones a browser still holds are removed once, when the page
+ * starts, so that no name outlives the list that kept it.
+ */
+const RETIRED_RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
+
+export function forgetRetiredLists(storage?: Storage) {
+  try {
+    // Inside the try: where storage is blocked, merely naming it throws.
+    const store = storage ?? localStorage
+    const doomed: string[] = []
+    for (let i = 0; i < store.length; i++) {
+      const key = store.key(i)
+      if (key?.startsWith(RETIRED_RECENT_ACTORS_PREFIX)) doomed.push(key)
+    }
+    for (const key of doomed) store.removeItem(key)
+  } catch {
+    /* no storage: nothing was kept */
+  }
+}
 
 export const useSessionStore = defineStore('session', () => {
+  forgetRetiredLists()
   const me = ref<Me | null>(null)
   const memberships = ref<Membership[]>([])
   const status = ref<SessionStatus>('unknown')
@@ -102,29 +124,10 @@ export const useSessionStore = defineStore('session', () => {
   /** Forgets everything about the caller, as when Core says the session is over. */
   function clear() {
     forgetCaller()
-    forgetStoredLists()
     status.value = 'signedOut'
     if (usingToken.value) {
       bearer.set(null)
       usingToken.value = false
-    }
-  }
-
-  /**
-   * Drops the lists views keep in this browser for one caller, so that none
-   * outlives a sign-out or the session's end: the administration pages'
-   * actors seen recently (adminShared's useRecentActors).
-   */
-  function forgetStoredLists() {
-    try {
-      const doomed: string[] = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key?.startsWith(RECENT_ACTORS_PREFIX)) doomed.push(key)
-      }
-      for (const key of doomed) localStorage.removeItem(key)
-    } catch {
-      /* no storage: nothing was kept */
     }
   }
 

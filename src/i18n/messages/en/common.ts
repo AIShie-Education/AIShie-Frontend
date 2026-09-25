@@ -112,6 +112,13 @@ export default {
     loadMore: 'Load more',
     end: 'End of list',
   },
+  actorInput: {
+    search: 'Search by name or email, or paste an actor ID',
+    noMatch: 'No one matches “{q}”.',
+    more: 'Only the first {n} are shown: type more to narrow it down.',
+    unavailable: 'This Core cannot search by name yet (it needs a newer Core): paste an actor ID.',
+    failed: 'The search failed: {message}',
+  },
   copyId: 'Copy ID',
   notSignedIn: 'Not signed in',
   archivedCourse: 'This course is archived: it can be read, but nothing in it can be changed.',

@@ -859,6 +859,129 @@
       "path": "/v1/actors/{actor_id}/sso"
     },
     {
+      "description": "Every actor on the platform — people, agents and the system actor — in the order they were registered, optionally narrowed by q (part of a name or an email address), kind, status or platform role. This is how someone registered earlier is found again; for one actor by id, use actor.get.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "description": "human, agent or system",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          },
+          "platform_role": {
+            "description": "root, admin, or none for the actors who hold neither",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "q": {
+            "description": "part of a display name or an email address, matched in any case; % and _ mean themselves. At most 254 characters",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "description": "active or suspended",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "actor.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actors": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "created_at": {
+                  "type": "string"
+                },
+                "created_by_actor_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "display_name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "platform_role": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "display_name",
+                "status",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "actors"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors"
+    },
+    {
       "description": "Lift a suspension. The actor's memberships and credentials work again as they were.",
       "input_schema": {
         "additionalProperties": false,

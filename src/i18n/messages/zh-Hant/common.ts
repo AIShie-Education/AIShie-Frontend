@@ -112,6 +112,13 @@ export default {
     loadMore: '載入更多',
     end: '已到列表底部',
   },
+  actorInput: {
+    search: '按名稱或電子郵件搜尋，或貼上參與者 ID',
+    noMatch: '沒有符合「{q}」的參與者。',
+    more: '只顯示首 {n} 位，請輸入更多字詞以收窄範圍。',
+    unavailable: '此 Core 版本尚未支援按名稱搜尋（需要較新版本的 Core），請貼上參與者 ID。',
+    failed: '搜尋失敗：{message}',
+  },
   copyId: '複製 ID',
   notSignedIn: '尚未登入',
   archivedCourse: '此課程已封存：可以檢視，但無法再作任何更改。',
