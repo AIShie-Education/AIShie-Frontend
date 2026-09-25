@@ -1,0 +1,48 @@
+import { ElMessage, ElNotification } from 'element-plus'
+import { ApiError } from '@/api/http'
+import { i18n } from '@/i18n'
+
+const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
+
+/** A sentence for the person, in their language, with Core's own words where they help. */
+export function errorMessage(e: unknown): string {
+  if (!(e instanceof ApiError)) return (e as Error)?.message ?? String(e)
+  if (e.isNetwork) return t('common.errors.network')
+  if (e.actionStatus === 'denied') return t('common.outcome.denied')
+  switch (e.code) {
+    case 'unauthenticated':
+      return t('common.errors.unauthenticated')
+    case 'rate_limited':
+      return t('common.errors.rateLimited')
+    case 'internal':
+      return t('common.errors.internal')
+    case 'idempotency_conflict':
+      return t('common.errors.idempotency')
+    case 'forbidden':
+      return e.message ? `${t('common.errors.forbiddenAction')} (${e.message})` : t('common.errors.forbiddenAction')
+    case 'not_found':
+      return e.message || t('common.errors.notFound')
+    case 'conflict':
+      return `${t('common.errors.conflict')}: ${e.message}`
+    case 'failed_precondition':
+      return `${t('common.errors.precondition')}: ${e.message}`
+    case 'invalid_argument':
+      return `${t('common.errors.invalid')}: ${e.message}`
+  }
+  return e.message || t('common.errors.title')
+}
+
+/** Shows an error the way the app shows errors. */
+export function notifyError(e: unknown, title?: string) {
+  const msg = errorMessage(e)
+  if (e instanceof ApiError && e.recorded) {
+    ElNotification({
+      type: e.actionStatus === 'denied' ? 'warning' : 'error',
+      title: title ?? t('common.outcome.failed'),
+      message: `${msg}\n${t('common.errors.recordedAs', { id: e.actionId!.slice(0, 8) })}`,
+      duration: 8000,
+    })
+    return
+  }
+  ElMessage({ type: 'error', message: title ? `${title}: ${msg}` : msg, duration: 6000, showClose: true })
+}

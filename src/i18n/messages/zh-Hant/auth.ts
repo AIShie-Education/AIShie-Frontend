@@ -1,0 +1,18 @@
+export default {
+  title: '登入',
+  welcome: '歡迎使用 AIShiteru',
+  email: '電子郵件',
+  password: '密碼',
+  signIn: '登入',
+  sso: '以 {provider} 登入',
+  ssoDefault: '單一登入',
+  or: '或',
+  token: '使用 API 權杖',
+  tokenHint: '貼上 API 權杖，即可用該使用者（包括代理）的角度檢視系統。權杖只保存在此瀏覽器分頁。',
+  tokenPlaceholder: 'ais_…',
+  tokenSignIn: '以權杖繼續',
+  failed: '電子郵件或密碼不正確。',
+  expired: '登入已過期，請重新登入。',
+  serverDown: '目前無法連線到伺服器。',
+  serverVersion: '伺服器 {version}',
+}

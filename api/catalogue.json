@@ -1,0 +1,5528 @@
+{
+  "tools": [
+    {
+      "description": "Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor a decision someone else proposed about it, nor approves closing an escalation they raised or approved.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "description": "the proposal being decided",
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "decision": {
+            "description": "approve or reject",
+            "type": "string"
+          },
+          "reason": {
+            "description": "why; shown to the proposer",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "action_id",
+          "decision"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "action.decide",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "error": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "details": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "result": true
+        },
+        "required": [
+          "action_id",
+          "outcome"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/actions/{action_id}/decide"
+    },
+    {
+      "description": "One action in full: what was asked, how it was authorized, what became of it, who decided or reviewed it.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "action_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "action.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action_type": {
+            "type": "string"
+          },
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "authz_result": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "decided_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decided_by_member_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "executed_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "member_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "payload": true,
+          "result": true,
+          "review_state": {
+            "type": "string"
+          },
+          "reviewed_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewed_by_member_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target_type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actor_id",
+          "action_type",
+          "target_type",
+          "payload",
+          "authz_result",
+          "status",
+          "review_state",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/actions/{action_id}"
+    },
+    {
+      "description": "The caller's own actions in this course — proposals and their outcomes included — oldest first.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "action.list_mine",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "action_type": {
+                  "type": "string"
+                },
+                "actor_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "authz_result": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "decided_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "decided_by_member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "executed_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "payload": true,
+                "result": true,
+                "review_state": {
+                  "type": "string"
+                },
+                "reviewed_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "reviewed_by_member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "target_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "actor_id",
+                "action_type",
+                "target_type",
+                "payload",
+                "authz_result",
+                "status",
+                "review_state",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "actions"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/actions/mine"
+    },
+    {
+      "description": "The review queue: actions that executed pending review and have not been reviewed, or were escalated.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "action.list_pending_review",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "action_type": {
+                  "type": "string"
+                },
+                "actor_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "authz_result": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "decided_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "decided_by_member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "executed_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "payload": true,
+                "result": true,
+                "review_state": {
+                  "type": "string"
+                },
+                "reviewed_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "reviewed_by_member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "target_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "actor_id",
+                "action_type",
+                "target_type",
+                "payload",
+                "authz_result",
+                "status",
+                "review_state",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "actions"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/actions/pending-review"
+    },
+    {
+      "description": "The approval queue: proposals in this course waiting for a decision, oldest first.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "action.list_proposed",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "action_type": {
+                  "type": "string"
+                },
+                "actor_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "authz_result": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "decided_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "decided_by_member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "executed_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "payload": true,
+                "result": true,
+                "review_state": {
+                  "type": "string"
+                },
+                "reviewed_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "reviewed_by_member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "target_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "actor_id",
+                "action_type",
+                "target_type",
+                "payload",
+                "authz_result",
+                "status",
+                "review_state",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "actions"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/actions/proposed"
+    },
+    {
+      "description": "Record that an action which executed pending review has been looked at: reviewed, or escalated for someone else to look at. Reviewing undoes nothing; putting something right is a separate action.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "description": "the executed action under review",
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "outcome": {
+            "description": "reviewed or escalated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "action_id",
+          "outcome"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "action.review",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "review_state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_id",
+          "review_state"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/actions/{action_id}/review"
+    },
+    {
+      "description": "One actor's registration: who they are, their standing, and who registered them.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "actor.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "created_by_actor_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "platform_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "display_name",
+          "status",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors/{actor_id}"
+    },
+    {
+      "description": "Issue an API token for another actor — how a newly registered agent gets its first credential, since it cannot sign in to ask for one. The token is returned once and only its hash is kept.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expires_in_days": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id",
+          "label"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "actor.issue_token",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "credential_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "token": {
+            "description": "shown once; it is not stored, and a replay of this call comes back without it",
+            "type": "string"
+          },
+          "token_prefix": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential_id",
+          "token_prefix"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors/{actor_id}/tokens"
+    },
+    {
+      "description": "Let a registered person sign in through the identity provider, by linking their account there to their actor here. Accounts are not created on first sign-in: until this is done, someone the provider vouches for is still nobody here. One identity links to one actor.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "provider": {
+            "description": "this installation's name for the identity provider, e.g. polyu-adfs",
+            "type": "string"
+          },
+          "subject": {
+            "description": "the account at the provider: for ADFS, the UPN, e.g. yuki@connect.polyu.hk",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id",
+          "provider",
+          "subject"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "actor.link_sso",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "credential_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential_id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors/{actor_id}/sso"
+    },
+    {
+      "description": "Lift a suspension. The actor's memberships and credentials work again as they were.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "actor.reactivate",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors/{actor_id}/reactivate"
+    },
+    {
+      "description": "Register a person or an agent. An actor can do nothing until it is seated in a course. An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "description": "needed for a person to sign in with a password",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "description": "human or agent; recorded for display and audit, and read by nothing else",
+            "type": "string"
+          },
+          "platform_role": {
+            "description": "admin; only root may grant it",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "display_name"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "actor.register",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors"
+    },
+    {
+      "description": "Suspend an actor everywhere at once: every call it makes from now on is denied, in every course, and it cannot sign in. Its memberships, history and credentials are kept.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "actor.suspend",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors/{actor_id}/suspend"
+    },
+    {
+      "description": "Create an assignment. It starts unpublished: students do not see it, and cannot submit to it, until assignment.publish. title and points_possible are required.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "component_id": {
+            "description": "the bucket this counts toward; omit for practice work that is not part of the grade",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "due_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instructions_document_id": {
+            "description": "a document of kind instructions, in this course",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "points_possible": {
+            "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "rubric_document_id": {
+            "description": "a document of kind rubric, in this course",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "assignment.create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/assignments"
+    },
+    {
+      "description": "One assignment: what it is worth, when it is due, and the documents holding its instructions and rubric.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "assignment_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "assignment.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "component_id": {
+            "description": "the bucket it counts toward; absent for practice work",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "due_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "instructions_document_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "points_possible": {
+            "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "published_at": {
+            "description": "absent while students cannot see it yet",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rubric_document_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "points_possible"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/assignments/{assignment_id}"
+    },
+    {
+      "description": "The course's assignments, within the caller's assignment scope. Assignments that are not published yet are shown only to members who can write assignments.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "assignment.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignments": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "component_id": {
+                  "description": "the bucket it counts toward; absent for practice work",
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "due_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "instructions_document_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "points_possible": {
+                  "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                },
+                "published_at": {
+                  "description": "absent while students cannot see it yet",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "rubric_document_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "points_possible"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "assignments"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/assignments"
+    },
+    {
+      "description": "Publish an assignment: students can now see it and submit to it. If it has an instructions document, that document must have a published version for them to read.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "assignment_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "assignment.publish",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/assignments/{assignment_id}/publish"
+    },
+    {
+      "description": "Change an assignment. Once any grade has been entered for it, what it is worth and where it counts are fixed: a score is a score out of the points possible when it was given.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "clear_component": {
+            "description": "take it out of the grade",
+            "type": "boolean"
+          },
+          "clear_due_at": {
+            "type": "boolean"
+          },
+          "component_id": {
+            "description": "the bucket this counts toward; omit for practice work that is not part of the grade",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "due_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instructions_document_id": {
+            "description": "a document of kind instructions, in this course",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "points_possible": {
+            "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "rubric_document_id": {
+            "description": "a document of kind rubric, in this course",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "assignment_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "assignment.update",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/assignments/{assignment_id}"
+    },
+    {
+      "description": "Add a component to the grading scheme under a parent: a bucket that assignments will hang from, or, with points_possible, something graded directly such as an exam.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "drop_lowest": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent_id": {
+            "description": "the component this one sits under; the root for a top-level bucket",
+            "format": "uuid",
+            "type": "string"
+          },
+          "points_possible": {
+            "description": "set for a component graded directly, such as an exam",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "sort_order": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "weight": {
+            "description": "relative to its siblings; default 1",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "parent_id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "component.create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/components"
+    },
+    {
+      "description": "Move a component, with everything beneath it, under a different parent in the same course. Once any grade has been entered beneath it, its place in the scheme is fixed.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "component_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "new_parent_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "component_id",
+          "new_parent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "component.move",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/components/{component_id}/move"
+    },
+    {
+      "description": "The course's grading scheme: the tree of components with their weights, from the course total down.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "component.tree",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "components": {
+            "description": "every component of the course, parents before children",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "drop_lowest": {
+                  "maximum": 2147483647,
+                  "minimum": -2147483648,
+                  "type": "integer"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "parent_id": {
+                  "description": "absent for the root, which is the course total",
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "points_possible": {
+                  "description": "set on a component graded directly, such as an exam",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                },
+                "sort_order": {
+                  "maximum": 2147483647,
+                  "minimum": -2147483648,
+                  "type": "integer"
+                },
+                "weight": {
+                  "description": "relative to its siblings",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "weight",
+                "drop_lowest",
+                "sort_order"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "components"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/components"
+    },
+    {
+      "description": "Change a component's name, weight, drop_lowest, points or order. Posted totals are not rewritten: what a student was shown stays as it was until grades beneath it are next posted or regraded.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "clear_points_possible": {
+            "description": "turn a directly graded component back into a bucket",
+            "type": "boolean"
+          },
+          "component_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "drop_lowest": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "points_possible": {
+            "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "sort_order": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "weight": {
+            "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "component_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "component.update",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/components/{component_id}"
+    },
+    {
+      "description": "Open a course: move it from draft (or back from archived) to active.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "course.activate",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/activate"
+    },
+    {
+      "description": "Archive a course. From then on it refuses every write, from anyone, agents included; everything in it stays readable.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "course.archive",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/archive"
+    },
+    {
+      "description": "Create one course offering — CS101 section A, this term — as a draft, with the root of its grading scheme. It has no members yet: seat its first instructor with course.seat_instructor, and they add the rest.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "CS101",
+            "type": "string"
+          },
+          "dept_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "section": {
+            "description": "A; one row is one offering, so another section is another course",
+            "type": "string"
+          },
+          "term_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dept_id",
+          "term_id",
+          "code",
+          "title"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "course.create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "root_component_id": {
+            "description": "the course total; the grading scheme hangs beneath it",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "root_component_id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses"
+    },
+    {
+      "description": "The course itself: code, section, title, description, status. Any member who can read its material may read this.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "course.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "dept_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "section": {
+            "type": "string"
+          },
+          "status": {
+            "description": "draft, active or archived; an archived course refuses every write",
+            "type": "string"
+          },
+          "term_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dept_id",
+          "term_id",
+          "code",
+          "section",
+          "title",
+          "status",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}"
+    },
+    {
+      "description": "Every course on the platform, optionally by term or department. For the courses you are seated in, use me.memberships.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dept_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          },
+          "term_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "course.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "courses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "dept_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "description": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "section": {
+                  "type": "string"
+                },
+                "status": {
+                  "description": "draft, active or archived; an archived course refuses every write",
+                  "type": "string"
+                },
+                "term_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "dept_id",
+                "term_id",
+                "code",
+                "section",
+                "title",
+                "status",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "courses"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses"
+    },
+    {
+      "description": "Seat an actor in a course with the built-in instructor preset. This is how a course gets its first member; from there the instructor adds everyone else with member.add.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "actor_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "course.seat_instructor",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "member_id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/instructors"
+    },
+    {
+      "description": "Change a course's title or description. Its code, section and term are what it is, and do not change.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "course.update",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}"
+    },
+    {
+      "description": "Create an API token for the caller's own account. The token is returned once and only its hash is kept: retrying this call returns the credential but not the token again.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_in_days": {
+            "description": "omit for a token that does not expire",
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "label": {
+            "description": "what this token is for, so it can be recognised later",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "credential.issue_token",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "credential_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "token": {
+            "description": "shown once; it is not stored, and a replay of this call comes back without it",
+            "type": "string"
+          },
+          "token_prefix": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential_id",
+          "token_prefix"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/me/credentials/tokens"
+    },
+    {
+      "description": "The caller's own credentials: tokens, sessions, password, SSO identity. Secrets are never shown.",
+      "input_schema": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "credential.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "credentials": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "created_at": {
+                  "type": "string"
+                },
+                "expires_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "last_used_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "provider": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "revoked_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "subject": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "token_prefix": {
+                  "description": "the public part of a token, enough to tell which one it is",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "credentials"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/me/credentials"
+    },
+    {
+      "description": "Revoke one of the caller's own credentials: a token stops working, a session is signed out. It takes effect on the credential's next use.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "credential_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "credential.revoke",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/me/credentials/{credential_id}/revoke"
+    },
+    {
+      "description": "Set or replace the caller's own password. The previous password stops working at once.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "credential.set_password",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/me/password"
+    },
+    {
+      "description": "Create a department. Departments group courses and may define their own permission presets; they play no part in authorization.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "department.create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/departments"
+    },
+    {
+      "description": "Every department, by name. Any signed-in actor may read this.",
+      "input_schema": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "department.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "departments": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "departments"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/departments"
+    },
+    {
+      "description": "Edit material, instructions or a rubric by adding a version. Versions are never changed or removed. The new version is a draft until it is published; what students read does not change until then.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "body_md": {
+            "description": "markdown text",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "publish": {
+            "description": "publish the new version at once",
+            "type": "boolean"
+          },
+          "upload_token": {
+            "description": "from document.upload_url, after uploading the file",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "document.add_version",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "published": {
+            "type": "boolean"
+          },
+          "seq": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "seq",
+          "published"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}/versions"
+    },
+    {
+      "description": "Retire a document. It disappears from lists and can no longer be edited; nothing is deleted, and anything pinned to one of its versions still reads it. A submitted file can be archived only while its submission is a draft.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "document.archive",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}/archive"
+    },
+    {
+      "description": "Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade; those have exactly one version and are given their content here.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "body_md": {
+            "description": "markdown text",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "grade_id": {
+            "description": "required for kind feedback: the grade this file belongs to",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "description": "material, instructions, rubric, submission or feedback",
+            "type": "string"
+          },
+          "sort_order": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "submission_id": {
+            "description": "required for kind submission: the draft this file belongs to",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "upload_token": {
+            "description": "from document.upload_url, after uploading the file",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "kind",
+          "title"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "document.create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "version_id": {
+            "description": "absent when the document was created empty",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "document_id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents"
+    },
+    {
+      "description": "Read a document: its text, and a short-lived URL for its file if it has one. Students get the published version; members who can read drafts get the latest. A specific version can be asked for by id — always allowed if it is the one your own submission was handed in under.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "version_id": {
+            "description": "a specific version; otherwise the published one, or the latest for members who can read drafts",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "document.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "grade_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "published_version_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sort_order": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "additionalProperties": false,
+            "description": "absent when the document has no version the caller may read",
+            "properties": {
+              "author_member_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "body_md": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "byte_size": {
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              },
+              "checksum": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "content_type": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "download_url": {
+                "description": "a short-lived URL for the file, if the version has one",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "published": {
+                "type": "boolean"
+              },
+              "seq": {
+                "maximum": 2147483647,
+                "minimum": -2147483648,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "seq",
+              "author_member_id",
+              "created_at",
+              "published"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "sort_order",
+          "status",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}"
+    },
+    {
+      "description": "The course's material, instructions and rubrics — those kinds the caller has permission to read. Documents with no published version are shown only to members who can read drafts. Instructions and rubrics follow their assignment: unless the caller writes assignments, they are shown only once a published assignment in the caller's scope refers to them. Submitted files and feedback files are not here: they come with submission.get and grade.get.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "include_archived": {
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "material, instructions or rubric; all that the caller may read if omitted",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "document.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "documents": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "created_at": {
+                  "type": "string"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "published_version_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "sort_order": {
+                  "maximum": 2147483647,
+                  "minimum": -2147483648,
+                  "type": "integer"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "title",
+                "sort_order",
+                "status",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "documents"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents"
+    },
+    {
+      "description": "Make a version of a document the one students read: the latest, or any earlier one. Work already submitted stays pinned to the version that was published when it was handed in.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "version_id": {
+            "description": "which version to publish; if omitted, the latest when the call was made (for a proposal, when it was proposed)",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "document.publish",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "published": {
+            "type": "boolean"
+          },
+          "seq": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "seq",
+          "published"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}/publish"
+    },
+    {
+      "description": "Get somewhere to upload a file. Files do not travel through tool calls: PUT the bytes to the URL this returns, then pass the upload_token to the tool that attaches it. Nothing is recorded until then, and an upload that is never attached is eventually discarded. A call that would attach it by way of a proposal is refused once the upload is more than 48 hours old.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "content_type": {
+            "description": "the file's media type, e.g. application/pdf; the upload must send the same",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "what the file is for: material, instructions, rubric, submission or feedback",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "kind",
+          "content_type"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "document.upload_url",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "headers the PUT must carry",
+            "type": "object"
+          },
+          "max_bytes": {
+            "description": "the largest file, in bytes, that can be attached. It is checked when the file is attached, which refuses a larger one; where the URL is an object store's, a larger upload is not stopped as it arrives",
+            "type": "integer"
+          },
+          "upload_token": {
+            "description": "hand this to document.create, document.add_version or grade.submit to attach what you uploaded",
+            "type": "string"
+          },
+          "upload_url": {
+            "description": "PUT the file's bytes here, once, within the window",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_url",
+          "headers",
+          "upload_token",
+          "expires_at",
+          "max_bytes"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/upload-url"
+    },
+    {
+      "description": "Every version of a document, oldest first, with which one is published. For members who can read drafts.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "document.versions",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "versions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "author_member_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "byte_size": {
+                  "type": [
+                    "null",
+                    "integer"
+                  ]
+                },
+                "content_type": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "has_file": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "published": {
+                  "type": "boolean"
+                },
+                "seq": {
+                  "maximum": 2147483647,
+                  "minimum": -2147483648,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "seq",
+                "has_file",
+                "author_member_id",
+                "created_at",
+                "published"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "versions"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}/versions"
+    },
+    {
+      "description": "The course's event feed from a cursor: everything that has happened since since_seq that the caller is allowed to know about. Events carry ids, never content — fetch what they point to with the read tools. The events of your own actions are always included, which is how you learn that a proposal was approved, rejected or cancelled. Core never calls out: poll this.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "limit": {
+            "description": "default 100, maximum 500",
+            "type": "integer"
+          },
+          "since_seq": {
+            "description": "the seq of the last event already seen; 0 for the beginning",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "event.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "action_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "assignment_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "occurred_at": {
+                  "type": "string"
+                },
+                "payload": true,
+                "seq": {
+                  "type": "integer"
+                },
+                "student_member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "subject_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "subject_type": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "seq",
+                "type",
+                "subject_type",
+                "payload",
+                "occurred_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "more": {
+            "description": "true when the page was full and there may be more right now",
+            "type": "boolean"
+          },
+          "next_seq": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "next_seq",
+          "more"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/events"
+    },
+    {
+      "description": "One grade in full: score, feedback, per-criterion breakdown, the rubric version it was given against, and the action that made it.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "grade_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "grade_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "grade.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "breakdown": true,
+          "component_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by_action_id": {
+            "description": "the action that made this grade: who, under which membership, approved by whom",
+            "format": "uuid",
+            "type": "string"
+          },
+          "feedback": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "feedback_files": {
+            "description": "read each with document.get",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "document_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "document_id",
+                "title"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "grader_member_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "origin": {
+            "description": "entered by a grader, or computed: a rolled-up total written down when grades were posted",
+            "type": "string"
+          },
+          "posted_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rubric_version_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "score": {
+            "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "state": {
+            "description": "draft, posted or superseded",
+            "type": "string"
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "superseded_by": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "student_member_id",
+          "origin",
+          "score",
+          "grader_member_id",
+          "created_by_action_id",
+          "state",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/grades/{grade_id}"
+    },
+    {
+      "description": "Grades within the caller's scope. Members who grade also see drafts and superseded grades; everyone else sees posted grades only. A member limited to listed assignments does not see grades on components.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignment_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "grade.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "grades": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assignment_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "breakdown": true,
+                "component_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "created_by_action_id": {
+                  "description": "the action that made this grade: who, under which membership, approved by whom",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "feedback": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "feedback_files": {
+                  "description": "read each with document.get",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "document_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "document_id",
+                      "title"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "grader_member_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "origin": {
+                  "description": "entered by a grader, or computed: a rolled-up total written down when grades were posted",
+                  "type": "string"
+                },
+                "posted_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "rubric_version_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "score": {
+                  "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                },
+                "state": {
+                  "description": "draft, posted or superseded",
+                  "type": "string"
+                },
+                "student_member_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "submission_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "superseded_by": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "student_member_id",
+                "origin",
+                "score",
+                "grader_member_id",
+                "created_by_action_id",
+                "state",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "grades"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/grades"
+    },
+    {
+      "description": "Post draft grades so that students can see them, and write down each affected student's rolled-up totals as they stand. Every grade in the batch must be within the caller's scope. A grade that is already posted is changed with grade.regrade, not posted again.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "description": "post every draft grade waiting for this assignment. A proposal records the drafts that were waiting when it was made, as grade_ids beside this: approving it posts those of them still waiting, passes over any posted since, and fails if one has been replaced",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "grade_ids": {
+            "description": "the draft grades to post; or give assignment_id. Approving a proposal to post them posts those still waiting, passes over any posted since, and fails if one has been replaced",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "treat_ungraded_as_zero": {
+            "description": "for final grades: count ungraded work as zero in the totals. Once a student's totals have been written this way they stay final: later posts and regrades keep counting ungraded work as zero. It decides the course total, so it needs an assignment scope of the whole course",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "grade.post",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "posted": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "snapshots": {
+            "description": "how many rolled-up totals were written or changed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "posted",
+          "snapshots"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/grades/post"
+    },
+    {
+      "description": "Replace a posted grade. The old grade is kept and marked superseded, the new one is posted at once, and the student's totals are written down again if they changed.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_extra": {
+            "description": "permit a score above the points possible",
+            "type": "boolean"
+          },
+          "breakdown": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "comment": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "criterion": {
+                  "type": "string"
+                },
+                "max": {
+                  "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                },
+                "points": {
+                  "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "criterion",
+                "points",
+                "max"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "feedback": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "feedback_files": {
+            "description": "files to return with the grade, uploaded beforehand",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "upload_token": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "upload_token"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "grade_id": {
+            "description": "the posted grade to replace",
+            "format": "uuid",
+            "type": "string"
+          },
+          "no_rubric": {
+            "description": "that the grader was shown no rubric; filled in when the grade is proposed and no rubric is published, and the grade then records none, whatever is published before it is approved. A call giving it is refused if a rubric is published",
+            "type": "boolean"
+          },
+          "out_of": {
+            "description": "the points possible the score is out of; defaults to what the work is worth now. A proposal records it, and is refused on approval if the work has been rescaled since",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "rubric_version_id": {
+            "description": "the rubric version the grader was shown; defaults to the published one. A proposal records it, or no_rubric if none was published when it was made",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "score": {
+            "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "treat_ungraded_as_zero": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "course_id",
+          "grade_id",
+          "score"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "grade.regrade",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "grade_id": {
+            "description": "the new grade",
+            "format": "uuid",
+            "type": "string"
+          },
+          "replaces": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "snapshots": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grade_id",
+          "replaces",
+          "snapshots"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/grades/{grade_id}/regrade"
+    },
+    {
+      "description": "Write a draft grade for a submission, or for a student on a directly graded component. A draft is not visible to the student until it is posted with grade.post. A new draft replaces any earlier draft for the same work.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_extra": {
+            "description": "permit a score above the points possible",
+            "type": "boolean"
+          },
+          "breakdown": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "comment": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "criterion": {
+                  "type": "string"
+                },
+                "max": {
+                  "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                },
+                "points": {
+                  "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "criterion",
+                "points",
+                "max"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "component_id": {
+            "description": "grade a directly graded component, such as an exam",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "feedback": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "feedback_files": {
+            "description": "files to return with the grade, uploaded beforehand",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "upload_token": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title",
+                "upload_token"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "for_missing": {
+            "description": "whether the grade is for a 'missing' placeholder, nothing handed in; filled in when the grade is proposed, and the grade is refused if late work has since taken the placeholder's place",
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "no_rubric": {
+            "description": "that the grader was shown no rubric; filled in when the grade is proposed and no rubric is published, and the grade then records none, whatever is published before it is approved. A call giving it is refused if a rubric is published",
+            "type": "boolean"
+          },
+          "out_of": {
+            "description": "the points possible the score is out of; defaults to what the work is worth now. A proposal records it, and is refused on approval if the work has been rescaled since",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "rubric_version_id": {
+            "description": "the rubric version the grader was shown; defaults to the published one. A proposal records it, or no_rubric if none was published when it was made",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "score": {
+            "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "student_member_id": {
+            "description": "required with component_id",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "submission_id": {
+            "description": "grade this submission; or give component_id and student_member_id",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "score"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "grade.submit",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "grade_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "grade_id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/grades"
+    },
+    {
+      "description": "One student's rolled-up grades, computed now from posted grades: every component of the course with its percentage and the working behind it. Nothing is stored by reading this.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "treat_ungraded_as_zero": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "course_id",
+          "student_member_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "gradebook.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "components": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "complete": {
+                  "type": "boolean"
+                },
+                "component_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "fraction": {
+                  "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                },
+                "items": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "dropped": {
+                        "type": "boolean"
+                      },
+                      "fraction": {
+                        "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                        "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                        "type": [
+                          "null",
+                          "number",
+                          "string"
+                        ]
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "weight": {
+                        "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
+                        "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                        "type": [
+                          "number",
+                          "string"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "fraction",
+                      "weight"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "percent": {
+                  "description": "out of 100; null when nothing beneath it has a posted grade",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "component_id",
+                "name",
+                "percent",
+                "fraction",
+                "complete",
+                "items"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "student_member_id",
+          "components"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/gradebook/{student_member_id}"
+    },
+    {
+      "description": "Who the caller is: the actor this credential belongs to.",
+      "input_schema": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "me.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "human, agent or system; for display only",
+            "type": "string"
+          },
+          "platform_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "display_name",
+          "status"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/me"
+    },
+    {
+      "description": "The courses the caller is seated in, with the member id for each. An agent starting cold begins here: every other tool takes a course_id.",
+      "input_schema": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "me.memberships",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "memberships": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assignment_scope": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "course_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "course_status": {
+                  "type": "string"
+                },
+                "expires_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "member_id": {
+                  "description": "the stable handle for this actor in this course; agents key their own memory on it",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "section": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "student_scope": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "member_id",
+                "course_id",
+                "code",
+                "section",
+                "title",
+                "course_status",
+                "role",
+                "status",
+                "student_scope",
+                "assignment_scope"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "memberships"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/me/memberships"
+    },
+    {
+      "description": "Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "assignment_scope": {
+            "description": "all or listed",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "the membership removes itself at this moment",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "listed_assignments": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "listed_students": {
+            "description": "member ids of the students in scope; listed with none means nobody",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "perms": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "individual permissions to set differently from the preset",
+            "type": "object"
+          },
+          "preset": {
+            "description": "a preset by name: student, observer, ta, instructor, tutor, grader, or one of the department's own",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "preset_id": {
+            "description": "or a preset by id",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "student_scope": {
+            "description": "all or listed",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "actor_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "member.add",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "member_id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members"
+    },
+    {
+      "description": "One member in full, including exactly which students and assignments a 'listed' scope lists.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "member_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "member.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "assignment_scope": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "human or agent; for display only",
+            "type": "string"
+          },
+          "listed_assignments": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "listed_students": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "perms": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "preset_id": {
+            "description": "where the permissions were copied from; not read again",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "description": "roster fact; the gradebook is the members whose role is student",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "student_scope": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actor_id",
+          "display_name",
+          "kind",
+          "role",
+          "status",
+          "student_scope",
+          "assignment_scope",
+          "perms",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members/{member_id}"
+    },
+    {
+      "description": "The members of a course — people and agents alike — with their roster role, status, permissions and scope.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "include_removed": {
+            "type": "boolean"
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          },
+          "role": {
+            "description": "only members with this roster role, e.g. student",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "member.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "members": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "actor_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "assignment_scope": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "display_name": {
+                  "type": "string"
+                },
+                "expires_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "kind": {
+                  "description": "human or agent; for display only",
+                  "type": "string"
+                },
+                "listed_assignments": {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "listed_students": {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "perms": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "preset_id": {
+                  "description": "where the permissions were copied from; not read again",
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "role": {
+                  "description": "roster fact; the gradebook is the members whose role is student",
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "student_scope": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "actor_id",
+                "display_name",
+                "kind",
+                "role",
+                "status",
+                "student_scope",
+                "assignment_scope",
+                "perms",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "members"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members"
+    },
+    {
+      "description": "Pause a member: every call they make is denied from now until they are resumed. The same membership, with its id, permissions and history, carries on afterwards — for an agent, the same relationship. Their pending proposals stay queued but cannot be approved while they are paused.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "member_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "member.pause",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members/{member_id}/pause"
+    },
+    {
+      "description": "Remove a member from the course. Everything they did stays on record, and whatever they had proposed that nobody has decided yet is cancelled. Seating the same actor again later is a new membership with a new id: for an agent, a fresh start.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "member_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "member.remove",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "cancelled_proposals": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cancelled_proposals"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members/{member_id}/remove"
+    },
+    {
+      "description": "Change which students and assignments a member's permissions reach, or when the membership expires. 'listed' with an empty list reaches nobody. Widening a scope, or extending or clearing an expiry, is a grant: everything the member will then hold must be within what you hold yourself. Narrowing is always allowed.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_scope": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clear_expiry": {
+            "type": "boolean"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "listed_assignments": {
+            "description": "replaces the list; omit to keep it",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "listed_students": {
+            "description": "replaces the list; omit to keep it",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "student_scope": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "member_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "member.rescope",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members/{member_id}/scope"
+    },
+    {
+      "description": "Resume a paused member, exactly as they were. That is a grant of everything they hold, which must be within what you hold yourself.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "member_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "member.resume",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members/{member_id}/resume"
+    },
+    {
+      "description": "Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself. Lowering is always allowed.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "perms": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "the permissions to change, by name; the rest stay as they are",
+            "type": "object"
+          }
+        },
+        "required": [
+          "course_id",
+          "member_id",
+          "perms"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "member.update_perms",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members/{member_id}/perms"
+    },
+    {
+      "description": "Define a permission preset for a department, alongside the built-ins. It may share a built-in's name.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_scope": {
+            "description": "all or listed",
+            "type": "string"
+          },
+          "dept_id": {
+            "description": "the department the preset belongs to; built-ins are not created here",
+            "format": "uuid",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "perms": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "permission name to level; anything not named is denied",
+            "type": "object"
+          },
+          "role": {
+            "description": "the roster role members get by default: student, instructor, ta, observer or assistant",
+            "type": "string"
+          },
+          "student_scope": {
+            "description": "all or listed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dept_id",
+          "name",
+          "role",
+          "student_scope",
+          "assignment_scope",
+          "perms"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "preset.create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/presets"
+    },
+    {
+      "description": "Permission presets: the six built-ins, and a department's own when dept_id is given. A preset is a starting point copied onto a member when they are added; editing one changes nobody already seated.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dept_id": {
+            "description": "also list this department's own presets",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "preset.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "presets": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assignment_scope": {
+                  "type": "string"
+                },
+                "dept_id": {
+                  "description": "absent for a built-in",
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "description": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "perms": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "student_scope": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "role",
+                "student_scope",
+                "assignment_scope",
+                "perms"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "presets"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/presets"
+    },
+    {
+      "description": "Replace a department preset's role, scope and permissions. Members already seated from it are not affected: their permissions were copied when they were added. Built-ins are not edited here.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_scope": {
+            "description": "all or listed",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "perms": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "permission name to level; anything not named is denied",
+            "type": "object"
+          },
+          "preset_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "role": {
+            "description": "the roster role members get by default: student, instructor, ta, observer or assistant",
+            "type": "string"
+          },
+          "student_scope": {
+            "description": "all or listed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preset_id",
+          "role",
+          "student_scope",
+          "assignment_scope",
+          "perms"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "preset.update",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/presets/{preset_id}"
+    },
+    {
+      "description": "Start a draft submission to a published assignment. A draft can be edited freely; nothing is handed in until submission.submit. Once an attempt has been submitted it never changes, and submitting again means creating a new attempt here.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "student_member_id": {
+            "description": "whose work this is; defaults to the caller",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "assignment_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "submission.create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "submission_id",
+          "attempt"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/submissions"
+    },
+    {
+      "description": "One submission in full, with its text and the version of the instructions it was submitted under.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "submission_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "submission.get",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "attempt": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "files": {
+            "description": "submitted files; read each with document.get",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "document_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "document_id",
+                "title"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "instructions_version_id": {
+            "description": "the exact version of the instructions in force when it was submitted",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "description": "draft, submitted, late or missing",
+            "type": "string"
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "submitted_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "assignment_id",
+          "student_member_id",
+          "attempt",
+          "state",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/submissions/{submission_id}"
+    },
+    {
+      "description": "Submissions in the course that fall within the caller's scope: a student sees their own, a tutor those of the students they are listed for, a grader those for the assignments they are listed for. Bodies are left out of the list; read one with submission.get.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignment_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "submission.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "submissions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assignment_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "attempt": {
+                  "maximum": 2147483647,
+                  "minimum": -2147483648,
+                  "type": "integer"
+                },
+                "body": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "files": {
+                  "description": "submitted files; read each with document.get",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "document_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "document_id",
+                      "title"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "instructions_version_id": {
+                  "description": "the exact version of the instructions in force when it was submitted",
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "state": {
+                  "description": "draft, submitted, late or missing",
+                  "type": "string"
+                },
+                "student_member_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "submitted_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "assignment_id",
+                "student_member_id",
+                "attempt",
+                "state",
+                "created_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "submissions"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/submissions"
+    },
+    {
+      "description": "Correct whether a submitted attempt counts as late — an extension granted, a clock that was wrong. It is the only thing about a submitted attempt that can change, and it is for graders, not for the student.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "state": {
+            "description": "submitted or late",
+            "type": "string"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "submission_id",
+          "state"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "submission.set_lateness",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/submissions/{submission_id}/lateness"
+    },
+    {
+      "description": "Hand a draft in. It is marked late if the due date has passed, the version of the instructions in force right now is recorded with it, and from this moment it never changes. A hand-in that waits for approval counts from when it was asked for: it is judged late or not, and recorded under the instructions then in force, as of that moment. It hands in the draft as it was then, and is refused on approval if the draft has changed meanwhile, so propose it only after any change to the draft that is waiting for approval has been decided.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "description": "the text being handed in; if given, the draft must hold exactly this. A proposal records it, and is refused on approval if the draft has changed since",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "files": {
+            "description": "the submitted files being handed in, by document id; as for body",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "instructions_version_id": {
+            "description": "the version of the instructions the work is handed in under; if given, it must be the one students read now. A proposal records it, and is handed in under it when approved",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "submission_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "submission.submit",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "description": "submitted, or late if the due date had passed",
+            "type": "string"
+          },
+          "submitted_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "submitted_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/submissions/{submission_id}/submit"
+    },
+    {
+      "description": "Replace the text of a draft submission. Only drafts change; a submitted attempt is frozen.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "submission_id",
+          "body"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "submission.update_draft",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/submissions/{submission_id}"
+    },
+    {
+      "description": "Create a term: a named span of dates that course offerings belong to.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ends_on": {
+            "description": "YYYY-MM-DD",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "starts_on": {
+            "description": "YYYY-MM-DD",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "starts_on",
+          "ends_on"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "term.create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/terms"
+    },
+    {
+      "description": "Every term, most recent first. Any signed-in actor may read this.",
+      "input_schema": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "term.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "terms": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "ends_on": {
+                  "type": "string"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "starts_on": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "starts_on",
+                "ends_on"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "terms"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/terms"
+    }
+  ]
+}
