@@ -47,17 +47,34 @@ onMounted(async () => {
   }
 })
 
+/**
+ * Where to go once signed in. If this page has held someone else (they signed
+ * out, or their session lapsed, and now another person or an agent's token
+ * signs in here), load the page again: views cache names and look-ups, and
+ * only a fresh page is sure to hold nothing of the caller before. The button
+ * stays busy until it has gone.
+ */
+function proceed(): boolean {
+  if (session.startsAfresh()) {
+    window.location.assign(router.resolve(next.value).href)
+    return true
+  }
+  router.replace(next.value)
+  return false
+}
+
 async function signIn() {
   if (!(await formRef.value?.validate().catch(() => false))) return
   busy.value = true
   error.value = null
+  let leaving = false
   try {
     await session.signInWithPassword(form.email.trim(), form.password)
-    router.replace(next.value)
+    leaving = proceed()
   } catch (e) {
     error.value = e instanceof ApiError && e.isUnauthenticated ? t('auth.failed') : errorMessage(e)
   } finally {
-    busy.value = false
+    if (!leaving) busy.value = false
   }
 }
 
@@ -65,18 +82,21 @@ async function signInWithToken() {
   if (!token.value.trim()) return
   busy.value = true
   error.value = null
+  let leaving = false
   try {
     await session.signInWithToken(token.value)
-    router.replace(next.value)
+    leaving = proceed()
   } catch (e) {
     error.value = errorMessage(e)
   } finally {
-    busy.value = false
+    if (!leaving) busy.value = false
   }
 }
 
 function sso() {
-  window.location.href = ssoStartUrl(next.value)
+  // The full address of the page to come back to (with the app's base path);
+  // ssoStartUrl makes it absolute when Core is on another origin.
+  window.location.href = ssoStartUrl(router.resolve(next.value).href)
 }
 </script>
 

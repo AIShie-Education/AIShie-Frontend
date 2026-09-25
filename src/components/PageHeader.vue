@@ -1,24 +1,47 @@
 <script setup lang="ts">
+import { Comment, Fragment, Text, type VNode } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 defineProps<{ title: string; subtitle?: string; back?: string | object }>()
+const { t } = useI18n()
+
+/**
+ * Whether what a slot gave holds anything to show. A slot passed with every
+ * child v-if'd away still exists, and would leave an empty row behind.
+ */
+function filled(nodes: VNode[] | undefined): boolean {
+  return !!nodes?.some((n) => {
+    if (n.type === Comment) return false
+    if (n.type === Text) return typeof n.children === 'string' && n.children.trim() !== ''
+    if (n.type === Fragment) return Array.isArray(n.children) && filled(n.children as VNode[])
+    return true
+  })
+}
 </script>
 
 <template>
   <div class="page-header">
     <div class="page-header__main">
-      <router-link v-if="back" :to="back" class="page-header__back">
-        <el-icon><ArrowLeft /></el-icon>
+      <router-link
+        v-if="back"
+        :to="back"
+        class="page-header__back"
+        :aria-label="t('common.actions.back')"
+        :title="t('common.actions.back')"
+      >
+        <el-icon aria-hidden="true"><ArrowLeft /></el-icon>
       </router-link>
       <div class="page-header__text">
         <h1 class="page-header__title">
           {{ title }}
           <slot name="tags" />
         </h1>
-        <p v-if="subtitle || $slots.subtitle" class="page-header__subtitle">
+        <p v-if="subtitle || filled($slots.subtitle?.())" class="page-header__subtitle">
           <slot name="subtitle">{{ subtitle }}</slot>
         </p>
       </div>
     </div>
-    <div v-if="$slots.default" class="page-header__actions">
+    <div v-if="filled($slots.default?.())" class="page-header__actions">
       <slot />
     </div>
   </div>

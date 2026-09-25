@@ -58,7 +58,7 @@ function leaves(tree, prefix = '') {
 }
 
 function placeholders(s) {
-  return [...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
+  return [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort().join(',')
 }
 
 const problems = []

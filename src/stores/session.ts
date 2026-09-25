@@ -3,12 +3,22 @@
 // A browser signs in with a session cookie it cannot read, so "am I signed
 // in" is answered by asking Core who the caller is (me.get). A pasted API
 // token is the other way in, for seeing the system as an agent sees it.
+//
+// Everything else the page holds (the open course, the seat's permissions,
+// names and look-ups cached by the views) belongs to one caller. When the
+// caller goes, the course store is dropped here; and since views keep caches
+// of their own, the next sign-in in this tab starts the page again from
+// nothing (see startsAfresh and LoginView).
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ApiError, bearer, login, logout as apiLogout, read } from '@/api/http'
 import type { Me, Membership } from '@/api/types'
+import { useCourseStore } from './course'
 
 export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut'
+
+/** Where the administration pages keep each administrator's actors seen recently. */
+const RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
 
 export const useSessionStore = defineStore('session', () => {
   const me = ref<Me | null>(null)
@@ -16,6 +26,8 @@ export const useSessionStore = defineStore('session', () => {
   const status = ref<SessionStatus>('unknown')
   const usingToken = ref(!!bearer.get())
   let loading: Promise<void> | null = null
+  /** Whether this page has held a caller who has since gone. */
+  let heldCaller = false
 
   const isRoot = computed(() => me.value?.platform_role === 'root')
   const isAdmin = computed(() => me.value?.platform_role === 'root' || me.value?.platform_role === 'admin')
@@ -52,6 +64,7 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function signInWithPassword(email: string, password: string) {
+    forgetCaller()
     bearer.set(null)
     usingToken.value = false
     await login(email, password)
@@ -60,6 +73,7 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function signInWithToken(token: string) {
+    forgetCaller()
     bearer.set(token.trim())
     usingToken.value = true
     status.value = 'unknown'
@@ -87,13 +101,48 @@ export const useSessionStore = defineStore('session', () => {
 
   /** Forgets everything about the caller, as when Core says the session is over. */
   function clear() {
-    me.value = null
-    memberships.value = []
+    forgetCaller()
+    forgetStoredLists()
     status.value = 'signedOut'
     if (usingToken.value) {
       bearer.set(null)
       usingToken.value = false
     }
+  }
+
+  /**
+   * Drops the lists views keep in this browser for one caller, so that none
+   * outlives a sign-out or the session's end: the administration pages'
+   * actors seen recently (adminShared's useRecentActors).
+   */
+  function forgetStoredLists() {
+    try {
+      const doomed: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key?.startsWith(RECENT_ACTORS_PREFIX)) doomed.push(key)
+      }
+      for (const key of doomed) localStorage.removeItem(key)
+    } catch {
+      /* no storage: nothing was kept */
+    }
+  }
+
+  /** Drops what this store and the course store hold for the caller. */
+  function forgetCaller() {
+    if (me.value) heldCaller = true
+    me.value = null
+    memberships.value = []
+    useCourseStore().close()
+  }
+
+  /**
+   * Whether the page should be loaded again once someone signs in: it has
+   * held another caller, and views keep caches (names, look-ups, the event
+   * feed's) that only a fresh page is sure to be rid of.
+   */
+  function startsAfresh(): boolean {
+    return heldCaller
   }
 
   return {
@@ -112,5 +161,6 @@ export const useSessionStore = defineStore('session', () => {
     signInWithToken,
     signOut,
     clear,
+    startsAfresh,
   }
 })

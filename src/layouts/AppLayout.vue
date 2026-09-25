@@ -2,13 +2,14 @@
 // The frame around every signed-in page: the caller's courses and, for
 // platform administrators, the administration pages on the left; language,
 // theme and the account menu on top.
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore, type Theme } from '@/stores/ui'
 import { LOCALES, type Locale } from '@/i18n'
 import StatusTag from '@/components/StatusTag.vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 
 const session = useSessionStore()
 const ui = useUiStore()
@@ -16,16 +17,8 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const narrow = ref(false)
+const narrow = useMediaQuery('(max-width: 899px)')
 const drawer = ref(false)
-function measure() {
-  narrow.value = window.innerWidth < 900
-}
-onMounted(() => {
-  measure()
-  window.addEventListener('resize', measure)
-})
-onUnmounted(() => window.removeEventListener('resize', measure))
 watch(
   () => route.fullPath,
   () => (drawer.value = false),
@@ -78,7 +71,11 @@ watch(
   <el-container class="app-shell">
     <component
       :is="narrow ? 'el-drawer' : 'el-aside'"
-      v-bind="narrow ? { modelValue: drawer, direction: 'ltr', size: '280px', withHeader: false } : { width: '264px' }"
+      v-bind="
+        narrow
+          ? { modelValue: drawer, direction: 'ltr', size: '280px', withHeader: false, appendToBody: true, class: 'app-nav-drawer' }
+          : { width: '264px' }
+      "
       class="app-aside"
       @update:model-value="(v: boolean) => (drawer = v)"
     >
@@ -138,7 +135,12 @@ watch(
           <span class="app-header__title">{{ pageTitle }}</span>
         </div>
         <div class="app-header__right">
-          <el-tag v-if="session.usingToken" type="warning" effect="plain" size="small">{{ t('layout.tokenMode') }}</el-tag>
+          <el-tooltip v-if="session.usingToken" :content="t('layout.tokenMode')" placement="bottom">
+            <el-tag type="warning" effect="plain" size="small" class="app-header__token">
+              <el-icon><Key /></el-icon>
+              <span class="app-header__token-text">{{ t('layout.tokenMode') }}</span>
+            </el-tag>
+          </el-tooltip>
 
           <el-dropdown trigger="click" @command="(l: Locale) => (ui.locale = l)">
             <el-button text circle :aria-label="t('common.nav.language')">
@@ -201,10 +203,6 @@ watch(
 }
 .app-aside {
   border-right: 1px solid var(--el-border-color-light);
-  background: var(--app-aside-bg);
-}
-:deep(.el-drawer__body) {
-  padding: 0;
   background: var(--app-aside-bg);
 }
 .app-aside__inner {
@@ -320,6 +318,22 @@ watch(
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.app-header__token :deep(.el-tag__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+@media (max-width: 600px) {
+  .app-header__token-text {
+    display: none;
+  }
+}
+.app-header__left {
+  flex: 1 1 auto;
+}
+.app-header__right {
+  flex-shrink: 0;
 }
 .app-user {
   display: flex;
