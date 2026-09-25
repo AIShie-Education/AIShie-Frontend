@@ -691,7 +691,7 @@
       "path": "/v1/courses/{course_id}/actions/{action_id}/review"
     },
     {
-      "description": "One actor's registration: who they are, their standing, and who registered them.",
+      "description": "One actor's registration: who they are, their standing, who registered them, and how they can sign in.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -730,9 +730,23 @@
               "string"
             ]
           },
+          "has_password": {
+            "type": "boolean"
+          },
+          "has_sso": {
+            "description": "an identity at the identity provider is linked (actor.link_sso)",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "type": "string"
+          },
+          "invite_expires_at": {
+            "description": "when the invitation not yet taken up expires, which may have passed; absent when there is none",
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "kind": {
             "type": "string"
@@ -752,11 +766,61 @@
           "kind",
           "display_name",
           "status",
-          "created_at"
+          "created_at",
+          "has_password",
+          "has_sso"
         ],
         "type": "object"
       },
       "path": "/v1/actors/{actor_id}"
+    },
+    {
+      "description": "Invite a registered person to choose their password. The token is for the front end's page that takes invitations; the person opens it, chooses a password there (POST /v1/auth/invite) and is signed in. It works once, until it expires, and only the newest invitation works: inviting again replaces it. Taken up by someone who has a password already, it replaces that password. It is withdrawn when the person sets a password some other way, and when their email changes. The person needs an email, which is what they will sign in with (actor.update gives one). An agent is given a token instead (actor.issue_token).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expires_in_days": {
+            "description": "default 7, at most 30",
+            "type": [
+              "null",
+              "integer"
+            ]
+          }
+        },
+        "required": [
+          "actor_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "actor.invite",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "description": "what the person will sign in with",
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "token": {
+            "description": "what the invitation link carries; shown once, and a replay of this call comes back without it",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors/{actor_id}/invite"
     },
     {
       "description": "Issue an API token for another actor — how a newly registered agent gets its first credential, since it cannot sign in to ask for one. The token is returned once and only its hash is kept.",
@@ -859,6 +923,138 @@
       "path": "/v1/actors/{actor_id}/sso"
     },
     {
+      "description": "Everyone registered, people and agents, oldest first, with how each can sign in. The system actor, which runs the background jobs, is not listed.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "description": "human or agent",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          },
+          "search": {
+            "description": "a piece of the name or of the email, in any case",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "description": "active or suspended",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "actor.list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actors": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "created_at": {
+                  "type": "string"
+                },
+                "created_by_actor_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "display_name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "has_password": {
+                  "type": "boolean"
+                },
+                "has_sso": {
+                  "description": "an identity at the identity provider is linked (actor.link_sso)",
+                  "type": "boolean"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "invite_expires_at": {
+                  "description": "when the invitation not yet taken up expires, which may have passed; absent when there is none",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "platform_role": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "display_name",
+                "status",
+                "created_at",
+                "has_password",
+                "has_sso"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "actors"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors"
+    },
+    {
       "description": "Lift a suspension. The actor's memberships and credentials work again as they were.",
       "input_schema": {
         "additionalProperties": false,
@@ -891,7 +1087,7 @@
       "path": "/v1/actors/{actor_id}/reactivate"
     },
     {
-      "description": "Register a person or an agent. An actor can do nothing until it is seated in a course. An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token.",
+      "description": "Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -972,6 +1168,103 @@
         "type": "object"
       },
       "path": "/v1/actors/{actor_id}/suspend"
+    },
+    {
+      "description": "Correct an actor's display name or email, or give an email to a person registered without one, so that they can sign in with a password. What is left out stays as it is. A change of email withdraws an invitation waiting (actor.invite): it went to the old one.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "display_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "description": "what a person signs in with; it can be changed, not removed",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "actor_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "actor.update",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "created_by_actor_id": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "has_password": {
+            "type": "boolean"
+          },
+          "has_sso": {
+            "description": "an identity at the identity provider is linked (actor.link_sso)",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "invite_expires_at": {
+            "description": "when the invitation not yet taken up expires, which may have passed; absent when there is none",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "platform_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "display_name",
+          "status",
+          "created_at",
+          "has_password",
+          "has_sso"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/actors/{actor_id}"
     },
     {
       "description": "Create an assignment. It starts unpublished: students do not see it, and cannot submit to it, until assignment.publish. title and points_possible are required.",

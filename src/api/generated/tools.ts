@@ -204,7 +204,7 @@ export interface ActionReviewOut {
   review_state: string
 }
 
-/** actor.get (read): One actor's registration: who they are, their standing, and who registered them. */
+/** actor.get (read): One actor's registration: who they are, their standing, who registered them, and how they can sign in. */
 export interface ActorGetIn {
   actor_id: string
 }
@@ -213,10 +213,39 @@ export interface ActorGetOut {
   created_by_actor_id?: null | string
   display_name: string
   email?: null | string
+  has_password: boolean
+  /**
+   * an identity at the identity provider is linked (actor.link_sso)
+   */
+  has_sso: boolean
   id: string
+  /**
+   * when the invitation not yet taken up expires, which may have passed; absent when there is none
+   */
+  invite_expires_at?: null | string
   kind: string
   platform_role?: null | string
   status: string
+}
+
+/** actor.invite (write): Invite a registered person to choose their password. The token is for the front end's page that takes invitations; the person opens it, chooses a password there (POST /v1/auth/invite) and is signed in. It works once, until it expires, and only the newest invitation works: inviting again replaces it. Taken up by someone who has a password already, it replaces that password. It is withdrawn when the person sets a password some other way, and when their email changes. The person needs an email, which is what they will sign in with (actor.update gives one). An agent is given a token instead (actor.issue_token). */
+export interface ActorInviteIn {
+  actor_id: string
+  /**
+   * default 7, at most 30
+   */
+  expires_in_days?: null | number
+}
+export interface ActorInviteOut {
+  /**
+   * what the person will sign in with
+   */
+  email: string
+  expires_at: string
+  /**
+   * what the invitation link carries; shown once, and a replay of this call comes back without it
+   */
+  token?: string
 }
 
 /** actor.issue_token (write): Issue an API token for another actor — how a newly registered agent gets its first credential, since it cannot sign in to ask for one. The token is returned once and only its hash is kept. */
@@ -251,6 +280,54 @@ export interface ActorLinkSsoOut {
   credential_id: string
 }
 
+/** actor.list (read): Everyone registered, people and agents, oldest first, with how each can sign in. The system actor, which runs the background jobs, is not listed. */
+export interface ActorListIn {
+  /**
+   * the id of the last item already seen
+   */
+  after?: null | string
+  /**
+   * human or agent
+   */
+  kind?: null | string
+  /**
+   * at most this many items; default 50, maximum 200
+   */
+  limit?: number
+  /**
+   * a piece of the name or of the email, in any case
+   */
+  search?: null | string
+  /**
+   * active or suspended
+   */
+  status?: null | string
+}
+export interface ActorListOut {
+  actors:
+    | null
+    | {
+        created_at: string
+        created_by_actor_id?: null | string
+        display_name: string
+        email?: null | string
+        has_password: boolean
+        /**
+         * an identity at the identity provider is linked (actor.link_sso)
+         */
+        has_sso: boolean
+        id: string
+        /**
+         * when the invitation not yet taken up expires, which may have passed; absent when there is none
+         */
+        invite_expires_at?: null | string
+        kind: string
+        platform_role?: null | string
+        status: string
+      }[]
+  next?: null | string
+}
+
 /** actor.reactivate (write): Lift a suspension. The actor's memberships and credentials work again as they were. */
 export interface ActorReactivateIn {
   actor_id: string
@@ -259,7 +336,7 @@ export interface ActorReactivateOut {
   ok: boolean
 }
 
-/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. */
+/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. */
 export interface ActorRegisterIn {
   display_name: string
   /**
@@ -285,6 +362,35 @@ export interface ActorSuspendIn {
 }
 export interface ActorSuspendOut {
   ok: boolean
+}
+
+/** actor.update (write): Correct an actor's display name or email, or give an email to a person registered without one, so that they can sign in with a password. What is left out stays as it is. A change of email withdraws an invitation waiting (actor.invite): it went to the old one. */
+export interface ActorUpdateIn {
+  actor_id: string
+  display_name?: null | string
+  /**
+   * what a person signs in with; it can be changed, not removed
+   */
+  email?: null | string
+}
+export interface ActorUpdateOut {
+  created_at: string
+  created_by_actor_id?: null | string
+  display_name: string
+  email?: null | string
+  has_password: boolean
+  /**
+   * an identity at the identity provider is linked (actor.link_sso)
+   */
+  has_sso: boolean
+  id: string
+  /**
+   * when the invitation not yet taken up expires, which may have passed; absent when there is none
+   */
+  invite_expires_at?: null | string
+  kind: string
+  platform_role?: null | string
+  status: string
 }
 
 /** assignment.create (write): Create an assignment. It starts unpublished: students do not see it, and cannot submit to it, until assignment.publish. title and points_possible are required. */
@@ -1832,11 +1938,14 @@ export interface ToolMap {
   'action.list_proposed': { in: ActionListProposedIn; out: ActionListProposedOut; kind: 'read' }
   'action.review': { in: ActionReviewIn; out: ActionReviewOut; kind: 'write' }
   'actor.get': { in: ActorGetIn; out: ActorGetOut; kind: 'read' }
+  'actor.invite': { in: ActorInviteIn; out: ActorInviteOut; kind: 'write' }
   'actor.issue_token': { in: ActorIssueTokenIn; out: ActorIssueTokenOut; kind: 'write' }
   'actor.link_sso': { in: ActorLinkSsoIn; out: ActorLinkSsoOut; kind: 'write' }
+  'actor.list': { in: ActorListIn; out: ActorListOut; kind: 'read' }
   'actor.reactivate': { in: ActorReactivateIn; out: ActorReactivateOut; kind: 'write' }
   'actor.register': { in: ActorRegisterIn; out: ActorRegisterOut; kind: 'write' }
   'actor.suspend': { in: ActorSuspendIn; out: ActorSuspendOut; kind: 'write' }
+  'actor.update': { in: ActorUpdateIn; out: ActorUpdateOut; kind: 'write' }
   'assignment.create': { in: AssignmentCreateIn; out: AssignmentCreateOut; kind: 'write' }
   'assignment.get': { in: AssignmentGetIn; out: AssignmentGetOut; kind: 'read' }
   'assignment.list': { in: AssignmentListIn; out: AssignmentListOut; kind: 'read' }
@@ -1913,11 +2022,14 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'action.list_proposed': { method: 'GET', path: '/v1/courses/{course_id}/actions/proposed', kind: 'read' },
   'action.review': { method: 'POST', path: '/v1/courses/{course_id}/actions/{action_id}/review', kind: 'write' },
   'actor.get': { method: 'GET', path: '/v1/actors/{actor_id}', kind: 'read' },
+  'actor.invite': { method: 'POST', path: '/v1/actors/{actor_id}/invite', kind: 'write' },
   'actor.issue_token': { method: 'POST', path: '/v1/actors/{actor_id}/tokens', kind: 'write' },
   'actor.link_sso': { method: 'POST', path: '/v1/actors/{actor_id}/sso', kind: 'write' },
+  'actor.list': { method: 'GET', path: '/v1/actors', kind: 'read' },
   'actor.reactivate': { method: 'POST', path: '/v1/actors/{actor_id}/reactivate', kind: 'write' },
   'actor.register': { method: 'POST', path: '/v1/actors', kind: 'write' },
   'actor.suspend': { method: 'POST', path: '/v1/actors/{actor_id}/suspend', kind: 'write' },
+  'actor.update': { method: 'POST', path: '/v1/actors/{actor_id}', kind: 'write' },
   'assignment.create': { method: 'POST', path: '/v1/courses/{course_id}/assignments', kind: 'write' },
   'assignment.get': { method: 'GET', path: '/v1/courses/{course_id}/assignments/{assignment_id}', kind: 'read' },
   'assignment.list': { method: 'GET', path: '/v1/courses/{course_id}/assignments', kind: 'read' },
