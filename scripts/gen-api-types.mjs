@@ -32,8 +32,10 @@ if (fromIdx !== -1) {
   const res = await fetch(`${base}/v1/tools`)
   if (!res.ok) throw new Error(`GET ${base}/v1/tools: ${res.status}`)
   const body = await res.json()
-  catalogue = { tools: [...body.tools].sort((a, b) => a.name.localeCompare(b.name)) }
-  const text = JSON.stringify(sortKeys(catalogue), null, 2) + '\n'
+  // The types are made from the catalogue as the snapshot keeps it, keys
+  // sorted, so that they come out the same with --from as without it.
+  catalogue = sortKeys({ tools: [...body.tools].sort((a, b) => a.name.localeCompare(b.name)) })
+  const text = JSON.stringify(catalogue, null, 2) + '\n'
   if (check) {
     const kept = await readFile(snapshot, 'utf8')
     if (kept === text) {
