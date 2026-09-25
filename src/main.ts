@@ -8,6 +8,7 @@ import './styles/main.css'
 
 import App from './App.vue'
 import { router } from './router'
+import { installChunkReload } from './router/chunkReload'
 import { i18n } from './i18n'
 import { onUnauthenticated } from './api/http'
 import { useSessionStore } from './stores/session'
@@ -20,6 +21,10 @@ app.use(ElementPlus)
 for (const [name, component] of Object.entries(ElementPlusIcons)) {
   app.component(name, component)
 }
+// A deploy removes the previous build's chunks: a tab still on it reloads at
+// the route it was going to, once, instead of failing to open that view.
+// Installed before the router starts, so the first navigation is covered too.
+installChunkReload(router)
 app.use(router)
 
 // Core says the caller is not signed in (the session lapsed, or was revoked):
