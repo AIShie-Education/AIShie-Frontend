@@ -1,0 +1,158 @@
+<script setup lang="ts">
+// The grades given for one submission, newest first. Those who grade see
+// drafts and superseded grades as well; everyone else sees the posted one.
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { ApiError } from '@/api/http'
+import type { Decimal, GradeSummary } from '@/api/types'
+import AsyncState from '@/components/AsyncState.vue'
+import MemberName from '@/components/MemberName.vue'
+import StatusTag from '@/components/StatusTag.vue'
+import TimeText from '@/components/TimeText.vue'
+import { formatDecimal, formatPercent } from '@/utils/format'
+
+const props = defineProps<{
+  courseId: string
+  assignmentId: string
+  studentId: string
+  grades: GradeSummary[]
+  pointsPossible?: Decimal | null
+  loading?: boolean
+  error?: ApiError | null
+  /** The student looking at their own work. */
+  own?: boolean
+}>()
+const emit = defineEmits<{ retry: [] }>()
+const { t } = useI18n()
+
+const sorted = computed(() => [...props.grades].sort((a, b) => b.created_at.localeCompare(a.created_at)))
+const hasDraft = computed(() => props.grades.some((g) => g.state === 'draft'))
+const forbidden = computed(() => !!props.error?.isForbidden)
+</script>
+
+<template>
+  <section class="app-card">
+    <h2 class="app-card__title">
+      <span>{{ t('submissions.grades.title') }}</span>
+      <router-link
+        v-if="!own && !forbidden"
+        class="sub-grades__all"
+        :to="{ name: 'course-grades', params: { courseId }, query: { assignment: assignmentId, student: studentId } }"
+      >
+        {{ t('submissions.grades.allLink') }}
+      </router-link>
+    </h2>
+    <p v-if="forbidden" class="app-muted sub-grades__none">{{ t('submissions.grades.forbidden') }}</p>
+    <AsyncState
+      v-else
+      :loading="loading && !grades.length"
+      :error="error"
+      @retry="emit('retry')"
+    >
+      <p v-if="!grades.length" class="app-muted sub-grades__none">
+        {{ own ? t('submissions.grades.emptyStudent') : t('submissions.grades.empty') }}
+      </p>
+      <ul v-else class="sub-grades">
+        <li v-for="g in sorted" :key="g.id">
+          <router-link
+            :to="{ name: 'course-grade', params: { courseId, gradeId: g.id } }"
+            class="sub-grades__row"
+            :class="{ 'is-superseded': g.state === 'superseded' }"
+          >
+            <div class="sub-grades__score">
+              <span class="sub-grades__value">{{ formatDecimal(g.score, 4) }}</span>
+              <span v-if="pointsPossible !== undefined && pointsPossible !== null" class="app-muted">
+                / {{ formatDecimal(pointsPossible, 4) }} · {{ formatPercent(g.score, pointsPossible) }}
+              </span>
+            </div>
+            <StatusTag vocab="gradeState" :value="g.state" />
+            <div class="sub-grades__meta">
+              <span v-if="!own">
+                <span class="app-muted">{{ t('submissions.grades.grader') }}</span>
+                <MemberName :id="g.grader_member_id" show-kind />
+              </span>
+              <span>
+                <span class="app-muted">{{ t('submissions.grades.entered') }}</span>
+                <TimeText :value="g.created_at" />
+              </span>
+              <span v-if="g.posted_at">
+                <span class="app-muted">{{ t('submissions.grades.posted') }}</span>
+                <TimeText :value="g.posted_at" />
+              </span>
+            </div>
+            <el-icon class="sub-grades__chevron"><ArrowRight /></el-icon>
+          </router-link>
+        </li>
+      </ul>
+      <p v-if="hasDraft && !own" class="app-form-hint">{{ t('submissions.grades.draftHint') }}</p>
+    </AsyncState>
+  </section>
+</template>
+
+<style scoped>
+.sub-grades__all {
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+}
+.sub-grades__all:hover {
+  text-decoration: underline;
+}
+.sub-grades__none {
+  margin: 0;
+  font-size: 13px;
+}
+.sub-grades {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sub-grades__row {
+  display: flex;
+  align-items: center;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.sub-grades__row:hover {
+  border-color: var(--el-color-primary-light-5);
+  background: var(--el-fill-color-light);
+}
+.sub-grades__row.is-superseded {
+  opacity: 0.65;
+}
+.sub-grades__score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.sub-grades__value {
+  font-size: 18px;
+  font-weight: 600;
+}
+.sub-grades__meta {
+  display: flex;
+  gap: 4px 14px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  /* Beside the score where there is room, on a line of its own where not. */
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.sub-grades__meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sub-grades__chevron {
+  color: var(--el-text-color-secondary);
+}
+</style>

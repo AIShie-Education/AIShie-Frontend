@@ -1,0 +1,541 @@
+<script setup lang="ts">
+// A student's own work on one assignment: their attempts (submission.list),
+// the open draft — its text (submission.update_draft) and files
+// (document.create kind submission, document.archive) — handing it in
+// (submission.submit), starting again (submission.create), and the posted
+// grade of each attempt (grade.list).
+//
+// Handing in names what is being handed in: the draft's text and its files,
+// and the version of the instructions the student read. Core refuses the
+// hand-in if the draft holds anything else by then — an edit from another tab,
+// say — so nothing is handed in that the student did not see.
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import dayjs from 'dayjs'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { read, type UploadedFile } from '@/api/http'
+import type { Assignment, GradeSummary, Submission, SubmissionSummary } from '@/api/types'
+import { useAsync } from '@/composables/useAsync'
+import { useWrite } from '@/composables/useWrite'
+import { useCourseStore } from '@/stores/course'
+import { formatDecimal } from '@/utils/format'
+import AsyncState from '@/components/AsyncState.vue'
+import DocumentFileLink from '@/components/DocumentFileLink.vue'
+import UploadField from './UploadField.vue'
+import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import StatusTag from '@/components/StatusTag.vue'
+import TimeText from '@/components/TimeText.vue'
+import { allGrades, allSubmissions } from './useAssignmentData'
+
+const props = defineProps<{
+  courseId: string
+  assignment: Assignment
+  /** The version of the instructions students read now, when there are instructions and it is known. */
+  instructionsVersionId?: string | null
+}>()
+const { t } = useI18n()
+const course = useCourseStore()
+
+const me = computed(() => course.myMemberId)
+const canWrite = computed(
+  () => course.writable && course.membership?.status !== 'paused' && course.can('submission_write'),
+)
+const needsApproval = computed(() => course.needsApproval('submission_write'))
+
+// --- Attempts and grades --------------------------------------------------------
+const attempts = useAsync<SubmissionSummary[]>(
+  async () => {
+    if (!me.value) return []
+    const subs = await allSubmissions(props.courseId, { assignment_id: props.assignment.id, student_member_id: me.value })
+    return subs.sort((a, b) => b.attempt - a.attempt)
+  },
+  { watch: [() => props.assignment.id], keepData: true },
+)
+const grades = useAsync<GradeSummary[]>(
+  async () => {
+    if (!me.value || !course.can('grade_read')) return []
+    try {
+      return await allGrades(props.courseId, { assignment_id: props.assignment.id, student_member_id: me.value })
+    } catch {
+      return []
+    }
+  },
+  { watch: [() => props.assignment.id], keepData: true },
+)
+const list = computed(() => attempts.data.value ?? [])
+const latest = computed(() => list.value[0] ?? null)
+const draft = computed(() => list.value.find((s) => s.state === 'draft') ?? null)
+function gradeFor(submissionId: string): GradeSummary | undefined {
+  return (grades.data.value ?? []).find((g) => g.submission_id === submissionId && g.state === 'posted')
+}
+
+// --- The open draft ---------------------------------------------------------------
+const draftFull = useAsync<Submission | null>(
+  async () => (draft.value ? read('submission.get', { course_id: props.courseId, submission_id: draft.value.id }) : null),
+  { watch: [() => draft.value?.id], keepData: true },
+)
+const current = computed(() => {
+  const d = draftFull.data.value
+  return d && draft.value && d.id === draft.value.id ? d : null
+})
+const files = computed(() => current.value?.files ?? [])
+
+/** What the person is writing, and what Core holds. */
+const text = ref('')
+const serverBody = ref('')
+let syncedId: string | null = null
+watch(
+  () => draftFull.data.value,
+  (d) => {
+    if (!d) {
+      syncedId = null
+      return
+    }
+    const body = d.body ?? ''
+    // A reload (after a file was attached, say) must not throw away what is
+    // being typed; a different draft starts from its own text.
+    if (d.id !== syncedId || text.value === serverBody.value) text.value = body
+    serverBody.value = body
+    syncedId = d.id
+  },
+)
+const dirty = computed(() => !!current.value && text.value !== serverBody.value)
+const nothingToHandIn = computed(() => !text.value.trim() && !files.value.length)
+
+const pastDue = computed(() => !!props.assignment.due_at && dayjs(props.assignment.due_at).isBefore(dayjs()))
+
+/** Something that waits for approval, said until the person moves on. */
+const notice = ref<string | null>(null)
+
+// --- Starting -----------------------------------------------------------------------
+const createW = useWrite('submission.create')
+async function start() {
+  notice.value = null
+  const out = await createW.run(
+    { course_id: props.courseId, assignment_id: props.assignment.id },
+    { success: t('assignments.work.started') },
+  )
+  if (out?.status === 'proposed') notice.value = t('assignments.work.startProposed')
+  // Reloaded whatever came of it: a refusal because a draft is already open
+  // means there is one to show.
+  await attempts.reload()
+}
+const startLabel = computed(() => {
+  const l = latest.value
+  if (!l) return t('assignments.work.start')
+  if (l.state === 'missing') return t('assignments.work.startLate')
+  return t('assignments.work.startNext', { n: l.attempt + 1 })
+})
+
+// --- Saving the text ----------------------------------------------------------------
+const saveW = useWrite('submission.update_draft')
+async function save(): Promise<boolean> {
+  const d = draft.value
+  if (!d) return false
+  const body = text.value
+  const out = await saveW.run({ course_id: props.courseId, submission_id: d.id, body }, { success: t('assignments.work.saved') })
+  if (!out) return false
+  if (out.status === 'proposed') {
+    notice.value = t('assignments.work.savePending')
+    return false
+  }
+  serverBody.value = body
+  void draftFull.reload()
+  return true
+}
+
+// --- Files ------------------------------------------------------------------------------
+const uploads = ref<UploadedFile[]>([])
+const attachW = useWrite('document.create')
+const attaching = ref(false)
+watch(uploads, () => void attachAll())
+
+/** Attaches each uploaded file to the draft, in turn. One that fails stays listed, to try again or drop. */
+async function attachAll() {
+  const d = draft.value
+  if (attaching.value || !d || !uploads.value.length) return
+  attaching.value = true
+  let changed = false
+  try {
+    while (uploads.value.length) {
+      const f = uploads.value[0]!
+      const out = await attachW.run(
+        { course_id: props.courseId, kind: 'submission', submission_id: d.id, title: f.fileName, upload_token: f.uploadToken },
+        { success: t('assignments.work.fileAttached', { name: f.fileName }) },
+      )
+      if (!out) break
+      uploads.value = uploads.value.filter((x) => x.uploadToken !== f.uploadToken)
+      if (out.status === 'proposed') notice.value = t('assignments.work.fileProposed', { name: f.fileName })
+      changed = true
+    }
+  } finally {
+    attaching.value = false
+    if (changed) void draftFull.reload()
+  }
+}
+
+const archiveW = useWrite('document.archive')
+async function removeFile(f: { document_id: string; title: string }) {
+  try {
+    await ElMessageBox.confirm(t('assignments.work.removeFileConfirm', { name: f.title }), t('common.confirm.title'), {
+      type: 'warning',
+      confirmButtonText: t('common.actions.remove'),
+      cancelButtonText: t('common.actions.cancel'),
+    })
+  } catch {
+    return
+  }
+  const out = await archiveW.run(
+    { course_id: props.courseId, document_id: f.document_id },
+    { success: t('assignments.work.fileRemoved') },
+  )
+  if (out?.status === 'proposed') notice.value = t('assignments.work.removeProposed', { name: f.title })
+  if (out) void draftFull.reload()
+}
+
+// --- Handing in ---------------------------------------------------------------------------
+const submitW = useWrite('submission.submit')
+const busy = computed(
+  () => createW.pending.value || saveW.pending.value || submitW.pending.value || archiveW.pending.value || attaching.value,
+)
+
+async function handIn() {
+  const d = draft.value
+  if (!d || !current.value) return
+  notice.value = null
+  if (dirty.value && !(await save())) return
+  const lines = [t('assignments.work.handInConfirm')]
+  if (pastDue.value) lines.push(t('assignments.work.handInLate'))
+  if (needsApproval.value) lines.push(t('assignments.work.handInApproval'))
+  try {
+    await ElMessageBox.confirm(lines.join(' '), t('assignments.work.handInConfirmTitle', { n: d.attempt }), {
+      type: pastDue.value ? 'warning' : 'info',
+      confirmButtonText: t('assignments.work.handIn'),
+      cancelButtonText: t('common.actions.cancel'),
+    })
+  } catch {
+    return
+  }
+  const out = await submitW.run(
+    {
+      course_id: props.courseId,
+      submission_id: d.id,
+      // What is being handed in, as the person sees it: Core refuses if the
+      // draft holds anything else.
+      body: serverBody.value,
+      files: files.value.map((f) => f.document_id),
+      instructions_version_id: props.instructionsVersionId ?? undefined,
+    },
+    { success: false },
+  )
+  if (!out) {
+    void draftFull.reload()
+    return
+  }
+  if (out.status === 'executed') {
+    const late = out.result.state === 'late'
+    const msg = late ? t('assignments.work.handedInLate') : t('assignments.work.handedIn')
+    ElMessage({
+      type: late ? 'warning' : 'success',
+      message: out.reviewState === 'pending' ? `${msg} ${t('common.outcome.pendingReview')}` : msg,
+    })
+  } else {
+    notice.value = t('assignments.work.handInProposed')
+  }
+  await attempts.reload()
+  void grades.reload()
+}
+
+function reload() {
+  void attempts.reload()
+  void grades.reload()
+  void draftFull.reload()
+}
+defineExpose({ reload })
+</script>
+
+<template>
+  <section class="app-card my-work">
+    <h2 class="app-card__title">
+      <span>{{ t('assignments.work.title') }}</span>
+      <el-tag v-if="needsApproval" type="warning" size="small" disable-transitions>
+        {{ t('enums.level.confirm_required') }}
+      </el-tag>
+    </h2>
+
+    <el-alert v-if="notice" type="info" show-icon class="my-work__alert" @close="notice = null">
+      <template #title>
+        {{ notice }}
+        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('assignments.list.viewMyActions') }}</router-link>
+      </template>
+    </el-alert>
+
+    <AsyncState
+      :loading="attempts.loading.value && !attempts.data.value"
+      :error="attempts.error.value"
+      @retry="attempts.reload"
+    >
+      <!-- The open draft -->
+      <div v-if="draft" class="my-work__draft">
+        <div class="my-work__draft-head">
+          <strong>{{ t('assignments.work.draftTitle', { n: draft.attempt }) }}</strong>
+          <StatusTag vocab="submissionState" value="draft" />
+          <span class="app-muted my-work__started">
+            {{ t('assignments.work.startedAt') }} <TimeText :value="draft.created_at" relative />
+          </span>
+        </div>
+        <el-alert v-if="pastDue" type="warning" :closable="false" show-icon class="my-work__alert">
+          {{ t('assignments.work.pastDue') }}
+        </el-alert>
+
+        <AsyncState
+          :loading="draftFull.loading.value && !current"
+          :error="draftFull.error.value"
+          @retry="draftFull.reload"
+        >
+          <div class="my-work__label">{{ t('assignments.work.text') }}</div>
+          <MarkdownEditor
+            v-model="text"
+            :rows="10"
+            :disabled="!canWrite || busy"
+            :placeholder="t('assignments.work.placeholder')"
+          />
+
+          <div class="my-work__label my-work__label--files">{{ t('assignments.work.files') }}</div>
+          <ul v-if="files.length" class="my-work__files">
+            <li v-for="f in files" :key="f.document_id">
+              <DocumentFileLink :course-id="courseId" :document-id="f.document_id" :title="f.title" />
+              <el-button
+                link
+                type="danger"
+                :disabled="!canWrite || busy"
+                :aria-label="t('common.actions.remove')"
+                @click="removeFile(f)"
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </li>
+          </ul>
+          <p v-else class="app-muted my-work__nofiles">{{ t('assignments.work.noFiles') }}</p>
+          <UploadField v-model="uploads" :course-id="courseId" kind="submission" multiple :disabled="!canWrite || attaching" />
+          <div class="app-form-hint">
+            {{ t('assignments.work.attachHint') }}
+            <el-button v-if="uploads.length && !attaching" link type="primary" @click="attachAll">
+              {{ t('assignments.work.retryAttach') }}
+            </el-button>
+          </div>
+
+          <div class="my-work__actions">
+            <span class="my-work__saved app-muted">
+              <template v-if="dirty">
+                <el-icon><EditPen /></el-icon>{{ t('assignments.work.unsaved') }}
+              </template>
+              <template v-else>
+                <el-icon><Check /></el-icon>{{ t('assignments.work.allSaved') }}
+              </template>
+            </span>
+            <span class="app-toolbar__spacer" />
+            <el-button :disabled="!canWrite || !dirty || busy" :loading="saveW.pending.value" @click="save">
+              {{ t('assignments.work.save') }}
+            </el-button>
+            <el-tooltip :content="t('assignments.work.nothingToHandIn')" :disabled="!nothingToHandIn" placement="top">
+              <span>
+                <el-button
+                  type="primary"
+                  :disabled="!canWrite || nothingToHandIn || busy"
+                  :loading="submitW.pending.value"
+                  @click="handIn"
+                >
+                  <el-icon><Promotion /></el-icon>
+                  <span>{{ t('assignments.work.handIn') }}</span>
+                </el-button>
+              </span>
+            </el-tooltip>
+          </div>
+        </AsyncState>
+      </div>
+
+      <!-- Nothing open: start (again) -->
+      <div v-else class="my-work__start">
+        <p class="my-work__start-text">
+          <template v-if="!latest">{{ t('assignments.work.none') }}</template>
+          <template v-else-if="latest.state === 'missing'">{{ t('assignments.work.missingHint') }}</template>
+          <template v-else>{{ t('assignments.work.startNextHint') }}</template>
+        </p>
+        <el-alert v-if="pastDue && (!latest || latest.state === 'missing')" type="warning" :closable="false" show-icon class="my-work__alert">
+          {{ t('assignments.work.pastDue') }}
+        </el-alert>
+        <div class="my-work__start-actions">
+          <el-button
+            :type="latest ? 'default' : 'primary'"
+            :disabled="!canWrite || busy"
+            :loading="createW.pending.value"
+            @click="start"
+          >
+            <el-icon><EditPen /></el-icon>
+            <span>{{ startLabel }}</span>
+          </el-button>
+          <span v-if="!latest" class="app-form-hint">{{ t('assignments.work.startHint') }}</span>
+        </div>
+      </div>
+
+      <!-- Every attempt -->
+      <template v-if="list.some((s) => s.state !== 'draft')">
+        <h3 class="my-work__subtitle">{{ t('assignments.work.attempts') }}</h3>
+        <ul class="my-work__attempts">
+          <li v-for="s in list" :key="s.id" class="my-work__attempt">
+            <div class="my-work__attempt-main">
+              <strong>{{ t('assignments.work.attempt', { n: s.attempt }) }}</strong>
+              <StatusTag vocab="submissionState" :value="s.state" />
+              <span v-if="s.submitted_at" class="app-muted">
+                {{ t('assignments.work.handedInAt') }} <TimeText :value="s.submitted_at" />
+              </span>
+              <span v-else-if="s.state === 'draft'" class="app-muted">{{ t('assignments.work.beingEdited') }}</span>
+            </div>
+            <div class="my-work__attempt-side">
+              <template v-if="gradeFor(s.id)">
+                <router-link
+                  :to="{ name: 'course-grade', params: { courseId, gradeId: gradeFor(s.id)!.id } }"
+                  class="my-work__grade"
+                >
+                  <el-icon><Medal /></el-icon>
+                  {{ formatDecimal(gradeFor(s.id)!.score) }} / {{ formatDecimal(assignment.points_possible) }}
+                </router-link>
+              </template>
+              <span v-else-if="s.state !== 'draft'" class="app-muted">{{ t('assignments.work.noGrade') }}</span>
+              <router-link
+                v-if="s.state !== 'draft'"
+                :to="{ name: 'course-submission', params: { courseId, submissionId: s.id } }"
+              >
+                {{ t('assignments.work.viewSubmission') }}
+              </router-link>
+            </div>
+          </li>
+        </ul>
+      </template>
+    </AsyncState>
+  </section>
+</template>
+
+<style scoped>
+.my-work__alert {
+  margin-bottom: 12px;
+}
+.my-work__alert a {
+  margin-left: 6px;
+}
+/* Room for the close button beside a long notice. */
+.my-work__alert:deep(.el-alert__content) {
+  padding-right: 24px;
+}
+.my-work__draft {
+  display: flex;
+  flex-direction: column;
+}
+.my-work__draft-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.my-work__started {
+  font-size: 12px;
+}
+.my-work__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--el-text-color-regular);
+  margin-bottom: 4px;
+}
+.my-work__label--files {
+  margin-top: 16px;
+}
+.my-work__files {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.my-work__files li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.my-work__files li :deep(.el-button span) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60vw;
+}
+.my-work__nofiles {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.my-work__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+.my-work__saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.my-work__start-text {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.my-work__start-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.my-work__start-actions .app-form-hint {
+  margin-top: 0;
+}
+.my-work__subtitle {
+  margin: 20px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.my-work__attempts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.my-work__attempt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-top: 1px solid var(--el-border-color-lighter);
+  font-size: 13px;
+}
+.my-work__attempt-main,
+.my-work__attempt-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.my-work__attempt-side a {
+  text-decoration: none;
+}
+.my-work__grade {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+</style>

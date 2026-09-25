@@ -1,7 +1,155 @@
-// Route and navigation titles only; the views fill in the rest.
 export default {
+  title: 'Materials',
+  hintReader: 'The course material that has been published, in the order it is meant to be read.',
+  hintDrafts: 'You also see material that is not published yet. Students see only what is published.',
+  newMaterial: 'New material',
+  includeArchived: 'Show archived',
+  empty: 'No material has been published yet.',
+  emptyDrafts: 'No material yet.',
+  sortOrder: 'Sort order',
+  added: 'Added',
+  published: 'Published',
+  unpublished: 'Not published',
+  pendingLink: 'See my actions',
+  pending: {
+    create: '“{title}” was sent for approval. It will appear here once someone approves it.',
+    createPublish: 'Publishing is not part of that proposal: once it is approved, open the material and publish it.',
+  },
+  create: {
+    title: 'New material',
+    name: 'Title',
+    namePlaceholder: 'e.g. Week 3 — Loops',
+    sortOrder: 'Sort order',
+    sortOrderHint: 'Material is listed by this number, lowest first.',
+    body: 'Text',
+    bodyHint: 'Markdown. Leave it empty if the material is only a file.',
+    file: 'File',
+    fileHint: 'Optional. Readers download it exactly as it is.',
+    publish: 'Publish at once',
+    publishHint:
+      'Students can read it straight away. Otherwise it stays a draft, seen only by members who can read drafts, until it is published.',
+    publishNeedsContent: 'Add text or a file first: an empty document has nothing to publish.',
+    emptyNote: 'With neither text nor a file, an empty document is created; give it content later by adding a version.',
+    approvalNote:
+      'Writing material needs approval here: this is sent as a proposal, and nothing is created until someone approves it.',
+    submit: 'Create',
+    done: 'Material created',
+    donePublished: 'Material created and published',
+    notPublished: 'The material was created but not published. Open it to publish it.',
+  },
   document: {
     title: 'Document',
+    versionShort: 'v{seq}',
+    version: 'Version {seq}',
+    latest: 'Latest',
+    published: 'Published',
+    notPublished: 'Not published',
+    created: 'Created',
+    kind: 'Kind',
+    status: 'Status',
+    sortOrder: 'Sort order',
+    file: 'File',
+    downloadFile: 'Download the file',
+    checksum: 'Checksum',
+    noText: 'This version has no text; its content is the file.',
+    noVersion: 'There is no version of this document that you can read.',
+    emptyDoc: 'This document has no content yet.',
+    addFirst: 'Add the first version',
+    viewingOther: 'You are looking at version {seq}, which is not the current one.',
+    viewingPinned:
+      'This is version {seq}, not the one published now. You can still read it because a submission you can see was handed in under it.',
+    showCurrent: 'Show the current version',
+    about: 'About this document',
+    usedBy: 'Used by',
+    usedAs: {
+      instructions: 'The instructions for {assignment}',
+      rubric: 'The rubric for {assignment}',
+    },
+    notUsed: 'No assignment you can see refers to it.',
+    unpublishedAssignment: 'not published',
+    readers: {
+      none: 'Nothing is published yet, so only members who can read drafts see this document.',
+      other: 'This version is not published. Everyone who cannot read drafts reads version {seq}.',
+      otherUnknown: 'This version is not published. Everyone who cannot read drafts reads the published version.',
+      this: 'This is the published version: it is what everyone who may read this document sees.',
+    },
+    archivedAlert:
+      'This document is archived. It can no longer be edited or published, and it is withdrawn from everyone who cannot read drafts; a version that someone’s submission was handed in under stays readable to them.',
+    rules: {
+      material:
+        'Students read the published version. Members who can read drafts see the latest version and the history of every version.',
+      instructions:
+        'Instructions follow their assignment: students see them only once a published assignment refers to them, and read the published version. A submission stays pinned to the version that was published when it was handed in.',
+      rubric:
+        'A rubric is read only by members allowed to read rubrics, such as graders — not by students — and only once a published assignment refers to it. A grade stays pinned to the rubric version it was given under.',
+    },
+    owned: {
+      submission:
+        'This file was handed in with a submission. It has exactly one version and is managed with its submission.',
+      feedback: 'This file is feedback on a grade. It has exactly one version and is managed with its grade.',
+      openSubmission: 'Open the submission',
+      openGrade: 'Open the grade',
+    },
+    actions: {
+      newVersion: 'New version',
+      publishThis: 'Publish this version',
+      archive: 'Archive',
+    },
+    versions: {
+      title: 'Versions',
+      hint: 'Versions are never changed or removed. Publishing chooses which one is read, and can go back to an earlier one.',
+      empty: 'No versions yet.',
+      text: 'Text',
+      showing: 'Showing',
+      view: 'View',
+      publish: 'Publish',
+    },
+    publish: {
+      title: 'Publish version {seq}?',
+      body: {
+        material: 'From now on, students read version {seq} of “{title}”.',
+        instructions:
+          'From now on, students read version {seq} of “{title}”. Work already handed in stays pinned to the version it was handed in under.',
+        rubric:
+          'From now on, those who read rubrics are given version {seq} of “{title}”. Grades already given stay pinned to the version they were given under.',
+      },
+      older: 'This is earlier than the latest version: publishing it moves what is read back to it.',
+      unreleased:
+        'Its assignment is not published yet: students see nothing until it is, and news of this goes only to those who can see unpublished work.',
+      done: 'Version {seq} published',
+      pending:
+        'Publishing version {seq} was sent for approval. What is read now stays as it is until someone approves it.',
+    },
+    archive: {
+      title: 'Archive “{title}”?',
+      body: 'It disappears from lists and can no longer be edited or published. Everyone who cannot read drafts loses access to it. Nothing is deleted: a version that someone’s submission was handed in under stays readable to them.',
+      usedBy: 'The assignment “{assignment}” refers to it: those who cannot read drafts will no longer see it there.',
+      done: 'Document archived',
+      pending: 'Archiving was sent for approval. The document stays as it is until someone approves it.',
+    },
+    approvalNote:
+      'Writing material needs approval here: this becomes a proposal and takes effect only once someone approves it.',
+    addVersion: {
+      title: 'New version of “{title}”',
+      intro:
+        'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published.',
+      startsFrom: 'Starts from the text of version {seq}, the latest.',
+      startsEmpty: 'The document has no version yet.',
+      body: 'Text',
+      file: 'File',
+      fileHint: 'Optional. A version holds text, a file, or both.',
+      fileNotCarried:
+        'Version {seq} has a file ({type}, {size}). A new version does not carry it over: upload it again to keep it.',
+      publish: 'Publish this version at once',
+      publishHint: 'Otherwise it stays a draft until someone publishes it.',
+      unreleased: 'Its assignment is not published yet: news of this goes only to those who can see unpublished work.',
+      needsContent: 'Give the version text or a file.',
+      unchanged: 'Nothing has changed from version {seq}.',
+      submit: 'Save version',
+      done: 'New version saved',
+      donePublished: 'New version saved and published',
+      pending: 'The new version was sent for approval. It will be added once someone approves it.',
+      pendingPublish: 'The new version was sent for approval. Once approved, it is added and published.',
+    },
   },
-  title: 'Materials',
 }

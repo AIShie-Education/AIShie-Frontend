@@ -1,0 +1,276 @@
+<script setup lang="ts">
+// What an action is about, in a line: for a grade the score and whose work,
+// for a hand-in the student and assignment, for a new member who and as what,
+// for a decision the proposal it decides. Names are looked up where the
+// caller's seat can read them; otherwise the id is shown.
+import { computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useCourseStore } from '@/stores/course'
+import { formatDecimal } from '@/utils/format'
+import IdText from '@/components/IdText.vue'
+import MemberName from '@/components/MemberName.vue'
+import StatusTag from '@/components/StatusTag.vue'
+import ActionActor from './ActionActor.vue'
+import ActionTarget from './ActionTarget.vue'
+import MaybeLink from './MaybeLink.vue'
+import { isObject, payloadOf, routeFor, str, targetTypeLabel, typeLabel, type ActionRow } from './actionText'
+import { useLookup, useSpecs } from './lookups'
+
+const props = withDefaults(
+  defineProps<{
+    action: ActionRow
+    courseId: string
+    /** How deep in a chain of decisions this is; a decision's own target is shown once. */
+    depth?: number
+    /** Make the thing it is about a link. */
+    link?: boolean
+  }>(),
+  { depth: 0, link: false },
+)
+const { t, te } = useI18n()
+const course = useCourseStore()
+const specs = useSpecs()
+onMounted(() => void course.ensureAssignments())
+
+const p = computed(() => payloadOf(props.action))
+const type = computed(() => props.action.action_type)
+const tt = computed(() => props.action.target_type)
+const tid = computed(() => props.action.target_id ?? undefined)
+const group = computed(() => type.value.split('.')[0])
+
+const sub = useLookup(() => (tt.value === 'submission' ? specs.submission(props.courseId, tid.value) : null))
+const grade = useLookup(() => (tt.value === 'grade' ? specs.grade(props.courseId, tid.value) : null))
+const doc = useLookup(() => (tt.value === 'document' && tid.value ? specs.document(props.courseId, tid.value) : null))
+const about = useLookup(() =>
+  tt.value === 'action' && props.depth < 1 ? specs.action(props.courseId, tid.value) : null,
+)
+const needsComponents = computed(
+  () => tt.value === 'grade_component' || !!str(p.value.component_id) || group.value === 'component',
+)
+const comps = useLookup(() => (needsComponents.value ? specs.components(props.courseId) : null))
+/** The seat a member.add made, once it has been carried out. */
+const seatedId = computed(() => {
+  const r = props.action.result
+  return props.action.status === 'executed' && isObject(r) ? str(r.member_id) : undefined
+})
+
+const actor = useLookup(() =>
+  type.value === 'member.add' && !seatedId.value ? specs.actor(str(p.value.actor_id)) : null,
+)
+
+const studentId = computed(
+  () =>
+    sub.value?.value?.student_member_id ??
+    grade.value?.value?.student_member_id ??
+    str(p.value.student_member_id) ??
+    (type.value === 'submission.create' ? (props.action.member_id ?? undefined) : undefined),
+)
+const assignmentId = computed(
+  () =>
+    sub.value?.value?.assignment_id ??
+    grade.value?.value?.assignment_id ??
+    str(p.value.assignment_id) ??
+    (tt.value === 'assignment' ? tid.value : undefined),
+)
+const assignmentTitle = computed(() => course.assignmentTitle(assignmentId.value))
+const componentId = computed(
+  () => (tt.value === 'grade_component' ? tid.value : undefined) ?? str(p.value.component_id) ?? grade.value?.value?.component_id ?? undefined,
+)
+const componentName = computed(() => {
+  const id = componentId.value
+  if (!id) return undefined
+  return (comps.value?.value as { id: string; name: string }[] | undefined)?.find((c) => c.id === id)?.name
+})
+
+const score = computed(() => {
+  const s = p.value.score as number | string | undefined
+  if (s === undefined || s === null) return null
+  const of = p.value.out_of as number | string | undefined
+  return of !== undefined && of !== null
+    ? t('actions.summary.outOf', { score: formatDecimal(s), of: formatDecimal(of) })
+    : formatDecimal(s)
+})
+
+const docTitle = computed(() => str(p.value.title) ?? doc.value?.value?.title)
+const docKind = computed(() => str(p.value.kind) ?? doc.value?.value?.kind)
+
+const permChanges = computed(() => {
+  const perms = p.value.perms
+  if (!perms || typeof perms !== 'object') return []
+  return Object.entries(perms as Record<string, string>)
+})
+
+const newMemberAs = computed(() => {
+  const preset = str(p.value.preset)
+  if (preset) return te(`enums.role.${preset}`) ? t(`enums.role.${preset}`) : preset
+  const role = str(p.value.role)
+  if (role) return t(`enums.role.${role}`)
+  return null
+})
+
+const targetRoute = computed(() => (props.link ? routeFor(props.courseId, tt.value, tid.value) : null))
+const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
+</script>
+
+<template>
+  <span class="action-target">
+    <!-- Grades -->
+    <template v-if="type === 'grade.submit' || type === 'grade.regrade'">
+      <span v-if="score" class="action-target__score">{{ score }}</span>
+      <span v-if="studentId" class="action-target__part"><MemberName :id="studentId" /></span>
+      <MaybeLink v-if="assignmentTitle || componentName" :to="targetRoute" class="action-target__part action-target__name">
+        {{ assignmentTitle ?? componentName }}
+      </MaybeLink>
+      <span v-else-if="!studentId && (tid || str(p.submission_id))" class="action-target__part">
+        {{ targetTypeLabel(tid ? tt : 'submission') }} <IdText :id="tid ?? str(p.submission_id)" />
+      </span>
+    </template>
+
+    <template v-else-if="type === 'grade.post'">
+      <span v-if="assignmentTitle" class="action-target__part action-target__name">{{ assignmentTitle }}</span>
+      <span v-else-if="Array.isArray(p.grade_ids)" class="action-target__part">
+        {{ t('actions.summary.grades', { n: (p.grade_ids as unknown[]).length }, (p.grade_ids as unknown[]).length) }}
+      </span>
+      <el-tag v-if="p.treat_ungraded_as_zero" size="small" type="warning" effect="plain">
+        {{ t('actions.summary.ungradedZero') }}
+      </el-tag>
+    </template>
+
+    <!-- Submissions -->
+    <template v-else-if="group === 'submission'">
+      <span v-if="studentId" class="action-target__part"><MemberName :id="studentId" /></span>
+      <MaybeLink v-if="assignmentTitle" :to="targetRoute" class="action-target__part action-target__name">
+        {{ assignmentTitle }}
+      </MaybeLink>
+      <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
+      <StatusTag v-if="type === 'submission.set_lateness'" vocab="submissionState" :value="str(p.state)" />
+      <span v-if="Array.isArray(p.files) && p.files.length" class="action-target__muted">
+        {{ t('actions.summary.files', { n: p.files.length }, p.files.length) }}
+      </span>
+    </template>
+
+    <!-- Members -->
+    <template v-else-if="type === 'member.add'">
+      <MaybeLink v-if="seatedId" :to="link ? routeFor(courseId, 'member_id', seatedId) : null" class="action-target__part">
+        <MemberName :id="seatedId" />
+      </MaybeLink>
+      <span v-else class="action-target__part action-target__name">
+        <template v-if="actor?.value">{{ actor.value.display_name }}</template>
+        <IdText v-else :id="str(p.actor_id)" />
+      </span>
+      <span v-if="newMemberAs" class="action-target__muted">{{ t('actions.summary.newMember', { what: newMemberAs }) }}</span>
+    </template>
+    <template v-else-if="group === 'member'">
+      <MaybeLink :to="targetRoute" class="action-target__part">
+        <MemberName :id="tid" />
+      </MaybeLink>
+      <span v-for="[perm, level] in permChanges.slice(0, 3)" :key="perm" class="action-target__perm">
+        {{ t(`enums.perm.${perm}`) }} → <StatusTag vocab="level" :value="level" />
+      </span>
+      <span v-if="permChanges.length > 3" class="action-target__muted">+{{ permChanges.length - 3 }}</span>
+    </template>
+
+    <!-- Documents -->
+    <template v-else-if="group === 'document'">
+      <MaybeLink v-if="docTitle" :to="targetRoute" class="action-target__part action-target__name">
+        {{ docTitle }}
+      </MaybeLink>
+      <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
+      <StatusTag v-if="docKind" vocab="documentKind" :value="docKind" />
+    </template>
+
+    <!-- Assignments -->
+    <template v-else-if="group === 'assignment'">
+      <MaybeLink v-if="str(p.title) || assignmentTitle" :to="targetRoute" class="action-target__part action-target__name">
+        {{ str(p.title) ?? assignmentTitle }}
+      </MaybeLink>
+      <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
+    </template>
+
+    <!-- Grading scheme -->
+    <template v-else-if="group === 'component'">
+      <span v-if="str(p.name) || componentName" class="action-target__part action-target__name">
+        {{ str(p.name) ?? componentName }}
+      </span>
+      <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
+    </template>
+
+    <template v-else-if="group === 'course'">
+      <span class="action-target__part action-target__name">{{ course.course?.title ?? targetTypeLabel(tt) }}</span>
+    </template>
+
+    <!-- A decision or review about another action -->
+    <template v-else-if="type === 'action.decide' || type === 'action.review'">
+      <el-tag
+        v-if="type === 'action.decide'"
+        size="small"
+        :type="p.decision === 'approve' ? 'success' : 'danger'"
+        effect="plain"
+      >
+        {{ p.decision === 'approve' ? t('actions.decision.approveVerb') : t('actions.decision.rejectVerb') }}
+      </el-tag>
+      <StatusTag v-else vocab="reviewState" :value="str(p.outcome)" />
+      <template v-if="aboutAction">
+        <MaybeLink :to="link ? routeFor(courseId, 'action', aboutAction.id) : null" class="action-target__part action-target__name">
+          {{ typeLabel(aboutAction.action_type) }}
+        </MaybeLink>
+        <span class="action-target__muted">{{ t('actions.summary.of') }}</span>
+        <ActionActor :member-id="aboutAction.member_id" :actor-id="aboutAction.actor_id" />
+        <span class="action-target__nested">
+          <ActionTarget :action="aboutAction" :course-id="courseId" :depth="depth + 1" />
+        </span>
+      </template>
+      <span v-else class="action-target__part">{{ targetTypeLabel('action') }} <IdText :id="tid" /></span>
+    </template>
+
+    <template v-else>
+      <span class="action-target__part">{{ targetTypeLabel(tt) }} <IdText v-if="tid" :id="tid" /></span>
+    </template>
+  </span>
+</template>
+
+<style scoped>
+.action-target {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.action-target__part {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  word-break: break-word;
+}
+.action-target__name {
+  font-weight: 500;
+}
+.action-target__score {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--el-text-color-primary);
+  background: var(--el-fill-color);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.action-target__muted {
+  color: var(--el-text-color-secondary);
+}
+.action-target__perm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-text-color-regular);
+}
+.action-target__nested {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 8px;
+  border-left: 2px solid var(--el-border-color);
+}
+</style>
