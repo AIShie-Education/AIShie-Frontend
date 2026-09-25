@@ -58,6 +58,13 @@ const activeTab = computed(() => {
 
 const ready = computed(() => course.courseId === props.courseId && !!course.course)
 
+// An administrator refused a course they have no seat in has not done anything
+// wrong: a platform role opens no course, a seat does. Say so, and where the
+// seat is given, rather than only that they may not see it.
+const adminWithoutSeat = computed(
+  () => session.isAdmin && !course.membership && !!course.error?.isForbidden && course.courseId === props.courseId,
+)
+
 // Where the tabs do not fit (a phone), they scroll sideways: the active one
 // is kept in view, and each end fades while there is more beyond it. Wider
 // screens wrap them instead, so every tab is always in sight.
@@ -102,7 +109,21 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <div class="course-layout">
+    <el-result
+      v-if="adminWithoutSeat"
+      icon="info"
+      :title="t('layout.course.adminNoSeat.title')"
+      :sub-title="t('layout.course.adminNoSeat.body')"
+      class="course-layout__no-seat"
+    >
+      <template #extra>
+        <router-link :to="{ name: 'admin-course', params: { courseId } }">
+          <el-button type="primary">{{ t('layout.course.adminNoSeat.action') }}</el-button>
+        </router-link>
+      </template>
+    </el-result>
     <AsyncState
+      v-else
       :loading="course.loading && !ready"
       :error="course.error"
       @retry="course.open(courseId, true)"
@@ -178,6 +199,12 @@ onBeforeUnmount(() => observer?.disconnect())
 </template>
 
 <style scoped>
+.course-layout__no-seat :deep(.el-result__subtitle) {
+  max-width: 60ch;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
 .course-head {
   display: flex;
   align-items: flex-end;

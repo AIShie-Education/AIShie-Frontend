@@ -20,6 +20,8 @@ export interface Demo {
   course: {
     id: string
     root_component_id: string
+    term_id: string
+    dept_id: string
     components: { assignments: string; midterm: string }
     documents: { week1: string; week2: string; syllabus: string }
     assignments: { hw1: string; hw2: string }
