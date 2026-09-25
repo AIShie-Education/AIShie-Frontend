@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // What is waiting for the caller: proposals to decide and actions to review
 // (for a seat with action_decide), and draft grades not yet released (for a
-// seat that posts grades and reads them). Each is one page of its list — enough to say "12",
-// or "200+" — rather than the whole of it. A queue the seat turns out not to
-// be allowed to read is left out; if none is left, so is the card.
+// seat that posts grades and reads them). A queue the seat turns out not to
+// be allowed to read is left out; if none is left, so is the card. In an
+// archived course nothing can be decided or posted any more, so nothing is
+// waiting for anyone and the card is not shown.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw } from 'vue-router'
@@ -17,12 +18,15 @@ const course = useCourseStore()
 const { t } = useI18n()
 
 const PAGE = 200
-const decides = computed(() => course.can('action_decide'))
+/** How far the drafts are looked for: grade.list has no filter by state. */
+const DRAFT_PAGES = 25
+const decides = computed(() => course.writable && course.can('action_decide'))
 // grade.list is gated by grade_read; drafts are among what it lists for a seat that posts.
-const posts = computed(() => course.can('grade_post') && course.can('grade_read'))
+const posts = computed(() => course.writable && course.can('grade_post') && course.can('grade_read'))
 
 interface Count {
   n: number
+  /** There may be more than n: the list was not read to its end. */
   more: boolean
   /** When the oldest thing waiting began to wait. */
   oldest: string | null
@@ -32,9 +36,10 @@ function count(list: { created_at: string }[], more: boolean): Count {
   return { n: list.length, more, oldest }
 }
 
-// Both action queues are behind action_decide: the second is asked for only
-// once the first has been allowed, so a seat whose levels are unknown is
-// refused once, not twice.
+// Both action queues hold only what is waiting, so one page says "12" or
+// "200+". They are behind action_decide: the second is asked for only once
+// the first has been allowed, so a seat whose levels are unknown is refused
+// once, not twice.
 const queues = useAsync<{ proposals: Count; reviews: Count | ApiError } | null>(async () => {
   if (!decides.value) return null
   const p = await read('action.list_proposed', { course_id: props.courseId, limit: PAGE })
@@ -47,10 +52,21 @@ const queues = useAsync<{ proposals: Count; reviews: Count | ApiError } | null>(
   }
   return { proposals: count(p.actions ?? [], !!p.next), reviews }
 })
+// grade.list gives every grade the seat may see, oldest first — posted,
+// superseded and computed ones too, and each regrade or new draft adds one —
+// so the live drafts may be anywhere in it: it is read to its end, up to
+// DRAFT_PAGES pages, and a count cut short there says "n+".
 const drafts = useAsync<Count | null>(async () => {
   if (!posts.value) return null
-  const out = await read('grade.list', { course_id: props.courseId, limit: PAGE })
-  return count((out.grades ?? []).filter((g) => g.state === 'draft'), !!out.next)
+  const found: { created_at: string }[] = []
+  let after: string | undefined
+  for (let i = 0; i < DRAFT_PAGES; i++) {
+    const out = await read('grade.list', { course_id: props.courseId, limit: PAGE, after })
+    for (const g of out.grades ?? []) if (g.state === 'draft') found.push(g)
+    if (!out.next) return count(found, false)
+    after = out.next
+  }
+  return count(found, true)
 })
 
 interface Row {
@@ -62,9 +78,15 @@ interface Row {
   loading: boolean
   error: ApiError | null
   data: Count | null
+  /** Said under a count that was cut short. */
+  partial?: string
 }
 const rows = computed<Row[]>(() => {
-  const approvals: RouteLocationRaw = { name: 'course-approvals', params: { courseId: props.courseId } }
+  const approvals = (tab?: 'review'): RouteLocationRaw => ({
+    name: 'course-approvals',
+    params: { courseId: props.courseId },
+    query: tab ? { tab } : undefined,
+  })
   const q = queues.data.value
   const reviewsOut = q?.reviews
   const out: Row[] = []
@@ -74,7 +96,7 @@ const rows = computed<Row[]>(() => {
       icon: 'Stamp',
       label: t('overview.attention.proposals'),
       oldestLabel: t('overview.attention.oldestProposal'),
-      to: approvals,
+      to: approvals(),
       loading: queues.loading.value,
       error: queues.error.value,
       data: q?.proposals ?? null,
@@ -84,7 +106,7 @@ const rows = computed<Row[]>(() => {
       icon: 'View',
       label: t('overview.attention.reviews'),
       oldestLabel: t('overview.attention.oldestReview'),
-      to: approvals,
+      to: approvals('review'),
       loading: queues.loading.value,
       error: queues.error.value ?? (reviewsOut instanceof ApiError ? reviewsOut : null),
       data: reviewsOut && !(reviewsOut instanceof ApiError) ? reviewsOut : null,
@@ -100,13 +122,14 @@ const rows = computed<Row[]>(() => {
       loading: drafts.loading.value,
       error: drafts.error.value,
       data: drafts.data.value ?? null,
+      partial: t('overview.attention.draftsPartial', { n: PAGE * DRAFT_PAGES }),
     })
   }
   // A refusal means the queue is not this seat's to look at.
   return out.filter((r) => !(r.error && r.error.isForbidden))
 })
 const loading = computed(() => rows.value.some((r) => r.loading))
-const allClear = computed(() => !loading.value && rows.value.every((r) => !r.error && r.data?.n === 0))
+const allClear = computed(() => !loading.value && rows.value.every((r) => !r.error && r.data?.n === 0 && !r.data.more))
 function reloadAll() {
   if (decides.value) void queues.reload()
   if (posts.value) void drafts.reload()
@@ -131,17 +154,22 @@ function reloadAll() {
         :key="r.key"
         :to="r.to"
         class="attention__row"
-        :class="{ 'is-waiting': (r.data?.n ?? 0) > 0 }"
+        :class="{ 'is-waiting': !!r.data && (r.data.n > 0 || r.data.more) }"
       >
-        <span class="attention__icon"><el-icon><component :is="r.icon" /></el-icon></span>
+        <span class="attention__icon"
+          ><el-icon><component :is="r.icon" /></el-icon
+        ></span>
         <span class="attention__text">
           <span class="attention__label">{{ r.label }}</span>
           <span v-if="r.error" class="attention__sub attention__sub--error">
             {{ t('overview.attention.failed') }}
           </span>
-          <span v-else-if="r.data?.oldest" class="attention__sub">
-            {{ r.oldestLabel }} <TimeText :value="r.data.oldest" relative />
-          </span>
+          <template v-else>
+            <span v-if="r.data?.oldest" class="attention__sub">
+              {{ r.oldestLabel }} <TimeText :value="r.data.oldest" relative />
+            </span>
+            <span v-if="r.data?.more && r.partial" class="attention__sub">{{ r.partial }}</span>
+          </template>
         </span>
         <span class="attention__count">
           <el-icon v-if="r.loading" class="is-loading"><Loading /></el-icon>

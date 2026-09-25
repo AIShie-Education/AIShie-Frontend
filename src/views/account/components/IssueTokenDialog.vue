@@ -1,16 +1,21 @@
 <script setup lang="ts">
 // Making an API token for oneself (credential.issue_token). The token itself
-// is handed to the parent, which shows it once.
+// is handed to the parent, which shows it once. A token is the whole actor:
+// Core gates platform tools on the actor's platform role alone, whatever
+// credential the call came with, so an administrator's token administers.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { ToolOut } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
+import { useSessionStore } from '@/stores/session'
 import { DIALOG_WIDTH } from './credentials'
 
 const open = defineModel<boolean>({ default: false })
 const emit = defineEmits<{ issued: [out: ToolOut<'credential.issue_token'>]; proposed: [] }>()
 const { t } = useI18n()
+const session = useSessionStore()
+const platformRole = computed(() => session.me?.platform_role || null)
 
 const formRef = ref<FormInstance>()
 const form = reactive({ label: '', expiry: 'days' as 'never' | 'days', days: 90 as number | undefined })
@@ -74,6 +79,14 @@ async function submit() {
     :close-on-click-modal="!pending"
   >
     <p class="issue-intro">{{ t('account.issue.intro') }}</p>
+    <el-alert
+      v-if="platformRole"
+      type="warning"
+      :closable="false"
+      show-icon
+      :title="t('account.issue.platformRole', { role: t(`enums.platformRole.${platformRole}`) })"
+      class="issue-role"
+    />
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent>
       <el-form-item :label="t('account.issue.label')" prop="label">
         <el-input
@@ -118,6 +131,9 @@ async function submit() {
   margin: 0 0 16px;
   line-height: 1.6;
   color: var(--el-text-color-regular);
+}
+.issue-role {
+  margin: -4px 0 16px;
 }
 .issue-expiry {
   display: flex;

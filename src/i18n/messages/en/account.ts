@@ -9,7 +9,6 @@ export default {
   },
   profile: {
     title: 'Profile',
-    name: 'Name',
     kind: 'Kind',
     email: 'Email',
     noEmail: 'No email address',
@@ -24,11 +23,6 @@ export default {
     summary: 'No seats | Seated in one course | Seated in {n} courses',
     empty: 'You are not seated in any course yet.',
     hint: 'Each seat has its own role, reach and permissions, set by whoever seated you.',
-    course: 'Course',
-    role: 'Role',
-    seat: 'Seat',
-    courseStatus: 'Course status',
-    reach: 'Reach',
     students: 'Students: {scope}',
     assignments: 'Assignments: {scope}',
     expires: 'Seat expires',
@@ -40,7 +34,9 @@ export default {
     isSet: 'You can sign in with your email address and password.',
     setOn: 'Set',
     notSet: 'No password is set. You sign in another way: single sign-on, or a token.',
-    noEmail: 'This account has no email address, so a password cannot be used to sign in.',
+    noEmail:
+      'This account has no email address, so it cannot sign in with a password, which is always entered with one. It signs in with single sign-on or a token instead.',
+    unknown: 'Whether a password is set could not be read.',
     set: 'Set a password',
     change: 'Change password',
     dialogSet: 'Set a password',
@@ -61,10 +57,15 @@ export default {
     showInactive: 'Show revoked and expired ({n})',
     empty: 'No active credentials',
     thisTab: 'This tab',
-    noLabel: 'No label',
+    thisBrowser: 'This browser',
+    sessionVia: {
+      password: 'Signed in with a password',
+      sso: 'Signed in through {provider}',
+    },
     token: 'Token',
-    provider: 'Provider',
     subject: 'Account',
+    linkedBy: 'Linked by',
+    note: 'Note',
     created: 'Created',
     lastUsed: 'Last used',
     neverUsed: 'Never used',
@@ -77,7 +78,10 @@ export default {
       expired: 'Expired',
     },
     revoke: 'Revoke',
-    sessionNote: 'A browser session is made each time you sign in with a password or single sign-on. Which one belongs to this browser cannot be told from here.',
+    sessionNote:
+      'A browser session is made each time you sign in with a password or single sign-on. The one marked “This browser” is the only one used in the last few minutes: the one this page is using.',
+    sessionNoteUnsure:
+      'A browser session is made each time you sign in with a password or single sign-on. Which one this browser is using can be told only when no other has been used in the last few minutes.',
   },
   revoke: {
     title: 'Revoke this credential?',
@@ -85,16 +89,21 @@ export default {
     session: 'The browser signed in with this session is signed out on its next request.',
     sessionMaybeMine: 'If it is the session this browser is using, you will be signed out here as well.',
     current: 'This is the token this tab is signed in with: you will be signed out here.',
+    currentSession: 'This is the session this browser is signed in with: you will be signed out here.',
     password: 'You will no longer be able to sign in with your password, until you set a new one.',
-    sso: 'You will no longer be able to sign in through {provider}. Only an administrator can link it again.',
+    sso: 'You will no longer be able to sign in through {provider}, until an administrator links that identity to this account again.',
     irreversible: 'A revoked credential cannot be brought back.',
     confirm: 'Revoke',
     done: 'Revoked',
     signedOut: 'The token this tab used is revoked; you have been signed out.',
+    signedOutSession: 'This browser’s session is revoked; you have been signed out.',
   },
   issue: {
     title: 'New API token',
-    intro: 'A token lets a program or an agent act as you: with exactly your seats and permissions, in every course you are seated in.',
+    intro:
+      'A token lets a program or an agent do anything you can: with your seats and permissions in every course you are seated in, and with this account itself (it can set your password and make or revoke tokens).',
+    platformRole:
+      'This token also carries your platform role ({role}): whoever holds it can administer the platform, as you can.',
     label: 'Label',
     labelPlaceholder: 'e.g. grading script on my laptop',
     labelHelp: 'What it is for, so that you can recognise it in the list later.',
@@ -105,7 +114,8 @@ export default {
     days: 'days',
     daysHelp: 'From 1 to 3650 days.',
     daysInvalid: 'Enter a whole number of days from 1 to 3650',
-    noExpiryWarn: 'A token that never expires keeps working until it is revoked. Prefer an expiry for anything you do not watch.',
+    noExpiryWarn:
+      'A token that never expires keeps working until it is revoked. Prefer an expiry for anything you do not watch.',
     submit: 'Create token',
   },
   token: {
@@ -123,7 +133,8 @@ export default {
     closeUncopied: 'The token will not be shown again. If you lose it, revoke it and make a new one.',
     closeAnyway: 'Close anyway',
     missingTitle: 'The token cannot be shown',
-    missing: 'This token was made by an earlier attempt of the same request, and a token is shown only once. If you did not keep it, revoke it and make a new one.',
+    missing:
+      'This token was made by an earlier attempt of the same request, and a token is shown only once. If you did not keep it, revoke it and make a new one.',
     revokeIt: 'Revoke it',
   },
 }

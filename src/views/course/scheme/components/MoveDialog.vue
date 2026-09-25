@@ -2,12 +2,21 @@
 // Moves a component, with everything beneath it, under another parent
 // (component.move). A component cannot go beneath itself, nor under one that
 // is graded directly or holds assignments; once a grade has been entered
-// beneath it, it stays where it is. Core refuses all of these too.
+// beneath it, it stays where it is. Core refuses all of these too. A place
+// that may hold assignments the caller cannot see is offered with a caution.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWrite } from '@/composables/useWrite'
 import { formatDecimal } from '@/utils/format'
-import { moveBlock, pct, placementFrozen, shareWith, type GradeFacts, type Scheme, type SchemeNode } from './schemeModel'
+import {
+  moveBlock,
+  pct,
+  placementFrozen,
+  shareWith,
+  type GradeFacts,
+  type Scheme,
+  type SchemeNode,
+} from './schemeModel'
 
 const visible = defineModel<boolean>({ required: true })
 const props = defineProps<{
@@ -31,6 +40,11 @@ watch(visible, (open) => {
   if (open) newParentId.value = ''
 })
 
+/** Offered as a new place, but it may hold assignments the caller cannot see, and then Core refuses. */
+function cautionText(to: SchemeNode): string | null {
+  return to.kind === 'unseen' ? t('scheme.reasons.unseen', { name: to.c.name }) : null
+}
+
 const options = computed(() => {
   const n = props.target
   if (!n) return []
@@ -43,13 +57,15 @@ const options = computed(() => {
           ? t('scheme.move.current')
           : b
             ? t(`scheme.reasons.${b}`, { name: to.c.name })
-            : ''
+            : (cautionText(to) ?? '')
     return { node: to, disabled: !!b, why, current: b === 'current' }
   })
 })
 const anywhere = computed(() => options.value.some((o) => !o.disabled))
 const frozen = computed(() => !!props.target && placementFrozen(props.target, props.facts))
 const newParent = computed(() => (newParentId.value ? (props.scheme.byId.get(newParentId.value) ?? null) : null))
+/** What is known now about the chosen place: the assignments may have been read again since it was chosen. */
+const newParentOption = computed(() => options.value.find((o) => o.node.id === newParentId.value) ?? null)
 
 const preview = computed(() => {
   const n = props.target
@@ -63,7 +79,7 @@ const preview = computed(() => {
 
 async function submit() {
   const n = props.target
-  if (!n || !newParentId.value || frozen.value) return
+  if (!n || !newParentId.value || frozen.value || newParentOption.value?.disabled) return
   const out = await run(
     { course_id: props.courseId, component_id: n.id, new_parent_id: newParentId.value },
     { success: t('scheme.outcome.moved') },
@@ -82,7 +98,7 @@ async function submit() {
   <el-dialog
     v-model="visible"
     :title="t('scheme.move.title', { name: target?.c.name ?? '' })"
-    width="min(560px, calc(100vw - 24px))"
+    width="560px"
     destroy-on-close
     :close-on-click-modal="!pending"
     append-to-body
@@ -126,18 +142,28 @@ async function submit() {
             <div class="md-option" :style="{ paddingLeft: `${o.node.depth * 14}px` }">
               <span class="md-option__name">
                 {{ o.node.c.name }}
-                <el-tag v-if="o.current" size="small" type="info" disable-transitions>{{ t('scheme.move.current') }}</el-tag>
+                <el-tag v-if="o.current" size="small" type="info" disable-transitions>{{
+                  t('scheme.move.current')
+                }}</el-tag>
               </span>
               <span v-if="o.why && !o.current" class="md-option__why">{{ o.why }}</span>
             </div>
           </el-option>
         </el-select>
         <div v-if="preview" class="app-form-hint md-preview">{{ preview }}</div>
+        <div v-if="newParentOption?.why" class="app-form-hint md-caution">
+          <el-icon><Warning /></el-icon>{{ newParentOption.why }}
+        </div>
       </el-form-item>
     </el-form>
     <template #footer>
       <el-button :disabled="pending" @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
-      <el-button type="primary" :loading="pending" :disabled="!newParentId || frozen" @click="submit">
+      <el-button
+        type="primary"
+        :loading="pending"
+        :disabled="!newParentId || frozen || newParentOption?.disabled"
+        @click="submit"
+      >
         {{ t('scheme.move.submit') }}
       </el-button>
     </template>
@@ -178,5 +204,15 @@ async function submit() {
 .md-preview {
   color: var(--el-text-color-regular);
   font-weight: 500;
+}
+.md-caution {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.md-caution .el-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--el-color-warning);
 }
 </style>

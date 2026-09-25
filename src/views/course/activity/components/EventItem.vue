@@ -10,9 +10,10 @@ import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
 import IdText from '@/components/IdText.vue'
+import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
-import SeatName from './SeatName.vue'
+import { typeLabel } from '@/views/course/actions/components/actionText'
 import { componentName, documentTitle, ensureComponentNames, ensureDocumentTitles } from './names'
 import {
   CATEGORY_ICON,
@@ -98,8 +99,10 @@ const subjectText = computed(() => {
       return t('activity.subject.submissionFile')
     case 'feedbackFile':
       return t('activity.subject.feedbackFile')
-    case 'action':
-      return payloadString(e, 'action_type') ?? t('activity.subject.action')
+    case 'action': {
+      const type = payloadString(e, 'action_type')
+      return type ? typeLabel(type) : t('activity.subject.action')
+    }
     case 'component':
       return component.value?.name ?? t('activity.subject.component')
     case 'course':
@@ -112,14 +115,41 @@ const subjectText = computed(() => {
 const showAssignment = computed(() => !!props.event.assignment_id && kind.value !== 'assignment')
 // Likewise the student, when the subject is not that member.
 const showStudent = computed(
-  () => !!props.event.student_member_id && !(kind.value === 'member' && props.event.subject_id === props.event.student_member_id),
+  () =>
+    !!props.event.student_member_id &&
+    !(kind.value === 'member' && props.event.subject_id === props.event.student_member_id),
 )
 
 type Fact =
   | { kind: 'tag'; vocab: 'actionStatus' | 'role' | 'submissionState'; value: string }
   | { kind: 'text'; text: string; tone?: 'danger' | 'warning' | 'success' | 'info' }
-  | { kind: 'code'; text: string }
   | { kind: 'link'; text: string; to: RouteLocationRaw; id: string }
+
+// Core's error codes (apperr), by the words common.errors has for them.
+const ERROR_KEYS: Record<string, string> = {
+  invalid_argument: 'common.errors.invalid',
+  unauthenticated: 'common.errors.unauthenticated',
+  forbidden: 'common.errors.forbiddenAction',
+  not_found: 'common.errors.notFound',
+  conflict: 'common.errors.conflict',
+  idempotency_conflict: 'common.errors.idempotency',
+  failed_precondition: 'common.errors.precondition',
+  rate_limited: 'common.errors.rateLimited',
+  internal: 'common.errors.internal',
+}
+function errorText(code: string): string {
+  const key = ERROR_KEYS[code]
+  return key ? t(key) : code
+}
+
+/** What the action named by an action event's by_action_id is, by event type. */
+const BY_ACTION: Record<string, 'byDecision' | 'byReview' | 'byCancel'> = {
+  'action.approved': 'byDecision',
+  'action.rejected': 'byDecision',
+  'action.reviewed': 'byReview',
+  'action.escalated': 'byReview',
+  'action.cancelled': 'byCancel',
+}
 
 // What the payload says, by event type. Payloads were read off Core's emit
 // sites; anything not recognised here is simply not shown.
@@ -131,12 +161,28 @@ const facts = computed<Fact[]>(() => {
     const outcome = payloadString(e, 'outcome')
     if (type === 'action.approved' && outcome) out.push({ kind: 'tag', vocab: 'actionStatus', value: outcome })
     const error = payloadString(e, 'error')
-    if (error) out.push({ kind: 'code', text: error })
+    if (error) out.push({ kind: 'text', text: errorText(error), tone: 'danger' })
     const reason = payloadString(e, 'reason')
     if (reason) out.push({ kind: 'text', text: label('activity.cancelReason', reason) ?? reason, tone: 'info' })
     const target = payloadString(e, 'target_type')
     if (type === 'action.proposed' && target) {
-      out.push({ kind: 'text', text: t('activity.fact.onTarget', { target: label('activity.target', target) ?? target }) })
+      out.push({
+        kind: 'text',
+        text: t('activity.fact.onTarget', { target: label('activity.target', target) ?? target }),
+      })
+    }
+    // The action this event records (the decision or review, with its
+    // reason or note; or what cancelled a proposal). It is someone else's,
+    // so only a seat that reads the action log can open it.
+    const by = payloadString(e, 'by_action_id')
+    const byKey = BY_ACTION[type]
+    if (by && byKey && reach.value.decides && !props.compact) {
+      out.push({
+        kind: 'link',
+        text: t(`activity.fact.${byKey}`),
+        id: by,
+        to: { name: 'course-action', params: { courseId: props.courseId, actionId: by } },
+      })
     }
   }
   if (type === 'assignment.updated' && payloadBool(e, 'due_at_changed')) {
@@ -166,14 +212,18 @@ const facts = computed<Fact[]>(() => {
     if (attempt !== undefined) out.push({ kind: 'text', text: t('activity.fact.attempt', { n: attempt }) })
   }
   if (type === 'grade.regraded') {
+    // The grade it replaces is superseded now, and a superseded grade is
+    // for those who grade (grade_submit or grade_post) to read.
     const old = payloadString(e, 'replaces')
-    if (old) {
+    if (old && (course.can('grade_submit') || course.can('grade_post'))) {
       out.push({
         kind: 'link',
         text: t('activity.fact.replaces'),
         id: old,
         to: { name: 'course-grade', params: { courseId: props.courseId, gradeId: old } },
       })
+    } else if (old) {
+      out.push({ kind: 'text', text: t('activity.fact.replacesEarlier') })
     }
   }
   if (type === 'grade.total_updated') {
@@ -221,24 +271,18 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
       <div class="event-item__line">
         <template v-if="kind === 'member' && event.subject_id">
           <router-link v-if="subjectTo" :to="subjectTo" class="event-item__subject">
-            <SeatName :id="event.subject_id" />
+            <MemberName :id="event.subject_id" show-kind />
           </router-link>
-          <span v-else class="event-item__subject"><SeatName :id="event.subject_id" /></span>
+          <span v-else class="event-item__subject"><MemberName :id="event.subject_id" show-kind /></span>
         </template>
         <template v-else-if="subjectText">
-          <router-link v-if="subjectTo" :to="subjectTo" class="event-item__subject">
-            <code v-if="kind === 'action'" class="event-item__code">{{ subjectText }}</code>
-            <template v-else>{{ subjectText }}</template>
-          </router-link>
-          <span v-else class="event-item__subject">
-            <code v-if="kind === 'action'" class="event-item__code">{{ subjectText }}</code>
-            <template v-else>{{ subjectText }}</template>
-          </span>
+          <router-link v-if="subjectTo" :to="subjectTo" class="event-item__subject">{{ subjectText }}</router-link>
+          <span v-else class="event-item__subject">{{ subjectText }}</span>
         </template>
 
         <span v-if="showStudent" class="event-item__ctx">
           <el-icon><User /></el-icon>
-          <SeatName :id="event.student_member_id" />
+          <MemberName :id="event.student_member_id" show-kind />
         </span>
         <span v-if="showAssignment && assignmentTo" class="event-item__ctx">
           <el-icon><EditPen /></el-icon>
@@ -251,10 +295,15 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
       <div v-if="facts.length" class="event-item__facts">
         <template v-for="(f, i) in facts" :key="i">
           <StatusTag v-if="f.kind === 'tag'" :vocab="f.vocab" :value="f.value" />
-          <el-tag v-else-if="f.kind === 'text'" :type="f.tone ?? 'info'" size="small" effect="plain" disable-transitions>
+          <el-tag
+            v-else-if="f.kind === 'text'"
+            :type="f.tone ?? 'info'"
+            size="small"
+            effect="plain"
+            disable-transitions
+          >
             {{ f.text }}
           </el-tag>
-          <code v-else-if="f.kind === 'code'" class="event-item__code">{{ f.text }}</code>
           <span v-else-if="f.kind === 'link'" class="event-item__fact-link">
             <router-link :to="f.to">{{ f.text }}</router-link>
             <IdText :id="f.id" />
@@ -383,14 +432,6 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-}
-.event-item__code {
-  font-family: var(--app-font-mono);
-  font-size: 12px;
-  background: var(--el-fill-color-light);
-  border-radius: 4px;
-  padding: 1px 5px;
-  overflow-wrap: anywhere;
 }
 .event-item__fact-link {
   display: inline-flex;

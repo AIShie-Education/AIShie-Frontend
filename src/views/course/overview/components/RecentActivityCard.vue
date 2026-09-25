@@ -7,13 +7,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import AsyncState from '@/components/AsyncState.vue'
 import EventItem from '@/views/course/activity/components/EventItem.vue'
-import {
-  hasOlder,
-  mergeNewestFirst,
-  newestWindow,
-  olderWindow,
-  runsOf,
-} from '@/views/course/activity/components/feed'
+import { hasOlder, mergeNewestFirst, newestWindow, olderWindow, runsOf } from '@/views/course/activity/components/feed'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()

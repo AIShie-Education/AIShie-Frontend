@@ -1,32 +1,36 @@
 <script setup lang="ts">
 // grade.submit for a directly graded component (an exam): a draft grade for
 // one student, which is released later with grade.post. Assignment work is
-// graded from its submission instead.
+// graded from its submission instead. Core grades a paused student too, never
+// a removed one.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
-import { read, type ToolOut, type UploadedFile, type WriteOutcome } from '@/api/http'
+import { read, type ApiError, type ToolOut, type UploadedFile, type WriteOutcome } from '@/api/http'
 import type { Component, GradeSummary } from '@/api/types'
+import { errorMessage } from '@/composables/useErrors'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
-import { formatDecimal, isDecimal } from '@/utils/format'
+import { isDecimal } from '@/utils/format'
 import FileUploader from '@/components/FileUploader.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import StatusTag from '@/components/StatusTag.vue'
-import BreakdownEditor from './BreakdownEditor.vue'
+import BreakdownEditor, { type BreakdownRow } from '@/views/course/submissions/components/BreakdownEditor.vue'
+import { decimalAbove } from '@/views/course/submissions/components/decimal'
 import ScoreText from './ScoreText.vue'
-import { breakdownForApi, decimalGreater, type BreakdownDraft } from './grading'
+import { breakdownForApi, breakdownValid, formatScore } from './grading'
 
 const visible = defineModel<boolean>({ default: false })
 const props = defineProps<{
   courseId: string
   components: Component[]
-  /** Loading or refused: the scheme could not be read. */
   componentsLoading?: boolean
+  /** The grading scheme could not be read (or is known to be refused): its components are unknown. */
+  componentsError?: ApiError | null
   studentMemberId?: string
 }>()
-const emit = defineEmits<{ done: [out: WriteOutcome<ToolOut<'grade.submit'>>] }>()
+const emit = defineEmits<{ done: [out: WriteOutcome<ToolOut<'grade.submit'>>]; retry: [] }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const { run, pending } = useWrite('grade.submit')
@@ -39,13 +43,13 @@ const form = reactive({
   allowExtra: false,
   feedback: '',
   files: [] as UploadedFile[],
-  breakdown: [] as BreakdownDraft[],
+  breakdown: [] as BreakdownRow[],
 })
 const showBreakdown = ref(false)
 
 const component = computed(() => props.components.find((c) => c.id === form.componentId))
 const outOf = computed(() => component.value?.points_possible ?? null)
-const aboveMax = computed(() => isDecimal(form.score) && decimalGreater(form.score, outOf.value))
+const aboveMax = computed(() => decimalAbove(form.score.trim(), outOf.value))
 const needsApproval = computed(() => course.needsApproval('grade_submit'))
 
 function onOpen() {
@@ -57,6 +61,7 @@ function onOpen() {
   form.files = []
   form.breakdown = []
   showBreakdown.value = false
+  breakdownChecked.value = false
   existing.value = []
 }
 
@@ -99,33 +104,52 @@ watch(
 const existingPosted = computed(() => existing.value.find((g) => g.state === 'posted'))
 const existingDraft = computed(() => existing.value.find((g) => g.state === 'draft'))
 
-const breakdownOk = computed(() =>
-  (breakdownForApi(form.breakdown) ?? []).every(
-    (b) => b.criterion && isDecimal(b.points) && isDecimal(b.max) && Number(b.points) >= 0 && Number(b.max) >= 0,
-  ),
-)
+/**
+ * A student with a posted grade here is not given a draft: a draft can never
+ * be posted over a posted grade, only the posted grade regraded.
+ */
+const blocked = computed(() => !!existingPosted.value)
+
+// The breakdown is checked on saving rather than by a form rule: a failing
+// form item marks every input inside it, and the editor marks only the bad ones.
+const breakdownChecked = ref(false)
+const breakdownError = computed(() => breakdownChecked.value && !breakdownValid(form.breakdown))
 
 const rules = computed<FormRules>(() => ({
   componentId: [{ required: true, message: t('common.errors.required'), trigger: 'change' }],
   studentMemberId: [{ required: true, message: t('common.errors.required'), trigger: 'change' }],
   score: [
     {
+      required: true,
       trigger: 'blur',
       validator: (_r: unknown, v: string, cb: (e?: Error) => void) => {
         if (!v || !v.trim()) return cb(new Error(t('common.errors.required')))
         if (!isDecimal(v)) return cb(new Error(t('common.errors.invalidDecimal')))
         if (Number(v) < 0) return cb(new Error(t('grades.form.negative')))
-        if (decimalGreater(v, outOf.value) && !form.allowExtra) return cb(new Error(t('grades.form.aboveMax')))
+        if (decimalAbove(v.trim(), outOf.value) && !form.allowExtra) return cb(new Error(t('grades.form.aboveMax')))
         cb()
       },
     },
   ],
 }))
+watch(
+  () => form.allowExtra,
+  () => {
+    if (form.score.trim()) void formRef.value?.validateField('score').catch(() => undefined)
+  },
+)
+
+function useTotal(total: string) {
+  form.score = total
+  void formRef.value?.validateField('score').catch(() => undefined)
+}
 
 async function submit() {
-  if (!formRef.value) return
+  if (!formRef.value || blocked.value) return
+  breakdownChecked.value = showBreakdown.value
   const ok = await formRef.value.validate().catch(() => false)
-  if (!ok || !breakdownOk.value) return
+  const rows = showBreakdown.value ? form.breakdown : []
+  if (!ok || !breakdownValid(rows)) return
   const out = await run(
     {
       course_id: props.courseId,
@@ -133,12 +157,12 @@ async function submit() {
       student_member_id: form.studentMemberId,
       score: form.score.trim(),
       out_of: outOf.value ?? undefined,
-      allow_extra: form.allowExtra || undefined,
+      allow_extra: (aboveMax.value && form.allowExtra) || undefined,
       feedback: form.feedback.trim() || undefined,
       feedback_files: form.files.length
         ? form.files.map((f) => ({ title: f.fileName, upload_token: f.uploadToken }))
         : undefined,
-      breakdown: breakdownForApi(form.breakdown),
+      breakdown: breakdownForApi(rows),
     },
     { success: t('grades.enter.done') },
   )
@@ -149,18 +173,25 @@ async function submit() {
 </script>
 
 <template>
-  <el-dialog
-    v-model="visible"
-    class="grades-dialog"
-    :title="t('grades.enter.title')"
-    width="560px"
-    destroy-on-close
-    @open="onOpen"
-  >
+  <el-dialog v-model="visible" :title="t('grades.enter.title')" width="560px" destroy-on-close @open="onOpen">
     <p class="app-form-hint enter-dialog__intro">{{ t('grades.enter.intro') }}</p>
 
+    <!-- The scheme could not be read: which components take a grade is unknown, not absent. -->
     <el-alert
-      v-if="!componentsLoading && !components.length"
+      v-if="componentsError"
+      :type="componentsError.isForbidden ? 'warning' : 'error'"
+      :closable="false"
+      show-icon
+      :title="componentsError.isForbidden ? t('grades.enter.schemeForbidden') : t('grades.enter.schemeFailed')"
+    >
+      <template v-if="!componentsError.isForbidden">
+        <p class="enter-dialog__error">{{ errorMessage(componentsError) }}</p>
+        <el-button size="small" @click="emit('retry')">{{ t('common.actions.retry') }}</el-button>
+      </template>
+    </el-alert>
+
+    <el-alert
+      v-else-if="!componentsLoading && !components.length"
       type="info"
       :closable="false"
       show-icon
@@ -175,17 +206,17 @@ async function submit() {
           <el-option v-for="c in components" :key="c.id" :value="c.id" :label="c.name">
             <span>{{ c.name }}</span>
             <span class="enter-dialog__meta">{{
-              t('grades.enter.pointsPossible', { n: formatDecimal(c.points_possible) })
+              t('grades.enter.pointsPossible', { n: formatScore(c.points_possible) })
             }}</span>
           </el-option>
         </el-select>
       </el-form-item>
 
       <el-form-item :label="t('grades.columns.student')" prop="studentMemberId">
-        <MemberSelect v-model="form.studentMemberId" role="student" />
+        <MemberSelect v-model="form.studentMemberId" role="student" :statuses="['active', 'paused']" />
       </el-form-item>
 
-      <div v-if="checking" class="app-form-hint">{{ t('grades.enter.checking') }}</div>
+      <div v-if="checking" class="app-form-hint enter-dialog__checking">{{ t('grades.enter.checking') }}</div>
       <el-alert v-else-if="existingPosted" type="warning" :closable="false" show-icon class="enter-dialog__existing">
         <template #title>
           {{ t('grades.enter.hasPosted') }}
@@ -203,45 +234,58 @@ async function submit() {
         </template>
       </el-alert>
 
-      <el-form-item :label="t('grades.form.score')" prop="score">
-        <div class="enter-dialog__score">
-          <el-input v-model="form.score" inputmode="decimal" class="enter-dialog__score-input" />
-          <span class="enter-dialog__of">/ {{ formatDecimal(outOf) }}</span>
-        </div>
-      </el-form-item>
-      <el-form-item v-if="aboveMax || form.allowExtra">
-        <el-checkbox v-model="form.allowExtra" :label="t('grades.form.allowExtra')" />
-        <p class="app-form-hint grades-hint">{{ t('grades.form.allowExtraHelp') }}</p>
-      </el-form-item>
+      <!-- No draft over a posted grade: it could never be posted. -->
+      <template v-if="!blocked">
+        <el-form-item :label="t('grades.form.score')" prop="score">
+          <div class="enter-dialog__score">
+            <el-input v-model="form.score" inputmode="decimal" class="enter-dialog__score-input" />
+            <span class="enter-dialog__of">/ {{ formatScore(outOf) }}</span>
+          </div>
+        </el-form-item>
+        <el-form-item v-if="aboveMax || form.allowExtra">
+          <el-checkbox v-model="form.allowExtra" :label="t('grades.form.allowExtra')" />
+          <p class="app-form-hint grades-hint">{{ t('grades.form.allowExtraHelp') }}</p>
+        </el-form-item>
 
-      <el-form-item :label="t('grades.form.feedback')">
-        <MarkdownEditor v-model="form.feedback" :rows="5" :placeholder="t('grades.form.feedbackPlaceholder')" />
-      </el-form-item>
+        <el-form-item :label="t('grades.form.feedback')">
+          <MarkdownEditor v-model="form.feedback" :rows="5" :placeholder="t('grades.form.feedbackPlaceholder')" />
+        </el-form-item>
 
-      <el-form-item :label="t('grades.form.feedbackFiles')">
-        <FileUploader v-model="form.files" :course-id="courseId" kind="feedback" multiple :disabled="pending" />
-        <p class="app-form-hint grades-hint">{{ t('grades.form.feedbackFilesHelp') }}</p>
-      </el-form-item>
+        <el-form-item :label="t('grades.form.feedbackFiles')">
+          <FileUploader v-model="form.files" :course-id="courseId" kind="feedback" multiple :disabled="pending" />
+          <p class="app-form-hint grades-hint">{{ t('grades.form.feedbackFilesHelp') }}</p>
+        </el-form-item>
 
-      <el-form-item>
-        <el-checkbox v-model="showBreakdown" :label="t('grades.form.addBreakdown')" />
-      </el-form-item>
-      <el-form-item
-        v-if="showBreakdown"
-        :label="t('grades.breakdown.title')"
-        :error="breakdownOk ? '' : t('grades.form.breakdownInvalid')"
-      >
-        <BreakdownEditor v-model="form.breakdown" :disabled="pending" @use-total="(v) => (form.score = v)" />
-      </el-form-item>
+        <el-form-item>
+          <el-checkbox v-model="showBreakdown" :label="t('grades.form.addBreakdown')" />
+        </el-form-item>
+        <el-form-item
+          v-if="showBreakdown"
+          :label="t('grades.breakdown.title')"
+          :error="breakdownError ? t('grades.form.breakdownInvalid') : ''"
+        >
+          <BreakdownEditor
+            v-model="form.breakdown"
+            :disabled="pending"
+            :strict="breakdownChecked"
+            @use-total="useTotal"
+          />
+        </el-form-item>
 
-      <el-alert v-if="needsApproval" type="info" :closable="false" show-icon>
-        {{ t('grades.enter.proposalNote') }}
-      </el-alert>
+        <el-alert v-if="needsApproval" type="info" :closable="false" show-icon>
+          {{ t('grades.enter.proposalNote') }}
+        </el-alert>
+      </template>
     </el-form>
 
     <template #footer>
       <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
-      <el-button type="primary" :loading="pending" :disabled="!course.writable || !components.length" @click="submit">
+      <el-button
+        type="primary"
+        :loading="pending"
+        :disabled="!course.writable || !components.length || !!componentsError || blocked"
+        @click="submit"
+      >
         {{ needsApproval ? t('grades.enter.submitProposal') : t('grades.enter.submit') }}
       </el-button>
     </template>
@@ -279,14 +323,13 @@ async function submit() {
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
 }
-</style>
-
-<style>
-/* Dialogs are teleported out of this component; keep them inside a phone screen. */
-.grades-dialog {
-  max-width: calc(100vw - 24px);
+.enter-dialog__checking {
+  margin-bottom: 16px;
 }
-.grades-dialog .grades-hint {
+.enter-dialog__error {
+  margin: 0 0 8px;
+}
+.grades-hint {
   flex-basis: 100%;
   margin: 4px 0 0;
 }

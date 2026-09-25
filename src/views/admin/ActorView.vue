@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
@@ -19,24 +20,26 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import IssueTokenCard from './components/IssueTokenCard.vue'
 import LinkSsoCard from './components/LinkSsoCard.vue'
-import { useNarrow, useRecentActors } from './components/adminShared'
+import { useCanonicalId, useRecentActors } from './components/adminShared'
 
 const props = defineProps<{ actorId: string }>()
 const { t } = useI18n()
 const session = useSessionStore()
 const narrow = useNarrow()
 const { remember } = useRecentActors()
+/** The actor's id as Core writes it, whatever the address says. */
+const id = useCanonicalId(() => props.actorId, 'actorId')
 
 const state = useAsync(
   () => {
-    if (!isUuid(props.actorId)) {
+    if (!isUuid(id.value)) {
       return Promise.reject(new ApiError({ status: 404, code: 'not_found', message: t('admin.actors.notFound') }))
     }
-    return read('actor.get', { actor_id: props.actorId })
+    return read('actor.get', { actor_id: id.value })
   },
-  { watch: [() => props.actorId], keepData: true },
+  { watch: [id], keepData: true },
 )
-const actor = computed(() => (state.data.value?.id === props.actorId ? state.data.value : undefined))
+const actor = computed(() => (state.data.value?.id === id.value ? state.data.value : undefined))
 watch(actor, (a) => a && remember(a))
 
 // Who registered them, by name where they can be read.
@@ -160,7 +163,7 @@ async function reactivate() {
 
         <section class="app-card">
           <h2 class="app-card__title">{{ t('admin.actor.registration') }}</h2>
-          <el-descriptions :column="narrow ? 1 : 2" border>
+          <el-descriptions :column="narrow ? 1 : 2" border class="actor__desc">
             <el-descriptions-item :label="t('admin.actor.name')">
               <strong class="actor__name">{{ actor.display_name }}</strong>
             </el-descriptions-item>
@@ -212,6 +215,10 @@ async function reactivate() {
 <style scoped>
 .actor__alert {
   margin-bottom: 12px;
+}
+/* A label breaks between words, never inside one (登記時 / 間). */
+.actor__desc :deep(.el-descriptions__label) {
+  white-space: nowrap;
 }
 .actor__name {
   word-break: break-word;

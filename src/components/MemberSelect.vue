@@ -43,7 +43,7 @@ const free = computed(() => course.membersState === 'forbidden' || course.member
     :clearable="clearable"
     :disabled="disabled"
     :loading="course.membersState === 'loading'"
-    :placeholder="placeholder ?? (free ? 'member id' : t('common.actions.select'))"
+    :placeholder="placeholder ?? (free ? t('common.labels.pasteMemberId') : t('common.actions.select'))"
     class="member-select"
   >
     <el-option v-for="m in options" :key="m.id" :value="m.id" :label="m.display_name">

@@ -1,8 +1,8 @@
-// 平台管理：課程與使用者。
+// 平台管理：課程、人員與代理。
 export default {
   nav: {
     courses: '課程',
-    actors: '使用者與代理',
+    actors: '人員與代理',
     terms: '學期',
     departments: '學系',
     presets: '權限預設',
@@ -32,6 +32,11 @@ export default {
     goDepts: '建立學系',
     unknown: '不明',
     termDates: '{from} 至 {to}',
+    setupFailed: {
+      terms: '無法載入學期，因此暫時不能建立課程，清單中亦無法顯示課程所屬的學期。',
+      depts: '無法載入學系，因此暫時不能建立課程，清單中亦無法顯示課程所屬的學系。',
+      both: '無法載入學期及學系，因此暫時不能建立課程，清單中亦無法顯示課程所屬的學期及學系。',
+    },
   },
 
   create: {
@@ -93,13 +98,13 @@ export default {
   seat: {
     title: '指派導師',
     intro: '新課程沒有任何成員。請在此指派第一位導師：對方會獲得內建的導師權限預設，之後可在課程的「成員」頁面加入其他人。',
-    actorId: '使用者 ID',
-    placeholder: '貼上使用者 ID，或從最近查看過的人中選擇',
+    actorId: '參與者 ID',
+    placeholder: '貼上 ID，或選擇最近查看過的參與者',
     lookUp: '查詢',
-    invalidId: '這不是有效的使用者 ID。',
-    notFound: '找不到此 ID 的使用者。',
-    suspended: '此使用者已被停用，Core 不會為已停用的使用者安排席位。請先將其重新啟用。',
-    system: '系統帳戶負責執行背景工作，不會加入任何課程。',
+    invalidId: '這不是有效的參與者 ID。',
+    notFound: '找不到此 ID 的參與者。',
+    suspended: '此參與者已被停用，Core 不會為已停用的參與者安排席位。請先將其重新啟用。',
+    system: '系統參與者負責執行背景工作，不會加入任何課程。',
     agent: '這是一個代理。若指派為導師，它將擁有導師預設的全部權限。',
     submit: '指派為導師',
     done: '已指派 {name} 為導師',
@@ -111,21 +116,21 @@ export default {
   },
 
   actors: {
-    title: '使用者與代理',
-    subtitle: '登記使用者與代理，管理其狀態及登入憑證',
+    title: '人員與代理',
+    subtitle: '登記人員與代理，並管理其狀態及登入憑證',
     register: '登記',
-    noDirectory: '這裡沒有可瀏覽的名錄：Core 只按 ID 查詢使用者，其餘情況則透過他們所在的課程得知。你在此登記或查詢過的使用者，會記錄在此瀏覽器中，列於下方。',
-    lookUpTitle: '查詢使用者',
-    lookUpPlaceholder: '使用者 ID',
+    noDirectory: '這裡沒有可瀏覽的名錄：Core 只按 ID 查詢參與者，其餘情況則透過他們所在的課程得知。你在此登記或查詢過的參與者，會記錄在此瀏覽器中，列於下方。',
+    lookUpTitle: '查詢參與者',
+    lookUpPlaceholder: '參與者 ID',
     lookUp: '開啟',
-    invalidId: '這不是有效的使用者 ID。',
-    notFound: '找不到此 ID 的使用者。',
+    invalidId: '這不是有效的參與者 ID。',
+    notFound: '找不到此 ID 的參與者。',
     myRecord: '我的資料',
     recentTitle: '最近查看',
-    recentHint: '只保存在此瀏覽器，僅供你本人使用。',
-    recentEmpty: '暫時沒有。你登記或查詢過的使用者會顯示在這裡。',
+    recentHint: '只在此瀏覽器保存名稱及 ID，僅供你本人使用。',
+    recentEmpty: '暫時沒有。你登記或查詢過的參與者會顯示在這裡。',
     clearRecent: '清除清單',
-    clearConfirm: '要清除清單上的所有使用者嗎？Core 中的資料不會有任何改變。',
+    clearConfirm: '要清除清單上的所有參與者嗎？Core 中的資料不會有任何改變。',
     forget: '從清單中移除',
     seen: '最後查看',
     registeredHere: '在此登記',
@@ -133,7 +138,7 @@ export default {
 
   registered: {
     title: '已登記 {name}',
-    id: '使用者 ID',
+    id: '參與者 ID',
     open: '開啟其頁面',
     dismiss: '關閉',
     nextSteps: '下一步',
@@ -150,8 +155,9 @@ export default {
   },
 
   register: {
-    title: '登記使用者',
-    intro: '登記後的使用者在加入課程之前，無法進行任何操作。',
+    title: '登記參與者',
+    intro: '登記後的參與者在加入課程之前，無法進行任何操作。',
+    introAdmin: '管理員無需任何席位，即可管理整個平台：課程、人員與代理、學期、學系及權限預設。但在課程之內，管理員與其他人一樣，須先加入課程才能操作。',
     kind: '類型',
     kindHelp: {
       human: '可透過單一登入、密碼或權杖登入。',
@@ -163,18 +169,19 @@ export default {
       agent: 'grader-v2',
     },
     email: '電子郵件',
-    emailHint: '以密碼登入時需要。每個電子郵件只能屬於一位使用者。',
+    emailHint: '以密碼登入時需要，而且日後無法補上。每個電子郵件只能屬於一位參與者。',
     admin: '平台管理員',
-    adminHint: '管理員可建立課程、登記及管理使用者；在課程內則與其他人一樣，受其席位權限約束。',
+    adminHint: '管理員可建立課程、登記及管理參與者；在課程內則與其他人一樣，受其席位權限約束。管理員身分只能在登記時授予。',
     adminRootOnly: '只有 Root 可以設立管理員。',
+    permanent: '登記後，這裡填寫的任何資料都無法更改：Core 沒有修改參與者資料的功能。請先核對清楚再登記。',
     submit: '登記',
     done: '已登記 {name}',
   },
 
   actor: {
-    title: '使用者',
+    title: '參與者',
     registration: '登記資料',
-    id: '使用者 ID',
+    id: '參與者 ID',
     kind: '類型',
     name: '顯示名稱',
     email: '電子郵件',
@@ -195,17 +202,17 @@ export default {
     reactivateTitle: '重新啟用 {name}？',
     reactivateConfirm: '對方的席位及登入憑證將回復運作。',
     reactivated: '{name} 已重新啟用',
-    suspendedBanner: '已停用：此使用者在所有課程中的每一個操作都會被拒絕，也無法登入。',
+    suspendedBanner: '已停用：此參與者在所有課程中的每一個操作都會被拒絕，也無法登入。',
     cannot: {
       self: '這是你自己的帳戶，無法將其停用。',
-      role: '只有 Root 可以管理擁有平台角色的使用者。',
-      system: '系統帳戶負責執行背景工作，不能停用，也不能發出權杖或連結身分。',
+      role: '只有 Root 可以管理擁有平台角色的參與者。',
+      system: '系統參與者負責執行背景工作，不能停用，也不能發出權杖或連結身分。',
     },
   },
 
   token: {
     title: 'API 權杖',
-    intro: '發出權杖，讓此使用者可以呼叫 Core：代理無法自行登入申請權杖，第一個憑證便是由此取得。權杖只會顯示一次，Core 只保存其雜湊值。',
+    intro: '發出權杖，讓此參與者可以呼叫 Core：代理無法自行登入申請權杖，第一個憑證便是由此取得。權杖只會顯示一次，Core 只保存其雜湊值。',
     introSelf: '為你自己的帳戶發出權杖。你的權杖也可在「帳戶」頁面管理。',
     label: '標籤',
     labelPlaceholder: 'CS101 秋季學期評分代理',
@@ -218,7 +225,7 @@ export default {
     daysPlaceholder: '1–3650',
     daysInvalid: '請輸入 1 至 3650 天',
     submit: '發出權杖',
-    suspendedNote: '此使用者已被停用：現在發出的權杖在重新啟用之前都會被拒絕。',
+    suspendedNote: '此參與者已被停用：現在發出的權杖在重新啟用之前都會被拒絕。',
     revealTitle: '請立即複製權杖',
     once: '權杖只會在此顯示一次。Core 只保存其雜湊值；如遺失，請重新發出。',
     replayed: '這是重複的請求，因此不會再次顯示權杖。如尚未複製，請重新發出。',
@@ -231,7 +238,7 @@ export default {
     mcpEndpoint: '端點（Streamable HTTP）',
     mcpHeader: '標頭',
     mcpNotes: '工具名稱即目錄中的名稱，把點號換成底線（grade_submit）。狀態為「proposed」的結果並非錯誤：該操作正等待人手批准，代理可透過 event_list 得知結果。',
-    humanHint: '使用者可以用此權杖登入（登入 → 使用 API 權杖），再到「帳戶」頁面設定密碼。',
+    humanHint: '人員也可以用此權杖登入（登入 → 使用 API 權杖），再到「帳戶」頁面設定密碼。',
     uncopiedTitle: '不複製就關閉？',
     uncopied: '權杖尚未複製，關閉後將不會再顯示。',
     closeAnyway: '仍然關閉',
@@ -240,7 +247,7 @@ export default {
 
   sso: {
     title: '單一登入',
-    intro: '連結此使用者在身分提供者的帳戶，讓對方可以用它登入。登入時不會自動建立帳戶：在完成連結之前，即使身分提供者認可對方，對方在這裡仍然是無名之人。',
+    intro: '連結此人在身分提供者的帳戶，讓對方可以用它登入。登入不會自動建立帳戶：在完成連結之前，即使身分提供者認可對方，對方也無法登入此平台。',
     provider: '身分提供者',
     providerHint: '此平台對身分提供者的命名。',
     subject: '帳戶（UPN）',
@@ -250,7 +257,7 @@ export default {
     submit: '連結身分',
     done: '已連結身分',
     linkedAs: '已連結 {subject}',
-    once: '一個身分只能連結一位使用者，而且是永久的：一經連結，便不會再轉給其他人。',
+    once: '一個身分只能連結一位參與者，而且是永久的：一經連結，便不會再轉給其他人。',
     agent: '代理以 API 權杖連線，不使用單一登入。',
   },
 }

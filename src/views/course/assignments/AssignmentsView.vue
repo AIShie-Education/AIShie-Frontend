@@ -10,6 +10,7 @@ import dayjs from 'dayjs'
 import { read } from '@/api/http'
 import type { AssignmentSummary, SubmissionSummary } from '@/api/types'
 import { useAsync, usePaged } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
@@ -18,7 +19,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AssignmentFormDialog from './components/AssignmentFormDialog.vue'
-import { allSubmissions, latestByAssignment, useNarrow, useScheme } from './components/useAssignmentData'
+import { allSubmissions, latestByAssignment, useScheme } from './components/useAssignmentData'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -38,16 +39,29 @@ const scheme = useScheme(() => props.courseId)
 /** On a phone the table keeps two columns; the rest goes under the title. */
 const narrow = useNarrow()
 
-// A student's own work, newest attempt per assignment. Not being able to read
-// it only means the column says less.
-const mine = useAsync<Map<string, SubmissionSummary>>(async () => {
-  if (!isStudent.value || !course.myMemberId) return new Map()
+// A student's own work: the newest attempt at each assignment, and which
+// assignments they have handed something in for (a later attempt may be a
+// draft). Not being able to read it only means the column says less.
+interface Mine {
+  latest: Map<string, SubmissionSummary>
+  handedIn: Set<string>
+}
+const mine = useAsync<Mine>(async () => {
+  const none: Mine = { latest: new Map(), handedIn: new Set() }
+  if (!isStudent.value || !course.myMemberId) return none
   try {
-    return latestByAssignment(await allSubmissions(props.courseId, { student_member_id: course.myMemberId }))
+    const subs = await allSubmissions(props.courseId, { student_member_id: course.myMemberId })
+    return {
+      latest: latestByAssignment(subs),
+      handedIn: new Set(subs.filter((s) => s.state === 'submitted' || s.state === 'late').map((s) => s.assignment_id)),
+    }
   } catch {
-    return new Map()
+    return none
   }
 })
+function myLatest(a: AssignmentSummary): SubmissionSummary | undefined {
+  return mine.data.value?.latest.get(a.id)
+}
 
 // --- Filtering ------------------------------------------------------------------
 const query = ref('')
@@ -66,10 +80,9 @@ const rows = computed(() => {
 const now = ref(Date.now())
 const isPast = (due: string | null | undefined) => !!due && dayjs(due).valueOf() < now.value
 function handedIn(a: AssignmentSummary): boolean {
-  const s = mine.data.value?.get(a.id)
-  return !!s && (s.state === 'submitted' || s.state === 'late')
+  return !!mine.data.value?.handedIn.has(a.id)
 }
-/** Past due and, for a student, nothing handed in: overdue. */
+/** Past due and, for a student, nothing handed in (in any attempt): overdue. */
 function overdue(a: AssignmentSummary): boolean {
   return isStudent.value && isPast(a.due_at) && !handedIn(a)
 }
@@ -114,8 +127,9 @@ function refresh() {
 <template>
   <div class="assignments-view">
     <PageHeader :title="t('assignments.title')" :subtitle="t('assignments.subtitle')">
-      <el-button :aria-label="t('common.actions.refresh')" @click="refresh">
+      <el-button :loading="list.loading.value" @click="refresh">
         <el-icon><Refresh /></el-icon>
+        <span>{{ t('common.actions.refresh') }}</span>
       </el-button>
       <template v-if="writer">
         <el-button type="primary" :disabled="!course.writable" @click="formOpen = true">
@@ -128,7 +142,9 @@ function refresh() {
     <el-alert v-if="proposed" type="info" show-icon class="assignments-view__alert" @close="proposed = false">
       <template #title>
         {{ t('assignments.list.proposed') }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('assignments.list.viewMyActions') }}</router-link>
+        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+          t('assignments.list.viewMyActions')
+        }}</router-link>
       </template>
     </el-alert>
     <div v-if="writer && course.needsApproval('assignment_write')" class="app-form-hint assignments-view__approval">
@@ -144,7 +160,9 @@ function refresh() {
           clearable
           class="assignments-view__search"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
         <el-radio-group v-if="writer && hasUnpublished" v-model="show" size="small">
           <el-radio-button value="all">{{ t('assignments.list.show.all') }}</el-radio-button>
@@ -173,7 +191,12 @@ function refresh() {
           :default-sort="{ prop: 'due_at', order: 'ascending' }"
           @row-click="open"
         >
-          <el-table-column :label="t('assignments.list.col.title')" prop="title" :min-width="narrow ? 180 : 240" sortable>
+          <el-table-column
+            :label="t('assignments.list.col.title')"
+            prop="title"
+            :min-width="narrow ? 180 : 240"
+            sortable
+          >
             <template #default="{ row }">
               <div class="assignments-view__title">
                 <router-link
@@ -189,10 +212,12 @@ function refresh() {
               </div>
               <div class="assignments-view__sub app-muted">{{ componentLabel(row) }}</div>
               <div v-if="narrow" class="assignments-view__meta">
-                <span class="app-muted">{{ t('assignments.list.pointsShort', { n: formatDecimal(row.points_possible) }) }}</span>
+                <span class="app-muted">{{
+                  t('assignments.list.pointsShort', { n: formatDecimal(row.points_possible) })
+                }}</span>
                 <template v-if="isStudent">
-                  <template v-if="mine.data.value?.get(row.id)">
-                    <StatusTag vocab="submissionState" :value="mine.data.value.get(row.id)!.state" />
+                  <template v-if="myLatest(row)">
+                    <StatusTag vocab="submissionState" :value="myLatest(row)!.state" />
                   </template>
                   <span v-else-if="!mine.loading.value" class="app-muted">{{ t('assignments.state.notStarted') }}</span>
                 </template>
@@ -232,11 +257,11 @@ function refresh() {
           </el-table-column>
           <el-table-column v-if="isStudent && !narrow" :label="t('assignments.list.col.mine')" min-width="150">
             <template #default="{ row }">
-              <template v-if="mine.data.value?.get(row.id)">
+              <template v-if="myLatest(row)">
                 <div class="assignments-view__mine">
-                  <StatusTag vocab="submissionState" :value="mine.data.value.get(row.id)!.state" />
+                  <StatusTag vocab="submissionState" :value="myLatest(row)!.state" />
                   <span class="app-muted">
-                    {{ t('assignments.state.attempt', { n: mine.data.value.get(row.id)!.attempt }) }}
+                    {{ t('assignments.state.attempt', { n: myLatest(row)!.attempt }) }}
                   </span>
                 </div>
               </template>

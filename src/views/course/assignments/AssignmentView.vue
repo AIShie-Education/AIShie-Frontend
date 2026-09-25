@@ -53,9 +53,7 @@ const instructions = useAsync<DocumentFull | null>(
 )
 const instructionsDoc = computed(() => instructions.data.value ?? null)
 /** Instructions exist but students have nothing of them to read. */
-const instructionsUnpublished = computed(
-  () => !!instructionsDoc.value && !instructionsDoc.value.published_version_id,
-)
+const instructionsUnpublished = computed(() => !!instructionsDoc.value && !instructionsDoc.value.published_version_id)
 
 // --- Due -----------------------------------------------------------------------------
 const pastDue = computed(() => !!assignment.value?.due_at && dayjs(assignment.value.due_at).isBefore(dayjs()))
@@ -66,8 +64,15 @@ const componentLabel = computed(() => {
 })
 
 // --- Editing and publishing ---------------------------------------------------------
+/** A change that waits for approval: the page shows the assignment as it still is. */
+const pendingNote = ref<string | null>(null)
+/** Publications asked for from this page that wait for approval: not to be asked for twice. */
+const publishProposed = ref(false)
+const instructionsProposed = ref(false)
+
 const formOpen = ref(false)
-function onSaved() {
+function onSaved(r: { status: 'executed' | 'proposed' }) {
+  pendingNote.value = r.status === 'proposed' ? t('assignments.detail.proposed.edit') : null
   void state.reload()
   void instructions.reload()
   void scheme.reload()
@@ -78,7 +83,9 @@ async function publish() {
   const a = assignment.value
   if (!a) return
   const lines = [t('assignments.detail.publishConfirm', { title: a.title })]
-  if (a.instructions_document_id) lines.push(t('assignments.detail.publishNeedsInstructions'))
+  // Instructions known to be unpublished keep the button disabled; those that
+  // could not be read may be either.
+  if (a.instructions_document_id && !instructionsDoc.value) lines.push(t('assignments.detail.publishNeedsInstructions'))
   if (course.needsApproval('assignment_write')) lines.push(t('assignments.detail.publishApproval'))
   try {
     await ElMessageBox.confirm(lines.join(' '), t('assignments.detail.publishTitle'), {
@@ -94,8 +101,12 @@ async function publish() {
     { success: t('assignments.detail.published') },
   )
   if (out?.status === 'executed') {
+    pendingNote.value = null
     course.invalidate('assignments')
     void state.reload()
+  } else if (out?.status === 'proposed') {
+    publishProposed.value = true
+    pendingNote.value = t('assignments.detail.proposed.publish')
   }
 }
 
@@ -108,11 +119,24 @@ async function publishInstructions() {
     { success: t('assignments.detail.instructionsPublished') },
   )
   if (out?.status === 'executed') void instructions.reload()
+  else if (out?.status === 'proposed') {
+    instructionsProposed.value = true
+    pendingNote.value = t('assignments.detail.proposed.instructions')
+  }
+}
+
+/** A hand-in found other instructions in force than the ones shown: show those. */
+function onInstructionsChanged() {
+  void state.reload()
+  void instructions.reload()
 }
 
 const summary = ref<InstanceType<typeof WorkSummary> | null>(null)
 const work = ref<InstanceType<typeof MyWorkPanel> | null>(null)
 function refresh() {
+  // What was proposed may have been decided since; Core says if it is still waiting.
+  publishProposed.value = false
+  instructionsProposed.value = false
   void state.reload()
   void instructions.reload()
   summary.value?.reload()
@@ -122,53 +146,80 @@ function refresh() {
 
 <template>
   <div class="assignment-view">
-    <AsyncState :loading="state.loading.value && !assignment" :error="state.error.value" @retry="state.reload">
-      <template v-if="assignment">
-        <PageHeader :title="assignment.title" :back="{ name: 'course-assignments', params: { courseId } }">
-          <template #tags>
-            <el-tag v-if="!assignment.published_at" type="warning" disable-transitions>
-              {{ t('assignments.state.unpublished') }}
-            </el-tag>
-            <el-tag v-if="pastDue" type="info" disable-transitions>{{ t('assignments.state.pastDue') }}</el-tag>
-          </template>
-          <template #subtitle>
-            <span v-if="assignment.due_at">
-              {{ t('assignments.detail.dueLine') }} <TimeText :value="assignment.due_at" />
-              (<TimeText :value="assignment.due_at" relative />)
-            </span>
-            <span v-else>{{ t('common.time.noDue') }}</span>
-            · {{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
-          </template>
-          <el-button :aria-label="t('common.actions.refresh')" @click="refresh">
-            <el-icon><Refresh /></el-icon>
-          </el-button>
-          <template v-if="writer">
-            <el-button :disabled="!course.writable" @click="formOpen = true">
-              <el-icon><Edit /></el-icon>
-              <span>{{ t('common.actions.edit') }}</span>
-            </el-button>
+    <PageHeader
+      :title="assignment?.title ?? t('assignments.detail.title')"
+      :back="{ name: 'course-assignments', params: { courseId } }"
+    >
+      <template v-if="assignment" #tags>
+        <el-tag v-if="!assignment.published_at" type="warning" disable-transitions>
+          {{ t('assignments.state.unpublished') }}
+        </el-tag>
+        <el-tag v-if="pastDue" type="info" disable-transitions>{{ t('assignments.state.pastDue') }}</el-tag>
+      </template>
+      <template v-if="assignment" #subtitle>
+        <span v-if="assignment.due_at">
+          {{ t('assignments.detail.dueLine') }} <TimeText :value="assignment.due_at" /> (<TimeText
+            :value="assignment.due_at"
+            relative
+          />)
+        </span>
+        <span v-else>{{ t('common.time.noDue') }}</span>
+        · {{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
+      </template>
+      <el-button :loading="state.loading.value" @click="refresh">
+        <el-icon><Refresh /></el-icon>
+        <span>{{ t('common.actions.refresh') }}</span>
+      </el-button>
+      <template v-if="assignment && writer">
+        <el-button :disabled="!course.writable" @click="formOpen = true">
+          <el-icon><Edit /></el-icon>
+          <span>{{ t('common.actions.edit') }}</span>
+        </el-button>
+        <el-tooltip
+          v-if="!assignment.published_at"
+          :content="
+            instructionsUnpublished
+              ? t('assignments.detail.instructionsUnpublished')
+              : t('assignments.detail.proposed.publish')
+          "
+          :disabled="!(instructionsUnpublished || publishProposed) || !course.writable"
+          placement="bottom"
+        >
+          <span>
             <el-button
-              v-if="!assignment.published_at"
               type="primary"
-              :disabled="!course.writable"
+              :disabled="!course.writable || instructionsUnpublished || publishProposed"
               :loading="publishW.pending.value"
               @click="publish"
             >
               <el-icon><Promotion /></el-icon>
               <span>{{ t('common.actions.publish') }}</span>
             </el-button>
-            <el-tag
-              v-if="course.needsApproval('assignment_write')"
-              type="warning"
-              size="small"
-              class="assignment-view__approval"
-              disable-transitions
-            >
-              {{ t('enums.level.confirm_required') }}
-            </el-tag>
-          </template>
-        </PageHeader>
+          </span>
+        </el-tooltip>
+        <el-tag
+          v-if="course.needsApproval('assignment_write')"
+          type="warning"
+          size="small"
+          class="assignment-view__approval"
+          disable-transitions
+        >
+          {{ t('enums.level.confirm_required') }}
+        </el-tag>
+      </template>
+    </PageHeader>
 
+    <el-alert v-if="pendingNote" type="info" show-icon class="assignment-view__alert" @close="pendingNote = null">
+      <template #title>
+        {{ pendingNote }}
+        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
+          {{ t('assignments.list.viewMyActions') }}
+        </router-link>
+      </template>
+    </el-alert>
+
+    <AsyncState :loading="state.loading.value && !assignment" :error="state.error.value" @retry="state.reload">
+      <template v-if="assignment">
         <el-alert
           v-if="writer && !assignment.published_at"
           type="info"
@@ -190,7 +241,7 @@ function refresh() {
               v-if="course.can('document_write') && instructionsDoc?.version"
               link
               type="primary"
-              :disabled="!course.writable"
+              :disabled="!course.writable || instructionsProposed"
               :loading="publishDocW.pending.value"
               @click="publishInstructions"
             >
@@ -207,7 +258,10 @@ function refresh() {
                 <span>{{ t('assignments.detail.instructions') }}</span>
                 <router-link
                   v-if="assignment.instructions_document_id"
-                  :to="{ name: 'course-document', params: { courseId, documentId: assignment.instructions_document_id } }"
+                  :to="{
+                    name: 'course-document',
+                    params: { courseId, documentId: assignment.instructions_document_id },
+                  }"
                   class="assignment-view__doclink"
                 >
                   {{ t('assignments.detail.openDocument') }}
@@ -236,10 +290,7 @@ function refresh() {
                     "
                   />
                   <template v-if="instructionsDoc.version">
-                    <MarkdownView
-                      v-if="instructionsDoc.version.body_md"
-                      :source="instructionsDoc.version.body_md"
-                    />
+                    <MarkdownView v-if="instructionsDoc.version.body_md" :source="instructionsDoc.version.body_md" />
                     <p v-else-if="!instructionsDoc.version.download_url" class="app-muted assignment-view__none">
                       {{ t('assignments.detail.noText') }}
                     </p>
@@ -264,6 +315,7 @@ function refresh() {
               :course-id="courseId"
               :assignment="assignment"
               :instructions-version-id="instructionsDoc?.published_version_id ?? null"
+              @instructions-changed="onInstructionsChanged"
             />
           </div>
 
@@ -353,6 +405,13 @@ function refresh() {
 <style scoped>
 .assignment-view__alert {
   margin-bottom: 16px;
+}
+.assignment-view__alert a {
+  margin-left: 6px;
+}
+/* Room for the close button beside a long notice. */
+.assignment-view__alert:deep(.el-alert__content) {
+  padding-right: 24px;
 }
 .assignment-view__approval {
   align-self: center;

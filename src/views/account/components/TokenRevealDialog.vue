@@ -11,7 +11,8 @@ import { DIALOG_WIDTH, maskedToken } from './credentials'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ issued: ToolOut<'credential.issue_token'> | null }>()
-const emit = defineEmits<{ revoke: [credentialId: string] }>()
+// closed: the dialog has gone, and the parent can forget the token.
+const emit = defineEmits<{ revoke: [credentialId: string]; closed: [] }>()
 const { t } = useI18n()
 
 const copied = ref(false)
@@ -72,6 +73,7 @@ function revoke() {
     :close-on-click-modal="false"
     :before-close="beforeClose"
     destroy-on-close
+    @closed="emit('closed')"
   >
     <template v-if="issued && token">
       <el-alert type="warning" :closable="false" show-icon :title="t('account.token.warning')" />
@@ -93,7 +95,9 @@ function revoke() {
       <pre class="reveal-code" @copy="copied = true">{{ header }}</pre>
       <dl class="reveal-meta">
         <dt>{{ t('account.token.listedAs') }}</dt>
-        <dd><code>{{ maskedToken(issued.token_prefix) }}</code></dd>
+        <dd>
+          <code>{{ maskedToken(issued.token_prefix) }}</code>
+        </dd>
         <dt>{{ t('account.token.expires') }}</dt>
         <dd>
           <TimeText v-if="issued.expires_at" :value="issued.expires_at" />
@@ -105,7 +109,9 @@ function revoke() {
       <el-alert type="error" :closable="false" show-icon :title="t('account.token.missing')" />
       <dl class="reveal-meta">
         <dt>{{ t('account.token.listedAs') }}</dt>
-        <dd><code>{{ maskedToken(issued.token_prefix) }}</code></dd>
+        <dd>
+          <code>{{ maskedToken(issued.token_prefix) }}</code>
+        </dd>
       </dl>
     </template>
     <template #footer>

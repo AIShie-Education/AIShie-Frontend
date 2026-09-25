@@ -35,6 +35,8 @@ export default {
   labels: {
     id: 'ID',
     scoped: 'scoped',
+    scopedHelp: 'Only for the students and assignments within the seat’s scope',
+    pasteMemberId: 'Paste a member ID',
     changed: 'changed',
     name: 'Name',
     title: 'Title',

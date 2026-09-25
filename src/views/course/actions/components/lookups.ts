@@ -4,7 +4,7 @@
 // can read it; anything that cannot be looked up is shown by its id instead.
 import { computed, reactive, watch, type ComputedRef } from 'vue'
 import { ApiError, read } from '@/api/http'
-import type { Perm } from '@/api/types'
+import type { Perm, Preset } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 
@@ -15,6 +15,10 @@ export interface Entry<T> {
 }
 
 const entries = reactive(new Map<string, Entry<unknown>>())
+/** How each entry is loaded, to look again (refresh). */
+const loaders = new Map<string, () => Promise<unknown>>()
+/** The latest load of each entry: an older answer that arrives late is dropped. */
+const generations = new Map<string, number>()
 
 const MAX_AT_ONCE = 4
 let running = 0
@@ -30,24 +34,48 @@ async function limited<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-function ensure<T>(key: string, loader: () => Promise<T>) {
-  if (entries.has(key)) return
-  entries.set(key, { state: 'loading' })
+function run(key: string) {
+  const loader = loaders.get(key)
+  if (!loader) return
+  const gen = (generations.get(key) ?? 0) + 1
+  generations.set(key, gen)
   limited(loader).then(
     (v) => {
       const e = entries.get(key)
-      if (e) Object.assign(e, { state: 'ok', value: v })
+      if (e && generations.get(key) === gen) Object.assign(e, { state: 'ok', value: v, error: undefined })
     },
     (err) => {
       const e = entries.get(key)
-      if (e) Object.assign(e, { state: 'error', error: err instanceof ApiError ? err : undefined })
+      if (e && generations.get(key) === gen)
+        Object.assign(e, { state: 'error', value: undefined, error: err instanceof ApiError ? err : undefined })
     },
   )
 }
 
-/** Forgets what was looked up under a prefix (an action whose state has changed, say). */
-export function forget(prefix: string) {
-  for (const k of [...entries.keys()]) if (k.startsWith(prefix)) entries.delete(k)
+function ensure<T>(key: string, loader: () => Promise<T>) {
+  if (entries.has(key)) return
+  loaders.set(key, loader)
+  entries.set(key, { state: 'loading' })
+  run(key)
+}
+
+/**
+ * Looks again at what was looked up under a prefix (an action whose state
+ * has changed, say), keeping what is known on show until the answer comes.
+ */
+export function refresh(prefix: string) {
+  for (const k of [...entries.keys()]) if (k.startsWith(prefix)) run(k)
+}
+
+/**
+ * After a decision or a review: the actions it was about have moved on, and
+ * what a carried-out proposal changed may be on show too (which version of a
+ * document is published).
+ */
+export function refreshAfterDecision(courseId: string) {
+  refresh(`${courseId}:action:`)
+  refresh(`${courseId}:document:`)
+  refresh(`${courseId}:versions:`)
 }
 
 export interface Spec<T> {
@@ -95,6 +123,15 @@ export function useSpecs() {
         load: () => read('document.get', { course_id: courseId, document_id: id }),
       }
     },
+    /** Every version of a document, with which is published: for those who read drafts. */
+    versions(courseId: string, documentId: string | null | undefined) {
+      if (!documentId || !may('document_read_draft')) return null
+      return {
+        key: `${courseId}:versions:${documentId}`,
+        load: () =>
+          read('document.versions', { course_id: courseId, document_id: documentId }).then((o) => o.versions ?? []),
+      }
+    },
     action(courseId: string, id: string | null | undefined) {
       if (!id || !may('action_decide')) return null
       return { key: `${courseId}:action:${id}`, load: () => read('action.get', { course_id: courseId, action_id: id }) }
@@ -104,6 +141,19 @@ export function useSpecs() {
       return {
         key: `${courseId}:components`,
         load: () => read('component.tree', { course_id: courseId }).then((o) => o.components ?? []),
+      }
+    },
+    /**
+     * The built-in presets and the course's department's own (anyone signed
+     * in may read them), once the course, and so its department, is known.
+     */
+    presets(courseId: string): Spec<Preset[]> | null {
+      const c = course.course
+      if (!c || c.id !== courseId) return null
+      const dept = c.dept_id ?? undefined
+      return {
+        key: `presets:${dept ?? ''}`,
+        load: () => read('preset.list', { dept_id: dept }).then((o) => o.presets ?? []),
       }
     },
     actor(id: string | null | undefined) {

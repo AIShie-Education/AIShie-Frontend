@@ -3,17 +3,23 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Decimal } from '@/api/types'
-import { formatDecimal } from '@/utils/format'
-import { addDecimals, useNarrow, type BreakdownItem } from './grading'
+import { useNarrow } from '@/composables/useMediaQuery'
+import { sumDecimals } from '@/views/course/submissions/components/decimal'
+import { formatScore, plainDecimal, type BreakdownItem } from './grading'
 
 const props = defineProps<{ items: BreakdownItem[]; score?: Decimal | null }>()
 const { t } = useI18n()
 const narrow = useNarrow()
 
-const totalPoints = computed(() => addDecimals(props.items.map((b) => b.points)))
-const totalMax = computed(() => addDecimals(props.items.map((b) => b.max)))
+const sum = (vs: Decimal[]) => sumDecimals(vs.map((v) => plainDecimal(v) ?? String(v)))
+const totalPoints = computed(() => sum(props.items.map((b) => b.points)))
+const totalMax = computed(() => sum(props.items.map((b) => b.max)))
 const differs = computed(
-  () => props.score !== null && props.score !== undefined && Number(totalPoints.value) !== Number(props.score),
+  () =>
+    totalPoints.value !== null &&
+    props.score !== null &&
+    props.score !== undefined &&
+    totalPoints.value !== plainDecimal(props.score),
 )
 </script>
 
@@ -25,8 +31,8 @@ const differs = computed(
         <div class="bd-list__head">
           <span class="bd-table__criterion">{{ b.criterion }}</span>
           <span class="bd-table__num bd-list__pts">
-            <strong>{{ formatDecimal(b.points) }}</strong>
-            <span class="app-muted"> / {{ formatDecimal(b.max) }}</span>
+            <strong>{{ formatScore(b.points) }}</strong>
+            <span class="app-muted"> / {{ formatScore(b.max) }}</span>
           </span>
         </div>
         <p v-if="b.comment" class="bd-table__comment bd-list__comment">{{ b.comment }}</p>
@@ -40,12 +46,12 @@ const differs = computed(
       </el-table-column>
       <el-table-column :label="t('grades.breakdown.points')" min-width="90" align="right">
         <template #default="{ row }">
-          <span class="bd-table__num">{{ formatDecimal(row.points) }}</span>
+          <span class="bd-table__num">{{ formatScore(row.points) }}</span>
         </template>
       </el-table-column>
       <el-table-column :label="t('grades.breakdown.max')" min-width="80" align="right">
         <template #default="{ row }">
-          <span class="bd-table__num app-muted">{{ formatDecimal(row.max) }}</span>
+          <span class="bd-table__num app-muted">{{ formatScore(row.max) }}</span>
         </template>
       </el-table-column>
       <el-table-column :label="t('grades.breakdown.comment')" min-width="200">
@@ -56,11 +62,11 @@ const differs = computed(
     </el-table>
     <div class="bd-table__total">
       <span>{{ t('grades.breakdown.total') }}</span>
-      <strong class="bd-table__num">{{ formatDecimal(totalPoints) }}</strong>
-      <span class="app-muted">/ {{ formatDecimal(totalMax) }}</span>
+      <strong class="bd-table__num">{{ formatScore(totalPoints) }}</strong>
+      <span class="app-muted">/ {{ formatScore(totalMax) }}</span>
     </div>
     <p v-if="differs" class="app-form-hint">
-      {{ t('grades.breakdown.differs', { total: formatDecimal(totalPoints), score: formatDecimal(score) }) }}
+      {{ t('grades.breakdown.differs', { total: formatScore(totalPoints), score: formatScore(score) }) }}
     </p>
   </div>
 </template>

@@ -23,7 +23,10 @@ const props = defineProps<{
   facts: GradeFacts | null
   /** Offer the editing actions (assignment_write, or unknown). */
   canWrite: boolean
-  /** False in an archived course: the actions are shown disabled. */
+  /**
+   * False in an archived course, or while it is not known yet which components
+   * hold assignments: the actions are shown disabled.
+   */
   writable: boolean
 }>()
 const emit = defineEmits<{ add: [parent: SchemeNode]; edit: [node: SchemeNode]; move: [node: SchemeNode] }>()
@@ -40,7 +43,8 @@ const rows = computed<Row[]>(() => {
   const walk = (n: SchemeNode) => {
     out.push({ type: 'component', key: n.id, depth: n.depth, node: n })
     if (collapsed.value.has(n.id)) return
-    for (const x of n.assignments) out.push({ type: 'assignment', key: `a:${x.a.id}`, depth: n.depth + 1, item: x, host: n })
+    for (const x of n.assignments)
+      out.push({ type: 'assignment', key: `a:${x.a.id}`, depth: n.depth + 1, item: x, host: n })
     n.children.forEach(walk)
   }
   if (props.scheme.root) walk(props.scheme.root)
@@ -64,6 +68,7 @@ const ICONS: Record<string, string> = {
   bucket: 'Collection',
   direct: 'EditPen',
   empty: 'Folder',
+  unseen: 'Folder',
 }
 const TAGS: Record<string, 'primary' | 'success' | 'warning' | 'info'> = {
   root: 'primary',
@@ -71,6 +76,7 @@ const TAGS: Record<string, 'primary' | 'success' | 'warning' | 'info'> = {
   bucket: 'success',
   direct: 'warning',
   empty: 'info',
+  unseen: 'info',
 }
 const kindOf = (n: SchemeNode) => (n.isRoot ? 'root' : n.kind)
 
@@ -84,6 +90,10 @@ function frozenText(n: SchemeNode): string | null {
 function addBlockText(n: SchemeNode): string | null {
   const b = childBlock(n)
   return b ? t(`scheme.reasons.${b}`, { name: n.c.name }) : null
+}
+/** Offered, but it may hold assignments the caller cannot see, and then Core refuses. */
+function addCautionText(n: SchemeNode): string | null {
+  return n.kind === 'unseen' ? t('scheme.reasons.unseen', { name: n.c.name }) : null
 }
 function moveBlockText(n: SchemeNode): string | null {
   if (n.isRoot) return t('scheme.reasons.root')
@@ -104,36 +114,36 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
     <div class="st-row st-row--head" role="row">
       <div class="st-cell st-name" role="columnheader">{{ t('scheme.tree.cols.name') }}</div>
       <div class="st-facts">
-      <div class="st-cell st-num" role="columnheader">
-        <el-tooltip :content="t('scheme.tree.colHelp.weight')" placement="top">
-          <span class="st-help">{{ t('scheme.tree.cols.weight') }}</span>
-        </el-tooltip>
-      </div>
-      <div class="st-cell st-share" role="columnheader">
-        <el-tooltip :content="t('scheme.tree.colHelp.share')" placement="top">
-          <span class="st-help">{{ t('scheme.tree.cols.share') }}</span>
-        </el-tooltip>
-      </div>
-      <div class="st-cell st-num" role="columnheader">
-        <el-tooltip :content="t('scheme.tree.colHelp.ofTotal')" placement="top">
-          <span class="st-help">{{ t('scheme.tree.cols.ofTotal') }}</span>
-        </el-tooltip>
-      </div>
-      <div class="st-cell st-num" role="columnheader">
-        <el-tooltip :content="t('scheme.tree.colHelp.drop')" placement="top">
-          <span class="st-help">{{ t('scheme.tree.cols.drop') }}</span>
-        </el-tooltip>
-      </div>
-      <div class="st-cell st-num" role="columnheader">
-        <el-tooltip :content="t('scheme.tree.colHelp.points')" placement="top">
-          <span class="st-help">{{ t('scheme.tree.cols.points') }}</span>
-        </el-tooltip>
-      </div>
-      <div class="st-cell st-num" role="columnheader">
-        <el-tooltip :content="t('scheme.tree.colHelp.order')" placement="top">
-          <span class="st-help">{{ t('scheme.tree.cols.order') }}</span>
-        </el-tooltip>
-      </div>
+        <div class="st-cell st-num" role="columnheader">
+          <el-tooltip :content="t('scheme.tree.colHelp.weight')" placement="top">
+            <span class="st-help">{{ t('scheme.tree.cols.weight') }}</span>
+          </el-tooltip>
+        </div>
+        <div class="st-cell st-share" role="columnheader">
+          <el-tooltip :content="t('scheme.tree.colHelp.share')" placement="top">
+            <span class="st-help">{{ t('scheme.tree.cols.share') }}</span>
+          </el-tooltip>
+        </div>
+        <div class="st-cell st-num" role="columnheader">
+          <el-tooltip :content="t('scheme.tree.colHelp.ofTotal')" placement="top">
+            <span class="st-help">{{ t('scheme.tree.cols.ofTotal') }}</span>
+          </el-tooltip>
+        </div>
+        <div class="st-cell st-num" role="columnheader">
+          <el-tooltip :content="t('scheme.tree.colHelp.drop')" placement="top">
+            <span class="st-help">{{ t('scheme.tree.cols.drop') }}</span>
+          </el-tooltip>
+        </div>
+        <div class="st-cell st-num" role="columnheader">
+          <el-tooltip :content="t('scheme.tree.colHelp.points')" placement="top">
+            <span class="st-help">{{ t('scheme.tree.cols.points') }}</span>
+          </el-tooltip>
+        </div>
+        <div class="st-cell st-num" role="columnheader">
+          <el-tooltip :content="t('scheme.tree.colHelp.order')" placement="top">
+            <span class="st-help">{{ t('scheme.tree.cols.order') }}</span>
+          </el-tooltip>
+        </div>
       </div>
       <div v-if="canWrite" class="st-cell st-actions" role="columnheader">
         <span class="st-sr">{{ t('scheme.tree.cols.actions') }}</span>
@@ -179,70 +189,69 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
         </div>
 
         <div class="st-facts">
-        <div
-          class="st-cell st-num"
-          :class="{ 'is-blank': row.node.isRoot }"
-          :data-label="t('scheme.tree.cols.weight')"
-          role="cell"
-        >
-          <template v-if="row.node.isRoot">—</template>
-          <template v-else>
-            {{ formatDecimal(row.node.c.weight, 4) }}
-            <el-tooltip v-if="row.node.weight === 0" :content="t('scheme.tree.zeroWeight')" placement="top">
-              <el-icon class="st-note"><InfoFilled /></el-icon>
-            </el-tooltip>
-          </template>
-        </div>
+          <div
+            class="st-cell st-num"
+            :class="{ 'is-blank': row.node.isRoot }"
+            :data-label="t('scheme.tree.cols.weight')"
+            role="cell"
+          >
+            <template v-if="row.node.isRoot">—</template>
+            <template v-else>
+              {{ formatDecimal(row.node.c.weight, 4) }}
+              <el-tooltip v-if="row.node.weight === 0" :content="t('scheme.tree.zeroWeight')" placement="top">
+                <el-icon class="st-note"><InfoFilled /></el-icon>
+              </el-tooltip>
+            </template>
+          </div>
 
-        <div
-          class="st-cell st-share"
-          :class="{ 'is-blank': row.node.share === null }"
-          :data-label="t('scheme.tree.cols.share')"
-          role="cell"
-        >
-          <span v-if="row.node.share !== null" class="st-bar" aria-hidden="true">
-            <span class="st-bar__fill" :style="{ width: barWidth(row.node.share) }" />
-          </span>
-          <span class="st-share__text">{{ pct(row.node.share) }}</span>
-        </div>
+          <div
+            class="st-cell st-share"
+            :class="{ 'is-blank': row.node.share === null }"
+            :data-label="t('scheme.tree.cols.share')"
+            role="cell"
+          >
+            <span v-if="row.node.share !== null" class="st-bar" aria-hidden="true">
+              <span class="st-bar__fill" :style="{ width: barWidth(row.node.share) }" />
+            </span>
+            <span class="st-share__text">{{ pct(row.node.share) }}</span>
+          </div>
 
-        <div
-          class="st-cell st-num"
-          :class="{ 'is-blank': row.node.isRoot || row.node.ofTotal === null }"
-          :data-label="t('scheme.tree.cols.ofTotal')"
-          role="cell"
-        >
-          {{ pct(row.node.ofTotal) }}
-        </div>
+          <div
+            class="st-cell st-num"
+            :class="{ 'is-blank': row.node.isRoot || row.node.ofTotal === null }"
+            :data-label="t('scheme.tree.cols.ofTotal')"
+            role="cell"
+          >
+            {{ pct(row.node.ofTotal) }}
+          </div>
 
-        <div
-          class="st-cell st-num"
-          :class="{ 'is-blank': !row.node.c.drop_lowest }"
-          :data-label="t('scheme.tree.cols.drop')"
-          role="cell"
-        >
-          <template v-if="row.node.c.drop_lowest">{{ row.node.c.drop_lowest }}</template>
-          <template v-else>—</template>
-        </div>
+          <div
+            class="st-cell st-num"
+            :class="{ 'is-blank': !row.node.c.drop_lowest }"
+            :data-label="t('scheme.tree.cols.drop')"
+            role="cell"
+          >
+            <template v-if="row.node.c.drop_lowest">{{ row.node.c.drop_lowest }}</template>
+            <template v-else>—</template>
+          </div>
 
-        <div
-          class="st-cell st-num"
-          :class="{ 'is-blank': row.node.kind !== 'direct' }"
-          :data-label="t('scheme.tree.cols.points')"
-          role="cell"
-        >
-          {{ row.node.kind === 'direct' ? formatDecimal(row.node.c.points_possible, 4) : '—' }}
-        </div>
+          <div
+            class="st-cell st-num"
+            :class="{ 'is-blank': row.node.kind !== 'direct' }"
+            :data-label="t('scheme.tree.cols.points')"
+            role="cell"
+          >
+            {{ row.node.kind === 'direct' ? formatDecimal(row.node.c.points_possible, 4) : '—' }}
+          </div>
 
-        <div
-          class="st-cell st-num st-order"
-          :class="{ 'is-blank': row.node.isRoot }"
-          :data-label="t('scheme.tree.cols.order')"
-          role="cell"
-        >
-          {{ row.node.isRoot ? '—' : row.node.c.sort_order }}
-        </div>
-
+          <div
+            class="st-cell st-num st-order"
+            :class="{ 'is-blank': row.node.isRoot }"
+            :data-label="t('scheme.tree.cols.order')"
+            role="cell"
+          >
+            {{ row.node.isRoot ? '—' : row.node.c.sort_order }}
+          </div>
         </div>
 
         <div v-if="canWrite" class="st-cell st-actions" role="cell">
@@ -260,18 +269,29 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
               <el-dropdown-menu>
                 <el-dropdown-item command="add" :disabled="!!addBlockText(row.node)">
                   <div class="st-menu">
-                    <span class="st-menu__label"><el-icon><Plus /></el-icon>{{ t('scheme.actions.addChild') }}</span>
-                    <span v-if="addBlockText(row.node)" class="st-menu__why">{{ addBlockText(row.node) }}</span>
+                    <span class="st-menu__label">
+                      <el-icon><Plus /></el-icon>
+                      {{ t('scheme.actions.addChild') }}
+                    </span>
+                    <span v-if="addBlockText(row.node) ?? addCautionText(row.node)" class="st-menu__why">
+                      {{ addBlockText(row.node) ?? addCautionText(row.node) }}
+                    </span>
                   </div>
                 </el-dropdown-item>
                 <el-dropdown-item command="edit">
                   <div class="st-menu">
-                    <span class="st-menu__label"><el-icon><Edit /></el-icon>{{ t('scheme.actions.edit') }}</span>
+                    <span class="st-menu__label">
+                      <el-icon><Edit /></el-icon>
+                      {{ t('scheme.actions.edit') }}
+                    </span>
                   </div>
                 </el-dropdown-item>
                 <el-dropdown-item v-if="!row.node.isRoot" command="move" :disabled="!!moveBlockText(row.node)">
                   <div class="st-menu">
-                    <span class="st-menu__label"><el-icon><Rank /></el-icon>{{ t('scheme.actions.move') }}</span>
+                    <span class="st-menu__label">
+                      <el-icon><Rank /></el-icon>
+                      {{ t('scheme.actions.move') }}
+                    </span>
                     <span v-if="moveBlockText(row.node)" class="st-menu__why">{{ moveBlockText(row.node) }}</span>
                   </div>
                 </el-dropdown-item>
@@ -298,7 +318,11 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
                 {{ t('scheme.tree.unpublished') }}
               </el-tag>
             </el-tooltip>
-            <el-tooltip v-if="row.item.share === null && row.host.kind !== 'bucket'" :content="t('scheme.tree.ignored')" placement="top">
+            <el-tooltip
+              v-if="row.item.share === null && row.host.kind !== 'bucket'"
+              :content="t('scheme.tree.ignored')"
+              placement="top"
+            >
               <el-icon class="st-warn"><WarningFilled /></el-icon>
             </el-tooltip>
             <el-tooltip
@@ -311,33 +335,33 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
           </span>
         </div>
         <div class="st-facts">
-        <div class="st-cell st-num is-blank st-byline" :data-label="t('scheme.tree.cols.weight')" role="cell">
-          <span class="st-muted">{{ t('scheme.tree.byPoints') }}</span>
-        </div>
-        <div
-          class="st-cell st-share"
-          :class="{ 'is-blank': row.item.share === null }"
-          :data-label="t('scheme.tree.cols.share')"
-          role="cell"
-        >
-          <span v-if="row.item.share !== null" class="st-bar st-bar--assignment" aria-hidden="true">
-            <span class="st-bar__fill" :style="{ width: barWidth(row.item.share) }" />
-          </span>
-          <span class="st-share__text">{{ pct(row.item.share) }}</span>
-        </div>
-        <div
-          class="st-cell st-num"
-          :class="{ 'is-blank': row.item.ofTotal === null }"
-          :data-label="t('scheme.tree.cols.ofTotal')"
-          role="cell"
-        >
-          {{ pct(row.item.ofTotal) }}
-        </div>
-        <div class="st-cell st-num is-blank" role="cell">—</div>
-        <div class="st-cell st-num" :data-label="t('scheme.tree.cols.points')" role="cell">
-          {{ formatDecimal(row.item.a.points_possible, 4) }}
-        </div>
-        <div class="st-cell st-num is-blank" role="cell">—</div>
+          <div class="st-cell st-num is-blank st-byline" :data-label="t('scheme.tree.cols.weight')" role="cell">
+            <span class="st-muted">{{ t('scheme.tree.byPoints') }}</span>
+          </div>
+          <div
+            class="st-cell st-share"
+            :class="{ 'is-blank': row.item.share === null }"
+            :data-label="t('scheme.tree.cols.share')"
+            role="cell"
+          >
+            <span v-if="row.item.share !== null" class="st-bar st-bar--assignment" aria-hidden="true">
+              <span class="st-bar__fill" :style="{ width: barWidth(row.item.share) }" />
+            </span>
+            <span class="st-share__text">{{ pct(row.item.share) }}</span>
+          </div>
+          <div
+            class="st-cell st-num"
+            :class="{ 'is-blank': row.item.ofTotal === null }"
+            :data-label="t('scheme.tree.cols.ofTotal')"
+            role="cell"
+          >
+            {{ pct(row.item.ofTotal) }}
+          </div>
+          <div class="st-cell st-num is-blank" role="cell">—</div>
+          <div class="st-cell st-num" :data-label="t('scheme.tree.cols.points')" role="cell">
+            {{ formatDecimal(row.item.a.points_possible, 4) }}
+          </div>
+          <div class="st-cell st-num is-blank" role="cell">—</div>
         </div>
         <div v-if="canWrite" class="st-cell st-actions" role="cell" />
       </div>

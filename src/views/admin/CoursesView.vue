@@ -4,17 +4,18 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { read } from '@/api/http'
 import type { Department, Term } from '@/api/types'
 import { useAsync, usePaged } from '@/composables/useAsync'
+import { errorMessage } from '@/composables/useErrors'
+import { useNarrow } from '@/composables/useMediaQuery'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import CreateCourseDialog from './components/CreateCourseDialog.vue'
-import { useNarrow, type CourseRow } from './components/adminShared'
+import type { CourseRow } from './components/adminShared'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -42,6 +43,16 @@ const setupLoaded = computed(() => termsState.data.value !== undefined && deptsS
 const missingTerms = computed(() => termsState.data.value !== undefined && terms.value.length === 0)
 const missingDepts = computed(() => deptsState.data.value !== undefined && departments.value.length === 0)
 const canCreate = computed(() => setupLoaded.value && !missingTerms.value && !missingDepts.value)
+/** Terms or departments did not load: no course can be made, and none shows its term or department. */
+const setupError = computed(() => termsState.error.value ?? deptsState.error.value)
+const setupFailed = computed(() =>
+  termsState.error.value && deptsState.error.value ? 'both' : termsState.error.value ? 'terms' : 'depts',
+)
+const setupRetrying = computed(() => termsState.loading.value || deptsState.loading.value)
+function reloadSetup() {
+  if (termsState.error.value) void termsState.reload()
+  if (deptsState.error.value) void deptsState.reload()
+}
 
 const list = usePaged<CourseRow>(
   (after) =>
@@ -57,10 +68,6 @@ const creating = ref(false)
 function onCreated(courseId: string) {
   router.push({ name: 'admin-course', params: { courseId } })
 }
-function onProposed() {
-  ElMessage({ type: 'info', message: t('common.outcome.proposed') })
-  void list.reload()
-}
 
 function rowClick(row: CourseRow) {
   router.push({ name: 'admin-course', params: { courseId: row.id } })
@@ -75,6 +82,20 @@ function rowClick(row: CourseRow) {
         <span>{{ t('admin.courses.create') }}</span>
       </el-button>
     </PageHeader>
+
+    <el-alert
+      v-if="setupError"
+      type="error"
+      show-icon
+      :closable="false"
+      class="courses__setup"
+      :title="t(`admin.courses.setupFailed.${setupFailed}`)"
+    >
+      <div class="courses__setup-error">
+        <span>{{ errorMessage(setupError) }}</span>
+        <el-button size="small" :loading="setupRetrying" @click="reloadSetup">{{ t('common.actions.retry') }}</el-button>
+      </div>
+    </el-alert>
 
     <el-alert
       v-if="missingTerms || missingDepts"
@@ -189,7 +210,6 @@ function rowClick(row: CourseRow) {
       :term-id="termId"
       :dept-id="deptId"
       @created="onCreated"
-      @proposed="onProposed"
     />
   </div>
 </template>
@@ -202,6 +222,13 @@ function rowClick(row: CourseRow) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin-top: 4px;
+}
+.courses__setup-error {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
   margin-top: 4px;
 }
 .courses__filter {

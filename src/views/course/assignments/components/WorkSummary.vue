@@ -1,6 +1,9 @@
 <script setup lang="ts">
-// Where the work on one assignment stands: each student's newest attempt,
-// counted by its state (submission.list, within the caller's scope).
+// Where the work on one assignment stands (submission.list, within the
+// caller's scope): each student counted once, by where their work stands —
+// handed in (late or on time) if any attempt was, else a draft being written,
+// else missing. After the due date Core records a "missing" row for every
+// student with nothing, so a row is not yet work.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SubmissionState, SubmissionSummary } from '@/api/types'
@@ -18,16 +21,33 @@ const state = useAsync(() => allSubmissions(props.courseId, { assignment_id: pro
 
 const STATES: SubmissionState[] = ['draft', 'submitted', 'late', 'missing']
 
+/** One student's standing: the newest attempt handed in, else an open draft, else missing. */
+function standing(subs: SubmissionSummary[]): SubmissionState {
+  const handed = subs
+    .filter((s) => s.state === 'submitted' || s.state === 'late')
+    .sort((a, b) => b.attempt - a.attempt)[0]
+  if (handed) return handed.state as SubmissionState
+  if (subs.some((s) => s.state === 'draft')) return 'draft'
+  return 'missing'
+}
+
 const summary = computed(() => {
-  const subs = state.data.value ?? []
-  const latest = new Map<string, SubmissionSummary>()
-  for (const s of subs) {
-    const cur = latest.get(s.student_member_id)
-    if (!cur || s.attempt > cur.attempt) latest.set(s.student_member_id, s)
-  }
+  const rows = state.data.value ?? []
+  const byStudent = new Map<string, SubmissionSummary[]>()
+  for (const s of rows) byStudent.set(s.student_member_id, [...(byStudent.get(s.student_member_id) ?? []), s])
   const counts: Record<string, number> = Object.fromEntries(STATES.map((s) => [s, 0]))
-  for (const s of latest.values()) counts[s.state] = (counts[s.state] ?? 0) + 1
-  return { students: latest.size, attempts: subs.length, counts }
+  for (const subs of byStudent.values()) {
+    const st = standing(subs)
+    counts[st] = (counts[st] ?? 0) + 1
+  }
+  return {
+    rows: rows.length,
+    // Students who have started or handed in something; a missing row is none.
+    withWork: byStudent.size - (counts.missing ?? 0),
+    // Attempts made: drafts and work handed in, not the records of nothing.
+    attempts: rows.filter((s) => s.state !== 'missing').length,
+    counts,
+  }
 })
 
 defineExpose({ reload: state.reload })
@@ -35,11 +55,11 @@ defineExpose({ reload: state.reload })
 
 <template>
   <AsyncState :loading="state.loading.value" :error="state.error.value" @retry="state.reload">
-    <p v-if="!summary.attempts" class="app-muted work-summary__empty">{{ t('assignments.detail.summary.empty') }}</p>
+    <p v-if="!summary.rows" class="app-muted work-summary__empty">{{ t('assignments.detail.summary.empty') }}</p>
     <template v-else>
       <div class="work-summary">
         <div class="work-summary__tile">
-          <span class="work-summary__num">{{ summary.students }}</span>
+          <span class="work-summary__num">{{ summary.withWork }}</span>
           <span class="work-summary__label">{{ t('assignments.detail.summary.students') }}</span>
         </div>
         <div class="work-summary__tile">

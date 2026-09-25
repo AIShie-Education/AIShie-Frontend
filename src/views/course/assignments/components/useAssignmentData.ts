@@ -1,9 +1,9 @@
 // Loaders the assignment pages share: the grading scheme's buckets (where an
 // assignment can hang), the documents an assignment can point at, and "every
 // page of" a list Core pages by cursor.
-import { computed, onScopeDispose, ref, type Ref } from 'vue'
+import { computed, type Ref } from 'vue'
 import { read } from '@/api/http'
-import type { Component, DocumentSummary, GradeSummary, SubmissionSummary } from '@/api/types'
+import type { Component, DocumentSummary, GradeSummary, ListItem, SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 
@@ -54,6 +54,22 @@ export function allDocuments(courseId: string, kind: 'instructions' | 'rubric'):
   return readAll((after) =>
     read('document.list', { course_id: courseId, kind, limit: PAGE, after }).then((o) => ({
       items: o.documents,
+      next: o.next,
+    })),
+  )
+}
+
+export type MyAction = ListItem<'action.list_mine', 'actions'>
+
+/**
+ * The caller's own actions made after the thing with the given id was (ids
+ * are UUIDv7, so they sort by time): the proposals about a draft are all made
+ * after the draft itself.
+ */
+export function myActionsSince(courseId: string, sinceId: string): Promise<MyAction[]> {
+  return readAll((after) =>
+    read('action.list_mine', { course_id: courseId, limit: PAGE, after: after ?? sinceId }).then((o) => ({
+      items: o.actions,
       next: o.next,
     })),
   )
@@ -126,14 +142,4 @@ export function useScheme(courseId: Ref<string> | (() => string), opts: { immedi
   }
 
   return { loading: state.loading, readable, components, buckets, componentName, reload: state.reload }
-}
-
-/** Whether the viewport is phone-narrow; follows it as it changes. */
-export function useNarrow(query = '(max-width: 640px)') {
-  const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query) : null
-  const narrow = ref(!!mq?.matches)
-  const on = (e: MediaQueryListEvent) => (narrow.value = e.matches)
-  mq?.addEventListener('change', on)
-  onScopeDispose(() => mq?.removeEventListener('change', on))
-  return narrow
 }

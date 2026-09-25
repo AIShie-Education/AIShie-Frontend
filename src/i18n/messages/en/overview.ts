@@ -11,7 +11,8 @@ export default {
   seat: {
     title: 'Your seat',
     none: 'You have no seat in this course. You can look at it because of your platform role, but not act in it as a member.',
-    pausedHelp: 'While your seat is paused, everything you try here is refused. It carries on as before once it is resumed.',
+    pausedHelp:
+      'While your seat is paused, everything you try here is refused. It carries on as before once it is resumed.',
     memberId: 'Member ID',
     memberIdHelp:
       'Your stable handle in this course. It stays the same for as long as you hold this seat, and agents key their own memory on it. Being removed and added again gives a new one, and a fresh start.',
@@ -36,7 +37,8 @@ export default {
     title: 'What you may do',
     exact: 'These are your seat’s own settings.',
     preset:
-      'Guessed from the built-in preset for your role ({role}), because your seat may not read the member list. Your seat may have been set differently: Core decides at every call.',
+      'Guessed from the built-in preset “{preset}”, because your seat may not read the member list. Your seat may have been set differently: Core decides at every call.',
+    refused: 'Core refused this when your own seat was read, so it counts as not permitted.',
     unknown:
       'Your seat may not read the member list, so its permissions are not visible to you. Everything is offered, and Core refuses what you may not do.',
     nothing: 'Your seat may do nothing here at the moment.',
@@ -53,6 +55,7 @@ export default {
     oldestDraft: 'Oldest entered',
     failed: 'Could not be counted just now',
     atLeast: '{n}+',
+    draftsPartial: 'Counted among the first {n} grades only',
     allClear: 'Nothing is waiting for you.',
   },
   assignments: {

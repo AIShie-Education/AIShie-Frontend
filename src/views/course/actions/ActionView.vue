@@ -5,9 +5,12 @@
 // from action.list_mine instead, which carries the same fields.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import { ApiError, read } from '@/api/http'
+import type { ToolOut } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import { uuidPredecessor } from '@/views/admin/components/adminShared'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import JsonView from '@/components/JsonView.vue'
@@ -21,6 +24,7 @@ import DecidePanel from './components/DecidePanel.vue'
 import FieldsView from './components/FieldsView.vue'
 import MaybeLink from './components/MaybeLink.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
+import SeatGrant from './components/SeatGrant.vue'
 import {
   invalidateAfter,
   isAboutAction,
@@ -31,54 +35,48 @@ import {
   storedError,
   targetTypeLabel,
   typeLabel,
+  useJudgeRules,
   type ActionRow,
 } from './components/actionText'
 import type { DecideResult, Done } from './components/decide'
-import { forget, useLookup, useSpecs } from './components/lookups'
+import { refreshAfterDecision, useLookup, useSpecs } from './components/lookups'
 
 const props = defineProps<{ courseId: string; actionId: string }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const specs = useSpecs()
+const rules = useJudgeRules()
 
 const fromMine = ref(false)
-const MINE_PAGE = 200
-const MINE_PAGES = 25
 
 async function load(): Promise<ActionRow> {
-  fromMine.value = false
   if (course.can('action_decide')) {
     try {
-      return await read('action.get', { course_id: props.courseId, action_id: props.actionId })
+      const a = await read('action.get', { course_id: props.courseId, action_id: props.actionId })
+      fromMine.value = false
+      return a
     } catch (e) {
       if (!(e instanceof ApiError && e.isForbidden)) throw e
     }
   }
-  // Not a decider here: an action of one's own is in action.list_mine.
-  let after: string | undefined
-  for (let i = 0; i < MINE_PAGES; i++) {
-    const out = await read('action.list_mine', { course_id: props.courseId, limit: MINE_PAGE, after })
-    const found = (out.actions ?? []).find((a) => a.id === props.actionId)
-    if (found) {
+  // Not a decider here: an action of one's own is in action.list_mine, which
+  // lists by id after a cursor, so asking for the one after the id just
+  // before this one finds it in a single call.
+  const want = props.actionId.trim().toLowerCase()
+  const after = uuidPredecessor(want)
+  if (after) {
+    const out = await read('action.list_mine', { course_id: props.courseId, after, limit: 1 })
+    const found = out.actions?.[0]
+    if (found && found.id.toLowerCase() === want) {
       fromMine.value = true
       return found
     }
-    if (!out.next) break
-    after = out.next
   }
   throw new ApiError({ status: 403, code: 'forbidden', message: t('actions.detail.notYours') })
 }
 
 const state = useAsync(load, { keepData: true })
 const action = computed(() => state.data.value)
-watch(
-  () => props.actionId,
-  () => {
-    state.data.value = undefined
-    lastDone.value = null
-    void state.reload()
-  },
-)
 
 const canDecide = computed(() => course.can('action_decide') && !fromMine.value)
 const showDecide = computed(() => canDecide.value && action.value?.status === 'proposed')
@@ -88,6 +86,69 @@ const showReview = computed(
     action.value?.status === 'executed' &&
     (action.value.review_state === 'pending' || action.value.review_state === 'escalated'),
 )
+const decidable = computed(() => showDecide.value || showReview.value)
+
+// The caller's own decision (or review) on this that itself waits for
+// approval, their action_decide being confirm_required. Core would take a
+// second one, and the second would fail once the first is approved, so there
+// is nothing more to do here meanwhile. It is in the approval queue, made
+// after this action; ids run in time order, so the queue is read from here on.
+const QUEUE_PAGE = 200
+const QUEUE_PAGES = 5
+async function findMyPending(): Promise<string | null> {
+  const id = action.value?.id
+  if (!id) return null
+  let after: string | undefined = id
+  for (let i = 0; i < QUEUE_PAGES; i++) {
+    const out: ToolOut<'action.list_proposed'> = await read('action.list_proposed', {
+      course_id: props.courseId,
+      limit: QUEUE_PAGE,
+      after,
+    })
+    const mine = (out.actions ?? []).find((x) => isAboutAction(x) && x.target_id === id && rules.isMine(x))
+    if (mine) return mine.id
+    if (!out.next) return null
+    after = out.next
+  }
+  return null
+}
+const myPending = useAsync(findMyPending, { immediate: false })
+/** A decision just made, until the queue has been read again and says so itself. */
+const justProposed = ref<string | null>(null)
+async function checkMine() {
+  if (!decidable.value) return
+  await myPending.reload()
+  if (!myPending.error.value) justProposed.value = null
+}
+const waiting = computed(() => (decidable.value ? (justProposed.value ?? myPending.data.value ?? null) : null))
+
+/** What deciding or reviewing here came to, until the person closes it or leaves. */
+const lastDone = ref<Done | null>(null)
+
+watch(
+  () => props.actionId,
+  () => {
+    state.data.value = undefined
+    myPending.data.value = undefined
+    justProposed.value = null
+    lastDone.value = null
+    void state.reload()
+  },
+)
+// Once the action is known to be one the caller could decide or review.
+watch(
+  () => (decidable.value ? action.value?.id : null),
+  (id) => {
+    if (id) void checkMine()
+  },
+)
+
+/** Reads the action again, and whatever this page shows about the actions around it. */
+async function reloadPage() {
+  refreshAfterDecision(props.courseId)
+  await state.reload()
+  await checkMine()
+}
 
 const back = computed(() =>
   canDecide.value
@@ -95,12 +156,12 @@ const back = computed(() =>
     : { name: 'course-my-actions', params: { courseId: props.courseId } },
 )
 
-const lastDone = ref<Done | null>(null)
 function onDone(d: Done) {
-  if (d.kind !== 'stale') lastDone.value = d
+  if (d.kind === 'stale') ElMessage({ type: 'info', message: t('actions.detail.stale') })
+  else lastDone.value = d
+  if (d.kind === 'proposed') justProposed.value = d.actionId
   if (d.kind === 'decided' && d.out.outcome === 'executed') invalidateAfter(action.value?.action_type)
-  forget(`${props.courseId}:action:${props.actionId}`)
-  void state.reload()
+  void reloadPage()
 }
 
 // A decision or review: the action it is about.
@@ -108,6 +169,10 @@ const about = useLookup(() =>
   action.value && isAboutAction(action.value) ? specs.action(props.courseId, action.value.target_id) : null,
 )
 const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
+/** A link to another action, for someone who may open it (a decider). */
+function actionRoute(id: string | null | undefined) {
+  return canDecide.value ? routeFor(props.courseId, 'action', id) : null
+}
 
 const error = computed(() => (action.value ? storedError(action.value) : null))
 const errorWhy = computed(() => reasonText(error.value))
@@ -128,9 +193,11 @@ const hasResult = computed(() => {
   const r = action.value?.result
   return r !== undefined && r !== null && !(isObject(r) && Object.keys(r).length === 0)
 })
-const targetRoute = computed(() =>
-  action.value ? routeFor(props.courseId, action.value.target_type, action.value.target_id) : null,
-)
+const targetRoute = computed(() => {
+  const a = action.value
+  if (!a) return null
+  return a.target_type === 'action' ? actionRoute(a.target_id) : routeFor(props.courseId, a.target_type, a.target_id)
+})
 const errorTitle = computed(() => {
   switch (action.value?.status) {
     case 'denied':
@@ -170,7 +237,7 @@ const errorTitle = computed(() => {
               <code class="action-view__code">{{ action.action_type }}</code>
             </span>
           </template>
-          <el-button :loading="state.loading.value" @click="state.reload">
+          <el-button :loading="state.loading.value" @click="reloadPage">
             <el-icon><Refresh /></el-icon>
             <span>{{ t('common.actions.refresh') }}</span>
           </el-button>
@@ -191,7 +258,18 @@ const errorTitle = computed(() => {
 
         <section v-if="showDecide || showReview" class="app-card action-view__decide">
           <h2 class="app-card__title">{{ showDecide ? t('actions.detail.decide') : t('actions.detail.review') }}</h2>
-          <DecidePanel :action="action" :course-id="courseId" :mode="showDecide ? 'decide' : 'review'" @done="onDone" />
+          <DecidePanel
+            :action="action"
+            :course-id="courseId"
+            :mode="showDecide ? 'decide' : 'review'"
+            :waiting="waiting"
+            @done="onDone"
+          />
+          <p v-if="waiting && lastDone?.kind !== 'proposed'" class="action-view__rule">
+            <router-link :to="{ name: 'course-action', params: { courseId, actionId: waiting } }">
+              {{ t('actions.decision.viewDecision') }}
+            </router-link>
+          </p>
           <p class="action-view__rule">{{ t('actions.decision.ruleNote') }}</p>
         </section>
 
@@ -258,16 +336,21 @@ const errorTitle = computed(() => {
                   <ActionActor :member-id="aboutAction.member_id" :actor-id="aboutAction.actor_id" show-kind />
                   <ActionTarget :action="aboutAction" :course-id="courseId" :depth="1" link />
                 </template>
-                <MaybeLink v-else :to="routeFor(courseId, 'action', action.target_id)">
+                <MaybeLink v-else :to="actionRoute(action.target_id)">
                   <IdText :id="action.target_id" />
                 </MaybeLink>
               </div>
-              <FieldsView :course-id="courseId" :value="action.payload" />
+              <FieldsView :course-id="courseId" :value="action.payload" :action="action" />
               <el-collapse class="action-view__raw">
                 <el-collapse-item :title="t('actions.detail.raw')" name="raw">
                   <JsonView :value="action.payload" />
                 </el-collapse-item>
               </el-collapse>
+            </section>
+
+            <section v-if="action.action_type === 'member.add' && action.status === 'proposed'" class="app-card">
+              <h2 class="app-card__title">{{ t('actions.grant.title') }}</h2>
+              <SeatGrant :action="action" :course-id="courseId" />
             </section>
           </div>
 
@@ -314,7 +397,7 @@ const errorTitle = computed(() => {
                   </p>
                   <p v-if="rejection?.byActionId" class="action-view__inline">
                     {{ t('actions.outcome.decisionAction') }}
-                    <MaybeLink :to="routeFor(courseId, 'action', rejection.byActionId)">
+                    <MaybeLink :to="actionRoute(rejection.byActionId)">
                       <IdText :id="rejection.byActionId" />
                     </MaybeLink>
                   </p>

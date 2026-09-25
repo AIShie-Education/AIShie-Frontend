@@ -10,7 +10,7 @@ export default {
     grader: 'Grader',
     created: 'Created',
     posted: 'Posted',
-    feedback: 'Feedback',
+    feedback: 'Written feedback',
   },
   list: {
     subtitle: 'Draft, posted and superseded grades within your scope. Students see only posted grades.',
@@ -21,6 +21,13 @@ export default {
     empty: 'No grades yet',
     emptyFiltered: 'No grades match these filters',
     gradebook: 'Gradebook',
+  },
+  noRead: {
+    title: 'This seat does not read grades',
+    submit:
+      'It enters grades from each submission. What it has entered, or proposed for approval, is listed in My actions.',
+    toSubmissions: 'Submissions',
+    toActions: 'My actions',
   },
   mine: {
     title: 'My grades',
@@ -39,6 +46,9 @@ export default {
     whatAssignment: 'Every draft grade waiting for “{title}”',
     assignmentHint:
       '{n} draft(s) for it are loaded on this page. Drafts not loaded yet are posted too; drafts entered after this is sent are not.',
+    assignmentHintFiltered:
+      'The student filter does not apply here: every student’s drafts for this assignment are posted, not only those listed on this page.',
+    noDrafts: 'No draft grades are waiting for this assignment.',
     whatSelected: 'Selected drafts: {n}',
     proposalAssignment:
       'Posting needs approval here. The proposal records the drafts waiting now: approving it posts those still waiting, skips any posted meanwhile, and fails if one of them has been replaced by a newer draft.',
@@ -72,6 +82,9 @@ export default {
     intro:
       'For a component graded on its own, such as an exam: a draft grade for one student, released when it is posted. Assignment work is graded from its submission instead.',
     noComponents: 'This course has no directly graded components.',
+    schemeForbidden:
+      'This seat cannot read the grading scheme, so the components that take a grade of their own cannot be listed here.',
+    schemeFailed: 'The grading scheme could not be read.',
     toScheme: 'A component with points possible of its own can be added in the grading scheme.',
     component: 'Component',
     pointsPossible: 'out of {n}',
@@ -107,9 +120,7 @@ export default {
     points: 'Points',
     max: 'Max',
     comment: 'Comment',
-    addRow: 'Add criterion',
     total: 'Total',
-    useTotal: 'Use as score',
     differs: 'The breakdown adds up to {total}; the score given is {score}.',
   },
   regrade: {
@@ -171,6 +182,7 @@ export default {
     weight: 'Weight',
     notGraded: 'Not graded',
     points: '{n} pts',
+    shareHint: 'Its share of the result: only what counted — with a result, not dropped — shares it.',
     dropped: 'Dropped',
     kindAssignment: 'Assignment',
     kindComponent: 'Component',
@@ -183,6 +195,10 @@ export default {
     subtitleOwn: 'Your standing across the grading scheme, computed now from your posted grades.',
     toGrades: 'Grades',
     pickStudent: 'Choose a student',
+    pasteMemberId: 'Choose, or paste a member ID',
+    noSeenStudents: 'No students seen yet: paste a member ID',
+    studentShort: 'Student {id}',
+    notAnId: 'That is not a member ID.',
     pickFirst: 'Choose a student to see their gradebook.',
     whatIf: 'What-if: final grade',
     whatIfHelp: 'Counts ungraded work as zero, as final grades would. Only a view: nothing is stored.',
@@ -215,6 +231,8 @@ export default {
       'A component holding assignments adds their points: Σ score ÷ Σ points possible, so larger assignments weigh more.',
     legendParent:
       'A component with sub-components averages them by weight. “Drops lowest” leaves out that many of the lowest results, never all.',
+    legendShare:
+      'The percentage beside a weight is its share of the result: only what counted — work with a result, not dropped — shares it.',
     legendIncomplete: '“Incomplete” means something beneath has no posted grade yet and was left out.',
     legendSnapshot:
       '“At posting” is the total written down when grades were posted; it does not change until the next post or regrade.',

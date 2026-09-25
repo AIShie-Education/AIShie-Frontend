@@ -19,7 +19,7 @@ import ActionTarget from './components/ActionTarget.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
 import { invalidateAfter, isAboutAction, typeLabel, useJudgeRules, type ActionRow } from './components/actionText'
 import type { Done } from './components/decide'
-import { forget } from './components/lookups'
+import { refreshAfterDecision } from './components/lookups'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -64,37 +64,82 @@ interface Recent {
 }
 const recent = ref<Recent[]>([])
 let seq = 0
-/** Proposals the caller has decided, where that decision itself waits for approval: id → the decision's id. */
-const waiting = reactive(new Map<string, string>())
 const rules = useJudgeRules()
-/** …including those found in the queue itself: the caller's own decisions, still proposed. */
+/** Reads of the approval queue started so far. */
+let queueReads = 0
+/**
+ * Proposals the caller has decided here, where that decision itself waits for
+ * approval: id → the decision's id, and how many reads of the queue had
+ * started when it was made. The queue shows the same once it is read again,
+ * but only as far as it is loaded (oldest first, and a decision comes after
+ * what it decides); this covers the rest until the decision is dealt with
+ * (prune).
+ */
+const decidedHere = reactive(new Map<string, { decision: string; reads: number }>())
+/** The caller's own decisions still waiting for approval, by what they decide. */
 const myPending = computed(() => {
-  const m = new Map<string, string>(waiting)
+  const m = new Map<string, string>()
+  for (const [target, e] of decidedHere) m.set(target, e.decision)
   for (const x of proposed.items.value) {
     if (isAboutAction(x) && x.target_id && x.status === 'proposed' && rules.isMine(x)) m.set(x.target_id, x.id)
   }
   return m
 })
 
+/**
+ * After the queue read numbered readNo: lets go of decisions made here that no
+ * longer wait (approved, rejected, cancelled or expired meanwhile). The queue
+ * holds only what waits, so a decision missing from a queue read to its end
+ * is done; otherwise Core is asked. One made after the read began is kept.
+ */
+async function prune(readNo: number) {
+  const listed = new Set(proposed.items.value.map((x) => x.id))
+  const complete = !proposed.hasMore.value && !proposed.error.value
+  await Promise.all(
+    [...decidedHere].map(async ([target, e]) => {
+      if (e.reads >= readNo || listed.has(e.decision)) return
+      if (complete) {
+        decidedHere.delete(target)
+        return
+      }
+      try {
+        const a = await read('action.get', { course_id: props.courseId, action_id: e.decision })
+        if (a.status !== 'proposed') decidedHere.delete(target)
+      } catch {
+        // Cannot tell: keep holding back rather than invite a second decision.
+      }
+    }),
+  )
+}
+
+async function reloadProposed() {
+  const n = ++queueReads
+  await proposed.reload()
+  await prune(n)
+}
+
 function refresh() {
-  void proposed.reload()
+  refreshAfterDecision(props.courseId)
+  void reloadProposed()
   void review.reload()
 }
 
 function onDone(a: ActionRow, d: Done, which: Tab) {
   const list = which === 'proposed' ? proposed : review
+  refreshAfterDecision(props.courseId)
   if (d.kind === 'stale') {
     ElMessage({ type: 'info', message: t('actions.approvals.stale') })
-    void list.reload()
+    if (which === 'proposed') void reloadProposed()
+    else void review.reload()
     return
   }
-  forget(`${props.courseId}:action:${a.id}`)
   if (d.kind === 'decided' && d.out.outcome === 'executed') invalidateAfter(a.action_type)
   recent.value = [{ key: ++seq, action: a, done: d }, ...recent.value]
   if (d.kind === 'proposed') {
-    // The proposal still waits; so, now, does the caller's decision on it.
-    waiting.set(a.id, d.actionId)
-    void list.reload()
+    // The proposal still waits; so, now, does the caller's decision on it,
+    // which joins the approval queue.
+    decidedHere.set(a.id, { decision: d.actionId, reads: queueReads })
+    void reloadProposed()
     return
   }
   if (d.kind === 'reviewed' && d.state === 'escalated') {
@@ -106,7 +151,7 @@ function onDone(a: ActionRow, d: Done, which: Tab) {
   }
   list.items.value = list.items.value.filter((x) => x.id !== a.id)
   // Deciding a decision carries out (or not) the proposal underneath, which
-  // may be listed too.
+  // may be listed too, and settles the caller's own decisions waiting on it.
   if (isAboutAction(a)) refresh()
 }
 
@@ -183,7 +228,7 @@ function dismiss(key: number) {
               :error="proposed.error.value"
               :empty="!proposed.items.value.length"
               :empty-text="t('actions.approvals.emptyProposed')"
-              @retry="proposed.reload"
+              @retry="reloadProposed"
             >
               <div class="approvals__list">
                 <ActionCard

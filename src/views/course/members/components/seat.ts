@@ -1,11 +1,12 @@
 // What the members pages share: the presets, the measure of a seat against
 // the caller's own (Core's "nobody hands out more than they hold", checked
 // here only to warn — Core decides), and Core's refusals put in words.
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { ApiError, read } from '@/api/http'
 import { AUTONOMY_LEVELS, PERMS, type AutonomyLevel, type Perm, type PermLevels, type Preset } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { i18n } from '@/i18n'
+import { formatDateTime } from '@/utils/format'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
 const te = (key: string): boolean => (i18n.global as unknown as { te: (k: string) => boolean }).te(key)
@@ -69,18 +70,6 @@ export function usePresets() {
   return { presets, byId, builtIn, department, loading, error, reload: load }
 }
 
-/** True below the given width; follows the window. */
-export function useNarrow(px = 768) {
-  const narrow = ref(typeof window !== 'undefined' && window.innerWidth < px)
-  const measure = () => (narrow.value = window.innerWidth < px)
-  onMounted(() => {
-    measure()
-    window.addEventListener('resize', measure)
-  })
-  onUnmounted(() => window.removeEventListener('resize', measure))
-  return narrow
-}
-
 // ---------------------------------------------------------------------------
 // A seat, measured against the caller's own
 // ---------------------------------------------------------------------------
@@ -114,6 +103,23 @@ export function widens(before: Shape, after: Shape): boolean {
     if (new Date(after.expiresAt).getTime() > new Date(before.expiresAt).getTime()) return true
   }
   return false
+}
+
+/**
+ * The permissions a seat would hold above the caller's own, each with a short
+ * note for its row in a PermEditor; empty when the caller's seat is not known
+ * exactly. Only a warning: Core is the one that decides.
+ */
+export function permsAbove(perms: PermLevels): Partial<Record<Perm, string>> {
+  const course = useCourseStore()
+  const mine = course.seat
+  if (course.permsSource !== 'exact' || !mine) return {}
+  const held = fullPerms(mine.perms)
+  const out: Partial<Record<Perm, string>> = {}
+  for (const p of PERMS) {
+    if (rank(perms[p]) > rank(held[p])) out[p] = t('members.grant.rowAbove', { held: t(`enums.level.${held[p]}`) })
+  }
+  return out
 }
 
 /**
@@ -153,7 +159,7 @@ export function grantProblems(after: Shape): string[] {
   if (mine.expires_at) {
     const mineEnds = new Date(mine.expires_at).getTime()
     if (!after.expiresAt || new Date(after.expiresAt).getTime() > mineEnds) {
-      out.push(t('members.grant.outlives', { t: new Date(mine.expires_at).toLocaleString() }))
+      out.push(t('members.grant.outlives', { t: formatDateTime(mine.expires_at) }))
     }
   }
   return out
@@ -182,7 +188,7 @@ const EXPLAIN: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/list assignments that are in your own scope/, () => t('members.refusal.assignmentsOutside')],
   [
     /your own membership ends at (\S+); you cannot give one that lasts longer/,
-    (m) => t('members.refusal.outlives', { t: new Date(m[1]!).toLocaleString() }),
+    (m) => t('members.refusal.outlives', { t: formatDateTime(m[1]!) }),
   ],
   [/not on your own membership/, () => t('members.refusal.ownSeat')],
   [/already has a seat in this course/, () => t('members.refusal.alreadySeated')],

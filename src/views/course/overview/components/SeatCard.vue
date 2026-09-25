@@ -8,9 +8,9 @@ import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
 import IdText from '@/components/IdText.vue'
+import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
-import SeatName from '@/views/course/activity/components/SeatName.vue'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
@@ -77,10 +77,14 @@ function scopeText(which: 'student' | 'assignment'): string {
         <dd>
           <span>{{ scopeText('student') }}</span>
           <ul
-            v-if="m.student_scope === 'listed' && listedStudents.length && !(listedStudents.length === 1 && listedStudents[0] === m.member_id)"
+            v-if="
+              m.student_scope === 'listed' &&
+              listedStudents.length &&
+              !(listedStudents.length === 1 && listedStudents[0] === m.member_id)
+            "
             class="seat__listed"
           >
-            <li v-for="id in listedStudents.slice(0, SHOW)" :key="id"><SeatName :id="id" /></li>
+            <li v-for="id in listedStudents.slice(0, SHOW)" :key="id"><MemberName :id="id" show-kind /></li>
             <li v-if="listedStudents.length > SHOW" class="app-muted">
               {{ t('overview.seat.andMore', { n: listedStudents.length - SHOW }) }}
             </li>
@@ -112,7 +116,9 @@ function scopeText(which: 'student' | 'assignment'): string {
         <dd>
           <template v-if="m.expires_at">
             <TimeText :value="m.expires_at" />
-            <el-tag v-if="expired" type="danger" size="small" class="seat__expired">{{ t('overview.seat.expired') }}</el-tag>
+            <el-tag v-if="expired" type="danger" size="small" class="seat__expired">{{
+              t('overview.seat.expired')
+            }}</el-tag>
           </template>
           <span v-else>{{ t('common.labels.never') }}</span>
         </dd>

@@ -6,11 +6,14 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DocumentSummary } from '@/api/types'
 import type { UploadedFile } from '@/api/http'
+import { useCourseStore } from '@/stores/course'
 import UploadField from './UploadField.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import type { DocChoice } from './types'
 
 const model = defineModel<DocChoice>({ required: true })
+/** True while the new document's file is still uploading. */
+const uploading = defineModel<boolean>('uploading', { default: false })
 const props = defineProps<{
   courseId: string
   kind: 'instructions' | 'rubric'
@@ -24,12 +27,20 @@ const props = defineProps<{
   canCreate: boolean
   /** The title a new document starts with. */
   defaultTitle?: string
+  /**
+   * Only a document with a published version will do (the instructions of a
+   * published assignment): others cannot be chosen, and a new one is
+   * published at once.
+   */
+  requirePublished?: boolean
   disabled?: boolean
 }>()
 const { t } = useI18n()
+const course = useCourseStore()
 
 function set(patch: Partial<DocChoice>) {
-  if (patch.mode === 'new' && !model.value.title.trim() && props.defaultTitle) patch = { ...patch, title: props.defaultTitle }
+  if (patch.mode === 'new' && !model.value.title.trim() && props.defaultTitle)
+    patch = { ...patch, title: props.defaultTitle }
   model.value = { ...model.value, ...patch }
 }
 
@@ -60,7 +71,13 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
         class="doc-choice__select"
         @update:model-value="(v: string) => set({ id: v })"
       >
-        <el-option v-for="d in options" :key="d.id" :value="d.id" :label="d.title">
+        <el-option
+          v-for="d in options"
+          :key="d.id"
+          :value="d.id"
+          :label="d.title"
+          :disabled="requirePublished && !d.published_version_id"
+        >
           <div class="doc-choice__option">
             <span class="doc-choice__option-title">{{ d.title }}</span>
             <el-tag v-if="!d.published_version_id" size="small" type="warning" disable-transitions>
@@ -74,12 +91,18 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
         {{ t('assignments.form.doc.noneAvailable', { kind: kindLabel }) }}
       </div>
       <div v-else-if="selected && !selected.published_version_id" class="app-form-hint">
-        {{ t('assignments.form.doc.selectedUnpublished') }}
+        {{
+          requirePublished ? t('assignments.form.doc.mustBePublished') : t('assignments.form.doc.selectedUnpublished')
+        }}
       </div>
       <div v-if="!allowNone" class="app-form-hint">{{ t('assignments.form.doc.cannotRemove') }}</div>
     </div>
 
     <div v-else-if="model.mode === 'new'" class="doc-choice__body doc-choice__new">
+      <div v-if="course.needsApproval('document_write')" class="app-form-hint doc-choice__approval">
+        <el-tag type="warning" size="small" disable-transitions>{{ t('enums.level.confirm_required') }}</el-tag>
+        <span>{{ t('assignments.form.doc.newNeedsApproval') }}</span>
+      </div>
       <el-input
         :model-value="model.title"
         :disabled="disabled"
@@ -97,6 +120,7 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
       <div class="doc-choice__file">
         <span class="app-muted">{{ t('assignments.form.doc.newFile') }}</span>
         <UploadField
+          v-model:uploading="uploading"
           :model-value="model.files"
           :course-id="courseId"
           :kind="kind"
@@ -105,8 +129,8 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
         />
       </div>
       <el-checkbox
-        :model-value="model.publish"
-        :disabled="disabled"
+        :model-value="model.publish || requirePublished"
+        :disabled="disabled || requirePublished"
         @update:model-value="(v: string | number | boolean) => set({ publish: !!v })"
       >
         {{ t('assignments.form.doc.publishNow') }}
@@ -135,6 +159,15 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
 }
 .doc-choice__select {
   width: 100%;
+}
+.doc-choice__approval {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 0;
+}
+.doc-choice__approval .el-tag {
+  flex-shrink: 0;
 }
 .doc-choice__option {
   display: flex;

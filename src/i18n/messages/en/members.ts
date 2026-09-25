@@ -1,10 +1,13 @@
 export default {
   title: 'Members',
-  subtitle: 'Everyone seated in this course, people and agents alike, each with their own permissions, reach and lifetime.',
+  subtitle:
+    'Everyone seated in this course, people and agents alike, each with their own permissions, reach and lifetime.',
   addMember: 'Add member',
   expired: 'Expired',
   empty: 'No members match these filters.',
   emptyAgents: 'No agents are seated in this course.',
+  emptyAgentsSoFar: 'No agents among the first {n} members. Load more to look through the rest.',
+  emptyPeopleSoFar: 'No people among the first {n} members. Load more to look through the rest.',
   partialCounts: 'The counts cover the members loaded so far. Load more to see everyone.',
   tabs: {
     all: 'All',
@@ -62,7 +65,8 @@ export default {
     ta: 'Reads everything and enters grades; the instructor posts them and approves requests.',
     instructor: 'Everything, unsupervised.',
     tutor: 'An agent that reads material, and the work and grades of the students it is listed for. Writes nothing.',
-    grader: 'An agent that reads material and rubrics, and proposes grades for the assignments it is listed for; a person approves each one.',
+    grader:
+      'An agent that reads material and rubrics, and proposes grades for the assignments it is listed for; a person approves each one.',
   },
   add: {
     title: 'Add a member',
@@ -90,7 +94,8 @@ export default {
     pickStudents: 'Choose students',
     pickAssignments: 'Choose assignments',
     listsItself: "A student's seat with an empty list reaches that student only: they see their own work.",
-    nobodyStudents: 'Listed with nobody on the list reaches no student at all. Reach fails closed: choose students, or All.',
+    nobodyStudents:
+      'Listed with nobody on the list reaches no student at all. Reach fails closed: choose students, or All.',
     nobodyAssignments: 'Listed with no assignments reaches no assignment at all. Choose assignments, or All.',
     expires: 'Seat ends',
     expiresNever: 'Does not end',
@@ -113,6 +118,7 @@ export default {
       'A seat you give may not hold any permission at a higher level than your own, reach students or assignments outside your own reach, or last longer than your own seat. Core refuses a seat that does.',
     willRefuse: 'Core will refuse this, because:',
     permAbove: 'You hold “{perm}” at “{held}”; this seat would have it at “{wanted}”.',
+    rowAbove: 'Higher than your own level, “{held}”',
     studentsAll: 'Your own reach is a list of students, so you cannot give a seat that reaches all students.',
     newStudent:
       'Your own reach is a list of students, and a new student’s seat reaches that student, who cannot be on your list yet.',
@@ -123,7 +129,8 @@ export default {
   },
   refusal: {
     coreSaid: 'Core said:',
-    permAbove: 'You hold “{perm}” at “{held}” yourself, so you cannot give it at “{wanted}”. Lower that level, or ask someone who holds it to do this.',
+    permAbove:
+      'You hold “{perm}” at “{held}” yourself, so you cannot give it at “{wanted}”. Lower that level, or ask someone who holds it to do this.',
     studentsAll: 'Your own reach is a list of students, so the seat must be limited to listed students too.',
     newStudent:
       'Your own reach is a list of students. A new student’s seat reaches that student, who is not on your list, so you cannot seat them.',
@@ -135,14 +142,15 @@ export default {
     alreadySeated:
       'This actor already has a seat in this course. Change that seat instead, or remove it and add them again for a fresh start.',
     noActor: 'No actor has this ID. Check it with the administrator who registered them.',
-    suspended: 'This actor is suspended across the platform, and cannot be seated until an administrator reactivates them.',
+    suspended:
+      'This actor is suspended across the platform, and cannot be seated until an administrator reactivates them.',
     systemActor: 'The system actor is never seated in a course.',
     notStudents: 'Everyone on the student list must be a current student of this course.',
     notAssignments: 'Everything on the assignment list must be an assignment of this course.',
     pastExpiry: 'The end is in the past. To end a seat now, remove it.',
     removed: 'This seat has been removed (or has ended). Seat the actor again for a fresh start.',
     noPreset: 'That preset no longer exists.',
-    otherDept: "That preset belongs to another department.",
+    otherDept: 'That preset belongs to another department.',
     wrongStatus: 'The seat changed while you were looking at it. Reload and try again.',
     nothing: 'Nothing was changed.',
     noManage: 'Your seat does not allow managing members here.',
@@ -153,13 +161,15 @@ export default {
     intro:
       'Choose which students and assignments this seat’s submission and grade permissions reach, and when the seat ends. Narrowing is always allowed; widening is a grant.',
     staleStudents:
-      '{n} listed student is no longer a student of this course. Take them off the list, or Core will refuse it. | {n} listed students are no longer students of this course. Take them off the list, or Core will refuse it.',
+      '{n} student on this list is no longer a student of this course. Core refuses a changed list that still names them. | {n} students on this list are no longer students of this course. Core refuses a changed list that still names them.',
+    dropStale: 'Take them off the list',
     currently: 'Currently:',
     keep: 'Keep',
     setEnd: 'Set an end',
     clear: 'Never end',
     expiryHelp: 'Moving the end later, or removing it, is a grant. To end a seat now, remove it instead.',
-    isGrant: 'This widens the seat, so it is a grant: everything the seat will then hold must be within what you hold yourself.',
+    isGrant:
+      'This widens the seat, so it is a grant: everything the seat will then hold must be within what you hold yourself.',
     nothing: 'Nothing changed yet',
     success: 'Reach updated',
   },
@@ -237,7 +247,8 @@ export default {
       confirmFresh:
         'This cannot be undone. Seating them again later makes a new seat with a new ID; for an agent, a fresh start.',
       success: '{name} was removed',
-      cancelled: 'Removed. {n} pending request of theirs was cancelled. | Removed. {n} pending requests of theirs were cancelled.',
+      cancelled:
+        'Removed. {n} pending request of theirs was cancelled. | Removed. {n} pending requests of theirs were cancelled.',
       noneCancelled: 'Removed. They had no pending requests to cancel.',
       fresh: 'Seating them again later makes a new seat with a new member ID.',
     },

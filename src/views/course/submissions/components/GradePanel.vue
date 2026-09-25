@@ -6,8 +6,9 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
-import type { UploadedFile } from '@/api/http'
-import type { Assignment, GradeSummary, Submission } from '@/api/types'
+import { read, type UploadedFile } from '@/api/http'
+import type { ActionSummary, Assignment, GradeSummary, Submission } from '@/api/types'
+import DocumentFileLink from '@/components/DocumentFileLink.vue'
 import FileUploader from '@/components/FileUploader.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import { useAsync } from '@/composables/useAsync'
@@ -17,6 +18,7 @@ import { formatDecimal, isDecimal } from '@/utils/format'
 import BreakdownEditor, { type BreakdownRow } from './BreakdownEditor.vue'
 import RubricPanel from './RubricPanel.vue'
 import { decimalAbove, isNonNegativeDecimal } from './decimal'
+import { proposalFate } from './proposals'
 import { loadRubric, rubricArgs } from './rubric'
 
 const props = defineProps<{
@@ -28,6 +30,10 @@ const props = defineProps<{
   liveDraft?: GradeSummary
   /** The live posted grade for this work, if one is known. */
   livePosted?: GradeSummary
+  /** The caller cannot read grades, so whether any exist is not known. */
+  gradesHidden?: boolean
+  /** Grades proposed for this work and waiting for approval. */
+  proposals?: ActionSummary[]
 }>()
 const emit = defineEmits<{ graded: [] }>()
 const { t } = useI18n()
@@ -62,6 +68,25 @@ const pointsText = computed(() => (points.value === undefined ? '' : formatDecim
 const above = computed(() => points.value !== undefined && decimalAbove(form.score.trim(), points.value))
 const missing = computed(() => props.submission.state === 'missing')
 const needsApproval = computed(() => course.needsApproval('grade_submit'))
+
+// Grades proposed for this work that wait for approval. Approving one is
+// refused once a draft newer than it exists (Core's noNewerDraft), so a
+// draft saved now stops those not already behind a newer draft. A grade the
+// caller enters is itself a proposal when their grading needs approval: the
+// one proposed later then stands, whichever is approved first.
+const proposed = computed(() => props.proposals ?? [])
+const proposedByMe = computed(() => proposed.value.filter((p) => p.member_id === course.myMemberId))
+const wouldStop = computed(() =>
+  needsApproval.value ? [] : proposed.value.filter((p) => proposalFate(p, props.liveDraft) !== 'newerDraft'),
+)
+const proposedHint = computed(() => {
+  if (needsApproval.value) {
+    if (proposedByMe.value.length) return t('submissions.grade.pending.mine')
+    if (proposed.value.length) return t('submissions.grade.pending.otherPropose')
+    return null
+  }
+  return wouldStop.value.length ? t('submissions.grade.pending.other') : null
+})
 
 function breakdownValid(): boolean {
   return form.breakdown.every(
@@ -105,10 +130,37 @@ function useTotal(total: string) {
   void formRef.value?.validateField('score').catch(() => undefined)
 }
 
+/**
+ * The feedback files of the draft the form was filled from. They belong to
+ * that draft and stay with it when the new one replaces it, so they are named
+ * beside the uploader, to be uploaded again if they should come along.
+ */
+type DraftFiles = { document_id: string; title: string }[] | 'loading' | 'failed'
+const draftFiles = ref<DraftFiles | null>(null)
+let draftFilesSeq = 0
+
+async function loadDraftFiles(gradeId: string) {
+  const mine = ++draftFilesSeq
+  draftFiles.value = 'loading'
+  try {
+    // grade.list does not carry feedback files; grade.get does.
+    const full = await read('grade.get', { course_id: props.courseId, grade_id: gradeId })
+    if (mine === draftFilesSeq) draftFiles.value = full.feedback_files ?? []
+  } catch {
+    if (mine === draftFilesSeq) draftFiles.value = 'failed'
+  }
+}
+const draftFileList = computed(() => (Array.isArray(draftFiles.value) ? draftFiles.value : []))
+const draftFilesHint = computed(() => {
+  if (draftFiles.value === 'failed') return t('submissions.grade.draftFilesUnknown')
+  return draftFileList.value.length ? t('submissions.grade.draftFiles') : null
+})
+
 /** Fills the form from the current draft, to change it rather than start again. */
 function startFromDraft() {
   const g = props.liveDraft
   if (!g) return
+  void loadDraftFiles(g.id)
   form.score = String(g.score)
   form.feedback = g.feedback ?? ''
   form.allowExtra = decimalAbove(g.score, points.value)
@@ -129,6 +181,8 @@ const uploaderKey = ref(0)
 
 function reset() {
   Object.assign(form, blank())
+  draftFilesSeq++
+  draftFiles.value = null
   breakdownChecked.value = false
   uploaderKey.value++
   formRef.value?.clearValidate()
@@ -138,9 +192,17 @@ async function submit() {
   breakdownChecked.value = true
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid || !breakdownValid()) return
-  if (props.liveDraft) {
+  const stops = wouldStop.value.length > 0
+  const confirmText = props.liveDraft
+    ? stops
+      ? t('submissions.grade.replaceAndStopConfirm')
+      : t('submissions.grade.replaceConfirm')
+    : stops
+      ? t('submissions.grade.stopConfirm')
+      : null
+  if (confirmText) {
     try {
-      await ElMessageBox.confirm(t('submissions.grade.replaceConfirm'), t('common.confirm.title'), {
+      await ElMessageBox.confirm(confirmText, t('common.confirm.title'), {
         type: 'warning',
         confirmButtonText: t('common.actions.confirm'),
         cancelButtonText: t('common.actions.cancel'),
@@ -252,6 +314,18 @@ async function submit() {
       <p v-else-if="course.permsSource === 'unknown'" class="app-form-hint grade-panel__hint">
         {{ t('common.permissionUnknown') }}
       </p>
+      <el-alert v-if="gradesHidden" type="info" :closable="false" show-icon class="grade-panel__alert">
+        {{ t('submissions.grade.gradesHidden') }}
+      </el-alert>
+      <el-alert
+        v-if="proposedHint && outcome?.status !== 'proposed'"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="grade-panel__alert"
+      >
+        {{ proposedHint }}
+      </el-alert>
       <el-alert v-if="missing" type="warning" :closable="false" show-icon class="grade-panel__alert">
         {{ t('submissions.grade.forMissing') }}
       </el-alert>
@@ -290,7 +364,9 @@ async function submit() {
                 :placeholder="t('submissions.grade.scorePlaceholder')"
                 class="grade-panel__score-input"
               />
-              <span v-if="pointsText" class="app-muted">{{ t('submissions.grade.outOf', { points: pointsText }) }}</span>
+              <span v-if="pointsText" class="app-muted">{{
+                t('submissions.grade.outOf', { points: pointsText })
+              }}</span>
             </div>
           </el-form-item>
           <el-form-item v-if="above || form.allowExtra">
@@ -308,12 +384,24 @@ async function submit() {
           </el-form-item>
 
           <el-form-item :label="t('submissions.grade.feedback')">
-            <MarkdownEditor v-model="form.feedback" :rows="8" :placeholder="t('submissions.grade.feedbackPlaceholder')" />
+            <MarkdownEditor
+              v-model="form.feedback"
+              :rows="8"
+              :placeholder="t('submissions.grade.feedbackPlaceholder')"
+            />
           </el-form-item>
 
           <el-form-item :label="t('submissions.grade.files')">
             <div class="grade-panel__block">
               <FileUploader :key="uploaderKey" v-model="form.files" :course-id="courseId" kind="feedback" multiple />
+              <div v-if="draftFilesHint" class="grade-panel__draft-files" role="note">
+                <p class="grade-panel__draft-files-text">{{ draftFilesHint }}</p>
+                <ul v-if="draftFileList.length" class="grade-panel__draft-files-list">
+                  <li v-for="f in draftFileList" :key="f.document_id">
+                    <DocumentFileLink :course-id="courseId" :document-id="f.document_id" :title="f.title" />
+                  </li>
+                </ul>
+              </div>
               <div class="app-form-hint">{{ t('submissions.grade.filesHint') }}</div>
             </div>
           </el-form-item>
@@ -399,6 +487,28 @@ async function submit() {
 }
 .grade-panel__score-input {
   width: 140px;
+}
+.grade-panel__draft-files {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--el-color-warning-light-5);
+  background: var(--el-color-warning-light-9);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.grade-panel__draft-files-text {
+  margin: 0;
+}
+.grade-panel__draft-files-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.grade-panel__draft-files-list :deep(.el-button span) {
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 .grade-panel__actions {
   display: flex;

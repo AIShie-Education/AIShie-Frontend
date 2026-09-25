@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // One course: its header, and the parts of it the caller's seat reaches.
-import { computed, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import { courseTabClaim } from '@/composables/useCourseTab'
 import type { Perm } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -13,7 +14,7 @@ const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
 const session = useSessionStore()
 const route = useRoute()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 watch(
   () => props.courseId,
@@ -30,27 +31,73 @@ interface Tab {
   /** Route names that count as this tab. */
   also?: string[]
 }
+// In the order most used; on a phone the strip scrolls, and what is at its
+// end is furthest away.
 const tabs: Tab[] = [
   { name: 'course-overview', label: 'layout.course.overview', icon: 'Odometer' },
   { name: 'course-materials', label: 'layout.course.materials', icon: 'Reading', perms: ['document_read'], also: ['course-document'] },
   { name: 'course-assignments', label: 'layout.course.assignments', icon: 'EditPen', perms: ['document_read'], also: ['course-assignment'] },
   { name: 'course-submissions', label: 'layout.course.submissions', icon: 'Files', perms: ['submission_read'], also: ['course-submission'] },
   { name: 'course-grades', label: 'layout.course.grades', icon: 'Medal', perms: ['grade_read', 'grade_submit', 'grade_post'], also: ['course-grade'] },
+  { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
+  { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read'], also: ['course-member'] },
+  { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
+  { name: 'course-my-actions', label: 'layout.course.myActions', icon: 'List', perms: ['document_read'] },
   { name: 'course-gradebook', label: 'layout.course.gradebook', icon: 'Tickets', perms: ['grade_read'] },
   { name: 'course-scheme', label: 'layout.course.scheme', icon: 'Share', perms: ['grade_read'] },
-  { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read'], also: ['course-member'] },
-  { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
-  { name: 'course-my-actions', label: 'layout.course.myActions', icon: 'List', perms: ['document_read'] },
-  { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
 ]
 
 const visibleTabs = computed(() => tabs.filter((tab) => !tab.perms || tab.perms.some((p) => course.can(p))))
+const tabOf = (list: Tab[], routeName: string | undefined) =>
+  routeName ? list.find((tab) => tab.name === routeName || tab.also?.includes(routeName)) : undefined
 const activeTab = computed(() => {
-  const n = route.name as string
-  return tabs.find((tab) => tab.name === n || tab.also?.includes(n))?.name ?? 'course-overview'
+  // A page may say which tab it belongs to (useCourseTab), where that tab is offered.
+  const claimed = tabOf(visibleTabs.value, courseTabClaim.value?.route)
+  return (claimed ?? tabOf(tabs, route.name as string | undefined))?.name ?? 'course-overview'
 })
 
 const ready = computed(() => course.courseId === props.courseId && !!course.course)
+
+// Where the tabs do not fit (a phone), they scroll sideways: the active one
+// is kept in view, and each end fades while there is more beyond it. Wider
+// screens wrap them instead, so every tab is always in sight.
+const nav = ref<HTMLElement | null>(null)
+const more = reactive({ start: false, end: false })
+function measure() {
+  const el = nav.value
+  if (!el) return
+  const max = el.scrollWidth - el.clientWidth
+  more.start = max > 1 && el.scrollLeft > 1
+  more.end = max > 1 && el.scrollLeft < max - 1
+}
+function revealActive(smooth: boolean) {
+  const el = nav.value
+  const item = el?.querySelector<HTMLElement>('.course-tabs__item.is-active')
+  if (!el || !item) return measure()
+  const clear = 32 // past the fade
+  const left = item.offsetLeft - clear
+  const right = item.offsetLeft + item.offsetWidth + clear
+  let to = el.scrollLeft
+  if (left < to) to = Math.max(0, left)
+  else if (right > to + el.clientWidth) to = right - el.clientWidth
+  if (to !== el.scrollLeft) el.scrollTo({ left: to, behavior: smooth ? 'smooth' : 'auto' })
+  measure()
+}
+let observer: ResizeObserver | null = null
+watch(nav, (el) => {
+  observer?.disconnect()
+  observer = null
+  if (!el) return
+  if (typeof ResizeObserver !== 'undefined') {
+    observer = new ResizeObserver(() => measure())
+    observer.observe(el)
+  }
+  void nextTick(() => revealActive(false))
+})
+watch([activeTab, () => visibleTabs.value.length], () => void nextTick(() => revealActive(true)), { flush: 'post' })
+// Labels in another language are another width.
+watch(locale, () => void nextTick(() => revealActive(false)), { flush: 'post' })
+onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
@@ -81,8 +128,10 @@ const ready = computed(() => course.courseId === props.courseId && !!course.cour
               v-if="session.isAdmin"
               :to="{ name: 'admin-course', params: { courseId } }"
               class="course-head__admin"
+              :aria-label="t('common.nav.admin')"
+              :title="t('common.nav.admin')"
             >
-              <el-icon><Setting /></el-icon>
+              <el-icon aria-hidden="true"><Setting /></el-icon>
             </router-link>
           </div>
         </header>
@@ -100,15 +149,22 @@ const ready = computed(() => course.courseId === props.courseId && !!course.cour
           {{ t('layout.course.paused') }}
         </el-alert>
 
-        <nav class="course-tabs" :aria-label="t('layout.course.nav')">
+        <nav
+          ref="nav"
+          class="course-tabs"
+          :class="{ 'has-more-start': more.start, 'has-more-end': more.end }"
+          :aria-label="t('layout.course.nav')"
+          @scroll.passive="measure"
+        >
           <router-link
             v-for="tab in visibleTabs"
             :key="tab.name"
             :to="{ name: tab.name, params: { courseId } }"
             class="course-tabs__item"
             :class="{ 'is-active': activeTab === tab.name }"
+            :aria-current="activeTab === tab.name ? 'page' : undefined"
           >
-            <el-icon><component :is="tab.icon" /></el-icon>
+            <el-icon aria-hidden="true"><component :is="tab.icon" /></el-icon>
             <span>{{ t(tab.label) }}</span>
           </router-link>
         </nav>
@@ -163,12 +219,34 @@ const ready = computed(() => course.courseId === props.courseId && !!course.cour
   margin-bottom: 12px;
 }
 .course-tabs {
+  position: relative;
   display: flex;
   gap: 2px;
   overflow-x: auto;
   border-bottom: 1px solid var(--el-border-color-light);
   margin-bottom: 20px;
   scrollbar-width: thin;
+  --fade: 40px;
+}
+/* More beyond an end: that end fades out. */
+.course-tabs.has-more-end {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+}
+.course-tabs.has-more-start {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--fade)), transparent);
+}
+.course-tabs.has-more-start.has-more-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+}
+/* With room beside the navigation, every tab shows: they wrap onto a second row. */
+@media (min-width: 900px) {
+  .course-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
 }
 .course-tabs__item {
   display: inline-flex;

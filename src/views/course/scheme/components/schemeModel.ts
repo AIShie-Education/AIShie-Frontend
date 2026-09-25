@@ -13,14 +13,33 @@ import type { AssignmentSummary, Component, GradeSummary } from '@/api/types'
  * - direct: points_possible on the component itself (an exam): its one grade over its points;
  * - group: it has sub-components, weight-averaged;
  * - bucket: it holds assignments, points-weighted;
- * - empty: none of these yet.
+ * - empty: none of these yet;
+ * - unseen: rolled up, with no sub-components and no assignment the caller
+ *   can see, while not every assignment is shown to the caller: it may be a
+ *   bucket of assignments outside their reach, or empty. Core's rules for a
+ *   component that holds assignments may apply to it.
  */
-export type NodeKind = 'group' | 'bucket' | 'direct' | 'empty'
+export type NodeKind = 'group' | 'bucket' | 'direct' | 'empty' | 'unseen'
+
+/**
+ * How much of the course's assignments the list the scheme is built from
+ * holds. assignment.list answers only those within the caller's assignment
+ * scope, and unpublished ones only to those who may write assignments.
+ */
+export interface AssignmentsSeen {
+  /** Every assignment that counts (every published one) is there, so shares within a bucket can be worked out. */
+  counted: boolean
+  /** Every assignment, published or not, is there, so a leaf with none is known to be empty. */
+  all: boolean
+}
 
 export interface SchemeAssignment {
   a: AssignmentSummary
   points: number
-  /** Its part of the bucket: points over the bucket's points. Null when it counts toward nothing. */
+  /**
+   * Its part of the bucket: points over the bucket's points. Null when it counts toward nothing, or when
+   * not every assignment that counts is known.
+   */
   share: number | null
   /** Its nominal part of the course total. */
   ofTotal: number | null
@@ -65,7 +84,11 @@ function byDueThenTitle(x: AssignmentSummary, y: AssignmentSummary): number {
   return x.title.localeCompare(y.title)
 }
 
-export function buildScheme(components: Component[] | null | undefined, assignments: AssignmentSummary[]): Scheme {
+export function buildScheme(
+  components: Component[] | null | undefined,
+  assignments: AssignmentSummary[],
+  seen: AssignmentsSeen,
+): Scheme {
   const list = components ?? []
   const byId = new Map<string, SchemeNode>()
   for (const c of list) {
@@ -117,7 +140,9 @@ export function buildScheme(components: Component[] | null | undefined, assignme
           ? 'group'
           : n.assignments.length
             ? 'bucket'
-            : 'empty'
+            : seen.all
+              ? 'empty'
+              : 'unseen'
     nodes.push(n)
     const sum = n.children.reduce((s, ch) => s + Math.max(ch.weight, 0), 0)
     for (const ch of n.children) {
@@ -127,7 +152,8 @@ export function buildScheme(components: Component[] | null | undefined, assignme
     // Only a bucket counts its assignments (a group's own would be ignored),
     // and only those published: Core leaves an unpublished one out of every
     // total rather than show it as scored nothing (ListGradedAssignments).
-    const counts = n.kind === 'bucket'
+    // Their shares are worked out only when every one that counts is known.
+    const counts = n.kind === 'bucket' && seen.counted
     const counted = (x: SchemeAssignment) => counts && !!x.a.published_at
     const pts = n.assignments.reduce((s, x) => s + (counted(x) ? Math.max(x.points, 0) : 0), 0)
     for (const x of n.assignments) {
@@ -154,7 +180,11 @@ export function subtree(n: SchemeNode): SchemeNode[] {
   return out
 }
 
-/** Why a node cannot take sub-components (component.go canHaveChildren), or null. */
+/**
+ * Why a node cannot take sub-components (component.go canHaveChildren), or
+ * null. An 'unseen' node is not blocked: whether it holds assignments cannot
+ * be told, and Core refuses if it does.
+ */
 export function childBlock(n: SchemeNode): 'direct' | 'assignments' | null {
   if (n.kind === 'direct') return 'direct'
   if (n.assignments.length) return 'assignments'
@@ -162,10 +192,7 @@ export function childBlock(n: SchemeNode): 'direct' | 'assignments' | null {
 }
 
 /** Why a node cannot be the new parent of `moving`, or null. */
-export function moveBlock(
-  moving: SchemeNode,
-  to: SchemeNode,
-): 'self' | 'current' | 'direct' | 'assignments' | null {
+export function moveBlock(moving: SchemeNode, to: SchemeNode): 'self' | 'current' | 'direct' | 'assignments' | null {
   if (to.id === moving.id || to.path.includes(moving.id)) return 'self'
   if (to.id === moving.parentId) return 'current'
   return childBlock(to)

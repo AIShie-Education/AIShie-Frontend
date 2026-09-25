@@ -2,7 +2,8 @@
 export default {
   terms: {
     title: 'Terms',
-    subtitle: 'Named spans of dates that course offerings belong to. Anyone signed in can see them; only administrators make them.',
+    subtitle:
+      'Named spans of dates that course offerings belong to. Anyone signed in can see them; only administrators make them.',
     new: 'New term',
     filter: 'Filter by name',
     empty: 'No terms yet',
@@ -33,7 +34,8 @@ export default {
   },
   departments: {
     title: 'Departments',
-    subtitle: 'Departments group courses and may have permission presets of their own. They play no part in who may do what.',
+    subtitle:
+      'Departments group courses and may have permission presets of their own. They play no part in who may do what.',
     new: 'New department',
     filter: 'Filter by name',
     empty: 'No departments yet',
@@ -51,8 +53,10 @@ export default {
   },
   presets: {
     title: 'Permission presets',
-    subtitle: 'Starting points for a new member: a roster role, a reach and a level for each of the thirteen permissions.',
-    explain: 'A preset is copied onto a member’s seat when they are added. Changing a preset later changes nobody already seated: only members added afterwards get the new values. Any value on a seat can still be changed on the seat itself.',
+    subtitle:
+      'Starting points for a new member: a roster role, a reach and a level for each of the thirteen permissions.',
+    explain:
+      'A preset is copied onto a member’s seat when they are added. Changing a preset later changes nobody already seated: only members added afterwards get the new values. Any value on a seat can still be changed on the seat itself.',
     department: 'Department',
     builtinOnly: 'Built-ins only',
     pickDepartment: 'Choose a department to see its own presets beside the built-ins.',
@@ -61,6 +65,24 @@ export default {
     builtin: 'Built-in',
     builtinHelp: 'Ships with the installation and cannot be edited here.',
     own: 'Department',
+    // The built-ins by Core's name for them (the name stays shown beside, as the identifier).
+    builtinNames: {
+      student: 'Student',
+      observer: 'Observer',
+      ta: 'Teaching assistant',
+      instructor: 'Instructor',
+      tutor: 'Tutor (agent)',
+      grader: 'Grader (agent)',
+    },
+    builtinDescriptions: {
+      student: 'Reads published material, hands in work, and sees their own grades.',
+      observer: 'Reads published material and the member list; changes nothing.',
+      ta: 'Reads everything and enters grades; the instructor posts them and approves requests.',
+      instructor: 'Everything, unsupervised.',
+      tutor: 'An agent that reads material, and the work and grades of the students it is listed for. Writes nothing.',
+      grader:
+        'An agent that reads material and rubrics, and proposes grades for the assignments it is listed for; a person approves each one.',
+    },
     empty: 'No presets',
     noDescription: 'No description',
     allowed: '{n} of 13 permissions allowed',
@@ -75,9 +97,10 @@ export default {
     assignmentsLine: 'Assignments: {scope}',
     drawer: {
       title: 'Preset: {name}',
+      name: 'Name',
       department: 'Department',
-      description: 'Description',
-      builtinNote: 'Built-in presets are part of the installation and are not edited through the API. To give a department something different, copy it into a preset of that department.',
+      builtinNote:
+        'Built-in presets are part of the installation and are not edited through the API. To give a department something different, copy it into a preset of that department.',
       copy: 'Copy into a department preset',
       edit: 'Edit',
       id: 'Preset ID',
@@ -100,13 +123,18 @@ export default {
       startFromPlaceholder: 'Copy an existing preset (optional)',
       startFromHelp: 'Fills in its role, reach and permissions; you can change them before saving.',
       role: 'Roster role',
-      roleHelp: 'The role members seated from it get. Only students appear in the gradebook; agents are usually assistants.',
+      roleHelp:
+        'The role members seated from it get. Only students appear in the gradebook; agents are usually assistants.',
       studentScope: 'Students reached',
       assignmentScope: 'Assignments reached',
-      scopeHelp: '“Listed only” reaches just the students or assignments listed on the member’s seat, chosen when they are seated. Listed with nothing on the list reaches nothing.',
+      scopeHelp:
+        '“Listed only” reaches just the students or assignments listed on the member’s seat, chosen when they are seated. A student whose list of students is left empty is listed for themselves, and so reaches their own work; any other empty list reaches nothing.',
       perms: 'Permissions',
       permsHelp: 'Anything left at Denied is not permitted.',
-      replaceWarn: 'Saving replaces this preset’s description, role, reach and every permission. Members already seated from it keep what they were given.',
+      replaceWarn:
+        'Saving replaces this preset’s description, role, reach and every permission. Members already seated from it keep what they were given.',
+      changedCount:
+        'Nothing differs from the saved preset yet. | One value differs from the saved preset, marked below. | {n} values differ from the saved preset, marked below.',
       created: 'Preset created',
       updated: 'Preset saved',
     },

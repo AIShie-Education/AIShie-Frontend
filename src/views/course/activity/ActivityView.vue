@@ -227,7 +227,11 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
     if (!day || day.key !== key) {
       const diff = today.diff(d.startOf('day'), 'day')
       const label =
-        diff === 0 ? t('activity.today') : diff === 1 ? t('activity.yesterday') : `${d.format('LL')} · ${d.format('ddd')}`
+        diff === 0
+          ? t('activity.today')
+          : diff === 1
+            ? t('activity.yesterday')
+            : `${d.format('LL')} · ${d.format('ddd')}`
       day = { key, label, events: [] }
       out.push(day)
     }
@@ -306,9 +310,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
                 <el-icon><component :is="expanded.has(run.key) ? 'ArrowUp' : 'ArrowDown'" /></el-icon>
                 <span>
                   {{
-                    expanded.has(run.key)
-                      ? t('activity.runLess')
-                      : t('activity.runMore', { n: run.events.length - 1 })
+                    expanded.has(run.key) ? t('activity.runLess') : t('activity.runMore', { n: run.events.length - 1 })
                   }}
                 </span>
                 <span v-if="!expanded.has(run.key)" class="activity__run-since app-muted">

@@ -2,7 +2,8 @@
 // Editing material, instructions or a rubric: document.add_version. A version
 // is never changed, so an edit is a new version, started from the text of the
 // latest one. A file is not carried over from one version to the next — a
-// version holds what it is given — so a file to keep is uploaded again.
+// version holds what it is given — so a file to keep is uploaded again, and
+// saving without one is how a file is dropped.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read, type ApiError, type UploadKind, type UploadedFile } from '@/api/http'
@@ -68,8 +69,12 @@ watch(
 )
 
 const hasContent = computed(() => form.body.trim() !== '' || form.files.length > 0)
-const unchanged = computed(() => !form.files.length && !!base.value && form.body === (base.value.body_md ?? ''))
 const baseHasFile = computed(() => !!base.value && (!!base.value.download_url || !!base.value.content_type))
+const sameText = computed(() => !!base.value && form.body === (base.value.body_md ?? ''))
+// A new version holds only what it is given: the same text without the file
+// the latest version has is a change — it drops the file.
+const unchanged = computed(() => sameText.value && !form.files.length && !baseHasFile.value)
+const dropsFileOnly = computed(() => sameText.value && !form.files.length && baseHasFile.value)
 const canSave = computed(
   () => course.writable && !baseLoading.value && !baseError.value && hasContent.value && !unchanged.value,
 )
@@ -114,9 +119,11 @@ async function submit() {
         :title="t('materials.document.approvalNote')"
       />
       <p class="version-dialog__intro">
-        {{ t('materials.document.addVersion.intro') }}
-        <template v-if="base">{{ t('materials.document.addVersion.startsFrom', { seq: base.seq }) }}</template>
-        <template v-else>{{ t('materials.document.addVersion.startsEmpty') }}</template>
+        {{
+          base
+            ? t('materials.document.addVersion.introFrom', { seq: base.seq })
+            : t('materials.document.addVersion.introEmpty')
+        }}
       </p>
       <el-form label-position="top" @submit.prevent="submit">
         <el-form-item :label="t('materials.document.addVersion.body')">
@@ -158,6 +165,9 @@ async function submit() {
         </span>
         <span v-else-if="!baseLoading && unchanged && base" class="version-dialog__why">
           {{ t('materials.document.addVersion.unchanged', { seq: base.seq }) }}
+        </span>
+        <span v-else-if="!baseLoading && dropsFileOnly && base" class="version-dialog__why">
+          {{ t('materials.document.addVersion.dropsFile', { seq: base.seq }) }}
         </span>
         <span class="version-dialog__spacer" />
         <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>

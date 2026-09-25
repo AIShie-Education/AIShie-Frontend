@@ -25,11 +25,12 @@ const SOON_MS = 48 * 3600 * 1000
 
 onMounted(() => void course.ensureAssignments())
 
-// The store keeps a state, not the error; AsyncState is given one to match.
+// Core's own error, as the store kept it. A refusal the store foresaw (the
+// seat is known not to hold document_read) was never asked, so has none.
 const listError = computed<ApiError | null>(() => {
-  if (course.assignmentsState === 'forbidden') return new ApiError({ status: 403, code: 'forbidden', message: '' })
-  if (course.assignmentsState === 'error') return new ApiError({ status: 0, code: 'internal', message: '' })
-  return null
+  const state = course.assignmentsState
+  if (state !== 'forbidden' && state !== 'error') return null
+  return course.assignmentsError ?? new ApiError({ status: 403, code: 'forbidden', message: '' })
 })
 const listLoading = computed(() => course.assignmentsState === 'loading' || course.assignmentsState === 'idle')
 function retry() {
@@ -40,9 +41,7 @@ function retry() {
 const now = Date.now()
 const all = computed(() => [...course.assignments.values()])
 const due = (a: AssignmentSummary) => (a.due_at ? new Date(a.due_at).getTime() : NaN)
-const upcomingAll = computed(() =>
-  all.value.filter((a) => due(a) > now).sort((a, b) => due(a) - due(b)),
-)
+const upcomingAll = computed(() => all.value.filter((a) => due(a) > now).sort((a, b) => due(a) - due(b)))
 const upcoming = computed(() => upcomingAll.value.slice(0, UPCOMING))
 const recent = computed(() =>
   all.value
@@ -92,7 +91,12 @@ function row(a: AssignmentSummary): Row {
   return { a, standing: st, urgent: open && due(a) > now && due(a) - now < SOON_MS }
 }
 const groups = computed(() => [
-  { key: 'upcoming', title: t('overview.assignments.upcoming'), rows: upcoming.value.map(row), empty: t('overview.assignments.nothingDue') },
+  {
+    key: 'upcoming',
+    title: t('overview.assignments.upcoming'),
+    rows: upcoming.value.map(row),
+    empty: t('overview.assignments.nothingDue'),
+  },
   { key: 'recent', title: t('overview.assignments.recent'), rows: recent.value.map(row), empty: '' },
 ])
 </script>

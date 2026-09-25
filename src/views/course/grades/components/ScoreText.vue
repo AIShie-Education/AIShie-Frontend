@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// A score and what it is out of, with the percentage: "9.5 / 10 · 95%". A
-// computed total is a percentage already and is shown as one.
+// A score and what it is out of, with the percentage: "9.125 / 10 · 91.25%".
+// A computed total is a percentage already and is shown as one. Scores keep
+// every decimal place Core holds; percentages have two, as Core rounds them.
 import { computed } from 'vue'
 import type { Decimal } from '@/api/types'
-import { formatDecimal, formatPercent } from '@/utils/format'
+import { formatPct, formatScore, percentOf } from './grading'
 
 const props = defineProps<{
   score: Decimal | null | undefined
@@ -14,19 +15,17 @@ const props = defineProps<{
   size?: 'default' | 'large'
 }>()
 
-const percent = computed(() =>
-  props.outOf === null || props.outOf === undefined ? '—' : formatPercent(props.score, props.outOf),
-)
+const percent = computed(() => percentOf(props.score, props.outOf))
 </script>
 
 <template>
   <span class="score-text" :class="{ 'score-text--large': size === 'large' }">
     <template v-if="asPercent">
-      <strong class="score-text__score">{{ formatDecimal(score) }}%</strong>
+      <strong class="score-text__score">{{ formatPct(score) }}</strong>
     </template>
     <template v-else>
-      <strong class="score-text__score">{{ formatDecimal(score) }}</strong>
-      <span class="score-text__of"> / {{ formatDecimal(outOf) }}</span>
+      <strong class="score-text__score">{{ formatScore(score) }}</strong>
+      <span class="score-text__of">/ {{ formatScore(outOf) }}</span>
       <span v-if="!hidePercent && percent !== '—'" class="score-text__pct">{{ percent }}</span>
     </template>
   </span>
@@ -36,14 +35,15 @@ const percent = computed(() =>
 .score-text {
   display: inline-flex;
   align-items: baseline;
-  gap: 2px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .score-text__score {
   font-weight: 600;
 }
+/* A flex item's leading space collapses: the gap before the slash is a margin. */
 .score-text__of {
+  margin-left: 0.3em;
   color: var(--el-text-color-secondary);
 }
 .score-text__pct {

@@ -43,9 +43,15 @@ function value(p: Perm): AutonomyLevel | undefined {
       <div class="perm-editor__label">
         <span class="perm-editor__name">
           {{ t(`enums.perm.${p}`) }}
-          <el-tag v-if="SCOPED_PERMS.includes(p)" size="small" type="info" effect="plain" round>{{
-            t('common.labels.scoped')
-          }}</el-tag>
+          <el-tag
+            v-if="SCOPED_PERMS.includes(p)"
+            size="small"
+            type="info"
+            effect="plain"
+            round
+            :title="t('common.labels.scopedHelp')"
+            >{{ t('common.labels.scoped') }}</el-tag
+          >
           <el-tag v-if="changed?.includes(p)" size="small" type="warning" effect="light" round>{{
             t('common.labels.changed')
           }}</el-tag>

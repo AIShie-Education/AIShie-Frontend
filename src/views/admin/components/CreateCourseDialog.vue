@@ -5,11 +5,10 @@ import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { Department, Term } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
-import { DIALOG_WIDTH } from './adminShared'
 
 const open = defineModel<boolean>({ required: true })
 const props = defineProps<{ terms: Term[]; departments: Department[]; termId?: string; deptId?: string }>()
-const emit = defineEmits<{ created: [courseId: string]; proposed: [] }>()
+const emit = defineEmits<{ created: [courseId: string] }>()
 const { t } = useI18n()
 
 const formRef = ref<FormInstance>()
@@ -57,13 +56,13 @@ async function submit() {
   )
   if (!out) return
   open.value = false
+  // A platform tool is never proposed: outside a course there is no ladder.
   if (out.status === 'executed') emit('created', out.result.course_id)
-  else emit('proposed')
 }
 </script>
 
 <template>
-  <el-dialog v-model="open" :title="t('admin.create.title')" :width="DIALOG_WIDTH" destroy-on-close>
+  <el-dialog v-model="open" :title="t('admin.create.title')" width="560px" destroy-on-close>
     <p class="app-form-hint create-course__intro">{{ t('admin.create.intro') }}</p>
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <div class="create-course__row">

@@ -100,15 +100,30 @@ export function isApiError(e: unknown): e is ApiError {
 /** Where Core is. Empty means this origin (and, in development, the proxy). */
 export const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '')
 
+/** This page's origin, or '' where there is no page (unit tests without a DOM). */
+function pageOrigin(): string {
+  return typeof window !== 'undefined' ? window.location.origin : ''
+}
+
+/**
+ * The origin API calls go to: API_BASE's, resolved against this page (so a
+ * path prefix such as '/core' is this origin), or this page's own.
+ */
+function apiOrigin(): string {
+  if (!API_BASE || typeof window === 'undefined') return pageOrigin()
+  try {
+    return new URL(API_BASE, window.location.href).origin
+  } catch {
+    return pageOrigin()
+  }
+}
+
 /**
  * Core's own public origin (its PUBLIC_URL), for telling people where an
  * agent connects over MCP. In development this is the proxied Core, not the
  * dev server, which does not forward /mcp.
  */
-export const CORE_ORIGIN: string =
-  (import.meta.env.VITE_CORE_PUBLIC_URL ?? '').replace(/\/+$/, '') ||
-  (API_BASE ? new URL(API_BASE, 'http://x').origin : '') ||
-  (typeof window !== 'undefined' ? window.location.origin : '')
+export const CORE_ORIGIN: string = (import.meta.env.VITE_CORE_PUBLIC_URL ?? '').replace(/\/+$/, '') || apiOrigin()
 
 /** Where an agent's MCP client connects (streamable HTTP, bearer token). */
 export const MCP_ENDPOINT = `${CORE_ORIGIN}/mcp`
@@ -379,9 +394,18 @@ export async function logout(): Promise<void> {
   if (raw.status !== 204 && raw.status !== 401) throw errorFrom(raw)
 }
 
-/** Where a browser goes to sign in through the identity provider. */
+/**
+ * Where a browser goes to sign in through the identity provider. returnTo is a path on this front end (with its
+ * base path). Core sends the browser there from its own callback, and takes a
+ * bare path to be a path on Core's origin; so when Core is elsewhere the path
+ * is made absolute, on this page's origin, which Core accepts when it is one
+ * of its TRUSTED_ORIGINS.
+ */
 export function ssoStartUrl(returnTo: string): string {
-  return `${API_BASE}/v1/auth/sso/start?return_to=${encodeURIComponent(returnTo)}`
+  let to = returnTo
+  const page = pageOrigin()
+  if (page && apiOrigin() !== page && to.startsWith('/') && !to.startsWith('//')) to = page + to
+  return `${API_BASE}/v1/auth/sso/start?return_to=${encodeURIComponent(to)}`
 }
 
 export async function health(): Promise<{

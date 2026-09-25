@@ -26,8 +26,14 @@ import ProposalNotice from './components/ProposalNotice.vue'
 import RegradeDialog from './components/RegradeDialog.vue'
 import ScoreText from './components/ScoreText.vue'
 import WorkingTable from './components/WorkingTable.vue'
-import { parseBreakdown, parseWorking, useGradeLookups, type PostRow, type WorkingItem } from './components/grading'
-import { formatPercent } from '@/utils/format'
+import {
+  parseBreakdown,
+  parseWorking,
+  percentOf,
+  useGradeLookups,
+  type PostRow,
+  type WorkingItem,
+} from './components/grading'
 
 const props = defineProps<{ courseId: string; gradeId: string }>()
 const { t } = useI18n()
@@ -69,16 +75,16 @@ function workingName(item: WorkingItem): string | null {
 // What can be done with it
 // ---------------------------------------------------------------------------
 
+// Regrading takes grade_submit and grade_post, and runs at the lower of the two.
 const canRegrade = computed(
   () =>
     !!g.value &&
     !mine.value &&
     g.value.state === 'posted' &&
     g.value.origin === 'entered' &&
-    course.can('grade_submit') &&
-    course.can('grade_post'),
+    course.canAll(['grade_submit', 'grade_post']),
 )
-const regradeNeedsApproval = computed(() => course.needsApproval('grade_submit') || course.needsApproval('grade_post'))
+const regradeNeedsApproval = computed(() => course.needsApprovalAll(['grade_submit', 'grade_post']))
 const canPostThis = computed(
   () =>
     !!g.value && !mine.value && g.value.state === 'draft' && g.value.origin === 'entered' && course.can('grade_post'),
@@ -87,6 +93,13 @@ const canPostThis = computed(
 const regradeVisible = ref(false)
 const postVisible = ref(false)
 const proposal = ref<{ title: string; body: string } | null>(null)
+// The route keeps this view when another grade is opened: a notice is about the grade it was given on.
+watch(
+  () => props.gradeId,
+  () => {
+    proposal.value = null
+  },
+)
 
 const postRows = computed<PostRow[]>(() =>
   g.value
@@ -249,7 +262,7 @@ const backLink = computed(() => ({
         <section class="app-card grade-view__score-card">
           <div class="grade-view__score">
             <ScoreText :score="g.score" :out-of="outOf" :as-percent="isComputed" size="large" hide-percent />
-            <div v-if="!isComputed && outOf !== null" class="grade-view__pct">{{ formatPercent(g.score, outOf) }}</div>
+            <div v-if="!isComputed && outOf !== null" class="grade-view__pct">{{ percentOf(g.score, outOf) }}</div>
           </div>
           <p v-if="isComputed" class="app-muted grade-view__score-note">
             {{ t('grades.detail.computedNote') }}
@@ -420,7 +433,10 @@ const backLink = computed(() => ({
             <el-table-column :label="t('grades.columns.state')" min-width="100">
               <template #default="{ row }"><StatusTag vocab="gradeState" :value="row.state" /></template>
             </el-table-column>
-            <el-table-column :label="t('grades.columns.grader')" min-width="140">
+            <el-table-column
+              :label="isComputed ? t('grades.detail.writtenBy') : t('grades.columns.grader')"
+              min-width="140"
+            >
               <template #default="{ row }"><MemberName :id="row.grader_member_id" show-kind /></template>
             </el-table-column>
             <el-table-column :label="t('grades.columns.created')" min-width="150">

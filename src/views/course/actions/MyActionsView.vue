@@ -9,25 +9,21 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { read, type ApiError } from '@/api/http'
 import { toApiError } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
+import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActionActor from './components/ActionActor.vue'
 import ActionTarget from './components/ActionTarget.vue'
-import {
-  reasonText,
-  storedDecision,
-  storedError,
-  typeLabel,
-  useNarrow,
-  type ActionRow,
-} from './components/actionText'
+import { reasonText, storedDecision, storedError, typeLabel, type ActionRow } from './components/actionText'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
 const router = useRouter()
-const narrow = useNarrow(768)
+const session = useSessionStore()
+const narrow = useNarrow(767)
 
 const PAGE = 200
 /** Pages loaded in one go before asking the person whether to go on. */
@@ -119,7 +115,10 @@ function open(row: ActionRow) {
     </PageHeader>
 
     <div class="app-card">
-      <p class="my-actions__help">{{ t('actions.mine.help') }}</p>
+      <p class="my-actions__help">
+        {{ t('actions.mine.help') }}
+        <template v-if="session.me?.kind === 'agent'">{{ t('actions.mine.helpAgent') }}</template>
+      </p>
 
       <div v-if="waitingCount || reviewCount" class="my-actions__summary">
         <el-tag v-if="waitingCount" type="warning" effect="light" class="my-actions__chip" @click="status = 'proposed'">

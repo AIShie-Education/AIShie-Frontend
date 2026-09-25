@@ -4,10 +4,10 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
+import { MCP_ENDPOINT } from '@/api/http'
 import type { ToolOut } from '@/api/types'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
-import { DIALOG_WIDTH, mcpEndpoint } from './adminShared'
 
 const open = defineModel<boolean>({ required: true })
 const props = defineProps<{ issued: ToolOut<'actor.issue_token'> | null; actorKind: string }>()
@@ -24,7 +24,7 @@ watch(open, (v) => {
 })
 
 const token = computed(() => props.issued?.token || '')
-const endpoint = computed(() => mcpEndpoint())
+const endpoint = MCP_ENDPOINT
 const header = computed(() => `Authorization: Bearer ${token.value || '…'}`)
 
 async function copy(what: 'token' | 'endpoint' | 'header', text: string) {
@@ -60,7 +60,7 @@ function finish() {
   <el-dialog
     v-model="open"
     :title="token ? t('admin.token.revealTitle') : t('admin.token.title')"
-    :width="DIALOG_WIDTH"
+    width="560px"
     :before-close="beforeClose"
     :close-on-click-modal="false"
     destroy-on-close

@@ -9,6 +9,7 @@ import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
 import { PERMS, type AutonomyLevel, type Member, type Perm, type PermLevels } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
@@ -26,10 +27,10 @@ import {
   fullPerms,
   grantProblems,
   isExpired,
+  permsAbove,
   presetDescription,
   presetLabel,
   rank,
-  useNarrow,
   usePresets,
   type Shape,
 } from './components/seat'
@@ -38,7 +39,7 @@ const props = defineProps<{ courseId: string; memberId: string }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const session = useSessionStore()
-const narrow = useNarrow(768)
+const narrow = useNarrow(767)
 const presets = usePresets()
 
 const state = useAsync<Member>(() => read('member.get', { course_id: props.courseId, member_id: props.memberId }), {
@@ -84,6 +85,24 @@ const differsFromPreset = computed(() => {
 
 const listedStudents = computed(() => m.value?.listed_students ?? [])
 const listedAssignments = computed(() => m.value?.listed_assignments ?? [])
+// Where to see a student's work: offered by the permission each page reads
+// with (gradebook.get and grade.list need grade_read, submission.list
+// submission_read) and, where the caller's own seat is known exactly, only
+// for a student within its reach. A gradebook spans every assignment, so it
+// also needs a reach over all of them.
+const work = computed(() => {
+  if (!m.value || m.value.role !== 'student') return { gradebook: false, submissions: false, grades: false }
+  const mine = course.permsSource === 'exact' ? course.seat : null
+  const reaches = !mine || mine.student_scope === 'all' || (mine.listed_students ?? []).includes(m.value.id)
+  const allAssignments = !mine || mine.assignment_scope === 'all'
+  return {
+    gradebook: reaches && allAssignments && course.can('grade_read'),
+    submissions: reaches && course.can('submission_read'),
+    grades: reaches && course.can('grade_read'),
+  }
+})
+const showWork = computed(() => work.value.gradebook || work.value.submissions || work.value.grades)
+
 const ownWorkOnly = computed(
   () =>
     !!m.value &&
@@ -151,6 +170,12 @@ function shapeWith(p: PermLevels): Shape {
 }
 const permProblems = computed(() =>
   editing.value && raises.value && m.value ? grantProblems(shapeWith({ ...perms.value, ...changes.value })) : [],
+)
+// On the rows: what changed, and — when the change is a grant, which measures
+// the whole seat — each level above the caller's own.
+const changedPerms = computed(() => Object.keys(changes.value) as Perm[])
+const rowWarnings = computed(() =>
+  editing.value && raises.value ? permsAbove({ ...perms.value, ...changes.value }) : {},
 )
 
 async function savePerms() {
@@ -242,7 +267,11 @@ async function resume() {
 async function remove() {
   if (!m.value) return
   const name = m.value.display_name
-  const msg = body([t('members.detail.remove.confirm', { name }), t('members.detail.remove.confirmFresh'), ...approvalNote()])
+  const msg = body([
+    t('members.detail.remove.confirm', { name }),
+    t('members.detail.remove.confirmFresh'),
+    ...approvalNote(),
+  ])
   if (!(await confirm(msg, t('members.detail.remove.title'), t('members.detail.remove.action'), true))) return
   pageError.value = null
   const out = await removeWrite.run({ course_id: props.courseId, member_id: m.value.id }, { notify: false })
@@ -271,7 +300,12 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
       <template v-if="m && showManage">
         <el-tooltip :content="disabledReason" :disabled="!disabledReason" placement="bottom">
           <div class="member__actions">
-            <el-button v-if="m.status === 'active'" :disabled="!manageable || busy" :loading="pauseWrite.pending.value" @click="pause">
+            <el-button
+              v-if="m.status === 'active'"
+              :disabled="!manageable || busy"
+              :loading="pauseWrite.pending.value"
+              @click="pause"
+            >
               <el-icon><VideoPause /></el-icon><span>{{ t('members.detail.pause.action') }}</span>
             </el-button>
             <el-button
@@ -283,7 +317,13 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             >
               <el-icon><VideoPlay /></el-icon><span>{{ t('members.detail.resume.action') }}</span>
             </el-button>
-            <el-button type="danger" plain :disabled="!manageable || busy" :loading="removeWrite.pending.value" @click="remove">
+            <el-button
+              type="danger"
+              plain
+              :disabled="!manageable || busy"
+              :loading="removeWrite.pending.value"
+              @click="remove"
+            >
               <el-icon><Delete /></el-icon><span>{{ t('members.detail.remove.action') }}</span>
             </el-button>
             <el-tag v-if="approval" type="warning" effect="plain">{{ t('enums.level.confirm_required') }}</el-tag>
@@ -307,7 +347,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             {{ t('members.proposed.view') }}
           </router-link>
           ·
-          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('members.proposed.mine') }}</router-link>
+          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+            t('members.proposed.mine')
+          }}</router-link>
         </el-alert>
         <el-alert
           v-if="removedResult !== null"
@@ -359,10 +401,18 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         <!-- The seat -->
         <section class="app-card">
           <h2 class="app-card__title">{{ t('members.detail.seat') }}</h2>
-          <el-descriptions :column="narrow ? 1 : 2" :direction="narrow ? 'vertical' : 'horizontal'" border class="member__desc" :class="{ 'is-narrow': narrow }">
+          <el-descriptions
+            :column="narrow ? 1 : 2"
+            :direction="narrow ? 'vertical' : 'horizontal'"
+            border
+            class="member__desc"
+            :class="{ 'is-narrow': narrow }"
+          >
             <el-descriptions-item :label="t('members.detail.actor')">
               <span class="member__actor">
-                <el-icon :class="{ member__agent: m.kind === 'agent' }"><Cpu v-if="m.kind === 'agent'" /><User v-else /></el-icon>
+                <el-icon :class="{ member__agent: m.kind === 'agent' }"
+                  ><Cpu v-if="m.kind === 'agent'" /><User v-else
+                /></el-icon>
                 <span>{{ m.display_name }}</span>
                 <StatusTag vocab="actorKind" :value="m.kind" />
               </span>
@@ -415,16 +465,31 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </el-descriptions-item>
           </el-descriptions>
 
-          <div v-if="m.role === 'student'" class="member__work">
+          <div v-if="showWork" class="member__work">
             <span class="app-muted">{{ t('members.detail.work.title') }}</span>
-            <router-link :to="{ name: 'course-gradebook', params: { courseId, studentMemberId: m.id } }">
-              <el-button size="small"><el-icon><Tickets /></el-icon><span>{{ t('members.detail.work.gradebook') }}</span></el-button>
+            <router-link
+              v-if="work.gradebook"
+              :to="{ name: 'course-gradebook', params: { courseId, studentMemberId: m.id } }"
+            >
+              <el-button size="small"
+                ><el-icon><Tickets /></el-icon><span>{{ t('members.detail.work.gradebook') }}</span></el-button
+              >
             </router-link>
-            <router-link :to="{ name: 'course-submissions', params: { courseId }, query: { student: m.id } }">
-              <el-button size="small"><el-icon><Files /></el-icon><span>{{ t('members.detail.work.submissions') }}</span></el-button>
+            <router-link
+              v-if="work.submissions"
+              :to="{ name: 'course-submissions', params: { courseId }, query: { student: m.id } }"
+            >
+              <el-button size="small"
+                ><el-icon><Files /></el-icon><span>{{ t('members.detail.work.submissions') }}</span></el-button
+              >
             </router-link>
-            <router-link :to="{ name: 'course-grades', params: { courseId }, query: { student: m.id } }">
-              <el-button size="small"><el-icon><Medal /></el-icon><span>{{ t('members.detail.work.grades') }}</span></el-button>
+            <router-link
+              v-if="work.grades"
+              :to="{ name: 'course-grades', params: { courseId }, query: { student: m.id } }"
+            >
+              <el-button size="small"
+                ><el-icon><Medal /></el-icon><span>{{ t('members.detail.work.grades') }}</span></el-button
+              >
             </router-link>
           </div>
         </section>
@@ -448,7 +513,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                 {{ t('members.scope.students') }}
                 <StatusTag vocab="scope" :value="m.student_scope" />
               </h3>
-              <p v-if="m.student_scope === 'all'" class="member__scope-text">{{ t('members.detail.scope.allStudents') }}</p>
+              <p v-if="m.student_scope === 'all'" class="member__scope-text">
+                {{ t('members.detail.scope.allStudents') }}
+              </p>
               <p v-else-if="!listedStudents.length" class="member__scope-text member__scope-none">
                 <el-icon><WarningFilled /></el-icon>{{ t('members.detail.scope.noStudents') }}
               </p>
@@ -466,7 +533,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                 {{ t('members.scope.assignments') }}
                 <StatusTag vocab="scope" :value="m.assignment_scope" />
               </h3>
-              <p v-if="m.assignment_scope === 'all'" class="member__scope-text">{{ t('members.detail.scope.allAssignments') }}</p>
+              <p v-if="m.assignment_scope === 'all'" class="member__scope-text">
+                {{ t('members.detail.scope.allAssignments') }}
+              </p>
               <p v-else-if="!listedAssignments.length" class="member__scope-text member__scope-none">
                 <el-icon><WarningFilled /></el-icon>{{ t('members.detail.scope.noAssignments') }}
               </p>
@@ -485,7 +554,12 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         <section class="app-card">
           <h2 class="app-card__title">
             <span>{{ t('members.detail.perms.title') }}</span>
-            <el-tooltip v-if="showManage && !editing" :content="disabledReason" :disabled="!disabledReason" placement="top">
+            <el-tooltip
+              v-if="showManage && !editing"
+              :content="disabledReason"
+              :disabled="!disabledReason"
+              placement="top"
+            >
               <span>
                 <el-button size="small" :disabled="!manageable" @click="startEdit">
                   <el-icon><Edit /></el-icon><span>{{ t('members.detail.perms.edit') }}</span>
@@ -498,7 +572,11 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             <template v-if="preset">
               {{
                 differsFromPreset
-                  ? t('members.detail.perms.differs', { n: differsFromPreset, preset: presetLabel(preset) }, differsFromPreset)
+                  ? t(
+                      'members.detail.perms.differs',
+                      { n: differsFromPreset, preset: presetLabel(preset) },
+                      differsFromPreset,
+                    )
                   : t('members.detail.perms.asPreset', { preset: presetLabel(preset) })
               }}
             </template>
@@ -509,17 +587,31 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               <template #title>{{ t('members.grant.rulesTitle') }}</template>
               {{ t('members.detail.perms.editHelp') }}
             </el-alert>
-            <PermEditor v-model="draft" size="small" />
-            <el-alert v-if="permProblems.length" type="warning" :closable="false" show-icon class="member__alert member__after">
+            <PermEditor v-model="draft" size="small" :changed="changedPerms" :warn="rowWarnings" />
+            <el-alert
+              v-if="permProblems.length"
+              type="warning"
+              :closable="false"
+              show-icon
+              class="member__alert member__after"
+            >
               <template #title>{{ t('members.grant.willRefuse') }}</template>
               <ul class="member__problems">
                 <li v-for="(p, i) in permProblems" :key="i">{{ p }}</li>
               </ul>
             </el-alert>
-            <RefusalAlert :error="permWrite.lastError.value" class="member__after" @close="permWrite.lastError.value = null" />
+            <RefusalAlert
+              :error="permWrite.lastError.value"
+              class="member__after"
+              @close="permWrite.lastError.value = null"
+            />
             <div class="member__edit-bar">
               <span class="app-muted">
-                {{ changeCount ? t('members.detail.perms.changes', { n: changeCount }) : t('members.detail.perms.unchanged') }}
+                {{
+                  changeCount
+                    ? t('members.detail.perms.changes', { n: changeCount })
+                    : t('members.detail.perms.unchanged')
+                }}
               </span>
               <el-tag v-if="approval" type="warning" effect="plain">{{ t('enums.level.confirm_required') }}</el-tag>
               <span class="app-toolbar__spacer" />
@@ -537,13 +629,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           <PermEditor v-else :model-value="perms" readonly />
         </section>
 
-        <RescopeDialog
-          v-if="showManage"
-          v-model="rescopeOpen"
-          :course-id="courseId"
-          :member="m"
-          @done="onRescoped"
-        />
+        <RescopeDialog v-if="showManage" v-model="rescopeOpen" :course-id="courseId" :member="m" @done="onRescoped" />
       </template>
     </AsyncState>
   </div>

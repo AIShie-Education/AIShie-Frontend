@@ -14,9 +14,9 @@ export default {
     pausedHelp: '席位暫停期間，你在這裡的所有操作都會被拒絕。恢復後一切照舊。',
     memberId: '成員 ID',
     memberIdHelp:
-      '你在這門課的固定識別碼。只要你仍持有這個席位，它就不會改變；代理程式會以它作為自身記憶的索引。被移除後再加入會得到新的 ID，一切重新開始。',
-    students: '可觸及的學生',
-    assignments: '可觸及的作業',
+      '你在這門課的固定識別碼。只要你仍持有這個席位，它就不會改變；代理會以它作為自身記憶的索引。被移除後再加入會得到新的 ID，一切重新開始。',
+    students: '學生範圍',
+    assignments: '作業範圍',
     studentAll: '課內所有學生',
     assignmentAll: '課內所有作業',
     studentListedSelf: '僅限席位上列明的學生（學生通常只有自己）',
@@ -29,12 +29,14 @@ export default {
     since: '加入於',
     expires: '席位到期',
     expired: '已到期',
-    scopeHelp: '可觸及範圍會把閱讀及撰寫提交、成績限制在所列明的學生和作業；課程教材則人人相同。',
+    scopeHelp: '範圍會把閱讀及撰寫提交、成績限制在所列明的學生和作業；課程教材則人人相同。',
   },
   perms: {
     title: '你可以做甚麼',
     exact: '以下是你席位本身的設定。',
-    preset: '由於你的席位不能查看成員名單，以下是按你角色（{role}）的內建預設推斷。你的席位可能另有設定：每次操作都由 Core 決定。',
+    preset:
+      '由於你的席位不能查看成員名單，以下是按內建預設「{preset}」推斷。你的席位可能另有設定：每次操作都由 Core 決定。',
+    refused: '讀取你自己的席位時已被 Core 拒絕，因此視為不允許。',
     unknown: '你的席位不能查看成員名單，因此你看不到自己的權限。所有功能都會提供，不允許的操作會由 Core 拒絕。',
     nothing: '你的席位目前在這裡甚麼都不能做。',
     deniedCount: '不允許：13 項中的 {n} 項。',
@@ -50,6 +52,7 @@ export default {
     oldestDraft: '最早輸入於',
     failed: '暫時無法統計',
     atLeast: '{n}+',
+    draftsPartial: '只統計了最早的 {n} 個成績',
     allClear: '目前沒有待你處理的事項。',
   },
   assignments: {

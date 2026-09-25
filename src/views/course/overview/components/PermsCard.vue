@@ -2,26 +2,56 @@
 // What the caller's seat may do, and how: at once, at once but reviewed
 // after, or only once someone approves. Core does not tell a member its own
 // permissions unless it may read the member list, so the course store's
-// levels are exact, guessed from the built-in preset for the roster role, or
-// unknown; this card says which.
+// levels are exact, guessed from a built-in preset, or unknown; this card
+// says which. Levels are the store's (course.level), so what Core has
+// already refused counts as denied here too.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { PERMS, type AutonomyLevel, type Perm } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { presetLabel } from '@/views/course/members/components/seat'
 
 const course = useCourseStore()
 const { t } = useI18n()
 
+const levels = computed(
+  () => Object.fromEntries(PERMS.map((p) => [p, course.level(p) ?? 'denied'])) as Record<Perm, AutonomyLevel>,
+)
 const LEVELS: Exclude<AutonomyLevel, 'denied'>[] = ['autonomous', 'pending_review', 'confirm_required']
 const groups = computed(() =>
-  LEVELS.map((level) => ({ level, perms: PERMS.filter((p: Perm) => course.perms[p] === level) })).filter(
+  LEVELS.map((level) => ({ level, perms: PERMS.filter((p: Perm) => levels.value[p] === level) })).filter(
     (g) => g.perms.length,
   ),
 )
-const denied = computed(() => PERMS.filter((p) => (course.perms[p] ?? 'denied') === 'denied'))
-const roleLabel = computed(() => (course.role ? t(`enums.role.${course.role}`) : ''))
+const denied = computed(() => PERMS.filter((p) => levels.value[p] === 'denied'))
+// Where Core's refusal overrules what the seat was taken to hold, say so on that row.
+const refusedWarn = computed(
+  () =>
+    Object.fromEntries(
+      [...course.refused]
+        .filter((p) => (course.perms[p] ?? 'denied') !== 'denied')
+        .map((p) => [p, t('overview.perms.refused')]),
+    ) as Partial<Record<Perm, string>>,
+)
+
+/**
+ * The built-in preset the store guessed from, by the same rule: the one named
+ * after the roster role, or for an agent's assistant seat the grader (listed
+ * to assignments) or the tutor (listed to students).
+ */
+const guessedPreset = computed(() => {
+  const m = course.membership
+  if (!m) return null
+  if (m.role !== 'assistant') return m.role
+  if (m.assignment_scope === 'listed' && m.student_scope === 'all') return 'grader'
+  if (m.student_scope === 'listed' && m.assignment_scope === 'all') return 'tutor'
+  return null
+})
+const presetText = computed(() =>
+  t('overview.perms.preset', { preset: guessedPreset.value ? presetLabel({ name: guessedPreset.value }) : '' }),
+)
 const open = ref<string[]>([])
 </script>
 
@@ -34,7 +64,7 @@ const open = ref<string[]>([])
       <el-icon v-else-if="course.permsSource === 'preset'"><InfoFilled /></el-icon>
       <el-icon v-else><Warning /></el-icon>
       <span v-if="course.permsSource === 'exact'">{{ t('overview.perms.exact') }}</span>
-      <span v-else-if="course.permsSource === 'preset'">{{ t('overview.perms.preset', { role: roleLabel }) }}</span>
+      <span v-else-if="course.permsSource === 'preset'">{{ presetText }}</span>
       <span v-else>{{ t('overview.perms.unknown') }}</span>
     </p>
 
@@ -59,7 +89,7 @@ const open = ref<string[]>([])
 
       <el-collapse v-model="open" class="perms__all">
         <el-collapse-item name="all" :title="t('overview.perms.showAll')">
-          <PermEditor :model-value="course.perms" readonly size="small" />
+          <PermEditor :model-value="levels" :warn="refusedWarn" readonly size="small" />
         </el-collapse-item>
       </el-collapse>
     </template>

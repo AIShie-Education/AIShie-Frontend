@@ -1,14 +1,47 @@
 // Small shared pieces for the platform set-up pages (terms, departments,
 // permission presets).
-import { AUTONOMY_LEVELS, PERMS, type AutonomyLevel, type PermLevels, type Preset, type Role, type Scope } from '@/api/types'
+import {
+  AUTONOMY_LEVELS,
+  PERMS,
+  type AutonomyLevel,
+  type PermLevels,
+  type Preset,
+  type Role,
+  type Scope,
+} from '@/api/types'
+import { i18n } from '@/i18n'
+
+const g = i18n.global as unknown as { t: (key: string) => string; te: (key: string) => boolean }
 
 /** A dialog as wide as the conventions ask, and no wider than a phone. */
 export const DIALOG_WIDTH = 'min(560px, calc(100vw - 32px))'
 /** A side drawer, the whole width on a phone. */
 export const DRAWER_SIZE = 'min(560px, 100vw)'
 
-export function isBuiltin(p: Preset): boolean {
+export function isBuiltin(p: Pick<Preset, 'dept_id'>): boolean {
   return !p.dept_id
+}
+
+/**
+ * A preset's name as a reader should see it: a built-in's in the reader's
+ * language (as the course's member pages show it), a department's own as its
+ * author wrote it. Core's name, the identifier, is p.name.
+ */
+export function presetLabel(p: Pick<Preset, 'name' | 'dept_id'>): string {
+  const key = `adminSetup.presets.builtinNames.${p.name}`
+  return isBuiltin(p) && g.te(key) ? g.t(key) : p.name
+}
+
+/** Whether presetLabel says something other than Core's name, which is then worth showing beside it. */
+export function hasOwnLabel(p: Pick<Preset, 'name' | 'dept_id'>): boolean {
+  return presetLabel(p) !== p.name
+}
+
+/** A built-in's description in the reader's language; a department's own as its author wrote it. */
+export function presetDescription(p: Pick<Preset, 'name' | 'dept_id' | 'description'>): string {
+  const key = `adminSetup.presets.builtinDescriptions.${p.name}`
+  if (isBuiltin(p) && g.te(key)) return g.t(key)
+  return p.description ?? ''
 }
 
 function asLevel(v: string | undefined): AutonomyLevel {
@@ -49,9 +82,19 @@ export function bodyOf(p: Preset | null | undefined): PresetBody {
   }
 }
 
-/** Built-ins first, then a department's own; by name within each. */
+// The built-ins in the order Core ships them: people from least to most, then agents.
+const BUILTIN_ORDER = ['student', 'observer', 'ta', 'instructor', 'tutor', 'grader']
+function builtinRank(p: Preset): number {
+  const i = BUILTIN_ORDER.indexOf(p.name)
+  return i < 0 ? BUILTIN_ORDER.length : i
+}
+
+/** Built-ins first, in the order they ship; then a department's own, by name. */
 export function sortPresets(list: Preset[]): Preset[] {
   return [...list].sort(
-    (a, b) => Number(isBuiltin(b)) - Number(isBuiltin(a)) || a.name.localeCompare(b.name),
+    (a, b) =>
+      Number(isBuiltin(b)) - Number(isBuiltin(a)) ||
+      (isBuiltin(a) ? builtinRank(a) - builtinRank(b) : 0) ||
+      a.name.localeCompare(b.name),
   )
 }

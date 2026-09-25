@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
@@ -18,25 +19,27 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import EditCourseDialog from './components/EditCourseDialog.vue'
 import SeatInstructorCard from './components/SeatInstructorCard.vue'
-import { findCourse, useNarrow } from './components/adminShared'
+import { findCourse, useCanonicalId } from './components/adminShared'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
 const session = useSessionStore()
 const courseStore = useCourseStore()
 const narrow = useNarrow()
+/** The course's id as Core writes it, whatever the address says. */
+const id = useCanonicalId(() => props.courseId, 'courseId')
 
-const state = useAsync(() => findCourse(props.courseId, t('admin.course.notFound')), {
-  watch: [() => props.courseId],
+const state = useAsync(() => findCourse(id.value, t('admin.course.notFound')), {
+  watch: [id],
   keepData: true,
 })
-const course = computed(() => (state.data.value?.id === props.courseId ? state.data.value : undefined))
+const course = computed(() => (state.data.value?.id === id.value ? state.data.value : undefined))
 const termsState = useAsync(() => read('term.list', {}).then((o) => o.terms ?? []))
 const deptsState = useAsync(() => read('department.list', {}).then((o) => o.departments ?? []))
 const term = computed(() => (termsState.data.value ?? []).find((x) => x.id === course.value?.term_id))
 const dept = computed(() => (deptsState.data.value ?? []).find((x) => x.id === course.value?.dept_id))
 
-const seat = computed(() => session.membershipFor(props.courseId))
+const seat = computed(() => session.membershipFor(id.value))
 const archived = computed(() => course.value?.status === 'archived')
 const codeLabel = computed(() =>
   course.value ? `${course.value.code}${course.value.section ? ` · ${course.value.section}` : ''}` : '',
@@ -49,7 +52,7 @@ const archiveW = useWrite('course.archive')
 async function refreshAll() {
   await state.reload()
   if (seat.value) void session.loadMemberships().catch(() => undefined)
-  if (courseStore.courseId === props.courseId) void courseStore.open(props.courseId, true)
+  if (courseStore.courseId === id.value) void courseStore.open(id.value, true)
 }
 
 async function activate() {
@@ -100,7 +103,7 @@ function onSeated(_memberId: string, actorId: string) {
         <StatusTag v-if="course" vocab="courseStatus" :value="course.status" size="default" />
       </template>
       <template v-if="course">
-        <router-link v-if="seat" :to="{ name: 'course-overview', params: { courseId } }">
+        <router-link v-if="seat" :to="{ name: 'course-overview', params: { courseId: id } }">
           <el-button>
             <el-icon><Right /></el-icon>
             <span>{{ t('admin.course.openCourse') }}</span>
@@ -210,6 +213,10 @@ function onSeated(_memberId: string, actorId: string) {
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     align-items: start;
   }
+}
+/* A label breaks between words, never inside one (課程編 / 號). */
+.course-admin__desc :deep(.el-descriptions__label) {
+  white-space: nowrap;
 }
 .course-admin__small {
   font-size: 12px;

@@ -41,7 +41,8 @@ markdown-it + DOMPurify.
   `grade.submit` `feedback_files`, …). A submission's files are attached with `document.create`
   (`kind: 'submission'`, `submission_id`, `upload_token`) while it is a draft; `submission.submit` then
   takes the list of their document ids as a guard. To download, use
-  `<DocumentFileLink :course-id :document-id :title />`, which fetches a fresh short-lived URL on click.
+  `<DocumentFileLink :course-id :document-id :title />`, which fetches a fresh short-lived URL on click
+  and saves the file under the document's title (or `file-name`), with its type's extension.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
   page. `usePaged(after => read(...).then(o => ({ items: o.assignments, next: o.next })))` and
   `<LoadMore :has-more :loading @more="loadMore" />`.
@@ -86,16 +87,24 @@ role, or unknown (`permsSource`). Therefore:
   caller), `course.assignmentTitle(id)` after `course.ensureAssignments()`. Use `<IdText :id />`
   where an id is all there is. After adding/removing members or assignments call
   `course.invalidate('members' | 'assignments')`.
+- Everything held is the caller's. Signing out (or Core ending the session) closes the course store,
+  and the next sign-in in the same tab loads the page afresh, so caches a view keeps at module level
+  never outlive the caller they were filled for.
 
 ## Building a view
 
 - Every page starts with `<PageHeader :title :subtitle :back>` with its primary actions in the
   default slot, then content in `.app-card` sections (`.app-card__title` for a section heading).
+  Actions that are all `v-if`'d away leave no empty row.
+- A page inside a course whose route does not say which tab it belongs to calls
+  `useCourseTab(() => routeName)` (`@/composables/useCourseTab`) with the route whose tab to highlight
+  (a document that is an assignment's instructions → `'course-assignments'`).
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
-  `v-html` with anything else.
+  `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
+  elsewhere is shown as a link to it, so a text cannot tell another host who read it.
 - Forms: `el-form` with `label-position="top"` and rules; dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or

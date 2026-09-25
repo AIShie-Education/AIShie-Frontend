@@ -1,28 +1,34 @@
 <script setup lang="ts">
 // Setting or replacing the caller's own password (credential.set_password).
-// Whether one is set, and since when, is read from the credential list.
+// Whether one is set, and since when, is read from the credential list. A
+// password is used only with an email address (auth.Login finds the account
+// by it), and no tool gives an account one later: without it, there is
+// nothing to set.
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
+import type { ApiError } from '@/api/http'
 import type { Credential } from '@/api/types'
+import { errorMessage } from '@/composables/useErrors'
 import { useWrite } from '@/composables/useWrite'
 import TimeText from '@/components/TimeText.vue'
-import {
-  DIALOG_WIDTH,
-  PASSWORD_MAX_BYTES,
-  PASSWORD_MIN_BYTES,
-  byteLength,
-  credentialState,
-} from './credentials'
+import { DIALOG_WIDTH, PASSWORD_MAX_BYTES, PASSWORD_MIN_BYTES, byteLength, credentialState } from './credentials'
 
-const props = defineProps<{ credentials: Credential[] | undefined; hasEmail: boolean }>()
-const emit = defineEmits<{ changed: [] }>()
+const props = defineProps<{
+  credentials: Credential[] | undefined
+  loading: boolean
+  error: ApiError | null
+  hasEmail: boolean
+}>()
+const emit = defineEmits<{ changed: []; retry: [] }>()
 const { t } = useI18n()
 
 const current = computed(() =>
   (props.credentials ?? []).find((c) => c.kind === 'password' && credentialState(c) === 'active'),
 )
 const known = computed(() => props.credentials !== undefined)
+// The list could not be read, and nothing read before it is kept.
+const failed = computed(() => !known.value && !props.loading && !!props.error)
 
 const open = ref(false)
 const formRef = ref<FormInstance>()
@@ -79,31 +85,32 @@ async function save() {
   <section class="app-card password-card">
     <h2 class="app-card__title">{{ t('account.password.title') }}</h2>
     <div class="password-card__body">
-      <el-icon :size="28" class="password-card__icon" :class="{ 'is-set': !!current }">
-        <Lock v-if="current" />
+      <el-icon :size="28" class="password-card__icon" :class="{ 'is-set': !!current && hasEmail }">
+        <Lock v-if="current && hasEmail" />
         <Unlock v-else />
       </el-icon>
       <div class="password-card__text">
-        <template v-if="current">
+        <p v-if="!hasEmail">{{ t('account.password.noEmail') }}</p>
+        <template v-else-if="current">
           <p>{{ t('account.password.isSet') }}</p>
           <p class="app-muted password-card__since">
             {{ t('account.password.setOn') }} <TimeText :value="current.created_at" />
           </p>
         </template>
         <p v-else-if="known">{{ t('account.password.notSet') }}</p>
+        <template v-else-if="failed">
+          <p>{{ t('account.password.unknown') }}</p>
+          <p class="app-muted password-card__error">{{ errorMessage(error) }}</p>
+        </template>
         <p v-else class="app-muted">{{ t('common.labels.loading') }}</p>
       </div>
     </div>
-    <el-alert
-      v-if="!hasEmail"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('account.password.noEmail')"
-      class="password-card__alert"
-    />
-    <div class="password-card__actions">
-      <el-button type="primary" plain @click="start">
+    <div v-if="hasEmail" class="password-card__actions">
+      <el-button v-if="failed" :loading="loading" @click="emit('retry')">
+        <el-icon><Refresh /></el-icon>
+        <span>{{ t('common.actions.retry') }}</span>
+      </el-button>
+      <el-button v-else type="primary" plain :disabled="!known" @click="start">
         <el-icon><Key /></el-icon>
         <span>{{ current ? t('account.password.change') : t('account.password.set') }}</span>
       </el-button>
@@ -170,8 +177,9 @@ async function save() {
 .password-card__since {
   font-size: 13px;
 }
-.password-card__alert {
-  margin-top: 12px;
+.password-card__error {
+  font-size: 13px;
+  word-break: break-word;
 }
 .password-card__actions {
   margin-top: 16px;

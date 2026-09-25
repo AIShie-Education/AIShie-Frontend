@@ -228,8 +228,17 @@ export async function eventsSince(
 // What an event is about
 // ---------------------------------------------------------------------------
 
-export type Category = 'grades' | 'submissions' | 'assignments' | 'documents' | 'members' | 'actions' | 'course' | 'other'
-export const CATEGORIES: Category[] = ['grades', 'submissions', 'assignments', 'documents', 'members', 'actions', 'course']
+export type Category =
+  'grades' | 'submissions' | 'assignments' | 'documents' | 'members' | 'actions' | 'course' | 'other'
+export const CATEGORIES: Category[] = [
+  'grades',
+  'submissions',
+  'assignments',
+  'documents',
+  'members',
+  'actions',
+  'course',
+]
 
 export const CATEGORY_ICON: Record<Category, string> = {
   grades: 'Medal',
@@ -332,25 +341,21 @@ type CourseStore = ReturnType<typeof useCourseStore>
 export interface Reach {
   /** May read the member list (and so open a member). */
   readsMembers: boolean
-  /** May read the action log (and so open any action). */
+  /** May read the action log (and so open anyone's action). */
   decides: boolean
 }
 
 /**
- * The course store tries member.get on the caller's own seat before anything
- * else, and its levels are exact only when that was allowed. A seated caller
- * whose levels are not exact was therefore refused it: it may not read the
- * member list, whatever its levels are guessed to be.
- *
- * A seat without action_decide sees action events only for its own actions,
- * which "My actions" shows; one whose levels are unknown is sent there too,
- * where it is sure to be let in.
+ * From the course store's levels, which count what Core has already refused
+ * (a seat refused its own member.get does not hold member_read). A seat
+ * whose levels are unknown is not taken to decide: it is sent only to what
+ * it is sure to be let into.
  */
 export function reachOf(course: CourseStore): Reach {
-  const readsMembers =
-    course.permsSource === 'exact' ? course.can('member_read') : !course.membership
-  const decides = course.level('action_decide') !== null && course.can('action_decide')
-  return { readsMembers, decides }
+  return {
+    readsMembers: course.can('member_read'),
+    decides: course.level('action_decide') !== null && course.can('action_decide'),
+  }
 }
 
 /** Where the event's subject can be looked at, if anywhere. */
@@ -381,10 +386,9 @@ export function subjectRoute(e: CourseEvent, courseId: string, reach: Reach): Ro
     case 'member':
       return id && reach.readsMembers ? { name: 'course-member', params: { courseId, memberId: id } } : null
     case 'action':
-      if (!id) return null
-      return reach.decides
-        ? { name: 'course-action', params: { courseId, actionId: id } }
-        : { name: 'course-my-actions', params: { courseId } }
+      // A seat without action_decide sees action events only for its own
+      // actions, and the action page shows one's own from action.list_mine.
+      return id ? { name: 'course-action', params: { courseId, actionId: id } } : null
     case 'component':
       return { name: 'course-scheme', params: { courseId } }
   }

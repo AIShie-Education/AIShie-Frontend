@@ -1,21 +1,28 @@
 <script setup lang="ts">
-// The shared FileUploader, as this module needs it until the shared one is
-// fixed: an upload in progress is kept as a reactive entry, so that its
-// progress shows and it leaves the list once done. (The shared component
-// pushes a plain object into a ref'd array and later filters by identity
-// against the array's proxies, so finished uploads stay listed as in flight.)
-//
 // Picks files and uploads each at once (document.upload_url, then PUT);
 // v-model is the list of files uploaded so far, each with the upload token to
 // hand to the tool that attaches it.
-import { reactive, ref } from 'vue'
+//
+// It is the shared FileUploader plus one thing this module needs and the
+// shared one does not yet say: whether an upload is still in flight
+// (v-model:uploading). Handing work in, or saving a form, while a file is
+// still on its way would go ahead without that file.
+import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { uploadFile, type UploadKind, type UploadedFile } from '@/api/http'
 import { notifyError } from '@/composables/useErrors'
 import { formatBytes } from '@/utils/format'
 
 const model = defineModel<UploadedFile[]>({ default: () => [] })
-const props = defineProps<{ courseId: string; kind: UploadKind; multiple?: boolean; disabled?: boolean; accept?: string }>()
+/** True while any picked file is still uploading. */
+const uploading = defineModel<boolean>('uploading', { default: false })
+const props = defineProps<{
+  courseId: string
+  kind: UploadKind
+  multiple?: boolean
+  disabled?: boolean
+  accept?: string
+}>()
 const { t } = useI18n()
 
 interface InFlight {
@@ -26,14 +33,26 @@ interface InFlight {
 const inFlight = ref<InFlight[]>([])
 const input = ref<HTMLInputElement | null>(null)
 let seq = 0
+watch(
+  () => inFlight.value.length > 0,
+  (v) => (uploading.value = v),
+)
+// Gone from the page, it no longer holds anything up: what is still on its
+// way goes nowhere.
+onBeforeUnmount(() => {
+  if (uploading.value) uploading.value = false
+})
 
 async function onPick(ev: Event) {
   const el = ev.target as HTMLInputElement
   const files = Array.from(el.files ?? [])
   el.value = ''
-  for (const file of files) {
-    const entry = reactive<InFlight>({ key: ++seq, name: file.name, progress: 0 })
-    inFlight.value.push(entry)
+  // Every picked file is in flight from now until its own upload ends, so
+  // that "uploading" stays true from the first file to the last.
+  const entries = files.map((file) => reactive<InFlight>({ key: ++seq, name: file.name, progress: 0 }))
+  inFlight.value.push(...entries)
+  for (const [i, file] of files.entries()) {
+    const entry = entries[i]!
     try {
       const done = await uploadFile(props.courseId, props.kind, file, (f) => (entry.progress = Math.round(f * 100)))
       model.value = props.multiple ? [...model.value, done] : [done]

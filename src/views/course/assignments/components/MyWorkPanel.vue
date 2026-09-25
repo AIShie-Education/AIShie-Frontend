@@ -8,14 +8,20 @@
 // Handing in names what is being handed in: the draft's text and its files,
 // and the version of the instructions the student read. Core refuses the
 // hand-in if the draft holds anything else by then — an edit from another tab,
-// say — so nothing is handed in that the student did not see.
+// say — or if other instructions have been published since, so nothing is
+// handed in that the student did not see.
+//
+// A change or a hand-in that waits for approval is found again in the
+// student's own actions (action.list_mine), so that it is not asked for twice
+// and the page keeps saying so, also after a reload.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { read, type UploadedFile } from '@/api/http'
+import { read, type ApiError, type UploadedFile } from '@/api/http'
 import type { Assignment, GradeSummary, Submission, SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { notifyError } from '@/composables/useErrors'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
@@ -25,13 +31,17 @@ import UploadField from './UploadField.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
-import { allGrades, allSubmissions } from './useAssignmentData'
+import { allGrades, allSubmissions, myActionsSince } from './useAssignmentData'
 
 const props = defineProps<{
   courseId: string
   assignment: Assignment
   /** The version of the instructions students read now, when there are instructions and it is known. */
   instructionsVersionId?: string | null
+}>()
+const emit = defineEmits<{
+  /** Other instructions are in force than the ones on the page: read them again. */
+  instructionsChanged: []
 }>()
 const { t } = useI18n()
 const course = useCourseStore()
@@ -46,7 +56,10 @@ const needsApproval = computed(() => course.needsApproval('submission_write'))
 const attempts = useAsync<SubmissionSummary[]>(
   async () => {
     if (!me.value) return []
-    const subs = await allSubmissions(props.courseId, { assignment_id: props.assignment.id, student_member_id: me.value })
+    const subs = await allSubmissions(props.courseId, {
+      assignment_id: props.assignment.id,
+      student_member_id: me.value,
+    })
     return subs.sort((a, b) => b.attempt - a.attempt)
   },
   { watch: [() => props.assignment.id], keepData: true },
@@ -71,7 +84,8 @@ function gradeFor(submissionId: string): GradeSummary | undefined {
 
 // --- The open draft ---------------------------------------------------------------
 const draftFull = useAsync<Submission | null>(
-  async () => (draft.value ? read('submission.get', { course_id: props.courseId, submission_id: draft.value.id }) : null),
+  async () =>
+    draft.value ? read('submission.get', { course_id: props.courseId, submission_id: draft.value.id }) : null,
   { watch: [() => draft.value?.id], keepData: true },
 )
 const current = computed(() => {
@@ -83,6 +97,9 @@ const files = computed(() => current.value?.files ?? [])
 /** What the person is writing, and what Core holds. */
 const text = ref('')
 const serverBody = ref('')
+/** The text of the newest change to the draft that waits for approval, and whether a hand-in of it does. */
+const proposedBody = ref<string | null>(null)
+const handInProposed = ref(false)
 let syncedId: string | null = null
 watch(
   () => draftFull.data.value,
@@ -97,6 +114,8 @@ watch(
     if (d.id !== syncedId || text.value === serverBody.value) text.value = body
     serverBody.value = body
     syncedId = d.id
+    // The change that waited for approval is in: it was approved.
+    if (proposedBody.value !== null && body === proposedBody.value) proposedBody.value = null
   },
 )
 const dirty = computed(() => !!current.value && text.value !== serverBody.value)
@@ -106,11 +125,61 @@ const pastDue = computed(() => !!props.assignment.due_at && dayjs(props.assignme
 
 /** Something that waits for approval, said until the person moves on. */
 const notice = ref<string | null>(null)
+/** Something to do before handing in, said until the person moves on. */
+const warning = ref<string | null>(null)
+
+// --- What waits for approval --------------------------------------------------------
+// proposedBody and handInProposed (above) are set at once when a write
+// becomes a proposal, and read back from the student's own actions whenever
+// the draft is loaded.
+const waiting = useAsync<{ body: string | null; handIn: boolean } | null>(
+  async () => {
+    const d = draft.value
+    if (!d) return { body: null, handIn: false }
+    try {
+      const acts = await myActionsSince(props.courseId, d.id)
+      let body: string | null = null
+      let handIn = false
+      for (const a of acts) {
+        if (a.status !== 'proposed' || a.target_id !== d.id) continue
+        if (a.action_type === 'submission.update_draft') {
+          const p = a.payload as { body?: unknown } | null
+          body = typeof p?.body === 'string' ? p.body : ''
+        } else if (a.action_type === 'submission.submit') {
+          handIn = true
+        }
+      }
+      return { body, handIn }
+    } catch {
+      // Not knowing only means the page says less.
+      return null
+    }
+  },
+  { watch: [() => draft.value?.id], keepData: true },
+)
+watch(
+  () => draft.value?.id,
+  () => {
+    proposedBody.value = null
+    handInProposed.value = false
+  },
+)
+watch(
+  () => waiting.data.value,
+  (w) => {
+    if (!w) return
+    proposedBody.value = w.body !== null && w.body !== serverBody.value ? w.body : null
+    handInProposed.value = w.handIn
+  },
+)
+/** What is typed is what waits for approval. */
+const typedIsProposed = computed(() => proposedBody.value !== null && text.value === proposedBody.value)
 
 // --- Starting -----------------------------------------------------------------------
 const createW = useWrite('submission.create')
 async function start() {
   notice.value = null
+  warning.value = null
   const out = await createW.run(
     { course_id: props.courseId, assignment_id: props.assignment.id },
     { success: t('assignments.work.started') },
@@ -131,12 +200,18 @@ const startLabel = computed(() => {
 const saveW = useWrite('submission.update_draft')
 async function save(): Promise<boolean> {
   const d = draft.value
-  if (!d) return false
+  if (!d || typedIsProposed.value) return false
   const body = text.value
-  const out = await saveW.run({ course_id: props.courseId, submission_id: d.id, body }, { success: t('assignments.work.saved') })
+  const out = await saveW.run(
+    { course_id: props.courseId, submission_id: d.id, body },
+    { success: t('assignments.work.saved') },
+  )
   if (!out) return false
   if (out.status === 'proposed') {
-    notice.value = t('assignments.work.savePending')
+    // Said by the waiting alert from now on; asking again would only file
+    // the same proposal twice.
+    proposedBody.value = body
+    void waiting.reload()
     return false
   }
   serverBody.value = body
@@ -146,9 +221,13 @@ async function save(): Promise<boolean> {
 
 // --- Files ------------------------------------------------------------------------------
 const uploads = ref<UploadedFile[]>([])
+/** A picked file is still uploading. */
+const uploadingFiles = ref(false)
 const attachW = useWrite('document.create')
 const attaching = ref(false)
 watch(uploads, () => void attachAll())
+/** Files picked that are not on the draft yet: uploading, being attached, or to attach again. */
+const filesPending = computed(() => uploadingFiles.value || attaching.value || uploads.value.length > 0)
 
 /** Attaches each uploaded file to the draft, in turn. One that fails stays listed, to try again or drop. */
 async function attachAll() {
@@ -160,7 +239,13 @@ async function attachAll() {
     while (uploads.value.length) {
       const f = uploads.value[0]!
       const out = await attachW.run(
-        { course_id: props.courseId, kind: 'submission', submission_id: d.id, title: f.fileName, upload_token: f.uploadToken },
+        {
+          course_id: props.courseId,
+          kind: 'submission',
+          submission_id: d.id,
+          title: f.fileName,
+          upload_token: f.uploadToken,
+        },
         { success: t('assignments.work.fileAttached', { name: f.fileName }) },
       )
       if (!out) break
@@ -196,14 +281,51 @@ async function removeFile(f: { document_id: string; title: string }) {
 // --- Handing in ---------------------------------------------------------------------------
 const submitW = useWrite('submission.submit')
 const busy = computed(
-  () => createW.pending.value || saveW.pending.value || submitW.pending.value || archiveW.pending.value || attaching.value,
+  () =>
+    createW.pending.value || saveW.pending.value || submitW.pending.value || archiveW.pending.value || attaching.value,
 )
+/** Why Hand in cannot be pressed now, or null. */
+const handInBlocked = computed<string | null>(() => {
+  if (handInProposed.value) return t('assignments.work.handInWaiting')
+  if (proposedBody.value !== null) return t('assignments.work.changeWaiting')
+  if (filesPending.value) return t('assignments.work.waitForFiles')
+  if (nothingToHandIn.value) return t('assignments.work.nothingToHandIn')
+  return null
+})
+
+/**
+ * Whether the instructions students read now are the ones this page shows.
+ * Unknown counts as yes: Core checks it anyway.
+ */
+async function instructionsStillCurrent(): Promise<boolean> {
+  const docId = props.assignment.instructions_document_id
+  if (!docId || !props.instructionsVersionId) return true
+  try {
+    const d = await read('document.get', { course_id: props.courseId, document_id: docId })
+    return (d.published_version_id ?? null) === props.instructionsVersionId
+  } catch {
+    return true
+  }
+}
+function instructionsChanged() {
+  warning.value = t('assignments.work.instructionsChanged')
+  emit('instructionsChanged')
+}
+/** Core's refusal of a hand-in under instructions that are no longer in force. */
+function isStaleInstructions(e: ApiError | null): boolean {
+  return !!e && e.code === 'failed_precondition' && e.message.includes('instructions')
+}
 
 async function handIn() {
   const d = draft.value
-  if (!d || !current.value) return
+  if (!d || !current.value || handInBlocked.value) return
   notice.value = null
+  warning.value = null
   if (dirty.value && !(await save())) return
+  if (!(await instructionsStillCurrent())) {
+    instructionsChanged()
+    return
+  }
   const lines = [t('assignments.work.handInConfirm')]
   if (pastDue.value) lines.push(t('assignments.work.handInLate'))
   if (needsApproval.value) lines.push(t('assignments.work.handInApproval'))
@@ -226,9 +348,13 @@ async function handIn() {
       files: files.value.map((f) => f.document_id),
       instructions_version_id: props.instructionsVersionId ?? undefined,
     },
-    { success: false },
+    { success: false, notify: false },
   )
   if (!out) {
+    const err = submitW.lastError.value
+    // Published between the check above and the hand-in.
+    if (isStaleInstructions(err)) instructionsChanged()
+    else notifyError(err)
     void draftFull.reload()
     return
   }
@@ -240,7 +366,9 @@ async function handIn() {
       message: out.reviewState === 'pending' ? `${msg} ${t('common.outcome.pendingReview')}` : msg,
     })
   } else {
-    notice.value = t('assignments.work.handInProposed')
+    // Said by the waiting alert from now on.
+    handInProposed.value = true
+    void waiting.reload()
   }
   await attempts.reload()
   void grades.reload()
@@ -250,6 +378,7 @@ function reload() {
   void attempts.reload()
   void grades.reload()
   void draftFull.reload()
+  void waiting.reload()
 }
 defineExpose({ reload })
 </script>
@@ -263,10 +392,13 @@ defineExpose({ reload })
       </el-tag>
     </h2>
 
+    <el-alert v-if="warning" type="warning" show-icon class="my-work__alert" :title="warning" @close="warning = null" />
     <el-alert v-if="notice" type="info" show-icon class="my-work__alert" @close="notice = null">
       <template #title>
         {{ notice }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('assignments.list.viewMyActions') }}</router-link>
+        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+          t('assignments.list.viewMyActions')
+        }}</router-link>
       </template>
     </el-alert>
 
@@ -286,6 +418,20 @@ defineExpose({ reload })
         </div>
         <el-alert v-if="pastDue" type="warning" :closable="false" show-icon class="my-work__alert">
           {{ t('assignments.work.pastDue') }}
+        </el-alert>
+        <el-alert
+          v-if="handInProposed || proposedBody !== null"
+          type="info"
+          :closable="false"
+          show-icon
+          class="my-work__alert"
+        >
+          <template #title>
+            {{ handInProposed ? t('assignments.work.handInProposed') : t('assignments.work.savePending') }}
+            <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
+              {{ t('assignments.list.viewMyActions') }}
+            </router-link>
+          </template>
         </el-alert>
 
         <AsyncState
@@ -317,7 +463,14 @@ defineExpose({ reload })
             </li>
           </ul>
           <p v-else class="app-muted my-work__nofiles">{{ t('assignments.work.noFiles') }}</p>
-          <UploadField v-model="uploads" :course-id="courseId" kind="submission" multiple :disabled="!canWrite || attaching" />
+          <UploadField
+            v-model="uploads"
+            v-model:uploading="uploadingFiles"
+            :course-id="courseId"
+            kind="submission"
+            multiple
+            :disabled="!canWrite || attaching"
+          />
           <div class="app-form-hint">
             {{ t('assignments.work.attachHint') }}
             <el-button v-if="uploads.length && !attaching" link type="primary" @click="attachAll">
@@ -327,7 +480,10 @@ defineExpose({ reload })
 
           <div class="my-work__actions">
             <span class="my-work__saved app-muted">
-              <template v-if="dirty">
+              <template v-if="dirty && typedIsProposed">
+                <el-icon><Clock /></el-icon>{{ t('assignments.work.awaitingApproval') }}
+              </template>
+              <template v-else-if="dirty">
                 <el-icon><EditPen /></el-icon>{{ t('assignments.work.unsaved') }}
               </template>
               <template v-else>
@@ -335,14 +491,18 @@ defineExpose({ reload })
               </template>
             </span>
             <span class="app-toolbar__spacer" />
-            <el-button :disabled="!canWrite || !dirty || busy" :loading="saveW.pending.value" @click="save">
+            <el-button
+              :disabled="!canWrite || !dirty || typedIsProposed || busy"
+              :loading="saveW.pending.value"
+              @click="save"
+            >
               {{ t('assignments.work.save') }}
             </el-button>
-            <el-tooltip :content="t('assignments.work.nothingToHandIn')" :disabled="!nothingToHandIn" placement="top">
+            <el-tooltip :content="handInBlocked ?? ''" :disabled="!handInBlocked || !canWrite" placement="top">
               <span>
                 <el-button
                   type="primary"
-                  :disabled="!canWrite || nothingToHandIn || busy"
+                  :disabled="!canWrite || !!handInBlocked || busy"
                   :loading="submitW.pending.value"
                   @click="handIn"
                 >
@@ -362,7 +522,13 @@ defineExpose({ reload })
           <template v-else-if="latest.state === 'missing'">{{ t('assignments.work.missingHint') }}</template>
           <template v-else>{{ t('assignments.work.startNextHint') }}</template>
         </p>
-        <el-alert v-if="pastDue && (!latest || latest.state === 'missing')" type="warning" :closable="false" show-icon class="my-work__alert">
+        <el-alert
+          v-if="pastDue && (!latest || latest.state === 'missing')"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="my-work__alert"
+        >
           {{ t('assignments.work.pastDue') }}
         </el-alert>
         <div class="my-work__start-actions">

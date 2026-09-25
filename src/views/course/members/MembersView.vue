@@ -8,6 +8,7 @@ import { useRouter } from 'vue-router'
 import { read } from '@/api/http'
 import { ROLES, type Member, type MemberSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { useCourseStore } from '@/stores/course'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -16,13 +17,13 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AddMemberDialog from './components/AddMemberDialog.vue'
 import ScopeSummary from './components/ScopeSummary.vue'
-import { isExpired, presetLabel, useNarrow, usePresets } from './components/seat'
+import { isExpired, presetLabel, usePresets } from './components/seat'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
 const router = useRouter()
 const course = useCourseStore()
-const narrow = useNarrow(768)
+const narrow = useNarrow(767)
 const presets = usePresets()
 
 const PAGE = 100
@@ -51,8 +52,24 @@ const counts = computed(() => {
   }
 })
 const rows = computed(() =>
-  list.items.value.filter((m) => kind.value === 'all' || (kind.value === 'agent' ? m.kind === 'agent' : m.kind !== 'agent')),
+  list.items.value.filter(
+    (m) => kind.value === 'all' || (kind.value === 'agent' ? m.kind === 'agent' : m.kind !== 'agent'),
+  ),
 )
+// member.list has no kind filter, so People and Agents are picked out of the
+// pages loaded so far. Nobody of that kind among them says nothing about the
+// pages not yet loaded: then the empty state says so and offers the rest.
+const emptyText = computed(() => {
+  if (list.hasMore.value && kind.value !== 'all') {
+    const n = list.items.value.length
+    return kind.value === 'agent' ? t('members.emptyAgentsSoFar', { n }) : t('members.emptyPeopleSoFar', { n })
+  }
+  return kind.value === 'agent' ? t('members.emptyAgents') : t('members.empty')
+})
+/** A tab's count, marked as a lower bound while there are pages not yet loaded. */
+function count(n: number): string {
+  return list.hasMore.value ? `${n}+` : String(n)
+}
 
 // member.list does not carry the listed students and assignments; member.get
 // does. They are fetched for the listed seats on the page — the few that are
@@ -67,9 +84,7 @@ watch(
   async (items) => {
     const listedSeats = items.filter(
       (m) =>
-        m.status !== 'removed' &&
-        (m.student_scope === 'listed' || m.assignment_scope === 'listed') &&
-        !asked.has(m.id),
+        m.status !== 'removed' && (m.student_scope === 'listed' || m.assignment_scope === 'listed') && !asked.has(m.id),
     )
     const queue = [
       ...listedSeats.filter((m) => m.role !== 'student'),
@@ -150,18 +165,22 @@ function rowClass({ row }: { row: MemberSummary }) {
         {{ t('members.proposed.view') }}
       </router-link>
       ·
-      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('members.proposed.mine') }}</router-link>
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('members.proposed.mine')
+      }}</router-link>
     </el-alert>
 
     <div class="app-card">
       <div v-if="!list.error.value?.isForbidden" class="app-toolbar">
         <el-radio-group v-model="kind" size="default">
-          <el-radio-button value="all">{{ t('members.tabs.all') }} · {{ counts.all }}</el-radio-button>
+          <el-radio-button value="all">{{ t('members.tabs.all') }} · {{ count(counts.all) }}</el-radio-button>
           <el-radio-button value="human">
-            <el-icon class="members__tab-icon"><User /></el-icon>{{ t('members.tabs.people') }} · {{ counts.human }}
+            <el-icon class="members__tab-icon"><User /></el-icon>{{ t('members.tabs.people') }} ·
+            {{ count(counts.human) }}
           </el-radio-button>
           <el-radio-button value="agent">
-            <el-icon class="members__tab-icon"><Cpu /></el-icon>{{ t('members.tabs.agents') }} · {{ counts.agent }}
+            <el-icon class="members__tab-icon"><Cpu /></el-icon>{{ t('members.tabs.agents') }} ·
+            {{ count(counts.agent) }}
           </el-radio-button>
         </el-radio-group>
         <span class="app-toolbar__spacer" />
@@ -176,17 +195,19 @@ function rowClass({ row }: { row: MemberSummary }) {
         :loading="list.loading.value && !list.items.value.length"
         :error="list.error.value"
         :empty="!rows.length"
-        :empty-text="kind === 'agent' ? t('members.emptyAgents') : t('members.empty')"
+        :empty-text="emptyText"
         @retry="list.reload"
       >
-        <el-table
-          :data="rows"
-          row-key="id"
-          class="members__table"
-          :row-class-name="rowClass"
-          @row-click="open"
-        >
-          <el-table-column prop="display_name" :label="t('members.columns.name')" :min-width="narrow ? 170 : 180" sortable>
+        <template #empty>
+          <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
+        </template>
+        <el-table :data="rows" row-key="id" class="members__table" :row-class-name="rowClass" @row-click="open">
+          <el-table-column
+            prop="display_name"
+            :label="t('members.columns.name')"
+            :min-width="narrow ? 170 : 180"
+            sortable
+          >
             <template #default="{ row }">
               <div class="members__name">
                 <el-icon class="members__kind-icon" :class="{ 'is-agent': row.kind === 'agent' }">
@@ -235,14 +256,20 @@ function rowClass({ row }: { row: MemberSummary }) {
               <span v-else class="app-muted">—</span>
             </template>
           </el-table-column>
-          <el-table-column v-if="!narrow" prop="created_at" :label="t('members.columns.dates')" min-width="185" sortable>
+          <el-table-column
+            v-if="!narrow"
+            prop="created_at"
+            :label="t('members.columns.dates')"
+            min-width="185"
+            sortable
+          >
             <template #default="{ row }">
               <div class="members__dates">
                 <span class="members__date-label">{{ t('members.columns.added') }}</span>
                 <TimeText :value="row.created_at" relative />
                 <span class="members__date-label">{{ t('members.columns.expires') }}</span>
                 <TimeText v-if="row.expires_at" :value="row.expires_at" relative />
-                <span v-else class="app-muted">{{ t('common.labels.never') }}</span>
+                <span v-else class="app-muted">{{ t('members.detail.noExpiry') }}</span>
               </div>
             </template>
           </el-table-column>

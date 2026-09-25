@@ -4,7 +4,7 @@
 // assignments they are listed for. Filtered by assignment and student, and
 // the filters kept in the address (?assignment=…&student=…) so that other
 // pages can link to a filtered list.
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
@@ -19,6 +19,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { usePaged } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { useCourseStore } from '@/stores/course'
 
 const props = defineProps<{ courseId: string }>()
@@ -69,16 +70,16 @@ const list = usePaged<SubmissionSummary>(
 
 const filtered = computed(() => !!assignment.value || !!studentFilter.value)
 const emptyText = computed(() =>
-  isStudent.value ? t('submissions.empty.student') : filtered.value ? t('submissions.empty.filtered') : t('submissions.empty.none'),
+  isStudent.value
+    ? t('submissions.empty.student')
+    : filtered.value
+      ? t('submissions.empty.filtered')
+      : t('submissions.empty.none'),
 )
 
 // On a phone the table's columns would not fit side by side: the list is
 // shown as one card per submission instead.
-const narrowQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 640px)') : null
-const narrow = ref(!!narrowQuery?.matches)
-const onNarrow = (e: MediaQueryListEvent) => (narrow.value = e.matches)
-narrowQuery?.addEventListener('change', onNarrow)
-onBeforeUnmount(() => narrowQuery?.removeEventListener('change', onNarrow))
+const narrow = useNarrow()
 
 function open(row: SubmissionSummary) {
   void router.push({ name: 'course-submission', params: { courseId: props.courseId, submissionId: row.id } })

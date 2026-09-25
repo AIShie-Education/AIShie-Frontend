@@ -32,8 +32,7 @@ export default {
   today: 'Today',
   yesterday: 'Yesterday',
   viaAction: 'The action behind it',
-  note:
-    'Events say what happened and what it concerned, never its content. Open one to see the thing itself, as far as your seat may; you always see what became of your own actions.',
+  note: 'Events say what happened and what it concerned, never its content. Open one to see the thing itself, as far as your seat may; you always see what became of your own actions.',
   subject: {
     assignment: 'Assignment',
     submission: 'Submission',
@@ -66,6 +65,10 @@ export default {
     unreleased: 'Not yet released to students',
     attempt: 'Attempt {n}',
     replaces: 'Replaces grade',
+    replacesEarlier: 'Replaces an earlier grade',
+    byDecision: 'The decision',
+    byReview: 'The review',
+    byCancel: 'What cancelled it',
     complete: 'Everything graded',
     incomplete: 'Some work not yet graded',
   },

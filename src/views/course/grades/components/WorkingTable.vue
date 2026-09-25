@@ -1,21 +1,21 @@
 <script setup lang="ts">
 // The working behind a rolled-up total, as Core wrote it down: each
 // assignment in a bucket (weighted by its points) or each child component
-// (weighted by its weight), its fraction, and whether it was dropped.
+// (weighted by its weight), its fraction, and whether it was dropped. The
+// share beside a weight is its part in the result: what was dropped or had
+// no result was left out, and the rest re-normalised.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { formatDecimal, formatFraction } from '@/utils/format'
 import IdText from '@/components/IdText.vue'
-import type { WorkingItem } from './grading'
+import { formatScore, fractionPercent, shares, type WorkingItem } from './grading'
 
 const props = defineProps<{ items: WorkingItem[]; name: (item: WorkingItem) => string | null }>()
 const { t } = useI18n()
 
-const totalWeight = computed(() => props.items.reduce((s, i) => s + (Number(i.weight) || 0), 0))
+const shareOf = computed(() => shares(props.items))
 function share(i: WorkingItem): string {
-  const w = Number(i.weight)
-  if (!totalWeight.value || !Number.isFinite(w)) return '—'
-  return formatFraction(w / totalWeight.value)
+  const s = shareOf.value.get(i.id)
+  return s === null || s === undefined ? '—' : fractionPercent(s)
 }
 </script>
 
@@ -35,7 +35,7 @@ function share(i: WorkingItem): string {
     <el-table-column :label="t('grades.working.fraction')" min-width="110" align="right">
       <template #default="{ row }">
         <span v-if="row.fraction !== null && row.fraction !== undefined" class="working__num">{{
-          formatFraction(row.fraction)
+          fractionPercent(row.fraction)
         }}</span>
         <span v-else class="app-muted">{{ t('grades.working.notGraded') }}</span>
       </template>
@@ -45,11 +45,11 @@ function share(i: WorkingItem): string {
         <span class="working__num">
           {{
             row.kind === 'assignment'
-              ? t('grades.working.points', { n: formatDecimal(row.weight) })
-              : formatDecimal(row.weight)
+              ? t('grades.working.points', { n: formatScore(row.weight) })
+              : formatScore(row.weight)
           }}
         </span>
-        <span class="app-muted working__share">{{ share(row) }}</span>
+        <span class="app-muted working__share" :title="t('grades.working.shareHint')">{{ share(row) }}</span>
       </template>
     </el-table-column>
     <el-table-column min-width="100">

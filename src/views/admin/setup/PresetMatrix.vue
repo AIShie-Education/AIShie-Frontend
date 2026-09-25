@@ -5,15 +5,13 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { PERMS, SCOPED_PERMS, type Perm, type Preset } from '@/api/types'
 import StatusTag from '@/components/StatusTag.vue'
-import { fullPerms, isBuiltin } from './presets'
+import { fullPerms, hasOwnLabel, isBuiltin, presetLabel } from './presets'
 
 const props = defineProps<{ presets: Preset[]; deptName: (id: string | null | undefined) => string | null }>()
 const emit = defineEmits<{ open: [preset: Preset] }>()
 const { t } = useI18n()
 
-type Row =
-  | { key: 'role' | 'student_scope' | 'assignment_scope'; kind: 'meta' }
-  | { key: Perm; kind: 'perm' }
+type Row = { key: 'role' | 'student_scope' | 'assignment_scope'; kind: 'meta' } | { key: Perm; kind: 'perm' }
 const rows = computed<Row[]>(() => [
   { key: 'role', kind: 'meta' },
   { key: 'student_scope', kind: 'meta' },
@@ -35,7 +33,14 @@ function rowClass({ row }: { row: Row }): string {
 </script>
 
 <template>
-  <el-table :data="rows" row-key="key" :row-class-name="rowClass" class="preset-matrix" size="small" scrollbar-always-on>
+  <el-table
+    :data="rows"
+    row-key="key"
+    :row-class-name="rowClass"
+    class="preset-matrix"
+    size="small"
+    scrollbar-always-on
+  >
     <el-table-column fixed="left" min-width="160" class-name="matrix-label-col">
       <template #default="{ row }">
         <div v-if="row.kind === 'perm'" class="matrix-label">
@@ -53,9 +58,12 @@ function rowClass({ row }: { row: Row }): string {
     <el-table-column v-for="p in presets" :key="p.id" min-width="152" align="center">
       <template #header>
         <button type="button" class="matrix-head" @click="emit('open', p)">
-          <span class="matrix-head__name">{{ p.name }}</span>
+          <span class="matrix-head__name">{{ presetLabel(p) }}</span>
           <span class="matrix-head__where">
             {{ isBuiltin(p) ? t('adminSetup.presets.builtin') : (deptName(p.dept_id) ?? t('adminSetup.presets.own')) }}
+            <template v-if="hasOwnLabel(p)">
+              · <code class="matrix-head__key">{{ p.name }}</code></template
+            >
           </span>
         </button>
       </template>
@@ -126,6 +134,9 @@ function rowClass({ row }: { row: Row }): string {
   line-height: 1.3;
   word-break: break-word;
   white-space: normal;
+}
+.matrix-head__key {
+  font-family: var(--app-font-mono);
 }
 .preset-matrix :deep(.matrix-row--last-meta td.el-table__cell) {
   border-bottom: 2px solid var(--el-border-color);

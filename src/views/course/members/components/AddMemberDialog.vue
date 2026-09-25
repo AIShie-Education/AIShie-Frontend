@@ -20,7 +20,7 @@ import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import RefusalAlert from './RefusalAlert.vue'
-import { fullPerms, grantProblems, presetDescription, presetLabel, rank, useNarrow } from './seat'
+import { fullPerms, grantProblems, permsAbove, presetDescription, presetLabel } from './seat'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -37,7 +37,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const course = useCourseStore()
 const session = useSessionStore()
-const narrow = useNarrow(640)
 const { run, pending, lastError } = useWrite('member.add')
 
 const formRef = ref<FormInstance>()
@@ -105,7 +104,9 @@ const overrides = computed<PermLevels>(() => {
   return out
 })
 const effective = computed<PermLevels>(() => ({ ...baseline.value, ...overrides.value }))
-const listsItself = computed(() => form.role === 'student' && form.studentScope === 'listed' && form.students.length === 0)
+const listsItself = computed(
+  () => form.role === 'student' && form.studentScope === 'listed' && form.students.length === 0,
+)
 const problems = computed(() =>
   preset.value
     ? grantProblems({
@@ -190,14 +191,13 @@ async function submit() {
   else emit('done', { status: 'proposed', actionId: out.actionId })
 }
 
-const changedCount = computed(() => Object.keys(overrides.value).length)
+const changedPerms = computed(() => Object.keys(overrides.value) as Perm[])
+const changedCount = computed(() => changedPerms.value.length)
+// Adding a seat is always a grant: each level above the caller's own is marked on its row.
+const rowWarnings = computed(() => permsAbove(effective.value))
 
 // The permissions above the caller's own, and a way to bring them down to it.
-const tooHigh = computed<Perm[]>(() => {
-  if (course.permsSource !== 'exact' || !course.seat) return []
-  const mine = fullPerms(course.seat.perms)
-  return (Object.keys(effective.value) as Perm[]).filter((p) => rank(effective.value[p]) > rank(mine[p]))
-})
+const tooHigh = computed(() => Object.keys(rowWarnings.value) as Perm[])
 function capToMine() {
   if (!course.seat) return
   const mine = fullPerms(course.seat.perms)
@@ -212,8 +212,7 @@ function capToMine() {
   <el-dialog
     v-model="open"
     :title="t('members.add.title')"
-    :width="narrow ? '100%' : '680px'"
-    :fullscreen="narrow"
+    width="680px"
     destroy-on-close
     append-to-body
     class="add-member"
@@ -300,6 +299,7 @@ function capToMine() {
             v-model="form.students"
             multiple
             role="student"
+            :statuses="['active', 'paused']"
             clearable
             :placeholder="t('members.add.pickStudents')"
           />
@@ -357,9 +357,7 @@ function capToMine() {
           />
           <div class="app-form-hint">
             {{ t('members.add.expiresHelp') }}
-            <template v-if="myExpiry">
-              {{ t('members.add.myExpiry') }} <TimeText :value="myExpiry" />
-            </template>
+            <template v-if="myExpiry"> {{ t('members.add.myExpiry') }} <TimeText :value="myExpiry" /> </template>
           </div>
         </div>
       </el-form-item>
@@ -377,7 +375,14 @@ function capToMine() {
             </span>
           </template>
           <p class="app-form-hint add-member__perms-hint">{{ t('members.add.permsHelp') }}</p>
-          <PermEditor v-model="form.perms" sparse :baseline="baseline" size="small" />
+          <PermEditor
+            v-model="form.perms"
+            sparse
+            :baseline="baseline"
+            :changed="changedPerms"
+            :warn="rowWarnings"
+            size="small"
+          />
         </el-collapse-item>
       </el-collapse>
     </el-form>

@@ -9,8 +9,8 @@ import type { DocumentVersion } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { formatBytes } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
+import MemberName from '@/components/MemberName.vue'
 import TimeText from '@/components/TimeText.vue'
-import AuthorName from './AuthorName.vue'
 
 const props = defineProps<{
   courseId: string
@@ -27,7 +27,6 @@ const props = defineProps<{
 const emit = defineEmits<{ publish: [version: DocumentVersion]; retry: [] }>()
 const { t } = useI18n()
 const course = useCourseStore()
-const readsMembers = computed(() => course.can('member_read'))
 
 const ordered = computed(() => [...props.versions].sort((a, b) => b.seq - a.seq))
 
@@ -60,8 +59,9 @@ function linkTo(v: DocumentVersion) {
           </el-tag>
         </div>
         <div class="version-item__meta">
-          <template v-if="readsMembers || v.author_member_id === course.myMemberId">
-            <AuthorName :id="v.author_member_id" />
+          <!-- Names come from the member list; without it only one's own name is known. -->
+          <template v-if="course.can('member_read') || v.author_member_id === course.myMemberId">
+            <MemberName :id="v.author_member_id" />
             <span class="version-item__dot">·</span>
           </template>
           <TimeText :value="v.created_at" relative />

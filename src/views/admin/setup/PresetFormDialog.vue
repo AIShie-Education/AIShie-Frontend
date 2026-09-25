@@ -5,10 +5,19 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
-import { ROLES, type Department, type PermLevels, type Preset, type Role, type Scope } from '@/api/types'
+import {
+  PERMS,
+  ROLES,
+  type Department,
+  type Perm,
+  type PermLevels,
+  type Preset,
+  type Role,
+  type Scope,
+} from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import PermEditor from '@/components/PermEditor.vue'
-import { DIALOG_WIDTH, bodyOf, fullPerms, isBuiltin } from './presets'
+import { DIALOG_WIDTH, bodyOf, fullPerms, isBuiltin, presetDescription, presetLabel } from './presets'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -23,6 +32,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ saved: [deptId: string | null] }>()
 const { t } = useI18n()
+// As PermEditor marks a changed row.
+const CHANGED_TAG = { size: 'small', type: 'warning', effect: 'light', round: true, disableTransitions: true } as const
 
 const formRef = ref<FormInstance>()
 const form = reactive({
@@ -42,7 +53,8 @@ const pending = computed(() => create.pending.value || update.pending.value)
 
 function fill(from: Preset | null) {
   const b = bodyOf(from)
-  form.description = b.description
+  // A copy starts from the description as the reader sees it; an edit from what is saved.
+  form.description = props.mode === 'edit' || !from ? b.description : presetDescription(from)
   form.role = b.role
   form.student_scope = b.student_scope
   form.assignment_scope = b.assignment_scope
@@ -72,17 +84,38 @@ function onStartFrom(id: string) {
   form.student_scope = p.student_scope as Scope
   form.assignment_scope = p.assignment_scope as Scope
   form.perms = bodyOf(p).perms
-  if (!form.description.trim() && p.description) form.description = p.description
+  if (!form.description.trim()) form.description = presetDescription(p)
 }
 
 const builtins = computed(() => props.presets.filter(isBuiltin))
 const owned = computed(() => props.presets.filter((p) => !isBuiltin(p)))
+// preset.update replaces the whole body: what the save would change, beside
+// what is saved.
+const saved = computed(() => (props.mode === 'edit' && props.preset ? bodyOf(props.preset) : null))
+const changedPerms = computed<Perm[]>(() => {
+  const was = saved.value
+  if (!was) return []
+  return PERMS.filter((p) => (form.perms[p] ?? 'denied') !== (was.perms[p] ?? 'denied'))
+})
+const changed = computed(() => {
+  const was = saved.value
+  return {
+    description: !!was && form.description.trim() !== was.description.trim(),
+    role: !!was && form.role !== was.role,
+    student_scope: !!was && form.student_scope !== was.student_scope,
+    assignment_scope: !!was && form.assignment_scope !== was.assignment_scope,
+  }
+})
+const changedCount = computed(() => changedPerms.value.length + Object.values(changed.value).filter(Boolean).length)
+
 const editedDeptName = computed(
   () => props.departments.find((d) => d.id === props.preset?.dept_id)?.name ?? props.preset?.dept_id ?? '',
 )
 
 const rules = computed<FormRules>(() => ({
-  dept_id: [{ required: props.mode === 'create', message: t('adminSetup.presets.form.departmentRequired'), trigger: 'change' }],
+  dept_id: [
+    { required: props.mode === 'create', message: t('adminSetup.presets.form.departmentRequired'), trigger: 'change' },
+  ],
   name: [
     { required: props.mode === 'create', message: t('common.errors.required'), trigger: 'blur' },
     {
@@ -106,7 +139,10 @@ async function save() {
     perms: fullPerms(form.perms),
   }
   if (props.mode === 'edit' && props.preset) {
-    const out = await update.run({ preset_id: props.preset.id, ...body }, { success: t('adminSetup.presets.form.updated') })
+    const out = await update.run(
+      { preset_id: props.preset.id, ...body },
+      { success: t('adminSetup.presets.form.updated') },
+    )
     if (!out) return
     open.value = false
     emit('saved', props.preset.dept_id ?? null)
@@ -145,6 +181,7 @@ async function save() {
       :closable="false"
       show-icon
       :title="t('adminSetup.presets.form.replaceWarn')"
+      :description="t('adminSetup.presets.form.changedCount', changedCount)"
       class="preset-form__alert"
     />
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent>
@@ -168,7 +205,10 @@ async function save() {
             @change="onStartFrom"
           >
             <el-option-group :label="t('adminSetup.presets.builtin')">
-              <el-option v-for="p in builtins" :key="p.id" :value="p.id" :label="p.name" />
+              <el-option v-for="p in builtins" :key="p.id" :value="p.id" :label="presetLabel(p)">
+                <span>{{ presetLabel(p) }}</span>
+                <code class="preset-form__option-key">{{ p.name }}</code>
+              </el-option>
             </el-option-group>
             <el-option-group v-if="owned.length" :label="t('adminSetup.presets.own')">
               <el-option v-for="p in owned" :key="p.id" :value="p.id" :label="p.name" />
@@ -191,7 +231,11 @@ async function save() {
         <div class="app-form-hint preset-form__fixed-hint">{{ t('adminSetup.presets.form.fixed') }}</div>
       </template>
 
-      <el-form-item :label="t('adminSetup.presets.form.description')">
+      <el-form-item>
+        <template #label>
+          {{ t('adminSetup.presets.form.description') }}
+          <el-tag v-if="changed.description" v-bind="CHANGED_TAG">{{ t('common.labels.changed') }}</el-tag>
+        </template>
         <el-input
           v-model="form.description"
           type="textarea"
@@ -201,7 +245,11 @@ async function save() {
         />
       </el-form-item>
 
-      <el-form-item :label="t('adminSetup.presets.form.role')" prop="role">
+      <el-form-item prop="role">
+        <template #label>
+          {{ t('adminSetup.presets.form.role') }}
+          <el-tag v-if="changed.role" v-bind="CHANGED_TAG">{{ t('common.labels.changed') }}</el-tag>
+        </template>
         <el-select v-model="form.role">
           <el-option v-for="r in ROLES" :key="r" :value="r" :label="t(`enums.role.${r}`)" />
         </el-select>
@@ -209,13 +257,21 @@ async function save() {
       </el-form-item>
 
       <div class="preset-form__scopes">
-        <el-form-item :label="t('adminSetup.presets.form.studentScope')">
+        <el-form-item>
+          <template #label>
+            {{ t('adminSetup.presets.form.studentScope') }}
+            <el-tag v-if="changed.student_scope" v-bind="CHANGED_TAG">{{ t('common.labels.changed') }}</el-tag>
+          </template>
           <el-radio-group v-model="form.student_scope">
             <el-radio-button value="all">{{ t('enums.scope.all') }}</el-radio-button>
             <el-radio-button value="listed">{{ t('enums.scope.listed') }}</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item :label="t('adminSetup.presets.form.assignmentScope')">
+        <el-form-item>
+          <template #label>
+            {{ t('adminSetup.presets.form.assignmentScope') }}
+            <el-tag v-if="changed.assignment_scope" v-bind="CHANGED_TAG">{{ t('common.labels.changed') }}</el-tag>
+          </template>
           <el-radio-group v-model="form.assignment_scope">
             <el-radio-button value="all">{{ t('enums.scope.all') }}</el-radio-button>
             <el-radio-button value="listed">{{ t('enums.scope.listed') }}</el-radio-button>
@@ -229,17 +285,17 @@ async function save() {
         <span class="app-form-hint">{{ t('adminSetup.presets.form.permsHelp') }}</span>
       </div>
       <div class="preset-form__perms">
-        <PermEditor v-model="form.perms" size="small" />
+        <PermEditor
+          v-model="form.perms"
+          size="small"
+          :baseline="saved?.perms"
+          :changed="saved ? changedPerms : undefined"
+        />
       </div>
     </el-form>
     <template #footer>
       <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>
-      <el-button
-        type="primary"
-        :loading="pending"
-        :disabled="mode === 'create' && !departments.length"
-        @click="save"
-      >
+      <el-button type="primary" :loading="pending" :disabled="mode === 'create' && !departments.length" @click="save">
         {{ mode === 'edit' ? t('common.actions.save') : t('common.actions.create') }}
       </el-button>
     </template>
@@ -247,6 +303,12 @@ async function save() {
 </template>
 
 <style scoped>
+.preset-form__option-key {
+  margin-left: 8px;
+  font-family: var(--app-font-mono);
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
 .preset-form__alert {
   margin-bottom: 16px;
 }

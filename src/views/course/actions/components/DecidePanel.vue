@@ -6,8 +6,10 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
-import { useWrite } from '@/composables/useWrite'
+import { notifyError } from '@/composables/useErrors'
+import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import type { ApiError, WriteOutcome } from '@/api/http'
 import { isAboutAction, reasonText, useJudgeRules, type ActionRow } from './actionText'
 import type { Done } from './decide'
 import { useLookup, useSpecs } from './lookups'
@@ -100,6 +102,22 @@ function stale(code: string | undefined) {
   return code === 'conflict' || code === 'not_found'
 }
 
+/**
+ * Says what useWrite would have said, except when someone else got there
+ * first: that is no error, and the page says so itself and refreshes. True
+ * in that case.
+ */
+function sayUnlessStale(out: WriteOutcome<unknown> | null, err: ApiError | null): boolean {
+  if (out) {
+    announce(out, { success: false })
+    return false
+  }
+  if (!err) return false
+  if (stale(err.code)) return true
+  notifyError(err)
+  return false
+}
+
 async function confirm() {
   const c = choice.value
   if (!c) return
@@ -107,12 +125,10 @@ async function confirm() {
   if (c === 'approve' || c === 'reject') {
     const out = await decide.run(
       { course_id: props.courseId, action_id: props.action.id, decision: c, reason: note },
-      { success: false },
+      { notify: false },
     )
-    if (!out) {
-      if (stale(decide.lastError.value?.code)) emit('done', { kind: 'stale' })
-      return
-    }
+    if (sayUnlessStale(out, decide.lastError.value)) emit('done', { kind: 'stale' })
+    if (!out) return
     cancel()
     if (out.status === 'proposed') {
       emit('done', { kind: 'proposed', decision: c, actionId: out.actionId })
@@ -125,12 +141,10 @@ async function confirm() {
   }
   const out = await review.run(
     { course_id: props.courseId, action_id: props.action.id, outcome: c, note },
-    { success: false },
+    { notify: false },
   )
-  if (!out) {
-    if (stale(review.lastError.value?.code)) emit('done', { kind: 'stale' })
-    return
-  }
+  if (sayUnlessStale(out, review.lastError.value)) emit('done', { kind: 'stale' })
+  if (!out) return
   cancel()
   if (out.status === 'proposed') {
     emit('done', { kind: 'proposed', decision: c, actionId: out.actionId })

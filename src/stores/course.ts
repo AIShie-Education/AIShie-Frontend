@@ -49,6 +49,12 @@ export const useCourseStore = defineStore('course', () => {
   const assignmentsError = ref<ApiError | null>(null)
   let membersPromise: Promise<void> | null = null
   let assignmentsPromise: Promise<void> | null = null
+  /**
+   * Bumped whenever what is held is dropped (another course, another caller).
+   * Anything asked for before then is stale when it comes back, even for the
+   * same course id, and must not be written into what is held now.
+   */
+  let epoch = 0
 
   const myMemberId = computed(() => membership.value?.member_id ?? null)
   const role = computed(() => membership.value?.role ?? null)
@@ -118,6 +124,7 @@ export const useCourseStore = defineStore('course', () => {
   }
 
   function reset() {
+    epoch++
     course.value = null
     membership.value = null
     seat.value = null
@@ -135,45 +142,68 @@ export const useCourseStore = defineStore('course', () => {
     assignmentsPromise = null
   }
 
+  /** Whether what was asked for course id in the given epoch still belongs to what is held. */
+  function current(id: string, e: number): boolean {
+    return courseId.value === id && epoch === e
+  }
+
   async function open(id: string, force = false) {
     if (!force && courseId.value === id && course.value) return
     if (courseId.value !== id) reset()
     courseId.value = id
+    const e = epoch
     loading.value = true
     error.value = null
     const session = useSessionStore()
     try {
       if (!session.membershipFor(id)) await session.loadMemberships().catch(() => undefined)
-      membership.value = session.membershipFor(id) ?? null
-      const [c] = await Promise.all([read('course.get', { course_id: id }), loadPerms(id)])
-      if (courseId.value !== id) return
+      if (!current(id, e)) return
+      const m = session.membershipFor(id) ?? null
+      membership.value = m
+      const [c] = await Promise.all([read('course.get', { course_id: id }), loadPerms(id, m, e)])
+      if (!current(id, e)) return
       course.value = c
-    } catch (e) {
-      if (courseId.value !== id) return
-      error.value = e instanceof ApiError ? e : new ApiError({ status: 0, code: 'internal', message: String(e) })
+    } catch (err) {
+      if (!current(id, e)) return
+      error.value = toError(err)
     } finally {
-      if (courseId.value === id) loading.value = false
+      if (current(id, e)) loading.value = false
     }
   }
 
-  async function loadPerms(id: string) {
-    const m = membership.value
+  /**
+   * Forgets the open course altogether, as when the caller changes: the next
+   * open() of any course, the same one included, starts again from nothing.
+   */
+  function close() {
+    reset()
+    courseId.value = null
+    loading.value = false
+  }
+
+  /**
+   * Works out the seat's permissions. Every write is checked against the
+   * course and epoch it was asked for: a late answer about a course left
+   * behind must not land in the one open now.
+   */
+  async function loadPerms(id: string, m: Membership | null, e: number) {
     if (!m) {
-      permsSource.value = 'unknown'
+      if (current(id, e)) permsSource.value = 'unknown'
       return
     }
     try {
       const s = await read('member.get', { course_id: id, member_id: m.member_id })
-      if (courseId.value !== id) return
+      if (!current(id, e)) return
       seat.value = s
       perms.value = (s.perms ?? {}) as PermLevels
       permsSource.value = 'exact'
       return
-    } catch (e) {
-      if (!(e instanceof ApiError) || !(e.isForbidden || e.isNotFound)) throw e
+    } catch (err) {
+      if (!(err instanceof ApiError) || !(err.isForbidden || err.isNotFound)) throw err
+      if (!current(id, e)) return
       // member.get is gated by member_read and nothing else, so a refusal
       // means the seat does not hold it (or is not live, which refuses all).
-      if (e.isForbidden) refused.value = new Set([...refused.value, 'member_read'])
+      if (err.isForbidden) refused.value = new Set([...refused.value, 'member_read'])
     }
     // Not allowed to read the member list: guess from the built-in preset
     // named after the roster role, where there is one. Agents are seated as
@@ -196,8 +226,8 @@ export const useCourseStore = defineStore('course', () => {
     }
     try {
       const out = await read('preset.list', {})
+      if (!current(id, e)) return
       const p = (out.presets ?? []).find((x) => x.name === presetName && !x.dept_id)
-      if (courseId.value !== id) return
       if (p) {
         perms.value = (p.perms ?? {}) as PermLevels
         permsSource.value = 'preset'
@@ -205,7 +235,7 @@ export const useCourseStore = defineStore('course', () => {
         permsSource.value = 'unknown'
       }
     } catch {
-      permsSource.value = 'unknown'
+      if (current(id, e)) permsSource.value = 'unknown'
     }
   }
 
@@ -221,6 +251,7 @@ export const useCourseStore = defineStore('course', () => {
     }
     membersState.value = 'loading'
     membersError.value = null
+    const e = epoch
     membersPromise = (async () => {
       const map = new Map<string, MemberSummary>()
       let after: string | undefined
@@ -231,12 +262,12 @@ export const useCourseStore = defineStore('course', () => {
           if (!out.next) break
           after = out.next
         }
-        if (courseId.value !== id) return
+        if (!current(id, e)) return
         members.value = map
         membersState.value = 'loaded'
-      } catch (e) {
-        if (courseId.value !== id) return
-        membersError.value = toError(e)
+      } catch (err) {
+        if (!current(id, e)) return
+        membersError.value = toError(err)
         membersState.value = membersError.value.isForbidden ? 'forbidden' : 'error'
         if (membersError.value.isForbidden) refused.value = new Set([...refused.value, 'member_read'])
         membersPromise = null
@@ -255,6 +286,7 @@ export const useCourseStore = defineStore('course', () => {
     }
     assignmentsState.value = 'loading'
     assignmentsError.value = null
+    const e = epoch
     assignmentsPromise = (async () => {
       const map = new Map<string, AssignmentSummary>()
       let after: string | undefined
@@ -265,12 +297,12 @@ export const useCourseStore = defineStore('course', () => {
           if (!out.next) break
           after = out.next
         }
-        if (courseId.value !== id) return
+        if (!current(id, e)) return
         assignments.value = map
         assignmentsState.value = 'loaded'
-      } catch (e) {
-        if (courseId.value !== id) return
-        assignmentsError.value = toError(e)
+      } catch (err) {
+        if (!current(id, e)) return
+        assignmentsError.value = toError(err)
         assignmentsState.value = assignmentsError.value.isForbidden ? 'forbidden' : 'error'
         assignmentsPromise = null
       }
@@ -329,6 +361,7 @@ export const useCourseStore = defineStore('course', () => {
     can,
     needsApproval,
     open,
+    close,
     reset,
     ensureMembers,
     ensureAssignments,

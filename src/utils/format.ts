@@ -71,3 +71,43 @@ export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 export function isUuid(s: string | null | undefined): boolean {
   return !!s && UUID_RE.test(s.trim())
 }
+
+// The usual extension for the types a course's files mostly come in, for
+// naming a download whose name has none.
+const EXTENSIONS: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/zip': 'zip',
+  'application/json': 'json',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.oasis.opendocument.text': 'odt',
+  'text/plain': 'txt',
+  'text/markdown': 'md',
+  'text/csv': 'csv',
+  'text/html': 'html',
+  'text/x-python': 'py',
+  'text/x-c': 'c',
+  'text/x-java-source': 'java',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+}
+
+/**
+ * A name to save a file under: the name given, with the usual extension for
+ * its content type added when it has none ("Week 1 slides" as a PDF →
+ * "Week 1 slides.pdf"). Characters no file system takes are replaced.
+ */
+export function downloadName(name: string | null | undefined, contentType?: string | null): string {
+  let n = (name ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim() || 'download'
+  const ext = contentType ? EXTENSIONS[contentType.split(';')[0].trim().toLowerCase()] : undefined
+  // "notes.log" has one; "Syllabus v2.1" does not.
+  if (ext && !/\.[A-Za-z][A-Za-z0-9]{0,7}$/.test(n)) n = `${n}.${ext}`
+  return n
+}

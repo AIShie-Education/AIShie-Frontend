@@ -1,14 +1,16 @@
 <script setup lang="ts">
 // actor.register: a person or an agent. Only root may make an administrator.
+// Core has no tool that changes an actor afterwards: the name, the email and
+// the platform role given here are theirs for good.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
-import { DIALOG_WIDTH, type RegisteredActor } from './adminShared'
+import type { RegisteredActor } from './adminShared'
 
 const open = defineModel<boolean>({ required: true })
-const emit = defineEmits<{ registered: [actor: RegisteredActor]; proposed: [] }>()
+const emit = defineEmits<{ registered: [actor: RegisteredActor] }>()
 const { t } = useI18n()
 const session = useSessionStore()
 
@@ -58,15 +60,18 @@ async function submit() {
   )
   if (!out) return
   open.value = false
+  // A platform tool is never proposed: outside a course there is no ladder.
   if (out.status === 'executed') {
     emit('registered', { id: out.result.actor_id, kind: form.kind, display_name, email, platform_role })
-  } else emit('proposed')
+  }
 }
 </script>
 
 <template>
-  <el-dialog v-model="open" :title="t('admin.register.title')" :width="DIALOG_WIDTH" destroy-on-close>
-    <p class="app-form-hint register__intro">{{ t('admin.register.intro') }}</p>
+  <el-dialog v-model="open" :title="t('admin.register.title')" width="560px" destroy-on-close>
+    <p class="app-form-hint register__intro">
+      {{ form.admin && session.isRoot ? t('admin.register.introAdmin') : t('admin.register.intro') }}
+    </p>
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <el-form-item :label="t('admin.register.kind')">
         <el-radio-group v-model="form.kind">
@@ -100,6 +105,7 @@ async function submit() {
           {{ session.isRoot ? t('admin.register.adminHint') : t('admin.register.adminRootOnly') }}
         </div>
       </el-form-item>
+      <el-alert type="info" :closable="false" show-icon :title="t('admin.register.permanent')" />
     </el-form>
     <template #footer>
       <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>

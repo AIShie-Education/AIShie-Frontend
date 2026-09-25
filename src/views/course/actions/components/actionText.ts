@@ -1,12 +1,12 @@
 // What the action pages share: an action's words (its kind, its target), the
 // error or decision stored in its result, where an id leads, and whether the
 // caller may decide or review it.
-import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
-import type { ActionFull } from '@/api/types'
+import type { ActionFull, Decimal, Preset } from '@/api/types'
 import { i18n } from '@/i18n'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import { formatDecimal } from '@/utils/format'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
 const te = (key: string): boolean => (i18n.global as unknown as { te: (k: string) => boolean }).te(key)
@@ -100,7 +100,13 @@ export function reasonText(e: StoredError | null | undefined): string | null {
   return parts.length ? parts.join(' ') : null
 }
 
-/** The page an id of a given kind is shown on, if there is one. */
+/**
+ * The page an id of a given kind is shown on, if there is one. An action is
+ * opened with action.get, which needs action_decide, or found among the
+ * caller's own (action.list_mine); an action id met anywhere else names
+ * someone else's, so it leads somewhere only for a decider. Link to one's
+ * own actions by route name.
+ */
 export function routeFor(courseId: string, kind: string, id: string | null | undefined): RouteLocationRaw | null {
   if (!id) return null
   switch (kind) {
@@ -125,7 +131,7 @@ export function routeFor(courseId: string, kind: string, id: string | null | und
     case 'action':
     case 'action_id':
     case 'by_action_id':
-      return { name: 'course-action', params: { courseId, actionId: id } }
+      return useCourseStore().can('action_decide') ? { name: 'course-action', params: { courseId, actionId: id } } : null
     case 'grade_component':
     case 'component_id':
       return { name: 'course-scheme', params: { courseId } }
@@ -201,13 +207,48 @@ export function useJudgeRules() {
   return { isMine, block, approveBlock }
 }
 
-/** True below the given width, kept up to date. */
-export function useNarrow(px = 768) {
-  const narrow = ref(typeof window !== 'undefined' ? window.innerWidth < px : false)
-  const on = () => (narrow.value = window.innerWidth < px)
-  onMounted(() => window.addEventListener('resize', on))
-  onUnmounted(() => window.removeEventListener('resize', on))
-  return computed(() => narrow.value)
+/**
+ * A decimal exactly as it was sent. Elsewhere a score is shown rounded; a
+ * proposal is approved for the value it holds, so that is what is shown.
+ */
+export function exactDecimal(v: Decimal | null | undefined): string {
+  if (typeof v === 'string') {
+    const s = v.trim()
+    const n = Number(s)
+    // Digits a number cannot hold are shown as they were written.
+    if (s === '' || !Number.isFinite(n) || plainDigits(n) !== canonicalDecimal(s)) return s || '—'
+    return formatDecimal(n, 20)
+  }
+  return formatDecimal(v, 20)
+}
+
+function plainDigits(n: number): string {
+  return canonicalDecimal(n.toLocaleString('en-US', { maximumFractionDigits: 20, useGrouping: false }))
+}
+
+/** "+012.500" → "12.5": the same number written the one way. */
+function canonicalDecimal(s: string): string {
+  let x = s.replace(/^\+/, '')
+  const neg = x.startsWith('-')
+  if (neg) x = x.slice(1)
+  const [whole, frac = ''] = x.split('.')
+  const i = whole.replace(/^0+(?=\d)/, '') || '0'
+  const f = frac.replace(/0+$/, '')
+  const out = f ? `${i}.${f}` : i
+  return neg && out !== '0' ? `-${out}` : out
+}
+
+/**
+ * The preset a member.add names, as Core finds it: by id, or by name — the
+ * department's own of that name first, then the built-in.
+ */
+export function presetOf(presets: Preset[] | null | undefined, payload: Record<string, unknown>): Preset | undefined {
+  if (!presets) return undefined
+  const id = str(payload.preset_id)
+  if (id) return presets.find((p) => p.id === id)
+  const name = str(payload.preset)
+  if (!name) return undefined
+  return presets.find((p) => p.name === name && !!p.dept_id) ?? presets.find((p) => p.name === name && !p.dept_id)
 }
 
 /** Result fields that name something made or changed, in the order they are worth showing. */

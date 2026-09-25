@@ -8,6 +8,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { read } from '@/api/http'
 import type { Term } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
@@ -17,6 +18,8 @@ import { DIALOG_WIDTH } from './setup/presets'
 
 const { t } = useI18n()
 const session = useSessionStore()
+// On a phone the dates go under the name, instead of in columns off-screen.
+const narrow = useNarrow()
 
 const terms = useAsync(() => read('term.list', {}).then((o) => o.terms ?? []), { keepData: true })
 const filter = ref('')
@@ -43,7 +46,10 @@ function lengthOf(x: Term): string {
 const all = computed(() => terms.data.value ?? [])
 const rows = computed(() => {
   const q = filter.value.trim().toLowerCase()
-  return all.value.filter((x) => !q || x.name.toLowerCase().includes(q))
+  // Latest first, also on a phone, where the date columns (and their sorting) are hidden.
+  return all.value
+    .filter((x) => !q || x.name.toLowerCase().includes(q))
+    .sort((x, y) => y.starts_on.localeCompare(x.starts_on))
 })
 
 // --- Creating ---------------------------------------------------------------
@@ -115,11 +121,18 @@ async function save() {
     <section class="app-card">
       <div class="app-toolbar">
         <el-input v-model="filter" :placeholder="t('adminSetup.terms.filter')" clearable class="setup-filter">
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
         <span class="app-toolbar__spacer" />
         <span v-if="all.length" class="app-muted setup-count">{{ t('adminSetup.terms.count', all.length) }}</span>
-        <el-button :loading="terms.loading.value" circle :aria-label="t('common.actions.refresh')" @click="terms.reload">
+        <el-button
+          :loading="terms.loading.value"
+          circle
+          :aria-label="t('common.actions.refresh')"
+          @click="terms.reload"
+        >
           <el-icon><Refresh /></el-icon>
         </el-button>
       </div>
@@ -131,28 +144,50 @@ async function save() {
         @retry="terms.reload"
       >
         <el-table :data="rows" row-key="id" :default-sort="{ prop: 'starts_on', order: 'descending' }">
-          <el-table-column prop="name" :label="t('adminSetup.terms.name')" min-width="200" sortable fixed="left">
+          <el-table-column
+            prop="name"
+            :label="t('adminSetup.terms.name')"
+            :min-width="narrow ? 180 : 200"
+            sortable
+            :fixed="narrow ? false : 'left'"
+          >
             <template #default="{ row }">
-              <span class="term-name">{{ row.name }}</span>
+              <div class="term-cell">
+                <span class="term-name">{{ row.name }}</span>
+                <span v-if="narrow" class="term-meta">
+                  <span class="term-day">{{ row.starts_on }} – {{ row.ends_on }}</span> ·
+                  <span class="term-length">{{ lengthOf(row) }}</span>
+                </span>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column :label="t('common.labels.status')" min-width="110">
+          <el-table-column :label="t('common.labels.status')" :min-width="narrow ? 90 : 110">
             <template #default="{ row }">
               <el-tag :type="STATE_TAG[stateOf(row)]" size="small" disable-transitions>
                 {{ t(`adminSetup.terms.state.${stateOf(row)}`) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="starts_on" :label="t('adminSetup.terms.startsOn')" min-width="120" sortable>
-            <template #default="{ row }"><span class="term-day">{{ row.starts_on }}</span></template>
+          <el-table-column
+            v-if="!narrow"
+            prop="starts_on"
+            :label="t('adminSetup.terms.startsOn')"
+            min-width="120"
+            sortable
+          >
+            <template #default="{ row }"
+              ><span class="term-day">{{ row.starts_on }}</span></template
+            >
           </el-table-column>
-          <el-table-column prop="ends_on" :label="t('adminSetup.terms.endsOn')" min-width="120" sortable>
-            <template #default="{ row }"><span class="term-day">{{ row.ends_on }}</span></template>
+          <el-table-column v-if="!narrow" prop="ends_on" :label="t('adminSetup.terms.endsOn')" min-width="120" sortable>
+            <template #default="{ row }"
+              ><span class="term-day">{{ row.ends_on }}</span></template
+            >
           </el-table-column>
-          <el-table-column :label="t('adminSetup.terms.length')" min-width="100">
+          <el-table-column v-if="!narrow" :label="t('adminSetup.terms.length')" min-width="100">
             <template #default="{ row }">{{ lengthOf(row) }}</template>
           </el-table-column>
-          <el-table-column :label="t('common.labels.id')" min-width="130">
+          <el-table-column v-if="!narrow" :label="t('common.labels.id')" min-width="130">
             <template #default="{ row }"><IdText :id="row.id" /></template>
           </el-table-column>
         </el-table>
@@ -213,11 +248,25 @@ async function save() {
 .setup-count {
   font-size: 13px;
 }
+.term-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
 .term-name {
+  word-break: break-word;
+}
+.term-meta {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
   word-break: break-word;
 }
 .term-day {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.term-length {
   white-space: nowrap;
 }
 .term-dates {

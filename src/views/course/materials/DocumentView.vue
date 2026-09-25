@@ -20,10 +20,10 @@ import { formatBytes } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFileLink from '@/components/DocumentFileLink.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
+import MemberName from '@/components/MemberName.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
-import AuthorName from './components/AuthorName.vue'
 import PendingAlert from './components/PendingAlert.vue'
 import VersionDialog from './components/VersionDialog.vue'
 import VersionHistory from './components/VersionHistory.vue'
@@ -91,14 +91,20 @@ function reloadAll() {
 }
 
 // The assignment that uses this document as its instructions or rubric, where
-// the caller can see one.
+// the caller can see one. Two may share it; a published one is named first,
+// since it is what makes the document readable.
 onMounted(() => void course.ensureAssignments())
 const owner = computed<AssignmentSummary | null>(() => {
+  let found: AssignmentSummary | null = null
   for (const a of course.assignments.values()) {
-    if (a.instructions_document_id === props.documentId || a.rubric_document_id === props.documentId) return a
+    if (a.instructions_document_id !== props.documentId && a.rubric_document_id !== props.documentId) continue
+    if (a.published_at) return a
+    found ??= a
   }
-  return null
+  return found
 })
+// Instructions and a rubric follow their assignment: until a published one
+// refers to them, nobody who cannot see unpublished assignments reads them.
 const unreleased = computed(
   () => (kind.value === 'instructions' || kind.value === 'rubric') && !!owner.value && !owner.value.published_at,
 )
@@ -140,6 +146,12 @@ const readersNote = computed(() => {
   const d = doc.value
   const v = shown.value
   if (!d || !v || !showVersions.value || !active.value) return null
+  if (unreleased.value) {
+    return {
+      type: 'info' as const,
+      text: t(`materials.document.readers.unreleased.${d.kind as 'instructions' | 'rubric'}`),
+    }
+  }
   if (!d.published_version_id) return { type: 'warning' as const, text: t('materials.document.readers.none') }
   if (v.published) return { type: 'success' as const, text: t('materials.document.readers.this') }
   return {
@@ -359,7 +371,7 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
                   </template>
                   <span class="doc-content__by">
                     <template v-if="showAuthor">
-                      <AuthorName :id="shown.author_member_id" />
+                      <MemberName :id="shown.author_member_id" />
                       <span class="doc-content__dot">·</span>
                     </template>
                     <TimeText :value="shown.created_at" />

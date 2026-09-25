@@ -6,7 +6,7 @@ import type { Preset } from '@/api/types'
 import IdText from '@/components/IdText.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
-import { DRAWER_SIZE, allowedCount, isBuiltin, permLevels } from './presets'
+import { DRAWER_SIZE, allowedCount, isBuiltin, permLevels, presetDescription, presetLabel } from './presets'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ preset: Preset | null; deptName: string | null; canEdit: boolean }>()
@@ -15,6 +15,7 @@ const { t } = useI18n()
 
 const builtin = computed(() => !!props.preset && isBuiltin(props.preset))
 const levels = computed(() => (props.preset ? permLevels(props.preset) : {}))
+const description = computed(() => (props.preset ? presetDescription(props.preset) : ''))
 </script>
 
 <template>
@@ -24,7 +25,7 @@ const levels = computed(() => (props.preset ? permLevels(props.preset) : {}))
     v-model="open"
     append-to-body
     :size="DRAWER_SIZE"
-    :title="preset ? t('adminSetup.presets.drawer.title', { name: preset.name }) : ''"
+    :title="preset ? t('adminSetup.presets.drawer.title', { name: presetLabel(preset) }) : ''"
     class="preset-drawer"
   >
     <template v-if="preset">
@@ -35,14 +36,20 @@ const levels = computed(() => (props.preset ? permLevels(props.preset) : {}))
         <el-tag v-else type="primary" size="small" disable-transitions>
           {{ deptName ?? t('adminSetup.presets.own') }}
         </el-tag>
-        <span class="app-muted preset-drawer__count">{{ t('adminSetup.presets.allowed', { n: allowedCount(preset) }) }}</span>
+        <span class="app-muted preset-drawer__count">{{
+          t('adminSetup.presets.allowed', { n: allowedCount(preset) })
+        }}</span>
       </div>
 
-      <p class="preset-drawer__desc" :class="{ 'app-muted': !preset.description }">
-        {{ preset.description || t('adminSetup.presets.noDescription') }}
+      <p class="preset-drawer__desc" :class="{ 'app-muted': !description }">
+        {{ description || t('adminSetup.presets.noDescription') }}
       </p>
 
       <dl class="preset-drawer__facts">
+        <dt>{{ t('adminSetup.presets.drawer.name') }}</dt>
+        <dd>
+          <code class="preset-drawer__key">{{ preset.name }}</code>
+        </dd>
         <dt>{{ t('adminSetup.presets.role') }}</dt>
         <dd><StatusTag vocab="role" :value="preset.role" /></dd>
         <dt>{{ t('adminSetup.presets.studentScope') }}</dt>
@@ -120,6 +127,10 @@ const levels = computed(() => (props.preset ? permLevels(props.preset) : {}))
   margin: 0;
   min-width: 0;
   word-break: break-word;
+}
+.preset-drawer__key {
+  font-family: var(--app-font-mono);
+  font-size: 13px;
 }
 .preset-drawer__note {
   margin-bottom: 12px;

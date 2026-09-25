@@ -5,7 +5,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useWrite } from '@/composables/useWrite'
-import { DIALOG_WIDTH, type CourseRow } from './adminShared'
+import type { CourseRow } from './adminShared'
 
 const open = defineModel<boolean>({ required: true })
 const props = defineProps<{ course: CourseRow }>()
@@ -63,7 +63,7 @@ async function submit() {
 </script>
 
 <template>
-  <el-dialog v-model="open" :title="t('admin.course.editTitle')" :width="DIALOG_WIDTH" destroy-on-close>
+  <el-dialog v-model="open" :title="t('admin.course.editTitle')" width="560px" destroy-on-close>
     <p class="app-form-hint edit-course__hint">{{ t('admin.course.editHint') }}</p>
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <el-form-item :label="t('admin.course.courseTitle')" prop="title">

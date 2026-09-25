@@ -68,10 +68,19 @@ const editing = computed(() => (props.mode === 'edit' ? props.target : null))
 const isRoot = computed(() => !!editing.value?.isRoot)
 const wasDirect = computed(() => editing.value?.kind === 'direct')
 
+/** Why a node cannot be the parent, or null. */
+function blockText(n: SchemeNode): string | null {
+  const b = childBlock(n)
+  return b ? t(`scheme.reasons.${b}`, { name: n.c.name }) : null
+}
+/** Offered as a parent, but it may hold assignments the caller cannot see, and then Core refuses. */
+function cautionText(n: SchemeNode): string | null {
+  return n.kind === 'unseen' ? t('scheme.reasons.unseen', { name: n.c.name }) : null
+}
 const parentOptions = computed(() =>
   props.scheme.nodes.map((n) => {
-    const b = childBlock(n)
-    return { node: n, disabled: !!b, why: b ? t(`scheme.reasons.${b}`, { name: n.c.name }) : '' }
+    const block = blockText(n)
+    return { node: n, disabled: !!block, why: block ?? cautionText(n) ?? '' }
   }),
 )
 
@@ -80,6 +89,7 @@ const parent = computed<SchemeNode | null>(() => {
   const p = editing.value?.parentId
   return p ? (props.scheme.byId.get(p) ?? null) : null
 })
+const parentCaution = computed(() => (props.mode === 'create' && parent.value ? cautionText(parent.value) : null))
 
 function nextSortOrder(p: SchemeNode | null): number {
   if (!p || !p.children.length) return 1
@@ -127,8 +137,10 @@ watch(
 const typeChoosable = computed(() => {
   if (props.mode === 'create') return true
   const n = editing.value
-  return !!n && !n.isRoot && (n.kind === 'direct' || n.kind === 'empty')
+  return !!n && !n.isRoot && (n.kind === 'direct' || n.kind === 'empty' || n.kind === 'unseen')
 })
+/** Graded directly is offered on an 'unseen' leaf, but Core refuses it if the leaf holds assignments. */
+const directCaution = computed(() => editing.value?.kind === 'unseen' && form.type === 'direct')
 const rolledBlocked = computed(() => !!editing.value && clearFrozen(editing.value, props.facts))
 const directBlockedNow = computed(() => !!editing.value && directBlocked(editing.value, props.facts))
 const pointsLocked = computed(
@@ -138,7 +150,8 @@ const pointsLocked = computed(
 // show what the points are, not what was typed.
 watch(pointsLocked, (locked) => {
   const c = editing.value?.c
-  if (locked && c && c.points_possible !== null && c.points_possible !== undefined) form.points = String(c.points_possible)
+  if (locked && c && c.points_possible !== null && c.points_possible !== undefined)
+    form.points = String(c.points_possible)
 })
 watch(rolledBlocked, (blocked) => {
   if (blocked && wasDirect.value) form.type = 'direct'
@@ -180,7 +193,20 @@ function decimalRule(required: () => boolean) {
   }
 }
 const rules = computed<FormRules>(() => ({
-  parentId: [{ required: props.mode === 'create', message: t('common.errors.required'), trigger: 'change' }],
+  parentId: [
+    {
+      required: props.mode === 'create',
+      validator: (_: unknown, v: string, cb: (e?: Error) => void) => {
+        if (props.mode !== 'create') return cb()
+        // The assignments may have been read after it was chosen.
+        const p = props.scheme.byId.get(v)
+        if (!p) return cb(new Error(t('common.errors.required')))
+        const block = blockText(p)
+        cb(block ? new Error(block) : undefined)
+      },
+      trigger: 'change',
+    },
+  ],
   name: [
     {
       required: true,
@@ -264,7 +290,9 @@ async function submitUpdate(): Promise<'executed' | 'proposed' | 'unchanged' | n
 }
 
 const title = computed(() =>
-  props.mode === 'create' ? t('scheme.form.createTitle') : t('scheme.form.editTitle', { name: props.target?.c.name ?? '' }),
+  props.mode === 'create'
+    ? t('scheme.form.createTitle')
+    : t('scheme.form.editTitle', { name: props.target?.c.name ?? '' }),
 )
 </script>
 
@@ -272,7 +300,7 @@ const title = computed(() =>
   <el-dialog
     v-model="visible"
     :title="title"
-    width="min(560px, calc(100vw - 24px))"
+    width="560px"
     destroy-on-close
     :close-on-click-modal="!pending"
     append-to-body
@@ -285,7 +313,15 @@ const title = computed(() =>
       :title="t('scheme.form.needsApproval')"
       class="cd-alert"
     />
-    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" :disabled="pending" @submit.prevent="submit">
+    <el-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      :validate-on-rule-change="false"
+      label-position="top"
+      :disabled="pending"
+      @submit.prevent="submit"
+    >
       <el-form-item v-if="mode === 'create'" :label="t('scheme.form.parent')" prop="parentId">
         <el-select v-model="form.parentId" filterable :placeholder="t('common.actions.select')">
           <el-option
@@ -302,6 +338,9 @@ const title = computed(() =>
             </div>
           </el-option>
         </el-select>
+        <div v-if="parentCaution" class="app-form-hint cd-caution">
+          <el-icon><Warning /></el-icon>{{ parentCaution }}
+        </div>
       </el-form-item>
 
       <el-form-item :label="t('scheme.form.name')" prop="name">
@@ -324,6 +363,9 @@ const title = computed(() =>
         </div>
         <div v-if="directBlockedNow" class="app-form-hint cd-lock">
           <el-icon><Lock /></el-icon>{{ t('scheme.form.directBlocked') }}
+        </div>
+        <div v-if="directCaution" class="app-form-hint cd-caution">
+          <el-icon><Warning /></el-icon>{{ t('scheme.form.directUnseen') }}
         </div>
       </el-form-item>
       <p v-else-if="isRoot" class="app-form-hint cd-note">{{ t('scheme.form.rootNote') }}</p>
@@ -437,6 +479,16 @@ const title = computed(() =>
   display: flex;
   align-items: center;
   gap: 4px;
+  color: var(--el-color-warning);
+}
+.cd-caution {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.cd-caution .el-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
   color: var(--el-color-warning);
 }
 .cd-note {

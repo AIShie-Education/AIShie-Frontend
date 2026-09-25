@@ -105,6 +105,23 @@ export default {
     submit: 'Save draft grade',
     propose: 'Propose grade',
     replaceConfirm: 'This replaces the current draft grade for this work. Continue?',
+    stopConfirm:
+      'A grade proposed for this work is waiting for approval. Once this draft is saved, approving that proposal will be refused. Continue?',
+    replaceAndStopConfirm:
+      'This replaces the current draft grade for this work, and approving the grade proposed for it will then be refused. Continue?',
+    pending: {
+      other:
+        'A grade proposed for this work is waiting for approval. If you save a draft grade now, approving that proposal will be refused: a proposal never replaces a draft entered after it was made.',
+      otherPropose:
+        'A grade proposed for this work is already waiting for approval. Yours will wait beside it; if both are approved, the one proposed later stands.',
+      mine: 'You have already proposed a grade for this work, and it is still waiting for approval. Proposing another does not withdraw it; if both are approved, the one proposed later stands.',
+    },
+    gradesHidden:
+      'Whether this work has been graded already cannot be shown to you. A new grade replaces an earlier draft; but once the work has a posted grade, a new one can never be posted, since a posted grade is changed only by regrading it.',
+    draftFiles:
+      'The draft you started from has feedback files. They stay with that draft and do not come with this grade: upload again any that should.',
+    draftFilesUnknown:
+      'Any feedback files on the draft you started from stay with that draft and do not come with this grade: upload again any that should.',
     reset: 'Clear',
     saved: 'Draft grade saved',
     savedBody: 'A draft grade is not visible to the student until it is posted.',
@@ -115,6 +132,18 @@ export default {
     proposedBody:
       'Your grade was sent for approval. No grade exists until someone approves it; it then becomes a draft, which still has to be posted.',
     myActions: 'See my actions',
+  },
+  proposals: {
+    title: 'Proposed grades waiting for approval',
+    proposer: 'Proposed by',
+    proposedAt: 'Proposed',
+    hint: 'A proposed grade is not a grade yet. Once approved it becomes a draft, dated when it was proposed, which still has to be posted.',
+    fate: {
+      newerDraft: 'A draft grade was entered after this was proposed, so approving it will be refused.',
+      replacesDraft: 'Approving it replaces the current draft grade.',
+      posted:
+        'This work already has a posted grade, so the draft this would make could never be posted. A posted grade is changed by regrading it.',
+    },
   },
   breakdown: {
     criterion: 'Criterion',

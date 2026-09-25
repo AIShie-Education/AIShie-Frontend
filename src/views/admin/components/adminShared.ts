@@ -1,17 +1,15 @@
-// What the administration pages share: finding one course by id, a list of
-// actors seen recently (Core has no actor directory), and where agents
-// connect.
-import { onScopeDispose, ref } from 'vue'
-import { ApiError, MCP_ENDPOINT, read } from '@/api/http'
+// What the administration pages share: finding one course by id, reading an
+// id from the address in Core's form, and a list of actors seen recently
+// (Core has no actor directory).
+import { computed, ref, watch, type ComputedRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ApiError, read } from '@/api/http'
 import type { Actor, ListItem } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
 
 /** A course as course.list gives it: the same shape as course.get. */
 export type CourseRow = ListItem<'course.list', 'courses'>
-
-/** Wide enough for a form, narrow enough for a phone. */
-export const DIALOG_WIDTH = 'min(560px, 94vw)'
 
 /** The default identity provider name, as Core records it (OIDC_PROVIDER_NAME). */
 export const DEFAULT_SSO_PROVIDER = 'polyu-adfs'
@@ -46,22 +44,39 @@ export async function findCourse(id: string, notFoundMessage: string): Promise<C
   throw new ApiError({ status: 404, code: 'not_found', message: notFoundMessage })
 }
 
-/** Where an agent's MCP client connects: Core's origin, /mcp. */
-export function mcpEndpoint(): string {
-  return MCP_ENDPOINT
+/**
+ * The id in route param `param`, the way Core writes ids (lower case), for
+ * asking Core and comparing with what it returns. An id pasted in capitals
+ * names the same thing, so the address is corrected in place.
+ */
+export function useCanonicalId(raw: () => string, param: string): ComputedRef<string> {
+  const route = useRoute()
+  const router = useRouter()
+  const id = computed(() => raw().trim().toLowerCase())
+  watch(
+    raw,
+    (v) => {
+      if (!isUuid(v) || v === id.value || !route.name) return
+      void router.replace({ name: route.name, params: { ...route.params, [param]: id.value }, query: route.query, hash: route.hash })
+    },
+    { immediate: true },
+  )
+  return id
 }
 
 // ---------------------------------------------------------------------------
 // Actors seen recently
 // ---------------------------------------------------------------------------
 
+/**
+ * An actor as the list keeps them: enough to find them again. Their email,
+ * standing and platform role are left out on purpose: the list stays in this
+ * browser after signing out, and the actor's own page reads those fresh.
+ */
 export interface RecentActor {
   id: string
   display_name: string
   kind: string
-  email?: string | null
-  status?: string
-  platform_role?: string | null
   /** When this browser last saw them. */
   seen_at: string
   /** Registered from this browser. */
@@ -85,13 +100,28 @@ function storageKey(owner: string) {
   return `aishiteru.admin.recentActors.${owner}`
 }
 
+function isEntry(x: unknown): x is RecentActor {
+  if (!x || typeof x !== 'object') return false
+  const e = x as Record<string, unknown>
+  return typeof e.id === 'string' && typeof e.display_name === 'string' && typeof e.kind === 'string' && typeof e.seen_at === 'string'
+}
+
+/** Only what RecentActor names, whatever else x carries. */
+function minimal(x: RecentActor): RecentActor {
+  return { id: x.id, display_name: x.display_name, kind: x.kind, seen_at: x.seen_at, registered: x.registered === true || undefined }
+}
+
 function load(owner: string): RecentActor[] {
   try {
     const raw = localStorage.getItem(storageKey(owner))
     if (!raw) return []
-    const v = JSON.parse(raw)
+    const v: unknown = JSON.parse(raw)
     if (!Array.isArray(v)) return []
-    return v.filter((x) => x && typeof x.id === 'string' && typeof x.display_name === 'string').slice(0, MAX_RECENT)
+    const list = v.filter(isEntry).slice(0, MAX_RECENT).map(minimal)
+    // A list kept before emails and roles were left out is rewritten without them.
+    const clean = JSON.stringify(list)
+    if (clean !== raw) localStorage.setItem(storageKey(owner), clean)
+    return list
   } catch {
     return []
   }
@@ -118,18 +148,15 @@ export function useRecentActors() {
     loadedFor = owner
   }
 
-  function remember(a: Pick<Actor, 'id' | 'display_name' | 'kind'> & Partial<Actor>, opts: { registered?: boolean } = {}) {
+  function remember(a: Pick<Actor, 'id' | 'display_name' | 'kind'>, opts: { registered?: boolean } = {}) {
     const prev = recent.value.find((x) => x.id === a.id)
-    const entry: RecentActor = {
+    const entry = minimal({
       id: a.id,
       display_name: a.display_name,
       kind: a.kind,
-      email: a.email ?? null,
-      status: a.status ?? prev?.status,
-      platform_role: a.platform_role ?? null,
       seen_at: new Date().toISOString(),
-      registered: opts.registered || prev?.registered || undefined,
-    }
+      registered: opts.registered || prev?.registered,
+    })
     recent.value = [entry, ...recent.value.filter((x) => x.id !== a.id)].slice(0, MAX_RECENT)
     save(owner, recent.value)
   }
@@ -141,24 +168,12 @@ export function useRecentActors() {
 
   function clear() {
     recent.value = []
-    save(owner, [])
+    try {
+      localStorage.removeItem(storageKey(owner))
+    } catch {
+      /* no storage: nothing was kept */
+    }
   }
 
   return { recent, remember, forget, clear }
-}
-
-// ---------------------------------------------------------------------------
-// Layout
-// ---------------------------------------------------------------------------
-
-/** Whether the window is at most `px` wide, kept up to date. */
-export function useNarrow(px = 640) {
-  const narrow = ref(false)
-  if (typeof window === 'undefined' || !window.matchMedia) return narrow
-  const mq = window.matchMedia(`(max-width: ${px}px)`)
-  const update = () => (narrow.value = mq.matches)
-  update()
-  mq.addEventListener('change', update)
-  onScopeDispose(() => mq.removeEventListener('change', update))
-  return narrow
 }

@@ -82,7 +82,9 @@ const innerWhy = computed(() => reasonText(inner.value?.error ?? null))
       <template v-else-if="done.kind === 'proposed'">
         <p class="outcome-alert__line">{{ t('actions.decision.willBeProposal') }}</p>
         <span class="outcome-alert__line">
-          <MaybeLink :to="routeFor(courseId, 'action', done.actionId)">{{ t('actions.decision.viewDecision') }}</MaybeLink>
+          <router-link :to="{ name: 'course-action', params: { courseId, actionId: done.actionId } }">
+            {{ t('actions.decision.viewDecision') }}
+          </router-link>
           <IdText :id="done.actionId" />
         </span>
       </template>

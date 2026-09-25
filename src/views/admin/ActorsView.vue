@@ -5,8 +5,8 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { isApiError, read } from '@/api/http'
+import { ElMessageBox } from 'element-plus'
+import { isApiError, MCP_ENDPOINT, read } from '@/api/http'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
@@ -15,7 +15,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './components/ActorSummary.vue'
 import RegisterActorDialog from './components/RegisterActorDialog.vue'
-import { mcpEndpoint, useRecentActors, type RegisteredActor } from './components/adminShared'
+import { useRecentActors, type RegisteredActor } from './components/adminShared'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -27,10 +27,7 @@ const justRegistered = ref<RegisteredActor | null>(null)
 
 function onRegistered(a: RegisteredActor) {
   justRegistered.value = a
-  remember({ ...a, status: 'active' }, { registered: true })
-}
-function onProposed() {
-  ElMessage({ type: 'info', message: t('common.outcome.proposed') })
+  remember(a, { registered: true })
 }
 
 const lookupId = ref('')
@@ -101,7 +98,7 @@ async function clearAll() {
         <li>{{ t('admin.registered.agent.token') }}</li>
         <li>{{ t('admin.registered.agent.seat') }}</li>
         <li>
-          {{ t('admin.registered.agent.connect', { endpoint: mcpEndpoint() }) }}
+          {{ t('admin.registered.agent.connect', { endpoint: MCP_ENDPOINT }) }}
         </li>
       </ol>
       <div class="actors__new-actions">
@@ -162,7 +159,7 @@ async function clearAll() {
       </ul>
     </section>
 
-    <RegisterActorDialog v-model="registering" @registered="onRegistered" @proposed="onProposed" />
+    <RegisterActorDialog v-model="registering" @registered="onRegistered" />
   </div>
 </template>
 

@@ -102,13 +102,32 @@ const bucketOptions = computed(() => {
   // A component it already hangs from stays choosable even if the scheme has
   // changed shape since.
   const cur = props.assignment?.component_id
-  if (cur && !list.some((b) => b.id === cur)) list.push({ id: cur, label: scheme.componentName(cur) ?? cur })
+  if (cur && !list.some((b) => b.id === cur)) {
+    list.push({ id: cur, label: scheme.componentName(cur) ?? t('assignments.state.counts') })
+  }
   return list
 })
 
 // --- Validation ------------------------------------------------------------------
-function docProblem(c: DocChoice): string | null {
+const publishedAssignment = computed(() => !!props.assignment?.published_at)
+/**
+ * A published assignment's instructions must have a published version (Core
+ * refuses anything else): only such a document can be chosen, and a new one
+ * is published at once.
+ */
+const mustPublish = (kind: DocKind) => kind === 'instructions' && publishedAssignment.value
+/** The chosen existing document is known to have no published version. */
+function choiceUnpublished(kind: DocKind): boolean {
+  const c = form[kind]
+  if (c.mode !== 'existing' || !c.id) return false
+  const d = docs[kind].find((x) => x.id === c.id)
+  return !!d && !d.published_version_id
+}
+
+function docProblem(kind: DocKind): string | null {
+  const c = form[kind]
   if (c.mode === 'existing' && !c.id) return t('assignments.form.doc.chooseRequired')
+  if (mustPublish(kind) && choiceUnpublished(kind)) return t('assignments.form.doc.mustBePublished')
   if (c.mode === 'new') {
     if (!c.title.trim()) return t('common.errors.required')
     if (!c.body.trim() && !c.files.length) return t('assignments.form.doc.needContent')
@@ -117,7 +136,7 @@ function docProblem(c: DocChoice): string | null {
 }
 const docRule = (kind: DocKind): FormItemRule => ({
   validator: (_r, _v, cb) => {
-    const p = docProblem(form[kind])
+    const p = docProblem(kind)
     return p ? cb(new Error(p)) : cb()
   },
   // Checked on saving only: switching to "write new" is not yet a mistake.
@@ -155,6 +174,9 @@ const publishDoc = useWrite('document.publish')
 const createAssignment = useWrite('assignment.create')
 const updateAssignment = useWrite('assignment.update')
 const busy = ref(false)
+/** A new document's file is still uploading: saving now would go without it. */
+const uploading = reactive<Record<DocKind, boolean>>({ instructions: false, rubric: false })
+const anyUploading = computed(() => uploading.instructions || uploading.rubric)
 
 /**
  * The document the choice names, creating it first if it is new. ok false:
@@ -199,14 +221,21 @@ async function resolveDoc(kind: DocKind): Promise<{ ok: boolean; id?: string }> 
   docs[kind] = [...docs[kind], entry]
   form[kind] = emptyDocChoice(id)
   ElMessage.success(t('assignments.form.docCreated', { title }))
-  if (c.publish && out.result.version_id) {
+  let published = false
+  if ((c.publish || mustPublish(kind)) && out.result.version_id) {
     const p = await publishDoc.run(
       { course_id: props.courseId, document_id: id, version_id: out.result.version_id },
       { success: false },
     )
     if (p?.status === 'executed') {
+      published = true
       docs[kind] = docs[kind].map((d) => (d.id === id ? { ...d, published_version_id: p.result.version_id } : d))
     }
+  }
+  if (mustPublish(kind) && !published) {
+    // Core would refuse the assignment for it: stop before asking.
+    docNotice.value = t('assignments.form.docNotPublished', { title })
+    return { ok: false }
   }
   return { ok: true, id }
 }
@@ -285,7 +314,10 @@ async function update(a: Assignment, instructionsId?: string, rubricId?: string)
 }
 
 async function submit() {
-  if (!formRef.value || busy.value) return
+  if (!formRef.value || busy.value || anyUploading.value) return
+  // A chosen document that was not published may have been since (a
+  // publication that waited for approval, say): look again before refusing it.
+  if ((['instructions', 'rubric'] as DocKind[]).some((k) => mustPublish(k) && choiceUnpublished(k))) await loadDocs()
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
   busy.value = true
@@ -308,7 +340,11 @@ const defaultDocTitle = (kind: DocKind) =>
         title: form.title.trim(),
       })
     : ''
-const publishedAssignment = computed(() => !!props.assignment?.published_at)
+/** Saving writes a new document first, which takes document_write as well. */
+const writesDocument = computed(() => form.instructions.mode === 'new' || form.rubric.mode === 'new')
+const saveNeedsApproval = computed(() =>
+  course.needsApprovalAll(writesDocument.value ? ['assignment_write', 'document_write'] : ['assignment_write']),
+)
 const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 </script>
 
@@ -320,7 +356,6 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
     top="6vh"
     destroy-on-close
     :close-on-click-modal="false"
-    class="assignment-form-dialog"
   >
     <el-alert v-if="docNotice" type="warning" :closable="false" show-icon class="assignment-form__alert">
       {{ docNotice }}
@@ -387,6 +422,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
       <el-form-item :label="t('assignments.form.instructions')" prop="instructions">
         <DocChoiceField
           v-model="form.instructions"
+          v-model:uploading="uploading.instructions"
           :course-id="courseId"
           kind="instructions"
           :options="docs.instructions"
@@ -395,6 +431,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
           :allow-none="!assignment?.instructions_document_id"
           :can-create="course.can('document_write')"
           :default-title="defaultDocTitle('instructions')"
+          :require-published="mustPublish('instructions')"
           :disabled="disabled || busy"
         />
         <div v-if="publishedAssignment" class="app-form-hint">
@@ -405,6 +442,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
       <el-form-item :label="t('assignments.form.rubric')" prop="rubric">
         <DocChoiceField
           v-model="form.rubric"
+          v-model:uploading="uploading.rubric"
           :course-id="courseId"
           kind="rubric"
           :options="docs.rubric"
@@ -420,12 +458,12 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 
     <template #footer>
       <div class="assignment-form__footer">
-        <el-tag v-if="course.needsApproval('assignment_write')" type="warning" size="small" disable-transitions>
+        <el-tag v-if="saveNeedsApproval" type="warning" size="small" disable-transitions>
           {{ t('enums.level.confirm_required') }}
         </el-tag>
         <span class="app-toolbar__spacer" />
         <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
-        <el-button type="primary" :loading="busy" :disabled="disabled" @click="submit">
+        <el-button type="primary" :loading="busy" :disabled="disabled || anyUploading" @click="submit">
           {{ editing ? t('common.actions.save') : t('common.actions.create') }}
         </el-button>
       </div>
@@ -456,12 +494,5 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-</style>
-
-<style>
-/* The dialog is teleported to <body>; keep it inside a phone's width. */
-.assignment-form-dialog.el-dialog {
-  max-width: calc(100vw - 24px);
 }
 </style>

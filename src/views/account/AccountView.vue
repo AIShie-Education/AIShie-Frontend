@@ -21,7 +21,16 @@ const me = useAsync(() => read('me.get', {}), { keepData: true })
 // Seats change while the app is open: read them afresh, into the session
 // store the navigation also shows them from.
 const seats = useAsync(() => session.loadMemberships())
-const creds = useAsync(() => read('credential.list', {}).then((o) => o.credentials ?? []), { keepData: true })
+// When the list was asked for goes with it: it tells which session is this
+// browser's (see thisBrowserSession).
+const creds = useAsync(
+  async () => {
+    const listedAt = Date.now()
+    const o = await read('credential.list', {})
+    return { list: o.credentials ?? [], listedAt }
+  },
+  { keepData: true },
+)
 
 const hasEmail = computed(() => !!(me.data.value ?? session.me)?.email)
 </script>
@@ -47,7 +56,14 @@ const hasEmail = computed(() => !!(me.data.value ?? session.me)?.email)
         :error="me.error.value"
         @retry="me.reload"
       />
-      <PasswordCard :credentials="creds.data.value" :has-email="hasEmail" @changed="creds.reload" />
+      <PasswordCard
+        :credentials="creds.data.value?.list"
+        :loading="creds.loading.value"
+        :error="creds.error.value"
+        :has-email="hasEmail"
+        @changed="creds.reload"
+        @retry="creds.reload"
+      />
     </div>
 
     <SeatsCard
@@ -59,7 +75,8 @@ const hasEmail = computed(() => !!(me.data.value ?? session.me)?.email)
     />
 
     <CredentialsCard
-      :credentials="creds.data.value"
+      :credentials="creds.data.value?.list"
+      :listed-at="creds.data.value?.listedAt"
       :loading="creds.loading.value"
       :error="creds.error.value"
       class="account-view__section"

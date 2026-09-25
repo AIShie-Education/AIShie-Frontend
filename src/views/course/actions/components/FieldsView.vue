@@ -1,22 +1,30 @@
 <script setup lang="ts">
 // The fields of a payload or a result, each shown for what it is: a score as
-// a score, feedback as text, a breakdown as a table, a member by name, an id
-// as a link to what it names. Fields nobody has told this about are shown as
-// they are.
+// a score (exactly as sent), feedback as text, a breakdown as a table, a
+// member by name, a preset by name, a version by its number, an id as a link
+// to what it names. Fields nobody has told this about are shown as they are.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal, formatPercent, isUuid, shortId } from '@/utils/format'
+import { presetLabel } from '@/views/course/members/components/seat'
 import IdText from '@/components/IdText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import MaybeLink from './MaybeLink.vue'
-import { fieldLabel, isObject, routeFor } from './actionText'
+import VersionRef from './VersionRef.vue'
+import { exactDecimal, fieldLabel, isObject, presetOf, routeFor, str, type ActionRow } from './actionText'
 import { useLookup, useSpecs } from './lookups'
 
-const props = defineProps<{ courseId: string; value: unknown; exclude?: string[] }>()
+const props = defineProps<{
+  courseId: string
+  value: unknown
+  exclude?: string[]
+  /** The action this is the payload of, where it is one: some fields mean more in its light. */
+  action?: ActionRow
+}>()
 const { t } = useI18n()
 const course = useCourseStore()
 const specs = useSpecs()
@@ -92,6 +100,18 @@ function componentName(id: unknown): string | undefined {
   return (comps.value?.value as { id: string; name: string }[] | undefined)?.find((c) => c.id === id)?.name
 }
 
+const presets = useLookup(() => (obj.value.preset_id || obj.value.preset ? specs.presets(props.courseId) : null))
+const preset = computed(() => presetOf(presets.value?.value, obj.value))
+const actionType = computed(() => props.action?.action_type)
+/** A proposal to publish a version, still to be decided: how it stands against what is read now matters. */
+const checkVersion = computed(() => actionType.value === 'document.publish' && props.action?.status === 'proposed')
+
+function label(k: string): string {
+  // member.add's permissions are changes laid over the preset, not the seat's whole grant.
+  if (k === 'perms' && actionType.value === 'member.add') return t('actions.fields.permOverrides')
+  return fieldLabel(k)
+}
+
 function kindOf(k: string, v: unknown): string {
   if (k === 'breakdown' && Array.isArray(v)) return 'breakdown'
   if (k === 'perms' && isObject(v)) return 'perms'
@@ -112,6 +132,8 @@ function kindOf(k: string, v: unknown): string {
   if (k === 'role' && typeof v === 'string') return 'role'
   if ((k === 'student_scope' || k === 'assignment_scope') && typeof v === 'string') return 'scope'
   if (k === 'upload_token') return 'file'
+  if ((k === 'preset_id' || k === 'preset') && typeof v === 'string') return 'preset'
+  if (k === 'version_id' && typeof v === 'string' && typeof obj.value.document_id === 'string') return 'version'
   if (typeof v === 'boolean') return 'bool'
   if (typeof v === 'string' && isUuid(v)) return 'id'
   if (Array.isArray(v) && v.every((x) => typeof x === 'string' && isUuid(x))) return 'idList'
@@ -131,7 +153,8 @@ function breakdown(v: unknown): BreakdownRow[] {
 function breakdownTotal(v: unknown) {
   const rows = breakdown(v)
   const sum = (k: 'points' | 'max') => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0)
-  return { points: sum('points'), max: sum('max') }
+  // A sum of binary fractions carries noise past the digits anyone typed.
+  return { points: formatDecimal(sum('points'), 6), max: formatDecimal(sum('max'), 6) }
 }
 function perms(v: unknown): [string, string][] {
   return isObject(v) ? (Object.entries(v) as [string, string][]) : []
@@ -154,13 +177,13 @@ function json(v: unknown) {
 <template>
   <dl v-if="fields.length" class="fields-view">
     <div v-for="k in fields" :key="k" class="fields-view__row" :class="`fields-view__row--${kindOf(k, obj[k])}`">
-      <dt class="fields-view__label">{{ fieldLabel(k) }}</dt>
+      <dt class="fields-view__label">{{ label(k) }}</dt>
       <dd class="fields-view__value">
         <template v-if="kindOf(k, obj[k]) === 'decimal'">
           <span class="fields-view__score">
-            {{ formatDecimal(obj[k] as number | string) }}
+            {{ exactDecimal(obj[k] as number | string) }}
             <template v-if="k === 'score' && obj.out_of !== undefined && obj.out_of !== null">
-              / {{ formatDecimal(obj.out_of as number | string) }}
+              / {{ exactDecimal(obj.out_of as number | string) }}
               <span class="fields-view__muted">({{ formatPercent(obj.score as number | string, obj.out_of as number | string) }})</span>
             </template>
           </span>
@@ -178,12 +201,12 @@ function json(v: unknown) {
             </el-table-column>
             <el-table-column :label="t('common.labels.points')" width="110" align="right">
               <template #default="{ row }">
-                <span class="fields-view__num">{{ formatDecimal(row.points) }} / {{ formatDecimal(row.max) }}</span>
+                <span class="fields-view__num">{{ exactDecimal(row.points) }} / {{ exactDecimal(row.max) }}</span>
               </template>
             </el-table-column>
           </el-table>
           <div class="fields-view__total fields-view__muted">
-            {{ t('actions.fields.total') }} {{ formatDecimal(breakdownTotal(obj[k]).points) }} / {{ formatDecimal(breakdownTotal(obj[k]).max) }}
+            {{ t('actions.fields.total') }} {{ breakdownTotal(obj[k]).points }} / {{ breakdownTotal(obj[k]).max }}
           </div>
         </template>
         <div v-else-if="kindOf(k, obj[k]) === 'perms'" class="fields-view__perms">
@@ -234,6 +257,22 @@ function json(v: unknown) {
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'documentKind'" vocab="documentKind" :value="obj[k] as string" />
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'role'" vocab="role" :value="obj[k] as string" />
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'scope'" vocab="scope" :value="obj[k] as string" />
+        <span v-else-if="kindOf(k, obj[k]) === 'preset'" class="fields-view__inline">
+          <template v-if="preset">
+            <strong>{{ presetLabel(preset) }}</strong>
+            <StatusTag v-if="preset.name !== preset.role" vocab="role" :value="preset.role" />
+          </template>
+          <span v-else-if="k === 'preset'">{{ obj[k] }}</span>
+          <IdText v-if="k === 'preset_id'" :id="obj[k] as string" />
+        </span>
+        <VersionRef
+          v-else-if="kindOf(k, obj[k]) === 'version'"
+          :course-id="courseId"
+          :document-id="str(obj.document_id)"
+          :version-id="obj[k] as string"
+          :check="checkVersion"
+          explain
+        />
         <span v-else-if="kindOf(k, obj[k]) === 'file'" class="fields-view__inline">
           <el-icon><Paperclip /></el-icon>{{ t('common.labels.yes') }}
         </span>

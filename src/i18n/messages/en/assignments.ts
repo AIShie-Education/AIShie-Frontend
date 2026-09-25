@@ -7,7 +7,7 @@ export default {
     show: {
       all: 'All',
       published: 'Published',
-      unpublished: 'Unpublished',
+      unpublished: 'Not published',
     },
     empty: 'No assignments yet.',
     emptyStudent: 'Nothing has been set yet. Assignments appear here once they are published.',
@@ -25,11 +25,11 @@ export default {
     approvalHint: 'Creating, changing and publishing assignments waits for someone to approve it.',
   },
   state: {
-    unpublished: 'Unpublished',
+    unpublished: 'Not published',
     pastDue: 'Past due',
     overdue: 'Overdue',
     practice: 'Practice (not graded)',
-    counts: 'Counts toward the grade',
+    counts: 'A graded part of the course',
     notStarted: 'Not started',
     attempt: 'attempt {n}',
   },
@@ -60,8 +60,11 @@ export default {
       new: 'Write new',
       choose: 'Choose a document',
       chooseRequired: 'Choose a document',
-      unpublishedTag: 'unpublished',
+      unpublishedTag: 'not published',
       selectedUnpublished: 'This document has no published version yet: students cannot read it.',
+      mustBePublished: 'This assignment is published, so its instructions must be a document with a published version.',
+      newNeedsApproval:
+        'Writing a new document waits for approval: the assignment is not saved until it has been approved.',
       unreadable: 'These documents cannot be listed with your permissions.',
       noneAvailable: 'There are no {kind} documents in this course yet.',
       cannotRemove: 'It can be replaced by another document, but not removed.',
@@ -78,6 +81,8 @@ export default {
     saved: 'Assignment saved.',
     nothingChanged: 'Nothing was changed.',
     docCreated: '“{title}” created.',
+    docNotPublished:
+      '“{title}” was created, but it has no published version yet (publishing it failed or waits for approval), so the assignment has not been saved. Save again once it is published.',
     docProposed:
       'Creating “{title}” is waiting for approval, so the assignment has not been saved. Save it without that document now and choose it once approved, or save it later.',
   },
@@ -91,15 +96,22 @@ export default {
     publishInstructions: 'Publish the latest version',
     instructionsPublished: 'Instructions published.',
     publishTitle: 'Publish assignment',
-    publishConfirm: 'Publish “{title}”? Students will see it and can start handing in work. An assignment cannot be unpublished.',
+    publishConfirm:
+      'Publish “{title}”? Students will see it and can start handing in work. An assignment cannot be unpublished.',
     publishNeedsInstructions: 'Its instructions must have a published version.',
     publishApproval: 'Publishing will wait for someone to approve it.',
     published: 'Assignment published.',
+    proposed: {
+      edit: 'Your changes to this assignment are waiting for approval. Until they are approved, it stays as shown here.',
+      publish: 'Publishing this assignment is waiting for approval. Students cannot see it until it is approved.',
+      instructions: 'Publishing the instructions is waiting for approval.',
+    },
     instructions: 'Instructions',
     openDocument: 'Open document',
     noInstructions: 'This assignment has no instructions document.',
     draftVersion: 'You are reading version {seq}, which is not published. Students read the published version.',
-    draftVersionNone: 'You are reading version {seq}. No version is published yet, so students cannot read these instructions.',
+    draftVersionNone:
+      'You are reading version {seq}. No version is published yet, so students cannot read these instructions.',
     noText: 'The instructions have no text.',
     noVersion: 'There is nothing to read in these instructions yet.',
     attachedFile: 'Attached file:',
@@ -119,7 +131,8 @@ export default {
     summary: {
       students: 'Students with work',
       attempts: 'Attempts',
-      scoped: 'Each student counted once, by their latest attempt; within what you can see.',
+      scoped:
+        'Each student is counted once: as handed in if any attempt was, else by an open draft, else as missing. Only work you can see is counted.',
       empty: 'No work has been started yet.',
     },
   },
@@ -155,9 +168,16 @@ export default {
     savePending:
       'Your change to the draft is waiting for approval. Hand in once it has been decided: a hand-in approved against a changed draft is refused.',
     unsaved: 'Unsaved changes',
+    awaitingApproval: 'Waiting for approval',
     allSaved: 'All changes saved',
     handIn: 'Hand in',
     nothingToHandIn: 'Write something or attach a file first.',
+    handInWaiting: 'Your hand-in is already waiting for approval.',
+    changeWaiting: 'Hand in once your change to the draft has been approved or rejected.',
+    waitForFiles:
+      'Wait until your files have uploaded and been attached to the draft, or remove any that could not be attached.',
+    instructionsChanged:
+      'The instructions have changed since you opened this page. Read them again above, then hand in.',
     handInConfirmTitle: 'Hand in attempt {n}?',
     handInConfirm: 'Once handed in, it cannot be changed. To change it later you would start a new attempt.',
     handInLate: 'The due date has passed, so it will be marked late.',

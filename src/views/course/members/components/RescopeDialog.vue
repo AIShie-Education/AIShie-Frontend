@@ -12,10 +12,11 @@ import type { Member, PermLevels } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
+import MemberName from '@/components/MemberName.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import TimeText from '@/components/TimeText.vue'
 import RefusalAlert from './RefusalAlert.vue'
-import { fullPerms, grantProblems, useNarrow, widens, type Shape } from './seat'
+import { fullPerms, grantProblems, widens, type Shape } from './seat'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ courseId: string; member: Member }>()
@@ -23,7 +24,6 @@ const emit = defineEmits<{ done: [status: 'executed' | 'proposed', actionId: str
 
 const { t } = useI18n()
 const course = useCourseStore()
-const narrow = useNarrow(640)
 const { run, pending, lastError } = useWrite('member.rescope')
 
 type ExpiryMode = 'keep' | 'set' | 'clear'
@@ -89,6 +89,16 @@ const staleStudents = computed(() => {
     return !m || m.role !== 'student' || m.status === 'removed'
   })
 })
+// The picker offers current students only (active or paused: Core takes a
+// paused student on a list, never a removed one). Those already on the list
+// who are no longer students are kept apart, shown by name under it.
+const currentStudents = computed<string[]>({
+  get: () => form.students.filter((id) => !staleStudents.value.includes(id)),
+  set: (ids) => (form.students = [...ids, ...staleStudents.value]),
+})
+function dropStale() {
+  form.students = currentStudents.value
+}
 
 // --- Measured against the caller's own seat ----------------------------------
 const before = computed<Shape>(() => ({
@@ -103,7 +113,11 @@ const after = computed<Shape>(() => ({
   perms: before.value.perms,
   studentScope: form.studentScope,
   students:
-    form.studentScope === 'listed' ? (studentsChanged.value || studentScopeChanged.value ? form.students : before.value.students) : [],
+    form.studentScope === 'listed'
+      ? studentsChanged.value || studentScopeChanged.value
+        ? form.students
+        : before.value.students
+      : [],
   assignmentScope: form.assignmentScope,
   assignments:
     form.assignmentScope === 'listed'
@@ -152,8 +166,7 @@ async function submit() {
   <el-dialog
     v-model="open"
     :title="t('members.rescope.title', { name: member.display_name })"
-    :width="narrow ? '100%' : '600px'"
-    :fullscreen="narrow"
+    width="600px"
     destroy-on-close
     append-to-body
   >
@@ -166,10 +179,10 @@ async function submit() {
         </el-radio-group>
         <div v-if="form.studentScope === 'listed'" class="rescope__list">
           <MemberSelect
-            v-model="form.students"
+            v-model="currentStudents"
             multiple
             role="student"
-            include-inactive
+            :statuses="['active', 'paused']"
             clearable
             :placeholder="t('members.add.pickStudents')"
           />
@@ -181,12 +194,21 @@ async function submit() {
             :title="t('members.add.nobodyStudents')"
           />
           <el-alert
-            v-if="staleStudents.length && (studentsChanged || studentScopeChanged)"
+            v-if="staleStudents.length"
             type="warning"
             :closable="false"
             show-icon
             :title="t('members.rescope.staleStudents', { n: staleStudents.length }, staleStudents.length)"
-          />
+          >
+            <div class="rescope__stale">
+              <el-tag v-for="id in staleStudents" :key="id" type="info" size="small" disable-transitions>
+                <MemberName :id="id" />
+              </el-tag>
+            </div>
+            <el-button size="small" class="rescope__drop" @click="dropStale">
+              {{ t('members.rescope.dropStale') }}
+            </el-button>
+          </el-alert>
         </div>
       </el-form-item>
 
@@ -314,6 +336,15 @@ async function submit() {
 .rescope__problems {
   margin: 4px 0 0;
   padding-left: 18px;
+}
+.rescope__stale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.rescope__drop {
+  margin-top: 8px;
 }
 .rescope__footer {
   display: flex;

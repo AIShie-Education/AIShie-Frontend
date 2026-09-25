@@ -1,19 +1,31 @@
 <script setup lang="ts">
 // What an action is about, in a line: for a grade the score and whose work,
 // for a hand-in the student and assignment, for a new member who and as what,
-// for a decision the proposal it decides. Names are looked up where the
-// caller's seat can read them; otherwise the id is shown.
+// for publishing which version, for a decision the proposal it decides.
+// Names are looked up where the caller's seat can read them; otherwise the id
+// is shown.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
-import { formatDecimal } from '@/utils/format'
+import { presetLabel } from '@/views/course/members/components/seat'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ActionActor from './ActionActor.vue'
 import ActionTarget from './ActionTarget.vue'
 import MaybeLink from './MaybeLink.vue'
-import { isObject, payloadOf, routeFor, str, targetTypeLabel, typeLabel, type ActionRow } from './actionText'
+import VersionRef from './VersionRef.vue'
+import {
+  exactDecimal,
+  isObject,
+  payloadOf,
+  presetOf,
+  routeFor,
+  str,
+  targetTypeLabel,
+  typeLabel,
+  type ActionRow,
+} from './actionText'
 import { useLookup, useSpecs } from './lookups'
 
 const props = withDefaults(
@@ -27,7 +39,7 @@ const props = withDefaults(
   }>(),
   { depth: 0, link: false },
 )
-const { t, te } = useI18n()
+const { t } = useI18n()
 const course = useCourseStore()
 const specs = useSpecs()
 onMounted(() => void course.ensureAssignments())
@@ -87,24 +99,31 @@ const score = computed(() => {
   if (s === undefined || s === null) return null
   const of = p.value.out_of as number | string | undefined
   return of !== undefined && of !== null
-    ? t('actions.summary.outOf', { score: formatDecimal(s), of: formatDecimal(of) })
-    : formatDecimal(s)
+    ? t('actions.summary.outOf', { score: exactDecimal(s), of: exactDecimal(of) })
+    : exactDecimal(s)
 })
 
 const docTitle = computed(() => str(p.value.title) ?? doc.value?.value?.title)
 const docKind = computed(() => str(p.value.kind) ?? doc.value?.value?.kind)
 
+// A new member's seat is the preset's, as Core finds it, with any role set in
+// the proposal over it.
+const presets = useLookup(() => (type.value === 'member.add' ? specs.presets(props.courseId) : null))
+const preset = computed(() => presetOf(presets.value?.value, p.value))
+/** Permissions it sets; for a new member, those set differently from the preset, once that is known. */
 const permChanges = computed(() => {
   const perms = p.value.perms
-  if (!perms || typeof perms !== 'object') return []
-  return Object.entries(perms as Record<string, string>)
+  if (!isObject(perms)) return []
+  const base = type.value === 'member.add' ? preset.value?.perms : undefined
+  return (Object.entries(perms) as [string, string][]).filter(([k, v]) => !base || v !== (base[k] ?? 'denied'))
 })
-
 const newMemberAs = computed(() => {
-  const preset = str(p.value.preset)
-  if (preset) return te(`enums.role.${preset}`) ? t(`enums.role.${preset}`) : preset
+  const as = preset.value ? presetLabel(preset.value) : str(p.value.preset)
   const role = str(p.value.role)
-  if (role) return t(`enums.role.${role}`)
+  const roleDiffers = !!role && role !== preset.value?.role
+  if (as && roleDiffers) return t('actions.summary.newMemberRole', { what: as, role: t(`enums.role.${role}`) })
+  if (as) return t('actions.summary.newMember', { what: as })
+  if (role) return t('actions.summary.newMember', { what: t(`enums.role.${role}`) })
   return null
 })
 
@@ -158,7 +177,12 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
         <template v-if="actor?.value">{{ actor.value.display_name }}</template>
         <IdText v-else :id="str(p.actor_id)" />
       </span>
-      <span v-if="newMemberAs" class="action-target__muted">{{ t('actions.summary.newMember', { what: newMemberAs }) }}</span>
+      <span v-if="newMemberAs" class="action-target__as">{{ newMemberAs }}</span>
+      <IdText v-else-if="str(p.preset_id)" :id="str(p.preset_id)" />
+      <span v-for="[perm, level] in permChanges.slice(0, 3)" :key="perm" class="action-target__perm">
+        {{ t(`enums.perm.${perm}`) }} → <StatusTag vocab="level" :value="level" />
+      </span>
+      <span v-if="permChanges.length > 3" class="action-target__muted">+{{ permChanges.length - 3 }}</span>
     </template>
     <template v-else-if="group === 'member'">
       <MaybeLink :to="targetRoute" class="action-target__part">
@@ -177,6 +201,13 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       </MaybeLink>
       <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
       <StatusTag v-if="docKind" vocab="documentKind" :value="docKind" />
+      <VersionRef
+        v-if="type === 'document.publish' && str(p.version_id)"
+        :course-id="courseId"
+        :document-id="str(p.document_id) ?? tid"
+        :version-id="str(p.version_id)!"
+        :check="action.status === 'proposed'"
+      />
     </template>
 
     <!-- Assignments -->
@@ -211,11 +242,16 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       </el-tag>
       <StatusTag v-else vocab="reviewState" :value="str(p.outcome)" />
       <template v-if="aboutAction">
-        <MaybeLink :to="link ? routeFor(courseId, 'action', aboutAction.id) : null" class="action-target__part action-target__name">
-          {{ typeLabel(aboutAction.action_type) }}
-        </MaybeLink>
-        <span class="action-target__muted">{{ t('actions.summary.of') }}</span>
-        <ActionActor :member-id="aboutAction.member_id" :actor-id="aboutAction.actor_id" />
+        <i18n-t keypath="actions.summary.by" tag="span" scope="global" class="action-target__by">
+          <template #what>
+            <MaybeLink :to="link ? routeFor(courseId, 'action', aboutAction.id) : null" class="action-target__name">
+              {{ typeLabel(aboutAction.action_type) }}
+            </MaybeLink>
+          </template>
+          <template #who>
+            <ActionActor :member-id="aboutAction.member_id" :actor-id="aboutAction.actor_id" />
+          </template>
+        </i18n-t>
         <span class="action-target__nested">
           <ActionTarget :action="aboutAction" :course-id="courseId" :depth="depth + 1" />
         </span>
@@ -259,6 +295,19 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
 }
 .action-target__muted {
   color: var(--el-text-color-secondary);
+}
+.action-target__as {
+  color: var(--el-text-color-regular);
+}
+.action-target__by {
+  color: var(--el-text-color-secondary);
+}
+.action-target__by :deep(.action-actor) {
+  color: var(--el-text-color-regular);
+  vertical-align: middle;
+}
+.action-target__by span.action-target__name {
+  color: var(--el-text-color-primary);
 }
 .action-target__perm {
   display: inline-flex;

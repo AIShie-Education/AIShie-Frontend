@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // One submission: the work as handed in (or as drafted so far), what it was
-// handed in under, the grades given for it, and — for those who grade — a
-// form to grade it and a way to correct its lateness.
+// handed in under, the grades given for it (and those proposed for it that
+// wait for approval), and — for those who grade — a form to grade it and a
+// way to correct its lateness.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
-import type { GradeSummary, SubmissionSummary } from '@/api/types'
+import type { ActionSummary, GradeSummary, SubmissionSummary } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFileLink from '@/components/DocumentFileLink.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
@@ -18,8 +19,8 @@ import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import GradePanel from './components/GradePanel.vue'
 import LatenessControl from './components/LatenessControl.vue'
-import OwnName from './components/OwnName.vue'
 import SubmissionGrades from './components/SubmissionGrades.vue'
+import { loadPendingGradeProposals } from './components/proposals'
 
 const props = defineProps<{ courseId: string; submissionId: string }>()
 const { t } = useI18n()
@@ -75,6 +76,37 @@ const gradeList = computed(() => grades.data.value ?? [])
 const gradesSettled = computed(() => grades.data.value !== undefined || !!grades.error.value)
 const liveDraft = computed(() => gradeList.value.find((g) => g.state === 'draft'))
 const livePosted = computed(() => gradeList.value.find((g) => g.state === 'posted'))
+/** Whether the grades already given for this work are hidden from the caller. */
+const gradesHidden = computed(() => !mayReadGrades.value || !!grades.error.value?.isForbidden)
+
+// Grades proposed for this work and waiting for approval. Approving one over
+// a draft entered after it is refused, so whoever grades is told of them.
+// Deciders read the approval queue; a seat whose grading waits for approval
+// reads its own actions. Not knowing of them only loses the warning, so a
+// failure to read them is not shown.
+const decides = computed(() => course.can('action_decide'))
+const mightPropose = computed(() => {
+  const l = course.level('grade_submit')
+  return l === null || l === 'confirm_required'
+})
+const proposals = useAsync(
+  async (): Promise<{ submissionId: string; items: ActionSummary[] }> => {
+    const cur = s.value
+    if (!cur) return { submissionId: '', items: [] }
+    if (own.value || cur.state === 'draft' || !(decides.value || mightPropose.value)) {
+      return { submissionId: cur.id, items: [] }
+    }
+    const items = await loadPendingGradeProposals(props.courseId, cur.id, {
+      decides: decides.value,
+      mightPropose: mightPropose.value,
+    })
+    return { submissionId: cur.id, items }
+  },
+  { watch: [() => s.value?.id], immediate: false, keepData: true },
+)
+const proposalList = computed(() =>
+  proposals.data.value?.submissionId === s.value?.id ? (proposals.data.value?.items ?? []) : [],
+)
 
 // The student's other attempts at the same assignment.
 const attempts = useAsync(
@@ -115,6 +147,7 @@ function reloadAll() {
 /** After grading, the grades again — unless they were refused: they still are. */
 function onGraded() {
   if (!grades.error.value?.isForbidden) void grades.reload()
+  void proposals.reload()
 }
 </script>
 
@@ -124,15 +157,18 @@ function onGraded() {
       <template v-if="s">
         <PageHeader
           :title="title"
-          :back="{ name: 'course-submissions', params: { courseId }, query: own ? {} : { assignment: s.assignment_id } }"
+          :back="{
+            name: 'course-submissions',
+            params: { courseId },
+            query: own ? {} : { assignment: s.assignment_id },
+          }"
         >
           <template #tags>
             <StatusTag vocab="submissionState" :value="s.state" size="default" />
           </template>
           <template #subtitle>
             <span class="submission-view__subtitle">
-              <OwnName v-if="own" />
-              <MemberName v-else :id="s.student_member_id" />
+              <MemberName :id="s.student_member_id" />
               <span>·</span>
               <span>{{ t('submissions.detail.attempt', { n: s.attempt }) }}</span>
             </span>
@@ -144,7 +180,9 @@ function onGraded() {
           >
             <el-button type="primary">
               <el-icon><EditPen /></el-icon>
-              <span>{{ s.state === 'draft' ? t('submissions.detail.continueEditing') : t('submissions.detail.handInLate') }}</span>
+              <span>{{
+                s.state === 'draft' ? t('submissions.detail.continueEditing') : t('submissions.detail.handInLate')
+              }}</span>
             </el-button>
           </router-link>
         </PageHeader>
@@ -189,8 +227,7 @@ function onGraded() {
             <div class="facts__item">
               <dt>{{ t('submissions.detail.facts.student') }}</dt>
               <dd>
-                <OwnName v-if="own" />
-                <MemberName v-else :id="s.student_member_id" />
+                <MemberName :id="s.student_member_id" />
                 <router-link
                   v-if="!own"
                   class="facts__aside"
@@ -283,7 +320,7 @@ function onGraded() {
         </section>
 
         <SubmissionGrades
-          v-if="mayReadGrades && s.state !== 'draft'"
+          v-if="s.state !== 'draft'"
           :course-id="courseId"
           :assignment-id="s.assignment_id"
           :student-id="s.student_member_id"
@@ -292,6 +329,10 @@ function onGraded() {
           :loading="grades.loading.value"
           :error="grades.error.value"
           :own="own"
+          :forbidden="!mayReadGrades"
+          :proposals="proposalList"
+          :live-draft="liveDraft"
+          :live-posted="livePosted"
           @retry="grades.reload"
         />
 
@@ -303,6 +344,8 @@ function onGraded() {
           :assignment="a"
           :live-draft="liveDraft"
           :live-posted="livePosted"
+          :grades-hidden="gradesHidden"
+          :proposals="proposalList"
           @graded="onGraded"
         />
       </template>

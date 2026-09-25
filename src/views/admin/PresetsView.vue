@@ -16,7 +16,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import PresetDrawer from './setup/PresetDrawer.vue'
 import PresetFormDialog from './setup/PresetFormDialog.vue'
 import PresetMatrix from './setup/PresetMatrix.vue'
-import { allowedCount, isBuiltin, sortPresets } from './setup/presets'
+import { allowedCount, hasOwnLabel, isBuiltin, presetDescription, presetLabel, sortPresets } from './setup/presets'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -92,7 +92,13 @@ function onSaved(savedDept: string | null) {
       </el-button>
     </PageHeader>
 
-    <el-alert type="info" :closable="false" show-icon :title="t('adminSetup.presets.explain')" class="presets-explain" />
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      :title="t('adminSetup.presets.explain')"
+      class="presets-explain"
+    />
 
     <div class="app-toolbar presets-toolbar">
       <label class="presets-toolbar__label" for="presets-dept">{{ t('adminSetup.presets.department') }}</label>
@@ -108,7 +114,12 @@ function onSaved(savedDept: string | null) {
         <el-option v-for="d in deptList" :key="d.id" :value="d.id" :label="d.name" />
       </el-select>
       <span class="app-toolbar__spacer" />
-      <el-button :loading="presets.loading.value" circle :aria-label="t('common.actions.refresh')" @click="presets.reload">
+      <el-button
+        :loading="presets.loading.value"
+        circle
+        :aria-label="t('common.actions.refresh')"
+        @click="presets.reload"
+      >
         <el-icon><Refresh /></el-icon>
       </el-button>
     </div>
@@ -130,7 +141,8 @@ function onSaved(savedDept: string | null) {
         <div class="presets-grid">
           <article v-for="p in list" :key="p.id" class="preset-card" :class="{ 'is-own': !isBuiltin(p) }">
             <header class="preset-card__head">
-              <span class="preset-card__name">{{ p.name }}</span>
+              <span class="preset-card__name">{{ presetLabel(p) }}</span>
+              <code v-if="hasOwnLabel(p)" class="preset-card__key">{{ p.name }}</code>
               <el-tag v-if="isBuiltin(p)" type="info" size="small" disable-transitions>
                 {{ t('adminSetup.presets.builtin') }}
               </el-tag>
@@ -138,8 +150,8 @@ function onSaved(savedDept: string | null) {
                 {{ deptName(p.dept_id) ?? t('adminSetup.presets.own') }}
               </el-tag>
             </header>
-            <p class="preset-card__desc" :class="{ 'app-muted': !p.description }">
-              {{ p.description || t('adminSetup.presets.noDescription') }}
+            <p class="preset-card__desc" :class="{ 'app-muted': !presetDescription(p) }">
+              {{ presetDescription(p) || t('adminSetup.presets.noDescription') }}
             </p>
             <div class="preset-card__facts">
               <StatusTag vocab="role" :value="p.role" />
@@ -233,6 +245,14 @@ function onSaved(savedDept: string | null) {
   font-weight: 600;
   font-size: 15px;
   word-break: break-word;
+}
+.preset-card__key {
+  font-family: var(--app-font-mono);
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+  padding: 1px 5px;
 }
 .preset-card__dept {
   max-width: 100%;

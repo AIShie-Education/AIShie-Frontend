@@ -26,6 +26,7 @@ import {
   emptyFacts,
   pct,
   SEGMENT_COLORS,
+  type AssignmentsSeen,
   type GradeFacts,
   type SchemeNode,
 } from './components/schemeModel'
@@ -41,7 +42,18 @@ const { data, error, loading, reload } = useAsync(() => read('component.tree', {
 })
 onMounted(() => void course.ensureAssignments())
 
-const scheme = computed(() => buildScheme(data.value?.components, [...course.assignments.values()]))
+// assignment.list answers only what is within the caller's assignment scope,
+// and unpublished assignments only to those who may write them. Where the list
+// may be short, a leaf that shows none may still hold some.
+const seen = computed<AssignmentsSeen>(() => {
+  const scope = course.seat?.assignment_scope ?? course.membership?.assignment_scope
+  const counted = course.assignmentsState === 'loaded' && scope === 'all'
+  return { counted, all: counted && course.can('assignment_write') }
+})
+/** Until the assignments have been read (or could not be), which components hold some is not known yet. */
+const assignmentsSettled = computed(() => course.assignmentsState !== 'idle' && course.assignmentsState !== 'loading')
+
+const scheme = computed(() => buildScheme(data.value?.components, [...course.assignments.values()], seen.value))
 const componentCount = computed(() => scheme.value.nodes.length)
 
 const canWrite = computed(() => course.can('assignment_write'))
@@ -53,14 +65,6 @@ const MAX_GRADE_PAGES = 25
 const facts = ref<GradeFacts | null>(null)
 const factsState = ref<'idle' | 'loading' | 'done' | 'failed'>('idle')
 let factsGeneration = 0
-
-/** Whether grade.list shows this caller every grade there is: drafts, and every student and assignment. */
-const seesAllGrades = computed(() => {
-  if (course.permsSource === 'unknown') return false
-  const draftsVisible = course.level('grade_submit') !== 'denied' || course.level('grade_post') !== 'denied'
-  const s = course.seat
-  return draftsVisible && !!s && s.student_scope === 'all' && s.assignment_scope === 'all'
-})
 
 async function loadFacts() {
   const mine = ++factsGeneration
@@ -84,7 +88,8 @@ async function loadFacts() {
       }
       after = out.next
     }
-    f.complete = allPages && seesAllGrades.value
+    // grade.list shows drafts only to those who grade, and only within the caller's scopes.
+    f.complete = allPages && course.seesAllGrades
     facts.value = f
     factsState.value = 'done'
   } catch {
@@ -131,8 +136,9 @@ const segments = computed<Segment[]>(() => {
 })
 const glanceEmpty = computed(() => {
   const root = scheme.value.root
-  if (!root) return 'none'
-  if (!root.children.length && !root.assignments.length) return 'none'
+  if (!root || root.kind === 'empty') return 'none'
+  // Assignments hung on the course total itself, not all of them shown.
+  if (root.kind === 'unseen' || (root.kind === 'bucket' && !seen.value.counted)) return 'unseen'
   return segments.value.length ? null : 'zero'
 })
 
@@ -196,12 +202,16 @@ function collapseAll() {
       </el-button>
       <el-tooltip
         v-if="canWrite && !error"
-        :content="t('scheme.reasons.archived')"
+        :content="t('common.archivedCourse')"
         :disabled="writable"
         placement="bottom"
       >
         <span class="scheme-view__add">
-          <el-button type="primary" :disabled="!writable || !data || !addable" @click="openCreate(null)">
+          <el-button
+            type="primary"
+            :disabled="!writable || !data || !assignmentsSettled || !addable"
+            @click="openCreate(null)"
+          >
             <el-icon><Plus /></el-icon>
             <span>{{ t('scheme.actions.addComponent') }}</span>
           </el-button>
@@ -215,7 +225,9 @@ function collapseAll() {
     <el-alert v-if="proposed" type="info" show-icon class="scheme-view__notice" @close="proposed = false">
       <template #title>
         {{ t('scheme.outcome.proposed') }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('scheme.outcome.viewMine') }}</router-link>
+        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+          t('scheme.outcome.viewMine')
+        }}</router-link>
       </template>
     </el-alert>
 
@@ -238,7 +250,11 @@ function collapseAll() {
           </h2>
           <p v-if="glanceEmpty" class="app-muted scheme-view__glance-empty">{{ t(`scheme.glance.${glanceEmpty}`) }}</p>
           <template v-else>
-            <div class="glance-bar" role="img" :aria-label="segments.map((s) => `${s.name} ${pct(s.share)}`).join(', ')">
+            <div
+              class="glance-bar"
+              role="img"
+              :aria-label="segments.map((s) => `${s.name} ${pct(s.share)}`).join(', ')"
+            >
               <span
                 v-for="s in segments"
                 :key="s.key"
@@ -263,7 +279,9 @@ function collapseAll() {
             <span class="scheme-view__heading">
               <el-icon><Share /></el-icon>
               {{ t('scheme.tree.title') }}
-              <span class="app-muted scheme-view__count">{{ t('scheme.tree.count', { n: componentCount }, componentCount) }}</span>
+              <span class="app-muted scheme-view__count">{{
+                t('scheme.tree.count', { n: componentCount }, componentCount)
+              }}</span>
             </span>
             <span class="scheme-view__tree-tools">
               <el-button text size="small" @click="expandAll">{{ t('scheme.actions.expandAll') }}</el-button>
@@ -273,20 +291,33 @@ function collapseAll() {
 
           <div class="scheme-view__notes">
             <p v-if="factsState === 'loading'" class="scheme-view__note">
-              <el-icon class="is-loading"><Loading /></el-icon>{{ t('scheme.tree.checking') }}
+              <el-icon class="is-loading"><Loading /></el-icon>
+              <span>{{ t('scheme.tree.checking') }}</span>
             </p>
             <p v-else-if="factsState === 'failed'" class="scheme-view__note">
-              <el-icon><Warning /></el-icon>{{ t('scheme.tree.factsFailed') }}
+              <el-icon><Warning /></el-icon>
+              <span>{{ t('scheme.tree.factsFailed') }}</span>
             </p>
             <p v-else-if="factsState === 'done' && facts && !facts.complete" class="scheme-view__note">
-              <el-icon><InfoFilled /></el-icon>{{ t('scheme.tree.partial') }}
+              <el-icon><InfoFilled /></el-icon>
+              <span>{{ t('scheme.tree.partial') }}</span>
             </p>
-            <p v-if="course.assignmentsState === 'forbidden'" class="scheme-view__note">
-              <el-icon><InfoFilled /></el-icon>{{ t('scheme.tree.assignmentsHidden') }}
+            <p v-if="course.assignmentsState === 'loaded' && !seen.counted" class="scheme-view__note">
+              <el-icon><InfoFilled /></el-icon>
+              <span>{{ t('scheme.tree.assignmentsPartial') }}</span>
+            </p>
+            <p v-else-if="course.assignmentsState === 'forbidden'" class="scheme-view__note">
+              <el-icon><InfoFilled /></el-icon>
+              <span>{{ t('scheme.tree.assignmentsHidden') }}</span>
             </p>
             <p v-else-if="course.assignmentsState === 'error'" class="scheme-view__note">
-              <el-icon><Warning /></el-icon>{{ t('scheme.tree.assignmentsFailed') }}
-              <el-button link type="primary" @click="course.ensureAssignments()">{{ t('common.actions.retry') }}</el-button>
+              <el-icon><Warning /></el-icon>
+              <span>
+                {{ t('scheme.tree.assignmentsFailed') }}
+                <el-button link type="primary" class="scheme-view__retry" @click="course.ensureAssignments()">
+                  {{ t('common.actions.retry') }}
+                </el-button>
+              </span>
             </p>
           </div>
 
@@ -296,7 +327,7 @@ function collapseAll() {
             :course-id="courseId"
             :facts="facts"
             :can-write="canWrite"
-            :writable="writable"
+            :writable="writable && assignmentsSettled"
             @add="openCreate"
             @edit="openEdit"
             @move="openMove"
@@ -315,11 +346,22 @@ function collapseAll() {
           <ul class="uncounted">
             <li v-for="a in scheme.uncounted" :key="a.id">
               <el-icon class="uncounted__icon"><Document /></el-icon>
-              <router-link :to="{ name: 'course-assignment', params: { courseId, assignmentId: a.id } }" class="uncounted__title">
+              <router-link
+                :to="{ name: 'course-assignment', params: { courseId, assignmentId: a.id } }"
+                class="uncounted__title"
+              >
                 {{ a.title }}
               </router-link>
-              <el-tag v-if="!a.published_at" type="info" size="small" disable-transitions>{{ t('scheme.tree.unpublished') }}</el-tag>
-              <span class="uncounted__points">{{ t('scheme.uncounted.points', { n: formatDecimal(a.points_possible, 4) }) }}</span>
+              <el-tag v-if="!a.published_at" type="info" size="small" disable-transitions>{{
+                t('scheme.tree.unpublished')
+              }}</el-tag>
+              <span class="uncounted__points">{{
+                t(
+                  'scheme.uncounted.points',
+                  { n: formatDecimal(a.points_possible, 4) },
+                  Number(a.points_possible) === 1 ? 1 : 2,
+                )
+              }}</span>
             </li>
           </ul>
         </section>
@@ -393,12 +435,20 @@ function collapseAll() {
 }
 .scheme-view__note {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  flex-wrap: wrap;
   margin: 0 0 4px;
   font-size: 12px;
+  line-height: 18px;
   color: var(--el-text-color-secondary);
+}
+.scheme-view__note > .el-icon {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.scheme-view__retry {
+  font-size: 12px;
+  vertical-align: baseline;
 }
 .scheme-view__glance-empty {
   margin: 0;

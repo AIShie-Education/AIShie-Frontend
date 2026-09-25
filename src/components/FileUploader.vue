@@ -67,8 +67,15 @@ function remove(i: number) {
         <el-icon><Document /></el-icon>
         <span class="file-uploader__name">{{ f.fileName }}</span>
         <span class="file-uploader__size">{{ formatBytes(f.size) }}</span>
-        <el-button link type="danger" :disabled="disabled" @click="remove(i)">
-          <el-icon><Close /></el-icon>
+        <el-button
+          link
+          type="danger"
+          :disabled="disabled"
+          :aria-label="t('common.actions.remove')"
+          :title="t('common.actions.remove')"
+          @click="remove(i)"
+        >
+          <el-icon aria-hidden="true"><Close /></el-icon>
         </el-button>
       </li>
       <li v-for="f in inFlight" :key="f.key">

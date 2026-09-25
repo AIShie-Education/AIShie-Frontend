@@ -20,6 +20,11 @@ const props = defineProps<{
   assignmentId?: string
   /** How many drafts for the assignment are loaded on the page. */
   loadedDrafts?: number
+  /**
+   * The page lists one student's grades: its count says nothing of the
+   * others, whose drafts for the assignment are posted too.
+   */
+  studentFiltered?: boolean
 }>()
 const emit = defineEmits<{ done: [out: WriteOutcome<ToolOut<'grade.post'>>] }>()
 const { t } = useI18n()
@@ -57,21 +62,18 @@ async function submit() {
 </script>
 
 <template>
-  <el-dialog
-    v-model="visible"
-    class="grades-dialog"
-    :title="t('grades.post.title')"
-    width="560px"
-    destroy-on-close
-    @open="onOpen"
-  >
+  <el-dialog v-model="visible" :title="t('grades.post.title')" width="560px" destroy-on-close @open="onOpen">
     <p class="post-dialog__intro">{{ t('grades.post.intro') }}</p>
 
     <div class="post-dialog__what">
       <template v-if="mode === 'assignment'">
         <div class="post-dialog__what-title">{{ t('grades.post.whatAssignment', { title: assignmentTitle }) }}</div>
         <p class="app-form-hint">
-          {{ t('grades.post.assignmentHint', { n: loadedDrafts ?? 0 }) }}
+          {{
+            studentFiltered
+              ? t('grades.post.assignmentHintFiltered')
+              : t('grades.post.assignmentHint', { n: loadedDrafts ?? 0 })
+          }}
         </p>
       </template>
       <template v-else>
@@ -145,12 +147,5 @@ async function submit() {
 }
 .post-dialog__approval {
   margin-top: 12px;
-}
-</style>
-
-<style>
-/* Dialogs are teleported out of this component; keep them inside a phone screen. */
-.grades-dialog {
-  max-width: calc(100vw - 24px);
 }
 </style>

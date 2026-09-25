@@ -72,6 +72,11 @@ export default {
       other: 'This version is not published. Everyone who cannot read drafts reads version {seq}.',
       otherUnknown: 'This version is not published. Everyone who cannot read drafts reads the published version.',
       this: 'This is the published version: it is what everyone who may read this document sees.',
+      unreleased: {
+        instructions: 'Its assignment is not published yet: students see nothing of this until it is.',
+        rubric:
+          'Its assignment is not published yet: until it is, only members who can see unpublished assignments read this rubric.',
+      },
     },
     archivedAlert:
       'This document is archived. It can no longer be edited or published, and it is withdrawn from everyone who cannot read drafts; a version that someone’s submission was handed in under stays readable to them.',
@@ -131,20 +136,21 @@ export default {
       'Writing material needs approval here: this becomes a proposal and takes effect only once someone approves it.',
     addVersion: {
       title: 'New version of “{title}”',
-      intro:
-        'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published.',
-      startsFrom: 'Starts from the text of version {seq}, the latest.',
-      startsEmpty: 'The document has no version yet.',
+      introFrom:
+        'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published. Starts from the text of version {seq}, the latest.',
+      introEmpty:
+        'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published. The document has no version yet.',
       body: 'Text',
       file: 'File',
       fileHint: 'Optional. A version holds text, a file, or both.',
       fileNotCarried:
-        'Version {seq} has a file ({type}, {size}). A new version does not carry it over: upload it again to keep it.',
+        'Version {seq} has a file ({type}, {size}). A new version does not carry it over: upload it again to keep it. Saving without a file leaves it out of the new version.',
       publish: 'Publish this version at once',
       publishHint: 'Otherwise it stays a draft until someone publishes it.',
       unreleased: 'Its assignment is not published yet: news of this goes only to those who can see unpublished work.',
       needsContent: 'Give the version text or a file.',
       unchanged: 'Nothing has changed from version {seq}.',
+      dropsFile: 'The same text as version {seq}, without its file.',
       submit: 'Save version',
       done: 'New version saved',
       donePublished: 'New version saved and published',

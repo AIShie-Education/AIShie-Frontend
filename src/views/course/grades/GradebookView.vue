@@ -4,23 +4,34 @@
 // working behind it. Nothing is stored by reading it. The totals written down
 // when grades were posted (computed grades, from grade.list) are shown beside
 // it: those are what the student was shown, and they do not drift.
+// Percentages are Core's own, to two places, as the written-down totals are.
 //
 // A student sees their own; staff pick a student, whose id goes in the path.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { read } from '@/api/http'
+import { ElMessage } from 'element-plus'
+import { read, type ToolOut } from '@/api/http'
 import type { Decimal, GradeSummary, GradebookLine } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { useCourseStore } from '@/stores/course'
-import { formatDecimal, formatFraction } from '@/utils/format'
+import { isUuid, shortId } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TimeText from '@/components/TimeText.vue'
-import { parseWorking, useGradeLookups, useNarrow } from './components/grading'
+import {
+  formatPct,
+  formatScore,
+  fractionPercent,
+  mulDecimals,
+  parseWorking,
+  shares,
+  useGradeLookups,
+} from './components/grading'
 
 const props = defineProps<{ courseId: string; studentMemberId?: string }>()
 const { t } = useI18n()
@@ -34,10 +45,18 @@ const mine = computed(() => course.role === 'student')
 const student = computed(() => props.studentMemberId || (mine.value ? (course.myMemberId ?? undefined) : undefined))
 const isOwn = computed(() => !!student.value && student.value === course.myMemberId)
 
+// ---------------------------------------------------------------------------
+// Choosing a student
+// ---------------------------------------------------------------------------
+
 const pick = computed({
   get: () => props.studentMemberId,
   set: (v: string | string[] | undefined) => {
-    const id = typeof v === 'string' && v ? v : undefined
+    const id = typeof v === 'string' && v.trim() ? v.trim() : undefined
+    if (id && !isUuid(id)) {
+      ElMessage({ type: 'warning', message: t('grades.gradebook.notAnId') })
+      return
+    }
     void router.push({
       name: 'course-gradebook',
       params: { courseId: props.courseId, studentMemberId: id },
@@ -45,19 +64,90 @@ const pick = computed({
   },
 })
 
+if (!mine.value) void course.ensureMembers()
+/**
+ * The member list cannot be read (a tutor agent's seat): offer the students
+ * whose work or grades this seat sees instead, and take a pasted member id.
+ */
+const rosterUnreadable = computed(
+  () => !mine.value && (course.membersState === 'forbidden' || course.membersState === 'error'),
+)
+const seenStudents = useAsync(
+  async () => {
+    if (!rosterUnreadable.value) return []
+    const ids = new Set<string>()
+    async function collect(page: (after?: string) => Promise<{ ids: string[]; next?: string | null }>) {
+      let after: string | undefined
+      for (let i = 0; i < 5; i++) {
+        const o = await page(after)
+        o.ids.forEach((id) => ids.add(id))
+        if (!o.next) break
+        after = o.next
+      }
+    }
+    await Promise.all([
+      course.can('grade_read')
+        ? collect((after) =>
+            read('grade.list', { course_id: props.courseId, limit: 200, after }).then((o) => ({
+              ids: (o.grades ?? []).map((g) => g.student_member_id),
+              next: o.next,
+            })),
+          ).catch(() => undefined)
+        : undefined,
+      course.can('submission_read')
+        ? collect((after) =>
+            read('submission.list', { course_id: props.courseId, limit: 200, after }).then((o) => ({
+              ids: (o.submissions ?? []).map((x) => x.student_member_id),
+              next: o.next,
+            })),
+          ).catch(() => undefined)
+        : undefined,
+    ])
+    return [...ids]
+  },
+  { watch: [rosterUnreadable] },
+)
+const studentOptions = computed(() => {
+  const ids = new Set(seenStudents.data.value ?? [])
+  if (props.studentMemberId) ids.add(props.studentMemberId)
+  return [...ids]
+    .map((id) => ({
+      id,
+      label: course.memberName(id) ?? t('grades.gradebook.studentShort', { id: shortId(id) }),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
+
+// ---------------------------------------------------------------------------
+// The gradebook, and the totals written down at posting
+// ---------------------------------------------------------------------------
+
 const whatIf = ref(false)
 
-const book = useAsync(
+/** An answer, with what it was asked for: the page never shows one student's figures under another's name. */
+interface Book {
+  student: string
+  whatIf: boolean
+  out: ToolOut<'gradebook.get'>
+}
+const book = useAsync<Book | undefined>(
   async () => {
-    if (!student.value) return undefined
-    return read('gradebook.get', {
+    const s = student.value
+    const w = whatIf.value
+    if (!s) return undefined
+    const out = await read('gradebook.get', {
       course_id: props.courseId,
-      student_member_id: student.value,
-      treat_ungraded_as_zero: whatIf.value || undefined,
+      student_member_id: s,
+      treat_ungraded_as_zero: w || undefined,
     })
+    return { student: s, whatIf: w, out }
   },
   { watch: [student, whatIf], keepData: true },
 )
+/** The answer for the student in the path; while another's is all there is, nothing. */
+const shown = computed(() => (book.data.value?.student === student.value ? book.data.value : undefined))
+/** Whether the figures shown count ungraded work as zero: the answer's, not the switch's. */
+const shownWhatIf = computed(() => !!shown.value?.whatIf)
 
 // The totals written down at posting: live posted computed grades.
 const snapshots = useAsync(
@@ -93,9 +183,12 @@ interface Row {
   id: string
   name: string | null
   fraction: Decimal | null
+  /** Out of 100, to two places: Core's for a component, worked out alike for an assignment. */
+  percent: string | null
   complete: boolean
   /** The child's weight, or the assignment's points, as the parent weighs it. */
   weight: Decimal | null
+  /** Its part in the parent's result; null when it did not count. */
   share: number | null
   dropped: boolean
   dropLowest: number
@@ -108,7 +201,7 @@ interface Row {
   children?: Row[]
 }
 
-const lines = computed(() => book.data.value?.components ?? [])
+const lines = computed(() => shown.value?.out.components ?? [])
 const root = computed(() => lines.value[0])
 
 const tree = computed<Row[]>(() => {
@@ -125,21 +218,23 @@ const tree = computed<Row[]>(() => {
     seen.add(line.component_id)
     const c = lookups.components.value.get(line.component_id)
     const items = line.items ?? []
-    const total = items.reduce((s, i) => s + (Number(i.weight) || 0), 0)
+    const shareOf = shares(items)
     const children: Row[] = []
     for (const it of items) {
-      const sh = total ? (Number(it.weight) || 0) / total : null
+      const sh = shareOf.get(it.id) ?? null
       if (it.kind === 'component') {
         const child = byId.get(it.id)
         if (child && !seen.has(it.id)) children.push(componentRow(child, it.weight, sh, !!it.dropped, false))
       } else {
+        const graded = it.fraction !== null && it.fraction !== undefined
         children.push({
           key: `a:${it.id}`,
           kind: 'assignment',
           id: it.id,
           name: course.assignmentTitle(it.id),
           fraction: it.fraction,
-          complete: it.fraction !== null && it.fraction !== undefined,
+          percent: graded ? fractionPercent(it.fraction) : null,
+          complete: graded,
           weight: it.weight,
           share: sh,
           dropped: !!it.dropped,
@@ -156,6 +251,7 @@ const tree = computed<Row[]>(() => {
       id: line.component_id,
       name: isRoot ? t('grades.courseTotal') : line.name,
       fraction: line.fraction,
+      percent: line.percent === null || line.percent === undefined ? null : formatPct(line.percent),
       complete: line.complete,
       weight,
       share,
@@ -172,11 +268,21 @@ const tree = computed<Row[]>(() => {
   return [componentRow(root.value, null, null, false, true)]
 })
 
+/**
+ * The score behind a result: fraction × points, worked out exactly. The
+ * fraction is score ÷ points to sixteen places, so ten places give back the
+ * score as entered (9.125, not 9.13).
+ */
 function score(row: Row): string | null {
   if (row.fraction === null || row.fraction === undefined || row.points === null || row.points === undefined)
     return null
   if (row.rolled && row.kind === 'component') return null
-  return formatDecimal(Number(row.fraction) * Number(row.points))
+  const s = mulDecimals(row.fraction, row.points)
+  return s === null ? null : formatScore(s)
+}
+
+function shareText(row: Row): string | null {
+  return row.share === null ? null : fractionPercent(row.share)
 }
 
 function openGrades(row: Row) {
@@ -234,7 +340,26 @@ watch(
     <section class="app-card gradebook__controls">
       <div v-if="!mine" class="gradebook__control">
         <span class="gradebook__control-label">{{ t('grades.columns.student') }}</span>
-        <MemberSelect v-model="pick" role="student" include-inactive :placeholder="t('grades.gradebook.pickStudent')" />
+        <MemberSelect
+          v-if="!rosterUnreadable"
+          v-model="pick"
+          role="student"
+          include-inactive
+          :placeholder="t('grades.gradebook.pickStudent')"
+        />
+        <el-select
+          v-else
+          v-model="pick"
+          filterable
+          allow-create
+          default-first-option
+          :loading="seenStudents.loading.value"
+          :placeholder="t('grades.gradebook.pasteMemberId')"
+          :no-data-text="t('grades.gradebook.noSeenStudents')"
+          class="gradebook__pick"
+        >
+          <el-option v-for="o in studentOptions" :key="o.id" :value="o.id" :label="o.label" />
+        </el-select>
       </div>
       <div class="gradebook__control gradebook__control--grow">
         <el-switch v-model="whatIf" :disabled="!student" />
@@ -257,13 +382,15 @@ watch(
       <el-empty :description="t('grades.gradebook.pickFirst')" />
     </section>
 
+    <!-- Reloading the same student's figures keeps them under a spinner; another student's are not shown. -->
     <AsyncState
       v-else
-      :loading="book.loading.value && !book.data.value"
+      class="gradebook__body"
+      :loading="book.loading.value"
       :error="book.error.value"
-      :empty="!!book.data.value && !lines.length"
+      :empty="!!shown && !lines.length"
       :empty-text="t('grades.gradebook.empty')"
-      overlay
+      :overlay="!!shown"
       @retry="book.reload"
     >
       <template v-if="root">
@@ -274,7 +401,7 @@ watch(
               <span v-if="!isOwn && !mine" class="gradebook__who"> · <MemberName :id="student" /></span>
             </div>
             <div class="gradebook__total-value">
-              {{ formatFraction(root.fraction) }}
+              {{ formatPct(root.percent) }}
             </div>
             <div class="gradebook__total-tags">
               <el-tag v-if="root.fraction === null || root.fraction === undefined" type="info">
@@ -282,15 +409,15 @@ watch(
               </el-tag>
               <el-tag v-else-if="!root.complete" type="warning">{{ t('grades.gradebook.soFar') }}</el-tag>
               <el-tag v-else type="success">{{ t('grades.gradebook.complete') }}</el-tag>
-              <el-tag v-if="whatIf" type="danger" effect="plain">{{ t('grades.gradebook.whatIfTag') }}</el-tag>
+              <el-tag v-if="shownWhatIf" type="danger" effect="plain">{{ t('grades.gradebook.whatIfTag') }}</el-tag>
             </div>
           </div>
           <div class="gradebook__total-side">
             <p class="app-form-hint gradebook__explain">
-              {{ whatIf ? t('grades.gradebook.explainWhatIf') : t('grades.gradebook.explainSoFar') }}
+              {{ shownWhatIf ? t('grades.gradebook.explainWhatIf') : t('grades.gradebook.explainSoFar') }}
             </p>
             <el-alert
-              v-if="finalWritten && !whatIf"
+              v-if="finalWritten && !shownWhatIf"
               type="warning"
               :closable="false"
               show-icon
@@ -307,7 +434,7 @@ watch(
                   params: { courseId, gradeId: rootSnapshot.id },
                 }"
               >
-                {{ formatDecimal(rootSnapshot.score) }}%
+                {{ formatPct(rootSnapshot.score) }}
               </router-link>
               <TimeText :value="rootSnapshot.posted_at" relative />
             </p>
@@ -351,18 +478,18 @@ watch(
                   <!-- Phone width: what the other columns say, beneath the name -->
                   <span v-if="narrow" class="gradebook__sub">
                     <span v-if="score(row) !== null" class="gradebook__num"
-                      >{{ score(row) }} / {{ formatDecimal(row.points) }}</span
+                      >{{ score(row) }} / {{ formatScore(row.points) }}</span
                     >
                     <span v-if="row.weight !== null" class="gradebook__num app-muted">
                       {{ t('grades.gradebook.weight') }}
                       {{
                         row.kind === 'assignment'
                           ? t('grades.working.points', {
-                              n: formatDecimal(row.weight),
+                              n: formatScore(row.weight),
                             })
-                          : formatDecimal(row.weight)
+                          : formatScore(row.weight)
                       }}
-                      <template v-if="row.share !== null">({{ formatFraction(row.share) }})</template>
+                      <template v-if="shareText(row) !== null">({{ shareText(row) }})</template>
                     </span>
                     <el-tag v-if="row.dropped" size="small" type="info">{{ t('grades.working.dropped') }}</el-tag>
                     <el-tag
@@ -387,7 +514,7 @@ watch(
                       class="gradebook__num"
                     >
                       {{ t('grades.gradebook.snapshot') }}
-                      {{ formatDecimal(row.snapshot.score) }}%
+                      {{ formatPct(row.snapshot.score) }}
                     </router-link>
                   </span>
                 </div>
@@ -395,8 +522,8 @@ watch(
             </el-table-column>
             <el-table-column :label="t('grades.gradebook.percent')" min-width="110" align="right">
               <template #default="{ row }">
-                <span v-if="row.fraction !== null && row.fraction !== undefined" class="gradebook__num gradebook__pct">
-                  {{ formatFraction(row.fraction) }}
+                <span v-if="row.percent !== null" class="gradebook__num gradebook__pct">
+                  {{ row.percent }}
                 </span>
                 <span v-else class="app-muted">{{ t('grades.working.notGraded') }}</span>
               </template>
@@ -405,10 +532,10 @@ watch(
               <template #default="{ row }">
                 <span v-if="score(row) !== null" class="gradebook__num">
                   {{ score(row) }}
-                  <span class="app-muted">/ {{ formatDecimal(row.points) }}</span>
+                  <span class="app-muted">/ {{ formatScore(row.points) }}</span>
                 </span>
                 <span v-else-if="!row.rolled && row.points !== null" class="app-muted gradebook__num">
-                  — / {{ formatDecimal(row.points) }}
+                  — / {{ formatScore(row.points) }}
                 </span>
               </template>
             </el-table-column>
@@ -419,14 +546,12 @@ watch(
                     {{
                       row.kind === 'assignment'
                         ? t('grades.working.points', {
-                            n: formatDecimal(row.weight),
+                            n: formatScore(row.weight),
                           })
-                        : formatDecimal(row.weight)
+                        : formatScore(row.weight)
                     }}
                   </span>
-                  <span v-if="row.share !== null" class="app-muted gradebook__share">{{
-                    formatFraction(row.share)
-                  }}</span>
+                  <span class="app-muted gradebook__share">{{ shareText(row) ?? '—' }}</span>
                 </template>
               </template>
             </el-table-column>
@@ -464,7 +589,7 @@ watch(
                   class="gradebook__num"
                   :title="t('grades.gradebook.snapshotHint')"
                 >
-                  {{ formatDecimal(row.snapshot.score) }}%
+                  {{ formatPct(row.snapshot.score) }}
                 </router-link>
               </template>
             </el-table-column>
@@ -472,6 +597,7 @@ watch(
           <ul class="gradebook__legend app-form-hint">
             <li>{{ t('grades.gradebook.legendBucket') }}</li>
             <li>{{ t('grades.gradebook.legendParent') }}</li>
+            <li>{{ t('grades.gradebook.legendShare') }}</li>
             <li>{{ t('grades.gradebook.legendIncomplete') }}</li>
             <li>{{ t('grades.gradebook.legendSnapshot') }}</li>
           </ul>
@@ -503,6 +629,14 @@ watch(
 }
 .gradebook__control .app-form-hint {
   margin-top: 2px;
+}
+.gradebook__pick {
+  width: 260px;
+  max-width: 100%;
+}
+/* The cards inside are not siblings of the controls card, so .app-card + .app-card does not space them. */
+.gradebook__body {
+  margin-top: 16px;
 }
 .gradebook__total {
   display: flex;

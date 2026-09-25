@@ -1,15 +1,18 @@
 <script setup lang="ts">
 // The grades given for one submission, newest first. Those who grade see
 // drafts and superseded grades as well; everyone else sees the posted one.
+// Below them, any grade proposed for it that still waits for approval: it is
+// not a grade yet, but it decides what a grade entered now comes to.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
-import type { Decimal, GradeSummary } from '@/api/types'
+import type { ActionSummary, Decimal, GradeSummary } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { formatDecimal, formatPercent } from '@/utils/format'
+import PendingGradeProposals from './PendingGradeProposals.vue'
 
 const props = defineProps<{
   courseId: string
@@ -21,13 +24,19 @@ const props = defineProps<{
   error?: ApiError | null
   /** The student looking at their own work. */
   own?: boolean
+  /** The caller may not read grades here: known already, so none were asked for. */
+  forbidden?: boolean
+  /** Grades proposed for this work and waiting for approval. */
+  proposals?: ActionSummary[]
+  liveDraft?: GradeSummary
+  livePosted?: GradeSummary
 }>()
 const emit = defineEmits<{ retry: [] }>()
 const { t } = useI18n()
 
 const sorted = computed(() => [...props.grades].sort((a, b) => b.created_at.localeCompare(a.created_at)))
 const hasDraft = computed(() => props.grades.some((g) => g.state === 'draft'))
-const forbidden = computed(() => !!props.error?.isForbidden)
+const forbidden = computed(() => props.forbidden || !!props.error?.isForbidden)
 </script>
 
 <template>
@@ -43,12 +52,7 @@ const forbidden = computed(() => !!props.error?.isForbidden)
       </router-link>
     </h2>
     <p v-if="forbidden" class="app-muted sub-grades__none">{{ t('submissions.grades.forbidden') }}</p>
-    <AsyncState
-      v-else
-      :loading="loading && !grades.length"
-      :error="error"
-      @retry="emit('retry')"
-    >
+    <AsyncState v-else :loading="loading && !grades.length" :error="error" @retry="emit('retry')">
       <p v-if="!grades.length" class="app-muted sub-grades__none">
         {{ own ? t('submissions.grades.emptyStudent') : t('submissions.grades.empty') }}
       </p>
@@ -86,6 +90,14 @@ const forbidden = computed(() => !!props.error?.isForbidden)
       </ul>
       <p v-if="hasDraft && !own" class="app-form-hint">{{ t('submissions.grades.draftHint') }}</p>
     </AsyncState>
+    <PendingGradeProposals
+      v-if="proposals?.length"
+      :course-id="courseId"
+      :proposals="proposals"
+      :points-possible="pointsPossible"
+      :live-draft="liveDraft"
+      :live-posted="livePosted"
+    />
   </section>
 </template>
 

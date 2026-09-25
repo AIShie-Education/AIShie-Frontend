@@ -28,7 +28,7 @@ const seated = ref<{ memberId: string; name: string } | null>(null)
 const { run, pending } = useWrite('course.seat_instructor')
 
 watch(actorId, (v) => {
-  if (found.value && found.value.id !== v.trim()) found.value = null
+  if (found.value && found.value.id !== v.trim().toLowerCase()) found.value = null
   lookupError.value = null
 })
 
@@ -42,28 +42,38 @@ function suggest(q: string, cb: (items: Suggestion[]) => void) {
   cb(
     recent.value
       .filter((a) => a.kind !== 'system')
-      .filter((a) => !needle || `${a.display_name} ${a.email ?? ''} ${a.id}`.toLowerCase().includes(needle))
+      .filter((a) => !needle || `${a.display_name} ${a.id}`.toLowerCase().includes(needle))
       .map((a) => ({ value: a.id, name: a.display_name, kind: a.kind })),
   )
 }
 
+// Picking one suggestion and then another starts two look-ups: only the
+// latest counts, and only while the field still holds the id it asked for,
+// since "Seat as instructor" seats whoever was found.
+let lookupSeq = 0
+const current = () => actorId.value.trim().toLowerCase()
+
 async function lookUp() {
-  const id = actorId.value.trim()
+  const seq = ++lookupSeq
+  const id = current()
   found.value = null
   lookupError.value = null
   if (!isUuid(id)) {
+    looking.value = false
     lookupError.value = t('admin.seat.invalidId')
     return
   }
   looking.value = true
   try {
     const a = await read('actor.get', { actor_id: id })
-    found.value = a
     remember(a)
+    if (seq === lookupSeq && a.id === current()) found.value = a
   } catch (e) {
-    lookupError.value = isApiError(e) && e.isNotFound ? t('admin.seat.notFound') : errorMessage(e)
+    if (seq === lookupSeq && id === current()) {
+      lookupError.value = isApiError(e) && e.isNotFound ? t('admin.seat.notFound') : errorMessage(e)
+    }
   } finally {
-    looking.value = false
+    if (seq === lookupSeq) looking.value = false
   }
 }
 
