@@ -1,0 +1,9 @@
+# The AIShiteru Core the front end is checked against, in one place. CI's end
+# to end tests run against it (scripts/ci-core.sh), and api/catalogue.json must
+# be its tool catalogue. The tag names Core's commit; the digest is what is
+# pulled, so the tag moving on changes nothing here.
+#
+# To move it (README, Moving the Core pin): take the new image's tag and
+# digest from the package's page or Core's CI run, write them below, refresh
+# api/catalogue.json from a Core of that version, and push both together.
+ghcr.io/aishiteru-lms/aishiteru-core:sha-de4f548@sha256:a19d5119c365406379cd84ed3496bb41e055b28b099027f0142ce6c64e0d3e46

@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# Starts an AIShiteru Core for the end-to-end tests, and stops it again. It is
+# a throwaway: a database of its own, a root actor whose password and API token
+# are made up for the run, files in a temporary directory, and the limits that
+# would slow the tests down turned off. Never point it at a database people
+# use.
+#
+# CI runs the image pinned in .github/core-image, in Docker. Without Docker,
+# give it a binary of Core instead:
+#
+#   CORE_BIN=../AIShiteru-Core/bin/aishiterud DATABASE_URL=postgres:///aishiteru_e2e \
+#     scripts/ci-core.sh start
+#   . "${TMPDIR:-/tmp}/aishiteru-ci-core/env"    # E2E_CORE_URL, E2E_ROOT_TOKEN, E2E_PASSWORD
+#   npx playwright test
+#   scripts/ci-core.sh stop
+#
+# start creates the database when it is missing (with psql, on DATABASE_URL's
+# server), and stop drops it again. A database that has been bootstrapped
+# before is refused: bootstrap runs once per database.
+#
+# In GitHub Actions, start masks the token and the password in the log and
+# puts the three E2E_* variables in $GITHUB_ENV for the steps after it. stop
+# leaves Core's log in core.log, next to the env file, for the job to upload.
+#
+#   CORE_BIN     a binary to run instead of the pinned image
+#   CORE_IMAGE   an image to run instead of the pinned one
+#   CORE_PORT    where Core listens on 127.0.0.1 (8080)
+#   CORE_DIR     where the env file, the log and the files go
+#   E2E_PORT     the port of the web server the tests use (5173), for TRUSTED_ORIGINS
+set -euo pipefail
+
+here=$(cd "$(dirname "$0")/.." && pwd)
+DIR=${CORE_DIR:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/aishiteru-ci-core}
+DIR=${DIR//\/\//\/} # macOS's TMPDIR ends in a /
+PORT=${CORE_PORT:-8080}
+URL=http://127.0.0.1:$PORT
+WEB_PORT=${E2E_PORT:-5173}
+CONTAINER=aishiteru-ci-core
+
+die() { echo "ci-core: $*" >&2; exit 1; }
+in_actions() { [ "${GITHUB_ACTIONS:-}" = true ]; }
+
+if [ -n "${CORE_BIN:-}" ]; then
+  mode=binary
+  [ -x "$CORE_BIN" ] || die "CORE_BIN=$CORE_BIN is not a program"
+else
+  mode=docker
+  IMAGE=${CORE_IMAGE:-$(grep -v -e '^#' -e '^[[:space:]]*$' "$here/.github/core-image" | tail -n 1)}
+  [ -n "$IMAGE" ] || die ".github/core-image names no image"
+fi
+
+# core ARGS: a one-off aishiterud command, with standard input passed on.
+core() {
+  if [ "$mode" = binary ]; then
+    "$CORE_BIN" "$@"
+  else
+    docker run --rm -i --network host --user "$(id -u):$(id -g)" -e DATABASE_URL "$IMAGE" "$@"
+  fi
+}
+
+# The database: its name, and the server's maintenance database to create and
+# drop it from, both taken from DATABASE_URL.
+database() {
+  [ -n "${DATABASE_URL:-}" ] || die "set DATABASE_URL to a database of the tests' own, e.g. postgres:///aishiteru_e2e"
+  export DATABASE_URL
+  local base=${DATABASE_URL%%\?*}
+  local query=${DATABASE_URL#"$base"}
+  [[ $base == *://*/* ]] || die "DATABASE_URL names no database: $base"
+  dbname=${base##*/}
+  maint=${base%/*}/postgres$query
+  # Quoted into SQL below, so a plain name only.
+  [[ $dbname =~ ^[a-z_][a-z0-9_]*$ ]] || die "the database in DATABASE_URL, $dbname, is not a plain lower-case name"
+  [ "$dbname" != postgres ] || die "DATABASE_URL names the maintenance database; give the tests one of their own"
+}
+
+# From the moment start makes anything, a start that fails takes down what it
+# started, and leaves only Core's log.
+failed() {
+  local rc=$?
+  if [ "$rc" != 0 ]; then
+    stop >/dev/null 2>&1 || true
+    echo "ci-core: Core's log is $DIR/core.log" >&2
+  fi
+}
+
+start() {
+  if [ -e "$DIR/pid" ] || [ -e "$DIR/container" ]; then
+    die "a Core this script started is still recorded in $DIR: run scripts/ci-core.sh stop first"
+  fi
+  database
+  # Anything listening there, whatever it answers, would get the tests'
+  # requests: only "could not connect" (7) will do.
+  local rc=0
+  curl -s -o /dev/null --max-time 2 "$URL/" || rc=$?
+  [ "$rc" = 7 ] || die "something already listens on 127.0.0.1:$PORT: stop it, or set CORE_PORT"
+  trap failed EXIT
+  mkdir -p "$DIR"
+  rm -rf "$DIR/blobs" "$DIR/core.log" "$DIR/env"
+  mkdir "$DIR/blobs"
+  : > "$DIR/core.log"
+
+  if [ "$mode" = docker ]; then
+    command -v docker >/dev/null 2>&1 || die "there is no docker here: run a binary of Core with CORE_BIN"
+    if ! docker pull -q "$IMAGE"; then
+      if in_actions; then
+        echo "::error::Could not pull $IMAGE. The package is private, and this repository's workflows can read it only once an owner of the AIShiteru-LMS organization (or an admin of the package) grants it, once: https://github.com/orgs/AIShiteru-LMS/packages/container/aishiteru-core/settings → Manage Actions access → Add Repository → AIShiteru-Frontend, role Read. (If the error above is not denied, unauthorized or not found, GHCR may be having trouble: re-run the job.)"
+        exit 1
+      fi
+      die "could not pull $IMAGE: docker login ghcr.io with a token that can read the package (classic, read:packages), or run a binary of Core with CORE_BIN"
+    fi
+  fi
+  local version commit want
+  version=$(core version </dev/null)
+  echo "Core: $version (${CORE_BIN:-$IMAGE})"
+  # The tag in the pin names Core's commit, and the digest decides what runs:
+  # they must agree, or the pin says one thing and tests another.
+  if [ "$mode" = docker ] && [[ $IMAGE == *:sha-*@sha256:* ]]; then
+    want=${IMAGE##*:sha-}
+    want=${want%%@*}
+    commit=$(printf '%s\n' "$version" | sed -n 's/^[^(]*(\([^,]*\),.*/\1/p')
+    if [ -z "$commit" ]; then
+      echo "ci-core: cannot read the commit from «$version»; not comparing it with the pin" >&2
+    elif [ "$commit" != "$want" ]; then
+      die "the pin's tag says commit $want, but its digest is commit $commit: fix .github/core-image"
+    fi
+  fi
+
+  if command -v psql >/dev/null 2>&1; then
+    if [ "$(psql -X -At -d "$maint" -c "SELECT 1 FROM pg_database WHERE datname = '$dbname'")" != 1 ]; then
+      psql -X -q -v ON_ERROR_STOP=1 -d "$maint" -c "CREATE DATABASE \"$dbname\""
+      (umask 077 && printf '%s\n' "$DATABASE_URL" > "$DIR/created-db")
+      echo "created the database $dbname"
+    fi
+  else
+    echo "no psql here: taking the database $dbname to exist"
+  fi
+  core migrate up </dev/null
+  core seed </dev/null
+
+  local password token
+  password=$(openssl rand -hex 16)
+  # The token is the only thing bootstrap prints on standard output; what it
+  # says around it goes to the log.
+  token=$(printf '%s\n' "$password" | core bootstrap --name Root --email root@e2e.test --password-stdin 2>>"$DIR/core.log") ||
+    die "bootstrap failed; a database that was bootstrapped before cannot be used again: $(tail -n 3 "$DIR/core.log")"
+  echo "(scripts/ci-core.sh keeps it in $DIR/env, not here)" >> "$DIR/core.log"
+  [[ $token =~ ^ais_[A-Za-z0-9_-]+$ ]] || die "bootstrap printed no token"
+  if in_actions; then
+    echo "::add-mask::$token"
+    echo "::add-mask::$password"
+  fi
+
+  # Tests sign in dozens of times a minute from one address, and a proposal
+  # the tests make should not wait a minute to be swept.
+  local -a settings=(
+    "HTTP_ADDR=127.0.0.1:$PORT"
+    "PUBLIC_URL=$URL"
+    "TRUSTED_ORIGINS=http://localhost:$WEB_PORT,http://127.0.0.1:$WEB_PORT"
+    INSECURE_COOKIES=true
+    RATE_LIMIT_PER_MINUTE=0
+    SIGN_IN_ATTEMPTS_PER_MINUTE=10000
+    JOBS_INTERVAL=5s
+    "BLOB_FS_ROOT=$DIR/blobs"
+  )
+  if [ "$mode" = binary ]; then
+    # Its output goes to the log, not to the step's: GitHub Actions would
+    # otherwise wait for it to end before ending the step.
+    env "${settings[@]}" nohup "$CORE_BIN" serve </dev/null >>"$DIR/core.log" 2>&1 &
+    echo $! > "$DIR/pid"
+  else
+    local -a flags=()
+    local e
+    for e in "${settings[@]}"; do flags+=(-e "$e"); done
+    # One left by a run of this script that was killed.
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    docker run -d --name "$CONTAINER" --network host --user "$(id -u):$(id -g)" \
+      -v "$DIR/blobs:$DIR/blobs" -e DATABASE_URL "${flags[@]}" "$IMAGE" serve >/dev/null
+    echo "$CONTAINER" > "$DIR/container"
+  fi
+
+  local i
+  for i in $(seq 1 60); do
+    if curl -fsS --max-time 2 "$URL/healthz" 2>/dev/null | grep -q '"status":"ok"'; then break; fi
+    if ! running || [ "$i" = 60 ]; then
+      if [ "$mode" = docker ]; then docker logs --tail 20 "$CONTAINER" 2>&1 | cat >&2 || true; else tail -n 20 "$DIR/core.log" >&2; fi
+      die "Core did not come up on $URL"
+    fi
+    sleep 0.5
+  done
+
+  (
+    umask 077
+    printf "export E2E_CORE_URL='%s'\nexport E2E_ROOT_TOKEN='%s'\nexport E2E_PASSWORD='%s'\n" "$URL" "$token" "$password" > "$DIR/env"
+  )
+  if in_actions; then
+    printf 'E2E_CORE_URL=%s\nE2E_ROOT_TOKEN=%s\nE2E_PASSWORD=%s\n' "$URL" "$token" "$password" >> "$GITHUB_ENV"
+  fi
+  echo "Core is up on $URL, on the database $dbname; root's API token and password are in $DIR/env:"
+  echo "  . $DIR/env"
+  trap - EXIT
+}
+
+running() {
+  if [ -f "$DIR/pid" ]; then
+    kill -0 "$(cat "$DIR/pid")" 2>/dev/null
+  else
+    [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = true ]
+  fi
+}
+
+# The container's log, into core.log; the binary writes there itself.
+logs() {
+  if [ -f "$DIR/container" ]; then docker logs "$CONTAINER" >>"$DIR/core.log" 2>&1 || true; fi
+}
+
+stop() {
+  local pid i
+  if [ -f "$DIR/pid" ]; then
+    pid=$(cat "$DIR/pid")
+    if kill "$pid" 2>/dev/null; then
+      for i in $(seq 1 40); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+      if kill -0 "$pid" 2>/dev/null; then kill -9 "$pid" 2>/dev/null || true; fi
+    fi
+    rm -f "$DIR/pid"
+    echo "stopped Core ($pid)"
+  fi
+  if [ -f "$DIR/container" ]; then
+    logs
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    rm -f "$DIR/container"
+    echo "stopped Core ($CONTAINER); its log is $DIR/core.log"
+  fi
+  if [ -f "$DIR/created-db" ]; then
+    DATABASE_URL=$(cat "$DIR/created-db")
+    database
+    psql -X -q -d "$maint" -c "DROP DATABASE IF EXISTS \"$dbname\" WITH (FORCE)" && echo "dropped the database $dbname"
+    rm -f "$DIR/created-db"
+  fi
+  rm -rf "$DIR/env" "$DIR/blobs"
+}
+
+case ${1:-} in
+  start) start ;;
+  stop) stop ;;
+  *) echo "usage: scripts/ci-core.sh start|stop (see the top of the script)" >&2; exit 2 ;;
+esac
