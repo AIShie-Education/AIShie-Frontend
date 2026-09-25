@@ -8,7 +8,7 @@ export default {
   ssoDefault: '單一登入',
   or: '或',
   token: '使用 API 權杖',
-  tokenHint: '貼上 API 權杖，即可用該使用者（包括代理）的角度檢視系統。權杖只保存在此瀏覽器分頁。',
+  tokenHint: '貼上 API 權杖，即可用該參與者（包括代理）的角度檢視系統。權杖只保存在此瀏覽器分頁。',
   tokenPlaceholder: 'ais_…',
   tokenSignIn: '以權杖繼續',
   failed: '電子郵件或密碼不正確。',

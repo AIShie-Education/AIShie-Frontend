@@ -49,7 +49,7 @@ export async function signIn(page: Page, who: DemoActor) {
 }
 
 /** Signs in with the actor's API token, as the app's token option does. */
-export async function signInWithToken(page: Page, who: DemoActor) {
+export async function signInWithToken(page: Page, who: Pick<DemoActor, 'token'>) {
   await page.addInitScript(() => {
     try {
       localStorage.setItem('aishiteru.locale', 'en')
@@ -62,8 +62,55 @@ export async function signInWithToken(page: Page, who: DemoActor) {
   await expect(page).not.toHaveURL(/\/login/)
 }
 
+/** The platform's root, by the token the run was given. */
+export function root(): Pick<DemoActor, 'token'> {
+  const token = process.env.E2E_ROOT_TOKEN
+  if (!token) throw new Error('E2E_ROOT_TOKEN is required')
+  return { token }
+}
+
+/** A path inside the run's course: coursePath('grades') → /courses/<id>/grades. */
+export function coursePath(sub = '') {
+  const d = demo()
+  return `/courses/${d.course.id}${sub ? `/${sub}` : ''}`
+}
+
+/** The course's section tabs. */
+export function courseTab(page: Page, name: string | RegExp) {
+  return page.getByRole('navigation', { name: 'Course sections' }).getByRole('link', { name })
+}
+
+/** Picks an option from an Element Plus select, opened by clicking `trigger`. */
+export async function pickOption(page: Page, trigger: ReturnType<Page['locator']>, option: string | RegExp) {
+  await trigger.click()
+  await page
+    .locator('.el-select-dropdown:visible .el-select-dropdown__item')
+    .filter({ hasText: option })
+    .first()
+    .click()
+}
+
+/** The message Element Plus pops up after a write (ElMessage). */
+export function toast(page: Page, text: string | RegExp) {
+  return page.locator('.el-message').filter({ hasText: text })
+}
+
+/** Core's reply: `result` for a read or a write carried out, `action_id` for a proposal. */
+export interface CoreReply {
+  status?: string
+  action_id?: string
+  /** Each tool's own shape (see src/api/generated/tools.ts). */
+  result?: any
+  error?: { code: string; message: string; details?: Record<string, unknown> }
+}
+
 /** Calls a Core tool directly, for arranging what a test needs. */
-export async function call(token: string, method: 'GET' | 'POST', path: string, body?: unknown) {
+export async function call(
+  token: string,
+  method: 'GET' | 'POST',
+  path: string,
+  body?: unknown,
+): Promise<{ status: number; body: CoreReply }> {
   const d = demo()
   const res = await fetch(d.core + path, {
     method,

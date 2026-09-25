@@ -5,7 +5,7 @@ export default {
   noCoursesAdmin: '你尚未加入任何課程。作為管理員，你可以建立課程並指派導師。',
   goAdmin: '前往平台管理',
   memberId: '成員 ID',
-  expires: '席位於 {t} 到期',
+  expires: '席位到期：{t}',
   scopeStudents: '學生範圍：{scope}',
   scopeAssignments: '作業範圍：{scope}',
   filterPlaceholder: '篩選課程',

@@ -1,4 +1,161 @@
-// Route and navigation titles only; the views fill in the rest.
 export default {
   title: 'Grading scheme',
+  subtitle:
+    'How the course total is built: its components, what each weighs, and the assignments that count toward them.',
+  actions: {
+    addComponent: 'Add component',
+    addChild: 'Add sub-component',
+    edit: 'Edit',
+    move: 'Move',
+    more: 'Actions for {name}',
+    expandAll: 'Expand all',
+    collapseAll: 'Collapse all',
+    toggle: 'Show or hide what is beneath {name}',
+  },
+  glance: {
+    title: 'Course total at a glance',
+    none: 'Nothing counts toward the course total yet. Add a component under it to start.',
+    zero: 'The components under the course total all weigh 0, so none of them counts yet.',
+    unseen:
+      'The course total may hold assignments that are not shown to you, so what each counts for is not worked out here.',
+  },
+  tree: {
+    title: 'Components',
+    count: '{n} component | {n} components',
+    cols: {
+      name: 'Component',
+      weight: 'Weight',
+      share: 'Share',
+      ofTotal: 'Of total',
+      drop: 'Drop lowest',
+      points: 'Points',
+      order: 'Order',
+      actions: 'Actions',
+    },
+    colHelp: {
+      weight: 'Relative to its siblings',
+      share: 'Its part of the component above it. Assignments share their bucket by points.',
+      ofTotal: 'Its nominal part of the course total, before dropping the lowest and before leaving ungraded work out',
+      drop: 'How many of the lowest items beneath it are left out',
+      points: 'Points possible: on a component graded directly, or on an assignment',
+      order: 'Sort order among siblings',
+    },
+    kind: {
+      root: 'Course total',
+      group: 'Weighted group',
+      bucket: 'Assignment bucket',
+      direct: 'Graded directly',
+      empty: 'Empty',
+      unseen: 'Rolled up',
+    },
+    kindHelp: {
+      root: 'The top of the tree: worked out from everything beneath it.',
+      group: 'The weighted average of its sub-components.',
+      bucket: 'Total score over total points of its assignments: a 100-point project outweighs a 10-point quiz.',
+      direct: 'One grade entered on it, over its points possible, as for an exam.',
+      empty: 'Nothing hangs from it yet. Hang assignments on it from an assignment’s page, or add sub-components here.',
+      unseen:
+        'Worked out from the assignments hung on it or the sub-components under it. None that you can see hangs from it, but it may hold assignments that are not shown to you.',
+    },
+    byPoints: 'by points',
+    zeroWeight: 'Weight 0: shown, but it counts for nothing.',
+    zeroPoints: 'Worth 0 points: neither counted nor missed.',
+    unpublished: 'Not published',
+    unpublishedHelp: 'Not counted until it is published: Core leaves unpublished work out of every total.',
+    ignored: 'Counts toward nothing: its component has sub-components.',
+    frozen: {
+      placement: 'Grades have been entered beneath it: its place in the scheme no longer changes.',
+      points: 'Grades have been entered on it: its points possible no longer change.',
+    },
+    checking: 'Checking where grades have already been entered…',
+    partial:
+      'Not every grade could be checked, so some parts that can no longer change may not be marked. Core refuses such a change anyway.',
+    factsFailed: 'Could not check where grades have been entered. Core still refuses any change its rules forbid.',
+    assignmentsHidden: 'Assignments are not shown: you cannot read this course’s assignments.',
+    assignmentsFailed: 'The assignments could not be loaded.',
+    assignmentsPartial:
+      'You see only the assignments within your reach. A component may hold others, so an assignment’s share of it is not worked out here, and one that shows none may still hold some.',
+  },
+  uncounted: {
+    title: 'Not counted toward the course total',
+    help: 'Assignments not hung on any component are practice work: they can be graded, but they are not part of the course total. Choose a component on the assignment’s page to count one.',
+    points: '{n} point | {n} points',
+  },
+  reasons: {
+    direct: '“{name}” is graded directly and cannot have sub-components.',
+    assignments: '“{name}” holds assignments and cannot also have sub-components.',
+    self: 'A component cannot go beneath itself.',
+    root: 'The course total is the root of the scheme and stays there.',
+    unseen: '“{name}” may hold assignments that are not shown to you; if it does, Core refuses this.',
+  },
+  form: {
+    createTitle: 'Add a component',
+    editTitle: 'Edit “{name}”',
+    parent: 'Under',
+    name: 'Name',
+    namePlaceholder: 'e.g. Quizzes, Final exam',
+    type: 'How it is graded',
+    typeRolled: 'Rolled up',
+    typeRolledHelp: 'From the assignments hung on it, or from sub-components added under it',
+    typeDirect: 'Graded directly',
+    typeDirectHelp: 'One grade entered on it for each student, as for an exam',
+    points: 'Points possible',
+    weight: 'Weight',
+    weightHelp: 'Relative to its siblings: 60 and 40 are the same as 3 and 2. At 0 it is shown but counts for nothing.',
+    sharePreview: 'That is {share} of “{parent}”.',
+    shareNone: 'Its siblings all weigh 0, so none of them counts.',
+    dropLowest: 'Drop lowest',
+    dropLowestHelp:
+      'How many of the lowest-scoring items beneath it to leave out of its grade. It never leaves out all of them.',
+    sortOrder: 'Sort order',
+    sortOrderHelp: 'Lower comes first among its siblings.',
+    rootNote:
+      'The course total is worked out from what is beneath it. It has no weight of its own and is never graded directly.',
+    rolledGroup: 'It has sub-components, so it is rolled up from them.',
+    rolledBucket: 'It holds assignments, so it is rolled up from them.',
+    pointsFrozen: 'Grades have been entered on it, so its points possible no longer change.',
+    clearFrozen: 'Grades have been entered on it, so it stays graded directly.',
+    directBlocked:
+      'It carries totals that were posted while it was rolled up. Add a new component for what is graded directly.',
+    directUnseen: 'It may hold assignments that are not shown to you; if it does, Core refuses to grade it directly.',
+    needsApproval: 'Changes to the grading scheme wait for someone to approve them before they take effect.',
+    notRewritten:
+      'Totals students have already been shown are not rewritten now: they change when grades beneath them are next posted or regraded.',
+    nothingChanged: 'Nothing was changed.',
+    negative: 'Cannot be negative',
+  },
+  move: {
+    title: 'Move “{name}”',
+    help: 'Everything beneath it moves with it.',
+    newParent: 'New place',
+    current: 'current place',
+    submit: 'Move',
+    sharePreview: 'With its weight of {weight}, it will be {share} of “{parent}”.',
+    noTarget: 'There is nowhere else it can go.',
+  },
+  outcome: {
+    created: 'Component added',
+    updated: 'Component saved',
+    moved: 'Component moved',
+    proposed: 'Your change to the scheme waits for approval. It is not part of the scheme until someone approves it.',
+    viewMine: 'See my actions',
+  },
+  help: {
+    title: 'How the course total is worked out',
+    tree: 'The scheme is a tree. At the top is the course total; each component beneath it is worked out from what hangs below it, and every grade is a percentage of what it was out of.',
+    bucket:
+      'An assignment bucket adds up its assignments’ scores and divides by their points, so each assignment counts by its points: a 100-point project outweighs a 10-point quiz. An assignment counts once it is published.',
+    group:
+      'A weighted group averages its sub-components by weight. Weights are relative to their siblings: 60 and 40 are the same as 3 and 2. A weight of 0 is shown but counts for nothing.',
+    direct:
+      'A component graded directly, such as an exam, has its own points possible and one grade entered on it for each student.',
+    drop: 'Drop lowest leaves out that many of the lowest percentages beneath a component — never all of them.',
+    ungraded:
+      'Work that has no grade yet is left out and the rest is scaled up to fill its place, giving a “grade so far”. Final grades can count ungraded work as zero instead.',
+    frozen:
+      'Once a grade has been entered — a draft as much as a posted one — for an assignment or a directly graded component, its points possible and its place in the scheme no longer change.',
+    posted:
+      'Changing a weight or drop lowest does not rewrite totals students have already been shown; they are brought up to date when grades beneath them are next posted or regraded.',
+  },
+  empty: 'This course has no grading scheme.',
 }

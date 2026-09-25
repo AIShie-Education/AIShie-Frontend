@@ -52,8 +52,13 @@ export function formatBytes(n: number | null | undefined): string {
   return `${v.toLocaleString(undefined, { maximumFractionDigits: i ? 1 : 0 })} ${units[i]}`
 }
 
+/**
+ * A short form of an id for showing, not for finding things by. Core's ids
+ * are UUIDv7, whose first characters are a timestamp shared by everything
+ * made in the same moment, so the short form is taken from the random end.
+ */
 export function shortId(id: string | null | undefined): string {
-  return id ? id.slice(0, 8) : '—'
+  return id ? id.replace(/-/g, '').slice(-8) : '—'
 }
 
 /** Is s a decimal Core will take? (Its schema's pattern, less the exponent.) */
@@ -65,4 +70,57 @@ export function isDecimal(s: string | number | null | undefined): boolean {
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export function isUuid(s: string | null | undefined): boolean {
   return !!s && UUID_RE.test(s.trim())
+}
+
+/**
+ * The UUID just before id in the order Postgres sorts UUIDs (byte by byte,
+ * which is the order of the hex digits as one big number).
+ */
+export function uuidPredecessor(id: string): string | null {
+  const hex = id.trim().replace(/-/g, '').toLowerCase()
+  if (!/^[0-9a-f]{32}$/.test(hex)) return null
+  const n = BigInt('0x' + hex)
+  if (n === 0n) return null
+  const p = (n - 1n).toString(16).padStart(32, '0')
+  return `${p.slice(0, 8)}-${p.slice(8, 12)}-${p.slice(12, 16)}-${p.slice(16, 20)}-${p.slice(20)}`
+}
+
+// The usual extension for the types a course's files mostly come in, for
+// naming a download whose name has none.
+const EXTENSIONS: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/zip': 'zip',
+  'application/json': 'json',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.oasis.opendocument.text': 'odt',
+  'text/plain': 'txt',
+  'text/markdown': 'md',
+  'text/csv': 'csv',
+  'text/html': 'html',
+  'text/x-python': 'py',
+  'text/x-c': 'c',
+  'text/x-java-source': 'java',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+}
+
+/**
+ * A name to save a file under: the name given, with the usual extension for
+ * its content type added when it has none ("Week 1 slides" as a PDF →
+ * "Week 1 slides.pdf"). Characters no file system takes are replaced.
+ */
+export function downloadName(name: string | null | undefined, contentType?: string | null): string {
+  let n = (name ?? '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim() || 'download'
+  const ext = contentType ? EXTENSIONS[contentType.split(';')[0].trim().toLowerCase()] : undefined
+  // "notes.log" has one; "Syllabus v2.1" does not.
+  if (ext && !/\.[A-Za-z][A-Za-z0-9]{0,7}$/.test(n)) n = `${n}.${ext}`
+  return n
 }

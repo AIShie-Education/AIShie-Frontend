@@ -34,6 +34,10 @@ export default {
   },
   labels: {
     id: 'ID',
+    scoped: '受範圍限制',
+    scopedHelp: '只限於席位範圍內的學生與作業',
+    pasteMemberId: '貼上成員 ID',
+    changed: '已更改',
     name: '名稱',
     title: '標題',
     description: '說明',

@@ -2,38 +2,64 @@
 // Picks files and uploads each at once, the way Core takes files: an upload
 // URL from document.upload_url, the bytes PUT there, and an upload token back
 // to hand to whichever tool attaches the file. v-model is the list of files
-// uploaded so far.
-import { ref } from 'vue'
+// uploaded so far; v-model:uploading says whether any picked file is still on
+// its way, since handing work in or saving a form then would go ahead without
+// it.
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { uploadFile, type UploadKind, type UploadedFile } from '@/api/http'
 import { notifyError } from '@/composables/useErrors'
 import { formatBytes } from '@/utils/format'
 
 const model = defineModel<UploadedFile[]>({ default: () => [] })
+/** True while any picked file is still uploading. */
+const uploading = defineModel<boolean>('uploading', { default: false })
 const props = defineProps<{ courseId: string; kind: UploadKind; multiple?: boolean; disabled?: boolean; accept?: string }>()
 const { t } = useI18n()
 
 interface InFlight {
+  key: number
   name: string
   progress: number
 }
 const inFlight = ref<InFlight[]>([])
+let seq = 0
 const input = ref<HTMLInputElement | null>(null)
+watch(
+  () => inFlight.value.length > 0,
+  (v) => (uploading.value = v),
+)
+// Gone from the page, it no longer holds anything up: what is still on its
+// way goes nowhere.
+onBeforeUnmount(() => {
+  if (uploading.value) uploading.value = false
+})
 
 async function onPick(ev: Event) {
-  const files = Array.from((ev.target as HTMLInputElement).files ?? [])
-  ;(ev.target as HTMLInputElement).value = ''
-  for (const file of files) {
-    const entry: InFlight = { name: file.name, progress: 0 }
-    inFlight.value.push(entry)
-    try {
-      const done = await uploadFile(props.courseId, props.kind, file, (f) => (entry.progress = Math.round(f * 100)))
-      model.value = props.multiple ? [...model.value, done] : [done]
-    } catch (e) {
-      notifyError(e, file.name)
-    } finally {
-      inFlight.value = inFlight.value.filter((x) => x !== entry)
-    }
+  const el = ev.target as HTMLInputElement
+  const files = Array.from(el.files ?? [])
+  el.value = ''
+  // Every picked file is in flight from before the first upload starts until
+  // its own ends, so "uploading" stays true from the first file to the last.
+  const keys = files.map(() => ++seq)
+  inFlight.value = [...inFlight.value, ...files.map((file, i) => ({ key: keys[i]!, name: file.name, progress: 0 }))]
+  await Promise.all(files.map((file, i) => upload(file, keys[i]!)))
+}
+
+// Each file in flight is kept by its key: the list is reactive, so what is
+// read back from it is a proxy, never the object that was put in.
+async function upload(file: File, key: number) {
+  const setProgress = (f: number) => {
+    const entry = inFlight.value.find((x) => x.key === key)
+    if (entry) entry.progress = Math.round(f * 100)
+  }
+  try {
+    const done = await uploadFile(props.courseId, props.kind, file, setProgress)
+    inFlight.value = inFlight.value.filter((x) => x.key !== key)
+    model.value = props.multiple ? [...model.value, done] : [done]
+  } catch (e) {
+    inFlight.value = inFlight.value.filter((x) => x.key !== key)
+    notifyError(e, file.name)
   }
 }
 
@@ -57,11 +83,18 @@ function remove(i: number) {
         <el-icon><Document /></el-icon>
         <span class="file-uploader__name">{{ f.fileName }}</span>
         <span class="file-uploader__size">{{ formatBytes(f.size) }}</span>
-        <el-button link type="danger" :disabled="disabled" @click="remove(i)">
-          <el-icon><Close /></el-icon>
+        <el-button
+          link
+          type="danger"
+          :disabled="disabled"
+          :aria-label="t('common.actions.remove')"
+          :title="t('common.actions.remove')"
+          @click="remove(i)"
+        >
+          <el-icon aria-hidden="true"><Close /></el-icon>
         </el-button>
       </li>
-      <li v-for="f in inFlight" :key="f.name">
+      <li v-for="f in inFlight" :key="f.key">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span class="file-uploader__name">{{ f.name }}</span>
         <el-progress :percentage="f.progress" :stroke-width="4" class="file-uploader__progress" />
@@ -86,17 +119,21 @@ function remove(i: number) {
   gap: 8px;
   padding: 2px 0;
   font-size: 13px;
+  min-width: 0;
 }
 .file-uploader__name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
   max-width: 320px;
 }
 .file-uploader__size {
   color: var(--el-text-color-secondary);
+  flex-shrink: 0;
 }
 .file-uploader__progress {
   width: 140px;
+  flex-shrink: 0;
 }
 </style>

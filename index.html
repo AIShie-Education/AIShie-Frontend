@@ -5,6 +5,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <!-- Images load from this origin only: Markdown written by students and agents must not
+         call out to other hosts (utils/markdown.ts turns such images into links; this is the backstop). -->
+    <meta http-equiv="Content-Security-Policy" content="img-src 'self' data: blob:" />
     <title>AIShiteru</title>
   </head>
   <body>

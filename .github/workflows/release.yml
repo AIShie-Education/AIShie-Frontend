@@ -1,0 +1,147 @@
+name: Release
+
+# The only place a release is made, and it runs on version tags only, from
+# main:
+#
+#   git tag -s v0.1.0 -m "v0.1.0" && git push origin v0.1.0
+#
+# It checks the tagged commit again, all of CI (ci.yml, called), then
+# publishes the build those checks passed on the release page: a tarball of
+# dist/, its SHA-256, and notes that say which Core it was checked against. A
+# tag with a hyphen (v0.1.0-rc.1) is a pre-release, and is deployed to staging
+# through deploy.yml. A stable release is not deployed by itself: production
+# is deployed by running the Deploy workflow by hand, from the tag, and the
+# run's summary says how.
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+# Each run block is bash with -o pipefail: a pipeline fails when any command
+# in it does, not only when its last one does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  tag:
+    name: the tag is on main
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - run: |
+          [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] \
+            || { echo "::error::$GITHUB_REF_NAME is not a version tag, like v1.2.3 or v1.2.3-rc.1"; exit 1; }
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME does not point at a commit on main"; exit 1; }
+
+  # A green run from last week proves nothing about this commit on today's
+  # runners, so everything CI checks is checked again, on the tagged commit,
+  # and its build is the one released.
+  ci:
+    needs: tag
+    permissions:
+      contents: read
+      packages: read # the end-to-end tests pull Core's image
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the notes start at the tag before
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: web-${{ github.sha }}
+          path: dist
+      - name: Pack, and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$GITHUB_REF_NAME
+          name=aishiteru-web-$tag.tar.gz
+          scripts/pack-dist.sh dist "$name"
+          sha256sum "$name" > "$name.sha256"
+          # The notes cover what is new since the release before: for a stable
+          # release, the stable one before, pre-releases included. The latest
+          # release is the highest stable version, said each time: left to
+          # itself, GitHub makes every new release the latest, a fix to an
+          # older line too.
+          flags=()
+          if [[ $tag == *-* ]]; then
+            flags=(--prerelease)
+            prev=$(git describe --tags --abbrev=0 "$GITHUB_SHA^" 2>/dev/null || true)
+          else
+            prev=$(git tag --list 'v[0-9]*' --merged "$GITHUB_SHA" --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vxF "$tag" | head -n 1 || true)
+            top=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+            if [ "$top" = "$tag" ]; then flags+=(--latest); else flags+=(--latest=false); fi
+          fi
+          if [ -n "$prev" ]; then flags+=(--notes-start-tag "$prev"); fi
+          pin=$(grep -v -e '^#' -e '^[[:space:]]*$' .github/core-image | tail -n 1)
+          core=${pin##*:sha-}
+          core=${core%%@*}
+          {
+            echo "## Checked against AIShiteru Core $core"
+            echo
+            echo "Its end-to-end tests ran against \`$pin\`, and its API types are that Core's tool catalogue: deploy it beside that version of Core, or a later one that keeps its tools."
+            echo
+            echo "## Deploying"
+            echo
+            echo "\`$name\` is the build (\`dist/\`), for a server set up with \`deploy/setup-web.sh\`: the Deploy workflow ships it (docs/deploying.md). \`$name.sha256\` is its checksum."
+          } > "$RUNNER_TEMP/notes.md"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            # A re-run: the release is there, perhaps without its files.
+            gh release upload "$tag" "$name" "$name.sha256" --clobber
+          else
+            gh release create "$tag" "$name" "$name.sha256" --verify-tag --title "$tag" \
+              --notes-file "$RUNNER_TEMP/notes.md" --generate-notes "${flags[@]}"
+          fi
+
+  # A pre-release goes to staging by itself, with the build its checks passed.
+  staging:
+    needs: publish
+    if: contains(github.ref_name, '-')
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+      artifact: web-${{ github.sha }}
+    secrets: inherit # the deploy target's credentials: see deploy.yml
+
+  # A stable release goes to production only when somebody runs Deploy for it.
+  production:
+    needs: publish
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: How to deploy it
+        run: |
+          {
+            echo "## $GITHUB_REF_NAME is released"
+            echo
+            echo "To deploy it to production: Actions → Deploy → Run workflow, with"
+            echo
+            echo "- Use workflow from: tag \`$GITHUB_REF_NAME\`"
+            echo "- environment: \`production\`"
+            echo "- ref: empty (or \`$GITHUB_REF_NAME\`)"
+            echo
+            echo "Deploy ships the release's own tarball, and says what it is before it goes on."
+          } | tee -a "$GITHUB_STEP_SUMMARY"

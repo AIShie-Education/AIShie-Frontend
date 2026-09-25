@@ -7,7 +7,12 @@
 //
 //   npm run gen:api -- --from https://test.aishie.app
 //
-// Without --from, the snapshot is read as it is.
+// Without --from, the snapshot is read as it is. With --check as well, the
+// server's catalogue is only compared with the snapshot, as this script would
+// write it, and nothing is written; CI does this against the Core it pins
+// (.github/core-image):
+//
+//   npm run gen:api -- --from http://127.0.0.1:8080 --check
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -18,6 +23,8 @@ const snapshot = resolve(root, 'api/catalogue.json')
 const out = resolve(root, 'src/api/generated/tools.ts')
 
 const fromIdx = process.argv.indexOf('--from')
+const check = process.argv.includes('--check')
+if (check && fromIdx === -1) throw new Error('--check compares a server with the snapshot: give it --from')
 let catalogue
 if (fromIdx !== -1) {
   const base = process.argv[fromIdx + 1]?.replace(/\/+$/, '')
@@ -26,7 +33,18 @@ if (fromIdx !== -1) {
   if (!res.ok) throw new Error(`GET ${base}/v1/tools: ${res.status}`)
   const body = await res.json()
   catalogue = { tools: [...body.tools].sort((a, b) => a.name.localeCompare(b.name)) }
-  await writeFile(snapshot, JSON.stringify(sortKeys(catalogue), null, 2) + '\n')
+  const text = JSON.stringify(sortKeys(catalogue), null, 2) + '\n'
+  if (check) {
+    const kept = await readFile(snapshot, 'utf8')
+    if (kept === text) {
+      console.log(`api/catalogue.json is the catalogue of ${base}: ${catalogue.tools.length} tools`)
+      process.exit(0)
+    }
+    console.error(`Core's tool catalogue changed: run npm run gen:api -- --from ${base}`)
+    for (const line of differences(JSON.parse(kept).tools ?? [], catalogue.tools)) console.error(`  ${line}`)
+    process.exit(1)
+  }
+  await writeFile(snapshot, text)
   console.log(`snapshot updated from ${base}: ${catalogue.tools.length} tools`)
 } else {
   catalogue = JSON.parse(await readFile(snapshot, 'utf8'))
@@ -38,6 +56,19 @@ function sortKeys(v) {
     return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])]))
   }
   return v
+}
+
+// Which tools the server has that the snapshot has not, and the other way
+// round, and which of the rest differ, by name.
+function differences(kept, served) {
+  const byName = (tools) => new Map(tools.map((t) => [t.name, JSON.stringify(sortKeys(t))]))
+  const a = byName(kept)
+  const b = byName(served)
+  const lines = []
+  for (const name of b.keys()) if (!a.has(name)) lines.push(`new on the server: ${name}`)
+  for (const name of a.keys()) if (!b.has(name)) lines.push(`gone from the server: ${name}`)
+  for (const [name, t] of b) if (a.has(name) && a.get(name) !== t) lines.push(`changed: ${name}`)
+  return lines.length ? lines : ['the same tools, written differently: regenerate the snapshot']
 }
 
 // course.get → CourseGet; member.update_perms → MemberUpdatePerms
