@@ -26,6 +26,10 @@ export type PermsSource = 'exact' | 'preset' | 'unknown'
 
 const PAGE = 200
 
+function toError(e: unknown): ApiError {
+  return e instanceof ApiError ? e : new ApiError({ status: 0, code: 'internal', message: String(e) })
+}
+
 export const useCourseStore = defineStore('course', () => {
   const courseId = ref<string | null>(null)
   const course = ref<Course | null>(null)
@@ -41,6 +45,8 @@ export const useCourseStore = defineStore('course', () => {
   const membersState = ref<'idle' | 'loading' | 'loaded' | 'forbidden' | 'error'>('idle')
   const assignments = ref<Map<string, AssignmentSummary>>(new Map())
   const assignmentsState = ref<'idle' | 'loading' | 'loaded' | 'forbidden' | 'error'>('idle')
+  const membersError = ref<ApiError | null>(null)
+  const assignmentsError = ref<ApiError | null>(null)
   let membersPromise: Promise<void> | null = null
   let assignmentsPromise: Promise<void> | null = null
 
@@ -50,11 +56,52 @@ export const useCourseStore = defineStore('course', () => {
   /** Writes are refused in an archived course, from everyone. */
   const writable = computed(() => !archived.value)
 
+  /**
+   * Levels learnt from Core's own refusals, whatever else is known: a seat
+   * whose read of its own membership was refused does not hold member_read.
+   */
+  const refused = ref<Set<Perm>>(new Set())
+
   /** The caller's level for a permission, or null when it cannot be known. */
   function level(p: Perm): AutonomyLevel | null {
+    if (refused.value.has(p)) return 'denied'
     if (permsSource.value === 'unknown') return null
     return perms.value[p] ?? 'denied'
   }
+
+  /**
+   * The level a tool gated by several permissions runs at: the lowest of
+   * them (regrading is grade_submit and grade_post). Null if any is unknown
+   * and none is known to be denied.
+   */
+  function levelOfAll(ps: Perm[]): AutonomyLevel | null {
+    const levels = ps.map(level)
+    if (levels.includes('denied')) return 'denied'
+    if (levels.includes(null)) return null
+    const order: AutonomyLevel[] = ['denied', 'confirm_required', 'pending_review', 'autonomous']
+    return levels.reduce<AutonomyLevel>((lo, l) => (order.indexOf(l!) < order.indexOf(lo) ? l! : lo), 'autonomous')
+  }
+
+  function canAll(ps: Perm[]): boolean {
+    return levelOfAll(ps) !== 'denied'
+  }
+
+  function needsApprovalAll(ps: Perm[]): boolean {
+    return levelOfAll(ps) === 'confirm_required'
+  }
+
+  /**
+   * Whether the caller sees every grade in the course, drafts included: needs
+   * a grading permission and a scope that reaches every student and every
+   * assignment. Only known for certain when the seat was read exactly.
+   */
+  const seesAllGrades = computed(
+    () =>
+      permsSource.value === 'exact' &&
+      (can('grade_submit') || can('grade_post')) &&
+      seat.value?.student_scope === 'all' &&
+      seat.value?.assignment_scope === 'all',
+  )
 
   /**
    * Whether to offer something gated by p. Unknown counts as yes: Core will
@@ -77,10 +124,13 @@ export const useCourseStore = defineStore('course', () => {
     perms.value = {}
     permsSource.value = 'unknown'
     error.value = null
+    refused.value = new Set()
     members.value = new Map()
     membersState.value = 'idle'
+    membersError.value = null
     assignments.value = new Map()
     assignmentsState.value = 'idle'
+    assignmentsError.value = null
     membersPromise = null
     assignmentsPromise = null
   }
@@ -121,16 +171,25 @@ export const useCourseStore = defineStore('course', () => {
       return
     } catch (e) {
       if (!(e instanceof ApiError) || !(e.isForbidden || e.isNotFound)) throw e
+      // member.get is gated by member_read and nothing else, so a refusal
+      // means the seat does not hold it (or is not live, which refuses all).
+      if (e.isForbidden) refused.value = new Set([...refused.value, 'member_read'])
     }
     // Not allowed to read the member list: guess from the built-in preset
-    // named after the roster role, where there is one.
+    // named after the roster role, where there is one. Agents are seated as
+    // assistants; the two built-in agent presets are told apart by their
+    // scope (a grader is listed to assignments, a tutor to students).
     const byRole: Record<string, string | undefined> = {
       student: 'student',
       ta: 'ta',
       instructor: 'instructor',
       observer: 'observer',
     }
-    const presetName = byRole[m.role]
+    let presetName = byRole[m.role]
+    if (m.role === 'assistant') {
+      if (m.assignment_scope === 'listed' && m.student_scope === 'all') presetName = 'grader'
+      else if (m.student_scope === 'listed' && m.assignment_scope === 'all') presetName = 'tutor'
+    }
     if (!presetName) {
       permsSource.value = 'unknown'
       return
@@ -155,7 +214,13 @@ export const useCourseStore = defineStore('course', () => {
     const id = courseId.value
     if (!id || membersState.value === 'loaded' || membersState.value === 'forbidden') return Promise.resolve()
     if (membersPromise) return membersPromise
+    if (level('member_read') === 'denied') {
+      // Asking would only be refused.
+      membersState.value = 'forbidden'
+      return Promise.resolve()
+    }
     membersState.value = 'loading'
+    membersError.value = null
     membersPromise = (async () => {
       const map = new Map<string, MemberSummary>()
       let after: string | undefined
@@ -171,7 +236,9 @@ export const useCourseStore = defineStore('course', () => {
         membersState.value = 'loaded'
       } catch (e) {
         if (courseId.value !== id) return
-        membersState.value = e instanceof ApiError && e.isForbidden ? 'forbidden' : 'error'
+        membersError.value = toError(e)
+        membersState.value = membersError.value.isForbidden ? 'forbidden' : 'error'
+        if (membersError.value.isForbidden) refused.value = new Set([...refused.value, 'member_read'])
         membersPromise = null
       }
     })()
@@ -182,7 +249,12 @@ export const useCourseStore = defineStore('course', () => {
     const id = courseId.value
     if (!id || assignmentsState.value === 'loaded' || assignmentsState.value === 'forbidden') return Promise.resolve()
     if (assignmentsPromise) return assignmentsPromise
+    if (level('document_read') === 'denied') {
+      assignmentsState.value = 'forbidden'
+      return Promise.resolve()
+    }
     assignmentsState.value = 'loading'
+    assignmentsError.value = null
     assignmentsPromise = (async () => {
       const map = new Map<string, AssignmentSummary>()
       let after: string | undefined
@@ -198,7 +270,8 @@ export const useCourseStore = defineStore('course', () => {
         assignmentsState.value = 'loaded'
       } catch (e) {
         if (courseId.value !== id) return
-        assignmentsState.value = e instanceof ApiError && e.isForbidden ? 'forbidden' : 'error'
+        assignmentsError.value = toError(e)
+        assignmentsState.value = assignmentsError.value.isForbidden ? 'forbidden' : 'error'
         assignmentsPromise = null
       }
     })()
@@ -239,8 +312,15 @@ export const useCourseStore = defineStore('course', () => {
     error,
     members,
     membersState,
+    membersError,
     assignments,
     assignmentsState,
+    assignmentsError,
+    refused,
+    seesAllGrades,
+    levelOfAll,
+    canAll,
+    needsApprovalAll,
     myMemberId,
     role,
     archived,

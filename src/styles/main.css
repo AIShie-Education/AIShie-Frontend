@@ -83,6 +83,23 @@ a {
 .el-form-item__content .el-select {
   width: 100%;
 }
+/* A dialog never runs off a phone's screen, whatever width it asks for. */
+.el-dialog {
+  max-width: calc(100vw - 24px);
+}
+@media (max-width: 600px) {
+  .el-dialog {
+    --el-dialog-margin-top: 8vh;
+  }
+  .el-message-box {
+    max-width: calc(100vw - 24px);
+  }
+}
+/* The app's navigation, when it is a drawer on a narrow screen. */
+.app-nav-drawer .el-drawer__body {
+  padding: 0;
+  background: var(--app-aside-bg);
+}
 
 /* Rendered Markdown (course material, submissions, feedback). */
 .markdown-body {

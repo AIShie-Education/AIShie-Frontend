@@ -2,7 +2,7 @@
 // actors seen recently (Core has no actor directory), and where agents
 // connect.
 import { onScopeDispose, ref } from 'vue'
-import { API_BASE, ApiError, read } from '@/api/http'
+import { ApiError, MCP_ENDPOINT, read } from '@/api/http'
 import type { Actor, ListItem } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
@@ -48,8 +48,7 @@ export async function findCourse(id: string, notFoundMessage: string): Promise<C
 
 /** Where an agent's MCP client connects: Core's origin, /mcp. */
 export function mcpEndpoint(): string {
-  const base = API_BASE || (typeof window !== 'undefined' ? window.location.origin : '')
-  return `${base}/mcp`
+  return MCP_ENDPOINT
 }
 
 // ---------------------------------------------------------------------------

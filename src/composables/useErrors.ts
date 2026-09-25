@@ -1,5 +1,7 @@
+import { h } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
 import { ApiError } from '@/api/http'
+import { shortId } from '@/utils/format'
 import { i18n } from '@/i18n'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
@@ -39,7 +41,10 @@ export function notifyError(e: unknown, title?: string) {
     ElNotification({
       type: e.actionStatus === 'denied' ? 'warning' : 'error',
       title: title ?? t('common.outcome.failed'),
-      message: `${msg}\n${t('common.errors.recordedAs', { id: e.actionId!.slice(0, 8) })}`,
+      message: h('div', [
+        h('div', msg),
+        h('div', { class: 'app-muted', style: 'margin-top: 4px; font-size: 12px' }, t('common.errors.recordedAs', { id: shortId(e.actionId) })),
+      ]),
       duration: 8000,
     })
     return

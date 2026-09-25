@@ -14,26 +14,36 @@ const props = defineProps<{ courseId: string; kind: UploadKind; multiple?: boole
 const { t } = useI18n()
 
 interface InFlight {
+  key: number
   name: string
   progress: number
 }
 const inFlight = ref<InFlight[]>([])
+let seq = 0
 const input = ref<HTMLInputElement | null>(null)
 
 async function onPick(ev: Event) {
   const files = Array.from((ev.target as HTMLInputElement).files ?? [])
   ;(ev.target as HTMLInputElement).value = ''
-  for (const file of files) {
-    const entry: InFlight = { name: file.name, progress: 0 }
-    inFlight.value.push(entry)
-    try {
-      const done = await uploadFile(props.courseId, props.kind, file, (f) => (entry.progress = Math.round(f * 100)))
-      model.value = props.multiple ? [...model.value, done] : [done]
-    } catch (e) {
-      notifyError(e, file.name)
-    } finally {
-      inFlight.value = inFlight.value.filter((x) => x !== entry)
-    }
+  await Promise.all(files.map(upload))
+}
+
+// Each file in flight is kept by its key: the list is reactive, so what is
+// read back from it is a proxy, never the object that was put in.
+async function upload(file: File) {
+  const key = ++seq
+  inFlight.value = [...inFlight.value, { key, name: file.name, progress: 0 }]
+  const setProgress = (f: number) => {
+    const entry = inFlight.value.find((x) => x.key === key)
+    if (entry) entry.progress = Math.round(f * 100)
+  }
+  try {
+    const done = await uploadFile(props.courseId, props.kind, file, setProgress)
+    inFlight.value = inFlight.value.filter((x) => x.key !== key)
+    model.value = props.multiple ? [...model.value, done] : [done]
+  } catch (e) {
+    inFlight.value = inFlight.value.filter((x) => x.key !== key)
+    notifyError(e, file.name)
   }
 }
 
@@ -61,7 +71,7 @@ function remove(i: number) {
           <el-icon><Close /></el-icon>
         </el-button>
       </li>
-      <li v-for="f in inFlight" :key="f.name">
+      <li v-for="f in inFlight" :key="f.key">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span class="file-uploader__name">{{ f.name }}</span>
         <el-progress :percentage="f.progress" :stroke-width="4" class="file-uploader__progress" />

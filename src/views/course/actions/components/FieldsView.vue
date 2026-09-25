@@ -6,7 +6,7 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
-import { formatDecimal, formatPercent, isUuid } from '@/utils/format'
+import { formatDecimal, formatPercent, isUuid, shortId } from '@/utils/format'
 import IdText from '@/components/IdText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -204,7 +204,7 @@ function json(v: unknown) {
         <span v-else-if="kindOf(k, obj[k]) === 'assignmentList'" class="fields-view__inline">
           <span v-if="!strings(obj[k]).length" class="fields-view__muted">{{ t('common.labels.none') }}</span>
           <MaybeLink v-for="id in strings(obj[k])" :key="id" :to="routeFor(courseId, 'assignment', id)">
-            {{ course.assignmentTitle(id) ?? id.slice(0, 8) }}
+            {{ course.assignmentTitle(id) ?? shortId(id) }}
           </MaybeLink>
         </span>
         <MaybeLink v-else-if="kindOf(k, obj[k]) === 'member'" :to="course.can('member_read') ? routeFor(courseId, 'member_id', obj[k] as string) : null">

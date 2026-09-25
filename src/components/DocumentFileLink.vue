@@ -5,7 +5,15 @@ import { ref } from 'vue'
 import { blobUrl, read } from '@/api/http'
 import { notifyError } from '@/composables/useErrors'
 
-const props = defineProps<{ courseId: string; documentId: string; versionId?: string | null; title: string }>()
+const props = defineProps<{
+  courseId: string
+  documentId: string
+  versionId?: string | null
+  /** The document's title: the link's text, unless the default slot gives another. */
+  title: string
+  /** The name a Markdown-only version is saved under; defaults to the title. */
+  fileName?: string
+}>()
 const busy = ref(false)
 
 async function open() {
@@ -27,7 +35,7 @@ async function open() {
       const blob = new Blob([doc.version.body_md], { type: 'text/markdown' })
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
-      a.download = `${props.title || 'document'}.md`
+      a.download = `${props.fileName || props.title || 'document'}.md`
       a.click()
       setTimeout(() => URL.revokeObjectURL(a.href), 1000)
     }
@@ -42,6 +50,6 @@ async function open() {
 <template>
   <el-button link type="primary" :loading="busy" @click="open">
     <el-icon v-if="!busy"><Paperclip /></el-icon>
-    <span>{{ title }}</span>
+    <span><slot>{{ title }}</slot></span>
   </el-button>
 </template>

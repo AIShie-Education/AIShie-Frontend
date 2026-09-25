@@ -9,6 +9,10 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const target = env.AISHITERU_API_TARGET || 'https://test.aishie.app'
+  // The dev server does not forward /mcp (Core refuses what a proxy forwards
+  // there unless it is a trusted one), so pages that tell people where an
+  // agent connects point at the proxied Core itself.
+  if (mode === 'development' && !env.VITE_CORE_PUBLIC_URL) process.env.VITE_CORE_PUBLIC_URL = target
   const proxied = {
     target,
     changeOrigin: true,

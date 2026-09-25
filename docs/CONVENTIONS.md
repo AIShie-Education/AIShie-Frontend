@@ -66,6 +66,14 @@ role, or unknown (`permsSource`). Therefore:
 
 - `course.can(perm)` decides what to **offer** (show a button, a tab). Unknown counts as yes.
   Core decides what is **allowed**; its refusal is shown by `useWrite`/`AsyncState`.
+- A tool gated by several permissions runs at the lowest of them: `course.levelOfAll([...])`,
+  `course.canAll([...])`, `course.needsApprovalAll([...])` (regrading is `grade_submit` and
+  `grade_post`). `course.seesAllGrades` says whether the caller certainly sees every grade, drafts
+  included (exact permissions, a grading permission, and both scopes `all`).
+- A seat's permissions are guessed for agents too: an `assistant` listed to assignments is taken
+  for the built-in `grader`, one listed to students for `tutor`. A refusal Core has already given
+  (reading one's own seat needs `member_read`) is remembered in `course.refused`, and
+  `ensureMembers()` does not ask again when the answer is sure to be no.
 - `course.needsApproval(perm)` → the action will become a proposal. Say so next to the button
   (e.g. an `el-tag` "Needs approval" / `t('enums.level.confirm_required')`).
 - `course.writable` is false in an archived course: disable every write control there.
@@ -89,14 +97,22 @@ role, or unknown (`permsSource`). Therefore:
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else.
 - Forms: `el-form` with `label-position="top"` and rules; dialogs with `el-dialog` (`width="560px"`,
-  `destroy-on-close`), the submit button bound to `pending` from `useWrite`. Confirm destructive or
+  `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
+  bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
   mobile width in mind (`min-width` on columns, not fixed widths everywhere).
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - Views are responsive down to phone width, and work in light and dark (use Element Plus CSS
-  variables, never hard-coded colours).
+  variables, never hard-coded colours). `useNarrow()` / `useMediaQuery()` from
+  `@/composables/useMediaQuery` switch a wide table to cards on a phone.
+- Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
+  first characters are a timestamp shared by everything made in the same moment.
+- `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
+  `<PermEditor :changed :warn>` marks rows; `<DocumentFileLink>` takes its link text in the default
+  slot; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
+- Formatting: Prettier with the repo's `.prettierrc` (no semicolons, single quotes, width 120).
 
 ## Text
 
@@ -109,6 +125,9 @@ role, or unknown (`permsSource`). Therefore:
   rather than repeating them.
 - Core's error messages are English and are shown as they are, after a translated lead
   (`errorMessage()` does this).
+- Some vocabularies are keyed by Core's own dotted names (`enums.event`: `grade.posted`, …).
+  vue-i18n splits a key path on dots, so look those up with a bracketed segment:
+  ``t(`enums.event['${type}']`)``.
 
 ## Files each part owns
 

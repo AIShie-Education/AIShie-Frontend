@@ -34,6 +34,8 @@ export default {
   },
   labels: {
     id: 'ID',
+    scoped: 'scoped',
+    changed: 'changed',
     name: 'Name',
     title: 'Title',
     description: 'Description',

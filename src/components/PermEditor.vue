@@ -14,6 +14,10 @@ const props = defineProps<{
   /** Shown beside each row for comparison, e.g. what the preset gives. */
   baseline?: PermLevels
   size?: 'small' | 'default'
+  /** Rows to mark as changed, e.g. from what the seat holds now. */
+  changed?: Perm[]
+  /** A warning to show under a row, e.g. that it is above the granter's own level. */
+  warn?: Partial<Record<Perm, string>>
 }>()
 const { t } = useI18n()
 
@@ -30,14 +34,28 @@ function value(p: Perm): AutonomyLevel | undefined {
 
 <template>
   <div class="perm-editor">
-    <div v-for="p in PERMS" :key="p" class="perm-editor__row">
+    <div
+      v-for="p in PERMS"
+      :key="p"
+      class="perm-editor__row"
+      :class="{ 'is-changed': changed?.includes(p), 'is-warned': !!warn?.[p] }"
+    >
       <div class="perm-editor__label">
         <span class="perm-editor__name">
           {{ t(`enums.perm.${p}`) }}
-          <el-tag v-if="SCOPED_PERMS.includes(p)" size="small" type="info" effect="plain" round>scoped</el-tag>
+          <el-tag v-if="SCOPED_PERMS.includes(p)" size="small" type="info" effect="plain" round>{{
+            t('common.labels.scoped')
+          }}</el-tag>
+          <el-tag v-if="changed?.includes(p)" size="small" type="warning" effect="light" round>{{
+            t('common.labels.changed')
+          }}</el-tag>
         </span>
         <span class="perm-editor__help">{{ t(`enums.permHelp.${p}`) }}</span>
         <code class="perm-editor__key">{{ p }}</code>
+        <span v-if="warn?.[p]" class="perm-editor__warn">
+          <el-icon><WarningFilled /></el-icon>
+          {{ warn[p] }}
+        </span>
       </div>
       <div class="perm-editor__value">
         <StatusTag v-if="readonly" vocab="level" :value="value(p) ?? 'denied'" />
@@ -92,5 +110,26 @@ function value(p: Perm): AutonomyLevel | undefined {
 }
 .perm-editor__value {
   flex-shrink: 0;
+}
+.perm-editor__row.is-changed {
+  background: var(--el-color-warning-light-9);
+  margin: 0 -8px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.perm-editor__warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--el-color-danger);
+  margin-top: 2px;
+}
+@media (max-width: 520px) {
+  .perm-editor__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
 }
 </style>

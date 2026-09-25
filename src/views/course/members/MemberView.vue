@@ -19,6 +19,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import { shortId } from '@/utils/format'
 import RefusalAlert from './components/RefusalAlert.vue'
 import RescopeDialog from './components/RescopeDialog.vue'
 import {
@@ -472,7 +473,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               <ul v-else class="member__scope-list">
                 <li v-for="id in listedAssignments" :key="id">
                   <router-link :to="{ name: 'course-assignment', params: { courseId, assignmentId: id } }">
-                    {{ course.assignmentTitle(id) ?? id.slice(0, 8) }}
+                    {{ course.assignmentTitle(id) ?? shortId(id) }}
                   </router-link>
                 </li>
               </ul>

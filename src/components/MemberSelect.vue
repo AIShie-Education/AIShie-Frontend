@@ -12,6 +12,8 @@ const props = defineProps<{
   /** Only members with this roster role, e.g. 'student'. */
   role?: Role
   includeInactive?: boolean
+  /** Which seat statuses to offer; overrides includeInactive. Core takes a paused student in a list, never a removed one. */
+  statuses?: ('active' | 'paused' | 'removed')[]
   placeholder?: string
   disabled?: boolean
   clearable?: boolean
@@ -22,7 +24,10 @@ onMounted(() => void course.ensureMembers())
 
 const options = computed(() =>
   [...course.members.values()]
-    .filter((m) => (!props.role || m.role === props.role) && (props.includeInactive || m.status === 'active'))
+    .filter((m) => !props.role || m.role === props.role)
+    .filter((m) =>
+      props.statuses ? props.statuses.includes(m.status as 'active') : props.includeInactive || m.status === 'active',
+    )
     .sort((a, b) => a.display_name.localeCompare(b.display_name)),
 )
 const free = computed(() => course.membersState === 'forbidden' || course.membersState === 'error')

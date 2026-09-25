@@ -52,8 +52,13 @@ export function formatBytes(n: number | null | undefined): string {
   return `${v.toLocaleString(undefined, { maximumFractionDigits: i ? 1 : 0 })} ${units[i]}`
 }
 
+/**
+ * A short form of an id for showing, not for finding things by. Core's ids
+ * are UUIDv7, whose first characters are a timestamp shared by everything
+ * made in the same moment, so the short form is taken from the random end.
+ */
 export function shortId(id: string | null | undefined): string {
-  return id ? id.slice(0, 8) : '—'
+  return id ? id.replace(/-/g, '').slice(-8) : '—'
 }
 
 /** Is s a decimal Core will take? (Its schema's pattern, less the exponent.) */

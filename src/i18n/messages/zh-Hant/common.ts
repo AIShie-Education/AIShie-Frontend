@@ -34,6 +34,8 @@ export default {
   },
   labels: {
     id: 'ID',
+    scoped: '受範圍限制',
+    changed: '已更改',
     name: '名稱',
     title: '標題',
     description: '說明',

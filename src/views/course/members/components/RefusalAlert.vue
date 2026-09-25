@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
 import { errorMessage } from '@/composables/useErrors'
 import { explainRefusal } from './seat'
+import { shortId } from '@/utils/format'
 
 const props = defineProps<{ error: ApiError | null }>()
 const emit = defineEmits<{ close: [] }>()
@@ -37,7 +38,7 @@ const raw = computed(() => (props.error && explained.value ? props.error.message
         <code>{{ raw }}</code>
       </div>
       <div v-if="error.actionId" class="refusal__recorded">
-        {{ t('common.errors.recordedAs', { id: error.actionId.slice(0, 8) }) }}
+        {{ t('common.errors.recordedAs', { id: shortId(error.actionId) }) }}
       </div>
     </div>
   </el-alert>

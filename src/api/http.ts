@@ -100,6 +100,19 @@ export function isApiError(e: unknown): e is ApiError {
 /** Where Core is. Empty means this origin (and, in development, the proxy). */
 export const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '')
 
+/**
+ * Core's own public origin (its PUBLIC_URL), for telling people where an
+ * agent connects over MCP. In development this is the proxied Core, not the
+ * dev server, which does not forward /mcp.
+ */
+export const CORE_ORIGIN: string =
+  (import.meta.env.VITE_CORE_PUBLIC_URL ?? '').replace(/\/+$/, '') ||
+  (API_BASE ? new URL(API_BASE, 'http://x').origin : '') ||
+  (typeof window !== 'undefined' ? window.location.origin : '')
+
+/** Where an agent's MCP client connects (streamable HTTP, bearer token). */
+export const MCP_ENDPOINT = `${CORE_ORIGIN}/mcp`
+
 const TOKEN_KEY = 'aishiteru.bearer'
 
 /**
