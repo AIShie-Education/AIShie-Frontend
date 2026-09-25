@@ -15,6 +15,11 @@ export default {
     approvals: 'Approvals',
     myActions: 'My actions',
     activity: 'Activity',
+    adminNoSeat: {
+      title: 'You have no seat in this course',
+      body: 'Administering the platform does not open a course: what anyone sees inside one comes from their seat in it. Seat this course’s instructor, or yourself, on its administration page.',
+      action: 'Go to the course’s administration page',
+    },
     paused: 'Your seat in this course is paused: nothing you do here will be accepted until it is resumed.',
   },
 }

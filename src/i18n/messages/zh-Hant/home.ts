@@ -10,4 +10,11 @@ export default {
   scopeAssignments: '作業範圍：{scope}',
   filterPlaceholder: '篩選課程',
   showArchived: '顯示已封存',
+  unseated: {
+    title: '你管理但尚未加入的課程',
+    explain:
+      '平台管理員的身分不會讓你進入課程：每個人在課程裡看到什麼，取決於他在該課程的席位。要打開這些課程，請到課程的管理頁指派導師，或指派你自己。',
+    manage: '管理課程',
+    more: '在平台管理查看全部（{n}）',
+  },
 }

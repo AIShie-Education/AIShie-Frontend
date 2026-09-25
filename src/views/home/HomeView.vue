@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { read } from '@/api/http'
+import type { Course } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
 import { useAsync } from '@/composables/useAsync'
 import AsyncState from '@/components/AsyncState.vue'
@@ -25,6 +27,44 @@ const courses = computed(() => {
     .sort((a, b) => `${a.code}${a.section}`.localeCompare(`${b.code}${b.section}`))
 })
 const hasArchived = computed(() => session.liveMemberships.some((m) => m.course_status === 'archived'))
+
+// An administrator creates courses without joining them, and a platform role
+// opens no course: what anyone sees inside one comes from their seat in it.
+// So the courses an administrator has no seat in are listed apart, each with
+// the way in — seating its instructor, or themselves, on its admin page.
+// Whether a course already has an instructor cannot be known without a seat
+// in it, so each is offered as "manage", not as "seat an instructor". The
+// newest come first — the one just created is the one most likely wanted —
+// and the rest are in Administration, which lists and filters them all.
+const ADMIN_LIST_LIMIT = 200
+const SHOWN = 12
+const platformCourses = useAsync(
+  async (): Promise<{ courses: Course[]; more: boolean; terms: Map<string, string> }> => {
+    if (!session.isAdmin) return { courses: [], more: false, terms: new Map() }
+    const [out, terms] = await Promise.all([
+      read('course.list', { limit: ADMIN_LIST_LIMIT }),
+      read('term.list', {}).catch(() => ({ terms: [] })),
+    ])
+    return {
+      courses: out.courses ?? [],
+      more: !!out.next,
+      terms: new Map((terms.terms ?? []).map((term) => [term.id, term.name])),
+    }
+  },
+  { keepData: true },
+)
+const unseatedAll = computed(() => {
+  const seated = new Set(session.liveMemberships.map((m) => m.course_id))
+  const q = filter.value.trim().toLowerCase()
+  return (platformCourses.data.value?.courses ?? [])
+    .filter((c) => !seated.has(c.id))
+    .filter((c) => showArchived.value || c.status !== 'archived')
+    .filter((c) => !q || `${c.code} ${c.section} ${c.title}`.toLowerCase().includes(q))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+})
+const unseated = computed(() => unseatedAll.value.slice(0, SHOWN))
+const unseatedMore = computed(() => unseatedAll.value.length > SHOWN || !!platformCourses.data.value?.more)
+const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
 </script>
 
 <template>
@@ -39,16 +79,18 @@ const hasArchived = computed(() => session.liveMemberships.some((m) => m.course_
     <AsyncState
       :loading="state.loading.value && !session.memberships.length"
       :error="session.memberships.length ? null : state.error.value"
-      :empty="!courses.length"
+      :empty="!courses.length && !unseated.length"
       :empty-text="session.isAdmin ? t('home.noCoursesAdmin') : t('home.noCourses')"
       @retry="state.reload"
     >
       <template #empty>
-        <router-link v-if="session.isAdmin" :to="{ name: 'admin-courses' }">
+        <router-link v-if="session.isAdmin && !unseated.length" :to="{ name: 'admin-courses' }">
           <el-button type="primary">{{ t('home.goAdmin') }}</el-button>
         </router-link>
       </template>
-      <div class="app-grid">
+      <!-- With courses to show below, "no seat yet" is a line, not a whole page. -->
+      <p v-if="!courses.length" class="home-none">{{ t('home.noCourses') }}</p>
+      <div v-else class="app-grid">
         <router-link
           v-for="m in courses"
           :key="m.member_id"
@@ -72,10 +114,72 @@ const hasArchived = computed(() => session.liveMemberships.some((m) => m.course_
         </router-link>
       </div>
     </AsyncState>
+
+    <section v-if="session.isAdmin && unseated.length" class="home-unseated" aria-labelledby="home-unseated-title">
+      <h2 id="home-unseated-title" class="home-unseated__title">{{ t('home.unseated.title') }}</h2>
+      <p class="home-unseated__explain">{{ t('home.unseated.explain') }}</p>
+      <div class="app-grid">
+        <router-link
+          v-for="c in unseated"
+          :key="c.id"
+          :to="{ name: 'admin-course', params: { courseId: c.id } }"
+          class="course-card course-card--unseated"
+        >
+          <div class="course-card__top">
+            <span class="course-card__code">{{ c.code }}<template v-if="c.section"> · {{ c.section }}</template></span>
+            <div class="course-card__tags">
+              <StatusTag vocab="courseStatus" :value="c.status" />
+            </div>
+          </div>
+          <h3 class="course-card__title">{{ c.title }}</h3>
+          <div class="course-card__meta">
+            <span v-if="termName(c.term_id)" class="app-muted">{{ termName(c.term_id) }}</span>
+          </div>
+          <div class="course-card__meta course-card__cta">
+            <el-icon aria-hidden="true"><Setting /></el-icon>
+            <span>{{ t('home.unseated.manage') }}</span>
+          </div>
+        </router-link>
+      </div>
+      <router-link v-if="unseatedMore" :to="{ name: 'admin-courses' }" class="home-unseated__more">
+        {{ t('home.unseated.more', { n: platformCourses.data.value?.more ? `${unseatedAll.length}+` : unseatedAll.length }) }}
+      </router-link>
+    </section>
   </div>
 </template>
 
 <style scoped>
+.home-none {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+}
+.home-unseated {
+  margin-top: 32px;
+}
+.home-unseated__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.home-unseated__explain {
+  margin: 6px 0 16px;
+  max-width: 72ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+.home-unseated__more {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+}
+.course-card--unseated {
+  border-style: dashed;
+}
+.course-card__cta {
+  color: var(--el-color-primary);
+  font-weight: 500;
+}
 .course-card {
   display: flex;
   flex-direction: column;
