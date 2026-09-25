@@ -1,0 +1,78 @@
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useSessionStore } from '@/stores/session'
+import AppLayout from '@/layouts/AppLayout.vue'
+import CourseLayout from '@/layouts/CourseLayout.vue'
+import accountRoutes from './modules/account'
+import adminRoutes from './modules/admin'
+import courseRoutes from './modules/course'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    /** Reachable without signing in. */
+    public?: boolean
+    /** Needs platform_role root or admin. */
+    admin?: boolean
+    /** i18n key for the page title. */
+    title?: string
+  }
+}
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/auth/LoginView.vue'),
+    meta: { public: true, title: 'auth.title' },
+  },
+  {
+    path: '/',
+    component: AppLayout,
+    children: [
+      { path: '', name: 'home', component: () => import('@/views/home/HomeView.vue'), meta: { title: 'common.nav.home' } },
+      ...accountRoutes,
+      ...adminRoutes,
+      {
+        path: 'courses/:courseId',
+        component: CourseLayout,
+        props: true,
+        children: courseRoutes,
+      },
+    ],
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/views/NotFoundView.vue'),
+    meta: { public: true },
+  },
+]
+
+export const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes,
+  scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
+})
+
+router.beforeEach(async (to) => {
+  const session = useSessionStore()
+  try {
+    await session.ensure()
+  } catch {
+    // Core could not be reached. Public pages still show; others show the
+    // layout's own error state once they ask for something.
+  }
+  if (to.meta.public) {
+    if (to.name === 'login' && session.status === 'signedIn') {
+      const next = typeof to.query.next === 'string' && to.query.next.startsWith('/') ? to.query.next : '/'
+      return next
+    }
+    return true
+  }
+  if (session.status === 'signedOut') {
+    return { name: 'login', query: to.fullPath !== '/' ? { next: to.fullPath } : {} }
+  }
+  if (to.matched.some((r) => r.meta.admin) && !session.isAdmin) {
+    return { name: 'home' }
+  }
+  return true
+})

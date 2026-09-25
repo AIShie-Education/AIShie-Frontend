@@ -1,0 +1,193 @@
+<script setup lang="ts">
+// One course: its header, and the parts of it the caller's seat reaches.
+import { computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
+import { useCourseStore } from '@/stores/course'
+import { useSessionStore } from '@/stores/session'
+import type { Perm } from '@/api/types'
+import AsyncState from '@/components/AsyncState.vue'
+import StatusTag from '@/components/StatusTag.vue'
+
+const props = defineProps<{ courseId: string }>()
+const course = useCourseStore()
+const session = useSessionStore()
+const route = useRoute()
+const { t } = useI18n()
+
+watch(
+  () => props.courseId,
+  (id) => void course.open(id),
+  { immediate: true },
+)
+
+interface Tab {
+  name: string
+  label: string
+  icon: string
+  /** Offered when the seat holds any of these (or when that cannot be known). */
+  perms?: Perm[]
+  /** Route names that count as this tab. */
+  also?: string[]
+}
+const tabs: Tab[] = [
+  { name: 'course-overview', label: 'layout.course.overview', icon: 'Odometer' },
+  { name: 'course-materials', label: 'layout.course.materials', icon: 'Reading', perms: ['document_read'], also: ['course-document'] },
+  { name: 'course-assignments', label: 'layout.course.assignments', icon: 'EditPen', perms: ['document_read'], also: ['course-assignment'] },
+  { name: 'course-submissions', label: 'layout.course.submissions', icon: 'Files', perms: ['submission_read'], also: ['course-submission'] },
+  { name: 'course-grades', label: 'layout.course.grades', icon: 'Medal', perms: ['grade_read', 'grade_submit', 'grade_post'], also: ['course-grade'] },
+  { name: 'course-gradebook', label: 'layout.course.gradebook', icon: 'Tickets', perms: ['grade_read'] },
+  { name: 'course-scheme', label: 'layout.course.scheme', icon: 'Share', perms: ['grade_read'] },
+  { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read'], also: ['course-member'] },
+  { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
+  { name: 'course-my-actions', label: 'layout.course.myActions', icon: 'List', perms: ['document_read'] },
+  { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
+]
+
+const visibleTabs = computed(() => tabs.filter((tab) => !tab.perms || tab.perms.some((p) => course.can(p))))
+const activeTab = computed(() => {
+  const n = route.name as string
+  return tabs.find((tab) => tab.name === n || tab.also?.includes(n))?.name ?? 'course-overview'
+})
+
+const ready = computed(() => course.courseId === props.courseId && !!course.course)
+</script>
+
+<template>
+  <div class="course-layout">
+    <AsyncState
+      :loading="course.loading && !ready"
+      :error="course.error"
+      @retry="course.open(courseId, true)"
+    >
+      <template v-if="ready && course.course">
+        <header class="course-head">
+          <div class="course-head__text">
+            <div class="course-head__code">
+              {{ course.course.code }}<template v-if="course.course.section"> · {{ course.course.section }}</template>
+            </div>
+            <h1 class="course-head__title">{{ course.course.title }}</h1>
+          </div>
+          <div class="course-head__tags">
+            <StatusTag vocab="courseStatus" :value="course.course.status" size="default" />
+            <StatusTag v-if="course.role" vocab="role" :value="course.role" size="default" />
+            <StatusTag
+              v-if="course.membership && course.membership.status !== 'active'"
+              vocab="memberStatus"
+              :value="course.membership.status"
+              size="default"
+            />
+            <router-link
+              v-if="session.isAdmin"
+              :to="{ name: 'admin-course', params: { courseId } }"
+              class="course-head__admin"
+            >
+              <el-icon><Setting /></el-icon>
+            </router-link>
+          </div>
+        </header>
+
+        <el-alert v-if="course.archived" type="info" :closable="false" show-icon class="course-banner">
+          {{ t('common.archivedCourse') }}
+        </el-alert>
+        <el-alert
+          v-else-if="course.membership?.status === 'paused'"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="course-banner"
+        >
+          {{ t('layout.course.paused') }}
+        </el-alert>
+
+        <nav class="course-tabs" :aria-label="t('layout.course.nav')">
+          <router-link
+            v-for="tab in visibleTabs"
+            :key="tab.name"
+            :to="{ name: tab.name, params: { courseId } }"
+            class="course-tabs__item"
+            :class="{ 'is-active': activeTab === tab.name }"
+          >
+            <el-icon><component :is="tab.icon" /></el-icon>
+            <span>{{ t(tab.label) }}</span>
+          </router-link>
+        </nav>
+
+        <div class="course-body">
+          <router-view :key="courseId" />
+        </div>
+      </template>
+    </AsyncState>
+  </div>
+</template>
+
+<style scoped>
+.course-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.course-head__code {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  letter-spacing: 0.3px;
+}
+.course-head__title {
+  margin: 2px 0 0;
+  font-size: 24px;
+  font-weight: 650;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.course-head__tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.course-head__admin {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--el-text-color-secondary);
+}
+.course-head__admin:hover {
+  background: var(--el-fill-color-light);
+  color: var(--el-color-primary);
+}
+.course-banner {
+  margin-bottom: 12px;
+}
+.course-tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--el-border-color-light);
+  margin-bottom: 20px;
+  scrollbar-width: thin;
+}
+.course-tabs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  color: var(--el-text-color-regular);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 14px;
+}
+.course-tabs__item:hover {
+  color: var(--el-color-primary);
+}
+.course-tabs__item.is-active {
+  color: var(--el-color-primary);
+  border-bottom-color: var(--el-color-primary);
+  font-weight: 500;
+}
+</style>

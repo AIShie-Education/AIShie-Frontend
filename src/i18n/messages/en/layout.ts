@@ -1,0 +1,20 @@
+export default {
+  courses: 'Courses',
+  menu: 'Menu',
+  tokenMode: 'Signed in with a token',
+  course: {
+    nav: 'Course sections',
+    overview: 'Overview',
+    materials: 'Materials',
+    assignments: 'Assignments',
+    submissions: 'Submissions',
+    grades: 'Grades',
+    gradebook: 'Gradebook',
+    scheme: 'Grading scheme',
+    members: 'Members',
+    approvals: 'Approvals',
+    myActions: 'My actions',
+    activity: 'Activity',
+    paused: 'Your seat in this course is paused: nothing you do here will be accepted until it is resumed.',
+  },
+}

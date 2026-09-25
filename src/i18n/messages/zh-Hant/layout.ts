@@ -1,0 +1,20 @@
+export default {
+  courses: '課程',
+  menu: '選單',
+  tokenMode: '以權杖登入',
+  course: {
+    nav: '課程分頁',
+    overview: '概覽',
+    materials: '教材',
+    assignments: '作業',
+    submissions: '提交',
+    grades: '成績',
+    gradebook: '成績冊',
+    scheme: '評分結構',
+    members: '成員',
+    approvals: '審批',
+    myActions: '我的操作',
+    activity: '動態',
+    paused: '你在此課程的席位已暫停：恢復之前，你在此的任何操作都不會被接受。',
+  },
+}
