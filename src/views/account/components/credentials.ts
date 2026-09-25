@@ -64,14 +64,15 @@ export function thisBrowserSession(list: Credential[], listedAt: number | undefi
 
 /**
  * How a browser session was begun, read from the label Core gives it: "password
- * login" (auth.Login) or "sso: <provider>" (auth.SignInWithIdentity). Null for
- * anything else.
+ * login" (auth.Login), "sso: <provider>" (auth.SignInWithIdentity) or
+ * "invitation accepted" (auth.AcceptInvite). Null for anything else.
  */
 export function sessionOrigin(
   label: string | null | undefined,
-): { via: 'password' } | { via: 'sso'; provider: string } | null {
+): { via: 'password' } | { via: 'invite' } | { via: 'sso'; provider: string } | null {
   if (!label) return null
   if (label === 'password login') return { via: 'password' }
+  if (label === 'invitation accepted') return { via: 'invite' }
   const m = /^sso: (.+)$/.exec(label)
   return m ? { via: 'sso', provider: m[1] } : null
 }
@@ -82,14 +83,13 @@ export function linkedBy(label: string | null | undefined): string | null {
   return m ? m[1] : null
 }
 
+/** Who made an invitation, from the label Core gives it: "invited by <name>" (actor.invite). */
+export function invitedBy(label: string | null | undefined): string | null {
+  const m = /^invited by (.+)$/.exec(label ?? '')
+  return m ? m[1] : null
+}
+
 /** A token as it may be shown: the scheme and the public prefix, the secret elided. */
 export function maskedToken(prefix: string | null | undefined): string {
   return prefix ? `ais_${prefix}_…` : '—'
-}
-
-/** Core measures a password in bytes of UTF-8: 10 to 1024. */
-export const PASSWORD_MIN_BYTES = 10
-export const PASSWORD_MAX_BYTES = 1024
-export function byteLength(s: string): number {
-  return new TextEncoder().encode(s).length
 }

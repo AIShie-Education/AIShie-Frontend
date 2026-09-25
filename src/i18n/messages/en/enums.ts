@@ -122,6 +122,7 @@ export default {
     sso: 'Single sign-on',
     api_token: 'API token',
     session: 'Browser session',
+    invite: 'Invitation',
   },
   event: {
     'action.proposed': 'Action proposed',
@@ -131,6 +132,8 @@ export default {
     'action.reviewed': 'Action reviewed',
     'action.escalated': 'Action escalated',
     'actor.registered': 'Actor registered',
+    'actor.updated': 'Actor updated',
+    'actor.invited': 'Actor invited',
     'actor.suspended': 'Actor suspended',
     'actor.reactivated': 'Actor reactivated',
     'assignment.created': 'Assignment created',

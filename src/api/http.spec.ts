@@ -1,18 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, blobUrl, read, write } from './http'
+import { acceptInvite, ApiError, blobUrl, onUnauthenticated, read, write } from './http'
 
 interface Call {
   url: string
   method: string
   headers: Record<string, string>
   body?: string
+  credentials?: RequestCredentials
 }
 
 let calls: Call[] = []
 let responses: Array<() => Response | Promise<Response>> = []
 
 function json(status: number, body: unknown, headers: Record<string, string> = {}) {
-  return () => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } })
+  return () =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } })
 }
 
 beforeEach(() => {
@@ -25,6 +27,7 @@ beforeEach(() => {
       method: init.method ?? 'GET',
       headers: init.headers as Record<string, string>,
       body: init.body as string | undefined,
+      credentials: init.credentials,
     })
     const next = responses.shift()
     if (!next) throw new Error('no response queued')
@@ -74,7 +77,13 @@ describe('write', () => {
   it('posts the arguments, less those in the path, with an idempotency key', async () => {
     responses.push(json(200, { status: 'executed', action_id: 'a1', review_state: 'none', result: { ok: true } }))
     const out = await write('member.pause', { course_id: 'c1', member_id: 'm1' }, { idempotencyKey: 'k1' })
-    expect(out).toEqual({ status: 'executed', actionId: 'a1', reviewState: 'none', result: { ok: true }, replayed: false })
+    expect(out).toEqual({
+      status: 'executed',
+      actionId: 'a1',
+      reviewState: 'none',
+      result: { ok: true },
+      replayed: false,
+    })
     expect(calls[0].url).toBe('/v1/courses/c1/members/m1/pause')
     expect(calls[0].method).toBe('POST')
     expect(calls[0].headers['Idempotency-Key']).toBe('k1')
@@ -90,7 +99,9 @@ describe('write', () => {
   })
 
   it('reports a denial as recorded, with its action', async () => {
-    responses.push(json(403, { status: 'denied', action_id: 'a3', error: { code: 'forbidden', message: 'not permitted' } }))
+    responses.push(
+      json(403, { status: 'denied', action_id: 'a3', error: { code: 'forbidden', message: 'not permitted' } }),
+    )
     const err = await write('course.archive', { course_id: 'c1' }).catch((e) => e)
     expect(err).toBeInstanceOf(ApiError)
     expect(err.recorded).toBe(true)
@@ -101,7 +112,11 @@ describe('write', () => {
 
   it('reports a failure with the domain error and its status', async () => {
     responses.push(
-      json(422, { status: 'failed', action_id: 'a4', error: { code: 'failed_precondition', message: 'the course is archived' } }),
+      json(422, {
+        status: 'failed',
+        action_id: 'a4',
+        error: { code: 'failed_precondition', message: 'the course is archived' },
+      }),
     )
     const err = await write('course.activate', { course_id: 'c1' }).catch((e) => e)
     expect(err.status).toBe(422)
@@ -112,7 +127,9 @@ describe('write', () => {
 
   it('retries a write that never got an answer under the same key', async () => {
     responses.push(() => Promise.reject(new TypeError('Failed to fetch')))
-    responses.push(json(200, { status: 'executed', action_id: 'a5', result: { ok: true } }, { 'Idempotency-Replayed': 'true' }))
+    responses.push(
+      json(200, { status: 'executed', action_id: 'a5', result: { ok: true } }, { 'Idempotency-Replayed': 'true' }),
+    )
     const out = await write('course.activate', { course_id: 'c1' })
     expect(calls).toHaveLength(2)
     expect(calls[0].headers['Idempotency-Key']).toBe(calls[1].headers['Idempotency-Key'])
@@ -130,7 +147,9 @@ describe('write', () => {
   })
 
   it('reports an idempotency conflict without claiming it was recorded', async () => {
-    responses.push(json(409, { error: { code: 'idempotency_conflict', message: 'key reused', details: { action_id: 'a0' } } }))
+    responses.push(
+      json(409, { error: { code: 'idempotency_conflict', message: 'key reused', details: { action_id: 'a0' } } }),
+    )
     const err = await write('course.activate', { course_id: 'c1' }).catch((e) => e)
     expect(err.code).toBe('idempotency_conflict')
     expect(err.recorded).toBe(false)
@@ -140,6 +159,67 @@ describe('write', () => {
   it('refuses to build a path with a missing parameter', async () => {
     await expect(write('member.pause', { course_id: 'c1', member_id: '' })).rejects.toThrow(/member_id is required/)
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe('acceptInvite', () => {
+  const TOKEN = 'aisinv_abcdefghijkl_secret'
+
+  it('posts the token and the password, with the cookie, and gives back who they are', async () => {
+    const answer = { actor_id: 'p1', email: 'chan@example.edu', expires_at: '2026-09-26T04:00:00Z' }
+    responses.push(json(200, answer))
+    const out = await acceptInvite(TOKEN, 'a long enough password')
+    expect(out).toEqual(answer)
+    expect(calls).toHaveLength(1)
+    expect(calls[0].method).toBe('POST')
+    expect(calls[0].url).toBe('/v1/auth/invite')
+    expect(calls[0].credentials).toBe('include')
+    expect(calls[0].headers['Idempotency-Key']).toBeUndefined()
+    expect(JSON.parse(calls[0].body!)).toEqual({ token: TOKEN, password: 'a long enough password' })
+  })
+
+  it('says an invitation that is no good is one, without signing anybody out', async () => {
+    const heard: ApiError[] = []
+    const stop = onUnauthenticated((e) => heard.push(e))
+    responses.push(json(401, { error: { code: 'unauthenticated', message: 'the invitation is not valid' } }))
+    const err = await acceptInvite(TOKEN, 'a long enough password').catch((e) => e)
+    stop()
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.status).toBe(401)
+    expect(err.isUnauthenticated).toBe(true)
+    expect(heard).toHaveLength(0)
+    expect(calls).toHaveLength(1)
+  })
+
+  it("passes on Core's words about a weak password", async () => {
+    responses.push(
+      json(400, { error: { code: 'invalid_argument', message: 'a password must be 10 to 1024 characters' } }),
+    )
+    const err = await acceptInvite(TOKEN, 'short').catch((e) => e)
+    expect(err.status).toBe(400)
+    expect(err.code).toBe('invalid_argument')
+    expect(err.message).toBe('a password must be 10 to 1024 characters')
+  })
+
+  it('is not retried when rate limited, and says how long to wait', async () => {
+    responses.push(json(429, { error: { code: 'rate_limited', message: 'too many calls' } }, { 'Retry-After': '42' }))
+    const err = await acceptInvite(TOKEN, 'a long enough password').catch((e) => e)
+    expect(calls).toHaveLength(1)
+    expect(err.status).toBe(429)
+    expect(err.code).toBe('rate_limited')
+    expect(err.details).toEqual({ retry_after_seconds: 42 })
+  })
+
+  it("keeps Core's own count of seconds to wait", async () => {
+    responses.push(
+      json(
+        429,
+        { error: { code: 'rate_limited', message: 'x', details: { retry_after_seconds: 7 } } },
+        { 'Retry-After': '9' },
+      ),
+    )
+    const err = await acceptInvite(TOKEN, 'a long enough password').catch((e) => e)
+    expect(err.details).toEqual({ retry_after_seconds: 7 })
   })
 })
 

@@ -11,7 +11,7 @@
 // nothing (see startsAfresh and LoginView).
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { ApiError, bearer, login, logout as apiLogout, read } from '@/api/http'
+import { acceptInvite, ApiError, bearer, login, logout as apiLogout, read } from '@/api/http'
 import type { Me, Membership } from '@/api/types'
 import { useCourseStore } from './course'
 
@@ -70,6 +70,24 @@ export const useSessionStore = defineStore('session', () => {
     await login(email, password)
     status.value = 'unknown'
     await ensure()
+  }
+
+  /**
+   * Takes up an invitation: sets the invited person's password and signs this
+   * browser in as them. Nothing is dropped until Core has said yes, so that
+   * whoever was signed in here still is when the invitation is refused. The
+   * email they sign in with from now on comes back. Once Core has said yes
+   * the invitation is used up, so failing to read who they are afterwards is
+   * not a failure here: the next page asks again.
+   */
+  async function signInWithInvite(token: string, password: string): Promise<{ email: string }> {
+    const out = await acceptInvite(token, password)
+    forgetCaller()
+    bearer.set(null)
+    usingToken.value = false
+    status.value = 'unknown'
+    await ensure().catch(() => undefined)
+    return { email: out.email }
   }
 
   async function signInWithToken(token: string) {
@@ -158,6 +176,7 @@ export const useSessionStore = defineStore('session', () => {
     loadMemberships,
     membershipFor,
     signInWithPassword,
+    signInWithInvite,
     signInWithToken,
     signOut,
     clear,
