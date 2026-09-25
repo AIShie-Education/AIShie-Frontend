@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ToolOut } from '@/api/types'
 import TimeText from '@/components/TimeText.vue'
-import { DIALOG_WIDTH, maskedToken } from './credentials'
+import { maskedToken } from './credentials'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ issued: ToolOut<'credential.issue_token'> | null }>()
@@ -69,7 +69,7 @@ function revoke() {
   <el-dialog
     v-model="open"
     :title="token ? t('account.token.title') : t('account.token.missingTitle')"
-    :width="DIALOG_WIDTH"
+    width="560px"
     :close-on-click-modal="false"
     :before-close="beforeClose"
     destroy-on-close

@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { call, courseTab, coursePath, demo, signIn, toast } from './support'
 
+// A score as ScoreText shows it, "8 / 10": the gaps around it are margins,
+// not spaces, so in a row's text it can run into its neighbours
+// ("converter8/ 1080%").
+const outOf = (score: number, of: number) => new RegExp(`(?<![\\d.])${score}\\s*/\\s*${of}`)
+
 // Ken's HW1 is a draft in the seeded course: he hands it in first, through
 // Core, so that there is work to grade.
 test.beforeAll(async () => {
@@ -133,10 +138,10 @@ test.describe.serial('grading a submission', () => {
     // The new grade, posted, with the old one in its history as superseded.
     await expect(page).not.toHaveURL(oldUrl)
     await expect(page.locator('.page-header')).toContainText('Posted')
-    await expect(page.locator('.grade-view__score')).toContainText('8 / 10')
+    await expect(page.locator('.grade-view__score')).toContainText(outOf(8, 10))
     const history = page.locator('.grade-view__history')
     await expect(history.locator('.el-table__row')).toHaveCount(2)
-    await expect(history.locator('.el-table__row').filter({ hasText: 'Superseded' })).toContainText('7 / 10')
+    await expect(history.locator('.el-table__row').filter({ hasText: 'Superseded' })).toContainText(outOf(7, 10))
     await expect(history.locator('.el-table__row').filter({ hasText: 'This one' })).toContainText('Posted')
 
     // The old grade says it has been replaced.
@@ -151,8 +156,8 @@ test.describe.serial('grading a submission', () => {
     await page.goto(coursePath('grades'))
     const rows = page.locator('.el-table__row').filter({ hasText: 'Ken Wong' }).filter({ hasText: 'HW1' })
     await expect(rows).toHaveCount(2)
-    await expect(rows.filter({ hasText: 'Superseded' })).toContainText('7 / 10')
-    await expect(rows.filter({ hasText: 'Posted' })).toContainText('8 / 10')
+    await expect(rows.filter({ hasText: 'Superseded' })).toContainText(outOf(7, 10))
+    await expect(rows.filter({ hasText: 'Posted' })).toContainText(outOf(8, 10))
   })
 
   test('Ken sees only the new grade', async ({ page }) => {
@@ -161,15 +166,10 @@ test.describe.serial('grading a submission', () => {
     await page.goto(coursePath('grades'))
     const rows = page.locator('.el-table__row').filter({ hasText: 'HW1' })
     await expect(rows).toHaveCount(1)
-    await expect(rows).toContainText('8 / 10')
+    await expect(rows).toContainText(outOf(8, 10))
   })
 
-  // FIXME(app bug): PageHeader's back link (src/components/PageHeader.vue) is an
-  // arrow icon with no accessible name, on every page that has one (grade,
-  // submission, action, member, document…). common.actions.back ("Back") exists
-  // for it and is used nowhere. With a `:aria-label="t('common.actions.back')"`
-  // on the link this passes: following it by CSS goes to the right place.
-  test.fixme('from a grade, Back returns to the grades for that work', async ({ page }) => {
+  test('from a grade, Back returns to the grades for that work', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('grades'))

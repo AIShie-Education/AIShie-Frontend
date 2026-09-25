@@ -14,6 +14,7 @@ import { ElMessageBox } from 'element-plus'
 import { read, type UploadKind } from '@/api/http'
 import type { AssignmentSummary, DocumentVersion } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { useCourseTab } from '@/composables/useCourseTab'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatBytes } from '@/utils/format'
@@ -56,6 +57,19 @@ const doc = computed(() => (docState.error.value ? undefined : docState.data.val
 const shown = computed(() => doc.value?.version ?? null)
 const kind = computed(() => doc.value?.kind ?? '')
 const courseLevel = computed(() => COURSE_LEVEL.includes(kind.value))
+
+// The tab a document belongs under: material under Materials (the route's own),
+// an assignment's instructions or rubric under Assignments, a submitted file
+// under Submissions and a feedback file under Grades.
+const TAB_OF_KIND: Record<string, string | null> = {
+  material: null,
+  instructions: 'course-assignments',
+  rubric: 'course-assignments',
+  submission: 'course-submissions',
+  feedback: 'course-grades',
+}
+useCourseTab(() => TAB_OF_KIND[kind.value] ?? null)
+
 const active = computed(() => doc.value?.status === 'active')
 
 // The version history is for readers of drafts, and only course-level

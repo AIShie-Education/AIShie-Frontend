@@ -93,6 +93,3 @@ export const PASSWORD_MAX_BYTES = 1024
 export function byteLength(s: string): number {
   return new TextEncoder().encode(s).length
 }
-
-/** A dialog as wide as the conventions ask, and no wider than a phone. */
-export const DIALOG_WIDTH = 'min(560px, calc(100vw - 32px))'

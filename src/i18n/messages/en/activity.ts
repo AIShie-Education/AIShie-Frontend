@@ -41,7 +41,7 @@ export default {
     courseTotal: 'Course total',
     componentTotal: 'Total for {name}',
     document: 'Document',
-    submissionFile: 'Submitted files',
+    submissionFile: 'Submission files',
     feedbackFile: 'Feedback',
     action: 'Action',
     component: 'Grading scheme',

@@ -25,8 +25,9 @@ const percent = computed(() => percentOf(props.score, props.outOf))
     </template>
     <template v-else>
       <strong class="score-text__score">{{ formatScore(score) }}</strong>
-      <span class="score-text__of">/ {{ formatScore(outOf) }}</span>
-      <span v-if="!hidePercent && percent !== '—'" class="score-text__pct">{{ percent }}</span>
+      <!-- The leading spaces are for reading and copying; the margins lay it out. -->
+      <span class="score-text__of"> / {{ formatScore(outOf) }}</span>
+      <span v-if="!hidePercent && percent !== '—'" class="score-text__pct"> {{ percent }}</span>
     </template>
   </span>
 </template>

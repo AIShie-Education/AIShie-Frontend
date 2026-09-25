@@ -37,6 +37,8 @@ export const useCourseStore = defineStore('course', () => {
   const seat = ref<Member | null>(null)
   const perms = ref<PermLevels>({})
   const permsSource = ref<PermsSource>('unknown')
+  /** The built-in preset perms were guessed from, when permsSource is 'preset'. */
+  const guessedPreset = ref<string | null>(null)
   const loading = ref(false)
   const error = ref<ApiError | null>(null)
 
@@ -130,6 +132,7 @@ export const useCourseStore = defineStore('course', () => {
     seat.value = null
     perms.value = {}
     permsSource.value = 'unknown'
+    guessedPreset.value = null
     error.value = null
     refused.value = new Set()
     members.value = new Map()
@@ -188,7 +191,7 @@ export const useCourseStore = defineStore('course', () => {
    */
   async function loadPerms(id: string, m: Membership | null, e: number) {
     if (!m) {
-      if (current(id, e)) permsSource.value = 'unknown'
+      if (current(id, e)) setPermsSource('unknown')
       return
     }
     try {
@@ -196,7 +199,7 @@ export const useCourseStore = defineStore('course', () => {
       if (!current(id, e)) return
       seat.value = s
       perms.value = (s.perms ?? {}) as PermLevels
-      permsSource.value = 'exact'
+      setPermsSource('exact')
       return
     } catch (err) {
       if (!(err instanceof ApiError) || !(err.isForbidden || err.isNotFound)) throw err
@@ -221,7 +224,7 @@ export const useCourseStore = defineStore('course', () => {
       else if (m.student_scope === 'listed' && m.assignment_scope === 'all') presetName = 'tutor'
     }
     if (!presetName) {
-      permsSource.value = 'unknown'
+      setPermsSource('unknown')
       return
     }
     try {
@@ -230,13 +233,19 @@ export const useCourseStore = defineStore('course', () => {
       const p = (out.presets ?? []).find((x) => x.name === presetName && !x.dept_id)
       if (p) {
         perms.value = (p.perms ?? {}) as PermLevels
-        permsSource.value = 'preset'
+        setPermsSource('preset', presetName)
       } else {
-        permsSource.value = 'unknown'
+        setPermsSource('unknown')
       }
     } catch {
-      if (current(id, e)) permsSource.value = 'unknown'
+      if (current(id, e)) setPermsSource('unknown')
     }
+  }
+
+  /** Where perms came from, and the preset's name when they were guessed from one. */
+  function setPermsSource(source: PermsSource, preset: string | null = null) {
+    permsSource.value = source
+    guessedPreset.value = source === 'preset' ? preset : null
   }
 
   /** Loads every member (removed ones included) for name look-ups. */
@@ -340,6 +349,7 @@ export const useCourseStore = defineStore('course', () => {
     seat,
     perms,
     permsSource,
+    guessedPreset,
     loading,
     error,
     members,

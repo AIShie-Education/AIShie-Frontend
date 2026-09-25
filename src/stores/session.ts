@@ -17,6 +17,9 @@ import { useCourseStore } from './course'
 
 export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut'
 
+/** Where the administration pages keep each administrator's actors seen recently. */
+const RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
+
 export const useSessionStore = defineStore('session', () => {
   const me = ref<Me | null>(null)
   const memberships = ref<Membership[]>([])
@@ -99,10 +102,29 @@ export const useSessionStore = defineStore('session', () => {
   /** Forgets everything about the caller, as when Core says the session is over. */
   function clear() {
     forgetCaller()
+    forgetStoredLists()
     status.value = 'signedOut'
     if (usingToken.value) {
       bearer.set(null)
       usingToken.value = false
+    }
+  }
+
+  /**
+   * Drops the lists views keep in this browser for one caller, so that none
+   * outlives a sign-out or the session's end: the administration pages'
+   * actors seen recently (adminShared's useRecentActors).
+   */
+  function forgetStoredLists() {
+    try {
+      const doomed: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key?.startsWith(RECENT_ACTORS_PREFIX)) doomed.push(key)
+      }
+      for (const key of doomed) localStorage.removeItem(key)
+    } catch {
+      /* no storage: nothing was kept */
     }
   }
 

@@ -362,7 +362,9 @@ const errorTitle = computed(() => {
 
             <section class="app-card">
               <h2 class="app-card__title">{{ t('actions.detail.result') }}</h2>
-              <p v-if="action.status === 'proposed'" class="action-view__help">{{ t('actions.result.waiting') }}</p>
+              <p v-if="action.status === 'proposed'" class="action-view__help">
+                {{ course.writable ? t('actions.result.waiting') : t('actions.result.archived') }}
+              </p>
 
               <el-alert
                 v-else-if="error || action.status === 'failed' || action.status === 'denied' || action.status === 'cancelled'"

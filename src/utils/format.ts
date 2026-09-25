@@ -72,6 +72,19 @@ export function isUuid(s: string | null | undefined): boolean {
   return !!s && UUID_RE.test(s.trim())
 }
 
+/**
+ * The UUID just before id in the order Postgres sorts UUIDs (byte by byte,
+ * which is the order of the hex digits as one big number).
+ */
+export function uuidPredecessor(id: string): string | null {
+  const hex = id.trim().replace(/-/g, '').toLowerCase()
+  if (!/^[0-9a-f]{32}$/.test(hex)) return null
+  const n = BigInt('0x' + hex)
+  if (n === 0n) return null
+  const p = (n - 1n).toString(16).padStart(32, '0')
+  return `${p.slice(0, 8)}-${p.slice(8, 12)}-${p.slice(12, 16)}-${p.slice(16, 20)}-${p.slice(20)}`
+}
+
 // The usual extension for the types a course's files mostly come in, for
 // naming a download whose name has none.
 const EXTENSIONS: Record<string, string> = {

@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n'
 import type { DocumentSummary } from '@/api/types'
 import type { UploadedFile } from '@/api/http'
 import { useCourseStore } from '@/stores/course'
-import UploadField from './UploadField.vue'
+import FileUploader from '@/components/FileUploader.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import type { DocChoice } from './types'
 
@@ -119,7 +119,7 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
       />
       <div class="doc-choice__file">
         <span class="app-muted">{{ t('assignments.form.doc.newFile') }}</span>
-        <UploadField
+        <FileUploader
           v-model:uploading="uploading"
           :model-value="model.files"
           :course-id="courseId"

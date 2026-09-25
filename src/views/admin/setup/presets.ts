@@ -13,8 +13,6 @@ import { i18n } from '@/i18n'
 
 const g = i18n.global as unknown as { t: (key: string) => string; te: (key: string) => boolean }
 
-/** A dialog as wide as the conventions ask, and no wider than a phone. */
-export const DIALOG_WIDTH = 'min(560px, calc(100vw - 32px))'
 /** A side drawer, the whole width on a phone. */
 export const DRAWER_SIZE = 'min(560px, 100vw)'
 

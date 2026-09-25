@@ -12,7 +12,7 @@ import type { Credential } from '@/api/types'
 import { errorMessage } from '@/composables/useErrors'
 import { useWrite } from '@/composables/useWrite'
 import TimeText from '@/components/TimeText.vue'
-import { DIALOG_WIDTH, PASSWORD_MAX_BYTES, PASSWORD_MIN_BYTES, byteLength, credentialState } from './credentials'
+import { PASSWORD_MAX_BYTES, PASSWORD_MIN_BYTES, byteLength, credentialState } from './credentials'
 
 const props = defineProps<{
   credentials: Credential[] | undefined
@@ -119,7 +119,7 @@ async function save() {
     <el-dialog
       v-model="open"
       :title="current ? t('account.password.dialogChange') : t('account.password.dialogSet')"
-      :width="DIALOG_WIDTH"
+      width="560px"
       destroy-on-close
       :close-on-click-modal="!pending"
     >

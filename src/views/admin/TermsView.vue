@@ -14,7 +14,6 @@ import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { DIALOG_WIDTH } from './setup/presets'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -197,7 +196,7 @@ async function save() {
     <el-dialog
       v-model="open"
       :title="t('adminSetup.terms.create.title')"
-      :width="DIALOG_WIDTH"
+      width="560px"
       destroy-on-close
       :close-on-click-modal="!pending"
     >

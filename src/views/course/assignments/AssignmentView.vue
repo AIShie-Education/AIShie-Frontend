@@ -39,9 +39,8 @@ const scheme = useScheme(() => props.courseId)
 const writer = computed(() => course.can('assignment_write'))
 const isStudent = computed(() => course.role === 'student' && !!course.myMemberId)
 const seesWork = computed(() => !isStudent.value && course.can('submission_read'))
-const seesGrades = computed(
-  () => !isStudent.value && (course.can('grade_read') || course.can('grade_submit') || course.can('grade_post')),
-)
+// The grades page lists with grade.list and component.tree, which take grade_read alone.
+const seesGrades = computed(() => !isStudent.value && course.can('grade_read'))
 
 // --- Instructions ---------------------------------------------------------------
 const instructions = useAsync<DocumentFull | null>(

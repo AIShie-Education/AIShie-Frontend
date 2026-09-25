@@ -27,7 +27,7 @@ import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFileLink from '@/components/DocumentFileLink.vue'
-import UploadField from './UploadField.vue'
+import FileUploader from '@/components/FileUploader.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -463,7 +463,7 @@ defineExpose({ reload })
             </li>
           </ul>
           <p v-else class="app-muted my-work__nofiles">{{ t('assignments.work.noFiles') }}</p>
-          <UploadField
+          <FileUploader
             v-model="uploads"
             v-model:uploading="uploadingFiles"
             :course-id="courseId"

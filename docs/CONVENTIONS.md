@@ -35,8 +35,8 @@ markdown-it + DOMPurify.
     see it in "My actions" (`course-my-actions`).
   - `null` — denied, failed, or never attempted; already shown to the person.
 - Use `write()` directly only outside components. Never call `fetch` yourself.
-- **Files**: bytes never go through a tool. `<FileUploader v-model="files" :course-id :kind multiple />`
-  uploads each picked file (`document.upload_url` → PUT) and gives `UploadedFile[]`; hand each
+- **Files**: bytes never go through a tool. `<FileUploader v-model="files" v-model:uploading="busy" :course-id :kind multiple />`
+  uploads each picked file (`busy` is true while any is in flight: disable the submit button with it) (`document.upload_url` → PUT) and gives `UploadedFile[]`; hand each
   `uploadToken` to the tool that attaches it (`document.create`/`add_version` `upload_token`,
   `grade.submit` `feedback_files`, …). A submission's files are attached with `document.create`
   (`kind: 'submission'`, `submission_id`, `upload_token`) while it is a draft; `submission.submit` then

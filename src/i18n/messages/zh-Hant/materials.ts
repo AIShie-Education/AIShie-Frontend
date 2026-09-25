@@ -13,7 +13,7 @@ export default {
   pendingLink: '查看我的操作',
   pending: {
     create: '「{title}」已送出待批准，獲批准後就會出現在這裡。',
-    createPublish: '這項提案不包括發佈：獲批准後，請打開該教材再發佈。',
+    createPublish: '這項提案不包括發佈：獲批准後，請開啟該教材再發佈。',
   },
   create: {
     title: '新增教材',
@@ -33,7 +33,7 @@ export default {
     submit: '建立',
     done: '已建立教材',
     donePublished: '已建立並發佈教材',
-    notPublished: '教材已建立，但尚未發佈。請打開它再發佈。',
+    notPublished: '教材已建立，但尚未發佈。請開啟它再發佈。',
   },
   document: {
     title: '文件',
@@ -86,8 +86,8 @@ export default {
     owned: {
       submission: '這是隨提交繳交的檔案。它只有一個版本，並隨其提交一同管理。',
       feedback: '這是成績的回饋檔案。它只有一個版本，並隨其成績一同管理。',
-      openSubmission: '打開該提交',
-      openGrade: '打開該成績',
+      openSubmission: '開啟該提交',
+      openGrade: '開啟該成績',
     },
     actions: {
       newVersion: '新增版本',

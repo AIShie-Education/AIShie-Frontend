@@ -9,7 +9,6 @@ import type { FormInstance, FormRules } from 'element-plus'
 import type { ToolOut } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
-import { DIALOG_WIDTH } from './credentials'
 
 const open = defineModel<boolean>({ default: false })
 const emit = defineEmits<{ issued: [out: ToolOut<'credential.issue_token'>]; proposed: [] }>()
@@ -74,7 +73,7 @@ async function submit() {
   <el-dialog
     v-model="open"
     :title="t('account.issue.title')"
-    :width="DIALOG_WIDTH"
+    width="560px"
     destroy-on-close
     :close-on-click-modal="!pending"
   >

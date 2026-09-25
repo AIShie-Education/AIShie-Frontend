@@ -29,9 +29,16 @@ export function isExpired(expiresAt: string | null | undefined, now = Date.now()
   return !!expiresAt && new Date(expiresAt).getTime() <= now
 }
 
+/**
+ * A preset's name as a reader should see it: a built-in's in the reader's
+ * language, a department's own as its author wrote it (the same rule as the
+ * platform set-up pages' presetLabel). A preset given by name alone is taken
+ * for a built-in.
+ */
 export function presetLabel(p: Pick<Preset, 'name'>): string {
   const key = `members.presetNames.${p.name}`
-  return te(key) ? t(key) : p.name
+  const deptId = (p as Partial<Pick<Preset, 'dept_id'>>).dept_id
+  return !deptId && te(key) ? t(key) : p.name
 }
 
 /** A built-in preset's description in the reader's language; a department's own as its author wrote it. */

@@ -3,7 +3,7 @@ export default {
   subtitle:
     'Everyone seated in this course, people and agents alike, each with their own permissions, reach and lifetime.',
   addMember: 'Add member',
-  expired: 'Expired',
+  expired: 'Ended',
   empty: 'No members match these filters.',
   emptyAgents: 'No agents are seated in this course.',
   emptyAgentsSoFar: 'No agents among the first {n} members. Load more to look through the rest.',
@@ -98,7 +98,7 @@ export default {
       'Listed with nobody on the list reaches no student at all. Reach fails closed: choose students, or All.',
     nobodyAssignments: 'Listed with no assignments reaches no assignment at all. Choose assignments, or All.',
     expires: 'Seat ends',
-    expiresNever: 'Does not end',
+    expiresNever: 'Never',
     expiresHelp: 'Optional. At this moment the seat removes itself.',
     myExpiry: 'Your own seat ends',
     expiresPast: 'Choose a moment in the future.',
@@ -188,7 +188,7 @@ export default {
     actorId: 'Actor ID',
     actorAdmin: 'Open in administration',
     roleHelp: 'A roster fact; it grants nothing by itself.',
-    noExpiry: 'Does not end',
+    noExpiry: 'Never',
     expiresHelp: 'At this moment the seat removes itself.',
     memberId: 'Member ID',
     memberIdHelp:

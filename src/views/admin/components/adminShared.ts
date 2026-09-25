@@ -6,26 +6,16 @@ import { useRoute, useRouter } from 'vue-router'
 import { ApiError, read } from '@/api/http'
 import type { Actor, ListItem } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
-import { isUuid } from '@/utils/format'
+import { isUuid, uuidPredecessor } from '@/utils/format'
+
+// Kept here for the pages that import it from the administration's helpers.
+export { uuidPredecessor }
 
 /** A course as course.list gives it: the same shape as course.get. */
 export type CourseRow = ListItem<'course.list', 'courses'>
 
 /** The default identity provider name, as Core records it (OIDC_PROVIDER_NAME). */
 export const DEFAULT_SSO_PROVIDER = 'polyu-adfs'
-
-/**
- * The UUID just before id in the order Postgres sorts UUIDs (byte by byte,
- * which is the order of the hex digits as one big number).
- */
-export function uuidPredecessor(id: string): string | null {
-  const hex = id.trim().replace(/-/g, '').toLowerCase()
-  if (!/^[0-9a-f]{32}$/.test(hex)) return null
-  const n = BigInt('0x' + hex)
-  if (n === 0n) return null
-  const p = (n - 1n).toString(16).padStart(32, '0')
-  return `${p.slice(0, 8)}-${p.slice(8, 12)}-${p.slice(12, 16)}-${p.slice(16, 20)}-${p.slice(20)}`
-}
 
 /**
  * One course, read as an administrator. course.get needs a seat in the

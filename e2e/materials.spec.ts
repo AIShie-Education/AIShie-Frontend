@@ -84,11 +84,7 @@ test.describe.serial('course material', () => {
     await expect(page.getByText('Draft — not yet published.')).toHaveCount(0)
   })
 
-  // FIXME(app bug): the shared FileUploader's remove button (src/components/FileUploader.vue)
-  // is an icon with no accessible name, so it cannot be found as "Remove" (by a
-  // screen reader, or by this test). UploadField.vue, the assignments module's
-  // copy, gives it aria-label="Remove"; the shared one does not.
-  test.fixme('a file picked for new material is listed once, and can be taken off again', async ({ page }) => {
+  test('a file picked for new material is listed once, and can be taken off again', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('materials'))

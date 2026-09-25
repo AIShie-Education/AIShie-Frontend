@@ -7,7 +7,7 @@
 // already refused counts as denied here too.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { PERMS, type AutonomyLevel, type Perm } from '@/api/types'
+import { PERMS, SCOPED_PERMS, type AutonomyLevel, type Perm } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -36,22 +36,15 @@ const refusedWarn = computed(
     ) as Partial<Record<Perm, string>>,
 )
 
-/**
- * The built-in preset the store guessed from, by the same rule: the one named
- * after the roster role, or for an agent's assistant seat the grader (listed
- * to assignments) or the tutor (listed to students).
- */
-const guessedPreset = computed(() => {
-  const m = course.membership
-  if (!m) return null
-  if (m.role !== 'assistant') return m.role
-  if (m.assignment_scope === 'listed' && m.student_scope === 'all') return 'grader'
-  if (m.student_scope === 'listed' && m.assignment_scope === 'all') return 'tutor'
-  return null
-})
+/** The built-in preset the store guessed the levels from. */
 const presetText = computed(() =>
-  t('overview.perms.preset', { preset: guessedPreset.value ? presetLabel({ name: guessedPreset.value }) : '' }),
+  t('overview.perms.preset', { preset: course.guessedPreset ? presetLabel({ name: course.guessedPreset }) : '' }),
 )
+/** What a permission covers, and for a scoped one that the seat's scope bounds it. */
+function permTip(p: Perm): string {
+  const help = t(`enums.permHelp.${p}`)
+  return SCOPED_PERMS.includes(p) ? `${help} — ${t('common.labels.scopedHelp')}` : help
+}
 const open = ref<string[]>([])
 </script>
 
@@ -77,7 +70,7 @@ const open = ref<string[]>([])
         </div>
         <ul class="perms__names">
           <li v-for="p in g.perms" :key="p">
-            <el-tooltip :content="t(`enums.permHelp.${p}`)" placement="top">
+            <el-tooltip :content="permTip(p)" placement="top">
               <span class="perms__name">{{ t(`enums.perm.${p}`) }}</span>
             </el-tooltip>
           </li>

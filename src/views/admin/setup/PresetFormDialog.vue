@@ -17,7 +17,7 @@ import {
 } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import PermEditor from '@/components/PermEditor.vue'
-import { DIALOG_WIDTH, bodyOf, fullPerms, isBuiltin, presetDescription, presetLabel } from './presets'
+import { bodyOf, fullPerms, isBuiltin, presetDescription, presetLabel } from './presets'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -162,7 +162,7 @@ async function save() {
   <el-dialog
     v-model="open"
     :title="mode === 'edit' ? t('adminSetup.presets.form.editTitle') : t('adminSetup.presets.form.createTitle')"
-    :width="DIALOG_WIDTH"
+    width="560px"
     destroy-on-close
     :close-on-click-modal="false"
     class="preset-form"

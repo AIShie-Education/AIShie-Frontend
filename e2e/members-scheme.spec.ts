@@ -86,11 +86,7 @@ test.describe.serial('members and the grading scheme', () => {
     await expect(row).toContainText('Active')
   })
 
-  // FIXME(app bug): MemberView.vue edits a seat with a bare <PermEditor v-model="draft">;
-  // it does not pass the foundation's new `:changed` (nor `:warn` for levels above
-  // the granter's own), so only a count ("1 changed") says what was touched and
-  // no row is marked. src/views/course/members/MemberView.vue, line ~512.
-  test.fixme('while editing a seat’s permissions, the rows changed are marked', async ({ page }) => {
+  test('while editing a seat’s permissions, the rows changed are marked', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath(`members/${d.actors.observer.member_id}`))

@@ -95,7 +95,7 @@ export default {
     material: 'Material',
     instructions: 'Instructions',
     rubric: 'Rubric',
-    submission: 'Submitted file',
+    submission: 'Submission file',
     feedback: 'Feedback file',
   },
   documentStatus: {

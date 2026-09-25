@@ -93,7 +93,7 @@ async function submit() {
   <el-dialog
     v-model="visible"
     :title="t('materials.create.title')"
-    width="min(680px, calc(100vw - 24px))"
+    width="680px"
     destroy-on-close
     :close-on-click-modal="false"
   >

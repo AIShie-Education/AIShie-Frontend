@@ -2,7 +2,8 @@
 export default {
   terms: {
     title: '學期',
-    subtitle: '具名的日期區間，開設的課程歸屬其中。所有已登入的人都可以檢視，只有管理員可以建立。',
+    subtitle:
+      '學期是一段有名稱的日期範圍，每個開班的課程都屬於某個學期。所有已登入的人都可以檢視，只有管理員可以建立。',
     new: '建立學期',
     filter: '依名稱篩選',
     empty: '尚未建立任何學期',
@@ -86,8 +87,8 @@ export default {
     matrix: '比較權限',
     matrixHint: '每一欄是一個預設。點選預設名稱可查看完整內容。',
     role: '名冊角色',
-    studentScope: '可及的學生',
-    assignmentScope: '可及的作業',
+    studentScope: '涵蓋的學生',
+    assignmentScope: '涵蓋的作業',
     studentsLine: '學生：{scope}',
     assignmentsLine: '作業：{scope}',
     drawer: {
@@ -119,10 +120,10 @@ export default {
       startFromHelp: '會填入該預設的角色、範圍和權限；儲存前仍可修改。',
       role: '名冊角色',
       roleHelp: '以此預設加入的成員所得的角色。只有學生會出現在成績冊中；代理通常是助理。',
-      studentScope: '可及的學生',
-      assignmentScope: '可及的作業',
+      studentScope: '涵蓋的學生',
+      assignmentScope: '涵蓋的作業',
       scopeHelp:
-        '「僅限清單」只涵蓋成員席位上列出的學生或作業，於加入時選定。學生的學生清單若留空，會自動列入本人，因此可及自己的作業；其他清單為空，便甚麼都涵蓋不到。',
+        '「僅限清單」只涵蓋成員席位上列出的學生或作業，於加入時選定。學生的學生清單若留空，會自動列入本人，因此涵蓋自己的作業；其他清單為空，便甚麼都涵蓋不到。',
       perms: '權限',
       permsHelp: '維持「禁止」的項目即不允許。',
       replaceWarn: '儲存後，會取代此預設的說明、角色、範圍和所有權限。已經以此預設加入的成員，會保留原本取得的設定。',

@@ -27,6 +27,12 @@ function metaLabel(key: string): string {
   return t('adminSetup.presets.assignmentScope')
 }
 
+/** What a permission covers, and for a scoped one that a seat's scope bounds it (the marker's meaning). */
+function permTip(p: Perm): string {
+  const help = t(`enums.permHelp.${p}`)
+  return SCOPED_PERMS.includes(p) ? `${help} — ${t('common.labels.scopedHelp')}` : help
+}
+
 function rowClass({ row }: { row: Row }): string {
   return row.key === 'assignment_scope' ? 'matrix-row--last-meta' : ''
 }
@@ -44,10 +50,16 @@ function rowClass({ row }: { row: Row }): string {
     <el-table-column fixed="left" min-width="160" class-name="matrix-label-col">
       <template #default="{ row }">
         <div v-if="row.kind === 'perm'" class="matrix-label">
-          <el-tooltip :content="t(`enums.permHelp.${row.key}`)" placement="right">
+          <el-tooltip :content="permTip(row.key)" placement="right">
             <span class="matrix-label__name">
               {{ t(`enums.perm.${row.key}`) }}
-              <el-icon v-if="SCOPED_PERMS.includes(row.key)" class="matrix-label__scoped"><Aim /></el-icon>
+              <el-icon
+                v-if="SCOPED_PERMS.includes(row.key)"
+                class="matrix-label__scoped"
+                role="img"
+                :aria-label="t('common.labels.scoped')"
+                ><Aim
+              /></el-icon>
             </span>
           </el-tooltip>
           <code class="matrix-label__key">{{ row.key }}</code>

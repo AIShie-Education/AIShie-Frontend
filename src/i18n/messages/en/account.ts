@@ -25,8 +25,8 @@ export default {
     hint: 'Each seat has its own role, reach and permissions, set by whoever seated you.',
     students: 'Students: {scope}',
     assignments: 'Assignments: {scope}',
-    expires: 'Seat expires',
-    noExpiry: 'No end date',
+    expires: 'Seat ends',
+    noExpiry: 'Never',
     memberId: 'Member ID',
   },
   password: {

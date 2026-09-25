@@ -1,4 +1,4 @@
-// 使用者自己的帳戶：身分、所屬課程，以及登入方式。
+// 參與者自己的帳戶：身分、所屬課程，以及登入方式。
 export default {
   title: '帳戶',
   subtitle: '你目前登入的身分、所屬的課程，以及登入這個帳戶的各種方式',
@@ -14,7 +14,7 @@ export default {
     status: '狀態',
     platformRole: '平台角色',
     noPlatformRole: '無：你能做甚麼，由各課程分別設定',
-    id: '帳戶 ID',
+    id: '參與者 ID',
     kindNote: '類型僅供顯示。你能做甚麼，取決於你在各課程中的席位。',
   },
   seats: {
@@ -25,7 +25,7 @@ export default {
     students: '學生：{scope}',
     assignments: '作業：{scope}',
     expires: '席位到期',
-    noExpiry: '沒有結束日期',
+    noExpiry: '從不',
     memberId: '成員 ID',
   },
   password: {
@@ -61,7 +61,7 @@ export default {
       sso: '透過 {provider} 登入',
     },
     token: '權杖',
-    subject: '帳號',
+    subject: '帳戶',
     linkedBy: '連結者',
     note: '備註',
     created: '建立於',

@@ -38,7 +38,7 @@ const tabs: Tab[] = [
   { name: 'course-materials', label: 'layout.course.materials', icon: 'Reading', perms: ['document_read'], also: ['course-document'] },
   { name: 'course-assignments', label: 'layout.course.assignments', icon: 'EditPen', perms: ['document_read'], also: ['course-assignment'] },
   { name: 'course-submissions', label: 'layout.course.submissions', icon: 'Files', perms: ['submission_read'], also: ['course-submission'] },
-  { name: 'course-grades', label: 'layout.course.grades', icon: 'Medal', perms: ['grade_read', 'grade_submit', 'grade_post'], also: ['course-grade'] },
+  { name: 'course-grades', label: 'layout.course.grades', icon: 'Medal', perms: ['grade_read'], also: ['course-grade'] },
   { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
   { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read'], also: ['course-member'] },
   { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
