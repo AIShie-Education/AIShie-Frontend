@@ -84,7 +84,6 @@ function closed() {
           <i18n-t keypath="admin.invite.pending" tag="span" scope="global">
             <template #date><TimeText :value="state.inviteExpiresAt" /></template>
           </i18n-t>
-          {{ t('admin.invite.pendingNote') }}
         </li>
         <li v-else-if="state.invite === 'expired'">
           <i18n-t keypath="admin.invite.expired" tag="span" scope="global">

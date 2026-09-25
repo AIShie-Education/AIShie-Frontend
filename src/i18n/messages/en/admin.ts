@@ -301,8 +301,7 @@ export default {
     title: 'Invitation link',
     intro:
       'A link for them to choose a password with: opening it, they choose one and are signed in. It works once, and making another replaces it.',
-    pending: 'A link made earlier works until {date}.',
-    pendingNote: 'Making a new one replaces it.',
+    pending: 'A link made earlier works until {date}. Making a new one replaces it.',
     expired: 'The last link expired unused on {date}.',
     hasPassword:
       'They have a password already. Taking up a link replaces it: this is how a forgotten password is reset.',
