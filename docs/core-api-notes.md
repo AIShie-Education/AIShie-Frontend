@@ -75,7 +75,8 @@ end; the "works around it" notes say what the front end does meanwhile.
   versions kept in a browser is still deleted at sign-out.
 - **An invitation cannot be checked before it is taken up.** `POST /v1/auth/invite` is the only
   thing that reads one, and it wants the password too, so the welcome page learns that a link was
-  used, replaced or has expired only after the person has chosen a password. (A weak password is
+  used, replaced, withdrawn (a new email, a password set otherwise) or has expired only after the
+  person has chosen a password. (A weak password is
   refused after the invitation is checked, so an empty one would tell; the page does not rely on
   that order, and each try spends the address's sign-in allowance.)
 - **`event.list` only reads forward** over a platform-wide sequence, with no newest-first read and

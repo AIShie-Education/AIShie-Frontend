@@ -125,7 +125,6 @@ export const useSessionStore = defineStore('session', () => {
   /** Forgets everything about the caller, as when Core says the session is over. */
   function clear() {
     forgetCaller()
-    forgetStoredLists()
     status.value = 'signedOut'
     if (usingToken.value) {
       bearer.set(null)
@@ -135,8 +134,8 @@ export const useSessionStore = defineStore('session', () => {
 
   /**
    * Drops the lists kept in this browser for one caller, so that none
-   * outlives a sign-out or the session's end: the actors seen recently that
-   * earlier versions of the administration pages kept (RECENT_ACTORS_PREFIX).
+   * outlives them: the actors seen recently that earlier versions of the
+   * administration pages kept (RECENT_ACTORS_PREFIX).
    */
   function forgetStoredLists() {
     try {
@@ -151,12 +150,17 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
-  /** Drops what this store and the course store hold for the caller. */
+  /**
+   * Drops what this store, the course store and this browser hold for the
+   * caller: on signing out, when the session ends, and whenever someone else
+   * signs in here, by any way in.
+   */
   function forgetCaller() {
     if (me.value) heldCaller = true
     me.value = null
     memberships.value = []
     useCourseStore().close()
+    forgetStoredLists()
   }
 
   /**

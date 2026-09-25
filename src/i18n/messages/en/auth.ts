@@ -19,7 +19,7 @@ export default {
   invite: {
     title: 'Choose your password',
     intro:
-      'You have been invited to AIShiteru. Choose a password to finish setting up your account: you are signed in as soon as it is set.',
+      'Choose a password for your AIShiteru account. If you already have one, this replaces it. You are signed in as soon as it is set.',
     incompleteTitle: 'This link is incomplete',
     incomplete:
       'The invitation code is missing from the address. Open the whole link from the message you were sent, or ask your administrator for a new one.',
@@ -35,7 +35,7 @@ export default {
     submit: 'Set password and sign in',
     invalidTitle: 'This invitation is no longer valid',
     invalid:
-      'It may have expired, been used already, or been replaced by a newer one. Ask your administrator for a new link.',
+      'It may have expired, been used already, been replaced by a newer one, or been withdrawn (for example because your email address was changed). Ask your administrator for a new link.',
     wait: 'Too many attempts from this network. Wait {n} second and try again. | Too many attempts from this network. Wait {n} seconds and try again.',
     doneTitle: 'Your password is set',
     done: 'You are signed in. From now on, sign in with {email} and the password you just chose.',

@@ -58,6 +58,26 @@ describe('signInWithInvite', () => {
     expect(session.startsAfresh()).toBe(false)
   })
 
+  it('drops what earlier versions kept in this browser for the caller it replaces', async () => {
+    me = { id: 'admin', display_name: 'Root' }
+    const session = useSessionStore()
+    await session.ensure()
+    localStorage.setItem('aishiteru.admin.recentActors.admin', '[]')
+    localStorage.setItem('aishiteru.locale', 'en')
+    invite = () => Promise.reject(new ApiError({ status: 401, code: 'unauthenticated', message: 'not valid' }))
+    await session.signInWithInvite('aisinv_x', 'a long enough password').catch(() => undefined)
+    // Refused: nobody changed.
+    expect(localStorage.getItem('aishiteru.admin.recentActors.admin')).toBe('[]')
+    invite = async () => {
+      me = { id: 'p1', display_name: 'Chan Tai Man' }
+      return { actor_id: 'p1', email: 'chan@example.edu', expires_at: '2026-09-26T00:00:00Z' }
+    }
+    await session.signInWithInvite('aisinv_y', 'a long enough password')
+    expect(localStorage.getItem('aishiteru.admin.recentActors.admin')).toBeNull()
+    expect(localStorage.getItem('aishiteru.locale')).toBe('en')
+    localStorage.clear()
+  })
+
   it('replaces whoever was signed in, and asks for a fresh page', async () => {
     me = { id: 'admin', display_name: 'Root' }
     const session = useSessionStore()

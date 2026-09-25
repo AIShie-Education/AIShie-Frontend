@@ -17,7 +17,7 @@ export default {
   serverVersion: '伺服器 {version}',
   invite: {
     title: '設定密碼',
-    intro: '你已獲邀使用 AIShiteru。請設定密碼以完成帳戶設定，設定後便會立即登入。',
+    intro: '請為你的 AIShiteru 帳戶設定密碼；如你原本已有密碼，新密碼會取代它。設定後便會立即登入。',
     incompleteTitle: '連結不完整',
     incomplete: '網址中缺少邀請碼。請從你收到的訊息開啟完整的連結，或向管理員索取新的連結。',
     signIn: '前往登入',
@@ -30,7 +30,8 @@ export default {
     mismatch: '兩次輸入的密碼不一致',
     submit: '設定密碼並登入',
     invalidTitle: '此邀請已經失效',
-    invalid: '邀請可能已過期、已被使用，或已被較新的邀請取代。請向管理員索取新的連結。',
+    invalid:
+      '邀請可能已過期、已被使用、已被較新的邀請取代，或已被撤回（例如你的電子郵件地址已更改）。請向管理員索取新的連結。',
     wait: '此網路的嘗試次數過多，請等候 {n} 秒後再試。',
     doneTitle: '密碼已設定',
     done: '你已登入。日後請以 {email} 及剛設定的密碼登入。',

@@ -93,8 +93,9 @@ describe('installChunkReload', () => {
     const assign = vi.fn()
     const reload = vi.fn()
     let t = 1_000
-    uninstall = installChunkReload(router, { assign, reload, storage: memoryStorage(), now: () => t })
-    return { router, assign, reload, advance: (ms: number) => (t += ms) }
+    const storage = memoryStorage()
+    uninstall = installChunkReload(router, { assign, reload, storage, now: () => t })
+    return { router, assign, reload, storage, advance: (ms: number) => (t += ms) }
   }
 
   it('reloads at the route being navigated to when its chunk is gone, once', async () => {
@@ -107,6 +108,30 @@ describe('installChunkReload', () => {
     await router.push('/').catch(() => {})
     await router.push('/b/1?tab=x#top').catch(() => {})
     expect(assign).toHaveBeenCalledTimes(1)
+  })
+
+  it('never writes a fragment down, and loads the page it is at again rather than moving to its fragment', async () => {
+    // The welcome page opened from an invitation link, its chunk gone.
+    window.history.replaceState(null, '', '/b/7#token=aisinv_secret')
+    try {
+      const { router, assign, reload, storage } = setup(() => Promise.reject(chromeError()))
+      await router.push('/b/7#token=aisinv_secret').catch(() => {})
+      expect(assign).not.toHaveBeenCalled()
+      expect(reload).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(storage.map.get('aishiteru.chunkReload')!).target).toBe('/b/7')
+      expect([...storage.map.values()].join()).not.toContain('aisinv_secret')
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+  })
+
+  it('keeps the fragment of another page it goes to in the address, not in storage', async () => {
+    const { router, assign, reload, storage } = setup(() => Promise.reject(chromeError()))
+    await router.push('/')
+    await router.push('/b/8?x=1#token=aisinv_secret').catch(() => {})
+    expect(reload).not.toHaveBeenCalled()
+    expect(assign).toHaveBeenCalledWith('/b/8?x=1#token=aisinv_secret')
+    expect(JSON.parse(storage.map.get('aishiteru.chunkReload')!).target).toBe('/b/8?x=1')
   })
 
   it('does nothing for a navigation that fails for another reason', async () => {
@@ -132,16 +157,23 @@ describe('installChunkReload', () => {
   })
 
   it('reloads where the page is for a preload error outside a navigation', async () => {
-    const { router, reload } = setup(() => Promise.resolve({ render: () => null }))
+    const { router, reload, storage } = setup(() => Promise.resolve({ render: () => null }))
     await router.push('/')
-    const event = new Event('vite:preloadError', { cancelable: true })
-    window.dispatchEvent(event)
-    expect(event.defaultPrevented).toBe(true)
-    expect(reload).toHaveBeenCalledTimes(1)
-    // Straight after that reload, the same failure is left to surface.
-    const again = new Event('vite:preloadError', { cancelable: true })
-    window.dispatchEvent(again)
-    expect(again.defaultPrevented).toBe(false)
-    expect(reload).toHaveBeenCalledTimes(1)
+    window.history.replaceState(null, '', '/?q=1#token=aisinv_secret')
+    try {
+      const event = new Event('vite:preloadError', { cancelable: true })
+      window.dispatchEvent(event)
+      expect(event.defaultPrevented).toBe(true)
+      expect(reload).toHaveBeenCalledTimes(1)
+      // Where it was, without the fragment.
+      expect(JSON.parse(storage.map.get('aishiteru.chunkReload')!).target).toBe('/?q=1')
+      // Straight after that reload, the same failure is left to surface.
+      const again = new Event('vite:preloadError', { cancelable: true })
+      window.dispatchEvent(again)
+      expect(again.defaultPrevented).toBe(false)
+      expect(reload).toHaveBeenCalledTimes(1)
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
   })
 })

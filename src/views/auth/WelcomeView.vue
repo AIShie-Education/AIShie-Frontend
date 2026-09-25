@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // Where an invitation link lands (actor.invite). The token is in the
-// fragment, #token=aisinv_…, which the browser sends to no server; it is read
-// once and taken out of the address, so that it stays in neither the address
-// bar nor the history. The person chooses a password, and POST
-// /v1/auth/invite sets it and signs this browser in as them.
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watchEffect } from 'vue'
+// fragment, #token=aisinv_…, which the browser sends to no server; each time
+// one arrives it is read and taken out of the address, so that it stays in
+// neither the address bar nor the history. The person chooses a password,
+// and POST /v1/auth/invite sets it and signs this browser in as them.
+import { computed, onBeforeUnmount, reactive, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -21,15 +21,6 @@ const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 const ui = useUiStore()
-
-/** The invitation, read before the address loses it. */
-const token = tokenFromHash(window.location.hash)
-
-onMounted(() => {
-  // Through the router, which writes the address with history.replaceState:
-  // its own record of where this page is loses the token too.
-  if (window.location.hash) void router.replace({ query: route.query, hash: '' })
-})
 
 // The app's frame names its pages; this one is outside it, as sign-in is.
 watchEffect(() => {
@@ -48,6 +39,32 @@ const error = ref<string | null>(null)
 const invalid = ref(false)
 /** The email they sign in with from now on, once the password is set. */
 const doneEmail = ref<string | null>(null)
+
+/** The invitation, read before the address loses it. */
+const token = ref<string | null>(null)
+
+// A link opened in a tab already on this page (another link pasted in, say)
+// changes only the fragment, and this page stays: each new token starts it
+// afresh. The token is then taken out of the address, through the router,
+// which writes it with history.replaceState, so that its own record of where
+// this page is loses the token too. The address left without one keeps the
+// token already read.
+watch(
+  () => route.hash,
+  (hash) => {
+    const found = tokenFromHash(hash)
+    if (!found) return
+    token.value = found
+    invalid.value = false
+    error.value = null
+    doneEmail.value = null
+    form.password = ''
+    form.repeat = ''
+    formRef.value?.clearValidate()
+    void router.replace({ query: route.query, hash: '' })
+  },
+  { immediate: true },
+)
 
 /** Who this browser is signed in as, whom accepting would sign out. */
 const signedInAs = computed(() => (session.status === 'signedIn' ? (session.me?.display_name ?? null) : null))
@@ -85,12 +102,13 @@ function waitMessage(e: ApiError): string {
 }
 
 async function submit() {
-  if (!token || busy.value) return
+  const invitation = token.value
+  if (!invitation || busy.value) return
   if (!(await formRef.value?.validate().catch(() => false))) return
   busy.value = true
   error.value = null
   try {
-    const out = await session.signInWithInvite(token, form.password)
+    const out = await session.signInWithInvite(invitation, form.password)
     form.password = ''
     form.repeat = ''
     doneEmail.value = out.email

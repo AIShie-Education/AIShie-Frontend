@@ -258,12 +258,12 @@ async function reactivate() {
           <!-- A person signs in by an invitation or single sign-on; an agent by a token. -->
           <template v-if="actor.kind === 'human'">
             <InviteCard :actor="actor" @edit="editing = true" @changed="state.reload" />
-            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" />
+            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="state.reload" />
             <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
           </template>
           <template v-else>
             <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
-            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" />
+            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="state.reload" />
           </template>
         </div>
 

@@ -404,8 +404,9 @@ export async function login(email: string, password: string): Promise<{ actor_id
  * and signs this browser in as them, with the session cookie a sign-in
  * gives. Public, like login: the invitation is what vouches for them. Core
  * answers 401 for an invitation that is no good (unknown, used, replaced,
- * expired, or for someone suspended since), 400 for a weak password (the
- * invitation still works), and 429 when this address has tried too often.
+ * withdrawn, expired, or for someone suspended since), 400 for a weak
+ * password (the invitation still works), and 429 when this address has tried
+ * too often.
  */
 export async function acceptInvite(
   token: string,

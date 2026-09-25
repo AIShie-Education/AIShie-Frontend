@@ -57,6 +57,9 @@ const rules = computed<FormRules>(() => ({
       validator: (_r: unknown, v: string, cb: (e?: Error) => void) => {
         const e = (v ?? '').trim()
         if (!e) return props.actor.email ? cb(new Error(t('common.errors.required'))) : cb()
+        // The form is checked only for an email being given or changed: one
+        // Core took already (ops@localhost, say) is not this form's to refuse.
+        if (e === props.actor.email) return cb()
         return EMAIL_RE.test(e) ? cb() : cb(new Error(t('common.errors.invalidEmail')))
       },
       trigger: 'blur',
@@ -88,7 +91,9 @@ async function submit() {
 
 <template>
   <el-dialog v-model="open" :title="t('admin.edit.title')" width="560px" destroy-on-close>
-    <p class="app-form-hint edit-actor__intro">{{ t('admin.edit.intro') }}</p>
+    <p class="app-form-hint edit-actor__intro">
+      {{ hasEmailField ? t('admin.edit.intro') : t('admin.edit.introName') }}
+    </p>
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <el-form-item :label="t('admin.edit.displayName')" prop="display_name">
         <el-input v-model="form.display_name" name="display_name" maxlength="200" autocomplete="off" />

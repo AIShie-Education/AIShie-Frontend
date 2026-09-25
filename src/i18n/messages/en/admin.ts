@@ -152,7 +152,7 @@ export default {
     sso: 'Single sign-on',
     invitedUntil: 'Invited until {date}',
     inviteExpired: 'Invitation expired',
-    cannot: 'Cannot sign in yet',
+    cannot: 'No password or single sign-on yet',
   },
 
   registered: {
@@ -283,6 +283,7 @@ export default {
   edit: {
     title: 'Edit registration',
     intro: 'Correct their name, or give them an email to sign in with. The kind and the platform role do not change.',
+    introName: 'Correct its name. The kind and the platform role do not change.',
     displayName: 'Display name',
     email: 'Email',
     emailHint: 'What they sign in with. It can be changed, not removed. An email belongs to one actor only.',
@@ -300,9 +301,9 @@ export default {
     title: 'Invitation link',
     intro:
       'A link for them to choose a password with: opening it, they choose one and are signed in. It works once, and making another replaces it.',
-    pending: 'A link made earlier works until',
+    pending: 'A link made earlier works until {date}.',
     pendingNote: 'Making a new one replaces it.',
-    expired: 'The last link expired unused on',
+    expired: 'The last link expired unused on {date}.',
     hasPassword:
       'They have a password already. Taking up a link replaces it: this is how a forgotten password is reset.',
     days: 'The link works for',

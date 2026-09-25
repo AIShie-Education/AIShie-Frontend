@@ -37,13 +37,24 @@ test.describe.serial('the directory and invitations', () => {
     await expect(yuki).toContainText('Password')
     await expect(rows.filter({ hasText: 'grader-v2' })).toHaveCount(0)
 
-    // Agents only: the run's grading agent is there, and nobody else.
-    await search.fill('grader-v2')
+    // "yuki" is a person (Yuki Tanaka) and an agent (tutor-yuki); with
+    // Agents picked, Core is asked for agents only, and the person goes.
+    await search.fill('yuki')
+    await expect(page).toHaveURL(/[?&]q=yuki/)
+    await expect(rows.filter({ hasText: 'Yuki Tanaka' }).first()).toBeVisible()
+    await expect(rows.filter({ hasText: 'tutor-yuki' }).first()).toBeVisible()
+    const askedForAgents = page.waitForRequest((req) => {
+      const u = new URL(req.url())
+      return (
+        u.pathname === '/v1/actors' && u.searchParams.get('kind') === 'agent' && u.searchParams.get('search') === 'yuki'
+      )
+    })
     await pickOption(page, page.locator('.actors__filter').first(), 'Agents')
+    await askedForAgents
     await expect(page).toHaveURL(/[?&]kind=agent/)
-    await expect(rows.filter({ hasText: 'grader-v2' }).first()).toBeVisible()
     await expect(rows.filter({ hasText: 'Yuki Tanaka' })).toHaveCount(0)
-    await expect(rows.filter({ hasText: 'grader-v2' }).first()).toContainText('Agent')
+    await expect(rows.filter({ hasText: 'tutor-yuki' }).first()).toBeVisible()
+    await expect(rows.filter({ hasText: 'tutor-yuki' }).first()).toContainText('Agent')
 
     // A whole ID finds that one actor, whatever the filters; Enter opens them.
     await search.fill(d.actors.yuki.actor_id)
@@ -76,7 +87,7 @@ test.describe.serial('the directory and invitations', () => {
     await expect(rows).toHaveCount(1)
     const row = rows.filter({ hasText: PERSON.name })
     await expect(row).toContainText(PERSON.email)
-    await expect(row).toContainText('Cannot sign in yet')
+    await expect(row).toContainText('No password or single sign-on yet')
     await row.getByRole('link', { name: PERSON.name }).click()
     await expect(page).toHaveURL(/\/admin\/actors\/[0-9a-f-]{36}$/)
     await expect(page.locator('.page-header')).toContainText(PERSON.name)
@@ -101,7 +112,9 @@ test.describe.serial('the directory and invitations', () => {
     // The page reads the actor again: an invitation is waiting.
     await expect(page.locator('.actor__desc')).toContainText('Invited until')
     await expect(card.getByRole('button', { name: 'Create a new link' })).toBeVisible()
-    await expect(card).toContainText('A link made earlier works until')
+    await expect(card).toContainText(
+      /A link made earlier works until \d{4}-\d\d-\d\d \d\d:\d\d\. Making a new one replaces it\./,
+    )
   })
 
   test('the link sets a password and signs the person in; used, it is no longer valid', async ({ browser }) => {
@@ -165,9 +178,45 @@ test.describe.serial('the directory and invitations', () => {
     await page.goto(`/admin/actors?q=${encodeURIComponent(PERSON.email)}`)
     const row = page.locator('.actors__table .el-table__body tr').filter({ hasText: PERSON.name })
     await expect(row).toContainText('Password')
-    await expect(row).not.toContainText('Cannot sign in yet')
+    await expect(row).not.toContainText('No password or single sign-on yet')
     await expect(row).not.toContainText('Invited until')
   })
+})
+
+test('a new link opened in a tab already on the welcome page takes the place of the last', async ({ page }) => {
+  const token = root().token
+  const email = `vera+${stamp}@e2e.test`
+  const reg = await call(token, 'POST', '/v1/actors', { kind: 'human', display_name: `Vera Visitor ${stamp}`, email })
+  expect(reg.body.status, JSON.stringify(reg.body)).toBe('executed')
+  const invited = await call(token, 'POST', `/v1/actors/${reg.body.result.actor_id}/invite`, {})
+  expect(invited.body.status, JSON.stringify(invited.body)).toBe('executed')
+  const submit = page.getByRole('button', { name: 'Set password and sign in' })
+  async function choose(password: string) {
+    await page.fill('input[name=password]', password)
+    await page.fill('input[name=repeat]', password)
+    await submit.click()
+  }
+  await englishFirst(page)
+
+  // No token, then a token no invitation has: each link only changes the fragment.
+  await page.goto('/welcome')
+  await expect(page.getByText('This link is incomplete')).toBeVisible()
+  await page.goto(`/welcome#token=aisinv_abcdefghijkl_${'x'.repeat(43)}`)
+  await expect(submit).toBeVisible()
+  await expect(page).toHaveURL(/\/welcome$/)
+  await choose(PASSWORD)
+  await expect(page.getByText('This invitation is no longer valid')).toBeVisible()
+
+  // The real link, in the same tab: the form again, its token out of the address, and it works.
+  await page.goto(`/welcome#token=${invited.body.result.token}`)
+  await expect(submit).toBeVisible()
+  await expect(page.getByText('This invitation is no longer valid')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/welcome$/)
+  expect(await page.evaluate(() => window.location.href + JSON.stringify(window.history.state))).not.toContain(
+    'aisinv_',
+  )
+  await choose(PASSWORD)
+  await expect(page.getByText(`From now on, sign in with ${email} and the password you just chose.`)).toBeVisible()
 })
 
 test('a link without its code says it is incomplete', async ({ page }) => {
@@ -210,7 +259,7 @@ test('an email is given, and a new one withdraws the invitation waiting', async 
   await expect(dialog).toContainText('Changing the email withdraws the invitation link waiting')
   await dialog.getByRole('button', { name: 'Save' }).click()
   await expect(page.locator('.page-header')).toContainText(`wanda.new+${stamp}@e2e.test`)
-  await expect(page.locator('.actor__desc')).toContainText('Cannot sign in yet')
+  await expect(page.locator('.actor__desc')).toContainText('No password or single sign-on yet')
   await expect(page.locator('.actor__desc')).not.toContainText('Invited until')
   const taken = await fetch(`${demo().core}/v1/auth/invite`, {
     method: 'POST',

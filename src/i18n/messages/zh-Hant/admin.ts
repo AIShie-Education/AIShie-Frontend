@@ -119,7 +119,7 @@ export default {
 
   actors: {
     title: '人員與代理',
-    subtitle: '平台上所有已登記的人員與代理：查找、登記新成員，並管理其狀態及登入方式',
+    subtitle: '平台上所有已登記的人員與代理：查找、登記新的人員或代理，並管理其狀態及登入方式',
     register: '登記',
     search: '搜尋',
     searchPlaceholder: '以姓名或電子郵件搜尋，或貼上 ID',
@@ -148,7 +148,7 @@ export default {
     sso: '單一登入',
     invitedUntil: '已邀請，{date} 前有效',
     inviteExpired: '邀請已過期',
-    cannot: '尚未能登入',
+    cannot: '尚未設定密碼或單一登入',
   },
 
   registered: {
@@ -275,6 +275,7 @@ export default {
   edit: {
     title: '編輯登記資料',
     intro: '修正對方的名稱，或加上供其登入的電子郵件。類型及平台角色不會改變。',
+    introName: '修正其名稱。類型及平台角色不會改變。',
     displayName: '顯示名稱',
     email: '電子郵件',
     emailHint: '對方以此登入。可以更改，但不能移除。每個電子郵件只能屬於一位參與者。',
@@ -290,9 +291,9 @@ export default {
   invite: {
     title: '邀請連結',
     intro: '讓對方設定密碼的連結：開啟後，對方設定密碼並隨即登入。連結只能使用一次，建立新連結會取代舊的。',
-    pending: '先前建立的連結有效至',
+    pending: '先前建立的連結有效至 {date}。',
     pendingNote: '建立新連結會取代它。',
-    expired: '上一條連結未被使用，已過期於',
+    expired: '上一條連結未經使用，已於 {date} 過期。',
     hasPassword: '對方已設定密碼。使用連結後會取代原有密碼：忘記密碼時便是以此重設。',
     days: '連結有效期',
     dayOption: '{n} 天',
