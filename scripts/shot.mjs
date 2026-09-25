@@ -9,7 +9,7 @@
 //     [--click 'text=Add member'] [--wait 800] [--full]
 //
 // --as is a key in the demo file's actors (instructor, ta, yuki, ken, mei,
-// observer, grader, tutor). People sign in through the sign-in form with
+// observer, grader, tutor), or root (with ROOT_TOKEN set). People sign in through the sign-in form with
 // DEMO_PASSWORD; agents, which have no password, with their API token.
 // {course}, {hw1}, {hw2}, {yuki_hw1}, {week1}, … in --path are filled from
 // the demo file, as are {member:yuki} and {actor:yuki}.
@@ -33,8 +33,12 @@ function args() {
 const opt = args()
 const demo = JSON.parse(await readFile(process.env.DEMO_FILE || 'demo.json', 'utf8'))
 const base = (opt.base || 'http://localhost:5173').replace(/\/+$/, '')
-const who = demo.actors[opt.as || 'instructor']
-if (!who) throw new Error(`no demo actor ${opt.as}`)
+// --as root signs in with ROOT_TOKEN, for the administration pages.
+const who =
+  opt.as === 'root'
+    ? { kind: 'agent', token: process.env.ROOT_TOKEN, display_name: 'root' }
+    : demo.actors[opt.as || 'instructor']
+if (!who || !who.token) throw new Error(`no demo actor ${opt.as} (or no ROOT_TOKEN for root)`)
 
 const fill = (p) =>
   p
