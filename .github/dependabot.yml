@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Minor and patch updates in one pull request a week; a major one gets its
+  # own. The Core the tests run against (.github/core-image) is moved by hand,
+  # with the catalogue it brings.
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      npm-dependencies:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

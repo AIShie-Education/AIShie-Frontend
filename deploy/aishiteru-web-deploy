@@ -1,0 +1,327 @@
+#!/bin/sh
+# Puts a build of the AIShiteru web front end on this server, or goes back to
+# one it keeps. The Deploy workflow runs it over SSH as the user webdeploy,
+# whose key can run nothing else (deploy/setup-web.sh, docs/deploying.md). By
+# hand, as root: sudo -u webdeploy aishiteru-web-deploy ...
+#
+#   aishiteru-web-deploy ID < build.tar.gz    unpack a build as release ID, and serve it
+#   aishiteru-web-deploy activate ID          serve release ID, one kept here, again
+#   aishiteru-web-deploy list                 the releases kept here, newest first
+#
+# ID is what the Deploy workflow calls the build: a release's tag (v1.2.3) or
+# a commit (abc1234). Letters, digits, dots, dashes and underscores, not
+# starting with a dot or a dash.
+#
+# A build is a gzipped tar of dist/ (scripts/pack-dist.sh). It is read whole,
+# up to a limit and within a time limit, before anything else waits for it,
+# and its listing is checked before anything is unpacked: plain files and
+# directories only, under plain names, inside the archive, with an index.html
+# at the top, and no more than a limit unpacked. It is unpacked beside the
+# releases, made readable to Caddy and no more, and renamed into place. Then
+# current, the link Caddy serves from, is switched to it in one rename, so a
+# request sees the old build or the new one, never half of each. The newest
+# five releases are kept, and the one served before this one: activate goes
+# back to any of them at once.
+#
+# The same ID again is a success if its build is the same as the one kept,
+# which is served again, and refused if it is not.
+#
+# The paths below are the ones deploy/setup-web.sh creates. The variables that
+# override them are for deploy/aishiteru-web-deploy_test.sh, and are not read
+# over SSH: what a client may set there is sshd's AcceptEnv, not this script.
+set -eu
+umask 022
+# Byte-wise character ranges, whatever the caller's locale.
+LC_ALL=C
+export LC_ALL
+
+if [ -n "${SSH_CONNECTION:-}" ]; then
+  unset AISHITERU_WEB_ROOT AISHITERU_WEB_MAX_BYTES AISHITERU_WEB_MAX_UNPACKED AISHITERU_WEB_MAX_ENTRIES \
+    AISHITERU_WEB_LOCK_WAIT AISHITERU_WEB_READ_WAIT AISHITERU_WEB_FLOCK
+fi
+ROOT=${AISHITERU_WEB_ROOT:-/srv/aishiteru-web}
+MAX_BYTES=${AISHITERU_WEB_MAX_BYTES:-52428800}        # 50 MiB, as sent
+MAX_UNPACKED=${AISHITERU_WEB_MAX_UNPACKED:-268435456} # 256 MiB, unpacked
+MAX_ENTRIES=${AISHITERU_WEB_MAX_ENTRIES:-10000}
+LOCK_WAIT=${AISHITERU_WEB_LOCK_WAIT:-300}
+READ_WAIT=${AISHITERU_WEB_READ_WAIT:-600}
+FLOCK=${AISHITERU_WEB_FLOCK:-flock}
+KEEP=5
+REL=$ROOT/releases
+LOG=$ROOT/deploy.log
+me=aishiteru-web-deploy
+
+say() { echo "$me: $*"; }
+die() { echo "$me: $*" >&2; exit 1; }
+usage() {
+  echo "usage: $me ID < build.tar.gz | $me activate ID | $me list" >&2
+  exit 2
+}
+
+# Over SSH, the command the workflow asked for comes as one argument
+# ("activate abc1234"). It is split on spaces here, once it is known to hold
+# nothing but the characters of a release ID, spaces and the command names.
+args=$*
+case $args in *[!A-Za-z0-9._\ -]*) usage ;; esac
+set -f
+# shellcheck disable=SC2086 # split on purpose; only the characters above are left
+set -- $args
+set +f
+
+valid_id() {
+  case $1 in
+    '' | .* | -* | *[!A-Za-z0-9._-]*)
+      echo "$me: not a release ID: $1 (letters, digits, dots, dashes and underscores, not starting with a dot or a dash)" >&2
+      exit 2
+      ;;
+  esac
+  [ "${#1}" -le 64 ] || { echo "$me: not a release ID: longer than 64 characters" >&2; exit 2; }
+}
+
+# The release being served: what current points at, releases/ID.
+current() {
+  if [ -L "$ROOT/current" ]; then
+    l=$(readlink "$ROOT/current")
+    echo "${l##*/}"
+  fi
+}
+
+log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$LOG"; }
+
+# remove PATH: gone, whatever modes an archive left inside it. A directory
+# nobody may read cannot be emptied, but its owner may always change that. A
+# link is removed, not followed.
+remove() {
+  if [ -d "$1" ] && [ ! -L "$1" ]; then chmod -R u+rwX "$1" 2>/dev/null || true; fi
+  rm -rf "$1" 2>/dev/null
+}
+
+work=
+stage=
+lockdir=
+cleanup() {
+  [ -z "$work" ] || rm -rf "$work"
+  # Still under the lock, which goes with the process, after this.
+  [ -z "$stage" ] || remove "$stage" || true
+  [ -z "$lockdir" ] || rmdir "$lockdir" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+
+# One deploy or activate at a time. flock where there is one (util-linux);
+# otherwise a directory, which a deploy that was killed may leave behind.
+lock() {
+  if command -v "$FLOCK" >/dev/null 2>&1; then
+    exec 9>"$ROOT/.lock"
+    "$FLOCK" -w "$LOCK_WAIT" 9 || die "another deploy has held the lock for $LOCK_WAIT seconds"
+  else
+    i=0
+    until mkdir "$ROOT/.lock.d" 2>/dev/null; do
+      i=$((i + 1))
+      [ "$i" -lt "$LOCK_WAIT" ] ||
+        die "$ROOT/.lock.d has been there for $LOCK_WAIT seconds: another deploy is running, or one was killed (then remove it)"
+      sleep 1
+    done
+    lockdir=$ROOT/.lock.d
+  fi
+  # What a deploy that was killed left half done. Nothing else runs now. What
+  # cannot go is said, and this run goes on: an activate must work whatever a
+  # build left behind.
+  for left in "$REL"/.*.tmp "$ROOT/.current.new"; do
+    if [ -e "$left" ] || [ -L "$left" ]; then
+      remove "$left" || echo "$me: could not remove $left, which a deploy left behind" >&2
+    fi
+  done
+}
+
+# The build, from standard input: one byte over the limit is enough to know
+# it is over, and one that stops coming is given up on (timeout: coreutils).
+receive() {
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$READ_WAIT" head -c "$((MAX_BYTES + 1))"
+  else
+    head -c "$((MAX_BYTES + 1))"
+  fi
+}
+
+# Points current at release ID, in one rename of a new link over the old:
+# the link itself, not the directory it points to. GNU mv says -T, BSD's -h.
+switch_to() {
+  ln -s "releases/$1" "$ROOT/.current.new"
+  mv -T "$ROOT/.current.new" "$ROOT/current" 2>/dev/null || mv -h "$ROOT/.current.new" "$ROOT/current"
+}
+
+# The releases, newest deployed first. IDs are checked on the way in: no
+# spaces or line breaks to split on.
+releases() {
+  # shellcheck disable=SC2012
+  ls -1t "$REL" | while read -r r; do
+    if [ -d "$REL/$r" ]; then echo "$r"; fi
+  done
+}
+
+# check_listing ARCHIVE DIR: refuses the archive, before anything is unpacked,
+# unless it holds only files and directories under plain relative names, an
+# index.html at the top, and no more than MAX_UNPACKED bytes unpacked.
+check_listing() {
+  tar -tzf "$1" > "$2/names" 2> "$2/err" || die "not a gzipped tar archive: $(head -n 2 "$2/err")"
+  # The type of each entry, the first letter of its long listing (- a file,
+  # d a directory; l, h, c, b and p are refused), and its size, in the same
+  # order. The size is what the entry unpacks to: a sparse file's is far more
+  # than it takes in the archive, or in the stream measured before. Owners
+  # as numbers, so that no name an archive gives them can move the columns:
+  # GNU tar lists "uid/gid size", bsdtar "links uid gid size".
+  tar --numeric-owner -tvzf "$1" 2> /dev/null | awk '
+    $2 ~ "^[0-9]+/[0-9]+$" && $3 ~ "^[0-9]+$" { print substr($1, 1, 1), $3; next }
+    $2 ~ "^[0-9]+$" && $3 ~ "^[0-9]+$" && $4 ~ "^[0-9]+$" && $5 ~ "^[0-9]+$" { print substr($1, 1, 1), $5; next }
+    { print substr($1, 1, 1), "?" }' > "$2/types"
+  [ "$(wc -l < "$2/names")" -eq "$(wc -l < "$2/types")" ] ||
+    die "refused the build: its listing does not add up (a name with a line break in it?)"
+  # Regular expressions as strings, which mawk, gawk and BSD awk read alike.
+  paste -d ' ' "$2/types" "$2/names" | awk -v max="$MAX_ENTRIES" -v maxsize="$MAX_UNPACKED" '
+    function refuse(why) { print "  " name ": " why; bad++ }
+    {
+      entries++
+      type = substr($0, 1, 1)
+      rest = substr($0, 3)
+      at = index(rest, " ")
+      size = substr(rest, 1, at - 1)
+      name = substr(rest, at + 1)
+      path = name
+      sub("^[.]/", "", path)
+      if (type != "-" && type != "d") { refuse("not a file or a directory"); next }
+      if (size !~ "^[0-9]+$") { refuse("no size in its listing"); next }
+      total += size
+      if (size + 0 > maxsize + 0) { refuse("more than " maxsize " bytes unpacked"); next }
+      # The top itself: a directory, or it would decide where the rest goes.
+      if (path == "" || path == ".") { if (type != "d") refuse("the top is not a directory"); next }
+      if (substr(path, 1, 1) == "/") { refuse("an absolute path"); next }
+      if (path ~ "[^A-Za-z0-9._~@+/-]") { refuse("a character other than letters, digits and . _ ~ @ + - /"); next }
+      sub("/$", "", path)
+      n = split(path, parts, "/")
+      for (i = 1; i <= n; i++) {
+        if (parts[i] == "" || parts[i] == "." || parts[i] == "..") { refuse("an empty, . or .. part"); next }
+      }
+      if (type == "-" && path == "index.html") top = 1
+    }
+    END {
+      if (entries > max) { print "  more than " max " entries"; bad++ }
+      if (total > maxsize + 0) { print "  more than " maxsize " bytes unpacked, all told"; bad++ }
+      if (!top) { print "  no index.html at the top"; bad++ }
+      exit (bad ? 1 : 0)
+    }' > "$2/problems" || { echo "$me: refused the build:" >&2; head -n 20 "$2/problems" >&2; exit 1; }
+}
+
+deploy() {
+  id=$1
+  [ ! -t 0 ] || die "the build goes on standard input: $me $id < build.tar.gz"
+  # Read and checked before the lock is taken, so that an upload that is slow
+  # or stalls holds up no other deploy, and no activate; and away from $ROOT,
+  # where the next run clears what a killed one left.
+  work=$(mktemp -d "${TMPDIR:-/tmp}/$me.XXXXXX")
+  in=$work/build.tar.gz
+  receive > "$in" || die "the build did not come whole within $READ_WAIT seconds"
+  size=$(wc -c < "$in" | tr -d ' ')
+  [ "$size" -gt 0 ] || die "nothing came on standard input"
+  [ "$size" -le "$MAX_BYTES" ] || die "refused the build: more than $MAX_BYTES bytes"
+  # How large it is unpacked, before anything is: a small archive can hold a
+  # great deal, and listing it reads all of that. The count stops at the limit.
+  stream=$(gzip -dc < "$in" 2> /dev/null | head -c "$((MAX_UNPACKED + 1))" | wc -c | tr -d ' ')
+  [ "$stream" -le "$MAX_UNPACKED" ] || die "refused the build: more than $MAX_UNPACKED bytes unpacked"
+  check_listing "$in" "$work"
+
+  lock
+  # Unpacked under a name no ID can have, owned by this user whatever the
+  # archive says, with modes and times of its own: a file's time is part of
+  # what browsers are told to compare, and it must change with the build.
+  stage=$REL/.$id.tmp
+  mkdir "$stage"
+  tar -x -z -m --no-same-owner --no-same-permissions -f "$in" -C "$stage" || die "could not unpack the build"
+  # tar still gives each directory the archive's mode once it is done, the
+  # top one too, less the umask: one nobody may read could not be looked
+  # through below, nor moved, nor removed.
+  chmod -R u+rwX "$stage" || die "could not set the modes of the unpacked build"
+  # The listing was checked; what is on disk now is checked again.
+  find "$stage" ! -type f ! -type d > "$work/odd" || die "could not look through the unpacked build"
+  [ ! -s "$work/odd" ] || die "refused the build: it unpacked to something other than files and directories: $(head -n 3 "$work/odd")"
+  [ -f "$stage/index.html" ] || die "refused the build: no index.html at the top"
+  find "$stage" -type d -exec chmod 755 {} +
+  find "$stage" -type f -exec chmod 644 {} +
+  files=$(find "$stage" -type f | wc -l | tr -d ' ')
+  # The sizes the files have, however little of the disk they take: what
+  # the listing said, and what is served.
+  unpacked=$(find "$stage" -type f -exec wc -c {} + | awk '!/ total$/ { s += $1 } END { printf "%.0f\n", s }')
+  [ "$unpacked" -le "$MAX_UNPACKED" ] || die "refused the build: more than $MAX_UNPACKED bytes unpacked"
+
+  prev=$(current)
+  if [ -d "$REL/$id" ]; then
+    if diff -r "$stage" "$REL/$id" > /dev/null 2>&1; then
+      remove "$stage"
+      stage=
+      if [ "$prev" = "$id" ]; then
+        say "release $id is here already, the same build, and served: nothing to do"
+        return
+      fi
+      switch_to "$id"
+      log "deployed $id again (before: ${prev:-none})"
+      say "release $id was kept here, the same build: serving it again (before: ${prev:-none})"
+      return
+    fi
+    die "release $id is here already, with other files: not replaced (activate $id serves the one kept)"
+  fi
+  mv "$stage" "$REL/$id"
+  stage=
+  # Its time is when it was deployed: the order releases are kept in.
+  touch "$REL/$id"
+  switch_to "$id"
+  log "deployed $id (before: ${prev:-none})"
+  say "deployed release $id: $files files, $((unpacked / 1024)) KiB unpacked; serving it (before: ${prev:-none})"
+
+  releases | {
+    n=0
+    while read -r r; do
+      n=$((n + 1))
+      if [ "$n" -le "$KEEP" ] || [ "$r" = "$id" ] || [ "$r" = "$prev" ]; then continue; fi
+      rm -rf -- "${REL:?}/$r"
+      say "removed release $r"
+    done
+  }
+}
+
+activate() {
+  id=$1
+  lock
+  [ -f "$REL/$id/index.html" ] || die "there is no release $id here ($me list)"
+  prev=$(current)
+  if [ "$prev" = "$id" ]; then
+    say "release $id is served already"
+    return
+  fi
+  switch_to "$id"
+  log "activated $id (before: ${prev:-none})"
+  say "serving release $id (before: ${prev:-none})"
+}
+
+list() {
+  cur=$(current)
+  releases | while read -r r; do
+    # When it was last deployed or activated, from the log.
+    when=$(awk -v r="$r" '$3 == r { t = $1 } END { print t }' "$LOG" 2> /dev/null || true)
+    mark=
+    if [ "$r" = "$cur" ]; then mark="  (served)"; fi
+    printf '%s  %s%s\n' "$r" "${when:--}" "$mark"
+  done
+}
+
+[ "$(id -u)" != 0 ] || die "run this as the user that owns $ROOT: sudo -u webdeploy $me ..."
+[ -d "$REL" ] || die "$REL is missing: see deploy/setup-web.sh"
+if [ -e "$ROOT/current" ] && [ ! -L "$ROOT/current" ]; then
+  die "$ROOT/current is not a link: see deploy/setup-web.sh"
+fi
+
+case ${1:-} in
+  list) [ $# -eq 1 ] || usage; list ;;
+  activate) [ $# -eq 2 ] || usage; valid_id "$2"; activate "$2" ;;
+  '') usage ;;
+  *) [ $# -eq 1 ] || usage; valid_id "$1"; deploy "$1" ;;
+esac
