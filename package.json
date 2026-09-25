@@ -13,7 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "gen:api": "node scripts/gen-api-types.mjs"
+    "gen:api": "node scripts/gen-api-types.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "check": "npm run typecheck && npm run check:i18n && npm test"
   },
   "engines": {
     "node": ">=20.19"
