@@ -1,9 +1,18 @@
-// What the members pages share: the presets, the measure of a seat against
-// the caller's own (Core's "nobody hands out more than they hold", checked
-// here only to warn — Core decides), and Core's refusals put in words.
-import { computed, ref, shallowRef, watch } from 'vue'
-import { ApiError, read } from '@/api/http'
-import { AUTONOMY_LEVELS, PERMS, type AutonomyLevel, type Perm, type PermLevels, type Preset } from '@/api/types'
+// What the members pages share: the presets, finding whom to seat, the
+// measure of a seat against the caller's own (Core's "nobody hands out more
+// than they hold", checked here only to warn — Core decides), and Core's
+// refusals put in words.
+import { computed, readonly, ref, shallowRef, watch } from 'vue'
+import { ApiError, isApiError, read, type ToolIn, type ToolOut } from '@/api/http'
+import {
+  AUTONOMY_LEVELS,
+  PERMS,
+  type Actor,
+  type AutonomyLevel,
+  type Perm,
+  type PermLevels,
+  type Preset,
+} from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { i18n } from '@/i18n'
 import { formatDateTime } from '@/utils/format'
@@ -75,6 +84,92 @@ export function usePresets() {
   const builtIn = computed(() => presets.value.filter((p) => !p.dept_id))
   const department = computed(() => presets.value.filter((p) => !!p.dept_id))
   return { presets, byId, builtIn, department, loading, error, reload: load }
+}
+
+// ---------------------------------------------------------------------------
+// Finding whom to seat
+// ---------------------------------------------------------------------------
+//
+// Whoever seats members can ask Core whom a whole email address, or an actor
+// ID they were given, names, and whether they already have a seat here
+// (member.lookup_actor). It lists nobody: a piece of an address finds no one.
+//
+// A Core from before the tool answers its route as no route at all (404, "no
+// such route"), and something in front of Core may answer 404 or 405 of its
+// own. That is a fact about the Core, not about who asks, so it is noted once
+// for the page's life, and the form falls back to what it did before: an ID,
+// pasted in.
+
+/** Whom an email address or an actor ID names, with their seat here if they have one. */
+export type SeatCandidate = ToolOut<'member.lookup_actor'>
+
+/**
+ * Whether an error from member.lookup_actor says this Core has no such tool.
+ * The tool's own answer that nobody has that email or ID is a 404 too, with
+ * Core's not_found code; a missing route says so in its message.
+ */
+export function lacksLookup(e: unknown): boolean {
+  if (!isApiError(e)) return false
+  if (e.status === 405 || e.code === 'method_not_allowed') return true
+  return e.status === 404 && (e.code !== 'not_found' || /no such route/i.test(e.message))
+}
+
+/** Whether an error from member.lookup_actor is its answer that nobody is registered with that email or ID. */
+export function foundNobody(e: unknown): boolean {
+  return isApiError(e) && e.isNotFound && !lacksLookup(e)
+}
+
+/**
+ * The address to look someone up by, trimmed, when it looks like a whole one
+ * (something@somewhere); null for empty text or a piece of one, which Core
+ * would not match: it finds by the whole address only, in any case.
+ */
+export function wholeEmail(text: string | null | undefined): string | null {
+  const s = (text ?? '').trim()
+  return /^[^\s@]+@[^\s@]+$/.test(s) ? s : null
+}
+
+/** What the directory (actor.get, actor.list) says of an actor, as a lookup would: with no word on a seat. */
+export function candidateFrom(a: Pick<Actor, 'id' | 'display_name' | 'kind' | 'status'>): SeatCandidate {
+  return { actor_id: a.id, display_name: a.display_name, kind: a.kind, status: a.status }
+}
+
+const lookupKnown = ref<boolean | null>(null)
+
+/** Whether this Core has member.lookup_actor: null until a call has said. */
+export const hasLookup = readonly(lookupKnown)
+
+/** member.lookup_actor, noting on the way whether this Core has it. */
+export async function lookupActor(args: ToolIn<'member.lookup_actor'>): Promise<SeatCandidate> {
+  try {
+    const out = await read('member.lookup_actor', args)
+    lookupKnown.value = true
+    return out
+  } catch (e) {
+    if (lacksLookup(e)) lookupKnown.value = false
+    else if (foundNobody(e)) lookupKnown.value = true
+    throw e
+  }
+}
+
+let probing: Promise<void> | null = null
+
+/**
+ * Asks Core whom the caller's own actor ID names, so that a form can offer
+ * finding by email before anyone types. Once a call has said whether this
+ * Core has the tool, it asks nothing; a failure that says nothing about the
+ * tool (the network, a refusal) leaves it unknown, for the next probe or
+ * lookup.
+ */
+export function probeLookup(courseId: string, selfId: string | null | undefined): Promise<void> {
+  if (lookupKnown.value !== null || !selfId) return Promise.resolve()
+  probing ??= lookupActor({ course_id: courseId, actor_id: selfId })
+    .then(
+      () => undefined,
+      () => undefined,
+    )
+    .finally(() => (probing = null))
+  return probing
 }
 
 // ---------------------------------------------------------------------------

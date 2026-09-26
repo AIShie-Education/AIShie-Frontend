@@ -80,8 +80,21 @@ export default {
       '在上方選取後會自動填入，也可以直接貼上參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
     noSearch:
       '此 Core 版本尚未支援以姓名或電子郵件搜尋（需要更新），請貼上參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
+    findEmail: '以電子郵件查找',
+    emailPlaceholder: "name{'@'}example.edu",
+    findButton: '查找',
+    emailHelp: '請輸入對方完整的電子郵件地址，大小寫不拘；只輸入部分地址是找不到人的。',
+    emailPartial: "請輸入完整的電子郵件地址，例如 name{'@'}example.edu；只輸入部分地址是找不到人的。",
+    emailNobody: '沒有人以這個電子郵件地址登記。請平台管理員先為對方登記，再回到這裡查找。',
+    actorHelpEmail:
+      '在上方以電子郵件找到對方後，會自動填入。代理沒有電子郵件：請向平台管理員索取它的參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
+    noSearchEmail:
+      '此 Core 版本尚未支援以姓名或電子郵件搜尋（需要更新），只能以完整的電子郵件地址查找：請在上方輸入，或直接貼上參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
     actorInvalid: '參與者 ID 的格式類似 01a0d79f-13c6-70da-a7cc-f009b1efe423。',
     actorMissing: '找不到此 ID 的參與者。',
+    alreadySeated: '對方已在此課程中有席位。請修改現有的席位，而不是再新增一個。',
+    openSeat: '開啟對方的席位',
+    suspended: '已停用：Core 不會為已停用的參與者安排席位，須先由平台管理員重新啟用。',
     preset: '權限預設',
     presetsFailed: '無法載入權限預設。',
     builtIn: '內建',
