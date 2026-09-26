@@ -165,6 +165,8 @@ test('on a Core without the directory, an administrator finds people by their ID
   listed.length = 0
   slow = 1500
   await page.goto(`/admin/courses/${courseId}`)
+  // Root is seated already: the card lists the instructors, and opens the form on asking.
+  await page.getByRole('button', { name: 'Seat another instructor' }).click()
   const noSearch = page.getByText('This Core cannot search by name or email yet (it needs updating)')
   const seat = page.locator('#seat-actor')
   await seat.click()

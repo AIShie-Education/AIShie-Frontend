@@ -10,6 +10,7 @@ import { useUiStore, type Theme } from '@/stores/ui'
 import { LOCALES, type Locale } from '@/i18n'
 import StatusTag from '@/components/StatusTag.vue'
 import { useMediaQuery } from '@/composables/useMediaQuery'
+import { titleKey } from '@/router/title'
 
 const session = useSessionStore()
 const ui = useUiStore()
@@ -54,17 +55,11 @@ function onUserCommand(cmd: string) {
   else if (cmd === 'signout') void signOut()
 }
 
+// The browser's tab is named by the router (router/title.ts); this is the header's.
 const pageTitle = computed(() => {
-  const key = [...route.matched].reverse().find((r) => r.meta.title)?.meta.title
+  const key = titleKey(route)
   return key ? t(key) : ''
 })
-watch(
-  pageTitle,
-  (title) => {
-    document.title = title ? `${title} · AIShiteru` : 'AIShiteru'
-  },
-  { immediate: true },
-)
 </script>
 
 <template>

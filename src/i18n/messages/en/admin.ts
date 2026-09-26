@@ -104,15 +104,29 @@ export default {
   seat: {
     title: 'Seat the instructor',
     intro:
-      "A new course has no members. Seat its first instructor here: they get the built-in instructor preset, and add everyone else from the course's Members page.",
+      "A new course has no members until its first instructor is seated here. They get the built-in instructor preset, and add everyone else from the course's Members page.",
+    seatedTitle: 'Instructors',
+    hasMembers: "This course has members. Its instructors add everyone else from the course's Members page.",
+    noInstructorsIntro:
+      "This course has members, but no instructor at the moment. Seat one here: they get the built-in instructor preset, and add everyone else from the course's Members page.",
+    seatedJustNow: 'seated just now',
+    notListed:
+      'You have no seat in this course, so its member list cannot be read here: only whom you seat from this page is shown.',
+    cannotList: 'Your seat in this course cannot read its member list, so its instructors are not shown here.',
+    listFailed: 'The member list could not be read just now.',
+    membersPage: 'Go to the Members page',
+    membersPageNeedsSeat:
+      "The course's own pages, Members included, open only to its members. Seat yourself to work in it.",
+    another: 'Seat another instructor',
     who: 'Instructor',
     placeholder: 'Search by name or email, or paste an ID',
     placeholderId: 'Paste an actor ID',
     noMatch: 'No one matches.',
     pasteId: 'Paste the whole actor ID.',
     noSearch: 'This Core cannot search by name or email yet (it needs updating): paste the actor ID instead.',
-    suspended: 'This actor is suspended, and Core does not seat a suspended actor. Reactivate them first.',
-    system: 'The system actor runs background jobs and is never seated in a course.',
+    suspended: 'They are suspended, and Core does not seat anyone suspended. Reactivate them first.',
+    system: 'The system account runs background jobs and is never seated in a course.',
+    alreadySeated: 'You have a seat in this course already, and Core does not seat anyone twice.',
     agent: 'This is an agent. Seated as instructor, it holds every permission of the instructor preset.',
     submit: 'Seat as instructor',
     done: '{name} is seated as instructor',
@@ -143,17 +157,19 @@ export default {
       status: 'Status',
       role: 'Platform role',
       signIn: 'Sign-in',
+      registered: 'Registered',
     },
+    registeredOn: 'Registered {date}',
     empty: 'No one is registered yet.',
     emptyFiltered: 'No one matches.',
     byId: 'Found by ID. Press Enter to open their page.',
-    notFound: 'No actor has this ID.',
+    notFound: 'No person or agent has this ID.',
     noList: {
       title: 'This Core cannot list people and agents yet',
-      body: 'Browsing and searching them needs a newer AIShiteru Core, one with actor.list. Until the server is updated, open an actor by their ID, or register someone new.',
+      body: 'Browsing and searching them needs a newer AIShiteru Core, one with actor.list. Until the server is updated, open a person or agent by their actor ID, or register someone new.',
     },
     openById: {
-      title: 'Open an actor by ID',
+      title: 'Open a person or agent by ID',
       placeholder: 'Actor ID',
       submit: 'Open',
       invalid: 'This is not an actor ID.',
@@ -192,8 +208,8 @@ export default {
   },
 
   register: {
-    title: 'Register an actor',
-    intro: 'A registered actor can do nothing until it is seated in a course.',
+    title: 'Register a person or agent',
+    intro: 'Someone registered can do nothing until seated in a course.',
     introAdmin:
       'An administrator manages the platform (courses, people and agents, terms, departments and presets) without any seat. Inside a course they can do nothing until they are seated, like anyone else.',
     kind: 'Kind',
@@ -208,19 +224,25 @@ export default {
     },
     email: 'Email',
     emailHint:
-      'What they sign in with, with the password they choose from an invitation. It can be given or changed later, not removed. An email belongs to one actor only.',
+      'What they sign in with, with the password they choose from an invitation. It can be given or changed later, not removed. An email belongs to one person only.',
     admin: 'Platform administrator',
     adminHint:
-      'Administrators create courses and register and manage actors. Inside courses they are governed by their seats like anyone else. It can be given only now, when registering.',
+      'Administrators create courses and register and manage people and agents. Inside courses they are governed by their seats like anyone else. It can be given only now, when registering.',
     adminRootOnly: 'Only root can make an administrator.',
     permanent:
       'The kind and the platform role cannot be changed after registering. The name and the email can be corrected on their page.',
     submit: 'Register',
     done: '{name} is registered',
+    sameName:
+      '{n} person or agent is already registered as “{name}”. | {n} people or agents are already registered as “{name}”.',
+    sameNameHint:
+      'Registering makes another, separate one with the same name, told apart only by its ID. Check it is not already here, or choose a name that tells them apart.',
+    sameNameUnchecked:
+      'Many names or emails contain “{name}”: only the {n} registered first were checked for the same name.',
   },
 
   actor: {
-    title: 'Actor',
+    title: 'Person or agent',
     registration: 'Registration',
     id: 'Actor ID',
     kind: 'Kind',
@@ -247,18 +269,19 @@ export default {
     reactivateTitle: 'Reactivate {name}?',
     reactivateConfirm: 'Their seats and credentials work again as they were.',
     reactivated: '{name} is active again',
-    suspendedBanner: 'Suspended: every call this actor makes is refused, in every course, and it cannot sign in.',
+    suspendedBanner: 'Suspended: every call they make is refused, in every course, and they cannot sign in.',
     cannot: {
       self: 'This is your own account: you cannot suspend it.',
-      role: 'Only root acts on an actor who holds a platform role.',
-      system: 'The system actor runs background jobs. It is never suspended, issued a token or linked to an identity.',
+      role: 'Only root acts on someone who holds a platform role.',
+      system:
+        'The system account runs background jobs. It is never suspended, issued a token or linked to an identity.',
     },
   },
 
   token: {
     title: 'API token',
     intro:
-      'Issue a token so this actor can call Core: this is how an agent gets its first credential, since it cannot sign in to ask for one. The token is shown once; Core keeps only its hash.',
+      'Issue a token so they can call Core: this is how an agent gets its first credential, since it cannot sign in to ask for one. The token is shown once; Core keeps only its hash.',
     introSelf: 'A token for your own account. Your tokens are also on your Account page.',
     label: 'Label',
     labelPlaceholder: 'grader for CS101, autumn term',
@@ -271,7 +294,7 @@ export default {
     daysPlaceholder: '1–3650',
     daysInvalid: 'From 1 to 3650 days',
     submit: 'Issue token',
-    suspendedNote: 'This actor is suspended: a token issued now is refused until they are reactivated.',
+    suspendedNote: 'They are suspended: a token issued now is refused until they are reactivated.',
     revealTitle: 'Copy the token now',
     once: 'This is the only time the token is shown. Core keeps only its hash: if it is lost, issue a new one.',
     replayed:
@@ -294,20 +317,83 @@ export default {
     doneCopying: 'Done',
   },
 
+  credentials: {
+    title: 'Tokens and sign-ins',
+    introAgent:
+      'The API tokens this agent calls Core with. Revoking one stops that token from its next call without suspending the agent: its other tokens and its seats are kept.',
+    introHuman:
+      'Every way into this account: API tokens, browser sessions, a password, single sign-on and an invitation link. Revoke one without suspending them: their other credentials and their seats are kept.',
+    self: 'These are your own. Revoke them on your Account page, which can tell which session is the one you are using now.',
+    selfLink: 'Open my account',
+    showInactive: 'Show revoked and expired ({n})',
+    tokens: 'API tokens',
+    signIns: 'Sessions and other sign-ins',
+    noTokens: 'No API tokens.',
+    noLiveTokens: 'No live API tokens.',
+    noSignIns: 'No live sessions or sign-ins.',
+    col: {
+      label: 'Label',
+      token: 'Token',
+      issuedBy: 'Issued by',
+      created: 'Created',
+      expires: 'Expires',
+      lastUsed: 'Last used',
+    },
+    unlabelled: 'No label',
+    selfIssued: 'Self-issued',
+    issuerUnknown: 'Not recorded',
+    neverUsed: 'Never used',
+    revokedAt: 'Revoked',
+    state: {
+      active: 'Active',
+      revoked: 'Revoked',
+      expired: 'Expired',
+    },
+    sessionVia: {
+      password: 'Signed in with a password',
+      sso: 'Signed in through {provider}',
+      invite: 'Signed in by accepting an invitation',
+    },
+    subject: 'Account',
+    linkedBy: 'Linked by',
+    invitedBy: 'Invited by',
+    note: 'Note',
+    revoke: 'Revoke',
+    revoked: 'Revoked',
+    signedOut: 'Signed out',
+    missing:
+      'This Core cannot list an actor’s tokens and sign-ins yet (it needs updating). Until it is, a leaked token can be stopped only by suspending them.',
+    confirm: {
+      titleToken: 'Revoke the token “{label}”?',
+      titleSession: 'Sign out this browser session?',
+      title: 'Revoke this credential?',
+      api_token: 'Anything using {token} is refused from its next call.',
+      irreversible:
+        'This cannot be undone: a revoked token never works again. If {name} still needs one, issue a new token.',
+      keeps: 'Nothing else changes: {name} keeps their other tokens and sign-ins, and their seats.',
+      session: 'The browser signed in with this session is signed out on its next request. {name} can sign in again.',
+      password:
+        '{name} can no longer sign in with a password until they set a new one, on their Account page while still signed in or through an invitation link.',
+      sso: '{name} can no longer sign in through {provider}, until the identity is linked to them again.',
+      invite: 'The invitation link stops working. A new one can be made at any time.',
+      other: 'It stops working from its next use.',
+    },
+  },
+
   edit: {
     title: 'Edit registration',
     intro: 'Correct their name, or give them an email to sign in with. The kind and the platform role do not change.',
     introName: 'Correct its name. The kind and the platform role do not change.',
     displayName: 'Display name',
     email: 'Email',
-    emailHint: 'What they sign in with. It can be changed, not removed. An email belongs to one actor only.',
+    emailHint: 'What they sign in with. It can be changed, not removed. An email belongs to one person only.',
     emailChanged: 'From now on they sign in with the new email. Their password, if they have one, stays as it is.',
     withdrawsInvite:
       'Changing the email withdraws the invitation link waiting, which went to the old one: create a new one afterwards.',
     nothingChanged: 'Nothing was changed.',
     saved: 'Saved',
     blocked: {
-      system: 'The system actor runs background jobs: its registration does not change.',
+      system: 'The system account runs background jobs: its registration does not change.',
     },
   },
 
@@ -329,7 +415,7 @@ export default {
     blocked: {
       self: 'This is your own account: set your password on your Account page.',
       selfLink: 'Open my account',
-      system: 'The system actor never signs in.',
+      system: 'The system account never signs in.',
       agent: 'Agents connect with API tokens, not passwords: issue it a token instead.',
       suspended: 'They are suspended. Reactivate them to invite them.',
       noEmail: 'They have no email, which is what they would sign in with. Give them one first.',
@@ -359,7 +445,7 @@ export default {
     submit: 'Link identity',
     done: 'Identity linked',
     linkedAs: 'Linked {subject}',
-    once: 'One identity links to one actor, for good: once linked it is never reassigned to anyone else.',
+    once: 'One identity links to one person, for good: once linked it is never reassigned to anyone else.',
     agent: 'Agents connect with API tokens, not single sign-on.',
   },
 }

@@ -22,7 +22,7 @@ export default {
     proposed: 'The new assignment is waiting for approval. It will appear here once someone approves it.',
     viewMyActions: 'See my actions',
     pointsShort: '{n} points',
-    approvalHint: 'Creating, changing and publishing assignments waits for someone to approve it.',
+    approvalHint: 'Creating, changing, publishing and unpublishing assignments waits for someone to approve it.',
   },
   state: {
     unpublished: 'Not published',
@@ -33,6 +33,8 @@ export default {
     notStarted: 'Not started',
     attempt: 'attempt {n}',
   },
+  // The grading scheme's root, still under the name Core gave it ("Total").
+  courseTotal: 'Course total',
   form: {
     createTitle: 'New assignment',
     editTitle: 'Edit assignment',
@@ -61,7 +63,11 @@ export default {
       choose: 'Choose a document',
       chooseRequired: 'Choose a document',
       unpublishedTag: 'not published',
-      selectedUnpublished: 'This document has no published version yet: students cannot read it.',
+      selectedUnpublished: {
+        instructions: 'This document has no published version yet: students cannot read it.',
+        rubric:
+          'This rubric has no published version yet, so grader agents cannot read it: only members who may read drafts (instructors and TAs by default) can. Students cannot read rubrics either way under the built-in student preset.',
+      },
       mustBePublished: 'This assignment is published, so its instructions must be a document with a published version.',
       newNeedsApproval:
         'Writing a new document waits for approval: the assignment is not saved until it has been approved.',
@@ -71,16 +77,35 @@ export default {
       newTitle: 'Document title',
       newBody: 'Write it here (Markdown)',
       newFile: 'Attach a file (optional)',
-      publishNow: 'Publish it now, so students can read it once the assignment is published',
+      publishNow: {
+        instructions: 'Publish it now, so students can read it once the assignment is published',
+        rubric: 'Publish it now',
+      },
+      rubricReaders:
+        'Until the assignment is published, only members whose seat grants “Manage assignments” (instructors by default) can read this rubric. Once it is published, members whose seat grants “Read rubrics” and covers this assignment read it. If the rubric is published, that means by default instructors, teaching assistants and the grader agents listed for this assignment. If it is not, only those who can also “Read drafts” read it (instructors and TAs by default; not grader agents). Never students: the built-in student preset cannot read rubrics.',
       needContent: 'Write some text or attach a file',
       defaultInstructions: '{title} — instructions',
       defaultRubric: '{title} — rubric',
       instructionsPublishedHint: 'This assignment is published, so its instructions must have a published version.',
     },
-    created: 'Assignment created. It is not published yet.',
-    saved: 'Assignment saved.',
+    created: {
+      plain: 'Assignment created. It is not published yet.',
+      instructions: 'Assignment created (with its instructions). It is not published yet.',
+      rubric: 'Assignment created (with its rubric). It is not published yet.',
+      both: 'Assignment created (with its instructions and rubric). It is not published yet.',
+    },
+    saved: {
+      plain: 'Assignment saved.',
+      instructions: 'Assignment saved (with its new instructions).',
+      rubric: 'Assignment saved (with its new rubric).',
+      both: 'Assignment saved (with its new instructions and rubric).',
+    },
     nothingChanged: 'Nothing was changed.',
-    docCreated: '“{title}” created.',
+    quoted: '“{title}”',
+    docsKept:
+      '{titles} was created, but the assignment was not saved. It is chosen here now, so saving again does not create it a second time. | {titles} were created, but the assignment was not saved. They are chosen here now, so saving again does not create them a second time.',
+    proposedWithDocs:
+      'Sent for approval: the assignment is saved once someone approves it. {titles} was created already and stays in the course even if it is not approved. | Sent for approval: the assignment is saved once someone approves it. {titles} were created already and stay in the course even if it is not approved.',
     docNotPublished:
       '“{title}” was created, but it has no published version yet (publishing it failed or waits for approval), so the assignment has not been saved. Save again once it is published.',
     docProposed:
@@ -97,13 +122,29 @@ export default {
     instructionsPublished: 'Instructions published.',
     publishTitle: 'Publish assignment',
     publishConfirm:
-      'Publish “{title}”? Students will see it and can start handing in work. An assignment cannot be unpublished.',
+      'Publish “{title}”? Students will see it and can start handing in work. It can be unpublished again only until a student starts on it (a draft counts) or its due date passes.',
     publishNeedsInstructions: 'Its instructions must have a published version.',
+    publishPastDue:
+      'Its due date has already passed: shortly after publishing, every student with nothing handed in is recorded as missing, and from then on it cannot be unpublished.',
     publishApproval: 'Publishing will wait for someone to approve it.',
     published: 'Assignment published.',
+    unpublish: 'Unpublish',
+    unpublishTitle: 'Unpublish assignment',
+    unpublishConfirm:
+      'Unpublish “{title}”? Students will no longer see it or be able to hand in work for it. What the activity feed has already shown about it stays there.',
+    unpublishUnchecked:
+      'Not every student’s work could be checked from here: if anyone has already started on it, it stays published.',
+    unpublishApproval: 'Unpublishing will wait for someone to approve it.',
+    unpublished: 'Assignment unpublished. Students no longer see it.',
+    unpublishStarted:
+      'Students have already started on it, so it can no longer be unpublished. (A draft counts, as does work recorded as missing.)',
+    unpublishMissing:
+      'Work on it has been recorded as missing (its due date passed, or it was recorded by hand), so it can no longer be unpublished.',
     proposed: {
       edit: 'Your changes to this assignment are waiting for approval. Until they are approved, it stays as shown here.',
       publish: 'Publishing this assignment is waiting for approval. Students cannot see it until it is approved.',
+      unpublish:
+        'Unpublishing this assignment is waiting for approval. Until it is approved students still see it, and once any of them starts on it or its due date passes, it can no longer be unpublished.',
       instructions: 'Publishing the instructions is waiting for approval.',
     },
     instructions: 'Instructions',

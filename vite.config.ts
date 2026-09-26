@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id: string) {
             if (id.includes('node_modules/element-plus') || id.includes('node_modules/@element-plus')) return 'element-plus'
-            if (id.includes('node_modules/markdown-it') || id.includes('node_modules/dompurify')) return 'markdown'
+            if (/node_modules\/(markdown-it|dompurify|katex|highlight\.js)\//.test(id)) return 'markdown'
             if (id.includes('node_modules')) return 'vendor'
           },
         },

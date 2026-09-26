@@ -72,6 +72,31 @@ export interface Scheme {
   uncounted: AssignmentSummary[]
 }
 
+/** The name Core gives the root it makes with every course: the course total. */
+export const CORE_ROOT_NAME = 'Total'
+
+/**
+ * A node's name as the page shows it. The root still called what Core named
+ * it is shown in the reader's language (`rootName`, "Course total"); any
+ * other name, the root's too once someone has renamed it, as it was written.
+ */
+export function nodeName(n: Pick<SchemeNode, 'c' | 'isRoot'>, rootName: string): string {
+  return namedByCore(n) ? rootName : n.c.name
+}
+
+/** Whether this is the root, still under the name Core gave it. */
+export function namedByCore(n: Pick<SchemeNode, 'c' | 'isRoot'>): boolean {
+  return n.isRoot && n.c.name === CORE_ROOT_NAME
+}
+
+/**
+ * A component from a flat list (component.tree) as the page shows it: the
+ * root, while still called what Core named it, in the reader's language.
+ */
+export function componentLabel(c: { name: string; parent_id?: string | null }, rootName: string): string {
+  return !c.parent_id && c.name === CORE_ROOT_NAME ? rootName : c.name
+}
+
 const num = (v: unknown): number => {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0

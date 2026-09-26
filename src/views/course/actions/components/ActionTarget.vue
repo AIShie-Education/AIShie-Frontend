@@ -6,6 +6,7 @@
 // is shown.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { componentLabel } from '@/views/course/scheme/components/schemeModel'
 import { useCourseStore } from '@/stores/course'
 import { presetLabel } from '@/views/course/members/components/seat'
 import IdText from '@/components/IdText.vue'
@@ -91,7 +92,10 @@ const componentId = computed(
 const componentName = computed(() => {
   const id = componentId.value
   if (!id) return undefined
-  return (comps.value?.value as { id: string; name: string }[] | undefined)?.find((c) => c.id === id)?.name
+  const c = (comps.value?.value as { id: string; name: string; parent_id?: string | null }[] | undefined)?.find(
+    (x) => x.id === id,
+  )
+  return c ? componentLabel(c, t('scheme.rootName')) : undefined
 })
 
 const score = computed(() => {

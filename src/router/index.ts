@@ -5,6 +5,7 @@ import CourseLayout from '@/layouts/CourseLayout.vue'
 import accountRoutes from './modules/account'
 import adminRoutes from './modules/admin'
 import courseRoutes from './modules/course'
+import { installTitle } from './title'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -56,7 +57,7 @@ const routes: RouteRecordRaw[] = [
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
-    meta: { public: true },
+    meta: { public: true, title: 'layout.notFound' },
   },
 ]
 
@@ -65,6 +66,9 @@ export const router = createRouter({
   routes,
   scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
 })
+
+// First, so that the tab is named before the sign-in check waits for Core.
+installTitle(router)
 
 router.beforeEach(async (to) => {
   const session = useSessionStore()

@@ -67,6 +67,7 @@ export default {
     subject: 'Account',
     linkedBy: 'Linked by',
     invitedBy: 'Invited by',
+    issuedBy: 'Issued by',
     note: 'Note',
     created: 'Created',
     lastUsed: 'Last used',

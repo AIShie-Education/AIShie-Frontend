@@ -4,20 +4,27 @@
 // holds more than the one adding it (levels, reach, lifetime), and this form
 // warns before sending when the caller's own seat is known.
 //
-// Who is seated is given by their actor ID. A platform administrator, whom
-// the directory (actor.list) answers, can also find them by name or email,
-// which fills the ID in; anyone else pastes the ID an administrator gives them.
+// Who is seated is given by their actor ID, which one of two ways to find
+// them fills in, never both at once: a platform administrator, whom the
+// directory (actor.list) answers, searches it by name or email; anyone else,
+// or an administrator whose Core has no directory, gives a person's whole
+// email (member.lookup_actor, which lists nobody). An ID can be pasted too:
+// an agent has no email, and an administrator gives its ID. Whatever ID is in
+// the field is looked up to show whom it names, to start from the preset for
+// their kind, and to stop a second seat for someone who already has one here.
+// A Core without member.lookup_actor has the ID field only, as before, and an
+// administrator's pasted ID is then looked up in the directory (actor.get).
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import type { FormInstance, FormRules } from 'element-plus'
-import { read, type ApiError, type ToolIn } from '@/api/http'
+import { isApiError, read, type ApiError, type ToolIn } from '@/api/http'
 import { ROLES, type Actor, type AutonomyLevel, type Perm, type PermLevels, type Preset } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
-import { isUuid } from '@/utils/format'
+import { isUuid, shortId } from '@/utils/format'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -25,7 +32,21 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { probeActorList, useActorSearch } from '@/views/admin/components/actorSearch'
 import RefusalAlert from './RefusalAlert.vue'
-import { fullPerms, grantProblems, permsAbove, presetDescription, presetLabel } from './seat'
+import {
+  candidateFrom,
+  foundNobody,
+  fullPerms,
+  grantProblems,
+  hasLookup,
+  lacksLookup,
+  lookupActor,
+  permsAbove,
+  presetDescription,
+  presetLabel,
+  probeLookup,
+  wholeEmail,
+  type SeatCandidate,
+} from './seat'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -66,7 +87,11 @@ const baseline = computed<PermLevels>(() => (preset.value ? fullPerms(preset.val
 function reset() {
   foundId.value = ''
   picked = null
+  email.value = ''
+  emailState.value = null
+  emailFound = null
   form.actorId = ''
+  presetChosen.value = false
   form.presetId = builtIn.value.find((p) => p.name === 'student')?.id ?? props.presets[0]?.id ?? ''
   form.students = []
   form.assignments = []
@@ -92,6 +117,7 @@ watch(open, (v) => {
   if (!v) return
   reset()
   if (session.isAdmin) void probeActorList()
+  void probeLookup(props.courseId, session.me?.id)
 })
 watch(
   () => props.presets,
@@ -132,7 +158,7 @@ const problems = computed(() =>
     : [],
 )
 
-// --- The actor, found or looked up where the caller may (platform administrators) --
+// --- Whom to seat ----------------------------------------------------------------
 const directory = useActorSearch()
 /**
  * Searching by name is offered to administrators once Core has said it has the
@@ -140,11 +166,21 @@ const directory = useActorSearch()
  * under someone typing in it.
  */
 const canFind = computed(() => session.isAdmin && directory.hasActorList.value === true)
+/**
+ * Finding by whole email is offered, on the same terms, to everyone the
+ * directory does not answer: once Core has said it has member.lookup_actor,
+ * and for an administrator once it has said it has no directory.
+ */
+const canFindByEmail = computed(
+  () => hasLookup.value === true && !canFind.value && (!session.isAdmin || directory.hasActorList.value === false),
+)
 const actorHelp = computed(() => {
   if (canFind.value) return t('members.add.actorHelpFound')
+  if (canFindByEmail.value) return session.isAdmin ? t('members.add.noSearchEmail') : t('members.add.actorHelpEmail')
   if (session.isAdmin && directory.hasActorList.value === false) return t('members.add.noSearch')
   return t('members.add.actorHelp')
 })
+
 /** The one picked in the search, whose ID is in the field. */
 const foundId = ref('')
 let picked: Actor | null = null
@@ -162,37 +198,131 @@ function onFound(id: string | undefined) {
   formRef.value?.clearValidate('actorId')
 }
 
-type ActorInfo = { display_name: string; kind: string; status: string } | 'missing' | null
-const actorInfo = ref<ActorInfo>(null)
+// By whole email: what was typed, what became of the last try, and the one it found.
+const email = ref('')
+type EmailState = 'finding' | 'partial' | 'nobody' | { error: string } | null
+const emailState = ref<EmailState>(null)
+/** The one the email found, whose ID is in the field. */
+let emailFound: SeatCandidate | null = null
+let emailSeq = 0
+
+async function findByEmail() {
+  const address = wholeEmail(email.value)
+  if (!address) {
+    emailState.value = email.value.trim() ? 'partial' : null
+    return
+  }
+  const mine = ++emailSeq
+  const before = form.actorId
+  emailState.value = 'finding'
+  try {
+    const out = await lookupActor({ course_id: props.courseId, email: address })
+    if (mine !== emailSeq) return
+    emailState.value = null
+    // An ID typed or pasted while this was on its way is the one meant: it stays.
+    if (form.actorId !== before) return
+    emailFound = out
+    if (form.actorId === out.actor_id) actorInfo.value = out
+    else form.actorId = out.actor_id
+    formRef.value?.clearValidate('actorId')
+  } catch (e) {
+    if (mine !== emailSeq) return
+    if (foundNobody(e)) emailState.value = 'nobody'
+    // A Core without the tool: the field goes, and the ID field is as it always was.
+    else if (lacksLookup(e)) emailState.value = null
+    else emailState.value = { error: errorMessage(e) }
+  }
+}
+function onEmailKey(e: Event | KeyboardEvent) {
+  if (!(e instanceof KeyboardEvent) || e.key !== 'Enter' || e.isComposing) return
+  e.preventDefault()
+  void findByEmail()
+}
+// Typing again (or clearing): what the last try said no longer applies, nor does
+// one still on its way, nor the ID it put in the field, which the text no longer finds.
+watch(email, () => {
+  emailSeq++
+  emailState.value = null
+  if (emailFound && form.actorId === emailFound.actor_id) form.actorId = ''
+  emailFound = null
+})
+
+// Whom the ID in the field names, and whether they already have a seat here.
+const actorInfo = ref<SeatCandidate | 'missing' | null>(null)
 const actorLooking = ref(false)
+/** Core can say whom an ID names: to anyone through the lookup, and to administrators through the directory. */
+const canResolve = computed(() => session.isAdmin || hasLookup.value !== false)
 let lookupTimer: ReturnType<typeof setTimeout> | undefined
+let lookupSeq = 0
+
+async function resolveActor(id: string): Promise<SeatCandidate | 'missing' | null> {
+  if (hasLookup.value !== false) {
+    try {
+      return await lookupActor({ course_id: props.courseId, actor_id: id })
+    } catch (e) {
+      if (foundNobody(e)) return 'missing'
+      if (!lacksLookup(e)) return null
+    }
+  }
+  if (!session.isAdmin) return null
+  try {
+    return candidateFrom(await read('actor.get', { actor_id: id }))
+  } catch (e) {
+    return isApiError(e) && e.isNotFound ? 'missing' : null
+  }
+}
+
 watch(
   () => form.actorId,
-  (id) => {
+  (raw) => {
     actorInfo.value = null
     clearTimeout(lookupTimer)
+    const mine = ++lookupSeq
     actorLooking.value = false
-    // An ID typed over the one picked leaves the search empty again.
-    if (picked && id.trim().toLowerCase() !== picked.id) {
+    const id = raw.trim().toLowerCase()
+    // An ID typed over the one picked or found leaves the search empty again.
+    if (picked && id !== picked.id) {
       picked = null
       foundId.value = ''
     }
-    if (!session.isAdmin || !isUuid(id)) return
-    if (picked) {
-      actorInfo.value = picked
+    if (emailFound && id !== emailFound.actor_id) emailFound = null
+    if (!isUuid(id)) return
+    if (emailFound) {
+      actorInfo.value = emailFound
       return
     }
-    lookupTimer = setTimeout(async () => {
-      actorLooking.value = true
-      try {
-        const a = await read('actor.get', { actor_id: id.trim() })
-        if (form.actorId === id) actorInfo.value = a
-      } catch {
-        if (form.actorId === id) actorInfo.value = 'missing'
-      } finally {
+    if (!canResolve.value) return
+    // What the directory said of the one picked shows at once; the lookup adds whether they have a seat here.
+    if (picked) {
+      actorInfo.value = candidateFrom(picked)
+      if (hasLookup.value === false) return
+    }
+    lookupTimer = setTimeout(
+      async () => {
+        if (!picked) actorLooking.value = true
+        const info = await resolveActor(id)
+        if (mine !== lookupSeq) return
         actorLooking.value = false
-      }
-    }, 350)
+        if (info) actorInfo.value = info
+      },
+      picked ? 0 : 350,
+    )
+  },
+)
+/** Their seat here, when they already have one: a second is not offered. */
+const seatedAs = computed(() => (actorInfo.value && actorInfo.value !== 'missing' && actorInfo.value.member_id) || null)
+
+// --- The preset to start from, by who is being seated ------------------------
+/** The person picked a preset themselves: who is being seated no longer changes it. */
+const presetChosen = ref(false)
+/** An agent starts as the built-in grader, a person as a student. */
+const kindPreset: Record<string, string> = { agent: 'grader', human: 'student' }
+watch(
+  () => (actorInfo.value && actorInfo.value !== 'missing' ? actorInfo.value.kind : null),
+  (kind) => {
+    if (!kind || presetChosen.value) return
+    const id = builtIn.value.find((p) => p.name === kindPreset[kind])?.id
+    if (id) form.presetId = id
   },
 )
 
@@ -220,7 +350,7 @@ function disabledDate(d: Date) {
 }
 
 async function submit() {
-  if (!formRef.value || !preset.value) return
+  if (!formRef.value || !preset.value || seatedAs.value) return
   const ok = await formRef.value.validate().catch(() => false)
   if (!ok) return
   const p = preset.value
@@ -293,6 +423,8 @@ function capToMine() {
               <span class="add-member__found-meta">
                 <StatusTag v-if="a.status !== 'active'" vocab="actorStatus" :value="a.status" />
                 <span>{{ a.email ?? t(`enums.actorKind.${a.kind}`) }}</span>
+                <!-- Two may share a name: the end of the ID, as People & agents shows it, tells them apart. -->
+                <code class="app-mono add-member__found-id">{{ shortId(a.id) }}</code>
               </span>
             </div>
           </el-option>
@@ -308,6 +440,50 @@ function capToMine() {
           </template>
         </el-select>
       </el-form-item>
+      <el-form-item v-else-if="canFindByEmail" :label="t('members.add.findEmail')" for="add-member-email">
+        <div class="add-member__email">
+          <el-input
+            id="add-member-email"
+            v-model="email"
+            type="email"
+            inputmode="email"
+            name="lookup_email"
+            autocomplete="off"
+            clearable
+            :placeholder="t('members.add.emailPlaceholder')"
+            class="add-member__email-input"
+            @keydown="onEmailKey"
+          />
+          <el-button :loading="emailState === 'finding'" :disabled="!email.trim()" @click="findByEmail">
+            {{ t('members.add.findButton') }}
+          </el-button>
+        </div>
+        <el-alert
+          v-if="emailState === 'nobody'"
+          type="warning"
+          :closable="false"
+          show-icon
+          :title="t('members.add.emailNobody')"
+          class="add-member__inline-alert add-member__email-alert"
+        />
+        <el-alert
+          v-else-if="emailState === 'partial'"
+          type="info"
+          :closable="false"
+          show-icon
+          :title="t('members.add.emailPartial')"
+          class="add-member__inline-alert add-member__email-alert"
+        />
+        <el-alert
+          v-else-if="emailState && emailState !== 'finding'"
+          type="error"
+          :closable="false"
+          show-icon
+          :title="emailState.error"
+          class="add-member__inline-alert add-member__email-alert"
+        />
+        <div v-else class="app-form-hint">{{ t('members.add.emailHelp') }}</div>
+      </el-form-item>
       <el-form-item :label="t('members.add.actor')" prop="actorId">
         <el-input
           v-model="form.actorId"
@@ -318,16 +494,42 @@ function capToMine() {
           autocomplete="off"
         />
         <div class="app-form-hint">{{ actorHelp }}</div>
-        <div v-if="session.isAdmin && (actorLooking || actorInfo)" class="add-member__actor">
+        <div v-if="actorLooking || actorInfo" class="add-member__actor" aria-live="polite">
           <span v-if="actorLooking" class="app-muted">{{ t('common.labels.loading') }}</span>
           <span v-else-if="actorInfo === 'missing'" class="add-member__actor-missing">
             <el-icon><WarningFilled /></el-icon>{{ t('members.add.actorMissing') }}
           </span>
           <template v-else-if="actorInfo">
-            <el-icon><Cpu v-if="actorInfo.kind === 'agent'" /><User v-else /></el-icon>
-            <strong>{{ actorInfo.display_name }}</strong>
-            <StatusTag vocab="actorKind" :value="actorInfo.kind" />
-            <StatusTag v-if="actorInfo.status !== 'active'" vocab="actorStatus" :value="actorInfo.status" />
+            <div class="add-member__actor-who">
+              <el-icon><Cpu v-if="actorInfo.kind === 'agent'" /><User v-else /></el-icon>
+              <strong>{{ actorInfo.display_name }}</strong>
+              <StatusTag vocab="actorKind" :value="actorInfo.kind" />
+              <StatusTag v-if="actorInfo.status !== 'active'" vocab="actorStatus" :value="actorInfo.status" />
+            </div>
+            <el-alert
+              v-if="seatedAs"
+              type="warning"
+              :closable="false"
+              show-icon
+              :title="t('members.add.alreadySeated')"
+              class="add-member__inline-alert"
+            >
+              <router-link
+                :to="{ name: 'course-member', params: { courseId, memberId: seatedAs } }"
+                class="add-member__seat-link"
+                @click="open = false"
+              >
+                {{ t('members.add.openSeat') }}
+              </router-link>
+            </el-alert>
+            <el-alert
+              v-else-if="actorInfo.status === 'suspended'"
+              type="warning"
+              :closable="false"
+              show-icon
+              :title="t('members.add.suspended')"
+              class="add-member__inline-alert"
+            />
           </template>
         </div>
       </el-form-item>
@@ -335,7 +537,13 @@ function capToMine() {
       <!-- Starting point -->
       <div class="add-member__row">
         <el-form-item :label="t('members.add.preset')" prop="presetId" class="add-member__grow">
-          <el-select v-model="form.presetId" :loading="presetsLoading" filterable class="add-member__preset-select">
+          <el-select
+            v-model="form.presetId"
+            :loading="presetsLoading"
+            filterable
+            class="add-member__preset-select"
+            @change="presetChosen = true"
+          >
             <el-option-group :label="t('members.add.builtIn')">
               <el-option v-for="p in builtIn" :key="p.id" :value="p.id" :label="presetLabel(p)">
                 <span>{{ presetLabel(p) }}</span>
@@ -496,7 +704,12 @@ function capToMine() {
         </el-tag>
         <span class="app-toolbar__spacer" />
         <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>
-        <el-button type="primary" :loading="pending" :disabled="!course.writable || !preset" @click="submit">
+        <el-button
+          type="primary"
+          :loading="pending"
+          :disabled="!course.writable || !preset || !!seatedAs"
+          @click="submit"
+        >
           {{ course.needsApproval('member_manage') ? t('members.add.submitProposal') : t('members.add.submit') }}
         </el-button>
       </div>
@@ -535,6 +748,15 @@ function capToMine() {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
+.add-member__found-meta > span:last-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.add-member__found-id {
+  flex-shrink: 0;
+  font-size: 11px;
+}
 .add-member__found-meta > span:last-child {
   min-width: 0;
   overflow: hidden;
@@ -545,13 +767,40 @@ function capToMine() {
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }
+.add-member__email {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.add-member__email-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.add-member__email-alert {
+  margin-top: 8px;
+}
 .add-member__actor {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.add-member__actor-who {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
-  font-size: 13px;
   flex-wrap: wrap;
+  min-width: 0;
+}
+.add-member__actor-who strong {
+  overflow-wrap: anywhere;
+}
+.add-member__seat-link {
+  color: var(--el-color-primary);
+  font-weight: 500;
 }
 .add-member__actor-missing {
   display: inline-flex;

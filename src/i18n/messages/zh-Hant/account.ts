@@ -66,6 +66,7 @@ export default {
     subject: '帳戶',
     linkedBy: '連結者',
     invitedBy: '邀請者',
+    issuedBy: '發出者',
     note: '備註',
     created: '建立於',
     lastUsed: '最近使用',

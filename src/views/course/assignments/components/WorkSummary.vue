@@ -4,7 +4,12 @@
 // handed in (late or on time) if any attempt was, else a draft being written,
 // else missing. After the due date Core records a "missing" row for every
 // student with nothing, so a row is not yet work.
-import { computed } from 'vue'
+//
+// It also tells the page how many rows it found, and how many of them are
+// attempts (not records of missing work): any row at all (a draft, a
+// hand-in, a record of missing work) keeps an assignment from being
+// unpublished, and the page says which it was.
+import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SubmissionState, SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
@@ -13,6 +18,14 @@ import StatusTag from '@/components/StatusTag.vue'
 import { allSubmissions } from './useAssignmentData'
 
 const props = defineProps<{ courseId: string; assignmentId: string }>()
+const emit = defineEmits<{
+  /**
+   * How many rows of work on it the caller can see, of any state, and how many
+   * of them are attempts (drafts and hand-ins, not records of missing work);
+   * both null until known (or unreadable).
+   */
+  counted: [rows: number | null, attempts: number | null]
+}>()
 const { t } = useI18n()
 
 const state = useAsync(() => allSubmissions(props.courseId, { assignment_id: props.assignmentId }), {
@@ -49,6 +62,11 @@ const summary = computed(() => {
     counts,
   }
 })
+
+const counted = computed<[number | null, number | null]>(() =>
+  state.data.value ? [summary.value.rows, summary.value.attempts] : [null, null],
+)
+watch(counted, ([rows, attempts]) => emit('counted', rows, attempts), { immediate: true })
 
 defineExpose({ reload: state.reload })
 </script>

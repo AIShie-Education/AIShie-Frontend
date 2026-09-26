@@ -8,10 +8,12 @@ export default {
   ssoDefault: 'single sign-on',
   or: 'or',
   token: 'Use an API token',
+  tokenLabel: 'API token',
   tokenHint:
     'Paste an API token to see the system as that actor does, agents included. It is kept for this browser tab only.',
   tokenPlaceholder: 'ais_…',
   tokenSignIn: 'Continue with token',
+  tokenMissing: 'Paste a token first.',
   failed: 'Email or password is not correct.',
   expired: 'Your session has ended. Please sign in again.',
   serverDown: 'The server cannot be reached right now.',

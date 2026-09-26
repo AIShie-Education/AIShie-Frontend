@@ -1,12 +1,13 @@
 <script setup lang="ts">
 // One actor: their registration and how they sign in (actor.get, corrected
 // with actor.update), their standing (actor.suspend, actor.reactivate) and
-// their ways in (actor.invite, actor.issue_token, actor.link_sso). What an
+// their ways in (actor.invite, actor.issue_token, actor.link_sso), listed and
+// revoked one by one (actor.list_credentials, actor.revoke_credential). What an
 // administrator may do to whom is Core's rule, mirrored here to say why a
 // control is off: not to yourself (though your own name and email are yours
 // to correct), only root to a holder of a platform role, and nobody to the
 // system actor.
-import { computed, ref } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
@@ -21,6 +22,7 @@ import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import ActorCredentialsCard from './components/ActorCredentialsCard.vue'
 import EditActorDialog from './components/EditActorDialog.vue'
 import InviteCard from './components/InviteCard.vue'
 import IssueTokenCard from './components/IssueTokenCard.vue'
@@ -65,7 +67,7 @@ const standingBlocker = computed<string | null>(() => {
   if (roleBlocked.value) return t('admin.actor.cannot.role')
   return null
 })
-/** Why credentials cannot be given; one's own account is fine. */
+/** Why credentials cannot be given or taken away; one's own account is fine. */
 const credentialBlocker = computed<string | null>(() => {
   if (isSystem.value) return t('admin.actor.cannot.system')
   if (!isSelf.value && roleBlocked.value) return t('admin.actor.cannot.role')
@@ -83,8 +85,22 @@ const editBlockedReason = computed<string | null>(() => {
 })
 const editing = ref(false)
 
+// The list of their credentials follows every change made to them on this
+// page: a token issued, an invitation made (which replaces the one before),
+// an identity linked, an email changed (which withdraws a pending invitation).
+const credentialsCard = useTemplateRef<InstanceType<typeof ActorCredentialsCard>>('credentialsCard')
+function reloadCredentials() {
+  void credentialsCard.value?.reload()
+}
+/** How they sign in has changed: the registration's summary as well as the list. */
+function onSignInChanged() {
+  void state.reload()
+  reloadCredentials()
+}
+
 function onSaved(a: Actor) {
   state.data.value = a
+  reloadCredentials()
   // One's own name shows in the app's frame too.
   if (a.id === session.me?.id) void session.load().catch(() => undefined)
 }
@@ -131,7 +147,7 @@ async function reactivate() {
   <div>
     <PageHeader
       :title="actor?.display_name ?? t('admin.actor.title')"
-      :subtitle="actor ? (actor.email ?? t(`enums.actorKind.${actor.kind}`)) : undefined"
+      :subtitle="actor?.email ?? undefined"
       :back="{ name: 'admin-actors' }"
     >
       <template #tags>
@@ -255,16 +271,27 @@ async function reactivate() {
         </section>
 
         <div class="actor__grid">
-          <!-- A person signs in by an invitation or single sign-on; an agent by a token. -->
+          <!-- A person signs in by an invitation or single sign-on; an agent by a token. An agent (or the
+               system) has no identity at the identity provider: no single sign-on card. -->
           <template v-if="actor.kind === 'human'">
-            <InviteCard :actor="actor" @edit="editing = true" @changed="state.reload" />
-            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="state.reload" />
-            <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
+            <InviteCard :actor="actor" @edit="editing = true" @changed="onSignInChanged" />
+            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="onSignInChanged" />
           </template>
-          <template v-else>
-            <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
-            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="state.reload" />
-          </template>
+          <!-- What they hold now, across the page's width: for an agent, its tokens first of all. -->
+          <ActorCredentialsCard
+            ref="credentialsCard"
+            class="actor__wide"
+            :actor="actor"
+            :is-self="isSelf"
+            :blocked-reason="credentialBlocker"
+            @changed="state.reload"
+          />
+          <IssueTokenCard
+            :actor="actor"
+            :is-self="isSelf"
+            :blocked-reason="credentialBlocker"
+            @issued="reloadCredentials"
+          />
         </div>
 
         <EditActorDialog v-model="editing" :actor="actor" @saved="onSaved" />
@@ -298,6 +325,9 @@ async function reactivate() {
 }
 .actor__grid > .app-card + .app-card {
   margin-top: 0;
+}
+.actor__grid > .actor__wide {
+  grid-column: 1 / -1;
 }
 @media (min-width: 1100px) {
   .actor__grid {

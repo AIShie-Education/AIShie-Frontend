@@ -1,0 +1,134 @@
+/* What MarkdownView adds to .markdown-body (main.css): typeset TeX (KaTeX's own
+   stylesheet is imported beside this one) and highlighted code, in colours for
+   light and dark. The code colours follow GitHub's themes. */
+
+/* Nothing a text typesets paints outside it. \kern, \mathllap and the like can move a
+   formula's ink up to maxSize to the right and without limit to the left, over the
+   page's own labels and columns. What goes right scrolls inside the text; what goes
+   left is cut off. A wide inline formula on a phone also scrolls here instead of
+   widening the page. */
+.markdown-body {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.markdown-body .md-math {
+  margin: 0 0 1em;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.markdown-body .md-math > .katex-display {
+  margin: 0.25em 0;
+}
+/* A display too wide for a phone scrolls on its own rather than widening the page. */
+.markdown-body .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}
+.markdown-body .md-math-error {
+  color: var(--el-color-danger);
+}
+
+:root {
+  --hl-text: #1f2328;
+  --hl-keyword: #cf222e;
+  --hl-title: #8250df;
+  --hl-constant: #0550ae;
+  --hl-string: #0a3069;
+  --hl-builtin: #953800;
+  --hl-comment: #6e7781;
+  --hl-tag: #116329;
+  --hl-add-fg: #116329;
+  --hl-add-bg: #dafbe1;
+  --hl-del-fg: #82071e;
+  --hl-del-bg: #ffebe9;
+}
+html.dark {
+  --hl-text: #c9d1d9;
+  --hl-keyword: #ff7b72;
+  --hl-title: #d2a8ff;
+  --hl-constant: #79c0ff;
+  --hl-string: #a5d6ff;
+  --hl-builtin: #ffa657;
+  --hl-comment: #8b949e;
+  --hl-tag: #7ee787;
+  --hl-add-fg: #aff5b4;
+  --hl-add-bg: #033a16;
+  --hl-del-fg: #ffdcd7;
+  --hl-del-bg: #67060c;
+}
+
+.markdown-body pre code[class*='language-'] {
+  color: var(--hl-text);
+}
+.markdown-body .hljs-doctag,
+.markdown-body .hljs-keyword,
+.markdown-body .hljs-meta .hljs-keyword,
+.markdown-body .hljs-template-tag,
+.markdown-body .hljs-template-variable,
+.markdown-body .hljs-type,
+.markdown-body .hljs-variable.language_ {
+  color: var(--hl-keyword);
+}
+.markdown-body .hljs-title,
+.markdown-body .hljs-title.class_,
+.markdown-body .hljs-title.class_.inherited__,
+.markdown-body .hljs-title.function_ {
+  color: var(--hl-title);
+}
+.markdown-body .hljs-attr,
+.markdown-body .hljs-attribute,
+.markdown-body .hljs-literal,
+.markdown-body .hljs-meta,
+.markdown-body .hljs-number,
+.markdown-body .hljs-operator,
+.markdown-body .hljs-variable,
+.markdown-body .hljs-selector-attr,
+.markdown-body .hljs-selector-class,
+.markdown-body .hljs-selector-id,
+.markdown-body .hljs-section {
+  color: var(--hl-constant);
+}
+.markdown-body .hljs-regexp,
+.markdown-body .hljs-string,
+.markdown-body .hljs-meta .hljs-string {
+  color: var(--hl-string);
+}
+.markdown-body .hljs-built_in,
+.markdown-body .hljs-symbol,
+.markdown-body .hljs-bullet {
+  color: var(--hl-builtin);
+}
+.markdown-body .hljs-comment,
+.markdown-body .hljs-code,
+.markdown-body .hljs-formula {
+  color: var(--hl-comment);
+}
+.markdown-body .hljs-comment {
+  font-style: italic;
+}
+.markdown-body .hljs-name,
+.markdown-body .hljs-quote,
+.markdown-body .hljs-selector-tag,
+.markdown-body .hljs-selector-pseudo {
+  color: var(--hl-tag);
+}
+.markdown-body .hljs-subst {
+  color: var(--hl-text);
+}
+.markdown-body .hljs-section,
+.markdown-body .hljs-strong {
+  font-weight: 600;
+}
+.markdown-body .hljs-emphasis {
+  font-style: italic;
+}
+.markdown-body .hljs-addition {
+  color: var(--hl-add-fg);
+  background-color: var(--hl-add-bg);
+}
+.markdown-body .hljs-deletion {
+  color: var(--hl-del-fg);
+  background-color: var(--hl-del-bg);
+}

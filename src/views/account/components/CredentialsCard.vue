@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Every way into the caller's account (credential.list), revoking one
-// (credential.revoke), and making an API token (credential.issue_token).
+// (credential.revoke), and making an API token (credential.issue_token). A
+// token an administrator issued them says who.
 import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -10,6 +11,7 @@ import type { Credential, ToolOut } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
+import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import IssueTokenDialog from './IssueTokenDialog.vue'
@@ -98,6 +100,14 @@ function linker(c: Credential): string | null {
 
 function inviter(c: Credential): string | null {
   return c.kind === 'invite' ? invitedBy(c.label) : null
+}
+
+/** Who issued a token, when it was someone else: an administrator (actor.issue_token). */
+function issuer(c: Credential): { id: string; name: string | null } | null {
+  const id = c.issued_by_actor_id
+  const me = session.me?.id
+  if (c.kind !== 'api_token' || !id || !me || id.toLowerCase() === me.toLowerCase()) return null
+  return { id, name: c.issued_by_name?.trim() || null }
 }
 
 /** Core's label, when the title and the rest do not already say it. */
@@ -268,6 +278,11 @@ function forgetSecret() {
                 <span class="creds-item__k">{{ t('account.credentials.invitedBy') }}</span>
                 {{ inviter(c) }}
               </span>
+              <span v-if="issuer(c)" class="creds-item__issuer">
+                <span class="creds-item__k">{{ t('account.credentials.issuedBy') }}</span>
+                <template v-if="issuer(c)?.name">{{ issuer(c)?.name }}</template>
+                <IdText v-else :id="issuer(c)?.id" />
+              </span>
               <span>
                 <span class="creds-item__k">{{ t('account.credentials.created') }}</span>
                 <TimeText :value="c.created_at" />
@@ -382,6 +397,9 @@ function forgetSecret() {
 }
 .creds-item__subject {
   word-break: break-all;
+}
+.creds-item__issuer {
+  word-break: break-word;
 }
 .creds-item__note {
   word-break: break-word;

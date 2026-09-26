@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import type { FormInstance, FormRules } from 'element-plus'
+import type { FormInstance, FormRules, InputInstance } from 'element-plus'
 import { ApiError, health, ssoStartUrl } from '@/api/http'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
@@ -18,24 +18,60 @@ const ui = useUiStore()
 const form = reactive({ email: '', password: '' })
 const formRef = ref<FormInstance>()
 const busy = ref(false)
-const error = ref<string | null>(route.query.expired ? t('auth.expired') : null)
+// Why signing in did not work, kept as its cause and put into words when shown,
+// so that a message already shown follows a change of language.
+type Failure = { key: string } | { err: unknown }
+const failure = shallowRef<Failure | null>(route.query.expired ? { key: 'auth.expired' } : null)
+const error = computed(() =>
+  !failure.value ? null : 'key' in failure.value ? t(failure.value.key) : errorMessage(failure.value.err),
+)
 const showToken = ref(false)
 const token = ref('')
+const tokenInput = ref<InputInstance>()
+/** Continue was pressed with no token pasted. */
+const tokenMissing = ref(false)
+watch(token, () => (tokenMissing.value = false))
 const version = ref<string | null>(null)
 const serverDown = ref(false)
 
 const ssoEnabled = import.meta.env.VITE_SSO_ENABLED === 'true'
-const ssoLabel = import.meta.env.VITE_SSO_LABEL || t('auth.ssoDefault')
+const ssoLabel = computed(() => import.meta.env.VITE_SSO_LABEL || t('auth.ssoDefault'))
 
 const next = computed(() => {
   const n = route.query.next
   return typeof n === 'string' && n.startsWith('/') && !n.startsWith('//') ? n : '/'
 })
 
+// A field is checked when it is left after being typed in, and every field
+// when signing in: not merely for being passed over (a password manager
+// moving through the form, or a click elsewhere, before anything is typed).
+// The rules are words in the page's language; changing it does not check the
+// form again (validate-on-rule-change is off), it only puts a message already
+// shown into the new language.
+const touched = reactive({ email: false, password: false })
+const submitted = ref(false)
+function required(field: 'email' | 'password') {
+  return {
+    required: true,
+    validator: (_r: unknown, v: string, cb: (e?: Error) => void) =>
+      !v?.trim() && (submitted.value || touched[field]) ? cb(new Error(t('common.errors.required'))) : cb(),
+    trigger: 'blur',
+  }
+}
 const rules = computed<FormRules>(() => ({
-  email: [{ required: true, message: t('common.errors.required'), trigger: 'blur' }],
-  password: [{ required: true, message: t('common.errors.required'), trigger: 'blur' }],
+  email: [required('email')],
+  password: [required('password')],
 }))
+watch(
+  () => ui.locale,
+  () =>
+    nextTick(() => {
+      const shown = (['email', 'password'] as const).filter(
+        (p) => formRef.value?.getField(p)?.validateState === 'error',
+      )
+      if (shown.length) void formRef.value?.validateField([...shown]).catch(() => undefined)
+    }),
+)
 
 onMounted(async () => {
   try {
@@ -64,30 +100,37 @@ function proceed(): boolean {
 }
 
 async function signIn() {
+  submitted.value = true
   if (!(await formRef.value?.validate().catch(() => false))) return
   busy.value = true
-  error.value = null
+  failure.value = null
   let leaving = false
   try {
     await session.signInWithPassword(form.email.trim(), form.password)
     leaving = proceed()
   } catch (e) {
-    error.value = e instanceof ApiError && e.isUnauthenticated ? t('auth.failed') : errorMessage(e)
+    failure.value = e instanceof ApiError && e.isUnauthenticated ? { key: 'auth.failed' } : { err: e }
   } finally {
     if (!leaving) busy.value = false
   }
 }
 
 async function signInWithToken() {
-  if (!token.value.trim()) return
+  if (!token.value.trim()) {
+    // Said beside the field (an alert, read out) and the field is focused, so
+    // that pressing again, which adds no new alert, still says what is wrong.
+    tokenMissing.value = true
+    tokenInput.value?.focus()
+    return
+  }
   busy.value = true
-  error.value = null
+  failure.value = null
   let leaving = false
   try {
     await session.signInWithToken(token.value)
     leaving = proceed()
   } catch (e) {
-    error.value = errorMessage(e)
+    failure.value = { err: e }
   } finally {
     if (!leaving) busy.value = false
   }
@@ -119,9 +162,23 @@ function sso() {
       <el-alert v-if="serverDown" type="warning" :title="t('auth.serverDown')" :closable="false" show-icon class="login__alert" />
       <el-alert v-if="error" type="error" :title="error" :closable="false" show-icon class="login__alert" />
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="signIn">
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        :validate-on-rule-change="false"
+        label-position="top"
+        @submit.prevent="signIn"
+      >
         <el-form-item :label="t('auth.email')" prop="email">
-          <el-input v-model="form.email" type="email" autocomplete="username" size="large" name="email" />
+          <el-input
+            v-model="form.email"
+            type="email"
+            autocomplete="username"
+            size="large"
+            name="email"
+            @input="touched.email = true"
+          />
         </el-form-item>
         <el-form-item :label="t('auth.password')" prop="password">
           <el-input
@@ -131,6 +188,7 @@ function sso() {
             show-password
             size="large"
             name="password"
+            @input="touched.password = true"
           />
         </el-form-item>
         <el-button type="primary" size="large" native-type="submit" :loading="busy" class="login__submit">
@@ -150,9 +208,22 @@ function sso() {
         </el-button>
         <el-collapse-transition>
           <form v-show="showToken" class="login__token-form" @submit.prevent="signInWithToken">
-            <p class="app-form-hint">{{ t('auth.tokenHint') }}</p>
-            <el-input v-model="token" type="password" show-password :placeholder="t('auth.tokenPlaceholder')" autocomplete="off" />
-            <el-button native-type="submit" :loading="busy" :disabled="!token.trim()">{{ t('auth.tokenSignIn') }}</el-button>
+            <p id="login-token-hint" class="app-form-hint">{{ t('auth.tokenHint') }}</p>
+            <el-input
+              ref="tokenInput"
+              v-model="token"
+              type="password"
+              show-password
+              :aria-label="t('auth.tokenLabel')"
+              :aria-invalid="tokenMissing || undefined"
+              :aria-describedby="tokenMissing ? 'login-token-hint login-token-missing' : 'login-token-hint'"
+              :placeholder="t('auth.tokenPlaceholder')"
+              autocomplete="off"
+            />
+            <div v-if="tokenMissing" id="login-token-missing" role="alert" class="login__token-missing">
+              {{ t('auth.tokenMissing') }}
+            </div>
+            <el-button native-type="submit" type="primary" plain :loading="busy">{{ t('auth.tokenSignIn') }}</el-button>
           </form>
         </el-collapse-transition>
       </div>
@@ -219,6 +290,11 @@ function sso() {
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+}
+.login__token-missing {
+  margin-top: -4px;
+  font-size: 12px;
+  color: var(--el-color-danger);
 }
 .login__version {
   margin: 20px 0 0;

@@ -103,6 +103,7 @@ export default {
     archived: 'Archived',
   },
   submissionState: {
+    not_started: 'Not started',
     draft: 'Draft',
     submitted: 'Submitted',
     late: 'Late',
@@ -139,6 +140,7 @@ export default {
     'assignment.created': 'Assignment created',
     'assignment.updated': 'Assignment updated',
     'assignment.published': 'Assignment published',
+    'assignment.unpublished': 'Assignment unpublished',
     'assignment.due_passed': 'Due date passed',
     'component.created': 'Grading component created',
     'component.updated': 'Grading component updated',

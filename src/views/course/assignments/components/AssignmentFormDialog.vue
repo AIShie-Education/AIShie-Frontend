@@ -6,10 +6,11 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
-import { ElMessage, type FormInstance, type FormItemRule } from 'element-plus'
-import type { ToolIn } from '@/api/http'
+import { ElMessage, ElNotification, type FormInstance, type FormItemRule } from 'element-plus'
+import type { ToolIn, WriteOutcome } from '@/api/http'
 import type { Assignment, DocumentSummary } from '@/api/types'
-import { useWrite } from '@/composables/useWrite'
+import { notifyError } from '@/composables/useErrors'
+import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isDecimal } from '@/utils/format'
 import DocChoiceField from './DocChoiceField.vue'
@@ -22,7 +23,7 @@ const visible = defineModel<boolean>('visible', { default: false })
 const props = defineProps<{ courseId: string; assignment?: Assignment | null }>()
 const emit = defineEmits<{ saved: [result: { status: 'executed' | 'proposed'; id?: string }] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const course = useCourseStore()
 // Loaded when the dialog opens (init), not while it sits closed.
 const scheme = useScheme(() => props.courseId, { immediate: false })
@@ -43,8 +44,8 @@ const form = reactive<FormState>({
   points: '',
   due: null,
   componentId: '',
-  instructions: emptyDocChoice(),
-  rubric: emptyDocChoice(),
+  instructions: emptyDocChoice('instructions'),
+  rubric: emptyDocChoice('rubric'),
 })
 const formRef = ref<FormInstance>()
 /** Something the person should know about a document before saving again. */
@@ -87,8 +88,8 @@ function init() {
   form.points = a ? String(a.points_possible) : ''
   form.due = a?.due_at ? new Date(a.due_at) : null
   form.componentId = a?.component_id ?? ''
-  form.instructions = emptyDocChoice(a?.instructions_document_id)
-  form.rubric = emptyDocChoice(a?.rubric_document_id)
+  form.instructions = emptyDocChoice('instructions', a?.instructions_document_id)
+  form.rubric = emptyDocChoice('rubric', a?.rubric_document_id)
   docNotice.value = null
   formRef.value?.clearValidate()
   void loadDocs()
@@ -179,11 +180,12 @@ const uploading = reactive<Record<DocKind, boolean>>({ instructions: false, rubr
 const anyUploading = computed(() => uploading.instructions || uploading.rubric)
 
 /**
- * The document the choice names, creating it first if it is new. ok false:
- * stop — it failed (already shown), or its creation waits for approval and
- * so has no id yet.
+ * The document the choice names, creating it first if it is new (created
+ * true). ok false: stop — it failed (already shown), or its creation waits
+ * for approval and so has no id yet. Nothing is said about a document
+ * created here: saving says it once, for the assignment and its documents.
  */
-async function resolveDoc(kind: DocKind): Promise<{ ok: boolean; id?: string }> {
+async function resolveDoc(kind: DocKind): Promise<{ ok: boolean; id?: string; created?: boolean }> {
   const c = form[kind]
   if (c.mode === 'none') return { ok: true }
   if (c.mode === 'existing') return { ok: true, id: c.id }
@@ -202,7 +204,7 @@ async function resolveDoc(kind: DocKind): Promise<{ ok: boolean; id?: string }> 
   if (out.status === 'proposed') {
     // No document yet, and none to point at. Put the choice back, so that
     // saving again does not propose the same document twice.
-    form[kind] = emptyDocChoice(currentDocId(kind))
+    form[kind] = emptyDocChoice(kind, currentDocId(kind))
     docNotice.value = t('assignments.form.docProposed', { title })
     return { ok: false }
   }
@@ -219,8 +221,8 @@ async function resolveDoc(kind: DocKind): Promise<{ ok: boolean; id?: string }> 
     created_at: new Date().toISOString(),
   }
   docs[kind] = [...docs[kind], entry]
-  form[kind] = emptyDocChoice(id)
-  ElMessage.success(t('assignments.form.docCreated', { title }))
+  form[kind] = emptyDocChoice(kind, id)
+  createdTitles.value = [...createdTitles.value, title]
   let published = false
   if ((c.publish || mustPublish(kind)) && out.result.version_id) {
     const p = await publishDoc.run(
@@ -237,7 +239,58 @@ async function resolveDoc(kind: DocKind): Promise<{ ok: boolean; id?: string }> 
     docNotice.value = t('assignments.form.docNotPublished', { title })
     return { ok: false }
   }
-  return { ok: true, id }
+  return { ok: true, id, created: true }
+}
+
+/** Documents written in this form and created, while the assignment itself is not saved yet. */
+const createdTitles = ref<string[]>([])
+/** Which of its documents saving has just created. */
+type Made = { instructions?: boolean; rubric?: boolean }
+
+/**
+ * What saving says, once: the assignment, and the documents written for it
+ * on the way (each one otherwise its own message, stacked over the page).
+ */
+function savedMessage(verb: 'created' | 'saved', made: Made): string {
+  const which =
+    made.instructions && made.rubric ? 'both' : made.instructions ? 'instructions' : made.rubric ? 'rubric' : 'plain'
+  return t(`assignments.form.${verb}.${which}`)
+}
+
+/**
+ * Says once how saving the assignment went. On a proposal it also names the
+ * documents written here, which exist already whatever becomes of it.
+ */
+function announceSaved(out: WriteOutcome<unknown>, verb: 'created' | 'saved', made: Made) {
+  if (out.status === 'proposed' && createdTitles.value.length) {
+    const titles = createdTitles.value.map((x) => t('assignments.form.quoted', { title: x }))
+    ElNotification({
+      type: 'info',
+      title: t('common.outcome.proposedTitle'),
+      message: t('assignments.form.proposedWithDocs', { titles: listFormat(titles) }, titles.length),
+      duration: 8000,
+    })
+    return
+  }
+  announce(out, { success: savedMessage(verb, made) })
+}
+
+/**
+ * The assignment was not saved, although documents written for it were
+ * created: say so, since they are now chosen as existing ones and saving
+ * again does not make them twice.
+ */
+function noteCreatedDocs() {
+  if (!createdTitles.value.length || docNotice.value) return
+  const titles = createdTitles.value.map((x) => t('assignments.form.quoted', { title: x }))
+  docNotice.value = t('assignments.form.docsKept', { titles: listFormat(titles) }, titles.length)
+}
+function listFormat(items: string[]): string {
+  try {
+    return new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(items)
+  } catch {
+    return items.join(', ')
+  }
 }
 
 function sameDecimal(a: string, b: string | number): boolean {
@@ -247,7 +300,7 @@ function sameDecimal(a: string, b: string | number): boolean {
   return a.trim() === String(b).trim()
 }
 
-async function create(instructionsId?: string, rubricId?: string) {
+async function create(made: Made, instructionsId?: string, rubricId?: string) {
   const out = await createAssignment.run(
     {
       course_id: props.courseId,
@@ -258,15 +311,19 @@ async function create(instructionsId?: string, rubricId?: string) {
       instructions_document_id: instructionsId,
       rubric_document_id: rubricId,
     },
-    { success: t('assignments.form.created') },
+    { notify: false },
   )
-  if (!out) return
+  if (!out) {
+    if (createAssignment.lastError.value) notifyError(createAssignment.lastError.value)
+    return noteCreatedDocs()
+  }
+  announceSaved(out, 'created', made)
   course.invalidate('assignments')
   visible.value = false
   emit('saved', out.status === 'executed' ? { status: 'executed', id: out.result.id } : { status: 'proposed' })
 }
 
-async function update(a: Assignment, instructionsId?: string, rubricId?: string) {
+async function update(a: Assignment, made: Made, instructionsId?: string, rubricId?: string) {
   const args: ToolIn<'assignment.update'> = { course_id: props.courseId, assignment_id: a.id }
   let changed = false
   const title = form.title.trim()
@@ -306,8 +363,12 @@ async function update(a: Assignment, instructionsId?: string, rubricId?: string)
     visible.value = false
     return
   }
-  const out = await updateAssignment.run(args, { success: t('assignments.form.saved') })
-  if (!out) return
+  const out = await updateAssignment.run(args, { notify: false })
+  if (!out) {
+    if (updateAssignment.lastError.value) notifyError(updateAssignment.lastError.value)
+    return noteCreatedDocs()
+  }
+  announceSaved(out, 'saved', made)
   course.invalidate('assignments')
   visible.value = false
   emit('saved', { status: out.status, id: a.id })
@@ -322,13 +383,15 @@ async function submit() {
   if (!valid) return
   busy.value = true
   docNotice.value = null
+  createdTitles.value = []
   try {
     const instructions = await resolveDoc('instructions')
-    if (!instructions.ok) return
+    if (!instructions.ok) return noteCreatedDocs()
     const rubric = await resolveDoc('rubric')
-    if (!rubric.ok) return
-    if (props.assignment) await update(props.assignment, instructions.id, rubric.id)
-    else await create(instructions.id, rubric.id)
+    if (!rubric.ok) return noteCreatedDocs()
+    const made: Made = { instructions: instructions.created, rubric: rubric.created }
+    if (props.assignment) await update(props.assignment, made, instructions.id, rubric.id)
+    else await create(made, instructions.id, rubric.id)
   } finally {
     busy.value = false
   }

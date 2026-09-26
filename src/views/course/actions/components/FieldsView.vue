@@ -5,6 +5,7 @@
 // to what it names. Fields nobody has told this about are shown as they are.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { componentLabel } from '@/views/course/scheme/components/schemeModel'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal, formatPercent, isUuid, shortId } from '@/utils/format'
 import { presetLabel } from '@/views/course/members/components/seat'
@@ -97,7 +98,10 @@ const comps = useLookup(() =>
   Object.keys(obj.value).some((k) => COMPONENTS.has(k)) ? specs.components(props.courseId) : null,
 )
 function componentName(id: unknown): string | undefined {
-  return (comps.value?.value as { id: string; name: string }[] | undefined)?.find((c) => c.id === id)?.name
+  const c = (comps.value?.value as { id: string; name: string; parent_id?: string | null }[] | undefined)?.find(
+    (x) => x.id === id,
+  )
+  return c ? componentLabel(c, t('scheme.rootName')) : undefined
 }
 
 const presets = useLookup(() => (obj.value.preset_id || obj.value.preset ? specs.presets(props.courseId) : null))

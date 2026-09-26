@@ -2,7 +2,7 @@
 // Departments (department.list, readable by anyone signed in) and making one
 // (department.create, administrators only). A department groups courses and
 // may have presets of its own; it cannot be renamed or removed.
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import { read } from '@/api/http'
@@ -12,6 +12,7 @@ import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import { usePresetCounts } from './setup/presetCounts'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -23,6 +24,23 @@ const rows = computed(() => {
   const q = filter.value.trim().toLowerCase()
   return all.value.filter((d) => !q || d.name.toLowerCase().includes(q))
 })
+
+// --- How many presets each has --------------------------------------------------
+// One preset.list per department, for the link to its presets to say how many
+// of its own it has: a few at a time, within a budget a visit, and none once
+// the page is left (see presetCounts.ts). Until a count is in (or if it cannot
+// be had) the link just says "View". Departments made here are counted as
+// they appear; Refresh counts them all again.
+const { counts: presetCounts, count: countPresets, forget: forgetPresetCounts } = usePresetCounts()
+watch(
+  () => departments.data.value,
+  (list) => void countPresets((list ?? []).map((d) => d.id)),
+  { immediate: true },
+)
+function refresh() {
+  forgetPresetCounts()
+  void departments.reload()
+}
 
 // --- Creating ---------------------------------------------------------------
 const open = ref(false)
@@ -75,7 +93,7 @@ async function save() {
           :loading="departments.loading.value"
           circle
           :aria-label="t('common.actions.refresh')"
-          @click="departments.reload"
+          @click="refresh"
         >
           <el-icon><Refresh /></el-icon>
         </el-button>
@@ -100,7 +118,13 @@ async function save() {
             <template #default="{ row }">
               <router-link :to="{ name: 'admin-presets', query: { dept: row.id } }" class="dept-link">
                 <el-icon><Key /></el-icon>
-                <span>{{ t('adminSetup.departments.presets') }}</span>
+                <span>
+                  {{
+                    presetCounts.has(row.id)
+                      ? t('adminSetup.departments.viewPresetsN', presetCounts.get(row.id) ?? 0)
+                      : t('adminSetup.departments.viewPresets')
+                  }}
+                </span>
               </router-link>
             </template>
           </el-table-column>

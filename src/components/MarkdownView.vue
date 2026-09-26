@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { renderMarkdown } from '@/utils/markdown'
+// Typeset TeX and highlighted code (utils/markdownMath.ts, markdownCode.ts).
+import 'katex/dist/katex.min.css'
+import '@/styles/markdown-rich.css'
 const props = defineProps<{ source: string | null | undefined; empty?: string }>()
 const html = computed(() => renderMarkdown(props.source))
 </script>

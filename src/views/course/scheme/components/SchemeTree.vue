@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { formatDecimal } from '@/utils/format'
 import {
   childBlock,
+  nodeName,
   pct,
   placementFrozen,
   pointsFrozen,
@@ -33,6 +34,8 @@ const emit = defineEmits<{ add: [parent: SchemeNode]; edit: [node: SchemeNode]; 
 /** Ids of the components whose contents are folded away. */
 const collapsed = defineModel<Set<string>>('collapsed', { default: () => new Set<string>() })
 const { t } = useI18n()
+/** A node's name as shown: the root still named by Core, in the reader's words. */
+const nameOf = (n: SchemeNode) => nodeName(n, t('scheme.rootName'))
 
 type Row =
   | { type: 'component'; key: string; depth: number; node: SchemeNode }
@@ -89,11 +92,11 @@ function frozenText(n: SchemeNode): string | null {
 
 function addBlockText(n: SchemeNode): string | null {
   const b = childBlock(n)
-  return b ? t(`scheme.reasons.${b}`, { name: n.c.name }) : null
+  return b ? t(`scheme.reasons.${b}`, { name: nameOf(n) }) : null
 }
 /** Offered, but it may hold assignments the caller cannot see, and then Core refuses. */
 function addCautionText(n: SchemeNode): string | null {
-  return n.kind === 'unseen' ? t('scheme.reasons.unseen', { name: n.c.name }) : null
+  return n.kind === 'unseen' ? t('scheme.reasons.unseen', { name: nameOf(n) }) : null
 }
 function moveBlockText(n: SchemeNode): string | null {
   if (n.isRoot) return t('scheme.reasons.root')
@@ -166,7 +169,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
             class="st-toggle"
             :class="{ 'is-open': !collapsed.has(row.node.id) }"
             :aria-expanded="!collapsed.has(row.node.id)"
-            :aria-label="t('scheme.actions.toggle', { name: row.node.c.name })"
+            :aria-label="t('scheme.actions.toggle', { name: nameOf(row.node) })"
             @click="toggle(row.node)"
           >
             <el-icon><ArrowRight /></el-icon>
@@ -176,7 +179,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
             <component :is="ICONS[kindOf(row.node)]" />
           </el-icon>
           <span class="st-label">
-            <span class="st-title">{{ row.node.c.name }}</span>
+            <span class="st-title">{{ nameOf(row.node) }}</span>
             <el-tooltip :content="t(`scheme.tree.kindHelp.${kindOf(row.node)}`)" placement="top">
               <el-tag :type="TAGS[kindOf(row.node)]" size="small" effect="plain" disable-transitions class="st-kind">
                 {{ t(`scheme.tree.kind.${kindOf(row.node)}`) }}
@@ -261,7 +264,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
               circle
               size="small"
               :disabled="!writable"
-              :aria-label="t('scheme.actions.more', { name: row.node.c.name })"
+              :aria-label="t('scheme.actions.more', { name: nameOf(row.node) })"
             >
               <el-icon><MoreFilled /></el-icon>
             </el-button>

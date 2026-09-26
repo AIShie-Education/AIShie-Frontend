@@ -83,8 +83,22 @@ export default {
       'Filled in when you pick someone above; an actor ID can also be pasted. It is not a member ID: that is made when they are seated here.',
     noSearch:
       'This Core cannot search by name or email yet (it needs updating): paste the actor ID. It is not a member ID: that is made when they are seated here.',
+    findEmail: 'Find by email',
+    emailPlaceholder: "name{'@'}example.edu",
+    findButton: 'Find',
+    emailHelp: 'Their whole email address, in upper or lower case: nobody is found by a part of one.',
+    emailPartial: "Give their whole email address, such as name{'@'}example.edu: a part of one finds nobody.",
+    emailNobody:
+      'Nobody is registered with that email. Ask a platform administrator to register them, then find them here.',
+    actorHelpEmail:
+      'Filled in when you find someone by email above. An agent has no email: ask a platform administrator, who can tell you their actor ID. It is not a member ID: that is made when they are seated here.',
+    noSearchEmail:
+      'This Core cannot search by name or email yet (it needs updating), only by a whole email address: give one above, or paste the actor ID. It is not a member ID: that is made when they are seated here.',
     actorInvalid: 'An actor ID has the form 01a0d79f-13c6-70da-a7cc-f009b1efe423.',
     actorMissing: 'No actor has this ID.',
+    alreadySeated: 'They already have a seat in this course. Change that seat rather than adding another.',
+    openSeat: 'Open their seat',
+    suspended: 'Suspended: Core seats nobody who is suspended until a platform administrator reinstates them.',
     preset: 'Preset',
     presetsFailed: 'The presets could not be loaded.',
     builtIn: 'Built-in',
@@ -213,6 +227,8 @@ export default {
       title: 'Reach',
       change: 'Change reach',
       help: 'Reach narrows the permissions about students’ work (submissions and grades). A listed reach with nothing on the list reaches nothing.',
+      helpStudent:
+        'Reach narrows the permissions about students’ work (submissions and grades). This student’s seat lists only the student themself, as an empty list does when a student is added, so they see their own work and nobody else’s.',
       allStudents: 'Every student in the course.',
       noStudents: 'Nobody: the list is empty, so these permissions reach no student.',
       ownWork: 'Only their own work.',

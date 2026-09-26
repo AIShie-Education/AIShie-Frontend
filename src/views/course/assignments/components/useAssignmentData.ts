@@ -5,7 +5,9 @@ import { computed, type Ref } from 'vue'
 import { read } from '@/api/http'
 import type { Component, DocumentSummary, GradeSummary, ListItem, SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { i18n } from '@/i18n'
 import { useCourseStore } from '@/stores/course'
+import { CORE_ROOT_NAME } from '@/views/course/scheme/components/schemeModel'
 
 const PAGE = 200
 /** A safety stop for "read every page": 40 pages of 200. */
@@ -120,8 +122,11 @@ export function useScheme(courseId: Ref<string> | (() => string), opts: { immedi
     let c = byId.value.get(cid)
     while (c) {
       // The root is the course total: it names the whole, not a place in it,
-      // unless it is the only component there is.
-      if (c.parent_id || names.length === 0) names.unshift(c.name)
+      // unless it is the only component there is. Still named as Core named
+      // it, it is named in the reader's words.
+      if (c.parent_id) names.unshift(c.name)
+      else if (names.length === 0)
+        names.unshift(c.name === CORE_ROOT_NAME ? i18n.global.t('assignments.courseTotal') : c.name)
       c = c.parent_id ? byId.value.get(c.parent_id) : undefined
       if (c && !c.parent_id) break
     }

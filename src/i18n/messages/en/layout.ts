@@ -2,6 +2,17 @@ export default {
   courses: 'Courses',
   menu: 'Menu',
   tokenMode: 'Signed in with a token',
+  // The tab's name on a page that does not exist (the router's catch-all).
+  notFound: 'Page not found',
+  // Labels Element Plus gives screen readers on tables (i18n/elementPlus.ts).
+  elementPlus: {
+    sortLabel: 'Sort by {column}',
+    filterLabel: 'Filter by {column}',
+    selectAllLabel: 'Select all rows',
+    selectRowLabel: 'Select this row',
+    expandRowLabel: 'Expand this row',
+    collapseRowLabel: 'Collapse this row',
+  },
   course: {
     nav: 'Course sections',
     overview: 'Overview',

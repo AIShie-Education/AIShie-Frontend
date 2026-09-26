@@ -92,7 +92,9 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
       </div>
       <div v-else-if="selected && !selected.published_version_id" class="app-form-hint">
         {{
-          requirePublished ? t('assignments.form.doc.mustBePublished') : t('assignments.form.doc.selectedUnpublished')
+          requirePublished
+            ? t('assignments.form.doc.mustBePublished')
+            : t(`assignments.form.doc.selectedUnpublished.${kind}`)
         }}
       </div>
       <div v-if="!allowNone" class="app-form-hint">{{ t('assignments.form.doc.cannotRemove') }}</div>
@@ -133,8 +135,11 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
         :disabled="disabled || requirePublished"
         @update:model-value="(v: string | number | boolean) => set({ publish: !!v })"
       >
-        {{ t('assignments.form.doc.publishNow') }}
+        {{ t(`assignments.form.doc.publishNow.${kind}`) }}
       </el-checkbox>
+      <div v-if="kind === 'rubric'" class="app-form-hint doc-choice__publish-hint">
+        {{ t('assignments.form.doc.rubricReaders') }}
+      </div>
     </div>
   </div>
 </template>
@@ -192,5 +197,8 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
 }
 .doc-choice__new :deep(.el-checkbox__label) {
   white-space: normal;
+}
+.doc-choice__publish-hint {
+  margin-top: -4px;
 }
 </style>

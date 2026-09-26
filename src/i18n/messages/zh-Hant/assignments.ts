@@ -22,7 +22,7 @@ export default {
     proposed: '新作業正在等待批准，獲批准後便會在這裡出現。',
     viewMyActions: '查看我的操作',
     pointsShort: '{n} 分',
-    approvalHint: '建立、修改及發佈作業都需要經人批准才會生效。',
+    approvalHint: '建立、修改、發佈及取消發佈作業都需要經人批准才會生效。',
   },
   state: {
     unpublished: '未發佈',
@@ -33,6 +33,8 @@ export default {
     notStarted: '尚未開始',
     attempt: '第 {n} 次',
   },
+  // The grading scheme's root, still under the name Core gave it ("Total").
+  courseTotal: '課程總成績',
   form: {
     createTitle: '新增作業',
     editTitle: '編輯作業',
@@ -59,7 +61,11 @@ export default {
       choose: '選擇文件',
       chooseRequired: '請選擇文件',
       unpublishedTag: '未發佈',
-      selectedUnpublished: '此文件尚未有已發佈的版本，學生無法閱讀。',
+      selectedUnpublished: {
+        instructions: '此文件尚未有已發佈的版本，學生無法閱讀。',
+        rubric:
+          '此評分準則尚未有已發佈的版本，因此評分代理無法閱讀：只有可閱讀草稿的成員（預設為導師及助教）看得到。無論是否發佈，內建的學生權限預設都不能閱讀評分準則。',
+      },
       mustBePublished: '此作業已發佈，因此作業說明必須是有已發佈版本的文件。',
       newNeedsApproval: '撰寫新文件需要經人批准：批准之前，作業不會儲存。',
       unreadable: '以你的權限無法列出這類文件。',
@@ -68,16 +74,33 @@ export default {
       newTitle: '文件標題',
       newBody: '在此撰寫（支援 Markdown）',
       newFile: '附加檔案（選填）',
-      publishNow: '立即發佈，讓學生在作業發佈後可以閱讀',
+      publishNow: {
+        instructions: '立即發佈，讓學生在作業發佈後可以閱讀',
+        rubric: '立即發佈',
+      },
+      rubricReaders:
+        '作業發佈之前，只有席位具備「管理作業」權限的成員（預設為導師）看得到這份評分準則。作業發佈後，席位具備「閱讀評分準則」權限且範圍涵蓋此作業的成員便可閱讀：評分準則已發佈時，預設為導師、助教及列明此作業的評分代理；未發佈時，只有同時可「閱讀草稿」的成員（預設為導師及助教，評分代理不在此列）看得到。學生則不能閱讀：內建的學生權限預設並不包括閱讀評分準則。',
       needContent: '請輸入內容或附加檔案',
       defaultInstructions: '{title} — 作業說明',
       defaultRubric: '{title} — 評分準則',
       instructionsPublishedHint: '此作業已發佈，因此它的作業說明必須有已發佈的版本。',
     },
-    created: '已建立作業，目前尚未發佈。',
-    saved: '已儲存作業。',
+    created: {
+      plain: '已建立作業，目前尚未發佈。',
+      instructions: '已建立作業（連同作業說明），目前尚未發佈。',
+      rubric: '已建立作業（連同評分準則），目前尚未發佈。',
+      both: '已建立作業（連同作業說明及評分準則），目前尚未發佈。',
+    },
+    saved: {
+      plain: '已儲存作業。',
+      instructions: '已儲存作業（連同新的作業說明）。',
+      rubric: '已儲存作業（連同新的評分準則）。',
+      both: '已儲存作業（連同新的作業說明及評分準則）。',
+    },
     nothingChanged: '沒有任何更改。',
-    docCreated: '已建立「{title}」。',
+    quoted: '「{title}」',
+    docsKept: '已建立{titles}，但作業尚未儲存。文件現已在此選取，再次儲存不會重複建立。',
+    proposedWithDocs: '已送出等待批准：作業要等有人批准後才會儲存。{titles}已經建立，即使未獲批准也會留在課程中。',
     docNotPublished:
       '已建立「{title}」，但它還沒有已發佈的版本（發佈失敗或正在等待批准），因此作業尚未儲存。待它發佈後再儲存一次。',
     docProposed:
@@ -92,13 +115,26 @@ export default {
     publishInstructions: '發佈最新版本',
     instructionsPublished: '已發佈作業說明。',
     publishTitle: '發佈作業',
-    publishConfirm: '要發佈「{title}」嗎？發佈後學生便能看到並開始繳交。作業發佈後無法取消發佈。',
+    publishConfirm:
+      '要發佈「{title}」嗎？發佈後學生便能看到並開始繳交。在任何學生開始作答（開始撰寫草稿也算）或截止日期過去之前，仍可取消發佈。',
     publishNeedsInstructions: '它的作業說明必須有已發佈的版本。',
+    publishPastDue: '截止日期已過：發佈後不久，所有未繳交的學生都會被記錄為缺交，之後便無法再取消發佈。',
     publishApproval: '發佈需要經人批准才會生效。',
     published: '已發佈作業。',
+    unpublish: '取消發佈',
+    unpublishTitle: '取消發佈作業',
+    unpublishConfirm:
+      '要取消發佈「{title}」嗎？取消後學生將看不到這份作業，也不能再繳交。課程動態中已顯示過的相關紀錄會保留。',
+    unpublishUnchecked: '這裡未能檢查所有學生的作業：如已有學生開始作答，作業會維持已發佈狀態。',
+    unpublishApproval: '取消發佈需要經人批准才會生效。',
+    unpublished: '已取消發佈作業，學生不會再看到它。',
+    unpublishStarted: '已有學生開始作答，因此無法再取消發佈。（草稿及缺交紀錄都計算在內。）',
+    unpublishMissing: '已有學生被記錄為缺交（截止日期已過，或由人手記錄），因此無法再取消發佈。',
     proposed: {
       edit: '你對此作業的修改正在等待批准。獲批准之前，作業會維持此處顯示的內容。',
       publish: '發佈此作業正在等待批准。獲批准之前，學生看不到它。',
+      unpublish:
+        '取消發佈此作業正在等待批准。獲批准之前，學生仍然看得到它；一旦有學生開始作答或截止日期過去，便無法再取消發佈。',
       instructions: '發佈作業說明正在等待批准。',
     },
     instructions: '作業說明',

@@ -14,6 +14,7 @@ import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { typeLabel } from '@/views/course/actions/components/actionText'
+import { CORE_ROOT_NAME } from '@/views/course/scheme/components/schemeModel'
 import { componentName, documentTitle, ensureComponentNames, ensureDocumentTitles } from './names'
 import {
   CATEGORY_ICON,
@@ -56,6 +57,19 @@ const kind = computed(() => subjectKind(props.event))
 const reach = computed(() => reachOf(course))
 const subjectTo = computed(() => subjectRoute(props.event, props.courseId, reach.value))
 
+/**
+ * An assignment the caller's assignment list, once read, leaves out: one
+ * unpublished since, for a student, whose feed still holds its publication
+ * (and its unpublication). Its page would say it does not exist, so it is
+ * named without a link. While the list is not read, the link stays.
+ */
+function unknownAssignment(id: string | null | undefined): boolean {
+  return !!id && course.assignmentsState === 'loaded' && !course.assignments.has(id)
+}
+const subjectLink = computed(() =>
+  kind.value === 'assignment' && unknownAssignment(props.event.subject_id) ? null : subjectTo.value,
+)
+
 /** The grading component the event names: its subject, or the total's component. */
 const componentId = computed(() =>
   kind.value === 'component' ? props.event.subject_id : payloadString(props.event, 'component_id'),
@@ -73,7 +87,7 @@ const kindLabel = computed(() => {
 
 const assignmentTitle = computed(() => course.assignmentTitle(props.event.assignment_id))
 const assignmentTo = computed<RouteLocationRaw | null>(() =>
-  props.event.assignment_id
+  props.event.assignment_id && !unknownAssignment(props.event.assignment_id)
     ? { name: 'course-assignment', params: { courseId: props.courseId, assignmentId: props.event.assignment_id } }
     : null,
 )
@@ -103,8 +117,12 @@ const subjectText = computed(() => {
       const type = payloadString(e, 'action_type')
       return type ? typeLabel(type) : t('activity.subject.action')
     }
-    case 'component':
-      return component.value?.name ?? t('activity.subject.component')
+    case 'component': {
+      const c = component.value
+      if (!c) return t('activity.subject.component')
+      // The root, still under the name Core gave it, in the reader's words.
+      return c.root && c.name === CORE_ROOT_NAME ? t('activity.subject.courseTotal') : c.name
+    }
     case 'course':
       return ''
   }
@@ -122,7 +140,7 @@ const showStudent = computed(
 
 type Fact =
   | { kind: 'tag'; vocab: 'actionStatus' | 'role' | 'submissionState'; value: string }
-  | { kind: 'text'; text: string; tone?: 'danger' | 'warning' | 'success' | 'info' }
+  | { kind: 'text'; text: string; tone?: 'danger' | 'warning' | 'success' | 'info'; tip?: string }
   | { kind: 'link'; text: string; to: RouteLocationRaw; id: string }
 
 // Core's error codes (apperr), by the words common.errors has for them.
@@ -195,7 +213,20 @@ const facts = computed<Fact[]>(() => {
     }
     const seq = payloadNumber(e, 'seq')
     if (seq !== undefined) out.push({ kind: 'text', text: t('activity.fact.version', { n: seq }) })
-    if (type.endsWith('_unreleased')) out.push({ kind: 'text', text: t('activity.fact.unreleased'), tone: 'info' })
+    // Filed under its unreleased name because no published assignment used
+    // the document then. It keeps that name, so only members who see
+    // unpublished assignments are shown this entry. Who reads the document
+    // once an assignment using it is published depends on its kind.
+    if (type.endsWith('_unreleased')) {
+      const k = type === 'document.rubric_published_unreleased' ? 'rubric' : payloadString(e, 'kind')
+      const tip =
+        k === 'rubric'
+          ? t('activity.fact.unreleasedTip.rubric')
+          : k === 'instructions'
+            ? t('activity.fact.unreleasedTip.instructions')
+            : t('activity.fact.unreleasedTip.other')
+      out.push({ kind: 'text', text: t('activity.fact.unreleased'), tone: 'info', tip })
+    }
   }
   if (type === 'member.added') {
     const role = payloadString(e, 'role')
@@ -276,7 +307,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
           <span v-else class="event-item__subject"><MemberName :id="event.subject_id" show-kind /></span>
         </template>
         <template v-else-if="subjectText">
-          <router-link v-if="subjectTo" :to="subjectTo" class="event-item__subject">{{ subjectText }}</router-link>
+          <router-link v-if="subjectLink" :to="subjectLink" class="event-item__subject">{{ subjectText }}</router-link>
           <span v-else class="event-item__subject">{{ subjectText }}</span>
         </template>
 
@@ -284,17 +315,23 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
           <el-icon><User /></el-icon>
           <MemberName :id="event.student_member_id" show-kind />
         </span>
-        <span v-if="showAssignment && assignmentTo" class="event-item__ctx">
+        <span v-if="showAssignment" class="event-item__ctx">
           <el-icon><EditPen /></el-icon>
-          <router-link :to="assignmentTo" class="event-item__ctx-link">
+          <router-link v-if="assignmentTo" :to="assignmentTo" class="event-item__ctx-link">
             {{ assignmentTitle ?? t('activity.subject.assignment') }}
           </router-link>
+          <span v-else>{{ assignmentTitle ?? t('activity.subject.assignment') }}</span>
         </span>
       </div>
 
       <div v-if="facts.length" class="event-item__facts">
         <template v-for="(f, i) in facts" :key="i">
           <StatusTag v-if="f.kind === 'tag'" :vocab="f.vocab" :value="f.value" />
+          <el-tooltip v-else-if="f.kind === 'text' && f.tip" :content="f.tip" placement="top">
+            <el-tag :type="f.tone ?? 'info'" size="small" effect="plain" disable-transitions tabindex="0">
+              {{ f.text }}
+            </el-tag>
+          </el-tooltip>
           <el-tag
             v-else-if="f.kind === 'text'"
             :type="f.tone ?? 'info'"
