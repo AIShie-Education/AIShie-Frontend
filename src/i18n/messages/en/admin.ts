@@ -104,7 +104,19 @@ export default {
   seat: {
     title: 'Seat the instructor',
     intro:
-      "A new course has no members. Seat its first instructor here: they get the built-in instructor preset, and add everyone else from the course's Members page.",
+      "A new course has no members until its first instructor is seated here. They get the built-in instructor preset, and add everyone else from the course's Members page.",
+    seatedTitle: 'Instructors',
+    hasMembers: "This course has members. Its instructors add everyone else from the course's Members page.",
+    seatedJustNow: 'seated just now',
+    noInstructors: 'No one is seated as instructor at the moment.',
+    notListed:
+      'You have no seat in this course, so its member list cannot be read here: only whom you seat from this page is shown.',
+    cannotList: 'Your seat in this course cannot read its member list, so its instructors are not shown here.',
+    listFailed: 'The member list could not be read just now.',
+    membersPage: 'Go to the Members page',
+    membersPageNeedsSeat:
+      "The course's own pages, Members included, open only to its members. Seat yourself to work in it.",
+    another: 'Seat another instructor',
     who: 'Instructor',
     placeholder: 'Search by name or email, or paste an ID',
     placeholderId: 'Paste an actor ID',
