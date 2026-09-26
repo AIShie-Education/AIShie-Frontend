@@ -1,10 +1,16 @@
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
+import { highlightCode } from './markdownCode'
+import { mathPlugin } from './markdownMath'
 
 // Course material, submissions and feedback are Markdown written by people
 // and by agents. Raw HTML in it is not rendered, and what markdown-it makes
-// is sanitised again before it reaches the page.
-const md = new MarkdownIt({ html: false, linkify: true, breaks: false, typographer: false })
+// is sanitised again before it reaches the page. TeX between dollar signs is
+// typeset (utils/markdownMath.ts) and fenced code in a language named after
+// the fence is highlighted (utils/markdownCode.ts); both only add markup of
+// their own, which is sanitised with the rest.
+const md = new MarkdownIt({ html: false, linkify: true, breaks: false, typographer: false, highlight: highlightCode })
+md.use(mathPlugin)
 
 const LINK_REL = 'noopener noreferrer nofollow'
 
@@ -62,7 +68,15 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
   return `<a href="${href}" target="_blank" rel="${LINK_REL}" class="md-image-link" title="${href}">${text}</a>`
 }
 
+// The sanitiser's defaults keep what KaTeX and highlight.js make (class and
+// style attributes, SVG, MathML) and let through, beyond them, only the link
+// and image attributes set above. MathML's <semantics> and <annotation> are
+// not allowed by default: the first is unwrapped, keeping the formula, and
+// the second, KaTeX's copy of the TeX, goes with its text (else the TeX would
+// be read out after the formula).
+const PURIFY = { ADD_ATTR: ['target', 'loading', 'referrerpolicy'], ADD_FORBID_CONTENTS: ['annotation'] }
+
 export function renderMarkdown(src: string | null | undefined): string {
   if (!src) return ''
-  return DOMPurify.sanitize(md.render(src), { ADD_ATTR: ['target', 'loading', 'referrerpolicy'] })
+  return DOMPurify.sanitize(md.render(src), PURIFY)
 }
