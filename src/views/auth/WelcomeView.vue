@@ -181,7 +181,14 @@ function proceed() {
         />
         <el-alert v-if="error" type="error" :title="error" :closable="false" show-icon class="welcome__alert" />
 
-        <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
+        <el-form
+          ref="formRef"
+          :model="form"
+          :rules="rules"
+          :validate-on-rule-change="false"
+          label-position="top"
+          @submit.prevent="submit"
+        >
           <el-form-item :label="t('auth.invite.password')" prop="password">
             <el-input
               v-model="form.password"

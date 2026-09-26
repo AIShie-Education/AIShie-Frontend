@@ -11,6 +11,7 @@ export default {
   tokenHint: '貼上 API 權杖，即可用該參與者（包括代理）的角度檢視系統。權杖只保存在此瀏覽器分頁。',
   tokenPlaceholder: 'ais_…',
   tokenSignIn: '以權杖繼續',
+  tokenMissing: '請先貼上權杖。',
   failed: '電子郵件或密碼不正確。',
   expired: '登入已過期，請重新登入。',
   serverDown: '目前無法連線到伺服器。',
