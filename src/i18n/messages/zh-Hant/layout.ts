@@ -2,6 +2,15 @@ export default {
   courses: '課程',
   menu: '選單',
   tokenMode: '以權杖登入',
+  // Labels Element Plus gives screen readers on tables (i18n/elementPlus.ts).
+  elementPlus: {
+    sortLabel: '按「{column}」排序',
+    filterLabel: '按「{column}」篩選',
+    selectAllLabel: '選取全部',
+    selectRowLabel: '選取這一項',
+    expandRowLabel: '展開這一項',
+    collapseRowLabel: '收合這一項',
+  },
   course: {
     nav: '課程分頁',
     overview: '概覽',
