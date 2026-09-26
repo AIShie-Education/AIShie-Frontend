@@ -1055,7 +1055,7 @@
       "path": "/v1/actors"
     },
     {
-      "description": "An actor's credentials, newest first: tokens with their label, prefix, issuer, expiry and last use, sessions, password and linked identities, revoked ones included. Secrets are never shown. Revoke one with actor.revoke_credential.",
+      "description": "An actor's credentials, newest first: tokens with their label, prefix, issuer, expiry and last use, sessions, invitations, password and linked identities, revoked ones included. Secrets are never shown. Revoke one, a pending invitation included, with actor.revoke_credential. Held to the rule for acting on the actor: only root lists the credentials of another holder of a platform role.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1093,7 +1093,7 @@
                   "type": "string"
                 },
                 "issued_by_actor_id": {
-                  "description": "who issued a token: the actor themself or an administrator; absent for other kinds and for older tokens",
+                  "description": "who issued a token: the actor themself or an administrator; absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field",
                   "format": "uuid",
                   "type": [
                     "null",
@@ -1738,7 +1738,7 @@
       "path": "/v1/courses/{course_id}/assignments/{assignment_id}/publish"
     },
     {
-      "description": "Take back an assignment published by mistake: students no longer see it and cannot submit to it. Only while nobody has a submission of any kind for it, not even a draft; after that it stays published. What the activity feed has already shown stays there.",
+      "description": "Take back an assignment published by mistake: students no longer see it and cannot submit to it. Only while nobody has a submission of any kind for it, not even a draft, and no 'missing' row has been recorded (a due date that has passed records them); after that it stays published. What the activity feed has already shown stays there.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2629,7 +2629,7 @@
                   "type": "string"
                 },
                 "issued_by_actor_id": {
-                  "description": "who issued a token: the actor themself or an administrator; absent for other kinds and for older tokens",
+                  "description": "who issued a token: the actor themself or an administrator; absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field",
                   "format": "uuid",
                   "type": [
                     "null",
@@ -5847,7 +5847,7 @@
       "path": "/v1/courses/{course_id}/submissions"
     },
     {
-      "description": "Record that a student has handed in nothing for a published assignment: they get a 'missing' submission, which can be graded (a zero, say). Only for a student with no submission at all, not even a draft. If they hand work in afterwards it takes the missing row over, as it does after a due date passes.",
+      "description": "Record that a student has handed in nothing for a published assignment: they get a 'missing' submission, which can be graded (a zero, say). Only for a student with no submission at all, not even a draft. If they hand work in afterwards it takes the missing row over, as it does after a due date passes, unless a grade has been entered or proposed for it: then the work is a new attempt, and the missing row keeps its grade.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5891,7 +5891,7 @@
       "path": "/v1/courses/{course_id}/assignments/{assignment_id}/missing"
     },
     {
-      "description": "Where every student stands on one assignment: each current student within the caller's scope, with their latest attempt's state, including those who have not started, whom submission.list cannot show. A student who has not started can be recorded as having handed in nothing with submission.record_missing.",
+      "description": "Where every student stands on one assignment: each current student within the caller's scope, with their latest attempt's state, including those who have not started, whom submission.list cannot show. A student who has not started can be recorded as having handed in nothing with submission.record_missing. Names and seat status come only to a caller who may read the member list; to anyone else a student is their member id, as in submission.list.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5949,11 +5949,18 @@
                   ]
                 },
                 "display_name": {
-                  "type": "string"
+                  "description": "only for a caller who may read the member list (perm_member_read)",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
                 },
                 "member_status": {
-                  "description": "active or paused",
-                  "type": "string"
+                  "description": "active or paused; only for a caller who may read the member list",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
                 },
                 "state": {
                   "description": "not_started (no submission at all), draft, submitted, late or missing: the latest attempt's",
@@ -5980,8 +5987,6 @@
               },
               "required": [
                 "student_member_id",
-                "display_name",
-                "member_status",
                 "state"
               ],
               "type": "object"

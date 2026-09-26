@@ -328,7 +328,7 @@ export interface ActorListOut {
   next?: null | string
 }
 
-/** actor.list_credentials (read): An actor's credentials, newest first: tokens with their label, prefix, issuer, expiry and last use, sessions, password and linked identities, revoked ones included. Secrets are never shown. Revoke one with actor.revoke_credential. */
+/** actor.list_credentials (read): An actor's credentials, newest first: tokens with their label, prefix, issuer, expiry and last use, sessions, invitations, password and linked identities, revoked ones included. Secrets are never shown. Revoke one, a pending invitation included, with actor.revoke_credential. Held to the rule for acting on the actor: only root lists the credentials of another holder of a platform role. */
 export interface ActorListCredentialsIn {
   actor_id: string
 }
@@ -340,7 +340,7 @@ export interface ActorListCredentialsOut {
         expires_at?: null | string
         id: string
         /**
-         * who issued a token: the actor themself or an administrator; absent for other kinds and for older tokens
+         * who issued a token: the actor themself or an administrator; absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field
          */
         issued_by_actor_id?: null | string
         /**
@@ -543,7 +543,7 @@ export interface AssignmentPublishOut {
   ok: boolean
 }
 
-/** assignment.unpublish (write): Take back an assignment published by mistake: students no longer see it and cannot submit to it. Only while nobody has a submission of any kind for it, not even a draft; after that it stays published. What the activity feed has already shown stays there. */
+/** assignment.unpublish (write): Take back an assignment published by mistake: students no longer see it and cannot submit to it. Only while nobody has a submission of any kind for it, not even a draft, and no 'missing' row has been recorded (a due date that has passed records them); after that it stays published. What the activity feed has already shown stays there. */
 export interface AssignmentUnpublishIn {
   assignment_id: string
   /**
@@ -833,7 +833,7 @@ export interface CredentialListOut {
         expires_at?: null | string
         id: string
         /**
-         * who issued a token: the actor themself or an administrator; absent for other kinds and for older tokens
+         * who issued a token: the actor themself or an administrator; absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field
          */
         issued_by_actor_id?: null | string
         /**
@@ -1940,7 +1940,7 @@ export interface SubmissionListOut {
       }[]
 }
 
-/** submission.record_missing (write): Record that a student has handed in nothing for a published assignment: they get a 'missing' submission, which can be graded (a zero, say). Only for a student with no submission at all, not even a draft. If they hand work in afterwards it takes the missing row over, as it does after a due date passes. */
+/** submission.record_missing (write): Record that a student has handed in nothing for a published assignment: they get a 'missing' submission, which can be graded (a zero, say). Only for a student with no submission at all, not even a draft. If they hand work in afterwards it takes the missing row over, as it does after a due date passes, unless a grade has been entered or proposed for it: then the work is a new attempt, and the missing row keeps its grade. */
 export interface SubmissionRecordMissingIn {
   assignment_id: string
   /**
@@ -1953,7 +1953,7 @@ export interface SubmissionRecordMissingOut {
   submission_id: string
 }
 
-/** submission.roster (read): Where every student stands on one assignment: each current student within the caller's scope, with their latest attempt's state, including those who have not started, whom submission.list cannot show. A student who has not started can be recorded as having handed in nothing with submission.record_missing. */
+/** submission.roster (read): Where every student stands on one assignment: each current student within the caller's scope, with their latest attempt's state, including those who have not started, whom submission.list cannot show. A student who has not started can be recorded as having handed in nothing with submission.record_missing. Names and seat status come only to a caller who may read the member list; to anyone else a student is their member id, as in submission.list. */
 export interface SubmissionRosterIn {
   /**
    * the id of the last item already seen
@@ -1975,11 +1975,14 @@ export interface SubmissionRosterOut {
     | null
     | {
         attempt?: null | number
-        display_name: string
         /**
-         * active or paused
+         * only for a caller who may read the member list (perm_member_read)
          */
-        member_status: string
+        display_name?: null | string
+        /**
+         * active or paused; only for a caller who may read the member list
+         */
+        member_status?: null | string
         /**
          * not_started (no submission at all), draft, submitted, late or missing: the latest attempt's
          */
