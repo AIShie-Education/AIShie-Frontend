@@ -1,7 +1,7 @@
 // Highlighting fenced code (```sql … ```) with highlight.js: its core and the
 // languages a course is likely to show, not all of them. A fence in no known
 // language, or in none, is left plain. highlight.js escapes the code itself
-// and adds only <span class="hljs-…">; the colours are in styles/highlight.css.
+// and adds only <span class="hljs-…">; the colours are in styles/markdown-rich.css.
 import hljs from 'highlight.js/lib/core'
 import bash from 'highlight.js/lib/languages/bash'
 import c from 'highlight.js/lib/languages/c'

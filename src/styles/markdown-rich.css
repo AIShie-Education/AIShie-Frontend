@@ -2,6 +2,16 @@
    stylesheet is imported beside this one) and highlighted code, in colours for
    light and dark. The code colours follow GitHub's themes. */
 
+/* Nothing a text typesets paints outside it. \kern, \mathllap and the like can move a
+   formula's ink up to maxSize to the right and without limit to the left, over the
+   page's own labels and columns. What goes right scrolls inside the text; what goes
+   left is cut off. A wide inline formula on a phone also scrolls here instead of
+   widening the page. */
+.markdown-body {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .markdown-body .md-math {
   margin: 0 0 1em;
   overflow-x: auto;
