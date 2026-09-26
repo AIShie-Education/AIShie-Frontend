@@ -67,6 +67,7 @@ function reset() {
   foundId.value = ''
   picked = null
   form.actorId = ''
+  presetChosen.value = false
   form.presetId = builtIn.value.find((p) => p.name === 'student')?.id ?? props.presets[0]?.id ?? ''
   form.students = []
   form.assignments = []
@@ -193,6 +194,20 @@ watch(
         actorLooking.value = false
       }
     }, 350)
+  },
+)
+
+// --- The preset to start from, by who is being seated ------------------------
+/** The person picked a preset themselves: who is being seated no longer changes it. */
+const presetChosen = ref(false)
+/** An agent starts as the built-in grader, a person as a student. */
+const kindPreset: Record<string, string> = { agent: 'grader', human: 'student' }
+watch(
+  () => (actorInfo.value && actorInfo.value !== 'missing' ? actorInfo.value.kind : null),
+  (kind) => {
+    if (!kind || presetChosen.value) return
+    const id = builtIn.value.find((p) => p.name === kindPreset[kind])?.id
+    if (id) form.presetId = id
   },
 )
 
@@ -335,7 +350,13 @@ function capToMine() {
       <!-- Starting point -->
       <div class="add-member__row">
         <el-form-item :label="t('members.add.preset')" prop="presetId" class="add-member__grow">
-          <el-select v-model="form.presetId" :loading="presetsLoading" filterable class="add-member__preset-select">
+          <el-select
+            v-model="form.presetId"
+            :loading="presetsLoading"
+            filterable
+            class="add-member__preset-select"
+            @change="presetChosen = true"
+          >
             <el-option-group :label="t('members.add.builtIn')">
               <el-option v-for="p in builtIn" :key="p.id" :value="p.id" :label="presetLabel(p)">
                 <span>{{ presetLabel(p) }}</span>

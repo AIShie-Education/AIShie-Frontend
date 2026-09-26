@@ -213,6 +213,8 @@ export default {
       title: 'Reach',
       change: 'Change reach',
       help: 'Reach narrows the permissions about students’ work (submissions and grades). A listed reach with nothing on the list reaches nothing.',
+      helpStudent:
+        'Reach narrows the permissions about students’ work (submissions and grades). A student’s seat lists the student themself: when they are added with an empty list, it covers only that student, so they see their own work and nobody else’s.',
       allStudents: 'Every student in the course.',
       noStudents: 'Nobody: the list is empty, so these permissions reach no student.',
       ownWork: 'Only their own work.',
