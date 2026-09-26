@@ -1,8 +1,9 @@
 // The page's name in the browser's tab. It is set as soon as a navigation
 // knows where it is going, from its route's meta.title, before the sign-in
 // check or any of the page's own data is waited for; again once the
-// navigation has settled (a redirect, or one that did not happen, leaves the
-// tab named after where the page is); and again when the language changes.
+// navigation has settled (a redirect, one that did not happen, or one that
+// failed leaves the tab named after where the page is); and again when the
+// language changes.
 import { watch } from 'vue'
 import type { RouteLocationNormalized, Router } from 'vue-router'
 import { i18n } from '@/i18n'
@@ -27,11 +28,20 @@ export function installTitle(router: Router): () => void {
   const name = (route: Pick<RouteLocationNormalized, 'matched'>) => {
     if (typeof document !== 'undefined') document.title = documentTitle(titleKey(route))
   }
+  // The latest navigation to have started.
+  let pending: RouteLocationNormalized | undefined
   const removers = [
     router.beforeEach((to) => {
+      pending = to
       name(to)
     }),
     router.afterEach(() => name(router.currentRoute.value)),
+    // A navigation that failed with an error (a view's code that did not
+    // load, a guard that threw) runs no afterEach, so the tab is put back
+    // here. A failure a newer navigation has overtaken is left to that one.
+    router.onError((_err, to) => {
+      if (to === pending) name(router.currentRoute.value)
+    }),
   ]
   const stop = watch(
     () => i18n.global.locale.value,

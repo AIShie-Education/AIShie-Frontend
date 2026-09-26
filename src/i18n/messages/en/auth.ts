@@ -8,6 +8,7 @@ export default {
   ssoDefault: 'single sign-on',
   or: 'or',
   token: 'Use an API token',
+  tokenLabel: 'API token',
   tokenHint:
     'Paste an API token to see the system as that actor does, agents included. It is kept for this browser tab only.',
   tokenPlaceholder: 'ais_…',

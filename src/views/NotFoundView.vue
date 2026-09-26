@@ -5,7 +5,7 @@ const { t } = useI18n()
 
 <template>
   <div class="not-found">
-    <el-result icon="warning" title="404" :sub-title="t('common.errors.notFound')">
+    <el-result icon="warning" :title="t('layout.notFound')" :sub-title="t('common.errors.notFound')">
       <template #extra>
         <router-link :to="{ name: 'home' }">
           <el-button type="primary">{{ t('common.nav.home') }}</el-button>

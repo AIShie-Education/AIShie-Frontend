@@ -4,7 +4,7 @@
 // one arrives it is read and taken out of the address, so that it stays in
 // neither the address bar nor the history. The person chooses a password,
 // and POST /v1/auth/invite sets it and signs this browser in as them.
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -26,7 +26,12 @@ const formRef = ref<FormInstance>()
 const form = reactive({ password: '', repeat: '' })
 const busy = ref(false)
 const leaving = ref(false)
-const error = ref<string | null>(null)
+/**
+ * Why setting the password did not work, kept as its cause and put into words
+ * when shown, so that a message already shown follows a change of language.
+ * `wait`: Core asked for a pause (429), which is said with how long.
+ */
+const failure = shallowRef<{ err: ApiError; wait: true } | { err: unknown } | null>(null)
 /** Core refused the invitation: nothing more can be done with it. */
 const invalid = ref(false)
 /** The email they sign in with from now on, once the password is set. */
@@ -48,7 +53,7 @@ watch(
     if (!found) return
     token.value = found
     invalid.value = false
-    error.value = null
+    failure.value = null
     doneEmail.value = null
     form.password = ''
     form.repeat = ''
@@ -88,17 +93,35 @@ const rules = computed<FormRules>(() => ({
   ],
 }))
 
+// The rules are words in the page's language; changing it does not check the
+// form again (validate-on-rule-change is off), it only puts a message already
+// shown into the new language.
+watch(
+  () => ui.locale,
+  () =>
+    nextTick(() => {
+      const shown = (['password', 'repeat'] as const).filter(
+        (p) => formRef.value?.getField(p)?.validateState === 'error',
+      )
+      if (shown.length) void formRef.value?.validateField([...shown]).catch(() => undefined)
+    }),
+)
+
 function waitMessage(e: ApiError): string {
   const n = Number(e.details?.retry_after_seconds)
   return Number.isFinite(n) && n > 0 ? t('auth.invite.wait', { n }, n) : errorMessage(e)
 }
+
+const error = computed(() =>
+  !failure.value ? null : 'wait' in failure.value ? waitMessage(failure.value.err) : errorMessage(failure.value.err),
+)
 
 async function submit() {
   const invitation = token.value
   if (!invitation || busy.value) return
   if (!(await formRef.value?.validate().catch(() => false))) return
   busy.value = true
-  error.value = null
+  failure.value = null
   try {
     const out = await session.signInWithInvite(invitation, form.password)
     form.password = ''
@@ -106,8 +129,8 @@ async function submit() {
     doneEmail.value = out.email
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) invalid.value = true
-    else if (e instanceof ApiError && e.status === 429) error.value = waitMessage(e)
-    else error.value = errorMessage(e)
+    else if (e instanceof ApiError && e.status === 429) failure.value = { err: e, wait: true }
+    else failure.value = { err: e }
   } finally {
     busy.value = false
   }

@@ -25,6 +25,20 @@
         document.documentElement.classList.toggle('dark', dark)
         document.documentElement.setAttribute('data-boot-theme', dark ? 'dark' : 'light')
       })()
+      // The app's own code did not load (the connection, or a deploy between this page and its
+      // scripts): the loading screen says so, in both languages, instead of loading for ever.
+      // Once the app has mounted over the loading screen, this does nothing.
+      window.addEventListener(
+        'error',
+        function (e) {
+          var el = e.target
+          var boot = document.querySelector('#app .boot')
+          if (!el || el.tagName !== 'SCRIPT' || !boot) return
+          boot.setAttribute('aria-busy', 'false')
+          boot.classList.add('boot--failed')
+        },
+        true,
+      )
     </script>
     <style>
       /* The loading screen in #app, until the app mounts over it (main.ts). Plain CSS, here:
@@ -110,6 +124,49 @@
           transform: translateX(250%);
         }
       }
+      /* Instead of the bar when the app cannot start: main.ts, or the script above, shows it. */
+      .boot__failed {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        max-width: 360px;
+        text-align: center;
+      }
+      .boot--failed .boot__bar {
+        display: none;
+      }
+      .boot--failed .boot__failed {
+        display: flex;
+      }
+      .boot__failed-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .boot__failed-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        text-align: center;
+      }
+      .boot__en {
+        display: block;
+      }
+      .boot__retry {
+        padding: 8px 20px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--boot-bar);
+        color: #ffffff;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .boot__retry:focus-visible {
+        outline: 2px solid var(--boot-bar);
+        outline-offset: 2px;
+      }
       @media (prefers-reduced-motion: reduce) {
         .boot__inner,
         .boot__bar::after {
@@ -117,6 +174,13 @@
         }
       }
     </style>
+    <noscript>
+      <style>
+        .boot__bar {
+          display: none;
+        }
+      </style>
+    </noscript>
   </head>
   <body>
     <div id="app">
@@ -127,6 +191,26 @@
             <span>AIShiteru</span>
           </div>
           <div class="boot__bar"></div>
+          <div class="boot__failed" role="alert">
+            <p class="boot__failed-title">
+              無法開啟 AIShiteru<span class="boot__en" lang="en">AIShiteru could not start</span>
+            </p>
+            <p class="boot__failed-text">
+              請檢查網路連線，然後重新載入頁面。<span class="boot__en" lang="en"
+                >Check your connection, then load the page again.</span
+              >
+            </p>
+            <button type="button" class="boot__retry" onclick="location.reload()">
+              重新載入 <span lang="en">Reload</span>
+            </button>
+          </div>
+          <noscript>
+            <p class="boot__failed-text">
+              需要啟用 JavaScript 才能使用 AIShiteru。<span class="boot__en" lang="en"
+                >AIShiteru needs JavaScript to run.</span
+              >
+            </p>
+          </noscript>
         </div>
       </div>
     </div>
