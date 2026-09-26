@@ -57,6 +57,19 @@ const kind = computed(() => subjectKind(props.event))
 const reach = computed(() => reachOf(course))
 const subjectTo = computed(() => subjectRoute(props.event, props.courseId, reach.value))
 
+/**
+ * An assignment the caller's assignment list, once read, leaves out: one
+ * unpublished since, for a student, whose feed still holds its publication
+ * (and its unpublication). Its page would say it does not exist, so it is
+ * named without a link. While the list is not read, the link stays.
+ */
+function unknownAssignment(id: string | null | undefined): boolean {
+  return !!id && course.assignmentsState === 'loaded' && !course.assignments.has(id)
+}
+const subjectLink = computed(() =>
+  kind.value === 'assignment' && unknownAssignment(props.event.subject_id) ? null : subjectTo.value,
+)
+
 /** The grading component the event names: its subject, or the total's component. */
 const componentId = computed(() =>
   kind.value === 'component' ? props.event.subject_id : payloadString(props.event, 'component_id'),
@@ -74,7 +87,7 @@ const kindLabel = computed(() => {
 
 const assignmentTitle = computed(() => course.assignmentTitle(props.event.assignment_id))
 const assignmentTo = computed<RouteLocationRaw | null>(() =>
-  props.event.assignment_id
+  props.event.assignment_id && !unknownAssignment(props.event.assignment_id)
     ? { name: 'course-assignment', params: { courseId: props.courseId, assignmentId: props.event.assignment_id } }
     : null,
 )
@@ -290,7 +303,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
           <span v-else class="event-item__subject"><MemberName :id="event.subject_id" show-kind /></span>
         </template>
         <template v-else-if="subjectText">
-          <router-link v-if="subjectTo" :to="subjectTo" class="event-item__subject">{{ subjectText }}</router-link>
+          <router-link v-if="subjectLink" :to="subjectLink" class="event-item__subject">{{ subjectText }}</router-link>
           <span v-else class="event-item__subject">{{ subjectText }}</span>
         </template>
 
@@ -298,11 +311,12 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
           <el-icon><User /></el-icon>
           <MemberName :id="event.student_member_id" show-kind />
         </span>
-        <span v-if="showAssignment && assignmentTo" class="event-item__ctx">
+        <span v-if="showAssignment" class="event-item__ctx">
           <el-icon><EditPen /></el-icon>
-          <router-link :to="assignmentTo" class="event-item__ctx-link">
+          <router-link v-if="assignmentTo" :to="assignmentTo" class="event-item__ctx-link">
             {{ assignmentTitle ?? t('activity.subject.assignment') }}
           </router-link>
+          <span v-else>{{ assignmentTitle ?? t('activity.subject.assignment') }}</span>
         </span>
       </div>
 

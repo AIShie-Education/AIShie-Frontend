@@ -22,7 +22,7 @@ export default {
     proposed: 'The new assignment is waiting for approval. It will appear here once someone approves it.',
     viewMyActions: 'See my actions',
     pointsShort: '{n} points',
-    approvalHint: 'Creating, changing and publishing assignments waits for someone to approve it.',
+    approvalHint: 'Creating, changing, publishing and unpublishing assignments waits for someone to approve it.',
   },
   state: {
     unpublished: 'Not published',
@@ -116,13 +116,29 @@ export default {
     instructionsPublished: 'Instructions published.',
     publishTitle: 'Publish assignment',
     publishConfirm:
-      'Publish “{title}”? Students will see it and can start handing in work. An assignment cannot be unpublished.',
+      'Publish “{title}”? Students will see it and can start handing in work. It can be unpublished again only until a student starts on it (a draft counts) or its due date passes.',
     publishNeedsInstructions: 'Its instructions must have a published version.',
+    publishPastDue:
+      'Its due date has already passed: shortly after publishing, every student with nothing handed in is recorded as missing, and from then on it cannot be unpublished.',
     publishApproval: 'Publishing will wait for someone to approve it.',
     published: 'Assignment published.',
+    unpublish: 'Unpublish',
+    unpublishTitle: 'Unpublish assignment',
+    unpublishConfirm:
+      'Unpublish “{title}”? Students will no longer see it or be able to hand in work for it. What the activity feed has already shown about it stays there.',
+    unpublishUnchecked:
+      'Not every student’s work could be checked from here: if anyone has already started on it, it stays published.',
+    unpublishApproval: 'Unpublishing will wait for someone to approve it.',
+    unpublished: 'Assignment unpublished. Students no longer see it.',
+    unpublishStarted:
+      'Students have already started on it, so it can no longer be unpublished. (A draft counts, as does work recorded as missing.)',
+    unpublishMissing:
+      'Work on it has been recorded as missing (its due date passed, or it was recorded by hand), so it can no longer be unpublished.',
     proposed: {
       edit: 'Your changes to this assignment are waiting for approval. Until they are approved, it stays as shown here.',
       publish: 'Publishing this assignment is waiting for approval. Students cannot see it until it is approved.',
+      unpublish:
+        'Unpublishing this assignment is waiting for approval. Until it is approved students still see it, and once any of them starts on it or its due date passes, it can no longer be unpublished.',
       instructions: 'Publishing the instructions is waiting for approval.',
     },
     instructions: 'Instructions',

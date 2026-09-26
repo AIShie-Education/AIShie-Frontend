@@ -22,7 +22,7 @@ export default {
     proposed: '新作業正在等待批准，獲批准後便會在這裡出現。',
     viewMyActions: '查看我的操作',
     pointsShort: '{n} 分',
-    approvalHint: '建立、修改及發佈作業都需要經人批准才會生效。',
+    approvalHint: '建立、修改、發佈及取消發佈作業都需要經人批准才會生效。',
   },
   state: {
     unpublished: '未發佈',
@@ -110,13 +110,26 @@ export default {
     publishInstructions: '發佈最新版本',
     instructionsPublished: '已發佈作業說明。',
     publishTitle: '發佈作業',
-    publishConfirm: '要發佈「{title}」嗎？發佈後學生便能看到並開始繳交。作業發佈後無法取消發佈。',
+    publishConfirm:
+      '要發佈「{title}」嗎？發佈後學生便能看到並開始繳交。在任何學生開始作答（開始撰寫草稿也算）或截止日期過去之前，仍可取消發佈。',
     publishNeedsInstructions: '它的作業說明必須有已發佈的版本。',
+    publishPastDue: '截止日期已過：發佈後不久，所有未繳交的學生都會被記錄為缺交，之後便無法再取消發佈。',
     publishApproval: '發佈需要經人批准才會生效。',
     published: '已發佈作業。',
+    unpublish: '取消發佈',
+    unpublishTitle: '取消發佈作業',
+    unpublishConfirm:
+      '要取消發佈「{title}」嗎？取消後學生將看不到這份作業，也不能再繳交。課程動態中已顯示過的相關紀錄會保留。',
+    unpublishUnchecked: '這裡未能檢查所有學生的作業：如已有學生開始作答，作業會維持已發佈狀態。',
+    unpublishApproval: '取消發佈需要經人批准才會生效。',
+    unpublished: '已取消發佈作業，學生不會再看到它。',
+    unpublishStarted: '已有學生開始作答，因此無法再取消發佈。（草稿及缺交紀錄都計算在內。）',
+    unpublishMissing: '已有學生被記錄為缺交（截止日期已過，或由人手記錄），因此無法再取消發佈。',
     proposed: {
       edit: '你對此作業的修改正在等待批准。獲批准之前，作業會維持此處顯示的內容。',
       publish: '發佈此作業正在等待批准。獲批准之前，學生看不到它。',
+      unpublish:
+        '取消發佈此作業正在等待批准。獲批准之前，學生仍然看得到它；一旦有學生開始作答或截止日期過去，便無法再取消發佈。',
       instructions: '發佈作業說明正在等待批准。',
     },
     instructions: '作業說明',

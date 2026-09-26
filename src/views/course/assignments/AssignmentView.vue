@@ -2,9 +2,10 @@
 // One assignment (assignment.get): its instructions, read inline
 // (document.get), what it is worth, when it is due and where it counts. Those
 // who write assignments edit and publish it here (assignment.update,
-// .publish); those who read the class's work see where it stands and go on to
-// the submissions and grades pages. A student works on it here: see
-// MyWorkPanel.
+// .publish), and take back a publication made by mistake (.unpublish) while
+// nobody has started on it; those who read the class's work see where it
+// stands and go on to the submissions and grades pages. A student works on it
+// here: see MyWorkPanel.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
@@ -85,6 +86,9 @@ async function publish() {
   // Instructions known to be unpublished keep the button disabled; those that
   // could not be read may be either.
   if (a.instructions_document_id && !instructionsDoc.value) lines.push(t('assignments.detail.publishNeedsInstructions'))
+  // Core's sweep then records every student with nothing as missing, and
+  // from then on it cannot be taken back.
+  if (pastDue.value) lines.push(t('assignments.detail.publishPastDue'))
   if (course.needsApproval('assignment_write')) lines.push(t('assignments.detail.publishApproval'))
   try {
     await ElMessageBox.confirm(lines.join(' '), t('assignments.detail.publishTitle'), {
@@ -101,11 +105,79 @@ async function publish() {
   )
   if (out?.status === 'executed') {
     pendingNote.value = null
+    unpublishProposed.value = false
     course.invalidate('assignments')
     void state.reload()
   } else if (out?.status === 'proposed') {
     publishProposed.value = true
     pendingNote.value = t('assignments.detail.proposed.publish')
+  }
+}
+
+// --- Unpublishing ----------------------------------------------------------------------
+// Core takes a publication back only while nobody has any submission row for
+// the assignment: not a draft, not a hand-in, not a record of missing work
+// (made by hand, or by Core's sweep once the due date has passed). Where the
+// class's work is read (WorkSummary), a row seen settles it; where it is not,
+// or the caller's student scope leaves students out, Core decides. (An
+// assignment outside the caller's assignment scope does not open here.)
+
+/** Rows of work on it the caller can see, of any state; null while not known. */
+const workRows = ref<number | null>(null)
+/** Of those, drafts and hand-ins: not records of missing work. */
+const workAttempts = ref<number | null>(null)
+function onCounted(rows: number | null, attempts: number | null) {
+  workRows.value = rows
+  workAttempts.value = attempts
+}
+/** Someone has a row for it: Core would refuse. */
+const started = computed(() => (workRows.value ?? 0) > 0)
+/** Why it can no longer be unpublished: someone started, or only missing work was recorded. */
+const startedText = computed(() =>
+  (workAttempts.value ?? 0) > 0 ? t('assignments.detail.unpublishStarted') : t('assignments.detail.unpublishMissing'),
+)
+/** Nobody has started, as far as every student's work goes (the caller's student scope reaches them all). */
+const checkedAll = computed(() => workRows.value === 0 && course.membership?.student_scope === 'all')
+/** Unpublishing asked for from this page that waits for approval: not to be asked for twice. */
+const unpublishProposed = ref(false)
+
+const unpublishW = useWrite('assignment.unpublish')
+async function unpublish() {
+  const a = assignment.value
+  if (!a) return
+  const lines = [t('assignments.detail.unpublishConfirm', { title: a.title })]
+  if (!checkedAll.value) lines.push(t('assignments.detail.unpublishUnchecked'))
+  if (course.needsApproval('assignment_write')) lines.push(t('assignments.detail.unpublishApproval'))
+  try {
+    await ElMessageBox.confirm(lines.join(' '), t('assignments.detail.unpublishTitle'), {
+      type: 'warning',
+      confirmButtonText: t('assignments.detail.unpublish'),
+      cancelButtonText: t('common.actions.cancel'),
+      confirmButtonClass: 'el-button--danger',
+    })
+  } catch {
+    return
+  }
+  const out = await unpublishW.run(
+    { course_id: props.courseId, assignment_id: a.id },
+    { success: t('assignments.detail.unpublished') },
+  )
+  if (out?.status === 'executed') {
+    pendingNote.value = null
+    publishProposed.value = false
+    course.invalidate('assignments')
+    void state.reload()
+  } else if (out?.status === 'proposed') {
+    unpublishProposed.value = true
+    pendingNote.value = t('assignments.detail.proposed.unpublish')
+  } else {
+    // Refused (and shown). Someone may have started on it since the page was
+    // read, or it was unpublished elsewhere: show where it stands now.
+    const code = unpublishW.lastError.value?.code
+    if (code === 'failed_precondition' || code === 'conflict') {
+      void state.reload()
+      summary.value?.reload()
+    }
   }
 }
 
@@ -135,6 +207,7 @@ const work = ref<InstanceType<typeof MyWorkPanel> | null>(null)
 function refresh() {
   // What was proposed may have been decided since; Core says if it is still waiting.
   publishProposed.value = false
+  unpublishProposed.value = false
   instructionsProposed.value = false
   void state.reload()
   void instructions.reload()
@@ -193,6 +266,25 @@ function refresh() {
             >
               <el-icon><Promotion /></el-icon>
               <span>{{ t('common.actions.publish') }}</span>
+            </el-button>
+          </span>
+        </el-tooltip>
+        <el-tooltip
+          v-else
+          :content="unpublishProposed ? t('assignments.detail.proposed.unpublish') : startedText"
+          :disabled="!(started || unpublishProposed) || !course.writable"
+          placement="bottom"
+        >
+          <span>
+            <el-button
+              type="danger"
+              plain
+              :disabled="!course.writable || started || unpublishProposed"
+              :loading="unpublishW.pending.value"
+              @click="unpublish"
+            >
+              <el-icon><Hide /></el-icon>
+              <span>{{ t('assignments.detail.unpublish') }}</span>
             </el-button>
           </span>
         </el-tooltip>
@@ -363,7 +455,13 @@ function refresh() {
             <!-- The class's work -->
             <section v-if="seesWork || seesGrades" class="app-card">
               <h2 class="app-card__title">{{ t('assignments.detail.work') }}</h2>
-              <WorkSummary v-if="seesWork" ref="summary" :course-id="courseId" :assignment-id="assignment.id" />
+              <WorkSummary
+                v-if="seesWork"
+                ref="summary"
+                :course-id="courseId"
+                :assignment-id="assignment.id"
+                @counted="onCounted"
+              />
               <div class="assignment-view__links">
                 <router-link
                   v-if="seesWork"
