@@ -373,19 +373,47 @@ export async function write<N extends WriteTool>(
 // Sign-in (not tools: there is no actor yet to call one as)
 // ---------------------------------------------------------------------------
 
+/**
+ * A sign-in that did not go through. A 401 here is not a lapsed session:
+ * nobody should be told they were signed out, so the listeners are not
+ * called. A 429 says how long to wait in details.retry_after_seconds.
+ */
+function signInError(raw: RawResponse): ApiError {
+  const b = raw.body?.error
+  let details: Record<string, unknown> | undefined = b?.details
+  const wait = Number(raw.headers.get('Retry-After'))
+  if (raw.status === 429 && details?.retry_after_seconds === undefined && Number.isFinite(wait) && wait > 0) {
+    details = { ...details, retry_after_seconds: wait }
+  }
+  return new ApiError({
+    status: raw.status,
+    code: b?.code ?? (raw.status === 429 ? 'rate_limited' : 'unknown'),
+    message: b?.message ?? `HTTP ${raw.status}`,
+    details,
+  })
+}
+
 export async function login(email: string, password: string): Promise<{ actor_id: string; expires_at: string }> {
   const raw = await send('POST', '/v1/auth/login', { body: { email, password } })
-  if (raw.status !== 200) {
-    // A failed sign-in is a 401 but not a lapsed session: nobody should be
-    // told they were signed out.
-    const b = raw.body?.error
-    throw new ApiError({
-      status: raw.status,
-      code: b?.code ?? 'unknown',
-      message: b?.message ?? `HTTP ${raw.status}`,
-      details: b?.details,
-    })
-  }
+  if (raw.status !== 200) throw signInError(raw)
+  return raw.body
+}
+
+/**
+ * Takes up an invitation (actor.invite): sets the invited person's password
+ * and signs this browser in as them, with the session cookie a sign-in
+ * gives. Public, like login: the invitation is what vouches for them. Core
+ * answers 401 for an invitation that is no good (unknown, used, replaced,
+ * withdrawn, expired, or for someone suspended since), 400 for a weak
+ * password (the invitation still works), and 429 when this address has tried
+ * too often.
+ */
+export async function acceptInvite(
+  token: string,
+  password: string,
+): Promise<{ actor_id: string; email: string; expires_at: string }> {
+  const raw = await send('POST', '/v1/auth/invite', { body: { token, password } })
+  if (raw.status !== 200) throw signInError(raw)
   return raw.body
 }
 

@@ -2,8 +2,8 @@
 // Setting or replacing the caller's own password (credential.set_password).
 // Whether one is set, and since when, is read from the credential list. A
 // password is used only with an email address (auth.Login finds the account
-// by it), and no tool gives an account one later: without it, there is
-// nothing to set.
+// by it), which only an administrator can give an account later
+// (actor.update): without it, there is nothing to set.
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -12,7 +12,8 @@ import type { Credential } from '@/api/types'
 import { errorMessage } from '@/composables/useErrors'
 import { useWrite } from '@/composables/useWrite'
 import TimeText from '@/components/TimeText.vue'
-import { PASSWORD_MAX_BYTES, PASSWORD_MIN_BYTES, byteLength, credentialState } from './credentials'
+import { passwordProblem } from '@/utils/password'
+import { credentialState } from './credentials'
 
 const props = defineProps<{
   credentials: Credential[] | undefined
@@ -40,10 +41,10 @@ const rules = computed<FormRules>(() => ({
     { required: true, message: t('common.errors.required'), trigger: 'blur' },
     {
       validator: (_r, v: string, cb) => {
-        const n = byteLength(v ?? '')
+        const problem = passwordProblem(v ?? '')
         if (!v) cb(new Error(t('common.errors.required')))
-        else if (n < PASSWORD_MIN_BYTES) cb(new Error(t('account.password.tooShort')))
-        else if (n > PASSWORD_MAX_BYTES) cb(new Error(t('account.password.tooLong')))
+        else if (problem === 'short') cb(new Error(t('account.password.tooShort')))
+        else if (problem === 'long') cb(new Error(t('account.password.tooLong')))
         else cb()
       },
       trigger: 'blur',

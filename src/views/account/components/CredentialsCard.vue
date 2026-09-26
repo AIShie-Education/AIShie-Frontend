@@ -16,6 +16,7 @@ import IssueTokenDialog from './IssueTokenDialog.vue'
 import TokenRevealDialog from './TokenRevealDialog.vue'
 import {
   credentialState,
+  invitedBy,
   isCurrentToken,
   linkedBy,
   maskedToken,
@@ -62,6 +63,7 @@ const KIND_ICON: Record<string, string> = {
   sso: 'Connection',
   api_token: 'Key',
   session: 'Monitor',
+  invite: 'Message',
 }
 const STATE_TAG: Record<CredentialState, 'success' | 'info' | 'danger'> = {
   active: 'success',
@@ -79,6 +81,7 @@ function title(c: Credential): string {
     case 'session': {
       const o = sessionOrigin(c.label)
       if (o?.via === 'password') return t('account.credentials.sessionVia.password')
+      if (o?.via === 'invite') return t('account.credentials.sessionVia.invite')
       if (o?.via === 'sso') return t('account.credentials.sessionVia.sso', { provider: o.provider })
       return t('enums.credentialKind.session')
     }
@@ -93,11 +96,15 @@ function linker(c: Credential): string | null {
   return c.kind === 'sso' ? linkedBy(c.label) : null
 }
 
+function inviter(c: Credential): string | null {
+  return c.kind === 'invite' ? invitedBy(c.label) : null
+}
+
 /** Core's label, when the title and the rest do not already say it. */
 function note(c: Credential): string | null {
   if (!c.label || c.kind === 'api_token') return null
   if (c.kind === 'session' && sessionOrigin(c.label)) return null
-  if (linker(c)) return null
+  if (linker(c) || inviter(c)) return null
   return c.label
 }
 
@@ -124,6 +131,9 @@ function revokeLines(c: Credential, current: boolean): string[] {
       break
     case 'sso':
       lines.push(t('account.revoke.sso', { provider: c.provider || t('enums.credentialKind.sso') }))
+      break
+    case 'invite':
+      lines.push(t('account.revoke.invite'))
       break
   }
   // An identity linked to this account again is the same credential revived
@@ -254,6 +264,10 @@ function forgetSecret() {
                 <span class="creds-item__k">{{ t('account.credentials.linkedBy') }}</span>
                 {{ linker(c) }}
               </span>
+              <span v-if="inviter(c)">
+                <span class="creds-item__k">{{ t('account.credentials.invitedBy') }}</span>
+                {{ inviter(c) }}
+              </span>
               <span>
                 <span class="creds-item__k">{{ t('account.credentials.created') }}</span>
                 <TimeText :value="c.created_at" />
@@ -263,7 +277,7 @@ function forgetSecret() {
                 <TimeText v-if="c.last_used_at" :value="c.last_used_at" relative />
                 <template v-else>{{ t('account.credentials.neverUsed') }}</template>
               </span>
-              <span v-if="c.kind === 'api_token' || c.kind === 'session'">
+              <span v-if="c.kind === 'api_token' || c.kind === 'session' || c.kind === 'invite'">
                 <span class="creds-item__k">{{ t('account.credentials.expires') }}</span>
                 <TimeText v-if="c.expires_at" :value="c.expires_at" />
                 <template v-else>{{ t('account.credentials.noExpiry') }}</template>

@@ -25,10 +25,23 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true, title: 'auth.title' },
   },
   {
+    // Where an invitation link lands (actor.invite): the token is in the
+    // fragment, #token=aisinv_…, which no server sees.
+    path: '/welcome',
+    name: 'welcome',
+    component: () => import('@/views/auth/WelcomeView.vue'),
+    meta: { public: true, title: 'auth.invite.title' },
+  },
+  {
     path: '/',
     component: AppLayout,
     children: [
-      { path: '', name: 'home', component: () => import('@/views/home/HomeView.vue'), meta: { title: 'common.nav.home' } },
+      {
+        path: '',
+        name: 'home',
+        component: () => import('@/views/home/HomeView.vue'),
+        meta: { title: 'common.nav.home' },
+      },
       ...accountRoutes,
       ...adminRoutes,
       {
@@ -62,6 +75,9 @@ router.beforeEach(async (to) => {
     // layout's own error state once they ask for something.
   }
   if (to.meta.public) {
+    // Signed in, the sign-in page has nothing to offer; the welcome page
+    // still does: an invitation opened in a browser someone is signed in to
+    // signs it in as the invited person instead, and says so first.
     if (to.name === 'login' && session.status === 'signedIn') {
       const next = typeof to.query.next === 'string' && to.query.next.startsWith('/') ? to.query.next : '/'
       return next

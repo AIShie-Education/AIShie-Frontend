@@ -1,66 +1,112 @@
 <script setup lang="ts">
-// People and agents. Core has no tool that lists actors, deliberately, so
-// this page registers them (actor.register), finds one by id (actor.get),
-// and remembers in this browser those registered or looked up here.
-import { ref, watch } from 'vue'
+// Everyone registered on the platform (actor.list), found by a piece of
+// their name or email, or by their ID (actor.get), and narrowed by kind and
+// standing; and registering someone new (actor.register).
+import { computed, onScopeDispose, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { isApiError, MCP_ENDPOINT, read } from '@/api/http'
-import { errorMessage } from '@/composables/useErrors'
+import { usePaged } from '@/composables/useAsync'
+import { useNarrow } from '@/composables/useMediaQuery'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
+import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
+import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import TimeText from '@/components/TimeText.vue'
+import StatusTag from '@/components/StatusTag.vue'
 import ActorSummary from './components/ActorSummary.vue'
 import RegisterActorDialog from './components/RegisterActorDialog.vue'
-import { useRecentActors, type RegisteredActor } from './components/adminShared'
+import SignInTags from './components/SignInTags.vue'
+import type { ActorRow, RegisteredActor } from './components/adminShared'
 
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
-const { recent, remember, forget, clear } = useRecentActors()
+const narrow = useNarrow(767)
+
+const PAGE = 50
+const KINDS = ['human', 'agent'] as const
+const STATUSES = ['active', 'suspended'] as const
+
+// The search and the filters live in the address, so that coming back to the
+// list keeps them. Only values Core takes are read from it.
+function queryParam<T extends string>(name: string, allowed?: readonly T[]) {
+  return computed<T | undefined>({
+    get: () => {
+      const v = route.query[name]
+      if (typeof v !== 'string' || !v) return undefined
+      return !allowed || allowed.includes(v as T) ? (v as T) : undefined
+    },
+    set: (v) => void router.replace({ query: { ...route.query, [name]: v || undefined } }),
+  })
+}
+const q = queryParam<string>('q')
+const kind = queryParam('kind', KINDS)
+const status = queryParam('status', STATUSES)
+
+// What is typed goes to the address a moment after typing stops.
+const searchText = ref(q.value ?? '')
+let typing: ReturnType<typeof setTimeout> | undefined
+watch(searchText, (v) => {
+  clearTimeout(typing)
+  typing = setTimeout(() => (q.value = v.trim() || undefined), 300)
+})
+// Back and forward change the address under the box.
+watch(q, (v) => {
+  if ((v ?? '') !== searchText.value.trim()) searchText.value = v ?? ''
+})
+// A search still to be written to the address would otherwise replace the
+// page being gone to, if typing is followed at once by opening someone.
+onBeforeRouteLeave(() => clearTimeout(typing))
+onScopeDispose(() => clearTimeout(typing))
+
+/** A whole actor ID in the box: that one actor, whatever the filters. */
+const byId = computed(() => (q.value && isUuid(q.value) ? q.value.trim().toLowerCase() : null))
+
+const list = usePaged<ActorRow>(
+  async (after) => {
+    if (byId.value) {
+      try {
+        return { items: [await read('actor.get', { actor_id: byId.value })] }
+      } catch (e) {
+        if (isApiError(e) && e.isNotFound) return { items: [] }
+        throw e
+      }
+    }
+    const o = await read('actor.list', { search: q.value, kind: kind.value, status: status.value, limit: PAGE, after })
+    return { items: o.actors, next: o.next }
+  },
+  { watch: [q, kind, status] },
+)
+const filtered = computed(() => !!q.value || !!kind.value || !!status.value)
+const emptyText = computed(() => {
+  if (byId.value) return t('admin.actors.notFound')
+  return filtered.value ? t('admin.actors.emptyFiltered') : t('admin.actors.empty')
+})
+
+/** Enter searches at once; on a whole ID it goes straight to that actor's page. */
+function onEnter() {
+  const text = searchText.value.trim()
+  clearTimeout(typing)
+  if (isUuid(text)) {
+    router.push({ name: 'admin-actor', params: { actorId: text.toLowerCase() } })
+    return
+  }
+  q.value = text || undefined
+}
+
+function open(row: ActorRow) {
+  router.push({ name: 'admin-actor', params: { actorId: row.id } })
+}
 
 const registering = ref(false)
 const justRegistered = ref<RegisteredActor | null>(null)
 
 function onRegistered(a: RegisteredActor) {
   justRegistered.value = a
-  remember(a, { registered: true })
-}
-
-const lookupId = ref('')
-const lookupError = ref<string | null>(null)
-const looking = ref(false)
-watch(lookupId, () => (lookupError.value = null))
-
-async function lookUp() {
-  const id = lookupId.value.trim()
-  lookupError.value = null
-  if (!isUuid(id)) {
-    lookupError.value = t('admin.actors.invalidId')
-    return
-  }
-  looking.value = true
-  try {
-    const a = await read('actor.get', { actor_id: id })
-    remember(a)
-    router.push({ name: 'admin-actor', params: { actorId: a.id } })
-  } catch (e) {
-    lookupError.value = isApiError(e) && e.isNotFound ? t('admin.actors.notFound') : errorMessage(e)
-  } finally {
-    looking.value = false
-  }
-}
-
-async function clearAll() {
-  const ok = await ElMessageBox.confirm(t('admin.actors.clearConfirm'), t('admin.actors.clearRecent'), {
-    type: 'warning',
-    confirmButtonText: t('admin.actors.clearRecent'),
-    cancelButtonText: t('common.actions.cancel'),
-  }).catch(() => false)
-  if (ok) clear()
+  void list.reload()
 }
 </script>
 
@@ -72,8 +118,6 @@ async function clearAll() {
         <span>{{ t('admin.actors.register') }}</span>
       </el-button>
     </PageHeader>
-
-    <el-alert type="info" :closable="false" show-icon :title="t('admin.actors.noDirectory')" class="actors__intro" />
 
     <section v-if="justRegistered" class="app-card actors__new">
       <h2 class="app-card__title">
@@ -87,8 +131,7 @@ async function clearAll() {
       </div>
       <h3 class="actors__subhead">{{ t('admin.registered.nextSteps') }}</h3>
       <ol v-if="justRegistered.kind === 'human'" class="actors__steps">
-        <li>{{ t('admin.registered.human.signIn') }}</li>
-        <li v-if="!justRegistered.email">{{ t('admin.registered.human.noEmail') }}</li>
+        <li>{{ justRegistered.email ? t('admin.registered.human.invite') : t('admin.registered.human.email') }}</li>
         <li>
           {{ t('admin.registered.human.seat') }}
           <router-link :to="{ name: 'admin-courses' }">{{ t('admin.nav.courses') }}</router-link>
@@ -104,7 +147,9 @@ async function clearAll() {
       <div class="actors__new-actions">
         <router-link :to="{ name: 'admin-actor', params: { actorId: justRegistered.id } }">
           <el-button type="primary">
-            <span>{{ t('admin.registered.open') }}</span>
+            <span v-if="justRegistered.kind !== 'human'">{{ t('admin.registered.open') }}</span>
+            <span v-else-if="justRegistered.email">{{ t('admin.registered.human.inviteButton') }}</span>
+            <span v-else>{{ t('admin.registered.human.emailButton') }}</span>
             <el-icon class="el-icon--right"><Right /></el-icon>
           </el-button>
         </router-link>
@@ -112,51 +157,108 @@ async function clearAll() {
     </section>
 
     <section class="app-card">
-      <h2 class="app-card__title">{{ t('admin.actors.lookUpTitle') }}</h2>
-      <form class="actors__lookup" @submit.prevent="lookUp">
+      <div class="app-toolbar">
         <el-input
-          v-model="lookupId"
-          :placeholder="t('admin.actors.lookUpPlaceholder')"
+          v-model="searchText"
+          :placeholder="t('admin.actors.searchPlaceholder')"
+          :aria-label="t('admin.actors.search')"
           clearable
-          class="actors__lookup-input app-mono"
-          :aria-label="t('admin.actors.lookUpPlaceholder')"
+          class="actors__search"
+          @keyup.enter="onEnter"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
         </el-input>
-        <el-button native-type="submit" type="primary" plain :loading="looking" :disabled="!lookupId.trim()">
-          {{ t('admin.actors.lookUp') }}
+        <el-select
+          v-model="kind"
+          clearable
+          :placeholder="t('admin.actors.allKinds')"
+          :aria-label="t('admin.actors.col.kind')"
+          :disabled="!!byId"
+          class="actors__filter"
+        >
+          <el-option v-for="k in KINDS" :key="k" :value="k" :label="t(`admin.actors.kinds.${k}`)" />
+        </el-select>
+        <el-select
+          v-model="status"
+          clearable
+          :placeholder="t('admin.actors.anyStatus')"
+          :aria-label="t('admin.actors.col.status')"
+          :disabled="!!byId"
+          class="actors__filter"
+        >
+          <el-option v-for="s in STATUSES" :key="s" :value="s" :label="t(`enums.actorStatus.${s}`)" />
+        </el-select>
+        <span class="app-toolbar__spacer" />
+        <el-button :loading="list.loading.value" :aria-label="t('common.actions.refresh')" @click="list.reload()">
+          <el-icon><Refresh /></el-icon>
+          <span v-if="!narrow">{{ t('common.actions.refresh') }}</span>
         </el-button>
-        <router-link v-if="session.me" :to="{ name: 'admin-actor', params: { actorId: session.me.id } }">
-          <el-button text>{{ t('admin.actors.myRecord') }}</el-button>
-        </router-link>
-      </form>
-      <div v-if="lookupError" class="actors__error">{{ lookupError }}</div>
-    </section>
+      </div>
 
-    <section class="app-card">
-      <h2 class="app-card__title">
-        <span>
-          {{ t('admin.actors.recentTitle') }}
-          <span class="app-muted actors__hint">{{ t('admin.actors.recentHint') }}</span>
-        </span>
-        <el-button v-if="recent.length" text size="small" @click="clearAll">{{ t('admin.actors.clearRecent') }}</el-button>
-      </h2>
-      <el-empty v-if="!recent.length" :description="t('admin.actors.recentEmpty')" :image-size="80" />
-      <ul v-else class="actors__recent">
-        <li v-for="a in recent" :key="a.id" class="actors__recent-item">
-          <ActorSummary :actor="a" link>
-            <template #meta>
-              <el-tag v-if="a.registered" size="small" type="success" effect="plain">{{ t('admin.actors.registeredHere') }}</el-tag>
-              {{ t('admin.actors.seen') }} <TimeText :value="a.seen_at" relative />
+      <p v-if="byId && list.items.value.length" class="app-form-hint actors__by-id">{{ t('admin.actors.byId') }}</p>
+
+      <AsyncState
+        :loading="list.loading.value && !list.items.value.length"
+        :error="list.error.value"
+        :empty="!list.items.value.length"
+        :empty-text="emptyText"
+        @retry="list.reload"
+      >
+        <ul v-if="narrow" class="actors__cards">
+          <li v-for="a in list.items.value" :key="a.id" class="actors__card">
+            <ActorSummary :actor="a" link>
+              <template v-if="a.kind === 'human'" #meta>
+                <SignInTags :actor="a" />
+              </template>
+            </ActorSummary>
+          </li>
+        </ul>
+        <el-table v-else :data="list.items.value" row-key="id" class="actors__table" @row-click="open">
+          <el-table-column :label="t('admin.actors.col.name')" min-width="200">
+            <template #default="{ row }">
+              <div class="actors__name">
+                <el-icon class="actors__kind-icon" :class="{ 'is-agent': row.kind === 'agent' }">
+                  <Cpu v-if="row.kind === 'agent'" />
+                  <Setting v-else-if="row.kind === 'system'" />
+                  <User v-else />
+                </el-icon>
+                <router-link
+                  :to="{ name: 'admin-actor', params: { actorId: row.id } }"
+                  class="actors__link"
+                  @click.stop
+                >
+                  {{ row.display_name }}
+                </router-link>
+                <span v-if="row.id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
+              </div>
             </template>
-            <el-tooltip :content="t('admin.actors.forget')" placement="top">
-              <el-button text circle :aria-label="t('admin.actors.forget')" @click="forget(a.id)">
-                <el-icon><Close /></el-icon>
-              </el-button>
-            </el-tooltip>
-          </ActorSummary>
-        </li>
-      </ul>
+          </el-table-column>
+          <el-table-column :label="t('admin.actors.col.kind')" width="100">
+            <template #default="{ row }"><StatusTag vocab="actorKind" :value="row.kind" /></template>
+          </el-table-column>
+          <el-table-column :label="t('admin.actors.col.email')" min-width="250">
+            <template #default="{ row }">
+              <span v-if="row.email" class="actors__email">{{ row.email }}</span>
+              <span v-else class="app-muted">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('admin.actors.col.status')" width="110">
+            <template #default="{ row }"><StatusTag vocab="actorStatus" :value="row.status" /></template>
+          </el-table-column>
+          <el-table-column :label="t('admin.actors.col.role')" width="120">
+            <template #default="{ row }">
+              <StatusTag v-if="row.platform_role" vocab="platformRole" :value="row.platform_role" />
+              <span v-else class="app-muted">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('admin.actors.col.signIn')" min-width="180">
+            <template #default="{ row }"><SignInTags :actor="row" /></template>
+          </el-table-column>
+        </el-table>
+        <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
+      </AsyncState>
     </section>
 
     <RegisterActorDialog v-model="registering" @registered="onRegistered" />
@@ -164,9 +266,6 @@ async function clearAll() {
 </template>
 
 <style scoped>
-.actors__intro {
-  margin-bottom: 16px;
-}
 .actors__new {
   border-color: var(--el-color-success-light-5);
 }
@@ -195,37 +294,68 @@ async function clearAll() {
   justify-content: flex-end;
   margin-top: 12px;
 }
-.actors__lookup {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.actors__lookup-input {
-  flex: 1 1 300px;
+.actors__search {
+  flex: 1 1 280px;
   min-width: 0;
-  max-width: 460px;
+  max-width: 420px;
 }
-.actors__error {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--el-color-danger);
+.actors__filter {
+  width: 160px;
 }
-.actors__hint {
-  font-size: 12px;
-  font-weight: 400;
-  margin-left: 6px;
+.actors__by-id {
+  margin: -8px 0 8px;
 }
-.actors__recent {
+.actors__table :deep(.el-table__row) {
+  cursor: pointer;
+}
+.actors__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.actors__kind-icon {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
+}
+.actors__kind-icon.is-agent {
+  color: var(--el-color-primary);
+}
+.actors__link {
+  font-weight: 600;
+  text-decoration: none;
+  word-break: break-word;
+}
+.actors__link:hover {
+  text-decoration: underline;
+}
+.actors__email {
+  overflow-wrap: anywhere;
+}
+.actors__cards {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.actors__recent-item {
-  padding: 10px 0;
+.actors__card {
+  padding: 12px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
-.actors__recent-item:last-child {
+.actors__card:last-child {
   border-bottom: none;
+}
+@media (max-width: 767px) {
+  .actors__search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+  .actors__filter {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+  .app-toolbar__spacer {
+    display: none;
+  }
 }
 </style>

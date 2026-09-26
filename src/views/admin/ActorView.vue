@@ -1,13 +1,16 @@
 <script setup lang="ts">
-// One actor: their registration (actor.get), their standing (actor.suspend,
-// actor.reactivate) and their credentials (actor.issue_token, actor.link_sso).
-// What an administrator may do to whom is Core's rule, mirrored here to say
-// why a control is off: not to yourself, only root to a holder of a platform
-// role, and nobody to the system actor.
-import { computed, watch } from 'vue'
+// One actor: their registration and how they sign in (actor.get, corrected
+// with actor.update), their standing (actor.suspend, actor.reactivate) and
+// their ways in (actor.invite, actor.issue_token, actor.link_sso). What an
+// administrator may do to whom is Core's rule, mirrored here to say why a
+// control is off: not to yourself (though your own name and email are yours
+// to correct), only root to a holder of a platform role, and nobody to the
+// system actor.
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
+import type { Actor } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useWrite } from '@/composables/useWrite'
@@ -18,15 +21,18 @@ import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import EditActorDialog from './components/EditActorDialog.vue'
+import InviteCard from './components/InviteCard.vue'
 import IssueTokenCard from './components/IssueTokenCard.vue'
 import LinkSsoCard from './components/LinkSsoCard.vue'
-import { useCanonicalId, useRecentActors } from './components/adminShared'
+import SignInTags from './components/SignInTags.vue'
+import { useCanonicalId } from './components/adminShared'
+import { editBlocker } from './components/signIn'
 
 const props = defineProps<{ actorId: string }>()
 const { t } = useI18n()
 const session = useSessionStore()
 const narrow = useNarrow()
-const { remember } = useRecentActors()
 /** The actor's id as Core writes it, whatever the address says. */
 const id = useCanonicalId(() => props.actorId, 'actorId')
 
@@ -40,7 +46,6 @@ const state = useAsync(
   { watch: [id], keepData: true },
 )
 const actor = computed(() => (state.data.value?.id === id.value ? state.data.value : undefined))
-watch(actor, (a) => a && remember(a))
 
 // Who registered them, by name where they can be read.
 const creatorId = computed(() => actor.value?.created_by_actor_id ?? null)
@@ -67,18 +72,39 @@ const credentialBlocker = computed<string | null>(() => {
   return null
 })
 
+/** Why correcting their name and email is not offered. */
+const editBlockedReason = computed<string | null>(() => {
+  const a = actor.value
+  if (!a) return null
+  const why = editBlocker(a, { id: session.me?.id, isRoot: session.isRoot })
+  if (why === 'system') return t('admin.edit.blocked.system')
+  if (why === 'role') return t('admin.actor.cannot.role')
+  return null
+})
+const editing = ref(false)
+
+function onSaved(a: Actor) {
+  state.data.value = a
+  // One's own name shows in the app's frame too.
+  if (a.id === session.me?.id) void session.load().catch(() => undefined)
+}
+
 const suspendW = useWrite('actor.suspend')
 const reactivateW = useWrite('actor.reactivate')
 
 async function suspend() {
   const a = actor.value
   if (!a) return
-  const ok = await ElMessageBox.confirm(t('admin.actor.suspendConfirm'), t('admin.actor.suspendTitle', { name: a.display_name }), {
-    type: 'warning',
-    confirmButtonText: t('admin.actor.suspend'),
-    cancelButtonText: t('common.actions.cancel'),
-    confirmButtonClass: 'el-button--danger',
-  }).catch(() => false)
+  const ok = await ElMessageBox.confirm(
+    t('admin.actor.suspendConfirm'),
+    t('admin.actor.suspendTitle', { name: a.display_name }),
+    {
+      type: 'warning',
+      confirmButtonText: t('admin.actor.suspend'),
+      cancelButtonText: t('common.actions.cancel'),
+      confirmButtonClass: 'el-button--danger',
+    },
+  ).catch(() => false)
   if (!ok) return
   const out = await suspendW.run({ actor_id: a.id }, { success: t('admin.actor.suspended', { name: a.display_name }) })
   if (out) await state.reload()
@@ -93,7 +119,10 @@ async function reactivate() {
     { type: 'info', confirmButtonText: t('admin.actor.reactivate'), cancelButtonText: t('common.actions.cancel') },
   ).catch(() => false)
   if (!ok) return
-  const out = await reactivateW.run({ actor_id: a.id }, { success: t('admin.actor.reactivated', { name: a.display_name }) })
+  const out = await reactivateW.run(
+    { actor_id: a.id },
+    { success: t('admin.actor.reactivated', { name: a.display_name }) },
+  )
   if (out) await state.reload()
 }
 </script>
@@ -113,6 +142,14 @@ async function reactivate() {
         </template>
       </template>
       <template v-if="actor">
+        <el-tooltip :disabled="!editBlockedReason" :content="editBlockedReason ?? ''" placement="bottom">
+          <span>
+            <el-button :disabled="!!editBlockedReason" @click="editing = true">
+              <el-icon><Edit /></el-icon>
+              <span>{{ t('admin.actor.edit') }}</span>
+            </el-button>
+          </span>
+        </el-tooltip>
         <el-tooltip :disabled="!standingBlocker" :content="standingBlocker ?? ''" placement="bottom">
           <span>
             <el-button
@@ -141,7 +178,11 @@ async function reactivate() {
       </template>
     </PageHeader>
 
-    <AsyncState :loading="state.loading.value && !actor" :error="actor ? null : state.error.value" @retry="state.reload">
+    <AsyncState
+      :loading="state.loading.value && !actor"
+      :error="actor ? null : state.error.value"
+      @retry="state.reload"
+    >
       <template v-if="actor">
         <el-alert
           v-if="actor.status === 'suspended'"
@@ -151,7 +192,14 @@ async function reactivate() {
           :title="t('admin.actor.suspendedBanner')"
           class="actor__alert"
         />
-        <el-alert v-if="isSelf" type="info" :closable="false" show-icon :title="t('admin.actor.you')" class="actor__alert" />
+        <el-alert
+          v-if="isSelf"
+          type="info"
+          :closable="false"
+          show-icon
+          :title="t('admin.actor.you')"
+          class="actor__alert"
+        />
         <el-alert
           v-if="isSystem || (roleBlocked && !isSelf)"
           type="info"
@@ -176,6 +224,9 @@ async function reactivate() {
             </el-descriptions-item>
             <el-descriptions-item :label="t('admin.actor.status')">
               <StatusTag vocab="actorStatus" :value="actor.status" />
+            </el-descriptions-item>
+            <el-descriptions-item v-if="actor.kind === 'human'" :label="t('admin.actor.signIn')">
+              <SignInTags :actor="actor" />
             </el-descriptions-item>
             <el-descriptions-item :label="t('admin.actor.platformRole')">
               <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" />
@@ -204,9 +255,19 @@ async function reactivate() {
         </section>
 
         <div class="actor__grid">
-          <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
-          <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" />
+          <!-- A person signs in by an invitation or single sign-on; an agent by a token. -->
+          <template v-if="actor.kind === 'human'">
+            <InviteCard :actor="actor" @edit="editing = true" @changed="state.reload" />
+            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="state.reload" />
+            <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
+          </template>
+          <template v-else>
+            <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
+            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="state.reload" />
+          </template>
         </div>
+
+        <EditActorDialog v-model="editing" :actor="actor" @saved="onSaved" />
       </template>
     </AsyncState>
   </div>

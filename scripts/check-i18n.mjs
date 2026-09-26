@@ -5,9 +5,10 @@
 //   node scripts/check-i18n.mjs
 //
 // Keys are found where code names them literally: t('a.b'), te('a.b'),
-// $t('a.b'), and in the route and navigation tables (title: 'a.b',
-// label: 'a.b'). A key built at run time (t(`enums.role.${r}`)) is checked
-// by its static prefix only: the prefix must name an object.
+// $t('a.b'), <i18n-t keypath="a.b">, and in the route and navigation
+// tables (title: 'a.b', label: 'a.b'). A key built at run time
+// (t(`enums.role.${r}`)) is checked by its static prefix only: the prefix
+// must name an object.
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative, resolve, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -85,13 +86,15 @@ const files = (await walk(src)).filter(
 )
 const literal = /\b(?:\$?t|te)\(\s*(['"])([A-Za-z][\w-]*(?:\.[\w-]+)+)\1/g
 const tableEntry = /\b(?:title|label):\s*(['"])([a-z][A-Za-z]*\.[\w.-]+)\1/g
+// Not :keypath="…", whose value is an expression.
+const keypath = /(?<![:\w-])keypath=(["'])([A-Za-z][\w-]*(?:\.[\w-]+)+)\1/g
 const templated = /\b(?:\$?t|te)\(\s*`([A-Za-z][\w-]*(?:\.[\w-]+)*)\.\$\{/g
 let checked = 0
 for (const f of files) {
   const text = await readFile(f, 'utf8')
   const where = relative(root, f)
   const seen = new Set()
-  for (const re of [literal, tableEntry]) {
+  for (const re of [literal, tableEntry, keypath]) {
     for (const m of text.matchAll(re)) {
       const key = m[2]
       if (seen.has(key)) continue

@@ -8,8 +8,8 @@
 //
 // Once only: if the reload fails the same way within a short while, the error
 // is left to surface instead of reloading for ever. The marker lives in
-// sessionStorage, keyed by the target, so a later deploy can still reload the
-// tab again.
+// sessionStorage, keyed by the target less its fragment (which may hold a
+// secret), so a later deploy can still reload the tab again.
 import type { Router } from 'vue-router'
 
 const MARKER_KEY = 'aishiteru.chunkReload'
@@ -67,6 +67,16 @@ export function claimReload(target: string, now: number = Date.now(), storage?: 
   }
 }
 
+/**
+ * An address without its fragment. A reload is keyed by it, and only it is
+ * written down: a fragment can carry a secret (an invitation's token, on the
+ * welcome page), which is never kept in storage.
+ */
+export function withoutFragment(href: string): string {
+  const i = href.indexOf('#')
+  return i === -1 ? href : href.slice(0, i)
+}
+
 export interface ChunkReloadOptions {
   /** Loads another URL; window.location.assign by default. */
   assign?: (href: string) => void
@@ -92,6 +102,8 @@ export function installChunkReload(router: Router, opts: ChunkReloadOptions = {}
   const reload = opts.reload ?? (() => window.location.reload())
   const now = opts.now ?? Date.now
   let navigating = false
+  const here = () =>
+    typeof window === 'undefined' ? '' : window.location.pathname + window.location.search + window.location.hash
 
   const removers = [
     router.beforeEach(() => {
@@ -104,14 +116,18 @@ export function installChunkReload(router: Router, opts: ChunkReloadOptions = {}
       navigating = false
       if (!isChunkLoadError(err)) return
       const href = router.resolve(to).href
-      if (claimReload(href, now(), opts.storage)) assign(href)
+      const target = withoutFragment(href)
+      if (!claimReload(target, now(), opts.storage)) return
+      // Assigning the page's own address with a fragment only moves to the
+      // fragment: the page is loaded again instead, and keeps its fragment.
+      if (target === withoutFragment(here())) reload()
+      else assign(href)
     }),
   ]
 
   const onPreloadError = (event: VitePreloadErrorEvent) => {
     if (navigating) return
-    const here = window.location.pathname + window.location.search + window.location.hash
-    if (claimReload(here, now(), opts.storage)) {
+    if (claimReload(withoutFragment(here()), now(), opts.storage)) {
       event.preventDefault()
       reload()
     }

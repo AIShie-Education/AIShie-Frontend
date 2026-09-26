@@ -1,13 +1,13 @@
 <script setup lang="ts">
 // actor.register: a person or an agent. Only root may make an administrator.
-// Core has no tool that changes an actor afterwards: the name, the email and
-// the platform role given here are theirs for good.
+// The kind and the platform role given here are theirs for good; the name and
+// the email can be corrected later (actor.update, on their page).
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
-import type { RegisteredActor } from './adminShared'
+import { EMAIL_RE, type RegisteredActor } from './adminShared'
 
 const open = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ registered: [actor: RegisteredActor] }>()
@@ -30,7 +30,6 @@ watch(
   { immediate: true },
 )
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const rules = computed<FormRules>(() => ({
   display_name: [
     {

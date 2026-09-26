@@ -18,8 +18,13 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   it. `pending_review` work is reviewed after the fact in the same place. Everyone can see what
   became of their own actions under *My actions*.
 - **Administration** (root and admins) — terms, departments, permission presets, courses and their
-  first instructor, and registering people and agents with tokens and single sign-on identities.
-- **Account** — credentials, API tokens (for connecting an agent over MCP), password.
+  first instructor; a directory of everyone registered, searchable by name, email or ID, with how
+  each signs in; registering people and agents and correcting their name and email; invitation
+  links, with which a person chooses their password (their first, or a new one when it is
+  forgotten); API tokens and single sign-on identities.
+- **Account** — credentials, API tokens (for connecting an agent over MCP), password; and the
+  page an invitation link opens (`/welcome`), where the person chooses a password and is signed
+  in. The link carries its token in the fragment (`#token=…`), which reaches no server log.
 
 What a seat may do is Core's decision alone. The app offers what the seat's permissions suggest,
 says when something will need approval, and shows Core's refusal when it refuses.

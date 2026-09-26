@@ -11,13 +11,18 @@
 // nothing (see startsAfresh and LoginView).
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { ApiError, bearer, login, logout as apiLogout, read } from '@/api/http'
+import { acceptInvite, ApiError, bearer, login, logout as apiLogout, read } from '@/api/http'
 import type { Me, Membership } from '@/api/types'
 import { useCourseStore } from './course'
 
 export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut'
 
-/** Where the administration pages keep each administrator's actors seen recently. */
+/**
+ * Where earlier versions of the administration pages kept, in this browser,
+ * each administrator's actors seen recently, before Core had a list of
+ * actors. Nothing writes there now; what those versions left is still
+ * deleted when the caller goes.
+ */
 const RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
 
 export const useSessionStore = defineStore('session', () => {
@@ -72,6 +77,24 @@ export const useSessionStore = defineStore('session', () => {
     await ensure()
   }
 
+  /**
+   * Takes up an invitation: sets the invited person's password and signs this
+   * browser in as them. Nothing is dropped until Core has said yes, so that
+   * whoever was signed in here still is when the invitation is refused. The
+   * email they sign in with from now on comes back. Once Core has said yes
+   * the invitation is used up, so failing to read who they are afterwards is
+   * not a failure here: the next page asks again.
+   */
+  async function signInWithInvite(token: string, password: string): Promise<{ email: string }> {
+    const out = await acceptInvite(token, password)
+    forgetCaller()
+    bearer.set(null)
+    usingToken.value = false
+    status.value = 'unknown'
+    await ensure().catch(() => undefined)
+    return { email: out.email }
+  }
+
   async function signInWithToken(token: string) {
     forgetCaller()
     bearer.set(token.trim())
@@ -102,7 +125,6 @@ export const useSessionStore = defineStore('session', () => {
   /** Forgets everything about the caller, as when Core says the session is over. */
   function clear() {
     forgetCaller()
-    forgetStoredLists()
     status.value = 'signedOut'
     if (usingToken.value) {
       bearer.set(null)
@@ -111,9 +133,9 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   /**
-   * Drops the lists views keep in this browser for one caller, so that none
-   * outlives a sign-out or the session's end: the administration pages'
-   * actors seen recently (adminShared's useRecentActors).
+   * Drops the lists kept in this browser for one caller, so that none
+   * outlives them: the actors seen recently that earlier versions of the
+   * administration pages kept (RECENT_ACTORS_PREFIX).
    */
   function forgetStoredLists() {
     try {
@@ -128,12 +150,17 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
-  /** Drops what this store and the course store hold for the caller. */
+  /**
+   * Drops what this store, the course store and this browser hold for the
+   * caller: on signing out, when the session ends, and whenever someone else
+   * signs in here, by any way in.
+   */
   function forgetCaller() {
     if (me.value) heldCaller = true
     me.value = null
     memberships.value = []
     useCourseStore().close()
+    forgetStoredLists()
   }
 
   /**
@@ -158,6 +185,7 @@ export const useSessionStore = defineStore('session', () => {
     loadMemberships,
     membershipFor,
     signInWithPassword,
+    signInWithInvite,
     signInWithToken,
     signOut,
     clear,

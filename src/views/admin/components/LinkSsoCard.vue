@@ -10,6 +10,8 @@ import IdText from '@/components/IdText.vue'
 import { DEFAULT_SSO_PROVIDER } from './adminShared'
 
 const props = defineProps<{ actor: Actor; blockedReason?: string | null }>()
+/** An identity was linked: how they sign in has changed. */
+const emit = defineEmits<{ linked: [] }>()
 const { t } = useI18n()
 
 const formRef = ref<FormInstance>()
@@ -38,6 +40,7 @@ async function submit() {
   )
   if (!out || out.status !== 'executed') return
   linked.value = { credentialId: out.result.credential_id, subject }
+  emit('linked')
   form.subject = ''
 }
 </script>
@@ -47,7 +50,13 @@ async function submit() {
     <h2 class="app-card__title">{{ t('admin.sso.title') }}</h2>
     <p class="app-muted sso__intro">{{ t('admin.sso.intro') }}</p>
     <el-alert v-if="blockedReason" type="info" :closable="false" show-icon :title="blockedReason" />
-    <el-alert v-else-if="actor.kind === 'agent'" type="info" :closable="false" show-icon :title="t('admin.sso.agent')" />
+    <el-alert
+      v-else-if="actor.kind === 'agent'"
+      type="info"
+      :closable="false"
+      show-icon
+      :title="t('admin.sso.agent')"
+    />
     <template v-else>
       <el-alert v-if="linked" type="success" show-icon class="sso__alert" @close="linked = null">
         <template #title>{{ t('admin.sso.linkedAs', { subject: linked.subject }) }}</template>
@@ -62,7 +71,12 @@ async function submit() {
           <div class="app-form-hint">{{ t('admin.sso.providerHint') }}</div>
         </el-form-item>
         <el-form-item :label="t('admin.sso.subject')" prop="subject">
-          <el-input v-model="form.subject" :placeholder="t('admin.sso.subjectPlaceholder')" maxlength="320" autocomplete="off" />
+          <el-input
+            v-model="form.subject"
+            :placeholder="t('admin.sso.subjectPlaceholder')"
+            maxlength="320"
+            autocomplete="off"
+          />
           <div class="app-form-hint sso__hint">
             <span>{{ t('admin.sso.subjectHint') }}</span>
             <el-button v-if="actor.email" link type="primary" size="small" @click="useEmail">

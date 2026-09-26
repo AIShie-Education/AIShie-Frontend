@@ -122,6 +122,7 @@ export default {
     sso: '單一登入',
     api_token: 'API 權杖',
     session: '瀏覽器登入階段',
+    invite: '邀請',
   },
   event: {
     'action.proposed': '提出操作',
@@ -131,6 +132,8 @@ export default {
     'action.reviewed': '操作已覆核',
     'action.escalated': '操作已升級',
     'actor.registered': '已登記參與者',
+    'actor.updated': '已更新參與者',
+    'actor.invited': '已邀請參與者',
     'actor.suspended': '參與者已停用',
     'actor.reactivated': '參與者已重新啟用',
     'assignment.created': '建立作業',
