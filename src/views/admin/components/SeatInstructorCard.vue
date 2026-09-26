@@ -17,6 +17,7 @@ import type { Actor, MemberSummary } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
+import { shortId } from '@/utils/format'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ActorSummary from './ActorSummary.vue'
@@ -36,35 +37,59 @@ const { run, pending } = useWrite('course.seat_instructor')
 // --- Who is seated already -------------------------------------------------------
 /** The administrator's own seat here, if any: a course with one has members. */
 const mySeat = computed(() => session.membershipFor(props.courseId))
+/** Their seat, unless it has expired: Core seats no one twice, but seats again over an expired seat. */
+const liveSeat = computed(() => {
+  const s = mySeat.value
+  return !!s && !(s.expires_at && Date.parse(s.expires_at) <= Date.now())
+})
 /** Seated from this card since the page was opened. */
 const seatedHere = ref<{ memberId: string; actorId: string; name: string }[]>([])
+/**
+ * The administrator seated themselves from this card: they have a seat,
+ * whether or not me.memberships has answered yet (or at all).
+ */
+const seatedSelf = computed(() => !!session.me && seatedHere.value.some((p) => p.actorId === session.me!.id))
 /** The course's instructors, when the administrator's seat may read the member list; null when not known. */
 const instructors = ref<MemberSummary[] | null>(null)
 const instructorsRefused = ref(false)
 const instructorsLoading = ref(false)
 
-async function loadInstructors() {
-  instructors.value = null
-  instructorsRefused.value = false
-  if (!mySeat.value) return
+// Loads overlap when the seat changes while one is under way: only the latest counts.
+let loads = 0
+/** Reads the instructors again; `keep` leaves the list up until the answer is in. */
+async function loadInstructors(keep = false) {
+  const mine = ++loads
+  if (!keep || !mySeat.value) {
+    instructors.value = null
+    instructorsRefused.value = false
+  }
+  if (!mySeat.value) {
+    instructorsLoading.value = false
+    return
+  }
   instructorsLoading.value = true
   try {
     const out = await read('member.list', { course_id: props.courseId, role: 'instructor', limit: 50 })
+    if (mine !== loads) return
     const now = Date.now()
     instructors.value = (out.members ?? []).filter(
       (m) => m.status !== 'removed' && !(m.expires_at && new Date(m.expires_at).getTime() <= now),
     )
+    instructorsRefused.value = false
   } catch (e) {
+    if (mine !== loads) return
+    instructors.value = null
     instructorsRefused.value = e instanceof ApiError && e.isForbidden
   } finally {
-    instructorsLoading.value = false
+    if (mine === loads) instructorsLoading.value = false
   }
 }
-watch(
-  () => [props.courseId, mySeat.value?.member_id],
-  () => void loadInstructors(),
-  { immediate: true },
-)
+// Keyed on the values, not on the seat object: me.memberships read again
+// (after activating or archiving the course, say) gives a new object for the
+// same seat, and the list then stays as it is.
+watch([() => props.courseId, () => mySeat.value?.member_id, () => mySeat.value?.role], () => void loadInstructors(), {
+  immediate: true,
+})
 watch(
   () => props.courseId,
   () => {
@@ -76,8 +101,9 @@ watch(
 
 /** What to say about the instructors, where they are not listed. */
 const rosterNote = computed(() => {
-  if (instructors.value) return instructors.value.length ? null : t('admin.seat.noInstructors')
-  if (!mySeat.value) return t('admin.seat.notListed')
+  // None: the intro says so (noInstructorsIntro).
+  if (instructors.value) return null
+  if (!mySeat.value) return seatedSelf.value ? null : t('admin.seat.notListed')
   return instructorsRefused.value ? t('admin.seat.cannotList') : t('admin.seat.listFailed')
 })
 
@@ -86,6 +112,10 @@ const hasMembers = computed(() => !!mySeat.value || seatedHere.value.length > 0 
 /** "Seat another instructor" was asked for. */
 const formOpen = ref(false)
 const showForm = computed(() => !hasMembers.value || formOpen.value)
+/** Members are known and none is an instructor: the course needs one, not "another". */
+const noInstructor = computed(() => instructors.value?.length === 0)
+/** The administrator has a seat here already, so "Me" is not offered. */
+const selfSeated = computed(() => liveSeat.value || seatedSelf.value)
 
 const { options, searching, error: searchError, search, onVisible, hasActorList } = useActorSearch()
 /** This Core has no directory: the instructor is found by a pasted ID. */
@@ -115,6 +145,7 @@ const blocker = computed(() => {
   if (!a) return null
   if (a.kind === 'system') return t('admin.seat.system')
   if (a.status !== 'active') return t('admin.seat.suspended')
+  if (a.id === session.me?.id && selfSeated.value) return t('admin.seat.alreadySeated')
   return null
 })
 
@@ -133,7 +164,7 @@ async function seat() {
     selectedId.value = ''
     found.value = null
     formOpen.value = false
-    if (mySeat.value) void loadInstructors()
+    if (mySeat.value) void loadInstructors(true)
   }
 }
 </script>
@@ -141,7 +172,15 @@ async function seat() {
 <template>
   <section class="app-card">
     <h2 class="app-card__title">{{ hasMembers ? t('admin.seat.seatedTitle') : t('admin.seat.title') }}</h2>
-    <p class="app-muted seat__intro">{{ hasMembers ? t('admin.seat.hasMembers') : t('admin.seat.intro') }}</p>
+    <p class="app-muted seat__intro">
+      {{
+        !hasMembers
+          ? t('admin.seat.intro')
+          : noInstructor
+            ? t('admin.seat.noInstructorsIntro')
+            : t('admin.seat.hasMembers')
+      }}
+    </p>
 
     <el-alert
       v-if="disabled"
@@ -182,6 +221,7 @@ async function seat() {
             <router-link :to="{ name: 'admin-actor', params: { actorId: p.actorId } }" class="seat__person-name">
               {{ p.name }}
             </router-link>
+            <span v-if="p.actorId === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
             <span class="app-muted">{{ t('admin.seat.seatedJustNow') }}</span>
           </li>
         </ul>
@@ -189,7 +229,7 @@ async function seat() {
       </template>
 
       <div class="seat__next">
-        <router-link v-if="mySeat" :to="{ name: 'course-members', params: { courseId } }">
+        <router-link v-if="mySeat || seatedSelf" :to="{ name: 'course-members', params: { courseId } }">
           <el-button type="primary" plain>
             <el-icon><User /></el-icon>
             <span>{{ t('admin.seat.membersPage') }}</span>
@@ -198,7 +238,7 @@ async function seat() {
         <span v-else class="app-form-hint seat__no-seat">{{ t('admin.seat.membersPageNeedsSeat') }}</span>
         <el-button v-if="!formOpen" text :disabled="disabled" @click="formOpen = true">
           <el-icon><Plus /></el-icon>
-          <span>{{ t('admin.seat.another') }}</span>
+          <span>{{ noInstructor ? t('admin.seat.title') : t('admin.seat.another') }}</span>
         </el-button>
       </div>
     </template>
@@ -228,6 +268,8 @@ async function seat() {
               <span class="seat__option-meta">
                 <StatusTag v-if="a.status !== 'active'" vocab="actorStatus" :value="a.status" />
                 <span>{{ a.email ?? t(`enums.actorKind.${a.kind}`) }}</span>
+                <!-- Two may share a name: the end of the ID, as People & agents shows it, tells them apart. -->
+                <code class="app-mono seat__option-id">{{ shortId(a.id) }}</code>
               </span>
             </div>
           </el-option>
@@ -240,7 +282,9 @@ async function seat() {
             </div>
           </template>
         </el-select>
-        <el-button v-if="session.me" text :disabled="disabled" @click="pickMe">{{ t('admin.seat.me') }}</el-button>
+        <el-button v-if="session.me && !selfSeated" text :disabled="disabled" @click="pickMe">
+          {{ t('admin.seat.me') }}
+        </el-button>
       </div>
       <div v-if="idOnly" class="app-form-hint">{{ t('admin.seat.noSearch') }}</div>
       <div v-if="pickError" class="seat__error">{{ pickError }}</div>
@@ -331,10 +375,16 @@ async function seat() {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
-.seat__option-meta > span:last-child {
+/* The email or kind; StatusTag is a span before it, the ID a code after it. */
+.seat__option-meta > span:last-of-type {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.seat__option-id {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
 }
 .seat__empty {
   display: flex;

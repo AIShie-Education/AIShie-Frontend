@@ -12,6 +12,7 @@ import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import { usePresetCounts } from './setup/presetCounts'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -25,30 +26,21 @@ const rows = computed(() => {
 })
 
 // --- How many presets each has --------------------------------------------------
-// preset.list answers the built-ins and one department's own: one call per
-// department, a few at a time, for the link to its presets to say how many.
-// Until a count is in (or if it cannot be had) the link just says "View".
-const COUNTED_AT_MOST = 200
-const presetCounts = reactive(new Map<string, number>())
-async function countPresets(ids: string[]) {
-  const queue = ids.filter((id) => !presetCounts.has(id)).slice(0, COUNTED_AT_MOST)
-  const worker = async () => {
-    for (let id = queue.shift(); id; id = queue.shift()) {
-      try {
-        const out = await read('preset.list', { dept_id: id })
-        presetCounts.set(id, (out.presets ?? []).filter((p) => p.dept_id === id).length)
-      } catch {
-        /* the link says "View" */
-      }
-    }
-  }
-  await Promise.all([worker(), worker(), worker(), worker()])
-}
+// One preset.list per department, for the link to its presets to say how many
+// of its own it has: a few at a time, within a budget a visit, and none once
+// the page is left (see presetCounts.ts). Until a count is in (or if it cannot
+// be had) the link just says "View". Departments made here are counted as
+// they appear; Refresh counts them all again.
+const { counts: presetCounts, count: countPresets, forget: forgetPresetCounts } = usePresetCounts()
 watch(
   () => departments.data.value,
   (list) => void countPresets((list ?? []).map((d) => d.id)),
   { immediate: true },
 )
+function refresh() {
+  forgetPresetCounts()
+  void departments.reload()
+}
 
 // --- Creating ---------------------------------------------------------------
 const open = ref(false)
@@ -101,7 +93,7 @@ async function save() {
           :loading="departments.loading.value"
           circle
           :aria-label="t('common.actions.refresh')"
-          @click="departments.reload"
+          @click="refresh"
         >
           <el-icon><Refresh /></el-icon>
         </el-button>
@@ -129,7 +121,7 @@ async function save() {
                 <span>
                   {{
                     presetCounts.has(row.id)
-                      ? t('adminSetup.departments.viewPresetsN', { n: presetCounts.get(row.id) })
+                      ? t('adminSetup.departments.viewPresetsN', presetCounts.get(row.id) ?? 0)
                       : t('adminSetup.departments.viewPresets')
                   }}
                 </span>

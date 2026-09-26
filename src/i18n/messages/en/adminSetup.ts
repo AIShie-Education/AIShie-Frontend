@@ -44,7 +44,7 @@ export default {
     name: 'Name',
     presets: 'Presets',
     viewPresets: 'View',
-    viewPresetsN: 'View ({n})',
+    viewPresetsN: 'View (built-ins only) | View (built-ins + 1 own) | View (built-ins + {n} own)',
     create: {
       title: 'New department',
       name: 'Name',

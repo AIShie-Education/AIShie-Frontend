@@ -43,7 +43,7 @@ export default {
     name: '名稱',
     presets: '權限預設',
     viewPresets: '查看',
-    viewPresetsN: '查看（{n} 個）',
+    viewPresetsN: '查看（只有內建） | 查看（內建＋本學系 1 個） | 查看（內建＋本學系 {n} 個）',
     create: {
       title: '建立學系',
       name: '名稱',

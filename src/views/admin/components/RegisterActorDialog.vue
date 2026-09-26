@@ -10,8 +10,9 @@ import { useSessionStore } from '@/stores/session'
 import { formatDate } from '@/utils/format'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
-import { hasActorList, listActors } from './actorSearch'
+import { hasActorList } from './actorSearch'
 import { EMAIL_RE, type ActorRow, type RegisteredActor } from './adminShared'
+import { findSameName, sameText } from './sameName'
 
 const open = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ registered: [actor: RegisteredActor] }>()
@@ -23,6 +24,8 @@ const form = reactive({ kind: 'human' as 'human' | 'agent', display_name: '', em
 const { run, pending } = useWrite('actor.register')
 /** Those already registered under the name typed (see below). */
 const sameName = ref<ActorRow[]>([])
+/** The name whose check stopped short of all its matches, and how many it read. */
+const sameNameUnchecked = ref<{ name: string; checked: number } | null>(null)
 
 watch(
   open,
@@ -33,6 +36,7 @@ watch(
     form.email = ''
     form.admin = false
     sameName.value = []
+    sameNameUnchecked.value = null
   },
   { immediate: true },
 )
@@ -40,9 +44,9 @@ watch(
 // --- Someone of the same name ---------------------------------------------------
 // Two actors may share a name, and then only their IDs tell them apart (two
 // agents both called "Claude", say). Registering such a name is allowed, but
-// the form says who has it already, a moment after typing stops. On a Core
-// without the directory (actor.list) there is nobody to compare with.
-const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase()
+// the form says who has it already, a moment after typing stops (see
+// sameName.ts). On a Core without the directory (actor.list) there is nobody
+// to compare with.
 let lookup: ReturnType<typeof setTimeout> | undefined
 let asked = 0
 watch(
@@ -51,20 +55,29 @@ watch(
     clearTimeout(lookup)
     const name = typed.trim()
     const mine = ++asked
+    const stale = () => mine !== asked
     sameName.value = sameName.value.filter((a) => sameText(a.display_name, name))
+    if (sameNameUnchecked.value && !sameText(sameNameUnchecked.value.name, name)) sameNameUnchecked.value = null
     if (!name || hasActorList.value === false) return
     lookup = setTimeout(async () => {
       try {
-        const out = await listActors({ search: name, limit: 50 })
-        if (mine === asked) sameName.value = (out.actors ?? []).filter((a) => sameText(a.display_name, name))
+        const out = await findSameName(name, { stale, found: (actors) => (sameName.value = actors) })
+        if (!out) return
+        sameName.value = out.actors
+        sameNameUnchecked.value = out.complete ? null : { name, checked: out.checked }
       } catch {
         /* no directory, or no answer: nothing to warn about */
-        if (mine === asked) sameName.value = []
+        if (stale()) return
+        sameName.value = []
+        sameNameUnchecked.value = null
       }
     }, 400)
   },
 )
-onScopeDispose(() => clearTimeout(lookup))
+onScopeDispose(() => {
+  clearTimeout(lookup)
+  asked++ // a check under way stops at its next page
+})
 
 const rules = computed<FormRules>(() => ({
   display_name: [
@@ -145,6 +158,9 @@ async function submit() {
             </li>
           </ul>
         </el-alert>
+        <div v-if="sameNameUnchecked" class="app-form-hint register__block">
+          {{ t('admin.register.sameNameUnchecked', { name: sameNameUnchecked.name, n: sameNameUnchecked.checked }) }}
+        </div>
       </el-form-item>
       <el-form-item v-if="form.kind === 'human'" prop="email">
         <template #label>
