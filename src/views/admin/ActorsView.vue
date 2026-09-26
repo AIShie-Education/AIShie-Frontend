@@ -13,12 +13,13 @@ import { usePaged } from '@/composables/useAsync'
 import { errorMessage } from '@/composables/useErrors'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useSessionStore } from '@/stores/session'
-import { isUuid } from '@/utils/format'
+import { formatDate, isUuid } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './components/ActorSummary.vue'
 import RegisterActorDialog from './components/RegisterActorDialog.vue'
 import SignInTags from './components/SignInTags.vue'
@@ -276,8 +277,11 @@ async function openById() {
         <ul v-if="narrow" class="actors__cards">
           <li v-for="a in list.items.value" :key="a.id" class="actors__card">
             <ActorSummary :actor="a" link>
-              <template v-if="a.kind === 'human'" #meta>
-                <SignInTags :actor="a" />
+              <template #meta>
+                <span class="actors__card-meta">
+                  <SignInTags v-if="a.kind === 'human'" :actor="a" />
+                  <span>{{ t('admin.actors.registeredOn', { date: formatDate(a.created_at) }) }}</span>
+                </span>
               </template>
             </ActorSummary>
           </li>
@@ -291,14 +295,20 @@ async function openById() {
                   <Setting v-else-if="row.kind === 'system'" />
                   <User v-else />
                 </el-icon>
-                <router-link
-                  :to="{ name: 'admin-actor', params: { actorId: row.id } }"
-                  class="actors__link"
-                  @click.stop
-                >
-                  {{ row.display_name }}
-                </router-link>
-                <span v-if="row.id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
+                <div class="actors__name-text">
+                  <div class="actors__name-line">
+                    <router-link
+                      :to="{ name: 'admin-actor', params: { actorId: row.id } }"
+                      class="actors__link"
+                      @click.stop
+                    >
+                      {{ row.display_name }}
+                    </router-link>
+                    <span v-if="row.id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
+                  </div>
+                  <!-- Two with the same name are told apart by their IDs. -->
+                  <IdText :id="row.id" />
+                </div>
               </div>
             </template>
           </el-table-column>
@@ -322,6 +332,9 @@ async function openById() {
           </el-table-column>
           <el-table-column :label="t('admin.actors.col.signIn')" min-width="180">
             <template #default="{ row }"><SignInTags :actor="row" /></template>
+          </el-table-column>
+          <el-table-column :label="t('admin.actors.col.registered')" min-width="150">
+            <template #default="{ row }"><TimeText :value="row.created_at" /></template>
           </el-table-column>
         </el-table>
         <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
@@ -409,6 +422,25 @@ async function openById() {
 .actors__kind-icon {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
+}
+.actors__name-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+.actors__name-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.actors__card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .actors__kind-icon.is-agent {
   color: var(--el-color-primary);

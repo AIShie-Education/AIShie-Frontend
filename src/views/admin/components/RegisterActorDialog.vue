@@ -2,12 +2,16 @@
 // actor.register: a person or an agent. Only root may make an administrator.
 // The kind and the platform role given here are theirs for good; the name and
 // the email can be corrected later (actor.update, on their page).
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onScopeDispose, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
-import { EMAIL_RE, type RegisteredActor } from './adminShared'
+import { formatDate } from '@/utils/format'
+import IdText from '@/components/IdText.vue'
+import StatusTag from '@/components/StatusTag.vue'
+import { hasActorList, listActors } from './actorSearch'
+import { EMAIL_RE, type ActorRow, type RegisteredActor } from './adminShared'
 
 const open = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ registered: [actor: RegisteredActor] }>()
@@ -17,6 +21,8 @@ const session = useSessionStore()
 const formRef = ref<FormInstance>()
 const form = reactive({ kind: 'human' as 'human' | 'agent', display_name: '', email: '', admin: false })
 const { run, pending } = useWrite('actor.register')
+/** Those already registered under the name typed (see below). */
+const sameName = ref<ActorRow[]>([])
 
 watch(
   open,
@@ -26,9 +32,39 @@ watch(
     form.display_name = ''
     form.email = ''
     form.admin = false
+    sameName.value = []
   },
   { immediate: true },
 )
+
+// --- Someone of the same name ---------------------------------------------------
+// Two actors may share a name, and then only their IDs tell them apart (two
+// agents both called "Claude", say). Registering such a name is allowed, but
+// the form says who has it already, a moment after typing stops. On a Core
+// without the directory (actor.list) there is nobody to compare with.
+const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase()
+let lookup: ReturnType<typeof setTimeout> | undefined
+let asked = 0
+watch(
+  () => form.display_name,
+  (typed) => {
+    clearTimeout(lookup)
+    const name = typed.trim()
+    const mine = ++asked
+    sameName.value = sameName.value.filter((a) => sameText(a.display_name, name))
+    if (!name || hasActorList.value === false) return
+    lookup = setTimeout(async () => {
+      try {
+        const out = await listActors({ search: name, limit: 50 })
+        if (mine === asked) sameName.value = (out.actors ?? []).filter((a) => sameText(a.display_name, name))
+      } catch {
+        /* no directory, or no answer: nothing to warn about */
+        if (mine === asked) sameName.value = []
+      }
+    }, 400)
+  },
+)
+onScopeDispose(() => clearTimeout(lookup))
 
 const rules = computed<FormRules>(() => ({
   display_name: [
@@ -90,6 +126,25 @@ async function submit() {
           maxlength="200"
           autocomplete="off"
         />
+        <el-alert
+          v-if="sameName.length"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="register__same"
+          :title="t('admin.register.sameName', { name: form.display_name.trim(), n: sameName.length }, sameName.length)"
+        >
+          <div>{{ t('admin.register.sameNameHint') }}</div>
+          <ul class="register__same-list">
+            <li v-for="a in sameName" :key="a.id">
+              <StatusTag vocab="actorKind" :value="a.kind" />
+              <StatusTag v-if="a.status !== 'active'" vocab="actorStatus" :value="a.status" />
+              <span v-if="a.email" class="register__same-email">{{ a.email }}</span>
+              <IdText :id="a.id" />
+              <span class="app-muted">{{ t('admin.actors.registeredOn', { date: formatDate(a.created_at) }) }}</span>
+            </li>
+          </ul>
+        </el-alert>
       </el-form-item>
       <el-form-item v-if="form.kind === 'human'" prop="email">
         <template #label>
@@ -119,5 +174,26 @@ async function submit() {
 }
 .register__block {
   width: 100%;
+}
+.register__same {
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.register__same-list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.register__same-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.register__same-email {
+  word-break: break-all;
 }
 </style>

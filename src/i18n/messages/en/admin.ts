@@ -155,7 +155,9 @@ export default {
       status: 'Status',
       role: 'Platform role',
       signIn: 'Sign-in',
+      registered: 'Registered',
     },
+    registeredOn: 'Registered {date}',
     empty: 'No one is registered yet.',
     emptyFiltered: 'No one matches.',
     byId: 'Found by ID. Press Enter to open their page.',
@@ -204,7 +206,7 @@ export default {
   },
 
   register: {
-    title: 'Register an actor',
+    title: 'Register a person or agent',
     intro: 'A registered actor can do nothing until it is seated in a course.',
     introAdmin:
       'An administrator manages the platform (courses, people and agents, terms, departments and presets) without any seat. Inside a course they can do nothing until they are seated, like anyone else.',
@@ -229,10 +231,14 @@ export default {
       'The kind and the platform role cannot be changed after registering. The name and the email can be corrected on their page.',
     submit: 'Register',
     done: '{name} is registered',
+    sameName:
+      '{n} person or agent is already registered as “{name}”. | {n} people or agents are already registered as “{name}”.',
+    sameNameHint:
+      'Registering makes another, separate one with the same name, told apart only by its ID. Check it is not already here, or choose a name that tells them apart.',
   },
 
   actor: {
-    title: 'Actor',
+    title: 'Person or agent',
     registration: 'Registration',
     id: 'Actor ID',
     kind: 'Kind',

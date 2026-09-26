@@ -131,7 +131,7 @@ async function reactivate() {
   <div>
     <PageHeader
       :title="actor?.display_name ?? t('admin.actor.title')"
-      :subtitle="actor ? (actor.email ?? t(`enums.actorKind.${actor.kind}`)) : undefined"
+      :subtitle="actor?.email ?? undefined"
       :back="{ name: 'admin-actors' }"
     >
       <template #tags>
@@ -261,10 +261,8 @@ async function reactivate() {
             <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="state.reload" />
             <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
           </template>
-          <template v-else>
-            <IssueTokenCard :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
-            <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="state.reload" />
-          </template>
+          <!-- An agent (or the system) has no identity at the identity provider: no single sign-on card. -->
+          <IssueTokenCard v-else :actor="actor" :is-self="isSelf" :blocked-reason="credentialBlocker" />
         </div>
 
         <EditActorDialog v-model="editing" :actor="actor" @saved="onSaved" />

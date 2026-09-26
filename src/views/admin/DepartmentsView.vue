@@ -2,7 +2,7 @@
 // Departments (department.list, readable by anyone signed in) and making one
 // (department.create, administrators only). A department groups courses and
 // may have presets of its own; it cannot be renamed or removed.
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import { read } from '@/api/http'
@@ -23,6 +23,32 @@ const rows = computed(() => {
   const q = filter.value.trim().toLowerCase()
   return all.value.filter((d) => !q || d.name.toLowerCase().includes(q))
 })
+
+// --- How many presets each has --------------------------------------------------
+// preset.list answers the built-ins and one department's own: one call per
+// department, a few at a time, for the link to its presets to say how many.
+// Until a count is in (or if it cannot be had) the link just says "View".
+const COUNTED_AT_MOST = 200
+const presetCounts = reactive(new Map<string, number>())
+async function countPresets(ids: string[]) {
+  const queue = ids.filter((id) => !presetCounts.has(id)).slice(0, COUNTED_AT_MOST)
+  const worker = async () => {
+    for (let id = queue.shift(); id; id = queue.shift()) {
+      try {
+        const out = await read('preset.list', { dept_id: id })
+        presetCounts.set(id, (out.presets ?? []).filter((p) => p.dept_id === id).length)
+      } catch {
+        /* the link says "View" */
+      }
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker()])
+}
+watch(
+  () => departments.data.value,
+  (list) => void countPresets((list ?? []).map((d) => d.id)),
+  { immediate: true },
+)
 
 // --- Creating ---------------------------------------------------------------
 const open = ref(false)
@@ -100,7 +126,13 @@ async function save() {
             <template #default="{ row }">
               <router-link :to="{ name: 'admin-presets', query: { dept: row.id } }" class="dept-link">
                 <el-icon><Key /></el-icon>
-                <span>{{ t('adminSetup.departments.presets') }}</span>
+                <span>
+                  {{
+                    presetCounts.has(row.id)
+                      ? t('adminSetup.departments.viewPresetsN', { n: presetCounts.get(row.id) })
+                      : t('adminSetup.departments.viewPresets')
+                  }}
+                </span>
               </router-link>
             </template>
           </el-table-column>

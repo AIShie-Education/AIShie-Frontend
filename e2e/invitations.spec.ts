@@ -70,7 +70,7 @@ test.describe.serial('the directory and invitations', () => {
     await signInWithToken(page, root())
     await page.goto('/admin/actors')
     await page.locator('.page-header').getByRole('button', { name: 'Register' }).click()
-    const dialog = page.getByRole('dialog', { name: 'Register an actor' })
+    const dialog = page.getByRole('dialog', { name: 'Register a person or agent' })
     await dialog.getByLabel('Display name').fill(PERSON.name)
     await dialog.getByLabel('Email').fill(PERSON.email)
     await dialog.getByRole('button', { name: 'Register' }).click()

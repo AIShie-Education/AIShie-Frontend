@@ -11,7 +11,7 @@ export default {
   courses: {
     title: '課程',
     subtitle: '平台上所有學期、所有學系的課程',
-    create: '新增課程',
+    create: '建立課程',
     term: '學期',
     dept: '學系',
     allTerms: '所有學期',
@@ -40,7 +40,7 @@ export default {
   },
 
   create: {
-    title: '新增課程',
+    title: '建立課程',
     intro:
       '一門課程在某一學期的一個開班；不同的分組即是另一門課程。課程建立後為草稿、沒有任何成員，下一步請指派第一位導師。',
     dept: '學系',
@@ -149,7 +149,9 @@ export default {
       status: '狀態',
       role: '平台角色',
       signIn: '登入方式',
+      registered: '登記時間',
     },
+    registeredOn: '{date} 登記',
     empty: '尚未登記任何人。',
     emptyFiltered: '沒有符合的結果。',
     byId: '已按 ID 找到。按 Enter 開啟其頁面。',
@@ -198,7 +200,7 @@ export default {
   },
 
   register: {
-    title: '登記參與者',
+    title: '登記人員或代理',
     intro: '登記後的參與者在加入課程之前，無法進行任何操作。',
     introAdmin:
       '管理員無需任何席位，即可管理整個平台：課程、人員與代理、學期、學系及權限預設。但在課程之內，管理員與其他人一樣，須先加入課程才能操作。',
@@ -222,10 +224,13 @@ export default {
     permanent: '登記後，類型及平台角色均無法更改；名稱及電子郵件可在其頁面修正。',
     submit: '登記',
     done: '已登記 {name}',
+    sameName: '已有 {n} 個人員或代理以「{name}」登記。',
+    sameNameHint:
+      '再登記會另外建立一個同名、但各自獨立的帳戶，只能靠 ID 分辨。請先確認不是重複登記，或改用能分辨彼此的名稱。',
   },
 
   actor: {
-    title: '參與者',
+    title: '人員／代理詳情',
     registration: '登記資料',
     id: '參與者 ID',
     kind: '類型',

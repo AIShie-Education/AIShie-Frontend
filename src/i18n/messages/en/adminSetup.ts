@@ -43,6 +43,8 @@ export default {
     count: 'No departments | One department | {n} departments',
     name: 'Name',
     presets: 'Presets',
+    viewPresets: 'View',
+    viewPresetsN: 'View ({n})',
     create: {
       title: 'New department',
       name: 'Name',
