@@ -1,5 +1,7 @@
 export default {
   title: 'Grading scheme',
+  // The root as Core names it ("Total"), in the reader's words, until someone renames it.
+  rootName: 'Course total',
   subtitle:
     'How the course total is built: its components, what each weighs, and the assignments that count toward them.',
   actions: {
@@ -94,6 +96,8 @@ export default {
     parent: 'Under',
     name: 'Name',
     namePlaceholder: 'e.g. Quizzes, Final exam',
+    rootNameHint:
+      'Core names the course total “Total”. Until it is renamed, it is shown as “{shown}”, in each reader’s language.',
     type: 'How it is graded',
     typeRolled: 'Rolled up',
     typeRolledHelp: 'From the assignments hung on it, or from sub-components added under it',

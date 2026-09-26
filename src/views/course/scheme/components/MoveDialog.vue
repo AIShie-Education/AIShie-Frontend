@@ -10,6 +10,7 @@ import { useWrite } from '@/composables/useWrite'
 import { formatDecimal } from '@/utils/format'
 import {
   moveBlock,
+  nodeName,
   pct,
   placementFrozen,
   shareWith,
@@ -32,6 +33,8 @@ const emit = defineEmits<{
   refused: []
 }>()
 const { t } = useI18n()
+/** A node's name as shown: the root still named by Core, in the reader's words. */
+const nameOf = (n: SchemeNode) => nodeName(n, t('scheme.rootName'))
 const { run, pending, lastError } = useWrite('component.move')
 
 const newParentId = ref<string>('')
@@ -42,7 +45,7 @@ watch(visible, (open) => {
 
 /** Offered as a new place, but it may hold assignments the caller cannot see, and then Core refuses. */
 function cautionText(to: SchemeNode): string | null {
-  return to.kind === 'unseen' ? t('scheme.reasons.unseen', { name: to.c.name }) : null
+  return to.kind === 'unseen' ? t('scheme.reasons.unseen', { name: nameOf(to) }) : null
 }
 
 const options = computed(() => {
@@ -56,7 +59,7 @@ const options = computed(() => {
         : b === 'current'
           ? t('scheme.move.current')
           : b
-            ? t(`scheme.reasons.${b}`, { name: to.c.name })
+            ? t(`scheme.reasons.${b}`, { name: nameOf(to) })
             : (cautionText(to) ?? '')
     return { node: to, disabled: !!b, why, current: b === 'current' }
   })
@@ -74,7 +77,7 @@ const preview = computed(() => {
   const share = shareWith(p.children, n.id, n.weight)
   return share === null
     ? t('scheme.form.shareNone')
-    : t('scheme.move.sharePreview', { weight: formatDecimal(n.c.weight, 4), share: pct(share), parent: p.c.name })
+    : t('scheme.move.sharePreview', { weight: formatDecimal(n.c.weight, 4), share: pct(share), parent: nameOf(p) })
 })
 
 async function submit() {
@@ -97,7 +100,7 @@ async function submit() {
 <template>
   <el-dialog
     v-model="visible"
-    :title="t('scheme.move.title', { name: target?.c.name ?? '' })"
+    :title="t('scheme.move.title', { name: target ? nameOf(target) : '' })"
     width="560px"
     destroy-on-close
     :close-on-click-modal="!pending"
@@ -135,13 +138,13 @@ async function submit() {
             v-for="o in options"
             :key="o.node.id"
             :value="o.node.id"
-            :label="o.node.c.name"
+            :label="nameOf(o.node)"
             :disabled="o.disabled"
             class="md-item"
           >
             <div class="md-option" :style="{ paddingLeft: `${o.node.depth * 14}px` }">
               <span class="md-option__name">
-                {{ o.node.c.name }}
+                {{ nameOf(o.node) }}
                 <el-tag v-if="o.current" size="small" type="info" disable-transitions>{{
                   t('scheme.move.current')
                 }}</el-tag>

@@ -14,6 +14,8 @@ import {
   childBlock,
   clearFrozen,
   directBlocked,
+  namedByCore,
+  nodeName,
   pct,
   pointsFrozen,
   shareWith,
@@ -38,6 +40,8 @@ const emit = defineEmits<{
   refused: []
 }>()
 const { t } = useI18n()
+/** A node's name as shown: the root still named by Core, in the reader's words. */
+const nameOf = (n: SchemeNode) => nodeName(n, t('scheme.rootName'))
 
 const create = useWrite('component.create')
 const update = useWrite('component.update')
@@ -71,11 +75,11 @@ const wasDirect = computed(() => editing.value?.kind === 'direct')
 /** Why a node cannot be the parent, or null. */
 function blockText(n: SchemeNode): string | null {
   const b = childBlock(n)
-  return b ? t(`scheme.reasons.${b}`, { name: n.c.name }) : null
+  return b ? t(`scheme.reasons.${b}`, { name: nameOf(n) }) : null
 }
 /** Offered as a parent, but it may hold assignments the caller cannot see, and then Core refuses. */
 function cautionText(n: SchemeNode): string | null {
-  return n.kind === 'unseen' ? t('scheme.reasons.unseen', { name: n.c.name }) : null
+  return n.kind === 'unseen' ? t('scheme.reasons.unseen', { name: nameOf(n) }) : null
 }
 const parentOptions = computed(() =>
   props.scheme.nodes.map((n) => {
@@ -175,7 +179,7 @@ const sharePreview = computed(() => {
   const share = shareWith(p.children, editing.value?.id ?? null, Number(form.weight))
   return share === null
     ? t('scheme.form.shareNone')
-    : t('scheme.form.sharePreview', { share: pct(share), parent: p.c.name })
+    : t('scheme.form.sharePreview', { share: pct(share), parent: nameOf(p) })
 })
 
 function decimalRule(required: () => boolean) {
@@ -292,7 +296,7 @@ async function submitUpdate(): Promise<'executed' | 'proposed' | 'unchanged' | n
 const title = computed(() =>
   props.mode === 'create'
     ? t('scheme.form.createTitle')
-    : t('scheme.form.editTitle', { name: props.target?.c.name ?? '' }),
+    : t('scheme.form.editTitle', { name: props.target ? nameOf(props.target) : '' }),
 )
 </script>
 
@@ -328,12 +332,12 @@ const title = computed(() =>
             v-for="o in parentOptions"
             :key="o.node.id"
             :value="o.node.id"
-            :label="o.node.c.name"
+            :label="nameOf(o.node)"
             :disabled="o.disabled"
             class="cd-item"
           >
             <div class="cd-option" :style="{ paddingLeft: `${o.node.depth * 14}px` }">
-              <span class="cd-option__name">{{ o.node.c.name }}</span>
+              <span class="cd-option__name">{{ nameOf(o.node) }}</span>
               <span v-if="o.why" class="cd-option__why">{{ o.why }}</span>
             </div>
           </el-option>
@@ -345,6 +349,9 @@ const title = computed(() =>
 
       <el-form-item :label="t('scheme.form.name')" prop="name">
         <el-input v-model="form.name" :placeholder="t('scheme.form.namePlaceholder')" maxlength="200" />
+        <div v-if="editing && namedByCore(editing)" class="app-form-hint">
+          {{ t('scheme.form.rootNameHint', { shown: t('scheme.rootName') }) }}
+        </div>
       </el-form-item>
 
       <el-form-item v-if="typeChoosable" :label="t('scheme.form.type')">

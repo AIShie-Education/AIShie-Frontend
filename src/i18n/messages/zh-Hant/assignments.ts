@@ -33,6 +33,8 @@ export default {
     notStarted: '尚未開始',
     attempt: '第 {n} 次',
   },
+  // The grading scheme's root, still under the name Core gave it ("Total").
+  courseTotal: '課程總成績',
   form: {
     createTitle: '新增作業',
     editTitle: '編輯作業',

@@ -33,6 +33,8 @@ export default {
     notStarted: 'Not started',
     attempt: 'attempt {n}',
   },
+  // The grading scheme's root, still under the name Core gave it ("Total").
+  courseTotal: 'Course total',
   form: {
     createTitle: 'New assignment',
     editTitle: 'Edit assignment',

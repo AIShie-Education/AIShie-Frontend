@@ -1,5 +1,7 @@
 export default {
   title: '評分結構',
+  // The root as Core names it ("Total"), in the reader's words, until someone renames it.
+  rootName: '課程總成績',
   subtitle: '課程總成績如何組成：各評分項目、各自所佔的權重，以及計入其中的作業。',
   actions: {
     addComponent: '新增評分項目',
@@ -90,6 +92,7 @@ export default {
     parent: '上層項目',
     name: '名稱',
     namePlaceholder: '例如：小測、期末考',
+    rootNameHint: 'Core 把課程總成績命名為「Total」。在改名之前，它會以各讀者所用的語言顯示為「{shown}」。',
     type: '評分方式',
     typeRolled: '由下而上計算',
     typeRolledHelp: '由歸入的作業，或由其下新增的子項目計算',

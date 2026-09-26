@@ -14,6 +14,7 @@ import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { typeLabel } from '@/views/course/actions/components/actionText'
+import { CORE_ROOT_NAME } from '@/views/course/scheme/components/schemeModel'
 import { componentName, documentTitle, ensureComponentNames, ensureDocumentTitles } from './names'
 import {
   CATEGORY_ICON,
@@ -103,8 +104,12 @@ const subjectText = computed(() => {
       const type = payloadString(e, 'action_type')
       return type ? typeLabel(type) : t('activity.subject.action')
     }
-    case 'component':
-      return component.value?.name ?? t('activity.subject.component')
+    case 'component': {
+      const c = component.value
+      if (!c) return t('activity.subject.component')
+      // The root, still under the name Core gave it, in the reader's words.
+      return c.root && c.name === CORE_ROOT_NAME ? t('activity.subject.courseTotal') : c.name
+    }
     case 'course':
       return ''
   }
