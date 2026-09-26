@@ -507,7 +507,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </el-tooltip>
           </h2>
           <p class="app-form-hint member__scope-help">
-            {{ m.role === 'student' ? t('members.detail.scope.helpStudent') : t('members.detail.scope.help') }}
+            {{ ownWorkOnly ? t('members.detail.scope.helpStudent') : t('members.detail.scope.help') }}
           </p>
           <div class="member__scope">
             <div class="member__scope-block">

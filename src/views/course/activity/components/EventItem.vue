@@ -213,15 +213,19 @@ const facts = computed<Fact[]>(() => {
     }
     const seq = payloadNumber(e, 'seq')
     if (seq !== undefined) out.push({ kind: 'text', text: t('activity.fact.version', { n: seq }) })
-    // The type says what students could see when it happened, not now: the
-    // assignment may have been published since.
+    // Filed under its unreleased name because no published assignment used
+    // the document then. It keeps that name, so only members who see
+    // unpublished assignments are shown this entry. Who reads the document
+    // once an assignment using it is published depends on its kind.
     if (type.endsWith('_unreleased')) {
-      out.push({
-        kind: 'text',
-        text: t('activity.fact.unreleased'),
-        tone: 'info',
-        tip: t('activity.fact.unreleasedTip'),
-      })
+      const k = type === 'document.rubric_published_unreleased' ? 'rubric' : payloadString(e, 'kind')
+      const tip =
+        k === 'rubric'
+          ? t('activity.fact.unreleasedTip.rubric')
+          : k === 'instructions'
+            ? t('activity.fact.unreleasedTip.instructions')
+            : t('activity.fact.unreleasedTip.other')
+      out.push({ kind: 'text', text: t('activity.fact.unreleased'), tone: 'info', tip })
     }
   }
   if (type === 'member.added') {

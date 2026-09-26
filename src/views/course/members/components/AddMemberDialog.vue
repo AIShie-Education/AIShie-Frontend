@@ -24,7 +24,7 @@ import { useWrite, announce } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
-import { isUuid } from '@/utils/format'
+import { isUuid, shortId } from '@/utils/format'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -423,6 +423,8 @@ function capToMine() {
               <span class="add-member__found-meta">
                 <StatusTag v-if="a.status !== 'active'" vocab="actorStatus" :value="a.status" />
                 <span>{{ a.email ?? t(`enums.actorKind.${a.kind}`) }}</span>
+                <!-- Two may share a name: the end of the ID, as People & agents shows it, tells them apart. -->
+                <code class="app-mono add-member__found-id">{{ shortId(a.id) }}</code>
               </span>
             </div>
           </el-option>
@@ -745,6 +747,15 @@ function capToMine() {
   text-overflow: ellipsis;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+.add-member__found-meta > span:last-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.add-member__found-id {
+  flex-shrink: 0;
+  font-size: 11px;
 }
 .add-member__found-meta > span:last-child {
   min-width: 0;

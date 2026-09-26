@@ -63,7 +63,11 @@ export default {
       choose: 'Choose a document',
       chooseRequired: 'Choose a document',
       unpublishedTag: 'not published',
-      selectedUnpublished: 'This document has no published version yet: students cannot read it.',
+      selectedUnpublished: {
+        instructions: 'This document has no published version yet: students cannot read it.',
+        rubric:
+          'This rubric has no published version yet, so grader agents cannot read it: only members who may read drafts (instructors and TAs by default) can. Students cannot read rubrics either way under the built-in student preset.',
+      },
       mustBePublished: 'This assignment is published, so its instructions must be a document with a published version.',
       newNeedsApproval:
         'Writing a new document waits for approval: the assignment is not saved until it has been approved.',
@@ -78,7 +82,7 @@ export default {
         rubric: 'Publish it now',
       },
       rubricReaders:
-        'Publishing lets members whose seat grants “Read rubrics” read it: by default instructors, teaching assistants and grader agents. Not students: the built-in student preset cannot read rubrics. Unpublished, only those who may read drafts (instructors and TAs by default) see it.',
+        'Until the assignment is published, only members whose seat grants “Manage assignments” (instructors by default) can read this rubric. Once it is published, members whose seat grants “Read rubrics” and covers this assignment read it. If the rubric is published, that means by default instructors, teaching assistants and the grader agents listed for this assignment. If it is not, only those who can also “Read drafts” read it (instructors and TAs by default; not grader agents). Never students: the built-in student preset cannot read rubrics.',
       needContent: 'Write some text or attach a file',
       defaultInstructions: '{title} — instructions',
       defaultRubric: '{title} — rubric',
@@ -100,6 +104,8 @@ export default {
     quoted: '“{title}”',
     docsKept:
       '{titles} was created, but the assignment was not saved. It is chosen here now, so saving again does not create it a second time. | {titles} were created, but the assignment was not saved. They are chosen here now, so saving again does not create them a second time.',
+    proposedWithDocs:
+      'Sent for approval: the assignment is saved once someone approves it. {titles} was created already and stays in the course even if it is not approved. | Sent for approval: the assignment is saved once someone approves it. {titles} were created already and stay in the course even if it is not approved.',
     docNotPublished:
       '“{title}” was created, but it has no published version yet (publishing it failed or waits for approval), so the assignment has not been saved. Save again once it is published.',
     docProposed:

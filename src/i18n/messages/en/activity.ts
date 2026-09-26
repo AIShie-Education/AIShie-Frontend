@@ -62,9 +62,15 @@ export default {
     onTarget: 'about {target}',
     dueChanged: 'Due date changed',
     version: 'Version {n}',
-    unreleased: 'Not yet visible to students at the time',
-    unreleasedTip:
-      'When this happened, its assignment was not published yet, so students could not see it then and were not told of it. It may be visible to them now.',
+    unreleased: 'No published assignment used it then',
+    unreleasedTip: {
+      instructions:
+        'When this happened, no published assignment used these instructions, so only members who can see unpublished assignments were told of it, and this entry stays theirs alone. Students read the instructions’ published version once an assignment using them is published.',
+      rubric:
+        'When this happened, no published assignment used this rubric, so only members who can see unpublished assignments were told of it, and this entry stays theirs alone. Once an assignment using it is published, members who read rubrics read its published version; students do not, under the built-in preset.',
+      other:
+        'When this happened, no published assignment used this document, so only members who can see unpublished assignments were told of it, and this entry stays theirs alone.',
+    },
     attempt: 'Attempt {n}',
     replaces: 'Replaces grade',
     replacesEarlier: 'Replaces an earlier grade',

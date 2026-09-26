@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Component } from '@/api/types'
-import { buildScheme, namedByCore, nodeName } from './schemeModel'
+import { buildScheme, componentLabel, namedByCore, nodeName } from './schemeModel'
 
 function component(id: string, name: string, parent_id: string | null): Component {
   return { id, name, parent_id, weight: 1, sort_order: 0, drop_lowest: 0 } as unknown as Component
@@ -25,5 +25,13 @@ describe('names in the scheme', () => {
   it('shows a root that has been renamed as it was named', () => {
     const renamed = buildScheme([component('r', 'Overall', null)], [], { counted: true, all: true })
     expect(nodeName(renamed.root!, 'Course total')).toBe('Overall')
+  })
+
+  it('names a component from a flat list the same way', () => {
+    expect(componentLabel(component('r', 'Total', null), 'Course total')).toBe('Course total')
+    expect(componentLabel({ name: 'Total' }, 'Course total')).toBe('Course total')
+    expect(componentLabel(component('r', 'Overall', null), 'Course total')).toBe('Overall')
+    expect(componentLabel(component('a', 'Total', 'r'), 'Course total')).toBe('Total')
+    expect(componentLabel(component('b', 'Quizzes', 'r'), 'Course total')).toBe('Quizzes')
   })
 })

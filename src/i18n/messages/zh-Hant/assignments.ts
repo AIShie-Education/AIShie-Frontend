@@ -61,7 +61,11 @@ export default {
       choose: '選擇文件',
       chooseRequired: '請選擇文件',
       unpublishedTag: '未發佈',
-      selectedUnpublished: '此文件尚未有已發佈的版本，學生無法閱讀。',
+      selectedUnpublished: {
+        instructions: '此文件尚未有已發佈的版本，學生無法閱讀。',
+        rubric:
+          '此評分準則尚未有已發佈的版本，因此評分代理無法閱讀：只有可閱讀草稿的成員（預設為導師及助教）看得到。無論是否發佈，內建的學生權限預設都不能閱讀評分準則。',
+      },
       mustBePublished: '此作業已發佈，因此作業說明必須是有已發佈版本的文件。',
       newNeedsApproval: '撰寫新文件需要經人批准：批准之前，作業不會儲存。',
       unreadable: '以你的權限無法列出這類文件。',
@@ -75,7 +79,7 @@ export default {
         rubric: '立即發佈',
       },
       rubricReaders:
-        '發佈後，席位具備「閱讀評分準則」權限的成員便可閱讀，預設為導師、助教及評分代理。學生則不能閱讀：內建的學生權限預設並不包括閱讀評分準則。未發佈時，只有可閱讀草稿的成員（預設為導師及助教）看得到。',
+        '作業發佈之前，只有席位具備「管理作業」權限的成員（預設為導師）看得到這份評分準則。作業發佈後，席位具備「閱讀評分準則」權限且範圍涵蓋此作業的成員便可閱讀：評分準則已發佈時，預設為導師、助教及列明此作業的評分代理；未發佈時，只有同時可「閱讀草稿」的成員（預設為導師及助教，評分代理不在此列）看得到。學生則不能閱讀：內建的學生權限預設並不包括閱讀評分準則。',
       needContent: '請輸入內容或附加檔案',
       defaultInstructions: '{title} — 作業說明',
       defaultRubric: '{title} — 評分準則',
@@ -96,6 +100,7 @@ export default {
     nothingChanged: '沒有任何更改。',
     quoted: '「{title}」',
     docsKept: '已建立{titles}，但作業尚未儲存。文件現已在此選取，再次儲存不會重複建立。',
+    proposedWithDocs: '已送出等待批准：作業要等有人批准後才會儲存。{titles}已經建立，即使未獲批准也會留在課程中。',
     docNotPublished:
       '已建立「{title}」，但它還沒有已發佈的版本（發佈失敗或正在等待批准），因此作業尚未儲存。待它發佈後再儲存一次。',
     docProposed:

@@ -89,6 +89,14 @@ export function namedByCore(n: Pick<SchemeNode, 'c' | 'isRoot'>): boolean {
   return n.isRoot && n.c.name === CORE_ROOT_NAME
 }
 
+/**
+ * A component from a flat list (component.tree) as the page shows it: the
+ * root, while still called what Core named it, in the reader's language.
+ */
+export function componentLabel(c: { name: string; parent_id?: string | null }, rootName: string): string {
+  return !c.parent_id && c.name === CORE_ROOT_NAME ? rootName : c.name
+}
+
 const num = (v: unknown): number => {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0

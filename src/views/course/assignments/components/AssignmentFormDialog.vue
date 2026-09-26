@@ -6,10 +6,11 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
-import { ElMessage, type FormInstance, type FormItemRule } from 'element-plus'
-import type { ToolIn } from '@/api/http'
+import { ElMessage, ElNotification, type FormInstance, type FormItemRule } from 'element-plus'
+import type { ToolIn, WriteOutcome } from '@/api/http'
 import type { Assignment, DocumentSummary } from '@/api/types'
-import { useWrite } from '@/composables/useWrite'
+import { notifyError } from '@/composables/useErrors'
+import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isDecimal } from '@/utils/format'
 import DocChoiceField from './DocChoiceField.vue'
@@ -257,6 +258,24 @@ function savedMessage(verb: 'created' | 'saved', made: Made): string {
 }
 
 /**
+ * Says once how saving the assignment went. On a proposal it also names the
+ * documents written here, which exist already whatever becomes of it.
+ */
+function announceSaved(out: WriteOutcome<unknown>, verb: 'created' | 'saved', made: Made) {
+  if (out.status === 'proposed' && createdTitles.value.length) {
+    const titles = createdTitles.value.map((x) => t('assignments.form.quoted', { title: x }))
+    ElNotification({
+      type: 'info',
+      title: t('common.outcome.proposedTitle'),
+      message: t('assignments.form.proposedWithDocs', { titles: listFormat(titles) }, titles.length),
+      duration: 8000,
+    })
+    return
+  }
+  announce(out, { success: savedMessage(verb, made) })
+}
+
+/**
  * The assignment was not saved, although documents written for it were
  * created: say so, since they are now chosen as existing ones and saving
  * again does not make them twice.
@@ -292,9 +311,13 @@ async function create(made: Made, instructionsId?: string, rubricId?: string) {
       instructions_document_id: instructionsId,
       rubric_document_id: rubricId,
     },
-    { success: savedMessage('created', made) },
+    { notify: false },
   )
-  if (!out) return noteCreatedDocs()
+  if (!out) {
+    if (createAssignment.lastError.value) notifyError(createAssignment.lastError.value)
+    return noteCreatedDocs()
+  }
+  announceSaved(out, 'created', made)
   course.invalidate('assignments')
   visible.value = false
   emit('saved', out.status === 'executed' ? { status: 'executed', id: out.result.id } : { status: 'proposed' })
@@ -340,8 +363,12 @@ async function update(a: Assignment, made: Made, instructionsId?: string, rubric
     visible.value = false
     return
   }
-  const out = await updateAssignment.run(args, { success: savedMessage('saved', made) })
-  if (!out) return noteCreatedDocs()
+  const out = await updateAssignment.run(args, { notify: false })
+  if (!out) {
+    if (updateAssignment.lastError.value) notifyError(updateAssignment.lastError.value)
+    return noteCreatedDocs()
+  }
+  announceSaved(out, 'saved', made)
   course.invalidate('assignments')
   visible.value = false
   emit('saved', { status: out.status, id: a.id })

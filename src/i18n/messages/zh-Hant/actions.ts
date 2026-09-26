@@ -199,7 +199,7 @@ export default {
   },
   targetType: {
     action: '操作',
-    actor: '參與者',
+    actor: '人員或代理',
     assignment: '作業',
     course: '課程',
     course_member: '成員',
@@ -294,7 +294,7 @@ export default {
     tool_removed: '這類操作已無法執行。',
   },
   denyReason: {
-    actor_not_active: '參與者已被停用。',
+    actor_not_active: '此人員或代理已被停用。',
     course_archived: '課程已封存。',
     not_a_member: '不是本課程的成員。',
     membership_not_active: '席位已暫停、移除或到期。',
