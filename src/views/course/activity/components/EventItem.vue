@@ -122,7 +122,7 @@ const showStudent = computed(
 
 type Fact =
   | { kind: 'tag'; vocab: 'actionStatus' | 'role' | 'submissionState'; value: string }
-  | { kind: 'text'; text: string; tone?: 'danger' | 'warning' | 'success' | 'info' }
+  | { kind: 'text'; text: string; tone?: 'danger' | 'warning' | 'success' | 'info'; tip?: string }
   | { kind: 'link'; text: string; to: RouteLocationRaw; id: string }
 
 // Core's error codes (apperr), by the words common.errors has for them.
@@ -195,7 +195,16 @@ const facts = computed<Fact[]>(() => {
     }
     const seq = payloadNumber(e, 'seq')
     if (seq !== undefined) out.push({ kind: 'text', text: t('activity.fact.version', { n: seq }) })
-    if (type.endsWith('_unreleased')) out.push({ kind: 'text', text: t('activity.fact.unreleased'), tone: 'info' })
+    // The type says what students could see when it happened, not now: the
+    // assignment may have been published since.
+    if (type.endsWith('_unreleased')) {
+      out.push({
+        kind: 'text',
+        text: t('activity.fact.unreleased'),
+        tone: 'info',
+        tip: t('activity.fact.unreleasedTip'),
+      })
+    }
   }
   if (type === 'member.added') {
     const role = payloadString(e, 'role')
@@ -295,6 +304,11 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
       <div v-if="facts.length" class="event-item__facts">
         <template v-for="(f, i) in facts" :key="i">
           <StatusTag v-if="f.kind === 'tag'" :vocab="f.vocab" :value="f.value" />
+          <el-tooltip v-else-if="f.kind === 'text' && f.tip" :content="f.tip" placement="top">
+            <el-tag :type="f.tone ?? 'info'" size="small" effect="plain" disable-transitions tabindex="0">
+              {{ f.text }}
+            </el-tag>
+          </el-tooltip>
           <el-tag
             v-else-if="f.kind === 'text'"
             :type="f.tone ?? 'info'"

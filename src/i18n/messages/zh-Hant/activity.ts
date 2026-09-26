@@ -62,7 +62,9 @@ export default {
     onTarget: '對象：{target}',
     dueChanged: '截止日期已更改',
     version: '第 {n} 版',
-    unreleased: '尚未向學生公開',
+    unreleased: '當時尚未向學生公開',
+    unreleasedTip:
+      '發生這件事時，所屬作業尚未發佈，因此學生當時看不到，也沒有收到通知。作業其後若已發佈，學生現在可能已經看得到。',
     attempt: '第 {n} 次提交',
     replaces: '取代成績',
     replacesEarlier: '取代先前的成績',

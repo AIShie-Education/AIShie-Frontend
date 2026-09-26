@@ -62,7 +62,9 @@ export default {
     onTarget: 'about {target}',
     dueChanged: 'Due date changed',
     version: 'Version {n}',
-    unreleased: 'Not yet released to students',
+    unreleased: 'Not yet visible to students at the time',
+    unreleasedTip:
+      'When this happened, its assignment was not published yet, so students could not see it then and were not told of it. It may be visible to them now.',
     attempt: 'Attempt {n}',
     replaces: 'Replaces grade',
     replacesEarlier: 'Replaces an earlier grade',
