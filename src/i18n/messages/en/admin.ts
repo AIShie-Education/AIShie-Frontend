@@ -107,7 +107,10 @@ export default {
       "A new course has no members. Seat its first instructor here: they get the built-in instructor preset, and add everyone else from the course's Members page.",
     who: 'Instructor',
     placeholder: 'Search by name or email, or paste an ID',
+    placeholderId: 'Paste an actor ID',
     noMatch: 'No one matches.',
+    pasteId: 'Paste the whole actor ID.',
+    noSearch: 'This Core cannot search by name or email yet (it needs updating): paste the actor ID instead.',
     suspended: 'This actor is suspended, and Core does not seat a suspended actor. Reactivate them first.',
     system: 'The system actor runs background jobs and is never seated in a course.',
     agent: 'This is an agent. Seated as instructor, it holds every permission of the instructor preset.',
@@ -145,6 +148,17 @@ export default {
     emptyFiltered: 'No one matches.',
     byId: 'Found by ID. Press Enter to open their page.',
     notFound: 'No actor has this ID.',
+    noList: {
+      title: 'This Core cannot list people and agents yet',
+      body: 'Browsing and searching them needs a newer AIShiteru Core, one with actor.list. Until the server is updated, open an actor by their ID, or register someone new.',
+    },
+    openById: {
+      title: 'Open an actor by ID',
+      placeholder: 'Actor ID',
+      submit: 'Open',
+      invalid: 'This is not an actor ID.',
+      hint: 'Registering someone shows their ID, and a course member’s page shows the actor ID of whoever holds the seat.',
+    },
   },
 
   signIn: {

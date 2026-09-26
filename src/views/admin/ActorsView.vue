@@ -2,11 +2,15 @@
 // Everyone registered on the platform (actor.list), found by a piece of
 // their name or email, or by their ID (actor.get), and narrowed by kind and
 // standing; and registering someone new (actor.register).
+//
+// A Core from before actor.list cannot list anyone. The page then says so,
+// and offers what there was before the directory: opening an actor by ID.
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { isApiError, MCP_ENDPOINT, read } from '@/api/http'
 import { usePaged } from '@/composables/useAsync'
+import { errorMessage } from '@/composables/useErrors'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useSessionStore } from '@/stores/session'
 import { isUuid } from '@/utils/format'
@@ -19,6 +23,7 @@ import ActorSummary from './components/ActorSummary.vue'
 import RegisterActorDialog from './components/RegisterActorDialog.vue'
 import SignInTags from './components/SignInTags.vue'
 import type { ActorRow, RegisteredActor } from './components/adminShared'
+import { hasActorList, listActors } from './components/actorSearch'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -75,7 +80,9 @@ const list = usePaged<ActorRow>(
         throw e
       }
     }
-    const o = await read('actor.list', { search: q.value, kind: kind.value, status: status.value, limit: PAGE, after })
+    // Known to be missing, it is not asked again: the page shows the fallback.
+    if (hasActorList.value === false) return { items: [] }
+    const o = await listActors({ search: q.value, kind: kind.value, status: status.value, limit: PAGE, after })
     return { items: o.actors, next: o.next }
   },
   { watch: [q, kind, status] },
@@ -107,6 +114,32 @@ const justRegistered = ref<RegisteredActor | null>(null)
 function onRegistered(a: RegisteredActor) {
   justRegistered.value = a
   void list.reload()
+}
+
+// --- On a Core without the directory: one actor, by ID ------------------------
+/** This Core has no actor.list: there is no list to show, only look-ups by ID. */
+const noList = computed(() => hasActorList.value === false)
+const openId = ref('')
+const openError = ref<string | null>(null)
+const opening = ref(false)
+watch(openId, () => (openError.value = null))
+
+async function openById() {
+  const id = openId.value.trim().toLowerCase()
+  if (!isUuid(id)) {
+    openError.value = t('admin.actors.openById.invalid')
+    return
+  }
+  opening.value = true
+  openError.value = null
+  try {
+    const a = await read('actor.get', { actor_id: id })
+    await router.push({ name: 'admin-actor', params: { actorId: a.id } })
+  } catch (e) {
+    openError.value = isApiError(e) && e.isNotFound ? t('admin.actors.notFound') : errorMessage(e)
+  } finally {
+    opening.value = false
+  }
 }
 </script>
 
@@ -156,7 +189,41 @@ function onRegistered(a: RegisteredActor) {
       </div>
     </section>
 
-    <section class="app-card">
+    <template v-if="noList">
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="t('admin.actors.noList.title')"
+        :description="t('admin.actors.noList.body')"
+        class="actors__no-list"
+      />
+      <section class="app-card">
+        <h2 class="app-card__title">{{ t('admin.actors.openById.title') }}</h2>
+        <form class="actors__open" @submit.prevent="openById">
+          <el-input
+            v-model="openId"
+            :placeholder="t('admin.actors.openById.placeholder')"
+            :aria-label="t('admin.actors.openById.placeholder')"
+            clearable
+            name="actor_id"
+            autocomplete="off"
+            class="actors__open-input app-mono"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button native-type="submit" type="primary" plain :loading="opening" :disabled="!openId.trim()">
+            {{ t('admin.actors.openById.submit') }}
+          </el-button>
+        </form>
+        <div v-if="openError" class="actors__open-error">{{ openError }}</div>
+        <p class="app-form-hint actors__open-hint">{{ t('admin.actors.openById.hint') }}</p>
+      </section>
+    </template>
+
+    <section v-else class="app-card">
       <div class="app-toolbar">
         <el-input
           v-model="searchText"
@@ -293,6 +360,31 @@ function onRegistered(a: RegisteredActor) {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
+}
+.actors__no-list {
+  margin-bottom: 16px;
+}
+.actors__no-list :deep(.el-alert__description) {
+  line-height: 1.6;
+}
+.actors__open {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.actors__open-input {
+  flex: 1 1 300px;
+  min-width: 0;
+  max-width: 460px;
+}
+.actors__open-error {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--el-color-danger);
+}
+.actors__open-hint {
+  margin: 8px 0 0;
 }
 .actors__search {
   flex: 1 1 280px;

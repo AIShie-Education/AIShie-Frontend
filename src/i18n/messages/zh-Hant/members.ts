@@ -69,10 +69,17 @@ export default {
   add: {
     title: '新增成員',
     intro: '把一位人員或一個代理加入此課程。權限預設提供初始的角色、範圍與各項權限等級；以下任何一項都可以另行調整。',
+    find: '以姓名或電子郵件查找',
+    findPlaceholder: '搜尋人員與代理',
+    findNoMatch: '沒有符合的人。',
     actor: '參與者 ID',
     actorPlaceholder: '例如 01a0d79f-13c6-70da-a7cc-f009b1efe423',
     actorHelp:
       '每位人員和每個代理都由平台管理員登記一次，管理員可以告訴你他們的參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
+    actorHelpFound:
+      '在上方選取後會自動填入，也可以直接貼上參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
+    noSearch:
+      '此 Core 版本尚未支援以姓名或電子郵件搜尋（需要更新），請貼上參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
     actorInvalid: '參與者 ID 的格式類似 01a0d79f-13c6-70da-a7cc-f009b1efe423。',
     actorMissing: '找不到此 ID 的參與者。',
     preset: '權限預設',

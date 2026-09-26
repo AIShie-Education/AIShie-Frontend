@@ -72,10 +72,17 @@ export default {
     title: 'Add a member',
     intro:
       'Seat a person or an agent in this course. A preset gives the starting role, reach and permission levels; you can change any of them below.',
+    find: 'Find by name or email',
+    findPlaceholder: 'Search people and agents',
+    findNoMatch: 'No one matches.',
     actor: 'Actor ID',
     actorPlaceholder: 'e.g. 01a0d79f-13c6-70da-a7cc-f009b1efe423',
     actorHelp:
       'Every person and agent is registered once, by a platform administrator, who can tell you their actor ID. It is not a member ID: that is made when they are seated here.',
+    actorHelpFound:
+      'Filled in when you pick someone above; an actor ID can also be pasted. It is not a member ID: that is made when they are seated here.',
+    noSearch:
+      'This Core cannot search by name or email yet (it needs updating): paste the actor ID. It is not a member ID: that is made when they are seated here.',
     actorInvalid: 'An actor ID has the form 01a0d79f-13c6-70da-a7cc-f009b1efe423.',
     actorMissing: 'No actor has this ID.',
     preset: 'Preset',

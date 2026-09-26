@@ -72,7 +72,9 @@ end; the "works around it" notes say what the front end does meanwhile.
   someone depended on an administrator passing actor ids out of band, and the front end kept a
   per-browser "seen recently" list. Core's `actor.list` (with `actor.update` and `actor.invite`)
   now lets the administration pages list and search everyone, and the list is gone; what earlier
-  versions kept in a browser is still deleted at sign-out.
+  versions kept in a browser is still deleted at sign-out. A Core from before it answers
+  `GET /v1/actors` with 405 `method_not_allowed` (the route takes POST, registering); the pages
+  then say the Core needs updating and take a pasted actor ID, as before.
 - **An invitation cannot be checked before it is taken up.** `POST /v1/auth/invite` is the only
   thing that reads one, and it wants the password too, so the welcome page learns that a link was
   used, replaced, withdrawn (a new email, a password set otherwise) or has expired only after the
