@@ -4,11 +4,18 @@
 // assignments they are listed for. Filtered by assignment and student, and
 // the filters kept in the address (?assignment=…&student=…) so that other
 // pages can link to a filtered list.
+//
+// For anyone but a student, choosing an assignment shows its roster instead
+// (submission.roster): every student in scope, including those who have not
+// started, whom a list of submissions cannot show, and who can be recorded
+// there as having handed in nothing. A Core without the roster gets the list.
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
 import type { SubmissionSummary } from '@/api/types'
+import RosterTable from './components/RosterTable.vue'
+import { lacksRoster, type RosterEntry } from './components/roster'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -56,17 +63,57 @@ watch([assignment, student], ([a, s]) => {
 
 const studentFilter = computed(() => (isStudent.value ? undefined : student.value || undefined))
 
+/** False once this Core has said it has no submission.roster: the page lists submissions instead. */
+const hasRoster = ref(true)
+/** An assignment chosen by someone other than a student: every student on it is shown. */
+const rosterMode = computed(() => !isStudent.value && !!assignment.value && hasRoster.value)
+
 const list = usePaged<SubmissionSummary>(
   (after) =>
-    read('submission.list', {
-      course_id: props.courseId,
-      assignment_id: assignment.value || undefined,
-      student_member_id: studentFilter.value,
-      limit: 50,
-      after,
-    }).then((o) => ({ items: o.submissions, next: o.next })),
-  { watch: [() => assignment.value, studentFilter] },
+    rosterMode.value
+      ? Promise.resolve({ items: [] })
+      : read('submission.list', {
+          course_id: props.courseId,
+          assignment_id: assignment.value || undefined,
+          student_member_id: studentFilter.value,
+          limit: 50,
+          after,
+        }).then((o) => ({ items: o.submissions, next: o.next })),
+  { watch: [() => assignment.value, studentFilter, rosterMode] },
 )
+
+// The roster pages by student, not by name; the student filter is applied to
+// it here, so it is read again only when the assignment changes.
+const roster = usePaged<RosterEntry>(
+  async (after) => {
+    const assignmentId = assignment.value
+    if (!rosterMode.value || !assignmentId) return { items: [] }
+    try {
+      const o = await read('submission.roster', {
+        course_id: props.courseId,
+        assignment_id: assignmentId,
+        limit: 200,
+        after,
+      })
+      return { items: o.students, next: o.next }
+    } catch (e) {
+      if (!lacksRoster(e)) throw e
+      hasRoster.value = false
+      return { items: [] }
+    }
+  },
+  { watch: [() => assignment.value, rosterMode] },
+)
+// A reload keeps the rows it has until the new page arrives. Those are
+// another assignment's: shown under this one, they would say the wrong thing
+// about who has started, and offer to mark someone missing on this one from
+// what they did on that. Empty the table at once, so that it waits instead.
+watch(assignment, () => {
+  roster.items.value = []
+  roster.hasMore.value = false
+})
+/** The list on show, for the refresh button. */
+const active = computed(() => (rosterMode.value ? roster : list))
 
 const filtered = computed(() => !!assignment.value || !!studentFilter.value)
 const emptyText = computed(() =>
@@ -129,13 +176,33 @@ function open(row: SubmissionSummary) {
         :placeholder="t('submissions.filters.student')"
       />
       <span class="app-toolbar__spacer" />
-      <el-button :loading="list.loading.value" @click="list.reload">
+      <el-button :loading="active.loading.value" @click="active.reload">
         <el-icon><Refresh /></el-icon>
         <span>{{ t('common.actions.refresh') }}</span>
       </el-button>
     </div>
 
-    <section class="app-card submissions-card">
+    <p v-if="!isStudent && !list.error.value?.isForbidden && (!assignment || !hasRoster)" class="submissions-hint">
+      <el-icon><InfoFilled /></el-icon>
+      <span>{{ assignment ? t('submissions.roster.unavailable') : t('submissions.hint.pickAssignment') }}</span>
+    </p>
+
+    <section v-if="rosterMode && assignment" class="app-card submissions-card">
+      <RosterTable
+        :course-id="courseId"
+        :assignment-id="assignment"
+        :student-id="studentFilter"
+        :rows="roster.items.value"
+        :loading="roster.loading.value"
+        :error="roster.error.value"
+        :has-more="roster.hasMore.value"
+        @more="roster.loadMore"
+        @retry="roster.reload"
+        @changed="roster.reload"
+      />
+    </section>
+
+    <section v-else class="app-card submissions-card">
       <AsyncState
         :loading="list.loading.value && !list.items.value.length"
         :error="list.error.value"
@@ -231,6 +298,19 @@ function open(row: SubmissionSummary) {
   .submissions-filter {
     width: 100%;
   }
+}
+.submissions-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: -4px 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+.submissions-hint .el-icon {
+  flex: none;
+  margin-top: 3px;
 }
 .submission-cards {
   list-style: none;

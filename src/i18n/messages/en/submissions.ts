@@ -2,7 +2,8 @@
 export default {
   title: 'Submissions',
   subtitle: {
-    staff: 'Work handed in, drafts in progress and work marked missing, for the students and assignments you reach.',
+    staff:
+      'Work handed in and drafts in progress, for the students and assignments you reach. Choose an assignment to see every student on it, including those who have not started, and to record work that was never handed in as missing.',
     student: 'Your work for each assignment, attempt by attempt.',
   },
   filters: {
@@ -17,6 +18,32 @@ export default {
     submittedAt: 'Handed in',
   },
   notHandedIn: 'Not handed in',
+  hint: {
+    pickAssignment:
+      'Choose an assignment to see every student on it, including those who have not started yet, and to mark as missing anyone who has handed in nothing.',
+  },
+  roster: {
+    unavailable:
+      'This server cannot list the students who have not started, so only the work that exists is shown here.',
+    summary: {
+      total: '{n} student | {n} students',
+      partial: 'The counts cover the students loaded so far.',
+    },
+    empty: 'There are no current students on this assignment that you can see.',
+    emptyStudent:
+      'This student is not among the current students you can see on this assignment. Clear the assignment filter to see all of their work, including from before they left the course.',
+    unpublished: 'This assignment is not published: students cannot see it yet, so nobody can be marked as missing it.',
+    markMissing: 'Mark missing',
+    myActions: 'See my actions',
+    confirm: {
+      title: 'Mark {name} as missing?',
+      body: 'This records that {name} handed in nothing for “{assignment}”, so that it can be graded (with a zero, for example). If they hand in work later, it takes the place of this record, as long as the record has not been graded by then.',
+      thisAssignment: 'this assignment',
+      notDue: 'It is not due until {due}.',
+      needsApproval: 'It will wait for someone to approve it before it takes effect.',
+    },
+    done: '{name} is marked as missing.',
+  },
   empty: {
     filtered: 'No submissions match these filters.',
     none: 'No work has been started or handed in yet.',
@@ -58,11 +85,12 @@ export default {
         'This is a draft: nothing has been handed in yet. Carry on working on it, and hand it in, from the assignment page.',
       draftStaff:
         'This is a draft the student is still working on. It can still change, and it cannot be graded until it is handed in.',
-      missingOwn: 'Nothing was handed in by the due date. You can still hand in late work from the assignment page.',
+      missingOwn:
+        'Nothing was handed in for this, so it is recorded as missing. You can still hand in work from the assignment page, though it may count as late.',
       missingStaff:
-        'Nothing was handed in by the due date. This placeholder is here so that it can be graded. If the student hands in late work before it is graded, that work takes its place.',
+        'Nothing was handed in: this is recorded as missing, when the due date passed or by hand, so that it can be graded. If the student hands in work before it is graded, that work takes its place.',
       missingGraded:
-        'Nothing was handed in by the due date, and that has been graded. Late work from the student would be a new attempt, with a grade of its own.',
+        'Nothing was handed in, and that has been graded. Work the student hands in now would be a new attempt, with a grade of its own.',
     },
     continueEditing: 'Continue on the assignment page',
     handInLate: 'Hand in late work',
