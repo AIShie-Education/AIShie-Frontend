@@ -65,7 +65,8 @@ export function activeFirst<T extends Pick<Actor, 'status'>>(actors: readonly T[
  * name or email holds the text (the start of the directory for none), or the
  * one actor whose whole ID it is. On a Core without the directory only the ID
  * works: other text finds nobody, and `hasActorList` is false for the form to
- * say so, once, rather than as a failure.
+ * say so, once, rather than as a failure. Text typed while a probe is under
+ * way waits for its answer.
  */
 export function useActorSearch(limit = 20) {
   const options = ref<Actor[]>([])
@@ -89,10 +90,16 @@ export function useActorSearch(limit = 20) {
             throw e
           },
         )
-      } else if (known.value === false) {
-        found = []
       } else {
-        found = activeFirst((await listActors({ search: needle || undefined, limit })).actors)
+        // A probe under way is about to say whether this Core has the
+        // directory: wait for it rather than ask the same again, and then send
+        // only the text typed last.
+        if (known.value === null && probing) {
+          await probing
+          if (mine !== seq) return
+        }
+        found =
+          known.value === false ? [] : activeFirst((await listActors({ search: needle || undefined, limit })).actors)
       }
       if (mine === seq) options.value = found
     } catch (e) {

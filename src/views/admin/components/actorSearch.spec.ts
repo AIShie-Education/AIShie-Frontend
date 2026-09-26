@@ -195,6 +195,60 @@ describe('useActorSearch', () => {
     expect(s.options.value).toEqual([actor()])
   })
 
+  it('waits for a probe under way, and on a Core without the directory asks nothing more', async () => {
+    const { useActorSearch, probeActorList, hasActorList, ApiError } = await page()
+    let reply!: () => void
+    answer = (tool) =>
+      tool === 'actor.get'
+        ? Promise.resolve(actor())
+        : new Promise((_resolve, reject) => {
+            reply = () => reject(new ApiError({ status: 405, code: 'method_not_allowed', message: 'GET' }))
+          })
+    const probed = probeActorList()
+    const s = useActorSearch()
+    // The list opens, and text is typed, before the Core has said.
+    s.onVisible(true)
+    const typed = s.search('sam')
+    // A whole ID needs no directory, and does not wait for it.
+    const pasted = useActorSearch()
+    await pasted.search(ID)
+    expect(pasted.options.value).toEqual([actor()])
+    expect(s.searching.value).toBe(true)
+
+    reply()
+    await Promise.all([probed, typed])
+    expect(hasActorList.value).toBe(false)
+    expect(s.options.value).toEqual([])
+    expect(s.error.value).toBeNull()
+    expect(s.searching.value).toBe(false)
+    expect(asked).toEqual([
+      { tool: 'actor.list', args: { limit: 1 } },
+      { tool: 'actor.get', args: { actor_id: ID } },
+    ])
+  })
+
+  it('waits for a probe under way, and then sends only the latest text', async () => {
+    const { useActorSearch, probeActorList, hasActorList } = await page()
+    let reply!: () => void
+    answer = (_tool, args) =>
+      args.limit === 1
+        ? new Promise((resolve) => (reply = () => resolve({ actors: [] })))
+        : Promise.resolve({ actors: [actor()] })
+    const probed = probeActorList()
+    const s = useActorSearch()
+    s.onVisible(true)
+    const typed = s.search('chan')
+
+    reply()
+    await Promise.all([probed, typed])
+    expect(hasActorList.value).toBe(true)
+    expect(s.options.value).toEqual([actor()])
+    expect(asked).toEqual([
+      { tool: 'actor.list', args: { limit: 1 } },
+      { tool: 'actor.list', args: { search: 'chan', limit: 20 } },
+    ])
+  })
+
   it('says why any other failure found nobody', async () => {
     const { useActorSearch, hasActorList, refuse } = await page()
     answer = () => refuse(403, 'forbidden')

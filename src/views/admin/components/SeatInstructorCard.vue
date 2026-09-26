@@ -124,8 +124,10 @@ async function seat() {
             </span>
           </div>
         </el-option>
+        <!-- el-select shows this slot while it loads too: no "no one" before Core has answered. -->
         <template #empty>
-          <div class="seat__empty">
+          <div v-if="searching" class="seat__empty">{{ t('common.labels.loading') }}</div>
+          <div v-else class="seat__empty">
             <span>{{ searchError ?? (idOnly ? t('admin.seat.pasteId') : t('admin.seat.noMatch')) }}</span>
             <router-link :to="{ name: 'admin-actors' }">{{ t('admin.seat.registerFirst') }}</router-link>
           </div>

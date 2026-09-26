@@ -134,11 +134,16 @@ const problems = computed(() =>
 
 // --- The actor, found or looked up where the caller may (platform administrators) --
 const directory = useActorSearch()
-/** Searching by name is offered: to administrators, on a Core that has the directory. */
-const canFind = computed(() => session.isAdmin && directory.hasActorList.value !== false)
+/**
+ * Searching by name is offered to administrators once Core has said it has the
+ * directory (opening the dialog asks), so that the field never comes and goes
+ * under someone typing in it.
+ */
+const canFind = computed(() => session.isAdmin && directory.hasActorList.value === true)
 const actorHelp = computed(() => {
-  if (!session.isAdmin) return t('members.add.actorHelp')
-  return canFind.value ? t('members.add.actorHelpFound') : t('members.add.noSearch')
+  if (canFind.value) return t('members.add.actorHelpFound')
+  if (session.isAdmin && directory.hasActorList.value === false) return t('members.add.noSearch')
+  return t('members.add.actorHelp')
 })
 /** The one picked in the search, whose ID is in the field. */
 const foundId = ref('')
@@ -291,8 +296,15 @@ function capToMine() {
               </span>
             </div>
           </el-option>
+          <!-- el-select shows this slot while it loads too: no "no one" before Core has answered. -->
           <template #empty>
-            <div class="add-member__found-empty">{{ directory.error.value ?? t('members.add.findNoMatch') }}</div>
+            <div class="add-member__found-empty">
+              {{
+                directory.searching.value
+                  ? t('common.labels.loading')
+                  : (directory.error.value ?? t('members.add.findNoMatch'))
+              }}
+            </div>
           </template>
         </el-select>
       </el-form-item>

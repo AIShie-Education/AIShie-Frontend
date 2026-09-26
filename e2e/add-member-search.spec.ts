@@ -43,12 +43,23 @@ test.beforeAll(async () => {
 })
 
 test('an administrator finds whom to add by name, and the search fills in their ID', async ({ page }) => {
+  // Opening the dialog asks Core whether it has the directory: slowly here.
+  await page.route(
+    (url) => url.pathname === '/v1/actors' && url.searchParams.get('limit') === '1',
+    async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      return route.continue()
+    },
+  )
   await signInWithToken(page, root())
   await page.goto(`/courses/${courseId}/members`)
   await page.getByRole('button', { name: 'Add member' }).click()
   const dialog = page.getByRole('dialog', { name: 'Add a member' })
-  await expect(dialog.getByText('Find by name or email')).toBeVisible()
   const idField = dialog.getByPlaceholder('e.g. 01a0d79f-13c6-70da-a7cc-f009b1efe423')
+  await expect(idField).toBeVisible()
+  // Until it has said, there is no search to type into (and so none to take away).
+  expect(await dialog.getByText('Find by name or email').count()).toBe(0)
+  await expect(dialog.getByText('Find by name or email')).toBeVisible()
   await expect(dialog).toContainText('Filled in when you pick someone above')
 
   // A piece of the name finds the two people and the agent, the suspended last.
@@ -116,11 +127,13 @@ test('someone who is not an administrator adds members by actor ID only', async 
 test('on a Core without the directory, an administrator finds people by their ID', async ({ page }) => {
   // What a Core from before actor.list answers: the route takes POST only.
   const listed: string[] = []
+  let slow = 0
   await page.route(
     (url) => url.pathname === '/v1/actors',
-    (route) => {
+    async (route) => {
       if (route.request().method() !== 'GET') return route.continue()
       listed.push(route.request().url())
+      if (slow) await new Promise((resolve) => setTimeout(resolve, slow))
       return route.fulfill({
         status: 405,
         headers: { Allow: 'POST' },
@@ -146,15 +159,22 @@ test('on a Core without the directory, an administrator finds people by their ID
   await expect(page.locator('.page-header')).toContainText(SAM.name)
   expect(listed).toHaveLength(1)
 
-  // Seating an instructor: the search takes a pasted ID, and says why.
+  // Seating an instructor: the search takes a pasted ID, and says why. From
+  // here on Core is slow to answer, as a distant one is: text typed before it
+  // has said waits for its answer, and is not sent after it.
   listed.length = 0
+  slow = 1500
   await page.goto(`/admin/courses/${courseId}`)
-  await expect(page.getByText('This Core cannot search by name or email yet (it needs updating)')).toBeVisible()
+  const noSearch = page.getByText('This Core cannot search by name or email yet (it needs updating)')
   const seat = page.locator('#seat-actor')
   await seat.click()
   await page.keyboard.type('sam')
+  expect(await noSearch.count()).toBe(0)
+  const dropdown = page.locator('.el-select-dropdown:visible')
+  await expect(dropdown).toContainText('Loading…')
+  await expect(noSearch).toBeVisible()
   const options = page.locator('.el-select-dropdown:visible .el-select-dropdown__item')
-  await expect(page.locator('.el-select-dropdown:visible')).toContainText('Paste the whole actor ID.')
+  await expect(dropdown).toContainText('Paste the whole actor ID.')
   await page.keyboard.press('ControlOrMeta+a')
   await page.keyboard.type(samId)
   await expect(options).toHaveCount(1)
@@ -164,14 +184,23 @@ test('on a Core without the directory, an administrator finds people by their ID
   // The Core was asked once whether it has the directory, and not again.
   expect(listed).toHaveLength(1)
 
-  // Adding a member: the ID field, with the same word on why.
+  // Adding a member: the ID field, with the same word on why. Before Core has
+  // said, there is the ID field only, and nothing is taken from under the
+  // person typing in it.
   listed.length = 0
   await page.goto(`/courses/${courseId}/members`)
   await page.getByRole('button', { name: 'Add member' }).click()
   const dialog = page.getByRole('dialog', { name: 'Add a member' })
-  await expect(dialog).toContainText('This Core cannot search by name or email yet (it needs updating)')
+  const idField = dialog.getByPlaceholder('e.g. 01a0d79f-13c6-70da-a7cc-f009b1efe423')
+  await expect(idField).toBeVisible()
+  const noSearchHere = dialog.getByText('This Core cannot search by name or email yet (it needs updating)')
+  expect(await noSearchHere.count()).toBe(0)
+  expect(await dialog.getByText('Find by name or email').count()).toBe(0)
+  await idField.fill(samId)
+  await expect(noSearchHere).toBeVisible()
   await expect(dialog.getByText('Find by name or email')).toHaveCount(0)
-  await dialog.getByPlaceholder('e.g. 01a0d79f-13c6-70da-a7cc-f009b1efe423').fill(samId)
+  await expect(idField).toBeFocused()
+  await expect(idField).toHaveValue(samId)
   await expect(dialog.locator('.add-member__actor')).toContainText(SAM.name)
   expect(listed).toHaveLength(1)
 })
