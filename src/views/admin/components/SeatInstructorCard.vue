@@ -2,71 +2,34 @@
 // course.seat_instructor: how a course gets its first member. The instructor
 // is found in the directory (actor.list) by a piece of their name or email,
 // or by a pasted ID (actor.get), so that the administrator sees who they are
-// about to seat.
-import { computed, ref } from 'vue'
+// about to seat. On a Core without the directory, a pasted ID is the way.
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { isApiError, read } from '@/api/http'
+import { read } from '@/api/http'
 import type { Actor } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
-import { isUuid } from '@/utils/format'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ActorSummary from './ActorSummary.vue'
+import { probeActorList, useActorSearch } from './actorSearch'
 
 const props = defineProps<{ courseId: string; disabled?: boolean }>()
 const emit = defineEmits<{ seated: [memberId: string, actorId: string] }>()
 const { t } = useI18n()
 const session = useSessionStore()
 
-const MATCHES = 20
-
 const selectedId = ref('')
 const found = ref<Actor | null>(null)
-const options = ref<Actor[]>([])
-const searching = ref(false)
-const searchError = ref<string | null>(null)
 const pickError = ref<string | null>(null)
 const seated = ref<{ memberId: string; name: string } | null>(null)
 const { run, pending } = useWrite('course.seat_instructor')
 
-// Typing fast starts one search after another: only the latest counts.
-let searchSeq = 0
-
-async function search(query: string) {
-  const seq = ++searchSeq
-  const needle = query.trim()
-  searching.value = true
-  searchError.value = null
-  try {
-    let list: Actor[]
-    if (isUuid(needle)) {
-      list = await read('actor.get', { actor_id: needle.toLowerCase() }).then(
-        (a) => [a],
-        (e) => {
-          if (isApiError(e) && e.isNotFound) return []
-          throw e
-        },
-      )
-    } else {
-      list = (await read('actor.list', { search: needle || undefined, limit: MATCHES })).actors ?? []
-    }
-    if (seq === searchSeq) options.value = list
-  } catch (e) {
-    if (seq === searchSeq) {
-      options.value = []
-      searchError.value = errorMessage(e)
-    }
-  } finally {
-    if (seq === searchSeq) searching.value = false
-  }
-}
-
-/** The first time the list opens, it shows the start of the directory. */
-function onVisible(open: boolean) {
-  if (open && !options.value.length && !searching.value) void search('')
-}
+const { options, searching, error: searchError, search, onVisible, hasActorList } = useActorSearch()
+/** This Core has no directory: the instructor is found by a pasted ID. */
+const idOnly = computed(() => hasActorList.value === false)
+onMounted(() => void probeActorList())
 
 function pick(id: string | undefined) {
   pickError.value = null
@@ -143,9 +106,10 @@ async function seat() {
         remote
         remote-show-suffix
         clearable
+        fit-input-width
         :remote-method="search"
         :loading="searching"
-        :placeholder="t('admin.seat.placeholder')"
+        :placeholder="idOnly ? t('admin.seat.placeholderId') : t('admin.seat.placeholder')"
         :disabled="disabled"
         class="seat__select"
         @change="pick"
@@ -162,13 +126,14 @@ async function seat() {
         </el-option>
         <template #empty>
           <div class="seat__empty">
-            <span>{{ searchError ?? t('admin.seat.noMatch') }}</span>
+            <span>{{ searchError ?? (idOnly ? t('admin.seat.pasteId') : t('admin.seat.noMatch')) }}</span>
             <router-link :to="{ name: 'admin-actors' }">{{ t('admin.seat.registerFirst') }}</router-link>
           </div>
         </template>
       </el-select>
       <el-button v-if="session.me" text :disabled="disabled" @click="pickMe">{{ t('admin.seat.me') }}</el-button>
     </div>
+    <div v-if="idOnly" class="app-form-hint">{{ t('admin.seat.noSearch') }}</div>
     <div v-if="pickError" class="seat__error">{{ pickError }}</div>
 
     <div v-if="found" class="seat__found">
@@ -251,6 +216,11 @@ async function seat() {
   text-overflow: ellipsis;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+.seat__option-meta > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .seat__empty {
   display: flex;

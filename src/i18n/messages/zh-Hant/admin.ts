@@ -104,7 +104,10 @@ export default {
       '新課程沒有任何成員。請在此指派第一位導師：對方會獲得內建的導師權限預設，之後可在課程的「成員」頁面加入其他人。',
     who: '導師',
     placeholder: '以姓名或電子郵件搜尋，或貼上 ID',
+    placeholderId: '貼上參與者 ID',
     noMatch: '沒有符合的人。',
+    pasteId: '請貼上完整的參與者 ID。',
+    noSearch: '此 Core 版本尚未支援以姓名或電子郵件搜尋（需要更新），請改為貼上參與者 ID。',
     suspended: '此參與者已被停用，Core 不會為已停用的參與者安排席位。請先將其重新啟用。',
     system: '系統參與者負責執行背景工作，不會加入任何課程。',
     agent: '這是一個代理。若指派為導師，它將擁有導師預設的全部權限。',
@@ -141,6 +144,17 @@ export default {
     emptyFiltered: '沒有符合的結果。',
     byId: '已按 ID 找到。按 Enter 開啟其頁面。',
     notFound: '找不到此 ID 的參與者。',
+    noList: {
+      title: '此 Core 版本尚未能列出人員與代理',
+      body: '瀏覽及搜尋人員與代理需要較新版本的 AIShiteru Core（具備 actor.list 的版本）。在伺服器更新之前，請按參與者 ID 開啟，或登記新的人員或代理。',
+    },
+    openById: {
+      title: '按 ID 開啟參與者',
+      placeholder: '參與者 ID',
+      submit: '開啟',
+      invalid: '這不是有效的參與者 ID。',
+      hint: '登記後會顯示對方的 ID；課程成員頁面亦會顯示該席位所屬參與者的 ID。',
+    },
   },
 
   signIn: {

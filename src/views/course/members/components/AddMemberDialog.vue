@@ -3,12 +3,16 @@
 // scope and levels; anything here overrides it. Core refuses a seat that
 // holds more than the one adding it (levels, reach, lifetime), and this form
 // warns before sending when the caller's own seat is known.
+//
+// Who is seated is given by their actor ID. A platform administrator, whom
+// the directory (actor.list) answers, can also find them by name or email,
+// which fills the ID in; anyone else pastes the ID an administrator gives them.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import type { FormInstance, FormRules } from 'element-plus'
 import { read, type ApiError, type ToolIn } from '@/api/http'
-import { ROLES, type AutonomyLevel, type Perm, type PermLevels, type Preset } from '@/api/types'
+import { ROLES, type Actor, type AutonomyLevel, type Perm, type PermLevels, type Preset } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
@@ -19,6 +23,7 @@ import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import { probeActorList, useActorSearch } from '@/views/admin/components/actorSearch'
 import RefusalAlert from './RefusalAlert.vue'
 import { fullPerms, grantProblems, permsAbove, presetDescription, presetLabel } from './seat'
 
@@ -59,6 +64,8 @@ const preset = computed(() => props.presets.find((p) => p.id === form.presetId) 
 const baseline = computed<PermLevels>(() => (preset.value ? fullPerms(preset.value.perms) : {}))
 
 function reset() {
+  foundId.value = ''
+  picked = null
   form.actorId = ''
   form.presetId = builtIn.value.find((p) => p.name === 'student')?.id ?? props.presets[0]?.id ?? ''
   form.students = []
@@ -81,7 +88,11 @@ function applyPreset() {
   form.perms = {}
 }
 watch(() => form.presetId, applyPreset)
-watch(open, (v) => v && reset())
+watch(open, (v) => {
+  if (!v) return
+  reset()
+  if (session.isAdmin) void probeActorList()
+})
 watch(
   () => props.presets,
   () => {
@@ -121,7 +132,31 @@ const problems = computed(() =>
     : [],
 )
 
-// --- The actor, looked up where the caller may (platform administrators) ------
+// --- The actor, found or looked up where the caller may (platform administrators) --
+const directory = useActorSearch()
+/** Searching by name is offered: to administrators, on a Core that has the directory. */
+const canFind = computed(() => session.isAdmin && directory.hasActorList.value !== false)
+const actorHelp = computed(() => {
+  if (!session.isAdmin) return t('members.add.actorHelp')
+  return canFind.value ? t('members.add.actorHelpFound') : t('members.add.noSearch')
+})
+/** The one picked in the search, whose ID is in the field. */
+const foundId = ref('')
+let picked: Actor | null = null
+
+function onFound(id: string | undefined) {
+  const a = (id && directory.options.value.find((x) => x.id === id)) || null
+  if (!a) {
+    // Cleared: so is the ID it put in the field.
+    if (picked && form.actorId === picked.id) form.actorId = ''
+    picked = null
+    return
+  }
+  picked = a
+  form.actorId = a.id
+  formRef.value?.clearValidate('actorId')
+}
+
 type ActorInfo = { display_name: string; kind: string; status: string } | 'missing' | null
 const actorInfo = ref<ActorInfo>(null)
 const actorLooking = ref(false)
@@ -131,7 +166,17 @@ watch(
   (id) => {
     actorInfo.value = null
     clearTimeout(lookupTimer)
+    actorLooking.value = false
+    // An ID typed over the one picked leaves the search empty again.
+    if (picked && id.trim().toLowerCase() !== picked.id) {
+      picked = null
+      foundId.value = ''
+    }
     if (!session.isAdmin || !isUuid(id)) return
+    if (picked) {
+      actorInfo.value = picked
+      return
+    }
     lookupTimer = setTimeout(async () => {
       actorLooking.value = true
       try {
@@ -221,6 +266,36 @@ function capToMine() {
 
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <!-- Who -->
+      <el-form-item v-if="canFind" :label="t('members.add.find')" for="add-member-find">
+        <el-select
+          id="add-member-find"
+          v-model="foundId"
+          filterable
+          remote
+          remote-show-suffix
+          clearable
+          fit-input-width
+          :remote-method="directory.search"
+          :loading="directory.searching.value"
+          :placeholder="t('members.add.findPlaceholder')"
+          class="add-member__find"
+          @change="onFound"
+          @visible-change="directory.onVisible"
+        >
+          <el-option v-for="a in directory.options.value" :key="a.id" :value="a.id" :label="a.display_name">
+            <div class="add-member__found">
+              <span class="add-member__found-name">{{ a.display_name }}</span>
+              <span class="add-member__found-meta">
+                <StatusTag v-if="a.status !== 'active'" vocab="actorStatus" :value="a.status" />
+                <span>{{ a.email ?? t(`enums.actorKind.${a.kind}`) }}</span>
+              </span>
+            </div>
+          </el-option>
+          <template #empty>
+            <div class="add-member__found-empty">{{ directory.error.value ?? t('members.add.findNoMatch') }}</div>
+          </template>
+        </el-select>
+      </el-form-item>
       <el-form-item :label="t('members.add.actor')" prop="actorId">
         <el-input
           v-model="form.actorId"
@@ -230,7 +305,7 @@ function capToMine() {
           name="actor_id"
           autocomplete="off"
         />
-        <div class="app-form-hint">{{ t('members.add.actorHelp') }}</div>
+        <div class="app-form-hint">{{ actorHelp }}</div>
         <div v-if="session.isAdmin && (actorLooking || actorInfo)" class="add-member__actor">
           <span v-if="actorLooking" class="app-muted">{{ t('common.labels.loading') }}</span>
           <span v-else-if="actorInfo === 'missing'" class="add-member__actor-missing">
@@ -422,6 +497,41 @@ function capToMine() {
   margin: 0 0 16px;
   color: var(--el-text-color-regular);
   line-height: 1.6;
+}
+.add-member__find {
+  width: 100%;
+}
+.add-member__found {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.add-member__found-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.add-member__found-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.add-member__found-meta > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.add-member__found-empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 .add-member__actor {
   display: flex;
