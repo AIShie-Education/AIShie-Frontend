@@ -328,6 +328,38 @@ export interface ActorListOut {
   next?: null | string
 }
 
+/** actor.list_credentials (read): An actor's credentials, newest first: tokens with their label, prefix, issuer, expiry and last use, sessions, password and linked identities, revoked ones included. Secrets are never shown. Revoke one with actor.revoke_credential. */
+export interface ActorListCredentialsIn {
+  actor_id: string
+}
+export interface ActorListCredentialsOut {
+  credentials:
+    | null
+    | {
+        created_at: string
+        expires_at?: null | string
+        id: string
+        /**
+         * who issued a token: the actor themself or an administrator; absent for other kinds and for older tokens
+         */
+        issued_by_actor_id?: null | string
+        /**
+         * the issuer's display name
+         */
+        issued_by_name?: null | string
+        kind: string
+        label?: null | string
+        last_used_at?: null | string
+        provider?: null | string
+        revoked_at?: null | string
+        subject?: null | string
+        /**
+         * the public part of a token, enough to tell which one it is
+         */
+        token_prefix?: null | string
+      }[]
+}
+
 /** actor.reactivate (write): Lift a suspension. The actor's memberships and credentials work again as they were. */
 export interface ActorReactivateIn {
   actor_id: string
@@ -354,6 +386,15 @@ export interface ActorRegisterIn {
 }
 export interface ActorRegisterOut {
   actor_id: string
+}
+
+/** actor.revoke_credential (write): Revoke one of an actor's credentials — a token that has leaked, a session left signed in — without suspending the actor: everything else it holds keeps working. It takes effect on the credential's next use. */
+export interface ActorRevokeCredentialIn {
+  actor_id: string
+  credential_id: string
+}
+export interface ActorRevokeCredentialOut {
+  ok: boolean
 }
 
 /** actor.suspend (write): Suspend an actor everywhere at once: every call it makes from now on is denied, in every course, and it cannot sign in. Its memberships, history and credentials are kept. */
@@ -499,6 +540,18 @@ export interface AssignmentPublishIn {
   course_id: string
 }
 export interface AssignmentPublishOut {
+  ok: boolean
+}
+
+/** assignment.unpublish (write): Take back an assignment published by mistake: students no longer see it and cannot submit to it. Only while nobody has a submission of any kind for it, not even a draft; after that it stays published. What the activity feed has already shown stays there. */
+export interface AssignmentUnpublishIn {
+  assignment_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+}
+export interface AssignmentUnpublishOut {
   ok: boolean
 }
 
@@ -779,6 +832,14 @@ export interface CredentialListOut {
         created_at: string
         expires_at?: null | string
         id: string
+        /**
+         * who issued a token: the actor themself or an administrator; absent for other kinds and for older tokens
+         */
+        issued_by_actor_id?: null | string
+        /**
+         * the issuer's display name
+         */
+        issued_by_name?: null | string
         kind: string
         label?: null | string
         last_used_at?: null | string
@@ -1579,6 +1640,41 @@ export interface MemberListOut {
   next?: null | string
 }
 
+/** member.lookup_actor (read): Find the registered person an email address belongs to, to seat them with member.add, or see whom an actor id names (an agent has no email: it is seated by the id an administrator gives). Give one of email or actor_id. The whole address must match, in any case; there is no partial search. */
+export interface MemberLookupActorIn {
+  /**
+   * or the actor id an administrator gave, to see whom it names
+   */
+  actor_id?: null | string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * the person's whole email address, in any case
+   */
+  email?: null | string
+}
+export interface MemberLookupActorOut {
+  /**
+   * what member.add takes
+   */
+  actor_id: string
+  display_name: string
+  /**
+   * human or agent; for display only
+   */
+  kind: string
+  /**
+   * their seat in this course, when they already have one
+   */
+  member_id?: null | string
+  /**
+   * active or suspended
+   */
+  status: string
+}
+
 /** member.pause (write): Pause a member: every call they make is denied from now until they are resumed. The same membership, with its id, permissions and history, carries on afterwards — for an agent, the same relationship. Their pending proposals stay queued but cannot be approved while they are paused. */
 export interface MemberPauseIn {
   /**
@@ -1844,6 +1940,59 @@ export interface SubmissionListOut {
       }[]
 }
 
+/** submission.record_missing (write): Record that a student has handed in nothing for a published assignment: they get a 'missing' submission, which can be graded (a zero, say). Only for a student with no submission at all, not even a draft. If they hand work in afterwards it takes the missing row over, as it does after a due date passes. */
+export interface SubmissionRecordMissingIn {
+  assignment_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  student_member_id: string
+}
+export interface SubmissionRecordMissingOut {
+  submission_id: string
+}
+
+/** submission.roster (read): Where every student stands on one assignment: each current student within the caller's scope, with their latest attempt's state, including those who have not started, whom submission.list cannot show. A student who has not started can be recorded as having handed in nothing with submission.record_missing. */
+export interface SubmissionRosterIn {
+  /**
+   * the id of the last item already seen
+   */
+  after?: null | string
+  assignment_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * at most this many items; default 50, maximum 200
+   */
+  limit?: number
+}
+export interface SubmissionRosterOut {
+  next?: null | string
+  students:
+    | null
+    | {
+        attempt?: null | number
+        display_name: string
+        /**
+         * active or paused
+         */
+        member_status: string
+        /**
+         * not_started (no submission at all), draft, submitted, late or missing: the latest attempt's
+         */
+        state: string
+        student_member_id: string
+        /**
+         * the latest attempt; absent when not started
+         */
+        submission_id?: null | string
+        submitted_at?: null | string
+      }[]
+}
+
 /** submission.set_lateness (write): Correct whether a submitted attempt counts as late — an extension granted, a clock that was wrong. It is the only thing about a submitted attempt that can change, and it is for graders, not for the student. */
 export interface SubmissionSetLatenessIn {
   /**
@@ -1942,14 +2091,17 @@ export interface ToolMap {
   'actor.issue_token': { in: ActorIssueTokenIn; out: ActorIssueTokenOut; kind: 'write' }
   'actor.link_sso': { in: ActorLinkSsoIn; out: ActorLinkSsoOut; kind: 'write' }
   'actor.list': { in: ActorListIn; out: ActorListOut; kind: 'read' }
+  'actor.list_credentials': { in: ActorListCredentialsIn; out: ActorListCredentialsOut; kind: 'read' }
   'actor.reactivate': { in: ActorReactivateIn; out: ActorReactivateOut; kind: 'write' }
   'actor.register': { in: ActorRegisterIn; out: ActorRegisterOut; kind: 'write' }
+  'actor.revoke_credential': { in: ActorRevokeCredentialIn; out: ActorRevokeCredentialOut; kind: 'write' }
   'actor.suspend': { in: ActorSuspendIn; out: ActorSuspendOut; kind: 'write' }
   'actor.update': { in: ActorUpdateIn; out: ActorUpdateOut; kind: 'write' }
   'assignment.create': { in: AssignmentCreateIn; out: AssignmentCreateOut; kind: 'write' }
   'assignment.get': { in: AssignmentGetIn; out: AssignmentGetOut; kind: 'read' }
   'assignment.list': { in: AssignmentListIn; out: AssignmentListOut; kind: 'read' }
   'assignment.publish': { in: AssignmentPublishIn; out: AssignmentPublishOut; kind: 'write' }
+  'assignment.unpublish': { in: AssignmentUnpublishIn; out: AssignmentUnpublishOut; kind: 'write' }
   'assignment.update': { in: AssignmentUpdateIn; out: AssignmentUpdateOut; kind: 'write' }
   'component.create': { in: ComponentCreateIn; out: ComponentCreateOut; kind: 'write' }
   'component.move': { in: ComponentMoveIn; out: ComponentMoveOut; kind: 'write' }
@@ -1988,6 +2140,7 @@ export interface ToolMap {
   'member.add': { in: MemberAddIn; out: MemberAddOut; kind: 'write' }
   'member.get': { in: MemberGetIn; out: MemberGetOut; kind: 'read' }
   'member.list': { in: MemberListIn; out: MemberListOut; kind: 'read' }
+  'member.lookup_actor': { in: MemberLookupActorIn; out: MemberLookupActorOut; kind: 'read' }
   'member.pause': { in: MemberPauseIn; out: MemberPauseOut; kind: 'write' }
   'member.remove': { in: MemberRemoveIn; out: MemberRemoveOut; kind: 'write' }
   'member.rescope': { in: MemberRescopeIn; out: MemberRescopeOut; kind: 'write' }
@@ -1999,6 +2152,8 @@ export interface ToolMap {
   'submission.create': { in: SubmissionCreateIn; out: SubmissionCreateOut; kind: 'write' }
   'submission.get': { in: SubmissionGetIn; out: SubmissionGetOut; kind: 'read' }
   'submission.list': { in: SubmissionListIn; out: SubmissionListOut; kind: 'read' }
+  'submission.record_missing': { in: SubmissionRecordMissingIn; out: SubmissionRecordMissingOut; kind: 'write' }
+  'submission.roster': { in: SubmissionRosterIn; out: SubmissionRosterOut; kind: 'read' }
   'submission.set_lateness': { in: SubmissionSetLatenessIn; out: SubmissionSetLatenessOut; kind: 'write' }
   'submission.submit': { in: SubmissionSubmitIn; out: SubmissionSubmitOut; kind: 'write' }
   'submission.update_draft': { in: SubmissionUpdateDraftIn; out: SubmissionUpdateDraftOut; kind: 'write' }
@@ -2026,14 +2181,17 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'actor.issue_token': { method: 'POST', path: '/v1/actors/{actor_id}/tokens', kind: 'write' },
   'actor.link_sso': { method: 'POST', path: '/v1/actors/{actor_id}/sso', kind: 'write' },
   'actor.list': { method: 'GET', path: '/v1/actors', kind: 'read' },
+  'actor.list_credentials': { method: 'GET', path: '/v1/actors/{actor_id}/credentials', kind: 'read' },
   'actor.reactivate': { method: 'POST', path: '/v1/actors/{actor_id}/reactivate', kind: 'write' },
   'actor.register': { method: 'POST', path: '/v1/actors', kind: 'write' },
+  'actor.revoke_credential': { method: 'POST', path: '/v1/actors/{actor_id}/credentials/{credential_id}/revoke', kind: 'write' },
   'actor.suspend': { method: 'POST', path: '/v1/actors/{actor_id}/suspend', kind: 'write' },
   'actor.update': { method: 'POST', path: '/v1/actors/{actor_id}', kind: 'write' },
   'assignment.create': { method: 'POST', path: '/v1/courses/{course_id}/assignments', kind: 'write' },
   'assignment.get': { method: 'GET', path: '/v1/courses/{course_id}/assignments/{assignment_id}', kind: 'read' },
   'assignment.list': { method: 'GET', path: '/v1/courses/{course_id}/assignments', kind: 'read' },
   'assignment.publish': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/publish', kind: 'write' },
+  'assignment.unpublish': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/unpublish', kind: 'write' },
   'assignment.update': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}', kind: 'write' },
   'component.create': { method: 'POST', path: '/v1/courses/{course_id}/components', kind: 'write' },
   'component.move': { method: 'POST', path: '/v1/courses/{course_id}/components/{component_id}/move', kind: 'write' },
@@ -2072,6 +2230,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'member.add': { method: 'POST', path: '/v1/courses/{course_id}/members', kind: 'write' },
   'member.get': { method: 'GET', path: '/v1/courses/{course_id}/members/{member_id}', kind: 'read' },
   'member.list': { method: 'GET', path: '/v1/courses/{course_id}/members', kind: 'read' },
+  'member.lookup_actor': { method: 'GET', path: '/v1/courses/{course_id}/actor-lookup', kind: 'read' },
   'member.pause': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/pause', kind: 'write' },
   'member.remove': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/remove', kind: 'write' },
   'member.rescope': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/scope', kind: 'write' },
@@ -2083,6 +2242,8 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'submission.create': { method: 'POST', path: '/v1/courses/{course_id}/submissions', kind: 'write' },
   'submission.get': { method: 'GET', path: '/v1/courses/{course_id}/submissions/{submission_id}', kind: 'read' },
   'submission.list': { method: 'GET', path: '/v1/courses/{course_id}/submissions', kind: 'read' },
+  'submission.record_missing': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/missing', kind: 'write' },
+  'submission.roster': { method: 'GET', path: '/v1/courses/{course_id}/assignments/{assignment_id}/roster', kind: 'read' },
   'submission.set_lateness': { method: 'POST', path: '/v1/courses/{course_id}/submissions/{submission_id}/lateness', kind: 'write' },
   'submission.submit': { method: 'POST', path: '/v1/courses/{course_id}/submissions/{submission_id}/submit', kind: 'write' },
   'submission.update_draft': { method: 'POST', path: '/v1/courses/{course_id}/submissions/{submission_id}', kind: 'write' },
