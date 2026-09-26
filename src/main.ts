@@ -39,4 +39,11 @@ onUnauthenticated(() => {
   }
 })
 
-app.mount('#app')
+// index.html shows a loading screen in #app until the first page can be
+// shown: mounting replaces it once the first navigation has settled (the
+// sign-in check answered and the page's code loaded), rather than leaving an
+// empty frame meanwhile. A navigation that failed still mounts the app.
+router
+  .isReady()
+  .catch(() => undefined)
+  .then(() => app.mount('#app'))

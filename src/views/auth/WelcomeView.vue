@@ -4,7 +4,7 @@
 // one arrives it is read and taken out of the address, so that it stays in
 // neither the address bar nor the history. The person chooses a password,
 // and POST /v1/auth/invite sets it and signs this browser in as them.
-import { computed, onBeforeUnmount, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -21,14 +21,6 @@ const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 const ui = useUiStore()
-
-// The app's frame names its pages; this one is outside it, as sign-in is.
-watchEffect(() => {
-  document.title = `${t('auth.invite.title')} · AIShiteru`
-})
-onBeforeUnmount(() => {
-  document.title = 'AIShiteru'
-})
 
 const formRef = ref<FormInstance>()
 const form = reactive({ password: '', repeat: '' })
