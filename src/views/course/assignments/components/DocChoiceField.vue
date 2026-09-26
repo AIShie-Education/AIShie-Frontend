@@ -133,8 +133,11 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
         :disabled="disabled || requirePublished"
         @update:model-value="(v: string | number | boolean) => set({ publish: !!v })"
       >
-        {{ t('assignments.form.doc.publishNow') }}
+        {{ t(`assignments.form.doc.publishNow.${kind}`) }}
       </el-checkbox>
+      <div v-if="kind === 'rubric'" class="app-form-hint doc-choice__publish-hint">
+        {{ t('assignments.form.doc.rubricReaders') }}
+      </div>
     </div>
   </div>
 </template>
@@ -192,5 +195,8 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
 }
 .doc-choice__new :deep(.el-checkbox__label) {
   white-space: normal;
+}
+.doc-choice__publish-hint {
+  margin-top: -4px;
 }
 </style>

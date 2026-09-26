@@ -14,6 +14,19 @@ export interface DocChoice {
   publish: boolean
 }
 
-export function emptyDocChoice(id?: string | null): DocChoice {
-  return { mode: id ? 'existing' : 'none', id: id ?? undefined, title: '', body: '', files: [], publish: true }
+/**
+ * A choice of the document `id` (or of none). A new document is published at
+ * once by default when it is instructions, which students read once the
+ * assignment is published; not when it is a rubric, which the built-in
+ * student preset cannot read anyway, so that publishing one is a choice.
+ */
+export function emptyDocChoice(kind: 'instructions' | 'rubric', id?: string | null): DocChoice {
+  return {
+    mode: id ? 'existing' : 'none',
+    id: id ?? undefined,
+    title: '',
+    body: '',
+    files: [],
+    publish: kind === 'instructions',
+  }
 }

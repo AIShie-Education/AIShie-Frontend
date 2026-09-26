@@ -68,16 +68,32 @@ export default {
       newTitle: '文件標題',
       newBody: '在此撰寫（支援 Markdown）',
       newFile: '附加檔案（選填）',
-      publishNow: '立即發佈，讓學生在作業發佈後可以閱讀',
+      publishNow: {
+        instructions: '立即發佈，讓學生在作業發佈後可以閱讀',
+        rubric: '立即發佈',
+      },
+      rubricReaders:
+        '發佈後，席位具備「閱讀評分準則」權限的成員便可閱讀，預設為導師、助教及評分代理。學生則不能閱讀：內建的學生權限預設並不包括閱讀評分準則。未發佈時，只有可閱讀草稿的成員（預設為導師及助教）看得到。',
       needContent: '請輸入內容或附加檔案',
       defaultInstructions: '{title} — 作業說明',
       defaultRubric: '{title} — 評分準則',
       instructionsPublishedHint: '此作業已發佈，因此它的作業說明必須有已發佈的版本。',
     },
-    created: '已建立作業，目前尚未發佈。',
-    saved: '已儲存作業。',
+    created: {
+      plain: '已建立作業，目前尚未發佈。',
+      instructions: '已建立作業（連同作業說明），目前尚未發佈。',
+      rubric: '已建立作業（連同評分準則），目前尚未發佈。',
+      both: '已建立作業（連同作業說明及評分準則），目前尚未發佈。',
+    },
+    saved: {
+      plain: '已儲存作業。',
+      instructions: '已儲存作業（連同新的作業說明）。',
+      rubric: '已儲存作業（連同新的評分準則）。',
+      both: '已儲存作業（連同新的作業說明及評分準則）。',
+    },
     nothingChanged: '沒有任何更改。',
-    docCreated: '已建立「{title}」。',
+    quoted: '「{title}」',
+    docsKept: '已建立{titles}，但作業尚未儲存。文件現已在此選取，再次儲存不會重複建立。',
     docNotPublished:
       '已建立「{title}」，但它還沒有已發佈的版本（發佈失敗或正在等待批准），因此作業尚未儲存。待它發佈後再儲存一次。',
     docProposed:

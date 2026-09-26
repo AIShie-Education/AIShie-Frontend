@@ -71,16 +71,33 @@ export default {
       newTitle: 'Document title',
       newBody: 'Write it here (Markdown)',
       newFile: 'Attach a file (optional)',
-      publishNow: 'Publish it now, so students can read it once the assignment is published',
+      publishNow: {
+        instructions: 'Publish it now, so students can read it once the assignment is published',
+        rubric: 'Publish it now',
+      },
+      rubricReaders:
+        'Publishing lets members whose seat grants “Read rubrics” read it: by default instructors, teaching assistants and grader agents. Not students: the built-in student preset cannot read rubrics. Unpublished, only those who may read drafts (instructors and TAs by default) see it.',
       needContent: 'Write some text or attach a file',
       defaultInstructions: '{title} — instructions',
       defaultRubric: '{title} — rubric',
       instructionsPublishedHint: 'This assignment is published, so its instructions must have a published version.',
     },
-    created: 'Assignment created. It is not published yet.',
-    saved: 'Assignment saved.',
+    created: {
+      plain: 'Assignment created. It is not published yet.',
+      instructions: 'Assignment created (with its instructions). It is not published yet.',
+      rubric: 'Assignment created (with its rubric). It is not published yet.',
+      both: 'Assignment created (with its instructions and rubric). It is not published yet.',
+    },
+    saved: {
+      plain: 'Assignment saved.',
+      instructions: 'Assignment saved (with its new instructions).',
+      rubric: 'Assignment saved (with its new rubric).',
+      both: 'Assignment saved (with its new instructions and rubric).',
+    },
     nothingChanged: 'Nothing was changed.',
-    docCreated: '“{title}” created.',
+    quoted: '“{title}”',
+    docsKept:
+      '{titles} was created, but the assignment was not saved. It is chosen here now, so saving again does not create it a second time. | {titles} were created, but the assignment was not saved. They are chosen here now, so saving again does not create them a second time.',
     docNotPublished:
       '“{title}” was created, but it has no published version yet (publishing it failed or waits for approval), so the assignment has not been saved. Save again once it is published.',
     docProposed:
