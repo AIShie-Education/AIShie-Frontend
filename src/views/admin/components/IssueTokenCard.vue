@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// actor.issue_token: an API token for another actor, shown once.
+// actor.issue_token: an API token for another actor, shown once. Says
+// `issued` when Core has made one, for the list of their tokens to show it.
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -8,6 +9,7 @@ import { useWrite } from '@/composables/useWrite'
 import TokenRevealDialog from './TokenRevealDialog.vue'
 
 const props = defineProps<{ actor: Actor; isSelf?: boolean; blockedReason?: string | null }>()
+const emit = defineEmits<{ issued: [] }>()
 const { t } = useI18n()
 
 const PRESETS = ['30', '90', '365', 'never', 'custom'] as const
@@ -61,6 +63,7 @@ async function submit() {
   issued.value = out.result
   revealing.value = true
   form.label = ''
+  emit('issued')
 }
 
 /** The token is not kept any longer than the dialog that shows it. */
@@ -74,14 +77,7 @@ function forget() {
     <h2 class="app-card__title">{{ t('admin.token.title') }}</h2>
     <p class="app-muted token__intro">{{ isSelf ? t('admin.token.introSelf') : t('admin.token.intro') }}</p>
     <el-alert v-if="blockedReason" type="info" :closable="false" show-icon :title="blockedReason" />
-    <el-form
-      v-else
-      ref="formRef"
-      :model="form"
-      :rules="rules"
-      label-position="top"
-      @submit.prevent="submit"
-    >
+    <el-form v-else ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <el-alert
         v-if="actor.status !== 'active'"
         type="warning"
@@ -101,12 +97,28 @@ function forget() {
               v-for="p in PRESETS"
               :key="p"
               :value="p"
-              :label="p === 'never' ? t('admin.token.never') : p === 'custom' ? t('admin.token.custom') : t('admin.token.days', { n: p })"
+              :label="
+                p === 'never'
+                  ? t('admin.token.never')
+                  : p === 'custom'
+                    ? t('admin.token.custom')
+                    : t('admin.token.days', { n: p })
+              "
             />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="form.expiry === 'custom'" :label="t('admin.token.customDays')" prop="days" class="token__expiry-item">
-          <el-input v-model="form.days" inputmode="numeric" :placeholder="t('admin.token.daysPlaceholder')" class="token__days" />
+        <el-form-item
+          v-if="form.expiry === 'custom'"
+          :label="t('admin.token.customDays')"
+          prop="days"
+          class="token__expiry-item"
+        >
+          <el-input
+            v-model="form.days"
+            inputmode="numeric"
+            :placeholder="t('admin.token.daysPlaceholder')"
+            class="token__days"
+          />
         </el-form-item>
       </div>
       <div class="token__actions">

@@ -312,6 +312,69 @@ export default {
     doneCopying: 'Done',
   },
 
+  credentials: {
+    title: 'Tokens and sign-ins',
+    introAgent:
+      'The API tokens this agent calls Core with. Revoking one stops that token from its next call without suspending the agent: its other tokens and its seats are kept.',
+    introHuman:
+      'Every way into this account: API tokens, browser sessions, a password, single sign-on and an invitation link. Revoke one without suspending them: their other credentials and their seats are kept.',
+    self: 'These are your own. Revoke them on your Account page, which can tell which session is the one you are using now.',
+    selfLink: 'Open my account',
+    showInactive: 'Show revoked and expired ({n})',
+    tokens: 'API tokens',
+    signIns: 'Sessions and other sign-ins',
+    noTokens: 'No API tokens.',
+    noLiveTokens: 'No live API tokens.',
+    noSignIns: 'No live sessions or sign-ins.',
+    col: {
+      label: 'Label',
+      token: 'Token',
+      issuedBy: 'Issued by',
+      created: 'Created',
+      expires: 'Expires',
+      lastUsed: 'Last used',
+    },
+    unlabelled: 'No label',
+    selfIssued: 'Self-issued',
+    issuerUnknown: 'Not recorded',
+    neverUsed: 'Never used',
+    revokedAt: 'Revoked',
+    state: {
+      active: 'Active',
+      revoked: 'Revoked',
+      expired: 'Expired',
+    },
+    sessionVia: {
+      password: 'Signed in with a password',
+      sso: 'Signed in through {provider}',
+      invite: 'Signed in by accepting an invitation',
+    },
+    subject: 'Account',
+    linkedBy: 'Linked by',
+    invitedBy: 'Invited by',
+    note: 'Note',
+    revoke: 'Revoke',
+    revoked: 'Revoked',
+    signedOut: 'Signed out',
+    missing:
+      'This Core cannot list an actor’s tokens and sign-ins yet (it needs updating). Until it is, a leaked token can be stopped only by suspending the actor.',
+    confirm: {
+      titleToken: 'Revoke the token “{label}”?',
+      titleSession: 'Sign out this browser session?',
+      title: 'Revoke this credential?',
+      api_token: 'Anything using {token} is refused from its next call.',
+      irreversible:
+        'This cannot be undone: a revoked token never works again. If {name} still needs one, issue a new token.',
+      keeps: 'Nothing else changes: {name} keeps their other tokens and sign-ins, and their seats.',
+      session: 'The browser signed in with this session is signed out on its next request. {name} can sign in again.',
+      password:
+        '{name} can no longer sign in with a password until they set a new one, on their Account page while still signed in or through an invitation link.',
+      sso: '{name} can no longer sign in through {provider}, until the identity is linked to them again.',
+      invite: 'The invitation link stops working. A new one can be made at any time.',
+      other: 'It stops working from its next use.',
+    },
+  },
+
   edit: {
     title: 'Edit registration',
     intro: 'Correct their name, or give them an email to sign in with. The kind and the platform role do not change.',
