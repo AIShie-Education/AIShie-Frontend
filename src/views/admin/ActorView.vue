@@ -102,6 +102,12 @@ const standingBlocker = computed<string | null>(() => {
   if (roleBlocked.value) return t('admin.actor.cannot.role')
   return null
 })
+/** Why the owner cannot be set: as for its standing, and an agent with a platform role is owned by nobody. */
+const ownerBlocker = computed<string | null>(() => {
+  if (standingBlocker.value) return standingBlocker.value
+  if (actor.value?.platform_role && !actor.value.owner_actor_id) return t('admin.actor.cannot.ownerRole')
+  return null
+})
 /** Why credentials cannot be given or taken away; one's own account is fine. */
 const credentialBlocker = computed<string | null>(() => {
   if (isSystem.value) return t('admin.actor.cannot.system')
@@ -323,15 +329,9 @@ async function reactivate() {
                   <IdText v-else :id="actor.owner_actor_id" />
                 </router-link>
                 <span v-else class="app-muted">{{ t('admin.actor.noOwner') }}</span>
-                <el-tooltip :disabled="!standingBlocker" :content="standingBlocker ?? ''" placement="top">
+                <el-tooltip :disabled="!ownerBlocker" :content="ownerBlocker ?? ''" placement="top">
                   <span>
-                    <el-button
-                      link
-                      type="primary"
-                      size="small"
-                      :disabled="!!standingBlocker"
-                      @click="settingOwner = true"
-                    >
+                    <el-button link type="primary" size="small" :disabled="!!ownerBlocker" @click="settingOwner = true">
                       {{ actor.owner_actor_id ? t('admin.actor.changeOwner') : t('admin.actor.setOwner') }}
                     </el-button>
                   </span>

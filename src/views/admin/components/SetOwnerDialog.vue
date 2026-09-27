@@ -3,8 +3,11 @@
 // An agent someone owns acts only as their delegate, seated by them
 // (member.add_delegate) and never with more than their seat. Core refuses
 // the change while the agent is seated in a course that is not archived, and
-// revokes every token and session the agent has when it goes through, since
-// whoever owned it before may hold them: both are said before, not after.
+// for an agent that holds a platform role (an agent someone owns holds none).
+// When it goes through, every credential the agent has (tokens, sessions,
+// password, invitation, linked identity) is revoked, since whoever owned it
+// before may hold them, and the previous owner's requests to seat it that
+// wait for a decision are cancelled: all this is said before, not after.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Actor } from '@/api/types'
@@ -30,7 +33,9 @@ watch(open, (v) => {
 })
 
 const ownerName = computed(() => props.actor.owner_name?.trim() || null)
-const canSubmit = computed(() => !pending.value && (mode.value === 'clear' || !!ownerId.value))
+/** An agent that holds a platform role is given no owner (taking one away is fine). */
+const hasRole = computed(() => !!props.actor.platform_role && mode.value === 'set')
+const canSubmit = computed(() => !pending.value && (mode.value === 'clear' || (!!ownerId.value && !hasRole.value)))
 
 async function submit() {
   if (!canSubmit.value) return
@@ -59,6 +64,14 @@ async function submit() {
     :close-on-click-modal="!pending"
   >
     <p class="set-owner__intro">{{ t('admin.setOwner.intro') }}</p>
+    <el-alert
+      v-if="hasRole"
+      type="error"
+      :closable="false"
+      show-icon
+      :title="t('admin.setOwner.role')"
+      class="set-owner__alert set-owner__role"
+    />
     <p v-if="hasOwner" class="set-owner__now">
       {{ t('admin.setOwner.current', { owner: ownerName ?? t('admin.actor.ownerUnnamed') }) }}
     </p>
@@ -88,6 +101,7 @@ async function submit() {
       <ul class="set-owner__list">
         <li>{{ t('admin.setOwner.seated') }}</li>
         <li>{{ t('admin.setOwner.revokes') }}</li>
+        <li v-if="hasOwner">{{ t('admin.setOwner.requests') }}</li>
         <li>{{ t('admin.setOwner.archived') }}</li>
       </ul>
     </el-alert>

@@ -3,7 +3,8 @@
 // The kind and the platform role given here are theirs for good; the name and
 // the email can be corrected later (actor.update, on their page). An agent may
 // be given an owner, a person whose delegate alone it will be; that can be
-// changed later too (actor.set_owner).
+// changed later too (actor.set_owner). An agent with an owner holds no
+// platform role, so the two are not offered together.
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -29,6 +30,11 @@ const form = reactive({ kind: 'human' as 'human' | 'agent', display_name: '', em
 /** The person chosen to own the agent, for what the page says next. */
 const owner = ref<Actor | null>(null)
 const { run, pending } = useWrite('actor.register')
+/** An agent given an owner holds no platform role (Core refuses the pair). */
+const owned = computed(() => form.kind === 'agent' && !!form.owner)
+watch(owned, (v) => {
+  if (v) form.admin = false
+})
 /** Those already registered under the name typed (see below). */
 const sameName = ref<ActorRow[]>([])
 /** The name whose check stopped short of all its matches, and how many it read. */
@@ -201,9 +207,15 @@ async function submit() {
         </div>
       </el-form-item>
       <el-form-item>
-        <el-checkbox v-model="form.admin" :disabled="!session.isRoot" :label="t('admin.register.admin')" />
+        <el-checkbox v-model="form.admin" :disabled="!session.isRoot || owned" :label="t('admin.register.admin')" />
         <div class="app-form-hint register__block">
-          {{ session.isRoot ? t('admin.register.adminHint') : t('admin.register.adminRootOnly') }}
+          {{
+            !session.isRoot
+              ? t('admin.register.adminRootOnly')
+              : owned
+                ? t('admin.register.adminOwned')
+                : t('admin.register.adminHint')
+          }}
         </div>
       </el-form-item>
       <el-alert type="info" :closable="false" show-icon :title="t('admin.register.permanent')" />

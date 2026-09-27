@@ -238,6 +238,7 @@ export default {
     adminHint:
       'Administrators create courses and register and manage people and agents. Inside courses they are governed by their seats like anyone else. It can be given only now, when registering.',
     adminRootOnly: 'Only root can make an administrator.',
+    adminOwned: 'An agent someone owns holds no platform role: leave the owner empty to make it an administrator.',
     permanent:
       'The kind and the platform role cannot be changed after registering. The name and the email can be corrected on their page.',
     owner: 'Owner',
@@ -307,6 +308,7 @@ export default {
       role: 'Only root acts on someone who holds a platform role.',
       system:
         'The system account runs background jobs. It is never suspended, issued a token or linked to an identity.',
+      ownerRole: 'It holds a platform role, and an agent someone owns holds none.',
     },
   },
 
@@ -339,7 +341,9 @@ export default {
     seated:
       'This is refused while the agent is seated in a course that is not archived: its owner takes it out first (My agents → Take out), or a course manager removes its seat.',
     revokes:
-      'Every token and session the agent has is revoked at once, since whoever owned it before may hold them. Its runtime stops until it is given a new token.',
+      'Every credential the agent has is revoked at once — its tokens, sessions, password, invitation and linked sign-in identity — since whoever owned it before may hold them. Its runtime stops until it is given a new token.',
+    requests: 'Requests its previous owner made to seat it in a course, still waiting for a decision, are cancelled.',
+    role: 'An agent that holds a platform role cannot be given an owner: an agent someone owns holds none.',
     archived: 'A seat it keeps in an archived course counts for nothing from then on.',
     submit: 'Set owner',
     submitClear: 'Take the owner away',
