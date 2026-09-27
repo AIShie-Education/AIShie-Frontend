@@ -1,13 +1,14 @@
 <script setup lang="ts">
 // agent.create: registering an agent of one's own. Only its name is asked
-// for: nothing about where or how it runs is kept here. A refusal at the
-// limit tells how many one may have (noteAgentLimit), which the list then
-// shows as "n of N".
+// for: nothing about where or how it runs is kept here. agent.list has said
+// how many one may have and whether one may register them oneself; where
+// either stands in the way, the dialog says so and does not offer to create.
+// A refusal at the limit tells the limit too (noteAgentLimit).
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useWrite } from '@/composables/useWrite'
-import { knownAgentLimit, noteAgentLimit } from './agents'
+import { createBlock, knownAgentLimit, noteAgentLimit } from './agents'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ counted: number }>()
@@ -22,7 +23,7 @@ watch(open, (v) => {
   if (v) form.name = ''
 })
 
-const atLimit = computed(() => knownAgentLimit.value !== null && props.counted >= knownAgentLimit.value)
+const blocked = computed(() => createBlock(props.counted))
 
 const rules = computed<FormRules>(() => ({
   name: [
@@ -34,7 +35,7 @@ const rules = computed<FormRules>(() => ({
 }))
 
 async function submit() {
-  if (pending.value) return
+  if (pending.value || blocked.value) return
   if (!(await formRef.value?.validate().catch(() => false))) return
   const name = form.name.trim()
   const out = await run({ display_name: name }, { success: t('agents.create.done', { name }) })
@@ -58,11 +59,15 @@ async function submit() {
   >
     <p class="create-agent__intro">{{ t('agents.create.intro') }}</p>
     <el-alert
-      v-if="atLimit"
+      v-if="blocked"
       type="warning"
       :closable="false"
       show-icon
-      :title="t('agents.limit.reached', { limit: knownAgentLimit ?? 0 })"
+      :title="
+        blocked === 'atLimit'
+          ? t('agents.limit.reached', { limit: knownAgentLimit ?? 0 })
+          : t('agents.limit.noSelfService')
+      "
       class="create-agent__alert"
     />
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
@@ -84,7 +89,9 @@ async function submit() {
     </ol>
     <template #footer>
       <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>
-      <el-button type="primary" :loading="pending" @click="submit">{{ t('agents.create.submit') }}</el-button>
+      <el-button type="primary" :loading="pending" :disabled="!!blocked" @click="submit">
+        {{ t('agents.create.submit') }}
+      </el-button>
     </template>
   </el-dialog>
 </template>

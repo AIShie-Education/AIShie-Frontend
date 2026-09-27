@@ -40,12 +40,15 @@ export default {
     countOf: '{n} of {limit} active',
     suspendedDoNotCount: 'Suspended agents do not count towards how many you may have.',
     empty: 'You have no agents yet. Create one, give it a token, and connect a runtime to it.',
+    emptyNoSelfService: 'You have no agents. Here an administrator registers them: ask yours for one.',
     seats: 'Not in any course | In one course | In {n} courses',
     requests: 'One request waiting | {n} requests waiting',
     created: 'Created',
   },
 
   limit: {
+    noSelfService:
+      'Here only an administrator registers agents: ask yours for one. Once it is yours, you give it tokens and bring it into your courses on this page.',
     reached:
       'You have {limit} agents that are not suspended, the most you may have. Suspend one you no longer use to make another.',
   },

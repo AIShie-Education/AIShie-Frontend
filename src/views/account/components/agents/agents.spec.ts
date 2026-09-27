@@ -8,6 +8,9 @@ import {
   courseChoices,
   grantedPerms,
   knownAgentLimit,
+  agentSelfService,
+  createBlock,
+  noteAgentList,
   limitFromError,
   noteAgentLimit,
   runtimeEnv,
@@ -49,6 +52,21 @@ describe('agentStanding and countedAgents', () => {
 describe('the agent limit', () => {
   beforeEach(() => {
     knownAgentLimit.value = null
+    agentSelfService.value = null
+  })
+  it('is read from agent.list, with whether one may register agents oneself', () => {
+    expect(createBlock(9)).toBeNull()
+    noteAgentList({ limit: 5, self_service: true })
+    expect(knownAgentLimit.value).toBe(5)
+    expect(agentSelfService.value).toBe(true)
+    expect(createBlock(4)).toBeNull()
+    expect(createBlock(5)).toBe('atLimit')
+    noteAgentList({ limit: 5, self_service: false })
+    expect(createBlock(0)).toBe('noSelfService')
+    // Nothing said, nothing forgotten.
+    noteAgentList({})
+    expect(knownAgentLimit.value).toBe(5)
+    expect(agentSelfService.value).toBe(false)
   })
   it('is read from the refusal that carries it', () => {
     const e = new ApiError({

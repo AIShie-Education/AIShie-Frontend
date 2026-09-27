@@ -106,6 +106,7 @@ export default {
     pick: '代理',
     pickPlaceholder: '選擇你的一個代理',
     none: '你沒有可帶入本課程的代理，請改為新建一個。',
+    noneAvailable: '你沒有可帶入本課程的代理。',
     alreadyHere: '已在本課程',
     suspended: '已停用',
     name: '名稱',

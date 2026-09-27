@@ -115,6 +115,7 @@ export default {
     pick: 'Agent',
     pickPlaceholder: 'Choose one of your agents',
     none: 'None of your agents can be brought in here. Create a new one instead.',
+    noneAvailable: 'None of your agents can be brought in here.',
     alreadyHere: 'Already in this course',
     suspended: 'Suspended',
     name: 'Name',

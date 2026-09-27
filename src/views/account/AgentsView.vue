@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // My agents: the agents the caller owns (agent.list), with whether each is
 // connected (last_seen_at), where it is seated and what waits for approval,
-// and registering a new one (agent.create). Each opens on its own page
+// and registering a new one (agent.create) — not offered when Core says only
+// an administrator registers agents here, and held back at the limit, with
+// the reason said. Each opens on its own page
 // (account-agent). Only a person owns agents: an agent signed in here is told
 // so, and offered nothing.
 import { computed, ref } from 'vue'
@@ -17,7 +19,7 @@ import PresenceText from '@/components/PresenceText.vue'
 import TimeText from '@/components/TimeText.vue'
 import AboutAgentsCard from './components/agents/AboutAgentsCard.vue'
 import CreateAgentDialog from './components/agents/CreateAgentDialog.vue'
-import { agentStanding, countedAgents, knownAgentLimit } from './components/agents/agents'
+import { agentStanding, countedAgents, createBlock, knownAgentLimit, noteAgentList } from './components/agents/agents'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -26,7 +28,14 @@ const session = useSessionStore()
 /** Only a person owns agents; whether the caller is one is known once me.get has answered. */
 const isHuman = computed(() => !session.me || session.me.kind === 'human')
 
-const list = useAsync(() => read('agent.list', {}).then((o) => o.agents ?? []), { keepData: true })
+const list = useAsync(
+  () =>
+    read('agent.list', {}).then((o) => {
+      noteAgentList(o)
+      return o.agents ?? []
+    }),
+  { keepData: true },
+)
 const agents = computed<AgentSummary[]>(() => list.data.value ?? [])
 const counted = computed(() => countedAgents(agents.value))
 const countText = computed(() =>
@@ -35,6 +44,8 @@ const countText = computed(() =>
     : t('agents.list.count', { n: counted.value }, counted.value),
 )
 const suspendedCount = computed(() => agents.value.length - counted.value)
+/** Why a new agent cannot be registered now, once agent.list has said. */
+const blocked = computed(() => (list.data.value ? createBlock(counted.value) : null))
 
 const creating = ref(false)
 function onCreated(actorId: string) {
@@ -50,10 +61,19 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
 <template>
   <div class="agents-view">
     <PageHeader :title="t('agents.title')" :subtitle="t('agents.subtitle')" :back="{ name: 'account' }">
-      <el-button v-if="isHuman" type="primary" @click="creating = true">
-        <el-icon><Plus /></el-icon>
-        <span>{{ t('agents.list.new') }}</span>
-      </el-button>
+      <el-tooltip
+        v-if="isHuman && blocked !== 'noSelfService'"
+        :disabled="!blocked"
+        :content="t('agents.limit.reached', { limit: knownAgentLimit ?? 0 })"
+        placement="bottom"
+      >
+        <span>
+          <el-button type="primary" :disabled="!!blocked" @click="creating = true">
+            <el-icon><Plus /></el-icon>
+            <span>{{ t('agents.list.new') }}</span>
+          </el-button>
+        </span>
+      </el-tooltip>
     </PageHeader>
 
     <el-alert
@@ -65,19 +85,32 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
       class="agents-view__alert"
     />
 
-    <AboutAgentsCard v-else-if="list.data.value && !agents.length" />
+    <el-alert
+      v-else-if="blocked"
+      :type="blocked === 'atLimit' ? 'warning' : 'info'"
+      :closable="false"
+      show-icon
+      :title="
+        blocked === 'atLimit'
+          ? t('agents.limit.reached', { limit: knownAgentLimit ?? 0 })
+          : t('agents.limit.noSelfService')
+      "
+      class="agents-view__alert"
+    />
+
+    <AboutAgentsCard v-if="isHuman && list.data.value && !agents.length" />
 
     <section v-if="isHuman" class="app-card">
       <h2 class="app-card__title">
         <span>{{ t('agents.list.title') }}</span>
-        <span v-if="agents.length" class="agents-list__count">{{ countText }}</span>
+        <span v-if="agents.length || knownAgentLimit !== null" class="agents-list__count">{{ countText }}</span>
       </h2>
       <p v-if="suspendedCount" class="app-form-hint agents-list__hint">{{ t('agents.list.suspendedDoNotCount') }}</p>
       <AsyncState
         :loading="list.loading.value && !list.data.value"
         :error="list.data.value ? null : list.error.value"
         :empty="!agents.length"
-        :empty-text="t('agents.list.empty')"
+        :empty-text="blocked === 'noSelfService' ? t('agents.list.emptyNoSelfService') : t('agents.list.empty')"
         @retry="list.reload"
       >
         <ul class="agents-list">

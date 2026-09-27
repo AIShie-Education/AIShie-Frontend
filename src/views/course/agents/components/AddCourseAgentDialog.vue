@@ -18,6 +18,7 @@ import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import RefusalAlert from '@/views/course/members/components/RefusalAlert.vue'
+import { countedAgents, createBlock, knownAgentLimit, noteAgentList } from '@/views/account/components/agents/agents'
 import { levelOf } from './courseAgents'
 
 const open = defineModel<boolean>({ default: false })
@@ -41,9 +42,23 @@ const newName = ref('')
 /** An agent made here whose seating has not gone through yet: tried again, it is not made twice. */
 const created = ref<{ id: string; name: string } | null>(null)
 
-const agents = useAsync<AgentSummary[]>(() => read('agent.list', {}).then((o) => o.agents ?? []), {
-  immediate: false,
-})
+const agents = useAsync<AgentSummary[]>(
+  () =>
+    read('agent.list', {}).then((o) => {
+      noteAgentList(o)
+      return o.agents ?? []
+    }),
+  { immediate: false },
+)
+/** Why a new agent cannot be made here now: only an administrator registers them, or the caller is at the limit. */
+const createBlocked = computed(() => (agents.data.value ? createBlock(countedAgents(agents.data.value)) : null))
+const createBlockedText = computed(() =>
+  createBlocked.value === 'atLimit'
+    ? t('agents.limit.reached', { limit: knownAgentLimit.value ?? 0 })
+    : createBlocked.value === 'noSelfService'
+      ? t('agents.limit.noSelfService')
+      : '',
+)
 const defaults = useAsync<DelegateDefaults>(
   () => read('member.delegate_defaults', { course_id: props.courseId, preset: SEAT.preset }),
   { immediate: false },
@@ -72,9 +87,12 @@ const available = computed(() => choices.value.filter((a) => !unavailable(a)))
 watch(
   () => agents.data.value,
   (list) => {
-    if (list && !available.value.length && !created.value) mode.value = 'create'
+    if (list && !available.value.length && !created.value && !createBlocked.value) mode.value = 'create'
   },
 )
+watch(createBlocked, (b) => {
+  if (b && mode.value === 'create' && !created.value) mode.value = 'existing'
+})
 
 /** What it would hold that is not denied, in the ladder's order of permissions. */
 const granted = computed(() => {
@@ -100,7 +118,9 @@ const chosenName = computed(() =>
     : (choices.value.find((a) => a.actor_id === agentId.value)?.display_name ?? ''),
 )
 const ready = computed(() =>
-  mode.value === 'create' ? !!newName.value.trim() && newName.value.trim().length <= 200 : !!agentId.value,
+  mode.value === 'create'
+    ? !createBlocked.value && !!newName.value.trim() && newName.value.trim().length <= 200
+    : !!agentId.value,
 )
 
 async function submit() {
@@ -152,8 +172,11 @@ async function submit() {
       <el-form-item :label="t('courseAgents.addDialog.source')">
         <el-radio-group v-model="mode">
           <el-radio-button value="existing">{{ t('courseAgents.addDialog.existing') }}</el-radio-button>
-          <el-radio-button value="create">{{ t('courseAgents.addDialog.create') }}</el-radio-button>
+          <el-radio-button value="create" :disabled="!!createBlocked && !created">
+            {{ t('courseAgents.addDialog.create') }}
+          </el-radio-button>
         </el-radio-group>
+        <div v-if="createBlocked && !created" class="app-form-hint add-agent__stack">{{ createBlockedText }}</div>
       </el-form-item>
 
       <el-form-item v-if="mode === 'existing'" :label="t('courseAgents.addDialog.pick')" for="add-agent-pick">
@@ -174,7 +197,7 @@ async function submit() {
             v-model="agentId"
             class="add-agent__select"
             :placeholder="t('courseAgents.addDialog.pickPlaceholder')"
-            :no-data-text="t('courseAgents.addDialog.none')"
+            :no-data-text="createBlocked ? t('courseAgents.addDialog.noneAvailable') : t('courseAgents.addDialog.none')"
             popper-class="add-agent-popper"
           >
             <el-option
@@ -192,7 +215,7 @@ async function submit() {
             </el-option>
           </el-select>
           <div v-if="agents.data.value && !available.length" class="app-form-hint">
-            {{ t('courseAgents.addDialog.none') }}
+            {{ createBlocked ? t('courseAgents.addDialog.noneAvailable') : t('courseAgents.addDialog.none') }}
           </div>
         </div>
       </el-form-item>

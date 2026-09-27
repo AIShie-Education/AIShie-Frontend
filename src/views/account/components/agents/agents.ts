@@ -38,10 +38,11 @@ export function countedAgents(list: readonly Pick<AgentSummary, 'status'>[] | nu
 }
 
 // --- The limit ------------------------------------------------------------------
-// Core does not say how many agents a person may have (AGENT_MAX_PER_OWNER,
-// five unless the installation says otherwise) until it refuses one more:
-// the refusal carries it as details.limit. It is kept for the page's life
-// (a new caller in this tab starts the page afresh).
+// agent.list says how many agents that are not suspended a person may have
+// (limit) and whether they may register one themselves (self_service). A
+// refusal of agent.create or agent.reactivate at the limit says it too, as
+// details.limit. Both are kept for the page's life (a new caller in this tab
+// starts the page afresh).
 
 /** The limit from a refusal of agent.create or agent.reactivate, if it is one. */
 export function limitFromError(e: unknown): number | null {
@@ -51,14 +52,36 @@ export function limitFromError(e: unknown): number | null {
 }
 
 const limit = ref<number | null>(null)
+const selfService = ref<boolean | null>(null)
 /** The most agents that are not suspended the caller may have, once Core has said. */
 export const knownAgentLimit = limit
+/** Whether the caller may register agents themselves (agent.create), once Core has said; null until then. */
+export const agentSelfService = selfService
 
 /** Notes the limit from a refusal; true when the error was that refusal. */
 export function noteAgentLimit(e: unknown): boolean {
   const n = limitFromError(e)
   if (n !== null) limit.value = n
   return n !== null
+}
+
+/** Notes what agent.list says of the limit and of registering agents oneself. */
+export function noteAgentList(out: { limit?: number | null; self_service?: boolean | null }) {
+  if (typeof out.limit === 'number' && Number.isInteger(out.limit) && out.limit > 0) limit.value = out.limit
+  if (typeof out.self_service === 'boolean') selfService.value = out.self_service
+}
+
+/**
+ * Why the caller cannot register another agent now: noSelfService, only an
+ * administrator registers them here; atLimit, as many as they may have are
+ * not suspended. Null when nothing known stands in the way (Core decides).
+ */
+export type CreateBlock = 'noSelfService' | 'atLimit'
+
+export function createBlock(counted: number): CreateBlock | null {
+  if (selfService.value === false) return 'noSelfService'
+  if (limit.value !== null && counted >= limit.value) return 'atLimit'
+  return null
 }
 
 // --- Bringing an agent into a course --------------------------------------------
