@@ -7,7 +7,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
-import type { Preset } from '@/api/types'
+import { PERMS, type Preset } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
@@ -163,7 +163,9 @@ function onSaved(savedDept: string | null) {
               </span>
             </div>
             <footer class="preset-card__foot">
-              <span class="app-muted">{{ t('adminSetup.presets.allowed', { n: allowedCount(p) }) }}</span>
+              <span class="app-muted">{{
+                t('adminSetup.presets.allowed', { n: allowedCount(p), total: PERMS.length })
+              }}</span>
               <span class="preset-card__actions">
                 <el-button v-if="canWrite && !isBuiltin(p)" link type="primary" @click="startEdit(p)">
                   {{ t('adminSetup.presets.drawer.edit') }}

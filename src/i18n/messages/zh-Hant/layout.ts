@@ -26,6 +26,8 @@ export default {
     approvals: '審批',
     myActions: '我的操作',
     activity: '動態',
+    agents: '代理',
+    conversations: '對話',
     adminNoSeat: {
       title: '你在這門課程沒有席位',
       body: '平台管理員的身分不會讓你進入課程：每個人在課程裡看到什麼，取決於他在該課程的席位。請到這門課程的管理頁指派導師，或指派你自己。',

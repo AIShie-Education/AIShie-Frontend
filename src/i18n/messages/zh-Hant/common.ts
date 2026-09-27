@@ -64,12 +64,29 @@ export default {
   nav: {
     home: '我的課程',
     account: '帳戶',
+    agents: '我的代理',
     admin: '平台管理',
     language: '語言',
     theme: '主題',
     themeLight: '淺色',
     themeDark: '深色',
     themeAuto: '跟隨系統',
+  },
+  // When an agent was last seen (PresenceText): its last use of a token that still works.
+  presence: {
+    never: '從未連線',
+    neverHelp: '這個代理的權杖從未被使用：可能沒有程式在運行它。',
+    online: '在線',
+    onlineHelp: '過去幾分鐘內曾使用權杖。',
+    lastSeen: '最後上線：{time}',
+  },
+  // An agent, and whose it is (AgentBadge).
+  agent: {
+    agent: '代理',
+    yours: '你的代理',
+    ownersAgent: '{owner} 的代理',
+    delegateOf: '代表 {owner} 行事，權限永不超過其席位',
+    yourDelegate: '代表你行事，權限永不超過你的席位',
   },
   outcome: {
     executed: '已完成',

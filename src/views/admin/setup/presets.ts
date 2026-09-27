@@ -2,6 +2,7 @@
 // permission presets).
 import {
   AUTONOMY_LEVELS,
+  BUILTIN_PRESETS,
   PERMS,
   type AutonomyLevel,
   type PermLevels,
@@ -46,7 +47,7 @@ function asLevel(v: string | undefined): AutonomyLevel {
   return (AUTONOMY_LEVELS as string[]).includes(v ?? '') ? (v as AutonomyLevel) : 'denied'
 }
 
-/** All thirteen, each at a level: what Core means by a preset's perms. */
+/** Every permission, each at a level: what Core means by a preset's perms. */
 export function fullPerms(perms: Record<string, string | undefined> | null | undefined): Record<string, AutonomyLevel> {
   const out: Record<string, AutonomyLevel> = {}
   for (const p of PERMS) out[p] = asLevel(perms?.[p])
@@ -81,7 +82,7 @@ export function bodyOf(p: Preset | null | undefined): PresetBody {
 }
 
 // The built-ins in the order Core ships them: people from least to most, then agents.
-const BUILTIN_ORDER = ['student', 'observer', 'ta', 'instructor', 'tutor', 'grader']
+const BUILTIN_ORDER: string[] = BUILTIN_PRESETS
 function builtinRank(p: Preset): number {
   const i = BUILTIN_ORDER.indexOf(p.name)
   return i < 0 ? BUILTIN_ORDER.length : i

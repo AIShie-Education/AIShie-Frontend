@@ -54,7 +54,7 @@ export default {
   },
   presets: {
     title: '權限預設',
-    subtitle: '新成員的起點：名冊角色、範圍，以及十三項權限各自的等級。',
+    subtitle: '新成員的起點：名冊角色、範圍，以及每項權限的等級。',
     explain:
       '成員加入時，預設會被複製到該成員的席位上。之後更改預設，不會影響任何已加入的成員：只有之後加入的成員才會取得新的設定。席位上的任何設定，仍可在席位本身個別調整。',
     department: '學系',
@@ -72,6 +72,8 @@ export default {
       instructor: '導師',
       tutor: '輔導（代理）',
       grader: '評分（代理）',
+      delegate: '個人助手（代理）',
+      course_tutor: '課程代理',
     },
     builtinDescriptions: {
       student: '閱讀已發佈的教材、繳交作業，並查看自己的成績。',
@@ -80,10 +82,12 @@ export default {
       instructor: '擁有所有權限，無需監督。',
       tutor: '代理：閱讀教材，以及清單內學生的作業與成績；不作任何寫入。',
       grader: '代理：閱讀教材與評分準則，為清單內的作業提出評分建議，每一項都須由人批准。',
+      delegate: '某人自己的代理：閱讀教材及其擁有者的作業與成績，並回答擁有者的提問。權限永不超過擁有者的席位。',
+      course_tutor: '代理：回答學生有關課程教材的提問；不閱讀任何人的作業。',
     },
     empty: '沒有預設',
     noDescription: '沒有說明',
-    allowed: '13 項權限中允許 {n} 項',
+    allowed: '{total} 項權限中允許 {n} 項',
     details: '詳細資料',
     list: '預設',
     matrix: '比較權限',

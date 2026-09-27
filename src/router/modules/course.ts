@@ -123,5 +123,21 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: { title: 'activity.title' },
   },
+  {
+    // The course's agents (member_manage): course agents, and whether students may bring their own.
+    path: 'agents',
+    name: 'course-agents',
+    component: () => import('@/views/course/agents/CourseAgentsView.vue'),
+    props: true,
+    meta: { title: 'courseAgents.title' },
+  },
+  {
+    // The caller's conversations, and one of them when conversationId is given.
+    path: 'conversations/:conversationId?',
+    name: 'course-conversations',
+    component: () => import('@/views/course/conversations/ConversationsView.vue'),
+    props: true,
+    meta: { title: 'chat.title' },
+  },
 ]
 export default routes

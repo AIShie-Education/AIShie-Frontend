@@ -26,7 +26,7 @@ export function rank(l: string | null | undefined): number {
   return i < 0 ? 0 : i
 }
 
-/** A full set of the thirteen levels from what Core sent (anything missing is denied). */
+/** A full set of levels, one per permission, from what Core sent (anything missing is denied). */
 export function fullPerms(p: Record<string, string | undefined> | null | undefined): Record<Perm, AutonomyLevel> {
   const out = {} as Record<Perm, AutonomyLevel>
   for (const k of PERMS) out[k] = (p?.[k] as AutonomyLevel | undefined) ?? 'denied'
@@ -130,8 +130,28 @@ export function wholeEmail(text: string | null | undefined): string | null {
 }
 
 /** What the directory (actor.get, actor.list) says of an actor, as a lookup would: with no word on a seat. */
-export function candidateFrom(a: Pick<Actor, 'id' | 'display_name' | 'kind' | 'status'>): SeatCandidate {
-  return { actor_id: a.id, display_name: a.display_name, kind: a.kind, status: a.status }
+export function candidateFrom(
+  a: Pick<Actor, 'id' | 'display_name' | 'kind' | 'status'> & {
+    owner_actor_id?: string | null
+    owner_name?: string | null
+  },
+): SeatCandidate {
+  const out: SeatCandidate = { actor_id: a.id, display_name: a.display_name, kind: a.kind, status: a.status }
+  if (a.owner_actor_id) {
+    out.owner_actor_id = a.owner_actor_id
+    out.owner_name = a.owner_name ?? null
+  }
+  return out
+}
+
+/**
+ * For an agent a person owns, that person (their name, or '' when it is not
+ * given): such an agent is not seated with member.add. Only its owner brings
+ * it in, as their delegate. Null for anyone else.
+ */
+export function ownedBy(c: Pick<SeatCandidate, 'owner_actor_id' | 'owner_name'> | null | undefined): string | null {
+  if (!c?.owner_actor_id) return null
+  return c.owner_name ?? ''
 }
 
 const lookupKnown = ref<boolean | null>(null)
@@ -293,6 +313,19 @@ const EXPLAIN: [RegExp, (m: RegExpMatchArray) => string][] = [
     (m) => t('members.refusal.outlives', { t: formatDateTime(m[1]!) }),
   ],
   [/not on your own membership/, () => t('members.refusal.ownSeat')],
+  [/not on the membership you are a delegate of/, () => t('members.refusal.ownPrincipal')],
+  [/the agent belongs to someone: its owner brings it in/, () => t('members.refusal.ownedAgent')],
+  [
+    /the delegate's principal holds (\w+) at (\w+), so the delegate cannot hold it at (\w+)/,
+    (m) =>
+      t('members.refusal.principalCap', { perm: permName(m[1]!), held: levelName(m[2]!), wanted: levelName(m[3]!) }),
+  ],
+  [/a delegate reaches no further than its principal/, () => t('members.refusal.principalScope')],
+  [
+    /a delegate lasts no longer than its principal, whose membership ends at (\S+)/,
+    (m) => t('members.refusal.principalExpiry', { t: formatDateTime(m[1]!) }),
+  ],
+  [/a delegate never holds (\w+)/, (m) => t('members.refusal.delegateNever', { perm: permName(m[1]!) })],
   [/already has a seat in this course/, () => t('members.refusal.alreadySeated')],
   [/no such actor/, () => t('members.refusal.noActor')],
   [/the actor is suspended/, () => t('members.refusal.suspended')],

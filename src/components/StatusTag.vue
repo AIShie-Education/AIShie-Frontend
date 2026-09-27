@@ -21,6 +21,11 @@ export type Vocabulary =
   | 'gradeState'
   | 'gradeOrigin'
   | 'credentialKind'
+  | 'preset'
+  | 'seatPurpose'
+  | 'conversationState'
+  | 'conversationStatus'
+  | 'answerLevel'
 
 const props = defineProps<{ vocab: Vocabulary; value: string | null | undefined; size?: 'small' | 'default' | 'large' }>()
 const { t, te } = useI18n()
@@ -39,6 +44,7 @@ const COLORS: Record<string, TagType> = {
   suspended: 'danger',
   paused: 'warning',
   removed: 'info',
+  expired: 'info',
   proposed: 'warning',
   approved: 'primary',
   rejected: 'danger',
@@ -54,6 +60,15 @@ const COLORS: Record<string, TagType> = {
   missing: 'danger',
   posted: 'success',
   superseded: 'info',
+  // conversations
+  open: 'success',
+  closed: 'info',
+  awaiting_answer: 'warning',
+  reply_pending_approval: 'warning',
+  answered: 'success',
+  // agents
+  course: 'primary',
+  personal: 'primary',
   agent: 'primary',
   human: 'info',
   system: 'warning',

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Presets side by side: one column each, one row for the roster role, the two
-// scopes and each of the thirteen permissions.
+// scopes and each of the permissions.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { PERMS, SCOPED_PERMS, type Perm, type Preset } from '@/api/types'

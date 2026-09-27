@@ -64,12 +64,29 @@ export default {
   nav: {
     home: 'My courses',
     account: 'Account',
+    agents: 'My agents',
     admin: 'Administration',
     language: 'Language',
     theme: 'Theme',
     themeLight: 'Light',
     themeDark: 'Dark',
     themeAuto: 'System',
+  },
+  // When an agent was last seen (PresenceText): its last use of a token that still works.
+  presence: {
+    never: 'Never connected',
+    neverHelp: 'No token of this agent has been used yet: nothing may be running it.',
+    online: 'Online',
+    onlineHelp: 'Used a token within the last few minutes.',
+    lastSeen: 'Last seen {time}',
+  },
+  // An agent, and whose it is (AgentBadge).
+  agent: {
+    agent: 'Agent',
+    yours: 'Your agent',
+    ownersAgent: '{owner}’s agent',
+    delegateOf: 'Acts for {owner}, never with more than their seat',
+    yourDelegate: 'Acts for you, never with more than your seat',
   },
   outcome: {
     executed: 'Done',
