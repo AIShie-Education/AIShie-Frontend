@@ -75,7 +75,14 @@ export function agentRows(
     // own may share a built-in's name and mean something else.
     const presetName = preset?.name ?? null
     const principal = m.principal_member_id ? (byId.get(m.principal_member_id) ?? null) : null
-    const purpose = m.principal_member_id && preset && !preset.dept_id ? seatPurpose({ preset: preset.name }) : null
+    // A delegate's seat records whom it answers (answers_course); a record
+    // without the field (an older Core) is told by its built-in preset.
+    const purpose = m.principal_member_id
+      ? seatPurpose({
+          answers_course: m.answers_course,
+          preset: preset && !preset.dept_id ? preset.name : null,
+        })
+      : null
     const group: AgentGroup = !m.principal_member_id
       ? 'unowned'
       : (purpose ?? (principal && principal.role !== 'student' ? 'course' : 'personal'))

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Adding a course agent: one of the caller's own agents (agent.list), or one
 // made here (agent.create), brought in as the caller's delegate with the
-// course_tutor preset (member.add_delegate). What it would hold is shown
+// course_tutor preset, answering the course (member.add_delegate with
+// answers_course, said outright). What it would hold is shown
 // first, as Core works it out (member.delegate_defaults): the preset clipped
 // to the caller's own seat.
 import { computed, ref, watch } from 'vue'
@@ -12,7 +13,7 @@ import { useAsync } from '@/composables/useAsync'
 import { announce, useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
-import { presetForPurpose } from '@/utils/agents'
+import { delegateArgsFor } from '@/utils/agents'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -31,8 +32,8 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const course = useCourseStore()
 
-/** The preset a course agent is seated with. */
-const PRESET = presetForPurpose('course')
+/** What a course agent is seated with: the course_tutor preset, answering the course. */
+const SEAT = delegateArgsFor('course')
 
 const mode = ref<'existing' | 'create'>('existing')
 const agentId = ref('')
@@ -44,7 +45,7 @@ const agents = useAsync<AgentSummary[]>(() => read('agent.list', {}).then((o) =>
   immediate: false,
 })
 const defaults = useAsync<DelegateDefaults>(
-  () => read('member.delegate_defaults', { course_id: props.courseId, preset: PRESET }),
+  () => read('member.delegate_defaults', { course_id: props.courseId, preset: SEAT.preset }),
   { immediate: false },
 )
 
@@ -116,9 +117,7 @@ async function submit() {
       void agents.reload()
     }
   }
-  // TODO(answers_course): once Core records the seat's purpose, send
-  // answers_course: true here (a course agent students may ask).
-  const out = await addWrite.run({ course_id: props.courseId, actor_id: actorId, preset: PRESET }, { notify: false })
+  const out = await addWrite.run({ course_id: props.courseId, actor_id: actorId, ...SEAT }, { notify: false })
   if (!out) {
     // The new agent exists now: a second try seats it rather than making another.
     if (created.value) {

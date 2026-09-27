@@ -103,6 +103,30 @@ describe('agentRows', () => {
     expect(rows[0]!.presetName).toBe('course_tutor')
   })
 
+  it('reads what the seat records of whom it answers before the preset', () => {
+    const own = seat({
+      kind: 'agent',
+      role: 'assistant',
+      display_name: 'My helper',
+      preset_id: 'p-tutor',
+      principal_member_id: instructor.id,
+      answers_course: false,
+    })
+    const dept = seat({
+      kind: 'agent',
+      role: 'assistant',
+      display_name: 'Dept tutor',
+      preset_id: 'p-dept',
+      principal_member_id: instructor.id,
+      answers_course: true,
+    })
+    const rows = agentRows([instructor, own, dept], presets, NOW)
+    expect(rows.map((r) => [r.member.display_name, r.group, r.purpose])).toEqual([
+      ['Dept tutor', 'course', 'course'],
+      ['My helper', 'personal', 'personal'],
+    ])
+  })
+
   it('does not read a purpose from a department preset that shares a built-in name', () => {
     const a = seat({
       kind: 'agent',

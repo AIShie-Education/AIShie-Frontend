@@ -379,6 +379,8 @@ function startAgain() {
     kind: r.kind,
     role: r.role,
     is_my_delegate: r.is_delegate_of_opener,
+    // Someone else's agent answers the opener only if it answers the course.
+    answers_course: r.kind === 'agent' && !r.is_delegate_of_opener,
     owner_name: r.owner_name,
     last_seen_at: r.last_seen_at,
     answer_level: r.answer_level,

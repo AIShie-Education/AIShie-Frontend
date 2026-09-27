@@ -55,6 +55,7 @@ function seat(over: Partial<Membership> = {}): Membership {
     student_scope: 'all',
     assignment_scope: 'all',
     perms: {},
+    answers_course: false,
     ...over,
   }
 }

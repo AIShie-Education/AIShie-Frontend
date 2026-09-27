@@ -61,6 +61,10 @@ export interface ActionGetOut {
   status: string
   target_id?: null | string
   target_type: string
+  /**
+   * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+   */
+  yours_to_decide?: null | boolean
 }
 
 /** action.list_mine (read): The caller's own actions in this course — proposals and their outcomes included — oldest first. exclude_types leaves out whole kinds of action: a chat's messages, say. */
@@ -103,11 +107,15 @@ export interface ActionListMineOut {
         status: string
         target_id?: null | string
         target_type: string
+        /**
+         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         */
+        yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
 
-/** action.list_pending_review (read): The review queue: actions that executed pending review and have not been reviewed, or were escalated. */
+/** action.list_pending_review (read): The review queue: actions that executed pending review and have not been reviewed, or were escalated. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else reviews. */
 export interface ActionListPendingReviewIn {
   /**
    * the id of the last item already seen
@@ -143,11 +151,15 @@ export interface ActionListPendingReviewOut {
         status: string
         target_id?: null | string
         target_type: string
+        /**
+         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         */
+        yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
 
-/** action.list_proposed (read): The approval queue: proposals in this course waiting for a decision, oldest first. */
+/** action.list_proposed (read): The approval queue: proposals in this course waiting for a decision, oldest first. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else decides. */
 export interface ActionListProposedIn {
   /**
    * the id of the last item already seen
@@ -183,6 +195,10 @@ export interface ActionListProposedOut {
         status: string
         target_id?: null | string
         target_type: string
+        /**
+         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         */
+        yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
@@ -442,7 +458,7 @@ export interface ActorRevokeCredentialOut {
   ok: boolean
 }
 
-/** actor.set_owner (write): Give an agent an owner, change it, or take it away (owner_actor_id null). An agent someone owns acts only as their delegate. Refused while the agent is seated in a course that is not archived: its owner withdraws it first (agent.withdraw). Every token and session the agent has is revoked, since whoever owned it before may hold them; issue it a new one. A seat it keeps in an archived course counts for nothing from then on. */
+/** actor.set_owner (write): Give an agent an owner, change it, or take it away (owner_actor_id null). An agent someone owns acts only as their delegate. Refused while the agent is seated in a course that is not archived: take it out first (agent.withdraw by its owner, or member.remove), and for an agent that holds a platform role, which an agent someone owns does not. Every credential the agent has — tokens, sessions, password, invitation, linked identity — is revoked, since whoever owned it before may hold them, and the old owner's requests to seat it that wait for a decision are cancelled; issue it a new token. A seat it keeps in an archived course counts for nothing from then on. */
 export interface ActorSetOwnerIn {
   actor_id: string
   /**
@@ -542,6 +558,10 @@ export interface AgentGetOut {
   seats:
     | null
     | {
+        /**
+         * it answers the course, not you alone: the students it can see and do no more than may ask it too
+         */
+        answers_course: boolean
         assignment_scope: string
         code: string
         course_id: string
@@ -602,7 +622,7 @@ export interface AgentIssueTokenOut {
   token_prefix: string
 }
 
-/** agent.list (read): Your own agents, oldest first: their standing, when each was last seen, how many courses each is seated in, and how many requests to seat one wait for a decision. */
+/** agent.list (read): Your own agents, oldest first: their standing, when each was last seen, how many courses each is seated in, and how many requests to seat one wait for a decision; with how many you may have, and whether you may register one yourself. */
 export interface AgentListIn {}
 export interface AgentListOut {
   agents:
@@ -632,6 +652,14 @@ export interface AgentListOut {
          */
         suspended_by_me: boolean
       }[]
+  /**
+   * how many agents that are not suspended you may have; suspended ones do not count, and an administrator may give you more
+   */
+  limit: number
+  /**
+   * whether you may register agents yourself (agent.create); if not, an administrator does
+   */
+  self_service: boolean
 }
 
 /** agent.list_credentials (read): One of your agents' tokens, newest first, with their label, prefix, issuer, expiry and last use, revoked ones included. Secrets are never shown. */
@@ -967,7 +995,7 @@ export interface ComponentUpdateOut {
   ok: boolean
 }
 
-/** conversation.answer (write): Answer in a conversation addressed to you (conversation.inbox lists those waiting), replying to the opener's latest message, whose id you give as in_reply_to_message_id. If the opener has written again since, the answer is refused as a conflict: read the new message and answer that. Your level of conversation_answer decides whether an answer is posted at once, posted and reviewed after, or waits for a person's approval; one that waits is checked again when approved, and refused then if the conversation has moved on. */
+/** conversation.answer (write): Answer in a conversation addressed to you (conversation.inbox lists those waiting), replying to the opener's latest message, whose id you give as in_reply_to_message_id. It is refused as a conflict, with a reason: moved_on if the opener has written again since (read the new message and answer that), already_answered if that message has its answer, answer_pending if an answer of yours to it waits for approval, closed if the conversation is. Your level of conversation_answer decides whether an answer is posted at once, posted and reviewed after, or waits for a person's approval; one that waits is checked again when approved, and refused then if the conversation has moved on. An answer that failed or was rejected may be written again, under a new idempotency key. */
 export interface ConversationAnswerIn {
   /**
    * at most 20000 characters
@@ -1037,6 +1065,10 @@ export interface ConversationGetOut {
   last_author_member_id?: null | string
   last_message_at?: null | string
   /**
+   * when a message in it was last retracted: a retraction adds no message, so a reader polling with after_seq reads the messages again when this changes
+   */
+  last_retracted_at?: null | string
+  /**
    * what an answer replies to
    */
   latest_opener_message_id?: null | string
@@ -1091,12 +1123,12 @@ export interface ConversationGetOut {
   status: string
   title?: null | string
   /**
-   * who can read what is written here
+   * who can read what is written here, as codes: participants, the two who take part; overseers, course staff who decide actions for the opener; action_record, anyone who decides actions in the course, through the record of each message's action; respondent_answers_others, the respondent answers other members too and may repeat to them what is written here
    */
   visible_to: null | string[]
 }
 
-/** conversation.inbox (read): Conversations addressed to you that wait for an answer: open, the opener wrote last, and no answer of yours waits for approval; the longest waiting first. Read each with conversation.messages and answer with conversation.answer, in_reply_to_message_id = its latest_opener_message_id. Poll this, per course: nothing is pushed to you. */
+/** conversation.inbox (read): Conversations addressed to you that wait for an answer: open, the opener wrote last, the opener's latest message not retracted, and no answer of yours to it waiting for approval; the longest waiting first. Read each with conversation.messages and answer with conversation.answer, in_reply_to_message_id = its latest_opener_message_id. Poll this, per course: nothing is pushed to you. */
 export interface ConversationInboxIn {
   /**
    * the course this call is about
@@ -1122,6 +1154,10 @@ export interface ConversationInboxOut {
         id: string
         last_author_member_id?: null | string
         last_message_at?: null | string
+        /**
+         * when a message in it was last retracted: a retraction adds no message, so a reader polling with after_seq reads the messages again when this changes
+         */
+        last_retracted_at?: null | string
         /**
          * what an answer replies to
          */
@@ -1215,6 +1251,10 @@ export interface ConversationListOut {
         last_author_member_id?: null | string
         last_message_at?: null | string
         /**
+         * when a message in it was last retracted: a retraction adds no message, so a reader polling with after_seq reads the messages again when this changes
+         */
+        last_retracted_at?: null | string
+        /**
          * what an answer replies to
          */
         latest_opener_message_id?: null | string
@@ -1303,6 +1343,10 @@ export interface ConversationMessagesOut {
     last_author_member_id?: null | string
     last_message_at?: null | string
     /**
+     * when a message in it was last retracted: a retraction adds no message, so a reader polling with after_seq reads the messages again when this changes
+     */
+    last_retracted_at?: null | string
+    /**
      * what an answer replies to
      */
     latest_opener_message_id?: null | string
@@ -1387,7 +1431,7 @@ export interface ConversationMessagesOut {
   more: boolean
 }
 
-/** conversation.open (write): Start a conversation with one member of the course — the course's tutor agent, your own agent — and, if you give body, ask the first question. You may address only someone who can see and do nothing you cannot, or your own agent: conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it. */
+/** conversation.open (write): Start a conversation with one member of the course — the course's tutor agent, your own agent — and, if you give body, ask the first question. You may address only someone who can see and do nothing you cannot, or your own agent: conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it; and a respondent that answers others too, such as the course's tutor, may repeat to them what you write. */
 export interface ConversationOpenIn {
   /**
    * the first question, if you have it now; at most 20000 characters
@@ -1414,7 +1458,7 @@ export interface ConversationOpenOut {
   message_id?: null | string
 }
 
-/** conversation.respondents (read): Whom you may start a conversation with here: members who answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents. Each says how its answers arrive and, for an agent, when it was last seen. */
+/** conversation.respondents (read): Whom you may start a conversation with here: members who answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents. Each says how its answers arrive, whether it answers others too (answers_course: it may repeat to them what you write), and, for an agent, when it was last seen. */
 export interface ConversationRespondentsIn {
   /**
    * the course this call is about
@@ -1429,6 +1473,10 @@ export interface ConversationRespondentsOut {
          * autonomous: answers appear at once; pending_review: they appear and are reviewed after; confirm_required: each waits for a person's approval
          */
         answer_level: string
+        /**
+         * an agent seated to answer the course, not its owner alone: it answers other members as well, and may repeat to them what it is told
+         */
+        answers_course: boolean
         display_name: string
         /**
          * your own agent, seated as your delegate
@@ -2271,6 +2319,10 @@ export interface MeMembershipsOut {
   memberships:
     | null
     | {
+        /**
+         * when you are someone's delegate: true if you answer the course — other members may ask you, and you keep what each tells you from the others — false if you answer your principal alone
+         */
+        answers_course: boolean
         assignment_scope: string
         code: string
         course_id: string
@@ -2342,7 +2394,7 @@ export interface MemberAddOut {
   member_id: string
 }
 
-/** member.add_delegate (write): Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, your agent holds no more than the delegate preset gives. */
+/** member.add_delegate (write): Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, your agent holds no more than the delegate preset gives. */
 export interface MemberAddDelegateIn {
   /**
    * the agent you own to bring in
@@ -2352,6 +2404,10 @@ export interface MemberAddDelegateIn {
    * set by the server on a proposal, for whoever decides it; ignored
    */
   agent_display_name?: null | string
+  /**
+   * true: a course agent, which the students it can see and do no more than may ask, as well as you; false: it answers you alone. Only someone who manages the course's members may make it true; by default true for the course_tutor preset when you do, false otherwise
+   */
+  answers_course?: null | boolean
   /**
    * all or listed
    */
@@ -2396,7 +2452,7 @@ export interface MemberAddDelegateOut {
   member_id: string
 }
 
-/** member.delegate_defaults (read): What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first. */
+/** member.delegate_defaults (read): What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first, and whether it would answer the course or you alone. */
 export interface MemberDelegateDefaultsIn {
   /**
    * the course this call is about
@@ -2408,6 +2464,10 @@ export interface MemberDelegateDefaultsIn {
   preset?: null | string
 }
 export interface MemberDelegateDefaultsOut {
+  /**
+   * whether it would answer the course, and not you alone
+   */
+  answers_course: boolean
   assignment_scope: string
   expires_at?: null | string
   /**
@@ -2438,6 +2498,10 @@ export interface MemberGetIn {
 }
 export interface MemberGetOut {
   actor_id: string
+  /**
+   * for a delegate, whether its seat answers the course, and not its principal alone; it does while its principal manages the course's members
+   */
+  answers_course: boolean
   assignment_scope: string
   created_at: string
   display_name: string
@@ -2498,6 +2562,10 @@ export interface MemberListOut {
     | null
     | {
         actor_id: string
+        /**
+         * for a delegate, whether its seat answers the course, and not its principal alone; it does while its principal manages the course's members
+         */
+        answers_course: boolean
         assignment_scope: string
         created_at: string
         display_name: string
@@ -2653,7 +2721,7 @@ export interface MemberUpdatePermsOut {
   ok: boolean
 }
 
-/** member.update_perms_bulk (write): Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. */
+/** member.update_perms_bulk (write): Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. */
 export interface MemberUpdatePermsBulkIn {
   /**
    * the course this call is about

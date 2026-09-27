@@ -29,6 +29,7 @@ function seat(over: Partial<Membership> = {}): Membership {
     student_scope: 'listed',
     assignment_scope: 'all',
     perms: { agent_delegate: 'confirm_required', member_manage: 'denied' },
+    answers_course: false,
     ...over,
   }
 }

@@ -154,12 +154,16 @@ const newMemberAs = computed(() => {
 })
 
 // An agent brought in as someone's delegate: its name and its owner's are
-// fixed in a proposal (Core writes them in when it is made); what it is for
-// follows from the built-in preset it is seated with.
+// fixed in a proposal (Core writes them in when it is made), and so is whom
+// it answers (answers_course); a proposal from before Core recorded that is
+// told by the built-in preset it names.
 const agentName = computed(() => str(p.value.agent_display_name))
 const ownerName = computed(() => str(p.value.owner_display_name))
 const purpose = computed(() =>
-  preset.value && !preset.value.dept_id ? seatPurpose({ preset: preset.value.name }) : seatPurpose({ preset: str(p.value.preset) }),
+  seatPurpose({
+    answers_course: typeof p.value.answers_course === 'boolean' ? p.value.answers_course : null,
+    preset: preset.value ? (preset.value.dept_id ? null : preset.value.name) : str(p.value.preset),
+  }),
 )
 const everyRole = computed(() => {
   const role = str(p.value.role)

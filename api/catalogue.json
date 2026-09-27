@@ -180,6 +180,13 @@
           },
           "target_type": {
             "type": "string"
+          },
+          "yours_to_decide": {
+            "description": "in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove",
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         },
         "required": [
@@ -318,6 +325,13 @@
                 },
                 "target_type": {
                   "type": "string"
+                },
+                "yours_to_decide": {
+                  "description": "in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove",
+                  "type": [
+                    "null",
+                    "boolean"
+                  ]
                 }
               },
               "required": [
@@ -354,7 +368,7 @@
       "path": "/v1/courses/{course_id}/actions/mine"
     },
     {
-      "description": "The review queue: actions that executed pending review and have not been reviewed, or were escalated.",
+      "description": "The review queue: actions that executed pending review and have not been reviewed, or were escalated. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else reviews.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -464,6 +478,13 @@
                 },
                 "target_type": {
                   "type": "string"
+                },
+                "yours_to_decide": {
+                  "description": "in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove",
+                  "type": [
+                    "null",
+                    "boolean"
+                  ]
                 }
               },
               "required": [
@@ -500,7 +521,7 @@
       "path": "/v1/courses/{course_id}/actions/pending-review"
     },
     {
-      "description": "The approval queue: proposals in this course waiting for a decision, oldest first.",
+      "description": "The approval queue: proposals in this course waiting for a decision, oldest first. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else decides.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -610,6 +631,13 @@
                 },
                 "target_type": {
                   "type": "string"
+                },
+                "yours_to_decide": {
+                  "description": "in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove",
+                  "type": [
+                    "null",
+                    "boolean"
+                  ]
                 }
               },
               "required": [
@@ -1398,7 +1426,7 @@
       "path": "/v1/actors/{actor_id}/credentials/{credential_id}/revoke"
     },
     {
-      "description": "Give an agent an owner, change it, or take it away (owner_actor_id null). An agent someone owns acts only as their delegate. Refused while the agent is seated in a course that is not archived: its owner withdraws it first (agent.withdraw). Every token and session the agent has is revoked, since whoever owned it before may hold them; issue it a new one. A seat it keeps in an archived course counts for nothing from then on.",
+      "description": "Give an agent an owner, change it, or take it away (owner_actor_id null). An agent someone owns acts only as their delegate. Refused while the agent is seated in a course that is not archived: take it out first (agent.withdraw by its owner, or member.remove), and for an agent that holds a platform role, which an agent someone owns does not. Every credential the agent has — tokens, sessions, password, invitation, linked identity — is revoked, since whoever owned it before may hold them, and the old owner's requests to seat it that wait for a decision are cancelled; issue it a new token. A seat it keeps in an archived course counts for nothing from then on.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1706,6 +1734,10 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "answers_course": {
+                  "description": "it answers the course, not you alone: the students it can see and do no more than may ask it too",
+                  "type": "boolean"
+                },
                 "assignment_scope": {
                   "type": "string"
                 },
@@ -1775,7 +1807,8 @@
                 "status",
                 "perms",
                 "student_scope",
-                "assignment_scope"
+                "assignment_scope",
+                "answers_course"
               ],
               "type": "object"
             },
@@ -1866,7 +1899,7 @@
       "path": "/v1/me/agents/{actor_id}/tokens"
     },
     {
-      "description": "Your own agents, oldest first: their standing, when each was last seen, how many courses each is seated in, and how many requests to seat one wait for a decision.",
+      "description": "Your own agents, oldest first: their standing, when each was last seen, how many courses each is seated in, and how many requests to seat one wait for a decision; with how many you may have, and whether you may register one yourself.",
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -1930,10 +1963,20 @@
               "null",
               "array"
             ]
+          },
+          "limit": {
+            "description": "how many agents that are not suspended you may have; suspended ones do not count, and an administrator may give you more",
+            "type": "integer"
+          },
+          "self_service": {
+            "description": "whether you may register agents yourself (agent.create); if not, an administrator does",
+            "type": "boolean"
           }
         },
         "required": [
-          "agents"
+          "agents",
+          "limit",
+          "self_service"
         ],
         "type": "object"
       },
@@ -2966,7 +3009,7 @@
       "path": "/v1/courses/{course_id}/components/{component_id}"
     },
     {
-      "description": "Answer in a conversation addressed to you (conversation.inbox lists those waiting), replying to the opener's latest message, whose id you give as in_reply_to_message_id. If the opener has written again since, the answer is refused as a conflict: read the new message and answer that. Your level of conversation_answer decides whether an answer is posted at once, posted and reviewed after, or waits for a person's approval; one that waits is checked again when approved, and refused then if the conversation has moved on.",
+      "description": "Answer in a conversation addressed to you (conversation.inbox lists those waiting), replying to the opener's latest message, whose id you give as in_reply_to_message_id. It is refused as a conflict, with a reason: moved_on if the opener has written again since (read the new message and answer that), already_answered if that message has its answer, answer_pending if an answer of yours to it waits for approval, closed if the conversation is. Your level of conversation_answer decides whether an answer is posted at once, posted and reviewed after, or waits for a person's approval; one that waits is checked again when approved, and refused then if the conversation has moved on. An answer that failed or was rejected may be written again, under a new idempotency key.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3158,6 +3201,13 @@
               "string"
             ]
           },
+          "last_retracted_at": {
+            "description": "when a message in it was last retracted: a retraction adds no message, so a reader polling with after_seq reads the messages again when this changes",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "latest_opener_message_id": {
             "description": "what an answer replies to",
             "format": "uuid",
@@ -3266,7 +3316,7 @@
             ]
           },
           "visible_to": {
-            "description": "who can read what is written here",
+            "description": "who can read what is written here, as codes: participants, the two who take part; overseers, course staff who decide actions for the opener; action_record, anyone who decides actions in the course, through the record of each message's action; respondent_answers_others, the respondent answers other members too and may repeat to them what is written here",
             "items": {
               "type": "string"
             },
@@ -3290,7 +3340,7 @@
       "path": "/v1/courses/{course_id}/conversations/{conversation_id}"
     },
     {
-      "description": "Conversations addressed to you that wait for an answer: open, the opener wrote last, and no answer of yours waits for approval; the longest waiting first. Read each with conversation.messages and answer with conversation.answer, in_reply_to_message_id = its latest_opener_message_id. Poll this, per course: nothing is pushed to you.",
+      "description": "Conversations addressed to you that wait for an answer: open, the opener wrote last, the opener's latest message not retracted, and no answer of yours to it waiting for approval; the longest waiting first. Read each with conversation.messages and answer with conversation.answer, in_reply_to_message_id = its latest_opener_message_id. Poll this, per course: nothing is pushed to you.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -3342,6 +3392,13 @@
                   ]
                 },
                 "last_message_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "last_retracted_at": {
+                  "description": "when a message in it was last retracted: a retraction adds no message, so a reader polling with after_seq reads the messages again when this changes",
                   "type": [
                     "null",
                     "string"
@@ -3552,6 +3609,13 @@
                   ]
                 },
                 "last_message_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "last_retracted_at": {
+                  "description": "when a message in it was last retracted: a retraction adds no message, so a reader polling with after_seq reads the messages again when this changes",
                   "type": [
                     "null",
                     "string"
@@ -3774,6 +3838,13 @@
                   "string"
                 ]
               },
+              "last_retracted_at": {
+                "description": "when a message in it was last retracted: a retraction adds no message, so a reader polling with after_seq reads the messages again when this changes",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
               "latest_opener_message_id": {
                 "description": "what an answer replies to",
                 "format": "uuid",
@@ -3985,7 +4056,7 @@
       "path": "/v1/courses/{course_id}/conversations/{conversation_id}/messages"
     },
     {
-      "description": "Start a conversation with one member of the course — the course's tutor agent, your own agent — and, if you give body, ask the first question. You may address only someone who can see and do nothing you cannot, or your own agent: conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it.",
+      "description": "Start a conversation with one member of the course — the course's tutor agent, your own agent — and, if you give body, ask the first question. You may address only someone who can see and do nothing you cannot, or your own agent: conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it; and a respondent that answers others too, such as the course's tutor, may repeat to them what you write.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4047,7 +4118,7 @@
       "path": "/v1/courses/{course_id}/conversations"
     },
     {
-      "description": "Whom you may start a conversation with here: members who answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents. Each says how its answers arrive and, for an agent, when it was last seen.",
+      "description": "Whom you may start a conversation with here: members who answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents. Each says how its answers arrive, whether it answers others too (answers_course: it may repeat to them what you write), and, for an agent, when it was last seen.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -4075,6 +4146,10 @@
                 "answer_level": {
                   "description": "autonomous: answers appear at once; pending_review: they appear and are reviewed after; confirm_required: each waits for a person's approval",
                   "type": "string"
+                },
+                "answers_course": {
+                  "description": "an agent seated to answer the course, not its owner alone: it answers other members as well, and may repeat to them what it is told",
+                  "type": "boolean"
                 },
                 "display_name": {
                   "type": "string"
@@ -4116,6 +4191,7 @@
                 "kind",
                 "role",
                 "is_my_delegate",
+                "answers_course",
                 "answer_level"
               ],
               "type": "object"
@@ -6580,6 +6656,10 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "answers_course": {
+                  "description": "when you are someone's delegate: true if you answer the course — other members may ask you, and you keep what each tells you from the others — false if you answer your principal alone",
+                  "type": "boolean"
+                },
                 "assignment_scope": {
                   "type": "string"
                 },
@@ -6646,7 +6726,8 @@
                 "status",
                 "student_scope",
                 "assignment_scope",
-                "perms"
+                "perms",
+                "answers_course"
               ],
               "type": "object"
             },
@@ -6773,7 +6854,7 @@
       "path": "/v1/courses/{course_id}/members"
     },
     {
-      "description": "Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, your agent holds no more than the delegate preset gives.",
+      "description": "Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, your agent holds no more than the delegate preset gives.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6787,6 +6868,13 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "answers_course": {
+            "description": "true: a course agent, which the students it can see and do no more than may ask, as well as you; false: it answers you alone. Only someone who manages the course's members may make it true; by default true for the course_tutor preset when you do, false otherwise",
+            "type": [
+              "null",
+              "boolean"
             ]
           },
           "assignment_scope": {
@@ -6891,7 +6979,7 @@
       "path": "/v1/courses/{course_id}/delegates"
     },
     {
-      "description": "What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first.",
+      "description": "What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first, and whether it would answer the course or you alone.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6919,6 +7007,10 @@
       "output_schema": {
         "additionalProperties": false,
         "properties": {
+          "answers_course": {
+            "description": "whether it would answer the course, and not you alone",
+            "type": "boolean"
+          },
           "assignment_scope": {
             "type": "string"
           },
@@ -6982,6 +7074,7 @@
           "listed_students",
           "assignment_scope",
           "listed_assignments",
+          "answers_course",
           "level"
         ],
         "type": "object"
@@ -7018,6 +7111,10 @@
           "actor_id": {
             "format": "uuid",
             "type": "string"
+          },
+          "answers_course": {
+            "description": "for a delegate, whether its seat answers the course, and not its principal alone; it does while its principal manages the course's members",
+            "type": "boolean"
           },
           "assignment_scope": {
             "type": "string"
@@ -7119,7 +7216,8 @@
           "student_scope",
           "assignment_scope",
           "perms",
-          "created_at"
+          "created_at",
+          "answers_course"
         ],
         "type": "object"
       },
@@ -7176,6 +7274,10 @@
                 "actor_id": {
                   "format": "uuid",
                   "type": "string"
+                },
+                "answers_course": {
+                  "description": "for a delegate, whether its seat answers the course, and not its principal alone; it does while its principal manages the course's members",
+                  "type": "boolean"
                 },
                 "assignment_scope": {
                   "type": "string"
@@ -7277,7 +7379,8 @@
                 "student_scope",
                 "assignment_scope",
                 "perms",
-                "created_at"
+                "created_at",
+                "answers_course"
               ],
               "type": "object"
             },
@@ -7629,7 +7732,7 @@
       "path": "/v1/courses/{course_id}/members/{member_id}/perms"
     },
     {
-      "description": "Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is.",
+      "description": "Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {

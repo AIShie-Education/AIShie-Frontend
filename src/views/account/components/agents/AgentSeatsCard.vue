@@ -114,8 +114,10 @@ async function takeBack(r: AgentRequest) {
           </router-link>
           <div class="agent-seat__tags">
             <StatusTag v-if="seatPurpose(s)" vocab="seatPurpose" :value="seatPurpose(s)" />
-            <StatusTag v-else-if="isBuiltinPreset(s.preset)" vocab="preset" :value="s.preset" />
-            <el-tag v-else-if="s.preset" type="info" size="small" disable-transitions>{{ s.preset }}</el-tag>
+            <template v-if="s.preset && seatPurpose({ preset: s.preset }) !== seatPurpose(s)">
+              <StatusTag v-if="isBuiltinPreset(s.preset)" vocab="preset" :value="s.preset" />
+              <el-tag v-else type="info" size="small" disable-transitions>{{ s.preset }}</el-tag>
+            </template>
             <StatusTag v-if="s.status !== 'active'" vocab="memberStatus" :value="s.status" />
             <StatusTag v-if="s.course_status !== 'active'" vocab="courseStatus" :value="s.course_status" />
           </div>

@@ -106,7 +106,7 @@ export default {
     title: 'Add a course agent',
     explainTitle: 'What a course agent is',
     explain:
-      'One of your own agents, brought in as your delegate for students to ask about the course. It answers any student whose own seat reaches at least as far as it does (with the Course agent preset, every student), and reads only published material: nobody’s work or grades.',
+      'One of your own agents, brought in as your delegate for students to ask about the course. It answers any student whose own seat reaches at least as far as it does (with the Course agent preset, every student), and reads only published material: nobody’s work or grades. It holds what each student writes to it, and may repeat it to the others it answers.',
     explainBound:
       'It never holds more than your seat, is paused while you are, and leaves the course with you. You can change how its replies go out once it is here.',
     source: 'Which agent',

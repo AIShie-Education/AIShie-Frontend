@@ -27,12 +27,23 @@ const specs = useSpecs()
 const p = computed(() => payloadOf(props.action))
 const presets = useLookup(() => specs.presets(props.courseId))
 const preset = computed(() => presetOf(presets.value?.value, p.value))
+// What it is for: whom it answers, as the proposal records it
+// (answers_course); in one made before Core recorded that, the built-in
+// preset it names.
 const purpose = computed(() =>
-  preset.value
-    ? preset.value.dept_id
-      ? null
-      : seatPurpose({ preset: preset.value.name })
-    : seatPurpose({ preset: str(p.value.preset) }),
+  seatPurpose({
+    answers_course: typeof p.value.answers_course === 'boolean' ? p.value.answers_course : null,
+    preset: preset.value ? (preset.value.dept_id ? null : preset.value.name) : str(p.value.preset),
+  }),
+)
+
+/** The preset's name is worth showing beside the purpose unless it is the built-in one that purpose stands for. */
+const presetSaysMore = computed(
+  () =>
+    !purpose.value ||
+    !preset.value ||
+    !!preset.value.dept_id ||
+    seatPurpose({ preset: preset.value.name }) !== purpose.value,
 )
 
 const agentName = computed(() => str(p.value.agent_display_name))
@@ -107,8 +118,8 @@ const expiresAt = computed(() => str(p.value.expires_at))
         <dd>
           <div class="delegate-grant__inline">
             <StatusTag v-if="purpose" vocab="seatPurpose" :value="purpose" />
-            <strong v-else-if="preset">{{ presetLabel(preset) }}</strong>
-            <IdText v-else-if="str(p.preset_id)" :id="str(p.preset_id)" />
+            <strong v-if="preset && presetSaysMore">{{ presetLabel(preset) }}</strong>
+            <IdText v-else-if="!preset && !purpose && str(p.preset_id)" :id="str(p.preset_id)" />
             <el-tag v-if="preset?.dept_id" size="small" type="info" effect="plain">{{
               t('actions.grant.deptPreset')
             }}</el-tag>

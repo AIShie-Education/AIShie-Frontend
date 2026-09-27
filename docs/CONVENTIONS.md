@@ -127,7 +127,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Agents: `<AgentBadge :kind :owner-name :mine />` beside an actor's or member's name ("Agent",
   "Your agent", "Yuki's agent"; nothing for a person); `<PresenceText :value="last_seen_at" />` for
   whether an agent is connected (never / online within two minutes / last seen). `seatPurpose()`
-  (`@/utils/agents`) tells a course agent from a personal assistant.
+  (`@/utils/agents`) tells a course agent from a personal assistant by the seat's `answers_course`;
+  `delegateArgsFor()` gives `member.add_delegate` both the preset and `answers_course`, always said
+  outright.
 - Anything kept fresh by asking again (a chat, an inbox): `usePolling(fn, { intervalMs, enabled })`
   from `@/composables/usePolling` — one poll at a time, backing off after failures, paused while the
   page is hidden, stopped on unmount; `pollNow()` after sending something.

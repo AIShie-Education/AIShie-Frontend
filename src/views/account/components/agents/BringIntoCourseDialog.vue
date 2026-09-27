@@ -3,10 +3,11 @@
 // delegate (member.add_delegate). The caller picks the course (one where
 // their seat allows agent_delegate) and what the agent is for there: their
 // own assistant (preset delegate), or, when they manage the course's
-// members, a course agent students may ask (preset course_tutor). What it
-// would be seated with is previewed from member.delegate_defaults, which says
-// too whether the call will be carried out at once or become a request an
-// instructor approves.
+// members, a course agent students may ask (preset course_tutor). Whom it
+// answers is sent outright (answers_course), never left to the preset's
+// default. What it would be seated with is previewed from
+// member.delegate_defaults, which says too whether the call will be carried
+// out at once or become a request an instructor approves.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
@@ -14,7 +15,7 @@ import type { AgentFull, AutonomyLevel, DelegateDefaults } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
-import { presetForPurpose, type SeatPurpose } from '@/utils/agents'
+import { delegateArgsFor, presetForPurpose, type SeatPurpose } from '@/utils/agents'
 import AsyncState from '@/components/AsyncState.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -100,10 +101,7 @@ async function submit() {
     {
       course_id: courseId.value,
       actor_id: props.agent.actor_id,
-      preset: presetForPurpose(purpose.value),
-      // TODO(answers_course): once Core records a seat's purpose, send it here
-      // too (answers_course: purpose.value === 'course'), and let a person
-      // who manages members choose it apart from the preset.
+      ...delegateArgsFor(purpose.value),
     },
     { success: t('agents.bring.done', { name: props.agent.display_name, course }) },
   )
@@ -184,6 +182,8 @@ async function submit() {
               class="bring__alert"
             />
             <dl class="bring__facts">
+              <dt>{{ t('agents.bring.answers') }}</dt>
+              <dd>{{ purpose === 'course' ? t('agents.bring.answersCourse') : t('agents.bring.answersYou') }}</dd>
               <dt>{{ t('agents.bring.students') }}</dt>
               <dd>{{ studentsText() }}</dd>
               <dt>{{ t('agents.bring.assignments') }}</dt>

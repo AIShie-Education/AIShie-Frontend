@@ -249,7 +249,7 @@ export default {
       personal:
         'Your own assistant: it reads what you can read (your own work and grades, if you are a student) and answers only you.',
       course:
-        'A course agent: every student may ask it about the course material. It reads nobody’s work. Offered because you manage this course’s members.',
+        'A course agent: every student may ask it about the course material, and it may repeat to one what another told it. It reads nobody’s work. Offered because you manage this course’s members.',
     },
     preview: 'What it would get',
     level: {
@@ -259,6 +259,9 @@ export default {
         'This sends a request: an instructor approves it before your agent is seated. You can take it back while it waits.',
       denied: 'Your seat here does not let you bring agents in.',
     },
+    answers: 'Who may ask it',
+    answersYou: 'Only you',
+    answersCourse: 'You and the students: it holds what each one writes, and may repeat it to the others',
     students: 'Students it reaches',
     assignments: 'Assignments',
     ends: 'Seat ends',
