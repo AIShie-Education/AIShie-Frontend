@@ -35,7 +35,7 @@ import LinkSsoCard from './components/LinkSsoCard.vue'
 import SetOwnerDialog from './components/SetOwnerDialog.vue'
 import SignInTags from './components/SignInTags.vue'
 import { useCanonicalId } from './components/adminShared'
-import { listActors } from './components/actorSearch'
+import { hasActorList, listActors } from './components/actorSearch'
 import { suspendedBy } from './components/owner'
 import { editBlocker } from './components/signIn'
 
@@ -73,12 +73,15 @@ const suspender = useAsync(
 )
 
 // The agents a person owns (actor.list, owner_actor_id): a page's worth, and
-// a link to the whole list.
-const ownedOf = computed(() => (actor.value?.kind === 'human' ? actor.value.id : null))
+// a link to the whole list. Not asked of a Core known to have no directory.
+const ownedOf = computed(() => (actor.value?.kind === 'human' && hasActorList.value !== false ? actor.value.id : null))
 const owned = useAsync(
   () =>
     ownedOf.value
-      ? listActors({ owner_actor_id: ownedOf.value, kind: 'agent', limit: 20 })
+      ? listActors({ owner_actor_id: ownedOf.value, kind: 'agent', limit: 20 }).catch(() => ({
+          actors: [],
+          next: null,
+        }))
       : Promise.resolve({ actors: [], next: null }),
   { watch: [ownedOf] },
 )
