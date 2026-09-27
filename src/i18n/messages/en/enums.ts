@@ -26,6 +26,9 @@ export default {
     member_read: 'See members',
     member_manage: 'Manage members',
     action_decide: 'Approve & review',
+    agent_delegate: 'Bring in own agents',
+    conversation_ask: 'Ask questions',
+    conversation_answer: 'Answer questions',
   },
   permHelp: {
     document_read: 'Published material and instructions; also the course, its assignments and its activity feed',
@@ -41,6 +44,38 @@ export default {
     member_read: 'The member list',
     member_manage: 'Adding, removing and re-scoping members',
     action_decide: 'Approving proposals and reviewing after the fact',
+    agent_delegate:
+      'Bringing an agent you own into the course as your assistant; it never holds more than your own seat',
+    conversation_ask: 'Starting conversations with the course’s agents or your own, and writing in them',
+    conversation_answer: 'Being asked questions, and answering them; the level is how the answers go out',
+  },
+  // The built-in presets, by Core's name for them.
+  preset: {
+    student: 'Student',
+    observer: 'Observer',
+    ta: 'Teaching assistant',
+    instructor: 'Instructor',
+    tutor: 'Tutor (agent)',
+    grader: 'Grader (agent)',
+    delegate: 'Personal assistant (agent)',
+    course_tutor: 'Course agent',
+  },
+  presetHelp: {
+    student: 'Reads published material, hands in work, and sees their own grades.',
+    observer: 'Reads published material and the member list; changes nothing.',
+    ta: 'Reads everything and enters grades; the instructor posts them and approves requests.',
+    instructor: 'Everything, unsupervised.',
+    tutor: 'An agent that reads material, and the work and grades of the students it is listed for. Writes nothing.',
+    grader:
+      'An agent that reads material and rubrics, and proposes grades for the assignments it is listed for; a person approves each one.',
+    delegate:
+      'Someone’s own agent: reads the material and its owner’s work and grades, and answers its owner’s questions. Never more than its owner’s seat.',
+    course_tutor: 'An agent that answers students’ questions about the course material. Reads nobody’s work.',
+  },
+  // What an agent seated as someone's delegate is there for.
+  seatPurpose: {
+    personal: 'Personal assistant',
+    course: 'Course agent',
   },
   role: {
     student: 'Student',
@@ -75,6 +110,15 @@ export default {
     active: 'Active',
     paused: 'Paused',
     removed: 'Removed',
+    expired: 'Expired',
+  },
+  // Why a seat was removed (member.removed's reason).
+  removedReason: {
+    removed: 'Removed by a manager',
+    expired: 'Its time ran out',
+    withdrawn: 'Withdrawn by its owner',
+    principal_removed: 'Its owner left the course',
+    orphaned: 'No longer tied to its owner’s seat',
   },
   actionStatus: {
     denied: 'Denied',
@@ -125,6 +169,27 @@ export default {
     session: 'Browser session',
     invite: 'Invitation',
   },
+  conversationState: {
+    awaiting_answer: 'Awaiting an answer',
+    reply_pending_approval: 'Answer awaiting approval',
+    answered: 'Answered',
+    closed: 'Closed',
+  },
+  conversationStatus: {
+    open: 'Open',
+    closed: 'Closed',
+  },
+  // closed_reason codes; anything else is what the closer wrote, shown as it is.
+  closedReason: {
+    seat_removed: 'A participant left the course',
+  },
+  // A respondent's conversation_answer, as the person asking should read it.
+  answerLevel: {
+    autonomous: 'Answers at once',
+    pending_review: 'Answers at once; reviewed after',
+    confirm_required: 'Each answer waits for approval',
+    denied: 'Not answering now',
+  },
   event: {
     'action.proposed': 'Action proposed',
     'action.approved': 'Proposal approved',
@@ -137,6 +202,8 @@ export default {
     'actor.invited': 'Actor invited',
     'actor.suspended': 'Actor suspended',
     'actor.reactivated': 'Actor reactivated',
+    'actor.credential_revoked': 'Credential revoked',
+    'agent.created': 'Agent created',
     'assignment.created': 'Assignment created',
     'assignment.updated': 'Assignment updated',
     'assignment.published': 'Assignment published',
@@ -145,6 +212,10 @@ export default {
     'component.created': 'Grading component created',
     'component.updated': 'Grading component updated',
     'component.moved': 'Grading component moved',
+    'conversation.opened': 'Conversation started',
+    'conversation.message_posted': 'New message',
+    'conversation.closed': 'Conversation closed',
+    'conversation.message_retracted': 'Message withdrawn',
     'course.created': 'Course created',
     'course.updated': 'Course updated',
     'course.activated': 'Course activated',

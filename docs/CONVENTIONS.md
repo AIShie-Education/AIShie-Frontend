@@ -61,9 +61,11 @@ markdown-it + DOMPurify.
 ## Permissions in the UI
 
 `useCourseStore()` (`@/stores/course`) holds the open course (`course`), the caller's seat
-(`membership`, `myMemberId`, `role`) and `perms`. Core never tells a member their own permissions
-unless they may read the member list, so `perms` is exact, guessed from the built-in preset for the
-role, or unknown (`permsSource`). Therefore:
+(`membership`, `myMemberId`, `role`; `principalMemberId` / `isDelegate` when the caller is an agent
+seated as someone's delegate) and `perms`. `me.memberships` gives each seat's effective levels (its
+own, capped by its principal's for a delegate; all denied while the seat does not count), so `perms`
+is exact; against a Core from before that field it is read from the seat (with `member_read`),
+guessed from the built-in preset for the role, or unknown (`permsSource`). Therefore:
 
 - `course.can(perm)` decides what to **offer** (show a button, a tab). Unknown counts as yes.
   Core decides what is **allowed**; its refusal is shown by `useWrite`/`AsyncState`.
@@ -71,8 +73,9 @@ role, or unknown (`permsSource`). Therefore:
   `course.canAll([...])`, `course.needsApprovalAll([...])` (regrading is `grade_submit` and
   `grade_post`). `course.seesAllGrades` says whether the caller certainly sees every grade, drafts
   included (exact permissions, a grading permission, and both scopes `all`).
-- A seat's permissions are guessed for agents too: an `assistant` listed to assignments is taken
-  for the built-in `grader`, one listed to students for `tutor`. A refusal Core has already given
+- Where a seat's permissions are guessed (an older Core), they are guessed for agents too: an
+  `assistant` listed to assignments is taken for the built-in `grader`, one listed to students for
+  `tutor`; a delegate seat (one with a principal) is never guessed. A refusal Core has already given
   (reading one's own seat needs `member_read`) is remembered in `course.refused`, and
   `ensureMembers()` does not ask again when the answer is sure to be no.
 - `course.needsApproval(perm)` → the action will become a proposal. Say so next to the button
@@ -121,6 +124,15 @@ role, or unknown (`permsSource`). Therefore:
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentFileLink>` takes its link text in the default
   slot; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
+- Agents: `<AgentBadge :kind :owner-name :mine />` beside an actor's or member's name ("Agent",
+  "Your agent", "Yuki's agent"; nothing for a person); `<PresenceText :value="last_seen_at" />` for
+  whether an agent is connected (never / online within two minutes / last seen). `seatPurpose()`
+  (`@/utils/agents`) tells a course agent from a personal assistant by the seat's `answers_course`;
+  `delegateArgsFor()` gives `member.add_delegate` both the preset and `answers_course`, always said
+  outright.
+- Anything kept fresh by asking again (a chat, an inbox): `usePolling(fn, { intervalMs, enabled })`
+  from `@/composables/usePolling` — one poll at a time, backing off after failures, paused while the
+  page is hidden, stopped on unmount; `pollNow()` after sending something.
 - Formatting: Prettier with the repo's `.prettierrc` (no semicolons, single quotes, width 120).
 
 ## Text

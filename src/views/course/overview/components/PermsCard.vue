@@ -77,7 +77,7 @@ const open = ref<string[]>([])
         </ul>
       </div>
       <p v-if="denied.length && groups.length" class="perms__denied app-muted">
-        {{ t('overview.perms.deniedCount', { n: denied.length }) }}
+        {{ t('overview.perms.deniedCount', { n: denied.length, total: PERMS.length }) }}
       </p>
 
       <el-collapse v-model="open" class="perms__all">

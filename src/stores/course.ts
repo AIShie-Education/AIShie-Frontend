@@ -1,33 +1,82 @@
 // The course being looked at: the course itself, the caller's seat in it, and
 // what that seat may do.
 //
-// Core does not tell a member their own permissions directly. A member who
-// may read the member list (member_read) reads their own seat and knows them
-// exactly. Anyone else is judged by the built-in preset their roster role
-// suggests — a guess, since any value on a seat can be overridden — or not at
-// all. Views therefore use can() to decide what to offer, never to decide
-// what is allowed: Core decides that, and a refusal is shown as such.
+// Core tells every member what their seat may do now: me.memberships carries
+// each seat's effective levels (its own, capped by its principal's when the
+// caller is someone's delegate; all denied while the seat does not count).
+// Those are exact. A Core from before that field is handled as before: a
+// member who may read the member list (member_read) reads their own seat and
+// knows its levels exactly; anyone else is judged by the built-in preset
+// their roster role suggests — a guess, since any value on a seat can be
+// overridden — or not at all. Views use can() to decide what to offer, never
+// to decide what is allowed: Core decides that, and a refusal is shown as such.
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ApiError, read } from '@/api/http'
-import type {
-  AssignmentSummary,
-  AutonomyLevel,
-  Course,
-  Member,
-  MemberSummary,
-  Membership,
-  Perm,
-  PermLevels,
+import {
+  AUTONOMY_LEVELS,
+  PERMS,
+  type AssignmentSummary,
+  type AutonomyLevel,
+  type BuiltinPreset,
+  type Course,
+  type Member,
+  type MemberSummary,
+  type Membership,
+  type Perm,
+  type PermLevels,
 } from '@/api/types'
 import { useSessionStore } from './session'
 
 export type PermsSource = 'exact' | 'preset' | 'unknown'
 
 const PAGE = 200
+/** How old the caller's memberships may be when a course is opened, before they are read again. */
+const MEMBERSHIPS_FRESH_MS = 5_000
 
 function toError(e: unknown): ApiError {
   return e instanceof ApiError ? e : new ApiError({ status: 0, code: 'internal', message: String(e) })
+}
+
+/**
+ * The seat's effective levels as me.memberships gives them, or null from a
+ * Core that does not (the field arrived with delegate seats). Any permission
+ * missing from what Core sent is denied.
+ */
+export function effectivePerms(m: Pick<Membership, 'perms'> | null | undefined): PermLevels | null {
+  const p = m?.perms as Record<string, string | undefined> | null | undefined
+  if (!p || typeof p !== 'object') return null
+  const out: PermLevels = {}
+  for (const k of PERMS) {
+    const v = p[k]
+    out[k] = v && (AUTONOMY_LEVELS as string[]).includes(v) ? (v as AutonomyLevel) : 'denied'
+  }
+  return out
+}
+
+/**
+ * The built-in preset a seat's roster facts suggest, when its levels cannot
+ * be read: the preset named after its role, for people. Agents are seated as
+ * assistants; the two built-in agent presets of old are told apart by their
+ * scope (a grader is listed to assignments, a tutor to students). A delegate
+ * (a seat with a principal) is never guessed: whatever preset it was seated
+ * with, it is capped by its principal's seat, which cannot be seen from here.
+ */
+export function guessPreset(
+  m: Pick<Membership, 'role' | 'student_scope' | 'assignment_scope'> & { principal_member_id?: string | null },
+): BuiltinPreset | null {
+  if (m.principal_member_id) return null
+  switch (m.role) {
+    case 'student':
+    case 'ta':
+    case 'instructor':
+    case 'observer':
+      return m.role
+    case 'assistant':
+      if (m.assignment_scope === 'listed' && m.student_scope === 'all') return 'grader'
+      if (m.student_scope === 'listed' && m.assignment_scope === 'all') return 'tutor'
+  }
+  return null
 }
 
 export const useCourseStore = defineStore('course', () => {
@@ -60,6 +109,14 @@ export const useCourseStore = defineStore('course', () => {
 
   const myMemberId = computed(() => membership.value?.member_id ?? null)
   const role = computed(() => membership.value?.role ?? null)
+  /**
+   * When the caller is someone's delegate (an agent seated by its owner, as
+   * when a person signs in here with their agent's token), the principal's
+   * seat: the caller then holds nothing that seat does not. Null for a seat
+   * of one's own, which every person's is.
+   */
+  const principalMemberId = computed(() => membership.value?.principal_member_id ?? null)
+  const isDelegate = computed(() => !!principalMemberId.value)
   const archived = computed(() => course.value?.status === 'archived')
   /** Writes are refused in an archived course, from everyone. */
   const writable = computed(() => !archived.value)
@@ -107,8 +164,8 @@ export const useCourseStore = defineStore('course', () => {
     () =>
       permsSource.value === 'exact' &&
       (can('grade_submit') || can('grade_post')) &&
-      seat.value?.student_scope === 'all' &&
-      seat.value?.assignment_scope === 'all',
+      (seat.value ?? membership.value)?.student_scope === 'all' &&
+      (seat.value ?? membership.value)?.assignment_scope === 'all',
   )
 
   /**
@@ -159,7 +216,11 @@ export const useCourseStore = defineStore('course', () => {
     error.value = null
     const session = useSessionStore()
     try {
-      if (!session.membershipFor(id)) await session.loadMemberships().catch(() => undefined)
+      // The seat's levels come with the memberships, and change when someone
+      // changes the seat: read them afresh for each course opened, unless
+      // they were read a moment ago (signing in reads them too); what was
+      // held stands in if Core cannot be asked.
+      await session.loadMemberships(force ? {} : { maxAgeMs: MEMBERSHIPS_FRESH_MS }).catch(() => undefined)
       if (!current(id, e)) return
       const m = session.membershipFor(id) ?? null
       membership.value = m
@@ -194,6 +255,27 @@ export const useCourseStore = defineStore('course', () => {
       if (current(id, e)) setPermsSource('unknown')
       return
     }
+    const effective = effectivePerms(m)
+    if (effective) {
+      // Exact, from Core. The seat itself (its stored levels, lists and
+      // expiry, which the member pages compare grants with) is read too
+      // where the seat may read the member list; nothing is asked that is
+      // sure to be refused.
+      perms.value = effective
+      setPermsSource('exact')
+      if (effective.member_read === 'denied' || !effective.member_read) return
+      try {
+        const s = await read('member.get', { course_id: id, member_id: m.member_id })
+        if (current(id, e)) seat.value = s
+      } catch (err) {
+        // The levels are known either way: a seat that cannot be read only
+        // leaves the member pages without it to compare grants with.
+        if (current(id, e) && err instanceof ApiError && err.isForbidden) {
+          refused.value = new Set([...refused.value, 'member_read'])
+        }
+      }
+      return
+    }
     try {
       const s = await read('member.get', { course_id: id, member_id: m.member_id })
       if (!current(id, e)) return
@@ -208,21 +290,7 @@ export const useCourseStore = defineStore('course', () => {
       // means the seat does not hold it (or is not live, which refuses all).
       if (err.isForbidden) refused.value = new Set([...refused.value, 'member_read'])
     }
-    // Not allowed to read the member list: guess from the built-in preset
-    // named after the roster role, where there is one. Agents are seated as
-    // assistants; the two built-in agent presets are told apart by their
-    // scope (a grader is listed to assignments, a tutor to students).
-    const byRole: Record<string, string | undefined> = {
-      student: 'student',
-      ta: 'ta',
-      instructor: 'instructor',
-      observer: 'observer',
-    }
-    let presetName = byRole[m.role]
-    if (m.role === 'assistant') {
-      if (m.assignment_scope === 'listed' && m.student_scope === 'all') presetName = 'grader'
-      else if (m.student_scope === 'listed' && m.assignment_scope === 'all') presetName = 'tutor'
-    }
+    const presetName = guessPreset(m)
     if (!presetName) {
       setPermsSource('unknown')
       return
@@ -365,6 +433,8 @@ export const useCourseStore = defineStore('course', () => {
     needsApprovalAll,
     myMemberId,
     role,
+    principalMemberId,
+    isDelegate,
     archived,
     writable,
     level,

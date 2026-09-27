@@ -9,6 +9,8 @@ import { useI18n } from 'vue-i18n'
 import { componentLabel } from '@/views/course/scheme/components/schemeModel'
 import { useCourseStore } from '@/stores/course'
 import { presetLabel } from '@/views/course/members/components/seat'
+import { seatPurpose } from '@/utils/agents'
+import AgentBadge from '@/components/AgentBadge.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -18,6 +20,7 @@ import MaybeLink from './MaybeLink.vue'
 import VersionRef from './VersionRef.vue'
 import {
   exactDecimal,
+  excerpt,
   isObject,
   payloadOf,
   presetOf,
@@ -37,8 +40,10 @@ const props = withDefaults(
     depth?: number
     /** Make the thing it is about a link. */
     link?: boolean
+    /** Quote the start of a message written with it (off where the message is shown whole). */
+    quote?: boolean
   }>(),
-  { depth: 0, link: false },
+  { depth: 0, link: false, quote: true },
 )
 const { t } = useI18n()
 const course = useCourseStore()
@@ -57,6 +62,21 @@ const doc = useLookup(() => (tt.value === 'document' && tid.value ? specs.docume
 const about = useLookup(() =>
   tt.value === 'action' && props.depth < 1 ? specs.action(props.courseId, tid.value) : null,
 )
+/** The conversation a chat action is about: its title, where the caller may read it. */
+const conversationId = computed(() => {
+  if (group.value !== 'conversation') return undefined
+  const r = props.action.result
+  return (
+    (tt.value === 'conversation' ? tid.value : undefined) ??
+    str(p.value.conversation_id) ??
+    // conversation.open names the one it made in its result.
+    (isObject(r) ? str(r.conversation_id) : undefined)
+  )
+})
+const conversation = useLookup(() =>
+  conversationId.value && props.depth < 1 ? specs.conversation(props.courseId, conversationId.value) : null,
+)
+const conversationTitle = computed(() => conversation.value?.value?.title ?? undefined)
 const needsComponents = computed(
   () => tt.value === 'grade_component' || !!str(p.value.component_id) || group.value === 'component',
 )
@@ -112,7 +132,9 @@ const docKind = computed(() => str(p.value.kind) ?? doc.value?.value?.kind)
 
 // A new member's seat is the preset's, as Core finds it, with any role set in
 // the proposal over it.
-const presets = useLookup(() => (type.value === 'member.add' ? specs.presets(props.courseId) : null))
+const presets = useLookup(() =>
+  type.value === 'member.add' || type.value === 'member.add_delegate' ? specs.presets(props.courseId) : null,
+)
 const preset = computed(() => presetOf(presets.value?.value, p.value))
 /** Permissions it sets; for a new member, those set differently from the preset, once that is known. */
 const permChanges = computed(() => {
@@ -129,6 +151,23 @@ const newMemberAs = computed(() => {
   if (as) return t('actions.summary.newMember', { what: as })
   if (role) return t('actions.summary.newMember', { what: t(`enums.role.${role}`) })
   return null
+})
+
+// An agent brought in as someone's delegate: its name and its owner's are
+// fixed in a proposal (Core writes them in when it is made), and so is whom
+// it answers (answers_course); a proposal from before Core recorded that is
+// told by the built-in preset it names.
+const agentName = computed(() => str(p.value.agent_display_name))
+const ownerName = computed(() => str(p.value.owner_display_name))
+const purpose = computed(() =>
+  seatPurpose({
+    answers_course: typeof p.value.answers_course === 'boolean' ? p.value.answers_course : null,
+    preset: preset.value ? (preset.value.dept_id ? null : preset.value.name) : str(p.value.preset),
+  }),
+)
+const everyRole = computed(() => {
+  const role = str(p.value.role)
+  return role ? t('actions.summary.everyRole', { role: t(`enums.role.${role}`) }) : null
 })
 
 const targetRoute = computed(() => (props.link ? routeFor(props.courseId, tt.value, tid.value) : null))
@@ -188,7 +227,26 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       </span>
       <span v-if="permChanges.length > 3" class="action-target__muted">+{{ permChanges.length - 3 }}</span>
     </template>
-    <template v-else-if="group === 'member'">
+    <template v-else-if="type === 'member.add_delegate'">
+      <MaybeLink v-if="seatedId" :to="link ? routeFor(courseId, 'member_id', seatedId) : null" class="action-target__part">
+        <MemberName :id="seatedId" />
+      </MaybeLink>
+      <span v-else class="action-target__part action-target__name">
+        <template v-if="agentName">{{ agentName }}</template>
+        <IdText v-else :id="str(p.actor_id) ?? tid" />
+      </span>
+      <AgentBadge :owner-name="ownerName" />
+      <StatusTag v-if="purpose" vocab="seatPurpose" :value="purpose" />
+      <span v-else-if="preset" class="action-target__as">{{ t('actions.summary.newMember', { what: presetLabel(preset) }) }}</span>
+    </template>
+    <template v-else-if="type === 'member.update_perms_bulk'">
+      <span v-if="everyRole" class="action-target__part action-target__name">{{ everyRole }}</span>
+      <span v-for="[perm, level] in permChanges.slice(0, 3)" :key="perm" class="action-target__perm">
+        {{ t(`enums.perm.${perm}`) }} → <StatusTag vocab="level" :value="level" />
+      </span>
+      <span v-if="permChanges.length > 3" class="action-target__muted">+{{ permChanges.length - 3 }}</span>
+    </template>
+    <template v-else-if="group === 'member' || (group === 'agent' && tt === 'course_member')">
       <MaybeLink :to="targetRoute" class="action-target__part">
         <MemberName :id="tid" />
       </MaybeLink>
@@ -230,14 +288,38 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
     </template>
 
+    <!-- Conversations -->
+    <template v-else-if="group === 'conversation'">
+      <MaybeLink
+        v-if="conversationId"
+        :to="link ? routeFor(courseId, 'conversation', conversationId) : null"
+        class="action-target__part action-target__name"
+      >
+        <template v-if="conversationTitle">{{ conversationTitle }}</template>
+        <template v-else-if="str(p.title)">{{ str(p.title) }}</template>
+        <template v-else>{{ targetTypeLabel('conversation') }} <IdText :id="conversationId" /></template>
+      </MaybeLink>
+      <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
+      <span v-if="str(p.respondent_member_id)" class="action-target__part">
+        → <MemberName :id="str(p.respondent_member_id)" />
+      </span>
+      <span v-if="quote && excerpt(p.body)" class="action-target__quote">“{{ excerpt(p.body) }}”</span>
+      <span v-else-if="quote && type === 'conversation.close' && str(p.reason)" class="action-target__quote">
+        “{{ excerpt(p.reason) }}”
+      </span>
+    </template>
+
     <template v-else-if="group === 'course'">
       <span class="action-target__part action-target__name">{{ course.course?.title ?? targetTypeLabel(tt) }}</span>
     </template>
 
     <!-- A decision or review about another action -->
-    <template v-else-if="type === 'action.decide' || type === 'action.review'">
+    <template v-else-if="type === 'action.decide' || type === 'action.review' || type === 'action.withdraw'">
+      <el-tag v-if="type === 'action.withdraw'" size="small" type="info" effect="plain">
+        {{ t('actions.summary.withdrawn') }}
+      </el-tag>
       <el-tag
-        v-if="type === 'action.decide'"
+        v-else-if="type === 'action.decide'"
         size="small"
         :type="p.decision === 'approve' ? 'success' : 'danger'"
         effect="plain"
@@ -312,6 +394,12 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
 }
 .action-target__by span.action-target__name {
   color: var(--el-text-color-primary);
+}
+.action-target__quote {
+  color: var(--el-text-color-secondary);
+  font-style: italic;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .action-target__perm {
   display: inline-flex;

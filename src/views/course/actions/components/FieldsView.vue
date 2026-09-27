@@ -6,6 +6,7 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { componentLabel } from '@/views/course/scheme/components/schemeModel'
+import { PERMS, type Perm } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal, formatPercent, isUuid, shortId } from '@/utils/format'
 import { presetLabel } from '@/views/course/members/components/seat'
@@ -16,7 +17,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import MaybeLink from './MaybeLink.vue'
 import VersionRef from './VersionRef.vue'
-import { exactDecimal, fieldLabel, isObject, presetOf, routeFor, str, type ActionRow } from './actionText'
+import { exactDecimal, fieldLabel, isObject, presetOf, routeFor, str, typeLabel, type ActionRow } from './actionText'
 import { useLookup, useSpecs } from './lookups'
 
 const props = defineProps<{
@@ -38,6 +39,13 @@ const ORDER = [
   'allow_extra',
   'title',
   'name',
+  'display_name',
+  'agent_display_name',
+  'owner_display_name',
+  'conversation_id',
+  'respondent_member_id',
+  'in_reply_to_message_id',
+  'message_id',
   'kind',
   'state',
   'student_member_id',
@@ -75,7 +83,16 @@ const ORDER = [
 ]
 const DECIMALS = new Set(['score', 'out_of', 'points_possible', 'weight'])
 const TEXT = new Set(['feedback', 'body', 'body_md', 'description'])
-const MEMBERS = new Set(['student_member_id', 'member_id', 'decided_by_member_id', 'reviewed_by_member_id'])
+const MEMBERS = new Set([
+  'student_member_id',
+  'member_id',
+  'decided_by_member_id',
+  'reviewed_by_member_id',
+  'respondent_member_id',
+  'opener_member_id',
+  'author_member_id',
+  'principal_member_id',
+])
 const TIMES = new Set(['due_at', 'expires_at', 'submitted_at', 'posted_at', 'created_at'])
 const COMPONENTS = new Set(['component_id', 'parent_id', 'new_parent_id'])
 const REVIEW_STATES = new Set(['none', 'pending', 'reviewed', 'escalated'])
@@ -113,6 +130,9 @@ const checkVersion = computed(() => actionType.value === 'document.publish' && p
 function label(k: string): string {
   // member.add's permissions are changes laid over the preset, not the seat's whole grant.
   if (k === 'perms' && actionType.value === 'member.add') return t('actions.fields.permOverrides')
+  // member.add_delegate's proposal carries the whole seat Core worked out, not changes.
+  if (k === 'perms' && actionType.value === 'member.add_delegate') return t('actions.fields.permsSeat')
+  if (k === 'role' && actionType.value === 'member.update_perms_bulk') return t('actions.fields.bulkRole')
   return fieldLabel(k)
 }
 
@@ -136,6 +156,7 @@ function kindOf(k: string, v: unknown): string {
   if (k === 'role' && typeof v === 'string') return 'role'
   if ((k === 'student_scope' || k === 'assignment_scope') && typeof v === 'string') return 'scope'
   if (k === 'upload_token') return 'file'
+  if (k === 'exclude_types' && Array.isArray(v)) return 'typeList'
   if ((k === 'preset_id' || k === 'preset') && typeof v === 'string') return 'preset'
   if (k === 'version_id' && typeof v === 'string' && typeof obj.value.document_id === 'string') return 'version'
   if (typeof v === 'boolean') return 'bool'
@@ -161,7 +182,13 @@ function breakdownTotal(v: unknown) {
   return { points: formatDecimal(sum('points'), 6), max: formatDecimal(sum('max'), 6) }
 }
 function perms(v: unknown): [string, string][] {
-  return isObject(v) ? (Object.entries(v) as [string, string][]) : []
+  if (!isObject(v)) return []
+  // In the order permissions are always listed (Core's JSON has none); unknown ones last.
+  const at = (k: string) => {
+    const i = PERMS.indexOf(k as Perm)
+    return i < 0 ? PERMS.length : i
+  }
+  return (Object.entries(v) as [string, string][]).sort((a, b) => at(a[0]) - at(b[0]))
 }
 function strings(v: unknown): string[] {
   return Array.isArray(v) ? v.map(String) : []
@@ -224,6 +251,9 @@ function json(v: unknown) {
             <el-icon><Paperclip /></el-icon> {{ f.title }}
           </li>
         </ul>
+        <span v-else-if="kindOf(k, obj[k]) === 'typeList'" class="fields-view__inline">
+          <span v-for="x in strings(obj[k])" :key="x">{{ typeLabel(x) }}</span>
+        </span>
         <span v-else-if="kindOf(k, obj[k]) === 'memberList'" class="fields-view__inline">
           <span v-if="!strings(obj[k]).length" class="fields-view__muted">{{ t('common.labels.none') }}</span>
           <MemberName v-for="id in strings(obj[k])" :key="id" :id="id" />

@@ -42,7 +42,7 @@ export default {
     unknown:
       'Your seat may not read the member list, so its permissions are not visible to you. Everything is offered, and Core refuses what you may not do.',
     nothing: 'Your seat may do nothing here at the moment.',
-    deniedCount: 'Not permitted: {n} of 13.',
+    deniedCount: 'Not permitted: {n} of {total}.',
     showAll: 'Every permission',
   },
   attention: {

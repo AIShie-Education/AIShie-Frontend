@@ -103,6 +103,44 @@ describe('candidateFrom', () => {
       status: 'suspended',
     })
   })
+  it('keeps whose agent it is, which member.add refuses to seat', async () => {
+    const { candidateFrom, ownedBy } = await page()
+    const c = candidateFrom({
+      id: MEI,
+      display_name: 'Helper',
+      kind: 'agent',
+      status: 'active',
+      owner_actor_id: ME,
+      owner_name: 'Yuki',
+    })
+    expect(c.owner_actor_id).toBe(ME)
+    expect(ownedBy(c)).toBe('Yuki')
+    expect(ownedBy({ owner_actor_id: ME })).toBe('')
+    expect(ownedBy(candidateFrom({ id: MEI, display_name: 'Grader', kind: 'agent', status: 'active' }))).toBeNull()
+    expect(ownedBy(null)).toBeNull()
+  })
+})
+
+describe('explainRefusal', () => {
+  it('explains the refusals that concern agents and their owners', async () => {
+    const { explainRefusal, err } = await page()
+    const says = (message: string) => explainRefusal(err(403, 'forbidden', message))
+    for (const m of [
+      'the agent belongs to someone: its owner brings it in, with member.add_delegate',
+      "the delegate's principal holds grade_read at denied, so the delegate cannot hold it at autonomous",
+      'a delegate reaches no further than its principal, whose scope is narrower than that',
+      'a delegate lasts no longer than its principal, whose membership ends at 2026-12-01T00:00:00Z',
+      'a delegate never holds member_manage',
+      'not on the membership you are a delegate of',
+    ]) {
+      const out = says(m)
+      expect(out, m).toBeTruthy()
+      expect(out, m).not.toMatch(/^members\.refusal\./)
+    }
+    expect(
+      says("the delegate's principal holds grade_read at denied, so the delegate cannot hold it at autonomous"),
+    ).not.toContain('grade_read')
+  })
 })
 
 describe('lookupActor', () => {

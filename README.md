@@ -171,6 +171,14 @@ The end-to-end tests run against one image of Core, pinned by digest in `.github
 http://127.0.0.1:8080`), fix what the type checker then shows, and commit them with the new pin
 ([CONTRIBUTING.md](CONTRIBUTING.md#the-core-the-tests-run-against)).
 
+Agents, delegates and conversations (My agents, a course's agents, the chat) need a Core at or after
+the merge of AIShiteru-Core's `claude/agent-ownership-course-access-5avatj` branch (`agent.*`,
+`member.add_delegate` with `answers_course`, `conversation.*` with `visible_to` codes and
+`last_retracted_at`, `yours_to_decide` on the approval queues). The snapshot in `api/catalogue.json` is
+that branch's; until `.github/core-image` pins an image built from it, CI's catalogue check and its
+end-to-end job run against the older pinned Core and stay red. Move the pin once Core publishes that
+image; locally, run the tests against a binary of that Core (`CORE_BIN=… scripts/ci-core.sh start`).
+
 ## Layout
 
 ```

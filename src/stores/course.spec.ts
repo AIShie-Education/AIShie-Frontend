@@ -17,7 +17,8 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
-const { useCourseStore } = await import('./course')
+const { read } = await import('@/api/http')
+const { useCourseStore, effectivePerms, guessPreset } = await import('./course')
 const { useSessionStore } = await import('./session')
 
 const forbidden = () => new ApiError({ status: 403, code: 'forbidden', message: 'no' })
@@ -72,7 +73,10 @@ describe('course store', () => {
     await session.ensure()
     const course = useCourseStore()
     const first = course.open('c1')
-    await vi.waitFor(() => expect(course.courseId).toBe('c1'))
+    // The first course's seat is being read when the second is opened.
+    await vi.waitFor(() =>
+      expect(read).toHaveBeenCalledWith('member.get', expect.objectContaining({ course_id: 'c1' })),
+    )
     await course.open('c2')
     late.reject(forbidden())
     await first
@@ -111,5 +115,138 @@ describe('course store', () => {
     expect(course.myMemberId).toBe('m9')
     expect(course.permsSource).toBe('preset')
     expect(course.can('grade_post')).toBe(false)
+  })
+
+  it('takes the levels me.memberships gives as exact, and asks nothing sure to be refused', async () => {
+    answers.set('me.memberships', async () => ({
+      memberships: [
+        {
+          ...memberships[0],
+          perms: { document_read: 'autonomous', conversation_ask: 'autonomous', agent_delegate: 'confirm_required' },
+        },
+      ],
+    }))
+    const session = useSessionStore()
+    await session.ensure()
+    const course = useCourseStore()
+    vi.mocked(read).mockClear()
+    await course.open('c1')
+    expect(course.permsSource).toBe('exact')
+    expect(course.guessedPreset).toBeNull()
+    expect(course.level('conversation_ask')).toBe('autonomous')
+    expect(course.needsApproval('agent_delegate')).toBe(true)
+    // Not sent: denied, not unknown.
+    expect(course.can('conversation_answer')).toBe(false)
+    expect(course.can('member_read')).toBe(false)
+    const asked = vi.mocked(read).mock.calls.map((c) => c[0])
+    expect(asked).not.toContain('member.get')
+    expect(asked).not.toContain('preset.list')
+    expect(course.isDelegate).toBe(false)
+  })
+
+  it('still reads the seat itself where it may read the member list', async () => {
+    answers.set('me.memberships', async () => ({
+      memberships: [{ ...memberships[1], perms: { member_read: 'autonomous', member_manage: 'autonomous' } }],
+    }))
+    // The stored levels differ from the effective ones: the effective ones count.
+    answers.set('member.get', async () => ({
+      id: 'm2',
+      perms: { member_read: 'autonomous', grade_post: 'autonomous' },
+      student_scope: 'all',
+      assignment_scope: 'all',
+    }))
+    const session = useSessionStore()
+    await session.ensure()
+    const course = useCourseStore()
+    await course.open('c2')
+    expect(course.permsSource).toBe('exact')
+    expect(course.seat?.id).toBe('m2')
+    expect(course.level('member_manage')).toBe('autonomous')
+    expect(course.level('grade_post')).toBe('denied')
+  })
+
+  it('keeps exact levels when the seat cannot be read after all', async () => {
+    answers.set('me.memberships', async () => ({
+      memberships: [{ ...memberships[1], perms: { member_read: 'autonomous', document_read: 'autonomous' } }],
+    }))
+    answers.set('member.get', () => Promise.reject(new ApiError({ status: 500, code: 'internal', message: 'x' })))
+    const session = useSessionStore()
+    await session.ensure()
+    const course = useCourseStore()
+    await course.open('c2')
+    expect(course.error).toBeNull()
+    expect(course.permsSource).toBe('exact')
+    expect(course.seat).toBeNull()
+    expect(course.can('document_read')).toBe(true)
+  })
+
+  it('knows a delegate seat as one, and never guesses its levels from a preset', async () => {
+    answers.set('me.memberships', async () => ({
+      memberships: [
+        { ...memberships[0], role: 'assistant', student_scope: 'listed', principal_member_id: 'owner-seat' },
+      ],
+    }))
+    answers.set('member.get', () => Promise.reject(forbidden()))
+    const session = useSessionStore()
+    await session.ensure()
+    const course = useCourseStore()
+    await course.open('c1')
+    expect(course.isDelegate).toBe(true)
+    expect(course.principalMemberId).toBe('owner-seat')
+    expect(course.permsSource).toBe('unknown')
+    expect(course.guessedPreset).toBeNull()
+    expect(course.can('document_read')).toBe(true)
+    expect(course.can('member_read')).toBe(false)
+  })
+
+  it('reads the memberships again when another course is opened, so changed levels show', async () => {
+    let level = 'denied'
+    answers.set('me.memberships', async () => ({
+      memberships: memberships.map((m) => ({ ...m, perms: { conversation_ask: level } })),
+    }))
+    const session = useSessionStore()
+    await session.ensure()
+    const course = useCourseStore()
+    await course.open('c1', true)
+    expect(course.can('conversation_ask')).toBe(false)
+    level = 'autonomous'
+    await course.open('c2', true)
+    expect(course.can('conversation_ask')).toBe(true)
+  })
+})
+
+describe('effectivePerms', () => {
+  it('is null from a Core that does not send them', () => {
+    expect(effectivePerms(null)).toBeNull()
+    expect(effectivePerms({} as never)).toBeNull()
+  })
+  it('fills every permission, denying what is missing or unknown', () => {
+    const p = effectivePerms({ perms: { document_read: 'autonomous', grade_read: 'sometimes' } })!
+    expect(p.document_read).toBe('autonomous')
+    expect(p.grade_read).toBe('denied')
+    expect(p.conversation_answer).toBe('denied')
+    expect(Object.keys(p)).toHaveLength(16)
+  })
+})
+
+describe('guessPreset', () => {
+  const seat = (role: string, student_scope = 'all', assignment_scope = 'all', principal_member_id?: string) => ({
+    role,
+    student_scope,
+    assignment_scope,
+    principal_member_id,
+  })
+  it('names people by their role', () => {
+    expect(guessPreset(seat('student'))).toBe('student')
+    expect(guessPreset(seat('instructor'))).toBe('instructor')
+  })
+  it('tells the old agent presets apart by scope', () => {
+    expect(guessPreset(seat('assistant', 'all', 'listed'))).toBe('grader')
+    expect(guessPreset(seat('assistant', 'listed', 'all'))).toBe('tutor')
+    expect(guessPreset(seat('assistant', 'all', 'all'))).toBeNull()
+  })
+  it('never guesses a delegate, whatever its shape', () => {
+    expect(guessPreset(seat('assistant', 'listed', 'all', 'p'))).toBeNull()
+    expect(guessPreset(seat('assistant', 'all', 'listed', 'p'))).toBeNull()
   })
 })

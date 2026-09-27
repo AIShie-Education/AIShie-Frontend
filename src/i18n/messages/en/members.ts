@@ -9,6 +9,8 @@ export default {
   emptyAgentsSoFar: 'No agents among the first {n} members. Load more to look through the rest.',
   emptyPeopleSoFar: 'No people among the first {n} members. Load more to look through the rest.',
   partialCounts: 'The counts cover the members loaded so far. Load more to see everyone.',
+  agentsHint: 'Course agents, how their replies reach students, and whether students may bring their own agents:',
+  agentsPage: 'Agents page',
   tabs: {
     all: 'All',
     people: 'People',
@@ -58,6 +60,8 @@ export default {
     instructor: 'Instructor',
     tutor: 'Tutor (agent)',
     grader: 'Grader (agent)',
+    delegate: 'Personal assistant (agent)',
+    course_tutor: 'Course agent',
   },
   presetHelp: {
     student: 'Reads published material, hands in work, and sees their own grades.',
@@ -67,11 +71,14 @@ export default {
     tutor: 'An agent that reads material, and the work and grades of the students it is listed for. Writes nothing.',
     grader:
       'An agent that reads material and rubrics, and proposes grades for the assignments it is listed for; a person approves each one.',
+    delegate:
+      'Someone’s own agent: reads the material and its owner’s work and grades, and answers its owner’s questions. Never more than its owner’s seat.',
+    course_tutor: 'An agent that answers students’ questions about the course material. Reads nobody’s work.',
   },
   add: {
     title: 'Add a member',
     intro:
-      'Seat a person or an agent in this course. A preset gives the starting role, reach and permission levels; you can change any of them below.',
+      'Seat a person or an agent in this course. A preset gives the starting role, reach and permission levels; you can change any of them below. An agent that belongs to someone is not added here: its owner brings it in.',
     find: 'Find by name or email',
     findPlaceholder: 'Search people and agents',
     findNoMatch: 'No one matches.',
@@ -99,6 +106,10 @@ export default {
     alreadySeated: 'They already have a seat in this course. Change that seat rather than adding another.',
     openSeat: 'Open their seat',
     suspended: 'Suspended: Core seats nobody who is suspended until a platform administrator reinstates them.',
+    ownedAgent: 'This agent belongs to {owner}, so it cannot be added here.',
+    ownedAgentNoName: 'This agent belongs to someone, so it cannot be added here.',
+    ownedAgentHelp:
+      'An agent a person owns takes part only as their delegate: its owner brings it into the course themselves, and it never holds more than their seat. To add a course agent of your own, use the Agents page.',
     preset: 'Preset',
     presetsFailed: 'The presets could not be loaded.',
     builtIn: 'Built-in',
@@ -160,6 +171,14 @@ export default {
     assignmentsOutside: 'You can only list assignments that are within your own reach.',
     outlives: 'Your own seat ends at {t}; you cannot give one that lasts longer. Set an end no later than yours.',
     ownSeat: 'Nobody manages their own seat. Ask another member who manages members.',
+    ownPrincipal: 'An agent does not manage the seat of the person whose delegate it is.',
+    ownedAgent:
+      'This agent belongs to someone. Only its owner brings it into a course, as their delegate; it cannot be added as a member here.',
+    principalCap:
+      'This agent acts for someone who holds “{perm}” at “{held}”, and an agent never does more than its owner: it cannot have it at “{wanted}”.',
+    principalScope: 'An agent reaches no further than its owner, whose own reach is narrower than that.',
+    principalExpiry: 'An agent’s seat lasts no longer than its owner’s, which ends at {t}.',
+    delegateNever: 'An agent seated as someone’s delegate never holds “{perm}”.',
     alreadySeated:
       'This actor already has a seat in this course. Change that seat instead, or remove it and add them again for a fresh start.',
     noActor: 'No actor has this ID. Check it with the administrator who registered them.',
@@ -217,6 +236,16 @@ export default {
     memberIdAgent:
       'This seat’s own ID. An agent keys its memory of this course on it: pausing and resuming keeps the same relationship, while removing and re-adding gives a new ID and a fresh start.',
     approvalNote: 'Your seat needs approval for this, so it will wait for someone to approve it.',
+    delegate: {
+      actsFor: 'Acts for',
+      help: 'Its owner’s seat in this course. The agent never holds more than that seat, reaches no further, is paused while it is, and leaves the course with it.',
+      permsHelp:
+        'The levels below are this agent’s own. What it may do is also capped by its owner’s seat, and it never manages members or brings in agents.',
+      never: 'An agent seated as someone’s delegate never holds this',
+      theirAgents: 'Their agents here',
+      theirAgentsHelp: 'Agents this member brought into the course. Each acts only for them, and leaves with them.',
+      removeToo: 'Their agent here leaves the course with them. | Their {n} agents here leave the course with them.',
+    },
     work: {
       title: 'Their work:',
       gradebook: 'Gradebook',

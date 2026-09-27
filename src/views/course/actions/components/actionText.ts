@@ -92,6 +92,12 @@ export function reasonText(e: StoredError | null | undefined): string | null {
     const k2 = `actions.denyReason.${reason}`
     parts.push(te(k1) ? t(k1) : te(k2) ? t(k2) : reason)
   }
+  // A cancellation may say more of why (an agent's owner changed, say).
+  const why = str(e.details.why)
+  if (why) {
+    const k = `actions.cancelWhy.${why}`
+    if (te(k)) parts.push(t(k))
+  }
   const authz = str(e.details.authz_reason)
   if (authz) {
     const k = `actions.denyReason.${authz}`
@@ -137,6 +143,9 @@ export function routeFor(courseId: string, kind: string, id: string | null | und
       return { name: 'course-scheme', params: { courseId } }
     case 'course':
       return { name: 'course-overview', params: { courseId } }
+    case 'conversation':
+    case 'conversation_id':
+      return { name: 'course-conversations', params: { courseId, conversationId: id } }
   }
   return null
 }
@@ -158,8 +167,26 @@ export function isAboutAction(a: Pick<ActionRow, 'action_type'>): boolean {
   return a.action_type === 'action.decide' || a.action_type === 'action.review'
 }
 
+/**
+ * The start of a message as one line of plain text, for a summary: Markdown's
+ * marks taken off (it is shown in full, rendered, elsewhere).
+ */
+export function excerpt(text: unknown, max = 80): string | undefined {
+  if (typeof text !== 'string') return undefined
+  const plain = text
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[`*_~>#|]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!plain) return undefined
+  return plain.length > max ? `${plain.slice(0, max - 1).trimEnd()}…` : plain
+}
+
 export type Block =
   | 'own'
+  | 'ownAgent'
   | 'ownReview'
   | 'ownRemove'
   | 'ownEscalation'
@@ -175,9 +202,33 @@ export type Block =
 export function useJudgeRules() {
   const course = useCourseStore()
   const session = useSessionStore()
+  // Whose seat is whose agent is read from the member list.
+  void course.ensureMembers()
   function isMine(a: { member_id?: string | null; actor_id?: string } | null | undefined): boolean {
     if (!a) return false
     return (!!a.member_id && a.member_id === course.myMemberId) || (!!a.actor_id && a.actor_id === session.me?.id)
+  }
+  /**
+   * Whether an action is the caller's own or their party's: a person, the
+   * agents they own, and those agents among themselves are one party, and
+   * nobody decides or reviews their own party's actions (Core refuses it).
+   * Told from the seat that acted, where the member list is readable; the
+   * approval and review queues say it outright (yours_to_decide), which
+   * block() takes first.
+   */
+  function isOwnParty(a: { member_id?: string | null; actor_id?: string } | null | undefined): boolean {
+    if (!a) return false
+    if (isMine(a)) return true
+    const me = course.myMemberId
+    const seat = a.member_id ? course.members.get(a.member_id) : undefined
+    // The caller's principal, when the caller is someone's agent.
+    if (a.member_id && course.principalMemberId && a.member_id === course.principalMemberId) return true
+    if (!seat) return false
+    if (me && seat.principal_member_id === me) return true
+    if (seat.owner_actor_id && seat.owner_actor_id === session.me?.id) return true
+    // Another agent of the caller's own owner.
+    const mine = me ? course.members.get(me) : undefined
+    return !!mine?.owner_actor_id && seat.owner_actor_id === mine.owner_actor_id
   }
   function block(
     a: ActionRow,
@@ -186,7 +237,11 @@ export function useJudgeRules() {
   ): Block {
     if (!course.writable) return 'archived'
     if (isMine(a)) return mode === 'decide' ? 'own' : 'ownReview'
-    if (isAboutAction(a) && isMine(about)) return 'ownRemove'
+    // The queues say whose it is to decide (yours_to_decide); elsewhere
+    // (action.get) it is told from the member list.
+    if (a.yours_to_decide === false) return 'ownAgent'
+    if (a.yours_to_decide !== true && isOwnParty(a)) return 'ownAgent'
+    if (isAboutAction(a) && isOwnParty(about)) return 'ownRemove'
     if (mode === 'review' && a.review_state === 'escalated' && a.reviewed_by_member_id && a.reviewed_by_member_id === course.myMemberId)
       return 'ownEscalation'
     return null
@@ -204,7 +259,7 @@ export function useJudgeRules() {
       return 'closesOwnEscalation'
     return null
   }
-  return { isMine, block, approveBlock }
+  return { isMine, isOwnParty, block, approveBlock }
 }
 
 /**

@@ -2,7 +2,7 @@
 // One preset in full: what a member seated from it starts with.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Preset } from '@/api/types'
+import { PERMS, type Preset } from '@/api/types'
 import IdText from '@/components/IdText.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -37,7 +37,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
           {{ deptName ?? t('adminSetup.presets.own') }}
         </el-tag>
         <span class="app-muted preset-drawer__count">{{
-          t('adminSetup.presets.allowed', { n: allowedCount(preset) })
+          t('adminSetup.presets.allowed', { n: allowedCount(preset), total: PERMS.length })
         }}</span>
       </div>
 

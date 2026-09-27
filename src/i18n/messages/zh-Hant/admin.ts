@@ -152,8 +152,12 @@ export default {
       role: '平台角色',
       signIn: '登入方式',
       registered: '登記時間',
+      owner: '擁有者',
     },
     registeredOn: '{date} 登記',
+    noOwner: '沒有擁有者',
+    ownerIs: '擁有者：{owner}',
+    ownedBy: '{owner} 擁有的代理',
     empty: '尚未登記任何人。',
     emptyFiltered: '沒有符合的結果。',
     byId: '已按 ID 找到。按 Enter 開啟其頁面。',
@@ -199,6 +203,10 @@ export default {
       seat: '請課程導師（成員 → 新增）以「grader」或「tutor」等預設為它安排席位，並將範圍限定於它所服務的學生或作業。',
       connect: '將其 MCP 用戶端指向 {endpoint}，並以權杖作為 Bearer 權杖。',
     },
+    ownedAgent: {
+      owner: '它由 {owner} 擁有：由對方在自己的「我的代理」頁面發給它權杖，並以其代表身分帶入自己的課程。',
+      seat: '它不會經「成員 → 新增」入席：在每個課程中，它的權限都不會超過擁有者的席位。',
+    },
   },
 
   register: {
@@ -223,7 +231,12 @@ export default {
     adminHint:
       '管理員可建立課程、登記及管理人員與代理；在課程內則與其他人一樣，受其席位權限約束。管理員身分只能在登記時授予。',
     adminRootOnly: '只有 Root 可以設立管理員。',
+    adminOwned: '有擁有者的代理不可擁有平台角色：如要設為管理員，請留空擁有者。',
     permanent: '登記後，類型及平台角色均無法更改；名稱及電子郵件可在其頁面修正。',
+    owner: '擁有者',
+    ownerHint:
+      '如由課程管理者自行安排入席的代理，請留空。設定擁有者後，它只會以該人的代表身分行事：由對方帶入自己的課程，權限永不超過其席位。',
+    ownerHintSet: '它只會以此人的代表身分行事：由對方在「我的代理」發給它權杖並帶入自己的課程。權限永不超過其席位。',
     submit: '登記',
     done: '已登記 {name}',
     sameName: '已有 {n} 個人員或代理以「{name}」登記。',
@@ -260,11 +273,66 @@ export default {
     reactivateConfirm: '對方的席位及登入憑證將回復運作。',
     reactivated: '{name} 已重新啟用',
     suspendedBanner: '已停用：對方在所有課程中的每一個操作都會被拒絕，也無法登入。',
+    suspendedByOwnerBanner:
+      '這個代理由其擁有者停用，擁有者可自行解除。在此重新啟用亦會解除停用；如接手這次停用，停用便歸你所有，擁有者之後無法自行解除。',
+    suspendedBy: '停用者',
+    itsOwner: '其擁有者',
+    suspendedByUnrecorded: '未有紀錄（視作管理員所為）',
+    takeOver: '接手停用',
+    takeOverHint: '把這次停用轉為管理員的停用，擁有者便無法再自行解除。',
+    takeOverConfirm: '這個代理由其擁有者停用。在此再次停用，停用便歸你所有：之後只有管理員才能解除。',
+    owner: '擁有者',
+    noOwner: '沒有：它以自己的席位行事，由課程管理者設定',
+    ownerUnnamed: '某人',
+    setOwner: '設定擁有者',
+    changeOwner: '更改',
+    ownedAgents: '擁有的代理',
+    ownedAll: '查看全部',
+    ownedHint: '由 {owner} 擁有：它只以對方的代表身分行事，由對方安排加入其課程，權限永不超過對方在該課程的席位。',
     cannot: {
       self: '這是你自己的帳戶，無法將其停用。',
       role: '只有 Root 可以管理擁有平台角色的人員。',
       system: '系統帳戶負責執行背景工作，不能停用，也不能發出權杖或連結身分。',
+      ownerRole: '它擁有平台角色，而有擁有者的代理不可擁有平台角色。',
     },
+  },
+
+  owner: {
+    placeholder: '以姓名或電郵搜尋人員，或貼上 ID',
+    placeholderId: '貼上人員的身分 ID',
+    noMatch: '沒有相符的啟用中人員。',
+    pasteId: '請貼上完整的身分 ID。',
+    noSearch: '這個 Core 版本尚未支援以姓名或電郵搜尋（需要更新）：請改為貼上身分 ID。',
+    blocked: {
+      notHuman: '不是人員',
+      suspended: '已停用',
+      role: '只有 root 可以選擇持有平台角色的人',
+    },
+  },
+
+  setOwner: {
+    titleSet: '設定擁有者',
+    titleChange: '更改擁有者',
+    intro:
+      '有擁有者的代理只會以對方的代表身分行事：由對方在「我的代理」發給它權杖並帶入自己的課程，而它在那裡的權限永不超過對方的席位。',
+    current: '現時的擁有者：{owner}。',
+    modeSet: '改由其他人擁有',
+    modeClear: '移除擁有者',
+    owner: '新擁有者',
+    ownerHint: '必須是啟用中的人員。',
+    clearEffect: '沒有擁有者後，它會變回一般代理：由課程管理者自行安排入席，並只由管理員發給權杖。',
+    before: '繼續之前',
+    seated:
+      '代理若仍在未封存的課程中有席位，這項更改會被拒絕：須先由其擁有者撤出（我的代理 → 撤出），或由課程管理者移除其席位。',
+    revokes:
+      '代理的所有憑證會即時撤銷，包括權杖、登入階段、密碼、邀請及已連結的登入身分，因為前擁有者可能仍持有它們。在發給新權杖之前，它的執行環境會停止運作。',
+    requests: '前擁有者提出、仍在等待決定的課程入席申請，會一併取消。',
+    role: '擁有平台角色的代理不能設定擁有者：有擁有者的代理不可擁有平台角色。',
+    archived: '它在已封存課程中保留的席位，自此不再有任何效力。',
+    submit: '設定擁有者',
+    submitClear: '移除擁有者',
+    done: '{name} 現由 {owner} 擁有',
+    cleared: '{name} 已沒有擁有者',
   },
 
   token: {

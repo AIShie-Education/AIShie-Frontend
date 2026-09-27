@@ -39,7 +39,7 @@ export default {
     refused: '讀取你自己的席位時已被 Core 拒絕，因此視為不允許。',
     unknown: '你的席位不能查看成員名單，因此你看不到自己的權限。所有功能都會提供，不允許的操作會由 Core 拒絕。',
     nothing: '你的席位目前在這裡甚麼都不能做。',
-    deniedCount: '不允許：13 項中的 {n} 項。',
+    deniedCount: '不允許：{total} 項中的 {n} 項。',
     showAll: '全部權限',
   },
   attention: {

@@ -9,6 +9,7 @@ import { courseTabClaim } from '@/composables/useCourseTab'
 import type { Perm } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import ChatLauncher from '@/views/course/conversations/components/ChatLauncher.vue'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
@@ -39,8 +40,15 @@ const tabs: Tab[] = [
   { name: 'course-assignments', label: 'layout.course.assignments', icon: 'EditPen', perms: ['document_read'], also: ['course-assignment'] },
   { name: 'course-submissions', label: 'layout.course.submissions', icon: 'Files', perms: ['submission_read'], also: ['course-submission'] },
   { name: 'course-grades', label: 'layout.course.grades', icon: 'Medal', perms: ['grade_read'], also: ['course-grade'] },
+  {
+    name: 'course-conversations',
+    label: 'layout.course.conversations',
+    icon: 'ChatDotRound',
+    perms: ['conversation_ask', 'conversation_answer'],
+  },
   { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
   { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read'], also: ['course-member'] },
+  { name: 'course-agents', label: 'layout.course.agents', icon: 'Cpu', perms: ['member_manage'] },
   { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
   { name: 'course-my-actions', label: 'layout.course.myActions', icon: 'List', perms: ['document_read'] },
   { name: 'course-gradebook', label: 'layout.course.gradebook', icon: 'Tickets', perms: ['grade_read'] },
@@ -193,6 +201,9 @@ onBeforeUnmount(() => observer?.disconnect())
         <div class="course-body">
           <router-view :key="courseId" />
         </div>
+
+        <!-- The chat button and drawer, on every page of the course; it decides for itself whether to show. -->
+        <ChatLauncher :key="courseId" :course-id="courseId" />
       </template>
     </AsyncState>
   </div>

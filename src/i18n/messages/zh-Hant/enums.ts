@@ -26,6 +26,9 @@ export default {
     member_read: '查看成員',
     member_manage: '管理成員',
     action_decide: '批准與覆核',
+    agent_delegate: '帶入自己的代理',
+    conversation_ask: '提問',
+    conversation_answer: '回答提問',
   },
   permHelp: {
     document_read: '已發佈的教材與作業說明；也包括課程本身、作業列表與動態',
@@ -41,6 +44,35 @@ export default {
     member_read: '成員名單',
     member_manage: '新增、移除成員及調整範圍',
     action_decide: '批准提案與事後覆核',
+    agent_delegate: '把自己擁有的代理帶入課程當你的助手；它的權限永遠不會超過你自己的席位',
+    conversation_ask: '與課程代理或自己的代理開始對話，並在對話中發言',
+    conversation_answer: '接受提問並作答；等級決定答覆如何送出',
+  },
+  // The built-in presets, by Core's name for them.
+  preset: {
+    student: '學生',
+    observer: '旁聽者',
+    ta: '助教',
+    instructor: '導師',
+    tutor: '輔導（代理）',
+    grader: '評分（代理）',
+    delegate: '個人助手（代理）',
+    course_tutor: '課程代理',
+  },
+  presetHelp: {
+    student: '閱讀已發佈的教材、繳交作業，並查看自己的成績。',
+    observer: '閱讀已發佈的教材與成員名單；不作任何更改。',
+    ta: '可閱讀所有內容並輸入成績；由導師發佈成績及批准請求。',
+    instructor: '擁有所有權限，無需監督。',
+    tutor: '代理：閱讀教材，以及清單內學生的作業與成績；不作任何寫入。',
+    grader: '代理：閱讀教材與評分準則，為清單內的作業提出評分建議，每一項都須由人批准。',
+    delegate: '某人自己的代理：閱讀教材及其擁有者的作業與成績，並回答擁有者的提問。權限永不超過擁有者的席位。',
+    course_tutor: '代理：回答學生有關課程教材的提問；不閱讀任何人的作業。',
+  },
+  // What an agent seated as someone's delegate is there for.
+  seatPurpose: {
+    personal: '個人助手',
+    course: '課程代理',
   },
   role: {
     student: '學生',
@@ -75,6 +107,15 @@ export default {
     active: '啟用',
     paused: '已暫停',
     removed: '已移除',
+    expired: '已過期',
+  },
+  // Why a seat was removed (member.removed's reason).
+  removedReason: {
+    removed: '由管理者移除',
+    expired: '席位已到期',
+    withdrawn: '擁有者已撤出',
+    principal_removed: '擁有者已離開課程',
+    orphaned: '已不再連結擁有者的席位',
   },
   actionStatus: {
     denied: '被拒絕',
@@ -125,6 +166,27 @@ export default {
     session: '瀏覽器登入階段',
     invite: '邀請',
   },
+  conversationState: {
+    awaiting_answer: '等待回覆',
+    reply_pending_approval: '回覆待批准',
+    answered: '已回覆',
+    closed: '已結束',
+  },
+  conversationStatus: {
+    open: '進行中',
+    closed: '已結束',
+  },
+  // closed_reason codes; anything else is what the closer wrote, shown as it is.
+  closedReason: {
+    seat_removed: '有參與者已離開課程',
+  },
+  // A respondent's conversation_answer, as the person asking should read it.
+  answerLevel: {
+    autonomous: '即時回覆',
+    pending_review: '即時回覆，事後覆核',
+    confirm_required: '每則回覆須經批准',
+    denied: '暫不回覆',
+  },
   event: {
     'action.proposed': '提出操作',
     'action.approved': '提案已批准',
@@ -137,6 +199,8 @@ export default {
     'actor.invited': '已發出登入邀請',
     'actor.suspended': '人員或代理已停用',
     'actor.reactivated': '人員或代理已重新啟用',
+    'actor.credential_revoked': '已撤銷憑證',
+    'agent.created': '已建立代理',
     'assignment.created': '建立作業',
     'assignment.updated': '更新作業',
     'assignment.published': '發佈作業',
@@ -145,6 +209,10 @@ export default {
     'component.created': '建立評分項目',
     'component.updated': '更新評分項目',
     'component.moved': '移動評分項目',
+    'conversation.opened': '開始對話',
+    'conversation.message_posted': '新訊息',
+    'conversation.closed': '對話已結束',
+    'conversation.message_retracted': '訊息已撤回',
     'course.created': '建立課程',
     'course.updated': '更新課程',
     'course.activated': '課程已啟用',

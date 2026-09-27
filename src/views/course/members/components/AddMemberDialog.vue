@@ -40,6 +40,7 @@ import {
   hasLookup,
   lacksLookup,
   lookupActor,
+  ownedBy,
   permsAbove,
   presetDescription,
   presetLabel,
@@ -311,6 +312,11 @@ watch(
 )
 /** Their seat here, when they already have one: a second is not offered. */
 const seatedAs = computed(() => (actorInfo.value && actorInfo.value !== 'missing' && actorInfo.value.member_id) || null)
+/**
+ * For an agent a person owns, that person: Core refuses to seat it with
+ * member.add (its owner brings it in, as their delegate), so it is not offered.
+ */
+const owner = computed(() => (actorInfo.value && actorInfo.value !== 'missing' ? ownedBy(actorInfo.value) : null))
 
 // --- The preset to start from, by who is being seated ------------------------
 /** The person picked a preset themselves: who is being seated no longer changes it. */
@@ -350,7 +356,7 @@ function disabledDate(d: Date) {
 }
 
 async function submit() {
-  if (!formRef.value || !preset.value || seatedAs.value) return
+  if (!formRef.value || !preset.value || seatedAs.value || owner.value !== null) return
   const ok = await formRef.value.validate().catch(() => false)
   if (!ok) return
   const p = preset.value
@@ -422,7 +428,12 @@ function capToMine() {
               <span class="add-member__found-name">{{ a.display_name }}</span>
               <span class="add-member__found-meta">
                 <StatusTag v-if="a.status !== 'active'" vocab="actorStatus" :value="a.status" />
-                <span>{{ a.email ?? t(`enums.actorKind.${a.kind}`) }}</span>
+                <span>{{
+                  a.email ??
+                  (a.owner_name
+                    ? t('common.agent.ownersAgent', { owner: a.owner_name })
+                    : t(`enums.actorKind.${a.kind}`))
+                }}</span>
                 <!-- Two may share a name: the end of the ID, as People & agents shows it, tells them apart. -->
                 <code class="app-mono add-member__found-id">{{ shortId(a.id) }}</code>
               </span>
@@ -521,6 +532,16 @@ function capToMine() {
               >
                 {{ t('members.add.openSeat') }}
               </router-link>
+            </el-alert>
+            <el-alert
+              v-else-if="owner !== null"
+              type="warning"
+              :closable="false"
+              show-icon
+              :title="owner ? t('members.add.ownedAgent', { owner }) : t('members.add.ownedAgentNoName')"
+              class="add-member__inline-alert"
+            >
+              {{ t('members.add.ownedAgentHelp') }}
             </el-alert>
             <el-alert
               v-else-if="actorInfo.status === 'suspended'"
@@ -707,7 +728,7 @@ function capToMine() {
         <el-button
           type="primary"
           :loading="pending"
-          :disabled="!course.writable || !preset || !!seatedAs"
+          :disabled="!course.writable || !preset || !!seatedAs || owner !== null"
           @click="submit"
         >
           {{ course.needsApproval('member_manage') ? t('members.add.submitProposal') : t('members.add.submit') }}

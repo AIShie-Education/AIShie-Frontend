@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The thirteen permissions, each at a level on the one ladder. v-model is the
+// Every permission, each at a level on the one ladder. v-model is the
 // map from permission to level; with `sparse`, a permission can be left unset
 // (for "as the preset has it"), and only those set are in the map.
 import { useI18n } from 'vue-i18n'

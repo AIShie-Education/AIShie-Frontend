@@ -55,8 +55,7 @@ export default {
   },
   presets: {
     title: 'Permission presets',
-    subtitle:
-      'Starting points for a new member: a roster role, a reach and a level for each of the thirteen permissions.',
+    subtitle: 'Starting points for a new member: a roster role, a reach and a level for each permission.',
     explain:
       'A preset is copied onto a member’s seat when they are added. Changing a preset later changes nobody already seated: only members added afterwards get the new values. Any value on a seat can still be changed on the seat itself.',
     department: 'Department',
@@ -75,6 +74,8 @@ export default {
       instructor: 'Instructor',
       tutor: 'Tutor (agent)',
       grader: 'Grader (agent)',
+      delegate: 'Personal assistant (agent)',
+      course_tutor: 'Course agent',
     },
     builtinDescriptions: {
       student: 'Reads published material, hands in work, and sees their own grades.',
@@ -84,10 +85,13 @@ export default {
       tutor: 'An agent that reads material, and the work and grades of the students it is listed for. Writes nothing.',
       grader:
         'An agent that reads material and rubrics, and proposes grades for the assignments it is listed for; a person approves each one.',
+      delegate:
+        'Someone’s own agent: reads the material and its owner’s work and grades, and answers its owner’s questions. Never more than its owner’s seat.',
+      course_tutor: 'An agent that answers students’ questions about the course material. Reads nobody’s work.',
     },
     empty: 'No presets',
     noDescription: 'No description',
-    allowed: '{n} of 13 permissions allowed',
+    allowed: '{n} of {total} permissions allowed',
     details: 'Details',
     list: 'Presets',
     matrix: 'Compare permissions',

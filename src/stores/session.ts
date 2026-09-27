@@ -59,9 +59,32 @@ export const useSessionStore = defineStore('session', () => {
     return loading
   }
 
-  async function loadMemberships() {
-    const out = await read('me.memberships', {})
-    memberships.value = out.memberships ?? []
+  /** Bumped when the caller goes: memberships asked for before then are not theirs. */
+  let generation = 0
+  let membershipsAt = 0
+  let membershipsLoading: Promise<void> | null = null
+
+  /**
+   * Reads the caller's seats (and what each may do now). With maxAgeMs, a
+   * list read no longer ago than that, or one being read, is taken as it is.
+   */
+  function loadMemberships(opts: { maxAgeMs?: number } = {}): Promise<void> {
+    if (opts.maxAgeMs !== undefined) {
+      if (membershipsLoading) return membershipsLoading
+      if (membershipsAt && Date.now() - membershipsAt <= opts.maxAgeMs) return Promise.resolve()
+    }
+    const g = generation
+    const p = read('me.memberships', {})
+      .then((out) => {
+        if (g !== generation) return
+        memberships.value = out.memberships ?? []
+        membershipsAt = Date.now()
+      })
+      .finally(() => {
+        if (membershipsLoading === p) membershipsLoading = null
+      })
+    membershipsLoading = p
+    return p
   }
 
   function membershipFor(courseId: string): Membership | undefined {
@@ -159,6 +182,9 @@ export const useSessionStore = defineStore('session', () => {
     if (me.value) heldCaller = true
     me.value = null
     memberships.value = []
+    generation++
+    membershipsAt = 0
+    membershipsLoading = null
     useCourseStore().close()
     forgetStoredLists()
   }

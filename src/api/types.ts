@@ -29,6 +29,9 @@ export type Perm =
   | 'member_read'
   | 'member_manage'
   | 'action_decide'
+  | 'agent_delegate'
+  | 'conversation_ask'
+  | 'conversation_answer'
 export const PERMS: Perm[] = [
   'document_read',
   'document_read_draft',
@@ -43,6 +46,9 @@ export const PERMS: Perm[] = [
   'member_read',
   'member_manage',
   'action_decide',
+  'agent_delegate',
+  'conversation_ask',
+  'conversation_answer',
 ]
 /** Permissions whose reach is narrowed by a member's student and assignment scope. */
 export const SCOPED_PERMS: Perm[] = [
@@ -53,14 +59,50 @@ export const SCOPED_PERMS: Perm[] = [
   'grade_post',
 ]
 export type PermLevels = Partial<Record<Perm, AutonomyLevel>>
+/**
+ * What a delegate seat (an agent seated by its owner) never holds, whatever
+ * is set on it: it does not manage the course or bring agents of its own.
+ */
+export const DELEGATE_NEVER_PERMS: Perm[] = ['member_manage', 'agent_delegate']
 
 export type Role = 'student' | 'instructor' | 'ta' | 'observer' | 'assistant'
 export const ROLES: Role[] = ['student', 'instructor', 'ta', 'observer', 'assistant']
 export type Scope = 'all' | 'listed'
+// The built-in presets, in the order Core ships them: people from least to
+// most, then agents (a department's own presets have names of their own).
+export type BuiltinPreset =
+  | 'student'
+  | 'observer'
+  | 'ta'
+  | 'instructor'
+  | 'tutor'
+  | 'grader'
+  | 'delegate'
+  | 'course_tutor'
+export const BUILTIN_PRESETS: BuiltinPreset[] = [
+  'student',
+  'observer',
+  'ta',
+  'instructor',
+  'tutor',
+  'grader',
+  'delegate',
+  'course_tutor',
+]
+/**
+ * The presets member.add_delegate is usually given: delegate (a person's own
+ * assistant, the default) and course_tutor (a course agent students may ask).
+ */
+export type DelegatePreset = 'delegate' | 'course_tutor'
+export const DELEGATE_PRESETS: DelegatePreset[] = ['delegate', 'course_tutor']
 export type ActorKind = 'human' | 'agent' | 'system'
 export type PlatformRole = 'root' | 'admin'
 export type CourseStatus = 'draft' | 'active' | 'archived'
 export type MemberStatus = 'active' | 'paused' | 'removed'
+/** A seat's status as the conversation views report it: removed seats and expired ones told apart. */
+export type SeatStatus = MemberStatus | 'expired'
+/** An actor's standing on the platform (agent.list, actor.get). */
+export type ActorStatus = 'active' | 'suspended'
 export type DocumentKind = 'material' | 'instructions' | 'rubric' | 'submission' | 'feedback'
 export type SubmissionState = 'draft' | 'submitted' | 'late' | 'missing'
 
@@ -92,6 +134,47 @@ export type GradebookLine = ListItem<'gradebook.get', 'components'>
 export type ActionFull = ToolOut<'action.get'>
 export type ActionSummary = ListItem<'action.list_proposed', 'actions'>
 export type CourseEvent = ListItem<'event.list', 'events'>
+
+// Agents a person owns (agent.*), and their seats as delegates
+export type AgentSummary = ListItem<'agent.list', 'agents'>
+export type AgentFull = ToolOut<'agent.get'>
+/** One of an agent's seats: a delegate seat, whose principal is its owner's seat there. */
+export type AgentSeat = ListItem<'agent.get', 'seats'>
+/** A member.add_delegate proposal naming the agent, waiting for a decision (withdraw with action.withdraw). */
+export type AgentRequest = ListItem<'agent.get', 'requests'>
+export type AgentCredential = ListItem<'agent.list_credentials', 'credentials'>
+export type AgentToken = ToolOut<'agent.issue_token'>
+/** What member.add_delegate would seat an agent with, and the level the call would run at. */
+export type DelegateDefaults = ToolOut<'member.delegate_defaults'>
+/** The caller's seat in a course, as me.memberships reports it: perms are effective (after any delegate caps). */
+export type MembershipPerms = Membership['perms']
+
+// Conversations (conversation.*)
+export type ConversationState = 'awaiting_answer' | 'reply_pending_approval' | 'answered' | 'closed'
+export const CONVERSATION_STATES: ConversationState[] = ['awaiting_answer', 'reply_pending_approval', 'answered', 'closed']
+export type ConversationStatus = 'open' | 'closed'
+/** conversation.list's `as`: which of the caller's conversations to list. */
+export type ConversationRole = 'opener' | 'respondent' | 'overseer'
+/**
+ * closed_reason is either what the closer wrote (free text, shown as it is)
+ * or this code, set when a participant's seat was removed.
+ */
+export const CLOSED_SEAT_REMOVED = 'seat_removed'
+/** A conversation as every conversation tool returns it, without its messages. */
+export type ConversationView = ListItem<'conversation.list', 'conversations'>
+/** conversation.get: the view, and who can read it (visible_to, as codes: participants, overseers, action_record, respondent_answers_others). */
+export type ConversationDetail = ToolOut<'conversation.get'>
+export type ConversationOpener = ConversationView['opener']
+/** The respondent as a conversation shows it: presence, answer level, whose agent it is. */
+export type ConversationRespondent = ConversationView['respondent']
+/** A message: ordered and paged by seq (after_seq / before_seq), never by id. */
+export type ConversationMessage = ListItem<'conversation.messages', 'messages'>
+export type MessageRetraction = NonNullable<ConversationMessage['retracted']>
+export type ConversationMessagesPage = ToolOut<'conversation.messages'>
+/** Someone the caller may open a conversation with (conversation.respondents). */
+export type Respondent = ListItem<'conversation.respondents', 'respondents'>
+/** A conversation waiting for the caller's answer (conversation.inbox). */
+export type InboxItem = ListItem<'conversation.inbox', 'conversations'>
 
 /** A decimal as Core sends it: a JSON number, or a string where exactness matters. */
 export type Decimal = number | string

@@ -52,6 +52,7 @@ async function signOut() {
 
 function onUserCommand(cmd: string) {
   if (cmd === 'account') router.push({ name: 'account' })
+  else if (cmd === 'agents') router.push({ name: 'account-agents' })
   else if (cmd === 'signout') void signOut()
 }
 
@@ -175,6 +176,9 @@ const pageTitle = computed(() => {
               <el-dropdown-menu>
                 <el-dropdown-item command="account">
                   <el-icon><User /></el-icon>{{ t('common.nav.account') }}
+                </el-dropdown-item>
+                <el-dropdown-item v-if="session.me?.kind === 'human'" command="agents">
+                  <el-icon><Cpu /></el-icon>{{ t('common.nav.agents') }}
                 </el-dropdown-item>
                 <el-dropdown-item command="signout" divided>
                   <el-icon><SwitchButton /></el-icon>{{ t('common.actions.signOut') }}
