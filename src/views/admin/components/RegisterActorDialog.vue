@@ -1,10 +1,13 @@
 <script setup lang="ts">
 // actor.register: a person or an agent. Only root may make an administrator.
 // The kind and the platform role given here are theirs for good; the name and
-// the email can be corrected later (actor.update, on their page).
+// the email can be corrected later (actor.update, on their page). An agent may
+// be given an owner, a person whose delegate alone it will be; that can be
+// changed later too (actor.set_owner).
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
+import type { Actor } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { formatDate } from '@/utils/format'
@@ -13,14 +16,18 @@ import StatusTag from '@/components/StatusTag.vue'
 import { hasActorList } from './actorSearch'
 import { EMAIL_RE, type ActorRow, type RegisteredActor } from './adminShared'
 import { findSameName, sameText } from './sameName'
+import OwnerSelect from './OwnerSelect.vue'
+import type { OwnerPick } from './owner'
 
 const open = defineModel<boolean>({ required: true })
-const emit = defineEmits<{ registered: [actor: RegisteredActor] }>()
+const emit = defineEmits<{ registered: [actor: RegisteredActor, owner: OwnerPick | null] }>()
 const { t } = useI18n()
 const session = useSessionStore()
 
 const formRef = ref<FormInstance>()
-const form = reactive({ kind: 'human' as 'human' | 'agent', display_name: '', email: '', admin: false })
+const form = reactive({ kind: 'human' as 'human' | 'agent', display_name: '', email: '', admin: false, owner: '' })
+/** The person chosen to own the agent, for what the page says next. */
+const owner = ref<Actor | null>(null)
 const { run, pending } = useWrite('actor.register')
 /** Those already registered under the name typed (see below). */
 const sameName = ref<ActorRow[]>([])
@@ -35,6 +42,8 @@ watch(
     form.display_name = ''
     form.email = ''
     form.admin = false
+    form.owner = ''
+    owner.value = null
     sameName.value = []
     sameNameUnchecked.value = null
   },
@@ -102,15 +111,28 @@ async function submit() {
   const display_name = form.display_name.trim()
   const email = form.kind === 'human' && form.email.trim() ? form.email.trim() : null
   const platform_role = form.admin && session.isRoot ? 'admin' : null
+  const ownerId = form.kind === 'agent' && form.owner ? form.owner : null
+  const ownerPick: OwnerPick | null =
+    ownerId && owner.value?.id === ownerId ? { id: ownerId, display_name: owner.value.display_name } : null
   const out = await run(
-    { kind: form.kind, display_name, email: email ?? undefined, platform_role: platform_role ?? undefined },
+    {
+      kind: form.kind,
+      display_name,
+      email: email ?? undefined,
+      platform_role: platform_role ?? undefined,
+      owner_actor_id: ownerId ?? undefined,
+    },
     { success: t('admin.register.done', { name: display_name }) },
   )
   if (!out) return
   open.value = false
   // A platform tool is never proposed: outside a course there is no ladder.
   if (out.status === 'executed') {
-    emit('registered', { id: out.result.actor_id, kind: form.kind, display_name, email, platform_role })
+    emit(
+      'registered',
+      { id: out.result.actor_id, kind: form.kind, display_name, email, platform_role },
+      ownerId ? (ownerPick ?? { id: ownerId, display_name: '' }) : null,
+    )
   }
 }
 </script>
@@ -168,6 +190,15 @@ async function submit() {
         </template>
         <el-input v-model="form.email" type="email" maxlength="320" autocomplete="off" />
         <div class="app-form-hint register__block">{{ t('admin.register.emailHint') }}</div>
+      </el-form-item>
+      <el-form-item v-if="form.kind === 'agent'">
+        <template #label>
+          {{ t('admin.register.owner') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+        </template>
+        <OwnerSelect v-model="form.owner" @picked="(a) => (owner = a)" />
+        <div class="app-form-hint register__block">
+          {{ form.owner ? t('admin.register.ownerHintSet') : t('admin.register.ownerHint') }}
+        </div>
       </el-form-item>
       <el-form-item>
         <el-checkbox v-model="form.admin" :disabled="!session.isRoot" :label="t('admin.register.admin')" />

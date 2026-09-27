@@ -6,7 +6,11 @@
 // administrator may do to whom is Core's rule, mirrored here to say why a
 // control is off: not to yourself (though your own name and email are yours
 // to correct), only root to a holder of a platform role, and nobody to the
-// system actor.
+// system actor. An agent may have an owner, a person whose delegate alone it
+// is (shown, and set or cleared with actor.set_owner); a person's page lists
+// the agents they own. A suspension says who made it: one an agent's owner
+// made they may lift themselves, and suspending it here as well makes it the
+// administrator's.
 import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -16,6 +20,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AgentBadge from '@/components/AgentBadge.vue'
 import { isUuid } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -27,8 +32,11 @@ import EditActorDialog from './components/EditActorDialog.vue'
 import InviteCard from './components/InviteCard.vue'
 import IssueTokenCard from './components/IssueTokenCard.vue'
 import LinkSsoCard from './components/LinkSsoCard.vue'
+import SetOwnerDialog from './components/SetOwnerDialog.vue'
 import SignInTags from './components/SignInTags.vue'
 import { useCanonicalId } from './components/adminShared'
+import { listActors } from './components/actorSearch'
+import { suspendedBy } from './components/owner'
 import { editBlocker } from './components/signIn'
 
 const props = defineProps<{ actorId: string }>()
@@ -55,6 +63,33 @@ const creator = useAsync(
   () => (creatorId.value ? read('actor.get', { actor_id: creatorId.value }) : Promise.resolve(null)),
   { watch: [creatorId] },
 )
+
+// Who made the suspension, by name: the owner's is known already.
+const suspension = computed(() => (actor.value ? suspendedBy(actor.value) : null))
+const suspenderId = computed(() => (suspension.value === 'admin' ? (actor.value?.suspended_by_actor_id ?? null) : null))
+const suspender = useAsync(
+  () => (suspenderId.value ? read('actor.get', { actor_id: suspenderId.value }) : Promise.resolve(null)),
+  { watch: [suspenderId] },
+)
+
+// The agents a person owns (actor.list, owner_actor_id): a page's worth, and
+// a link to the whole list.
+const ownedOf = computed(() => (actor.value?.kind === 'human' ? actor.value.id : null))
+const owned = useAsync(
+  () =>
+    ownedOf.value
+      ? listActors({ owner_actor_id: ownedOf.value, kind: 'agent', limit: 20 })
+      : Promise.resolve({ actors: [], next: null }),
+  { watch: [ownedOf] },
+)
+const ownedAgents = computed(() => owned.data.value?.actors ?? [])
+
+const settingOwner = ref(false)
+function onOwnerSet() {
+  void state.reload()
+  // Every token and session it had is revoked.
+  reloadCredentials()
+}
 
 const isSelf = computed(() => !!actor.value && actor.value.id === session.me?.id)
 const isSystem = computed(() => actor.value?.kind === 'system')
@@ -111,8 +146,9 @@ const reactivateW = useWrite('actor.reactivate')
 async function suspend() {
   const a = actor.value
   if (!a) return
+  const takeOver = suspension.value === 'owner'
   const ok = await ElMessageBox.confirm(
-    t('admin.actor.suspendConfirm'),
+    takeOver ? t('admin.actor.takeOverConfirm') : t('admin.actor.suspendConfirm'),
     t('admin.actor.suspendTitle', { name: a.display_name }),
     {
       type: 'warning',
@@ -152,7 +188,8 @@ async function reactivate() {
     >
       <template #tags>
         <template v-if="actor">
-          <StatusTag vocab="actorKind" :value="actor.kind" size="default" />
+          <StatusTag v-if="!actor.owner_actor_id" vocab="actorKind" :value="actor.kind" size="default" />
+          <AgentBadge v-else :owner-name="actor.owner_name ?? undefined" size="default" />
           <StatusTag vocab="actorStatus" :value="actor.status" size="default" />
           <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" size="default" />
         </template>
@@ -191,6 +228,24 @@ async function reactivate() {
             </el-button>
           </span>
         </el-tooltip>
+        <el-tooltip
+          v-if="suspension === 'owner'"
+          :content="standingBlocker ?? t('admin.actor.takeOverHint')"
+          placement="bottom"
+        >
+          <span>
+            <el-button
+              type="danger"
+              plain
+              :disabled="!!standingBlocker"
+              :loading="suspendW.pending.value"
+              @click="suspend"
+            >
+              <el-icon><Lock /></el-icon>
+              <span>{{ t('admin.actor.takeOver') }}</span>
+            </el-button>
+          </span>
+        </el-tooltip>
       </template>
     </PageHeader>
 
@@ -206,6 +261,7 @@ async function reactivate() {
           :closable="false"
           show-icon
           :title="t('admin.actor.suspendedBanner')"
+          :description="suspension === 'owner' ? t('admin.actor.suspendedByOwnerBanner') : undefined"
           class="actor__alert"
         />
         <el-alert
@@ -241,6 +297,68 @@ async function reactivate() {
             <el-descriptions-item :label="t('admin.actor.status')">
               <StatusTag vocab="actorStatus" :value="actor.status" />
             </el-descriptions-item>
+            <el-descriptions-item v-if="suspension" :label="t('admin.actor.suspendedBy')">
+              <template v-if="suspension === 'owner' && actor.owner_actor_id">
+                <router-link :to="{ name: 'admin-actor', params: { actorId: actor.owner_actor_id } }">
+                  <span v-if="actor.owner_name">{{ actor.owner_name }}</span>
+                  <IdText v-else :id="actor.owner_actor_id" />
+                </router-link>
+                <span class="app-muted"> ({{ t('admin.actor.itsOwner') }})</span>
+              </template>
+              <template v-else-if="suspension === 'admin' && actor.suspended_by_actor_id">
+                <router-link :to="{ name: 'admin-actor', params: { actorId: actor.suspended_by_actor_id } }">
+                  <span v-if="suspender.data.value">{{ suspender.data.value.display_name }}</span>
+                  <IdText v-else :id="actor.suspended_by_actor_id" />
+                </router-link>
+              </template>
+              <span v-else class="app-muted">{{ t('admin.actor.suspendedByUnrecorded') }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="actor.kind === 'agent'" :label="t('admin.actor.owner')">
+              <div class="actor__owner">
+                <router-link
+                  v-if="actor.owner_actor_id"
+                  :to="{ name: 'admin-actor', params: { actorId: actor.owner_actor_id } }"
+                >
+                  <span v-if="actor.owner_name">{{ actor.owner_name }}</span>
+                  <IdText v-else :id="actor.owner_actor_id" />
+                </router-link>
+                <span v-else class="app-muted">{{ t('admin.actor.noOwner') }}</span>
+                <el-tooltip :disabled="!standingBlocker" :content="standingBlocker ?? ''" placement="top">
+                  <span>
+                    <el-button
+                      link
+                      type="primary"
+                      size="small"
+                      :disabled="!!standingBlocker"
+                      @click="settingOwner = true"
+                    >
+                      {{ actor.owner_actor_id ? t('admin.actor.changeOwner') : t('admin.actor.setOwner') }}
+                    </el-button>
+                  </span>
+                </el-tooltip>
+              </div>
+            </el-descriptions-item>
+            <el-descriptions-item
+              v-if="actor.kind === 'human' && ownedAgents.length"
+              :label="t('admin.actor.ownedAgents')"
+            >
+              <span class="actor__owned">
+                <router-link
+                  v-for="a in ownedAgents"
+                  :key="a.id"
+                  :to="{ name: 'admin-actor', params: { actorId: a.id } }"
+                  class="actor__owned-item"
+                >
+                  {{ a.display_name }}
+                </router-link>
+                <router-link
+                  v-if="owned.data.value?.next"
+                  :to="{ name: 'admin-actors', query: { kind: 'agent', owner: actor.id } }"
+                >
+                  {{ t('admin.actor.ownedAll') }}
+                </router-link>
+              </span>
+            </el-descriptions-item>
             <el-descriptions-item v-if="actor.kind === 'human'" :label="t('admin.actor.signIn')">
               <SignInTags :actor="actor" />
             </el-descriptions-item>
@@ -264,7 +382,10 @@ async function reactivate() {
               <IdText :id="actor.id" :full="!narrow" />
             </el-descriptions-item>
           </el-descriptions>
-          <p v-if="!isSystem" class="app-form-hint actor__seats">
+          <p v-if="actor.owner_actor_id" class="app-form-hint actor__seats">
+            {{ t('admin.actor.ownedHint', { owner: actor.owner_name ?? t('admin.actor.ownerUnnamed') }) }}
+          </p>
+          <p v-else-if="!isSystem" class="app-form-hint actor__seats">
             {{ t('admin.actor.seatsHint') }}
             <router-link :to="{ name: 'admin-courses' }">{{ t('admin.nav.courses') }}</router-link>
           </p>
@@ -295,6 +416,7 @@ async function reactivate() {
         </div>
 
         <EditActorDialog v-model="editing" :actor="actor" @saved="onSaved" />
+        <SetOwnerDialog v-if="actor.kind === 'agent'" v-model="settingOwner" :actor="actor" @saved="onOwnerSet" />
       </template>
     </AsyncState>
   </div>
@@ -316,6 +438,20 @@ async function reactivate() {
 }
 .actor__seats {
   margin: 12px 0 0;
+}
+.actor__owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.actor__owned {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.actor__owned-item {
+  word-break: break-word;
 }
 .actor__grid {
   display: grid;

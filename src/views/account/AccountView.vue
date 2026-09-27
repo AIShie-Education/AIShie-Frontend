@@ -33,6 +33,8 @@ const creds = useAsync(
 )
 
 const hasEmail = computed(() => !!(me.data.value ?? session.me)?.email)
+/** Only a person owns agents (agent.create refuses an agent). */
+const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human')
 </script>
 
 <template>
@@ -74,6 +76,20 @@ const hasEmail = computed(() => !!(me.data.value ?? session.me)?.email)
       @retry="seats.reload"
     />
 
+    <section v-if="ownsAgents" class="app-card account-view__section account-agents">
+      <el-icon :size="28" class="account-agents__icon" aria-hidden="true"><Cpu /></el-icon>
+      <div class="account-agents__text">
+        <h2 class="account-agents__title">{{ t('agents.accountCard.title') }}</h2>
+        <p class="app-form-hint account-agents__body">{{ t('agents.accountCard.body') }}</p>
+      </div>
+      <router-link :to="{ name: 'account-agents' }" class="account-agents__link">
+        <el-button>
+          <span>{{ t('agents.accountCard.open') }}</span>
+          <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+        </el-button>
+      </router-link>
+    </section>
+
     <CredentialsCard
       :credentials="creds.data.value?.list"
       :listed-at="creds.data.value?.listedAt"
@@ -101,6 +117,39 @@ const hasEmail = computed(() => !!(me.data.value ?? session.me)?.email)
 }
 .account-view__section {
   margin-top: 16px;
+}
+.account-agents {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.account-agents__icon {
+  flex-shrink: 0;
+  color: var(--el-color-primary);
+}
+.account-agents__text {
+  flex: 1;
+  min-width: 0;
+}
+.account-agents__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.account-agents__body {
+  margin: 4px 0 0;
+}
+.account-agents__link {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .account-agents {
+    flex-wrap: wrap;
+  }
+  .account-agents__link {
+    width: 100%;
+    padding-left: 42px;
+  }
 }
 @media (max-width: 900px) {
   .account-view__top {

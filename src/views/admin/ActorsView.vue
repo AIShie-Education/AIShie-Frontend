@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Everyone registered on the platform (actor.list), found by a piece of
-// their name or email, or by their ID (actor.get), and narrowed by kind and
-// standing; and registering someone new (actor.register).
+// their name or email, or by their ID (actor.get), and narrowed by kind,
+// standing and, for agents, owner (from a person's page); and registering
+// someone new (actor.register), an agent with an owner if need be.
 //
 // A Core from before actor.list cannot list anyone. The page then says so,
 // and offers what there was before the directory: opening an actor by ID.
@@ -9,7 +10,7 @@ import { computed, onScopeDispose, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { isApiError, MCP_ENDPOINT, read } from '@/api/http'
-import { usePaged } from '@/composables/useAsync'
+import { useAsync, usePaged } from '@/composables/useAsync'
 import { errorMessage } from '@/composables/useErrors'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useSessionStore } from '@/stores/session'
@@ -25,6 +26,7 @@ import RegisterActorDialog from './components/RegisterActorDialog.vue'
 import SignInTags from './components/SignInTags.vue'
 import type { ActorRow, RegisteredActor } from './components/adminShared'
 import { hasActorList, listActors } from './components/actorSearch'
+import type { OwnerPick } from './components/owner'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -51,6 +53,18 @@ function queryParam<T extends string>(name: string, allowed?: readonly T[]) {
 const q = queryParam<string>('q')
 const kind = queryParam('kind', KINDS)
 const status = queryParam('status', STATUSES)
+// The agents one person owns: ?owner=<actor id>, from that person's page.
+const ownerParam = queryParam<string>('owner')
+const owner = computed(() =>
+  ownerParam.value && isUuid(ownerParam.value) ? ownerParam.value.toLowerCase() : undefined,
+)
+const ownerActor = useAsync(
+  () => (owner.value ? read('actor.get', { actor_id: owner.value }) : Promise.resolve(null)),
+  { watch: [owner] },
+)
+function clearOwner() {
+  ownerParam.value = undefined
+}
 
 // What is typed goes to the address a moment after typing stops.
 const searchText = ref(q.value ?? '')
@@ -83,12 +97,19 @@ const list = usePaged<ActorRow>(
     }
     // Known to be missing, it is not asked again: the page shows the fallback.
     if (hasActorList.value === false) return { items: [] }
-    const o = await listActors({ search: q.value, kind: kind.value, status: status.value, limit: PAGE, after })
-    return { items: o.actors, next: o.next }
+    const o = await listActors({
+      search: q.value,
+      kind: kind.value,
+      status: status.value,
+      owner_actor_id: owner.value,
+      limit: PAGE,
+      after,
+    })
+    return { items: o.actors ?? [], next: o.next }
   },
-  { watch: [q, kind, status] },
+  { watch: [q, kind, status, owner] },
 )
-const filtered = computed(() => !!q.value || !!kind.value || !!status.value)
+const filtered = computed(() => !!q.value || !!kind.value || !!status.value || !!owner.value)
 const emptyText = computed(() => {
   if (byId.value) return t('admin.actors.notFound')
   return filtered.value ? t('admin.actors.emptyFiltered') : t('admin.actors.empty')
@@ -111,9 +132,12 @@ function open(row: ActorRow) {
 
 const registering = ref(false)
 const justRegistered = ref<RegisteredActor | null>(null)
+/** The owner the agent just registered was given, if any. */
+const justOwner = ref<OwnerPick | null>(null)
 
-function onRegistered(a: RegisteredActor) {
+function onRegistered(a: RegisteredActor, ownerPick: OwnerPick | null) {
   justRegistered.value = a
+  justOwner.value = ownerPick
   void list.reload()
 }
 
@@ -170,6 +194,10 @@ async function openById() {
           {{ t('admin.registered.human.seat') }}
           <router-link :to="{ name: 'admin-courses' }">{{ t('admin.nav.courses') }}</router-link>
         </li>
+      </ol>
+      <ol v-else-if="justOwner" class="actors__steps">
+        <li>{{ t('admin.registered.ownedAgent.owner', { owner: justOwner.display_name }) }}</li>
+        <li>{{ t('admin.registered.ownedAgent.seat') }}</li>
       </ol>
       <ol v-else class="actors__steps">
         <li>{{ t('admin.registered.agent.token') }}</li>
@@ -265,6 +293,15 @@ async function openById() {
         </el-button>
       </div>
 
+      <div v-if="owner && !byId" class="actors__owner-filter">
+        <el-tag closable type="primary" effect="plain" disable-transitions @close="clearOwner">
+          {{
+            t('admin.actors.ownedBy', {
+              owner: ownerActor.data.value?.display_name ?? t('admin.actor.ownerUnnamed'),
+            })
+          }}
+        </el-tag>
+      </div>
       <p v-if="byId && list.items.value.length" class="app-form-hint actors__by-id">{{ t('admin.actors.byId') }}</p>
 
       <AsyncState
@@ -280,6 +317,9 @@ async function openById() {
               <template #meta>
                 <span class="actors__card-meta">
                   <SignInTags v-if="a.kind === 'human'" :actor="a" />
+                  <span v-if="a.owner_actor_id">
+                    {{ t('admin.actors.ownerIs', { owner: a.owner_name ?? t('admin.actor.ownerUnnamed') }) }}
+                  </span>
                   <span>{{ t('admin.actors.registeredOn', { date: formatDate(a.created_at) }) }}</span>
                 </span>
               </template>
@@ -314,6 +354,21 @@ async function openById() {
           </el-table-column>
           <el-table-column :label="t('admin.actors.col.kind')" width="100">
             <template #default="{ row }"><StatusTag vocab="actorKind" :value="row.kind" /></template>
+          </el-table-column>
+          <el-table-column v-if="kind !== 'human'" :label="t('admin.actors.col.owner')" min-width="150">
+            <template #default="{ row }">
+              <router-link
+                v-if="row.owner_actor_id"
+                :to="{ name: 'admin-actor', params: { actorId: row.owner_actor_id } }"
+                class="actors__owner"
+                @click.stop
+              >
+                <span v-if="row.owner_name">{{ row.owner_name }}</span>
+                <IdText v-else :id="row.owner_actor_id" />
+              </router-link>
+              <span v-else-if="row.kind === 'agent'" class="app-muted">{{ t('admin.actors.noOwner') }}</span>
+              <span v-else class="app-muted">—</span>
+            </template>
           </el-table-column>
           <el-table-column :label="t('admin.actors.col.email')" min-width="250">
             <template #default="{ row }">
@@ -409,6 +464,16 @@ async function openById() {
 }
 .actors__by-id {
   margin: -8px 0 8px;
+}
+.actors__owner-filter {
+  margin: -4px 0 12px;
+}
+.actors__owner {
+  text-decoration: none;
+  word-break: break-word;
+}
+.actors__owner:hover {
+  text-decoration: underline;
 }
 .actors__table :deep(.el-table__row) {
   cursor: pointer;

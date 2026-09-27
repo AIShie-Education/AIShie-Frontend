@@ -158,8 +158,12 @@ export default {
       role: 'Platform role',
       signIn: 'Sign-in',
       registered: 'Registered',
+      owner: 'Owner',
     },
     registeredOn: 'Registered {date}',
+    noOwner: 'No owner',
+    ownerIs: 'Owned by {owner}',
+    ownedBy: 'Agents owned by {owner}',
     empty: 'No one is registered yet.',
     emptyFiltered: 'No one matches.',
     byId: 'Found by ID. Press Enter to open their page.',
@@ -205,6 +209,11 @@ export default {
       seat: 'Have a course instructor seat it (Members → Add) with a preset such as grader or tutor, scoped to the students or assignments it serves.',
       connect: 'Point its MCP client at {endpoint}, with the token as a bearer token.',
     },
+    ownedAgent: {
+      owner:
+        '{owner} owns it: they give it tokens and bring it into their courses from their own My agents page, as their delegate.',
+      seat: 'It is never seated from Members → Add: in each course it holds no more than its owner’s seat.',
+    },
   },
 
   register: {
@@ -231,6 +240,11 @@ export default {
     adminRootOnly: 'Only root can make an administrator.',
     permanent:
       'The kind and the platform role cannot be changed after registering. The name and the email can be corrected on their page.',
+    owner: 'Owner',
+    ownerHint:
+      'Leave empty for an agent that course managers seat themselves. With an owner, it acts only as that person’s delegate: they bring it into their courses, and it never holds more than their seat.',
+    ownerHintSet:
+      'It acts only as this person’s delegate: they give it tokens and bring it into their courses from My agents. It never holds more than their seat.',
     submit: 'Register',
     done: '{name} is registered',
     sameName:
@@ -270,12 +284,67 @@ export default {
     reactivateConfirm: 'Their seats and credentials work again as they were.',
     reactivated: '{name} is active again',
     suspendedBanner: 'Suspended: every call they make is refused, in every course, and they cannot sign in.',
+    suspendedByOwnerBanner:
+      'Its owner suspended it, and may lift that themselves. Reactivating it here lifts it as well; taking the suspension over makes it yours, and then its owner cannot lift it.',
+    suspendedBy: 'Suspended by',
+    itsOwner: 'its owner',
+    suspendedByUnrecorded: 'Not recorded (counts as an administrator’s)',
+    takeOver: 'Take over the suspension',
+    takeOverHint: 'Make the suspension an administrator’s, so that its owner can no longer lift it.',
+    takeOverConfirm:
+      'Its owner suspended it. Suspending it here as well makes the suspension yours: from then on only an administrator can lift it.',
+    owner: 'Owner',
+    noOwner: 'None: it acts on its own seats, set by course managers',
+    ownerUnnamed: 'someone',
+    setOwner: 'Set owner',
+    changeOwner: 'Change',
+    ownedAgents: 'Agents they own',
+    ownedAll: 'See all',
+    ownedHint:
+      'Owned by {owner}: it acts only as their delegate, seated by them in their courses, and never holds more than their seat there.',
     cannot: {
       self: 'This is your own account: you cannot suspend it.',
       role: 'Only root acts on someone who holds a platform role.',
       system:
         'The system account runs background jobs. It is never suspended, issued a token or linked to an identity.',
     },
+  },
+
+  owner: {
+    placeholder: 'Search people by name or email, or paste an ID',
+    placeholderId: 'Paste a person’s actor ID',
+    noMatch: 'No active person matches.',
+    pasteId: 'Paste the whole actor ID.',
+    noSearch: 'This Core cannot search by name or email yet (it needs updating): paste the actor ID instead.',
+    blocked: {
+      notHuman: 'Not a person',
+      suspended: 'Suspended',
+      role: 'Only root can choose a holder of a platform role',
+    },
+  },
+
+  setOwner: {
+    titleSet: 'Set an owner',
+    titleChange: 'Change the owner',
+    intro:
+      'An agent someone owns acts only as their delegate: they give it tokens and bring it into their courses from My agents, and it never holds more than their seat there.',
+    current: 'Owned now by {owner}.',
+    modeSet: 'Give it another owner',
+    modeClear: 'Take the owner away',
+    owner: 'New owner',
+    ownerHint: 'An active person.',
+    clearEffect:
+      'Without an owner it is an ordinary agent again: course managers seat it themselves, and only administrators give it tokens.',
+    before: 'Before you go on',
+    seated:
+      'This is refused while the agent is seated in a course that is not archived: its owner takes it out first (My agents → Take out), or a course manager removes its seat.',
+    revokes:
+      'Every token and session the agent has is revoked at once, since whoever owned it before may hold them. Its runtime stops until it is given a new token.',
+    archived: 'A seat it keeps in an archived course counts for nothing from then on.',
+    submit: 'Set owner',
+    submitClear: 'Take the owner away',
+    done: '{owner} now owns {name}',
+    cleared: '{name} has no owner now',
   },
 
   token: {
