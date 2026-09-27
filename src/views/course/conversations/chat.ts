@@ -219,30 +219,62 @@ export function chatStatus(
   return { ...base, notice: opts.empty ? { kind: 'start' } : null, block: null }
 }
 
+// --- Refusals -------------------------------------------------------------------------
+
+/**
+ * Why Core refused a write in a conversation as a conflict (details.reason):
+ * moved_on, the opener wrote again since the message answered; already_answered,
+ * that message has its answer; answer_pending, an answer of the caller's to it
+ * waits for approval; closed, the conversation is closed.
+ */
+export type ConflictReason = 'moved_on' | 'already_answered' | 'answer_pending' | 'closed'
+const CONFLICT_REASONS: ConflictReason[] = ['moved_on', 'already_answered', 'answer_pending', 'closed']
+
+export function conflictReasonOf(
+  e: { code?: string; details?: Record<string, unknown> | null } | null | undefined,
+): ConflictReason | null {
+  if (!e || e.code !== 'conflict') return null
+  const r = e.details?.reason
+  return typeof r === 'string' && (CONFLICT_REASONS as string[]).includes(r) ? (r as ConflictReason) : null
+}
+
 // --- Who can read it -------------------------------------------------------------------
 
 /** The readers conversation.get names, by the chat's words for them. */
-export type VisibleToKey = 'participants' | 'overseers' | 'actionRecord'
+export type VisibleToKey = 'participants' | 'overseers' | 'actionRecord' | 'respondentAnswersOthers'
 export type VisibleToLine = { key: VisibleToKey } | { text: string }
 
-// Core says who can read a conversation in English prose (visible_to); these
-// are the sentences it sends today, by what the chat calls them.
+// Core says who can read a conversation as codes (visible_to), by what the
+// chat calls them. respondent_answers_others: the one answering answers other
+// members too, holds what each writes, and may repeat it to them.
 const VISIBLE_TO: Record<string, VisibleToKey> = {
   participants: 'participants',
-  'course staff who decide actions for the opener': 'overseers',
-  "anyone who decides actions in this course, in the record of each message's action": 'actionRecord',
+  overseers: 'overseers',
+  action_record: 'actionRecord',
+  respondent_answers_others: 'respondentAnswersOthers',
 }
 /** What Core says of every conversation, for one not read yet (or not yet started). */
 export const DEFAULT_VISIBLE_TO: VisibleToKey[] = ['participants', 'overseers', 'actionRecord']
 
 /**
- * Who can read a conversation, in lines to show: those Core names in words
- * the app has are translated, anything else is shown as Core wrote it.
+ * Who can read a conversation, in lines to show: the codes Core sends that
+ * the app has words for are translated, any other is shown as Core sent it.
+ * Before Core has said (a conversation not read yet, or not started), what it
+ * says of every conversation, with the respondent's answering others when it
+ * is known that it does (Core says so of every respondent that is not the
+ * opener's own agent).
  */
-export function visibleToLines(list: readonly string[] | null | undefined): VisibleToLine[] {
-  if (!list?.length) return DEFAULT_VISIBLE_TO.map((key) => ({ key }))
+export function visibleToLines(
+  list: readonly string[] | null | undefined,
+  opts: { answersOthers?: boolean } = {},
+): VisibleToLine[] {
+  if (!list?.length) {
+    const keys: VisibleToKey[] = [...DEFAULT_VISIBLE_TO]
+    if (opts.answersOthers) keys.push('respondentAnswersOthers')
+    return keys.map((key) => ({ key }))
+  }
   return list.map((s) => {
-    const key = VISIBLE_TO[s.trim().toLowerCase().replace(/[’]/g, "'")]
+    const key = VISIBLE_TO[s.trim().toLowerCase()]
     return key ? { key } : { text: s }
   })
 }

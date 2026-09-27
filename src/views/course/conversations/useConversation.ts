@@ -3,8 +3,11 @@
 // nothing); older ones on request, before the first seq held. The view that
 // comes with every page (state, respondent's presence) replaces the one held.
 //
-// Retracting a message does not give it a new seq, so the newest page is read
-// again now and then, and a message the caller retracts is marked at once.
+// Retracting a message does not give it a new seq. The view that comes with
+// every page says when a message in it was last retracted
+// (last_retracted_at): when that moves, the messages held are read again, so
+// a withdrawal shows wherever the message is. One the caller retracts is
+// marked at once.
 import { computed, onScopeDispose, ref, shallowRef, toValue, type MaybeRefOrGetter } from 'vue'
 import { ApiError, read } from '@/api/http'
 import type { ConversationMessage, ConversationView } from '@/api/types'
@@ -16,8 +19,8 @@ import { firstSeq, lastSeq, mergeMessages, POLL_MS, pollDelayMs, sameMessages, s
 export const PAGE = 50
 /** At most this many new messages per poll; a fuller page is read on at once. */
 const POLL_PAGE = 100
-/** How often the newest page is read again, for retractions. */
-const TAIL_REFRESH_MS = 30_000
+/** At most this many pages are read again after a retraction; the rest on the next. */
+const REREAD_PAGES = 20
 
 export interface UseConversationOptions {
   courseId: string
@@ -44,7 +47,10 @@ export function useConversation(opts: UseConversationOptions) {
 
   let disposed = false
   let lastFetchAt = 0
-  let lastTailAt = 0
+  /** The last_retracted_at the messages held were read under. */
+  let readRetractedAt: string | null = null
+  /** A retraction happened since the messages held were read: read them again. */
+  let reread = false
   /** Polls in a row that brought nothing new. */
   let quiet = 0
   let force = false
@@ -62,6 +68,7 @@ export function useConversation(opts: UseConversationOptions) {
     if (v) {
       const old = view.value
       changedView = !old || stateOf(old) !== stateOf(v) || old.last_message_at !== v.last_message_at
+      if ((v.last_retracted_at ?? null) !== readRetractedAt) reread = true
       view.value = v
     }
     return changedMessages || changedView
@@ -75,10 +82,12 @@ export function useConversation(opts: UseConversationOptions) {
       const out = await read('conversation.messages', { ...base(), limit: PAGE })
       if (disposed) return
       messages.value = []
+      readRetractedAt = out.conversation?.last_retracted_at ?? null
+      reread = false
       take(out.messages, out.conversation)
       hasOlder.value = !!out.more
       loaded.value = true
-      lastFetchAt = lastTailAt = now()
+      lastFetchAt = now()
       quiet = 0
     } catch (e) {
       if (!disposed) error.value = toApiError(e)
@@ -122,13 +131,34 @@ export function useConversation(opts: UseConversationOptions) {
       if (after === null) hasOlder.value = !!out.more
       if (!out.more || after === null) break
     }
-    if (t - lastTailAt >= TAIL_REFRESH_MS) {
-      lastTailAt = t
-      const out = await read('conversation.messages', { ...base(), limit: PAGE })
-      if (disposed) return
-      if (take(out.messages, out.conversation)) changed = true
-    }
+    if (reread && (await readHeldAgain())) changed = true
     quiet = changed ? 0 : quiet + 1
+  }
+
+  /**
+   * Reads every message held again, oldest first, after a retraction (whose
+   * message may be any of them). True when anything changed.
+   */
+  async function readHeldAgain(): Promise<boolean> {
+    const first = firstSeq(messages.value)
+    const target = view.value?.last_retracted_at ?? null
+    reread = false
+    readRetractedAt = target
+    if (first === null) return false
+    let changed = false
+    let after = first - 1
+    const last = lastSeq(messages.value) ?? first
+    for (let i = 0; i < REREAD_PAGES && after < last; i++) {
+      const out = await read('conversation.messages', { ...base(), limit: POLL_PAGE, after_seq: after })
+      if (disposed) return changed
+      // A newer retraction while reading: go over them again next time.
+      if ((out.conversation?.last_retracted_at ?? null) !== target) reread = true
+      const page = out.messages ?? []
+      if (take(page, null)) changed = true
+      if (!out.more || !page.length) break
+      after = page[page.length - 1]!.seq
+    }
+    return changed
   }
 
   /** Reads the page of messages before the first held. */

@@ -26,6 +26,7 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+const { ApiError } = await import('@/api/http')
 const { i18n, setLocale } = await import('@/i18n')
 const { useCourseStore } = await import('@/stores/course')
 const { default: ChatPane } = await import('./ChatPane.vue')
@@ -175,6 +176,28 @@ describe('ChatPane', () => {
     })
   })
 
+  it('says why an answer was refused as a conflict, keeps the draft, and reads again', async () => {
+    seat('tutor')
+    writeAnswer = () => {
+      throw new ApiError({
+        status: 409,
+        code: 'conflict',
+        message: 'the conversation moved on; answer the latest message',
+        details: { reason: 'moved_on', latest_opener_message_id: 'm5' },
+      })
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const reads = (await import('@/api/http')).read as unknown as { mock: { calls: unknown[][] } }
+    const before = reads.mock.calls.length
+    const ta = await type(w, 'An answer to the old question')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(document.body.textContent).toContain('They wrote again before your answer went in')
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('An answer to the old question')
+    expect(reads.mock.calls.length).toBeGreaterThan(before)
+  })
+
   it('keeps a question that waits for approval on screen, marked so', async () => {
     seat('student')
     writeAnswer = () => ({ status: 'proposed', actionId: 'a9', reviewState: 'none', replayed: false })
@@ -225,6 +248,8 @@ describe('ChatPane', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', respondent }, global })
     await flushPromises()
     expect(w.find('.chat-pane__notice').text()).toContain('never connected')
+    // A course agent answers others too: the opener is told before writing.
+    expect(w.find('.chat-pane__shared').text()).toContain('may repeat to them')
     const ta = await type(w, 'What is due Friday?')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()

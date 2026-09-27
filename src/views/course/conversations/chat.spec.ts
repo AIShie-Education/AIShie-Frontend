@@ -313,15 +313,16 @@ describe('retractedBy', () => {
 })
 
 describe('visibleToLines', () => {
-  it('translates what Core says today and shows anything else as written', () => {
+  it('translates the codes Core sends and shows any other as sent', () => {
     expect(
-      visibleToLines([
-        'participants',
-        'course staff who decide actions for the opener',
-        "anyone who decides actions in this course, in the record of each message's action",
-        'the dean',
-      ]),
-    ).toEqual([{ key: 'participants' }, { key: 'overseers' }, { key: 'actionRecord' }, { text: 'the dean' }])
+      visibleToLines(['participants', 'overseers', 'action_record', 'respondent_answers_others', 'the_dean']),
+    ).toEqual([
+      { key: 'participants' },
+      { key: 'overseers' },
+      { key: 'actionRecord' },
+      { key: 'respondentAnswersOthers' },
+      { text: 'the_dean' },
+    ])
   })
 
   it('says what Core says of every conversation before it has said it', () => {
@@ -329,6 +330,12 @@ describe('visibleToLines', () => {
       'participants',
       'overseers',
       'actionRecord',
+    ])
+    expect(visibleToLines([], { answersOthers: true }).map((l) => ('key' in l ? l.key : l.text))).toEqual([
+      'participants',
+      'overseers',
+      'actionRecord',
+      'respondentAnswersOthers',
     ])
   })
 })

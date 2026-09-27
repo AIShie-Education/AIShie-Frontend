@@ -22,6 +22,7 @@ export default {
     hint: '權限不超過你的代理和成員，以及你自己的代理。',
     empty: '這裡暫時沒有你可以提問的對象。',
     offlineHint: '這個代理目前似乎沒有在運行，回覆可能需要一段時間。',
+    sharedHint: '它也會回答其他成員，會記住每個人寫給它的內容，並可能轉述給他們。',
   },
   list: {
     mine: '你的對話',
@@ -93,12 +94,20 @@ export default {
     count: '{n} / {max} 字',
   },
   // Who can read a conversation (Core's visible_to).
+  conflict: {
+    moved_on: '在你的回覆送出前，對方又寫了新訊息。現已顯示最新一則，請回覆那一則。',
+    already_answered: '那則訊息已經回覆過了，所以你的回覆沒有發出。',
+    answer_pending: '你對那則訊息的回覆已在等待批准。',
+    closed: '這段對話已經關閉，不能再寫入任何內容。',
+  },
   visibleTo: {
     button: '誰可以閱讀',
     title: '誰可以閱讀這段對話',
     participants: '對話雙方',
     overseers: '負責審批開啟者操作的課程教職員',
     actionRecord: '課程中任何負責審批操作的人，可透過每則訊息的操作紀錄閱讀',
+    respondentAnswersOthers: '回答的一方也會回答其他成員：它會記住每個人寫的內容，並可能把這裡寫的內容轉述給他們',
+    sharedNote: '對方也會回答其他成員：你在這裡寫的內容，它可能會轉述給他們。',
     note: '每則訊息都經由一項操作寫入，其紀錄會保留原文，即使訊息已被撤回。',
   },
   message: {

@@ -168,12 +168,12 @@ describe('useConversation', () => {
     active.value = true
     await nextTick()
     await advance(3000)
-    // Back on screen: what came after, and (it has been a while) the newest page again.
+    // Back on screen: what came after, and nothing read again while nothing was retracted.
     expect(
       messageCalls()
         .slice(1)
         .map((x) => x.args.after_seq),
-    ).toEqual([4, undefined])
+    ).toEqual([4])
     dispose()
   })
 
@@ -198,17 +198,31 @@ describe('useConversation', () => {
     dispose()
   })
 
-  it('reads the newest page again now and then, to show retractions', async () => {
+  it('reads the messages held again when last_retracted_at moves, and only then', async () => {
+    server.messages = range(1, 150)
     const { c, dispose } = start()
     await vi.advanceTimersByTimeAsync(0)
-    server.messages = range(1, 4).map((m) =>
+    await c.loadOlder()
+    await c.loadOlder()
+    expect(c.messages.value).toHaveLength(150)
+    // A retraction adds no message: nothing is read again until the view says one happened.
+    server.messages = server.messages.map((m) =>
       m.seq === 3 ? { ...m, body: null, retracted: { at: 'x', by_member_id: 'staff' } } : m,
     )
     await advance(3000)
     expect(c.messages.value[2]!.retracted).toBeFalsy()
-    for (let i = 0; i < 10; i++) await advance(3000)
+    const before = messageCalls().length
+    server.view = view({ state: 'awaiting_answer', last_retracted_at: '2026-09-26T12:05:00Z' })
+    await advance(3000)
     expect(c.messages.value[2]!.retracted).toBeTruthy()
     expect(c.messages.value[2]!.body).toBeNull()
+    // The poll, then the held messages from the oldest, a page of 100 at a time.
+    const reads = messageCalls().slice(before)
+    expect(reads.map((r) => r.args.after_seq)).toEqual([150, 0, 100])
+    // Once read again, not again until it moves.
+    const after = messageCalls().length
+    await advance(3000)
+    expect(messageCalls().length - after).toBe(1)
     dispose()
   })
 

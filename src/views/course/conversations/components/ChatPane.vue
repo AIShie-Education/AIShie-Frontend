@@ -15,6 +15,8 @@ import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNow } from '@/composables/useNow'
 import { useWrite } from '@/composables/useWrite'
+import { notifyError } from '@/composables/useErrors'
+import type { ApiError } from '@/api/http'
 import { useCourseStore } from '@/stores/course'
 import { fromNow } from '@/utils/format'
 import {
@@ -23,6 +25,7 @@ import {
   charCount,
   chatStatus,
   cleanBody,
+  conflictReasonOf,
   draftKey,
   getDraft,
   lastSeq,
@@ -129,7 +132,20 @@ const answerLevel = computed(() => {
 const draftAvailability = computed<Availability | null>(() =>
   isDraft.value && props.respondent ? availabilityOf(props.respondent, now.value) : null,
 )
-const visibleLines = computed(() => visibleToLines(conv?.visibleTo.value))
+/**
+ * Whether the one answering answers other members too, before Core has said
+ * (visible_to): so for anyone but the opener's own agent.
+ */
+const answersOthers = computed(() => {
+  if (isDraft.value) return !!props.respondent && !props.respondent.is_my_delegate
+  const v = view.value
+  return !!v && !v.respondent.is_delegate_of_opener
+})
+const visibleLines = computed(() => visibleToLines(conv?.visibleTo.value, { answersOthers: answersOthers.value }))
+/** The opener is told plainly when what they write may be repeated to others. */
+const sharedNote = computed(
+  () => role.value === 'opener' && visibleLines.value.some((l) => 'key' in l && l.key === 'respondentAnswersOthers'),
+)
 
 // --- Messages -------------------------------------------------------------------------
 
@@ -242,6 +258,18 @@ function afterWrite(out: { reviewState: string } | null) {
   if (out?.reviewState === 'pending') ElMessage({ type: 'info', message: t('common.outcome.pendingReview') })
 }
 
+/** Tells the person why a write was refused; a conflict in words for its reason, then reads again. */
+function refused(err: ApiError | null) {
+  if (!err) return
+  const reason = conflictReasonOf(err)
+  if (reason) ElMessage({ type: 'warning', message: t(`chat.conflict.${reason}`), duration: 6000 })
+  else notifyError(err)
+  if (err.code === 'conflict') {
+    void conv?.refresh()
+    emit('changed')
+  }
+}
+
 async function send() {
   if (writeBlocked.value || sending.value || bodyProblem(draft.value)) return
   const body = cleanBody(draft.value)
@@ -274,11 +302,13 @@ async function send() {
     if (!replyTo) return
     const out = await answerWrite.run(
       { course_id: props.courseId, conversation_id: props.conversationId, in_reply_to_message_id: replyTo, body },
-      { success: false },
+      { success: false, notify: false },
     )
     if (!out) {
-      // "The conversation moved on": the opener wrote again. Show it; the draft stays for them to adjust.
-      if (answerWrite.lastError.value?.code === 'conflict') void conv.refresh()
+      // A conflict says why (the opener wrote again, it is answered, an answer
+      // waits, it is closed): say that, and show where it stands now. The
+      // draft stays for them to adjust.
+      refused(answerWrite.lastError.value)
       return
     }
     draft.value = ''
@@ -288,10 +318,10 @@ async function send() {
   }
   const out = await askWrite.run(
     { course_id: props.courseId, conversation_id: props.conversationId, body },
-    { success: false },
+    { success: false, notify: false },
   )
   if (!out) {
-    if (askWrite.lastError.value?.code === 'conflict') void conv.refresh()
+    refused(askWrite.lastError.value)
     return
   }
   draft.value = ''
@@ -489,6 +519,7 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
             </div>
           </el-popover>
         </div>
+        <div v-if="sharedNote" class="chat-pane__shared">{{ t('chat.visibleTo.sharedNote') }}</div>
       </div>
       <div class="chat-pane__head-actions">
         <slot name="actions" />
@@ -657,6 +688,12 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
   flex-wrap: wrap;
   gap: 4px 10px;
   margin-top: 4px;
+}
+.chat-pane__shared {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--el-text-color-secondary);
 }
 .chat-pane__readers {
   gap: 4px;

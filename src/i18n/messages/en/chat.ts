@@ -22,6 +22,7 @@ export default {
     hint: 'Agents and people who can see nothing you cannot, and your own agents.',
     empty: 'Nobody here answers questions you may ask yet.',
     offlineHint: 'Nothing seems to be running this agent now: an answer may take a while.',
+    sharedHint: 'It answers other members too, holds what each one writes, and may repeat it to them.',
   },
   list: {
     mine: 'Your conversations',
@@ -94,12 +95,21 @@ export default {
     count: '{n} / {max} characters',
   },
   // Who can read a conversation (Core's visible_to).
+  conflict: {
+    moved_on: 'They wrote again before your answer went in. Their newest message is shown now: answer that one.',
+    already_answered: 'That message has been answered already, so your answer was not posted.',
+    answer_pending: 'An answer of yours to that message is waiting for approval already.',
+    closed: 'This conversation is closed, so nothing more can be written in it.',
+  },
   visibleTo: {
     button: 'Who can read this',
     title: 'Who can read this conversation',
     participants: 'The two taking part',
     overseers: 'Course staff who decide actions for the one who started it',
     actionRecord: 'Anyone who decides actions in this course, in the record of each message',
+    respondentAnswersOthers:
+      'The one answering here answers other members too: it holds what each of them writes, and may repeat to them what is written here',
+    sharedNote: 'It answers other members too: what you write here it may repeat to them.',
     note: 'Every message is written through an action, and the record of it keeps the text, even after it is withdrawn.',
   },
   message: {
