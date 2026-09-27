@@ -90,6 +90,18 @@ describe('useJudgeRules: a person and their agents are one party', () => {
     expect(rules.block(action('theirs'), 'decide')).toBeNull()
   })
 
+  it('takes the queue’s word for whose it is to decide over the member list', () => {
+    // Someone else's seat as far as the list shows, but Core says it is the caller's party's.
+    rules = setup(me, [seat('stranger')])
+    expect(rules.block({ ...action('stranger'), yours_to_decide: false }, 'decide')).toBe('ownAgent')
+    // The list would say it is the caller's agent's; the queue says it is theirs to decide.
+    const bot = seat('bot', { kind: 'agent', principal_member_id: 'me', owner_actor_id: 'actor-me' })
+    rules = setup(me, [bot])
+    expect(rules.block({ ...action('bot'), yours_to_decide: true }, 'decide')).toBeNull()
+    // One's own is one's own whatever the flag.
+    expect(rules.block({ ...action('me'), yours_to_decide: false }, 'review')).toBe('ownReview')
+  })
+
   it('still calls the caller’s own action their own', () => {
     expect(rules.block(action('me'), 'decide')).toBe('own')
     expect(rules.block(action('me'), 'review')).toBe('ownReview')

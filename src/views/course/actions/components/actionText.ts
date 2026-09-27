@@ -92,6 +92,12 @@ export function reasonText(e: StoredError | null | undefined): string | null {
     const k2 = `actions.denyReason.${reason}`
     parts.push(te(k1) ? t(k1) : te(k2) ? t(k2) : reason)
   }
+  // A cancellation may say more of why (an agent's owner changed, say).
+  const why = str(e.details.why)
+  if (why) {
+    const k = `actions.cancelWhy.${why}`
+    if (te(k)) parts.push(t(k))
+  }
   const authz = str(e.details.authz_reason)
   if (authz) {
     const k = `actions.denyReason.${authz}`
@@ -206,7 +212,9 @@ export function useJudgeRules() {
    * Whether an action is the caller's own or their party's: a person, the
    * agents they own, and those agents among themselves are one party, and
    * nobody decides or reviews their own party's actions (Core refuses it).
-   * Told from the seat that acted, where the member list is readable.
+   * Told from the seat that acted, where the member list is readable; the
+   * approval and review queues say it outright (yours_to_decide), which
+   * block() takes first.
    */
   function isOwnParty(a: { member_id?: string | null; actor_id?: string } | null | undefined): boolean {
     if (!a) return false
@@ -229,7 +237,10 @@ export function useJudgeRules() {
   ): Block {
     if (!course.writable) return 'archived'
     if (isMine(a)) return mode === 'decide' ? 'own' : 'ownReview'
-    if (isOwnParty(a)) return 'ownAgent'
+    // The queues say whose it is to decide (yours_to_decide); elsewhere
+    // (action.get) it is told from the member list.
+    if (a.yours_to_decide === false) return 'ownAgent'
+    if (a.yours_to_decide !== true && isOwnParty(a)) return 'ownAgent'
     if (isAboutAction(a) && isOwnParty(about)) return 'ownRemove'
     if (mode === 'review' && a.review_state === 'escalated' && a.reviewed_by_member_id && a.reviewed_by_member_id === course.myMemberId)
       return 'ownEscalation'

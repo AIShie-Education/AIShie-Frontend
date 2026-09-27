@@ -376,6 +376,9 @@ export default {
     tool_removed: 'This kind of action can no longer be carried out.',
     withdrawn: 'Whoever proposed it took it back.',
   },
+  cancelWhy: {
+    owner_changed: 'The agent was given another owner, or none, so the request to seat it lapsed.',
+  },
   denyReason: {
     actor_not_active: 'The actor is suspended.',
     course_archived: 'The course is archived.',
