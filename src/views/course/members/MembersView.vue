@@ -10,6 +10,8 @@ import { ROLES, type Member, type MemberSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useCourseStore } from '@/stores/course'
+import { useSessionStore } from '@/stores/session'
+import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -23,6 +25,7 @@ const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
 const router = useRouter()
 const course = useCourseStore()
+const session = useSessionStore()
 const narrow = useNarrow(767)
 const presets = usePresets()
 
@@ -129,6 +132,11 @@ function onAdded(out: { status: 'executed'; memberId: string } | { status: 'prop
   void list.reload()
 }
 
+/** The caller's own agent. */
+function mine(row: MemberSummary): boolean {
+  return !!row.owner_actor_id && row.owner_actor_id === session.me?.id
+}
+
 function open(row: MemberSummary) {
   router.push({ name: 'course-member', params: { courseId: props.courseId, memberId: row.id } })
 }
@@ -215,7 +223,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                 </el-icon>
                 <span class="members__name-text">{{ row.display_name }}</span>
                 <span v-if="row.id === course.myMemberId" class="members__me">({{ t('common.labels.you') }})</span>
-                <StatusTag v-if="row.kind === 'agent'" vocab="actorKind" :value="row.kind" />
+                <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" />
               </div>
               <div v-if="narrow" class="members__stack">
                 <StatusTag vocab="role" :value="row.role" />
@@ -276,6 +284,10 @@ function rowClass({ row }: { row: MemberSummary }) {
         </el-table>
         <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
         <p v-if="list.hasMore.value && kind !== 'all'" class="app-form-hint">{{ t('members.partialCounts') }}</p>
+        <p v-if="kind === 'agent' && canManage" class="app-form-hint members__agents-link">
+          {{ t('members.agentsHint') }}
+          <router-link :to="{ name: 'course-agents', params: { courseId } }">{{ t('members.agentsPage') }}</router-link>
+        </p>
       </AsyncState>
     </div>
 
@@ -317,7 +329,8 @@ function rowClass({ row }: { row: MemberSummary }) {
 .members__name {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 2px 6px;
   min-width: 0;
 }
 .members__name-text {
@@ -348,6 +361,9 @@ function rowClass({ row }: { row: MemberSummary }) {
 .members__date-label {
   color: var(--el-text-color-secondary);
   white-space: nowrap;
+}
+.members__agents-link {
+  margin-top: 12px;
 }
 .members__stack,
 .members__tags {

@@ -5,10 +5,11 @@
 // from action.list_mine instead, which carries the same fields.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
 import type { ToolOut } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { uuidPredecessor } from '@/views/admin/components/adminShared'
 import AsyncState from '@/components/AsyncState.vue'
@@ -20,7 +21,9 @@ import TimeText from '@/components/TimeText.vue'
 import ActionActor from './components/ActionActor.vue'
 import ActionTarget from './components/ActionTarget.vue'
 import ActionTimeline from './components/ActionTimeline.vue'
+import AnswerProposal from './components/AnswerProposal.vue'
 import DecidePanel from './components/DecidePanel.vue'
+import DelegateGrant from './components/DelegateGrant.vue'
 import FieldsView from './components/FieldsView.vue'
 import MaybeLink from './components/MaybeLink.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
@@ -143,6 +146,29 @@ watch(
   },
 )
 
+// Taking back a proposal of one's own that still waits (action.withdraw).
+const withdrawWrite = useWrite('action.withdraw')
+const canWithdraw = computed(
+  () => !!action.value && action.value.status === 'proposed' && rules.isMine(action.value) && course.writable,
+)
+async function withdraw() {
+  const a = action.value
+  if (!a) return
+  try {
+    await ElMessageBox.confirm(t('actions.withdraw.confirm'), t('actions.withdraw.title'), {
+      type: 'warning',
+      confirmButtonText: t('actions.withdraw.action'),
+      cancelButtonText: t('common.actions.cancel'),
+    })
+  } catch {
+    return
+  }
+  const out = await withdrawWrite.run({ course_id: props.courseId, action_id: a.id }, { notify: false })
+  if (!out) return
+  announce(out, { success: t('actions.withdraw.done') })
+  await reloadPage()
+}
+
 /** Reads the action again, and whatever this page shows about the actions around it. */
 async function reloadPage() {
   refreshAfterDecision(props.courseId)
@@ -237,6 +263,10 @@ const errorTitle = computed(() => {
               <code class="action-view__code">{{ action.action_type }}</code>
             </span>
           </template>
+          <el-button v-if="canWithdraw" :loading="withdrawWrite.pending.value" @click="withdraw">
+            <el-icon><RefreshLeft /></el-icon>
+            <span>{{ t('actions.withdraw.action') }}</span>
+          </el-button>
           <el-button :loading="state.loading.value" @click="reloadPage">
             <el-icon><Refresh /></el-icon>
             <span>{{ t('common.actions.refresh') }}</span>
@@ -318,6 +348,16 @@ const errorTitle = computed(() => {
                   <dd><IdText :id="action.id" full /></dd>
                 </div>
               </dl>
+            </section>
+
+            <section v-if="action.action_type === 'conversation.answer'" class="app-card">
+              <h2 class="app-card__title">{{ t('actions.answer.title') }}</h2>
+              <AnswerProposal :action="action" :course-id="courseId" />
+            </section>
+
+            <section v-if="action.action_type === 'member.add_delegate' && action.status === 'proposed'" class="app-card">
+              <h2 class="app-card__title">{{ t('actions.delegate.title') }}</h2>
+              <DelegateGrant :action="action" :course-id="courseId" />
             </section>
 
             <section class="app-card">

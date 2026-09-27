@@ -29,6 +29,13 @@ const PAGE = 200
 /** Pages loaded in one go before asking the person whether to go on. */
 const PAGES_AT_ONCE = 10
 
+/**
+ * A chat's messages are actions too, and would bury everything else: they are
+ * left out (action.list_mine's exclude_types) unless the person asks for them.
+ */
+const CHAT_TYPES = ['conversation.ask', 'conversation.answer']
+const showChat = ref(false)
+
 const items = ref<ActionRow[]>([])
 const loading = ref(false)
 const error = ref<ApiError | null>(null)
@@ -47,7 +54,12 @@ async function load(reset: boolean) {
   }
   try {
     for (let i = 0; i < PAGES_AT_ONCE; i++) {
-      const out = await read('action.list_mine', { course_id: props.courseId, limit: PAGE, after: next })
+      const out = await read('action.list_mine', {
+        course_id: props.courseId,
+        limit: PAGE,
+        after: next,
+        exclude_types: showChat.value ? undefined : CHAT_TYPES,
+      })
       if (mine !== generation) return
       items.value = [...items.value, ...(out.actions ?? [])]
       next = out.next ?? undefined
@@ -61,6 +73,7 @@ async function load(reset: boolean) {
   }
 }
 onMounted(() => void load(true))
+watch(showChat, () => void load(true))
 
 // Filters, order and paging, all over what is loaded.
 const status = ref<string>('')
@@ -145,6 +158,7 @@ function open(row: ActionRow) {
           <el-option value="" :label="t('actions.mine.anyType')" />
           <el-option v-for="ty in types" :key="ty.value" :value="ty.value" :label="ty.label" />
         </el-select>
+        <el-checkbox v-model="showChat" :label="t('actions.mine.showChat')" border />
         <span class="app-toolbar__spacer" />
         <el-radio-group v-model="order" size="default">
           <el-radio-button value="newest">{{ t('actions.mine.sort.newest') }}</el-radio-button>

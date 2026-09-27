@@ -76,6 +76,8 @@ export function refreshAfterDecision(courseId: string) {
   refresh(`${courseId}:action:`)
   refresh(`${courseId}:document:`)
   refresh(`${courseId}:versions:`)
+  refresh(`${courseId}:conversation:`)
+  refresh(`${courseId}:messages:`)
 }
 
 export interface Spec<T> {
@@ -154,6 +156,29 @@ export function useSpecs() {
       return {
         key: `presets:${dept ?? ''}`,
         load: () => read('preset.list', { dept_id: dept }).then((o) => o.presets ?? []),
+      }
+    },
+    /**
+     * A conversation, as its participants and the staff who decide actions for
+     * its opener may read it (conversation.get borrows document_read; Core
+     * says no to anyone else, and the id is shown instead).
+     */
+    conversation(courseId: string, id: string | null | undefined) {
+      if (!id || !may('document_read')) return null
+      return {
+        key: `${courseId}:conversation:${id}`,
+        load: () => read('conversation.get', { course_id: courseId, conversation_id: id }),
+      }
+    },
+    /** A conversation's newest messages (a page of them, oldest first), on the same terms. */
+    messages(courseId: string, id: string | null | undefined) {
+      if (!id || !may('document_read')) return null
+      return {
+        key: `${courseId}:messages:${id}`,
+        load: () =>
+          read('conversation.messages', { course_id: courseId, conversation_id: id, limit: 100 }).then(
+            (o) => o.messages ?? [],
+          ),
       }
     },
     actor(id: string | null | undefined) {

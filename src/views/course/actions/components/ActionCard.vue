@@ -3,6 +3,7 @@
 // reviewing it without leaving the list.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import MarkdownView from '@/components/MarkdownView.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActionActor from './ActionActor.vue'
@@ -23,6 +24,10 @@ const { t } = useI18n()
 
 const p = computed(() => payloadOf(props.action))
 /** A line of what was said with it: feedback, a reason, a note, or the text handed in. */
+/** A message written in a conversation is the thing decided: shown whole, as it would be read. */
+const message = computed(() =>
+  props.action.action_type.startsWith('conversation.') ? (str(p.value.body) ?? null) : null,
+)
 const excerpt = computed(() => {
   const s = str(p.value.feedback) ?? str(p.value.reason) ?? str(p.value.note) ?? str(p.value.body) ?? str(p.value.body_md)
   return s ? s.replace(/\s+/g, ' ').trim() : null
@@ -57,7 +62,7 @@ const excerpt = computed(() => {
       </div>
       <div class="action-card__fact">
         <dt>{{ t('actions.fields.target') }}</dt>
-        <dd><ActionTarget :action="action" :course-id="courseId" link /></dd>
+        <dd><ActionTarget :action="action" :course-id="courseId" link :quote="!message" /></dd>
       </div>
       <div v-if="mode === 'review' && action.review_state === 'escalated' && action.reviewed_by_member_id" class="action-card__fact">
         <dt>{{ t('enums.reviewState.escalated') }}</dt>
@@ -72,7 +77,8 @@ const excerpt = computed(() => {
       </div>
     </dl>
 
-    <p v-if="excerpt" class="action-card__excerpt">{{ excerpt }}</p>
+    <div v-if="message" class="action-card__message"><MarkdownView :source="message" /></div>
+    <p v-else-if="excerpt" class="action-card__excerpt">{{ excerpt }}</p>
 
     <footer class="action-card__foot">
       <DecidePanel
@@ -158,6 +164,18 @@ const excerpt = computed(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+.action-card__message {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--el-fill-color-lighter);
+  border-left: 3px solid var(--el-color-primary);
+}
+.action-card__message :deep(.markdown-body) {
+  font-size: 13px;
 }
 .action-card__excerpt {
   margin: 0;

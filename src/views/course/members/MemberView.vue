@@ -7,12 +7,13 @@ import { computed, h, ref, watch, type VNode } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
-import { PERMS, type AutonomyLevel, type Member, type Perm, type PermLevels } from '@/api/types'
+import { DELEGATE_NEVER_PERMS, PERMS, type AutonomyLevel, type Member, type Perm, type PermLevels } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -103,6 +104,22 @@ const work = computed(() => {
 })
 const showWork = computed(() => work.value.gradebook || work.value.submissions || work.value.grades)
 
+// --- An agent a person owns, and a person's own agents ------------------------
+/** The seat is an agent's, seated as someone's delegate (its owner's seat is the principal). */
+const principalId = computed(() => m.value?.principal_member_id ?? null)
+/** The caller's own agent. */
+const mineAgent = computed(() => !!m.value?.owner_actor_id && m.value.owner_actor_id === session.me?.id)
+/** The agents seated here as this member's delegates, from the course's member list where it is readable. */
+const delegates = computed(() => {
+  if (!m.value || m.value.kind === 'agent') return []
+  const id = m.value.id
+  return [...course.members.values()].filter((x) => x.principal_member_id === id && x.status !== 'removed')
+})
+function presetName(id: string | null | undefined): string | null {
+  const p = id ? presets.byId.value.get(id) : undefined
+  return p ? presetLabel(p) : null
+}
+
 const ownWorkOnly = computed(
   () =>
     !!m.value &&
@@ -174,9 +191,17 @@ const permProblems = computed(() =>
 // On the rows: what changed, and — when the change is a grant, which measures
 // the whole seat — each level above the caller's own.
 const changedPerms = computed(() => Object.keys(changes.value) as Perm[])
-const rowWarnings = computed(() =>
-  editing.value && raises.value ? permsAbove({ ...perms.value, ...changes.value }) : {},
-)
+const rowWarnings = computed(() => {
+  if (!editing.value) return {}
+  const out: Partial<Record<Perm, string>> = raises.value ? permsAbove({ ...perms.value, ...changes.value }) : {}
+  // A delegate never holds these, whatever is set: Core refuses to give them.
+  if (principalId.value) {
+    for (const p of DELEGATE_NEVER_PERMS) {
+      if ((draft.value[p] ?? 'denied') !== 'denied') out[p] = t('members.detail.delegate.never')
+    }
+  }
+  return out
+})
 
 async function savePerms() {
   if (!m.value || !changeCount.value) return
@@ -270,6 +295,9 @@ async function remove() {
   const msg = body([
     t('members.detail.remove.confirm', { name }),
     t('members.detail.remove.confirmFresh'),
+    ...(delegates.value.length
+      ? [t('members.detail.delegate.removeToo', { n: delegates.value.length }, delegates.value.length)]
+      : []),
     ...approvalNote(),
   ])
   if (!(await confirm(msg, t('members.detail.remove.title'), t('members.detail.remove.action'), true))) return
@@ -290,7 +318,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
     <PageHeader :title="m?.display_name ?? t('members.detail.title')" :back="back">
       <template #tags>
         <template v-if="m">
-          <el-icon v-if="m.kind === 'agent'" class="member__agent"><Cpu /></el-icon>
+          <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" size="default" />
           <StatusTag vocab="role" :value="m.role" size="default" />
           <StatusTag vocab="memberStatus" :value="m.status" size="default" />
           <el-tag v-if="expired" type="info">{{ t('members.expired') }}</el-tag>
@@ -414,8 +442,19 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                   ><Cpu v-if="m.kind === 'agent'" /><User v-else
                 /></el-icon>
                 <span>{{ m.display_name }}</span>
-                <StatusTag vocab="actorKind" :value="m.kind" />
+                <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" />
+                <StatusTag v-else vocab="actorKind" :value="m.kind" />
               </span>
+            </el-descriptions-item>
+            <el-descriptions-item
+              v-if="principalId"
+              :label="t('members.detail.delegate.actsFor')"
+              :span="narrow ? 1 : 2"
+            >
+              <router-link :to="{ name: 'course-member', params: { courseId, memberId: principalId } }">
+                <MemberName :id="principalId" />
+              </router-link>
+              <div class="member__hint">{{ t('members.detail.delegate.help') }}</div>
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.status')">
               <StatusTag vocab="memberStatus" :value="m.status" />
@@ -494,6 +533,22 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           </div>
         </section>
 
+        <!-- A person's own agents here -->
+        <section v-if="delegates.length" class="app-card">
+          <h2 class="app-card__title">{{ t('members.detail.delegate.theirAgents') }}</h2>
+          <p class="app-form-hint member__scope-help">{{ t('members.detail.delegate.theirAgentsHelp') }}</p>
+          <ul class="member__delegates">
+            <li v-for="d in delegates" :key="d.id">
+              <el-icon class="member__agent"><Cpu /></el-icon>
+              <router-link :to="{ name: 'course-member', params: { courseId, memberId: d.id } }">
+                {{ d.display_name }}
+              </router-link>
+              <span v-if="presetName(d.preset_id)" class="app-muted">{{ presetName(d.preset_id) }}</span>
+              <StatusTag v-if="d.status !== 'active'" vocab="memberStatus" :value="d.status" />
+            </li>
+          </ul>
+        </section>
+
         <!-- Reach -->
         <section class="app-card">
           <h2 class="app-card__title">
@@ -569,6 +624,12 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               </span>
             </el-tooltip>
           </h2>
+          <p v-if="principalId" class="app-form-hint member__scope-help">
+            {{ t('members.detail.delegate.permsHelp') }}
+            <router-link v-if="canManage" :to="{ name: 'course-agents', params: { courseId } }">
+              {{ t('members.agentsPage') }}
+            </router-link>
+          </p>
           <p class="app-form-hint member__scope-help">
             {{ t('members.detail.perms.help') }}
             <template v-if="preset">
@@ -750,6 +811,23 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
 .member__problems {
   margin: 4px 0 0;
   padding-left: 18px;
+}
+.member__delegates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.member__delegates li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+  font-size: 14px;
+}
+.member__delegates a {
+  text-decoration: none;
+  font-weight: 500;
 }
 .member__edit-bar {
   display: flex;
