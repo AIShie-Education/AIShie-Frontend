@@ -50,19 +50,51 @@ export default {
       'AIShie refused the token the runtime had. A new token labelled “AIShie runtime” is made and handed to the runtime; you will not see it.',
     reconnectSubmit: 'Connect again',
     replaced: 'The runtime has a new token for {name}',
-    previousNotRevoked:
-      'The runtime has the new token, but its old one could not be revoked. Revoke the older “AIShie runtime” token in the Tokens list below.',
   },
 
-  // The one-brain rule.
+  // A token the runtime could not revoke, after replacing or deleting (§9.4).
+  unrevoked: {
+    title: 'A token of this agent may still work',
+    body: 'The school’s runtime could not revoke the token {token} in AIShie ({why}), so whatever has it may still act as your agent. Revoke it here, as the agent’s owner.',
+    why: {
+      agent_suspended: 'the agent is suspended in AIShie',
+      core_unavailable: 'it could not reach AIShie',
+      core_refused: 'AIShie refused its request',
+      unknown: 'it could not tell whether it did',
+    },
+    revoke: 'Revoke it in AIShie',
+    later: 'Not now',
+    revoked: '{token} is revoked.',
+    gone: '{token} no longer works: there was nothing to revoke.',
+    held: 'The runtime holds {token} now, so it was not revoked.',
+    failed: 'It could not be revoked here either. Revoke it in the Tokens list below.',
+  },
+
+  // The agent's other tokens, as the runtime lists them on inspect and connect
+  // (A.1), or as the page works them out from Core's list before it issues one.
+  otherTokens: {
+    inUseTitle: 'This agent seems to be running somewhere else',
+    inUse:
+      'Its token {token} was used {ago}. An agent has one brain at a time. Stop the other runtime, or revoke that token in AIShie, so that only this runtime answers as your agent.',
+    unusedTitle: 'This agent has other tokens',
+    unused: 'They still work, but have not been used lately. Revoke any that nothing of yours needs.',
+    unknown: 'Could not check for other copies of this agent.',
+    unlabelled: 'No label',
+    recent: 'In use',
+    lastUsed: 'last used',
+    neverUsed: 'never used',
+    revoke: 'Revoke',
+    revoked: '{token} is revoked: nothing can act as your agent with it now.',
+    gone: '{token} no longer works: there was nothing to revoke.',
+    revokeFailed: 'It could not be revoked. Try again, or revoke it in the Tokens list below.',
+    anyway: 'Connect anyway',
+    anywayReplace: 'Go on anyway',
+  },
+
+  // The one-brain rule, when resuming a hosted agent, and for a pasted token used lately.
   oneBrain: {
     title: 'Something else is running this agent',
     body: 'Another of its tokens was used in the last few minutes: a runtime of your own, or another MCP client, is running it. If the school’s runtime runs it too, both answer every question. Revoke those tokens to stop it, or go on if you will stop it yourself.',
-    used: 'last used',
-    revoke: 'Revoke them and connect',
-    anyway: 'Connect anyway',
-    revokeReplace: 'Revoke them and go on',
-    anywayReplace: 'Go on anyway',
     revokeResume: 'Revoke them and resume',
     anywayResume: 'Resume anyway',
     revokeFailed: 'Not every one of those tokens could be revoked, so nothing more was done. Try again, or revoke them in the Tokens list below.',
@@ -256,6 +288,8 @@ export default {
     replaceToken: 'Replace token',
     delete: 'Delete from the school’s runtime',
     usedByRuntime: 'Used by the school’s runtime',
+    ownKeyOff: 'The school’s runtime does not take a model and key of your own at the moment, so they cannot be changed here.',
+    connectOff: 'The school’s runtime does not take new tokens at the moment, so it cannot be given one here.',
     issueWhileHosted:
       'The school’s runtime runs this agent. Anything you start with a new token would answer too: to run it yourself, delete it from the school’s runtime first.',
   },
@@ -271,7 +305,6 @@ export default {
     alsoRevokeHintUnlabelled: 'This page did not make its token. Keep it only if something else uses it.',
     submit: 'Delete',
     done: '{name} is no longer on the school’s runtime',
-    fallbackFailed: 'Revoke the token “AIShie runtime” in the Tokens list below.',
     notAttempted: 'Its token still works; revoke it below if nothing else uses it.',
   },
 
@@ -295,16 +328,22 @@ export default {
     operator_agent: 'The school’s operator already runs this agent.',
     agent_not_found: 'This agent is no longer on the school’s runtime.',
     version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
+    changedMeanwhile: 'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
     school_key_not_offered: 'The school’s key is not offered yet.',
     own_key_required: 'Enter your API key for {provider}.',
     own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for {provider}.',
     model_denied: 'The school does not allow this model. Choose another.',
     settings_rejected: 'The runtime cannot run these settings.',
-    key_malformed: 'That does not look like an API key.',
+    key_malformed: 'That does not look like an API key from {provider}. Paste the key exactly as {provider} gave it, with no spaces.',
+    key_is_aishie_token:
+      'That is an AIShie token (yours or an agent’s), not an API key from {provider}. An AIShie token is never sent to a provider: paste the key {provider} gave you.',
     unknown_provider: 'Choose one of the providers offered.',
     adapter_not_offered: 'Choose one of the API styles offered.',
     unknown_endpoint: 'Choose one of the endpoints offered.',
     invalid_field: 'This value is not accepted here.',
+    unknown_field: 'The school’s runtime did not take this request: it has no field “{field}”. Reload the page and try again.',
+    unknown_parameter:
+      'The school’s runtime did not take this request: it takes no “{field}” in the address. Reload the page and try again.',
   },
 
   // Hosting that is not for this person, or not here after all.

@@ -6,7 +6,7 @@
 // No token or key is written in any file: the fakes make them at random as
 // a test runs, in the shapes Core and the providers use.
 import { vi } from 'vitest'
-import type { HostedAgent, ProviderOffer, Seat } from '@/api/runtime-types'
+import type { HostedAgent, OtherToken, OtherTokens, ProviderOffer, Seat } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
 
 export const ACTOR = '0192f3c1-7d2e-7c3a-9b1f-2a4c6e8f0a1b'
@@ -163,6 +163,15 @@ export const OFFERS: ProviderOffer[] = [
     key_prefix: 'sk-',
     suggested_models: [{ model: 'kimi-k2', priced: true }],
   },
+  {
+    // As the runtime offers it: the global endpoint alone, until the mainland one has passed a live test (§11, 7).
+    provider: 'glm',
+    label: 'Zhipu GLM',
+    adapters: ['openai_chat'],
+    endpoint: { kind: 'choice', choices: [{ id: 'global', label: 'Global', base_url: 'https://api.z.ai/api/paas/v4' }] },
+    key_prefix: null,
+    suggested_models: [],
+  },
 ]
 
 export function credential(over: Partial<AgentCredential> = {}): AgentCredential {
@@ -177,6 +186,24 @@ export function credential(over: Partial<AgentCredential> = {}): AgentCredential
     expires_at: null,
     ...over,
   }
+}
+
+/** One of the agent's other live tokens, as the runtime lists it (other_tokens, A.1). */
+export function otherToken(over: Partial<OtherToken> = {}): OtherToken {
+  return {
+    prefix: random(B32, 12),
+    label: 'laptop',
+    created_at: '2026-09-01T00:00:00Z',
+    last_used_at: null,
+    expires_at: null,
+    recent: false,
+    ...over,
+  }
+}
+
+/** The runtime's other_tokens for these tokens: in use when one is recent. */
+export function otherTokens(tokens: OtherToken[]): OtherTokens {
+  return { in_use: tokens.some((x) => x.recent), window_seconds: 900, tokens }
 }
 
 /**

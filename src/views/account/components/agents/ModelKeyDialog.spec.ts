@@ -99,7 +99,7 @@ describe('ModelKeyDialog', () => {
     expect(s.to('GET', RUNTIME.models)).toHaveLength(1)
     expect(s.to('GET', RUNTIME.agent)).toHaveLength(1)
     const labels = Array.from(document.body.querySelectorAll('.el-select-dropdown__item'), (o) => o.textContent?.trim())
-    expect(labels).toEqual(['OpenAI', 'Azure OpenAI', 'Amazon Bedrock', 'Moonshot (Kimi)'])
+    expect(labels).toEqual(['OpenAI', 'Azure OpenAI', 'Amazon Bedrock', 'Moonshot (Kimi)', 'Zhipu GLM'])
     // Nothing chosen yet: nothing to save.
     expect(w.find('.model-dialog__save').attributes('disabled')).toBeDefined()
   })
@@ -130,6 +130,30 @@ describe('ModelKeyDialog', () => {
     await flushPromises()
     expect(w.find('.model-form__endpoint').exists()).toBe(true)
     expect(vm.form.endpoint).toBe('global')
+  })
+
+  it('offers a provider’s endpoints as GET /models lists them: GLM’s global one alone, and sends it', async () => {
+    const { w, vm } = await open()
+    vm.onProvider('glm')
+    await flushPromises()
+    expect(vm.form.endpoint).toBe('global')
+    const endpoint = w.find('.model-form__endpoint')
+    expect(endpoint.exists()).toBe(true)
+    const options = Array.from(document.body.querySelectorAll('.el-select-dropdown__item'), (o) => o.textContent?.trim())
+    expect(options).toContain('Global')
+    expect(options).not.toContain('China')
+    vm.form.model = 'glm-4.6'
+    vm.key = newKey()
+    await flushPromises()
+    answerTest('ok')
+    await click(w, '.model-dialog__test-button')
+    expect(JSON.parse(s.to('POST', RUNTIME.keyTest)[0].body!)).toMatchObject({ provider: 'glm', endpoint: 'global' })
+
+    // Moonshot lists both of its own, so both are offered.
+    vm.onProvider('moonshot')
+    await flushPromises()
+    const all = Array.from(document.body.querySelectorAll('.el-select-dropdown__item'), (o) => o.textContent?.trim())
+    expect(all).toContain('China')
   })
 
   it.each([
@@ -267,14 +291,31 @@ describe('ModelKeyDialog', () => {
     expect(w.find('.model-form__key').exists()).toBe(true)
   })
 
-  it('refuses to send a key that is not one, and a Core token above all', async () => {
+  it('refuses to send a key that is not one, and a Core token above all, saying it is an AIShie token', async () => {
+    const { w, vm } = await open()
+    const token = newToken().token
+    for (const pasted of [token, `"${token}"`, `Bearer ${token}`]) {
+      await fill(vm, pasted)
+      await click(w, '.model-dialog__test-button')
+      await click(w, '.model-dialog__save')
+      expect(w.text()).toContain(
+        'That is an AIShie token (yours or an agent’s), not an API key from OpenAI. An AIShie token is never sent to a provider: paste the key OpenAI gave you.',
+      )
+    }
+    await fill(vm, 'sk-with a space')
+    await click(w, '.model-dialog__test-button')
+    expect(w.text()).toContain('That does not look like an API key from OpenAI.')
+    expect(s.to('POST', RUNTIME.keyTest)).toHaveLength(0)
+    expect(s.to('PATCH', RUNTIME.agent)).toHaveLength(0)
+    expect(s.everything()).not.toContain(token)
+  })
+
+  it('says so in Traditional Chinese too', async () => {
+    setLocale('zh-Hant')
     const { w, vm } = await open()
     await fill(vm, newToken().token)
     await click(w, '.model-dialog__test-button')
-    await click(w, '.model-dialog__save')
-    expect(w.text()).toContain('That does not look like an API key.')
-    expect(s.to('POST', RUNTIME.keyTest)).toHaveLength(0)
-    expect(s.to('PATCH', RUNTIME.agent)).toHaveLength(0)
+    expect(w.text()).toContain('這是 AIShie 的權杖（你的或代理的），不是 OpenAI 的 API 金鑰。')
   })
 
   it('puts a field’s refusal on its field', async () => {
@@ -295,13 +336,14 @@ describe('ModelKeyDialog', () => {
     [422, 'failed_precondition', 'own_key_required', 'Enter your API key for OpenAI.'],
     [422, 'failed_precondition', 'own_key_provider_mismatch', 'Your saved key is for another provider. Enter a key for OpenAI.'],
     [422, 'failed_precondition', 'school_key_not_offered', 'The school’s key is not offered yet.'],
-    [400, 'invalid_argument', 'key_malformed', 'That does not look like an API key.'],
+    [400, 'invalid_argument', 'key_malformed', 'That does not look like an API key from OpenAI.'],
+    [400, 'invalid_argument', 'unknown_field', 'The school’s runtime did not take this request: it has no field “/model/Own”.'],
   ] as const)('says a refusal to save in words: %s', async (status, code, reason, words) => {
     const { w, vm } = await open()
     await fill(vm)
     answerTest('ok')
     await click(w, '.model-dialog__test-button')
-    s.on('PATCH', RUNTIME.agent, () => refusal(status, code, reason))
+    s.on('PATCH', RUNTIME.agent, () => refusal(status, code, reason, reason === 'unknown_field' ? { field: '/model/Own' } : {}))
     await click(w, '.model-dialog__save')
     expect(w.text()).toContain(words)
     expect(w.emitted('saved')).toBeUndefined()

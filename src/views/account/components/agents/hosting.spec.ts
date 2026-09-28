@@ -7,6 +7,8 @@ import {
   HOSTED_STATUSES,
   KEY_TEST_RESULTS,
   PROBLEM_REASONS,
+  REVOCATIONS,
+  REVOCATION_PROBLEMS,
   RUNTIME_ERROR_REASONS,
 } from '@/api/runtime-types'
 import {
@@ -14,24 +16,32 @@ import {
   RECENT_USE_MS,
   choiceFrom,
   choiceKey,
+  connectedParts,
   courseLabel,
   credentialByPrefix,
+  defaultsFor,
   emptyModelForm,
   fieldOfPointer,
   formFromModel,
   formProblems,
   hostingErrorKey,
   hostingErrorText,
+  isAishieToken,
   isDefinitive,
   isKeyShaped,
+  keyProblem,
   otherRecentTokens,
+  otherTokensFrom,
   ownerFallbackCredential,
   pollInterval,
   problemsOf,
   seatSentences,
+  tokenHint,
+  unrevoked,
   usedRecently,
+  withoutTokens,
 } from './hosting'
-import { OFFERS, credential, newToken, seat } from './hostingFakes'
+import { OFFERS, credential, hostedAgent, newToken, otherToken, otherTokens, seat } from './hostingFakes'
 
 // The message functions, as plainly typed as the helpers take them.
 const g = i18n.global as unknown as {
@@ -75,7 +85,7 @@ const EN: Record<string, string> = {
   own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for OpenAI.',
   model_denied: 'The school does not allow this model. Choose another.',
   settings_rejected: 'The runtime cannot run these settings.',
-  key_malformed: 'That does not look like an API key.',
+  key_malformed: 'That does not look like an API key from OpenAI. Paste the key exactly as OpenAI gave it, with no spaces.',
   unknown_provider: 'Choose one of the providers offered.',
   adapter_not_offered: 'Choose one of the API styles offered.',
   unknown_endpoint: 'Choose one of the endpoints offered.',
@@ -88,15 +98,25 @@ const EN: Record<string, string> = {
   runtime_absent: 'The school’s runtime is not available on this server. Reload the page.',
 }
 
+// Refused names (A.3.1, A.3.2): a page out of step with the runtime, said with the name refused.
+const NAMED: Record<string, [string, string]> = {
+  unknown_field: [
+    '/model/Own',
+    'The school’s runtime did not take this request: it has no field “/model/Own”. Reload the page and try again.',
+  ],
+  unknown_parameter: [
+    'revoke',
+    'The school’s runtime did not take this request: it takes no “revoke” in the address. Reload the page and try again.',
+  ],
+}
+
 // The rest (§9.5's last row): the request itself was wrong; the app's generic words, with the message.
 const GENERIC = [
   'cross_origin',
   'not_json',
   'body_too_large',
   'malformed_json',
-  'unknown_field',
   'missing_field',
-  'unknown_parameter',
   'bad_if_match',
   'version_required',
   'method_not_allowed',
@@ -107,7 +127,7 @@ const GENERIC = [
 describe('the words for each error reason', () => {
   it('cover the contract’s whole closed list, and this client’s own reasons', () => {
     const all = [...RUNTIME_ERROR_REASONS, ...CLIENT_ERROR_REASONS]
-    for (const r of all) expect(r in EN || GENERIC.includes(r), r).toBe(true)
+    for (const r of all) expect(r in EN || r in NAMED || GENERIC.includes(r), r).toBe(true)
     for (const r of Object.keys(EN)) expect(all as readonly string[], r).toContain(r)
   })
 
@@ -125,6 +145,19 @@ describe('the words for each error reason', () => {
     expect(words).not.toContain('developer words')
     const key = hostingErrorKey(e)!
     expect(te(key), key).toBe(true)
+  })
+
+  it.each(Object.entries(NAMED))('%s names what the runtime refused, in both languages', (reason, [field, words]) => {
+    const e = err(reason, { field })
+    expect(hostingErrorText(e, t)).toBe(words)
+    setLocale('zh-Hant')
+    const zh = hostingErrorText(e, t)
+    expect(zh).toContain(`「${field}」`)
+    expect(zh).toMatch(/[一-鿿]/)
+    setLocale('en')
+    // Without a name, the app's generic words, with the runtime's message.
+    expect(hostingErrorKey(err(reason))).toBeNull()
+    expect(hostingErrorText(err(reason), t)).toContain(`developer words for ${reason}`)
   })
 
   it.each(GENERIC)('%s gets the app’s generic words, with the runtime’s message', (reason) => {
@@ -155,6 +188,8 @@ describe('the words for each error reason', () => {
     expect(isDefinitive(err('token_refused', {}, 422))).toBe(true)
     expect(isDefinitive(err('already_hosted', {}, 409))).toBe(true)
     expect(isDefinitive(err('assertion_invalid', {}, 401))).toBe(false)
+    // Changed meanwhile: a request sent again after a lost answer is told so too.
+    expect(isDefinitive(err('version_mismatch', { current_version: 4 }, 412))).toBe(false)
     expect(isDefinitive(err('core_unavailable', {}, 503))).toBe(false)
     expect(isDefinitive(err('network', {}, 0))).toBe(false)
   })
@@ -245,7 +280,7 @@ describe('tokens', () => {
     expect(credentialByPrefix(creds, 'aaaaaaaaaaaa')?.revoked_at).toBeTruthy()
   })
 
-  it('take another live token used in the last ten minutes for something else running the agent', () => {
+  it('take another live token used in the runtime’s window (15 minutes) for something else running the agent', () => {
     const creds = [
       credential({ id: 'recent', last_used_at: ago(RECENT_USE_MS - 1000) }),
       credential({ id: 'old', last_used_at: ago(RECENT_USE_MS + 1000) }),
@@ -259,6 +294,64 @@ describe('tokens', () => {
     expect(otherRecentTokens(creds, 'runtimetoken', NOW).map((c) => c.id)).toEqual(['recent', 'ahead'])
     expect(otherRecentTokens(creds, null, NOW).map((c) => c.id)).toEqual(['recent', 'runtime', 'ahead'])
     expect(usedRecently({ last_used_at: 'not a date' }, NOW)).toBe(false)
+  })
+
+  it('are listed as the runtime lists the agent’s other tokens, from Core’s list, before a token is issued', () => {
+    const creds = [
+      credential({ token_prefix: 'neverusedold', last_used_at: null, created_at: '2026-09-01T00:00:00Z', label: '  ' }),
+      credential({ token_prefix: 'usedhoursago', last_used_at: ago(3 * 3600_000), label: 'old laptop' }),
+      credential({ token_prefix: 'neverusednew', last_used_at: null, created_at: '2026-09-20T00:00:00Z' }),
+      credential({ token_prefix: 'usedrecently', last_used_at: ago(3 * 60_000), label: 'my laptop' }),
+      credential({ token_prefix: 'revokedtoken', last_used_at: ago(1000), revoked_at: ago(500) }),
+      credential({ token_prefix: 'sessiontoken', kind: 'session', last_used_at: ago(1000) }),
+      credential({ token_prefix: 'runtimetoken', last_used_at: ago(1000) }),
+    ]
+    const o = otherTokensFrom(creds, 'runtimetoken', NOW)!
+    expect(o.in_use).toBe(true)
+    expect(o.window_seconds).toBe(900)
+    expect(o.tokens.map((x) => x.prefix)).toEqual(['usedrecently', 'usedhoursago', 'neverusednew', 'neverusedold'])
+    expect(o.tokens[0]).toMatchObject({ label: 'my laptop', recent: true, last_used_at: ago(3 * 60_000), expires_at: null })
+    expect(o.tokens[1].recent).toBe(false)
+    // A label of spaces is none.
+    expect(o.tokens[3].label).toBeNull()
+    // Just past the window, nothing is in use.
+    expect(otherTokensFrom([credential({ last_used_at: ago(RECENT_USE_MS + 1000) })], null, NOW)!.in_use).toBe(false)
+    expect(otherTokensFrom(Array.from({ length: 25 }, () => credential()), null, NOW)!.tokens).toHaveLength(20)
+    // No list to go by: nothing can be said.
+    expect(otherTokensFrom(null, null, NOW)).toBeNull()
+    expect(otherTokensFrom([], null, NOW)).toEqual({ in_use: false, window_seconds: 900, tokens: [] })
+  })
+
+  it('leave out what was revoked here, and stop warning once none left is in use', () => {
+    const recent = otherToken({ prefix: 'recentrecent', recent: true })
+    const quiet = otherToken({ prefix: 'quietquietqu' })
+    const o = otherTokens([recent, quiet])
+    expect(o.in_use).toBe(true)
+    expect(withoutTokens(o, ['recentrecent'])).toEqual({ in_use: false, window_seconds: 900, tokens: [quiet] })
+    expect(withoutTokens(o, [])).toBe(o)
+    expect(withoutTokens(null, ['x'])).toBeNull()
+    expect(withoutTokens(undefined, ['x'])).toBeUndefined()
+    expect(tokenHint('k7v2m4qhx3ab')).toBe('ais_k7v2m4qhx3ab…')
+  })
+
+  it('part connect’s answer into the agent and its other tokens, which it may not carry', () => {
+    const others = otherTokens([otherToken({ recent: true })])
+    const agent = hostedAgent()
+    expect(connectedParts({ ...agent, other_tokens: others })).toEqual({ agent, others })
+    expect(connectedParts({ ...agent, other_tokens: null })).toEqual({ agent, others: null })
+    expect(connectedParts(agent)).toEqual({ agent, others: undefined })
+    expect('other_tokens' in connectedParts({ ...agent, other_tokens: others }).agent).toBe(false)
+  })
+
+  it('leave the owner a token to revoke only when the runtime’s revocation failed, whatever the problem', () => {
+    const info = { hint: 'ais_oldruntimetk…', prefix: 'oldruntimetk' }
+    for (const revocation of REVOCATIONS) {
+      for (const problem of [...REVOCATION_PROBLEMS, null]) {
+        const left = unrevoked({ ...info, revocation, problem })
+        if (revocation === 'failed') expect(left, `${revocation} ${problem}`).toEqual({ ...info, problem })
+        else expect(left, `${revocation} ${problem}`).toBeNull()
+      }
+    }
   })
 
   it('know an agent token by its shape', () => {
@@ -321,6 +414,30 @@ describe('the model form', () => {
     expect(formProblems(emptyModelForm(), undefined)).toEqual({ provider: 'hosting.model.invalid.required' })
   })
 
+  it('takes a provider’s endpoint choices from the runtime’s offer alone', () => {
+    const glm = OFFERS.find((o) => o.provider === 'glm')!
+    const form = defaultsFor({ ...emptyModelForm(), model: 'glm-4.6' }, glm)
+    expect(form.endpoint).toBe('global')
+    expect(choiceFrom(form, glm)).toEqual({ provider: 'glm', adapter: 'openai_chat', model: 'glm-4.6', endpoint: 'global' })
+    // A saved endpoint the runtime no longer offers is shown as it is, and must be chosen again: never switched silently.
+    const saved = formFromModel(
+      {
+        provider: 'glm',
+        adapter: 'openai_chat',
+        model: 'glm-4.6',
+        endpoint: 'china',
+        resource: null,
+        region: null,
+        max_output_tokens: null,
+        reasoning_effort: null,
+        price_known: true,
+      },
+      OFFERS,
+    )
+    expect(saved.endpoint).toBe('china')
+    expect(formProblems(saved, glm)).toEqual({ endpoint: 'hosting.errors.unknown_endpoint' })
+  })
+
   it('tells one choice from another whatever the order of its members', () => {
     expect(choiceKey({ provider: 'a', model: 'b' })).toBe(choiceKey({ model: 'b', provider: 'a' }))
     expect(choiceKey({ provider: 'a', model: 'b' })).not.toBe(choiceKey({ provider: 'a', model: 'c' }))
@@ -343,5 +460,27 @@ describe('the model form', () => {
     expect(isKeyShaped(newToken().token)).toBe(false)
     expect(isKeyShaped('aisinv_abcdefghijkl_x')).toBe(false)
     expect(isKeyShaped('x'.repeat(4097))).toBe(false)
+    // Anywhere in it, as the runtime looks (A.3.7): in quotes, or after other text.
+    const token = newToken().token
+    expect(isKeyShaped(`"${token}"`)).toBe(false)
+    expect(isKeyShaped(`key=${token}`)).toBe(false)
+    expect(isKeyShaped(`aisinv_${'abcdefghijkl'}_${'x'.repeat(20)}`)).toBe(false)
+  })
+
+  it('tells an AIShie token pasted as a key from a key that is merely malformed', () => {
+    const token = newToken().token
+    for (const k of [token, `"${token}"`, `Bearer ${token}`, `x${token}`, 'ais_short', 'aisinv_short']) {
+      expect(isAishieToken(k), k).toBe(true)
+      expect(keyProblem(k), k).toBe('hosting.errors.key_is_aishie_token')
+    }
+    expect(isAishieToken('sk-ais_abc')).toBe(false)
+    expect(keyProblem('sk-with space')).toBe('hosting.errors.key_malformed')
+    expect(keyProblem('short')).toBe('hosting.errors.key_malformed')
+    expect(keyProblem('sk-abcdefgh')).toBeNull()
+    expect(t('hosting.errors.key_is_aishie_token', { provider: 'OpenAI' })).toBe(
+      'That is an AIShie token (yours or an agent’s), not an API key from OpenAI. An AIShie token is never sent to a provider: paste the key OpenAI gave you.',
+    )
+    setLocale('zh-Hant')
+    expect(t('hosting.errors.key_is_aishie_token', { provider: 'OpenAI' })).toContain('AIShie 的權杖')
   })
 })

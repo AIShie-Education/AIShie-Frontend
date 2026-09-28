@@ -191,6 +191,17 @@ describe('runtimeStatus', () => {
     }
   })
 
+  it('takes each feature as the boolean the runtime sent, false included', async () => {
+    infoAnswer = json(200, { ...INFO_BODY, features: { connect_by_token: false, own_key: false, school_key: true } })
+    const s = await rt.runtimeStatus()
+    expect(s.available && s.info.features).toEqual({ connect_by_token: false, own_key: false, school_key: true })
+
+    // What is not a boolean is not taken for one: the v1 default stands.
+    infoAnswer = json(200, { ...INFO_BODY, features: { connect_by_token: 'false', own_key: 0, school_key: 'true' } })
+    const again = await rt.runtimeStatus({ refresh: true })
+    expect(again.available && again.info.features).toEqual({ connect_by_token: true, own_key: true, school_key: false })
+  })
+
   it('runtimeInfo gives the info, or null to hide hosting', async () => {
     await expect(rt.runtimeInfo()).resolves.toEqual(INFO_BODY)
     infoAnswer = empty(502)
@@ -785,9 +796,66 @@ describe('the contract’s calls', () => {
     expect(new Set(sent.map((c) => `${c.method} ${c.url} ${c.body}`)).size).toBe(1)
   })
 
+  it('connect answers the agent with its other live tokens beside it, and inspect names them too', async () => {
+    const other_tokens = {
+      in_use: true,
+      window_seconds: 900,
+      tokens: [
+        {
+          prefix: 'k7v2m4qhx3ab',
+          label: 'laptop',
+          created_at: '2026-09-01T00:00:00Z',
+          last_used_at: '2026-09-28T07:57:00Z',
+          expires_at: null,
+          recent: true,
+        },
+      ],
+    }
+    runtimeAnswers.push(json(201, { ...AGENT, other_tokens }, { ETag: '"1"' }))
+    const connected = await rt.runtime.connect({ token: 't', core_actor_id: 'a' })
+    expect(connected.status).toBe(201)
+    expect(connected.data.id).toBe('agt_1')
+    expect(connected.data.other_tokens).toEqual(other_tokens)
+
+    // Core would not list them: nothing is known, and nothing failed.
+    runtimeAnswers.push(json(200, { core_actor_id: 'a', other_tokens: null }))
+    const inspected = await rt.runtime.inspect({ token: 't' })
+    expect(inspected.data.other_tokens).toBeNull()
+  })
+
+  it('replaces a token with the token alone, never naming the agent in the body', async () => {
+    runtimeAnswers.push(json(200, { agent: AGENT, previous_token: { hint: 'h', prefix: 'p', revocation: 'revoked', problem: null } }))
+    await rt.runtime.replaceToken('agt_1', 't')
+    const [c] = runtimeCalls()
+    expect(JSON.parse(c.body!)).toEqual({ token: 't' })
+    expect(Object.keys(JSON.parse(c.body!))).toEqual(['token'])
+    expect(c.headers['If-Match']).toBeUndefined()
+  })
+
+  it.each([
+    ['remove', () => rt.runtime.remove('agt_1')],
+    ['pause', () => rt.runtime.pause('agt_1')],
+    ['resume', () => rt.runtime.resume('agt_1')],
+    ['replaceToken', () => rt.runtime.replaceToken('agt_1', 't')],
+  ] as const)('%s names no version, and a 412 all the same is a version mismatch with the version now', async (_, call) => {
+    runtimeAnswers.push(
+      json(412, {
+        error: { code: 'version_mismatch', message: 'changed since', details: { reason: 'version_mismatch', current_version: 9 } },
+      }),
+    )
+    const err = await failure(call())
+    expect(runtimeCalls()[0].headers['If-Match']).toBeUndefined()
+    expect(rt.isVersionMismatch(err)).toBe(true)
+    expect(err.reason).toBe('version_mismatch')
+    expect(err.details.current_version).toBe(9)
+    // A refusal, not a failure to answer: never sent again by itself.
+    expect(runtimeCalls()).toHaveLength(1)
+  })
+
   it.each([
     ['update', () => rt.runtime.update('agt_1', 3, { own_key: null })],
     ['testKey', () => rt.runtime.testKey({ provider: 'openai', model: 'm', key: 'sk-0000000000' })],
+    ['replaceToken at a version', () => rt.runtime.replaceToken('agt_1', 't', 3)],
   ] as const)('%s is never sent again by itself', async (_, call) => {
     runtimeAnswers.push(empty(503), json(200, AGENT))
     const err = await failure(call())

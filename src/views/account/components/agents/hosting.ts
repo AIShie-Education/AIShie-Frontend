@@ -6,13 +6,20 @@
 import { ApiError } from '@/api/http'
 import { isRuntimeError } from '@/api/runtime'
 import type {
+  ConnectAnswer,
   EndpointOffer,
+  HostedAgent,
   HostedStatus,
+  OtherToken,
+  OtherTokens,
   OwnModel,
   OwnModelChoice,
   ProviderOffer,
   ReasoningEffort,
+  RevokedToken,
+  RevocationProblem,
   Seat,
+  TokenInfo,
 } from '@/api/runtime-types'
 import { REASONING_EFFORTS } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
@@ -26,12 +33,15 @@ export const RUNTIME_TOKEN_LABEL = 'AIShie runtime'
 
 /**
  * How recent a use of one of the agent's other tokens counts as something
- * else running it now. Core notes a use at most once a minute, and a runtime
- * that is running asks for work at least every minute or two; ten minutes
- * leaves room for a quiet spell without taking a runtime stopped an hour ago
- * for one still running.
+ * else running it now: the runtime's own window (window_seconds, 900; the
+ * contract's A.1), so that the page and the runtime warn alike. Core notes
+ * a token's use at most once a minute, and a runtime running an agent calls
+ * Core far more often than that.
  */
-export const RECENT_USE_MS = 10 * 60_000
+export const RECENT_USE_MS = 15 * 60_000
+
+/** How many of the agent's other tokens the runtime lists at most (A.1). */
+const MAX_OTHER_TOKENS = 20
 
 /**
  * What the wizard does with the token it issues: host the agent (connect),
@@ -86,7 +96,16 @@ const REASON_KEY: Record<string, string> = {
   adapter_not_offered: 'errors.adapter_not_offered',
   unknown_endpoint: 'errors.unknown_endpoint',
   invalid_field: 'errors.invalid_field',
+  // The runtime reads a member only by exactly its name, and takes no query
+  // but DELETE's revoke_token (A.3.1, A.3.2): this page never sends another,
+  // so one refused is a page older or newer than the runtime. Worded with
+  // the name refused, when the runtime gave one.
+  unknown_field: 'errors.unknown_field',
+  unknown_parameter: 'errors.unknown_parameter',
 }
+
+/** Reasons worded with the name the runtime refused (details.field), and generically without one. */
+const NAMED_REASONS: ReadonlySet<string> = new Set(['unknown_field', 'unknown_parameter'])
 
 /** Reasons whose words belong on one field of the model form (details.field names it). */
 export const FIELD_REASONS: ReadonlySet<string> = new Set([
@@ -100,8 +119,15 @@ export const FIELD_REASONS: ReadonlySet<string> = new Set([
 /** The full message key (hosting.…) for an error's reason, or null for the generic words. */
 export function hostingErrorKey(e: unknown): string | null {
   if (!isRuntimeError(e)) return null
+  if (NAMED_REASONS.has(e.reason) && !fieldNamed(e)) return null
   const k = REASON_KEY[e.reason]
   return k ? `hosting.${k}` : null
+}
+
+/** The member or parameter an error names (details.field), or '' when it names none. */
+function fieldNamed(e: ApiError): string {
+  const f = e.details?.field
+  return typeof f === 'string' ? f : ''
 }
 
 /**
@@ -118,6 +144,7 @@ export function hostingErrorText(e: unknown, t: T, opts: { provider?: string } =
   return t(key, {
     seconds: Number.isFinite(wait) && wait > 0 ? Math.ceil(wait) : 10,
     provider: opts.provider ?? '',
+    field: fieldNamed(err),
   })
 }
 
@@ -128,9 +155,15 @@ export function problemsOf(e: unknown): string[] {
   return Array.isArray(p) ? p.filter((x): x is string => typeof x === 'string').slice(0, 20) : []
 }
 
-/** Whether an error is final for the request (a refusal), as the wizard's revoke rule counts it (§9.2). */
+/**
+ * Whether an error is final for the request (a refusal), as the wizard's
+ * revoke rule counts it (§9.2): a 4xx other than 401, and other than 412. A
+ * 412 says the agent changed meanwhile, which a token replacement sent
+ * again after a lost answer would be told as well: whether the runtime has
+ * the token must be asked, not assumed.
+ */
 export function isDefinitive(e: unknown): boolean {
-  return e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401
+  return e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401 && e.status !== 412
 }
 
 /** Whether nothing can be said of what became of the request: no answer, or the server's failure. */
@@ -257,6 +290,100 @@ export function otherRecentTokens(
       (!except || c.token_prefix !== except) &&
       usedRecently(c, now),
   )
+}
+
+/**
+ * A token the runtime could not revoke in Core, which may still work (§9.4):
+ * its public part, and why (null when it cannot be told whether it was
+ * revoked at all: the runtime's answer was lost, or the agent was gone
+ * already when it was deleted).
+ */
+export interface UnrevokedToken extends TokenInfo {
+  problem: RevocationProblem | null
+}
+
+/**
+ * The token a replacement or a deletion left working, for its owner to be
+ * offered to revoke, or null when there is nothing to do: revoked, or
+ * already not working. not_attempted is not this: a replay of the same
+ * token, or a token kept on purpose.
+ */
+export function unrevoked(t: RevokedToken): UnrevokedToken | null {
+  if (t.revocation !== 'failed') return null
+  return { hint: t.hint, prefix: t.prefix, problem: t.problem ?? null }
+}
+
+/** A token as the runtime shows one, by its public prefix: ais_k7v2m4qhx3ab… */
+export function tokenHint(prefix: string): string {
+  return `ais_${prefix}…`
+}
+
+/** The most recently used first, never-used ones last (the newest of those first), as the runtime lists them. */
+function byUse(a: OtherToken, b: OtherToken): number {
+  if (!a.last_used_at || !b.last_used_at) {
+    if (a.last_used_at) return -1
+    if (b.last_used_at) return 1
+    return Date.parse(b.created_at) - Date.parse(a.created_at)
+  }
+  return Date.parse(b.last_used_at) - Date.parse(a.last_used_at)
+}
+
+/**
+ * The one-brain check the runtime makes when a token is inspected or
+ * connected (other_tokens, A.1), made here from Core's list of the agent's
+ * tokens, for where there is no such answer yet: before the page issues a
+ * token of its own. The live API tokens but except (the runtime's own, when
+ * it is given a new one), each marked recent when used within the runtime's
+ * window. Null when there is no list to go by.
+ */
+export function otherTokensFrom(
+  creds: readonly AgentCredential[] | null | undefined,
+  except: string | null | undefined,
+  now = Date.now(),
+): OtherTokens | null {
+  if (!creds) return null
+  const tokens = creds
+    .filter(
+      (c) =>
+        c.kind === 'api_token' &&
+        !!c.token_prefix &&
+        credentialState(c, now) === 'active' &&
+        (!except || c.token_prefix !== except),
+    )
+    .map(
+      (c): OtherToken => ({
+        prefix: c.token_prefix!,
+        label: c.label?.trim() || null,
+        created_at: c.created_at,
+        last_used_at: c.last_used_at ?? null,
+        expires_at: c.expires_at ?? null,
+        recent: usedRecently(c, now),
+      }),
+    )
+    .sort(byUse)
+  return { in_use: tokens.some((x) => x.recent), window_seconds: RECENT_USE_MS / 1000, tokens: tokens.slice(0, MAX_OTHER_TOKENS) }
+}
+
+/** o without the tokens of those prefixes (revoked here since), and in use only while one left is recent. */
+export function withoutTokens(o: OtherTokens, prefixes: readonly string[]): OtherTokens
+export function withoutTokens(o: OtherTokens | null | undefined, prefixes: readonly string[]): OtherTokens | null | undefined
+export function withoutTokens(o: OtherTokens | null | undefined, prefixes: readonly string[]): OtherTokens | null | undefined {
+  if (!o || !prefixes.length) return o
+  const tokens = o.tokens.filter((x) => !prefixes.includes(x.prefix))
+  return { ...o, tokens, in_use: tokens.some((x) => x.recent) }
+}
+
+/**
+ * POST /agents' answer parted into the agent and its other tokens: undefined
+ * when the answer did not carry them (the agent found by the runtime's list
+ * after a lost answer, or a runtime that does not say).
+ */
+export function connectedParts(a: ConnectAnswer | HostedAgent): {
+  agent: HostedAgent
+  others: OtherTokens | null | undefined
+} {
+  const { other_tokens: others, ...agent } = a as Partial<Pick<ConnectAnswer, 'other_tokens'>> & HostedAgent
+  return { agent, others }
 }
 
 // --- The model form -----------------------------------------------------------------
@@ -413,12 +540,39 @@ export function formProblems(form: ModelForm, offer: ProviderOffer | undefined):
 }
 
 /**
+ * A Core token or invitation anywhere in a string, as Core makes them: ais_
+ * or aisinv_, a 12-character public prefix, _ and the secret. The runtime
+ * looks for the same (A.3.7).
+ */
+const CORE_TOKEN_INSIDE = /ais(?:inv)?_[a-z2-7]{12}_[A-Za-z0-9_-]{16,}/
+
+/**
+ * Whether what was pasted as a provider's key is an AIShie token instead, a
+ * person's or an agent's: one that begins as a Core token or invitation
+ * does, or holds one anywhere (in quotes, or after other text). The runtime
+ * refuses it as key_malformed, and it must never go to a provider.
+ */
+export function isAishieToken(key: string): boolean {
+  return key.startsWith('ais_') || key.startsWith('aisinv_') || CORE_TOKEN_INSIDE.test(key)
+}
+
+/**
  * Whether a key could be one the runtime takes (§5.4): 8 to 4096 printable
- * ASCII characters with no whitespace, and never a Core token, which must
- * never go to a provider (nor, as a key, to the runtime).
+ * ASCII characters with no whitespace, and never an AIShie token, which
+ * must never go to a provider (nor, as a key, to the runtime).
  */
 export function isKeyShaped(key: string): boolean {
   if (key.length < 8 || key.length > 4096) return false
   if (!/^[\x21-\x7e]+$/.test(key)) return false
-  return !key.startsWith('ais_') && !key.startsWith('aisinv_')
+  return !isAishieToken(key)
+}
+
+/**
+ * The message key (hosting.…) for what is wrong with a key, or null when
+ * nothing is: an AIShie token pasted in its place is said to be one, so
+ * that its owner knows to paste the provider's key instead.
+ */
+export function keyProblem(key: string): string | null {
+  if (isAishieToken(key)) return 'hosting.errors.key_is_aishie_token'
+  return isKeyShaped(key) ? null : 'hosting.errors.key_malformed'
 }

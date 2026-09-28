@@ -46,18 +46,51 @@ export default {
     reconnectBody: 'AIShie 拒絕了執行環境原有的權杖。系統會建立一個標籤為「AIShie runtime」的新權杖並交給執行環境；你不會看到它。',
     reconnectSubmit: '重新連接',
     replaced: '執行環境已取得 {name} 的新權杖',
-    previousNotRevoked: '執行環境已取得新權杖，但舊權杖未能撤銷。請在下方「權杖」清單中撤銷較舊的「AIShie runtime」權杖。',
   },
 
-  // The one-brain rule.
+  // A token the runtime could not revoke, after replacing or deleting (§9.4).
+  unrevoked: {
+    title: '這個代理的一個權杖可能仍然有效',
+    body: '學校的執行環境未能在 AIShie 中撤銷權杖 {token}（{why}），所以持有它的程式仍可能以你的代理身分行事。請以代理擁有者的身分在這裡撤銷它。',
+    why: {
+      agent_suspended: '這個代理在 AIShie 中已停用',
+      core_unavailable: '它無法連接 AIShie',
+      core_refused: 'AIShie 拒絕了它的請求',
+      unknown: '它無法確定是否已撤銷',
+    },
+    revoke: '在 AIShie 中撤銷',
+    later: '暫時不要',
+    revoked: '已撤銷 {token}。',
+    gone: '{token} 已經失效：沒有需要撤銷的。',
+    held: '執行環境現正使用 {token}，所以沒有撤銷它。',
+    failed: '在這裡也未能撤銷它。請在下方「權杖」清單中撤銷它。',
+  },
+
+  // The agent's other tokens, as the runtime lists them on inspect and connect
+  // (A.1), or as the page works them out from Core's list before it issues one.
+  otherTokens: {
+    inUseTitle: '這個代理似乎正在其他地方運行',
+    inUse:
+      '它的權杖 {token} 最近一次使用是 {ago}。代理同一時間只能有一個「大腦」。請停止另一個執行環境，或在 AIShie 中撤銷那個權杖，讓只有這個執行環境以你的代理身分回答。',
+    unusedTitle: '這個代理還有其他權杖',
+    unused: '它們仍然有效，但最近沒有使用。如果你沒有程式需要它們，可以撤銷。',
+    unknown: '無法檢查這個代理是否有其他副本。',
+    unlabelled: '沒有標籤',
+    recent: '使用中',
+    lastUsed: '上次使用',
+    neverUsed: '從未使用',
+    revoke: '撤銷',
+    revoked: '已撤銷 {token}：現在沒有程式能再用它以你的代理身分行事。',
+    gone: '{token} 已經失效：沒有需要撤銷的。',
+    revokeFailed: '未能撤銷它。請再試一次，或在下方「權杖」清單中撤銷它。',
+    anyway: '仍然連接',
+    anywayReplace: '仍然繼續',
+  },
+
+  // The one-brain rule, when resuming a hosted agent, and for a pasted token used lately.
   oneBrain: {
     title: '有其他程式正在運行這個代理',
     body: '它的另一個權杖在過去數分鐘內曾被使用：你自己的執行環境或其他 MCP 用戶端正在運行它。如果學校的執行環境也運行它，每個問題都會有兩個回答。請撤銷那些權杖以停止它，或者你會自行停止它的話，可以繼續。',
-    used: '上次使用',
-    revoke: '撤銷它們並連接',
-    anyway: '仍然連接',
-    revokeReplace: '撤銷它們並繼續',
-    anywayReplace: '仍然繼續',
     revokeResume: '撤銷它們並恢復',
     anywayResume: '仍然恢復',
     revokeFailed: '部分權杖未能撤銷，所以沒有進行下一步。請再試一次，或在下方「權杖」清單中撤銷它們。',
@@ -248,6 +281,8 @@ export default {
     replaceToken: '更換權杖',
     delete: '從學校的執行環境刪除',
     usedByRuntime: '由學校的執行環境使用',
+    ownKeyOff: '學校的執行環境暫時不接受你自己的模型與金鑰，所以無法在這裡更改。',
+    connectOff: '學校的執行環境暫時不接受新的權杖，所以無法在這裡為它換新權杖。',
     issueWhileHosted: '學校的執行環境正在運行這個代理。你用新權杖啟動的任何程式也會回答：如要自己運行，請先從學校的執行環境刪除它。',
   },
 
@@ -261,7 +296,6 @@ export default {
     alsoRevokeHintUnlabelled: '它的權杖並非由本頁建立。只有在其他程式仍在使用它時才保留。',
     submit: '刪除',
     done: '{name} 已不在學校的執行環境上',
-    fallbackFailed: '請在下方「權杖」清單中撤銷權杖「AIShie runtime」。',
     notAttempted: '它的權杖仍然有效；如沒有其他程式使用，請在下方撤銷它。',
   },
 
@@ -285,16 +319,21 @@ export default {
     operator_agent: '學校的營運者已經在運行這個代理。',
     agent_not_found: '這個代理已不在學校的執行環境上。',
     version_mismatch: '這個代理已在另一個分頁或視窗中被更改。請檢查最新的設定後再儲存一次。',
+    changedMeanwhile: '這個代理剛在另一個分頁或視窗中被更改。這裡顯示的是它現在的狀態：請檢查後再試一次。',
     school_key_not_offered: '學校的金鑰暫未提供。',
     own_key_required: '請輸入你在 {provider} 的 API 金鑰。',
     own_key_provider_mismatch: '你已儲存的金鑰屬於另一個供應商。請輸入 {provider} 的金鑰。',
     model_denied: '學校不允許使用這個模型。請選擇另一個。',
     settings_rejected: '執行環境無法使用這些設定運行。',
-    key_malformed: '這看起來不像 API 金鑰。',
+    key_malformed: '這看起來不像 {provider} 的 API 金鑰。請按 {provider} 給你的原樣貼上金鑰，不要加入空格。',
+    key_is_aishie_token:
+      '這是 AIShie 的權杖（你的或代理的），不是 {provider} 的 API 金鑰。AIShie 權杖絕不會傳送給供應商：請貼上 {provider} 給你的金鑰。',
     unknown_provider: '請從提供的供應商中選擇。',
     adapter_not_offered: '請從提供的 API 形式中選擇。',
     unknown_endpoint: '請從提供的端點中選擇。',
     invalid_field: '這裡不接受這個值。',
+    unknown_field: '學校的執行環境不接受這個請求：它沒有「{field}」這個欄位。請重新載入頁面後再試。',
+    unknown_parameter: '學校的執行環境不接受這個請求：網址中不能有「{field}」。請重新載入頁面後再試。',
   },
 
   // Hosting that is not for this person, or not here after all.

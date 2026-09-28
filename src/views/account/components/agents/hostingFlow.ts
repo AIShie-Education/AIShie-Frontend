@@ -87,10 +87,11 @@ export interface HandOff<T> {
  *    comes back without the token, and that credential is revoked and one
  *    more issued under a new key;
  * 3. hand, with the token in a local variable only, blanked in finally;
- * 4. a refusal (a 4xx other than 401) revokes the issued credential, best
- *    effort; no answer or a server failure asks check whether the runtime
- *    has it after all, and revokes it only when it plainly does not. Never
- *    revoke without checking: the first request may have succeeded.
+ * 4. a refusal (a 4xx other than 401 or 412) revokes the issued credential,
+ *    best effort; no answer, a server failure or a 412 (the agent changed
+ *    meanwhile) asks check whether the runtime has it after all, and
+ *    revokes it only when it plainly does not. Never revoke without
+ *    checking: the first request may have succeeded.
  *
  * Rejects with the error that stopped it.
  */

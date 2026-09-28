@@ -44,11 +44,24 @@ export const PROBLEM_REASONS: readonly ProblemReason[] = [
   'failing',
 ]
 
-/** What became of an agent token the runtime was asked to revoke in Core (§7.3). */
+/**
+ * What became of an agent token the runtime was asked to revoke in Core
+ * (§7.3): revoked, or already not working (nothing to do); failed, when the
+ * token may still work and its owner is offered to revoke it (§9.4); or
+ * not attempted (kept on purpose, or a replay of the same token).
+ */
 export type Revocation = 'revoked' | 'already_invalid' | 'failed' | 'not_attempted'
 
-/** Why a revocation failed. */
+export const REVOCATIONS: readonly Revocation[] = ['revoked', 'already_invalid', 'failed', 'not_attempted']
+
+/**
+ * Why a revocation failed: the agent is suspended in Core, Core could not be
+ * reached, or Core refused the token the runtime asked with (core_refused:
+ * after two replacements at once, the newer one revoked it first; A.3.5).
+ */
 export type RevocationProblem = 'agent_suspended' | 'core_unavailable' | 'core_refused'
+
+export const REVOCATION_PROBLEMS: readonly RevocationProblem[] = ['agent_suspended', 'core_unavailable', 'core_refused']
 
 /** An agent token as the runtime shows it: never more than its public part. */
 export interface TokenInfo {
@@ -147,10 +160,20 @@ export interface HostedAgent {
   updated_at: string
 }
 
-/** What the runtime offers, by GET /info. */
+/**
+ * What the runtime offers, by GET /info. Each is a boolean the runtime
+ * works out as it starts, not a constant: connect_by_token and own_key are
+ * true where it was given a Core and a vault to seal with (in any
+ * deployment, as the contract's §5.1 and A.2.1 say), and false otherwise;
+ * school_key is false in v1. The page offers what each names only while it
+ * is true.
+ */
 export interface RuntimeFeatures {
+  /** Agents may be connected by a token (inspect, POST /agents, PUT /token). */
   connect_by_token: boolean
+  /** An owner may give a model and their own key (GET /models, keys/test, PATCH). */
   own_key: boolean
+  /** The school's key (D8); not offered in v1. */
   school_key: boolean
 }
 
@@ -227,6 +250,49 @@ export interface TokenRequest {
   core_actor_id?: string
 }
 
+/**
+ * PUT /agents/{id}/token: the token alone. The agent is the one hosted
+ * there, so a core_actor_id member is refused (400 unknown_field,
+ * /core_actor_id; the contract's A.2.3).
+ */
+export interface ReplaceTokenRequest {
+  token: string
+}
+
+/**
+ * One of the agent's other live API tokens in Core (the contract's A.1):
+ * never the token being inspected or connected, nor the one the runtime
+ * holds for it. Nothing of it is secret: it is what Core shows the owner.
+ */
+export interface OtherToken {
+  /** Core's token_prefix, 12 characters; shown as `ais_${prefix}…`. */
+  prefix: string
+  /** The label it was issued with, if any. */
+  label: string | null
+  created_at: string
+  /** Null: never used. */
+  last_used_at: string | null
+  /** Null: it does not expire. */
+  expires_at: string | null
+  /** Last used within window_seconds of when the runtime asked Core. */
+  recent: boolean
+}
+
+/**
+ * The one-brain warning (A.1): an agent has one brain at a time, and a
+ * token of its used lately means something may run it somewhere else now.
+ * The runtime only says so; connecting is not refused, and it never
+ * revokes a token it was not given.
+ */
+export interface OtherTokens {
+  /** Some token below is recent: warn. */
+  in_use: boolean
+  /** How recent "recent" is, in seconds (900). */
+  window_seconds: number
+  /** At most 20: the most recently used first, never-used ones last (newest first). */
+  tokens: OtherToken[]
+}
+
 /** POST /agents/inspect: what a token is. */
 export interface InspectAnswer {
   core_actor_id: string
@@ -235,6 +301,17 @@ export interface InspectAnswer {
   token: TokenInfo
   seats: Seat[]
   hosted: null | { agent_id: string | null; by_you: boolean; same_token: boolean }
+  /** The agent's other live tokens; null when Core would not list them (nothing is known, and nothing failed). */
+  other_tokens: OtherTokens | null
+}
+
+/**
+ * POST /agents, 201 and its 200 replay: the agent, and its other live
+ * tokens beside its members (A.1). Only these two answers carry
+ * other_tokens; GET, PATCH, PUT /token, pause and resume do not.
+ */
+export interface ConnectAnswer extends HostedAgent {
+  other_tokens: OtherTokens | null
 }
 
 /** PATCH /agents/{id}, merge-patch: an absent member is unchanged, null clears it. */
