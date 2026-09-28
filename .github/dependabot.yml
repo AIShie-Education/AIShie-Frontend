@@ -20,3 +20,11 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+  # The images the Dockerfile builds from: Caddy's, the Alpine it is built on,
+  # and Node. Node's major version is .nvmrc's, and moves with it, by hand.
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]

@@ -1,0 +1,69 @@
+# The web front end's own server, in its image (Dockerfile): the build's files
+# from /srv, over plain HTTP on :8080. The stack's Caddy, in front of it,
+# terminates TLS and sends Core its own routes (/v1, /mcp, /healthz); what
+# reaches this server is the front end's.
+#
+# The rules are deploy/setup-web.sh's site block, the same behaviour, and one
+# more: which sites may show the app in a frame (FRAME_ANCESTORS, below).
+{
+	# Nothing reconfigures it while it runs, and it keeps nothing: no admin
+	# endpoint, no configuration saved, no certificates and no storage to
+	# check or clean, so it writes nothing and runs on a read-only file system.
+	admin off
+	persist_config off
+	auto_https off
+	storage_check off
+	storage_clean_interval off
+	servers {
+		# HTTP/1.1 only: HTTP/2 and 3 need TLS, which the stack's Caddy
+		# has, and cleartext HTTP/2 (h2c) is not offered to be upgraded to
+		# through it.
+		protocols h1
+	}
+}
+
+:8080 {
+	root * /srv
+
+	# A script or a style sheet is taken for what it is served as, never for
+	# what its bytes look like.
+	header X-Content-Type-Options nosniff
+
+	# Which pages may show the app in a frame (an LMS that opens it in an
+	# iframe, say): Content-Security-Policy frame-ancestors, with the sources
+	# in the environment's FRAME_ANCESTORS, such as
+	# 'self' https://canvas.example.edu, or 'none'; unset, 'self', this
+	# origin alone. Only a header can say this: a <meta> policy leaves
+	# frame-ancestors out. This header says nothing else, and index.html's
+	# policy only img-src, so the app may itself show another site in a
+	# frame. There is no X-Frame-Options: frame-ancestors supersedes it, and
+	# it cannot name another site.
+	#
+	# Caddy puts the value in as it reads this file, when the container
+	# starts. In a heredoc a quote is plain text, so none in the value can
+	# change what this says; a value on more than one line stops the
+	# container from starting.
+	header Content-Security-Policy <<CSP
+		frame-ancestors {$FRAME_ANCESTORS:'self'}
+		CSP
+
+	# Hashed files (/assets/) never change, so a browser may keep them for
+	# good; a name that is not there is a plain 404, not the app, and is not
+	# kept.
+	handle /assets/* {
+		@found file
+		header @found Cache-Control "public, max-age=31536000, immutable"
+		encode zstd gzip
+		file_server
+	}
+
+	# Anything else, index.html and version.json first, is asked for again
+	# each time, so that a new image shows at once. A path that is not a file
+	# is one of the app's own routes: index.html.
+	handle {
+		header Cache-Control "no-cache"
+		encode zstd gzip
+		try_files {path} /index.html
+		file_server
+	}
+}

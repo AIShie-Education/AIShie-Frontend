@@ -1,8 +1,9 @@
 name: CI
 
 # Runs on every pull request and on main. On a pull request it only checks. A
-# push to main whose checks all pass is deployed to staging, through
-# deploy.yml, with the very build the checks passed; releases come from
+# push to main whose checks all pass is published and deployed: publish.yml
+# tests its image and pushes it to GHCR, for the compose stack, and deploy.yml
+# deploys the very build the checks passed to staging. Releases come from
 # release.yml, on version tags, which runs these same checks by calling this
 # workflow.
 #
@@ -22,9 +23,10 @@ on:
 # A newer push to a pull request makes the older run moot. Every push to main
 # is checked in a run of its own, which nothing waits for or cancels: waiting
 # would hold the next commit's checks back until this one is deployed, and a
-# waiting run is cancelled when another joins the group. deploy.yml puts the
-# deploys in order. The workflow's name keeps a release's run of these checks
-# apart from main's run of the same commit.
+# waiting run is cancelled when another joins the group. publish.yml and
+# deploy.yml put the publishing and the deploys in order. The workflow's name
+# keeps a release's run of these checks apart from main's run of the same
+# commit.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -112,7 +114,7 @@ jobs:
       - name: shellcheck
         run: |
           shellcheck -s sh deploy/aishiteru-web-deploy deploy/setup-web.sh scripts/pack-dist.sh
-          shellcheck deploy/aishiteru-web-deploy_test.sh scripts/ci-core.sh
+          shellcheck deploy/aishiteru-web-deploy_test.sh scripts/ci-core.sh scripts/test-image.sh
       # On Ubuntu, like the server: GNU tar and mv, and dash as /bin/sh.
       - run: deploy/aishiteru-web-deploy_test.sh
 
@@ -128,6 +130,44 @@ jobs:
       # What reaches browsers only: the dependencies the build bundles. A dev
       # tool's advisory is about the machine that runs it.
       - run: npm audit --omit=dev --audit-level=high
+
+  # The image, built for this machine and tested (scripts/test-image.sh): it
+  # must serve the build check made, file for file, by the rules
+  # deploy/setup-web.sh's site has. On a push nothing is built here: a push
+  # publishes, and publish.yml (main) or release.yml (a tag) tests the image it
+  # is about to push, as this does. Plain docker, and actions/* only, as the
+  # rest of a pull request's checks.
+  image:
+    name: the image
+    needs: check
+    if: github.event_name != 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # git describe needs the tags
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: web-${{ github.sha }}
+          path: ${{ runner.temp }}/dist
+      - id: meta
+        name: Version and commit
+        run: |
+          {
+            echo "version=$(git describe --tags --always)"
+            echo "commit=${GITHUB_SHA:0:7}"
+          } | tee -a "$GITHUB_OUTPUT"
+      - name: Build
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          COMMIT: ${{ steps.meta.outputs.commit }}
+        run: docker build --build-arg VERSION="$VERSION" --build-arg COMMIT="$COMMIT" -t aishie-frontend:test .
+      - name: Test the image
+        env:
+          EXPECT_VERSION: ${{ steps.meta.outputs.version }}
+          EXPECT_COMMIT: ${{ steps.meta.outputs.commit }}
+        run: scripts/test-image.sh aishie-frontend:test "$RUNNER_TEMP/dist"
 
   # The build check made, served by vite preview, against the pinned Core on a
   # scratch database. Core's catalogue is checked here too, while it is up:
@@ -213,6 +253,19 @@ jobs:
             ${{ runner.temp }}/aishiteru-ci-core/core.log
           if-no-files-found: ignore
           retention-days: 14
+
+  # A green push to main: its image, tested and pushed to GHCR as :sha-<commit>,
+  # and :edge while it is main's tip. Pull requests, the weekly run and a
+  # release's run of these checks publish nothing here (release.yml publishes
+  # a release's image). audit does not hold it back: a new advisory is for a
+  # person to weigh, and it still shows red here.
+  publish:
+    needs: [check, scripts, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish.yml
 
   # A green push to main: the build its checks passed, deployed to staging.
   # Pull requests, the weekly run and a release's run of these checks deploy

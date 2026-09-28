@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { acceptInvite, ApiError, blobUrl, onUnauthenticated, read, write } from './http'
+import { acceptInvite, ApiError, authMethods, blobUrl, onUnauthenticated, read, write } from './http'
 
 interface Call {
   url: string
@@ -37,6 +37,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   vi.useRealTimers()
 })
 
@@ -220,6 +221,86 @@ describe('acceptInvite', () => {
     )
     const err = await acceptInvite(TOKEN, 'a long enough password').catch((e) => e)
     expect(err.details).toEqual({ retry_after_seconds: 7 })
+  })
+})
+
+describe('authMethods', () => {
+  const START = '/v1/auth/sso/start'
+  // What the build says, which only a Core that does not say is taken to mean.
+  const built = (enabled: string, label = '') => {
+    vi.stubEnv('VITE_SSO_ENABLED', enabled)
+    vi.stubEnv('VITE_SSO_LABEL', label)
+  }
+
+  it('asks Core, publicly, and takes no single sign-on for none, whatever the build says', async () => {
+    built('true', 'Built-in NetID')
+    responses.push(json(200, { password: true, sso: null }))
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: null })
+    expect(calls).toHaveLength(1)
+    expect(calls[0].method).toBe('GET')
+    expect(calls[0].url).toBe('/v1/auth/methods')
+    expect(calls[0].credentials).toBe('include')
+    expect(calls[0].headers['Idempotency-Key']).toBeUndefined()
+  })
+
+  it("takes single sign-on with Core's name for the provider, and where it starts", async () => {
+    built('false')
+    responses.push(json(200, { password: true, sso: { label: 'PolyU NetID', start: START } }))
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'PolyU NetID', start: START } })
+  })
+
+  it('takes single sign-on with no name as the app’s own words, not the build’s', async () => {
+    built('true', 'Built-in NetID')
+    responses.push(json(200, { password: true, sso: { label: null, start: START } }))
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: null, start: START } })
+  })
+
+  it('takes a Core from before the route (404) to mean what the build says', async () => {
+    built('true', 'PolyU NetID')
+    responses.push(
+      json(404, { error: { code: 'not_found', message: 'no such route; GET /v1/tools lists what there is' } }),
+    )
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'PolyU NetID', start: START } })
+
+    built('true')
+    responses.push(json(404, {}))
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: null, start: START } })
+
+    vi.unstubAllEnvs()
+    responses.push(json(404, {}))
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: null })
+  })
+
+  it('takes no answer to mean what the build says, and does not ask again', async () => {
+    built('true', 'PolyU NetID')
+    responses.push(() => Promise.reject(new TypeError('Failed to fetch')))
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'PolyU NetID', start: START } })
+    expect(calls).toHaveLength(1)
+
+    built('false')
+    responses.push(json(503, { error: { code: 'unavailable', message: 'starting' } }))
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: null })
+    expect(calls).toHaveLength(2)
+  })
+
+  it('takes an answer that is not one to mean what the build says', async () => {
+    built('true')
+    const fallback = { password: true, sso: { label: null, start: START } }
+    // The front end's own index.html, from a proxy that does not send /v1 to Core.
+    responses.push(() => new Response('<!doctype html><div id="app"></div>', { status: 200 }))
+    await expect(authMethods()).resolves.toEqual(fallback)
+    for (const body of [
+      { sso: null },
+      { password: true },
+      { password: true, sso: { label: 'X' } },
+      { password: true, sso: { label: 7, start: START } },
+      { password: true, sso: { label: 'X', start: 'https://elsewhere.example/start' } },
+      { password: true, sso: { label: 'X', start: '//elsewhere.example/start' } },
+      { password: true, sso: { label: 'X', start: '/v1/auth/sso/start?next=/' } },
+    ]) {
+      responses.push(json(200, body))
+      await expect(authMethods(), JSON.stringify(body)).resolves.toEqual(fallback)
+    }
   })
 })
 

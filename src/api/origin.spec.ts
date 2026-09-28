@@ -38,6 +38,13 @@ describe('where Core is', () => {
     expect(u.searchParams.get('return_to')).toBe('/courses/c1')
   })
 
+  it('starts single sign-on where Core says, where Core is', async () => {
+    const http = await load({ VITE_API_BASE: '/core', VITE_CORE_PUBLIC_URL: '' })
+    const u = new URL(http.ssoStartUrl('/courses/c1', '/v1/auth/oidc/start'), window.location.href)
+    expect(u.pathname).toBe('/core/v1/auth/oidc/start')
+    expect(u.searchParams.get('return_to')).toBe('/courses/c1')
+  })
+
   it('prefers the public URL it is given', async () => {
     const http = await load({ VITE_API_BASE: '/core', VITE_CORE_PUBLIC_URL: 'https://lms.example.edu/' })
     expect(http.MCP_ENDPOINT).toBe('https://lms.example.edu/mcp')

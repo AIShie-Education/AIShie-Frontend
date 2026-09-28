@@ -2,13 +2,196 @@
 
 The front end is a directory of static files, and it is served from the same
 origin as AIShiteru Core: Core's session cookie is `SameSite=Lax`, and its
-guard refuses writes from other origins. So it lives on the server Core runs
-on, one per environment, set up with Core's `deploy/setup-server.sh`
-([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md)).
-Caddy, which already serves HTTPS there, sends `/v1/*`, `/mcp`, `/mcp/*` and
-`/healthz` to Core on `127.0.0.1:8080`, and everything else to the files in
-`/srv/aishiteru-web/current`, falling back to `index.html` for the app's own
-routes.
+guard refuses writes from other origins. One proxy in front of both sends
+`/v1/*`, `/mcp`, `/mcp/*` and `/healthz` to Core, and everything else to the
+front end's files, falling back to `index.html` for the app's own routes.
+
+The whole system runs as one docker compose stack, from
+[AIShie-Deploy](https://github.com/AIShie-Education/AIShie-Deploy): its
+server pulls the images of Core, the agent runtime and this front end from
+GHCR, and its Caddy terminates TLS in front of them. That is how the front end
+is deployed: as [its image](#the-image), which every green push to `main` and
+every release publishes.
+
+Until the stack runs, the front end is also deployed the way it was before, and
+that still works: over SSH, as files, to the server Core runs on
+([Over SSH](#over-ssh), and the sections after it). It is retired once the
+stack runs.
+
+## The image
+
+`ghcr.io/aishie-education/aishie-frontend`, for `linux/amd64` and
+`linux/arm64`: the production build (`npm run build`) served by Caddy, as the
+[`Dockerfile`](../Dockerfile) and [`Caddyfile`](../Caddyfile) make it. The
+package is private, as Core's is: the first publish creates it, linked to this
+repository, and a server pulls it with a token that can read it.
+
+### Tags
+
+| Tag | What it is |
+| --- | --- |
+| `:sha-<commit>` | A push to `main` whose checks passed (checks and build, scripts, end to end) and whose image passed its test; `<commit>` is the commit's first 7 hex digits. It never moves. |
+| `:edge` | The newest of those: moved to each one that is still `main`'s tip when it is published, so it never goes backwards. |
+| `:X.Y.Z` and `:X.Y` | A release, tag `vX.Y.Z`; `:X.Y` moves to each release of that line. |
+| `:latest` | The highest stable release. A release on an older line leaves it alone. |
+| `:X.Y.Z-rc.N` | A pre-release, tag `vX.Y.Z-rc.N`: that tag only, neither `:X.Y` nor `:latest`. |
+
+Every image carries the labels `org.opencontainers.image.source`
+(`https://github.com/AIShie-Education/AIShie-Frontend`),
+`org.opencontainers.image.revision` (the whole commit) and
+`org.opencontainers.image.version` (the version, below), and its build's
+provenance and SBOM. A release's image also has an artifact attestation where
+GitHub has them (`ATTESTATIONS`, [CONTRIBUTING.md](../CONTRIBUTING.md#one-time-settings)).
+
+### What it does
+
+- It listens on **port 8080**, plain HTTP/1.1. TLS, HSTS and the routes to
+  Core are the stack's Caddy's: whatever reaches this server is taken for the
+  front end's, so `/v1/*`, `/mcp`, `/mcp/*` and `/healthz` must be routed to
+  Core before they get here (here they would get `index.html`).
+- It runs as **uid 65532** (not root), writes nothing and needs no
+  capability: `read_only: true`, `cap_drop: [ALL]` and
+  `security_opt: [no-new-privileges:true]` all suit it. It takes no volume
+  or command, and one setting from the environment, `FRAME_ANCESTORS`
+  ([Frames](#frames)).
+- `/assets/*` are the hashed files: one that is there comes with
+  `Cache-Control: public, max-age=31536000, immutable`; one that is not is a
+  plain 404, with an empty body and no `Cache-Control`, not the app.
+- Everything else comes with `Cache-Control: no-cache`: a file of the build if
+  there is one, and otherwise `index.html`, with 200, for the app's own
+  routes.
+- Answers are compressed with zstd or gzip when the browser asks. Every
+  answer, a 404 too, carries `X-Content-Type-Options: nosniff` and
+  `Content-Security-Policy: frame-ancestors 'self'`, or the sources
+  `FRAME_ANCESTORS` lists in place of `'self'` ([Frames](#frames)). That
+  header says nothing else: `index.html` has a policy of its own, for
+  images. There is no `X-Frame-Options`.
+- `GET /version.json` answers `{"version":"<version>","commit":"<commit>"}`,
+  `no-cache`: `<commit>` is the first 7 hex digits of the image's commit, as
+  in its `:sha-` tag, and `<version>` its version label: `git describe --tags --always` of the commit
+  for a push to `main` (`v1.2.3-4-gabc1234`, or the commit before the first
+  tag), the tag for a release (`v1.2.3`). It is written when the image is
+  built, from its build arguments, not from the app. It is the stack's health
+  check. The image declares it as its own (`HEALTHCHECK`: every 30 seconds,
+  every second while it starts), and has `wget` for a compose `healthcheck`
+  of the stack's own:
+  `["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/version.json"]`.
+- It holds the build, `version.json`, Caddy and its configuration, on Alpine:
+  no sources, no `node_modules`, no `.env`.
+
+The build is the same for every server: Core on the page's own origin
+(`VITE_API_BASE` and `VITE_CORE_PUBLIC_URL` empty). What is not the same is
+not built in, but asked for when the page loads, or set when the container
+starts:
+
+- **Single sign-on** is Core's to say. The sign-in page asks
+  `GET /v1/auth/methods` as it loads, and shows the single sign-on button once
+  Core answers that it has an identity provider (its `OIDC_ISSUER`), named as
+  Core's `OIDC_DISPLAY_NAME` names it, or *single sign-on* when that is not
+  set. The rest of the page does not wait for the answer. A Core from before
+  that route answers 404, and then the build's own settings are taken, as
+  they are when Core cannot be asked: in the image `VITE_SSO_ENABLED` is
+  unset, so there is no button.
+- **Which sites may show the app in a frame** is the container's
+  `FRAME_ANCESTORS` ([Frames](#frames)).
+
+In the stack, the Caddy in front sends Core its routes and this image the
+rest, for instance:
+
+```caddyfile
+lms.example.edu {
+	@core path /v1/* /mcp /mcp/* /healthz
+	handle @core {
+		reverse_proxy core:8080
+	}
+	handle {
+		reverse_proxy web:8080
+	}
+}
+```
+
+### Frames
+
+Framing goes two ways, and the image allows both:
+
+- **The app showing another site in a frame**, a similarity checker's
+  viewer (Turnitin's, say), is governed by the page's own policy
+  (`frame-src`), and nothing limits it: `index.html`'s policy sets only
+  `img-src`, and the image's header only `frame-ancestors`. Keep it so for
+  such a viewer to work.
+- **Another site showing the app in a frame**, an LMS that opens it in an
+  iframe (an LTI launch, say), is `frame-ancestors`, which only a header can
+  set: a `<meta>` policy leaves it out. Unless told otherwise, only the app's
+  own origin may frame it: `Content-Security-Policy: frame-ancestors 'self'`.
+  The container's `FRAME_ANCESTORS` puts its own sources in place of
+  `'self'`, separated by spaces and written as CSP writes them, quotes
+  included (the value is what is inside the double quotes, as a shell or a
+  compose `.env` file takes it):
+
+  ```bash
+  FRAME_ANCESTORS="'self' https://canvas.example.edu"   # the app, and that LMS
+  FRAME_ANCESTORS="'none'"                              # no page at all, not even the app's own
+  ```
+
+  Caddy puts the value into its configuration as it reads it, when the
+  container starts. A value it cannot read (one on more than one line) stops
+  the container from starting, and so the stack's updater rolls the update
+  back. Anything on one line goes into the header as it is, to be read by the
+  browser, which ignores a source it does not understand. Set but empty, it
+  lists no source, which lets no page frame the app, as `'none'` does: for
+  the default, leave it unset. There is no `X-Frame-Options`:
+  `frame-ancestors` supersedes it, and it cannot name another site.
+
+  An LMS on another site framing the app makes Core's session cookie a
+  third-party one. The browser sends it only when it is `SameSite=None`, so
+  Core needs `COOKIE_SAMESITE=none` as well, or a sign-in in the frame does
+  not hold: the next call finds nobody signed in. The browser must also
+  accept third-party cookies, which Safari, and every browser on iOS, does
+  not, and which people can turn off in others; there the app works only in
+  a tab of its own. That is Core's setting, not the image's
+  ([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md)).
+  Single sign-on in a frame takes the frame to the identity provider's page,
+  which most providers do not let be framed.
+
+### How an image is made
+
+The Dockerfile builds the app with `npm ci` and `npm run build` in Node
+(`.nvmrc`'s), once, on the machine's own architecture, and puts the files
+into each architecture's image; nothing is emulated. The build takes nothing
+from the environment: `.dockerignore` keeps `.env` out, and no `VITE_`
+variable is set, so it is the same build CI makes and checks.
+
+Before any image is pushed, `scripts/test-image.sh` runs it read-only with no
+capabilities, as the stack may, and checks it with curl: every rule above,
+`version.json`, the user and the port, the health check, and that it serves
+exactly the build CI checked, file for file. It runs it again with
+`FRAME_ANCESTORS` set, for the header that sets, and once with a value on two
+lines, which must stop it from starting. On a pull request CI builds the
+image and runs the test; on `main`, `publish.yml` builds it, tests it, pushes
+it, and checks that the image pushed has the layers of the one tested;
+`release.yml` does the same for a version tag. To do it here:
+
+```bash
+npm ci && npm run build
+docker build --build-arg VERSION=$(git describe --tags --always) \
+  --build-arg COMMIT=$(git rev-parse HEAD | cut -c1-7) -t aishie-frontend:dev .
+scripts/test-image.sh aishie-frontend:dev dist
+docker run --rm -p 8080:8080 aishie-frontend:dev    # http://localhost:8080
+```
+
+The test says which rule an image breaks. If it says `/srv` is not the
+build, the image's `npm run build` made other files than the one it is
+compared with: other sources or another `package-lock.json`, most likely.
+
+## Over SSH
+
+The server Core runs on, one per environment, set up with Core's
+`deploy/setup-server.sh`
+([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md)),
+serves the files itself. Caddy, which already serves HTTPS there, sends
+`/v1/*`, `/mcp`, `/mcp/*` and `/healthz` to Core on `127.0.0.1:8080`, and
+everything else to the files in `/srv/aishiteru-web/current`. This is retired
+once the compose stack runs; until then it works as it did.
 
 The scripts in [`deploy/`](../deploy) do the work:
 
@@ -167,6 +350,16 @@ Run these as root on the server.
 
 ## When something goes wrong
 
+- **The publish job cannot push the image** (`denied`, `permission_denied`).
+  The package is not linked to this repository, or does not let its
+  workflows write: it was pushed by hand before the first publish, most
+  likely. In the package's settings
+  (github.com/orgs/AIShie-Education/packages/container/aishie-frontend/settings),
+  Manage Actions access → Add Repository → `AIShie-Frontend`, role Write.
+- **"… is not the image tested".** The image was pushed, but its `linux/amd64`
+  layers are not those of the image the job tested, which the builder's cache
+  should have made them: `:edge` was not moved, and a release was not
+  published. Run the job again.
 - **The e2e job cannot pull Core's image.** Core's image is private, and this
   repository's workflows can read it only once an owner of the organization
   grants it: the package's settings

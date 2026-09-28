@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, reactive, ref, shallowRef, watch } from 
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules, InputInstance } from 'element-plus'
-import { ApiError, health, ssoStartUrl } from '@/api/http'
+import { ApiError, authMethods, health, ssoStartUrl, type SsoMethod } from '@/api/http'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
@@ -34,8 +34,10 @@ watch(token, () => (tokenMissing.value = false))
 const version = ref<string | null>(null)
 const serverDown = ref(false)
 
-const ssoEnabled = import.meta.env.VITE_SSO_ENABLED === 'true'
-const ssoLabel = computed(() => import.meta.env.VITE_SSO_LABEL || t('auth.ssoDefault'))
+// Single sign-on as Core offers it (authMethods): the button appears once
+// Core has said, and nothing else on the page waits for that.
+const ssoMethod = shallowRef<SsoMethod | null>(null)
+const ssoLabel = computed(() => ssoMethod.value?.label || t('auth.ssoDefault'))
 
 const next = computed(() => {
   const n = route.query.next
@@ -74,6 +76,7 @@ watch(
 )
 
 onMounted(async () => {
+  void authMethods().then((m) => (ssoMethod.value = m.sso))
   try {
     const h = await health()
     version.value = h?.version ?? null
@@ -137,9 +140,10 @@ async function signInWithToken() {
 }
 
 function sso() {
+  if (!ssoMethod.value) return
   // The full address of the page to come back to (with the app's base path);
   // ssoStartUrl makes it absolute when Core is on another origin.
-  window.location.href = ssoStartUrl(router.resolve(next.value).href)
+  window.location.href = ssoStartUrl(router.resolve(next.value).href, ssoMethod.value.start)
 }
 </script>
 
@@ -196,9 +200,9 @@ function sso() {
         </el-button>
       </el-form>
 
-      <template v-if="ssoEnabled">
+      <template v-if="ssoMethod">
         <el-divider>{{ t('auth.or') }}</el-divider>
-        <el-button size="large" class="login__submit" @click="sso">{{ t('auth.sso', { provider: ssoLabel }) }}</el-button>
+        <el-button size="large" class="login__submit login__sso" @click="sso">{{ t('auth.sso', { provider: ssoLabel }) }}</el-button>
       </template>
 
       <div class="login__token">
