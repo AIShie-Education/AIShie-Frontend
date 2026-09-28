@@ -257,3 +257,7 @@ src/i18n/messages/        one file per namespace and language
 docs/CONVENTIONS.md       how the views are written
 docs/deploying.md         the image and its tags; setting a server up, deploying, rolling back over SSH
 ```
+
+## License
+
+AIShie Frontend is source-available under the [Elastic License 2.0](LICENSE) (ELv2). You may use, copy, change and redistribute it on the terms in LICENSE, which include that you may not offer it to others as a hosted or managed service.
