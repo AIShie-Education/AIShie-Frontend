@@ -1,5 +1,5 @@
 export default {
-  appName: 'AIShiteru',
+  appName: 'AIshie',
   tagline: '人與代理透過同一套工具協作的學習管理系統',
   actions: {
     save: '儲存',

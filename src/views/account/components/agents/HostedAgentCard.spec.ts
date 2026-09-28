@@ -74,11 +74,11 @@ describe('HostedAgentCard: what it says', () => {
     running: ['Running', 'Your agent runs on the school’s runtime and answers in its courses.'],
     paused: [
       'Paused',
-      'Your agent answers nobody and makes no calls, so it shows as offline. Resume it to start again. (This is not Suspend: the agent stays active in AIShie.)',
+      'Your agent answers nobody and makes no calls, so it shows as offline. Resume it to start again. (This is not Suspend: the agent stays active in AIshie.)',
     ],
     needs_token: [
       'Needs a new token',
-      'AIShie refused your agent’s token: it was revoked or expired. Connect it again to give the runtime a new one.',
+      'AIshie refused your agent’s token: it was revoked or expired. Connect it again to give the runtime a new one.',
     ],
     stopped: [
       'Restarting',
@@ -93,16 +93,16 @@ describe('HostedAgentCard: what it says', () => {
   })
 
   const PROBLEMS: Record<ProblemReason, string> = {
-    token_refused: 'AIShie refused the agent’s token.',
+    token_refused: 'AIshie refused the agent’s token.',
     settings_rejected: 'Its settings do not work here: model: unknown. Change the model or key.',
     runtime_misconfigured: 'The school’s runtime is not set up to run hosted agents. Tell your administrator.',
     operator_agent: 'The school’s operator already runs this agent, so this copy does not run.',
     actor_in_use: 'Another agent here already uses this agent’s identity.',
     token_other_agent: 'Its token belongs to another agent. Connect it again.',
     token_not_agent: 'Its token is a person’s, not the agent’s. Connect it again.',
-    owner_changed: 'This agent now belongs to someone else in AIShie, so the runtime stopped it. Delete it here.',
-    core_too_old: 'This AIShie server cannot say who owns an agent. Tell your administrator.',
-    agent_suspended: 'The agent is suspended in AIShie. Reactivate it and it starts again by itself.',
+    owner_changed: 'This agent now belongs to someone else in AIshie, so the runtime stopped it. Delete it here.',
+    core_too_old: 'This AIshie server cannot say who owns an agent. Tell your administrator.',
+    agent_suspended: 'The agent is suspended in AIshie. Reactivate it and it starts again by itself.',
     failing: 'It could not start and will try again shortly: model: unknown.',
   }
 
@@ -154,10 +154,10 @@ describe('HostedAgentCard: what it says', () => {
     const self = w.find('details.hosted-card__self')
     expect(self.attributes('open')).toBeUndefined()
     expect(self.find('summary').text()).toBe('Connect another AI tool, or run the runtime yourself, instead')
-    expect(self.text()).toContain('These apply only after you stop hosting: delete the agent from AIShie’s hosting first')
+    expect(self.text()).toContain('These apply only after you stop hosting: delete the agent from AIshie’s hosting first')
     expect(self.findAll('.hosted-card__self-h').map((h) => h.text())).toEqual([
       'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
-      'Run the AIShie runtime yourself (advanced)',
+      'Run the AIshie runtime yourself (advanced)',
     ])
     expect(self.text()).toContain('Authorization: Bearer <token>')
     // The agent file is folded away within, and holds no token.
@@ -172,7 +172,7 @@ describe('HostedAgentCard: what it says', () => {
     const self = w.find('details.hosted-card__self')
     expect(self.find('summary').text()).toBe('改用其他 AI 工具連接，或自己架 runtime')
     expect(self.text()).toContain('這些只適用於停止代管之後')
-    expect(w.find('.hosted-card__title').text()).toContain('由 AIShie 代管')
+    expect(w.find('.hosted-card__title').text()).toContain('由 AIshie 代管')
   })
 })
 
@@ -227,7 +227,7 @@ describe('HostedAgentCard: what the owner can do', () => {
     expect(s.to('POST', RUNTIME.pause)).toHaveLength(1)
     expect(s.to('POST', RUNTIME.pause)[0].body).toBeUndefined()
     expect(w.emitted('update')![0][0]).toMatchObject({ status: 'paused' })
-    expect(i18n.global.t('hosting.card.pauseHint')).toBe('Stops the agent here; it stays active in AIShie.')
+    expect(i18n.global.t('hosting.card.pauseHint')).toBe('Stops the agent here; it stays active in AIshie.')
   })
 
   it('resumes', async () => {
@@ -372,9 +372,9 @@ describe('HostedAgentCard: deleting', () => {
     const w = await deleteDialog(hostedAgent({ proposals_waiting: 3 }), { credentials: [ownCred()] })
     const text = w.find('.delete-hosting').text()
     expect(text).toContain(
-      'The runtime stops this agent, forgets its settings and your key, and revokes its token “AIShie runtime”. The agent stays in AIShie; you can host it again later.',
+      'The runtime stops this agent, forgets its settings and your key, and revokes its token “AIShie runtime”. The agent stays in AIshie; you can host it again later.',
     )
-    expect(text).toContain('3 answers still waiting for approval stay in AIShie.')
+    expect(text).toContain('3 answers still waiting for approval stay in AIshie.')
     // Its own token is revoked without asking.
     expect(w.find('.delete-hosting__revoke').exists()).toBe(false)
   })

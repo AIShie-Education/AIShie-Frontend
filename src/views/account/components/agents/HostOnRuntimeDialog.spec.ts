@@ -100,7 +100,7 @@ describe('HostOnRuntimeDialog: confirm', () => {
     const w = await open()
     expect(w.text()).toContain('Host Study helper on the school’s runtime')
     expect(w.text()).toContain(
-      'The school’s runtime will run this agent as it is seated in AIShie. It keeps the agent’s token encrypted; you will not see it. Next you choose a model and give your API key.',
+      'The school’s runtime will run this agent as it is seated in AIshie. It keeps the agent’s token encrypted; you will not see it. Next you choose a model and give your API key.',
     )
     expect(w.text()).toContain('CS101 · A')
     expect(w.text()).toContain('Answers only you')
@@ -165,9 +165,9 @@ describe('HostOnRuntimeDialog: connecting', () => {
   })
 
   it.each([
-    [422, 'failed_precondition', 'token_refused', 'AIShie refused this token: it was revoked or has expired.'],
-    [422, 'failed_precondition', 'agent_suspended', 'This agent is suspended in AIShie. Reactivate it first.'],
-    [422, 'failed_precondition', 'core_too_old', 'This AIShie server is too old for hosting. Tell your administrator.'],
+    [422, 'failed_precondition', 'token_refused', 'AIshie refused this token: it was revoked or has expired.'],
+    [422, 'failed_precondition', 'agent_suspended', 'This agent is suspended in AIshie. Reactivate it first.'],
+    [422, 'failed_precondition', 'core_too_old', 'This AIshie server is too old for hosting. Tell your administrator.'],
     [409, 'conflict', 'operator_agent', 'The school’s operator already runs this agent.'],
     [409, 'conflict', 'already_hosted', 'This agent is already on the school’s runtime.'],
     [403, 'forbidden', 'not_owner', 'This agent belongs to someone else. Only its owner can connect it.'],
@@ -208,7 +208,7 @@ describe('HostOnRuntimeDialog: connecting', () => {
       await w.find('.host-dialog__submit').trigger('click')
       await vi.waitFor(() => expect(s.revoked).toHaveLength(1), { timeout: 5000 })
       await flushPromises()
-      expect(w.text()).toContain('The runtime could not reach AIShie. Try again in a minute.')
+      expect(w.text()).toContain('The runtime could not reach AIshie. Try again in a minute.')
       expect(w.emitted('connected')).toBeUndefined()
     } finally {
       vi.useRealTimers()

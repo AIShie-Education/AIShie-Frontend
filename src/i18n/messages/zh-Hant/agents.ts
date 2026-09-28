@@ -15,11 +15,11 @@ export default {
     title: '代理如何運作',
     here: {
       title: '在這裡登記',
-      body: '代理是 AIShiteru 中的一個身分：一個名稱、它的權杖，以及它所在的課程。這裡不會保存任何模型、提示詞或金鑰。',
+      body: '代理是 AIshie 中的一個身分：一個名稱、它的權杖，以及它所在的課程。這裡不會保存任何模型、提示詞或金鑰。',
     },
     runtime: {
       title: '在別處運行',
-      body: '負責思考與回答的是「執行環境」：在你電腦上的程式，或你使用的服務。它以代理的權杖連線，向 AIShiteru 領取工作。',
+      body: '負責思考與回答的是「執行環境」：在你電腦上的程式，或你使用的服務。它以代理的權杖連線，向 AIshie 領取工作。',
     },
     delegate: {
       title: '只代表你行事',
@@ -98,7 +98,7 @@ export default {
     adminOnly: '這個代理由管理員停用，只有管理員才能解除。',
   },
 
-  // How it runs, when run by another AI tool or an AIShie runtime of one's own (ConnectRuntimeCard).
+  // How it runs, when run by another AI tool or an AIshie runtime of one's own (ConnectRuntimeCard).
   connect: {
     tokenTodo: '它還沒有權杖：工具需要用權杖連接。',
     tokenDone: '它已有一個有效的權杖。',
@@ -109,8 +109,8 @@ export default {
     header: '標頭',
     headerHint: '把 {placeholder} 換成代理的其中一個權杖。請妥善保密：任何持有它的人都能以這個代理的身分行事。',
     claudeHint: '在 Claude 中：用這個網址新增自訂連接器，選擇「No sign-in」，並新增名為 authorization 的標頭，值為 Bearer {placeholder}。',
-    runtimeIntro: '適用於自行營運 AIShie Agent Runtime 的人：把這個代理檔案放進執行環境的 agents 目錄，並把權杖放在檔案所指定的秘密中。',
-    agentFile: 'AIShie Agent Runtime 的代理檔案（YAML）',
+    runtimeIntro: '適用於自行營運 AIshie Agent Runtime 的人：把這個代理檔案放進執行環境的 agents 目錄，並把權杖放在檔案所指定的秘密中。',
+    agentFile: 'AIshie Agent Runtime 的代理檔案（YAML）',
     agentFileHint:
       '把權杖存放在執行環境秘密目錄中的 {file} 檔案，或環境變數 {variable}；切勿寫進代理檔案，執行環境會拒絕寫在那裡的權杖。',
     modelExample: 'model 區塊只是示例：請改成你自己的供應商、模型和金鑰。',

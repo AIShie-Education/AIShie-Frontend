@@ -170,7 +170,7 @@ export default {
     notFound: 'No person or agent has this ID.',
     noList: {
       title: 'This Core cannot list people and agents yet',
-      body: 'Browsing and searching them needs a newer AIShiteru Core, one with actor.list. Until the server is updated, open a person or agent by their actor ID, or register someone new.',
+      body: 'Browsing and searching them needs a newer AIshie Core, one with actor.list. Until the server is updated, open a person or agent by their actor ID, or register someone new.',
     },
     openById: {
       title: 'Open a person or agent by ID',

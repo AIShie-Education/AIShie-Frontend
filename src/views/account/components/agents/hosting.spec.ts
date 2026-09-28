@@ -66,16 +66,16 @@ const EN: Record<string, string> = {
   assertion_expired: 'Could not sign you in to the school’s runtime. Reload the page and try again.',
   keys_unavailable: 'The school’s runtime is not available right now. Try again in a minute.',
   store_unavailable: 'The school’s runtime is not available right now. Try again in a minute.',
-  core_unavailable: 'The runtime could not reach AIShie. Try again in a minute.',
+  core_unavailable: 'The runtime could not reach AIshie. Try again in a minute.',
   rate_limited: 'Too many tries. Wait 12 seconds.',
-  token_malformed: 'That is not an AIShie agent token (it should begin with ais_).',
-  token_refused: 'AIShie refused this token: it was revoked or has expired.',
+  token_malformed: 'That is not an AIshie agent token (it should begin with ais_).',
+  token_refused: 'AIshie refused this token: it was revoked or has expired.',
   token_not_agent: 'This token is a person’s, not an agent’s. The runtime only takes an agent’s own token.',
-  agent_suspended: 'This agent is suspended in AIShie. Reactivate it first.',
+  agent_suspended: 'This agent is suspended in AIshie. Reactivate it first.',
   token_other_agent: 'This token belongs to another agent.',
-  agent_unowned: 'Nobody owns this agent in AIShie, so it cannot be connected here. Ask an administrator.',
+  agent_unowned: 'Nobody owns this agent in AIshie, so it cannot be connected here. Ask an administrator.',
   not_owner: 'This agent belongs to someone else. Only its owner can connect it.',
-  core_too_old: 'This AIShie server is too old for hosting. Tell your administrator.',
+  core_too_old: 'This AIshie server is too old for hosting. Tell your administrator.',
   already_hosted: 'This agent is already on the school’s runtime.',
   operator_agent: 'The school’s operator already runs this agent.',
   agent_not_found: 'This agent is no longer on the school’s runtime.',
@@ -478,9 +478,9 @@ describe('the model form', () => {
     expect(keyProblem('short')).toBe('hosting.errors.key_malformed')
     expect(keyProblem('sk-abcdefgh')).toBeNull()
     expect(t('hosting.errors.key_is_aishie_token', { provider: 'OpenAI' })).toBe(
-      'That is an AIShie token (yours or an agent’s), not an API key from OpenAI. An AIShie token is never sent to a provider: paste the key OpenAI gave you.',
+      'That is an AIshie token (yours or an agent’s), not an API key from OpenAI. An AIshie token is never sent to a provider: paste the key OpenAI gave you.',
     )
     setLocale('zh-Hant')
-    expect(t('hosting.errors.key_is_aishie_token', { provider: 'OpenAI' })).toContain('AIShie 的權杖')
+    expect(t('hosting.errors.key_is_aishie_token', { provider: 'OpenAI' })).toContain('AIshie 的權杖')
   })
 })

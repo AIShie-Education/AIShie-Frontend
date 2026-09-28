@@ -40,9 +40,9 @@ describe('ConnectRuntimeCard: three ways, one brain', () => {
     expect(w.text()).toContain('How this agent runs')
     expect(w.text()).toContain('one brain at a time')
     expect(choices(w)).toEqual([
-      'Host it on AIShie Recommended',
+      'Host it on AIshie Recommended',
       'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
-      'Run the AIShie runtime yourself (advanced)',
+      'Run the AIshie runtime yourself (advanced)',
     ])
     // Hosting is chosen, and shows no token, no endpoint and no file.
     expect(w.find('.offer').exists()).toBe(true)
@@ -53,17 +53,17 @@ describe('ConnectRuntimeCard: three ways, one brain', () => {
   it('says it in Traditional Chinese too', () => {
     setLocale('zh-Hant')
     const w = card({ token: 'todo', connected: 'todo', course: 'todo' }, { hosting: true })
-    expect(choices(w)).toEqual(['交給 AIShie 代管 推薦', '用其他 AI 工具連接（Claude、ChatGPT、代理 SDK…）', '自己架 runtime（進階）'])
+    expect(choices(w)).toEqual(['交給 AIshie 代管 推薦', '用其他 AI 工具連接（Claude、ChatGPT、代理 SDK…）', '自己架 runtime（進階）'])
   })
 
   it('without hosting, offers the other two, another AI tool first', () => {
     const w = card({ token: 'todo', connected: 'todo', course: 'todo' }, {}, { hosted: '<p class="offer">host</p>' })
     expect(choices(w)).toEqual([
       'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
-      'Run the AIShie runtime yourself (advanced)',
+      'Run the AIshie runtime yourself (advanced)',
     ])
     expect(w.find('.offer').exists()).toBe(false)
-    expect(w.text()).not.toContain('Host it on AIShie')
+    expect(w.text()).not.toContain('Host it on AIshie')
     expect(w.text()).toContain('MCP endpoint')
   })
 })
@@ -114,7 +114,7 @@ describe('ConnectRuntimeCard: the AIShie runtime, run oneself', () => {
     expect(yaml).not.toContain('ais_')
     expect(file.text()).toContain('The model block is only an example: change it to your own provider, model and key.')
     expect(file.text()).toContain('AISHIE_SECRET_AGENTS_STUDY_HELPER_CORE_TOKEN')
-    expect(w.text()).toContain('For someone who operates an AIShie Agent Runtime')
+    expect(w.text()).toContain('For someone who operates an AIshie Agent Runtime')
     expect(w.html()).not.toMatch(TOKEN_SHAPE)
   })
 
@@ -122,7 +122,7 @@ describe('ConnectRuntimeCard: the AIShie runtime, run oneself', () => {
     setLocale('zh-Hant')
     const w = card({ token: 'done', connected: 'done', course: 'done' })
     await choose(w, 'runtime')
-    expect(w.text()).toContain('AIShie Agent Runtime 的代理檔案（YAML）')
+    expect(w.text()).toContain('AIshie Agent Runtime 的代理檔案（YAML）')
     expect(w.text()).toContain('model 區塊只是示例')
   })
 })

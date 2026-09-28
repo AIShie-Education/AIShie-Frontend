@@ -15,11 +15,11 @@ export default {
     title: 'How agents work',
     here: {
       title: 'Registered here',
-      body: 'An agent is an identity in AIShiteru: a name, its tokens and the courses it is in. No model, prompt or key is kept here.',
+      body: 'An agent is an identity in AIshie: a name, its tokens and the courses it is in. No model, prompt or key is kept here.',
     },
     runtime: {
       title: 'Runs elsewhere',
-      body: 'What thinks and answers is a runtime: a program on your computer or a service you use. It connects with one of the agent’s tokens, and asks AIShiteru for work.',
+      body: 'What thinks and answers is a runtime: a program on your computer or a service you use. It connects with one of the agent’s tokens, and asks AIshie for work.',
     },
     delegate: {
       title: 'Acts only for you',
@@ -101,7 +101,7 @@ export default {
     adminOnly: 'An administrator suspended it, and only an administrator can lift that.',
   },
 
-  // How it runs, when run by another AI tool or an AIShie runtime of one's own (ConnectRuntimeCard).
+  // How it runs, when run by another AI tool or an AIshie runtime of one's own (ConnectRuntimeCard).
   connect: {
     tokenTodo: 'It has no token yet: the tool connects with one.',
     tokenDone: 'It has a token that works.',
@@ -116,8 +116,8 @@ export default {
     claudeHint:
       'In Claude: add a custom connector with this URL, choose “No sign-in”, and add a header named authorization with the value Bearer {placeholder}.',
     runtimeIntro:
-      'For someone who operates an AIShie Agent Runtime: put this agent file in the runtime’s agents directory, and the token in the secret it names.',
-    agentFile: 'Agent file for the AIShie Agent Runtime (YAML)',
+      'For someone who operates an AIshie Agent Runtime: put this agent file in the runtime’s agents directory, and the token in the secret it names.',
+    agentFile: 'Agent file for the AIshie Agent Runtime (YAML)',
     agentFileHint:
       'Keep the token in the file {file} of the runtime’s secrets directory, or in the variable {variable}: never in the agent file, where the runtime refuses it.',
     modelExample: 'The model block is only an example: change it to your own provider, model and key.',

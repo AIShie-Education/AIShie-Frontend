@@ -164,7 +164,7 @@ export default {
     notFound: '找不到此 ID 的人員或代理。',
     noList: {
       title: '此 Core 版本尚未能列出人員與代理',
-      body: '瀏覽及搜尋人員與代理需要較新版本的 AIShiteru Core（具備 actor.list 的版本）。在伺服器更新之前，請按參與者 ID 開啟，或登記新的人員或代理。',
+      body: '瀏覽及搜尋人員與代理需要較新版本的 AIshie Core（具備 actor.list 的版本）。在伺服器更新之前，請按參與者 ID 開啟，或登記新的人員或代理。',
     },
     openById: {
       title: '按 ID 開啟人員或代理',

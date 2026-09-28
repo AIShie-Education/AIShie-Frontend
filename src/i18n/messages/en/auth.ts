@@ -1,6 +1,6 @@
 export default {
   title: 'Sign in',
-  welcome: 'Welcome to AIShiteru',
+  welcome: 'Welcome to AIshie',
   email: 'Email',
   password: 'Password',
   signIn: 'Sign in',
@@ -21,7 +21,7 @@ export default {
   invite: {
     title: 'Choose your password',
     intro:
-      'Choose a password for your AIShiteru account. If you already have one, this replaces it. You are signed in as soon as it is set.',
+      'Choose a password for your AIshie account. If you already have one, this replaces it. You are signed in as soon as it is set.',
     incompleteTitle: 'This link is incomplete',
     incomplete:
       'The invitation code is missing from the address. Open the whole link from the message you were sent, or ask your administrator for a new one.',

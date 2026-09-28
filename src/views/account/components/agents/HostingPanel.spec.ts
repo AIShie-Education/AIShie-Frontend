@@ -82,10 +82,10 @@ function expectSelfOnly(w: VueWrapper) {
   expect(w.text()).toContain('How this agent runs')
   expect(w.findAll('.connect-choice__title').map((c) => c.text())).toEqual([
     'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
-    'Run the AIShie runtime yourself (advanced)',
+    'Run the AIshie runtime yourself (advanced)',
   ])
   expect(w.text()).toContain('Authorization: Bearer <token>')
-  expect(w.text()).not.toContain('Host it on AIShie')
+  expect(w.text()).not.toContain('Host it on AIshie')
   expect(w.text()).not.toContain('school’s runtime')
   expect(w.find('.el-alert--error').exists()).toBe(false)
   expect(w.find('.hosted-card').exists()).toBe(false)
@@ -117,7 +117,7 @@ describe('HostingPanel: no runtime here', () => {
     await flushPromises()
     expect(w.find('.hosting-panel__checking').exists()).toBe(true)
     expect(w.text()).not.toContain('How this agent runs')
-    expect(w.text()).not.toContain('Host it on AIShie')
+    expect(w.text()).not.toContain('Host it on AIshie')
     release(new Response(null, { status: 502 }))
     await flushPromises()
     await vi.waitFor(() => expectSelfOnly(w))
@@ -146,9 +146,9 @@ describe('HostingPanel: the runtime is here', () => {
     const w = await panel()
     expect(w.text()).toContain('How this agent runs')
     expect(w.findAll('.connect-choice__title').map((b) => b.text())).toEqual([
-      'Host it on AIShie Recommended',
+      'Host it on AIshie Recommended',
       'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
-      'Run the AIShie runtime yourself (advanced)',
+      'Run the AIshie runtime yourself (advanced)',
     ])
     expect(w.find('.hosting-offer__host').text()).toBe('Set up hosting')
     // Neither token, endpoint nor file while hosting is chosen.
@@ -232,7 +232,7 @@ describe('HostingPanel: what the runtime offers', () => {
     const w = await panel()
     expect(w.findAll('.connect-choice__title').map((c) => c.text())).toEqual([
       'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
-      'Run the AIShie runtime yourself (advanced)',
+      'Run the AIshie runtime yourself (advanced)',
     ])
     expect(w.find('.hosting-offer__host').exists()).toBe(false)
     expect(w.find('.hosting-offer__paste').exists()).toBe(false)
@@ -342,7 +342,7 @@ describe('HostingPanel: a token the runtime could not revoke', () => {
     expect(w.find('.hosted-card').exists()).toBe(false)
     expect(w.find('.connect-card').exists()).toBe(true)
     expect(w.find('.hosting-panel__unrevoked').text()).toContain(
-      'The school’s runtime could not revoke the token ais_runtimetoken… in AIShie (it could not reach AIShie)',
+      'The school’s runtime could not revoke the token ais_runtimetoken… in AIshie (it could not reach AIshie)',
     )
     // Offered, not done.
     expect(s.revoked).toEqual([])
@@ -367,7 +367,7 @@ describe('HostingPanel: a token the runtime could not revoke', () => {
     await flushPromises()
     ;(document.body.querySelector('.host-dialog__submit') as HTMLElement).click()
     await vi.waitFor(() => expect(w.find('.hosting-panel__unrevoked').exists()).toBe(true))
-    expect(w.find('.hosting-panel__unrevoked').text()).toContain('(AIShie refused its request)')
+    expect(w.find('.hosting-panel__unrevoked').text()).toContain('(AIshie refused its request)')
     expect(w.find('.hosted-card').exists()).toBe(true)
     await w.find('.unrevoked__later').trigger('click')
     expect(w.find('.hosting-panel__unrevoked').exists()).toBe(false)

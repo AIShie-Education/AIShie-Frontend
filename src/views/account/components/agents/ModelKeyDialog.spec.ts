@@ -299,7 +299,7 @@ describe('ModelKeyDialog', () => {
       await click(w, '.model-dialog__test-button')
       await click(w, '.model-dialog__save')
       expect(w.text()).toContain(
-        'That is an AIShie token (yours or an agent’s), not an API key from OpenAI. An AIShie token is never sent to a provider: paste the key OpenAI gave you.',
+        'That is an AIshie token (yours or an agent’s), not an API key from OpenAI. An AIshie token is never sent to a provider: paste the key OpenAI gave you.',
       )
     }
     await fill(vm, 'sk-with a space')
@@ -315,7 +315,7 @@ describe('ModelKeyDialog', () => {
     const { w, vm } = await open()
     await fill(vm, newToken().token)
     await click(w, '.model-dialog__test-button')
-    expect(w.text()).toContain('這是 AIShie 的權杖（你的或代理的），不是 OpenAI 的 API 金鑰。')
+    expect(w.text()).toContain('這是 AIshie 的權杖（你的或代理的），不是 OpenAI 的 API 金鑰。')
   })
 
   it('puts a field’s refusal on its field', async () => {

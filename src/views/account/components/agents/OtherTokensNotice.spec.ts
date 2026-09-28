@@ -61,7 +61,7 @@ describe('OtherTokensNotice: a token in use', () => {
     expect(w.find('.el-alert--warning').exists()).toBe(true)
     expect(alert.text()).toContain('This agent seems to be running somewhere else')
     expect(w.find('.other-tokens__body').text()).toBe(
-      'Its token ais_k7v2m4qhx3ab… was used 3 minutes ago. An agent has one brain at a time. Stop the other runtime, or revoke that token in AIShie, so that only this runtime answers as your agent.',
+      'Its token ais_k7v2m4qhx3ab… was used 3 minutes ago. An agent has one brain at a time. Stop the other runtime, or revoke that token in AIshie, so that only this runtime answers as your agent.',
     )
   })
 
