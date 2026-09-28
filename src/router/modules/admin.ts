@@ -1,10 +1,13 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-// Platform administration: outside any course, for root and admins.
+// Administration: outside any course. Courses and departments are for
+// platform administrators and for the administrators of a department, who see
+// only what is beneath their appointments; people, terms and presets are for
+// platform administrators alone.
 const routes: RouteRecordRaw[] = [
   {
     path: 'admin',
-    meta: { admin: true },
+    meta: { admin: 'departments' },
     children: [
       { path: '', name: 'admin', redirect: { name: 'admin-courses' } },
       {
@@ -24,20 +27,20 @@ const routes: RouteRecordRaw[] = [
         path: 'actors',
         name: 'admin-actors',
         component: () => import('@/views/admin/ActorsView.vue'),
-        meta: { title: 'admin.actors.title' },
+        meta: { title: 'admin.actors.title', admin: true },
       },
       {
         path: 'actors/:actorId',
         name: 'admin-actor',
         component: () => import('@/views/admin/ActorView.vue'),
         props: true,
-        meta: { title: 'admin.actor.title' },
+        meta: { title: 'admin.actor.title', admin: true },
       },
       {
         path: 'terms',
         name: 'admin-terms',
         component: () => import('@/views/admin/TermsView.vue'),
-        meta: { title: 'adminSetup.terms.title' },
+        meta: { title: 'adminSetup.terms.title', admin: true },
       },
       {
         path: 'departments',
@@ -49,7 +52,7 @@ const routes: RouteRecordRaw[] = [
         path: 'presets',
         name: 'admin-presets',
         component: () => import('@/views/admin/PresetsView.vue'),
-        meta: { title: 'adminSetup.presets.title' },
+        meta: { title: 'adminSetup.presets.title', admin: true },
       },
     ],
   },

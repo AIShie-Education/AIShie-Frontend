@@ -3,7 +3,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { ApiError } from '@/api/http'
 
 // Who me.get says is signed in, and what taking up an invitation answers.
-let me: { id: string; display_name: string } | null = null
+let me: { id: string; display_name: string; platform_role?: string | null; administers?: unknown[] | null } | null =
+  null
 let invite: () => Promise<{ actor_id: string; email: string; expires_at: string }>
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
@@ -124,5 +125,49 @@ describe('the runtime’s assertion', () => {
     invite = () => Promise.reject(new ApiError({ status: 401, code: 'unauthenticated', message: 'not valid' }))
     await session.signInWithInvite('aisinv_x', 'a long enough password').catch(() => undefined)
     expect(forgetRuntimeAssertion).not.toHaveBeenCalled()
+  })
+})
+
+describe('who administers', () => {
+  const appointment = { dept_id: 'd1', name: 'Engineering', appointment_id: 'ap1', appointed_at: '2026-09-01T00:00:00Z' }
+
+  it('a department administrator sees the administration pages, without a platform role', async () => {
+    me = { id: 'ada', display_name: 'Ada', administers: [appointment] }
+    const session = useSessionStore()
+    await session.ensure()
+    expect(session.administers).toEqual([appointment])
+    expect(session.isDeptAdmin).toBe(true)
+    expect(session.isAdmin).toBe(false)
+    expect(session.canAdminister).toBe(true)
+  })
+
+  it('a platform administrator does, appointed or not', async () => {
+    me = { id: 'root', display_name: 'Root', platform_role: 'root' }
+    const session = useSessionStore()
+    await session.ensure()
+    expect(session.administers).toEqual([])
+    expect(session.isDeptAdmin).toBe(false)
+    expect(session.canAdminister).toBe(true)
+  })
+
+  it('nobody else does, whether Core sends the field empty, as null, or not at all (an older Core)', async () => {
+    for (const administers of [[], null, undefined]) {
+      setActivePinia(createPinia())
+      me = { id: 'yuki', display_name: 'Yuki', ...(administers === undefined ? {} : { administers }) }
+      const session = useSessionStore()
+      await session.ensure()
+      expect(session.administers).toEqual([])
+      expect(session.isDeptAdmin).toBe(false)
+      expect(session.canAdminister).toBe(false)
+    }
+  })
+
+  it('is forgotten with the caller', async () => {
+    me = { id: 'ada', display_name: 'Ada', administers: [appointment] }
+    const session = useSessionStore()
+    await session.ensure()
+    session.clear()
+    expect(session.isDeptAdmin).toBe(false)
+    expect(session.canAdminister).toBe(false)
   })
 })

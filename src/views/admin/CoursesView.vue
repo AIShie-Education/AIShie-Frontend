@@ -1,14 +1,20 @@
 <script setup lang="ts">
-// Every course on the platform (course.list), by term and department, and
-// creating one (course.create).
+// The courses the caller administers (course.list): every course on the
+// platform for a platform administrator, and for a department's
+// administrator those in the departments they administer and beneath them,
+// which Core alone decides. By term and by department, with or without the
+// departments beneath it; and creating one (course.create) in a department
+// they administer.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
-import type { Department, Term } from '@/api/types'
+import type { Term } from '@/api/types'
 import { useAsync, usePaged } from '@/composables/useAsync'
+import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { errorMessage } from '@/composables/useErrors'
 import { useNarrow } from '@/composables/useMediaQuery'
+import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -21,6 +27,7 @@ const { t } = useI18n()
 const route = useRoute()
 const narrow = useNarrow()
 const router = useRouter()
+const session = useSessionStore()
 
 // The filters live in the address, so that coming back to the list keeps them.
 function queryParam(name: string) {
@@ -31,36 +38,48 @@ function queryParam(name: string) {
 }
 const termId = queryParam('term')
 const deptId = queryParam('dept')
+/** The department chosen, with every department beneath it. */
+const within = computed<boolean>({
+  get: () => route.query.within === '1',
+  set: (v) => void router.replace({ query: { ...route.query, within: v ? '1' : undefined } }),
+})
 
 const termsState = useAsync(() => read('term.list', {}).then((o) => o.terms ?? []))
-const deptsState = useAsync(() => read('department.list', {}).then((o) => o.departments ?? []))
+const tree = useDepartmentTree()
 const terms = computed<Term[]>(() => termsState.data.value ?? [])
-const departments = computed<Department[]>(() => deptsState.data.value ?? [])
+/** The departments a course may be listed by or made in: those the caller administers, in the tree's order. */
+const deptOptions = computed(() => tree.administeredOptions.value)
 const termById = computed(() => new Map(terms.value.map((x) => [x.id, x])))
-const deptById = computed(() => new Map(departments.value.map((x) => [x.id, x])))
+const deptName = (id: string) => tree.byId.value.get(id)?.name
 
-const setupLoaded = computed(() => termsState.data.value !== undefined && deptsState.data.value !== undefined)
+const setupLoaded = computed(() => termsState.data.value !== undefined && tree.loaded.value)
 const missingTerms = computed(() => termsState.data.value !== undefined && terms.value.length === 0)
-const missingDepts = computed(() => deptsState.data.value !== undefined && departments.value.length === 0)
+const missingDepts = computed(() => tree.loaded.value && deptOptions.value.length === 0)
 const canCreate = computed(() => setupLoaded.value && !missingTerms.value && !missingDepts.value)
 /** Terms or departments did not load: no course can be made, and none shows its term or department. */
-const setupError = computed(() => termsState.error.value ?? deptsState.error.value)
+const setupError = computed(() => termsState.error.value ?? (tree.loaded.value ? null : tree.error.value))
 const setupFailed = computed(() =>
-  termsState.error.value && deptsState.error.value ? 'both' : termsState.error.value ? 'terms' : 'depts',
+  termsState.error.value && tree.error.value ? 'both' : termsState.error.value ? 'terms' : 'depts',
 )
-const setupRetrying = computed(() => termsState.loading.value || deptsState.loading.value)
+const setupRetrying = computed(() => termsState.loading.value || tree.loading.value)
 function reloadSetup() {
   if (termsState.error.value) void termsState.reload()
-  if (deptsState.error.value) void deptsState.reload()
+  if (tree.error.value) void tree.reload()
 }
 
 const list = usePaged<CourseRow>(
   (after) =>
-    read('course.list', { term_id: termId.value, dept_id: deptId.value, limit: 50, after }).then((o) => ({
+    read('course.list', {
+      term_id: termId.value,
+      dept_id: deptId.value && !within.value ? deptId.value : undefined,
+      within_dept_id: deptId.value && within.value ? deptId.value : undefined,
+      limit: 50,
+      after,
+    }).then((o) => ({
       items: o.courses,
       next: o.next,
     })),
-  { watch: [termId, deptId] },
+  { watch: [termId, deptId, within] },
 )
 const filtered = computed(() => !!termId.value || !!deptId.value)
 
@@ -76,7 +95,10 @@ function rowClick(row: CourseRow) {
 
 <template>
   <div>
-    <PageHeader :title="t('admin.courses.title')" :subtitle="t('admin.courses.subtitle')">
+    <PageHeader
+      :title="t('admin.courses.title')"
+      :subtitle="session.isAdmin ? t('admin.courses.subtitle') : t('deptAdmin.courses.subtitle')"
+    >
       <el-button type="primary" :disabled="!canCreate" @click="creating = true">
         <el-icon><Plus /></el-icon>
         <span>{{ t('admin.courses.create') }}</span>
@@ -106,14 +128,17 @@ function rowClick(row: CourseRow) {
       :title="t('admin.courses.needSetup')"
     >
       <div class="courses__setup-links">
-        <span v-if="missingTerms">
+        <span v-if="missingTerms && session.isAdmin">
           {{ t('admin.courses.noTerms') }}
           <router-link :to="{ name: 'admin-terms' }">{{ t('admin.courses.goTerms') }}</router-link>
         </span>
-        <span v-if="missingDepts">
+        <!-- Terms are a platform administrator's to make. -->
+        <span v-else-if="missingTerms">{{ t('deptAdmin.courses.noTerms') }}</span>
+        <span v-if="missingDepts && session.isAdmin">
           {{ t('admin.courses.noDepts') }}
           <router-link :to="{ name: 'admin-departments' }">{{ t('admin.courses.goDepts') }}</router-link>
         </span>
+        <span v-else-if="missingDepts">{{ t('deptAdmin.tree.empty') }}</span>
       </div>
     </el-alert>
 
@@ -138,12 +163,15 @@ function rowClick(row: CourseRow) {
           clearable
           filterable
           :placeholder="t('admin.courses.allDepts')"
-          :loading="deptsState.loading.value"
+          :loading="tree.loading.value"
           class="courses__filter"
           :aria-label="t('admin.courses.dept')"
         >
-          <el-option v-for="x in departments" :key="x.id" :value="x.id" :label="x.name" />
+          <el-option v-for="x in deptOptions" :key="x.node.id" :value="x.node.id" :label="x.node.name">
+            <span :style="{ paddingLeft: `${x.indent * 14}px` }">{{ x.node.name }}</span>
+          </el-option>
         </el-select>
+        <el-checkbox v-if="deptId" v-model="within" :label="t('deptAdmin.courses.within')" class="courses__within" />
         <span class="app-toolbar__spacer" />
         <el-button :loading="list.loading.value" @click="list.reload()">
           <el-icon><Refresh /></el-icon>
@@ -171,7 +199,7 @@ function rowClick(row: CourseRow) {
                 <span class="courses__title">{{ row.title }}</span>
                 <span v-if="narrow" class="courses__meta">
                   {{ termById.get(row.term_id)?.name ?? t('admin.courses.unknown') }}
-                  · {{ deptById.get(row.dept_id)?.name ?? t('admin.courses.unknown') }}
+                  · {{ deptName(row.dept_id) ?? t('admin.courses.unknown') }}
                 </span>
               </div>
             </template>
@@ -189,7 +217,7 @@ function rowClick(row: CourseRow) {
           </el-table-column>
           <el-table-column v-if="!narrow" :label="t('admin.courses.col.dept')" min-width="150">
             <template #default="{ row }">
-              <span v-if="deptById.get(row.dept_id)">{{ deptById.get(row.dept_id)!.name }}</span>
+              <span v-if="deptName(row.dept_id)" :title="tree.pathLabel(row.dept_id)">{{ deptName(row.dept_id) }}</span>
               <span v-else class="app-muted">{{ t('admin.courses.unknown') }}</span>
             </template>
           </el-table-column>
@@ -206,7 +234,7 @@ function rowClick(row: CourseRow) {
     <CreateCourseDialog
       v-model="creating"
       :terms="terms"
-      :departments="departments"
+      :departments="deptOptions"
       :term-id="termId"
       :dept-id="deptId"
       @created="onCreated"
@@ -234,6 +262,9 @@ function rowClick(row: CourseRow) {
 .courses__filter {
   width: 220px;
   max-width: 100%;
+}
+.courses__within {
+  margin-right: 0;
 }
 .courses__option-meta {
   float: right;

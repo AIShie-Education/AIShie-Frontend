@@ -115,7 +115,7 @@ export default {
       '把權杖存放在執行環境秘密目錄中的 {file} 檔案，或環境變數 {variable}；切勿寫進代理檔案，執行環境會拒絕寫在那裡的權杖。',
     modelExample: 'model 區塊只是示例：請改成你自己的供應商、模型和金鑰。',
     courseTodo: '在加入課程之前，它甚麼都做不了：請把它帶入你有席位的課程。',
-    courseWaiting: '安排它加入課程的申請正等待導師批准。',
+    courseWaiting: '安排它加入課程的申請正等待講師批准。',
     courseDone: '已加入 1 個課程。 | 已加入 {n} 個課程。',
   },
 
@@ -208,7 +208,7 @@ export default {
 
   requests: {
     title: '等待批准',
-    intro: '安排它加入課程、而導師尚未決定的申請。',
+    intro: '安排它加入課程、而講師尚未決定的申請。',
     since: '申請於',
     takeBack: '撤回',
     takeBackTitle: '撤回這項申請？',
@@ -223,7 +223,7 @@ export default {
     course: '課程',
     noCourses: '你沒有在任何課程中擁有席位。',
     noneAvailable: '你的課程目前都不能加入這個代理；每個課程旁都註明了原因。',
-    needsApproval: '須先經導師批准',
+    needsApproval: '須先經講師批准',
     blocked: {
       archived: '已封存：不接受任何更改',
       paused: '你在這裡的席位已暫停',
@@ -242,8 +242,8 @@ export default {
     preview: '它將獲得的權限',
     level: {
       autonomous: '帶入後會立即入席。',
-      pending_review: '帶入後會立即入席，之後由導師覆核。',
-      confirm_required: '這會送出一項申請：須經導師批准，你的代理才會入席。申請在等待期間，你可以隨時撤回。',
+      pending_review: '帶入後會立即入席，之後由講師覆核。',
+      confirm_required: '這會送出一項申請：須經講師批准，你的代理才會入席。申請在等待期間，你可以隨時撤回。',
       denied: '你在這裡的席位不允許帶入代理。',
     },
     answers: '誰可以向它提問',

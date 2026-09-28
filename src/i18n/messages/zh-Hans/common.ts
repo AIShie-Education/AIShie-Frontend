@@ -65,7 +65,7 @@ export default {
     home: '我的课程',
     account: '账号',
     agents: '我的智能体',
-    admin: '平台管理',
+    admin: '管理',
     language: '语言',
     theme: '主题',
     themeLight: '浅色',

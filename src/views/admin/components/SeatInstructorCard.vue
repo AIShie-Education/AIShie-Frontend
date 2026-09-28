@@ -1,8 +1,12 @@
 <script setup lang="ts">
-// course.seat_instructor: how a course gets its first member. The instructor
-// is found in the directory (actor.list) by a piece of their name or email,
-// or by a pasted ID (actor.get), so that the administrator sees who they are
-// about to seat. On a Core without the directory, a pasted ID is the way.
+// course.seat_instructor: how a course gets its first member. A platform
+// administrator finds the instructor in the directory (actor.list) by a
+// piece of their name or email, or by a pasted ID (actor.get), so that they
+// see who they are about to seat; on a Core without the directory, a pasted
+// ID is the way. A department's administrator has no directory: they find
+// the person by their whole email (actor.lookup_by_email), register and
+// invite someone who is not registered yet (actor.invite_new), and invite
+// again someone who has never signed in and whom they may (actor.invite).
 //
 // Once the course is known to have members the card no longer offers the
 // form first: it shows the instructors where the administrator's own seat
@@ -13,7 +17,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ApiError, read } from '@/api/http'
-import type { Actor, MemberSummary } from '@/api/types'
+import type { Actor, ActorLookup, MemberSummary, ToolOut } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
@@ -21,12 +25,22 @@ import { shortId } from '@/utils/format'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ActorSummary from './ActorSummary.vue'
+import InviteNewDialog from './InviteNewDialog.vue'
+import InviteRevealDialog from './InviteRevealDialog.vue'
+import PersonLookup from './PersonLookup.vue'
 import { probeActorList, useActorSearch } from './actorSearch'
 
 const props = defineProps<{ courseId: string; disabled?: boolean }>()
 const emit = defineEmits<{ seated: [memberId: string, actorId: string] }>()
 const { t } = useI18n()
 const session = useSessionStore()
+
+/**
+ * How the instructor is found: in the directory, which is a platform
+ * administrator's; or by their whole email, as a department's administrator
+ * finds anyone.
+ */
+const mode = computed<'directory' | 'email'>(() => (session.isAdmin ? 'directory' : 'email'))
 
 const selectedId = ref('')
 const found = ref<Actor | null>(null)
@@ -96,6 +110,8 @@ watch(
     seatedHere.value = []
     seated.value = null
     formOpen.value = false
+    person.value = null
+    justInvited.value = null
   },
 )
 
@@ -120,7 +136,88 @@ const selfSeated = computed(() => liveSeat.value || seatedSelf.value)
 const { options, searching, error: searchError, search, onVisible, hasActorList } = useActorSearch()
 /** This Core has no directory: the instructor is found by a pasted ID. */
 const idOnly = computed(() => hasActorList.value === false)
-onMounted(() => void probeActorList())
+// The directory is a platform administrator's: nobody else is sent to it.
+onMounted(() => {
+  if (mode.value === 'directory') void probeActorList()
+})
+
+// --- By email -----------------------------------------------------------------
+const finder = ref<InstanceType<typeof PersonLookup>>()
+/** Whom the email found. */
+const person = ref<ActorLookup | null>(null)
+/** Someone registered and invited from this card: offered to be seated at once. */
+const justInvited = ref<string | null>(null)
+const inviteOpen = ref(false)
+const inviteEmail = ref('')
+/** An invitation just made, shown the once (and dropped when its dialog closes). */
+const issued = ref<ToolOut<'actor.invite'> | null>(null)
+const revealing = ref(false)
+/** Whom to show, to be seated, once the invitation's link has been shown. */
+let afterReveal: { person: ActorLookup; email: string } | null = null
+const inviteW = useWrite('actor.invite')
+
+function onFound(p: ActorLookup) {
+  person.value = p
+  if (p.actor_id !== justInvited.value) justInvited.value = null
+}
+
+function startInvite(email: string) {
+  inviteEmail.value = email
+  inviteOpen.value = true
+}
+
+function onInvited(out: ToolOut<'actor.invite_new'>, name: string) {
+  justInvited.value = out.actor_id
+  afterReveal = {
+    person: {
+      actor_id: out.actor_id,
+      display_name: name,
+      kind: 'human',
+      status: 'active',
+      can_sign_in: false,
+      invitable: true,
+      invite_expires_at: out.expires_at,
+    },
+    email: out.email,
+  }
+  issued.value = { token: out.token, email: out.email, expires_at: out.expires_at }
+  revealing.value = true
+}
+
+/** The email is someone's already: they are found, to be seated instead. */
+function onTaken(_actorId: string | null, email: string) {
+  void finder.value?.find(email)
+}
+
+async function inviteAgain(p: ActorLookup) {
+  const out = await inviteW.run({ actor_id: p.actor_id }, { success: false })
+  if (!out || out.status !== 'executed') return
+  afterReveal = null
+  issued.value = out.result
+  revealing.value = true
+}
+
+// Once the link has been shown and the dialog is going, whoever was just
+// invited is shown, to be seated.
+watch(revealing, (v) => {
+  if (v || !afterReveal) return
+  finder.value?.show(afterReveal.person, afterReveal.email)
+  afterReveal = null
+})
+/** The token is kept no longer than the dialog that shows it. */
+function onRevealClosed() {
+  issued.value = null
+}
+
+/** Who is about to be seated, however they were found. */
+const candidate = computed(() => {
+  if (mode.value === 'email') {
+    const p = person.value
+    return p ? { id: p.actor_id, display_name: p.display_name, kind: p.kind, status: p.status } : null
+  }
+  const a = found.value
+  return a ? { id: a.id, display_name: a.display_name, kind: a.kind, status: a.status } : null
+})
 
 function pick(id: string | undefined) {
   pickError.value = null
@@ -130,6 +227,15 @@ function pick(id: string | undefined) {
 async function pickMe() {
   if (!session.me) return
   pickError.value = null
+  if (mode.value === 'email') {
+    // Who they are is known already; the directory is not theirs to ask.
+    const me = session.me
+    finder.value?.show(
+      { actor_id: me.id, display_name: me.display_name, kind: me.kind, status: me.status, can_sign_in: true, invitable: false },
+      me.email ?? '',
+    )
+    return
+  }
   try {
     const me = await read('actor.get', { actor_id: session.me.id })
     options.value = [me, ...options.value.filter((a) => a.id !== me.id)]
@@ -141,7 +247,7 @@ async function pickMe() {
 }
 
 const blocker = computed(() => {
-  const a = found.value
+  const a = candidate.value
   if (!a) return null
   if (a.kind === 'system') return t('admin.seat.system')
   if (a.status !== 'active') return t('admin.seat.suspended')
@@ -150,7 +256,7 @@ const blocker = computed(() => {
 })
 
 async function seat() {
-  const a = found.value
+  const a = candidate.value
   if (!a || blocker.value) return
   const out = await run(
     { course_id: props.courseId, actor_id: a.id },
@@ -163,6 +269,9 @@ async function seat() {
     emit('seated', out.result.member_id, a.id)
     selectedId.value = ''
     found.value = null
+    finder.value?.clear()
+    person.value = null
+    justInvited.value = null
     formOpen.value = false
     if (mySeat.value) void loadInstructors(true)
   }
@@ -206,9 +315,14 @@ async function seat() {
       <ul v-else-if="instructors?.length" class="seat__people">
         <li v-for="m in instructors" :key="m.id" class="seat__person">
           <el-icon class="seat__person-icon"><Cpu v-if="m.kind === 'agent'" /><User v-else /></el-icon>
-          <router-link :to="{ name: 'admin-actor', params: { actorId: m.actor_id } }" class="seat__person-name">
+          <router-link
+            v-if="mode === 'directory'"
+            :to="{ name: 'admin-actor', params: { actorId: m.actor_id } }"
+            class="seat__person-name"
+          >
             {{ m.display_name }}
           </router-link>
+          <span v-else class="seat__person-name">{{ m.display_name }}</span>
           <span v-if="m.actor_id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
           <StatusTag v-if="m.status !== 'active'" vocab="memberStatus" :value="m.status" />
         </li>
@@ -218,9 +332,14 @@ async function seat() {
         <ul v-if="seatedHere.length" class="seat__people">
           <li v-for="p in seatedHere" :key="p.memberId" class="seat__person">
             <el-icon class="seat__person-icon"><UserFilled /></el-icon>
-            <router-link :to="{ name: 'admin-actor', params: { actorId: p.actorId } }" class="seat__person-name">
+            <router-link
+              v-if="mode === 'directory'"
+              :to="{ name: 'admin-actor', params: { actorId: p.actorId } }"
+              class="seat__person-name"
+            >
               {{ p.name }}
             </router-link>
+            <span v-else class="seat__person-name">{{ p.name }}</span>
             <span v-if="p.actorId === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
             <span class="app-muted">{{ t('admin.seat.seatedJustNow') }}</span>
           </li>
@@ -243,7 +362,60 @@ async function seat() {
       </div>
     </template>
 
-    <div v-if="showForm" class="seat__form" :class="{ 'is-another': hasMembers }">
+    <div v-if="showForm && mode === 'email'" class="seat__form" :class="{ 'is-another': hasMembers }">
+      <PersonLookup
+        ref="finder"
+        :disabled="disabled"
+        :missing-text="t('deptAdmin.lookup.notFound')"
+        @found="onFound"
+        @missing="person = null"
+        @cleared="person = null"
+      >
+        <template #beside>
+          <el-button v-if="session.me && !selfSeated" text :disabled="disabled" @click="pickMe">
+            {{ t('admin.seat.me') }}
+          </el-button>
+        </template>
+        <template #missing="{ email }">
+          <el-button type="primary" plain :disabled="disabled" @click="startInvite(email)">
+            <el-icon><Message /></el-icon>
+            <span>{{ t('deptAdmin.invite.new') }}</span>
+          </el-button>
+        </template>
+        <template #default="{ person: p }">
+          <el-alert v-if="blocker" type="warning" :closable="false" show-icon :title="blocker" class="seat__warn" />
+          <el-alert
+            v-else-if="p.kind === 'agent'"
+            type="info"
+            :closable="false"
+            show-icon
+            :title="t('admin.seat.agent')"
+            class="seat__warn"
+          />
+          <div v-if="p.invitable && !p.can_sign_in" class="seat__again">
+            <span class="app-form-hint seat__again-hint">{{ t('deptAdmin.invite.againHint') }}</span>
+            <el-button size="small" :loading="inviteW.pending.value" :disabled="disabled" @click="inviteAgain(p)">
+              <el-icon><Message /></el-icon>
+              <span>{{ t('deptAdmin.invite.again') }}</span>
+            </el-button>
+          </div>
+          <div class="seat__actions">
+            <el-button v-if="hasMembers" @click="formOpen = false">{{ t('common.actions.cancel') }}</el-button>
+            <el-button type="primary" :loading="pending" :disabled="disabled || !!blocker" @click="seat">
+              <el-icon><UserFilled /></el-icon>
+              <span>
+                {{ justInvited === p.actor_id ? t('deptAdmin.invite.seatThem', { name: p.display_name }) : t('admin.seat.submit') }}
+              </span>
+            </el-button>
+          </div>
+        </template>
+      </PersonLookup>
+      <div v-if="hasMembers && !person" class="seat__actions seat__cancel">
+        <el-button @click="formOpen = false">{{ t('common.actions.cancel') }}</el-button>
+      </div>
+    </div>
+
+    <div v-else-if="showForm" class="seat__form" :class="{ 'is-another': hasMembers }">
       <label class="seat__label" for="seat-actor">{{ t('admin.seat.who') }}</label>
       <div class="seat__row">
         <el-select
@@ -312,6 +484,11 @@ async function seat() {
         <el-button @click="formOpen = false">{{ t('common.actions.cancel') }}</el-button>
       </div>
     </div>
+
+    <template v-if="mode === 'email'">
+      <InviteNewDialog v-model="inviteOpen" :email="inviteEmail" @invited="onInvited" @taken="onTaken" />
+      <InviteRevealDialog v-model="revealing" :issued="issued" @closed="onRevealClosed" />
+    </template>
   </section>
 </template>
 
@@ -460,5 +637,16 @@ async function seat() {
 }
 .seat__cancel {
   margin-top: 12px;
+}
+.seat__again {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+.seat__again-hint {
+  margin-top: 0;
+  flex: 1 1 220px;
 }
 </style>

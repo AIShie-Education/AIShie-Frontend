@@ -34,7 +34,7 @@ export default {
   },
   departments: {
     title: '部门',
-    subtitle: '部门用来将课程分组，并可拥有自己的权限预设。部门与“谁可以做什么”无关。',
+    subtitle: '部门以树状结构将课程分组，并可拥有自己的权限预设。部门管理员在此管理该部门及其下属部门的所有课程。',
     new: '创建部门',
     filter: '按名称筛选',
     empty: '尚未创建任何部门',
@@ -48,7 +48,7 @@ export default {
       title: '创建部门',
       name: '名称',
       namePlaceholder: '例如：计算机科学系',
-      permanent: '部门创建后无法改名或删除。',
+      permanent: '部门创建后不能删除，但可以改名或移动。',
       done: '已创建部门',
     },
   },

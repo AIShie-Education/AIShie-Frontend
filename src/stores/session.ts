@@ -37,6 +37,17 @@ export const useSessionStore = defineStore('session', () => {
 
   const isRoot = computed(() => me.value?.platform_role === 'root')
   const isAdmin = computed(() => me.value?.platform_role === 'root' || me.value?.platform_role === 'admin')
+  /**
+   * The departments the caller is appointed to administer (me.get). They
+   * administer every department beneath each as well; department.list_tree
+   * says which. Absent from a Core from before departments had
+   * administrators, and for everyone who administers nothing.
+   */
+  const administers = computed(() => me.value?.administers ?? [])
+  /** Appointed to administer at least one department (and so everything beneath it). */
+  const isDeptAdmin = computed(() => administers.value.length > 0)
+  /** Sees the administration pages: a platform administrator, or a department administrator. */
+  const canAdminister = computed(() => isAdmin.value || isDeptAdmin.value)
   const liveMemberships = computed(() => memberships.value.filter((m) => m.status !== 'removed'))
 
   async function load(): Promise<void> {
@@ -210,6 +221,9 @@ export const useSessionStore = defineStore('session', () => {
     usingToken,
     isRoot,
     isAdmin,
+    administers,
+    isDeptAdmin,
+    canAdminister,
     ensure,
     load,
     loadMemberships,

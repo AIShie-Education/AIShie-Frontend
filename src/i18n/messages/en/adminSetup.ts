@@ -35,7 +35,7 @@ export default {
   departments: {
     title: 'Departments',
     subtitle:
-      'Departments group courses and may have permission presets of their own. They play no part in who may do what.',
+      'Departments form a tree and group courses, and may have permission presets of their own. The administrators of a department manage its courses and everything beneath it, from here.',
     new: 'New department',
     filter: 'Filter by name',
     empty: 'No departments yet',
@@ -49,7 +49,7 @@ export default {
       title: 'New department',
       name: 'Name',
       namePlaceholder: 'e.g. Department of Computing',
-      permanent: 'A department cannot be renamed or removed once it is made.',
+      permanent: 'A department cannot be removed once it is made; it can be renamed or moved.',
       done: 'Department created',
     },
   },

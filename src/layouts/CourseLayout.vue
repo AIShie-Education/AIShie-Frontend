@@ -6,6 +6,8 @@ import { useRoute } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { courseTabClaim } from '@/composables/useCourseTab'
+import { useDepartmentTree } from '@/composables/useDepartmentTree'
+import { findCourse } from '@/views/admin/components/adminShared'
 import type { Perm } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -67,10 +69,43 @@ const activeTab = computed(() => {
 const ready = computed(() => course.courseId === props.courseId && !!course.course)
 
 // An administrator refused a course they have no seat in has not done anything
-// wrong: a platform role opens no course, a seat does. Say so, and where the
-// seat is given, rather than only that they may not see it.
+// wrong: neither a platform role nor a department's appointment opens a
+// course, a seat does. Say so, and where the seat is given, rather than only
+// that they may not see it. A department's administrator is told so only of a
+// course they administer, which course.list lists them; any other is refused
+// as it would be anyone.
+const refusedWithoutSeat = computed(
+  () => !course.membership && !!course.error?.isForbidden && course.courseId === props.courseId,
+)
+/** The course refused is one the department administrator administers (null: not asked, or not known yet). */
+const administeredHere = ref<string | null>(null)
+watch(
+  () => [refusedWithoutSeat.value, props.courseId, session.isAdmin, session.isDeptAdmin] as const,
+  async ([refused, id, platform, deptAdmin]) => {
+    administeredHere.value = null
+    if (!refused || platform || !deptAdmin) return
+    try {
+      await findCourse(id, '')
+      if (id === props.courseId) administeredHere.value = id
+    } catch {
+      /* not theirs, or not to be known: refused as anyone is */
+    }
+  },
+  { immediate: true },
+)
 const adminWithoutSeat = computed(
-  () => session.isAdmin && !course.membership && !!course.error?.isForbidden && course.courseId === props.courseId,
+  () => refusedWithoutSeat.value && (session.isAdmin || administeredHere.value === props.courseId),
+)
+
+// The way to the course's administration page, for whoever administers it.
+const departments = useDepartmentTree({ immediate: false })
+watch(
+  () => session.isDeptAdmin && !session.isAdmin,
+  (deptAdmin) => void (deptAdmin && departments.ensure()),
+  { immediate: true },
+)
+const administers = computed(
+  () => session.isAdmin || (!!course.course && !!departments.byId.value.get(course.course.dept_id)?.administers),
 )
 
 // Where the tabs do not fit (a phone), they scroll sideways: the active one
@@ -121,7 +156,7 @@ onBeforeUnmount(() => observer?.disconnect())
       v-if="adminWithoutSeat"
       icon="info"
       :title="t('layout.course.adminNoSeat.title')"
-      :sub-title="t('layout.course.adminNoSeat.body')"
+      :sub-title="session.isAdmin ? t('layout.course.adminNoSeat.body') : t('deptAdmin.noSeat.body')"
       class="course-layout__no-seat"
     >
       <template #extra>
@@ -154,7 +189,7 @@ onBeforeUnmount(() => observer?.disconnect())
               size="default"
             />
             <router-link
-              v-if="session.isAdmin"
+              v-if="administers"
               :to="{ name: 'admin-course', params: { courseId } }"
               class="course-head__admin"
               :aria-label="t('common.nav.admin')"
