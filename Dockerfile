@@ -42,7 +42,7 @@ RUN case "$VERSION" in \
 # container that drops them all (cap_drop: [ALL]). A plain copy leaves the
 # capability behind.
 FROM caddy:2.11-alpine AS caddy
-FROM --platform=$BUILDPLATFORM alpine:3.23 AS caddy-plain
+FROM --platform=$BUILDPLATFORM alpine:3.24 AS caddy-plain
 COPY --from=caddy /usr/bin/caddy /caddy-with-capability
 RUN cp /caddy-with-capability /caddy
 
@@ -50,7 +50,7 @@ RUN cp /caddy-with-capability /caddy
 # by, the configuration and the build. Busybox stays, for a health check that
 # runs inside the container (wget). Nothing here runs a command, so no target
 # architecture is emulated.
-FROM alpine:3.23
+FROM alpine:3.24
 COPY --from=caddy-plain /caddy /usr/bin/caddy
 COPY --from=caddy /etc/mime.types /etc/mime.types
 COPY Caddyfile /etc/caddy/Caddyfile
