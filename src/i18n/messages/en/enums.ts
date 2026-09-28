@@ -25,6 +25,7 @@ export default {
     grade_post: 'Post grades',
     member_read: 'See members',
     member_manage: 'Manage members',
+    member_invite: 'Create invite links',
     action_decide: 'Approve & review',
     agent_delegate: 'Bring in own agents',
     conversation_ask: 'Ask questions',
@@ -43,6 +44,8 @@ export default {
     grade_post: 'Releasing grades to students; with Enter grades, also regrading',
     member_read: 'The member list',
     member_manage: 'Adding, removing and re-scoping members',
+    member_invite:
+      'Creating, listing and revoking the course’s invite links, through which anyone who has one joins as a student',
     action_decide: 'Approving proposals and reviewing after the fact',
     agent_delegate:
       'Bringing an agent you own into the course as your assistant; it never holds more than your own seat',
@@ -220,6 +223,8 @@ export default {
     'course.updated': 'Course updated',
     'course.activated': 'Course activated',
     'course.archived': 'Course archived',
+    'course.join_link_created': 'Invite link created',
+    'course.join_link_revoked': 'Invite link revoked',
     'document.created': 'Document created',
     'document.version_added': 'New document version',
     'document.published': 'Document published',

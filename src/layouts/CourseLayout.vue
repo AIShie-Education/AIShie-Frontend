@@ -49,7 +49,7 @@ const tabs: Tab[] = [
     perms: ['conversation_ask', 'conversation_answer'],
   },
   { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
-  { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read'], also: ['course-member'] },
+  { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read', 'member_invite'], also: ['course-member'] },
   { name: 'course-agents', label: 'layout.course.agents', icon: 'Cpu', perms: ['member_manage'] },
   { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
   { name: 'course-my-actions', label: 'layout.course.myActions', icon: 'List', perms: ['document_read'] },

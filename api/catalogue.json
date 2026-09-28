@@ -807,6 +807,10 @@
               "string"
             ]
           },
+          "email_verified": {
+            "description": "false for a person who registered through a join link, whose email nobody has checked: Core sends no email; setting it with actor.update vouches for it",
+            "type": "boolean"
+          },
           "has_password": {
             "type": "boolean"
           },
@@ -864,6 +868,7 @@
           "id",
           "kind",
           "display_name",
+          "email_verified",
           "status",
           "created_at",
           "has_password",
@@ -1155,6 +1160,10 @@
                     "string"
                   ]
                 },
+                "email_verified": {
+                  "description": "false for a person who registered through a join link, whose email nobody has checked: Core sends no email; setting it with actor.update vouches for it",
+                  "type": "boolean"
+                },
                 "has_password": {
                   "type": "boolean"
                 },
@@ -1212,6 +1221,7 @@
                 "id",
                 "kind",
                 "display_name",
+                "email_verified",
                 "status",
                 "created_at",
                 "has_password",
@@ -1619,7 +1629,7 @@
       "path": "/v1/actors/{actor_id}/suspend"
     },
     {
-      "description": "Correct an actor's display name or email, or give an email to a person registered without one, so that they can sign in with a password. What is left out stays as it is. A change of email withdraws an invitation waiting (actor.invite): it went to the old one.",
+      "description": "Correct an actor's display name or email, or give an email to a person registered without one, so that they can sign in with a password. What is left out stays as it is. A change of email withdraws an invitation waiting (actor.invite): it went to the old one. An email you set is one you vouch for: a person who registered through a join link has email_verified false, until you do.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1670,6 +1680,10 @@
               "null",
               "string"
             ]
+          },
+          "email_verified": {
+            "description": "false for a person who registered through a join link, whose email nobody has checked: Core sends no email; setting it with actor.update vouches for it",
+            "type": "boolean"
           },
           "has_password": {
             "type": "boolean"
@@ -1728,6 +1742,7 @@
           "id",
           "kind",
           "display_name",
+          "email_verified",
           "status",
           "created_at",
           "has_password",
@@ -4593,6 +4608,273 @@
       "path": "/v1/courses/{course_id}"
     },
     {
+      "description": "Make a link that seats whoever opens it as a student of the course, at once and with no approval — typically shown as a QR code in class: a person signed in joins, and someone with no account registers through it (name, email, password) and joins. Nobody registers any other way. Every link works for ten minutes from now, and then never again; make another for the next class. It seats max_uses people at most if given, and only emails at allowed_email_domains if given. The seat is the course's student preset, as member.add gives it, and is yours to give: it must be within what you hold, now and at every join, so the link stops working (creator_lost_authority) once you are paused or removed, lose member_invite, or no longer hold what the preset gives; a seat taken through it ends when yours does. The token is returned once and only its hash is kept. Revoke it with course.join_link_revoke. Not by proposal: with member_invite at confirm_required, ask someone who holds it without approval.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_email_domains": {
+            "description": "only people whose email is at one of these domains, exactly: example.edu does not take mail.example.edu; at most 20. Anyone's unless given. Core cannot check an email, so this keeps out whoever gives another, not whoever claims one of these",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "max_uses": {
+            "description": "how many people may join through it, from 1 to 10000; as many as like while it lives unless given",
+            "type": [
+              "null",
+              "integer"
+            ]
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "course.join_link_create",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_email_domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "expires_at": {
+            "description": "ten minutes after it was made, always",
+            "type": "string"
+          },
+          "link_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "max_uses": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "token": {
+            "description": "what the link carries, for the front end's join page (its path /join/<token>, say), which may show it as a QR code too; shown once, and a replay of this call comes back without it",
+            "type": "string"
+          }
+        },
+        "required": [
+          "link_id",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/join-links"
+    },
+    {
+      "description": "The course's join links, newest first: each one's status (live, expired, used_up or revoked), whether it seats anyone now and why not (course_archived, or creator_lost_authority when whoever made it no longer could), when it expires, who made and who revoked it, which email domains it takes, and how many have joined through it; member.list with join_link_id says who. Never a token: only its hash is kept.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "description": "the id of the last item already seen",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "limit": {
+            "description": "at most this many items; default 50, maximum 200",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "course.join_link_list",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "links": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "allowed_email_domains": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "created_by_member_id": {
+                  "description": "whose authority it seats with, and whose seat a seat taken through it ends with",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "created_by_name": {
+                  "type": "string"
+                },
+                "expires_at": {
+                  "type": "string"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "joinable": {
+                  "description": "whether it seats anyone now",
+                  "type": "boolean"
+                },
+                "max_uses": {
+                  "maximum": 2147483647,
+                  "minimum": -2147483648,
+                  "type": [
+                    "null",
+                    "integer"
+                  ]
+                },
+                "preset_id": {
+                  "description": "the preset whose levels and scope it gives, as they stand at each join",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "reason": {
+                  "description": "why it seats nobody now: revoked, expired, used_up, course_archived or creator_lost_authority",
+                  "type": "string"
+                },
+                "revoked_at": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "revoked_by_member_id": {
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "revoked_by_name": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "role": {
+                  "description": "what it seats: student",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "live, expired, used_up or revoked",
+                  "type": "string"
+                },
+                "uses": {
+                  "description": "how many people have joined through it; member.list with join_link_id says who",
+                  "maximum": 2147483647,
+                  "minimum": -2147483648,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "joinable",
+                "role",
+                "preset_id",
+                "created_by_member_id",
+                "created_by_name",
+                "created_at",
+                "expires_at",
+                "uses"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "next": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "links"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/join-links"
+    },
+    {
+      "description": "Revoke a join link before its ten minutes are up: from now on it seats nobody, and whoever opens it is told it was revoked. Anyone who holds member_invite may revoke any of the course's links, whoever made it. Those who joined through it keep their seats; remove them with member.remove.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "link_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "link_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "course.join_link_revoke",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/join-links/{link_id}/revoke"
+    },
+    {
       "description": "Courses as their administrators see them, without a seat in them: every course on the platform for a platform administrator; for a department administrator, those in the departments they administer and beneath them. Optionally by term, by one department (dept_id), or by a department and everything beneath it (within_dept_id). For the courses you are seated in, use me.memberships.",
       "input_schema": {
         "additionalProperties": false,
@@ -7226,6 +7508,13 @@
               "string"
             ]
           },
+          "email_verified": {
+            "description": "with an email: false when you gave it registering through a join link, and nobody has checked it since; Core sends no email",
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -7509,7 +7798,7 @@
       "path": "/v1/courses/{course_id}/members"
     },
     {
-      "description": "Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, your agent holds no more than the delegate preset gives.",
+      "description": "Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, whatever your agent may do beyond what the delegate preset gives — your own writes, such as drafting your submission — it does only by proposal (confirm_required at most), whoever grants it. It holds member_manage or member_invite only when you name them in perms, whatever the preset carries; then it manages the course's members, or hands out its join links, for you, and never acts on your own seat nor on your other agents' (not_your_principal).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7790,6 +8079,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "join_link_id": {
+            "description": "for a seat a person took through a join link, the link (course.join_link_list)",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "kind": {
             "description": "human or agent; for display only",
             "type": "string"
@@ -7906,6 +8203,14 @@
           "include_removed": {
             "type": "boolean"
           },
+          "join_link_id": {
+            "description": "only the seats people took through this join link",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "limit": {
             "description": "at most this many items; default 50, maximum 200",
             "type": "integer"
@@ -7959,6 +8264,14 @@
                 "id": {
                   "format": "uuid",
                   "type": "string"
+                },
+                "join_link_id": {
+                  "description": "for a seat a person took through a join link, the link (course.join_link_list)",
+                  "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
                 },
                 "kind": {
                   "description": "human or agent; for display only",
@@ -8401,7 +8714,7 @@
       "path": "/v1/courses/{course_id}/members/{member_id}/perms"
     },
     {
-      "description": "Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset.",
+      "description": "Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. A delegate's call is refused whole (not_your_principal) when the role takes in its principal's seat or another agent of its principal's.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {

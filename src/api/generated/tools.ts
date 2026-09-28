@@ -248,6 +248,10 @@ export interface ActorGetOut {
   created_by_actor_id?: null | string
   display_name: string
   email?: null | string
+  /**
+   * false for a person who registered through a join link, whose email nobody has checked: Core sends no email; setting it with actor.update vouches for it
+   */
+  email_verified: boolean
   has_password: boolean
   /**
    * an identity at the identity provider is linked (actor.link_sso)
@@ -381,6 +385,10 @@ export interface ActorListOut {
         created_by_actor_id?: null | string
         display_name: string
         email?: null | string
+        /**
+         * false for a person who registered through a join link, whose email nobody has checked: Core sends no email; setting it with actor.update vouches for it
+         */
+        email_verified: boolean
         has_password: boolean
         /**
          * an identity at the identity provider is linked (actor.link_sso)
@@ -532,7 +540,7 @@ export interface ActorSuspendOut {
   ok: boolean
 }
 
-/** actor.update (write): Correct an actor's display name or email, or give an email to a person registered without one, so that they can sign in with a password. What is left out stays as it is. A change of email withdraws an invitation waiting (actor.invite): it went to the old one. */
+/** actor.update (write): Correct an actor's display name or email, or give an email to a person registered without one, so that they can sign in with a password. What is left out stays as it is. A change of email withdraws an invitation waiting (actor.invite): it went to the old one. An email you set is one you vouch for: a person who registered through a join link has email_verified false, until you do. */
 export interface ActorUpdateIn {
   actor_id: string
   display_name?: null | string
@@ -546,6 +554,10 @@ export interface ActorUpdateOut {
   created_by_actor_id?: null | string
   display_name: string
   email?: null | string
+  /**
+   * false for a person who registered through a join link, whose email nobody has checked: Core sends no email; setting it with actor.update vouches for it
+   */
+  email_verified: boolean
   has_password: boolean
   /**
    * an identity at the identity provider is linked (actor.link_sso)
@@ -1648,6 +1660,107 @@ export interface CourseGetOut {
   title: string
 }
 
+/** course.join_link_create (write): Make a link that seats whoever opens it as a student of the course, at once and with no approval — typically shown as a QR code in class: a person signed in joins, and someone with no account registers through it (name, email, password) and joins. Nobody registers any other way. Every link works for ten minutes from now, and then never again; make another for the next class. It seats max_uses people at most if given, and only emails at allowed_email_domains if given. The seat is the course's student preset, as member.add gives it, and is yours to give: it must be within what you hold, now and at every join, so the link stops working (creator_lost_authority) once you are paused or removed, lose member_invite, or no longer hold what the preset gives; a seat taken through it ends when yours does. The token is returned once and only its hash is kept. Revoke it with course.join_link_revoke. Not by proposal: with member_invite at confirm_required, ask someone who holds it without approval. */
+export interface CourseJoinLinkCreateIn {
+  /**
+   * only people whose email is at one of these domains, exactly: example.edu does not take mail.example.edu; at most 20. Anyone's unless given. Core cannot check an email, so this keeps out whoever gives another, not whoever claims one of these
+   */
+  allowed_email_domains?: null | string[]
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * how many people may join through it, from 1 to 10000; as many as like while it lives unless given
+   */
+  max_uses?: null | number
+}
+export interface CourseJoinLinkCreateOut {
+  allowed_email_domains?: null | string[]
+  /**
+   * ten minutes after it was made, always
+   */
+  expires_at: string
+  link_id: string
+  max_uses?: null | number
+  /**
+   * what the link carries, for the front end's join page (its path /join/<token>, say), which may show it as a QR code too; shown once, and a replay of this call comes back without it
+   */
+  token?: string
+}
+
+/** course.join_link_list (read): The course's join links, newest first: each one's status (live, expired, used_up or revoked), whether it seats anyone now and why not (course_archived, or creator_lost_authority when whoever made it no longer could), when it expires, who made and who revoked it, which email domains it takes, and how many have joined through it; member.list with join_link_id says who. Never a token: only its hash is kept. */
+export interface CourseJoinLinkListIn {
+  /**
+   * the id of the last item already seen
+   */
+  after?: null | string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * at most this many items; default 50, maximum 200
+   */
+  limit?: number
+}
+export interface CourseJoinLinkListOut {
+  links:
+    | null
+    | {
+        allowed_email_domains?: null | string[]
+        created_at: string
+        /**
+         * whose authority it seats with, and whose seat a seat taken through it ends with
+         */
+        created_by_member_id: string
+        created_by_name: string
+        expires_at: string
+        id: string
+        /**
+         * whether it seats anyone now
+         */
+        joinable: boolean
+        max_uses?: null | number
+        /**
+         * the preset whose levels and scope it gives, as they stand at each join
+         */
+        preset_id: string
+        /**
+         * why it seats nobody now: revoked, expired, used_up, course_archived or creator_lost_authority
+         */
+        reason?: string
+        revoked_at?: null | string
+        revoked_by_member_id?: null | string
+        revoked_by_name?: null | string
+        /**
+         * what it seats: student
+         */
+        role: string
+        /**
+         * live, expired, used_up or revoked
+         */
+        status: string
+        /**
+         * how many people have joined through it; member.list with join_link_id says who
+         */
+        uses: number
+      }[]
+  next?: null | string
+}
+
+/** course.join_link_revoke (write): Revoke a join link before its ten minutes are up: from now on it seats nobody, and whoever opens it is told it was revoked. Anyone who holds member_invite may revoke any of the course's links, whoever made it. Those who joined through it keep their seats; remove them with member.remove. */
+export interface CourseJoinLinkRevokeIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  link_id: string
+}
+export interface CourseJoinLinkRevokeOut {
+  ok: boolean
+}
+
 /** course.list (read): Courses as their administrators see them, without a seat in them: every course on the platform for a platform administrator; for a department administrator, those in the departments they administer and beneath them. Optionally by term, by one department (dept_id), or by a department and everything beneath it (within_dept_id). For the courses you are seated in, use me.memberships. */
 export interface CourseListIn {
   /**
@@ -2543,6 +2656,10 @@ export interface MeGetOut {
       }[]
   display_name: string
   email?: null | string
+  /**
+   * with an email: false when you gave it registering through a join link, and nobody has checked it since; Core sends no email
+   */
+  email_verified?: null | boolean
   id: string
   /**
    * human, agent or system; for display only
@@ -2651,7 +2768,7 @@ export interface MemberAddOut {
   member_id: string
 }
 
-/** member.add_delegate (write): Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, your agent holds no more than the delegate preset gives. */
+/** member.add_delegate (write): Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, whatever your agent may do beyond what the delegate preset gives — your own writes, such as drafting your submission — it does only by proposal (confirm_required at most), whoever grants it. It holds member_manage or member_invite only when you name them in perms, whatever the preset carries; then it manages the course's members, or hands out its join links, for you, and never acts on your own seat nor on your other agents' (not_your_principal). */
 export interface MemberAddDelegateIn {
   /**
    * the agent you own to bring in
@@ -2765,6 +2882,10 @@ export interface MemberGetOut {
   expires_at?: null | string
   id: string
   /**
+   * for a seat a person took through a join link, the link (course.join_link_list)
+   */
+  join_link_id?: null | string
+  /**
    * human or agent; for display only
    */
   kind: string
@@ -2810,6 +2931,10 @@ export interface MemberListIn {
   course_id: string
   include_removed?: boolean
   /**
+   * only the seats people took through this join link
+   */
+  join_link_id?: null | string
+  /**
    * at most this many items; default 50, maximum 200
    */
   limit?: number
@@ -2832,6 +2957,10 @@ export interface MemberListOut {
         display_name: string
         expires_at?: null | string
         id: string
+        /**
+         * for a seat a person took through a join link, the link (course.join_link_list)
+         */
+        join_link_id?: null | string
         /**
          * human or agent; for display only
          */
@@ -2986,7 +3115,7 @@ export interface MemberUpdatePermsOut {
   ok: boolean
 }
 
-/** member.update_perms_bulk (write): Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. */
+/** member.update_perms_bulk (write): Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. A delegate's call is refused whole (not_your_principal) when the role takes in its principal's seat or another agent of its principal's. */
 export interface MemberUpdatePermsBulkIn {
   /**
    * the course this call is about
@@ -3659,6 +3788,9 @@ export interface ToolMap {
   'course.archive': { in: CourseArchiveIn; out: CourseArchiveOut; kind: 'write' }
   'course.create': { in: CourseCreateIn; out: CourseCreateOut; kind: 'write' }
   'course.get': { in: CourseGetIn; out: CourseGetOut; kind: 'read' }
+  'course.join_link_create': { in: CourseJoinLinkCreateIn; out: CourseJoinLinkCreateOut; kind: 'write' }
+  'course.join_link_list': { in: CourseJoinLinkListIn; out: CourseJoinLinkListOut; kind: 'read' }
+  'course.join_link_revoke': { in: CourseJoinLinkRevokeIn; out: CourseJoinLinkRevokeOut; kind: 'write' }
   'course.list': { in: CourseListIn; out: CourseListOut; kind: 'read' }
   'course.move': { in: CourseMoveIn; out: CourseMoveOut; kind: 'write' }
   'course.seat_instructor': { in: CourseSeatInstructorIn; out: CourseSeatInstructorOut; kind: 'write' }
@@ -3790,6 +3922,9 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'course.archive': { method: 'POST', path: '/v1/courses/{course_id}/archive', kind: 'write' },
   'course.create': { method: 'POST', path: '/v1/courses', kind: 'write' },
   'course.get': { method: 'GET', path: '/v1/courses/{course_id}', kind: 'read' },
+  'course.join_link_create': { method: 'POST', path: '/v1/courses/{course_id}/join-links', kind: 'write' },
+  'course.join_link_list': { method: 'GET', path: '/v1/courses/{course_id}/join-links', kind: 'read' },
+  'course.join_link_revoke': { method: 'POST', path: '/v1/courses/{course_id}/join-links/{link_id}/revoke', kind: 'write' },
   'course.list': { method: 'GET', path: '/v1/courses', kind: 'read' },
   'course.move': { method: 'POST', path: '/v1/courses/{course_id}/move', kind: 'write' },
   'course.seat_instructor': { method: 'POST', path: '/v1/courses/{course_id}/instructors', kind: 'write' },

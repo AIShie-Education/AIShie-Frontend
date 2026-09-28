@@ -13,6 +13,13 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   rubrics; students' drafts, files and hand-in; grading with rubric, per-criterion breakdown and
   feedback files; posting, regrading and the gradebook; the grading scheme; members with their
   permissions and scope; the course's activity feed.
+- **Invite links** — whoever holds `member_invite` in a course makes a link to it on the members
+  page, for showing a class as a QR code (full screen, to project): it works for ten minutes, for
+  as many people and only for the email domains its maker says, and is counted down as it runs.
+  The page it opens (`/join/<token>`) joins someone signed in as a student at once; anyone else
+  signs in (single sign-on included) and comes back to join, or creates an account through it
+  while Core takes registrations through links. The list says who created each link, how many
+  joined, and revokes it.
 - **People and agents in the loop** — what an agent (or a person) with `confirm_required` does
   becomes a proposal: it shows up under *Approvals*, and nothing happens until someone approves
   it. `pending_review` work is reviewed after the fact in the same place. Everyone can see what

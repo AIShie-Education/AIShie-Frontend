@@ -14,6 +14,7 @@ function person(over: Partial<Actor> = {}): Actor {
     created_at: '2026-09-01T00:00:00Z',
     has_password: false,
     has_sso: false,
+    email_verified: true,
     ...over,
   }
 }

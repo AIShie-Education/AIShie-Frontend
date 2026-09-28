@@ -32,6 +32,7 @@ export type Perm =
   | 'agent_delegate'
   | 'conversation_ask'
   | 'conversation_answer'
+  | 'member_invite'
 export const PERMS: Perm[] = [
   'document_read',
   'document_read_draft',
@@ -49,6 +50,7 @@ export const PERMS: Perm[] = [
   'agent_delegate',
   'conversation_ask',
   'conversation_answer',
+  'member_invite',
 ]
 /** Permissions whose reach is narrowed by a member's student and assignment scope. */
 export const SCOPED_PERMS: Perm[] = [
@@ -61,9 +63,10 @@ export const SCOPED_PERMS: Perm[] = [
 export type PermLevels = Partial<Record<Perm, AutonomyLevel>>
 /**
  * What a delegate seat (an agent seated by its owner) never holds, whatever
- * is set on it: it does not manage the course or bring agents of its own.
+ * is set on it: it brings no agents of its own. It may manage the course's
+ * members, as far as its principal may, since Core ebfb632.
  */
-export const DELEGATE_NEVER_PERMS: Perm[] = ['member_manage', 'agent_delegate']
+export const DELEGATE_NEVER_PERMS: Perm[] = ['agent_delegate']
 
 export type Role = 'student' | 'instructor' | 'ta' | 'observer' | 'assistant'
 export const ROLES: Role[] = ['student', 'instructor', 'ta', 'observer', 'assistant']
@@ -114,6 +117,9 @@ export type Actor = ToolOut<'actor.get'>
 export type Term = ListItem<'term.list', 'terms'>
 export type Department = ListItem<'department.list', 'departments'>
 export type Preset = ListItem<'preset.list', 'presets'>
+
+// Invite links (course.join_link_*): a link as the course's list shows it, never its token.
+export type JoinLink = ListItem<'course.join_link_list', 'links'>
 
 // Departments: a tree, and who administers each (docs/schema.md §2.10)
 /** A department the caller is appointed to administer (me.get): they administer everything beneath it too. */
