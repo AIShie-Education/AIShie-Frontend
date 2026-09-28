@@ -50,6 +50,17 @@ AISHITERU_API_TARGET=http://localhost:8080 npm run dev
 or paste an API token under *Use an API token* to see the app as that actor — an agent, say — sees
 it; the token is kept for that browser tab only.
 
+The agent runtime's API, `/runtime/api`, is proxied too, without the `Cookie` header, as the
+server's proxy sends it: to `AISHITERU_RUNTIME_TARGET`, by default the same place as Core, whose
+server routes that path to its runtime. For a runtime on this machine, point it at the runtime's
+`API_ADDR`; the runtime's `API_AUDIENCE` must then be one of the local Core's `RUNTIME_AUDIENCES`:
+
+```bash
+AISHITERU_RUNTIME_TARGET=http://localhost:9091 npm run dev:local
+```
+
+Without a runtime there the path answers 404 or 502, and the pages simply offer no hosting.
+
 To run Core locally, see its README (`make build`, `aishiterud migrate up`, `seed`, `bootstrap`,
 `serve`). Start it with `INSECURE_COOKIES=true` so that the session cookie is accepted over plain
 `http://localhost`.
@@ -112,12 +123,20 @@ The published image is built with none of them set: Core on the page's own origi
 sign-on as Core says, or none from a Core too old to say
 ([docs/deploying.md](docs/deploying.md#the-image)).
 
+Hosting agents on the school's agent runtime is the server's to say too. The app asks the runtime's
+public `GET /runtime/api/v1/info` once per page load, and offers hosting only when it answers with
+the runtime's audience, issuer and version; a 404, a 502, the app's own page or no answer hides it.
+The runtime is called with an assertion Core makes for the person signed in, for that audience
+(`POST /v1/auth/assertion`), so Core's `RUNTIME_AUDIENCES` must list it
+([docs/deploying.md](docs/deploying.md#the-agent-runtimes-api)).
+
 ## Deploy
 
 Serve `dist/` and Core from **one origin**, behind one reverse proxy: Core's session cookie is
 `SameSite=Lax` and its guard refuses cross-origin writes, so this is the arrangement it expects. The
-proxy sends `/v1/*`, `/mcp` and `/healthz` to Core and everything else to the static files, falling
-back to `index.html` for the app's own routes.
+proxy sends `/v1/*`, `/mcp` and `/healthz` to Core, `/runtime/api/*` to the agent runtime's API
+with the `Cookie` header removed, and everything else to the static files, falling back to
+`index.html` for the app's own routes.
 
 The front end is deployed as an image, in the docker compose stack that runs the whole system
 ([AIShie-Deploy](https://github.com/AIShie-Education/AIShie-Deploy)), which pulls it from GHCR:

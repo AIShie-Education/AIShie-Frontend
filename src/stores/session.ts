@@ -12,6 +12,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { acceptInvite, ApiError, bearer, login, logout as apiLogout, read } from '@/api/http'
+import { forgetAssertion } from '@/api/runtime'
 import type { Me, Membership } from '@/api/types'
 import { useCourseStore } from './course'
 
@@ -176,7 +177,9 @@ export const useSessionStore = defineStore('session', () => {
   /**
    * Drops what this store, the course store and this browser hold for the
    * caller: on signing out, when the session ends, and whenever someone else
-   * signs in here, by any way in.
+   * signs in here, by any way in. That includes the assertion of who they
+   * are that the agent runtime is called with, which would otherwise work
+   * for its last few minutes for whoever came next.
    */
   function forgetCaller() {
     if (me.value) heldCaller = true
@@ -187,6 +190,7 @@ export const useSessionStore = defineStore('session', () => {
     membershipsLoading = null
     useCourseStore().close()
     forgetStoredLists()
+    forgetAssertion()
   }
 
   /**

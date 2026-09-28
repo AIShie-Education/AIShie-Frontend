@@ -227,7 +227,70 @@ export function setupProgress(input: {
   }
 }
 
-/** The environment a runtime is started with: where Core's MCP endpoint is, and the agent's token. */
-export function runtimeEnv(endpoint: string, token: string): string {
-  return `CORE_MCP_URL=${endpoint}\nAISHITERU_TOKEN=${token}`
+/**
+ * What the AIShie Agent Runtime is given to run an agent its owner runs
+ * themselves: an agent file, YAML in the runtime's agents directory, whose
+ * core section says where Core is (its base URL: the runtime finds /mcp
+ * there) and which secret holds the agent's token. The token is never in the
+ * file, and the runtime refuses one written there: it is kept in the secret
+ * the file names, the file tokenFile under the runtime's secrets directory,
+ * or failing that the variable tokenVar. The model is the runtime's own
+ * example of a student's agent (examples/agents/delegate.yaml there), on a
+ * key of the owner's, for them to change.
+ */
+export interface RuntimeAgentFile {
+  /** The agent's id in the runtime's configuration. */
+  id: string
+  yaml: string
+  /** Where the token is kept, under the runtime's secrets directory. */
+  tokenFile: string
+  /** Where the runtime looks for the token when there is no such file. */
+  tokenVar: string
+}
+
+/**
+ * An id the runtime takes (letters, digits, '-', at most 64) for the agent:
+ * its name, in plain letters, or failing that (a name with none) the end of
+ * its actor id, which is the random part of it.
+ */
+export function runtimeAgentId(name: string, actorId: string): string {
+  const slug = name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, 48)
+    .replace(/^-+|-+$/g, '')
+  if (slug) return slug
+  const tail = actorId
+    .replace(/[^A-Za-z0-9]/g, '')
+    .slice(-8)
+    .toLowerCase()
+  return tail ? `agent-${tail}` : 'agent'
+}
+
+/** The variable a secret:// path falls back to: AISHIE_SECRET_ and the path, upper case, '_' for the rest. */
+function secretVar(path: string): string {
+  return 'AISHIE_SECRET_' + path.toUpperCase().replace(/[^A-Z0-9]/g, '_')
+}
+
+export function runtimeAgentFile(input: { coreUrl: string; name: string; actorId: string }): RuntimeAgentFile {
+  const id = runtimeAgentId(input.name, input.actorId)
+  const tokenFile = `agents/${id}/core_token`
+  const yaml = [
+    'agent:',
+    `  id: ${id}`,
+    // A JSON string is a YAML double-quoted one: any name is taken as it is.
+    `  display_name: ${JSON.stringify(input.name)}`,
+    '  core:',
+    `    base_url: ${input.coreUrl}`,
+    `    token_ref: secret://${tokenFile}`,
+    '  model:',
+    '    adapter: openai_chat',
+    '    base_url: https://api.deepseek.com',
+    '    model: deepseek-chat',
+    `    key_ref: secret://agents/${id}/model_key`,
+    '',
+  ].join('\n')
+  return { id, yaml, tokenFile, tokenVar: secretVar(tokenFile) }
 }

@@ -302,7 +302,8 @@ function buildRequest(name: ToolName, args: Record<string, unknown>) {
   return { route, path, rest }
 }
 
-function queryString(args: Record<string, unknown>): string {
+/** A query string of args, leaving out undefined and null; '' for none. */
+export function queryString(args: Record<string, unknown>): string {
   const q = new URLSearchParams()
   for (const [k, v] of Object.entries(args)) {
     if (v === undefined || v === null) continue
@@ -493,6 +494,54 @@ export async function authMethods(): Promise<AuthMethods> {
     password: true,
     sso: env.VITE_SSO_ENABLED === 'true' ? { label: env.VITE_SSO_LABEL || null, start: SSO_START_PATH } : null,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Assertions, for the agent runtime (runtime.ts)
+// ---------------------------------------------------------------------------
+
+/** Where Core makes an assertion of who is signed in, for a service that hosts agents. */
+export const ASSERTION_PATH = '/v1/auth/assertion'
+
+/**
+ * An assertion Core made of the person signed in here: a bearer credential
+ * for one audience, good for a few minutes. expiresAt is when it ends, in
+ * milliseconds on this browser's clock.
+ */
+export interface CoreAssertion {
+  assertion: string
+  expiresAt: number
+}
+
+/**
+ * Asks Core for an assertion of who is signed in, for the audience given
+ * (the runtime's, as its GET /info names it), with the session cookie or the
+ * pasted token, as every call to Core goes. The body is exactly
+ * {"audience": …}: Core refuses anything more. Nothing is kept here, and the
+ * assertion is in no error: Core's refusals are its own words.
+ *
+ * Core refuses with 404 when it makes no assertions, 400 for an audience it
+ * does not list, 403 for a suspended account or an agent, and 401 when the
+ * session is over; that one is a lapsed session like any other, and the
+ * listeners hear of it. Asking again is harmless, so a gateway error or a
+ * rate limit is retried as a read is.
+ *
+ * expires_at is on Core's clock. Core's Date header says what that clock
+ * read as it answered, so the time is moved onto this browser's clock by the
+ * difference, and a browser whose clock runs ahead does not take every
+ * assertion for one that has already ended.
+ */
+export async function requestAssertion(audience: string): Promise<CoreAssertion> {
+  const raw = await sendWithRetry('POST', ASSERTION_PATH, { body: { audience } })
+  if (raw.status !== 200) throw errorFrom(raw)
+  const b = raw.body
+  const expires = typeof b?.expires_at === 'string' ? Date.parse(b.expires_at) : NaN
+  if (typeof b?.assertion !== 'string' || !b.assertion || !Number.isFinite(expires)) {
+    throw new ApiError({ status: raw.status, code: 'invalid_response', message: 'Core answered without an assertion' })
+  }
+  const coreNow = Date.parse(raw.headers.get('Date') ?? '')
+  const skew = Number.isFinite(coreNow) ? coreNow - Date.now() : 0
+  return { assertion: b.assertion, expiresAt: expires - skew }
 }
 
 export async function health(): Promise<{

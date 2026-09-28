@@ -18,6 +18,24 @@ that still works: over SSH, as files, to the server Core runs on
 ([Over SSH](#over-ssh), and the sections after it). It is retired once the
 stack runs.
 
+## The agent runtime's API
+
+The pages that host a person's agent on the school's runtime call the
+runtime's API, on the same origin, under `/runtime/api/v1`. The stack's Caddy
+sends `/runtime/api/*` to the runtime's API listener with the `Cookie` header
+removed: the runtime takes a bearer assertion, never Core's session. The
+front end asks for one with `POST /v1/auth/assertion`, for the audience the
+runtime names, so Core's `RUNTIME_AUDIENCES` must list the runtime's
+`API_AUDIENCE` (such as `https://lms.example.edu/runtime`).
+
+Nothing in the front end is set for it. It asks the runtime's public
+`GET /runtime/api/v1/info` once per page load, and offers hosting only when
+the answer is the runtime's (its audience, issuer and version). A 404, the
+stack's 502 while the runtime serves no API, `index.html` from a proxy that
+does not route the path, or no answer, hides it. So the same image serves a
+server with a runtime and one without, and the SSH set-up below, whose site
+block has no route for the path, shows no hosting.
+
 ## The image
 
 `ghcr.io/aishie-education/aishie-frontend`, for `linux/amd64` and
