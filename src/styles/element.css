@@ -85,7 +85,7 @@
   --el-border-color-lighter: var(--app-line-soft);
   --el-border-color-extra-light: #f3f0e9;
 
-  --el-fill-color-blank: var(--app-card);
+  --el-fill-color-blank: var(--app-field);
   --el-fill-color-extra-light: #fbfaf7;
   --el-fill-color-lighter: #f8f6f1;
   --el-fill-color-light: #f2eee6;
@@ -192,7 +192,7 @@ html.dark {
   --el-border-color-lighter: var(--app-line-soft);
   --el-border-color-extra-light: #202636;
 
-  --el-fill-color-blank: var(--app-card);
+  --el-fill-color-blank: var(--app-field);
   --el-fill-color-extra-light: #1c2130;
   --el-fill-color-lighter: #1e2333;
   --el-fill-color-light: #212739;
