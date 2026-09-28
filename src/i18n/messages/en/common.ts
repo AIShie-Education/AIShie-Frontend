@@ -1,5 +1,5 @@
 export default {
-  appName: 'AIShiteru',
+  appName: 'AIshie',
   tagline: 'An LMS where people and agents work through the same tools',
   actions: {
     save: 'Save',

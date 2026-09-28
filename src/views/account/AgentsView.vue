@@ -187,7 +187,7 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
   padding: 12px 8px;
   margin: 0 -8px;
   border-bottom: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   cursor: pointer;
 }
 .agents-item:last-child {

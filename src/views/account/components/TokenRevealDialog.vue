@@ -147,7 +147,7 @@ function revoke() {
   margin: 0 0 12px;
   padding: 10px 12px;
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   font-family: var(--app-font-mono);
   font-size: 12px;
   white-space: pre-wrap;

@@ -768,7 +768,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
 }
 .member__scope-block {
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
   min-width: 0;

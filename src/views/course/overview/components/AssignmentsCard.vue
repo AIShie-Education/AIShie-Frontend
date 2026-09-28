@@ -197,7 +197,7 @@ const groups = computed(() => [
   gap: 12px;
   flex-wrap: wrap;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   border: 1px solid var(--el-border-color-lighter);
   color: var(--el-text-color-primary);
   text-decoration: none;

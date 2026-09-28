@@ -49,8 +49,8 @@ describe('page titles', () => {
     expect(titleKey(router.resolve('/admin/actors'))).toBe('admin.actors.title')
     expect(titleKey(router.resolve('/admin/other'))).toBe('admin.courses.title')
     expect(titleKey(router.resolve('/plain'))).toBeUndefined()
-    expect(documentTitle(undefined)).toBe('AIShiteru')
-    expect(documentTitle('x', (k) => `<${k}>`)).toBe('<x> · AIShiteru')
+    expect(documentTitle(undefined)).toBe('AIshie')
+    expect(documentTitle('x', (k) => `<${k}>`)).toBe('<x> · AIshie')
   })
 
   it('names the tab before later guards have answered, and follows the language', async () => {
@@ -67,18 +67,18 @@ describe('page titles', () => {
       return new Promise<void>((r) => (release = r))
     })
     await router.push('/admin/actors')
-    expect(document.title).toBe('People & agents · AIShiteru')
+    expect(document.title).toBe('People & agents · AIshie')
 
     const going = router.push('/slow')
     await waiting
     // Still waiting on the guard, and the tab already says where it is going.
-    expect(document.title).toBe('Sign in · AIShiteru')
+    expect(document.title).toBe('Sign in · AIshie')
     release()
     await going
 
     i18n.global.locale.value = 'zh-Hant'
     await Promise.resolve()
-    expect(document.title).toBe('登入 · AIShiteru')
+    expect(document.title).toBe('登入 · AIshie')
   })
 
   it('names the tab after where the page stayed when a navigation does not happen', async () => {
@@ -89,7 +89,7 @@ describe('page titles', () => {
     await router.push('/')
     await router.push('/plain')
     expect(router.currentRoute.value.name).toBe('home')
-    expect(document.title).toBe('My courses · AIShiteru')
+    expect(document.title).toBe('My courses · AIshie')
   })
 
   it('names the tab after where the page stayed when a navigation fails', async () => {
@@ -100,7 +100,7 @@ describe('page titles', () => {
     await router.push('/')
     await router.push('/broken').catch(() => undefined)
     expect(router.currentRoute.value.name).toBe('home')
-    expect(document.title).toBe('My courses · AIShiteru')
+    expect(document.title).toBe('My courses · AIshie')
 
     // A guard that throws fails the same way.
     router.beforeEach((to) => {
@@ -108,7 +108,7 @@ describe('page titles', () => {
     })
     await router.push('/plain').catch(() => undefined)
     expect(router.currentRoute.value.name).toBe('home')
-    expect(document.title).toBe('My courses · AIShiteru')
+    expect(document.title).toBe('My courses · AIshie')
   })
 
   it('leaves the tab to a newer navigation when an older one fails', async () => {
@@ -134,11 +134,11 @@ describe('page titles', () => {
     broken.fail(new Error('Failed to fetch dynamically imported module'))
     await failing
     // The older navigation failed while the newer one waits: the tab still says where that one goes.
-    expect(document.title).toBe('Sign in · AIShiteru')
+    expect(document.title).toBe('Sign in · AIshie')
     release()
     await going
     expect(router.currentRoute.value.name).toBe('slow')
-    expect(document.title).toBe('Sign in · AIShiteru')
+    expect(document.title).toBe('Sign in · AIshie')
   })
 
   it('names a page that does not exist', async () => {
@@ -147,9 +147,9 @@ describe('page titles', () => {
     installTitle(router)
     await router.push('/no-such-page')
     expect(router.currentRoute.value.name).toBe('not-found')
-    expect(document.title).toBe('Page not found · AIShiteru')
+    expect(document.title).toBe('Page not found · AIshie')
     i18n.global.locale.value = 'zh-Hant'
     await Promise.resolve()
-    expect(document.title).toBe('找不到頁面 · AIShiteru')
+    expect(document.title).toBe('找不到頁面 · AIshie')
   })
 })

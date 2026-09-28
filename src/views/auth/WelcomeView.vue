@@ -13,6 +13,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
+import AppWordmark from '@/components/AppWordmark.vue'
 import { tokenFromHash } from '@/utils/invitation'
 import { passwordProblem } from '@/utils/password'
 
@@ -157,11 +158,9 @@ function proceed() {
     </div>
     <div class="welcome__card">
       <div class="welcome__brand">
-        <img src="/favicon.svg" alt="" width="44" height="44" />
-        <div>
-          <h1 class="welcome__title">{{ t('auth.invite.title') }}</h1>
-          <p class="welcome__tagline">{{ t('common.tagline') }}</p>
-        </div>
+        <AppWordmark class="welcome__wordmark" decorative />
+        <h1 class="welcome__title">{{ t('auth.invite.title') }}</h1>
+        <p class="welcome__tagline">{{ t('common.tagline') }}</p>
       </div>
 
       <el-result v-if="doneEmail" icon="success" :title="t('auth.invite.doneTitle')" class="welcome__result">
@@ -252,8 +251,9 @@ function proceed() {
   justify-content: center;
   padding: 56px 16px 24px;
   background:
-    radial-gradient(1200px 600px at 10% -10%, var(--el-color-primary-light-9), transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, var(--el-color-danger-light-9), transparent 60%), var(--app-page-bg);
+    radial-gradient(1200px 600px at 10% -10%, var(--app-indigo-tint), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, var(--app-light) 16%, transparent), transparent 60%),
+    var(--app-ground);
   position: relative;
 }
 .welcome__lang {
@@ -264,25 +264,30 @@ function proceed() {
 .welcome__card {
   width: 100%;
   max-width: 440px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
+  background: var(--app-card);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius-card);
   padding: 32px 28px 24px;
-  box-shadow: var(--el-box-shadow-light);
+  box-shadow: var(--app-shadow-raised);
 }
 .welcome__brand {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   margin-bottom: 20px;
+}
+.welcome__wordmark {
+  height: 34px;
+  margin-bottom: 18px;
 }
 .welcome__title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 650;
+  font-size: 24px;
+  line-height: 1.3;
 }
 .welcome__tagline {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }

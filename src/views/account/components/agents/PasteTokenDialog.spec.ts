@@ -97,7 +97,7 @@ describe('PasteTokenDialog', () => {
     const w = await open()
     await type(w, 'sk-not-an-agent-token')
     await press(w, '.el-dialog__footer .el-button--primary')
-    expect(w.text()).toContain('That is not an AIShie agent token (it should begin with ais_).')
+    expect(w.text()).toContain('That is not an AIshie agent token (it should begin with ais_).')
     expect(s.calls).toHaveLength(0)
   })
 
@@ -127,14 +127,14 @@ describe('PasteTokenDialog', () => {
   })
 
   it.each([
-    [422, 'failed_precondition', 'token_refused', 'AIShie refused this token: it was revoked or has expired.'],
+    [422, 'failed_precondition', 'token_refused', 'AIshie refused this token: it was revoked or has expired.'],
     [422, 'failed_precondition', 'token_not_agent', 'This token is a person’s, not an agent’s. The runtime only takes an agent’s own token.'],
     [422, 'failed_precondition', 'token_other_agent', 'This token belongs to another agent.'],
-    [403, 'forbidden', 'agent_unowned', 'Nobody owns this agent in AIShie, so it cannot be connected here. Ask an administrator.'],
+    [403, 'forbidden', 'agent_unowned', 'Nobody owns this agent in AIshie, so it cannot be connected here. Ask an administrator.'],
     [403, 'forbidden', 'not_owner', 'This agent belongs to someone else. Only its owner can connect it.'],
-    [422, 'failed_precondition', 'agent_suspended', 'This agent is suspended in AIShie. Reactivate it first.'],
-    [422, 'failed_precondition', 'core_too_old', 'This AIShie server is too old for hosting. Tell your administrator.'],
-    [400, 'invalid_argument', 'token_malformed', 'That is not an AIShie agent token (it should begin with ais_).'],
+    [422, 'failed_precondition', 'agent_suspended', 'This agent is suspended in AIshie. Reactivate it first.'],
+    [422, 'failed_precondition', 'core_too_old', 'This AIshie server is too old for hosting. Tell your administrator.'],
+    [400, 'invalid_argument', 'token_malformed', 'That is not an AIshie agent token (it should begin with ais_).'],
   ] as const)('says why the runtime refused the token: %s', async (status, code, reason, words) => {
     const { token } = newToken()
     s.on('POST', RUNTIME.inspect, () => refusal(status, code, reason))
@@ -153,7 +153,7 @@ describe('PasteTokenDialog', () => {
       const w = await open()
       await type(w, token)
       await w.find('.el-dialog__footer .el-button--primary').trigger('click')
-      await vi.waitFor(() => expect(w.text()).toContain('The runtime could not reach AIShie. Try again in a minute.'), {
+      await vi.waitFor(() => expect(w.text()).toContain('The runtime could not reach AIshie. Try again in a minute.'), {
         timeout: 5000,
       })
       expect(s.to('POST', RUNTIME.inspect)).toHaveLength(3)

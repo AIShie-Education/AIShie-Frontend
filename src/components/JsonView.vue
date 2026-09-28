@@ -20,7 +20,7 @@ const text = computed(() => {
   margin: 0;
   padding: 12px;
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   font-family: var(--app-font-mono);
   font-size: 12px;
   line-height: 1.5;

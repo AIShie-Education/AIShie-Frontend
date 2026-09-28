@@ -68,17 +68,16 @@ function filled(nodes: VNode[] | undefined): boolean {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-control);
   color: var(--el-text-color-regular);
   flex-shrink: 0;
 }
 .page-header__back:hover {
-  background: var(--el-fill-color-light);
+  background: var(--app-ground-2);
 }
 .page-header__title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 24px;
   line-height: 32px;
   display: flex;
   align-items: center;

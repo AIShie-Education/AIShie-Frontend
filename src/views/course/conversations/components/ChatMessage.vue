@@ -94,7 +94,7 @@ const withdrawnText = computed(() => {
   max-width: min(100%, 680px);
   min-width: 0;
   padding: 9px 13px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-item);
   border-top-left-radius: 4px;
   background: var(--el-fill-color-light);
   color: var(--el-text-color-primary);

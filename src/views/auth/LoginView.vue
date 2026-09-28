@@ -7,6 +7,7 @@ import { ApiError, authMethods, health, ssoStartUrl, type SsoMethod } from '@/ap
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
+import AppWordmark from '@/components/AppWordmark.vue'
 import { errorMessage } from '@/composables/useErrors'
 
 const { t } = useI18n()
@@ -156,11 +157,9 @@ function sso() {
     </div>
     <div class="login__card">
       <div class="login__brand">
-        <img src="/favicon.svg" alt="" width="44" height="44" />
-        <div>
-          <h1 class="login__title">{{ t('auth.welcome') }}</h1>
-          <p class="login__tagline">{{ t('common.tagline') }}</p>
-        </div>
+        <AppWordmark class="login__wordmark" decorative />
+        <h1 class="login__title">{{ t('auth.welcome') }}</h1>
+        <p class="login__tagline">{{ t('common.tagline') }}</p>
       </div>
 
       <el-alert v-if="serverDown" type="warning" :title="t('auth.serverDown')" :closable="false" show-icon class="login__alert" />
@@ -245,9 +244,9 @@ function sso() {
   justify-content: center;
   padding: 24px 16px;
   background:
-    radial-gradient(1200px 600px at 10% -10%, var(--el-color-primary-light-9), transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, var(--el-color-danger-light-9), transparent 60%),
-    var(--app-page-bg);
+    radial-gradient(1200px 600px at 10% -10%, var(--app-indigo-tint), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, var(--app-light) 16%, transparent), transparent 60%),
+    var(--app-ground);
   position: relative;
 }
 .login__lang {
@@ -258,25 +257,30 @@ function sso() {
 .login__card {
   width: 100%;
   max-width: 420px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 14px;
+  background: var(--app-card);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius-card);
   padding: 32px 28px 20px;
-  box-shadow: var(--el-box-shadow-light);
+  box-shadow: var(--app-shadow-raised);
 }
 .login__brand {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   margin-bottom: 24px;
+}
+.login__wordmark {
+  height: 34px;
+  margin-bottom: 18px;
 }
 .login__title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 650;
+  font-size: 24px;
+  line-height: 1.3;
 }
 .login__tagline {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }

@@ -62,8 +62,9 @@ const { t } = useI18n()
   margin-bottom: 16px;
 }
 .profile-card__avatar {
-  background: var(--el-color-primary);
-  color: var(--el-color-white);
+  background: var(--app-indigo-tint);
+  color: var(--app-indigo);
+  font-weight: 600;
   font-size: 20px;
   flex-shrink: 0;
 }

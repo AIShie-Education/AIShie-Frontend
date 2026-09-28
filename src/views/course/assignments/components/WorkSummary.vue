@@ -108,7 +108,7 @@ defineExpose({ reload: state.reload })
   flex-direction: column;
   gap: 2px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-light);
 }
 .work-summary__num {

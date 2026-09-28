@@ -8,6 +8,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore, type Theme } from '@/stores/ui'
 import { LOCALES, type Locale } from '@/i18n'
+import AppWordmark from '@/components/AppWordmark.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { titleKey } from '@/router/title'
@@ -77,8 +78,7 @@ const pageTitle = computed(() => {
     >
       <div class="app-aside__inner">
         <router-link :to="{ name: 'home' }" class="app-brand">
-          <img src="/favicon.svg" alt="" class="app-brand__logo" />
-          <span class="app-brand__name">AIShiteru</span>
+          <AppWordmark class="app-brand__logo" />
         </router-link>
 
         <nav class="app-nav">
@@ -201,8 +201,8 @@ const pageTitle = computed(() => {
   min-height: 100vh;
 }
 .app-aside {
-  border-right: 1px solid var(--el-border-color-light);
-  background: var(--app-aside-bg);
+  border-right: 1px solid var(--app-line);
+  background: var(--app-ground);
 }
 .app-aside__inner {
   display: flex;
@@ -216,21 +216,13 @@ const pageTitle = computed(() => {
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
   height: 56px;
-  padding: 0 20px;
-  color: var(--el-text-color-primary);
+  padding: 0 22px;
   text-decoration: none;
   flex-shrink: 0;
 }
 .app-brand__logo {
-  width: 28px;
-  height: 28px;
-}
-.app-brand__name {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
+  height: 26px;
 }
 .app-nav {
   padding: 8px 12px 24px;
@@ -241,9 +233,9 @@ const pageTitle = computed(() => {
 .app-nav__heading {
   font-size: 12px;
   font-weight: 600;
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   padding: 0 10px 6px;
 }
 .app-nav__item {
@@ -251,17 +243,18 @@ const pageTitle = computed(() => {
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-control);
   color: var(--el-text-color-regular);
   text-decoration: none;
   font-size: 14px;
 }
 .app-nav__item:hover {
-  background: var(--el-fill-color-light);
+  background: var(--app-ground-2);
+  color: var(--app-ink);
 }
 .app-nav__item.is-active {
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  background: var(--app-indigo-tint);
+  color: var(--app-indigo);
   font-weight: 500;
 }
 .app-nav__course {
@@ -275,7 +268,7 @@ const pageTitle = computed(() => {
   color: var(--el-text-color-secondary);
 }
 .app-nav__course.is-active .app-nav__code {
-  color: var(--el-color-primary);
+  color: var(--app-indigo);
 }
 .app-nav__title {
   overflow: hidden;
@@ -294,8 +287,8 @@ const pageTitle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--el-border-color-light);
-  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--app-line);
+  background: var(--app-ground);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -343,16 +336,21 @@ const pageTitle = computed(() => {
   cursor: pointer;
   color: var(--el-text-color-primary);
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-control);
   font: inherit;
 }
 .app-user:hover {
-  background: var(--el-fill-color-light);
+  background: var(--app-ground-2);
+}
+/* The header's icon buttons, on the ground: their hover is the ground's second shade. */
+.app-header .el-button.is-text:not(.is-disabled):hover {
+  background-color: var(--app-ground-2);
 }
 .app-user__avatar {
-  background: var(--el-color-primary);
-  color: #fff;
+  background: var(--app-indigo-tint);
+  color: var(--app-indigo);
   font-size: 13px;
+  font-weight: 600;
 }
 .app-user__name {
   max-width: 160px;

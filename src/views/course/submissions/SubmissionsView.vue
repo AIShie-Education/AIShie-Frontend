@@ -326,7 +326,7 @@ function open(row: SubmissionSummary) {
   gap: 6px;
   padding: 10px 12px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   color: inherit;
   text-decoration: none;
 }

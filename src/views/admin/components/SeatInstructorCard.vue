@@ -403,7 +403,7 @@ async function seat() {
   margin-top: 16px;
   padding: 16px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-lighter);
   display: flex;
   flex-direction: column;

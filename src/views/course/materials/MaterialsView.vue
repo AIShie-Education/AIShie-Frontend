@@ -170,7 +170,7 @@ function onProposed(info: { title: string; publish: boolean }) {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   color: inherit;
   text-decoration: none;
   min-width: 0;
@@ -189,7 +189,7 @@ function onProposed(info: { title: string; publish: boolean }) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   background: var(--el-fill-color);
   color: var(--el-text-color-secondary);
   font-size: 12px;

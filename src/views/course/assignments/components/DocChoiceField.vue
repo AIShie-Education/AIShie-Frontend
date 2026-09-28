@@ -160,7 +160,7 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
   gap: 8px;
   padding: 12px;
   border: 1px dashed var(--el-border-color);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
 }
 .doc-choice__select {
   width: 100%;

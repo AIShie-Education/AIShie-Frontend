@@ -165,7 +165,7 @@ const closed = computed(() => c.value?.status === 'closed')
   max-height: 360px;
   overflow: auto;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
 }

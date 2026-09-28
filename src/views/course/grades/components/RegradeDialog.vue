@@ -212,7 +212,7 @@ async function submit() {
   gap: 10px;
   flex-wrap: wrap;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-light);
   margin-bottom: 8px;
 }
@@ -225,7 +225,7 @@ async function submit() {
   margin-bottom: 16px;
   padding: 10px 12px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
 }
 .regrade__score {
   display: flex;

@@ -91,7 +91,7 @@ function outOf(p: ActionSummary): Decimal | null | undefined {
   flex-wrap: wrap;
   padding: 10px 12px;
   border: 1px dashed var(--el-color-warning-light-5);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-color-warning-light-9);
   color: inherit;
   text-decoration: none;

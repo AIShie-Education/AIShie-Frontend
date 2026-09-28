@@ -113,7 +113,7 @@ function linkTo(v: DocumentVersion) {
 }
 .version-item {
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;

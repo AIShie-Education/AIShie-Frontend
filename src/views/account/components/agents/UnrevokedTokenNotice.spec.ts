@@ -49,17 +49,17 @@ async function press(w: VueWrapper, cls: string) {
 
 describe('UnrevokedTokenNotice', () => {
   it.each([
-    ['agent_suspended', 'the agent is suspended in AIShie'],
-    ['core_unavailable', 'it could not reach AIShie'],
-    ['core_refused', 'AIShie refused its request'],
+    ['agent_suspended', 'the agent is suspended in AIshie'],
+    ['core_unavailable', 'it could not reach AIshie'],
+    ['core_refused', 'AIshie refused its request'],
     [null, 'it could not tell whether it did'],
   ] as const)('says the token may still work, and why (%s)', async (problem, why) => {
     const w = await notice({ ...OLD, problem })
     expect(w.find('.unrevoked').text()).toContain('A token of this agent may still work')
     expect(w.find('.unrevoked__body').text()).toBe(
-      `The school’s runtime could not revoke the token ais_oldruntimetk… in AIShie (${why}), so whatever has it may still act as your agent. Revoke it here, as the agent’s owner.`,
+      `The school’s runtime could not revoke the token ais_oldruntimetk… in AIshie (${why}), so whatever has it may still act as your agent. Revoke it here, as the agent’s owner.`,
     )
-    expect(w.find('.unrevoked__revoke').text()).toBe('Revoke it in AIShie')
+    expect(w.find('.unrevoked__revoke').text()).toBe('Revoke it in AIshie')
     // Offered, not done.
     expect(s.calls).toHaveLength(0)
   })
@@ -67,8 +67,8 @@ describe('UnrevokedTokenNotice', () => {
   it('says it in Traditional Chinese too', async () => {
     setLocale('zh-Hant')
     const w = await notice({ ...OLD, problem: 'agent_suspended' })
-    expect(w.find('.unrevoked__body').text()).toContain('學校的執行環境未能在 AIShie 中撤銷權杖 ais_oldruntimetk…（這個代理在 AIShie 中已停用）')
-    expect(w.find('.unrevoked__revoke').text()).toBe('在 AIShie 中撤銷')
+    expect(w.find('.unrevoked__body').text()).toContain('學校的執行環境未能在 AIshie 中撤銷權杖 ais_oldruntimetk…（這個代理在 AIshie 中已停用）')
+    expect(w.find('.unrevoked__revoke').text()).toBe('在 AIshie 中撤銷')
   })
 
   it('revokes it as the owner, the live API token with that prefix in the agent’s list', async () => {

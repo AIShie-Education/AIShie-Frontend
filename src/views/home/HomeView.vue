@@ -158,8 +158,7 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
 }
 .home-unseated__title {
   margin: 0;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 20px;
 }
 .home-unseated__explain {
   margin: 6px 0 16px;
@@ -183,11 +182,11 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
 .course-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 18px;
-  border-radius: 12px;
-  border: 1px solid var(--el-border-color-light);
-  background: var(--el-bg-color);
+  gap: 10px;
+  padding: 22px 24px;
+  border-radius: var(--app-radius-card);
+  border: 1px solid var(--app-line);
+  background: var(--app-card);
   color: inherit;
   text-decoration: none;
   transition:
@@ -196,8 +195,8 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
     transform 0.15s;
 }
 .course-card:hover {
-  border-color: var(--el-color-primary-light-5);
-  box-shadow: var(--el-box-shadow-light);
+  border-color: var(--app-indigo-line);
+  box-shadow: var(--app-shadow-raised);
   transform: translateY(-1px);
 }
 .course-card__top {
@@ -209,7 +208,8 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
 .course-card__code {
   font-size: 13px;
   font-weight: 600;
-  color: var(--el-color-primary);
+  color: var(--app-indigo);
+  letter-spacing: 0.06em;
 }
 .course-card__tags {
   display: flex;
@@ -217,9 +217,11 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
 }
 .course-card__title {
   margin: 0;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.35;
+  font-family: var(--app-font-serif);
+  font-size: 19px;
+  font-weight: var(--app-heading-weight);
+  letter-spacing: var(--app-heading-tracking);
+  line-height: 1.3;
 }
 .course-card__meta {
   display: flex;

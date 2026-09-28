@@ -177,7 +177,7 @@ function finish() {
 }
 .reveal__snippet {
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   padding: 10px 12px;
 }
 .reveal__snippet-label {

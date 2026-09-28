@@ -8,14 +8,14 @@ import { watch } from 'vue'
 import type { RouteLocationNormalized, Router } from 'vue-router'
 import { i18n } from '@/i18n'
 
-export const APP_NAME = 'AIShiteru'
+export const APP_NAME = 'AIshie'
 
 /** The i18n key of a route's title: that of the innermost matched route that has one. */
 export function titleKey(route: Pick<RouteLocationNormalized, 'matched'>): string | undefined {
   return [...route.matched].reverse().find((r) => r.meta.title)?.meta.title
 }
 
-/** What the tab says for a page titled by `key`: "Assignments · AIShiteru", or the app's name alone. */
+/** What the tab says for a page titled by `key`: "Assignments · AIshie", or the app's name alone. */
 export function documentTitle(key: string | undefined, t: (key: string) => string = (k) => i18n.global.t(k)): string {
   return key ? `${t(key)} · ${APP_NAME}` : APP_NAME
 }

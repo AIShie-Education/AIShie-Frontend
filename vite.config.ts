@@ -2,6 +2,20 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
+// The typefaces come from @fontsource (src/styles/fonts.ts), whose style
+// sheets give each piece of a face as woff2 and, for browsers too old to run
+// this app, as woff. Only woff2 is kept, so the build carries no woff files
+// that nothing would fetch; and no piece is inlined into a style sheet, where
+// every reader would download it whether their page uses it or not.
+const fontsourceWoff2Only = {
+  name: 'fontsource-woff2-only',
+  enforce: 'pre' as const,
+  transform(code: string, id: string) {
+    if (!/[\\/]@fontsource[\\/].+\.css$/.test(id)) return
+    return { code: code.replace(/,\s*url\([^)]+\.woff\)\s*format\(['"]woff['"]\)/g, ''), map: null }
+  },
+}
+
 // In development the front end is served from this machine and every API call
 // goes through the dev server's proxy to Core, so that the browser sees one
 // origin: the session cookie is first-party, and Core's cross-origin guard
@@ -40,7 +54,7 @@ export default defineConfig(({ mode }) => {
   const runtime = proxyTo(runtimeTarget, { stripCookie: true })
   const proxy = { '/v1': core, '/healthz': core, '/runtime/api': runtime }
   return {
-    plugins: [vue()],
+    plugins: [vue(), fontsourceWoff2Only],
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },
@@ -56,11 +70,15 @@ export default defineConfig(({ mode }) => {
     build: {
       target: 'es2022',
       chunkSizeWarningLimit: 1500,
+      assetsInlineLimit: (file: string) => (/[\\/]@fontsource[\\/]/.test(file) ? false : undefined),
       rollupOptions: {
         output: {
           manualChunks(id: string) {
             if (id.includes('node_modules/element-plus') || id.includes('node_modules/@element-plus')) return 'element-plus'
             if (/node_modules\/(markdown-it|dompurify|katex|highlight\.js)\//.test(id)) return 'markdown'
+            // A typeface goes where it is imported: Chinese's into the chunk
+            // loaded only for a page in Chinese (src/styles/fonts.ts).
+            if (id.includes('node_modules/@fontsource/')) return undefined
             if (id.includes('node_modules')) return 'vendor'
           },
         },
