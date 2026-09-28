@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -124,4 +124,47 @@ export async function call(
     body: body === undefined ? undefined : JSON.stringify(body),
   })
   return { status: res.status, body: await res.json() }
+}
+
+/**
+ * Registers a person as the platform's root, gives them the run's password
+ * (through an API token of theirs, as they would set it themselves) and
+ * returns them with that token. They sign in by their email or their login
+ * ID, whichever they were given.
+ */
+export async function registerPerson(
+  name: string,
+  signInBy: { email?: string; login_id?: string },
+): Promise<DemoActor & { login_id?: string }> {
+  const reg = await call(root().token, 'POST', '/v1/actors', { kind: 'human', display_name: name, ...signInBy })
+  expect(reg.body.status, JSON.stringify(reg.body)).toBe('executed')
+  const actorId = reg.body.result.actor_id as string
+  const tok = await call(root().token, 'POST', `/v1/actors/${actorId}/tokens`, { label: 'e2e', expires_in_days: 1 })
+  expect(tok.body.status, JSON.stringify(tok.body)).toBe('executed')
+  const token = tok.body.result.token as string
+  const pw = await call(token, 'POST', '/v1/me/password', { password: process.env.E2E_PASSWORD })
+  expect(pw.body.status, JSON.stringify(pw.body)).toBe('executed')
+  return { actor_id: actorId, display_name: name, kind: 'human', token, ...signInBy }
+}
+
+/**
+ * With E2E_SHOTS set to a directory, photographs the page there as
+ * <name>.png; otherwise does nothing. A tooltip or a dialog fades in: the
+ * photograph waits for it to be whole.
+ */
+export async function photograph(page: Page, name: string) {
+  const dir = process.env.E2E_SHOTS
+  if (!dir) return
+  mkdirSync(dir, { recursive: true })
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: resolve(dir, `${name}.png`), fullPage: false })
+}
+
+/** Reads the app in Traditional Chinese from the next page load on. */
+export async function inTraditionalChinese(page: Page) {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('aishiteru.locale', 'zh-Hant')
+    } catch {}
+  })
 }
