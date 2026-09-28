@@ -76,9 +76,17 @@ GitHub has them (`ATTESTATIONS`, [CONTRIBUTING.md](../CONTRIBUTING.md#one-time-s
   no sources, no `node_modules`, no `.env`.
 
 The build is the same for every server: Core on the page's own origin
-(`VITE_API_BASE` and `VITE_CORE_PUBLIC_URL` empty), no single sign-on button
-(`VITE_SSO_ENABLED` unset). A server that needs another setting needs it as
-configuration read when the page loads, which the image does not have yet.
+(`VITE_API_BASE` and `VITE_CORE_PUBLIC_URL` empty). What is not the same is
+asked for when the page loads, not built in:
+
+- **Single sign-on** is Core's to say. The sign-in page asks
+  `GET /v1/auth/methods` as it loads, and shows the single sign-on button once
+  Core answers that it has an identity provider (its `OIDC_ISSUER`), named as
+  Core's `OIDC_DISPLAY_NAME` names it, or *single sign-on* when that is not
+  set. The rest of the page does not wait for the answer. A Core from before
+  that route answers 404, and then the build's own settings are taken, as
+  they are when Core cannot be asked: in the image `VITE_SSO_ENABLED` is
+  unset, so there is no button.
 
 In the stack, the Caddy in front sends Core its routes and this image the
 rest, for instance:

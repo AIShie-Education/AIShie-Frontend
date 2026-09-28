@@ -422,18 +422,77 @@ export async function logout(): Promise<void> {
   if (raw.status !== 204 && raw.status !== 401) throw errorFrom(raw)
 }
 
+/** Where single sign-on starts on Core, when Core does not say. */
+export const SSO_START_PATH = '/v1/auth/sso/start'
+
 /**
  * Where a browser goes to sign in through the identity provider. returnTo is a path on this front end (with its
  * base path). Core sends the browser there from its own callback, and takes a
  * bare path to be a path on Core's origin; so when Core is elsewhere the path
  * is made absolute, on this page's origin, which Core accepts when it is one
- * of its TRUSTED_ORIGINS.
+ * of its TRUSTED_ORIGINS. start is the path on Core that begins it, as
+ * authMethods gives it.
  */
-export function ssoStartUrl(returnTo: string): string {
+export function ssoStartUrl(returnTo: string, start: string = SSO_START_PATH): string {
   let to = returnTo
   const page = pageOrigin()
   if (page && apiOrigin() !== page && to.startsWith('/') && !to.startsWith('//')) to = page + to
-  return `${API_BASE}/v1/auth/sso/start?return_to=${encodeURIComponent(to)}`
+  return `${API_BASE}${start}?return_to=${encodeURIComponent(to)}`
+}
+
+/**
+ * Single sign-on as Core offers it: the name of the identity provider as the
+ * button shows it (Core's OIDC_DISPLAY_NAME), or null for the app's own
+ * words; and the path on Core where signing in starts.
+ */
+export interface SsoMethod {
+  label: string | null
+  start: string
+}
+
+/**
+ * How one signs in to this Core (GET /v1/auth/methods): with a password
+ * (always, so far), and with single sign-on when Core has an identity
+ * provider (its OIDC_ISSUER); sso is null when it has none.
+ */
+export interface AuthMethods {
+  password: boolean
+  sso: SsoMethod | null
+}
+
+/** A path on Core, with no query: nothing that would send the browser to another site. */
+const corePath = /^\/(?![/\\])[^?#]*$/
+
+function authMethodsFrom(b: any): AuthMethods | null {
+  if (!b || typeof b !== 'object' || typeof b.password !== 'boolean' || !('sso' in b)) return null
+  const s = b.sso
+  if (s === null) return { password: b.password, sso: null }
+  if (!s || typeof s !== 'object' || typeof s.start !== 'string' || !corePath.test(s.start)) return null
+  if (s.label !== null && typeof s.label !== 'string') return null
+  return { password: b.password, sso: { label: s.label || null, start: s.start } }
+}
+
+/**
+ * Asks Core how one signs in: public, like login, and asked before anyone
+ * is. A Core from before the route answers 404; that, no answer, or an answer
+ * that is not this (a page, from a proxy that sends /v1 elsewhere) is taken
+ * as the build's own settings, VITE_SSO_ENABLED and VITE_SSO_LABEL, so that
+ * an older Core offers what it did before. It is asked once and never
+ * rejects: a sign-in page shows no error for it.
+ */
+export async function authMethods(): Promise<AuthMethods> {
+  try {
+    const raw = await send('GET', '/v1/auth/methods')
+    const methods = raw.status === 200 ? authMethodsFrom(raw.body) : null
+    if (methods) return methods
+  } catch {
+    /* no answer: the build's settings, below */
+  }
+  const env = import.meta.env
+  return {
+    password: true,
+    sso: env.VITE_SSO_ENABLED === 'true' ? { label: env.VITE_SSO_LABEL || null, start: SSO_START_PATH } : null,
+  }
 }
 
 export async function health(): Promise<{

@@ -4,15 +4,20 @@ import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { i18n, setLocale } from '@/i18n'
-import { ApiError } from '@/api/http'
+import { ApiError, authMethods, ssoStartUrl, type AuthMethods } from '@/api/http'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import LoginView from './LoginView.vue'
 
-vi.mock('@/api/http', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/api/http')>()),
-  health: vi.fn(async () => ({ status: 'ok', version: '1.0.0', commit: 'c', schema_version: 1, schema_latest: 1 })),
-}))
+vi.mock('@/api/http', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/api/http')>()
+  return {
+    ...real,
+    health: vi.fn(async () => ({ status: 'ok', version: '1.0.0', commit: 'c', schema_version: 1, schema_latest: 1 })),
+    authMethods: vi.fn(async (): Promise<AuthMethods> => ({ password: true, sso: null })),
+    ssoStartUrl: vi.fn(real.ssoStartUrl),
+  }
+})
 
 beforeEach(() => {
   vi.stubGlobal('matchMedia', (media: string) => ({
@@ -24,6 +29,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.mocked(authMethods).mockReset().mockResolvedValue({ password: true, sso: null })
+  vi.mocked(ssoStartUrl).mockClear()
   document.body.innerHTML = ''
   setLocale('en')
   vi.unstubAllGlobals()
@@ -95,6 +102,58 @@ describe('the sign-in page', () => {
     await input.setValue('ais_x')
     expect(w.find('#login-token-missing').exists()).toBe(false)
     expect(input.attributes('aria-invalid')).toBeUndefined()
+    w.unmount()
+  })
+})
+
+describe('single sign-on on the sign-in page', () => {
+  const START = '/v1/auth/sso/start'
+  const ssoButton = (w: Awaited<ReturnType<typeof mountAt>>) => {
+    const b = w.find('button.login__sso')
+    return b.exists() ? b : undefined
+  }
+
+  it('offers none when Core has none', async () => {
+    const w = await mountAt('/login', 'en')
+    expect(authMethods).toHaveBeenCalledTimes(1)
+    expect(ssoButton(w)).toBeUndefined()
+    expect(w.find('.el-divider').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('names the provider as Core does, and starts where Core says, coming back to where it was going', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: 'PolyU NetID', start: START } })
+    // The address the browser is sent to: only the fragment changes, which a test page can follow.
+    vi.mocked(ssoStartUrl).mockReturnValueOnce('#sso-started')
+    const w = await mountAt('/login?next=/courses/c1', 'en')
+    const button = ssoButton(w)
+    expect(button?.text()).toBe('Sign in with PolyU NetID')
+    await button!.trigger('click')
+    expect(ssoStartUrl).toHaveBeenCalledWith('/courses/c1', START)
+    expect(window.location.hash).toBe('#sso-started')
+    w.unmount()
+  })
+
+  it("says single sign-on in the page's own words when Core gives no name", async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: null, start: START } })
+    const en = await mountAt('/login', 'en')
+    expect(ssoButton(en)?.text()).toBe('Sign in with single sign-on')
+    en.unmount()
+    const zh = await mountAt('/login', 'zh-Hant')
+    expect(ssoButton(zh)?.text()).toBe('以 單一登入 登入')
+    zh.unmount()
+  })
+
+  it('shows the rest of the page at once, and the button only once Core has said', async () => {
+    let answer!: (m: AuthMethods) => void
+    vi.mocked(authMethods).mockReturnValue(new Promise((resolve) => (answer = resolve)))
+    const w = await mountAt('/login', 'en')
+    expect(w.find('input[name="email"]').exists()).toBe(true)
+    expect(w.find('.login__version').text()).toBe('Server 1.0.0')
+    expect(ssoButton(w)).toBeUndefined()
+    answer({ password: true, sso: { label: 'PolyU NetID', start: START } })
+    await flushPromises()
+    expect(ssoButton(w)?.text()).toBe('Sign in with PolyU NetID')
     w.unmount()
   })
 })

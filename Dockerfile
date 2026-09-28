@@ -13,8 +13,9 @@
 #
 # Nothing configures it: no .env reaches it (.dockerignore) and no VITE_
 # variable is set, so it is CI's build, for any server. Core is on the page's
-# own origin (VITE_API_BASE and VITE_CORE_PUBLIC_URL empty), and there is no
-# single sign-on button (VITE_SSO_ENABLED unset, so false).
+# own origin (VITE_API_BASE and VITE_CORE_PUBLIC_URL empty), and single sign-on
+# is as Core says (GET /v1/auth/methods), or none from a Core too old to say
+# (VITE_SSO_ENABLED unset, so false).
 FROM --platform=$BUILDPLATFORM node:24-slim AS build
 WORKDIR /src
 COPY package.json package-lock.json ./

@@ -95,16 +95,22 @@ in `.github/core-image` ([Moving the Core pin](#moving-the-core-pin)).
 
 ## Configure
 
+Single sign-on is Core's to say. The sign-in page asks Core how one signs in
+(`GET /v1/auth/methods`) as it loads, and shows the single sign-on button once Core says it has an
+identity provider (its `OIDC_ISSUER`), with the provider's name when Core gives one
+(`OIDC_DISPLAY_NAME`) and *single sign-on* when it does not. Nothing here is set for it.
+
 Built into the app at build time (see `.env.example`):
 
 | Variable | Meaning |
 |---|---|
 | `VITE_API_BASE` | Where Core is, when it is not this origin. Leave empty for a same-origin deployment (recommended). |
-| `VITE_SSO_ENABLED` | `true` shows the single sign-on button; Core must have `OIDC_ISSUER` set. |
-| `VITE_SSO_LABEL` | The button's provider name, e.g. `PolyU NetID`. |
+| `VITE_SSO_ENABLED` | Only for a Core without `GET /v1/auth/methods` (it answers 404), or when Core cannot be asked: `true` shows the single sign-on button; Core must have `OIDC_ISSUER` set. |
+| `VITE_SSO_LABEL` | The button's provider name then, e.g. `PolyU NetID`. |
 
-The published image is built with none of them set: Core on the page's own origin, and no single
-sign-on button ([docs/deploying.md](docs/deploying.md#the-image)).
+The published image is built with none of them set: Core on the page's own origin, and single
+sign-on as Core says, or none from a Core too old to say
+([docs/deploying.md](docs/deploying.md#the-image)).
 
 ## Deploy
 
