@@ -1,20 +1,22 @@
 <script setup lang="ts">
-// Shows an agent's new token once, ready to start a runtime with: the token;
-// the agent file the AIShie Agent Runtime reads, which names the secret the
-// token is kept in; and, for any other MCP client, Core's MCP endpoint and
-// the header that carries the token. Core keeps only its hash, and a replay
+// Shows an agent's new token once, ready to connect with: the token; Core's
+// MCP endpoint and the header that carries the token, for another AI tool
+// (Claude, ChatGPT, an agent SDK); and, for someone who runs an AIShie
+// runtime themselves, the agent file it reads, folded away (it names the
+// secret the token is kept in, never the token). Core keeps only its hash,
+// and a replay
 // of the call that made it comes back without it: then all there is to do is
 // say so and offer to revoke it. The same pattern as the account's own
 // TokenRevealDialog.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
-import { CORE_ORIGIN, MCP_ENDPOINT } from '@/api/http'
 import type { AgentToken } from '@/api/types'
 import TimeText from '@/components/TimeText.vue'
 import { maskedToken } from '../credentials'
+import ConnectToolSteps from './ConnectToolSteps.vue'
 import CopyBlock from './CopyBlock.vue'
-import { runtimeAgentFile } from './agents'
+import OwnRuntimeSteps from './OwnRuntimeSteps.vue'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ issued: AgentToken | null; name: string; actorId: string }>()
@@ -29,10 +31,6 @@ watch(
 )
 
 const token = computed(() => props.issued?.token || '')
-// The file holds no token: the runtime refuses one written there.
-const file = computed(() => runtimeAgentFile({ coreUrl: CORE_ORIGIN, name: props.name, actorId: props.actorId }))
-// The header an MCP client sends; a protocol string, not prose.
-const header = computed(() => `Authorization: Bearer ${token.value}`)
 
 async function beforeClose(done: () => void) {
   if (token.value && !copied.value) {
@@ -73,12 +71,10 @@ function revoke() {
     <template v-if="issued && token">
       <el-alert type="warning" :closable="false" show-icon :title="t('agents.reveal.warning')" />
       <CopyBlock :text="token" :label="t('agents.reveal.token')" inline class="reveal__block" @copied="copied = true" />
-      <CopyBlock :text="file.yaml" :label="t('agents.reveal.agentFile')" class="reveal__block" />
-      <p class="app-form-hint reveal__hint">
-        {{ t('agents.reveal.agentFileHint', { file: file.tokenFile, variable: file.tokenVar }) }}
-      </p>
-      <CopyBlock :text="MCP_ENDPOINT" :label="t('agents.reveal.endpoint')" inline class="reveal__block" />
-      <CopyBlock :text="header" :label="t('agents.reveal.header')" class="reveal__block" @copied="copied = true" />
+      <h3 class="reveal__h">{{ t('hosting.choice.tool') }}</h3>
+      <ConnectToolSteps :token="token" @copied="copied = true" />
+      <h3 class="reveal__h">{{ t('hosting.choice.runtime') }}</h3>
+      <OwnRuntimeSteps :name="name" :actor-id="actorId" class="reveal__runtime" />
       <dl class="reveal__meta">
         <dt>{{ t('agents.reveal.listedAs') }}</dt>
         <dd>
@@ -114,8 +110,10 @@ function revoke() {
 .reveal__block {
   margin-top: 16px;
 }
-.reveal__hint {
-  margin: 6px 0 0;
+.reveal__h {
+  margin: 18px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
 }
 .reveal__meta {
   display: grid;

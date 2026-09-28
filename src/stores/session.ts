@@ -12,7 +12,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { acceptInvite, ApiError, bearer, login, logout as apiLogout, read } from '@/api/http'
-import { forgetAssertion } from '@/api/runtime'
+import { forgetRuntimeAssertion } from '@/api/runtime'
 import type { Me, Membership } from '@/api/types'
 import { useCourseStore } from './course'
 
@@ -190,7 +190,7 @@ export const useSessionStore = defineStore('session', () => {
     membershipsLoading = null
     useCourseStore().close()
     forgetStoredLists()
-    forgetAssertion()
+    forgetRuntimeAssertion()
   }
 
   /**

@@ -23,15 +23,15 @@ vi.mock('@/api/http', async (orig) => {
 })
 
 // The assertion the agent runtime is called with, which the store drops.
-const forgetAssertion = vi.fn()
-vi.mock('@/api/runtime', () => ({ forgetAssertion: () => forgetAssertion() }))
+const forgetRuntimeAssertion = vi.fn()
+vi.mock('@/api/runtime', () => ({ forgetRuntimeAssertion: () => forgetRuntimeAssertion() }))
 
 const { useSessionStore } = await import('./session')
 
 beforeEach(() => {
   setActivePinia(createPinia())
   me = null
-  forgetAssertion.mockClear()
+  forgetRuntimeAssertion.mockClear()
 })
 
 describe('signInWithInvite', () => {
@@ -102,11 +102,11 @@ describe('the runtime’s assertion', () => {
     me = { id: 'p1', display_name: 'Chan Tai Man' }
     const session = useSessionStore()
     await session.ensure()
-    expect(forgetAssertion).not.toHaveBeenCalled()
+    expect(forgetRuntimeAssertion).not.toHaveBeenCalled()
 
     // Core says the session is over.
     session.clear()
-    expect(forgetAssertion).toHaveBeenCalledTimes(1)
+    expect(forgetRuntimeAssertion).toHaveBeenCalledTimes(1)
 
     // Someone else signs in here.
     invite = async () => {
@@ -114,7 +114,7 @@ describe('the runtime’s assertion', () => {
       return { actor_id: 'p2', email: 'wong@example.edu', expires_at: '2026-09-26T00:00:00Z' }
     }
     await session.signInWithInvite('aisinv_x', 'a long enough password')
-    expect(forgetAssertion).toHaveBeenCalledTimes(2)
+    expect(forgetRuntimeAssertion).toHaveBeenCalledTimes(2)
   })
 
   it('is kept when an invitation is refused and nobody changed', async () => {
@@ -123,6 +123,6 @@ describe('the runtime’s assertion', () => {
     await session.ensure()
     invite = () => Promise.reject(new ApiError({ status: 401, code: 'unauthenticated', message: 'not valid' }))
     await session.signInWithInvite('aisinv_x', 'a long enough password').catch(() => undefined)
-    expect(forgetAssertion).not.toHaveBeenCalled()
+    expect(forgetRuntimeAssertion).not.toHaveBeenCalled()
   })
 })

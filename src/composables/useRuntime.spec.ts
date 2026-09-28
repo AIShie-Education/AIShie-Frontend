@@ -5,7 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 let useRuntime: typeof import('./useRuntime').useRuntime
 let ApiError: typeof import('@/api/http').ApiError
 
-const INFO_BODY = { audience: 'https://lms.example.edu/runtime', issuer: 'https://lms.example.edu', version: '0.4.0' }
+const INFO_BODY = {
+  api: 'aishie-runtime',
+  api_version: 1,
+  version: '0.4.0',
+  commit: 'e6df9b4',
+  audience: 'https://lms.example.edu/runtime',
+  issuer: 'https://lms.example.edu',
+  features: { connect_by_token: true, own_key: true, school_key: false },
+}
 let answers: Array<() => Response | Promise<Response>> = []
 let asked = 0
 
@@ -75,6 +83,22 @@ describe('useRuntime', () => {
     expect(r.available.value).toBe(true)
     expect(r.error.value).toBeNull()
     expect(asked).toBe(2)
+  })
+
+  it('hides hosting once Core turns out to make no assertions for the runtime', async () => {
+    answers.push(ok)
+    const r = useRuntime()
+    await vi.waitFor(() => expect(r.available.value).toBe(true))
+    vi.stubGlobal('fetch', async (url: string) => {
+      if (url === '/v1/auth/assertion')
+        return new Response(JSON.stringify({ error: { code: 'not_found', message: 'none' } }), { status: 404 })
+      throw new Error(`unexpected ${url}`)
+    })
+    const { runtime } = await import('@/api/runtime')
+    await expect(runtime.list()).rejects.toMatchObject({ reason: 'runtime_absent' })
+    expect(r.available.value).toBe(false)
+    expect(r.checked.value).toBe(true)
+    expect(useRuntime().available.value).toBe(false)
   })
 
   it('lets a later question’s answer stand over an earlier one that comes after it', async () => {

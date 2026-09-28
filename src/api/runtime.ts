@@ -1,5 +1,6 @@
 // The AIShie Agent Runtime's API: what this front end calls to host a
-// person's agents on the school's runtime (M2).
+// person's agents on the school's runtime (M2). The contract is
+// m2.api.spec.md; its objects are in runtime-types.ts.
 //
 // The runtime is on this origin, under /runtime/api/v1. The proxy in front
 // sends that path to it and strips the Cookie header on the way, so Core's
@@ -13,48 +14,67 @@
 // storage, not in a log, not in an error. It is replaced shortly before it
 // ends, and once more when the runtime answers 401, after which the call is
 // sent once again; a second 401 is the answer. It is dropped when the person
-// signed in here goes (forgetAssertion, from the session store).
+// signed in here goes (forgetRuntimeAssertion, from the session store).
 //
 // Whether the runtime is there at all is asked, not built in: the image is
-// the same for every server. GET /info answering 200 with its shape means
-// it is; anything else (404, a gateway's 502, the app's own index.html from
-// a proxy that does not route the path) means it is not, and the hosting
-// UI stays hidden. It is asked once per page load (runtimeStatus, and
-// useRuntime over it).
+// the same for every server. GET /info answering 200, in JSON, as
+// {"api": "aishie-runtime", "api_version": 1, "audience": …} means it is;
+// anything else (404, a gateway's 502, the app's own index.html from a proxy
+// that does not route the path) means it is not, and the hosting UI stays
+// hidden. It is asked once per page load (runtimeStatus, and useRuntime over
+// it). Core refusing to make assertions for the runtime's audience (404, or
+// 400 for an audience it does not list) hides it too.
 //
-// Errors are the app's ApiError. The runtime answers them in Core's
-// envelope, {"error": {"code", "message", "details"}}.
+// Errors are RuntimeError, an ApiError with the runtime's details.reason,
+// from Core's envelope, which the runtime answers in. The runtime reads no
+// Idempotency-Key: each of its writes is safe to send again by a natural key
+// (the same token, the same value), or never sent again (PATCH, key tests),
+// as the contract's §5.14 says; this client retries accordingly.
 //
-// The route and field names the runtime's contract fixes are here, in
-// RUNTIME_API_BASE, RUNTIME_ROUTES, infoFrom and the header names, and
-// nowhere else in the app.
+// The route and field names the contract fixes are here and in
+// runtime-types.ts, and nowhere else in the app.
 
-import { ApiError, newIdempotencyKey, queryString, requestAssertion } from './http'
+import { ApiError, queryString, requestAssertion } from './http'
+import type {
+  AgentPatch,
+  ClientErrorReason,
+  DeleteAnswer,
+  HostedAgent,
+  InspectAnswer,
+  KeyTestAnswer,
+  KeyTestRequest,
+  ModelsAnswer,
+  ReplaceTokenAnswer,
+  RuntimeFeatures,
+  RuntimeInfo,
+  RuntimeMe,
+  TokenRequest,
+} from './runtime-types'
+
+export type { RuntimeInfo } from './runtime-types'
 
 /** Where the runtime's API is: a path on this origin. */
-export const RUNTIME_API_BASE = '/runtime/api/v1'
+export const RUNTIME_BASE = '/runtime/api/v1'
 
 /**
- * The runtime's routes, under RUNTIME_API_BASE; a {name} is a path parameter
+ * The runtime's routes, under RUNTIME_BASE; a {name} is a path parameter
  * (runtimePath fills it in).
  */
 export const RUNTIME_ROUTES = {
   /** Public: what the runtime is, and the audience of the assertions it takes. */
   info: '/info',
+  me: '/me',
+  models: '/models',
+  keyTest: '/keys/test',
+  inspect: '/agents/inspect',
+  agents: '/agents',
+  agent: '/agents/{id}',
+  agentToken: '/agents/{id}/token',
+  agentPause: '/agents/{id}/pause',
+  agentResume: '/agents/{id}/resume',
 } as const
 
-/** What the runtime says of itself, publicly (GET /info). */
-export interface RuntimeInfo {
-  /** The audience Core's assertions for this runtime name, such as https://lms.example.edu/runtime. */
-  audience: string
-  /** The Core whose assertions it trusts: that Core's PUBLIC_URL. */
-  issuer: string
-  /** The runtime's version. */
-  version: string
-}
-
 /** Headers of the contract beyond plain HTTP's. */
-const IDEMPOTENCY_KEY = 'Idempotency-Key'
 const IDEMPOTENCY_REPLAYED = 'Idempotency-Replayed'
 
 /**
@@ -64,18 +84,37 @@ const IDEMPOTENCY_REPLAYED = 'Idempotency-Replayed'
  */
 export const ASSERTION_REFRESH_MS = 30_000
 
-/** The runtime's /info answer, or null when it is not one. */
+/** Whether a response's Content-Type says JSON. */
+function isJsonType(h: Headers): boolean {
+  const ct = (h.get('Content-Type') ?? '').toLowerCase()
+  return /^application\/([a-z0-9.+-]*\+)?json\s*(;|$)/.test(ct)
+}
+
+/** The runtime's /info answer, or null when it is not one (§3.1.1). */
 function infoFrom(b: unknown): RuntimeInfo | null {
   if (!b || typeof b !== 'object' || Array.isArray(b)) return null
-  const { audience, issuer, version } = b as Record<string, unknown>
-  if (typeof audience !== 'string' || !audience) return null
-  if (typeof issuer !== 'string' || !issuer) return null
-  if (typeof version !== 'string') return null
-  return { audience, issuer, version }
+  const o = b as Record<string, unknown>
+  if (o.api !== 'aishie-runtime' || o.api_version !== 1) return null
+  if (typeof o.audience !== 'string' || !o.audience) return null
+  const f = (o.features && typeof o.features === 'object' ? o.features : {}) as Record<string, unknown>
+  const features: RuntimeFeatures = {
+    connect_by_token: f.connect_by_token !== false,
+    own_key: f.own_key !== false,
+    school_key: f.school_key === true,
+  }
+  return {
+    api: 'aishie-runtime',
+    api_version: 1,
+    version: typeof o.version === 'string' ? o.version : '',
+    commit: typeof o.commit === 'string' ? o.commit : '',
+    audience: o.audience,
+    issuer: typeof o.issuer === 'string' ? o.issuer : '',
+    features,
+  }
 }
 
 /**
- * A path under RUNTIME_API_BASE, with the route's {name} parameters filled
+ * A path under RUNTIME_BASE, with the route's {name} parameters filled
  * in, each encoded as one path segment.
  */
 export function runtimePath(route: string, params: Record<string, string | number> = {}): string {
@@ -87,15 +126,45 @@ export function runtimePath(route: string, params: Record<string, string | numbe
 }
 
 // ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+/**
+ * An error from the runtime, or about reaching it: an ApiError whose reason
+ * is the runtime's details.reason (the closed list of the contract's §2.3),
+ * or one of this client's own (ClientErrorReason) for what the runtime did
+ * not word. The pages choose their words by reason.
+ */
+export class RuntimeError extends ApiError {
+  readonly reason: string
+
+  constructor(opts: { status: number; code: string; message: string; reason: string; details?: Record<string, unknown> }) {
+    super(opts)
+    this.name = 'RuntimeError'
+    this.reason = opts.reason
+  }
+}
+
+export function isRuntimeError(e: unknown): e is RuntimeError {
+  return e instanceof RuntimeError
+}
+
+function clientError(reason: ClientErrorReason, status: number, message: string, code = reason): RuntimeError {
+  return new RuntimeError({ status, code, message, reason })
+}
+
+// ---------------------------------------------------------------------------
 // Keeping secrets out of errors
 // ---------------------------------------------------------------------------
 
 /** A JSON Web Token's shape: what Core's assertions are. */
 const JWT = /eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/g
+/** An agent token's shape, secret part and all: never shown, even should an answer repeat one. */
+const AGENT_TOKEN = /\bais(?:inv)?_[a-z2-7]{12}_[A-Za-z0-9_-]+/g
 
-/** s, with any assertion in it (the one held, or anything shaped like one) taken out. */
+/** s, with any assertion or agent token in it (the one held, or anything shaped like one) taken out. */
 function scrub(s: string): string {
-  let out = s.replace(JWT, '[assertion]')
+  let out = s.replace(JWT, '[assertion]').replace(AGENT_TOKEN, '[token]')
   if (held && out.includes(held.token)) out = out.split(held.token).join('[assertion]')
   return out
 }
@@ -143,7 +212,7 @@ async function send(
     text = await res.text()
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') throw e
-    throw new ApiError({ status: 0, code: 'network', message: 'the agent runtime could not be reached' })
+    throw clientError('network', 0, 'the agent runtime could not be reached')
   }
   let parsed: unknown = undefined
   let notJson = false
@@ -157,15 +226,21 @@ async function send(
   return { status: res.status, body: parsed, notJson, headers: res.headers }
 }
 
-function retryAfterMs(h: Headers): number {
+/** Seconds to wait from a Retry-After header, or null. */
+function retryAfterSeconds(h: Headers): number | null {
   const v = Number(h.get('Retry-After'))
-  return Number.isFinite(v) && v > 0 ? Math.min(v, 10) * 1000 : 1000
+  return Number.isFinite(v) && v > 0 ? v : null
+}
+
+function retryAfterMs(h: Headers): number {
+  const v = retryAfterSeconds(h)
+  return v !== null ? Math.min(v, 10) * 1000 : 1000
 }
 
 /**
  * Sends, and when retry is true sends again what met no answer, a rate
- * limit or a gateway error, up to three times: a read, or a write under its
- * idempotency key, which the runtime answers once however often it is sent.
+ * limit or a gateway error, up to three times: a read, or a write the
+ * runtime answers once however often it is sent (§5.14).
  */
 async function sendWithRetry(retry: boolean, ...args: Parameters<typeof send>): Promise<RawResponse> {
   const attempts = retry ? 3 : 1
@@ -190,21 +265,33 @@ async function sendWithRetry(retry: boolean, ...args: Parameters<typeof send>): 
 }
 
 /**
- * The ApiError for an answer that is not a success: the runtime's own code,
- * message and details from Core's envelope, or, for an answer without one
- * (a proxy's), the status alone. A 401 here is the runtime's, not a lapsed
- * session: nobody is told they were signed out.
+ * The RuntimeError for an answer that is not a success: the runtime's own
+ * code, message, reason and details from Core's envelope, or, for an answer
+ * without one (a proxy's), the status alone. A 401 here is the runtime's,
+ * not a lapsed session: nobody is told they were signed out.
  */
-function runtimeError(raw: RawResponse): ApiError {
+function runtimeError(raw: RawResponse): RuntimeError {
   const e = (raw.body as { error?: unknown } | undefined)?.error as
-    { code?: unknown; message?: unknown; details?: unknown } | undefined
+    | { code?: unknown; message?: unknown; details?: unknown }
+    | undefined
+  const enveloped = !!e && typeof e === 'object'
   const code = typeof e?.code === 'string' && e.code ? e.code : raw.status >= 500 ? 'internal' : 'unknown'
   const message = typeof e?.message === 'string' && e.message ? scrub(e.message) : `HTTP ${raw.status}`
-  const details =
+  let details =
     e?.details && typeof e.details === 'object' && !Array.isArray(e.details)
       ? (scrubAll(e.details) as Record<string, unknown>)
       : undefined
-  return new ApiError({ status: raw.status, code, message, details })
+  const wait = retryAfterSeconds(raw.headers)
+  if (raw.status === 429 && wait !== null && details?.retry_after_seconds === undefined) {
+    details = { ...details, retry_after_seconds: wait }
+  }
+  let reason = typeof details?.reason === 'string' && details.reason ? details.reason : ''
+  if (!reason) {
+    if (!enveloped && raw.status >= 500) reason = 'runtime_unavailable'
+    else if (raw.status === 429) reason = 'rate_limited'
+    else reason = code
+  }
+  return new RuntimeError({ status: raw.status, code, message, details, reason })
 }
 
 // ---------------------------------------------------------------------------
@@ -215,25 +302,26 @@ function runtimeError(raw: RawResponse): ApiError {
 export type RuntimeStatus = { available: true; info: RuntimeInfo } | { available: false; error: ApiError }
 
 let probe: Promise<RuntimeStatus> | null = null
+const statusListeners = new Set<(s: RuntimeStatus) => void>()
 
 async function askInfo(): Promise<RuntimeStatus> {
   let raw: RawResponse
   try {
-    raw = await send('GET', RUNTIME_API_BASE + RUNTIME_ROUTES.info, { Accept: 'application/json' }, undefined)
+    raw = await send('GET', RUNTIME_BASE + RUNTIME_ROUTES.info, { Accept: 'application/json' }, undefined)
   } catch (e) {
-    const error = e instanceof ApiError ? e : new ApiError({ status: 0, code: 'network', message: 'no answer' })
+    const error = e instanceof ApiError ? e : clientError('network', 0, 'no answer')
     return { available: false, error }
   }
   if (raw.status !== 200) return { available: false, error: runtimeError(raw) }
-  const info = infoFrom(raw.body)
+  const info = isJsonType(raw.headers) ? infoFrom(raw.body) : null
   if (info) return { available: true, info }
   return {
     available: false,
-    error: new ApiError({
-      status: raw.status,
-      code: 'invalid_response',
-      message: `what answers at ${RUNTIME_API_BASE}${RUNTIME_ROUTES.info} is not the agent runtime`,
-    }),
+    error: clientError(
+      'invalid_response',
+      raw.status,
+      `what answers at ${RUNTIME_BASE}${RUNTIME_ROUTES.info} is not the agent runtime`,
+    ),
   }
 }
 
@@ -247,10 +335,29 @@ export function runtimeStatus(opts: { refresh?: boolean } = {}): Promise<Runtime
   return probe
 }
 
-/** The runtime's info, or the reason there is no runtime to call. */
-async function runtimeInfo(): Promise<RuntimeInfo> {
+/** The runtime's info, or null when there is none to use: hide hosting. Memoized per page load. */
+export async function runtimeInfo(): Promise<RuntimeInfo | null> {
   const s = await runtimeStatus()
-  if (!s.available) throw s.error
+  return s.available ? s.info : null
+}
+
+/** Hears when the runtime is found to be absent after all (Core makes no assertions for it). */
+export function onRuntimeStatus(fn: (s: RuntimeStatus) => void): () => void {
+  statusListeners.add(fn)
+  return () => statusListeners.delete(fn)
+}
+
+/** Takes the runtime to be absent for the rest of the page's life, and says so. */
+function markAbsent(error: ApiError) {
+  const s: RuntimeStatus = { available: false, error }
+  probe = Promise.resolve(s)
+  statusListeners.forEach((fn) => fn(s))
+}
+
+/** The runtime's info, or the reason there is no runtime to call. */
+async function requireInfo(): Promise<RuntimeInfo> {
+  const s = await runtimeStatus()
+  if (!s.available) throw clientError('runtime_absent', s.error.status, s.error.message)
   return s.info
 }
 
@@ -270,9 +377,34 @@ let minting: Promise<Held> | null = null
 /** Moved on when the person goes: an assertion asked for before then is not kept. */
 let generation = 0
 
+/**
+ * Core's refusal to make an assertion, as the contract's §3.1.6 has it: a
+ * 401 is a lapsed session (http.ts has told the app already) and stays
+ * Core's error; 403 is an account Core will not vouch for here (suspended,
+ * or not a person); 404 or 400 means there is no runtime to use after all,
+ * and hosting is hidden.
+ */
+function mintRefusal(e: unknown, audience: string): unknown {
+  if (!(e instanceof ApiError) || e instanceof RuntimeError) return e
+  if (e.status === 403) return new RuntimeError({ status: 403, code: e.code, message: e.message, reason: 'account_refused' })
+  if (e.status === 404 || e.status === 400) {
+    // A deploy mismatch (the runtime's audience is not in Core's list) is worth a line for whoever looks.
+    if (e.status === 400) console.warn(`Core makes no assertions for the agent runtime's audience ${audience}; hosting is hidden.`)
+    const absent = new RuntimeError({ status: e.status, code: e.code, message: e.message, reason: 'runtime_absent' })
+    markAbsent(absent)
+    return absent
+  }
+  return e
+}
+
 async function mint(audience: string): Promise<Held> {
   const g = generation
-  const a = await requestAssertion(audience)
+  let a: Awaited<ReturnType<typeof requestAssertion>>
+  try {
+    a = await requestAssertion(audience)
+  } catch (e) {
+    throw mintRefusal(e, audience)
+  }
   const now = Date.now()
   const life = Math.max(0, a.expiresAt - now)
   const next: Held = {
@@ -290,7 +422,7 @@ async function mint(audience: string): Promise<Held> {
  * otherwise a new one from Core, one request however many calls wait for it.
  */
 async function assertion(stale?: string): Promise<string> {
-  const { audience } = await runtimeInfo()
+  const { audience } = await requireInfo()
   const h = held
   if (h && h.audience === audience && h.token !== stale && Date.now() < h.refreshAt) return h.token
   if (!minting) {
@@ -303,10 +435,19 @@ async function assertion(stale?: string): Promise<string> {
 }
 
 /**
+ * Makes sure an assertion is at hand, fresh or held, without calling the
+ * runtime: for a flow that must not begin (issue a token, say) when the
+ * runtime cannot be called. Rejects as a call would.
+ */
+export async function ensureRuntimeAssertion(): Promise<void> {
+  await assertion()
+}
+
+/**
  * Drops the assertion held for the person signed in here, and any on its
  * way: when they sign out, their session ends, or someone else signs in.
  */
-export function forgetAssertion(): void {
+export function forgetRuntimeAssertion(): void {
   held = null
   minting = null
   generation++
@@ -323,15 +464,14 @@ export interface RuntimeRequestOptions {
   query?: Record<string, unknown>
   /** The JSON body. */
   body?: unknown
-  /**
-   * The call's idempotency key. Every POST carries one, a fresh one when
-   * none is given: keep one per intended action (a form's submission) and
-   * send it again to retry, and the runtime answers as it did the first
-   * time rather than acting twice. Another method sends one only when given.
-   */
-  idempotencyKey?: string
   /** The version the change is made to (If-Match; see ifMatch). */
   ifMatch?: string | number
+  /**
+   * Send it again after no answer, a rate limit or a gateway error. A GET is
+   * retried unless this is false; any other method only when it is true, for
+   * a write the runtime answers once however often it is sent (§5.14).
+   */
+  retry?: boolean
   signal?: AbortSignal
 }
 
@@ -341,19 +481,20 @@ export interface RuntimeResponse<T> {
   data: T
   /** The version of what was answered (its ETag), for a later If-Match. */
   etag: string | null
-  /** The runtime answered a POST from an earlier call under the same key. */
+  /** The runtime answered as it did to the same request before (Idempotency-Replayed). */
   replayed: boolean
 }
 
 /**
- * The If-Match value for a version: an ETag as the runtime gave it (quoted,
- * or weak) as it is, a bare version (7, or "7") quoted, as a strong ETag is.
- * Never "*", which would match whatever version there is.
+ * The If-Match value for a version: the runtime's strong ETag, "<version>",
+ * from the version (7, or "7") or the ETag as the runtime gave it. Never "*",
+ * which would match whatever version there is, and never a weak tag, which
+ * the runtime refuses.
  */
 export function ifMatch(version: string | number): string {
   const v = String(version).trim()
-  if (/^(W\/)?"[\x21\x23-\x7e]*"$/.test(v)) return v
-  if (/^[\x21\x23-\x7e]+$/.test(v) && v !== '*') return `"${v}"`
+  if (/^"[0-9]+"$/.test(v)) return v
+  if (/^[0-9]+$/.test(v)) return `"${v}"`
   throw new Error(`not a version to match: ${JSON.stringify(v)}`)
 }
 
@@ -364,29 +505,26 @@ export function isVersionMismatch(e: unknown): boolean {
 
 /**
  * Calls the runtime as the person signed in here. path is under
- * RUNTIME_API_BASE (runtimePath builds one). Resolves with the answer on a
- * 2xx; rejects with an ApiError otherwise, or when there is no runtime to
- * call, or when Core gives no assertion for it (Core's own error, and a 401
- * from Core is a lapsed session). A read, and a POST under its key, are sent
- * again after a gateway error or a rate limit; any call once more after a
- * 401 from the runtime, with a new assertion.
+ * RUNTIME_BASE (runtimePath builds one). Resolves with the answer on a 2xx;
+ * rejects with a RuntimeError otherwise, or when there is no runtime to
+ * call, or when Core gives no assertion for it (a 401 from Core is a lapsed
+ * session, and stays Core's error). Retried as opts.retry says; any call
+ * once more after a 401 from the runtime, with a new assertion.
  */
 export async function runtimeRequest<T = unknown>(
   method: RuntimeMethod,
   path: string,
   opts: RuntimeRequestOptions = {},
 ): Promise<RuntimeResponse<T>> {
-  const url = RUNTIME_API_BASE + path + queryString(opts.query ?? {})
+  const url = RUNTIME_BASE + path + queryString(opts.query ?? {})
   const headers: Record<string, string> = { Accept: 'application/json' }
   let body: string | undefined
   if (opts.body !== undefined) {
     headers['Content-Type'] = 'application/json'
     body = JSON.stringify(opts.body)
   }
-  const key = opts.idempotencyKey ?? (method === 'POST' ? newIdempotencyKey() : undefined)
-  if (key) headers[IDEMPOTENCY_KEY] = key
   if (opts.ifMatch !== undefined) headers['If-Match'] = ifMatch(opts.ifMatch)
-  const retry = method === 'GET' || !!key
+  const retry = opts.retry ?? method === 'GET'
 
   let token = await assertion()
   let raw = await sendWithRetry(retry, method, url, { ...headers, Authorization: `Bearer ${token}` }, body, opts.signal)
@@ -395,13 +533,7 @@ export async function runtimeRequest<T = unknown>(
     raw = await sendWithRetry(retry, method, url, { ...headers, Authorization: `Bearer ${token}` }, body, opts.signal)
   }
   if (raw.status < 200 || raw.status >= 300) throw runtimeError(raw)
-  if (raw.notJson) {
-    throw new ApiError({
-      status: raw.status,
-      code: 'invalid_response',
-      message: 'the agent runtime did not answer in JSON',
-    })
-  }
+  if (raw.notJson) throw clientError('invalid_response', raw.status, 'the agent runtime did not answer in JSON')
   return {
     status: raw.status,
     data: raw.body as T,
@@ -410,7 +542,7 @@ export async function runtimeRequest<T = unknown>(
   }
 }
 
-/** The calls F2 and F3 make, by method. */
+/** Calls by method, for a route this module does not name in `runtime` below. */
 export const runtimeApi = {
   get<T>(path: string, opts: Omit<RuntimeRequestOptions, 'body'> = {}): Promise<T> {
     return runtimeRequest<T>('GET', path, opts).then((r) => r.data)
@@ -422,19 +554,67 @@ export const runtimeApi = {
   post<T>(path: string, body?: unknown, opts: Omit<RuntimeRequestOptions, 'body'> = {}): Promise<RuntimeResponse<T>> {
     return runtimeRequest<T>('POST', path, { ...opts, body })
   },
-  /** A change to what was read at version (its ETag, or the version it carries); 412 when it has moved on. */
+  /** A change to what was read at version (its ETag, or the version it carries); 412 when it has moved on. Never retried. */
   patch<T>(
     path: string,
     body: unknown,
     version: string | number,
-    opts: Omit<RuntimeRequestOptions, 'body' | 'ifMatch'> = {},
+    opts: Omit<RuntimeRequestOptions, 'body' | 'ifMatch' | 'retry'> = {},
   ): Promise<RuntimeResponse<T>> {
-    return runtimeRequest<T>('PATCH', path, { ...opts, body, ifMatch: version })
+    return runtimeRequest<T>('PATCH', path, { ...opts, body, ifMatch: version, retry: false })
   },
   put<T>(path: string, body: unknown, opts: Omit<RuntimeRequestOptions, 'body'> = {}): Promise<RuntimeResponse<T>> {
     return runtimeRequest<T>('PUT', path, { ...opts, body })
   },
-  delete(path: string, opts: Omit<RuntimeRequestOptions, 'body'> = {}): Promise<void> {
-    return runtimeRequest('DELETE', path, opts).then(() => undefined)
+  delete<T>(path: string, opts: Omit<RuntimeRequestOptions, 'body'> = {}): Promise<RuntimeResponse<T>> {
+    return runtimeRequest<T>('DELETE', path, opts)
   },
+}
+
+const agentPath = (route: string, id: string) => runtimePath(route, { id })
+
+/**
+ * The contract's calls (§9.1), each resolving { data, etag, status,
+ * replayed }. Retried as §5.14 says: reads, inspect, connect, a token
+ * replacement, pause, resume and delete, which the runtime answers once
+ * however often they are sent; never a PATCH (If-Match makes it safe to
+ * repeat by hand) or a key test (it spends a token of the owner's).
+ */
+export const runtime = {
+  me: () => runtimeRequest<RuntimeMe>('GET', RUNTIME_ROUTES.me),
+  models: () => runtimeRequest<ModelsAnswer>('GET', RUNTIME_ROUTES.models),
+  /** Tries an own key with one token; never stored, never retried. */
+  testKey: (req: KeyTestRequest) =>
+    runtimeRequest<KeyTestAnswer>('POST', RUNTIME_ROUTES.keyTest, { body: req, retry: false }),
+  /** What a token is, before connecting it. */
+  inspect: (req: TokenRequest) =>
+    runtimeRequest<InspectAnswer>('POST', RUNTIME_ROUTES.inspect, { body: req, retry: true }),
+  /** Connects an agent by its token: 201, or 200 replayed for the same token. */
+  connect: (req: TokenRequest) => runtimeRequest<HostedAgent>('POST', RUNTIME_ROUTES.agents, { body: req, retry: true }),
+  list: () => runtimeRequest<{ agents: HostedAgent[] }>('GET', RUNTIME_ROUTES.agents),
+  get: (id: string) => runtimeRequest<HostedAgent>('GET', agentPath(RUNTIME_ROUTES.agent, id)),
+  /** Model and own key, at the version read (If-Match); 412 when it has moved on. Never retried. */
+  update: (id: string, version: string | number, patch: AgentPatch) =>
+    runtimeRequest<HostedAgent>('PATCH', agentPath(RUNTIME_ROUTES.agent, id), {
+      body: patch,
+      ifMatch: version,
+      retry: false,
+    }),
+  /** Gives the runtime a new token for the agent; it revokes the one it had. */
+  replaceToken: (id: string, token: string, version?: string | number) =>
+    runtimeRequest<ReplaceTokenAnswer>('PUT', agentPath(RUNTIME_ROUTES.agentToken, id), {
+      body: { token },
+      ifMatch: version,
+      retry: true,
+    }),
+  /** Stops the agent on the runtime; it stays active in Core (this is not Core's Suspend). */
+  pause: (id: string) => runtimeRequest<HostedAgent>('POST', agentPath(RUNTIME_ROUTES.agentPause, id), { retry: true }),
+  resume: (id: string) =>
+    runtimeRequest<HostedAgent>('POST', agentPath(RUNTIME_ROUTES.agentResume, id), { retry: true }),
+  /** Deletes the hosting, and by default revokes the agent's token in Core (D7). */
+  remove: (id: string, revokeToken = true) =>
+    runtimeRequest<DeleteAnswer>('DELETE', agentPath(RUNTIME_ROUTES.agent, id), {
+      query: { revoke_token: revokeToken ? 'true' : 'false' },
+      retry: true,
+    }),
 }
