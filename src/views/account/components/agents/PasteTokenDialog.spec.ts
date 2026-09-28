@@ -44,6 +44,7 @@ function inspection(prefix: string, over: Partial<InspectAnswer> = {}): InspectA
     token: { hint: `ais_${prefix}…`, prefix },
     seats: [seat({ seen_at: new Date().toISOString() })],
     hosted: null,
+    other_tokens: { in_use: false, window_seconds: 900, tokens: [] },
     ...over,
   }
 }
