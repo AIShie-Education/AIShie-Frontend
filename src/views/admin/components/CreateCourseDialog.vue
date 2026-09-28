@@ -1,13 +1,21 @@
 <script setup lang="ts">
-// course.create: one offering of a course in one term, as a draft.
+// course.create: one offering of a course in one term, as a draft, in a
+// department the caller administers (any, for a platform administrator),
+// chosen from the tree.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { Department, Term } from '@/api/types'
+import type { DepartmentNode, Term } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 
 const open = defineModel<boolean>({ required: true })
-const props = defineProps<{ terms: Term[]; departments: Department[]; termId?: string; deptId?: string }>()
+const props = defineProps<{
+  terms: Term[]
+  /** The departments it may be made in, in the tree's order, each indented beneath those above it. */
+  departments: { node: Pick<DepartmentNode, 'id' | 'name'>; indent: number }[]
+  termId?: string
+  deptId?: string
+}>()
 const emit = defineEmits<{ created: [courseId: string] }>()
 const { t } = useI18n()
 
@@ -19,7 +27,8 @@ watch(
   open,
   (v) => {
     if (!v) return
-    form.dept_id = props.deptId || (props.departments.length === 1 ? props.departments[0]!.id : '')
+    const offered = props.deptId && props.departments.some((d) => d.node.id === props.deptId)
+    form.dept_id = offered ? props.deptId! : props.departments.length === 1 ? props.departments[0]!.node.id : ''
     form.term_id = props.termId || props.terms[0]?.id || ''
     form.code = ''
     form.section = ''
@@ -76,7 +85,9 @@ async function submit() {
         </el-form-item>
         <el-form-item :label="t('admin.create.dept')" prop="dept_id" class="create-course__half">
           <el-select v-model="form.dept_id" filterable :placeholder="t('common.actions.select')">
-            <el-option v-for="x in departments" :key="x.id" :value="x.id" :label="x.name" />
+            <el-option v-for="x in departments" :key="x.node.id" :value="x.node.id" :label="x.node.name">
+              <span :style="{ paddingLeft: `${x.indent * 14}px` }">{{ x.node.name }}</span>
+            </el-option>
           </el-select>
         </el-form-item>
       </div>

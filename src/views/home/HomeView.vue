@@ -28,8 +28,9 @@ const courses = computed(() => {
 })
 const hasArchived = computed(() => session.liveMemberships.some((m) => m.course_status === 'archived'))
 
-// An administrator creates courses without joining them, and a platform role
-// opens no course: what anyone sees inside one comes from their seat in it.
+// An administrator creates courses without joining them, and neither a
+// platform role nor a department's appointment opens a course: what anyone
+// sees inside one comes from their seat in it.
 // So the courses an administrator has no seat in are listed apart, each with
 // the way in — seating its instructor, or themselves, on its admin page.
 // Whether a course already has an instructor cannot be known without a seat
@@ -40,7 +41,8 @@ const ADMIN_LIST_LIMIT = 200
 const SHOWN = 12
 const platformCourses = useAsync(
   async (): Promise<{ courses: Course[]; more: boolean; terms: Map<string, string> }> => {
-    if (!session.isAdmin) return { courses: [], more: false, terms: new Map() }
+    // course.list gives a department's administrator only the courses they administer.
+    if (!session.canAdminister) return { courses: [], more: false, terms: new Map() }
     const [out, terms] = await Promise.all([
       read('course.list', { limit: ADMIN_LIST_LIMIT }),
       read('term.list', {}).catch(() => ({ terms: [] })),
@@ -80,11 +82,11 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
       :loading="state.loading.value && !session.memberships.length"
       :error="session.memberships.length ? null : state.error.value"
       :empty="!courses.length && !unseated.length"
-      :empty-text="session.isAdmin ? t('home.noCoursesAdmin') : t('home.noCourses')"
+      :empty-text="session.canAdminister ? t('home.noCoursesAdmin') : t('home.noCourses')"
       @retry="state.reload"
     >
       <template #empty>
-        <router-link v-if="session.isAdmin && !unseated.length" :to="{ name: 'admin-courses' }">
+        <router-link v-if="session.canAdminister && !unseated.length" :to="{ name: 'admin-courses' }">
           <el-button type="primary">{{ t('home.goAdmin') }}</el-button>
         </router-link>
       </template>
@@ -115,9 +117,11 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
       </div>
     </AsyncState>
 
-    <section v-if="session.isAdmin && unseated.length" class="home-unseated" aria-labelledby="home-unseated-title">
+    <section v-if="session.canAdminister && unseated.length" class="home-unseated" aria-labelledby="home-unseated-title">
       <h2 id="home-unseated-title" class="home-unseated__title">{{ t('home.unseated.title') }}</h2>
-      <p class="home-unseated__explain">{{ t('home.unseated.explain') }}</p>
+      <p class="home-unseated__explain">
+        {{ session.isAdmin ? t('home.unseated.explain') : t('deptAdmin.home.explain') }}
+      </p>
       <div class="app-grid">
         <router-link
           v-for="c in unseated"

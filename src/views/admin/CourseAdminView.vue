@@ -1,13 +1,17 @@
 <script setup lang="ts">
-// One course as the platform sees it: its details (course.update), its
-// status (course.activate, course.archive) and its first instructor
+// One course as its administrators see it, from outside: its details
+// (course.update), its status (course.activate, course.archive), its
+// department (course.move) and its first instructor
 // (course.seat_instructor). Read through course.list, since course.get needs
-// a seat in the course and an administrator usually has none.
+// a seat in the course and an administrator usually has none; course.list
+// lists a department's administrator only the courses they administer, so
+// any other is not found here.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
+import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -18,6 +22,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import EditCourseDialog from './components/EditCourseDialog.vue'
+import MoveCourseDialog from './components/MoveCourseDialog.vue'
 import SeatInstructorCard from './components/SeatInstructorCard.vue'
 import { findCourse, useCanonicalId } from './components/adminShared'
 
@@ -35,9 +40,22 @@ const state = useAsync(() => findCourse(id.value, t('admin.course.notFound')), {
 })
 const course = computed(() => (state.data.value?.id === id.value ? state.data.value : undefined))
 const termsState = useAsync(() => read('term.list', {}).then((o) => o.terms ?? []))
-const deptsState = useAsync(() => read('department.list', {}).then((o) => o.departments ?? []))
+const departments = useDepartmentTree()
 const term = computed(() => (termsState.data.value ?? []).find((x) => x.id === course.value?.term_id))
-const dept = computed(() => (deptsState.data.value ?? []).find((x) => x.id === course.value?.dept_id))
+/** Where its department is in the tree, from the top. */
+const deptPath = computed(() => (course.value ? departments.pathLabel(course.value.dept_id) : ''))
+/** Somewhere the caller administers that it could move to. */
+const canMove = computed(() => {
+  if (!course.value) return false
+  const any = (ds: ReturnType<typeof departments.courseDestinations>): boolean =>
+    ds.some((d) => !d.disabled || any(d.children ?? []))
+  return any(departments.courseDestinations(course.value.dept_id))
+})
+const moving = ref(false)
+async function onMoved() {
+  await state.reload()
+  void departments.reload()
+}
 
 const seat = computed(() => session.membershipFor(id.value))
 const archived = computed(() => course.value?.status === 'archived')
@@ -138,17 +156,29 @@ function onSeated(_memberId: string, actorId: string) {
           :type="seat ? 'success' : 'info'"
           :closable="false"
           class="course-admin__alert"
-          :title="seat ? t('admin.course.seatedAs', { role: t(`enums.role.${seat.role}`) }) : t('admin.course.notSeated')"
+          :title="
+            seat
+              ? t('admin.course.seatedAs', { role: t(`enums.role.${seat.role}`) })
+              : session.isAdmin
+                ? t('admin.course.notSeated')
+                : t('deptAdmin.course.notSeated')
+          "
         />
 
         <div class="course-admin__grid">
           <section class="app-card">
             <h2 class="app-card__title">
               <span>{{ t('admin.course.details') }}</span>
-              <el-button size="small" :disabled="archived" @click="editing = true">
-                <el-icon><Edit /></el-icon>
-                <span>{{ t('admin.course.edit') }}</span>
-              </el-button>
+              <span class="course-admin__title-actions">
+                <el-button v-if="canMove" size="small" :disabled="archived" @click="moving = true">
+                  <el-icon><Rank /></el-icon>
+                  <span>{{ t('deptAdmin.course.move') }}</span>
+                </el-button>
+                <el-button size="small" :disabled="archived" @click="editing = true">
+                  <el-icon><Edit /></el-icon>
+                  <span>{{ t('admin.course.edit') }}</span>
+                </el-button>
+              </span>
             </h2>
             <el-descriptions :column="narrow ? 1 : 2" border class="course-admin__desc">
               <el-descriptions-item :label="t('admin.course.code')">
@@ -168,7 +198,7 @@ function onSeated(_memberId: string, actorId: string) {
                 <IdText v-else :id="course.term_id" />
               </el-descriptions-item>
               <el-descriptions-item :label="t('admin.course.dept')">
-                <span v-if="dept">{{ dept.name }}</span>
+                <span v-if="deptPath" class="course-admin__path">{{ deptPath }}</span>
                 <IdText v-else :id="course.dept_id" />
               </el-descriptions-item>
               <el-descriptions-item :label="t('admin.course.status')">
@@ -190,6 +220,7 @@ function onSeated(_memberId: string, actorId: string) {
         </div>
 
         <EditCourseDialog v-model="editing" :course="course" @saved="state.reload" />
+        <MoveCourseDialog v-model="moving" :course="course" @moved="onMoved" />
       </template>
     </AsyncState>
   </div>
@@ -220,6 +251,18 @@ function onSeated(_memberId: string, actorId: string) {
 }
 .course-admin__small {
   font-size: 12px;
+}
+.course-admin__title-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.course-admin__title-actions .el-button + .el-button {
+  margin-left: 0;
+}
+.course-admin__path {
+  word-break: break-word;
 }
 .course-admin__subhead {
   margin: 18px 0 6px;
