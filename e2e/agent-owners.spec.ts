@@ -38,6 +38,8 @@ const shots = process.env.E2E_SHOTS
 async function shot(page: Page, name: string) {
   if (!shots) return
   mkdirSync(shots, { recursive: true })
+  // A tooltip fades in: the photograph waits for it to be whole.
+  await page.waitForTimeout(400)
   await page.screenshot({ path: join(shots, `${name}.png`), fullPage: false })
 }
 
