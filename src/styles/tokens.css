@@ -35,6 +35,7 @@
   /* The light: the warm dot on the i, and what teaching passes on */
   --app-light: #e0934f;
   --app-light-halo: #f0d8c0;
+  --app-wordmark: #22407a;
 
   /* Pills: planned, waiting, done, refused */
   --app-planned-bg: #f3eac8;
@@ -106,6 +107,7 @@ html.dark {
 
   --app-light: #e0934f;
   --app-light-halo: #a8704f;
+  --app-wordmark: #ffffff;
 
   --app-planned-bg: #36311a;
   --app-planned-fg: #e6d48a;

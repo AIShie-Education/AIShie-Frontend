@@ -13,6 +13,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
+import AppWordmark from '@/components/AppWordmark.vue'
 import { tokenFromHash } from '@/utils/invitation'
 import { passwordProblem } from '@/utils/password'
 
@@ -157,11 +158,9 @@ function proceed() {
     </div>
     <div class="welcome__card">
       <div class="welcome__brand">
-        <img src="/favicon.svg" alt="" width="44" height="44" />
-        <div>
-          <h1 class="welcome__title">{{ t('auth.invite.title') }}</h1>
-          <p class="welcome__tagline">{{ t('common.tagline') }}</p>
-        </div>
+        <AppWordmark class="welcome__wordmark" decorative />
+        <h1 class="welcome__title">{{ t('auth.invite.title') }}</h1>
+        <p class="welcome__tagline">{{ t('common.tagline') }}</p>
       </div>
 
       <el-result v-if="doneEmail" icon="success" :title="t('auth.invite.doneTitle')" class="welcome__result">
@@ -273,9 +272,14 @@ function proceed() {
 }
 .welcome__brand {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   margin-bottom: 20px;
+}
+.welcome__wordmark {
+  height: 34px;
+  margin-bottom: 18px;
 }
 .welcome__title {
   margin: 0;
@@ -283,7 +287,7 @@ function proceed() {
   line-height: 1.3;
 }
 .welcome__tagline {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }

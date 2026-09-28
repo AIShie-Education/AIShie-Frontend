@@ -7,6 +7,7 @@ import { ApiError, authMethods, health, ssoStartUrl, type SsoMethod } from '@/ap
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
+import AppWordmark from '@/components/AppWordmark.vue'
 import { errorMessage } from '@/composables/useErrors'
 
 const { t } = useI18n()
@@ -156,11 +157,9 @@ function sso() {
     </div>
     <div class="login__card">
       <div class="login__brand">
-        <img src="/favicon.svg" alt="" width="44" height="44" />
-        <div>
-          <h1 class="login__title">{{ t('auth.welcome') }}</h1>
-          <p class="login__tagline">{{ t('common.tagline') }}</p>
-        </div>
+        <AppWordmark class="login__wordmark" decorative />
+        <h1 class="login__title">{{ t('auth.welcome') }}</h1>
+        <p class="login__tagline">{{ t('common.tagline') }}</p>
       </div>
 
       <el-alert v-if="serverDown" type="warning" :title="t('auth.serverDown')" :closable="false" show-icon class="login__alert" />
@@ -266,9 +265,14 @@ function sso() {
 }
 .login__brand {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   margin-bottom: 24px;
+}
+.login__wordmark {
+  height: 34px;
+  margin-bottom: 18px;
 }
 .login__title {
   margin: 0;
@@ -276,7 +280,7 @@ function sso() {
   line-height: 1.3;
 }
 .login__tagline {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }

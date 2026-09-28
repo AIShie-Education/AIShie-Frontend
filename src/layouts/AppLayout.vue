@@ -8,6 +8,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore, type Theme } from '@/stores/ui'
 import { LOCALES, type Locale } from '@/i18n'
+import AppWordmark from '@/components/AppWordmark.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { titleKey } from '@/router/title'
@@ -77,8 +78,7 @@ const pageTitle = computed(() => {
     >
       <div class="app-aside__inner">
         <router-link :to="{ name: 'home' }" class="app-brand">
-          <img src="/favicon.svg" alt="" class="app-brand__logo" />
-          <span class="app-brand__name">AIShiteru</span>
+          <AppWordmark class="app-brand__logo" />
         </router-link>
 
         <nav class="app-nav">
@@ -216,21 +216,13 @@ const pageTitle = computed(() => {
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
   height: 56px;
-  padding: 0 20px;
-  color: var(--el-text-color-primary);
+  padding: 0 22px;
   text-decoration: none;
   flex-shrink: 0;
 }
 .app-brand__logo {
-  width: 28px;
-  height: 28px;
-}
-.app-brand__name {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
+  height: 26px;
 }
 .app-nav {
   padding: 8px 12px 24px;
