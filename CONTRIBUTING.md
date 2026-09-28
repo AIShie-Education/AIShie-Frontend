@@ -55,7 +55,7 @@ scripts/ci-core.sh stop
 tag. It changes by hand, with the catalogue it brings, in one pull request:
 
 1. Take the new image from Core's CI run (its `publish / image` job) or the
-   package's page: `ghcr.io/aishiteru-lms/aishiteru-core:sha-<commit>`, and its
+   package's page: `ghcr.io/aishie-education/aishie-core:sha-<commit>`, and its
    digest (`docker buildx imagetools inspect <image>`).
 2. Start that Core: `CORE_IMAGE=<image>:sha-<commit>@sha256:<digest>` for
    `scripts/ci-core.sh start`, or `CORE_BIN` with a binary built from that
@@ -102,7 +102,7 @@ back, run it from the newest release's tag with the older tag as the ref, or
 Before the first push to `main` after the CI/CD workflows land, in GitHub:
 
 - **Core's image** (organization Settings → Packages, or the package's own
-  page, github.com/orgs/AIShiteru-LMS/packages/container/aishiteru-core/settings):
+  page, github.com/orgs/AIShie-Education/packages/container/aishie-core/settings):
   Manage Actions access → Add Repository → `AIShiteru-Frontend`, role Read.
   The image is private, and without this the end-to-end job cannot pull it and
   says so. An owner of the organization, or an admin of the package, does it

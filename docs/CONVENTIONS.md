@@ -1,8 +1,8 @@
 # Front-end conventions
 
 How this app is put together, and the rules every view follows. Read
-[AIShiteru Core's concepts](https://github.com/AIShiteru-LMS/AIShiteru-Core/blob/main/docs/aishiteru-core-concepts.md)
-and [schema](https://github.com/AIShiteru-LMS/AIShiteru-Core/blob/main/docs/schema.md) first: this app is
+[AIShiteru Core's concepts](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/aishiteru-core-concepts.md)
+and [schema](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/schema.md) first: this app is
 one client of Core's tool layer, the same one agents call over MCP, and it has no logic of its own
 about who may do what.
 
