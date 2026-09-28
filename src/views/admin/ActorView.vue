@@ -7,8 +7,8 @@
 // control is off: not to yourself (though your own name and email are yours
 // to correct), only root to a holder of a platform role, and nobody to the
 // system actor. An agent may have an owner, a person whose delegate alone it
-// is (shown, and set or cleared with actor.set_owner); a person's page lists
-// the agents they own. A suspension says who made it: one an agent's owner
+// is, given when it was registered and never changed afterwards (shown, with
+// that said); a person's page lists the agents they own. A suspension says who made it: one an agent's owner
 // made they may lift themselves, and suspending it here as well makes it the
 // administrator's.
 import { computed, ref, useTemplateRef } from 'vue'
@@ -32,7 +32,6 @@ import EditActorDialog from './components/EditActorDialog.vue'
 import InviteCard from './components/InviteCard.vue'
 import IssueTokenCard from './components/IssueTokenCard.vue'
 import LinkSsoCard from './components/LinkSsoCard.vue'
-import SetOwnerDialog from './components/SetOwnerDialog.vue'
 import SignInTags from './components/SignInTags.vue'
 import { useCanonicalId } from './components/adminShared'
 import { hasActorList, listActors } from './components/actorSearch'
@@ -87,13 +86,6 @@ const owned = useAsync(
 )
 const ownedAgents = computed(() => owned.data.value?.actors ?? [])
 
-const settingOwner = ref(false)
-function onOwnerSet() {
-  void state.reload()
-  // Every token and session it had is revoked.
-  reloadCredentials()
-}
-
 const isSelf = computed(() => !!actor.value && actor.value.id === session.me?.id)
 const isSystem = computed(() => actor.value?.kind === 'system')
 const roleBlocked = computed(() => !!actor.value?.platform_role && !session.isRoot)
@@ -103,12 +95,6 @@ const standingBlocker = computed<string | null>(() => {
   if (isSystem.value) return t('admin.actor.cannot.system')
   if (isSelf.value) return t('admin.actor.cannot.self')
   if (roleBlocked.value) return t('admin.actor.cannot.role')
-  return null
-})
-/** Why the owner cannot be set: as for its standing, and an agent with a platform role is owned by nobody. */
-const ownerBlocker = computed<string | null>(() => {
-  if (standingBlocker.value) return standingBlocker.value
-  if (actor.value?.platform_role && !actor.value.owner_actor_id) return t('admin.actor.cannot.ownerRole')
   return null
 })
 /** Why credentials cannot be given or taken away; one's own account is fine. */
@@ -332,13 +318,9 @@ async function reactivate() {
                   <IdText v-else :id="actor.owner_actor_id" />
                 </router-link>
                 <span v-else class="app-muted">{{ t('admin.actor.noOwner') }}</span>
-                <el-tooltip :disabled="!ownerBlocker" :content="ownerBlocker ?? ''" placement="top">
-                  <span>
-                    <el-button link type="primary" size="small" :disabled="!!ownerBlocker" @click="settingOwner = true">
-                      {{ actor.owner_actor_id ? t('admin.actor.changeOwner') : t('admin.actor.setOwner') }}
-                    </el-button>
-                  </span>
-                </el-tooltip>
+              </div>
+              <div class="app-form-hint actor__owner-fixed">
+                {{ actor.owner_actor_id ? t('admin.actor.ownerFixed') : t('admin.actor.noOwnerFixed') }}
               </div>
             </el-descriptions-item>
             <el-descriptions-item
@@ -419,7 +401,6 @@ async function reactivate() {
         </div>
 
         <EditActorDialog v-model="editing" :actor="actor" @saved="onSaved" />
-        <SetOwnerDialog v-if="actor.kind === 'agent'" v-model="settingOwner" :actor="actor" @saved="onOwnerSet" />
       </template>
     </AsyncState>
   </div>
@@ -447,6 +428,9 @@ async function reactivate() {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+.actor__owner-fixed {
+  margin-top: 2px;
 }
 .actor__owned {
   display: flex;

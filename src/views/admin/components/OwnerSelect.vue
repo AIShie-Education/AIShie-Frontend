@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// Choosing the person who is to own an agent: active people found by a piece
-// of their name or email (actor.list, kind human), or by a pasted actor ID
-// (actor.get). Someone who cannot own an agent (ownerBlocker) is listed but
+// Choosing the person who is to own an agent being registered, for good:
+// active people found by a piece of their name or email (actor.list, kind
+// human), or by a pasted actor ID (actor.get). Someone who cannot own an agent (ownerBlocker) is listed but
 // cannot be chosen, with the reason. On a Core without the directory only a
 // pasted ID works.
 import { computed, onMounted, ref, shallowRef } from 'vue'
@@ -16,7 +16,7 @@ import { hasActorList, lacksActorList, listActors, probeActorList } from './acto
 import { ownerBlocker, type OwnerBlock } from './owner'
 
 const model = defineModel<string>({ default: '' })
-const props = defineProps<{ disabled?: boolean; exclude?: string | null }>()
+defineProps<{ disabled?: boolean }>()
 const emit = defineEmits<{ picked: [actor: Actor | null] }>()
 const { t } = useI18n()
 const session = useSessionStore()
@@ -31,7 +31,7 @@ onMounted(() => void probeActorList())
 // The one chosen stays among the options whatever is searched next, so that
 // the box keeps showing their name.
 const options = computed(() => {
-  const list = found.value.filter((a) => a.id !== props.exclude)
+  const list = found.value
   const s = selected.value
   return s && !list.some((a) => a.id === s.id) ? [s, ...list] : list
 })

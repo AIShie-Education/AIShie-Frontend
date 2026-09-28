@@ -1,7 +1,7 @@
 {
   "tools": [
     {
-      "description": "Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor a decision someone else proposed about it, nor approves closing an escalation they raised or approved.",
+      "description": "Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor their owner's, nor another agent's of their owner, nor a decision someone else proposed about any of those, nor approves closing an escalation they raised or approved. An agent's owner decides its proposal only where they could do the same themselves without anyone's confirmation: their own level for it autonomous, and its target within their reach; by_owner then says so. That needs no action_decide of their own, and is done at once, as their own doing of it: a student confirms her own agent's drafts of her work.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -44,6 +44,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "by_owner": {
+            "description": "true when you decided as the owner of the agent that proposed it",
+            "type": "boolean"
+          },
           "error": {
             "additionalProperties": false,
             "properties": {
@@ -81,7 +85,7 @@
       "path": "/v1/courses/{course_id}/actions/{action_id}/decide"
     },
     {
-      "description": "One action in full: what was asked, how it was authorized, what became of it, who decided or reviewed it.",
+      "description": "One action in full: what was asked, how it was authorized, what became of it, who decided or reviewed it. An agent's owner reads any action of their own agent's, whatever they hold.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -182,7 +186,7 @@
             "type": "string"
           },
           "yours_to_decide": {
-            "description": "in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove",
+            "description": "in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove",
             "type": [
               "null",
               "boolean"
@@ -327,7 +331,7 @@
                   "type": "string"
                 },
                 "yours_to_decide": {
-                  "description": "in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove",
+                  "description": "in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove",
                   "type": [
                     "null",
                     "boolean"
@@ -368,7 +372,7 @@
       "path": "/v1/courses/{course_id}/actions/mine"
     },
     {
-      "description": "The review queue: actions that executed pending review and have not been reviewed, or were escalated. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else reviews.",
+      "description": "The review queue: actions that executed pending review and have not been reviewed, or were escalated. yours_to_decide is false on those of your own party, which someone else reviews — yours, your owner's, your owner's other agents', and your own agents' unless you could do the same yourself without anyone's confirmation. If you hold no action_decide here but own an agent seated here, it lists your own agents' actions alone.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -480,7 +484,7 @@
                   "type": "string"
                 },
                 "yours_to_decide": {
-                  "description": "in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove",
+                  "description": "in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove",
                   "type": [
                     "null",
                     "boolean"
@@ -521,7 +525,7 @@
       "path": "/v1/courses/{course_id}/actions/pending-review"
     },
     {
-      "description": "The approval queue: proposals in this course waiting for a decision, oldest first. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else decides.",
+      "description": "The approval queue: proposals in this course waiting for a decision, oldest first. yours_to_decide is false on those of your own party, which someone else decides — yours, your owner's, your owner's other agents', and your own agents' unless you could do the same yourself without anyone's confirmation. If you hold no action_decide here but own an agent seated here, it lists your own agents' proposals alone.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -633,7 +637,7 @@
                   "type": "string"
                 },
                 "yours_to_decide": {
-                  "description": "in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove",
+                  "description": "in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove",
                   "type": [
                     "null",
                     "boolean"
@@ -674,7 +678,7 @@
       "path": "/v1/courses/{course_id}/actions/proposed"
     },
     {
-      "description": "Record that an action which executed pending review has been looked at: reviewed, or escalated for someone else to look at. Reviewing undoes nothing; putting something right is a separate action.",
+      "description": "Record that an action which executed pending review has been looked at: reviewed, or escalated for someone else to look at. Reviewing undoes nothing; putting something right is a separate action. Nobody reviews their own action, their owner's or another agent's of their owner; an agent's owner reviews what it did only where they could do the same themselves without anyone's confirmation, and then needs no action_decide of their own.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -716,6 +720,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "by_owner": {
+            "description": "true when you reviewed it as the owner of the agent that did it",
+            "type": "boolean"
+          },
           "review_state": {
             "type": "string"
           }
@@ -729,12 +737,12 @@
       "path": "/v1/courses/{course_id}/actions/{action_id}/review"
     },
     {
-      "description": "Take back a proposal of yours that is still waiting for a decision. It is cancelled, and nothing of it is carried out. A proposal already decided, or someone else's, cannot be withdrawn.",
+      "description": "Take back a proposal of yours, or of an agent you own, that is still waiting for a decision. It is cancelled, and nothing of it is carried out. A proposal already decided, or anyone else's, cannot be withdrawn.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
           "action_id": {
-            "description": "your proposal that is still waiting for a decision",
+            "description": "your proposal, or one of an agent you own, that is still waiting for a decision",
             "format": "uuid",
             "type": "string"
           },
@@ -1460,7 +1468,7 @@
       "path": "/v1/actors/{actor_id}/reactivate"
     },
     {
-      "description": "Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat.",
+      "description": "Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1479,7 +1487,7 @@
             "type": "string"
           },
           "owner_actor_id": {
-            "description": "for an agent only: the active person who owns it, and whose delegate alone it will be",
+            "description": "for an agent only: the active person who owns it, and whose delegate alone it will be, for good",
             "format": "uuid",
             "type": [
               "null",
@@ -1554,47 +1562,6 @@
         "type": "object"
       },
       "path": "/v1/actors/{actor_id}/credentials/{credential_id}/revoke"
-    },
-    {
-      "description": "Give an agent an owner, change it, or take it away (owner_actor_id null). An agent someone owns acts only as their delegate. Refused while the agent is seated in a course that is not archived: take it out first (agent.withdraw by its owner, or member.remove), and for an agent that holds a platform role, which an agent someone owns does not. Every credential the agent has — tokens, sessions, password, invitation, linked identity — is revoked, since whoever owned it before may hold them, and the old owner's requests to seat it that wait for a decision are cancelled; issue it a new token. Everything the agent remembers is deleted: what it kept about its old owner, and about the people it answered for them. A seat it keeps in an archived course counts for nothing from then on.",
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "actor_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "owner_actor_id": {
-            "description": "the person who is to own the agent; null for nobody",
-            "format": "uuid",
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "actor_id",
-          "owner_actor_id"
-        ],
-        "type": "object"
-      },
-      "kind": "write",
-      "method": "POST",
-      "name": "actor.set_owner",
-      "output_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "ok"
-        ],
-        "type": "object"
-      },
-      "path": "/v1/actors/{actor_id}/owner"
     },
     {
       "description": "Suspend an actor everywhere at once: every call it makes from now on is denied, in every course, and it cannot sign in. Its memberships, history and credentials are kept. An agent its owner has suspended may be suspended here as well: the suspension is then yours, and its owner can no longer lift it.",
@@ -1753,7 +1720,7 @@
       "path": "/v1/actors/{actor_id}"
     },
     {
-      "description": "Register an agent of your own. It runs elsewhere, on whatever you connect to it with a token (agent.issue_token); no endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. A person may have a limited number of agents that are not suspended.",
+      "description": "Register an agent of your own. It runs elsewhere, on whatever you connect to it with a token (agent.issue_token); no endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. It is yours for good: nobody gives it another owner. A person may have a limited number of agents that are not suspended.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7524,7 +7491,7 @@
             "type": "string"
           },
           "owner_actor_id": {
-            "description": "for an agent a person owns, that person's actor id; absent for a person, and for an agent nobody owns",
+            "description": "for an agent a person owns, that person's actor id, the same for as long as the agent exists; absent for a person, and for an agent nobody owns",
             "format": "uuid",
             "type": [
               "null",
@@ -7552,7 +7519,7 @@
       "path": "/v1/me"
     },
     {
-      "description": "The courses the caller is seated in, with the member id for each and what the caller may do there. An agent starting cold begins here: every other tool takes a course_id.",
+      "description": "The courses the caller is seated in, with the member id for each and what the caller may do there, and the most each seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous). An agent starting cold begins here: every other tool takes a course_id.",
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -7594,6 +7561,20 @@
                   "description": "the stable handle for this actor in this course; agents key their own memory on it",
                   "format": "uuid",
                   "type": "string"
+                },
+                "perm_ceiling_reasons": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives",
+                  "type": "object"
+                },
+                "perm_ceilings": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves",
+                  "type": "object"
                 },
                 "perms": {
                   "additionalProperties": {
@@ -7638,7 +7619,8 @@
                 "student_scope",
                 "assignment_scope",
                 "perms",
-                "answers_course"
+                "answers_course",
+                "perm_ceilings"
               ],
               "type": "object"
             },
@@ -7689,7 +7671,7 @@
       "path": "/v1/me/site-chat"
     },
     {
-      "description": "Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own. An agent someone owns is not seated here: its owner brings it in as their delegate, with member.add_delegate.",
+      "description": "Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own. An agent decides and reviews only by proposal: its action_decide is confirm_required at most, a preset's cut down to it and a level named above it refused (agent_decides_by_proposal). An agent someone owns is not seated here: its owner brings it in as their delegate, with member.add_delegate.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7798,7 +7780,7 @@
       "path": "/v1/courses/{course_id}/members"
     },
     {
-      "description": "Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, whatever your agent may do beyond what the delegate preset gives — your own writes, such as drafting your submission — it does only by proposal (confirm_required at most), whoever grants it. It holds member_manage or member_invite only when you name them in perms, whatever the preset carries; then it manages the course's members, or hands out its join links, for you, and never acts on your own seat nor on your other agents' (not_your_principal).",
+      "description": "Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, whatever your agent may do beyond what the delegate preset gives — your own writes, such as drafting your submission — it does only by proposal (confirm_required at most), whoever grants it. It decides and reviews only by proposal, as any agent does: action_decide at confirm_required at most. A level named above what it may hold is refused, saying why (reason, as perm_ceiling_reasons in member.delegate_defaults gives it); a preset's is cut down. It holds member_manage or member_invite only when you name them in perms, whatever the preset carries; then it manages the course's members, or hands out its join links, for you, and never acts on your own seat nor on your other agents' (not_your_principal).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7923,7 +7905,7 @@
       "path": "/v1/courses/{course_id}/delegates"
     },
     {
-      "description": "What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first, and whether it would answer the course or you alone.",
+      "description": "What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first, and whether it would answer the course or you alone; and the most it may be given of each permission if you name one (perm_ceilings, with perm_ceiling_reasons where below autonomous).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7989,6 +7971,20 @@
               "array"
             ]
           },
+          "perm_ceiling_reasons": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives",
+            "type": "object"
+          },
+          "perm_ceilings": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves",
+            "type": "object"
+          },
           "perms": {
             "additionalProperties": {
               "type": "string"
@@ -8019,14 +8015,15 @@
           "assignment_scope",
           "listed_assignments",
           "answers_course",
-          "level"
+          "level",
+          "perm_ceilings"
         ],
         "type": "object"
       },
       "path": "/v1/courses/{course_id}/delegates/defaults"
     },
     {
-      "description": "One member in full, including exactly which students and assignments a 'listed' scope lists.",
+      "description": "One member in full, including exactly which students and assignments a 'listed' scope lists, and the most the seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8125,6 +8122,20 @@
               "string"
             ]
           },
+          "perm_ceiling_reasons": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives",
+            "type": "object"
+          },
+          "perm_ceilings": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves",
+            "type": "object"
+          },
           "perms": {
             "additionalProperties": {
               "type": "string"
@@ -8176,14 +8187,15 @@
           "assignment_scope",
           "perms",
           "created_at",
-          "answers_course"
+          "answers_course",
+          "perm_ceilings"
         ],
         "type": "object"
       },
       "path": "/v1/courses/{course_id}/members/{member_id}"
     },
     {
-      "description": "The members of a course — people and agents alike — with their roster role, status, permissions and scope.",
+      "description": "The members of a course — people and agents alike — with their roster role, status, permissions and scope, and for each seat the most it may be given of each permission (perm_ceilings), and why where that is below autonomous (perm_ceiling_reasons): offer nothing above it.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8311,6 +8323,20 @@
                     "string"
                   ]
                 },
+                "perm_ceiling_reasons": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives",
+                  "type": "object"
+                },
+                "perm_ceilings": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves",
+                  "type": "object"
+                },
                 "perms": {
                   "additionalProperties": {
                     "type": "string"
@@ -8362,7 +8388,8 @@
                 "assignment_scope",
                 "perms",
                 "created_at",
-                "answers_course"
+                "answers_course",
+                "perm_ceilings"
               ],
               "type": "object"
             },
@@ -8668,7 +8695,7 @@
       "path": "/v1/courses/{course_id}/members/{member_id}/resume"
     },
     {
-      "description": "Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself. Lowering is always allowed.",
+      "description": "Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself, and within what the seat may hold at all (perm_ceilings in member.get; above it the refusal gives the same reason code). Lowering is always allowed.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8714,7 +8741,7 @@
       "path": "/v1/courses/{course_id}/members/{member_id}/perms"
     },
     {
-      "description": "Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. A delegate's call is refused whole (not_your_principal) when the role takes in its principal's seat or another agent of its principal's.",
+      "description": "Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope, and within what the seat may hold at all (perm_ceilings): an agent's action_decide goes no higher than confirm_required. If any one seat cannot be changed, none is, and the refusal names it (member_id) and says why (reason). It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. A delegate's call is refused whole (not_your_principal) when the role takes in its principal's seat or another agent of its principal's.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {

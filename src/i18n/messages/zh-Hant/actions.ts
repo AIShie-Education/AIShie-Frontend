@@ -373,7 +373,7 @@ export default {
     withdrawn: '提出者已撤回。',
   },
   cancelWhy: {
-    owner_changed: '該代理已改由他人擁有或已沒有擁有者，因此讓它入席的申請已失效。',
+    owner_changed: '申請等待期間，該代理的擁有者曾被更改（當時仍可更改，現已固定），因此讓它入席的申請已失效。',
   },
   denyReason: {
     actor_not_active: '此人員或代理已被停用。',

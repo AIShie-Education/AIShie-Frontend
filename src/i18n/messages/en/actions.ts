@@ -377,7 +377,8 @@ export default {
     withdrawn: 'Whoever proposed it took it back.',
   },
   cancelWhy: {
-    owner_changed: 'The agent was given another owner, or none, so the request to seat it lapsed.',
+    owner_changed:
+      'The agent’s owner was changed while this waited, as could still happen then (an agent’s owner is fixed now), so the request to seat it lapsed.',
   },
   denyReason: {
     actor_not_active: 'The actor is suspended.',

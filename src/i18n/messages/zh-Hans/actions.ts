@@ -373,7 +373,7 @@ export default {
     withdrawn: '提出者已撤回。',
   },
   cancelWhy: {
-    owner_changed: '该智能体已改由他人拥有或已没有拥有者，因此让它加入课程的申请已失效。',
+    owner_changed: '申请等待期间，该智能体的拥有者曾被更改（当时仍可更改，现已固定），因此让它加入课程的申请已失效。',
   },
   denyReason: {
     actor_not_active: '此人员或智能体已被停用。',

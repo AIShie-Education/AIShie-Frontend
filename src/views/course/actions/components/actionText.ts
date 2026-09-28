@@ -92,7 +92,8 @@ export function reasonText(e: StoredError | null | undefined): string | null {
     const k2 = `actions.denyReason.${reason}`
     parts.push(te(k1) ? t(k1) : te(k2) ? t(k2) : reason)
   }
-  // A cancellation may say more of why (an agent's owner changed, say).
+  // A cancellation may say more of why: on a record from before owners were
+  // fixed, that the agent's owner changed while its request waited.
   const why = str(e.details.why)
   if (why) {
     const k = `actions.cancelWhy.${why}`

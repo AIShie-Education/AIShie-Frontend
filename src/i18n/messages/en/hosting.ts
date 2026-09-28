@@ -233,7 +233,7 @@ export default {
     actor_in_use: 'Another agent here already uses this agent’s identity.',
     token_other_agent: 'Its token belongs to another agent. Connect it again.',
     token_not_agent: 'Its token is a person’s, not the agent’s. Connect it again.',
-    owner_changed: 'This agent now belongs to someone else in AIshie, so the runtime stopped it. Delete it here.',
+    owner_changed: 'AIshie does not count this agent as yours, so the runtime stopped it. Delete it here.',
     core_too_old: 'This AIshie server cannot say who owns an agent. Tell your administrator.',
     agent_suspended: 'The agent is suspended in AIshie. Reactivate it and it starts again by itself.',
     failing: 'It could not start and will try again shortly: {detail}.',

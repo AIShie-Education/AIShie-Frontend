@@ -26,7 +26,8 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   became of their own actions under *My actions*.
 - **Administration** (root and admins) — terms, departments, permission presets, courses and their
   first instructor; a directory of everyone registered, searchable by name, email or ID, with how
-  each signs in; registering people and agents and correcting their name and email; invitation
+  each signs in; registering people and agents, an agent with the person who owns it, which is
+  fixed then and never changed, and correcting their name and email; invitation
   links, with which a person chooses their password (their first, or a new one when it is
   forgotten); API tokens and single sign-on identities.
 - **Account** — credentials, API tokens (for connecting an agent over MCP), password; and the

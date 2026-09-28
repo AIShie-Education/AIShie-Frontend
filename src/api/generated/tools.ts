@@ -3,7 +3,7 @@
 // Every tool in AIShiteru Core's catalogue (GET /v1/tools), with its input and
 // output types and its REST route.
 
-/** action.decide (write): Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor a decision someone else proposed about it, nor approves closing an escalation they raised or approved. */
+/** action.decide (write): Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor their owner's, nor another agent's of their owner, nor a decision someone else proposed about any of those, nor approves closing an escalation they raised or approved. An agent's owner decides its proposal only where they could do the same themselves without anyone's confirmation: their own level for it autonomous, and its target within their reach; by_owner then says so. That needs no action_decide of their own, and is done at once, as their own doing of it: a student confirms her own agent's drafts of her work. */
 export interface ActionDecideIn {
   /**
    * the proposal being decided
@@ -24,6 +24,10 @@ export interface ActionDecideIn {
 }
 export interface ActionDecideOut {
   action_id: string
+  /**
+   * true when you decided as the owner of the agent that proposed it
+   */
+  by_owner?: boolean
   error?: null | {
     code: string
     details?: {
@@ -35,7 +39,7 @@ export interface ActionDecideOut {
   result?: unknown
 }
 
-/** action.get (read): One action in full: what was asked, how it was authorized, what became of it, who decided or reviewed it. */
+/** action.get (read): One action in full: what was asked, how it was authorized, what became of it, who decided or reviewed it. An agent's owner reads any action of their own agent's, whatever they hold. */
 export interface ActionGetIn {
   action_id: string
   /**
@@ -62,7 +66,7 @@ export interface ActionGetOut {
   target_id?: null | string
   target_type: string
   /**
-   * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+   * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
    */
   yours_to_decide?: null | boolean
 }
@@ -108,14 +112,14 @@ export interface ActionListMineOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
 
-/** action.list_pending_review (read): The review queue: actions that executed pending review and have not been reviewed, or were escalated. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else reviews. */
+/** action.list_pending_review (read): The review queue: actions that executed pending review and have not been reviewed, or were escalated. yours_to_decide is false on those of your own party, which someone else reviews — yours, your owner's, your owner's other agents', and your own agents' unless you could do the same yourself without anyone's confirmation. If you hold no action_decide here but own an agent seated here, it lists your own agents' actions alone. */
 export interface ActionListPendingReviewIn {
   /**
    * the id of the last item already seen
@@ -152,14 +156,14 @@ export interface ActionListPendingReviewOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
 
-/** action.list_proposed (read): The approval queue: proposals in this course waiting for a decision, oldest first. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else decides. */
+/** action.list_proposed (read): The approval queue: proposals in this course waiting for a decision, oldest first. yours_to_decide is false on those of your own party, which someone else decides — yours, your owner's, your owner's other agents', and your own agents' unless you could do the same yourself without anyone's confirmation. If you hold no action_decide here but own an agent seated here, it lists your own agents' proposals alone. */
 export interface ActionListProposedIn {
   /**
    * the id of the last item already seen
@@ -196,14 +200,14 @@ export interface ActionListProposedOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
 
-/** action.review (write): Record that an action which executed pending review has been looked at: reviewed, or escalated for someone else to look at. Reviewing undoes nothing; putting something right is a separate action. */
+/** action.review (write): Record that an action which executed pending review has been looked at: reviewed, or escalated for someone else to look at. Reviewing undoes nothing; putting something right is a separate action. Nobody reviews their own action, their owner's or another agent's of their owner; an agent's owner reviews what it did only where they could do the same themselves without anyone's confirmation, and then needs no action_decide of their own. */
 export interface ActionReviewIn {
   /**
    * the executed action under review
@@ -221,13 +225,17 @@ export interface ActionReviewIn {
 }
 export interface ActionReviewOut {
   action_id: string
+  /**
+   * true when you reviewed it as the owner of the agent that did it
+   */
+  by_owner?: boolean
   review_state: string
 }
 
-/** action.withdraw (write): Take back a proposal of yours that is still waiting for a decision. It is cancelled, and nothing of it is carried out. A proposal already decided, or someone else's, cannot be withdrawn. */
+/** action.withdraw (write): Take back a proposal of yours, or of an agent you own, that is still waiting for a decision. It is cancelled, and nothing of it is carried out. A proposal already decided, or anyone else's, cannot be withdrawn. */
 export interface ActionWithdrawIn {
   /**
-   * your proposal that is still waiting for a decision
+   * your proposal, or one of an agent you own, that is still waiting for a decision
    */
   action_id: string
   /**
@@ -487,7 +495,7 @@ export interface ActorReactivateOut {
   ok: boolean
 }
 
-/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. */
+/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's. */
 export interface ActorRegisterIn {
   display_name: string
   /**
@@ -499,7 +507,7 @@ export interface ActorRegisterIn {
    */
   kind: string
   /**
-   * for an agent only: the active person who owns it, and whose delegate alone it will be
+   * for an agent only: the active person who owns it, and whose delegate alone it will be, for good
    */
   owner_actor_id?: null | string
   /**
@@ -517,18 +525,6 @@ export interface ActorRevokeCredentialIn {
   credential_id: string
 }
 export interface ActorRevokeCredentialOut {
-  ok: boolean
-}
-
-/** actor.set_owner (write): Give an agent an owner, change it, or take it away (owner_actor_id null). An agent someone owns acts only as their delegate. Refused while the agent is seated in a course that is not archived: take it out first (agent.withdraw by its owner, or member.remove), and for an agent that holds a platform role, which an agent someone owns does not. Every credential the agent has — tokens, sessions, password, invitation, linked identity — is revoked, since whoever owned it before may hold them, and the old owner's requests to seat it that wait for a decision are cancelled; issue it a new token. Everything the agent remembers is deleted: what it kept about its old owner, and about the people it answered for them. A seat it keeps in an archived course counts for nothing from then on. */
-export interface ActorSetOwnerIn {
-  actor_id: string
-  /**
-   * the person who is to own the agent; null for nobody
-   */
-  owner_actor_id: null | string
-}
-export interface ActorSetOwnerOut {
   ok: boolean
 }
 
@@ -582,7 +578,7 @@ export interface ActorUpdateOut {
   suspended_by_actor_id?: null | string
 }
 
-/** agent.create (write): Register an agent of your own. It runs elsewhere, on whatever you connect to it with a token (agent.issue_token); no endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. A person may have a limited number of agents that are not suspended. */
+/** agent.create (write): Register an agent of your own. It runs elsewhere, on whatever you connect to it with a token (agent.issue_token); no endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. It is yours for good: nobody gives it another owner. A person may have a limited number of agents that are not suspended. */
 export interface AgentCreateIn {
   /**
    * what the agent is called wherever it appears
@@ -2666,14 +2662,14 @@ export interface MeGetOut {
    */
   kind: string
   /**
-   * for an agent a person owns, that person's actor id; absent for a person, and for an agent nobody owns
+   * for an agent a person owns, that person's actor id, the same for as long as the agent exists; absent for a person, and for an agent nobody owns
    */
   owner_actor_id?: null | string
   platform_role?: null | string
   status: string
 }
 
-/** me.memberships (read): The courses the caller is seated in, with the member id for each and what the caller may do there. An agent starting cold begins here: every other tool takes a course_id. */
+/** me.memberships (read): The courses the caller is seated in, with the member id for each and what the caller may do there, and the most each seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous). An agent starting cold begins here: every other tool takes a course_id. */
 export interface MeMembershipsIn {}
 export interface MeMembershipsOut {
   memberships:
@@ -2692,6 +2688,18 @@ export interface MeMembershipsOut {
          * the stable handle for this actor in this course; agents key their own memory on it
          */
         member_id: string
+        /**
+         * why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives
+         */
+        perm_ceiling_reasons?: {
+          [k: string]: string | undefined
+        }
+        /**
+         * for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves
+         */
+        perm_ceilings: {
+          [k: string]: string | undefined
+        }
         /**
          * what you may do in the course now, before scope: your own levels, capped by your principal's if you are a delegate; all denied while the seat does not count
          */
@@ -2724,7 +2732,7 @@ export interface MeSiteChatOut {
   site_chat: boolean
 }
 
-/** member.add (write): Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own. An agent someone owns is not seated here: its owner brings it in as their delegate, with member.add_delegate. */
+/** member.add (write): Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own. An agent decides and reviews only by proposal: its action_decide is confirm_required at most, a preset's cut down to it and a level named above it refused (agent_decides_by_proposal). An agent someone owns is not seated here: its owner brings it in as their delegate, with member.add_delegate. */
 export interface MemberAddIn {
   actor_id: string
   /**
@@ -2768,7 +2776,7 @@ export interface MemberAddOut {
   member_id: string
 }
 
-/** member.add_delegate (write): Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, whatever your agent may do beyond what the delegate preset gives — your own writes, such as drafting your submission — it does only by proposal (confirm_required at most), whoever grants it. It holds member_manage or member_invite only when you name them in perms, whatever the preset carries; then it manages the course's members, or hands out its join links, for you, and never acts on your own seat nor on your other agents' (not_your_principal). */
+/** member.add_delegate (write): Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, whatever your agent may do beyond what the delegate preset gives — your own writes, such as drafting your submission — it does only by proposal (confirm_required at most), whoever grants it. It decides and reviews only by proposal, as any agent does: action_decide at confirm_required at most. A level named above what it may hold is refused, saying why (reason, as perm_ceiling_reasons in member.delegate_defaults gives it); a preset's is cut down. It holds member_manage or member_invite only when you name them in perms, whatever the preset carries; then it manages the course's members, or hands out its join links, for you, and never acts on your own seat nor on your other agents' (not_your_principal). */
 export interface MemberAddDelegateIn {
   /**
    * the agent you own to bring in
@@ -2826,7 +2834,7 @@ export interface MemberAddDelegateOut {
   member_id: string
 }
 
-/** member.delegate_defaults (read): What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first, and whether it would answer the course or you alone. */
+/** member.delegate_defaults (read): What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first, and whether it would answer the course or you alone; and the most it may be given of each permission if you name one (perm_ceilings, with perm_ceiling_reasons where below autonomous). */
 export interface MemberDelegateDefaultsIn {
   /**
    * the course this call is about
@@ -2853,6 +2861,18 @@ export interface MemberDelegateDefaultsOut {
    * when student_scope is listed: whom it reaches; empty is nobody
    */
   listed_students: null | string[]
+  /**
+   * why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives
+   */
+  perm_ceiling_reasons?: {
+    [k: string]: string | undefined
+  }
+  /**
+   * for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves
+   */
+  perm_ceilings: {
+    [k: string]: string | undefined
+  }
   perms: {
     [k: string]: string | undefined
   }
@@ -2862,7 +2882,7 @@ export interface MemberDelegateDefaultsOut {
   student_scope: string
 }
 
-/** member.get (read): One member in full, including exactly which students and assignments a 'listed' scope lists. */
+/** member.get (read): One member in full, including exactly which students and assignments a 'listed' scope lists, and the most the seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous). */
 export interface MemberGetIn {
   /**
    * the course this call is about
@@ -2896,6 +2916,18 @@ export interface MemberGetOut {
    */
   owner_actor_id?: null | string
   owner_name?: null | string
+  /**
+   * why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives
+   */
+  perm_ceiling_reasons?: {
+    [k: string]: string | undefined
+  }
+  /**
+   * for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves
+   */
+  perm_ceilings: {
+    [k: string]: string | undefined
+  }
   perms: {
     [k: string]: string | undefined
   }
@@ -2919,7 +2951,7 @@ export interface MemberGetOut {
   student_scope: string
 }
 
-/** member.list (read): The members of a course — people and agents alike — with their roster role, status, permissions and scope. */
+/** member.list (read): The members of a course — people and agents alike — with their roster role, status, permissions and scope, and for each seat the most it may be given of each permission (perm_ceilings), and why where that is below autonomous (perm_ceiling_reasons): offer nothing above it. */
 export interface MemberListIn {
   /**
    * the id of the last item already seen
@@ -2972,6 +3004,18 @@ export interface MemberListOut {
          */
         owner_actor_id?: null | string
         owner_name?: null | string
+        /**
+         * why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives
+         */
+        perm_ceiling_reasons?: {
+          [k: string]: string | undefined
+        }
+        /**
+         * for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves
+         */
+        perm_ceilings: {
+          [k: string]: string | undefined
+        }
         perms: {
           [k: string]: string | undefined
         }
@@ -3097,7 +3141,7 @@ export interface MemberResumeOut {
   ok: boolean
 }
 
-/** member.update_perms (write): Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself. Lowering is always allowed. */
+/** member.update_perms (write): Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself, and within what the seat may hold at all (perm_ceilings in member.get; above it the refusal gives the same reason code). Lowering is always allowed. */
 export interface MemberUpdatePermsIn {
   /**
    * the course this call is about
@@ -3115,7 +3159,7 @@ export interface MemberUpdatePermsOut {
   ok: boolean
 }
 
-/** member.update_perms_bulk (write): Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. A delegate's call is refused whole (not_your_principal) when the role takes in its principal's seat or another agent of its principal's. */
+/** member.update_perms_bulk (write): Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope, and within what the seat may hold at all (perm_ceilings): an agent's action_decide goes no higher than confirm_required. If any one seat cannot be changed, none is, and the refusal names it (member_id) and says why (reason). It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. A delegate's call is refused whole (not_your_principal) when the role takes in its principal's seat or another agent of its principal's. */
 export interface MemberUpdatePermsBulkIn {
   /**
    * the course this call is about
@@ -3751,7 +3795,6 @@ export interface ToolMap {
   'actor.reactivate': { in: ActorReactivateIn; out: ActorReactivateOut; kind: 'write' }
   'actor.register': { in: ActorRegisterIn; out: ActorRegisterOut; kind: 'write' }
   'actor.revoke_credential': { in: ActorRevokeCredentialIn; out: ActorRevokeCredentialOut; kind: 'write' }
-  'actor.set_owner': { in: ActorSetOwnerIn; out: ActorSetOwnerOut; kind: 'write' }
   'actor.suspend': { in: ActorSuspendIn; out: ActorSuspendOut; kind: 'write' }
   'actor.update': { in: ActorUpdateIn; out: ActorUpdateOut; kind: 'write' }
   'agent.create': { in: AgentCreateIn; out: AgentCreateOut; kind: 'write' }
@@ -3885,7 +3928,6 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'actor.reactivate': { method: 'POST', path: '/v1/actors/{actor_id}/reactivate', kind: 'write' },
   'actor.register': { method: 'POST', path: '/v1/actors', kind: 'write' },
   'actor.revoke_credential': { method: 'POST', path: '/v1/actors/{actor_id}/credentials/{credential_id}/revoke', kind: 'write' },
-  'actor.set_owner': { method: 'POST', path: '/v1/actors/{actor_id}/owner', kind: 'write' },
   'actor.suspend': { method: 'POST', path: '/v1/actors/{actor_id}/suspend', kind: 'write' },
   'actor.update': { method: 'POST', path: '/v1/actors/{actor_id}', kind: 'write' },
   'agent.create': { method: 'POST', path: '/v1/me/agents', kind: 'write' },
