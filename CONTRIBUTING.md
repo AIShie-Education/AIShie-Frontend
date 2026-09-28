@@ -26,7 +26,8 @@ request, on every push to `main` and once a week:
 - **the image:** on a pull request, the weekly run and a run by hand, the
   image is built with `docker build` and `scripts/test-image.sh` runs it and
   checks it against the build: the rules it serves by, `/version.json`, its
-  user and port, and that it serves exactly those files
+  user and port, that it serves exactly those files, and the frame header,
+  with `FRAME_ANCESTORS` unset and set
   ([docs/deploying.md](docs/deploying.md#the-image)). A push skips it: the
   push's Publish or Release run builds and tests the image it pushes.
 

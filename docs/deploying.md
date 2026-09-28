@@ -51,17 +51,21 @@ GitHub has them (`ATTESTATIONS`, [CONTRIBUTING.md](../CONTRIBUTING.md#one-time-s
   Core before they get here (here they would get `index.html`).
 - It runs as **uid 65532** (not root), writes nothing and needs no
   capability: `read_only: true`, `cap_drop: [ALL]` and
-  `security_opt: [no-new-privileges:true]` all suit it. It takes no
-  environment, volume or command.
+  `security_opt: [no-new-privileges:true]` all suit it. It takes no volume
+  or command, and one setting from the environment, `FRAME_ANCESTORS`
+  ([Frames](#frames)).
 - `/assets/*` are the hashed files: one that is there comes with
   `Cache-Control: public, max-age=31536000, immutable`; one that is not is a
   plain 404, with an empty body and no `Cache-Control`, not the app.
 - Everything else comes with `Cache-Control: no-cache`: a file of the build if
   there is one, and otherwise `index.html`, with 200, for the app's own
   routes.
-- Answers are compressed with zstd or gzip when the browser asks, and carry
-  `X-Content-Type-Options: nosniff`. There is no Content Security Policy
-  header: `index.html` has its own, for images.
+- Answers are compressed with zstd or gzip when the browser asks. Every
+  answer, a 404 too, carries `X-Content-Type-Options: nosniff` and
+  `Content-Security-Policy: frame-ancestors 'self'`, or the sources
+  `FRAME_ANCESTORS` lists in place of `'self'` ([Frames](#frames)). That
+  header says nothing else: `index.html` has a policy of its own, for
+  images. There is no `X-Frame-Options`.
 - `GET /version.json` answers `{"version":"<version>","commit":"<commit>"}`,
   `no-cache`: `<commit>` is the first 7 hex digits of the image's commit, as
   in its `:sha-` tag, and `<version>` its version label: `git describe --tags --always` of the commit
@@ -77,7 +81,8 @@ GitHub has them (`ATTESTATIONS`, [CONTRIBUTING.md](../CONTRIBUTING.md#one-time-s
 
 The build is the same for every server: Core on the page's own origin
 (`VITE_API_BASE` and `VITE_CORE_PUBLIC_URL` empty). What is not the same is
-asked for when the page loads, not built in:
+not built in, but asked for when the page loads, or set when the container
+starts:
 
 - **Single sign-on** is Core's to say. The sign-in page asks
   `GET /v1/auth/methods` as it loads, and shows the single sign-on button once
@@ -87,6 +92,8 @@ asked for when the page loads, not built in:
   that route answers 404, and then the build's own settings are taken, as
   they are when Core cannot be asked: in the image `VITE_SSO_ENABLED` is
   unset, so there is no button.
+- **Which sites may show the app in a frame** is the container's
+  `FRAME_ANCESTORS` ([Frames](#frames)).
 
 In the stack, the Caddy in front sends Core its routes and this image the
 rest, for instance:
@@ -103,6 +110,49 @@ lms.example.edu {
 }
 ```
 
+### Frames
+
+Framing goes two ways, and the image allows both:
+
+- **The app showing another site in a frame**, a similarity checker's
+  viewer (Turnitin's, say), is governed by the page's own policy
+  (`frame-src`), and nothing limits it: `index.html`'s policy sets only
+  `img-src`, and the image's header only `frame-ancestors`. Keep it so for
+  such a viewer to work.
+- **Another site showing the app in a frame**, an LMS that opens it in an
+  iframe (an LTI launch, say), is `frame-ancestors`, which only a header can
+  set: a `<meta>` policy leaves it out. Unless told otherwise, only the app's
+  own origin may frame it: `Content-Security-Policy: frame-ancestors 'self'`.
+  The container's `FRAME_ANCESTORS` puts its own sources in place of
+  `'self'`, separated by spaces and written as CSP writes them, quotes
+  included (the value is what is inside the double quotes, as a shell or a
+  compose `.env` file takes it):
+
+  ```bash
+  FRAME_ANCESTORS="'self' https://canvas.example.edu"   # the app, and that LMS
+  FRAME_ANCESTORS="'none'"                              # no page at all, not even the app's own
+  ```
+
+  Caddy puts the value into its configuration as it reads it, when the
+  container starts. A value it cannot read (one on more than one line) stops
+  the container from starting, and so the stack's updater rolls the update
+  back. Anything on one line goes into the header as it is, to be read by the
+  browser, which ignores a source it does not understand. Set but empty, it
+  lists no source, which lets no page frame the app, as `'none'` does: for
+  the default, leave it unset. There is no `X-Frame-Options`:
+  `frame-ancestors` supersedes it, and it cannot name another site.
+
+  An LMS on another site framing the app makes Core's session cookie a
+  third-party one. The browser sends it only when it is `SameSite=None`, so
+  Core needs `COOKIE_SAMESITE=none` as well, or a sign-in in the frame does
+  not hold: the next call finds nobody signed in. The browser must also
+  accept third-party cookies, which Safari, and every browser on iOS, does
+  not, and which people can turn off in others; there the app works only in
+  a tab of its own. That is Core's setting, not the image's
+  ([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md)).
+  Single sign-on in a frame takes the frame to the identity provider's page,
+  which most providers do not let be framed.
+
 ### How an image is made
 
 The Dockerfile builds the app with `npm ci` and `npm run build` in Node
@@ -114,7 +164,9 @@ variable is set, so it is the same build CI makes and checks.
 Before any image is pushed, `scripts/test-image.sh` runs it read-only with no
 capabilities, as the stack may, and checks it with curl: every rule above,
 `version.json`, the user and the port, the health check, and that it serves
-exactly the build CI checked, file for file. On a pull request CI builds the
+exactly the build CI checked, file for file. It runs it again with
+`FRAME_ANCESTORS` set, for the header that sets, and once with a value on two
+lines, which must stop it from starting. On a pull request CI builds the
 image and runs the test; on `main`, `publish.yml` builds it, tests it, pushes
 it, and checks that the image pushed has the layers of the one tested;
 `release.yml` does the same for a version tag. To do it here:

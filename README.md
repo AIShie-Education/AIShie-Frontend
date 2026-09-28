@@ -131,8 +131,11 @@ Caddy terminates TLS in front of it and sends Core its routes. Its tags:
   pre-release gets `:X.Y.Z-rc.N` alone.
 
 `GET /version.json` says which it is, `{"version":"v1.2.3","commit":"abc1234"}`, and is the stack's
-health check. What the image does, exactly, and how to build and test it here:
-[docs/deploying.md](docs/deploying.md#the-image).
+health check. It takes one setting, `FRAME_ANCESTORS`: which sites may show the app in a frame
+(`Content-Security-Policy: frame-ancestors`), by default `'self'`, its own origin alone; an LMS
+that frames it from another site also needs Core's `COOKIE_SAMESITE=none`
+([Frames](docs/deploying.md#frames)). What the image does, exactly, and how to build and test it
+here: [docs/deploying.md](docs/deploying.md#the-image).
 
 Until the stack runs, the older way still works: on a server set up with Core's
 `deploy/setup-server.sh`, `deploy/setup-web.sh` serves the files with Caddy, and the Deploy workflow

@@ -2,7 +2,8 @@
 # Checks that an image of the front end does what docs/deploying.md says it
 # does (The image): it runs it as a hardened stack would, on a read-only file
 # system with every capability dropped and no new privileges, and asks it
-# with curl.
+# with curl; then again with FRAME_ANCESTORS set, and once with a value that
+# must stop it from starting.
 #
 #   scripts/test-image.sh IMAGE [DIST]
 #
@@ -28,9 +29,9 @@ DIST=${2:-}
 [ -z "$DIST" ] || [ -f "$DIST/index.html" ] || { echo "test-image: $DIST/index.html is missing: give the build (dist/)" >&2; exit 2; }
 
 work=$(mktemp -d)
-container=
+containers=()
 cleanup() {
-  [ -z "$container" ] || docker rm -f "$container" > /dev/null 2>&1 || true
+  for c in ${containers[@]+"${containers[@]}"}; do docker rm -f "$c" > /dev/null 2>&1 || true; done
   rm -rf "$work"
 }
 trap cleanup EXIT
@@ -81,30 +82,41 @@ if [ -n "${EXPECT_REVISION:-}" ]; then
   check "label org.opencontainers.image.version" is "$(label org.opencontainers.image.version)" "${EXPECT_VERSION:-}"
 fi
 
-# Started as the stack would harden it; the port it listens on is published on
-# one of this machine's, which Docker picks.
-container=$(docker run -d --read-only --cap-drop ALL --security-opt no-new-privileges \
-  -p 127.0.0.1::8080 "$IMAGE")
-hostport=$(docker port "$container" 8080/tcp | head -n 1)
-[ -n "$hostport" ] || { docker logs "$container" >&2 || true; echo "test-image: port 8080 is not published" >&2; exit 1; }
-base=http://$hostport
-up=
-for _ in $(seq 1 60); do
-  if [ "$(docker inspect --format '{{ .State.Running }}' "$container")" != true ]; then
-    break
+# harden: how the stack may run it, read-only with no capabilities.
+harden=(--read-only --cap-drop ALL --security-opt no-new-privileges)
+# start [DOCKER RUN ARGS...]: runs the image hardened, with those arguments
+# besides, and waits until it answers; the port it listens on is published on
+# one of this machine's, which Docker picks. The container is $container, and
+# it answers at $base.
+container=
+base=
+start() {
+  container=$(docker run -d "${harden[@]}" -p 127.0.0.1::8080 "$@" "$IMAGE")
+  containers+=("$container")
+  local hostport up=
+  hostport=$(docker port "$container" 8080/tcp | head -n 1)
+  [ -n "$hostport" ] || { docker logs "$container" >&2 || true; echo "test-image: port 8080 is not published" >&2; exit 1; }
+  base=http://$hostport
+  for _ in $(seq 1 60); do
+    if [ "$(docker inspect --format '{{ .State.Running }}' "$container")" != true ]; then
+      break
+    fi
+    if curl -fsS --max-time 2 -o /dev/null "$base/version.json" 2> /dev/null; then
+      up=1
+      break
+    fi
+    sleep 0.5
+  done
+  if [ -z "$up" ]; then
+    docker logs "$container" >&2 || true
+    echo "FAIL - it does not answer on 8080 within 30 seconds" >&2
+    exit 1
   fi
-  if curl -fsS --max-time 2 -o /dev/null "$base/version.json" 2> /dev/null; then
-    up=1
-    break
-  fi
-  sleep 0.5
-done
-if [ -z "$up" ]; then
-  docker logs "$container" >&2 || true
-  echo "FAIL - it does not answer on 8080 within 30 seconds" >&2
-  exit 1
-fi
-ok "it answers on 8080 (published at $hostport), read-only, with no capabilities"
+}
+
+start
+server=$container
+ok "it answers on 8080 (published at $base), read-only, with no capabilities"
 
 # The server itself, as it runs.
 pid1=$(docker exec "$container" cat /proc/1/status)
@@ -112,12 +124,17 @@ uid=$(awk '$1 == "Uid:" { print $2 " " $3 " " $4 " " $5 }' <<< "$pid1")
 check "the server runs as a user that is not root (uids $uid)" like "$uid" '[1-9]* [1-9]* [1-9]* [1-9]*'
 check "the server is Caddy" is "$(docker exec "$container" cat /proc/1/comm | tr -d '\r')" caddy
 
+# Which pages may frame it, unless FRAME_ANCESTORS says otherwise.
+frame_self="frame-ancestors 'self'"
+
 # /: the app, asked for again each time.
 get root /
 check "/ answers 200" is "$status" 200
 check "/ is HTML" like "$(header root Content-Type)" 'text/html*'
 check "/ is Cache-Control: no-cache" is "$(header root Cache-Control)" no-cache
 check "/ is X-Content-Type-Options: nosniff" is "$(header root X-Content-Type-Options)" nosniff
+check "/ may be framed by this origin alone" is "$(header root Content-Security-Policy)" "$frame_self"
+check "/ says nothing of X-Frame-Options" is "$(header root X-Frame-Options)" ""
 if [ -n "$DIST" ]; then
   check "/ is the build's index.html" same "$work/root.body" "$DIST/index.html"
 else
@@ -138,6 +155,7 @@ check "$entry answers 200" is "$status" 200
 check "$entry is JavaScript" like "$(header asset Content-Type)" '*javascript*'
 check "$entry is immutable" is "$(header asset Cache-Control)" "public, max-age=31536000, immutable"
 check "$entry is X-Content-Type-Options: nosniff" is "$(header asset X-Content-Type-Options)" nosniff
+check "$entry may be framed by this origin alone" is "$(header asset Content-Security-Policy)" "$frame_self"
 if [ -n "$DIST" ]; then
   check "$entry is the build's" same "$work/asset.body" "$DIST$entry"
 fi
@@ -156,12 +174,14 @@ get missing /assets/index-0000000000.js
 check "a missing /assets/ file answers 404" is "$status" 404
 check "a missing /assets/ file is not the app" is "$(grep -c '<div id="app"' "$work/missing.body" || true)" 0
 check "a missing /assets/ file is not immutable" is "$(header missing Cache-Control)" ""
+check "a missing /assets/ file may be framed by this origin alone" is "$(header missing Content-Security-Policy)" "$frame_self"
 
 # /version.json: the stack's health check, from the build arguments.
 get version /version.json
 check "/version.json answers 200" is "$status" 200
 check "/version.json is JSON" like "$(header version Content-Type)" 'application/json*'
 check "/version.json is Cache-Control: no-cache" is "$(header version Cache-Control)" no-cache
+check "/version.json may be framed by this origin alone" is "$(header version Content-Security-Policy)" "$frame_self"
 body=$(cat "$work/version.body")
 check "/version.json is {\"version\":…,\"commit\":…}" like "$body" '{"version":"*","commit":"*"}'
 [[ $body =~ ^\{\"version\":\"[0-9A-Za-z.+_-]+\",\"commit\":\"([0-9a-f]{7}|unknown)\"\}$ ]] \
@@ -197,9 +217,27 @@ docker export "$container" | tar -t > "$work/files"
 extra=$(grep -E '(^|/)(node_modules|package\.json|package-lock\.json|\.env[^/]*|tsconfig[^/]*\.json|vite\.config\.ts)(/|$)|^srv/.*\.(ts|vue)$' "$work/files" | head -n 5 || true)
 check "no sources, dependencies or .env in the image" is "$extra" ""
 
+# FRAME_ANCESTORS: the sources it is given, in place of 'self'.
+framers="'self' https://canvas.example.edu"
+start -e "FRAME_ANCESTORS=$framers"
+get framed /
+check "with FRAME_ANCESTORS set, / answers 200" is "$status" 200
+check "with FRAME_ANCESTORS set, / may be framed by what it says" is "$(header framed Content-Security-Policy)" "frame-ancestors $framers"
+get framed-version /version.json
+check "with FRAME_ANCESTORS set, /version.json too" is "$(header framed-version Content-Security-Policy)" "frame-ancestors $framers"
+docker rm -f "$container" > /dev/null
+
+# A value Caddy cannot read, here one on two lines, stops the container from
+# starting: an update that sets one fails where it is seen, and the stack's
+# updater rolls it back.
+bad=$(docker run -d "${harden[@]}" -e "FRAME_ANCESTORS=$(printf "'self'\nhttps://canvas.example.edu")" "$IMAGE")
+containers+=("$bad")
+code=$(timeout 30 docker wait "$bad" 2> /dev/null) || code="still running after 30 seconds"
+check "with FRAME_ANCESTORS on two lines, it does not start (exit $code)" like "$code" '[1-9]*'
+
 if [ "$failed" != 0 ]; then
   echo "# the server's log:" >&2
-  docker logs "$container" >&2 || true
+  docker logs "$server" >&2 || true
   exit 1
 fi
 echo "# all passed"
