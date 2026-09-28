@@ -171,6 +171,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `conversation.respondents` leaves such agents out, and a conversation's opener learns from it
   (`offeredIn`) whether its agent may still be asked; Core refuses a question to one as
   `agent_answers_elsewhere`, which `errorMessage()` says in the same words.
+- A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
+  from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
+  clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose
+  clock is off counts right. `<QrCode :value :size :label />` draws a QR code in the page, black on
+  white in either theme; `downloadQrPng()` (`@/utils/qr`) saves it as a PNG.
 - Anything kept fresh by asking again (a chat, an inbox): `usePolling(fn, { intervalMs, enabled })`
   from `@/composables/usePolling` — one poll at a time, backing off after failures, paused while the
   page is hidden, stopped on unmount; `pollNow()` after sending something.

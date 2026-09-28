@@ -13,6 +13,7 @@
 // the way (network, 5xx, 429) is retried here with the key it was first sent
 // with, and can never act twice.
 
+import { noteCoreDate } from './clock'
 import { TOOL_ROUTES, type ToolMap, type ToolName } from './generated/tools'
 
 export type ActionStatus = 'executed' | 'proposed' | 'denied' | 'failed' | 'rejected' | 'cancelled' | 'approved'
@@ -205,6 +206,8 @@ async function send(
     if ((e as Error)?.name === 'AbortError') throw e
     throw new ApiError({ status: 0, code: 'network', message: (e as Error)?.message || 'network error' })
   }
+  // What Core's clock read as it answered, for times on its clock (clock.ts).
+  noteCoreDate(res.headers?.get('Date'))
   let parsed: any = null
   const text = await res.text()
   if (text) {
