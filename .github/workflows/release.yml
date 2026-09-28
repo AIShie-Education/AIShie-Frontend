@@ -6,12 +6,14 @@ name: Release
 #   git tag -s v0.1.0 -m "v0.1.0" && git push origin v0.1.0
 #
 # It checks the tagged commit again, all of CI (ci.yml, called), then
-# publishes the build those checks passed on the release page: a tarball of
-# dist/, its SHA-256, and notes that say which Core it was checked against. A
-# tag with a hyphen (v0.1.0-rc.1) is a pre-release, and is deployed to staging
-# through deploy.yml. A stable release is not deployed by itself: production
-# is deployed by running the Deploy workflow by hand, from the tag, and the
-# run's summary says how.
+# publishes its image in GHCR, tested first against the build those checks
+# passed (scripts/test-image.sh), and that build on the release page: a
+# tarball of dist/, its SHA-256, and notes that say which Core it was checked
+# against and which image is the release's. A tag with a hyphen (v0.1.0-rc.1)
+# is a pre-release: its image gets its own version tag and nothing else, and
+# it is deployed to staging through deploy.yml. A stable release is not
+# deployed by itself: production is deployed by running the Deploy workflow by
+# hand, from the tag, and the run's summary says how.
 
 on:
   push:
@@ -23,6 +25,9 @@ concurrency:
 
 permissions:
   contents: read
+
+env:
+  IMAGE: ghcr.io/aishie-education/aishie-frontend
 
 # Each run block is bash with -o pipefail: a pipeline fails when any command
 # in it does, not only when its last one does.
@@ -53,11 +58,125 @@ jobs:
     needs: tag
     permissions:
       contents: read
-      packages: read # the end-to-end tests pull Core's image
+      # The end-to-end tests pull Core's image (read). ci.yml's publish job
+      # asks for write, and runs on a push to main only, never here; but a
+      # called workflow's jobs may ask for no more than their caller gives,
+      # whether they run or not.
+      packages: write
     uses: ./.github/workflows/ci.yml
 
-  publish:
+  # The image of the build CI checked, for the compose stack (AIShie-Deploy):
+  # tested first, then pushed as X.Y.Z and X.Y, and as latest when this is the
+  # highest stable release; a pre-release as X.Y.Z-rc.N only. Nothing in its
+  # last stage runs a command, so the second architecture needs no emulation.
+  image:
     needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write # push to GHCR
+      id-token: write
+      attestations: write
+    outputs:
+      image: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the tags, to know the highest release
+      # latest is the highest stable release, said each time: a fix to an
+      # older line is not the latest, as on the release page.
+      - id: what
+        name: Commit, and whether this is the latest
+        run: |
+          top=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+          {
+            echo "commit=${GITHUB_SHA:0:7}"
+            if [ "$top" = "$GITHUB_REF_NAME" ]; then echo "latest=true"; else echo "latest=false"; fi
+          } | tee -a "$GITHUB_OUTPUT"
+      # The build CI checked, which the image must serve file for file.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: web-${{ github.sha }}
+          path: ${{ runner.temp }}/dist
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          # 1.2.3 and 1.2 for a stable release; a pre-release only 1.2.3-rc.1.
+          flavor: latest=${{ steps.what.outputs.latest }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          # The version /version.json says, the tag as it was pushed, as on
+          # main (git describe).
+          labels: |
+            org.opencontainers.image.version=${{ github.ref_name }}
+      # For this machine's Docker, to be tested before anything is pushed. The
+      # push below builds the same again and takes this build's layers from
+      # the builder's cache.
+      - name: Build for the test
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: aishie-frontend:test
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ steps.what.outputs.commit }}
+          provenance: false
+      - name: Test the image
+        env:
+          EXPECT_VERSION: ${{ github.ref_name }}
+          EXPECT_COMMIT: ${{ steps.what.outputs.commit }}
+          EXPECT_REVISION: ${{ github.sha }}
+          EXPECT_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: scripts/test-image.sh aishie-frontend:test "$RUNNER_TEMP/dist"
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ steps.what.outputs.commit }}
+          provenance: mode=max
+          sbom: true
+      # The image pushed is the one tested: the same layers, for this
+      # machine's architecture. Built twice, it is the builder's cache that
+      # makes them so, and this says that it did, before the release is published.
+      - name: The image pushed is the image tested
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          tested=$(docker image inspect aishie-frontend:test --format '{{json .RootFS.Layers}}' | jq -c .)
+          pushed=$(docker buildx imagetools inspect "$IMAGE@$DIGEST" --format '{{json (index .Image "linux/amd64").RootFS.DiffIDs}}' | jq -c .)
+          [ "$tested" = "$pushed" ] \
+            || { echo "::error::$IMAGE@$DIGEST is not the image tested: its linux/amd64 layers are $pushed, the tested one's $tested"; exit 1; }
+      # Artifact attestations need GitHub Enterprise Cloud on a private
+      # repository, and would fail the run after the image is pushed. Set the
+      # variable ATTESTATIONS to "true" where they are available.
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: ${{ !github.event.repository.private || vars.ATTESTATIONS == 'true' }}
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  # The release page, once its image is in GHCR.
+  publish:
+    needs: [ci, image]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -73,6 +192,7 @@ jobs:
       - name: Pack, and publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          IMAGE_REF: ${{ needs.image.outputs.image }}
         run: |
           tag=$GITHUB_REF_NAME
           name=aishiteru-web-$tag.tar.gz
@@ -103,6 +223,8 @@ jobs:
             echo
             echo "## Deploying"
             echo
+            echo "The image \`$IMAGE:${tag#v}\` is this build, served on :8080, for the compose stack (AIShie-Deploy); it is \`$IMAGE_REF\`."
+            echo
             echo "\`$name\` is the build (\`dist/\`), for a server set up with \`deploy/setup-web.sh\`: the Deploy workflow ships it (docs/deploying.md). \`$name.sha256\` is its checksum."
           } > "$RUNNER_TEMP/notes.md"
           if gh release view "$tag" > /dev/null 2>&1; then
@@ -127,12 +249,14 @@ jobs:
 
   # A stable release goes to production only when somebody runs Deploy for it.
   production:
-    needs: publish
+    needs: [image, publish]
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: How to deploy it
+        env:
+          IMAGE_REF: ${{ needs.image.outputs.image }}
         run: |
           {
             echo "## $GITHUB_REF_NAME is released"
@@ -144,4 +268,6 @@ jobs:
             echo "- ref: empty (or \`$GITHUB_REF_NAME\`)"
             echo
             echo "Deploy ships the release's own tarball, and says what it is before it goes on."
+            echo
+            echo "Its image, for the compose stack, is \`$IMAGE:${GITHUB_REF_NAME#v}\`: this run pushed it as \`$IMAGE_REF\`."
           } | tee -a "$GITHUB_STEP_SUMMARY"
