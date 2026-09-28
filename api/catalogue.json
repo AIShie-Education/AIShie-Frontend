@@ -2752,7 +2752,7 @@
       "path": "/v1/courses/{course_id}/assignments/{assignment_id}/unpublish"
     },
     {
-      "description": "Change an assignment. Once any grade has been entered for it, what it is worth and where it counts are fixed: a score is a score out of the points possible when it was given.",
+      "description": "Change an assignment. What it is worth and where it counts may change after grades are entered for it: a change of points says what becomes of them (existing_grades: rescale or keep_scores), and needs grade_submit and grade_post as well; moving it to another component, or out of the grade, needs nothing more. Either rewrites, at once, the posted totals it changes, with history, and so must reach every student who has one, over the whole course. A grade proposed out of the old points is refused when it is approved.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2781,6 +2781,13 @@
             "type": "string"
           },
           "due_at": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "existing_grades": {
+            "description": "rescale or keep_scores: what becomes of grades already entered when points_possible changes, required once any has been. rescale converts each score in proportion (45 of 50 becomes 90 of 100) in a new grade that replaces it, the old one kept; keep_scores leaves each score as it is, out of the new points. Either rewrites the totals it changes, and needs grade_submit and grade_post as well",
             "type": [
               "null",
               "string"
@@ -2832,10 +2839,20 @@
         "properties": {
           "ok": {
             "type": "boolean"
+          },
+          "rescaled": {
+            "description": "how many grades were written again in the new points",
+            "type": "integer"
+          },
+          "snapshots": {
+            "description": "how many posted totals were written down again",
+            "type": "integer"
           }
         },
         "required": [
-          "ok"
+          "ok",
+          "rescaled",
+          "snapshots"
         ],
         "type": "object"
       },
@@ -2914,7 +2931,7 @@
       "path": "/v1/courses/{course_id}/components"
     },
     {
-      "description": "Move a component, with everything beneath it, under a different parent in the same course. Once any grade has been entered beneath it, its place in the scheme is fixed.",
+      "description": "Move a component, with everything beneath it, under a different parent in the same course. It may move after grades are entered beneath it: that rewrites, at once, the posted totals it changes, with history, where it was and where it goes, and so must reach every student who has one, over the whole course.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2947,10 +2964,20 @@
         "properties": {
           "ok": {
             "type": "boolean"
+          },
+          "rescaled": {
+            "description": "how many grades were written again in the new points",
+            "type": "integer"
+          },
+          "snapshots": {
+            "description": "how many posted totals were written down again",
+            "type": "integer"
           }
         },
         "required": [
-          "ok"
+          "ok",
+          "rescaled",
+          "snapshots"
         ],
         "type": "object"
       },
@@ -3049,12 +3076,12 @@
       "path": "/v1/courses/{course_id}/components"
     },
     {
-      "description": "Change a component's name, weight, drop_lowest, points or order. Posted totals are not rewritten: what a student was shown stays as it was until grades beneath it are next posted or regraded.",
+      "description": "Change a component's name, weight, drop_lowest, points or order. A change of weight or drop_lowest does not rewrite posted totals: what a student was shown stays as it was until grades beneath it are next posted or regraded. The points of a directly graded component may change after grades are entered on it, saying what becomes of them (existing_grades: rescale or keep_scores, needing grade_submit and grade_post as well); that rewrites, at once, the posted totals it changes, and so must reach every student who has one, over the whole course.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
           "clear_points_possible": {
-            "description": "turn a directly graded component back into a bucket",
+            "description": "turn a directly graded component back into a bucket; not once a grade has been entered on it",
             "type": "boolean"
           },
           "component_id": {
@@ -3072,6 +3099,13 @@
             "type": [
               "null",
               "integer"
+            ]
+          },
+          "existing_grades": {
+            "description": "rescale or keep_scores: what becomes of grades already entered on a directly graded component when its points_possible changes, required once any has been; as for assignment.update. Needs grade_submit and grade_post as well",
+            "type": [
+              "null",
+              "string"
             ]
           },
           "name": {
@@ -3121,10 +3155,20 @@
         "properties": {
           "ok": {
             "type": "boolean"
+          },
+          "rescaled": {
+            "description": "how many grades were written again in the new points",
+            "type": "integer"
+          },
+          "snapshots": {
+            "description": "how many posted totals were written down again",
+            "type": "integer"
           }
         },
         "required": [
-          "ok"
+          "ok",
+          "rescaled",
+          "snapshots"
         ],
         "type": "object"
       },
@@ -5038,7 +5082,7 @@
       "path": "/v1/courses/{course_id}/instructors"
     },
     {
-      "description": "Change a course's title or description. Its code, section and term are what it is, and do not change. A department administrator does this for the courses of the departments they administer.",
+      "description": "Change a course's title or description. Its code, section and term are what it is, and do not change. A department administrator does this for the courses of the departments they administer; the course's instructors do it from their seat with course.update_details.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5080,6 +5124,52 @@
         "type": "object"
       },
       "path": "/v1/courses/{course_id}"
+    },
+    {
+      "description": "Change the course's title or description from a seat in it, for whoever manages its members, as its instructors do. Its code, section, term, department and status stay with its administrators (course.update, course.move, course.activate, course.archive). Giving what the course already says changes nothing and says so (changed: false).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "course.update_details",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "description": "false when the course already said what was given: nothing was done",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/details"
     },
     {
       "description": "Create an API token for the caller's own account. The token is returned once and only its hash is kept: retrying this call returns the credential but not the token again.",
@@ -5773,7 +5863,7 @@
       "path": "/v1/departments/{dept_id}"
     },
     {
-      "description": "Edit material, instructions or a rubric by adding a version. Versions are never changed or removed. The new version is a draft until it is published; what students read does not change until then.",
+      "description": "Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5840,7 +5930,7 @@
       "path": "/v1/courses/{course_id}/documents/{document_id}/versions"
     },
     {
-      "description": "Retire a document. It disappears from lists and can no longer be edited; nothing is deleted, and anything pinned to one of its versions still reads it. A submitted file can be archived only while its submission is a draft.",
+      "description": "Retire a document. It disappears from lists and can no longer be edited until it is brought back with document.unarchive; nothing is deleted, and anything pinned to one of its versions still reads it. A submitted file can be archived only while its submission is a draft.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5878,7 +5968,7 @@
       "path": "/v1/courses/{course_id}/documents/{document_id}/archive"
     },
     {
-      "description": "Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade; those have exactly one version and are given their content here.",
+      "description": "Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6022,6 +6112,39 @@
               "string"
             ]
           },
+          "purged": {
+            "additionalProperties": false,
+            "description": "the whole document was purged: who, when and why",
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "by_actor_id": {
+                "description": "the administrator who purged it",
+                "format": "uuid",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "at",
+              "by_actor_id",
+              "reason"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "purged_at": {
+            "description": "when every version of it was purged: it is archived for good",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "sort_order": {
             "maximum": 2147483647,
             "minimum": -2147483648,
@@ -6088,6 +6211,32 @@
               },
               "published": {
                 "type": "boolean"
+              },
+              "purged": {
+                "additionalProperties": false,
+                "description": "the version was purged: its text and file are gone, and this says who removed them, when and why. Work handed in under it still names it",
+                "properties": {
+                  "at": {
+                    "type": "string"
+                  },
+                  "by_actor_id": {
+                    "description": "the administrator who purged it",
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "at",
+                  "by_actor_id",
+                  "reason"
+                ],
+                "type": [
+                  "null",
+                  "object"
+                ]
               },
               "seq": {
                 "maximum": 2147483647,
@@ -6180,6 +6329,13 @@
                 },
                 "published_version_id": {
                   "format": "uuid",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "purged_at": {
+                  "description": "when every version of it was purged: it is archived for good",
                   "type": [
                     "null",
                     "string"
@@ -6283,6 +6439,152 @@
         "type": "object"
       },
       "path": "/v1/courses/{course_id}/documents/{document_id}/publish"
+    },
+    {
+      "description": "Purge a version of a course's material, instructions or rubric, or the whole document, uploaded by mistake: its text and file are removed, the file deleted from storage, and a tombstone says who removed them, when and why. A purged document is archived for good. Work handed in under a purged version of the instructions still names it and reads the tombstone; grades are untouched. Submitted and feedback files are not purged. For a platform administrator, or a department administrator for the courses of the departments they administer; it works in an archived course too.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "description": "why, 1 to 500 characters: kept on the tombstone, and shown to whoever reads what was purged",
+            "type": "string"
+          },
+          "version_id": {
+            "description": "one version to purge; every version of the document, and the document with them, if omitted",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "document.purge",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "files_removed": {
+            "description": "how many files were deleted from storage",
+            "type": "integer"
+          },
+          "purged_versions": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "purged_versions",
+          "files_removed"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}/purge"
+    },
+    {
+      "description": "Bring back an archived document: it is in lists again, can be edited, and its published version is read again by whoever may read that kind of document. For whoever may archive it: feedback on a posted grade takes grade_post as well, and a submitted file comes back only while its submission is a draft. A purged document stays archived.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "document.unarchive",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}/unarchive"
+    },
+    {
+      "description": "Rename a document, or change its place in the list (sort_order), for whoever may write that kind of document: material, instructions and rubrics with document_write, a submitted file with submission_write while its submission is a draft, a feedback file as its grade is written. Its versions are untouched; an archived or purged document may be renamed as well. Giving what it already is changes nothing (changed: false).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sort_order": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "document.update",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "description": "false when the document already was so: nothing was done",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "changed"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}"
     },
     {
       "description": "Get somewhere to upload a file. Files do not travel through tool calls: PUT the bytes to the URL this returns, then pass the upload_token to the tool that attaches it. Nothing is recorded until then, and an upload that is never attached is eventually discarded. A call that would attach it by way of a proposal is refused once the upload is more than 48 hours old.",
@@ -6409,6 +6711,13 @@
                 },
                 "published": {
                   "type": "boolean"
+                },
+                "purged_at": {
+                  "description": "when its text and file were purged; document.get of it says who and why",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
                 },
                 "seq": {
                   "maximum": 2147483647,
@@ -6547,6 +6856,123 @@
       "path": "/v1/courses/{course_id}/events"
     },
     {
+      "description": "Take a person's override off one student's total: the total worked out counts again, and what is rolled up above it is written again now. The override stays on record in the total's history. Gated as grade.override_total is. A total with no override is left as it is.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "component_id": {
+            "description": "a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead",
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "student_member_id",
+          "component_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "grade.clear_override",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "description": "false when the total already said this: nothing was done",
+            "type": "boolean"
+          },
+          "grade_id": {
+            "description": "the total as it stands now",
+            "format": "uuid",
+            "type": "string"
+          },
+          "snapshots": {
+            "description": "how many totals above it were written down again",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grade_id",
+          "changed",
+          "snapshots"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/clear-override"
+    },
+    {
+      "description": "Write feedback for a student on one of their totals on a rolled-up component, the course total included, or take it away with an empty one. The student reads it with the total; totals written for it later carry it on. Feedback files go on a total too, with document.create. Gated as grade.override_total is.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "component_id": {
+            "description": "a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead",
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "feedback": {
+            "description": "what the student is told about this total; empty takes a comment away",
+            "type": "string"
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "student_member_id",
+          "component_id",
+          "feedback"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "grade.comment_total",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "description": "false when the total already said this: nothing was done",
+            "type": "boolean"
+          },
+          "grade_id": {
+            "description": "the total as it stands now",
+            "format": "uuid",
+            "type": "string"
+          },
+          "snapshots": {
+            "description": "how many totals above it were written down again",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grade_id",
+          "changed",
+          "snapshots"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/comment"
+    },
+    {
       "description": "One grade in full: score, feedback, per-criterion breakdown, the rubric version it was given against, and the action that made it.",
       "input_schema": {
         "additionalProperties": false,
@@ -6634,9 +7060,53 @@
             "format": "uuid",
             "type": "string"
           },
+          "no_total": {
+            "description": "for a computed total: nothing beneath it counts any more, so it has no value, and its score of 0 means nothing",
+            "type": "boolean"
+          },
           "origin": {
             "description": "entered by a grader, or computed: a rolled-up total written down when grades were posted",
             "type": "string"
+          },
+          "override": {
+            "additionalProperties": false,
+            "description": "for a computed total, a person's number in place of the score worked out, which stays beside it; it is what counts in everything rolled up above",
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "by_member_id": {
+                "description": "who; for members who grade",
+                "format": "uuid",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "reason": {
+                "description": "why; for members who grade",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "score": {
+                "description": "out of 100, as the total's own score is",
+                "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                "type": [
+                  "number",
+                  "string"
+                ]
+              }
+            },
+            "required": [
+              "score",
+              "at"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
           },
           "posted_at": {
             "type": [
@@ -6809,9 +7279,53 @@
                   "format": "uuid",
                   "type": "string"
                 },
+                "no_total": {
+                  "description": "for a computed total: nothing beneath it counts any more, so it has no value, and its score of 0 means nothing",
+                  "type": "boolean"
+                },
                 "origin": {
                   "description": "entered by a grader, or computed: a rolled-up total written down when grades were posted",
                   "type": "string"
+                },
+                "override": {
+                  "additionalProperties": false,
+                  "description": "for a computed total, a person's number in place of the score worked out, which stays beside it; it is what counts in everything rolled up above",
+                  "properties": {
+                    "at": {
+                      "type": "string"
+                    },
+                    "by_member_id": {
+                      "description": "who; for members who grade",
+                      "format": "uuid",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "reason": {
+                      "description": "why; for members who grade",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "score": {
+                      "description": "out of 100, as the total's own score is",
+                      "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                      "type": [
+                        "number",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "score",
+                    "at"
+                  ],
+                  "type": [
+                    "null",
+                    "object"
+                  ]
                 },
                 "posted_at": {
                   "type": [
@@ -6890,6 +7404,76 @@
       "path": "/v1/courses/{course_id}/grades"
     },
     {
+      "description": "Override one student's total on a rolled-up component, the course total included, with a score out of 100 and a reason. The total worked out stays beside the override, and every total written for it later carries the override on; in everything rolled up above it, the override counts in its place, and those totals are written again now. A total is overridden once something beneath it has been posted. Like a regrade it writes a grade and makes it visible at once, so it takes grade_submit and grade_post and runs at the lower of the two; a total spans assignments, so it needs an assignment scope of the whole course. The reason and who made the override are shown to those who grade. Overriding with what is already there changes nothing.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "component_id": {
+            "description": "a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead",
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "description": "why, 1 to 500 characters: shown to those who grade, and kept",
+            "type": "string"
+          },
+          "score": {
+            "description": "out of 100, as a total's own score is",
+            "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "student_member_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "student_member_id",
+          "component_id",
+          "score",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "grade.override_total",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "description": "false when the total already said this: nothing was done",
+            "type": "boolean"
+          },
+          "grade_id": {
+            "description": "the total as it stands now",
+            "format": "uuid",
+            "type": "string"
+          },
+          "snapshots": {
+            "description": "how many totals above it were written down again",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grade_id",
+          "changed",
+          "snapshots"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/override"
+    },
+    {
       "description": "Post draft grades so that students can see them, and write down each affected student's rolled-up totals as they stand. Every grade in the batch must be within the caller's scope. A grade that is already posted is changed with grade.regrade, not posted again.",
       "input_schema": {
         "additionalProperties": false,
@@ -6919,7 +7503,7 @@
             ]
           },
           "treat_ungraded_as_zero": {
-            "description": "for final grades: count ungraded work as zero in the totals. Once a student's totals have been written this way they stay final: later posts and regrades keep counting ungraded work as zero. It decides the course total, so it needs an assignment scope of the whole course",
+            "description": "for final grades: count ungraded work as zero in the totals. Once a student's totals have been written this way they stay final: later posts and regrades keep counting ungraded work as zero, until grade.undo_ungraded_as_zero. It decides the course total, so it needs an assignment scope of the whole course",
             "type": "boolean"
           }
         },
@@ -7286,7 +7870,58 @@
       "path": "/v1/courses/{course_id}/grades"
     },
     {
-      "description": "One student's rolled-up grades, computed now from posted grades: every component of the course with its percentage and the working behind it. Nothing is stored by reading this.",
+      "description": "Undo treat_ungraded_as_zero for one student, or for every student it was applied to: their totals are written again, at once, leaving ungraded work out as a grade so far, and later posts and regrades no longer count it as zero until someone posts as final again. A total with nothing left beneath it says it has none. Gated as posting as final is: grade_post, reaching every student it is about, with an assignment scope of the whole course. Grades themselves are not touched, and the totals it replaces stay in the history.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "all_students": {
+            "description": "every student of the course whose totals count ungraded work as zero",
+            "type": "boolean"
+          },
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "student_member_id": {
+            "description": "the student whose totals count ungraded work as zero; or give all_students",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "grade.undo_ungraded_as_zero",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "snapshots": {
+            "description": "how many totals were written down again",
+            "type": "integer"
+          },
+          "students": {
+            "description": "how many students' totals no longer count ungraded work as zero",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "students",
+          "snapshots"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/grades/undo-ungraded-as-zero"
+    },
+    {
+      "description": "One student's rolled-up grades, computed now from posted grades: every component of the course with its percentage and the working behind it, and, beside a total a person has overridden, the override, which counts in its place in everything above it. Nothing is stored by reading this.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7358,6 +7993,9 @@
                       "kind": {
                         "type": "string"
                       },
+                      "overridden": {
+                        "type": "boolean"
+                      },
                       "weight": {
                         "description": "a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits",
                         "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
@@ -7383,8 +8021,17 @@
                 "name": {
                   "type": "string"
                 },
+                "override_percent": {
+                  "description": "out of 100: a person's override of this total, which counts in its place in everything rolled up above it",
+                  "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
+                  "type": [
+                    "null",
+                    "number",
+                    "string"
+                  ]
+                },
                 "percent": {
-                  "description": "out of 100; null when nothing beneath it has a posted grade",
+                  "description": "out of 100, as the scheme works it out; null when nothing beneath it has a posted grade",
                   "pattern": "^[-+]?([0-9]{1,40}(\\.[0-9]{0,40})?|\\.[0-9]{1,40})([eE][-+]?[0-9]{1,2})?$",
                   "type": [
                     "null",
@@ -8693,6 +9340,59 @@
         "type": "object"
       },
       "path": "/v1/courses/{course_id}/members/{member_id}/resume"
+    },
+    {
+      "description": "Change a seat's roster role: student, ta, instructor, observer or assistant. The role is a fact of the roster and nothing more: it decides who is on the gradebook and who hands work in, never what a seat may do. Its permissions and scope stay exactly as they are, since authorization never reads role; change them with member.update_perms and member.rescope. A student made a TA keeps everything they handed in and every grade and total they were given, readable as before, and work already handed in may still be graded; from then on they are off the roster: not listed as a student, not marked missing when a due date passes, handing in nothing new and given no new grade on a component. Someone made a student is on the roster and may hand work in. Not on your own seat, and not on a delegate's, which is always assistant; a delegate that manages the course's members changes the role of neither its principal's seat nor its principal's other agents' (not_your_principal). Giving a seat the role it has changes nothing and says so (changed: false).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "member_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "role": {
+            "description": "student, instructor, ta, observer or assistant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "member_id",
+          "role"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "member.set_role",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "changed": {
+            "description": "false when the seat already had the role: nothing was done",
+            "type": "boolean"
+          },
+          "previous": {
+            "description": "the role the seat had before this call",
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "previous",
+          "changed"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/members/{member_id}/role"
     },
     {
       "description": "Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself, and within what the seat may hold at all (perm_ceilings in member.get; above it the refusal gives the same reason code). Lowering is always allowed.",

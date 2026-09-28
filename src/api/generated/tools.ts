@@ -938,7 +938,7 @@ export interface AssignmentUnpublishOut {
   ok: boolean
 }
 
-/** assignment.update (write): Change an assignment. Once any grade has been entered for it, what it is worth and where it counts are fixed: a score is a score out of the points possible when it was given. */
+/** assignment.update (write): Change an assignment. What it is worth and where it counts may change after grades are entered for it: a change of points says what becomes of them (existing_grades: rescale or keep_scores), and needs grade_submit and grade_post as well; moving it to another component, or out of the grade, needs nothing more. Either rewrites, at once, the posted totals it changes, with history, and so must reach every student who has one, over the whole course. A grade proposed out of the old points is refused when it is approved. */
 export interface AssignmentUpdateIn {
   assignment_id: string
   /**
@@ -956,6 +956,10 @@ export interface AssignmentUpdateIn {
   course_id: string
   due_at?: null | string
   /**
+   * rescale or keep_scores: what becomes of grades already entered when points_possible changes, required once any has been. rescale converts each score in proportion (45 of 50 becomes 90 of 100) in a new grade that replaces it, the old one kept; keep_scores leaves each score as it is, out of the new points. Either rewrites the totals it changes, and needs grade_submit and grade_post as well
+   */
+  existing_grades?: null | string
+  /**
    * a document of kind instructions, in this course
    */
   instructions_document_id?: null | string
@@ -971,6 +975,14 @@ export interface AssignmentUpdateIn {
 }
 export interface AssignmentUpdateOut {
   ok: boolean
+  /**
+   * how many grades were written again in the new points
+   */
+  rescaled: number
+  /**
+   * how many posted totals were written down again
+   */
+  snapshots: number
 }
 
 /** component.create (write): Add a component to the grading scheme under a parent: a bucket that assignments will hang from, or, with points_possible, something graded directly such as an exam. */
@@ -999,7 +1011,7 @@ export interface ComponentCreateOut {
   id: string
 }
 
-/** component.move (write): Move a component, with everything beneath it, under a different parent in the same course. Once any grade has been entered beneath it, its place in the scheme is fixed. */
+/** component.move (write): Move a component, with everything beneath it, under a different parent in the same course. It may move after grades are entered beneath it: that rewrites, at once, the posted totals it changes, with history, where it was and where it goes, and so must reach every student who has one, over the whole course. */
 export interface ComponentMoveIn {
   component_id: string
   /**
@@ -1010,6 +1022,14 @@ export interface ComponentMoveIn {
 }
 export interface ComponentMoveOut {
   ok: boolean
+  /**
+   * how many grades were written again in the new points
+   */
+  rescaled: number
+  /**
+   * how many posted totals were written down again
+   */
+  snapshots: number
 }
 
 /** component.tree (read): The course's grading scheme: the tree of components with their weights, from the course total down. */
@@ -1045,10 +1065,10 @@ export interface ComponentTreeOut {
       }[]
 }
 
-/** component.update (write): Change a component's name, weight, drop_lowest, points or order. Posted totals are not rewritten: what a student was shown stays as it was until grades beneath it are next posted or regraded. */
+/** component.update (write): Change a component's name, weight, drop_lowest, points or order. A change of weight or drop_lowest does not rewrite posted totals: what a student was shown stays as it was until grades beneath it are next posted or regraded. The points of a directly graded component may change after grades are entered on it, saying what becomes of them (existing_grades: rescale or keep_scores, needing grade_submit and grade_post as well); that rewrites, at once, the posted totals it changes, and so must reach every student who has one, over the whole course. */
 export interface ComponentUpdateIn {
   /**
-   * turn a directly graded component back into a bucket
+   * turn a directly graded component back into a bucket; not once a grade has been entered on it
    */
   clear_points_possible?: boolean
   component_id: string
@@ -1057,6 +1077,10 @@ export interface ComponentUpdateIn {
    */
   course_id: string
   drop_lowest?: null | number
+  /**
+   * rescale or keep_scores: what becomes of grades already entered on a directly graded component when its points_possible changes, required once any has been; as for assignment.update. Needs grade_submit and grade_post as well
+   */
+  existing_grades?: null | string
   name?: null | string
   /**
    * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
@@ -1070,6 +1094,14 @@ export interface ComponentUpdateIn {
 }
 export interface ComponentUpdateOut {
   ok: boolean
+  /**
+   * how many grades were written again in the new points
+   */
+  rescaled: number
+  /**
+   * how many posted totals were written down again
+   */
+  snapshots: number
 }
 
 /** conversation.answer (write): Answer in a conversation addressed to you (conversation.inbox lists those waiting), replying to the opener's latest message, whose id you give as in_reply_to_message_id. It is refused as a conflict, with a reason: moved_on if the opener has written again since (read the new message and answer that), already_answered if that message has its answer, answer_pending if an answer of yours to it waits for approval, closed if the conversation is. Your level of conversation_answer decides whether an answer is posted at once, posted and reviewed after, or waits for a person's approval; one that waits is checked again when approved, and refused then if the conversation has moved on. An answer that failed or was rejected may be written again, under a new idempotency key. */
@@ -1818,7 +1850,7 @@ export interface CourseSeatInstructorOut {
   member_id: string
 }
 
-/** course.update (write): Change a course's title or description. Its code, section and term are what it is, and do not change. A department administrator does this for the courses of the departments they administer. */
+/** course.update (write): Change a course's title or description. Its code, section and term are what it is, and do not change. A department administrator does this for the courses of the departments they administer; the course's instructors do it from their seat with course.update_details. */
 export interface CourseUpdateIn {
   course_id: string
   description?: null | string
@@ -1826,6 +1858,22 @@ export interface CourseUpdateIn {
 }
 export interface CourseUpdateOut {
   ok: boolean
+}
+
+/** course.update_details (write): Change the course's title or description from a seat in it, for whoever manages its members, as its instructors do. Its code, section, term, department and status stay with its administrators (course.update, course.move, course.activate, course.archive). Giving what the course already says changes nothing and says so (changed: false). */
+export interface CourseUpdateDetailsIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  description?: null | string
+  title?: null | string
+}
+export interface CourseUpdateDetailsOut {
+  /**
+   * false when the course already said what was given: nothing was done
+   */
+  changed: boolean
 }
 
 /** credential.issue_token (write): Create an API token for the caller's own account. The token is returned once and only its hash is kept: retrying this call returns the credential but not the token again. */
@@ -2054,7 +2102,7 @@ export interface DepartmentUpdateOut {
   parent_id?: null | string
 }
 
-/** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed. The new version is a draft until it is published; what students read does not change until then. */
+/** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then. */
 export interface DocumentAddVersionIn {
   /**
    * markdown text
@@ -2080,7 +2128,7 @@ export interface DocumentAddVersionOut {
   version_id: string
 }
 
-/** document.archive (write): Retire a document. It disappears from lists and can no longer be edited; nothing is deleted, and anything pinned to one of its versions still reads it. A submitted file can be archived only while its submission is a draft. */
+/** document.archive (write): Retire a document. It disappears from lists and can no longer be edited until it is brought back with document.unarchive; nothing is deleted, and anything pinned to one of its versions still reads it. A submitted file can be archived only while its submission is a draft. */
 export interface DocumentArchiveIn {
   /**
    * the course this call is about
@@ -2092,7 +2140,7 @@ export interface DocumentArchiveOut {
   ok: boolean
 }
 
-/** document.create (write): Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade; those have exactly one version and are given their content here. */
+/** document.create (write): Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here. */
 export interface DocumentCreateIn {
   /**
    * markdown text
@@ -2147,6 +2195,21 @@ export interface DocumentGetOut {
   id: string
   kind: string
   published_version_id?: null | string
+  /**
+   * the whole document was purged: who, when and why
+   */
+  purged?: null | {
+    at: string
+    /**
+     * the administrator who purged it
+     */
+    by_actor_id: string
+    reason: string
+  }
+  /**
+   * when every version of it was purged: it is archived for good
+   */
+  purged_at?: null | string
   sort_order: number
   status: string
   submission_id?: null | string
@@ -2167,6 +2230,17 @@ export interface DocumentGetOut {
     download_url?: null | string
     id: string
     published: boolean
+    /**
+     * the version was purged: its text and file are gone, and this says who removed them, when and why. Work handed in under it still names it
+     */
+    purged?: null | {
+      at: string
+      /**
+       * the administrator who purged it
+       */
+      by_actor_id: string
+      reason: string
+    }
     seq: number
   }
 }
@@ -2199,6 +2273,10 @@ export interface DocumentListOut {
         id: string
         kind: string
         published_version_id?: null | string
+        /**
+         * when every version of it was purged: it is archived for good
+         */
+        purged_at?: null | string
         sort_order: number
         status: string
         title: string
@@ -2222,6 +2300,56 @@ export interface DocumentPublishOut {
   published: boolean
   seq: number
   version_id: string
+}
+
+/** document.purge (write): Purge a version of a course's material, instructions or rubric, or the whole document, uploaded by mistake: its text and file are removed, the file deleted from storage, and a tombstone says who removed them, when and why. A purged document is archived for good. Work handed in under a purged version of the instructions still names it and reads the tombstone; grades are untouched. Submitted and feedback files are not purged. For a platform administrator, or a department administrator for the courses of the departments they administer; it works in an archived course too. */
+export interface DocumentPurgeIn {
+  course_id: string
+  document_id: string
+  /**
+   * why, 1 to 500 characters: kept on the tombstone, and shown to whoever reads what was purged
+   */
+  reason: string
+  /**
+   * one version to purge; every version of the document, and the document with them, if omitted
+   */
+  version_id?: null | string
+}
+export interface DocumentPurgeOut {
+  /**
+   * how many files were deleted from storage
+   */
+  files_removed: number
+  purged_versions: number
+}
+
+/** document.unarchive (write): Bring back an archived document: it is in lists again, can be edited, and its published version is read again by whoever may read that kind of document. For whoever may archive it: feedback on a posted grade takes grade_post as well, and a submitted file comes back only while its submission is a draft. A purged document stays archived. */
+export interface DocumentUnarchiveIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  document_id: string
+}
+export interface DocumentUnarchiveOut {
+  ok: boolean
+}
+
+/** document.update (write): Rename a document, or change its place in the list (sort_order), for whoever may write that kind of document: material, instructions and rubrics with document_write, a submitted file with submission_write while its submission is a draft, a feedback file as its grade is written. Its versions are untouched; an archived or purged document may be renamed as well. Giving what it already is changes nothing (changed: false). */
+export interface DocumentUpdateIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  document_id: string
+  sort_order?: null | number
+  title?: null | string
+}
+export interface DocumentUpdateOut {
+  /**
+   * false when the document already was so: nothing was done
+   */
+  changed: boolean
 }
 
 /** document.upload_url (read): Get somewhere to upload a file. Files do not travel through tool calls: PUT the bytes to the URL this returns, then pass the upload_token to the tool that attaches it. Nothing is recorded until then, and an upload that is never attached is eventually discarded. A call that would attach it by way of a proposal is refused once the upload is more than 48 hours old. */
@@ -2280,6 +2408,10 @@ export interface DocumentVersionsOut {
         has_file: boolean
         id: string
         published: boolean
+        /**
+         * when its text and file were purged; document.get of it says who and why
+         */
+        purged_at?: null | string
         seq: number
       }[]
 }
@@ -2320,6 +2452,64 @@ export interface EventListOut {
   next_seq: number
 }
 
+/** grade.clear_override (write): Take a person's override off one student's total: the total worked out counts again, and what is rolled up above it is written again now. The override stays on record in the total's history. Gated as grade.override_total is. A total with no override is left as it is. */
+export interface GradeClearOverrideIn {
+  /**
+   * a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead
+   */
+  component_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  student_member_id: string
+}
+export interface GradeClearOverrideOut {
+  /**
+   * false when the total already said this: nothing was done
+   */
+  changed: boolean
+  /**
+   * the total as it stands now
+   */
+  grade_id: string
+  /**
+   * how many totals above it were written down again
+   */
+  snapshots: number
+}
+
+/** grade.comment_total (write): Write feedback for a student on one of their totals on a rolled-up component, the course total included, or take it away with an empty one. The student reads it with the total; totals written for it later carry it on. Feedback files go on a total too, with document.create. Gated as grade.override_total is. */
+export interface GradeCommentTotalIn {
+  /**
+   * a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead
+   */
+  component_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * what the student is told about this total; empty takes a comment away
+   */
+  feedback: string
+  student_member_id: string
+}
+export interface GradeCommentTotalOut {
+  /**
+   * false when the total already said this: nothing was done
+   */
+  changed: boolean
+  /**
+   * the total as it stands now
+   */
+  grade_id: string
+  /**
+   * how many totals above it were written down again
+   */
+  snapshots: number
+}
+
 /** grade.get (read): One grade in full: score, feedback, per-criterion breakdown, the rubric version it was given against, and the action that made it. */
 export interface GradeGetIn {
   /**
@@ -2350,9 +2540,31 @@ export interface GradeGetOut {
   grader_member_id: string
   id: string
   /**
+   * for a computed total: nothing beneath it counts any more, so it has no value, and its score of 0 means nothing
+   */
+  no_total?: boolean
+  /**
    * entered by a grader, or computed: a rolled-up total written down when grades were posted
    */
   origin: string
+  /**
+   * for a computed total, a person's number in place of the score worked out, which stays beside it; it is what counts in everything rolled up above
+   */
+  override?: null | {
+    at: string
+    /**
+     * who; for members who grade
+     */
+    by_member_id?: null | string
+    /**
+     * why; for members who grade
+     */
+    reason?: null | string
+    /**
+     * out of 100, as the total's own score is
+     */
+    score: number | string
+  }
   posted_at?: null | string
   rubric_version_id?: null | string
   /**
@@ -2410,9 +2622,31 @@ export interface GradeListOut {
         grader_member_id: string
         id: string
         /**
+         * for a computed total: nothing beneath it counts any more, so it has no value, and its score of 0 means nothing
+         */
+        no_total?: boolean
+        /**
          * entered by a grader, or computed: a rolled-up total written down when grades were posted
          */
         origin: string
+        /**
+         * for a computed total, a person's number in place of the score worked out, which stays beside it; it is what counts in everything rolled up above
+         */
+        override?: null | {
+          at: string
+          /**
+           * who; for members who grade
+           */
+          by_member_id?: null | string
+          /**
+           * why; for members who grade
+           */
+          reason?: null | string
+          /**
+           * out of 100, as the total's own score is
+           */
+          score: number | string
+        }
         posted_at?: null | string
         rubric_version_id?: null | string
         /**
@@ -2430,6 +2664,41 @@ export interface GradeListOut {
   next?: null | string
 }
 
+/** grade.override_total (write): Override one student's total on a rolled-up component, the course total included, with a score out of 100 and a reason. The total worked out stays beside the override, and every total written for it later carries the override on; in everything rolled up above it, the override counts in its place, and those totals are written again now. A total is overridden once something beneath it has been posted. Like a regrade it writes a grade and makes it visible at once, so it takes grade_submit and grade_post and runs at the lower of the two; a total spans assignments, so it needs an assignment scope of the whole course. The reason and who made the override are shown to those who grade. Overriding with what is already there changes nothing. */
+export interface GradeOverrideTotalIn {
+  /**
+   * a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead
+   */
+  component_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * why, 1 to 500 characters: shown to those who grade, and kept
+   */
+  reason: string
+  /**
+   * out of 100, as a total's own score is
+   */
+  score: number | string
+  student_member_id: string
+}
+export interface GradeOverrideTotalOut {
+  /**
+   * false when the total already said this: nothing was done
+   */
+  changed: boolean
+  /**
+   * the total as it stands now
+   */
+  grade_id: string
+  /**
+   * how many totals above it were written down again
+   */
+  snapshots: number
+}
+
 /** grade.post (write): Post draft grades so that students can see them, and write down each affected student's rolled-up totals as they stand. Every grade in the batch must be within the caller's scope. A grade that is already posted is changed with grade.regrade, not posted again. */
 export interface GradePostIn {
   /**
@@ -2445,7 +2714,7 @@ export interface GradePostIn {
    */
   grade_ids?: null | string[]
   /**
-   * for final grades: count ungraded work as zero in the totals. Once a student's totals have been written this way they stay final: later posts and regrades keep counting ungraded work as zero. It decides the course total, so it needs an assignment scope of the whole course
+   * for final grades: count ungraded work as zero in the totals. Once a student's totals have been written this way they stay final: later posts and regrades keep counting ungraded work as zero, until grade.undo_ungraded_as_zero. It decides the course total, so it needs an assignment scope of the whole course
    */
   treat_ungraded_as_zero?: boolean
 }
@@ -2593,7 +2862,33 @@ export interface GradeSubmitOut {
   grade_id: string
 }
 
-/** gradebook.get (read): One student's rolled-up grades, computed now from posted grades: every component of the course with its percentage and the working behind it. Nothing is stored by reading this. */
+/** grade.undo_ungraded_as_zero (write): Undo treat_ungraded_as_zero for one student, or for every student it was applied to: their totals are written again, at once, leaving ungraded work out as a grade so far, and later posts and regrades no longer count it as zero until someone posts as final again. A total with nothing left beneath it says it has none. Gated as posting as final is: grade_post, reaching every student it is about, with an assignment scope of the whole course. Grades themselves are not touched, and the totals it replaces stay in the history. */
+export interface GradeUndoUngradedAsZeroIn {
+  /**
+   * every student of the course whose totals count ungraded work as zero
+   */
+  all_students?: boolean
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * the student whose totals count ungraded work as zero; or give all_students
+   */
+  student_member_id?: null | string
+}
+export interface GradeUndoUngradedAsZeroOut {
+  /**
+   * how many totals were written down again
+   */
+  snapshots: number
+  /**
+   * how many students' totals no longer count ungraded work as zero
+   */
+  students: number
+}
+
+/** gradebook.get (read): One student's rolled-up grades, computed now from posted grades: every component of the course with its percentage and the working behind it, and, beside a total a person has overridden, the override, which counts in its place in everything above it. Nothing is stored by reading this. */
 export interface GradebookGetIn {
   /**
    * the course this call is about
@@ -2622,6 +2917,7 @@ export interface GradebookGetOut {
               fraction: null | number | string
               id: string
               kind: string
+              overridden?: boolean
               /**
                * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
                */
@@ -2629,7 +2925,11 @@ export interface GradebookGetOut {
             }[]
         name: string
         /**
-         * out of 100; null when nothing beneath it has a posted grade
+         * out of 100: a person's override of this total, which counts in its place in everything rolled up above it
+         */
+        override_percent?: null | number | string
+        /**
+         * out of 100, as the scheme works it out; null when nothing beneath it has a posted grade
          */
         percent: null | number | string
       }[]
@@ -3139,6 +3439,30 @@ export interface MemberResumeIn {
 }
 export interface MemberResumeOut {
   ok: boolean
+}
+
+/** member.set_role (write): Change a seat's roster role: student, ta, instructor, observer or assistant. The role is a fact of the roster and nothing more: it decides who is on the gradebook and who hands work in, never what a seat may do. Its permissions and scope stay exactly as they are, since authorization never reads role; change them with member.update_perms and member.rescope. A student made a TA keeps everything they handed in and every grade and total they were given, readable as before, and work already handed in may still be graded; from then on they are off the roster: not listed as a student, not marked missing when a due date passes, handing in nothing new and given no new grade on a component. Someone made a student is on the roster and may hand work in. Not on your own seat, and not on a delegate's, which is always assistant; a delegate that manages the course's members changes the role of neither its principal's seat nor its principal's other agents' (not_your_principal). Giving a seat the role it has changes nothing and says so (changed: false). */
+export interface MemberSetRoleIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  member_id: string
+  /**
+   * student, instructor, ta, observer or assistant
+   */
+  role: string
+}
+export interface MemberSetRoleOut {
+  /**
+   * false when the seat already had the role: nothing was done
+   */
+  changed: boolean
+  /**
+   * the role the seat had before this call
+   */
+  previous: string
+  role: string
 }
 
 /** member.update_perms (write): Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself, and within what the seat may hold at all (perm_ceilings in member.get; above it the refusal gives the same reason code). Lowering is always allowed. */
@@ -3838,6 +4162,7 @@ export interface ToolMap {
   'course.move': { in: CourseMoveIn; out: CourseMoveOut; kind: 'write' }
   'course.seat_instructor': { in: CourseSeatInstructorIn; out: CourseSeatInstructorOut; kind: 'write' }
   'course.update': { in: CourseUpdateIn; out: CourseUpdateOut; kind: 'write' }
+  'course.update_details': { in: CourseUpdateDetailsIn; out: CourseUpdateDetailsOut; kind: 'write' }
   'credential.issue_token': { in: CredentialIssueTokenIn; out: CredentialIssueTokenOut; kind: 'write' }
   'credential.list': { in: CredentialListIn; out: CredentialListOut; kind: 'read' }
   'credential.revoke': { in: CredentialRevokeIn; out: CredentialRevokeOut; kind: 'write' }
@@ -3856,14 +4181,21 @@ export interface ToolMap {
   'document.get': { in: DocumentGetIn; out: DocumentGetOut; kind: 'read' }
   'document.list': { in: DocumentListIn; out: DocumentListOut; kind: 'read' }
   'document.publish': { in: DocumentPublishIn; out: DocumentPublishOut; kind: 'write' }
+  'document.purge': { in: DocumentPurgeIn; out: DocumentPurgeOut; kind: 'write' }
+  'document.unarchive': { in: DocumentUnarchiveIn; out: DocumentUnarchiveOut; kind: 'write' }
+  'document.update': { in: DocumentUpdateIn; out: DocumentUpdateOut; kind: 'write' }
   'document.upload_url': { in: DocumentUploadUrlIn; out: DocumentUploadUrlOut; kind: 'read' }
   'document.versions': { in: DocumentVersionsIn; out: DocumentVersionsOut; kind: 'read' }
   'event.list': { in: EventListIn; out: EventListOut; kind: 'read' }
+  'grade.clear_override': { in: GradeClearOverrideIn; out: GradeClearOverrideOut; kind: 'write' }
+  'grade.comment_total': { in: GradeCommentTotalIn; out: GradeCommentTotalOut; kind: 'write' }
   'grade.get': { in: GradeGetIn; out: GradeGetOut; kind: 'read' }
   'grade.list': { in: GradeListIn; out: GradeListOut; kind: 'read' }
+  'grade.override_total': { in: GradeOverrideTotalIn; out: GradeOverrideTotalOut; kind: 'write' }
   'grade.post': { in: GradePostIn; out: GradePostOut; kind: 'write' }
   'grade.regrade': { in: GradeRegradeIn; out: GradeRegradeOut; kind: 'write' }
   'grade.submit': { in: GradeSubmitIn; out: GradeSubmitOut; kind: 'write' }
+  'grade.undo_ungraded_as_zero': { in: GradeUndoUngradedAsZeroIn; out: GradeUndoUngradedAsZeroOut; kind: 'write' }
   'gradebook.get': { in: GradebookGetIn; out: GradebookGetOut; kind: 'read' }
   'me.get': { in: MeGetIn; out: MeGetOut; kind: 'read' }
   'me.memberships': { in: MeMembershipsIn; out: MeMembershipsOut; kind: 'read' }
@@ -3878,6 +4210,7 @@ export interface ToolMap {
   'member.remove': { in: MemberRemoveIn; out: MemberRemoveOut; kind: 'write' }
   'member.rescope': { in: MemberRescopeIn; out: MemberRescopeOut; kind: 'write' }
   'member.resume': { in: MemberResumeIn; out: MemberResumeOut; kind: 'write' }
+  'member.set_role': { in: MemberSetRoleIn; out: MemberSetRoleOut; kind: 'write' }
   'member.update_perms': { in: MemberUpdatePermsIn; out: MemberUpdatePermsOut; kind: 'write' }
   'member.update_perms_bulk': { in: MemberUpdatePermsBulkIn; out: MemberUpdatePermsBulkOut; kind: 'write' }
   'memory.forget': { in: MemoryForgetIn; out: MemoryForgetOut; kind: 'write' }
@@ -3971,6 +4304,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'course.move': { method: 'POST', path: '/v1/courses/{course_id}/move', kind: 'write' },
   'course.seat_instructor': { method: 'POST', path: '/v1/courses/{course_id}/instructors', kind: 'write' },
   'course.update': { method: 'POST', path: '/v1/courses/{course_id}', kind: 'write' },
+  'course.update_details': { method: 'POST', path: '/v1/courses/{course_id}/details', kind: 'write' },
   'credential.issue_token': { method: 'POST', path: '/v1/me/credentials/tokens', kind: 'write' },
   'credential.list': { method: 'GET', path: '/v1/me/credentials', kind: 'read' },
   'credential.revoke': { method: 'POST', path: '/v1/me/credentials/{credential_id}/revoke', kind: 'write' },
@@ -3989,14 +4323,21 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'document.get': { method: 'GET', path: '/v1/courses/{course_id}/documents/{document_id}', kind: 'read' },
   'document.list': { method: 'GET', path: '/v1/courses/{course_id}/documents', kind: 'read' },
   'document.publish': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/publish', kind: 'write' },
+  'document.purge': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/purge', kind: 'write' },
+  'document.unarchive': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/unarchive', kind: 'write' },
+  'document.update': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}', kind: 'write' },
   'document.upload_url': { method: 'GET', path: '/v1/courses/{course_id}/upload-url', kind: 'read' },
   'document.versions': { method: 'GET', path: '/v1/courses/{course_id}/documents/{document_id}/versions', kind: 'read' },
   'event.list': { method: 'GET', path: '/v1/courses/{course_id}/events', kind: 'read' },
+  'grade.clear_override': { method: 'POST', path: '/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/clear-override', kind: 'write' },
+  'grade.comment_total': { method: 'POST', path: '/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/comment', kind: 'write' },
   'grade.get': { method: 'GET', path: '/v1/courses/{course_id}/grades/{grade_id}', kind: 'read' },
   'grade.list': { method: 'GET', path: '/v1/courses/{course_id}/grades', kind: 'read' },
+  'grade.override_total': { method: 'POST', path: '/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/override', kind: 'write' },
   'grade.post': { method: 'POST', path: '/v1/courses/{course_id}/grades/post', kind: 'write' },
   'grade.regrade': { method: 'POST', path: '/v1/courses/{course_id}/grades/{grade_id}/regrade', kind: 'write' },
   'grade.submit': { method: 'POST', path: '/v1/courses/{course_id}/grades', kind: 'write' },
+  'grade.undo_ungraded_as_zero': { method: 'POST', path: '/v1/courses/{course_id}/grades/undo-ungraded-as-zero', kind: 'write' },
   'gradebook.get': { method: 'GET', path: '/v1/courses/{course_id}/gradebook/{student_member_id}', kind: 'read' },
   'me.get': { method: 'GET', path: '/v1/me', kind: 'read' },
   'me.memberships': { method: 'GET', path: '/v1/me/memberships', kind: 'read' },
@@ -4011,6 +4352,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'member.remove': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/remove', kind: 'write' },
   'member.rescope': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/scope', kind: 'write' },
   'member.resume': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/resume', kind: 'write' },
+  'member.set_role': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/role', kind: 'write' },
   'member.update_perms': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/perms', kind: 'write' },
   'member.update_perms_bulk': { method: 'POST', path: '/v1/courses/{course_id}/members/bulk-perms', kind: 'write' },
   'memory.forget': { method: 'POST', path: '/v1/me/memory/entries/{memory_id}/forget', kind: 'write' },
