@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import dayjs from 'dayjs'
-import { LOCALES, dayjsLocale, i18n, initialLocale, localeForTag, setLocale } from '.'
-import { fromNow } from '@/utils/format'
+import { LOCALES, dayjsLocale, i18n, initialLocale, intlLocale, localeForTag, setLocale } from '.'
+import { formatDecimal, fromNow } from '@/utils/format'
 
 // The message functions, as plainly typed as a test needs them.
 const g = i18n.global as unknown as {
@@ -104,12 +104,15 @@ describe('the first language', () => {
 })
 
 describe('setLocale', () => {
-  it('sets the page in Simplified Chinese: messages, <html lang>, dates the Mainland’s way, and remembers it', () => {
+  it('sets the page in Simplified Chinese: messages, <html lang>, dates and numbers the Mainland’s way, and remembers it', () => {
     setLocale('zh-Hans')
     expect(i18n.global.locale.value).toBe('zh-Hans')
     expect(document.documentElement.lang).toBe('zh-Hans')
     expect(dayjs.locale()).toBe('zh-cn')
     expect(fromNow(dayjs().subtract(3, 'minute').toISOString())).toBe('3 分钟前')
+    const numbers = vi.spyOn(Number.prototype, 'toLocaleString')
+    expect(formatDecimal(1234.5)).toBe('1,234.5')
+    expect(numbers).toHaveBeenCalledWith('zh-CN', { maximumFractionDigits: 2 })
     expect(localStorage.getItem('aishiteru.locale')).toBe('zh-Hans')
   })
 
@@ -124,7 +127,11 @@ describe('setLocale', () => {
     expect(localStorage.getItem('aishiteru.locale')).toBe('en')
   })
 
-  it('names each language to dayjs', () => {
-    expect(LOCALES.map((l) => dayjsLocale(l.value))).toEqual(['zh-tw', 'zh-cn', 'en'])
+  it('names each language to dayjs and to Intl', () => {
+    expect(LOCALES.map((l) => [dayjsLocale(l.value), intlLocale(l.value)])).toEqual([
+      ['zh-tw', 'zh-TW'],
+      ['zh-cn', 'zh-CN'],
+      ['en', 'en'],
+    ])
   })
 })

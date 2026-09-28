@@ -9,6 +9,7 @@ import 'dayjs/locale/zh-tw'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
 import { loadFontsFor } from '@/styles/fonts'
+import { setNumberLocale } from '@/utils/format'
 
 dayjs.extend(relativeTime)
 dayjs.extend(localizedFormat)
@@ -77,9 +78,15 @@ export function dayjsLocale(l: Locale): string {
   return l === 'zh-Hans' ? 'zh-cn' : l === 'zh-Hant' ? 'zh-tw' : 'en'
 }
 
+/** The language as Intl names it, for numbers: the Mainland's forms, or Taiwan's. */
+export function intlLocale(l: Locale): string {
+  return l === 'zh-Hans' ? 'zh-CN' : l === 'zh-Hant' ? 'zh-TW' : 'en'
+}
+
 export function setLocale(l: Locale) {
   i18n.global.locale.value = l
   dayjs.locale(dayjsLocale(l))
+  setNumberLocale(intlLocale(l))
   // <html lang> chooses the typefaces too (styles/tokens.css); those it names are loaded.
   document.documentElement.lang = l
   loadFontsFor(l)
