@@ -112,6 +112,11 @@ summary:focus-visible,
 .el-form-item__content .el-select {
   width: 100%;
 }
+/* A tooltip that says a sentence (why a level is out of reach) wraps, and fits a phone. */
+.el-popper.app-tip-wrap {
+  max-width: min(360px, calc(100vw - 24px));
+  line-height: 1.5;
+}
 /* A dialog never runs off a phone's screen, whatever width it asks for. */
 .el-dialog {
   max-width: calc(100vw - 24px);

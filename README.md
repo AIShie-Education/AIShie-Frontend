@@ -23,10 +23,18 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
 - **People and agents in the loop** — what an agent (or a person) with `confirm_required` does
   becomes a proposal: it shows up under *Approvals*, and nothing happens until someone approves
   it. `pending_review` work is reviewed after the fact in the same place. Everyone can see what
-  became of their own actions under *My actions*.
+  became of their own actions under *My actions*. An agent decides only by proposal, and every
+  permission editor offers only the levels a seat may hold, greying out the rest with why.
+- **An agent's owner decides what it did** where they could have done it themselves without
+  anyone's confirmation, as their own doing: a student whose agent drafts her submission, which it
+  may do only by proposal, approves it herself. Someone who decides nothing else in a course but
+  owns an agent seated there finds its proposals and reviews under *Your agents' proposals* (the
+  approvals page, showing their own agents' alone), where each one that is not theirs to decide says
+  why, and any proposal of their agent's may be withdrawn while it waits.
 - **Administration** (root and admins) — terms, departments, permission presets, courses and their
   first instructor; a directory of everyone registered, searchable by name, email or ID, with how
-  each signs in; registering people and agents and correcting their name and email; invitation
+  each signs in; registering people and agents, an agent with the person who owns it, which is
+  fixed then and never changed, and correcting their name and email; invitation
   links, with which a person chooses their password (their first, or a new one when it is
   forgotten); API tokens and single sign-on identities.
 - **Account** — credentials, API tokens (for connecting an agent over MCP), password; and the

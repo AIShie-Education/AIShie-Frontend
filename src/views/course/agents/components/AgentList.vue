@@ -5,7 +5,8 @@
 // students cannot ask it there), when it was last connected (where the caller
 // may know), how its replies go out, and pausing, resuming and removing it. A course agent's replies can be switched
 // here (member.update_perms, conversation_answer); what its owner's seat
-// allows caps it, as Core does.
+// allows caps it, as Core does, and a way of replying above the seat's
+// ceiling (perm_ceilings) is offered greyed out, saying why.
 import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -17,6 +18,7 @@ import AgentBadge from '@/components/AgentBadge.vue'
 import MemberName from '@/components/MemberName.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { aboveCeiling, ceilingNote, ceilingsOf } from '@/utils/ceilings'
 import RefusalAlert from '@/views/course/members/components/RefusalAlert.vue'
 import { presetLabel } from '@/views/course/members/components/seat'
 import {
@@ -59,6 +61,13 @@ function presence(r: CourseAgentRow) {
 /** Raising a level is a grant: offered only up to the caller's own level, where that is known. */
 function aboveMine(l: AutonomyLevel): boolean {
   return course.permsSource === 'exact' && levelRank(l) > levelRank(course.level('conversation_answer'))
+}
+/** Above what the agent's seat may hold at all, whoever grants it; and why, in words. */
+function aboveCap(r: CourseAgentRow, l: AutonomyLevel): boolean {
+  return aboveCeiling(ceilingsOf(r.member), 'conversation_answer', l)
+}
+function capNote(r: CourseAgentRow): string {
+  return ceilingNote(ceilingsOf(r.member), 'conversation_answer') ?? ''
 }
 
 // --- Replies -----------------------------------------------------------------
@@ -199,12 +208,23 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
             :key="l"
             :value="l"
             :label="t(`courseAgents.replies.options.${l}`)"
-            :disabled="aboveMine(l)"
+            :disabled="aboveMine(l) || aboveCap(r, l)"
           >
-            <div class="agent-row__option">
-              <span>{{ t(`courseAgents.replies.options.${l}`) }}</span>
-              <span class="agent-row__option-help">{{ t(`courseAgents.replies.optionHelp.${l}`) }}</span>
-            </div>
+            <el-tooltip
+              :disabled="!aboveCap(r, l)"
+              :content="capNote(r)"
+              placement="left"
+              popper-class="app-tip-wrap"
+              :show-after="150"
+            >
+              <div class="agent-row__option">
+                <span>
+                  <el-icon v-if="aboveCap(r, l)" class="agent-row__lock"><Lock /></el-icon>
+                  {{ t(`courseAgents.replies.options.${l}`) }}
+                </span>
+                <span class="agent-row__option-help">{{ t(`courseAgents.replies.optionHelp.${l}`) }}</span>
+              </div>
+            </el-tooltip>
           </el-option>
         </el-select>
         <StatusTag v-else vocab="answerLevel" :value="r.answer" />
@@ -326,6 +346,10 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
 .agent-row__select {
   width: 220px;
   max-width: 100%;
+}
+.agent-row__lock {
+  vertical-align: -2px;
+  margin-right: 2px;
 }
 .agent-row__option {
   display: flex;

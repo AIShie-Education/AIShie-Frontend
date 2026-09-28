@@ -222,6 +222,7 @@ export default {
     withdrawn: '已從 {course} 撤出',
     withdrawnCancelled: '已從 {course} 撤出，並取消了它的 1 項申請 | 已從 {course} 撤出，並取消了它的 {n} 項申請',
     archived: '已封存的課程不接受任何更改，包括這一項。',
+    proposals: '它在這裡的提案',
   },
 
   requests: {
@@ -286,6 +287,10 @@ export default {
       },
     },
     cappedHint: '已按你自己的席位設定上限。負責管理課程成員的人日後可以調整它的權限，但永遠不會超過你的權限。',
+    adjust: '全部權限，以及另訂等級',
+    adjustHelp:
+      '留空的權限按預設給予。它在這裡不可擁有的等級會以灰色顯示，並註明原因；若你是學生，超出個人助手範圍的事（例如替你起草提交）它只能以提案的方式進行，由你確認後才執行。',
+    changed: '已另訂 {n} 項',
     submit: '帶入',
     submitRequest: '送出申請',
     done: '{name} 已加入 {course}',

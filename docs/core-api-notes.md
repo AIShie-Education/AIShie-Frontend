@@ -83,13 +83,14 @@ end; the "works around it" notes say what the front end does meanwhile.
   that order, and each try spends the address's sign-in allowance.)
 - **`event.list` only reads forward** over a platform-wide sequence, with no newest-first read and
   no head cursor, so "the latest 20 events" means searching for the head. Events also carry no
-  actor, and `action.get` is decider-only, so a non-decider can never be told who did something.
+  actor, and `action.get` is for deciders (and for an agent's owner, about their own agent's actions
+  alone), so anyone else can never be told who did something.
 - **Lists are ordered by id and have few filters:** `document.list` ignores `sort_order` (so
   paging and reading order do not compose); `grade.list` has no state filter and is oldest-first
   (finding the drafts to post means paging through everything); `action.list_mine` has no status,
   type or target filter; `preset.list` gives one department at a time.
-- **A proposer cannot fetch its own proposal by id** (`action.get` needs `action_decide`); it
-  must page through `action.list_mine`. Likewise a student can see `created_by_action_id` on
+- **A proposer cannot fetch its own proposal by id** (`action.get` needs `action_decide`, or owning
+  the agent that made it); it must page through `action.list_mine`. Likewise a student can see `created_by_action_id` on
   their grade but not open it — though schema.md calls it "the whole query" for a disputed mark.
 - **Pending proposals are invisible to non-deciders**, so a TA can enter a draft while an agent's
   proposal for the same work waits, and learns only at approval that it failed ("a newer draft

@@ -8,6 +8,35 @@ const refusal = (code: string, details: Record<string, unknown>, over: Partial<C
 
 beforeEach(() => setLocale('en'))
 
+describe('errorMessage, of a level above what a seat may hold', () => {
+  it('names the permission, how far it may go, and why, in the reader’s words', () => {
+    const e = refusal(
+      'forbidden',
+      { reason: 'agent_decides_by_proposal', permission: 'action_decide', ceiling: 'confirm_required' },
+      { actionId: 'a1', actionStatus: 'failed' },
+    )
+    expect(errorMessage(e)).toBe(
+      'Approve & review can be at most “Needs approval” here, because an agent decides and reviews only by proposal, which a person then confirms.',
+    )
+    setLocale('zh-Hans')
+    expect(errorMessage(e)).toBe('批准与审核在这里最多只能是“需审批”，因为智能体只能以提议的方式作出决定与审核，并须由人确认。')
+  })
+  it('leaves a ceiling’s code without its permission to Core’s own words', () => {
+    expect(errorMessage(refusal('forbidden', { reason: 'principal_level' }))).toContain('core’s own words')
+  })
+})
+
+describe('errorMessage, to an agent’s owner who could not have done it themselves', () => {
+  it('says so, and that someone else decides', () => {
+    const e = refusal('forbidden', { reason: 'owner_not_autonomous' }, { actionId: 'a1', actionStatus: 'failed' })
+    expect(errorMessage(e)).toBe(
+      'You decide what your agent did only where you could have done it yourself without anyone’s confirmation. Here your own level for it is lower, or it is beyond your reach, so someone else in the course decides it.',
+    )
+    setLocale('zh-Hant')
+    expect(errorMessage(e)).toMatch(/^你的代理所做的事，只有在你自己無需任何人確認也能做時，才由你決定。/)
+  })
+})
+
 describe('errorMessage, by the reason Core gives', () => {
   it('says what a department administrator reached beyond, recorded denial or not', () => {
     const denied = refusal('forbidden', { reason: 'department_out_of_scope' }, { actionId: 'a1', actionStatus: 'denied' })

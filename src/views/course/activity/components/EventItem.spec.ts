@@ -127,3 +127,38 @@ describe('EventItem, invite links', () => {
     }
   })
 })
+
+describe('EventItem, a decision by the owner of the agent that made it', () => {
+  const byOwner = (type: string, payload: Record<string, unknown>): CourseEvent => ({
+    seq: 2,
+    type,
+    occurred_at: '2026-09-28T10:00:00Z',
+    subject_type: 'action',
+    subject_id: 'p1',
+    action_id: 'p1',
+    payload: { action_type: 'submission.create', by_action_id: 'd1', ...payload },
+  })
+
+  it('says the owner decided it, reviewed it or took it back', async () => {
+    let w = mountItem(byOwner('action.approved', { outcome: 'executed', by_owner: true }))
+    await flushPromises()
+    expect(w.text()).toContain('Decided by its agent’s owner')
+    w.unmount()
+    w = mountItem(byOwner('action.reviewed', { by_owner: true }))
+    await flushPromises()
+    expect(w.text()).toContain('Reviewed by its agent’s owner')
+    w.unmount()
+    w = mountItem(byOwner('action.cancelled', { reason: 'withdrawn', by_owner: true }))
+    await flushPromises()
+    expect(w.text()).toContain('Taken back by its agent’s owner')
+    expect(w.text()).not.toContain('Taken back by the proposer')
+    w.unmount()
+  })
+
+  it('says nothing of an owner when someone else decided', async () => {
+    const w = mountItem(byOwner('action.approved', { outcome: 'executed' }))
+    await flushPromises()
+    expect(w.text()).not.toContain('owner')
+    w.unmount()
+  })
+})

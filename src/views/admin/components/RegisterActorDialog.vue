@@ -2,9 +2,10 @@
 // actor.register: a person or an agent. Only root may make an administrator.
 // The kind and the platform role given here are theirs for good; the name and
 // the email can be corrected later (actor.update, on their page). An agent may
-// be given an owner, a person whose delegate alone it will be; that can be
-// changed later too (actor.set_owner). An agent with an owner holds no
-// platform role, so the two are not offered together.
+// be given an owner, a person whose delegate alone it will be, only here: the
+// owner is fixed when it is registered, and nobody changes it or takes it away
+// afterwards; an agent registered without one stays nobody's. An agent with
+// an owner holds no platform role, so the two are not offered together.
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'

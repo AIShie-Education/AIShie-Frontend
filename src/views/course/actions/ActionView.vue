@@ -1,8 +1,11 @@
 <script setup lang="ts">
 // One action in full (action.get): what was asked, who asked, at what level it
 // was authorized, what became of it, who decided or reviewed it, and when.
-// action.get needs action_decide; anyone else sees an action of their own
-// from action.list_mine instead, which carries the same fields.
+// action.get needs action_decide, or owning the agent that did it; anyone else
+// sees an action of their own from action.list_mine instead, which carries the
+// same fields. Whether it is the caller's to decide is what the queue says of
+// it (yours_to_decide): an agent's owner decides what it did where they could
+// have done it themselves, and may take back what it proposed while it waits.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -10,6 +13,7 @@ import { ApiError, read } from '@/api/http'
 import type { ToolOut } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { announce, useWrite } from '@/composables/useWrite'
+import { notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { uuidPredecessor } from '@/views/admin/components/adminShared'
 import AsyncState from '@/components/AsyncState.vue'
@@ -53,7 +57,8 @@ const rules = useJudgeRules()
 const fromMine = ref(false)
 
 async function load(): Promise<ActionRow> {
-  if (course.can('action_decide')) {
+  // A decider reads any action; an agent's owner, their own agent's.
+  if (course.can('action_decide') || course.ownsAgentHere !== false) {
     try {
       const a = await read('action.get', { course_id: props.courseId, action_id: props.actionId })
       fromMine.value = false
@@ -81,7 +86,8 @@ async function load(): Promise<ActionRow> {
 const state = useAsync(load, { keepData: true })
 const action = computed(() => state.data.value)
 
-const canDecide = computed(() => course.can('action_decide') && !fromMine.value)
+/** Read with action.get: the caller decides here, or owns the agent that did it. */
+const canDecide = computed(() => !fromMine.value)
 const showDecide = computed(() => canDecide.value && action.value?.status === 'proposed')
 const showReview = computed(
   () =>
@@ -116,11 +122,36 @@ async function findMyPending(): Promise<string | null> {
   return null
 }
 const myPending = useAsync(findMyPending, { immediate: false })
+
+// Whether it is the caller's to decide, as the queue says of it: it lists by
+// id, so asking for the one after the id just before this one finds it.
+async function queueSays(): Promise<boolean | null> {
+  const a = action.value
+  if (!a) return null
+  const after = uuidPredecessor(a.id.toLowerCase())
+  if (!after) return null
+  const tool = a.status === 'proposed' ? 'action.list_proposed' : 'action.list_pending_review'
+  try {
+    const out = await read(tool, { course_id: props.courseId, after, limit: 1 })
+    const x = out.actions?.[0]
+    return x && x.id.toLowerCase() === a.id.toLowerCase() ? (x.yours_to_decide ?? null) : null
+  } catch {
+    return null
+  }
+}
+const queued = useAsync(queueSays, { immediate: false })
+/** The action, with what the queue says of whose it is to decide. */
+const judged = computed<ActionRow | undefined>(() => {
+  const a = action.value
+  if (!a) return undefined
+  const says = queued.data.value
+  return typeof says === 'boolean' ? { ...a, yours_to_decide: says } : a
+})
 /** A decision just made, until the queue has been read again and says so itself. */
 const justProposed = ref<string | null>(null)
 async function checkMine() {
   if (!decidable.value) return
-  await myPending.reload()
+  await Promise.all([myPending.reload(), queued.reload()])
   if (!myPending.error.value) justProposed.value = null
 }
 const waiting = computed(() => (decidable.value ? (justProposed.value ?? myPending.data.value ?? null) : null))
@@ -133,6 +164,7 @@ watch(
   () => {
     state.data.value = undefined
     myPending.data.value = undefined
+    queued.data.value = undefined
     justProposed.value = null
     lastDone.value = null
     void state.reload()
@@ -146,26 +178,39 @@ watch(
   },
 )
 
-// Taking back a proposal of one's own that still waits (action.withdraw).
+// Taking back a proposal that still waits (action.withdraw): one's own, or as
+// the owner of the agent that made it.
 const withdrawWrite = useWrite('action.withdraw')
+const ownersAgent = computed(() => !!action.value && rules.isOwnAgent(action.value))
 const canWithdraw = computed(
-  () => !!action.value && action.value.status === 'proposed' && rules.isMine(action.value) && course.writable,
+  () =>
+    !!action.value &&
+    action.value.status === 'proposed' &&
+    (rules.isMine(action.value) || ownersAgent.value) &&
+    course.writable,
 )
 async function withdraw() {
   const a = action.value
   if (!a) return
+  const agent = ownersAgent.value
   try {
-    await ElMessageBox.confirm(t('actions.withdraw.confirm'), t('actions.withdraw.title'), {
-      type: 'warning',
-      confirmButtonText: t('actions.withdraw.action'),
-      cancelButtonText: t('common.actions.cancel'),
-    })
+    await ElMessageBox.confirm(
+      t(agent ? 'actions.withdraw.confirmAgent' : 'actions.withdraw.confirm'),
+      t(agent ? 'actions.withdraw.titleAgent' : 'actions.withdraw.title'),
+      { type: 'warning', confirmButtonText: t('actions.withdraw.action'), cancelButtonText: t('common.actions.cancel') },
+    )
   } catch {
     return
   }
   const out = await withdrawWrite.run({ course_id: props.courseId, action_id: a.id }, { notify: false })
-  if (!out) return
-  announce(out, { success: t('actions.withdraw.done') })
+  if (!out) {
+    const e = withdrawWrite.lastError.value
+    if (e) notifyError(e)
+    await reloadPage()
+    return
+  }
+  announce(out, { success: t(agent ? 'actions.withdraw.doneAgent' : 'actions.withdraw.done') })
+  lastDone.value = { kind: 'withdrawn', byOwner: agent }
   await reloadPage()
 }
 
@@ -276,6 +321,15 @@ const errorTitle = computed(() => {
         <el-alert v-if="fromMine" type="info" show-icon :closable="false" class="action-view__notice">
           {{ t('actions.detail.fromMine') }}
         </el-alert>
+        <el-alert
+          v-else-if="ownersAgent && !course.can('action_decide')"
+          type="info"
+          show-icon
+          :closable="false"
+          class="action-view__notice"
+        >
+          {{ t('actions.detail.yourAgent') }}
+        </el-alert>
 
         <OutcomeAlert
           v-if="lastDone"
@@ -289,7 +343,7 @@ const errorTitle = computed(() => {
         <section v-if="showDecide || showReview" class="app-card action-view__decide">
           <h2 class="app-card__title">{{ showDecide ? t('actions.detail.decide') : t('actions.detail.review') }}</h2>
           <DecidePanel
-            :action="action"
+            :action="judged ?? action"
             :course-id="courseId"
             :mode="showDecide ? 'decide' : 'review'"
             :waiting="waiting"
@@ -430,6 +484,7 @@ const errorTitle = computed(() => {
                 show-icon
               >
                 <div class="action-view__error">
+                  <p v-if="rules.byOwner(action, 'decided')">{{ t('actions.result.rejectedByOwner') }}</p>
                   <p>
                     {{
                       rejection?.reason
@@ -451,6 +506,9 @@ const errorTitle = computed(() => {
               </template>
 
               <template v-else-if="action.status === 'executed'">
+                <p v-if="rules.byOwner(action, 'decided')" class="action-view__owner">
+                  <el-icon><Cpu /></el-icon>{{ t('actions.result.approvedByOwner') }}
+                </p>
                 <p class="action-view__help">{{ t('actions.result.made') }}</p>
                 <FieldsView v-if="hasResult" :course-id="courseId" :value="action.result" />
                 <p v-else class="action-view__help">{{ t('actions.result.none') }}</p>
@@ -585,6 +643,14 @@ const errorTitle = computed(() => {
 .action-view__about-type {
   font-weight: 600;
   text-decoration: none;
+}
+.action-view__owner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--el-color-primary);
 }
 .action-view__raw {
   margin-top: 12px;

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { i18n } from '@/i18n'
-import { documentTitle, installTitle, titleKey } from './title'
+import { defineComponent, nextTick, ref } from 'vue'
+import { mount } from '@vue/test-utils'
+import { documentTitle, installTitle, titleKey, usePageTitle } from './title'
 
 const View = { render: () => null }
 
@@ -151,5 +153,37 @@ describe('page titles', () => {
     i18n.global.locale.value = 'zh-Hant'
     await Promise.resolve()
     expect(document.title).toBe('找不到頁面 · AIshie')
+  })
+})
+
+describe('a page that names itself', () => {
+  it('is named so at its own route while it is shown, and by its route again after', async () => {
+    i18n.global.locale.value = 'en'
+    const router = makeRouter()
+    installTitle(router)
+    await router.push('/admin/actors')
+    expect(document.title).toBe('People & agents · AIshie')
+    const own = ref<string | null>('layout.course.agentProposals')
+    const Page = defineComponent({
+      setup() {
+        usePageTitle('actors', own)
+        return () => null
+      },
+    })
+    const w = mount(Page)
+    await nextTick()
+    expect(document.title).toBe('Your agents’ proposals · AIshie')
+    expect(titleKey(router.currentRoute.value)).toBe('layout.course.agentProposals')
+    // Only its own route: another is named as ever.
+    expect(titleKey({ ...router.resolve('/'), name: 'home' })).toBe('common.nav.home')
+    // It may give the name up while shown.
+    own.value = null
+    await nextTick()
+    expect(document.title).toBe('People & agents · AIshie')
+    own.value = 'layout.course.agentProposals'
+    await nextTick()
+    w.unmount()
+    await nextTick()
+    expect(document.title).toBe('People & agents · AIshie')
   })
 })

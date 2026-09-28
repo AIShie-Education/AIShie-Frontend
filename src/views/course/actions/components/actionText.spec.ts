@@ -2,14 +2,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import type { MemberSummary, Membership } from '@/api/types'
 
+// What Core answers, per tool; anything else is refused.
+const answers = new Map<string, () => Promise<unknown>>()
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
-  return { ...real, read: vi.fn(async () => Promise.reject(new Error('no reads here'))) }
+  return {
+    ...real,
+    read: vi.fn(async (tool: string) => {
+      const a = answers.get(tool)
+      return a ? a() : Promise.reject(new Error('no reads here'))
+    }),
+  }
 })
 
+import { flushPromises } from '@vue/test-utils'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
-import { excerpt, routeFor, useJudgeRules, type ActionRow } from './actionText'
+import { excerpt, reasonText, routeFor, storedError, useJudgeRules, type ActionRow } from './actionText'
+import { forgetMyAgents } from './myAgents'
 
 const COURSE = 'c1'
 
@@ -46,6 +56,7 @@ function action(memberId: string, actorId = `actor-${memberId}`): ActionRow {
 
 /** The caller is seated as `me`; the course's members are `members`. */
 function setup(me: MemberSummary, members: MemberSummary[], principal?: string) {
+  forgetMyAgents()
   setActivePinia(createPinia())
   const session = useSessionStore()
   session.$patch({ me: { id: me.actor_id, kind: me.kind } } as never)
@@ -68,11 +79,18 @@ describe('useJudgeRules: a person and their agents are one party', () => {
     rules = setup(me, [])
   })
 
-  it('blocks deciding one’s own agent’s proposal', () => {
+  it('leaves one’s own agent’s proposal to its owner where the queue says it is theirs, and says why where it is not', () => {
     const bot = seat('bot', { kind: 'agent', principal_member_id: 'me', owner_actor_id: 'actor-me' })
     rules = setup(me, [bot])
-    expect(rules.block(action('bot'), 'decide')).toBe('ownAgent')
     expect(rules.isOwnParty(action('bot'))).toBe(true)
+    expect(rules.isOwnAgent(action('bot'))).toBe(true)
+    // Their own level for it is autonomous and it is within their reach: theirs to decide, as its owner.
+    expect(rules.block({ ...action('bot'), yours_to_decide: true }, 'decide')).toBeNull()
+    // It is not: someone else decides, because their own level is lower.
+    expect(rules.block({ ...action('bot'), yours_to_decide: false }, 'decide')).toBe('ownAgentLevel')
+    expect(rules.block({ ...action('bot'), yours_to_decide: false }, 'review')).toBe('ownAgentLevel')
+    // Read with action.get, which does not say: Core decides, and says why if not.
+    expect(rules.block(action('bot'), 'decide')).toBeNull()
   })
 
   it('blocks an agent deciding its owner’s proposal, and a sibling agent’s', () => {
@@ -105,6 +123,73 @@ describe('useJudgeRules: a person and their agents are one party', () => {
   it('still calls the caller’s own action their own', () => {
     expect(rules.block(action('me'), 'decide')).toBe('own')
     expect(rules.block(action('me'), 'review')).toBe('ownReview')
+  })
+})
+
+describe('useJudgeRules: an agent’s owner who decides nothing else', () => {
+  const me = seat('me', { role: 'student' })
+
+  function ownerOnly() {
+    // A student: no member list to read, and no action_decide.
+    const rules = setup(me, [])
+    const course = useCourseStore()
+    course.$patch({ perms: { action_decide: 'denied', document_read: 'autonomous' }, permsSource: 'exact' } as never)
+    course.members = new Map()
+    course.membersState = 'forbidden'
+    return rules
+  }
+
+  it('takes what Core shows such a caller to decide for their own agent’s', () => {
+    const rules = ownerOnly()
+    expect(rules.isOwnAgent(action('bot', 'actor-bot'))).toBe(true)
+    expect(rules.isOwnAgent(action('me'))).toBe(false)
+    expect(rules.block({ ...action('bot', 'actor-bot'), yours_to_decide: false }, 'decide')).toBe('ownAgentLevel')
+    expect(rules.block({ ...action('bot', 'actor-bot'), yours_to_decide: true }, 'decide')).toBeNull()
+  })
+
+  it('knows the caller’s own agents from their list of agents', async () => {
+    answers.set('agent.list', async () => ({ agents: [{ actor_id: 'actor-bot', display_name: 'Mei’s helper' }] }))
+    // A decider who reads the member list, where the agent's seat is not (yet) listed.
+    const rules = setup(me, [seat('stranger')])
+    expect(rules.isOwnAgent(action('bot', 'actor-bot'))).toBe(false)
+    await flushPromises()
+    expect(rules.isOwnAgent(action('bot', 'actor-bot'))).toBe(true)
+    expect(rules.isOwnAgent(action('stranger'))).toBe(false)
+    answers.delete('agent.list')
+  })
+
+  it('tells a decision by the agent’s owner from anyone else’s', () => {
+    const bot = seat('bot', { kind: 'agent', principal_member_id: 'mei', owner_actor_id: 'actor-mei' })
+    const rules = setup(seat('teacher'), [seat('mei', { role: 'student' }), bot])
+    const decided = (by: string, over: Partial<ActionRow> = {}) =>
+      ({ ...action('bot'), status: 'executed', decided_by_member_id: by, ...over }) as ActionRow
+    expect(rules.byOwner(decided('mei'), 'decided')).toBe(true)
+    expect(rules.byOwner(decided('teacher'), 'decided')).toBe(false)
+    expect(rules.byOwner({ ...decided('mei'), reviewed_by_member_id: 'mei' }, 'reviewed')).toBe(true)
+    // A rejection says so itself.
+    const rejected = decided('x', { status: 'rejected', result: { decision: { decision: 'reject', by_owner: true } } })
+    expect(rules.byOwner(rejected, 'decided')).toBe(true)
+    // Without the member list, the caller's own agent's decided from their own seat.
+    const own = ownerOnly()
+    expect(own.byOwner({ ...decided('me'), member_id: 'bot', actor_id: 'actor-bot' }, 'decided')).toBe(true)
+  })
+})
+
+describe('reasonText', () => {
+  it('says a proposal taken back by its agent’s owner was', () => {
+    const cancelled = {
+      status: 'cancelled',
+      result: {
+        error: {
+          code: 'failed_precondition',
+          message: 'the proposal can no longer be carried out',
+          details: { reason: 'withdrawn', by_owner: true },
+        },
+      },
+    } as unknown as ActionRow
+    expect(reasonText(storedError(cancelled))).toBe('The owner of the agent that proposed it took it back.')
+    const own = { ...cancelled, result: { error: { code: 'x', message: 'y', details: { reason: 'withdrawn' } } } }
+    expect(reasonText(storedError(own as ActionRow))).toBe('Whoever proposed it took it back.')
   })
 })
 

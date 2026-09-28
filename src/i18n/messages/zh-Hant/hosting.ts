@@ -226,7 +226,7 @@ export default {
     actor_in_use: '這裡已有另一個代理使用了這個代理的身分。',
     token_other_agent: '它的權杖屬於另一個代理。請重新連接。',
     token_not_agent: '它的權杖屬於一個人，而不是這個代理。請重新連接。',
-    owner_changed: '這個代理在 AIshie 中現已屬於其他人，所以執行環境停止了它。請在這裡刪除它。',
+    owner_changed: 'AIshie 並不視這個代理為你所有，所以執行環境停止了它。請在這裡刪除它。',
     core_too_old: '這個 AIshie 伺服器無法說明代理屬於誰。請通知你的管理員。',
     agent_suspended: '這個代理在 AIshie 中已停用。重新啟用後，它會自行再次啟動。',
     failing: '它未能啟動，稍後會再試：{detail}。',

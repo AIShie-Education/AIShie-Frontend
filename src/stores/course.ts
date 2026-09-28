@@ -10,6 +10,13 @@
 // their roster role suggests — a guess, since any value on a seat can be
 // overridden — or not at all. Views use can() to decide what to offer, never
 // to decide what is allowed: Core decides that, and a refusal is shown as such.
+//
+// A person who decides nothing in a course (no action_decide) may still own
+// an agent that holds or held a seat there, and then decides what it proposed
+// wherever they could have done it themselves: Core shows them their own
+// agents' proposals and reviews in the course's queues, and nobody else's.
+// Whether that is so is asked of the queue itself (ownsAgentHere), whose gate
+// is that very rule.
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ApiError, read } from '@/api/http'
@@ -90,6 +97,14 @@ export const useCourseStore = defineStore('course', () => {
   const guessedPreset = ref<string | null>(null)
   const loading = ref(false)
   const error = ref<ApiError | null>(null)
+  /**
+   * For a person whose seat holds no action_decide: whether they own an agent
+   * that holds or held a seat in the course, so that its proposals and
+   * reviews are theirs to find (and, where they could have done the same
+   * themselves, to decide). Null until known, and wherever it does not
+   * matter: a seat that decides anyway, an agent's, levels not known.
+   */
+  const ownsAgentHere = ref<boolean | null>(null)
 
   // Look-ups for showing names instead of ids. Loaded on demand.
   const members = ref<Map<string, MemberSummary>>(new Map())
@@ -191,6 +206,7 @@ export const useCourseStore = defineStore('course', () => {
     permsSource.value = 'unknown'
     guessedPreset.value = null
     error.value = null
+    ownsAgentHere.value = null
     refused.value = new Set()
     members.value = new Map()
     membersState.value = 'idle'
@@ -227,6 +243,7 @@ export const useCourseStore = defineStore('course', () => {
       const [c] = await Promise.all([read('course.get', { course_id: id }), loadPerms(id, m, e)])
       if (!current(id, e)) return
       course.value = c
+      void probeOwnAgents(id, e)
     } catch (err) {
       if (!current(id, e)) return
       error.value = toError(err)
@@ -307,6 +324,24 @@ export const useCourseStore = defineStore('course', () => {
       }
     } catch {
       if (current(id, e)) setPermsSource('unknown')
+    }
+  }
+
+  /**
+   * Whether a person who decides nothing here owns an agent seated here, now
+   * or before: Core lets such a caller read the approval queue (their own
+   * agents' proposals alone) and refuses anyone else without action_decide,
+   * so one item of it is asked for. Only a refusal says no; anything else
+   * leaves it unknown.
+   */
+  async function probeOwnAgents(id: string, e: number) {
+    if (useSessionStore().me?.kind !== 'human') return
+    if (permsSource.value !== 'exact' || level('action_decide') !== 'denied') return
+    try {
+      await read('action.list_proposed', { course_id: id, limit: 1 })
+      if (current(id, e)) ownsAgentHere.value = true
+    } catch (err) {
+      if (current(id, e) && err instanceof ApiError && err.isForbidden) ownsAgentHere.value = false
     }
   }
 
@@ -427,6 +462,7 @@ export const useCourseStore = defineStore('course', () => {
     assignmentsState,
     assignmentsError,
     refused,
+    ownsAgentHere,
     seesAllGrades,
     levelOfAll,
     canAll,

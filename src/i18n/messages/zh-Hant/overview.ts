@@ -54,6 +54,8 @@ export default {
     atLeast: '{n}+',
     draftsPartial: '只統計了最早的 {n} 個成績',
     allClear: '目前沒有待你處理的事項。',
+    agentProposals: '你的代理待決定的提案',
+    agentReviews: '你的代理待覆核的操作',
   },
   assignments: {
     title: '作業',

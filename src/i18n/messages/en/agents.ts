@@ -234,6 +234,7 @@ export default {
     withdrawnCancelled:
       'Taken out of {course}; one proposal of its was cancelled | Taken out of {course}; {n} proposals of its were cancelled',
     archived: 'An archived course takes no changes, this one included.',
+    proposals: 'Its proposals here',
   },
 
   requests: {
@@ -302,6 +303,10 @@ export default {
     },
     cappedHint:
       'Clipped to your own seat. Someone who manages the course’s members can change its permissions later, never beyond yours.',
+    adjust: 'All permissions, and naming other levels',
+    adjustHelp:
+      'Leave a permission empty for what it gets anyway. Levels it may not hold here are greyed out, each saying why; for a student, what goes beyond a personal assistant — drafting your submission, say — it does only by proposal, which you then confirm.',
+    changed: '{n} set differently',
     submit: 'Bring it in',
     submitRequest: 'Send the request',
     done: '{name} is in {course}',

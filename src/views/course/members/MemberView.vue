@@ -21,6 +21,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import { ceilingsOf } from '@/utils/ceilings'
 import { shortId } from '@/utils/format'
 import RefusalAlert from './components/RefusalAlert.vue'
 import RescopeDialog from './components/RescopeDialog.vue'
@@ -78,6 +79,8 @@ const disabledReason = computed(() => {
 
 const preset = computed(() => (m.value?.preset_id ? presets.byId.value.get(m.value.preset_id) : undefined))
 const perms = computed(() => fullPerms(m.value?.perms))
+/** The most this seat may hold of each permission, whoever grants it, and why (Core's perm_ceilings). */
+const ceilings = computed(() => ceilingsOf(m.value))
 const differsFromPreset = computed(() => {
   if (!preset.value) return 0
   const base = fullPerms(preset.value.perms)
@@ -195,7 +198,9 @@ const rowWarnings = computed(() => {
   if (!editing.value) return {}
   const out: Partial<Record<Perm, string>> = raises.value ? permsAbove({ ...perms.value, ...changes.value }) : {}
   // A delegate never holds these, whatever is set: Core refuses to give them.
-  if (principalId.value) {
+  // A Core that says the seat's ceilings says so itself, and the editor
+  // offers nothing above them.
+  if (principalId.value && !ceilings.value) {
     for (const p of DELEGATE_NEVER_PERMS) {
       if ((draft.value[p] ?? 'denied') !== 'denied') out[p] = t('members.detail.delegate.never')
     }
@@ -653,7 +658,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               <template #title>{{ t('members.grant.rulesTitle') }}</template>
               {{ t('members.detail.perms.editHelp') }}
             </el-alert>
-            <PermEditor v-model="draft" size="small" :changed="changedPerms" :warn="rowWarnings" />
+            <PermEditor v-model="draft" size="small" :changed="changedPerms" :warn="rowWarnings" :ceilings="ceilings" />
             <el-alert
               v-if="permProblems.length"
               type="warning"
@@ -692,7 +697,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               </el-button>
             </div>
           </template>
-          <PermEditor v-else :model-value="perms" readonly />
+          <PermEditor v-else :model-value="perms" readonly :ceilings="ceilings" />
         </section>
 
         <RescopeDialog v-if="showManage" v-model="rescopeOpen" :course-id="courseId" :member="m" @done="onRescoped" />

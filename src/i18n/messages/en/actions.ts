@@ -15,11 +15,21 @@ export default {
     oldestFirst: 'Oldest first',
     decisionsNeedApproval: 'Your decisions here also need approval',
     decisionsNeedApprovalHelp: 'Your seat decides at the "needs approval" level: each approval or rejection you make becomes a proposal itself, which someone else confirms.',
-    noPermission: 'Approving and reviewing needs the "Approve & review" permission in this course.',
     recent: 'Decided just now',
     recentHelp: 'Leaving this page clears this list. Every decision stays in the course’s action log.',
     clearRecent: 'Clear',
     stale: 'Someone else has dealt with this in the meantime. The list has been refreshed.',
+    agentsTitle: 'Your agents’ proposals',
+    agentsSubtitle: 'What your agents proposed in this course, or did under review: yours to decide where you could have done it yourself.',
+    agentsIntroTitle: 'You decide what your own agents do here, where you could have done it yourself',
+    agentsIntro:
+      'Your agents act only for you. What one of them proposes, you approve or reject here wherever you could have done it without anyone’s confirmation: it is then carried out at once, as your own doing. Anything else is for someone else in the course to decide, and says why. You may withdraw any of its proposals while it waits.',
+    agentsProposedHelp:
+      'Nothing here has happened yet. Approving carries it out now, as your agent, once Core has checked it may still do it; withdrawing cancels it.',
+    agentsReviewHelp:
+      'Your agent has already done these. Reviewing records that you have looked; it undoes nothing. Escalating asks someone else in the course to look.',
+    agentsEmptyProposed: 'None of your agents’ proposals is waiting.',
+    agentsEmptyReview: 'Nothing your agents did is waiting for review.',
   },
   detail: {
     title: 'Action',
@@ -31,11 +41,14 @@ export default {
     history: 'History',
     facts: 'Details',
     fromMine: 'Shown from your own actions: seeing other people’s actions needs the "Approve & review" permission.',
-    notYours: 'This is not one of your own actions, and seeing other people’s needs the "Approve & review" permission.',
+    notYours:
+      'This is not one of your own actions, nor one of your own agents’, and seeing anyone else’s needs the "Approve & review" permission.',
     decide: 'Decide',
     review: 'Review',
     about: 'About',
     stale: 'Someone else has dealt with this in the meantime. The page has been refreshed.',
+    yourAgent:
+      'This is your own agent’s action. You decide it where you could have done it yourself without anyone’s confirmation, and may withdraw it while it waits.',
   },
   mine: {
     title: 'My actions',
@@ -162,6 +175,7 @@ export default {
     total: 'Total',
     publishRollsBack: 'Version {published} is what is read now: approving moves it back to version {seq}.',
     publishOlder: 'This is earlier than the latest version, {latest}: approving makes version {seq} the one read.',
+    by_owner: 'As the agent’s owner',
   },
   types: {
     action: {
@@ -306,6 +320,10 @@ export default {
     title: 'Withdraw this proposal?',
     confirm: 'It is cancelled and nothing of it is carried out. You can make it again later.',
     done: 'Proposal withdrawn',
+    titleAgent: 'Withdraw your agent’s proposal?',
+    confirmAgent:
+      'It is cancelled, and nothing of it is carried out. Your agent learns that you took it back, and may propose it again.',
+    doneAgent: 'Your agent’s proposal is withdrawn',
   },
   grant: {
     title: 'What approving grants',
@@ -349,11 +367,15 @@ export default {
       waiting: 'Your decision on this is already waiting for approval.',
       closesOwnEscalation: 'Approving this would close an escalation you raised, which is for someone else to do. You can still reject it.',
       ownAgent:
-        'This was done by your own agent, or by the person whose agent you are. A person and their agents count as one, so someone else deals with it.',
+        'This was done by your own party — the person whose agent you are, or another of their agents — and a person and their agents count as one, so someone else deals with it.',
+      ownAgentLevel:
+        'Your agent did this, and you could not have done it yourself without someone’s confirmation: your own level for it is lower than autonomous, or it is beyond your reach. So someone else in the course decides it.',
     },
     ruleNote: 'Nobody decides or reviews their own action — from any seat they have held, and not at one remove either.',
     proposedNotice: 'Your decision is waiting for approval',
     viewDecision: 'View your decision',
+    ownerRuleNote: 'You decide what your agent did only where you could have done it yourself without anyone’s confirmation.',
+    asOwner: 'You decide this as its owner: it is carried out at once, as your own doing.',
   },
   outcome: {
     executed: 'Approved and carried out',
@@ -367,6 +389,12 @@ export default {
     coreSays: 'Core says',
     decisionAction: 'Decision recorded as',
     inner: 'The proposal it decided: {what}',
+    executedByOwner: 'Approved and carried out, as your own doing',
+    rejectedByOwner: 'Rejected, as its owner',
+    withdrawn: 'Withdrawn: nothing of it was carried out',
+    decidedAsOwner: 'You decided this as the owner of the agent that proposed it: it counts as your own doing.',
+    reviewedAsOwner: 'You reviewed this as the owner of the agent that did it.',
+    withdrawnAsOwner: 'You took back your agent’s proposal, as its owner. Your agent is told.',
   },
   cancelReason: {
     proposal_expired: 'The proposal was too old to approve.',
@@ -375,9 +403,11 @@ export default {
     member_removed: 'Whoever proposed it has left the course.',
     tool_removed: 'This kind of action can no longer be carried out.',
     withdrawn: 'Whoever proposed it took it back.',
+    withdrawn_by_owner: 'The owner of the agent that proposed it took it back.',
   },
   cancelWhy: {
-    owner_changed: 'The agent was given another owner, or none, so the request to seat it lapsed.',
+    owner_changed:
+      'The agent’s owner was changed while this waited, as could still happen then (an agent’s owner is fixed now), so the request to seat it lapsed.',
   },
   denyReason: {
     actor_not_active: 'The actor is suspended.',
@@ -408,6 +438,11 @@ export default {
     waitingReview: 'Waiting for review',
     waitingSecond: 'Waiting for a second reviewer',
     someone: 'someone',
+    approvedByOwner: 'Approved by {who}, its owner',
+    rejectedByOwner: 'Rejected by {who}, its owner',
+    reviewedByOwner: 'Reviewed by {who}, its owner',
+    escalatedByOwner: 'Escalated by {who}, its owner',
+    withdrawnByOwner: 'Withdrawn by its owner',
   },
   result: {
     none: 'No result was recorded.',
@@ -415,6 +450,8 @@ export default {
     archived: 'Nothing has happened: the course is archived, so this can no longer be decided.',
     rejectedNoReason: 'No reason was given.',
     made: 'What it made or changed',
+    approvedByOwner: 'Approved by the owner of the agent that proposed it, as their own doing.',
+    rejectedByOwner: 'Rejected by the owner of the agent that proposed it.',
   },
   link: {
     details: 'Details',

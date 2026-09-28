@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // What is waiting for the caller: proposals to decide and actions to review
-// (for a seat with action_decide), and draft grades not yet released (for a
+// (for a seat with action_decide, or, for a person without it who owns an agent
+// seated here, their own agents'), and draft grades not yet released (for a
 // seat that posts grades and reads them). A queue the seat turns out not to
 // be allowed to read is left out; if none is left, so is the card. In an
 // archived course nothing can be decided or posted any more, so nothing is
@@ -21,6 +22,8 @@ const PAGE = 200
 /** How far the drafts are looked for: grade.list has no filter by state. */
 const DRAFT_PAGES = 25
 const decides = computed(() => course.writable && course.can('action_decide'))
+/** A person who decides nothing else here, whose own agents' proposals and reviews the queues show them. */
+const ownersQueue = computed(() => course.writable && !course.can('action_decide') && course.ownsAgentHere === true)
 // grade.list is gated by grade_read; drafts are among what it lists for a seat that posts.
 const posts = computed(() => course.writable && course.can('grade_post') && course.can('grade_read'))
 
@@ -40,18 +43,22 @@ function count(list: { created_at: string }[], more: boolean): Count {
 // "200+". They are behind action_decide: the second is asked for only once
 // the first has been allowed, so a seat whose levels are unknown is refused
 // once, not twice.
-const queues = useAsync<{ proposals: Count; reviews: Count | ApiError } | null>(async () => {
-  if (!decides.value) return null
-  const p = await read('action.list_proposed', { course_id: props.courseId, limit: PAGE })
-  let reviews: Count | ApiError
-  try {
-    const r = await read('action.list_pending_review', { course_id: props.courseId, limit: PAGE })
-    reviews = count(r.actions ?? [], !!r.next)
-  } catch (e) {
-    reviews = toApiError(e)
-  }
-  return { proposals: count(p.actions ?? [], !!p.next), reviews }
-})
+const queues = useAsync<{ proposals: Count; reviews: Count | ApiError } | null>(
+  async () => {
+    if (!decides.value && !ownersQueue.value) return null
+    const p = await read('action.list_proposed', { course_id: props.courseId, limit: PAGE })
+    let reviews: Count | ApiError
+    try {
+      const r = await read('action.list_pending_review', { course_id: props.courseId, limit: PAGE })
+      reviews = count(r.actions ?? [], !!r.next)
+    } catch (e) {
+      reviews = toApiError(e)
+    }
+    return { proposals: count(p.actions ?? [], !!p.next), reviews }
+    // Whether the caller owns an agent here is learnt as the course opens.
+  },
+  { watch: [ownersQueue] },
+)
 // grade.list gives every grade the seat may see, oldest first — posted,
 // superseded and computed ones too, and each regrade or new draft adds one —
 // so the live drafts may be anywhere in it: it is read to its end, up to
@@ -90,11 +97,12 @@ const rows = computed<Row[]>(() => {
   const q = queues.data.value
   const reviewsOut = q?.reviews
   const out: Row[] = []
-  if (decides.value) {
+  if (decides.value || ownersQueue.value) {
+    const agents = !decides.value
     out.push({
       key: 'proposals',
       icon: 'Stamp',
-      label: t('overview.attention.proposals'),
+      label: agents ? t('overview.attention.agentProposals') : t('overview.attention.proposals'),
       oldestLabel: t('overview.attention.oldestProposal'),
       to: approvals(),
       loading: queues.loading.value,
@@ -104,7 +112,7 @@ const rows = computed<Row[]>(() => {
     out.push({
       key: 'reviews',
       icon: 'View',
-      label: t('overview.attention.reviews'),
+      label: agents ? t('overview.attention.agentReviews') : t('overview.attention.reviews'),
       oldestLabel: t('overview.attention.oldestReview'),
       to: approvals('review'),
       loading: queues.loading.value,

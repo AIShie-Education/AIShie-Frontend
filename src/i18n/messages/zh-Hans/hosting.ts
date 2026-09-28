@@ -226,7 +226,7 @@ export default {
     actor_in_use: '这里已有另一个智能体使用了这个智能体的身份。',
     token_other_agent: '它的令牌属于另一个智能体。请重新连接。',
     token_not_agent: '它的令牌属于一个人，而不是这个智能体。请重新连接。',
-    owner_changed: '这个智能体在 AIshie 中现已属于其他人，所以运行环境停止了它。请在这里删除它。',
+    owner_changed: 'AIshie 并不视这个智能体为你所有，所以运行环境停止了它。请在这里删除它。',
     core_too_old: '这个 AIshie 服务器无法说明智能体属于谁。请通知你的管理员。',
     agent_suspended: '这个智能体在 AIshie 中已停用。重新启用后，它会自行再次启动。',
     failing: '它未能启动，稍后会再试：{detail}。',

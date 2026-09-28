@@ -143,6 +143,30 @@ describe('explainRefusal', () => {
   })
 })
 
+describe('explainRefusal, above a seat’s ceiling', () => {
+  it('says which permission, how far, why, and on whose seat a change to many stopped', async () => {
+    const { explainRefusal } = await page()
+    const { ApiError } = await import('@/api/http')
+    const { createPinia, setActivePinia } = await import('pinia')
+    setActivePinia(createPinia())
+    const { useCourseStore } = await import('@/stores/course')
+    const course = useCourseStore()
+    course.members = new Map([['m-agent', { id: 'm-agent', display_name: 'Mei’s helper' } as never]])
+    const details = { reason: 'student_agent_by_proposal', permission: 'submission_write', ceiling: 'confirm_required' }
+    const one = new ApiError({ status: 403, code: 'forbidden', message: 'the agent of someone …', details })
+    expect(explainRefusal(one)).toBe(
+      'Write submissions can be at most “Needs approval” here, because the agent of someone who does not manage this course’s members does this only by proposal, as it goes beyond what the personal assistant preset gives.',
+    )
+    const bulk = new ApiError({
+      status: 403,
+      code: 'forbidden',
+      message: '…',
+      details: { ...details, member_id: 'm-agent' },
+    })
+    expect(explainRefusal(bulk)).toMatch(/ \(the seat of Mei’s helper\)$/)
+  })
+})
+
 describe('lookupActor', () => {
   it('notes that the Core has the tool when it answers', async () => {
     const { lookupActor, hasLookup } = await page()

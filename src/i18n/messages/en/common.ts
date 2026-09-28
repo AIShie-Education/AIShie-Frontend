@@ -120,6 +120,20 @@ export default {
     required: 'Required',
     invalidDecimal: 'Enter a number',
     invalidEmail: 'Enter a valid email address',
+    ownerNotAutonomous:
+      'You decide what your agent did only where you could have done it yourself without anyone’s confirmation. Here your own level for it is lower, or it is beyond your reach, so someone else in the course decides it.',
+  },
+  // A seat's ceilings (perm_ceilings): the most it may hold of a permission, whoever grants it.
+  ceiling: {
+    tag: 'At most: {level}',
+    locked: 'Never here',
+    atMost: 'At most “{level}” here: {why}.',
+    atMostBare: 'At most “{level}” here.',
+    never: 'Never held here: {why}.',
+    neverBare: 'Never held here.',
+    refused: '{permission} can be at most “{ceiling}” here, because {why}.',
+    refusedNever: '{permission} cannot be given here at all, because {why}.',
+    worksAs: 'Set higher than it may hold: it works as “{level}” at most.',
   },
   confirm: {
     title: 'Are you sure?',

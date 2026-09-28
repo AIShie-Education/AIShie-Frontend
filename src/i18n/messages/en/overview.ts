@@ -57,6 +57,8 @@ export default {
     atLeast: '{n}+',
     draftsPartial: 'Counted among the first {n} grades only',
     allClear: 'Nothing is waiting for you.',
+    agentProposals: 'Your agents’ proposals awaiting a decision',
+    agentReviews: 'Your agents’ actions awaiting review',
   },
   assignments: {
     title: 'Assignments',

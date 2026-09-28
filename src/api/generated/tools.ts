@@ -3,7 +3,7 @@
 // Every tool in AIShiteru Core's catalogue (GET /v1/tools), with its input and
 // output types and its REST route.
 
-/** action.decide (write): Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor a decision someone else proposed about it, nor approves closing an escalation they raised or approved. */
+/** action.decide (write): Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor their owner's, nor another agent's of their owner, nor a decision someone else proposed about any of those, nor approves closing an escalation they raised or approved. An agent's owner decides its proposal only where they could do the same themselves without anyone's confirmation: their own level for it autonomous, and its target within their reach; by_owner then says so. That needs no action_decide of their own, and is done at once, as their own doing of it: a student confirms her own agent's drafts of her work. */
 export interface ActionDecideIn {
   /**
    * the proposal being decided
@@ -24,6 +24,10 @@ export interface ActionDecideIn {
 }
 export interface ActionDecideOut {
   action_id: string
+  /**
+   * true when you decided as the owner of the agent that proposed it
+   */
+  by_owner?: boolean
   error?: null | {
     code: string
     details?: {
@@ -35,7 +39,7 @@ export interface ActionDecideOut {
   result?: unknown
 }
 
-/** action.get (read): One action in full: what was asked, how it was authorized, what became of it, who decided or reviewed it. */
+/** action.get (read): One action in full: what was asked, how it was authorized, what became of it, who decided or reviewed it. An agent's owner reads any action of their own agent's, whatever they hold. */
 export interface ActionGetIn {
   action_id: string
   /**
@@ -62,7 +66,7 @@ export interface ActionGetOut {
   target_id?: null | string
   target_type: string
   /**
-   * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+   * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
    */
   yours_to_decide?: null | boolean
 }
@@ -108,14 +112,14 @@ export interface ActionListMineOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
 
-/** action.list_pending_review (read): The review queue: actions that executed pending review and have not been reviewed, or were escalated. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else reviews. */
+/** action.list_pending_review (read): The review queue: actions that executed pending review and have not been reviewed, or were escalated. yours_to_decide is false on those of your own party, which someone else reviews — yours, your owner's, your owner's other agents', and your own agents' unless you could do the same yourself without anyone's confirmation. If you hold no action_decide here but own an agent seated here, it lists your own agents' actions alone. */
 export interface ActionListPendingReviewIn {
   /**
    * the id of the last item already seen
@@ -152,14 +156,14 @@ export interface ActionListPendingReviewOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
 
-/** action.list_proposed (read): The approval queue: proposals in this course waiting for a decision, oldest first. yours_to_decide is false on those of your own party — yours, your agents', your owner's — which someone else decides. */
+/** action.list_proposed (read): The approval queue: proposals in this course waiting for a decision, oldest first. yours_to_decide is false on those of your own party, which someone else decides — yours, your owner's, your owner's other agents', and your own agents' unless you could do the same yourself without anyone's confirmation. If you hold no action_decide here but own an agent seated here, it lists your own agents' proposals alone. */
 export interface ActionListProposedIn {
   /**
    * the id of the last item already seen
@@ -196,14 +200,14 @@ export interface ActionListProposedOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your agent's, your owner's or another agent of your owner's, which someone else decides and reviews; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
   next?: null | string
 }
 
-/** action.review (write): Record that an action which executed pending review has been looked at: reviewed, or escalated for someone else to look at. Reviewing undoes nothing; putting something right is a separate action. */
+/** action.review (write): Record that an action which executed pending review has been looked at: reviewed, or escalated for someone else to look at. Reviewing undoes nothing; putting something right is a separate action. Nobody reviews their own action, their owner's or another agent's of their owner; an agent's owner reviews what it did only where they could do the same themselves without anyone's confirmation, and then needs no action_decide of their own. */
 export interface ActionReviewIn {
   /**
    * the executed action under review
@@ -221,13 +225,17 @@ export interface ActionReviewIn {
 }
 export interface ActionReviewOut {
   action_id: string
+  /**
+   * true when you reviewed it as the owner of the agent that did it
+   */
+  by_owner?: boolean
   review_state: string
 }
 
-/** action.withdraw (write): Take back a proposal of yours that is still waiting for a decision. It is cancelled, and nothing of it is carried out. A proposal already decided, or someone else's, cannot be withdrawn. */
+/** action.withdraw (write): Take back a proposal of yours, or of an agent you own, that is still waiting for a decision. It is cancelled, and nothing of it is carried out. A proposal already decided, or anyone else's, cannot be withdrawn. */
 export interface ActionWithdrawIn {
   /**
-   * your proposal that is still waiting for a decision
+   * your proposal, or one of an agent you own, that is still waiting for a decision
    */
   action_id: string
   /**
@@ -487,7 +495,7 @@ export interface ActorReactivateOut {
   ok: boolean
 }
 
-/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. */
+/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's. */
 export interface ActorRegisterIn {
   display_name: string
   /**
@@ -499,7 +507,7 @@ export interface ActorRegisterIn {
    */
   kind: string
   /**
-   * for an agent only: the active person who owns it, and whose delegate alone it will be
+   * for an agent only: the active person who owns it, and whose delegate alone it will be, for good
    */
   owner_actor_id?: null | string
   /**
@@ -517,18 +525,6 @@ export interface ActorRevokeCredentialIn {
   credential_id: string
 }
 export interface ActorRevokeCredentialOut {
-  ok: boolean
-}
-
-/** actor.set_owner (write): Give an agent an owner, change it, or take it away (owner_actor_id null). An agent someone owns acts only as their delegate. Refused while the agent is seated in a course that is not archived: take it out first (agent.withdraw by its owner, or member.remove), and for an agent that holds a platform role, which an agent someone owns does not. Every credential the agent has — tokens, sessions, password, invitation, linked identity — is revoked, since whoever owned it before may hold them, and the old owner's requests to seat it that wait for a decision are cancelled; issue it a new token. Everything the agent remembers is deleted: what it kept about its old owner, and about the people it answered for them. A seat it keeps in an archived course counts for nothing from then on. */
-export interface ActorSetOwnerIn {
-  actor_id: string
-  /**
-   * the person who is to own the agent; null for nobody
-   */
-  owner_actor_id: null | string
-}
-export interface ActorSetOwnerOut {
   ok: boolean
 }
 
@@ -582,7 +578,7 @@ export interface ActorUpdateOut {
   suspended_by_actor_id?: null | string
 }
 
-/** agent.create (write): Register an agent of your own. It runs elsewhere, on whatever you connect to it with a token (agent.issue_token); no endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. A person may have a limited number of agents that are not suspended. */
+/** agent.create (write): Register an agent of your own. It runs elsewhere, on whatever you connect to it with a token (agent.issue_token); no endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. It is yours for good: nobody gives it another owner. A person may have a limited number of agents that are not suspended. */
 export interface AgentCreateIn {
   /**
    * what the agent is called wherever it appears
@@ -942,7 +938,7 @@ export interface AssignmentUnpublishOut {
   ok: boolean
 }
 
-/** assignment.update (write): Change an assignment. Once any grade has been entered for it, what it is worth and where it counts are fixed: a score is a score out of the points possible when it was given. */
+/** assignment.update (write): Change an assignment. What it is worth and where it counts may change after grades are entered for it: a change of points says what becomes of them (existing_grades: rescale or keep_scores), and needs grade_submit and grade_post as well; moving it to another component, or out of the grade, needs nothing more. Either rewrites, at once, the posted totals it changes, with history, and so must reach every student who has one, over the whole course. A grade proposed out of the old points is refused when it is approved. */
 export interface AssignmentUpdateIn {
   assignment_id: string
   /**
@@ -960,6 +956,10 @@ export interface AssignmentUpdateIn {
   course_id: string
   due_at?: null | string
   /**
+   * rescale or keep_scores: what becomes of grades already entered when points_possible changes, required once any has been. rescale converts each score in proportion (45 of 50 becomes 90 of 100) in a new grade that replaces it, the old one kept; keep_scores leaves each score as it is, out of the new points. Either rewrites the totals it changes, and needs grade_submit and grade_post as well
+   */
+  existing_grades?: null | string
+  /**
    * a document of kind instructions, in this course
    */
   instructions_document_id?: null | string
@@ -975,6 +975,14 @@ export interface AssignmentUpdateIn {
 }
 export interface AssignmentUpdateOut {
   ok: boolean
+  /**
+   * how many grades were written again in the new points
+   */
+  rescaled: number
+  /**
+   * how many posted totals were written down again
+   */
+  snapshots: number
 }
 
 /** component.create (write): Add a component to the grading scheme under a parent: a bucket that assignments will hang from, or, with points_possible, something graded directly such as an exam. */
@@ -1003,7 +1011,7 @@ export interface ComponentCreateOut {
   id: string
 }
 
-/** component.move (write): Move a component, with everything beneath it, under a different parent in the same course. Once any grade has been entered beneath it, its place in the scheme is fixed. */
+/** component.move (write): Move a component, with everything beneath it, under a different parent in the same course. It may move after grades are entered beneath it: that rewrites, at once, the posted totals it changes, with history, where it was and where it goes, and so must reach every student who has one, over the whole course. */
 export interface ComponentMoveIn {
   component_id: string
   /**
@@ -1014,6 +1022,14 @@ export interface ComponentMoveIn {
 }
 export interface ComponentMoveOut {
   ok: boolean
+  /**
+   * how many grades were written again in the new points
+   */
+  rescaled: number
+  /**
+   * how many posted totals were written down again
+   */
+  snapshots: number
 }
 
 /** component.tree (read): The course's grading scheme: the tree of components with their weights, from the course total down. */
@@ -1049,10 +1065,10 @@ export interface ComponentTreeOut {
       }[]
 }
 
-/** component.update (write): Change a component's name, weight, drop_lowest, points or order. Posted totals are not rewritten: what a student was shown stays as it was until grades beneath it are next posted or regraded. */
+/** component.update (write): Change a component's name, weight, drop_lowest, points or order. A change of weight or drop_lowest does not rewrite posted totals: what a student was shown stays as it was until grades beneath it are next posted or regraded. The points of a directly graded component may change after grades are entered on it, saying what becomes of them (existing_grades: rescale or keep_scores, needing grade_submit and grade_post as well); that rewrites, at once, the posted totals it changes, and so must reach every student who has one, over the whole course. */
 export interface ComponentUpdateIn {
   /**
-   * turn a directly graded component back into a bucket
+   * turn a directly graded component back into a bucket; not once a grade has been entered on it
    */
   clear_points_possible?: boolean
   component_id: string
@@ -1061,6 +1077,10 @@ export interface ComponentUpdateIn {
    */
   course_id: string
   drop_lowest?: null | number
+  /**
+   * rescale or keep_scores: what becomes of grades already entered on a directly graded component when its points_possible changes, required once any has been; as for assignment.update. Needs grade_submit and grade_post as well
+   */
+  existing_grades?: null | string
   name?: null | string
   /**
    * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
@@ -1074,6 +1094,14 @@ export interface ComponentUpdateIn {
 }
 export interface ComponentUpdateOut {
   ok: boolean
+  /**
+   * how many grades were written again in the new points
+   */
+  rescaled: number
+  /**
+   * how many posted totals were written down again
+   */
+  snapshots: number
 }
 
 /** conversation.answer (write): Answer in a conversation addressed to you (conversation.inbox lists those waiting), replying to the opener's latest message, whose id you give as in_reply_to_message_id. It is refused as a conflict, with a reason: moved_on if the opener has written again since (read the new message and answer that), already_answered if that message has its answer, answer_pending if an answer of yours to it waits for approval, closed if the conversation is. Your level of conversation_answer decides whether an answer is posted at once, posted and reviewed after, or waits for a person's approval; one that waits is checked again when approved, and refused then if the conversation has moved on. An answer that failed or was rejected may be written again, under a new idempotency key. */
@@ -1822,7 +1850,7 @@ export interface CourseSeatInstructorOut {
   member_id: string
 }
 
-/** course.update (write): Change a course's title or description. Its code, section and term are what it is, and do not change. A department administrator does this for the courses of the departments they administer. */
+/** course.update (write): Change a course's title or description. Its code, section and term are what it is, and do not change. A department administrator does this for the courses of the departments they administer; the course's instructors do it from their seat with course.update_details. */
 export interface CourseUpdateIn {
   course_id: string
   description?: null | string
@@ -1830,6 +1858,22 @@ export interface CourseUpdateIn {
 }
 export interface CourseUpdateOut {
   ok: boolean
+}
+
+/** course.update_details (write): Change the course's title or description from a seat in it, for whoever manages its members, as its instructors do. Its code, section, term, department and status stay with its administrators (course.update, course.move, course.activate, course.archive). Giving what the course already says changes nothing and says so (changed: false). */
+export interface CourseUpdateDetailsIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  description?: null | string
+  title?: null | string
+}
+export interface CourseUpdateDetailsOut {
+  /**
+   * false when the course already said what was given: nothing was done
+   */
+  changed: boolean
 }
 
 /** credential.issue_token (write): Create an API token for the caller's own account. The token is returned once and only its hash is kept: retrying this call returns the credential but not the token again. */
@@ -2058,7 +2102,7 @@ export interface DepartmentUpdateOut {
   parent_id?: null | string
 }
 
-/** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed. The new version is a draft until it is published; what students read does not change until then. */
+/** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then. */
 export interface DocumentAddVersionIn {
   /**
    * markdown text
@@ -2084,7 +2128,7 @@ export interface DocumentAddVersionOut {
   version_id: string
 }
 
-/** document.archive (write): Retire a document. It disappears from lists and can no longer be edited; nothing is deleted, and anything pinned to one of its versions still reads it. A submitted file can be archived only while its submission is a draft. */
+/** document.archive (write): Retire a document. It disappears from lists and can no longer be edited until it is brought back with document.unarchive; nothing is deleted, and anything pinned to one of its versions still reads it. A submitted file can be archived only while its submission is a draft. */
 export interface DocumentArchiveIn {
   /**
    * the course this call is about
@@ -2096,7 +2140,7 @@ export interface DocumentArchiveOut {
   ok: boolean
 }
 
-/** document.create (write): Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade; those have exactly one version and are given their content here. */
+/** document.create (write): Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here. */
 export interface DocumentCreateIn {
   /**
    * markdown text
@@ -2151,6 +2195,21 @@ export interface DocumentGetOut {
   id: string
   kind: string
   published_version_id?: null | string
+  /**
+   * the whole document was purged: who, when and why
+   */
+  purged?: null | {
+    at: string
+    /**
+     * the administrator who purged it
+     */
+    by_actor_id: string
+    reason: string
+  }
+  /**
+   * when every version of it was purged: it is archived for good
+   */
+  purged_at?: null | string
   sort_order: number
   status: string
   submission_id?: null | string
@@ -2171,6 +2230,17 @@ export interface DocumentGetOut {
     download_url?: null | string
     id: string
     published: boolean
+    /**
+     * the version was purged: its text and file are gone, and this says who removed them, when and why. Work handed in under it still names it
+     */
+    purged?: null | {
+      at: string
+      /**
+       * the administrator who purged it
+       */
+      by_actor_id: string
+      reason: string
+    }
     seq: number
   }
 }
@@ -2203,6 +2273,10 @@ export interface DocumentListOut {
         id: string
         kind: string
         published_version_id?: null | string
+        /**
+         * when every version of it was purged: it is archived for good
+         */
+        purged_at?: null | string
         sort_order: number
         status: string
         title: string
@@ -2226,6 +2300,56 @@ export interface DocumentPublishOut {
   published: boolean
   seq: number
   version_id: string
+}
+
+/** document.purge (write): Purge a version of a course's material, instructions or rubric, or the whole document, uploaded by mistake: its text and file are removed, the file deleted from storage, and a tombstone says who removed them, when and why. A purged document is archived for good. Work handed in under a purged version of the instructions still names it and reads the tombstone; grades are untouched. Submitted and feedback files are not purged. For a platform administrator, or a department administrator for the courses of the departments they administer; it works in an archived course too. */
+export interface DocumentPurgeIn {
+  course_id: string
+  document_id: string
+  /**
+   * why, 1 to 500 characters: kept on the tombstone, and shown to whoever reads what was purged
+   */
+  reason: string
+  /**
+   * one version to purge; every version of the document, and the document with them, if omitted
+   */
+  version_id?: null | string
+}
+export interface DocumentPurgeOut {
+  /**
+   * how many files were deleted from storage
+   */
+  files_removed: number
+  purged_versions: number
+}
+
+/** document.unarchive (write): Bring back an archived document: it is in lists again, can be edited, and its published version is read again by whoever may read that kind of document. For whoever may archive it: feedback on a posted grade takes grade_post as well, and a submitted file comes back only while its submission is a draft. A purged document stays archived. */
+export interface DocumentUnarchiveIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  document_id: string
+}
+export interface DocumentUnarchiveOut {
+  ok: boolean
+}
+
+/** document.update (write): Rename a document, or change its place in the list (sort_order), for whoever may write that kind of document: material, instructions and rubrics with document_write, a submitted file with submission_write while its submission is a draft, a feedback file as its grade is written. Its versions are untouched; an archived or purged document may be renamed as well. Giving what it already is changes nothing (changed: false). */
+export interface DocumentUpdateIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  document_id: string
+  sort_order?: null | number
+  title?: null | string
+}
+export interface DocumentUpdateOut {
+  /**
+   * false when the document already was so: nothing was done
+   */
+  changed: boolean
 }
 
 /** document.upload_url (read): Get somewhere to upload a file. Files do not travel through tool calls: PUT the bytes to the URL this returns, then pass the upload_token to the tool that attaches it. Nothing is recorded until then, and an upload that is never attached is eventually discarded. A call that would attach it by way of a proposal is refused once the upload is more than 48 hours old. */
@@ -2284,6 +2408,10 @@ export interface DocumentVersionsOut {
         has_file: boolean
         id: string
         published: boolean
+        /**
+         * when its text and file were purged; document.get of it says who and why
+         */
+        purged_at?: null | string
         seq: number
       }[]
 }
@@ -2324,6 +2452,64 @@ export interface EventListOut {
   next_seq: number
 }
 
+/** grade.clear_override (write): Take a person's override off one student's total: the total worked out counts again, and what is rolled up above it is written again now. The override stays on record in the total's history. Gated as grade.override_total is. A total with no override is left as it is. */
+export interface GradeClearOverrideIn {
+  /**
+   * a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead
+   */
+  component_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  student_member_id: string
+}
+export interface GradeClearOverrideOut {
+  /**
+   * false when the total already said this: nothing was done
+   */
+  changed: boolean
+  /**
+   * the total as it stands now
+   */
+  grade_id: string
+  /**
+   * how many totals above it were written down again
+   */
+  snapshots: number
+}
+
+/** grade.comment_total (write): Write feedback for a student on one of their totals on a rolled-up component, the course total included, or take it away with an empty one. The student reads it with the total; totals written for it later carry it on. Feedback files go on a total too, with document.create. Gated as grade.override_total is. */
+export interface GradeCommentTotalIn {
+  /**
+   * a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead
+   */
+  component_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * what the student is told about this total; empty takes a comment away
+   */
+  feedback: string
+  student_member_id: string
+}
+export interface GradeCommentTotalOut {
+  /**
+   * false when the total already said this: nothing was done
+   */
+  changed: boolean
+  /**
+   * the total as it stands now
+   */
+  grade_id: string
+  /**
+   * how many totals above it were written down again
+   */
+  snapshots: number
+}
+
 /** grade.get (read): One grade in full: score, feedback, per-criterion breakdown, the rubric version it was given against, and the action that made it. */
 export interface GradeGetIn {
   /**
@@ -2354,9 +2540,31 @@ export interface GradeGetOut {
   grader_member_id: string
   id: string
   /**
+   * for a computed total: nothing beneath it counts any more, so it has no value, and its score of 0 means nothing
+   */
+  no_total?: boolean
+  /**
    * entered by a grader, or computed: a rolled-up total written down when grades were posted
    */
   origin: string
+  /**
+   * for a computed total, a person's number in place of the score worked out, which stays beside it; it is what counts in everything rolled up above
+   */
+  override?: null | {
+    at: string
+    /**
+     * who; for members who grade
+     */
+    by_member_id?: null | string
+    /**
+     * why; for members who grade
+     */
+    reason?: null | string
+    /**
+     * out of 100, as the total's own score is
+     */
+    score: number | string
+  }
   posted_at?: null | string
   rubric_version_id?: null | string
   /**
@@ -2414,9 +2622,31 @@ export interface GradeListOut {
         grader_member_id: string
         id: string
         /**
+         * for a computed total: nothing beneath it counts any more, so it has no value, and its score of 0 means nothing
+         */
+        no_total?: boolean
+        /**
          * entered by a grader, or computed: a rolled-up total written down when grades were posted
          */
         origin: string
+        /**
+         * for a computed total, a person's number in place of the score worked out, which stays beside it; it is what counts in everything rolled up above
+         */
+        override?: null | {
+          at: string
+          /**
+           * who; for members who grade
+           */
+          by_member_id?: null | string
+          /**
+           * why; for members who grade
+           */
+          reason?: null | string
+          /**
+           * out of 100, as the total's own score is
+           */
+          score: number | string
+        }
         posted_at?: null | string
         rubric_version_id?: null | string
         /**
@@ -2434,6 +2664,41 @@ export interface GradeListOut {
   next?: null | string
 }
 
+/** grade.override_total (write): Override one student's total on a rolled-up component, the course total included, with a score out of 100 and a reason. The total worked out stays beside the override, and every total written for it later carries the override on; in everything rolled up above it, the override counts in its place, and those totals are written again now. A total is overridden once something beneath it has been posted. Like a regrade it writes a grade and makes it visible at once, so it takes grade_submit and grade_post and runs at the lower of the two; a total spans assignments, so it needs an assignment scope of the whole course. The reason and who made the override are shown to those who grade. Overriding with what is already there changes nothing. */
+export interface GradeOverrideTotalIn {
+  /**
+   * a component rolled up from what is beneath it, the course total included; a component graded directly is regraded instead
+   */
+  component_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * why, 1 to 500 characters: shown to those who grade, and kept
+   */
+  reason: string
+  /**
+   * out of 100, as a total's own score is
+   */
+  score: number | string
+  student_member_id: string
+}
+export interface GradeOverrideTotalOut {
+  /**
+   * false when the total already said this: nothing was done
+   */
+  changed: boolean
+  /**
+   * the total as it stands now
+   */
+  grade_id: string
+  /**
+   * how many totals above it were written down again
+   */
+  snapshots: number
+}
+
 /** grade.post (write): Post draft grades so that students can see them, and write down each affected student's rolled-up totals as they stand. Every grade in the batch must be within the caller's scope. A grade that is already posted is changed with grade.regrade, not posted again. */
 export interface GradePostIn {
   /**
@@ -2449,7 +2714,7 @@ export interface GradePostIn {
    */
   grade_ids?: null | string[]
   /**
-   * for final grades: count ungraded work as zero in the totals. Once a student's totals have been written this way they stay final: later posts and regrades keep counting ungraded work as zero. It decides the course total, so it needs an assignment scope of the whole course
+   * for final grades: count ungraded work as zero in the totals. Once a student's totals have been written this way they stay final: later posts and regrades keep counting ungraded work as zero, until grade.undo_ungraded_as_zero. It decides the course total, so it needs an assignment scope of the whole course
    */
   treat_ungraded_as_zero?: boolean
 }
@@ -2597,7 +2862,33 @@ export interface GradeSubmitOut {
   grade_id: string
 }
 
-/** gradebook.get (read): One student's rolled-up grades, computed now from posted grades: every component of the course with its percentage and the working behind it. Nothing is stored by reading this. */
+/** grade.undo_ungraded_as_zero (write): Undo treat_ungraded_as_zero for one student, or for every student it was applied to: their totals are written again, at once, leaving ungraded work out as a grade so far, and later posts and regrades no longer count it as zero until someone posts as final again. A total with nothing left beneath it says it has none. Gated as posting as final is: grade_post, reaching every student it is about, with an assignment scope of the whole course. Grades themselves are not touched, and the totals it replaces stay in the history. */
+export interface GradeUndoUngradedAsZeroIn {
+  /**
+   * every student of the course whose totals count ungraded work as zero
+   */
+  all_students?: boolean
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * the student whose totals count ungraded work as zero; or give all_students
+   */
+  student_member_id?: null | string
+}
+export interface GradeUndoUngradedAsZeroOut {
+  /**
+   * how many totals were written down again
+   */
+  snapshots: number
+  /**
+   * how many students' totals no longer count ungraded work as zero
+   */
+  students: number
+}
+
+/** gradebook.get (read): One student's rolled-up grades, computed now from posted grades: every component of the course with its percentage and the working behind it, and, beside a total a person has overridden, the override, which counts in its place in everything above it. Nothing is stored by reading this. */
 export interface GradebookGetIn {
   /**
    * the course this call is about
@@ -2626,6 +2917,7 @@ export interface GradebookGetOut {
               fraction: null | number | string
               id: string
               kind: string
+              overridden?: boolean
               /**
                * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
                */
@@ -2633,7 +2925,11 @@ export interface GradebookGetOut {
             }[]
         name: string
         /**
-         * out of 100; null when nothing beneath it has a posted grade
+         * out of 100: a person's override of this total, which counts in its place in everything rolled up above it
+         */
+        override_percent?: null | number | string
+        /**
+         * out of 100, as the scheme works it out; null when nothing beneath it has a posted grade
          */
         percent: null | number | string
       }[]
@@ -2666,14 +2962,14 @@ export interface MeGetOut {
    */
   kind: string
   /**
-   * for an agent a person owns, that person's actor id; absent for a person, and for an agent nobody owns
+   * for an agent a person owns, that person's actor id, the same for as long as the agent exists; absent for a person, and for an agent nobody owns
    */
   owner_actor_id?: null | string
   platform_role?: null | string
   status: string
 }
 
-/** me.memberships (read): The courses the caller is seated in, with the member id for each and what the caller may do there. An agent starting cold begins here: every other tool takes a course_id. */
+/** me.memberships (read): The courses the caller is seated in, with the member id for each and what the caller may do there, and the most each seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous). An agent starting cold begins here: every other tool takes a course_id. */
 export interface MeMembershipsIn {}
 export interface MeMembershipsOut {
   memberships:
@@ -2692,6 +2988,18 @@ export interface MeMembershipsOut {
          * the stable handle for this actor in this course; agents key their own memory on it
          */
         member_id: string
+        /**
+         * why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives
+         */
+        perm_ceiling_reasons?: {
+          [k: string]: string | undefined
+        }
+        /**
+         * for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves
+         */
+        perm_ceilings: {
+          [k: string]: string | undefined
+        }
         /**
          * what you may do in the course now, before scope: your own levels, capped by your principal's if you are a delegate; all denied while the seat does not count
          */
@@ -2724,7 +3032,7 @@ export interface MeSiteChatOut {
   site_chat: boolean
 }
 
-/** member.add (write): Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own. An agent someone owns is not seated here: its owner brings it in as their delegate, with member.add_delegate. */
+/** member.add (write): Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own. An agent decides and reviews only by proposal: its action_decide is confirm_required at most, a preset's cut down to it and a level named above it refused (agent_decides_by_proposal). An agent someone owns is not seated here: its owner brings it in as their delegate, with member.add_delegate. */
 export interface MemberAddIn {
   actor_id: string
   /**
@@ -2768,7 +3076,7 @@ export interface MemberAddOut {
   member_id: string
 }
 
-/** member.add_delegate (write): Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, whatever your agent may do beyond what the delegate preset gives — your own writes, such as drafting your submission — it does only by proposal (confirm_required at most), whoever grants it. It holds member_manage or member_invite only when you name them in perms, whatever the preset carries; then it manages the course's members, or hands out its join links, for you, and never acts on your own seat nor on your other agents' (not_your_principal). */
+/** member.add_delegate (write): Bring an agent you own into this course as your delegate: its seat's principal is yours, and it can never do more than you can here, nor reach further, nor outlast your seat; it is paused while you are, and removed with you. It is seated with the delegate preset — your own assistant, which reads and answers you — unless you name another, such as course_tutor, clipped to what you hold; member.delegate_defaults shows what it would get. It answers you alone unless it answers the course (answers_course), which only someone who manages the course's members may choose, and which course_tutor chooses for them: then the students it can see and do no more than may ask it too, and whatever anyone tells it, it may repeat to the others it answers. Your level of agent_delegate decides whether this needs an instructor's approval first. Unless you manage the course's members, whatever your agent may do beyond what the delegate preset gives — your own writes, such as drafting your submission — it does only by proposal (confirm_required at most), whoever grants it. It decides and reviews only by proposal, as any agent does: action_decide at confirm_required at most. A level named above what it may hold is refused, saying why (reason, as perm_ceiling_reasons in member.delegate_defaults gives it); a preset's is cut down. It holds member_manage or member_invite only when you name them in perms, whatever the preset carries; then it manages the course's members, or hands out its join links, for you, and never acts on your own seat nor on your other agents' (not_your_principal). */
 export interface MemberAddDelegateIn {
   /**
    * the agent you own to bring in
@@ -2826,7 +3134,7 @@ export interface MemberAddDelegateOut {
   member_id: string
 }
 
-/** member.delegate_defaults (read): What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first, and whether it would answer the course or you alone. */
+/** member.delegate_defaults (read): What member.add_delegate would seat your agent with here if you named nothing but the preset: its permissions, which students and assignments it would reach, when it would end, and whether bringing it in needs an instructor's approval first, and whether it would answer the course or you alone; and the most it may be given of each permission if you name one (perm_ceilings, with perm_ceiling_reasons where below autonomous). */
 export interface MemberDelegateDefaultsIn {
   /**
    * the course this call is about
@@ -2853,6 +3161,18 @@ export interface MemberDelegateDefaultsOut {
    * when student_scope is listed: whom it reaches; empty is nobody
    */
   listed_students: null | string[]
+  /**
+   * why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives
+   */
+  perm_ceiling_reasons?: {
+    [k: string]: string | undefined
+  }
+  /**
+   * for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves
+   */
+  perm_ceilings: {
+    [k: string]: string | undefined
+  }
   perms: {
     [k: string]: string | undefined
   }
@@ -2862,7 +3182,7 @@ export interface MemberDelegateDefaultsOut {
   student_scope: string
 }
 
-/** member.get (read): One member in full, including exactly which students and assignments a 'listed' scope lists. */
+/** member.get (read): One member in full, including exactly which students and assignments a 'listed' scope lists, and the most the seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous). */
 export interface MemberGetIn {
   /**
    * the course this call is about
@@ -2896,6 +3216,18 @@ export interface MemberGetOut {
    */
   owner_actor_id?: null | string
   owner_name?: null | string
+  /**
+   * why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives
+   */
+  perm_ceiling_reasons?: {
+    [k: string]: string | undefined
+  }
+  /**
+   * for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves
+   */
+  perm_ceilings: {
+    [k: string]: string | undefined
+  }
   perms: {
     [k: string]: string | undefined
   }
@@ -2919,7 +3251,7 @@ export interface MemberGetOut {
   student_scope: string
 }
 
-/** member.list (read): The members of a course — people and agents alike — with their roster role, status, permissions and scope. */
+/** member.list (read): The members of a course — people and agents alike — with their roster role, status, permissions and scope, and for each seat the most it may be given of each permission (perm_ceilings), and why where that is below autonomous (perm_ceiling_reasons): offer nothing above it. */
 export interface MemberListIn {
   /**
    * the id of the last item already seen
@@ -2972,6 +3304,18 @@ export interface MemberListOut {
          */
         owner_actor_id?: null | string
         owner_name?: null | string
+        /**
+         * why, for each permission whose ceiling is below autonomous: agent_never (a delegate brings no agents of its own), agent_decides_by_proposal (an agent decides and reviews only by proposal), student_agent_by_proposal (the agent of someone who does not manage the members does by proposal what the delegate preset does not give), principal_level (a delegate holds no more than its principal); the same codes a refusal to go above it gives
+         */
+        perm_ceiling_reasons?: {
+          [k: string]: string | undefined
+        }
+        /**
+         * for each permission, the most this seat may be given, whoever gives it: what member.update_perms, member.update_perms_bulk and member.add_delegate accept at most, before what the one giving it holds themselves
+         */
+        perm_ceilings: {
+          [k: string]: string | undefined
+        }
         perms: {
           [k: string]: string | undefined
         }
@@ -3097,7 +3441,31 @@ export interface MemberResumeOut {
   ok: boolean
 }
 
-/** member.update_perms (write): Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself. Lowering is always allowed. */
+/** member.set_role (write): Change a seat's roster role: student, ta, instructor, observer or assistant. The role is a fact of the roster and nothing more: it decides who is on the gradebook and who hands work in, never what a seat may do. Its permissions and scope stay exactly as they are, since authorization never reads role; change them with member.update_perms and member.rescope. A student made a TA keeps everything they handed in and every grade and total they were given, readable as before, and work already handed in may still be graded; from then on they are off the roster: not listed as a student, not marked missing when a due date passes, handing in nothing new and given no new grade on a component. Someone made a student is on the roster and may hand work in. Not on your own seat, and not on a delegate's, which is always assistant; a delegate that manages the course's members changes the role of neither its principal's seat nor its principal's other agents' (not_your_principal). Giving a seat the role it has changes nothing and says so (changed: false). */
+export interface MemberSetRoleIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  member_id: string
+  /**
+   * student, instructor, ta, observer or assistant
+   */
+  role: string
+}
+export interface MemberSetRoleOut {
+  /**
+   * false when the seat already had the role: nothing was done
+   */
+  changed: boolean
+  /**
+   * the role the seat had before this call
+   */
+  previous: string
+  role: string
+}
+
+/** member.update_perms (write): Change individual permissions on a member. It takes effect on their next call: nothing is cached. Raising one is a grant: everything the member will then hold — every permission, over their whole scope, for as long as their seat lasts — must be within what you hold yourself, and within what the seat may hold at all (perm_ceilings in member.get; above it the refusal gives the same reason code). Lowering is always allowed. */
 export interface MemberUpdatePermsIn {
   /**
    * the course this call is about
@@ -3115,7 +3483,7 @@ export interface MemberUpdatePermsOut {
   ok: boolean
 }
 
-/** member.update_perms_bulk (write): Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope. If any one seat cannot be changed, none is. It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. A delegate's call is refused whole (not_your_principal) when the role takes in its principal's seat or another agent of its principal's. */
+/** member.update_perms_bulk (write): Change individual permissions on every seat with one roster role — every student, say — other than your own, removed and expired seats left out. Each change is held to the rules of member.update_perms: raising a level is a grant that must be within what you hold yourself, over that member's whole scope, and within what the seat may hold at all (perm_ceilings): an agent's action_decide goes no higher than confirm_required. If any one seat cannot be changed, none is, and the refusal names it (member_id) and says why (reason). It changes the seats there are now: a seat added later takes its preset's levels, so repeat the call, give the levels to member.add, or use a department preset. A delegate's call is refused whole (not_your_principal) when the role takes in its principal's seat or another agent of its principal's. */
 export interface MemberUpdatePermsBulkIn {
   /**
    * the course this call is about
@@ -3751,7 +4119,6 @@ export interface ToolMap {
   'actor.reactivate': { in: ActorReactivateIn; out: ActorReactivateOut; kind: 'write' }
   'actor.register': { in: ActorRegisterIn; out: ActorRegisterOut; kind: 'write' }
   'actor.revoke_credential': { in: ActorRevokeCredentialIn; out: ActorRevokeCredentialOut; kind: 'write' }
-  'actor.set_owner': { in: ActorSetOwnerIn; out: ActorSetOwnerOut; kind: 'write' }
   'actor.suspend': { in: ActorSuspendIn; out: ActorSuspendOut; kind: 'write' }
   'actor.update': { in: ActorUpdateIn; out: ActorUpdateOut; kind: 'write' }
   'agent.create': { in: AgentCreateIn; out: AgentCreateOut; kind: 'write' }
@@ -3795,6 +4162,7 @@ export interface ToolMap {
   'course.move': { in: CourseMoveIn; out: CourseMoveOut; kind: 'write' }
   'course.seat_instructor': { in: CourseSeatInstructorIn; out: CourseSeatInstructorOut; kind: 'write' }
   'course.update': { in: CourseUpdateIn; out: CourseUpdateOut; kind: 'write' }
+  'course.update_details': { in: CourseUpdateDetailsIn; out: CourseUpdateDetailsOut; kind: 'write' }
   'credential.issue_token': { in: CredentialIssueTokenIn; out: CredentialIssueTokenOut; kind: 'write' }
   'credential.list': { in: CredentialListIn; out: CredentialListOut; kind: 'read' }
   'credential.revoke': { in: CredentialRevokeIn; out: CredentialRevokeOut; kind: 'write' }
@@ -3813,14 +4181,21 @@ export interface ToolMap {
   'document.get': { in: DocumentGetIn; out: DocumentGetOut; kind: 'read' }
   'document.list': { in: DocumentListIn; out: DocumentListOut; kind: 'read' }
   'document.publish': { in: DocumentPublishIn; out: DocumentPublishOut; kind: 'write' }
+  'document.purge': { in: DocumentPurgeIn; out: DocumentPurgeOut; kind: 'write' }
+  'document.unarchive': { in: DocumentUnarchiveIn; out: DocumentUnarchiveOut; kind: 'write' }
+  'document.update': { in: DocumentUpdateIn; out: DocumentUpdateOut; kind: 'write' }
   'document.upload_url': { in: DocumentUploadUrlIn; out: DocumentUploadUrlOut; kind: 'read' }
   'document.versions': { in: DocumentVersionsIn; out: DocumentVersionsOut; kind: 'read' }
   'event.list': { in: EventListIn; out: EventListOut; kind: 'read' }
+  'grade.clear_override': { in: GradeClearOverrideIn; out: GradeClearOverrideOut; kind: 'write' }
+  'grade.comment_total': { in: GradeCommentTotalIn; out: GradeCommentTotalOut; kind: 'write' }
   'grade.get': { in: GradeGetIn; out: GradeGetOut; kind: 'read' }
   'grade.list': { in: GradeListIn; out: GradeListOut; kind: 'read' }
+  'grade.override_total': { in: GradeOverrideTotalIn; out: GradeOverrideTotalOut; kind: 'write' }
   'grade.post': { in: GradePostIn; out: GradePostOut; kind: 'write' }
   'grade.regrade': { in: GradeRegradeIn; out: GradeRegradeOut; kind: 'write' }
   'grade.submit': { in: GradeSubmitIn; out: GradeSubmitOut; kind: 'write' }
+  'grade.undo_ungraded_as_zero': { in: GradeUndoUngradedAsZeroIn; out: GradeUndoUngradedAsZeroOut; kind: 'write' }
   'gradebook.get': { in: GradebookGetIn; out: GradebookGetOut; kind: 'read' }
   'me.get': { in: MeGetIn; out: MeGetOut; kind: 'read' }
   'me.memberships': { in: MeMembershipsIn; out: MeMembershipsOut; kind: 'read' }
@@ -3835,6 +4210,7 @@ export interface ToolMap {
   'member.remove': { in: MemberRemoveIn; out: MemberRemoveOut; kind: 'write' }
   'member.rescope': { in: MemberRescopeIn; out: MemberRescopeOut; kind: 'write' }
   'member.resume': { in: MemberResumeIn; out: MemberResumeOut; kind: 'write' }
+  'member.set_role': { in: MemberSetRoleIn; out: MemberSetRoleOut; kind: 'write' }
   'member.update_perms': { in: MemberUpdatePermsIn; out: MemberUpdatePermsOut; kind: 'write' }
   'member.update_perms_bulk': { in: MemberUpdatePermsBulkIn; out: MemberUpdatePermsBulkOut; kind: 'write' }
   'memory.forget': { in: MemoryForgetIn; out: MemoryForgetOut; kind: 'write' }
@@ -3885,7 +4261,6 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'actor.reactivate': { method: 'POST', path: '/v1/actors/{actor_id}/reactivate', kind: 'write' },
   'actor.register': { method: 'POST', path: '/v1/actors', kind: 'write' },
   'actor.revoke_credential': { method: 'POST', path: '/v1/actors/{actor_id}/credentials/{credential_id}/revoke', kind: 'write' },
-  'actor.set_owner': { method: 'POST', path: '/v1/actors/{actor_id}/owner', kind: 'write' },
   'actor.suspend': { method: 'POST', path: '/v1/actors/{actor_id}/suspend', kind: 'write' },
   'actor.update': { method: 'POST', path: '/v1/actors/{actor_id}', kind: 'write' },
   'agent.create': { method: 'POST', path: '/v1/me/agents', kind: 'write' },
@@ -3929,6 +4304,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'course.move': { method: 'POST', path: '/v1/courses/{course_id}/move', kind: 'write' },
   'course.seat_instructor': { method: 'POST', path: '/v1/courses/{course_id}/instructors', kind: 'write' },
   'course.update': { method: 'POST', path: '/v1/courses/{course_id}', kind: 'write' },
+  'course.update_details': { method: 'POST', path: '/v1/courses/{course_id}/details', kind: 'write' },
   'credential.issue_token': { method: 'POST', path: '/v1/me/credentials/tokens', kind: 'write' },
   'credential.list': { method: 'GET', path: '/v1/me/credentials', kind: 'read' },
   'credential.revoke': { method: 'POST', path: '/v1/me/credentials/{credential_id}/revoke', kind: 'write' },
@@ -3947,14 +4323,21 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'document.get': { method: 'GET', path: '/v1/courses/{course_id}/documents/{document_id}', kind: 'read' },
   'document.list': { method: 'GET', path: '/v1/courses/{course_id}/documents', kind: 'read' },
   'document.publish': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/publish', kind: 'write' },
+  'document.purge': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/purge', kind: 'write' },
+  'document.unarchive': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/unarchive', kind: 'write' },
+  'document.update': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}', kind: 'write' },
   'document.upload_url': { method: 'GET', path: '/v1/courses/{course_id}/upload-url', kind: 'read' },
   'document.versions': { method: 'GET', path: '/v1/courses/{course_id}/documents/{document_id}/versions', kind: 'read' },
   'event.list': { method: 'GET', path: '/v1/courses/{course_id}/events', kind: 'read' },
+  'grade.clear_override': { method: 'POST', path: '/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/clear-override', kind: 'write' },
+  'grade.comment_total': { method: 'POST', path: '/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/comment', kind: 'write' },
   'grade.get': { method: 'GET', path: '/v1/courses/{course_id}/grades/{grade_id}', kind: 'read' },
   'grade.list': { method: 'GET', path: '/v1/courses/{course_id}/grades', kind: 'read' },
+  'grade.override_total': { method: 'POST', path: '/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/override', kind: 'write' },
   'grade.post': { method: 'POST', path: '/v1/courses/{course_id}/grades/post', kind: 'write' },
   'grade.regrade': { method: 'POST', path: '/v1/courses/{course_id}/grades/{grade_id}/regrade', kind: 'write' },
   'grade.submit': { method: 'POST', path: '/v1/courses/{course_id}/grades', kind: 'write' },
+  'grade.undo_ungraded_as_zero': { method: 'POST', path: '/v1/courses/{course_id}/grades/undo-ungraded-as-zero', kind: 'write' },
   'gradebook.get': { method: 'GET', path: '/v1/courses/{course_id}/gradebook/{student_member_id}', kind: 'read' },
   'me.get': { method: 'GET', path: '/v1/me', kind: 'read' },
   'me.memberships': { method: 'GET', path: '/v1/me/memberships', kind: 'read' },
@@ -3969,6 +4352,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'member.remove': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/remove', kind: 'write' },
   'member.rescope': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/scope', kind: 'write' },
   'member.resume': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/resume', kind: 'write' },
+  'member.set_role': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/role', kind: 'write' },
   'member.update_perms': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/perms', kind: 'write' },
   'member.update_perms_bulk': { method: 'POST', path: '/v1/courses/{course_id}/members/bulk-perms', kind: 'write' },
   'memory.forget': { method: 'POST', path: '/v1/me/memory/entries/{memory_id}/forget', kind: 'write' },

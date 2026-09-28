@@ -15,7 +15,8 @@ import {
 } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { i18n } from '@/i18n'
-import { formatDateTime } from '@/utils/format'
+import { ceilingRefusalText } from '@/utils/ceilings'
+import { formatDateTime, shortId } from '@/utils/format'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
 const te = (key: string): boolean => (i18n.global as unknown as { te: (k: string) => boolean }).te(key)
@@ -343,6 +344,14 @@ const EXPLAIN: [RegExp, (m: RegExpMatchArray) => string][] = [
 /** Core's refusal of a change to a seat, in the reader's words; null when there is nothing to add to Core's own. */
 export function explainRefusal(e: unknown): string | null {
   if (!(e instanceof ApiError)) return null
+  // Above what the seat may hold at all: which permission, how far, and why.
+  // A change to many seats at once names the one it stopped at.
+  const ceiling = ceilingRefusalText(e.details)
+  if (ceiling) {
+    const id = typeof e.details?.member_id === 'string' ? e.details.member_id : null
+    if (!id) return ceiling
+    return t('members.refusal.onSeat', { text: ceiling, name: useCourseStore().memberName(id) ?? shortId(id) })
+  }
   if (e.actionStatus === 'denied') {
     const reason = e.details?.reason
     if (reason === 'permission_denied') return t('members.refusal.noManage')

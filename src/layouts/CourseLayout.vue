@@ -57,7 +57,22 @@ const tabs: Tab[] = [
   { name: 'course-scheme', label: 'layout.course.scheme', icon: 'Share', perms: ['grade_read'] },
 ]
 
-const visibleTabs = computed(() => tabs.filter((tab) => !tab.perms || tab.perms.some((p) => course.can(p))))
+/**
+ * The approval queue is offered to whoever decides here, and to a person who
+ * does not but owns an agent seated here: for them it is their own agents'
+ * proposals, and says so.
+ */
+const agentsQueue = computed(() => !course.can('action_decide') && course.ownsAgentHere === true)
+const visibleTabs = computed(() =>
+  tabs
+    .filter(
+      (tab) =>
+        !tab.perms || tab.perms.some((p) => course.can(p)) || (tab.name === 'course-approvals' && agentsQueue.value),
+    )
+    .map((tab) =>
+      tab.name === 'course-approvals' && agentsQueue.value ? { ...tab, label: 'layout.course.agentProposals' } : tab,
+    ),
+)
 const tabOf = (list: Tab[], routeName: string | undefined) =>
   routeName ? list.find((tab) => tab.name === routeName || tab.also?.includes(routeName)) : undefined
 const activeTab = computed(() => {

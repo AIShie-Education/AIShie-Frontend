@@ -4,12 +4,21 @@
 // and have not been looked at, or were escalated (action.list_pending_review).
 // Each is decided or reviewed in place (action.decide, action.review), and
 // what became of it is kept on the page until the person leaves.
+//
+// A person without action_decide who owns an agent seated here is shown their
+// own agents' actions alone, under a title that says so: they decide those
+// where they could have done the same themselves without anyone's
+// confirmation (yours_to_decide), as their own doing of it, and each other
+// says why someone else decides it. Either may take back their agent's
+// proposal while it waits. A queue Core will not show the caller is simply
+// empty for them: nothing in it is theirs.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { read } from '@/api/http'
+import { ApiError, read } from '@/api/http'
 import { usePaged } from '@/composables/useAsync'
+import { usePageTitle } from '@/router/title'
 import { useCourseStore } from '@/stores/course'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -33,25 +42,23 @@ watch(tab, (v) => {
   void router.replace({ query: { ...route.query, tab: v === 'review' ? 'review' : undefined } })
 })
 
-const allowed = computed(() => course.can('action_decide'))
+/** The caller decides nothing here: what the queues show them is their own agents'. */
+const agentsOnly = computed(() => !course.can('action_decide'))
+usePageTitle('course-approvals', () => (agentsOnly.value ? 'actions.approvals.agentsTitle' : null))
 const PAGE = 50
 
-const proposed = usePaged<ActionRow>(
-  (after) =>
-    read('action.list_proposed', { course_id: props.courseId, limit: PAGE, after }).then((o) => ({
-      items: o.actions,
-      next: o.next,
-    })),
-  { immediate: allowed.value },
-)
-const review = usePaged<ActionRow>(
-  (after) =>
-    read('action.list_pending_review', { course_id: props.courseId, limit: PAGE, after }).then((o) => ({
-      items: o.actions,
-      next: o.next,
-    })),
-  { immediate: allowed.value },
-)
+/** One page of a queue; a queue the caller may not read has nothing of theirs in it. */
+async function queuePage(tool: 'action.list_proposed' | 'action.list_pending_review', after: string | undefined) {
+  try {
+    const o = await read(tool, { course_id: props.courseId, limit: PAGE, after })
+    return { items: o.actions, next: o.next }
+  } catch (e) {
+    if (e instanceof ApiError && e.isForbidden) return { items: [], next: null }
+    throw e
+  }
+}
+const proposed = usePaged<ActionRow>((after) => queuePage('action.list_proposed', after))
+const review = usePaged<ActionRow>((after) => queuePage('action.list_pending_review', after))
 
 function count(list: { items: { value: unknown[] }; hasMore: { value: boolean } }) {
   return `${list.items.value.length}${list.hasMore.value ? '+' : ''}`
@@ -135,6 +142,12 @@ function onDone(a: ActionRow, d: Done, which: Tab) {
   }
   if (d.kind === 'decided' && d.out.outcome === 'executed') invalidateAfter(a.action_type)
   recent.value = [{ key: ++seq, action: a, done: d }, ...recent.value]
+  if (d.kind === 'withdrawn') {
+    // Cancelled: it waits for nobody now.
+    list.items.value = list.items.value.filter((x) => x.id !== a.id)
+    void reloadProposed()
+    return
+  }
   if (d.kind === 'proposed') {
     // The proposal still waits; so, now, does the caller's decision on it,
     // which joins the approval queue.
@@ -162,7 +175,10 @@ function dismiss(key: number) {
 
 <template>
   <div class="approvals">
-    <PageHeader :title="t('actions.approvals.title')" :subtitle="t('actions.approvals.subtitle')">
+    <PageHeader
+      :title="agentsOnly ? t('actions.approvals.agentsTitle') : t('actions.approvals.title')"
+      :subtitle="agentsOnly ? t('actions.approvals.agentsSubtitle') : t('actions.approvals.subtitle')"
+    >
       <template #tags>
         <el-tooltip
           v-if="course.needsApproval('action_decide')"
@@ -172,119 +188,129 @@ function dismiss(key: number) {
           <el-tag type="warning" effect="plain">{{ t('actions.approvals.decisionsNeedApproval') }}</el-tag>
         </el-tooltip>
       </template>
-      <el-button v-if="allowed" :loading="proposed.loading.value || review.loading.value" @click="refresh">
+      <el-button :loading="proposed.loading.value || review.loading.value" @click="refresh">
         <el-icon><Refresh /></el-icon>
         <span>{{ t('common.actions.refresh') }}</span>
       </el-button>
     </PageHeader>
 
-    <div v-if="!allowed" class="app-card">
-      <el-result icon="info" :title="t('common.errors.forbidden')" :sub-title="t('actions.approvals.noPermission')">
-        <template #extra>
-          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('actions.mine.title') }}</router-link>
-        </template>
-      </el-result>
+    <el-alert v-if="agentsOnly" type="info" :closable="false" show-icon class="approvals__owner">
+      <template #title>{{ t('actions.approvals.agentsIntroTitle') }}</template>
+      <p class="approvals__owner-text">{{ t('actions.approvals.agentsIntro') }}</p>
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('actions.mine.title') }}</router-link>
+    </el-alert>
+
+    <section v-if="recent.length" class="app-card approvals__recent">
+      <h2 class="app-card__title">
+        <span>{{ t('actions.approvals.recent') }}</span>
+        <el-button link type="primary" @click="recent = []">{{ t('actions.approvals.clearRecent') }}</el-button>
+      </h2>
+      <p class="approvals__help">{{ t('actions.approvals.recentHelp') }}</p>
+      <div v-for="r in recent" :key="r.key" class="approvals__recent-item">
+        <div class="approvals__recent-head">
+          <router-link :to="{ name: 'course-action', params: { courseId, actionId: r.action.id } }" class="approvals__recent-type">
+            {{ typeLabel(r.action.action_type) }}
+          </router-link>
+          <ActionTarget :action="r.action" :course-id="courseId" />
+        </div>
+        <OutcomeAlert :course-id="courseId" :done="r.done" closable @close="dismiss(r.key)" />
+      </div>
+    </section>
+
+    <div class="app-card">
+      <el-tabs v-model="tab" class="approvals__tabs">
+        <el-tab-pane name="proposed">
+          <template #label>
+            <span class="approvals__tab">
+              <el-icon><Stamp /></el-icon>
+              {{ t('actions.approvals.tabs.proposed') }}
+              <el-badge
+                v-if="proposed.items.value.length"
+                :value="count(proposed)"
+                type="warning"
+                class="approvals__badge"
+              />
+            </span>
+          </template>
+          <p class="approvals__help">
+            {{ agentsOnly ? t('actions.approvals.agentsProposedHelp') : t('actions.approvals.proposedHelp') }}
+          </p>
+          <p class="approvals__help approvals__help--small">
+            <el-icon><Sort /></el-icon> {{ t('actions.approvals.oldestFirst') }} ·
+            {{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}
+          </p>
+          <AsyncState
+            :loading="proposed.loading.value && !proposed.items.value.length"
+            :error="proposed.error.value"
+            :empty="!proposed.items.value.length"
+            :empty-text="agentsOnly ? t('actions.approvals.agentsEmptyProposed') : t('actions.approvals.emptyProposed')"
+            @retry="reloadProposed"
+          >
+            <div class="approvals__list">
+              <ActionCard
+                v-for="a in proposed.items.value"
+                :key="a.id"
+                :action="a"
+                :course-id="courseId"
+                mode="decide"
+                :waiting="myPending.get(a.id)"
+                @done="(d) => onDone(a, d, 'proposed')"
+              />
+            </div>
+            <LoadMore :has-more="proposed.hasMore.value" :loading="proposed.loading.value" @more="proposed.loadMore" />
+          </AsyncState>
+        </el-tab-pane>
+
+        <el-tab-pane name="review">
+          <template #label>
+            <span class="approvals__tab">
+              <el-icon><View /></el-icon>
+              {{ t('actions.approvals.tabs.review') }}
+              <el-badge v-if="review.items.value.length" :value="count(review)" type="primary" class="approvals__badge" />
+            </span>
+          </template>
+          <p class="approvals__help">
+            {{ agentsOnly ? t('actions.approvals.agentsReviewHelp') : t('actions.approvals.reviewHelp') }}
+          </p>
+          <p class="approvals__help approvals__help--small">
+            <el-icon><Sort /></el-icon> {{ t('actions.approvals.oldestFirst') }} ·
+            {{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}
+          </p>
+          <AsyncState
+            :loading="review.loading.value && !review.items.value.length"
+            :error="review.error.value"
+            :empty="!review.items.value.length"
+            :empty-text="agentsOnly ? t('actions.approvals.agentsEmptyReview') : t('actions.approvals.emptyReview')"
+            @retry="review.reload"
+          >
+            <div class="approvals__list">
+              <ActionCard
+                v-for="a in review.items.value"
+                :key="a.id"
+                :action="a"
+                :course-id="courseId"
+                mode="review"
+                :waiting="myPending.get(a.id)"
+                @done="(d) => onDone(a, d, 'review')"
+              />
+            </div>
+            <LoadMore :has-more="review.hasMore.value" :loading="review.loading.value" @more="review.loadMore" />
+          </AsyncState>
+        </el-tab-pane>
+      </el-tabs>
     </div>
 
-    <template v-else>
-      <section v-if="recent.length" class="app-card approvals__recent">
-        <h2 class="app-card__title">
-          <span>{{ t('actions.approvals.recent') }}</span>
-          <el-button link type="primary" @click="recent = []">{{ t('actions.approvals.clearRecent') }}</el-button>
-        </h2>
-        <p class="approvals__help">{{ t('actions.approvals.recentHelp') }}</p>
-        <div v-for="r in recent" :key="r.key" class="approvals__recent-item">
-          <div class="approvals__recent-head">
-            <router-link :to="{ name: 'course-action', params: { courseId, actionId: r.action.id } }" class="approvals__recent-type">
-              {{ typeLabel(r.action.action_type) }}
-            </router-link>
-            <ActionTarget :action="r.action" :course-id="courseId" />
-          </div>
-          <OutcomeAlert :course-id="courseId" :done="r.done" closable @close="dismiss(r.key)" />
-        </div>
-      </section>
-
-      <div class="app-card">
-        <el-tabs v-model="tab" class="approvals__tabs">
-          <el-tab-pane name="proposed">
-            <template #label>
-              <span class="approvals__tab">
-                <el-icon><Stamp /></el-icon>
-                {{ t('actions.approvals.tabs.proposed') }}
-                <el-badge
-                  v-if="proposed.items.value.length"
-                  :value="count(proposed)"
-                  type="warning"
-                  class="approvals__badge"
-                />
-              </span>
-            </template>
-            <p class="approvals__help">{{ t('actions.approvals.proposedHelp') }}</p>
-            <p class="approvals__help approvals__help--small">
-              <el-icon><Sort /></el-icon> {{ t('actions.approvals.oldestFirst') }} · {{ t('actions.decision.ruleNote') }}
-            </p>
-            <AsyncState
-              :loading="proposed.loading.value && !proposed.items.value.length"
-              :error="proposed.error.value"
-              :empty="!proposed.items.value.length"
-              :empty-text="t('actions.approvals.emptyProposed')"
-              @retry="reloadProposed"
-            >
-              <div class="approvals__list">
-                <ActionCard
-                  v-for="a in proposed.items.value"
-                  :key="a.id"
-                  :action="a"
-                  :course-id="courseId"
-                  mode="decide"
-                  :waiting="myPending.get(a.id)"
-                  @done="(d) => onDone(a, d, 'proposed')"
-                />
-              </div>
-              <LoadMore :has-more="proposed.hasMore.value" :loading="proposed.loading.value" @more="proposed.loadMore" />
-            </AsyncState>
-          </el-tab-pane>
-
-          <el-tab-pane name="review">
-            <template #label>
-              <span class="approvals__tab">
-                <el-icon><View /></el-icon>
-                {{ t('actions.approvals.tabs.review') }}
-                <el-badge v-if="review.items.value.length" :value="count(review)" type="primary" class="approvals__badge" />
-              </span>
-            </template>
-            <p class="approvals__help">{{ t('actions.approvals.reviewHelp') }}</p>
-            <p class="approvals__help approvals__help--small">
-              <el-icon><Sort /></el-icon> {{ t('actions.approvals.oldestFirst') }} · {{ t('actions.decision.ruleNote') }}
-            </p>
-            <AsyncState
-              :loading="review.loading.value && !review.items.value.length"
-              :error="review.error.value"
-              :empty="!review.items.value.length"
-              :empty-text="t('actions.approvals.emptyReview')"
-              @retry="review.reload"
-            >
-              <div class="approvals__list">
-                <ActionCard
-                  v-for="a in review.items.value"
-                  :key="a.id"
-                  :action="a"
-                  :course-id="courseId"
-                  mode="review"
-                  :waiting="myPending.get(a.id)"
-                  @done="(d) => onDone(a, d, 'review')"
-                />
-              </div>
-              <LoadMore :has-more="review.hasMore.value" :loading="review.loading.value" @more="review.loadMore" />
-            </AsyncState>
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-    </template>
   </div>
 </template>
 
 <style scoped>
+.approvals__owner {
+  margin-bottom: 16px;
+}
+.approvals__owner-text {
+  margin: 0 0 4px;
+  line-height: 1.6;
+}
 .approvals__tab {
   display: inline-flex;
   align-items: center;

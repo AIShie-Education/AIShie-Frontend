@@ -1,5 +1,6 @@
-// An agent's owner, as the administration pages show and set it
-// (actor.set_owner, actor.register's owner_actor_id). Core's rules are
+// An agent's owner, as the administration pages show it and give it when the
+// agent is registered (actor.register's owner_actor_id), the one time it is
+// given: nobody changes it or takes it away afterwards. Core's rules are
 // mirrored here only to say beforehand why someone cannot be chosen: the
 // owner is an active person, and an administrator makes only root, or
 // themself, the owner of an agent when the person holds a platform role

@@ -231,6 +231,58 @@ describe('effectivePerms', () => {
   })
 })
 
+describe('whether a person who decides nothing here owns an agent seated here', () => {
+  const student = {
+    ...memberships[0],
+    perms: { document_read: 'autonomous', submission_write: 'autonomous', action_decide: 'denied' },
+  }
+  async function openAs(kind: string, seat: Record<string, unknown>) {
+    answers.set('me.get', async () => ({ id: 'a1', kind, display_name: 'Mei' }))
+    answers.set('me.memberships', async () => ({ memberships: [seat] }))
+    const session = useSessionStore()
+    await session.ensure()
+    // The same tab, signed in as someone else of this kind.
+    session.me = { ...session.me!, kind }
+    await session.loadMemberships()
+    const course = useCourseStore()
+    vi.mocked(read).mockClear()
+    await course.open('c1')
+    await new Promise((r) => setTimeout(r, 0))
+    return course
+  }
+  const asked = () => vi.mocked(read).mock.calls.filter((c) => c[0] === 'action.list_proposed')
+
+  it('asks the queue, which Core shows such an owner and refuses anyone else', async () => {
+    answers.set('action.list_proposed', async () => ({ actions: [] }))
+    const course = await openAs('human', student)
+    expect(asked()).toEqual([['action.list_proposed', { course_id: 'c1', limit: 1 }]])
+    expect(course.ownsAgentHere).toBe(true)
+  })
+
+  it('takes a refusal for no, and anything else for not known', async () => {
+    answers.set('action.list_proposed', () => Promise.reject(forbidden()))
+    let course = await openAs('human', student)
+    expect(course.ownsAgentHere).toBe(false)
+    course.close()
+    answers.set('action.list_proposed', () =>
+      Promise.reject(new ApiError({ status: 0, code: 'network', message: 'offline' })),
+    )
+    course = await openAs('human', student)
+    expect(course.ownsAgentHere).toBeNull()
+  })
+
+  it('does not ask for a seat that decides anyway, nor for an agent', async () => {
+    answers.set('action.list_proposed', async () => ({ actions: [] }))
+    let course = await openAs('human', { ...student, perms: { ...student.perms, action_decide: 'confirm_required' } })
+    expect(asked()).toEqual([])
+    expect(course.ownsAgentHere).toBeNull()
+    course.close()
+    course = await openAs('agent', student)
+    expect(asked()).toEqual([])
+    expect(course.ownsAgentHere).toBeNull()
+  })
+})
+
 describe('guessPreset', () => {
   const seat = (role: string, student_scope = 'all', assignment_scope = 'all', principal_member_id?: string) => ({
     role,

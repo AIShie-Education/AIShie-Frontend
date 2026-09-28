@@ -240,12 +240,12 @@ export default {
     adminRootOnly: 'Only root can make an administrator.',
     adminOwned: 'An agent someone owns holds no platform role: leave the owner empty to make it an administrator.',
     permanent:
-      'The kind and the platform role cannot be changed after registering. The name and the email can be corrected on their page.',
+      'The kind, the platform role and an agent’s owner cannot be changed after registering. The name and the email can be corrected on their page.',
     owner: 'Owner',
     ownerHint:
-      'Leave empty for an agent that course managers seat themselves. With an owner, it acts only as that person’s delegate: they bring it into their courses, and it never holds more than their seat.',
+      'Leave empty for an agent that course managers seat themselves. With an owner, it acts only as that person’s delegate: they bring it into their courses, and it never holds more than their seat. The owner is given now or never: it cannot be added, changed or taken away later.',
     ownerHintSet:
-      'It acts only as this person’s delegate: they give it tokens and bring it into their courses from My agents. It never holds more than their seat.',
+      'It acts only as this person’s delegate: they give it tokens and bring it into their courses from My agents. It never holds more than their seat, and it is theirs for good: nobody changes its owner later.',
     submit: 'Register',
     done: '{name} is registered',
     sameName:
@@ -297,8 +297,8 @@ export default {
     owner: 'Owner',
     noOwner: 'None: it acts on its own seats, set by course managers',
     ownerUnnamed: 'someone',
-    setOwner: 'Set owner',
-    changeOwner: 'Change',
+    ownerFixed: 'Given when it was registered, and never changed: nobody gives an agent another owner.',
+    noOwnerFixed: 'Registered without one, so it stays nobody’s: an owner is given only when an agent is registered.',
     ownedAgents: 'Agents they own',
     ownedAll: 'See all',
     ownedHint:
@@ -308,7 +308,6 @@ export default {
       role: 'Only root acts on someone who holds a platform role.',
       system:
         'The system account runs background jobs. It is never suspended, issued a token or linked to an identity.',
-      ownerRole: 'It holds a platform role, and an agent someone owns holds none.',
     },
   },
 
@@ -323,32 +322,6 @@ export default {
       suspended: 'Suspended',
       role: 'Only root can choose a holder of a platform role',
     },
-  },
-
-  setOwner: {
-    titleSet: 'Set an owner',
-    titleChange: 'Change the owner',
-    intro:
-      'An agent someone owns acts only as their delegate: they give it tokens and bring it into their courses from My agents, and it never holds more than their seat there.',
-    current: 'Owned now by {owner}.',
-    modeSet: 'Give it another owner',
-    modeClear: 'Take the owner away',
-    owner: 'New owner',
-    ownerHint: 'An active person.',
-    clearEffect:
-      'Without an owner it is an ordinary agent again: course managers seat it themselves, and only administrators give it tokens.',
-    before: 'Before you go on',
-    seated:
-      'This is refused while the agent is seated in a course that is not archived: its owner takes it out first (My agents → Take out), or a course manager removes its seat.',
-    revokes:
-      'Every credential the agent has is revoked at once — its tokens, sessions, password, invitation and linked sign-in identity — since whoever owned it before may hold them. Its runtime stops until it is given a new token.',
-    requests: 'Requests its previous owner made to seat it in a course, still waiting for a decision, are cancelled.',
-    role: 'An agent that holds a platform role cannot be given an owner: an agent someone owns holds none.',
-    archived: 'A seat it keeps in an archived course counts for nothing from then on.',
-    submit: 'Set owner',
-    submitClear: 'Take the owner away',
-    done: '{owner} now owns {name}',
-    cleared: '{name} has no owner now',
   },
 
   token: {

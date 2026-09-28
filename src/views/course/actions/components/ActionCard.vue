@@ -1,15 +1,20 @@
 <script setup lang="ts">
 // One action in a queue: what it is, who, what about, when; and deciding or
-// reviewing it without leaving the list.
+// reviewing it without leaving the list. A proposal of the caller's own, or of
+// an agent of theirs, may be taken back here while it waits (action.withdraw).
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessageBox } from 'element-plus'
+import { announce, useWrite } from '@/composables/useWrite'
+import { notifyError } from '@/composables/useErrors'
+import { useCourseStore } from '@/stores/course'
 import MarkdownView from '@/components/MarkdownView.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActionActor from './ActionActor.vue'
 import ActionTarget from './ActionTarget.vue'
 import DecidePanel from './DecidePanel.vue'
-import { payloadOf, str, typeLabel, type ActionRow } from './actionText'
+import { payloadOf, str, typeLabel, useJudgeRules, type ActionRow } from './actionText'
 import type { Done } from './decide'
 
 const props = defineProps<{
@@ -21,6 +26,42 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ done: [Done] }>()
 const { t } = useI18n()
+const course = useCourseStore()
+const rules = useJudgeRules()
+
+// --- Taking it back ------------------------------------------------------------
+/** The caller's own agent's, taken back as its owner; or the caller's own. */
+const ownersAgent = computed(() => rules.isOwnAgent(props.action))
+const canWithdraw = computed(
+  () =>
+    props.mode === 'decide' &&
+    props.action.status === 'proposed' &&
+    course.writable &&
+    (ownersAgent.value || rules.isMine(props.action)),
+)
+const withdrawW = useWrite('action.withdraw')
+async function withdraw() {
+  const agent = ownersAgent.value
+  try {
+    await ElMessageBox.confirm(
+      t(agent ? 'actions.withdraw.confirmAgent' : 'actions.withdraw.confirm'),
+      t(agent ? 'actions.withdraw.titleAgent' : 'actions.withdraw.title'),
+      { type: 'warning', confirmButtonText: t('actions.withdraw.action'), cancelButtonText: t('common.actions.cancel') },
+    )
+  } catch {
+    return
+  }
+  const out = await withdrawW.run({ course_id: props.courseId, action_id: props.action.id }, { notify: false })
+  if (!out) {
+    const e = withdrawW.lastError.value
+    // Decided, or taken back, meanwhile: the page reads the queue again.
+    if (e && (e.code === 'conflict' || e.code === 'not_found')) emit('done', { kind: 'stale' })
+    else if (e) notifyError(e)
+    return
+  }
+  announce(out, { success: t(agent ? 'actions.withdraw.doneAgent' : 'actions.withdraw.done') })
+  emit('done', { kind: 'withdrawn', byOwner: agent })
+}
 
 const p = computed(() => payloadOf(props.action))
 /** A line of what was said with it: feedback, a reason, a note, or the text handed in. */
@@ -89,10 +130,22 @@ const excerpt = computed(() => {
         size="small"
         @done="(d) => emit('done', d)"
       />
-      <router-link :to="{ name: 'course-action', params: { courseId, actionId: action.id } }" class="action-card__details">
-        {{ t('actions.link.details') }}
-        <el-icon><ArrowRight /></el-icon>
-      </router-link>
+      <div class="action-card__side">
+        <el-button
+          v-if="canWithdraw"
+          size="small"
+          :loading="withdrawW.pending.value"
+          class="action-card__withdraw"
+          @click="withdraw"
+        >
+          <el-icon><RefreshLeft /></el-icon>
+          <span>{{ t('actions.withdraw.action') }}</span>
+        </el-button>
+        <router-link :to="{ name: 'course-action', params: { courseId, actionId: action.id } }" class="action-card__details">
+          {{ t('actions.link.details') }}
+          <el-icon><ArrowRight /></el-icon>
+        </router-link>
+      </div>
     </footer>
   </article>
 </template>
@@ -201,6 +254,12 @@ const excerpt = computed(() => {
 }
 .action-card__foot > :first-child {
   flex: 1 1 280px;
+}
+.action-card__side {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .action-card__details {
   display: inline-flex;

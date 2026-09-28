@@ -24,6 +24,7 @@ export default {
     scheme: '評分結構',
     members: '成員',
     approvals: '審批',
+    agentProposals: '你的代理的提案',
     myActions: '我的操作',
     activity: '動態',
     agents: '代理',

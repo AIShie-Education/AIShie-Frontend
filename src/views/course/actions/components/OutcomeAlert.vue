@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // What a decision or review came to, said plainly: carried out (and what it
 // made), failed (and Core's words why), rejected, cancelled (and why it could
-// no longer be carried out), or itself waiting for approval.
+// no longer be carried out), or itself waiting for approval; a proposal taken
+// back; and, where the caller decided as the owner of the agent that proposed
+// it, that it was their own doing (by_owner).
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IdText from '@/components/IdText.vue'
@@ -28,6 +30,8 @@ const view = computed(() => {
       return { type: 'info', title: t('actions.outcome.proposed') }
     case 'reviewed':
       return { type: d.state === 'escalated' ? 'warning' : 'success', title: t(`actions.outcome.${d.state}`) }
+    case 'withdrawn':
+      return { type: 'info', title: t('actions.outcome.withdrawn') }
   }
   return { type: 'info', title: '' }
 })
@@ -49,6 +53,13 @@ const inner = computed<DecideResult | null>(() => {
   return null
 })
 const innerWhy = computed(() => reasonText(inner.value?.error ?? null))
+/** Decided, reviewed or taken back as the owner of the agent that did it. */
+const asOwner = computed(() => {
+  const d = props.done
+  if (d.kind === 'decided') return d.out.by_owner === true
+  if (d.kind === 'reviewed' || d.kind === 'withdrawn') return d.byOwner === true
+  return false
+})
 </script>
 
 <template>
@@ -61,6 +72,16 @@ const innerWhy = computed(() => reasonText(inner.value?.error ?? null))
     @close="emit('close')"
   >
     <div class="outcome-alert__body">
+      <p v-if="asOwner" class="outcome-alert__line outcome-alert__owner">
+        <el-icon><Cpu /></el-icon>
+        {{
+          done.kind === 'withdrawn'
+            ? t('actions.outcome.withdrawnAsOwner')
+            : done.kind === 'reviewed'
+              ? t('actions.outcome.reviewedAsOwner')
+              : t('actions.outcome.decidedAsOwner')
+        }}
+      </p>
       <template v-if="done.kind === 'decided'">
         <p v-if="why" class="outcome-alert__line">{{ why }}</p>
         <p v-if="error" class="outcome-alert__line outcome-alert__core">
