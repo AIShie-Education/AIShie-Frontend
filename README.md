@@ -103,14 +103,35 @@ Built into the app at build time (see `.env.example`):
 | `VITE_SSO_ENABLED` | `true` shows the single sign-on button; Core must have `OIDC_ISSUER` set. |
 | `VITE_SSO_LABEL` | The button's provider name, e.g. `PolyU NetID`. |
 
+The published image is built with none of them set: Core on the page's own origin, and no single
+sign-on button ([docs/deploying.md](docs/deploying.md#the-image)).
+
 ## Deploy
 
 Serve `dist/` and Core from **one origin**, behind one reverse proxy: Core's session cookie is
 `SameSite=Lax` and its guard refuses cross-origin writes, so this is the arrangement it expects. The
 proxy sends `/v1/*`, `/mcp` and `/healthz` to Core and everything else to the static files, falling
-back to `index.html` for the app's own routes. On a server set up with Core's `deploy/setup-server.sh`,
-`deploy/setup-web.sh` does this with Caddy, and the Deploy workflow keeps it up to date
-([docs/deploying.md](docs/deploying.md)). The site block it writes:
+back to `index.html` for the app's own routes.
+
+The front end is deployed as an image, in the docker compose stack that runs the whole system
+([AIShie-Deploy](https://github.com/AIShie-Education/AIShie-Deploy)), which pulls it from GHCR:
+`ghcr.io/aishie-education/aishie-frontend`, for amd64 and arm64. It is the production build, served
+by Caddy on port 8080 over plain HTTP, as a user that is not root, by the rules below; the stack's
+Caddy terminates TLS in front of it and sends Core its routes. Its tags:
+
+- `:sha-<commit>` for every push to `main` whose checks and image test passed (the commit's first 7
+  hex digits), and `:edge` for the newest of them that is still `main`'s tip;
+- `:X.Y.Z` and `:X.Y` for a release `vX.Y.Z`, and `:latest` for the highest stable one; a
+  pre-release gets `:X.Y.Z-rc.N` alone.
+
+`GET /version.json` says which it is, `{"version":"v1.2.3","commit":"abc1234"}`, and is the stack's
+health check. What the image does, exactly, and how to build and test it here:
+[docs/deploying.md](docs/deploying.md#the-image).
+
+Until the stack runs, the older way still works: on a server set up with Core's
+`deploy/setup-server.sh`, `deploy/setup-web.sh` serves the files with Caddy, and the Deploy workflow
+keeps them up to date over SSH ([docs/deploying.md](docs/deploying.md#over-ssh)). It is retired once
+the stack runs. The site block it writes, whose rules the image's `Caddyfile` has too:
 
 ```caddyfile
 lms.example.edu {
@@ -148,13 +169,16 @@ set Core's `COOKIE_SAMESITE=none`.
 
 - **Every pull request and push to `main`** is checked by [CI](.github/workflows/ci.yml): the checks
   above, the build, the scripts in `deploy/`, `npm audit`, and the end-to-end tests on that build
-  against the Core pinned in `.github/core-image`.
-- **A green push to `main`** is deployed to staging (test.aishie.app) by
-  [Deploy](.github/workflows/deploy.yml), with the build CI checked: nothing is built again.
-- **A version tag** (`v1.2.3`) runs CI again and publishes that build on the release page;
-  a pre-release (`v1.2.3-rc.1`) also goes to staging. **Production** is deployed by hand: Actions →
-  Deploy → Run workflow, from the release's tag, environment `production`
-  ([CONTRIBUTING.md](CONTRIBUTING.md#releasing)).
+  against the Core pinned in `.github/core-image`. A pull request's image is built and tested too
+  (`scripts/test-image.sh`).
+- **A green push to `main`** has its image tested and pushed to GHCR as `:sha-<commit>`, and `:edge`
+  while it is `main`'s tip, by [Publish](.github/workflows/publish.yml); and it is deployed to staging
+  (test.aishie.app) over SSH by [Deploy](.github/workflows/deploy.yml), with the build CI checked:
+  nothing is built again.
+- **A version tag** (`v1.2.3`) runs CI again, publishes its image as `:1.2.3` and `:1.2` (and
+  `:latest`), and that build on the release page; a pre-release (`v1.2.3-rc.1`) also goes to staging.
+  **Production** is deployed by hand: Actions → Deploy → Run workflow, from the release's tag,
+  environment `production` ([CONTRIBUTING.md](CONTRIBUTING.md#releasing)).
 - **Rolling back** is immediate on the server, which keeps the last few releases:
   `sudo -u webdeploy aishiteru-web-deploy list`, then `… activate <release>`; or run Deploy from the
   newest release's tag with the older tag as the ref ([docs/deploying.md](docs/deploying.md#day-to-day)).
@@ -175,9 +199,11 @@ http://127.0.0.1:8080`), fix what the type checker then shows, and commit them w
 
 ```
 api/catalogue.json        snapshot of Core's tool catalogue (GET /v1/tools)
-scripts/                  type generator, i18n check, demo data, screenshot helper, the CI Core, packing a build
-.github/                  CI, Deploy and Release workflows, the pinned Core (core-image), Dependabot
-deploy/                   the server's side: setup-web.sh and aishiteru-web-deploy (docs/deploying.md)
+scripts/                  type generator, i18n check, demo data, screenshot helper, the CI Core, packing a build,
+                          the image's test (test-image.sh)
+.github/                  CI, Publish, Deploy and Release workflows, the pinned Core (core-image), Dependabot
+Dockerfile, Caddyfile     the image: the build, served by Caddy on :8080 (docs/deploying.md)
+deploy/                   the SSH deploy's server side: setup-web.sh and aishiteru-web-deploy (docs/deploying.md)
 src/api/                  the client: http.ts (read, write, upload), generated types, named shapes
 src/stores/               session (who is signed in), course (the open course and the caller's seat)
 src/composables/          useAsync / usePaged, useWrite (idempotent writes and their outcomes), errors
@@ -186,5 +212,5 @@ src/layouts/              the app frame, and the course frame with its sections
 src/views/                one directory per area
 src/i18n/messages/        one file per namespace and language
 docs/CONVENTIONS.md       how the views are written
-docs/deploying.md         setting a server up, deploying, rolling back
+docs/deploying.md         the image and its tags; setting a server up, deploying, rolling back over SSH
 ```

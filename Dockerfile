@@ -5,7 +5,7 @@
 # rules). docs/deploying.md says what it answers.
 #
 #   docker build --build-arg VERSION=$(git describe --tags --always) \
-#     --build-arg COMMIT=$(git rev-parse --short=7 HEAD) -t aishie-frontend:dev .
+#     --build-arg COMMIT=$(git rev-parse HEAD | cut -c1-7) -t aishie-frontend:dev .
 
 # The build, made on the build machine's own architecture: its files are the
 # same for every target, so a multi-architecture image builds it once, with no

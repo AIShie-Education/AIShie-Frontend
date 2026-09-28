@@ -11,8 +11,9 @@ request, on every push to `main` and once a week:
 - **checks and build:** the generated API types are what `npm run gen:api`
   makes of `api/catalogue.json`; `npm run typecheck`, `npm run check:i18n`,
   `npm test`, `npm run build`. The build is kept as the run's artifact
-  `web-<commit>`: everything after this uses those files, and a deploy ships
-  them.
+  `web-<commit>`: everything after this uses those files, a deploy ships
+  them, and the image, which builds the sources again, must hold them file
+  for file.
 - **workflows and deploy scripts:** actionlint over the workflows, ShellCheck
   over the scripts, and `deploy/aishiteru-web-deploy_test.sh`. ShellCheck is
   0.11.0, pinned in `ci.yml` (`brew install shellcheck` gives the same), not
@@ -22,6 +23,18 @@ request, on every push to `main` and once a week:
   build, served by `vite preview`, and a real Core: the image pinned in
   `.github/core-image`, on a scratch database. The same Core's
   `GET /v1/tools` must be `api/catalogue.json`.
+- **the image:** on a pull request, the weekly run and a run by hand, the
+  image is built with `docker build` and `scripts/test-image.sh` runs it and
+  checks it against the build: the rules it serves by, `/version.json`, its
+  user and port, and that it serves exactly those files
+  ([docs/deploying.md](docs/deploying.md#the-image)). A push skips it: the
+  push's Publish or Release run builds and tests the image it pushes.
+
+A green push to `main` is then published
+([`publish.yml`](.github/workflows/publish.yml)): its image is built, tested
+the same way, and pushed to `ghcr.io/aishie-education/aishie-frontend` as
+`:sha-<commit>`, and `:edge` while the commit is still `main`'s tip. It is
+also deployed to staging over SSH, as before.
 
 On a laptop, the same, with Node from `.nvmrc`:
 
@@ -31,8 +44,16 @@ npm run gen:api && git diff --exit-code src/api/generated
 npm run check && npm run build
 go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12   # uses the shellcheck on PATH
 shellcheck -s sh deploy/aishiteru-web-deploy deploy/setup-web.sh scripts/pack-dist.sh
-shellcheck deploy/aishiteru-web-deploy_test.sh scripts/ci-core.sh
+shellcheck deploy/aishiteru-web-deploy_test.sh scripts/ci-core.sh scripts/test-image.sh
 deploy/aishiteru-web-deploy_test.sh
+```
+
+and the image, with Docker, against the build `npm run build` made:
+
+```bash
+docker build --build-arg VERSION=$(git describe --tags --always) \
+  --build-arg COMMIT=$(git rev-parse HEAD | cut -c1-7) -t aishie-frontend:dev .
+scripts/test-image.sh aishie-frontend:dev dist
 ```
 
 and the end-to-end tests against a throwaway Core, from its image (Docker, and
@@ -71,8 +92,9 @@ needs it is deployed there.
 
 ## Releasing
 
-A push to `main` goes to staging by itself once CI passes. A release is made
-by a tag, from `main`:
+A push to `main` goes out by itself once CI passes: its image to GHCR as
+`:sha-<commit>` and `:edge`, and its build to staging. A release is made by a
+tag, from `main`:
 
 ```
 git switch main && git pull
@@ -82,11 +104,15 @@ git push origin v0.1.0
 
 [`release.yml`](.github/workflows/release.yml) checks that the tag is on
 `main`, runs all of CI again on the tagged commit, and publishes the build it
-checked on the release page: `aishiteru-web-v0.1.0.tar.gz` and its `.sha256`.
-The notes list what is new since the release before (for a stable release,
-since the last stable one) and say which Core the build was checked against:
-deploy it beside that version of Core or a later one. A tag with a hyphen
-(`v0.1.0-rc.1`) is a pre-release, and is deployed to staging.
+checked: first its image, tested, as `ghcr.io/aishie-education/aishie-frontend:0.1.0`
+and `:0.1` (and `:latest`, when it is the highest stable release), for
+`linux/amd64` and `linux/arm64`; then the release page, with
+`aishiteru-web-v0.1.0.tar.gz` and its `.sha256`. The notes list what is new
+since the release before (for a stable release, since the last stable one),
+name the image, and say which Core the build was checked against: deploy it
+beside that version of Core or a later one. A tag with a hyphen
+(`v0.1.0-rc.1`) is a pre-release: its image is `:0.1.0-rc.1` alone, and it is
+deployed to staging.
 
 A stable release goes to production when somebody runs **Deploy** for it:
 Actions → Deploy → Run workflow, use the workflow from the release's tag, and
@@ -114,13 +140,29 @@ Before the first push to `main` after the CI/CD workflows land, in GitHub:
   they record the deployments, and Deploy's own checks keep production to
   stable releases. On a plan that has the rules, let `staging` take branch
   `main` and tags `v*`, and `production` tags `v*` only.
+- **Packages** (organization Settings → Packages): Package Creation must
+  allow Private, and Default Package Settings should keep "Inherit access
+  from source repository". The first publish then creates
+  `aishie-frontend` private, linked to this repository, which its workflows
+  can write to. Do not push the image by hand before that: a package pushed
+  from outside a workflow is not linked, and the workflow cannot push to it
+  until it is given access (package settings, Manage Actions access). The
+  compose stack's server pulls it with a token that can read it.
 - **Allowed actions** (organization Settings → Actions → General →
-  Policies): the workflows use `actions/*` only.
-- **Variables and secrets**, for each environment with a server: the
-  repository variables `DEPLOY_WEB_TARGET_STAGING` and
+  Policies): if the organization allows only selected actions, allow
+  `docker/*` with `actions/*`. Pull requests' CI uses only `actions/*`, so a
+  policy that leaves `docker/*` out first shows at the first publish.
+- **Variables and secrets**, when they apply: `ATTESTATIONS` = `true` where
+  artifact attestations are available (a public repository, or GitHub
+  Enterprise Cloud), for a release's image. For each environment with a
+  server: the repository variables `DEPLOY_WEB_TARGET_STAGING` and
   `DEPLOY_WEB_KNOWN_HOSTS_STAGING`, and the repository secret
   `DEPLOY_WEB_SSH_KEY_STAGING` (`_PRODUCTION` for production), which
   `deploy/setup-web.sh` prints ([docs/deploying.md](docs/deploying.md)).
-- **Minutes**: on GitHub Free a private repository has 2,000 Actions minutes a
-  month, shared with Core's. A run of CI takes about ten, most of them the
-  end-to-end job.
+- **Minutes and storage**: on GitHub Free a private repository has 2,000
+  Actions minutes a month, shared with Core's. A run of CI takes about ten,
+  most of them the end-to-end job; a push to `main` adds a few, to build,
+  test and push its two-architecture image. Every green push leaves a
+  `:sha-*` image, with its SBOM and provenance. Nothing deletes old images
+  automatically, since deleting untagged versions can break a
+  multi-architecture image; prune them from the package page when needed.
