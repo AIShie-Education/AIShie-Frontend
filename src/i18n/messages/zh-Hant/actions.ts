@@ -200,7 +200,7 @@ export default {
       update: '編輯課程',
       activate: '啟用課程',
       archive: '封存課程',
-      seat_instructor: '指派導師',
+      seat_instructor: '指派講師',
     },
     document: {
       create: '建立文件',
@@ -308,7 +308,7 @@ export default {
     title: '批准後會授予的席位',
     help: '批准後會建立的席位：以權限預設目前的設定為基礎（Core 會在執行提案時複製），再套用此提案本身的設定。',
     presetMissing: '找不到此提案指定的權限預設。若該權限預設已不存在，Core 將不會執行此提案。',
-    deptPreset: '學系預設',
+    deptPreset: '部門預設',
     listsItself: '其本人',
     nobody: '沒有任何學生',
     nothing: '沒有任何作業',

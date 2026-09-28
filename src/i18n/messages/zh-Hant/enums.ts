@@ -53,7 +53,7 @@ export default {
     student: '學生',
     observer: '旁聽者',
     ta: '助教',
-    instructor: '導師',
+    instructor: '講師',
     tutor: '輔導（代理）',
     grader: '評分（代理）',
     delegate: '個人助手（代理）',
@@ -62,7 +62,7 @@ export default {
   presetHelp: {
     student: '閱讀已發佈的教材、繳交作業，並查看自己的成績。',
     observer: '閱讀已發佈的教材與成員名單；不作任何更改。',
-    ta: '可閱讀所有內容並輸入成績；由導師發佈成績及批准請求。',
+    ta: '可閱讀所有內容並輸入成績；由講師發佈成績及批准請求。',
     instructor: '擁有所有權限，無需監督。',
     tutor: '代理：閱讀教材，以及清單內學生的作業與成績；不作任何寫入。',
     grader: '代理：閱讀教材與評分準則，為清單內的作業提出評分建議，每一項都須由人批准。',
@@ -76,7 +76,7 @@ export default {
   },
   role: {
     student: '學生',
-    instructor: '導師',
+    instructor: '講師',
     ta: '助教',
     observer: '旁聽者',
     assistant: '助理',
