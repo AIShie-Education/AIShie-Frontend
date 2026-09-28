@@ -36,6 +36,7 @@ function actor(over: Partial<Actor> = {}): Actor {
     created_at: '2026-09-01T00:00:00Z',
     has_password: true,
     has_sso: false,
+    email_verified: true,
     ...over,
   }
 }

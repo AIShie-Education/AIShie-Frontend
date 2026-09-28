@@ -61,9 +61,10 @@ export const SCOPED_PERMS: Perm[] = [
 export type PermLevels = Partial<Record<Perm, AutonomyLevel>>
 /**
  * What a delegate seat (an agent seated by its owner) never holds, whatever
- * is set on it: it does not manage the course or bring agents of its own.
+ * is set on it: it brings no agents of its own. It may manage the course's
+ * members, as far as its principal may, since Core ebfb632.
  */
-export const DELEGATE_NEVER_PERMS: Perm[] = ['member_manage', 'agent_delegate']
+export const DELEGATE_NEVER_PERMS: Perm[] = ['agent_delegate']
 
 export type Role = 'student' | 'instructor' | 'ta' | 'observer' | 'assistant'
 export const ROLES: Role[] = ['student', 'instructor', 'ta', 'observer', 'assistant']
