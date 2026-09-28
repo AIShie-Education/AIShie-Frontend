@@ -65,15 +65,22 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
 
 - **Show hosting only where there is a runtime.** `useRuntime()` from `@/composables/useRuntime`
   gives `available`, `info`, `error`, `checked` and `refresh`, from one `GET /info` per page load.
-  Until `checked`, show neither the feature nor its absence.
+  Until `checked`, show neither the feature nor its absence. `info.features` are booleans the runtime
+  works out as it starts (`connect_by_token`, `own_key`, `school_key`): offer what each names only
+  while it is true.
 - **Calls**: the contract's own, `runtime.me()`, `.models()`, `.testKey(req)`, `.inspect(req)`,
   `.connect(req)`, `.list()`, `.get(id)`, `.update(id, version, patch)`, `.replaceToken(id, token)`,
   `.pause(id)`, `.resume(id)`, `.remove(id, revokeToken)`, each resolving `{ data, etag, status,
   replayed }`. Each goes as the person signed in, with an assertion Core makes for them; the client
   asks for it, keeps it in memory, and asks again as it needs. The runtime reads no idempotency key:
   the client sends again what the runtime answers once however often it is sent, and never a PATCH
-  or a key test. `update` names the version it read; `isVersionMismatch(e)` (412) says the agent
-  changed since, so read it again and say so, keeping what the person typed.
+  or a key test. `update` names the version it read; the other writes name none, but any of them may
+  still answer 412: `isVersionMismatch(e)` says the agent changed since, so read it again and say so,
+  keeping what the person typed.
+- `inspect` and `connect` answer the agent's other live tokens (`other_tokens`, null when Core would
+  not list them): warn with `OtherTokensNotice` when one is in use, and never refuse or revoke for
+  the owner. A token the runtime could not revoke (`revocation: 'failed'`) may still work: tell the
+  owner and offer to revoke it as them (`UnrevokedTokenNotice`).
 - Errors are `RuntimeError` (an `ApiError`) with the runtime's `reason`; choose the words by reason
   (`hostingErrorText` in the agents' components). A 401 from the runtime is not a lapsed session
   (the client has already tried a new assertion): say the runtime refused, not that the person was
