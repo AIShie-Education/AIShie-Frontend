@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // One of the caller's agents (agent.get): its name (agent.update), its
 // standing (agent.suspend, agent.reactivate: an administrator's suspension is
-// theirs to lift), connecting a runtime to it with a token
+// theirs to lift), how it runs (HostingPanel: hosted by AIShie where the
+// school's runtime is there, another AI tool, or an AIShie runtime of the
+// owner's, one at a time), connecting a runtime to it with a token
 // (agent.issue_token, agent.list_credentials, agent.revoke_credential), the
 // courses it is seated in (agent.withdraw) and the requests to seat it that
 // wait (action.withdraw), and bringing it into a course (member.add_delegate).
@@ -27,7 +29,7 @@ import AgentSeatsCard from './components/agents/AgentSeatsCard.vue'
 import AgentTokenRevealDialog from './components/agents/AgentTokenRevealDialog.vue'
 import AgentTokensCard from './components/agents/AgentTokensCard.vue'
 import BringIntoCourseDialog from './components/agents/BringIntoCourseDialog.vue'
-import ConnectRuntimeCard from './components/agents/ConnectRuntimeCard.vue'
+import HostingPanel from './components/agents/HostingPanel.vue'
 import RenameAgentDialog from './components/agents/RenameAgentDialog.vue'
 import { agentStanding, noteAgentLimit, setupProgress } from './components/agents/agents'
 
@@ -125,6 +127,8 @@ async function reactivate() {
 
 // --- Tokens ----------------------------------------------------------------------------
 const issueOpen = ref(false)
+/** The prefix of the token the school's runtime holds, while it hosts the agent. */
+const hostedPrefix = ref<string | null>(null)
 const revealOpen = ref(false)
 const issued = ref<AgentToken | null>(null)
 const tokensCard = useTemplateRef<InstanceType<typeof AgentTokensCard>>('tokensCard')
@@ -224,16 +228,16 @@ function onBrought() {
         />
 
         <div class="agent-view__grid">
-          <ConnectRuntimeCard
-            :name="agent.display_name"
-            :actor-id="agent.actor_id"
+          <HostingPanel
+            :agent="agent"
+            :credentials="creds.data.value"
             :progress="progress"
-            :last-seen-at="agent.last_seen_at"
-            :seats="(agent.seats ?? []).length"
             :watching="watching"
-            :disabled="suspended"
+            :standing="standing"
             @issue="issueOpen = true"
             @bring="bringOpen = true"
+            @creds-changed="creds.reload"
+            @hosted="hostedPrefix = $event"
           />
           <section class="app-card">
             <h2 class="app-card__title">{{ t('agents.detail.about') }}</h2>
@@ -261,6 +265,7 @@ function onBrought() {
           :credentials="creds.data.value"
           :loading="creds.loading.value"
           :error="creds.error.value"
+          :hosted-prefix="hostedPrefix"
           class="agent-view__section"
           @changed="reloadAll"
           @retry="creds.reload"
@@ -278,6 +283,7 @@ function onBrought() {
           :actor-id="agent.actor_id"
           :name="agent.display_name"
           :suspended="suspended"
+          :hosted="!!hostedPrefix"
           @issued="onIssued"
         />
         <AgentTokenRevealDialog

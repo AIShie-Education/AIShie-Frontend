@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // agent.issue_token: a token for whatever runs one of the caller's agents.
-// The token itself goes to the parent, which shows it once.
+// The token itself goes to the parent, which shows it once. While the
+// school's runtime hosts the agent, it says that a runtime started with the
+// new token would be a second brain.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -8,7 +10,13 @@ import type { AgentToken } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 
 const open = defineModel<boolean>({ default: false })
-const props = defineProps<{ actorId: string; name: string; suspended?: boolean }>()
+const props = defineProps<{
+  actorId: string
+  name: string
+  suspended?: boolean
+  /** The school's runtime hosts it: anything else run with a token answers too. */
+  hosted?: boolean
+}>()
 const emit = defineEmits<{ issued: [out: AgentToken] }>()
 const { t } = useI18n()
 
@@ -77,6 +85,14 @@ async function submit() {
       :closable="false"
       show-icon
       :title="t('agents.issue.suspended')"
+      class="issue-alert"
+    />
+    <el-alert
+      v-if="hosted"
+      type="warning"
+      :closable="false"
+      show-icon
+      :title="t('hosting.card.issueWhileHosted')"
       class="issue-alert"
     />
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent>

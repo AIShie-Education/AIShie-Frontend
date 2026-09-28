@@ -1,0 +1,227 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import ElementPlus from 'element-plus'
+import * as icons from '@element-plus/icons-vue'
+import { createPinia, setActivePinia } from 'pinia'
+import type { AgentFull } from '@/api/types'
+import { ACTOR, CORE, RUNTIME, Servers, credential, hostedAgent, json } from './hostingFakes'
+
+vi.mock('element-plus', async (orig) => {
+  const real = await orig<typeof import('element-plus')>()
+  return { ...real, ElMessage: vi.fn(), ElNotification: vi.fn() }
+})
+
+// What the runtime said, and the assertion, are kept for the page's life in
+// their modules: each test loads them afresh, as a new page would.
+let HostingPanel: typeof import('./HostingPanel.vue').default
+let AgentTokensCard: typeof import('./AgentTokensCard.vue').default
+let i18n: typeof import('@/i18n').i18n
+let s: Servers
+
+const AGENT = {
+  actor_id: ACTOR,
+  display_name: 'Study helper',
+  status: 'active',
+  suspended_by_me: false,
+  created_at: '2026-09-01T00:00:00Z',
+  last_seen_at: null,
+  seats: [],
+  requests: [],
+} as unknown as AgentFull
+
+beforeEach(async () => {
+  s = new Servers().install()
+  vi.resetModules()
+  ;({ default: HostingPanel } = await import('./HostingPanel.vue'))
+  ;({ default: AgentTokensCard } = await import('./AgentTokensCard.vue'))
+  ;({ i18n } = await import('@/i18n'))
+  const { setLocale } = await import('@/i18n')
+  setLocale('en')
+})
+
+enableAutoUnmount(afterEach)
+afterEach(() => {
+  vi.unstubAllGlobals()
+  document.body.innerHTML = ''
+})
+
+async function panel(props: Record<string, unknown> = {}) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  const w = mount(HostingPanel, {
+    props: {
+      agent: AGENT,
+      credentials: [],
+      progress: { token: 'todo', connected: 'todo', course: 'todo' },
+      standing: 'active',
+      ...props,
+    },
+    global: { plugins: [pinia, i18n, ElementPlus], components: icons },
+    attachTo: document.body,
+  })
+  await flushPromises()
+  await vi.waitFor(() => expect(w.find('.hosting-panel__checking').exists()).toBe(false))
+  await flushPromises()
+  return w
+}
+
+/** Another AI tool, or the AIShie runtime run oneself: no word of hosting, and no error. */
+function expectSelfOnly(w: VueWrapper) {
+  expect(w.text()).toContain('How this agent runs')
+  expect(w.findAll('.connect-choice__title').map((c) => c.text())).toEqual([
+    'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
+    'Run the AIShie runtime yourself (advanced)',
+  ])
+  expect(w.text()).toContain('Authorization: Bearer <token>')
+  expect(w.text()).not.toContain('Host it on AIShie')
+  expect(w.text()).not.toContain('school’s runtime')
+  expect(w.find('.el-alert--error').exists()).toBe(false)
+  expect(w.find('.hosted-card').exists()).toBe(false)
+}
+
+describe('HostingPanel: no runtime here', () => {
+  it.each([
+    ['a gateway’s 502', () => new Response(null, { status: 502 })],
+    ['the app’s own page', () => new Response('<!doctype html><div id="app"></div>', { status: 200, headers: { 'Content-Type': 'text/html' } })],
+    ['a Core with no such route', () => json(404, { error: { code: 'not_found', message: 'no route' } })],
+    ['something else answering JSON', () => json(200, { api: 'other', api_version: 1, audience: 'x' })],
+    ['no answer', () => Promise.reject(new TypeError('Failed to fetch'))],
+  ])('after %s, shows running it oneself alone, and asks nothing more', async (_, answer) => {
+    s.on('GET', /^\/runtime\/api\/v1\/info$/, answer)
+    const w = await panel()
+    expectSelfOnly(w)
+    expect(s.calls.map((c) => c.url)).toEqual(['/runtime/api/v1/info'])
+    expect(w.emitted('hosted')![0]).toEqual([null])
+  })
+
+  it('shows neither hosting nor its absence until the runtime has answered', async () => {
+    let release!: (r: Response) => void
+    s.on('GET', /^\/runtime\/api\/v1\/info$/, () => new Promise<Response>((r) => (release = r)))
+    const pinia = createPinia()
+    const w = mount(HostingPanel, {
+      props: { agent: AGENT, credentials: [], progress: { token: 'todo', connected: 'todo', course: 'todo' }, standing: 'active' },
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons },
+    })
+    await flushPromises()
+    expect(w.find('.hosting-panel__checking').exists()).toBe(true)
+    expect(w.text()).not.toContain('How this agent runs')
+    expect(w.text()).not.toContain('Host it on AIShie')
+    release(new Response(null, { status: 502 }))
+    await flushPromises()
+    await vi.waitFor(() => expectSelfOnly(w))
+  })
+
+  it('hides hosting, with no error, when Core makes no assertions for the runtime', async () => {
+    s.on('POST', /^\/v1\/auth\/assertion$/, () => json(404, { error: { code: 'not_found', message: 'none' } }))
+    const w = await panel()
+    await vi.waitFor(() => expectSelfOnly(w))
+    expect(s.to('GET', RUNTIME.agents)).toHaveLength(0)
+  })
+
+  it('hides hosting, with a line for whoever looks, when Core does not list the runtime’s audience', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    s.on('POST', /^\/v1\/auth\/assertion$/, () => json(400, { error: { code: 'invalid_argument', message: 'audience' } }))
+    const w = await panel()
+    await vi.waitFor(() => expectSelfOnly(w))
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
+  })
+})
+
+describe('HostingPanel: the runtime is here', () => {
+  it('offers hosting on AIShie first, before the other two, when the agent is not hosted', async () => {
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent({ core_actor_id: 'someone-else' })] }))
+    const w = await panel()
+    expect(w.text()).toContain('How this agent runs')
+    expect(w.findAll('.connect-choice__title').map((b) => b.text())).toEqual([
+      'Host it on AIShie Recommended',
+      'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
+      'Run the AIShie runtime yourself (advanced)',
+    ])
+    expect(w.find('.hosting-offer__host').text()).toBe('Set up hosting')
+    // Neither token, endpoint nor file while hosting is chosen.
+    expect(w.find('.copy-block').exists()).toBe(false)
+    expect(w.find('.hosting-offer__paste').text()).toBe('I have a token for this agent')
+    expect(w.emitted('hosted')!.at(-1)).toEqual([null])
+  })
+
+  it('offers nothing to press for a suspended agent', async () => {
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+    const w = await panel({ standing: 'suspendedByMe' })
+    expect(w.find('.hosting-offer__host').attributes('disabled')).toBeDefined()
+    expect(w.find('.hosting-offer__paste').attributes('disabled')).toBeDefined()
+  })
+
+  it('shows the hosted card in its place when it is hosted, with running it oneself folded away', async () => {
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent()] }))
+    const w = await panel()
+    expect(w.find('.hosted-card').exists()).toBe(true)
+    expect(w.find('.el-radio-group').exists()).toBe(false)
+    expect(w.find('.hosted-card__model').text()).toBe('OpenAI · gpt-4.1-mini')
+    expect(w.find('.connect-card').exists()).toBe(false)
+    const fold = w.find('details.hosted-card__self')
+    expect(fold.attributes('open')).toBeUndefined()
+    expect(fold.text()).toContain('These apply only after you stop hosting')
+    expect(w.emitted('hosted')!.at(-1)).toEqual(['runtimetoken'])
+  })
+
+  it('says hosting is not for this account when Core will not vouch for it', async () => {
+    s.on('POST', /^\/v1\/auth\/assertion$/, () => json(403, { error: { code: 'forbidden', message: 'suspended' } }))
+    const w = await panel()
+    expect(w.text()).toContain('Hosting on the school’s runtime is not available for this account.')
+    expect(w.find('.hosting-offer__host').exists()).toBe(false)
+  })
+
+  it('says the runtime is not available now, with a retry', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      s.on('GET', RUNTIME.agents, () => json(503, { error: { code: 'unavailable', message: 'db', details: { reason: 'store_unavailable' } } }))
+      const w = await panel()
+      await vi.waitFor(() => expect(w.text()).toContain('The school’s runtime is not available right now. Try again in a minute.'), { timeout: 5000 })
+      s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+      await w.find('.hosting-offer__error button').trigger('click')
+      await vi.waitFor(() => expect(w.find('.hosting-offer__host').exists()).toBe(true))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('hosts the agent: the wizard, then the model and key, with the card behind it', async () => {
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+    s.on('POST', RUNTIME.agents, () => json(201, hostedAgent({ status: 'needs_model', model: { own: null, school: null }, own_key: null })))
+    s.on('GET', RUNTIME.agent, () => json(200, hostedAgent({ status: 'needs_model', model: { own: null, school: null }, own_key: null })))
+    const w = await panel()
+    await w.find('.hosting-offer__host').trigger('click')
+    await flushPromises()
+    await w.find('.host-dialog__submit').trigger('click')
+    await vi.waitFor(() => expect(w.find('.hosted-card').exists()).toBe(true))
+    await flushPromises()
+    expect(w.find('.hosted-card__tag').text()).toBe('Choose a model')
+    expect(w.find('.model-dialog__steps').exists()).toBe(true)
+    expect(w.emitted('credsChanged')).toBeTruthy()
+    // The token went to the runtime alone, and is on the page nowhere.
+    const token = s.issued[0].token
+    expect(document.body.innerHTML).not.toContain(token)
+    expect(s.calls.filter((c) => JSON.stringify(c).includes(token)).map((c) => c.url)).toEqual(['/runtime/api/v1/agents'])
+    expect(s.to('POST', CORE.issue)).toHaveLength(1)
+  })
+})
+
+describe('AgentTokensCard', () => {
+  it('marks the token the school’s runtime holds', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const creds = [
+      credential({ id: 'a', label: 'AIShie runtime', token_prefix: 'runtimetoken' }),
+      credential({ id: 'b', label: 'laptop' }),
+    ]
+    const w = mount(AgentTokensCard, {
+      props: { actorId: ACTOR, name: 'Study helper', credentials: creds, loading: false, error: null, hostedPrefix: 'runtimetoken' },
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons },
+    })
+    const tags = w.findAll('.token__hosted')
+    expect(tags).toHaveLength(1)
+    expect(tags[0].text()).toBe('Used by the school’s runtime')
+    expect(tags[0].element.closest('.token')!.textContent).toContain('AIShie runtime')
+  })
+})
