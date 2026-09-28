@@ -18,7 +18,15 @@ interface Call {
 const INFO = '/runtime/api/v1/info'
 const MINT = '/v1/auth/assertion'
 const AUDIENCE = 'https://lms.example.edu/runtime'
-const INFO_BODY = { audience: AUDIENCE, issuer: 'https://lms.example.edu', version: '0.4.0' }
+const INFO_BODY = {
+  api: 'aishie-runtime',
+  api_version: 1,
+  version: '0.4.0',
+  commit: 'e6df9b4',
+  audience: AUDIENCE,
+  issuer: 'https://lms.example.edu',
+  features: { connect_by_token: true, own_key: true, school_key: false },
+}
 const T0 = Date.parse('2026-09-28T08:00:00Z')
 
 let calls: Call[] = []
@@ -153,17 +161,41 @@ describe('runtimeStatus', () => {
       [],
       null,
       'runtime',
-      { audience: AUDIENCE, issuer: 'https://lms.example.edu' },
-      { audience: '', issuer: 'https://lms.example.edu', version: '1' },
-      { audience: 7, issuer: 'https://lms.example.edu', version: '1' },
-      { audience: AUDIENCE, issuer: null, version: '1' },
+      { audience: AUDIENCE, issuer: 'https://lms.example.edu', version: '1' },
+      { ...INFO_BODY, api: 'aishie' },
+      { ...INFO_BODY, api_version: 2 },
+      { ...INFO_BODY, api_version: '1' },
+      { ...INFO_BODY, audience: '' },
+      { ...INFO_BODY, audience: 7 },
       { status: 'executed', result: INFO_BODY },
     ]) {
       infoAnswer = json(200, body)
       const s = await rt.runtimeStatus({ refresh: true })
       expect(s.available, JSON.stringify(body)).toBe(false)
-      if (!s.available) expect(s.error.code).toBe('invalid_response')
+      if (!s.available) expect((s.error as InstanceType<typeof rt.RuntimeError>).reason).toBe('invalid_response')
     }
+  })
+
+  it('takes the shape in another content type to mean there is none', async () => {
+    infoAnswer = text(200, JSON.stringify(INFO_BODY), 'text/plain')
+    expect((await rt.runtimeStatus()).available).toBe(false)
+  })
+
+  it('takes what it does not know of the features to be the v1 defaults', async () => {
+    infoAnswer = json(200, { api: 'aishie-runtime', api_version: 1, audience: AUDIENCE })
+    const s = await rt.runtimeStatus()
+    expect(s.available).toBe(true)
+    if (s.available) {
+      expect(s.info.features).toEqual({ connect_by_token: true, own_key: true, school_key: false })
+      expect(s.info.issuer).toBe('')
+    }
+  })
+
+  it('runtimeInfo gives the info, or null to hide hosting', async () => {
+    await expect(rt.runtimeInfo()).resolves.toEqual(INFO_BODY)
+    infoAnswer = empty(502)
+    await rt.runtimeStatus({ refresh: true })
+    await expect(rt.runtimeInfo()).resolves.toBeNull()
   })
 
   it('takes no answer to mean there is none, without retrying', async () => {
@@ -255,13 +287,13 @@ describe('the assertion', () => {
   it('is dropped when the person goes, and one on its way is not kept', async () => {
     runtimeAnswers.push(json(200, {}), json(200, {}), json(200, {}))
     await rt.runtimeApi.get('/a')
-    rt.forgetAssertion()
+    rt.forgetRuntimeAssertion()
     await rt.runtimeApi.get('/a')
     expect(mintCalls()).toHaveLength(2)
     expect(runtimeCalls()[1].headers.Authorization).toBe(`Bearer ${minted[1]}`)
 
     // Someone signs out while an assertion for them is being made.
-    rt.forgetAssertion()
+    rt.forgetRuntimeAssertion()
     let release!: () => void
     const gate = new Promise<void>((r) => (release = r))
     mintAnswers.push(async () => {
@@ -270,7 +302,7 @@ describe('the assertion', () => {
     })
     const pending = rt.runtimeApi.get('/a')
     await vi.waitFor(() => expect(mintCalls()).toHaveLength(3))
-    rt.forgetAssertion()
+    rt.forgetRuntimeAssertion()
     release()
     await pending
     runtimeAnswers.push(json(200, {}))
@@ -287,18 +319,75 @@ describe('the assertion', () => {
     expect(runtimeCalls()).toHaveLength(0)
   })
 
-  it('refused by Core, fails the call with Core’s words and calls no runtime', async () => {
-    for (const [status, code, message] of [
-      [404, 'not_found', 'this server makes no assertions for a service that hosts agents'],
-      [400, 'invalid_argument', 'the audience is not one this server makes assertions for'],
-      [403, 'forbidden', 'the account is suspended'],
-    ] as const) {
-      mintAnswers.push(json(status, { error: { code, message } }))
-      const err = await failure(rt.runtimeApi.get('/agents'))
-      expect(err).toBeInstanceOf(http.ApiError)
-      expect({ status: err.status, code: err.code, message: err.message }).toEqual({ status, code, message })
-    }
+  it('refused by Core for this account (403), fails the call as “not for this account”, and calls no runtime', async () => {
+    mintAnswers.push(json(403, { error: { code: 'forbidden', message: 'the account is suspended' } }))
+    const err = await failure(rt.runtimeApi.get('/agents'))
+    expect(err).toBeInstanceOf(rt.RuntimeError)
+    expect({ status: err.status, reason: err.reason, message: err.message }).toEqual({
+      status: 403,
+      reason: 'account_refused',
+      message: 'the account is suspended',
+    })
     expect(runtimeCalls()).toHaveLength(0)
+    // The runtime is still there: a later caller may be one Core vouches for.
+    expect((await rt.runtimeStatus()).available).toBe(true)
+  })
+
+  it.each([
+    [404, 'not_found', 'this server makes no assertions for a service that hosts agents', false],
+    [400, 'invalid_argument', 'the audience is not one this server makes assertions for', true],
+  ] as const)('refused by Core with %i, hides hosting from then on', async (status, code, message, warns) => {
+    const warned: unknown[][] = []
+    vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => void warned.push(args))
+    const heard: boolean[] = []
+    const stop = rt.onRuntimeStatus((s) => heard.push(s.available))
+    mintAnswers.push(json(status, { error: { code, message } }))
+    const err = await failure(rt.runtimeApi.get('/agents'))
+    stop()
+    expect(err).toBeInstanceOf(rt.RuntimeError)
+    expect({ status: err.status, reason: err.reason, message: err.message }).toEqual({
+      status,
+      reason: 'runtime_absent',
+      message,
+    })
+    expect(heard).toEqual([false])
+    expect((await rt.runtimeStatus()).available).toBe(false)
+    await expect(rt.runtimeInfo()).resolves.toBeNull()
+    expect(warned.length).toBe(warns ? 1 : 0)
+    if (warns) expect(String(warned[0][0])).toContain(AUDIENCE)
+    expect(runtimeCalls()).toHaveLength(0)
+    // Nothing more is asked of Core or the runtime.
+    const again = await failure(rt.runtimeApi.get('/agents'))
+    expect(again.reason).toBe('runtime_absent')
+    expect(mintCalls()).toHaveLength(1)
+  })
+
+  it('rate-limited by Core, waits as Core says (at most 10 s) and asks once more', async () => {
+    mintAnswers.push(json(429, { error: { code: 'rate_limited', message: 'slow down' } }, { 'Retry-After': '60' }))
+    runtimeAnswers.push(json(200, {}))
+    const p = rt.runtimeApi.get('/agents')
+    await vi.advanceTimersByTimeAsync(9_000)
+    expect(mintCalls()).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1_100)
+    await p
+    expect(mintCalls()).toHaveLength(2)
+
+    // Twice is the answer.
+    rt.forgetRuntimeAssertion()
+    const limited = json(429, { error: { code: 'rate_limited', message: 'slow down' } }, { 'Retry-After': '1' })
+    mintAnswers.push(limited, limited, limited)
+    const err = await failure(rt.runtimeApi.get('/agents'))
+    expect(err.status).toBe(429)
+    expect(mintCalls()).toHaveLength(4)
+  })
+
+  it('can be made ready before a flow that must not begin without one', async () => {
+    await rt.ensureRuntimeAssertion()
+    expect(mintCalls()).toHaveLength(1)
+    expect(runtimeCalls()).toHaveLength(0)
+    runtimeAnswers.push(json(200, {}))
+    await rt.runtimeApi.get('/a')
+    expect(mintCalls()).toHaveLength(1)
   })
 
   it('refused by Core for a lapsed session tells the app, as any 401 from Core does', async () => {
@@ -324,26 +413,42 @@ describe('a 401 from the runtime', () => {
   it('gets a new assertion and the call again, once', async () => {
     runtimeAnswers.push(json(401, { error: { code: 'unauthenticated', message: 'the assertion has expired' } }))
     runtimeAnswers.push(json(201, { id: 'agt_1' }))
-    const out = await rt.runtimeApi.post('/agents', { token: 'ais_x' }, { idempotencyKey: 'k1' })
+    const out = await rt.runtimeApi.post('/agents', { token: 'ais_x' })
     expect(out.data).toEqual({ id: 'agt_1' })
     expect(mintCalls()).toHaveLength(2)
     const [first, second] = runtimeCalls()
     expect(first.headers.Authorization).toBe(`Bearer ${minted[0]}`)
     expect(second.headers.Authorization).toBe(`Bearer ${minted[1]}`)
-    // The same call: the same key and body.
-    expect(second.headers['Idempotency-Key']).toBe('k1')
+    // The same call: the same body.
     expect(second.body).toBe(first.body)
+  })
+
+  it('gets a new assertion and the call again even for a call that is never retried otherwise', async () => {
+    runtimeAnswers.push(json(401, { error: { code: 'unauthenticated', message: 'expired', details: { reason: 'assertion_expired' } } }))
+    runtimeAnswers.push(json(200, { result: 'ok', http_status: 200, provider_code: null, latency_ms: 80 }))
+    const out = await rt.runtime.testKey({ provider: 'openai', model: 'gpt-4.1-mini', key: 'sk-test-0000000000' })
+    expect(out.data.result).toBe('ok')
+    expect(runtimeCalls()).toHaveLength(2)
   })
 
   it('twice is the answer: no third call, no loop', async () => {
     const refused = json(401, { error: { code: 'unauthenticated', message: 'not an assertion this runtime takes' } })
     runtimeAnswers.push(refused, refused, refused, refused)
     const err = await failure(rt.runtimeApi.get('/agents'))
-    expect(err).toBeInstanceOf(http.ApiError)
+    expect(err).toBeInstanceOf(rt.RuntimeError)
     expect(err.status).toBe(401)
     expect(err.message).toBe('not an assertion this runtime takes')
     expect(runtimeCalls()).toHaveLength(2)
     expect(mintCalls()).toHaveLength(2)
+  })
+
+  it('twice surfaces with its reason', async () => {
+    const refused = json(401, {
+      error: { code: 'unauthenticated', message: 'bad', details: { reason: 'assertion_invalid' } },
+    })
+    runtimeAnswers.push(refused, refused)
+    const err = await failure(rt.runtime.list())
+    expect(err.reason).toBe('assertion_invalid')
   })
 
   it('is not taken for a lapsed session: the app is not told to sign anyone out', async () => {
@@ -421,6 +526,25 @@ describe('the assertion stays secret', () => {
     for (const token of minted) expect(said).not.toContain(token)
   })
 
+  it('and no agent token is in an error either, should the runtime repeat one', async () => {
+    const token = 'ais_k7v2m4qhx3ab_' + 'S'.repeat(43)
+    runtimeAnswers.push(
+      json(422, {
+        error: {
+          code: 'failed_precondition',
+          message: `refused ${token}`,
+          details: { reason: 'token_refused', echo: token },
+        },
+      }),
+    )
+    const err = await failure(rt.runtime.inspect({ token }))
+    expect(err.reason).toBe('token_refused')
+    const all = [String(err), err.message, err.stack, JSON.stringify(err), JSON.stringify(err.details)].join('\n')
+    expect(all).not.toContain(token)
+    expect(all).not.toContain('S'.repeat(43))
+    expect(err.message).toBe('refused [token]')
+  })
+
   it('is kept in no storage', async () => {
     runtimeAnswers.push(json(200, {}))
     await rt.runtimeApi.get('/a')
@@ -446,18 +570,25 @@ describe('the assertion stays secret', () => {
 })
 
 describe('errors', () => {
-  it('are the runtime’s own, from Core’s envelope', async () => {
+  it('are the runtime’s own, from Core’s envelope, with its reason', async () => {
     runtimeAnswers.push(
       json(409, {
-        error: { code: 'conflict', message: 'this agent is already hosted', details: { agent_id: 'agt_1' } },
+        error: {
+          code: 'conflict',
+          message: 'this agent is already hosted',
+          details: { reason: 'already_hosted', agent_id: 'agt_1' },
+        },
       }),
     )
     const err = await failure(rt.runtimeApi.post('/agents', {}))
+    expect(err).toBeInstanceOf(rt.RuntimeError)
     expect(err).toBeInstanceOf(http.ApiError)
+    expect(rt.isRuntimeError(err)).toBe(true)
     expect(err.status).toBe(409)
     expect(err.code).toBe('conflict')
+    expect(err.reason).toBe('already_hosted')
     expect(err.message).toBe('this agent is already hosted')
-    expect(err.details).toEqual({ agent_id: 'agt_1' })
+    expect(err.details).toEqual({ reason: 'already_hosted', agent_id: 'agt_1' })
     expect(err.recorded).toBe(false)
   })
 
@@ -468,88 +599,213 @@ describe('errors', () => {
     runtimeAnswers.push(json(status, { error: { code, message: 'x' } }))
     const err = await failure(rt.runtimeApi.delete('/agents/agt_1'))
     expect(err[getter]).toBe(true)
+    // An envelope without a reason: the code stands for it.
+    expect(err.reason).toBe(code)
   })
 
   it('without an envelope say the status alone', async () => {
     runtimeAnswers.push(text(500, '<h1>Internal Server Error</h1>'))
-    const err = await failure(rt.runtimeApi.delete('/a'))
-    expect({ status: err.status, code: err.code, message: err.message }).toEqual({
+    const err = await failure(rt.runtimeApi.delete('/a', { retry: true }))
+    expect({ status: err.status, code: err.code, message: err.message, reason: err.reason }).toEqual({
       status: 500,
       code: 'internal',
       message: 'HTTP 500',
+      reason: 'runtime_unavailable',
     })
     runtimeAnswers.push(empty(418))
     const other = await failure(rt.runtimeApi.delete('/a'))
-    expect({ status: other.status, code: other.code, message: other.message }).toEqual({
+    expect({ status: other.status, code: other.code, message: other.message, reason: other.reason }).toEqual({
       status: 418,
       code: 'unknown',
       message: 'HTTP 418',
+      reason: 'unknown',
     })
+  })
+
+  it('say how long to wait after a rate limit', async () => {
+    const limited = json(
+      429,
+      { error: { code: 'rate_limited', message: 'slow down', details: { reason: 'rate_limited' } } },
+      { 'Retry-After': '12' },
+    )
+    runtimeAnswers.push(limited)
+    const err = await failure(rt.runtime.testKey({ provider: 'openai', model: 'm', key: 'sk-0000000000' }))
+    expect(err.reason).toBe('rate_limited')
+    expect(err.details.retry_after_seconds).toBe(12)
   })
 
   it('include a success that is not JSON', async () => {
     runtimeAnswers.push(text(200, '<!doctype html>'))
     const err = await failure(rt.runtimeApi.get('/a'))
     expect(err.code).toBe('invalid_response')
+    expect(err.reason).toBe('invalid_response')
   })
 
   it('leave out a success with no body, which is none', async () => {
     runtimeAnswers.push(empty(204))
-    await expect(rt.runtimeApi.delete('/agents/agt_1')).resolves.toBeUndefined()
+    await expect(rt.runtimeApi.delete('/agents/agt_1')).resolves.toMatchObject({ status: 204, data: undefined })
   })
 
   it('say when no answer came, in their own words', async () => {
     runtimeAnswers.push(...Array(3).fill(() => Promise.reject(new TypeError('Failed to fetch'))))
     const err = await failure(rt.runtimeApi.get('/a'))
     expect(err.isNetwork).toBe(true)
+    expect(err.reason).toBe('network')
     expect(err.message).toBe('the agent runtime could not be reached')
     expect(runtimeCalls()).toHaveLength(3)
   })
 
-  it('from a gateway are retried for a read, and not for a change without a key', async () => {
+  it('from a gateway are retried for a read, and not for a PATCH', async () => {
     runtimeAnswers.push(empty(503), json(200, { ok: true }))
     await expect(rt.runtimeApi.get('/a')).resolves.toEqual({ ok: true })
     expect(runtimeCalls()).toHaveLength(2)
 
     runtimeAnswers.push(empty(503))
-    const err = await failure(rt.runtimeApi.patch('/agents/agt_1', { paused: true }, 3))
+    const err = await failure(rt.runtimeApi.patch('/agents/agt_1', { model: { own: null } }, 3))
     expect(err.status).toBe(503)
     expect(runtimeCalls()).toHaveLength(3)
   })
 })
 
-describe('Idempotency-Key', () => {
-  it('goes with every POST: the one given, or a fresh one', async () => {
-    runtimeAnswers.push(json(200, {}), json(200, {}), json(200, {}))
-    await rt.runtimeApi.post('/agents', { a: 1 }, { idempotencyKey: 'connect-1' })
-    await rt.runtimeApi.post('/agents/agt_1/pause')
-    await rt.runtimeApi.post('/agents/agt_1/pause')
-    const [a, b, c] = runtimeCalls()
-    expect(a.headers['Idempotency-Key']).toBe('connect-1')
-    expect(a.headers['Content-Type']).toBe('application/json')
-    expect(JSON.parse(a.body!)).toEqual({ a: 1 })
-    expect(b.headers['Idempotency-Key']).toMatch(/\S{8,}/)
-    expect(c.headers['Idempotency-Key']).not.toBe(b.headers['Idempotency-Key'])
-    expect(b.body).toBeUndefined()
+describe('the contract’s calls', () => {
+  const AGENT = { id: 'agt_1', version: 3 }
+
+  it.each([
+    ['me', () => rt.runtime.me(), 'GET', '/runtime/api/v1/me', undefined],
+    ['models', () => rt.runtime.models(), 'GET', '/runtime/api/v1/models', undefined],
+    ['list', () => rt.runtime.list(), 'GET', '/runtime/api/v1/agents', undefined],
+    ['get', () => rt.runtime.get('agt_1'), 'GET', '/runtime/api/v1/agents/agt_1', undefined],
+    [
+      'inspect',
+      () => rt.runtime.inspect({ token: 't', core_actor_id: 'a' }),
+      'POST',
+      '/runtime/api/v1/agents/inspect',
+      { token: 't', core_actor_id: 'a' },
+    ],
+    [
+      'connect',
+      () => rt.runtime.connect({ token: 't', core_actor_id: 'a' }),
+      'POST',
+      '/runtime/api/v1/agents',
+      { token: 't', core_actor_id: 'a' },
+    ],
+    [
+      'testKey',
+      () => rt.runtime.testKey({ provider: 'openai', model: 'm', key: 'k' }),
+      'POST',
+      '/runtime/api/v1/keys/test',
+      { provider: 'openai', model: 'm', key: 'k' },
+    ],
+    [
+      'update',
+      () => rt.runtime.update('agt_1', 3, { model: { own: null } }),
+      'PATCH',
+      '/runtime/api/v1/agents/agt_1',
+      { model: { own: null } },
+    ],
+    [
+      'replaceToken',
+      () => rt.runtime.replaceToken('agt_1', 't'),
+      'PUT',
+      '/runtime/api/v1/agents/agt_1/token',
+      { token: 't' },
+    ],
+    ['pause', () => rt.runtime.pause('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/pause', undefined],
+    ['resume', () => rt.runtime.resume('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/resume', undefined],
+    [
+      'remove',
+      () => rt.runtime.remove('agt_1'),
+      'DELETE',
+      '/runtime/api/v1/agents/agt_1?revoke_token=true',
+      undefined,
+    ],
+    [
+      'remove, keeping the token',
+      () => rt.runtime.remove('agt_1', false),
+      'DELETE',
+      '/runtime/api/v1/agents/agt_1?revoke_token=false',
+      undefined,
+    ],
+  ] as const)('%s goes where the contract says', async (_, call, method, url, body) => {
+    runtimeAnswers.push(json(200, AGENT, { ETag: '"3"' }))
+    const out = await call()
+    expect(out).toMatchObject({ status: 200, data: AGENT, etag: '"3"', replayed: false })
+    const [c] = runtimeCalls()
+    expect(c.method).toBe(method)
+    expect(c.url).toBe(url)
+    expect(c.body === undefined ? undefined : JSON.parse(c.body)).toEqual(body)
+    // The runtime reads no Idempotency-Key (§0.3): none is sent.
+    expect(c.headers['Idempotency-Key']).toBeUndefined()
   })
 
-  it('does not go with a read', async () => {
+  it('names the version a change is made to, and says when it has moved on', async () => {
+    runtimeAnswers.push(json(200, AGENT, { ETag: '"4"' }))
+    await rt.runtime.update('agt_1', 3, { own_key: null })
+    expect(runtimeCalls()[0].headers['If-Match']).toBe('"3"')
+
+    runtimeAnswers.push(
+      json(412, {
+        error: {
+          code: 'version_mismatch',
+          message: 'changed since',
+          details: { reason: 'version_mismatch', current_version: 5 },
+        },
+      }),
+    )
+    const err = await failure(rt.runtime.update('agt_1', '"4"', { own_key: null }))
+    expect(rt.isVersionMismatch(err)).toBe(true)
+    expect(err.reason).toBe('version_mismatch')
+    expect(err.details.current_version).toBe(5)
+    // Never sent again by itself.
+    expect(runtimeCalls()).toHaveLength(2)
+
+    runtimeAnswers.push(json(200, { agent: AGENT, previous_token: {} }))
+    await rt.runtime.replaceToken('agt_1', 't', 4)
+    expect(runtimeCalls()[2].headers['If-Match']).toBe('"4"')
+  })
+
+  it.each([
+    ['connect', () => rt.runtime.connect({ token: 't' })],
+    ['inspect', () => rt.runtime.inspect({ token: 't' })],
+    ['replaceToken', () => rt.runtime.replaceToken('agt_1', 't')],
+    ['pause', () => rt.runtime.pause('agt_1')],
+    ['resume', () => rt.runtime.resume('agt_1')],
+    ['remove', () => rt.runtime.remove('agt_1')],
+    ['get', () => rt.runtime.get('agt_1')],
+  ] as const)('%s is sent again after a 503 or no answer, as the same request', async (_, call) => {
+    runtimeAnswers.push(
+      empty(503),
+      () => Promise.reject(new TypeError('Failed to fetch')),
+      json(200, AGENT, { 'Idempotency-Replayed': 'true' }),
+    )
+    const out = await call()
+    expect(out.replayed).toBe(true)
+    const sent = runtimeCalls()
+    expect(sent).toHaveLength(3)
+    expect(new Set(sent.map((c) => `${c.method} ${c.url} ${c.body}`)).size).toBe(1)
+  })
+
+  it.each([
+    ['update', () => rt.runtime.update('agt_1', 3, { own_key: null })],
+    ['testKey', () => rt.runtime.testKey({ provider: 'openai', model: 'm', key: 'sk-0000000000' })],
+  ] as const)('%s is never sent again by itself', async (_, call) => {
+    runtimeAnswers.push(empty(503), json(200, AGENT))
+    const err = await failure(call())
+    expect(err.status).toBe(503)
+    expect(runtimeCalls()).toHaveLength(1)
+
+    runtimeAnswers.shift()
+    runtimeAnswers.push(() => Promise.reject(new TypeError('Failed to fetch')), json(200, AGENT))
+    const net = await failure(call())
+    expect(net.reason).toBe('network')
+    expect(runtimeCalls()).toHaveLength(2)
+    runtimeAnswers.length = 0
+  })
+
+  it('sends a query only as asked', async () => {
     runtimeAnswers.push(json(200, {}))
     await rt.runtimeApi.get('/agents', { query: { limit: 20, after: undefined, state: ['running', 'paused'] } })
-    const [call] = runtimeCalls()
-    expect(call.headers['Idempotency-Key']).toBeUndefined()
-    expect(call.url).toBe('/runtime/api/v1/agents?limit=20&state=running&state=paused')
-  })
-
-  it('keeps a POST that met no answer safe to send again, under the same key', async () => {
-    runtimeAnswers.push(
-      () => Promise.reject(new TypeError('Failed to fetch')),
-      json(201, { id: 'agt_1' }, { 'Idempotency-Replayed': 'true' }),
-    )
-    const out = await rt.runtimeApi.post('/agents', {})
-    const [first, second] = runtimeCalls()
-    expect(second.headers['Idempotency-Key']).toBe(first.headers['Idempotency-Key'])
-    expect(out).toMatchObject({ status: 201, data: { id: 'agt_1' }, replayed: true })
+    expect(runtimeCalls()[0].url).toBe('/runtime/api/v1/agents?limit=20&state=running&state=paused')
   })
 })
 
@@ -561,11 +817,10 @@ describe('If-Match and ETag', () => {
     expect(got.data.version).toBe(3)
 
     runtimeAnswers.push(json(200, { id: 'agt_1', version: 4 }, { ETag: '"4"' }))
-    const changed = await rt.runtimeApi.patch('/agents/agt_1', { paused: true }, got.etag!)
+    const changed = await rt.runtimeApi.patch('/agents/agt_1', { own_key: null }, got.etag!)
     const call = runtimeCalls()[1]
     expect(call.method).toBe('PATCH')
     expect(call.headers['If-Match']).toBe('"3"')
-    expect(call.headers['Idempotency-Key']).toBeUndefined()
     expect(changed.etag).toBe('"4"')
   })
 
@@ -576,20 +831,19 @@ describe('If-Match and ETag', () => {
   })
 
   it('says when the version has moved on', async () => {
-    runtimeAnswers.push(json(412, { error: { code: 'failed_precondition', message: 'changed since' } }))
+    runtimeAnswers.push(json(412, { error: { code: 'version_mismatch', message: 'changed since' } }))
     const err = await failure(rt.runtimeApi.patch('/agents/agt_1', {}, '"3"'))
     expect(rt.isVersionMismatch(err)).toBe(true)
     expect(rt.isVersionMismatch(new http.ApiError({ status: 409, code: 'conflict', message: 'x' }))).toBe(false)
     expect(rt.isVersionMismatch(new Error('x'))).toBe(false)
   })
 
-  it('quotes a bare version, keeps an ETag as it is, and refuses what is neither', () => {
+  it('quotes a bare version, keeps a strong ETag as it is, and refuses what the runtime would', () => {
     expect(rt.ifMatch(7)).toBe('"7"')
     expect(rt.ifMatch('7')).toBe('"7"')
     expect(rt.ifMatch('"7"')).toBe('"7"')
-    expect(rt.ifMatch('W/"abc"')).toBe('W/"abc"')
     expect(rt.ifMatch(' "7" ')).toBe('"7"')
-    for (const bad of ['', '*', 'a b', 'a"b', '"a"b"', 'line\nbreak']) {
+    for (const bad of ['', '*', 'W/"7"', '"abc"', 'a b', 'a"b', '"a"b"', 'line\nbreak', '-1', '1.5']) {
       expect(() => rt.ifMatch(bad), JSON.stringify(bad)).toThrow(/not a version/)
     }
   })

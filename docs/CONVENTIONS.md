@@ -66,18 +66,23 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
 - **Show hosting only where there is a runtime.** `useRuntime()` from `@/composables/useRuntime`
   gives `available`, `info`, `error`, `checked` and `refresh`, from one `GET /info` per page load.
   Until `checked`, show neither the feature nor its absence.
-- **Calls**: `runtimeApi.get(path, { query })`, `.post(path, body, { idempotencyKey })`,
-  `.getVersioned(path)` (with its `etag`), `.patch(path, body, version)`, `.put`, `.delete`, with
-  paths from `runtimePath(route, params)`. Each goes as the person signed in, with an assertion Core
-  makes for them; the client asks for it, keeps it in memory, and asks again as it needs. Keep one
-  idempotency key per intended action, as with Core's writes. A `patch` names the version it read
-  (the ETag, or the version the body carries); `isVersionMismatch(e)` says the thing changed since,
-  so read it again.
-- Errors are `ApiError`, in Core's shape. A 401 from the runtime is not a lapsed session (the
-  client has already tried a new assertion): say the runtime refused, not that the person was signed
-  out. A lapsed session shows as Core's 401 when the assertion is asked for, and the app handles it.
-- The runtime's route and field names live in `src/api/runtime.ts` (`RUNTIME_ROUTES` and the types
-  beside it), and nowhere else.
+- **Calls**: the contract's own, `runtime.me()`, `.models()`, `.testKey(req)`, `.inspect(req)`,
+  `.connect(req)`, `.list()`, `.get(id)`, `.update(id, version, patch)`, `.replaceToken(id, token)`,
+  `.pause(id)`, `.resume(id)`, `.remove(id, revokeToken)`, each resolving `{ data, etag, status,
+  replayed }`. Each goes as the person signed in, with an assertion Core makes for them; the client
+  asks for it, keeps it in memory, and asks again as it needs. The runtime reads no idempotency key:
+  the client sends again what the runtime answers once however often it is sent, and never a PATCH
+  or a key test. `update` names the version it read; `isVersionMismatch(e)` (412) says the agent
+  changed since, so read it again and say so, keeping what the person typed.
+- Errors are `RuntimeError` (an `ApiError`) with the runtime's `reason`; choose the words by reason
+  (`hostingErrorText` in the agents' components). A 401 from the runtime is not a lapsed session
+  (the client has already tried a new assertion): say the runtime refused, not that the person was
+  signed out. A lapsed session shows as Core's 401 when the assertion is asked for, and the app
+  handles it.
+- Never keep an agent token or a model key in reactive state, storage, a log or an error: a token
+  the page issues for the runtime lives in one local variable until the runtime has it.
+- The runtime's route and field names live in `src/api/runtime.ts` (`RUNTIME_ROUTES`) and
+  `src/api/runtime-types.ts`, and nowhere else.
 
 ## Permissions in the UI
 

@@ -524,7 +524,8 @@ export interface CoreAssertion {
  * does not list, 403 for a suspended account or an agent, and 401 when the
  * session is over; that one is a lapsed session like any other, and the
  * listeners hear of it. Asking again is harmless, so a gateway error or a
- * rate limit is retried as a read is.
+ * rate limit is retried, once: after Retry-After (at most 10 seconds) for a
+ * rate limit, as the runtime's contract says (§3.1).
  *
  * expires_at is on Core's clock. Core's Date header says what that clock
  * read as it answered, so the time is moved onto this browser's clock by the
@@ -532,7 +533,7 @@ export interface CoreAssertion {
  * assertion for one that has already ended.
  */
 export async function requestAssertion(audience: string): Promise<CoreAssertion> {
-  const raw = await sendWithRetry('POST', ASSERTION_PATH, { body: { audience } })
+  const raw = await sendWithRetry('POST', ASSERTION_PATH, { body: { audience } }, 2)
   if (raw.status !== 200) throw errorFrom(raw)
   const b = raw.body
   const expires = typeof b?.expires_at === 'string' ? Date.parse(b.expires_at) : NaN
