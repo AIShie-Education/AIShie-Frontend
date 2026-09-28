@@ -1,9 +1,13 @@
 <script setup lang="ts">
 // Every permission, each at a level on the one ladder. v-model is the
 // map from permission to level; with `sparse`, a permission can be left unset
-// (for "as the preset has it"), and only those set are in the map.
+// (for "as the preset has it"), and only those set are in the map. With the
+// seat's ceilings (Core's perm_ceilings), each capped row says how far it may
+// go and why, and offers nothing above it: a level above is greyed out, and a
+// permission capped at denied is locked.
 import { useI18n } from 'vue-i18n'
 import { PERMS, SCOPED_PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/types'
+import { aboveCeiling, ceilingNote, ceilingOf, type Ceilings } from '@/utils/ceilings'
 import LevelSelect from './LevelSelect.vue'
 import StatusTag from './StatusTag.vue'
 
@@ -18,6 +22,8 @@ const props = defineProps<{
   changed?: Perm[]
   /** A warning to show under a row, e.g. that it is above the granter's own level. */
   warn?: Partial<Record<Perm, string>>
+  /** The most the seat may hold of each permission, and why (ceilingsOf). */
+  ceilings?: Ceilings | null
 }>()
 const { t } = useI18n()
 
@@ -29,6 +35,10 @@ function set(p: Perm, v: AutonomyLevel | undefined) {
 }
 function value(p: Perm): AutonomyLevel | undefined {
   return model.value[p] ?? (props.sparse ? undefined : 'denied')
+}
+/** The level a row stands at, set or else as the baseline has it. */
+function shown(p: Perm): AutonomyLevel | undefined {
+  return value(p) ?? props.baseline?.[p]
 }
 </script>
 
@@ -55,12 +65,26 @@ function value(p: Perm): AutonomyLevel | undefined {
           <el-tag v-if="changed?.includes(p)" size="small" type="warning" effect="light" round>{{
             t('common.labels.changed')
           }}</el-tag>
+          <el-tooltip v-if="ceilingOf(ceilings, p)" :content="ceilingNote(ceilings, p) ?? ''" placement="top">
+            <el-tag size="small" type="info" effect="plain" round class="perm-editor__ceiling" tabindex="0">
+              <el-icon><Lock /></el-icon>
+              {{
+                ceilingOf(ceilings, p) === 'denied'
+                  ? t('common.ceiling.locked')
+                  : t('common.ceiling.tag', { level: t(`enums.level.${ceilingOf(ceilings, p)}`) })
+              }}
+            </el-tag>
+          </el-tooltip>
         </span>
         <span class="perm-editor__help">{{ t(`enums.permHelp.${p}`) }}</span>
         <code class="perm-editor__key">{{ p }}</code>
         <span v-if="warn?.[p]" class="perm-editor__warn">
           <el-icon><WarningFilled /></el-icon>
           {{ warn[p] }}
+        </span>
+        <span v-else-if="aboveCeiling(ceilings, p, shown(p))" class="perm-editor__over">
+          <el-icon><InfoFilled /></el-icon>
+          {{ t('common.ceiling.worksAs', { level: t(`enums.level.${ceilingOf(ceilings, p)}`) }) }}
         </span>
       </div>
       <div class="perm-editor__value">
@@ -71,6 +95,8 @@ function value(p: Perm): AutonomyLevel | undefined {
           :clearable="sparse"
           :size="size ?? 'default'"
           :placeholder="baseline?.[p] ? t(`enums.level.${baseline[p]}`) : undefined"
+          :ceiling="ceilingOf(ceilings, p)"
+          :ceiling-note="ceilingNote(ceilings, p)"
           @update:model-value="(v) => set(p, v)"
         />
       </div>
@@ -122,6 +148,18 @@ function value(p: Perm): AutonomyLevel | undefined {
   margin: 0 -8px;
   padding-left: 8px;
   padding-right: 8px;
+}
+.perm-editor__ceiling .el-icon {
+  vertical-align: -2px;
+  margin-right: 2px;
+}
+.perm-editor__over {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--el-color-warning);
+  margin-top: 2px;
 }
 .perm-editor__warn {
   display: inline-flex;

@@ -120,6 +120,18 @@ export default {
     invalidDecimal: '請輸入數字',
     invalidEmail: '請輸入有效的電子郵件地址',
   },
+  // 席位的上限（perm_ceilings）：無論由誰授予，該席位最多可擁有的權限等級。
+  ceiling: {
+    tag: '最多：{level}',
+    locked: '此處不可擁有',
+    atMost: '這裡最多只能是「{level}」：{why}。',
+    atMostBare: '這裡最多只能是「{level}」。',
+    never: '這裡不可擁有：{why}。',
+    neverBare: '這裡不可擁有。',
+    refused: '{permission}在這裡最多只能是「{ceiling}」，因為{why}。',
+    refusedNever: '{permission}在這裡完全不能授予，因為{why}。',
+    worksAs: '設定高於它可擁有的等級：實際最多以「{level}」運作。',
+  },
   confirm: {
     title: '確定嗎？',
     irreversible: '此操作無法復原。',

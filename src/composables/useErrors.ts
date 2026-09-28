@@ -1,6 +1,7 @@
 import { h } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
 import { ApiError } from '@/api/http'
+import { ceilingRefusalText } from '@/utils/ceilings'
 import { shortId } from '@/utils/format'
 import { i18n } from '@/i18n'
 
@@ -22,11 +23,15 @@ const SHARED_REASONS = new Map<string, string>([['agent_answers_elsewhere', 'com
  * (details.reason) and which has them (SHARED_REASONS, or
  * deptAdmin.errors.<reason>), with the refusal's details for its
  * placeholders; null for any other. An invitation a department administrator
- * may not make says which rule it failed (details.why).
+ * may not make says which rule it failed (details.why). A level above what a
+ * seat may hold at all says which permission, how far it may go, and why
+ * (ceilingRefusalText).
  */
 export function reasonMessage(e: ApiError): string | null {
   const reason = e.details?.reason
   if (typeof reason !== 'string' || !WORD.test(reason)) return null
+  const ceiling = ceilingRefusalText(e.details)
+  if (ceiling) return ceiling
   const shared = SHARED_REASONS.get(reason)
   if (shared) return t(shared)
   if (reason === 'invite_not_allowed') {

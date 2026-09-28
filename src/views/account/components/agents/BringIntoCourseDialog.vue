@@ -7,15 +7,20 @@
 // answers is sent outright (answers_course), never left to the preset's
 // default. What it would be seated with is previewed from
 // member.delegate_defaults, which says too whether the call will be carried
-// out at once or become a request an instructor approves.
+// out at once or become a request an instructor approves, and the most the
+// seat may hold of each permission (perm_ceilings): the caller may name
+// other levels (member.add_delegate's perms), up to those and no further —
+// for a student, her own writes such as drafting her submission, which her
+// agent then does only by proposal.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
-import type { AgentFull, AutonomyLevel, DelegateDefaults } from '@/api/types'
+import type { AgentFull, AutonomyLevel, DelegateDefaults, Perm, PermLevels } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { delegateArgsFor, presetForPurpose, type SeatPurpose } from '@/utils/agents'
+import { aboveCeiling, capToCeilings, ceilingsOf } from '@/utils/ceilings'
 import AsyncState from '@/components/AsyncState.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -59,7 +64,29 @@ const preview = useAsync<DelegateDefaults | null>(
 )
 const defaults = computed(() => preview.data.value ?? null)
 const level = computed(() => (defaults.value?.level ?? null) as AutonomyLevel | null)
-const granted = computed(() => grantedPerms(defaults.value?.perms))
+
+// --- Naming other levels -------------------------------------------------------------
+// What it would get unless told otherwise, and the most it may hold of each
+// permission here, why, as Core says them for this course and preset.
+const baseline = computed<PermLevels>(() => toPermLevels(defaults.value?.perms))
+const ceilings = computed(() => ceilingsOf(defaults.value))
+/** Levels the caller set in the editor; those that differ from the baseline are sent. */
+const named = ref<PermLevels>({})
+const overrides = computed<PermLevels>(() => {
+  const out: PermLevels = {}
+  for (const [p, l] of Object.entries(named.value) as [Perm, AutonomyLevel][]) {
+    if (l && l !== baseline.value[p] && !aboveCeiling(ceilings.value, p, l)) out[p] = l
+  }
+  return out
+})
+const changedPerms = computed(() => Object.keys(overrides.value) as Perm[])
+/** What it would hold: the baseline with the levels named, never above a ceiling. */
+const effective = computed<PermLevels>(() => capToCeilings({ ...baseline.value, ...overrides.value }, ceilings.value))
+// Another course or purpose is another starting point.
+watch([courseId, purpose, open], () => {
+  named.value = {}
+})
+const granted = computed(() => grantedPerms(effective.value))
 const students = computed(() =>
   defaults.value
     ? studentReach(defaults.value.student_scope, defaults.value.listed_students, choice.value?.membership.member_id)
@@ -102,6 +129,7 @@ async function submit() {
       course_id: courseId.value,
       actor_id: props.agent.actor_id,
       ...delegateArgsFor(purpose.value),
+      ...(changedPerms.value.length ? { perms: { ...overrides.value } } : {}),
     },
     { success: t('agents.bring.done', { name: props.agent.display_name, course }) },
   )
@@ -212,8 +240,21 @@ async function submit() {
               </dd>
             </dl>
             <details class="bring__details">
-              <summary>{{ t('agents.seats.allPerms') }}</summary>
-              <PermEditor :model-value="toPermLevels(defaults.perms)" readonly size="small" />
+              <summary>
+                {{ t('agents.bring.adjust') }}
+                <el-tag v-if="changedPerms.length" size="small" type="warning" round class="bring__changed">
+                  {{ t('agents.bring.changed', { n: changedPerms.length }) }}
+                </el-tag>
+              </summary>
+              <p class="app-form-hint bring__hint">{{ t('agents.bring.adjustHelp') }}</p>
+              <PermEditor
+                v-model="named"
+                sparse
+                :baseline="baseline"
+                :ceilings="ceilings"
+                :changed="changedPerms"
+                size="small"
+              />
             </details>
             <p class="app-form-hint bring__hint">{{ t('agents.bring.cappedHint') }}</p>
           </div>
@@ -325,6 +366,12 @@ async function submit() {
 }
 .bring__hint {
   margin: 10px 0 0;
+}
+.bring__details .bring__hint {
+  margin: 0 0 6px;
+}
+.bring__changed {
+  margin-left: 6px;
 }
 @media (max-width: 480px) {
   .bring__facts {

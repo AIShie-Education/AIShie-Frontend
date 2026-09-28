@@ -50,6 +50,15 @@ export default {
     conversation_ask: '与课程智能体或自己的智能体开始对话，并在对话中发言',
     conversation_answer: '接受提问并作答；级别决定回复如何发出',
   },
+  // 席位权限的上限原因（perm_ceiling_reasons），接在“因为”之后。
+  ceilingReason: {
+    agent_never: '代表他人行事的智能体不会带入自己的智能体',
+    agent_decides_by_proposal: '智能体只能以提议的方式作出决定与审核，并须由人确认',
+    student_agent_by_proposal:
+      '不管理本课程成员的人，其智能体做这件事只能以提议的方式进行，因为这超出了“个人助手”预设所给的权限',
+    principal_level: '代表他人行事的智能体，权限永不超过该人',
+    principal_level_conversation_answer: '代表他人行事的智能体，回答的自主程度不会超过该人提问的权限',
+  },
   // The built-in presets, by Core's name for them.
   preset: {
     student: '学生',

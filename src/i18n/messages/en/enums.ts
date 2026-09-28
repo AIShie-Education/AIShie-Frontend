@@ -52,6 +52,15 @@ export default {
     conversation_ask: 'Starting conversations with the course’s agents or your own, and writing in them',
     conversation_answer: 'Being asked questions, and answering them; the level is how the answers go out',
   },
+  // Why a seat may hold a permission at most at its ceiling (perm_ceiling_reasons), as a clause after "because".
+  ceilingReason: {
+    agent_never: 'an agent acting for someone brings in no agents of its own',
+    agent_decides_by_proposal: 'an agent decides and reviews only by proposal, which a person then confirms',
+    student_agent_by_proposal:
+      'the agent of someone who does not manage this course’s members does this only by proposal, as it goes beyond what the personal assistant preset gives',
+    principal_level: 'an agent acting for someone never holds more than that person does',
+    principal_level_conversation_answer: 'an agent acting for someone answers no more freely than that person may ask',
+  },
   // The built-in presets, by Core's name for them.
   preset: {
     student: 'Student',

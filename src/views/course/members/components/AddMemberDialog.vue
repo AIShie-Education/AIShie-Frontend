@@ -24,6 +24,7 @@ import { useWrite, announce } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import { capToCeilings, newSeatCeilings } from '@/utils/ceilings'
 import { isUuid, shortId } from '@/utils/format'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
@@ -83,7 +84,13 @@ const permsOpen = ref<string[]>([])
 const builtIn = computed(() => props.presets.filter((p) => !p.dept_id))
 const department = computed(() => props.presets.filter((p) => !!p.dept_id))
 const preset = computed(() => props.presets.find((p) => p.id === form.presetId) ?? null)
-const baseline = computed<PermLevels>(() => (preset.value ? fullPerms(preset.value.perms) : {}))
+/**
+ * What the preset gives, as Core would seat it: cut down to the seat's
+ * ceilings (an agent decides only by proposal), as member.add cuts a preset's.
+ */
+const baseline = computed<PermLevels>(() =>
+  preset.value ? capToCeilings(fullPerms(preset.value.perms), ceilings.value) : {},
+)
 
 function reset() {
   foundId.value = ''
@@ -310,6 +317,21 @@ watch(
     )
   },
 )
+/**
+ * The most the new seat may hold of each permission: nothing above
+ * confirm_required of action_decide for an agent (newSeatCeilings). A level
+ * chosen above it before the agent was named is let go.
+ */
+const ceilings = computed(() =>
+  newSeatCeilings(actorInfo.value && actorInfo.value !== 'missing' ? actorInfo.value.kind : null),
+)
+watch(ceilings, (c) => {
+  const kept = capToCeilings(form.perms, c)
+  for (const [p, l] of Object.entries(kept) as [Perm, AutonomyLevel][]) {
+    if (l !== form.perms[p]) delete kept[p]
+  }
+  if (Object.keys(kept).length !== Object.keys(form.perms).length) form.perms = kept
+})
 /** Their seat here, when they already have one: a second is not offered. */
 const seatedAs = computed(() => (actorInfo.value && actorInfo.value !== 'missing' && actorInfo.value.member_id) || null)
 /**
@@ -697,6 +719,7 @@ function capToMine() {
             :baseline="baseline"
             :changed="changedPerms"
             :warn="rowWarnings"
+            :ceilings="ceilings"
             size="small"
           />
         </el-collapse-item>

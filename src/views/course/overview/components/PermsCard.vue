@@ -4,12 +4,15 @@
 // permissions unless it may read the member list, so the course store's
 // levels are exact, guessed from a built-in preset, or unknown; this card
 // says which. Levels are the store's (course.level), so what Core has
-// already refused counts as denied here too.
+// already refused counts as denied here too. Where the seat is capped below
+// autonomous (an agent's, as me.memberships says), the full list says how far
+// each permission may go and why.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { PERMS, SCOPED_PERMS, type AutonomyLevel, type Perm } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import PermEditor from '@/components/PermEditor.vue'
+import { ceilingsOf } from '@/utils/ceilings'
 import StatusTag from '@/components/StatusTag.vue'
 import { presetLabel } from '@/views/course/members/components/seat'
 
@@ -46,6 +49,7 @@ function permTip(p: Perm): string {
   return SCOPED_PERMS.includes(p) ? `${help} — ${t('common.labels.scopedHelp')}` : help
 }
 const open = ref<string[]>([])
+const ceilings = computed(() => ceilingsOf(course.membership))
 </script>
 
 <template>
@@ -82,7 +86,7 @@ const open = ref<string[]>([])
 
       <el-collapse v-model="open" class="perms__all">
         <el-collapse-item name="all" :title="t('overview.perms.showAll')">
-          <PermEditor :model-value="levels" :warn="refusedWarn" readonly size="small" />
+          <PermEditor :model-value="levels" :warn="refusedWarn" :ceilings="ceilings" readonly size="small" />
         </el-collapse-item>
       </el-collapse>
     </template>

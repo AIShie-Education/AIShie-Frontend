@@ -179,6 +179,7 @@ export default {
     principalScope: 'An agent reaches no further than its owner, whose own reach is narrower than that.',
     principalExpiry: 'An agent’s seat lasts no longer than its owner’s, which ends at {t}.',
     delegateNever: 'An agent seated as someone’s delegate never holds “{perm}”.',
+    onSeat: '{text} (the seat of {name})',
     alreadySeated:
       'This actor already has a seat in this course. Change that seat instead, or remove it and add them again for a fresh start.',
     noActor: 'No actor has this ID. Check it with the administrator who registered them.',
@@ -240,7 +241,7 @@ export default {
       actsFor: 'Acts for',
       help: 'Its owner’s seat in this course. The agent never holds more than that seat, reaches no further, is paused while it is, and leaves the course with it.',
       permsHelp:
-        'The levels below are this agent’s own. What it may do is also capped by its owner’s seat, and it never manages members or brings in agents.',
+        'The levels below are this agent’s own. What it may do is also capped by its owner’s seat, and it never brings in agents of its own: each permission capped says how far it may go and why, and nothing above that is offered.',
       never: 'An agent seated as someone’s delegate never holds this',
       theirAgents: 'Their agents here',
       theirAgentsHelp: 'Agents this member brought into the course. Each acts only for them, and leaves with them.',

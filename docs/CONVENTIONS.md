@@ -113,6 +113,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `ensureMembers()` does not ask again when the answer is sure to be no.
 - `course.needsApproval(perm)` → the action will become a proposal. Say so next to the button
   (e.g. an `el-tag` "Needs approval" / `t('enums.level.confirm_required')`).
+- **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
+  `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
+  permission whoever grants it (`perm_ceilings`), and why where that is below autonomous
+  (`perm_ceiling_reasons`: `agent_never`, `agent_decides_by_proposal`,
+  `student_agent_by_proposal`, `principal_level`). Give every permission editor the seat's
+  `ceilingsOf(seat)` (`@/utils/ceilings`): `<PermEditor :ceilings>` and `<LevelSelect :ceiling
+  :ceiling-note>` grey out the levels above a ceiling, each with the reason in the reader's words
+  (`ceilingNote`), and lock a permission capped at denied. Where there is no seat to ask (a
+  preset, a change to every seat of a role), send and let Core refuse: `errorMessage()` and
+  `<RefusalAlert>` put its refusal in words ("{permission} can be at most {ceiling} here,
+  because …", `ceilingRefusalText`).
 - `course.writable` is false in an archived course: disable every write control there.
 - Reads that are refused (403) are shown by `<AsyncState>` as "no permission", not as a failure.
 - Permission names and which tool needs which are in Core's `docs/schema.md` §2.2. A few borrow:

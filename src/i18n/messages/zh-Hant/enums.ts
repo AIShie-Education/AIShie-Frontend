@@ -50,6 +50,15 @@ export default {
     conversation_ask: '與課程代理或自己的代理開始對話，並在對話中發言',
     conversation_answer: '接受提問並作答；等級決定答覆如何送出',
   },
+  // 席位權限的上限原因（perm_ceiling_reasons），接在「因為」之後。
+  ceilingReason: {
+    agent_never: '代表他人行事的代理不會帶入自己的代理',
+    agent_decides_by_proposal: '代理只能以提案的方式作出決定與覆核，並須由人確認',
+    student_agent_by_proposal:
+      '不管理本課程成員的人，其代理做這件事只能以提案的方式進行，因為這超出了「個人助手」預設所給的權限',
+    principal_level: '代表他人行事的代理，權限永不超過該人',
+    principal_level_conversation_answer: '代表他人行事的代理，回答的自主程度不會超過該人提問的權限',
+  },
   // The built-in presets, by Core's name for them.
   preset: {
     student: '學生',

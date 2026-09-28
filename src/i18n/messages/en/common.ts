@@ -121,6 +121,18 @@ export default {
     invalidDecimal: 'Enter a number',
     invalidEmail: 'Enter a valid email address',
   },
+  // A seat's ceilings (perm_ceilings): the most it may hold of a permission, whoever grants it.
+  ceiling: {
+    tag: 'At most: {level}',
+    locked: 'Never here',
+    atMost: 'At most “{level}” here: {why}.',
+    atMostBare: 'At most “{level}” here.',
+    never: 'Never held here: {why}.',
+    neverBare: 'Never held here.',
+    refused: '{permission} can be at most “{ceiling}” here, because {why}.',
+    refusedNever: '{permission} cannot be given here at all, because {why}.',
+    worksAs: 'Set higher than it may hold: it works as “{level}” at most.',
+  },
   confirm: {
     title: 'Are you sure?',
     irreversible: 'This cannot be undone.',
