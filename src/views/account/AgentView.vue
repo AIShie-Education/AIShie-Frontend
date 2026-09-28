@@ -225,6 +225,8 @@ function onBrought() {
 
         <div class="agent-view__grid">
           <ConnectRuntimeCard
+            :name="agent.display_name"
+            :actor-id="agent.actor_id"
             :progress="progress"
             :last-seen-at="agent.last_seen_at"
             :seats="(agent.seats ?? []).length"
@@ -282,6 +284,7 @@ function onBrought() {
           v-model="revealOpen"
           :issued="issued"
           :name="agent.display_name"
+          :actor-id="agent.actor_id"
           @revoke="revokeIssued"
           @closed="forgetSecret"
         />

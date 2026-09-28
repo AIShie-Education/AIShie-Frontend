@@ -5,14 +5,21 @@
 // Core's MCP endpoint with one of the agent's tokens. Core notices a token's
 // use (last_seen_at) and nothing else, so "connected" means a token has been
 // used.
+//
+// Running a runtime oneself is shown two ways: the agent file the AIShie
+// Agent Runtime reads, with the token in the secret it names; and, for any
+// other runtime or MCP client, the endpoint it connects to with the token.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MCP_ENDPOINT } from '@/api/http'
+import { CORE_ORIGIN, MCP_ENDPOINT } from '@/api/http'
 import PresenceText from '@/components/PresenceText.vue'
 import CopyBlock from './CopyBlock.vue'
-import { runtimeEnv, type SetupProgress, type StepState } from './agents'
+import { runtimeAgentFile, type SetupProgress, type StepState } from './agents'
 
 const props = defineProps<{
+  /** The agent's name and actor id, for the agent file. */
+  name: string
+  actorId: string
   progress: SetupProgress
   lastSeenAt: string | null | undefined
   seats: number
@@ -24,7 +31,10 @@ const props = defineProps<{
 const emit = defineEmits<{ issue: []; bring: [] }>()
 const { t } = useI18n()
 
-const env = computed(() => runtimeEnv(MCP_ENDPOINT, t('agents.connect.tokenPlaceholder')))
+const file = computed(() => runtimeAgentFile({ coreUrl: CORE_ORIGIN, name: props.name, actorId: props.actorId }))
+const fileHint = computed(() =>
+  t('agents.connect.agentFileHint', { file: file.value.tokenFile, variable: file.value.tokenVar }),
+)
 const allDone = computed(() => Object.values(props.progress).every((s) => s === 'done'))
 
 const ICON: Record<StepState, string> = { done: 'CircleCheckFilled', waiting: 'Clock', todo: 'Remove' }
@@ -69,9 +79,10 @@ const ICON: Record<StepState, string> = { done: 'CircleCheckFilled', waiting: 'C
             <template v-else>{{ t('agents.connect.runtimeTodo') }}</template>
           </div>
           <div v-if="progress.connected !== 'done'" class="connect-step__copy">
+            <CopyBlock :text="file.yaml" :label="t('agents.connect.agentFile')" />
+            <p class="app-form-hint connect-step__hint">{{ fileHint }}</p>
             <CopyBlock :text="MCP_ENDPOINT" :label="t('agents.connect.endpoint')" inline />
-            <CopyBlock :text="env" :label="t('agents.connect.env')" />
-            <p class="app-form-hint connect-step__hint">{{ t('agents.connect.envHint') }}</p>
+            <p class="app-form-hint connect-step__hint">{{ t('agents.connect.endpointHint') }}</p>
           </div>
         </div>
       </li>
@@ -103,8 +114,10 @@ const ICON: Record<StepState, string> = { done: 'CircleCheckFilled', waiting: 'C
 
     <details v-if="progress.connected === 'done'" class="connect-card__again">
       <summary>{{ t('agents.connect.showSettings') }}</summary>
+      <CopyBlock :text="file.yaml" :label="t('agents.connect.agentFile')" class="connect-card__block" />
+      <p class="app-form-hint connect-card__hint">{{ fileHint }}</p>
       <CopyBlock :text="MCP_ENDPOINT" :label="t('agents.connect.endpoint')" inline class="connect-card__block" />
-      <CopyBlock :text="env" :label="t('agents.connect.env')" class="connect-card__block" />
+      <p class="app-form-hint connect-card__hint">{{ t('agents.connect.endpointHint') }}</p>
     </details>
   </section>
 </template>
@@ -181,5 +194,8 @@ const ICON: Record<StepState, string> = { done: 'CircleCheckFilled', waiting: 'C
 }
 .connect-card__block {
   margin-top: 10px;
+}
+.connect-card__hint {
+  margin: 6px 0 0;
 }
 </style>

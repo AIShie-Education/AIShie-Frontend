@@ -13,7 +13,8 @@ import {
   noteAgentList,
   limitFromError,
   noteAgentLimit,
-  runtimeEnv,
+  runtimeAgentFile,
+  runtimeAgentId,
   setupProgress,
   studentReach,
   toPermLevels,
@@ -214,10 +215,52 @@ describe('setupProgress', () => {
   })
 })
 
-describe('runtimeEnv', () => {
-  it('gives the two variables a runtime starts with', () => {
-    expect(runtimeEnv('https://core.example/mcp', 'ais_x')).toBe(
-      'CORE_MCP_URL=https://core.example/mcp\nAISHITERU_TOKEN=ais_x',
+describe('runtimeAgentFile', () => {
+  const ACTOR = '0192f3c1-7d2e-7c3a-9b1f-2a4c6e8f0a1b'
+
+  it('is the agent file the AIShie runtime reads, with the token in the secret it names', () => {
+    const f = runtimeAgentFile({ coreUrl: 'https://lms.example.edu', name: 'Study helper', actorId: ACTOR })
+    expect(f.yaml).toBe(
+      [
+        'agent:',
+        '  id: study-helper',
+        '  display_name: "Study helper"',
+        '  core:',
+        '    base_url: https://lms.example.edu',
+        '    token_ref: secret://agents/study-helper/core_token',
+        '  model:',
+        '    adapter: openai_chat',
+        '    base_url: https://api.deepseek.com',
+        '    model: deepseek-chat',
+        '    key_ref: secret://agents/study-helper/model_key',
+        '',
+      ].join('\n'),
     )
+    expect(f.id).toBe('study-helper')
+    expect(f.tokenFile).toBe('agents/study-helper/core_token')
+    // The runtime's own rule (secrets.EnvName): upper case, '_' for all but letters and digits.
+    expect(f.tokenVar).toBe('AISHIE_SECRET_AGENTS_STUDY_HELPER_CORE_TOKEN')
+    // Neither the variables the runtime does not read, nor Core's MCP path: it finds /mcp itself.
+    expect(f.yaml).not.toMatch(/CORE_MCP_URL|AISHITERU_TOKEN|\/mcp/)
+  })
+
+  it('writes any name so that YAML reads it back as it is', () => {
+    const f = runtimeAgentFile({ coreUrl: 'https://lms.example.edu', name: 'Tutor: "A" #1', actorId: ACTOR })
+    expect(f.yaml).toContain('  display_name: "Tutor: \\"A\\" #1"\n')
+    expect(runtimeAgentFile({ coreUrl: 'x', name: '學習助手', actorId: ACTOR }).yaml).toContain(
+      '  display_name: "學習助手"\n',
+    )
+  })
+
+  it('gives an id the runtime takes, from the name or else the actor', () => {
+    expect(runtimeAgentId('Café Bot', ACTOR)).toBe('cafe-bot')
+    expect(runtimeAgentId('  --My   agent!!  ', ACTOR)).toBe('my-agent')
+    expect(runtimeAgentId('學習助手', ACTOR)).toBe('agent-6e8f0a1b')
+    expect(runtimeAgentId('', '')).toBe('agent')
+    const long = runtimeAgentId('a'.repeat(47) + ' b c', ACTOR)
+    expect(long).toBe('a'.repeat(47))
+    for (const name of ['Study helper', '學習助手', 'x'.repeat(200), '!!!', 'Ünïcödé Tutor']) {
+      expect(runtimeAgentId(name, ACTOR)).toMatch(/^[A-Za-z0-9_-]{1,64}$/)
+    }
   })
 })
