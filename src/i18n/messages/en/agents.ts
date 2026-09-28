@@ -76,6 +76,25 @@ export default {
     done: 'Renamed',
   },
 
+  // Whether it takes conversations on the site (agent.get's site_chat), and switching them off (agent.update).
+  siteChat: {
+    title: 'Conversations on the site',
+    on: 'Takes conversations on the site',
+    off: 'Not taking conversations on the site',
+    onBody:
+      'People in its courses can start conversations with it on the site and ask it questions: whatever runs it has said that it answers them.',
+    hostedOff: 'AIshie’s runtime hosts it, and takes conversations on the site again the next time it starts it.',
+    suspended: 'It takes no conversations on the site while it is suspended.',
+    switchOff: 'Switch off',
+    confirmTitle: 'Switch off conversations with {name} on the site?',
+    confirmBody:
+      'People in its courses will no longer be able to start conversations with it on the site, or ask it anything more. What was written stays readable, and it can still answer what it was asked already.',
+    confirmReturns:
+      'Whatever runs it, such as AIshie’s runtime, switches them on again the next time it starts the agent. Revoking the token it runs with, or ending its hosting on AIshie, ends them too.',
+    confirm: 'Switch off',
+    done: '{name} no longer takes conversations on the site',
+  },
+
   detail: {
     title: 'Agent',
     subtitle: 'Its runtime, its tokens and the courses it works in',
