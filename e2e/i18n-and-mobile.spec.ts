@@ -85,6 +85,37 @@ test.describe('language', () => {
     await expect(courseTab(page, 'Overview')).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   })
+
+  test('switching to 简体中文 sets the app in Simplified Chinese, in its own typefaces', async ({ page }) => {
+    const d = demo()
+    // The Chinese typefaces the page asks for, by script.
+    const fonts: string[] = []
+    page.on('request', (r) => {
+      const m = r.url().match(/noto-(?:sans|serif)-(sc|tc)/)
+      if (m) fonts.push(m[1])
+    })
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath())
+    await expect(courseTab(page, 'Overview')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Language' }).click()
+    await page.locator('.el-dropdown-menu:visible').getByText('简体中文').click()
+
+    const zhTabs = page.getByRole('navigation', { name: '课程栏目' })
+    for (const name of ['概览', '教材', '作业', '提交', '成绩', '成员', '审批', '我的操作']) {
+      await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
+    }
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
+    // Simplified glyphs, from Noto Sans SC: the SC faces are fetched, the TC ones never.
+    await expect.poll(() => fonts.includes('sc'), { message: 'an SC face is fetched' }).toBe(true)
+    expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Noto Sans SC/)
+    expect(fonts).not.toContain('tc')
+
+    await page.getByRole('button', { name: '语言' }).click()
+    await page.locator('.el-dropdown-menu:visible').getByText('English').click()
+    await expect(courseTab(page, 'Overview')).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  })
 })
 
 test.describe('at phone width', () => {
