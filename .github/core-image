@@ -6,4 +6,7 @@
 # To move it (README, Moving the Core pin): take the new image's tag and
 # digest from the package's page or Core's CI run, write them below, refresh
 # api/catalogue.json from a Core of that version, and push both together.
-ghcr.io/aishie-education/aishie-core:sha-7b2e935@sha256:9d10ff95317791629d851b67f2ae2e760f0bc037f593d6923f57f076a08bed29
+# TODO: the digest of sha-04ebbdf, which could not be read from here (GHCR
+# refused an anonymous pull). Until it is written after the tag, ci-core.sh
+# pulls by the tag alone and does not compare it with Core's version.
+ghcr.io/aishie-education/aishie-core:sha-04ebbdf

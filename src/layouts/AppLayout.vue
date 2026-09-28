@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // The frame around every signed-in page: the caller's courses and, for
-// platform administrators, the administration pages on the left; language,
-// theme and the account menu on top.
+// administrators, the administration pages on the left; language, theme and
+// the account menu on top. A department's administrator is offered the
+// courses and departments they administer; people, terms and presets are a
+// platform administrator's.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -31,13 +33,14 @@ const courses = computed(() =>
 )
 const activeCourseId = computed(() => (route.params.courseId as string | undefined) ?? null)
 
-const adminLinks = [
+const allAdminLinks = [
   { name: 'admin-courses', icon: 'School', label: 'admin.nav.courses' },
-  { name: 'admin-actors', icon: 'User', label: 'admin.nav.actors' },
-  { name: 'admin-terms', icon: 'Calendar', label: 'admin.nav.terms' },
+  { name: 'admin-actors', icon: 'User', label: 'admin.nav.actors', platform: true },
+  { name: 'admin-terms', icon: 'Calendar', label: 'admin.nav.terms', platform: true },
   { name: 'admin-departments', icon: 'OfficeBuilding', label: 'admin.nav.departments' },
-  { name: 'admin-presets', icon: 'Key', label: 'admin.nav.presets' },
+  { name: 'admin-presets', icon: 'Key', label: 'admin.nav.presets', platform: true },
 ]
+const adminLinks = computed(() => allAdminLinks.filter((l) => !l.platform || session.isAdmin))
 
 const themes: { value: Theme; label: string; icon: string }[] = [
   { value: 'auto', label: 'common.nav.themeAuto', icon: 'Monitor' },
@@ -105,7 +108,7 @@ const pageTitle = computed(() => {
             </router-link>
           </div>
 
-          <div v-if="session.isAdmin" class="app-nav__section">
+          <div v-if="session.canAdminister" class="app-nav__section">
             <div class="app-nav__heading">{{ t('common.nav.admin') }}</div>
             <router-link
               v-for="l in adminLinks"

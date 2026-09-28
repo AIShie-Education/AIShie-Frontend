@@ -6,13 +6,18 @@ import accountRoutes from './modules/account'
 import adminRoutes from './modules/admin'
 import courseRoutes from './modules/course'
 import { installTitle } from './title'
+import { adminNeed, mayOpen } from './access'
 
 declare module 'vue-router' {
   interface RouteMeta {
     /** Reachable without signing in. */
     public?: boolean
-    /** Needs platform_role root or admin. */
-    admin?: boolean
+    /**
+     * The administration pages: true needs platform_role root or admin;
+     * 'departments' needs that, or an appointment as a department's
+     * administrator. A child's own meta may ask for more than its parent's.
+     */
+    admin?: true | 'departments'
     /** i18n key for the page title. */
     title?: string
   }
@@ -91,7 +96,7 @@ router.beforeEach(async (to) => {
   if (session.status === 'signedOut') {
     return { name: 'login', query: to.fullPath !== '/' ? { next: to.fullPath } : {} }
   }
-  if (to.matched.some((r) => r.meta.admin) && !session.isAdmin) {
+  if (!mayOpen(adminNeed(to), session)) {
     return { name: 'home' }
   }
   return true

@@ -115,6 +115,16 @@ export type Term = ListItem<'term.list', 'terms'>
 export type Department = ListItem<'department.list', 'departments'>
 export type Preset = ListItem<'preset.list', 'presets'>
 
+// Departments: a tree, and who administers each (docs/schema.md §2.10)
+/** A department the caller is appointed to administer (me.get): they administer everything beneath it too. */
+export type Administered = ListItem<'me.get', 'administers'>
+/** One department in the tree, with what the caller may do with it (department.list_tree). */
+export type DepartmentNode = ListItem<'department.list_tree', 'departments'>
+/** An appointment as administrator of a department, live or ended (department.list_admins). */
+export type Appointment = ListItem<'department.list_admins', 'admins'>
+/** The person a whole email belongs to, as actor.lookup_by_email says of them. */
+export type ActorLookup = ToolOut<'actor.lookup_by_email'>
+
 // A course
 export type Course = ToolOut<'course.get'>
 export type Member = ToolOut<'member.get'>
