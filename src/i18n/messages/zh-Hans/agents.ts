@@ -222,6 +222,7 @@ export default {
     withdrawn: '已从 {course} 撤出',
     withdrawnCancelled: '已从 {course} 撤出，并取消了它的 1 项申请 | 已从 {course} 撤出，并取消了它的 {n} 项申请',
     archived: '已归档的课程不接受任何更改，包括这一项。',
+    proposals: '它在这里的提议',
   },
 
   requests: {

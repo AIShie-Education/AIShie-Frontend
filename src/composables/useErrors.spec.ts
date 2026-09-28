@@ -26,6 +26,17 @@ describe('errorMessage, of a level above what a seat may hold', () => {
   })
 })
 
+describe('errorMessage, to an agent’s owner who could not have done it themselves', () => {
+  it('says so, and that someone else decides', () => {
+    const e = refusal('forbidden', { reason: 'owner_not_autonomous' }, { actionId: 'a1', actionStatus: 'failed' })
+    expect(errorMessage(e)).toBe(
+      'You decide what your agent did only where you could have done it yourself without anyone’s confirmation. Here your own level for it is lower, or it is beyond your reach, so someone else in the course decides it.',
+    )
+    setLocale('zh-Hant')
+    expect(errorMessage(e)).toMatch(/^你的代理所做的事，只有在你自己無需任何人確認也能做時，才由你決定。/)
+  })
+})
+
 describe('errorMessage, by the reason Core gives', () => {
   it('says what a department administrator reached beyond, recorded denial or not', () => {
     const denied = refusal('forbidden', { reason: 'department_out_of_scope' }, { actionId: 'a1', actionStatus: 'denied' })

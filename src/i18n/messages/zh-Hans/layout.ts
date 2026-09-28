@@ -24,6 +24,7 @@ export default {
     scheme: '评分结构',
     members: '成员',
     approvals: '审批',
+    agentProposals: '你的智能体的提议',
     myActions: '我的操作',
     activity: '动态',
     agents: '智能体',

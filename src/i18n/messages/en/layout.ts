@@ -24,6 +24,7 @@ export default {
     scheme: 'Grading scheme',
     members: 'Members',
     approvals: 'Approvals',
+    agentProposals: 'Your agents’ proposals',
     myActions: 'My actions',
     activity: 'Activity',
     agents: 'Agents',

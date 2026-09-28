@@ -7,6 +7,7 @@ import { i18n } from '@/i18n'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { formatDecimal } from '@/utils/format'
+import { useMyAgents } from './myAgents'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
 const te = (key: string): boolean => (i18n.global as unknown as { te: (k: string) => boolean }).te(key)
@@ -70,14 +71,21 @@ export function storedError(a: Pick<ActionRow, 'status' | 'result'>): StoredErro
   return null
 }
 
-/** A rejected proposal's result: {"decision": {decision, reason, by_action_id}}. */
+/**
+ * A rejected proposal's result: {"decision": {decision, reason, by_action_id,
+ * by_owner}}; by_owner when the owner of the agent that proposed it rejected it.
+ */
 export function storedDecision(
   a: Pick<ActionRow, 'status' | 'result'>,
-): { reason?: string; byActionId?: string } | null {
+): { reason?: string; byActionId?: string; byOwner?: boolean } | null {
   if (a.status !== 'rejected') return null
   const r = a.result
   if (isObject(r) && isObject(r.decision)) {
-    return { reason: str(r.decision.reason), byActionId: str(r.decision.by_action_id) }
+    return {
+      reason: str(r.decision.reason),
+      byActionId: str(r.decision.by_action_id),
+      byOwner: r.decision.by_owner === true,
+    }
   }
   return {}
 }
@@ -87,7 +95,10 @@ export function reasonText(e: StoredError | null | undefined): string | null {
   if (!e?.details) return null
   const parts: string[] = []
   const reason = str(e.details.reason)
-  if (reason) {
+  if (reason === 'withdrawn' && e.details.by_owner === true) {
+    // Taken back by the owner of the agent that proposed it.
+    parts.push(t('actions.cancelReason.withdrawn_by_owner'))
+  } else if (reason) {
     const k1 = `actions.cancelReason.${reason}`
     const k2 = `actions.denyReason.${reason}`
     parts.push(te(k1) ? t(k1) : te(k2) ? t(k2) : reason)
@@ -188,6 +199,7 @@ export function excerpt(text: unknown, max = 80): string | undefined {
 export type Block =
   | 'own'
   | 'ownAgent'
+  | 'ownAgentLevel'
   | 'ownReview'
   | 'ownRemove'
   | 'ownEscalation'
@@ -199,15 +211,62 @@ export type Block =
 /**
  * Why the caller may not decide (or review) this, as far as can be told here.
  * Core has the last word: it also compares every seat the caller has held.
+ *
+ * A person and their agents are one party, and nobody decides their own
+ * party's action; but the owner of an agent decides what it did where they
+ * could have done it themselves without anyone's confirmation — their own
+ * level for it autonomous, its target within their reach — and then as their
+ * own doing of it, whatever they hold of action_decide (by_owner). The queues
+ * say which are the caller's to decide (yours_to_decide); elsewhere Core's
+ * refusal says it (owner_not_autonomous).
  */
 export function useJudgeRules() {
   const course = useCourseStore()
   const session = useSessionStore()
-  // Whose seat is whose agent is read from the member list.
+  const myAgents = useMyAgents()
+  // Whose seat is whose agent is read from the member list, and from the
+  // caller's own agents where that list cannot be read.
   void course.ensureMembers()
+  void myAgents.ensure()
   function isMine(a: { member_id?: string | null; actor_id?: string } | null | undefined): boolean {
     if (!a) return false
     return (!!a.member_id && a.member_id === course.myMemberId) || (!!a.actor_id && a.actor_id === session.me?.id)
+  }
+  /**
+   * Whether an action is one of the caller's own agents': an agent they own
+   * (agent.list), or a seat whose principal is theirs (the member list). A
+   * person without action_decide is shown no one else's but their own in the
+   * queues and by action.get, so what such a caller is deciding is their
+   * agent's.
+   */
+  function isOwnAgent(a: { member_id?: string | null; actor_id?: string } | null | undefined): boolean {
+    if (!a || isMine(a)) return false
+    if (myAgents.has(a.actor_id)) return true
+    const seat = a.member_id ? course.members.get(a.member_id) : undefined
+    if (seat) {
+      return (
+        (!!seat.owner_actor_id && seat.owner_actor_id === session.me?.id) ||
+        (!!course.myMemberId && seat.principal_member_id === course.myMemberId)
+      )
+    }
+    return course.level('action_decide') === 'denied'
+  }
+  /**
+   * Whether the owner of the agent that did it decided (or reviewed) it, as
+   * their own doing (Core's by_owner). A rejection records it; otherwise the
+   * seat that decided tells it: the proposer's principal is its owner's seat,
+   * read from the member list, or, for the caller's own agent, their own.
+   */
+  function byOwner(
+    a: Pick<ActionRow, 'member_id' | 'actor_id' | 'status' | 'result' | 'decided_by_member_id' | 'reviewed_by_member_id'>,
+    what: 'decided' | 'reviewed',
+  ): boolean {
+    const by = what === 'decided' ? a.decided_by_member_id : a.reviewed_by_member_id
+    if (!by) return false
+    if (what === 'decided' && storedDecision(a)?.byOwner) return true
+    const principal = a.member_id ? course.members.get(a.member_id)?.principal_member_id : undefined
+    if (principal) return principal === by
+    return isOwnAgent(a) && by === course.myMemberId
   }
   /**
    * Whether an action is the caller's own or their party's: a person, the
@@ -239,9 +298,11 @@ export function useJudgeRules() {
     if (!course.writable) return 'archived'
     if (isMine(a)) return mode === 'decide' ? 'own' : 'ownReview'
     // The queues say whose it is to decide (yours_to_decide); elsewhere
-    // (action.get) it is told from the member list.
-    if (a.yours_to_decide === false) return 'ownAgent'
-    if (a.yours_to_decide !== true && isOwnParty(a)) return 'ownAgent'
+    // (action.get) it is told from the member list. The caller's own agent's
+    // is theirs where they could have done it themselves: said so by the
+    // queue, or else left for Core to say.
+    if (a.yours_to_decide === false) return isOwnAgent(a) ? 'ownAgentLevel' : 'ownAgent'
+    if (a.yours_to_decide !== true && isOwnParty(a) && !isOwnAgent(a)) return 'ownAgent'
     if (isAboutAction(a) && isOwnParty(about)) return 'ownRemove'
     if (mode === 'review' && a.review_state === 'escalated' && a.reviewed_by_member_id && a.reviewed_by_member_id === course.myMemberId)
       return 'ownEscalation'
@@ -260,7 +321,7 @@ export function useJudgeRules() {
       return 'closesOwnEscalation'
     return null
   }
-  return { isMine, isOwnParty, block, approveBlock }
+  return { isMine, isOwnAgent, isOwnParty, byOwner, block, approveBlock }
 }
 
 /**

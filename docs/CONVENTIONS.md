@@ -113,6 +113,15 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `ensureMembers()` does not ask again when the answer is sure to be no.
 - `course.needsApproval(perm)` → the action will become a proposal. Say so next to the button
   (e.g. an `el-tag` "Needs approval" / `t('enums.level.confirm_required')`).
+- **An agent's owner decides what it did** where they could have done it themselves without
+  anyone's confirmation, whatever they hold of `action_decide` (Core's `by_owner`), and takes back
+  its proposals (`action.withdraw`). A person without `action_decide` who owns an agent seated in the
+  course is shown their own agents' actions in the queues and by `action.get`, and nobody else's:
+  `course.ownsAgentHere` says so (asked of the queue, whose gate is that rule), and the approvals tab
+  is offered to them as their agents' proposals. The queues mark each action `yours_to_decide`;
+  `useJudgeRules()` (`isOwnAgent`, `byOwner`, `block`) says why one is not the caller's, and a
+  queue Core will not show is simply empty. `owner_not_autonomous` is put in words by
+  `errorMessage()`.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous
@@ -145,7 +154,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   Actions that are all `v-if`'d away leave no empty row.
 - A page inside a course whose route does not say which tab it belongs to calls
   `useCourseTab(() => routeName)` (`@/composables/useCourseTab`) with the route whose tab to highlight
-  (a document that is an assignment's instructions → `'course-assignments'`).
+  (a document that is an assignment's instructions → `'course-assignments'`). A page that is another
+  page for some callers names itself in the header and the browser's tab with
+  `usePageTitle(routeName, () => key)` (`@/router/title`): the approval queue, for someone who decides
+  nothing there, is their agents' proposals.
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.

@@ -181,7 +181,16 @@ const facts = computed<Fact[]>(() => {
     const error = payloadString(e, 'error')
     if (error) out.push({ kind: 'text', text: errorText(error), tone: 'danger' })
     const reason = payloadString(e, 'reason')
-    if (reason) out.push({ kind: 'text', text: label('activity.cancelReason', reason) ?? reason, tone: 'info' })
+    // The owner of the agent that made it decided, reviewed or took it back,
+    // as their own doing (by_owner).
+    const byOwner = payloadBool(e, 'by_owner') === true
+    if (reason === 'withdrawn' && byOwner)
+      out.push({ kind: 'text', text: t('activity.fact.withdrawnByOwner'), tone: 'info' })
+    else if (reason) out.push({ kind: 'text', text: label('activity.cancelReason', reason) ?? reason, tone: 'info' })
+    if (byOwner && BY_ACTION[type] === 'byDecision')
+      out.push({ kind: 'text', text: t('activity.fact.decidedByOwner'), tone: 'success' })
+    if (byOwner && BY_ACTION[type] === 'byReview')
+      out.push({ kind: 'text', text: t('activity.fact.reviewedByOwner'), tone: 'success' })
     const target = payloadString(e, 'target_type')
     if (type === 'action.proposed' && target) {
       out.push({

@@ -119,6 +119,8 @@ export default {
     required: '必填',
     invalidDecimal: '請輸入數字',
     invalidEmail: '請輸入有效的電子郵件地址',
+    ownerNotAutonomous:
+      '你的代理所做的事，只有在你自己無需任何人確認也能做時，才由你決定。這裡你在這方面的等級較低，或它超出你的範圍，因此須由課程中的其他人決定。',
   },
   // 席位的上限（perm_ceilings）：無論由誰授予，該席位最多可擁有的權限等級。
   ceiling: {

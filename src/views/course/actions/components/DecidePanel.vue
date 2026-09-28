@@ -2,7 +2,10 @@
 // Approve or reject a proposal (action.decide), or review an action that ran
 // pending review (action.review), with an optional reason or note, right
 // where it is listed. Core refuses anyone deciding or reviewing their own
-// action; where that can be seen here the buttons are off and say why.
+// action; where that can be seen here the buttons are off and say why. The
+// owner of the agent that did it decides it where they could have done it
+// themselves, and then as their own doing of it: at once, whatever they hold
+// of action_decide, so it never becomes a proposal of theirs.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
@@ -40,7 +43,9 @@ const blocked = computed(() => {
 const approveBlocked = computed(() =>
   props.mode === 'decide' && !blocked.value ? rules.approveBlock(props.action, about.value?.value ?? null) : null,
 )
-const needsApproval = computed(() => course.needsApproval('action_decide'))
+/** The caller's own agent's: decided as its owner, at once (by_owner). */
+const asOwner = computed(() => rules.isOwnAgent(props.action))
+const needsApproval = computed(() => course.needsApproval('action_decide') && !asOwner.value)
 
 type Choice = 'approve' | 'reject' | 'reviewed' | 'escalated'
 const choice = ref<Choice | null>(null)
@@ -135,7 +140,7 @@ async function confirm() {
       return
     }
     const r = out.result
-    tell(r.outcome, r.error ?? undefined)
+    tell(r.outcome, r.error ?? undefined, r.by_owner === true)
     emit('done', { kind: 'decided', decision: c, out: r })
     return
   }
@@ -151,17 +156,21 @@ async function confirm() {
     return
   }
   ElMessage({ type: c === 'escalated' ? 'warning' : 'success', message: t(`actions.outcome.${c}`) })
-  emit('done', { kind: 'reviewed', state: c })
+  emit('done', { kind: 'reviewed', state: c, byOwner: out.result.by_owner === true })
 }
 
-/** Says what became of the proposal: executed, failed, rejected or cancelled. */
-function tell(outcome: string, error?: { code: string; message: string; details?: Record<string, unknown> }) {
+/** Says what became of the proposal: executed, failed, rejected or cancelled; and that its owner decided it. */
+function tell(
+  outcome: string,
+  error?: { code: string; message: string; details?: Record<string, unknown> },
+  byOwner = false,
+) {
   switch (outcome) {
     case 'executed':
-      ElMessage({ type: 'success', message: t('actions.outcome.executed') })
+      ElMessage({ type: 'success', message: t(byOwner ? 'actions.outcome.executedByOwner' : 'actions.outcome.executed') })
       break
     case 'rejected':
-      ElMessage({ type: 'info', message: t('actions.outcome.rejected') })
+      ElMessage({ type: 'info', message: t(byOwner ? 'actions.outcome.rejectedByOwner' : 'actions.outcome.rejected') })
       break
     case 'failed':
       ElNotification({
@@ -243,6 +252,7 @@ function tell(outcome: string, error?: { code: string; message: string; details?
 
     <div v-if="choice && !blocked" class="decide-panel__form">
       <p class="decide-panel__hint">{{ hint }}</p>
+      <p v-if="asOwner" class="decide-panel__hint decide-panel__hint--owner">{{ t('actions.decision.asOwner') }}</p>
       <el-input
         v-model="text"
         type="textarea"
@@ -305,6 +315,9 @@ function tell(outcome: string, error?: { code: string; message: string; details?
   font-size: 12px;
   line-height: 1.5;
   color: var(--el-text-color-secondary);
+}
+.decide-panel__hint--owner {
+  color: var(--el-color-primary);
 }
 .decide-panel__hint--warn {
   color: var(--el-color-warning);

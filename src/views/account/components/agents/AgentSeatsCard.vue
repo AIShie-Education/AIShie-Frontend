@@ -3,7 +3,9 @@
 // it may do there now (its own levels, capped by the caller's seat), and
 // taking it out (agent.withdraw); and the requests to seat it that wait for
 // an instructor (agent.get's requests), each of which the caller may take
-// back (action.withdraw).
+// back (action.withdraw). What it proposes in a course, or does under review,
+// waits for the caller in that course's queue of their agents' actions, where
+// they decide it, where they could have done it themselves, or take it back.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -166,6 +168,12 @@ async function takeBack(r: AgentRequest) {
           <PermEditor :model-value="toPermLevels(s.perms)" readonly size="small" />
         </details>
         <div class="agent-seat__actions">
+          <router-link :to="{ name: 'course-approvals', params: { courseId: s.course_id } }" class="agent-seat__queue">
+            <el-button size="small">
+              <el-icon><Stamp /></el-icon>
+              <span>{{ t('agents.seats.proposals') }}</span>
+            </el-button>
+          </router-link>
           <el-tooltip :disabled="s.course_status !== 'archived'" :content="t('agents.seats.archived')" placement="top">
             <span>
               <el-button
@@ -302,7 +310,12 @@ async function takeBack(r: AgentRequest) {
 .agent-seat__actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 8px;
+}
+.agent-seat__queue {
+  text-decoration: none;
 }
 .agent-request {
   display: flex;

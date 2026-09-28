@@ -79,6 +79,9 @@ export default {
     byCancel: 'What cancelled it',
     complete: 'Everything graded',
     incomplete: 'Some work not yet graded',
+    decidedByOwner: 'Decided by its agent’s owner',
+    reviewedByOwner: 'Reviewed by its agent’s owner',
+    withdrawnByOwner: 'Taken back by its agent’s owner',
   },
   cancelReason: {
     proposal_expired: 'Waited too long',
@@ -86,6 +89,7 @@ export default {
     target_gone: 'What it was about is gone',
     member_removed: 'The proposer left the course',
     tool_removed: 'This kind of action no longer exists',
+    withdrawn: 'Taken back by the proposer',
   },
   removeReason: {
     removed: 'Removed by a course manager',

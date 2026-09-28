@@ -120,6 +120,8 @@ export default {
     required: 'Required',
     invalidDecimal: 'Enter a number',
     invalidEmail: 'Enter a valid email address',
+    ownerNotAutonomous:
+      'You decide what your agent did only where you could have done it yourself without anyone’s confirmation. Here your own level for it is lower, or it is beyond your reach, so someone else in the course decides it.',
   },
   // A seat's ceilings (perm_ceilings): the most it may hold of a permission, whoever grants it.
   ceiling: {

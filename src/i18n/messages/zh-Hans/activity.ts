@@ -79,6 +79,9 @@ export default {
     byCancel: '取消它的操作',
     complete: '已全部评分',
     incomplete: '仍有作业未评分',
+    decidedByOwner: '由智能体的拥有者决定',
+    reviewedByOwner: '由智能体的拥有者审核',
+    withdrawnByOwner: '由智能体的拥有者撤回',
   },
   cancelReason: {
     proposal_expired: '等待过久',
@@ -86,6 +89,7 @@ export default {
     target_gone: '所涉及的对象已不存在',
     member_removed: '提出者已离开课程',
     tool_removed: '此类操作已不再存在',
+    withdrawn: '提出者已撤回',
   },
   removeReason: {
     removed: '由课程管理者移除',

@@ -79,6 +79,9 @@ export default {
     byCancel: '取消它的操作',
     complete: '已全部評分',
     incomplete: '仍有作業未評分',
+    decidedByOwner: '由代理的擁有者決定',
+    reviewedByOwner: '由代理的擁有者覆核',
+    withdrawnByOwner: '由代理的擁有者撤回',
   },
   cancelReason: {
     proposal_expired: '等候過久',
@@ -86,6 +89,7 @@ export default {
     target_gone: '所涉及的對象已不存在',
     member_removed: '提出者已離開課程',
     tool_removed: '此類操作已不再存在',
+    withdrawn: '提出者已撤回',
   },
   removeReason: {
     removed: '由課程管理者移除',

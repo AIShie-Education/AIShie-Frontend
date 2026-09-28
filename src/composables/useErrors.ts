@@ -16,7 +16,12 @@ const has = (key: string): boolean => (i18n.global as unknown as { te: (k: strin
  * refusal is met: a question to an agent that takes no conversations in the
  * site is told what every page says of such an agent.
  */
-const SHARED_REASONS = new Map<string, string>([['agent_answers_elsewhere', 'common.agent.externalNote']])
+const SHARED_REASONS = new Map<string, string>([
+  ['agent_answers_elsewhere', 'common.agent.externalNote'],
+  // An agent's owner decides or reviews what it did only where they could
+  // have done it themselves without anyone's confirmation.
+  ['owner_not_autonomous', 'common.errors.ownerNotAutonomous'],
+])
 
 /**
  * Words of the app's own for a refusal whose reason Core names

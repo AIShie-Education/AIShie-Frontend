@@ -234,6 +234,7 @@ export default {
     withdrawnCancelled:
       'Taken out of {course}; one proposal of its was cancelled | Taken out of {course}; {n} proposals of its were cancelled',
     archived: 'An archived course takes no changes, this one included.',
+    proposals: 'Its proposals here',
   },
 
   requests: {

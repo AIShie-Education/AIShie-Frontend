@@ -222,6 +222,7 @@ export default {
     withdrawn: '已從 {course} 撤出',
     withdrawnCancelled: '已從 {course} 撤出，並取消了它的 1 項申請 | 已從 {course} 撤出，並取消了它的 {n} 項申請',
     archived: '已封存的課程不接受任何更改，包括這一項。',
+    proposals: '它在這裡的提案',
   },
 
   requests: {

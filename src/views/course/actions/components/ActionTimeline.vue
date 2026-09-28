@@ -1,15 +1,17 @@
 <script setup lang="ts">
 // An action's history from its own row: made (proposed, done or refused),
 // decided, carried out or failed or cancelled, reviewed or escalated — and
-// what it is still waiting for.
+// what it is still waiting for. A decision, review or withdrawal by the owner
+// of the agent that made it says so: it was the owner's own doing.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import TimeText from '@/components/TimeText.vue'
 import ActionActor from './ActionActor.vue'
-import type { ActionRow } from './actionText'
+import { storedError, useJudgeRules, type ActionRow } from './actionText'
 
 const props = defineProps<{ action: ActionRow }>()
 const { t } = useI18n()
+const rules = useJudgeRules()
 
 type Tone = 'primary' | 'success' | 'warning' | 'danger' | 'info'
 interface Item {
@@ -42,17 +44,31 @@ const items = computed<Item[]>(() => {
 
   if (a.decided_at || a.decided_by_member_id) {
     const rejected = a.status === 'rejected'
+    const owner = rules.byOwner(a, 'decided')
     out.push({
       key: 'decided',
       tone: rejected ? 'danger' : 'success',
       icon: rejected ? 'CloseBold' : 'Stamp',
-      text: rejected ? 'actions.timeline.rejected' : 'actions.timeline.approved',
+      text: rejected
+        ? owner
+          ? 'actions.timeline.rejectedByOwner'
+          : 'actions.timeline.rejected'
+        : owner
+          ? 'actions.timeline.approvedByOwner'
+          : 'actions.timeline.approved',
       who: { memberId: a.decided_by_member_id },
       time: a.decided_at,
     })
   }
   if (a.status === 'cancelled') {
-    out.push({ key: 'cancelled', tone: 'warning', icon: 'RemoveFilled', text: 'actions.timeline.cancelled' })
+    const d = storedError(a)?.details
+    const byOwner = d?.reason === 'withdrawn' && d.by_owner === true
+    out.push({
+      key: 'cancelled',
+      tone: 'warning',
+      icon: 'RemoveFilled',
+      text: byOwner ? 'actions.timeline.withdrawnByOwner' : 'actions.timeline.cancelled',
+    })
   }
   if (a.executed_at) {
     out.push({ key: 'executed', tone: 'success', icon: 'CircleCheck', text: 'actions.timeline.executed', time: a.executed_at })
@@ -62,11 +78,18 @@ const items = computed<Item[]>(() => {
   }
   if (a.reviewed_at && (a.review_state === 'reviewed' || a.review_state === 'escalated')) {
     const esc = a.review_state === 'escalated'
+    const owner = rules.byOwner(a, 'reviewed')
     out.push({
       key: 'reviewed',
       tone: esc ? 'warning' : 'success',
       icon: esc ? 'Warning' : 'View',
-      text: esc ? 'actions.timeline.escalated' : 'actions.timeline.reviewed',
+      text: esc
+        ? owner
+          ? 'actions.timeline.escalatedByOwner'
+          : 'actions.timeline.escalated'
+        : owner
+          ? 'actions.timeline.reviewedByOwner'
+          : 'actions.timeline.reviewed',
       who: { memberId: a.reviewed_by_member_id },
       time: a.reviewed_at,
     })

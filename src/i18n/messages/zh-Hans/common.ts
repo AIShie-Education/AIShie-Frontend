@@ -119,6 +119,8 @@ export default {
     required: '必填',
     invalidDecimal: '请输入数字',
     invalidEmail: '请输入有效的邮箱地址',
+    ownerNotAutonomous:
+      '你的智能体所做的事，只有在你自己无需任何人确认也能做时，才由你决定。这里你在这方面的级别较低，或它超出你的范围，因此须由课程中的其他人决定。',
   },
   // 席位的上限（perm_ceilings）：无论由谁授予，该席位最多可拥有的权限级别。
   ceiling: {

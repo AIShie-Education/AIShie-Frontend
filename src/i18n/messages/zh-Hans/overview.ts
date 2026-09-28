@@ -54,6 +54,8 @@ export default {
     atLeast: '{n}+',
     draftsPartial: '只统计了最早的 {n} 个成绩',
     allClear: '目前没有待你处理的事项。',
+    agentProposals: '你的智能体待决定的提议',
+    agentReviews: '你的智能体待审核的操作',
   },
   assignments: {
     title: '作业',
