@@ -32,6 +32,7 @@ export type Perm =
   | 'agent_delegate'
   | 'conversation_ask'
   | 'conversation_answer'
+  | 'member_invite'
 export const PERMS: Perm[] = [
   'document_read',
   'document_read_draft',
@@ -49,6 +50,7 @@ export const PERMS: Perm[] = [
   'agent_delegate',
   'conversation_ask',
   'conversation_answer',
+  'member_invite',
 ]
 /** Permissions whose reach is narrowed by a member's student and assignment scope. */
 export const SCOPED_PERMS: Perm[] = [

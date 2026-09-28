@@ -225,7 +225,9 @@ describe('effectivePerms', () => {
     expect(p.document_read).toBe('autonomous')
     expect(p.grade_read).toBe('denied')
     expect(p.conversation_answer).toBe('denied')
-    expect(Object.keys(p)).toHaveLength(16)
+    // From a Core before invite links, which says nothing of member_invite.
+    expect(p.member_invite).toBe('denied')
+    expect(Object.keys(p)).toHaveLength(17)
   })
 })
 
