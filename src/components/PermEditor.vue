@@ -65,7 +65,12 @@ function shown(p: Perm): AutonomyLevel | undefined {
           <el-tag v-if="changed?.includes(p)" size="small" type="warning" effect="light" round>{{
             t('common.labels.changed')
           }}</el-tag>
-          <el-tooltip v-if="ceilingOf(ceilings, p)" :content="ceilingNote(ceilings, p) ?? ''" placement="top">
+          <el-tooltip
+            v-if="ceilingOf(ceilings, p)"
+            :content="ceilingNote(ceilings, p) ?? ''"
+            placement="top"
+            popper-class="app-tip-wrap"
+          >
             <el-tag size="small" type="info" effect="plain" round class="perm-editor__ceiling" tabindex="0">
               <el-icon><Lock /></el-icon>
               {{

@@ -210,7 +210,13 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
             :label="t(`courseAgents.replies.options.${l}`)"
             :disabled="aboveMine(l) || aboveCap(r, l)"
           >
-            <el-tooltip :disabled="!aboveCap(r, l)" :content="capNote(r)" placement="left" :show-after="150">
+            <el-tooltip
+              :disabled="!aboveCap(r, l)"
+              :content="capNote(r)"
+              placement="left"
+              popper-class="app-tip-wrap"
+              :show-after="150"
+            >
               <div class="agent-row__option">
                 <span>
                   <el-icon v-if="aboveCap(r, l)" class="agent-row__lock"><Lock /></el-icon>

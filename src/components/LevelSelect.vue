@@ -26,7 +26,12 @@ const locked = computed(() => props.ceiling === 'denied')
 </script>
 
 <template>
-  <el-tooltip :disabled="!locked || !ceilingNote" :content="ceilingNote ?? ''" placement="top">
+  <el-tooltip
+    :disabled="!locked || !ceilingNote"
+    :content="ceilingNote ?? ''"
+    placement="top"
+    popper-class="app-tip-wrap"
+  >
     <el-select
       v-model="model"
       :disabled="disabled || locked"
@@ -51,6 +56,7 @@ const locked = computed(() => props.ceiling === 'denied')
           :disabled="!above(l) || !ceilingNote"
           :content="ceilingNote ?? ''"
           placement="left"
+          popper-class="app-tip-wrap"
           :show-after="150"
         >
           <div class="level-select__option">
