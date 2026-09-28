@@ -97,7 +97,7 @@ defineExpose({ refresh: list.refresh })
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-bg-color);
   color: inherit;
   font: inherit;

@@ -259,7 +259,7 @@ function sso() {
   max-width: 420px;
   background: var(--app-card);
   border: 1px solid var(--app-line);
-  border-radius: 14px;
+  border-radius: var(--app-radius-card);
   padding: 32px 28px 20px;
   box-shadow: var(--app-shadow-raised);
 }

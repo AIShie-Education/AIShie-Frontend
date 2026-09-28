@@ -317,7 +317,7 @@ async function save() {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   background: var(--el-fill-color-light);
 }
 .preset-form__fixed-k {

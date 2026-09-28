@@ -115,7 +115,7 @@ async function submit() {
 }
 .post-dialog__what {
   background: var(--el-fill-color-light);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   padding: 10px 12px;
   margin-bottom: 16px;
 }

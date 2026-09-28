@@ -574,7 +574,7 @@ const errorTitle = computed(() => {
   flex-wrap: wrap;
   padding: 10px 12px;
   margin-bottom: 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
 }

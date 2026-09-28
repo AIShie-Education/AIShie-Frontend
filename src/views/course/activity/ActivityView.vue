@@ -378,13 +378,15 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 .activity__chip :deep(.el-icon) {
   vertical-align: -2px;
 }
+/* A category with nothing in it: outlined, not filled, its words as legible as the others'. */
 .activity__chip.is-zero:not(.is-checked) {
-  opacity: 0.55;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--app-line-strong);
 }
 .activity__chip-count {
   font-variant-numeric: tabular-nums;
   font-size: 12px;
-  opacity: 0.75;
+  font-weight: 400;
   margin-left: 2px;
 }
 .activity__fresh {
@@ -394,7 +396,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   flex-wrap: wrap;
   margin-top: 12px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-color-primary-light-9);
   color: var(--el-color-primary);
   font-size: 13px;

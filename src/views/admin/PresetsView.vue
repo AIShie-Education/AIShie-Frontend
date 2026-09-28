@@ -230,7 +230,7 @@ function onSaved(savedDept: string | null) {
   gap: 8px;
   padding: 14px 16px;
   border: 1px solid var(--el-border-color-light);
-  border-radius: 10px;
+  border-radius: var(--app-radius-card);
   background: var(--el-bg-color);
   min-width: 0;
 }

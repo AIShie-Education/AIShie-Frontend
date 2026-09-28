@@ -461,7 +461,7 @@ async function submit() {
   overflow: auto;
   padding: 14px 16px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-lighter);
 }
 .grade-panel__block {
@@ -491,7 +491,7 @@ async function submit() {
 .grade-panel__draft-files {
   margin-top: 8px;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   border: 1px solid var(--el-color-warning-light-5);
   background: var(--el-color-warning-light-9);
   font-size: 13px;

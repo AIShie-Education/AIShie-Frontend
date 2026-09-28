@@ -201,7 +201,7 @@ function back() {
   width: 32px;
   height: 32px;
   margin: 0;
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   color: var(--el-text-color-regular);
 }
 .chat-drawer__icon + .chat-drawer__icon {

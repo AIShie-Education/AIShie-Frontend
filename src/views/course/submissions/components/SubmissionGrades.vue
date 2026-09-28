@@ -129,7 +129,7 @@ const forbidden = computed(() => props.forbidden || !!props.error?.isForbidden)
   flex-wrap: wrap;
   padding: 10px 12px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   color: inherit;
   text-decoration: none;
 }

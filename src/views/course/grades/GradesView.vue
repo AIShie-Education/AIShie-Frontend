@@ -608,7 +608,7 @@ const gradebookLink = computed(() =>
   flex-wrap: wrap;
   margin-bottom: 12px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-light);
 }
 .grades-view__post .el-button + .el-button {

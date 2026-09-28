@@ -45,7 +45,7 @@ async function copy() {
   padding: 8px 8px 8px 12px;
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
 }
 .copy-block__text {
   flex: 1;

@@ -44,19 +44,34 @@ h2,
 a {
   color: var(--app-indigo);
 }
+/* Focus from the keyboard: a ring in the focus colour, clear of what has it.
+   Element Plus's controls draw theirs the same way (styles/element.css). */
+a:focus-visible,
+button:not(.el-button):focus-visible,
+summary:focus-visible,
+[tabindex='0']:not(input, textarea, select, .el-tabs__item):focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+}
 
 /* A card that holds a section of a page. */
+/* A card: white on the ground, a line around it, generous room inside. */
 .app-card {
   background: var(--app-card);
   border: 1px solid var(--app-line);
-  border-radius: 10px;
-  padding: 20px;
+  border-radius: var(--app-radius-card);
+  padding: 24px;
+}
+@media (max-width: 600px) {
+  .app-card {
+    padding: 16px;
+  }
 }
 .app-card + .app-card {
   margin-top: 16px;
 }
 .app-card__title {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   font-size: 18px;
   line-height: 1.35;
   display: flex;

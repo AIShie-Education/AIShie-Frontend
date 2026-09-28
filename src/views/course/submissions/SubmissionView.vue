@@ -439,7 +439,7 @@ function onGraded() {
   gap: 10px;
   flex-wrap: wrap;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   border: 1px solid var(--el-border-color-lighter);
   color: inherit;
   text-decoration: none;

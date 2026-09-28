@@ -855,7 +855,7 @@ function capToMine() {
   gap: 2px;
   font-size: 13px;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   background: var(--el-fill-color-light);
   line-height: 1.5;
 }

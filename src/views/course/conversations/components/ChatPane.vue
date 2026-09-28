@@ -761,7 +761,7 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
 .chat-pane__held-bubble {
   max-width: min(100%, 680px);
   padding: 9px 13px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-item);
   border-top-right-radius: 4px;
   border: 1px dashed var(--el-color-warning-light-3);
   background: var(--el-color-warning-light-9);
@@ -791,7 +791,7 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
   display: inline-flex;
   gap: 4px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-item);
   border-top-left-radius: 4px;
   background: var(--el-fill-color-light);
 }
@@ -845,7 +845,7 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
   font-size: 13px;
   line-height: 1.5;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   margin-bottom: 8px;
   background: var(--el-fill-color-light);
   color: var(--el-text-color-regular);

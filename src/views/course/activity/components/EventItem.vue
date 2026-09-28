@@ -358,7 +358,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   display: flex;
   gap: 12px;
   padding: 12px 12px 12px 10px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   border-left: 3px solid transparent;
   min-width: 0;
 }

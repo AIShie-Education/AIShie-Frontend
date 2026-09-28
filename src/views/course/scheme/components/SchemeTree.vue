@@ -406,7 +406,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
 }
 .st-row.is-root {
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   font-weight: 600;
 }
 .st-row.is-zero .st-title {

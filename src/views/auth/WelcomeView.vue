@@ -266,7 +266,7 @@ function proceed() {
   max-width: 440px;
   background: var(--app-card);
   border: 1px solid var(--app-line);
-  border-radius: 14px;
+  border-radius: var(--app-radius-card);
   padding: 32px 28px 24px;
   box-shadow: var(--app-shadow-raised);
 }

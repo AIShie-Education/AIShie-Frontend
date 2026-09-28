@@ -104,7 +104,7 @@ const excerpt = computed(() => {
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid var(--el-border-color-light);
-  border-radius: 10px;
+  border-radius: var(--app-radius-card);
   background: var(--el-bg-color);
   min-width: 0;
 }
@@ -170,7 +170,7 @@ const excerpt = computed(() => {
   overflow: auto;
   margin: 0;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   background: var(--el-fill-color-lighter);
   border-left: 3px solid var(--el-color-primary);
 }

@@ -13,6 +13,7 @@
   --app-overlay: #ffffff;
   --app-line: #e2ddd1;
   --app-line-soft: #ece8de;
+  --app-line-strong: #cfc8b8;
   /* The edge of a field, a checkbox or a radio: 3:1 on a card and on the ground. */
   --app-control-border: #8f887a;
   --app-control-border-hover: #6c665b;
@@ -89,6 +90,7 @@ html.dark {
   --app-overlay: #212739;
   --app-line: #2b3245;
   --app-line-soft: #242a3a;
+  --app-line-strong: #3a4156;
   --app-control-border: #737889;
   --app-control-border-hover: #9a9eab;
 

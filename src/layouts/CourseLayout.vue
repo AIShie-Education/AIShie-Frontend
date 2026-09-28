@@ -227,8 +227,8 @@ onBeforeUnmount(() => observer?.disconnect())
 .course-head__code {
   font-size: 13px;
   font-weight: 600;
-  color: var(--el-color-primary);
-  letter-spacing: 0.3px;
+  color: var(--app-indigo);
+  letter-spacing: 0.06em;
 }
 .course-head__title {
   margin: 2px 0 0;
@@ -245,12 +245,12 @@ onBeforeUnmount(() => observer?.disconnect())
 .course-head__admin {
   display: inline-flex;
   padding: 4px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-control);
   color: var(--el-text-color-secondary);
 }
 .course-head__admin:hover {
-  background: var(--el-fill-color-light);
-  color: var(--el-color-primary);
+  background: var(--app-ground-2);
+  color: var(--app-indigo);
 }
 .course-banner {
   margin-bottom: 12px;
@@ -260,7 +260,7 @@ onBeforeUnmount(() => observer?.disconnect())
   display: flex;
   gap: 2px;
   overflow-x: auto;
-  border-bottom: 1px solid var(--el-border-color-light);
+  border-bottom: 1px solid var(--app-line);
   margin-bottom: 20px;
   scrollbar-width: thin;
   --fade: 40px;
@@ -298,11 +298,16 @@ onBeforeUnmount(() => observer?.disconnect())
   font-size: 14px;
 }
 .course-tabs__item:hover {
-  color: var(--el-color-primary);
+  color: var(--app-indigo);
 }
 .course-tabs__item.is-active {
-  color: var(--el-color-primary);
-  border-bottom-color: var(--el-color-primary);
+  color: var(--app-indigo);
+  border-bottom-color: var(--app-indigo);
   font-weight: 500;
+}
+/* The strip scrolls, and would clip a ring outside a tab: this one is inside. */
+.course-tabs__item:focus-visible {
+  outline-offset: -2px;
+  border-radius: var(--app-radius-control);
 }
 </style>

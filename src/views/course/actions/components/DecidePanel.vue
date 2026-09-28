@@ -296,7 +296,7 @@ function tell(outcome: string, error?: { code: string; message: string; details?
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
 }

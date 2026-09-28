@@ -147,7 +147,7 @@ function bad(r: BreakdownRow, field: 'criterion' | 'points' | 'max'): boolean {
   gap: 6px 8px;
   padding: 10px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--app-radius-item);
   background: var(--el-fill-color-blank);
 }
 .breakdown__criterion {

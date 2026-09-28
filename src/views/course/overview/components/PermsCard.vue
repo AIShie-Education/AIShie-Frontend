@@ -138,7 +138,7 @@ const open = ref<string[]>([])
   display: inline-block;
   font-size: 13px;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-pill);
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
   cursor: default;
