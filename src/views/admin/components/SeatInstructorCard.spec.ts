@@ -5,7 +5,8 @@ import ElementPlus from 'element-plus'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent, h, nextTick } from 'vue'
 import { i18n, setLocale } from '@/i18n'
-import type { Actor, Membership, MemberSummary } from '@/api/types'
+import { ApiError } from '@/api/http'
+import type { Actor, ActorLookup, Membership, MemberSummary } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import SeatInstructorCard from './SeatInstructorCard.vue'
@@ -108,14 +109,15 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   document.body.innerHTML = ''
 })
 
-async function mountCard(memberships: Membership[]) {
+async function mountCard(memberships: Membership[], who: object = me, transitions = false) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const session = useSessionStore()
-  session.me = me as never
+  session.me = who as never
   session.memberships = memberships
   const blank = { render: () => null }
   const router = createRouter({
@@ -125,6 +127,7 @@ async function mountCard(memberships: Membership[]) {
       { path: '/courses/:courseId/members', name: 'course-members', component: blank },
       { path: '/admin/actors', name: 'admin-actors', component: blank },
       { path: '/admin/actors/:actorId', name: 'admin-actor', component: blank },
+      { path: '/welcome', name: 'welcome', component: blank },
     ],
   })
   const wrapper = mount(SeatInstructorCard, {
@@ -132,7 +135,15 @@ async function mountCard(memberships: Membership[]) {
     attachTo: document.body,
     global: {
       plugins: [pinia, i18n, ElementPlus, router],
-      stubs: { ElSelect: SelectStub, ElOption: OptionStub, Cpu: true, User: true, UserFilled: true, Plus: true },
+      stubs: {
+        ElSelect: SelectStub,
+        ElOption: OptionStub,
+        Cpu: true,
+        User: true,
+        UserFilled: true,
+        Plus: true,
+        ...(transitions ? { transition: false } : {}),
+      },
     },
   })
   await flushPromises()
@@ -237,6 +248,177 @@ describe('SeatInstructorCard', () => {
     expect(options[0]).toContain(shortId(a.id))
     expect(options[1]).toContain(shortId(b.id))
     expect(options[0]).not.toEqual(options[1])
+    wrapper.unmount()
+  })
+})
+
+// A department's administrator has no directory: they find people by their
+// whole email, invite new ones, and seat them.
+describe('SeatInstructorCard, for a department administrator', () => {
+  const ada = {
+    id: 'ada',
+    kind: 'human',
+    display_name: 'Ada Lovelace',
+    email: 'ada@example.edu',
+    status: 'active',
+    platform_role: null,
+    administers: [{ dept_id: 'F', name: 'Engineering', appointment_id: 'ap', appointed_at: '2026-09-01T00:00:00Z' }],
+  }
+  const chan: ActorLookup = {
+    actor_id: 'chan',
+    display_name: 'Chan Siu Ming',
+    kind: 'human',
+    status: 'active',
+    can_sign_in: true,
+    invitable: false,
+  }
+  const executed = (result: unknown) => ({ status: 'executed', actionId: 'a', reviewState: 'none', result, replayed: false })
+  const bodyButton = (text: string) =>
+    [...document.body.querySelectorAll('button')].find((b) => b.textContent?.trim() === text) as HTMLButtonElement | undefined
+
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', (media: string) => ({
+      matches: false,
+      media,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }))
+    // The directory would refuse them; the card must never ask it.
+    answers = {}
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn(async () => undefined) }, configurable: true })
+  })
+
+  async function find(wrapper: Awaited<ReturnType<typeof mountCard>>['wrapper'], email: string) {
+    await wrapper.find('input[name=lookup-email]').setValue(email)
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+  }
+  const directoryCalls = () => asked.filter((a) => a.tool === 'actor.list' || a.tool === 'actor.get')
+
+  it('finds the instructor by their whole email, and seats them, without the directory', async () => {
+    answers['actor.lookup_by_email'] = async () => chan
+    const { wrapper } = await mountCard([], ada)
+    await find(wrapper, ' chan@example.edu ')
+    expect(asked.find((a) => a.tool === 'actor.lookup_by_email')?.args).toEqual({ email: 'chan@example.edu' })
+    expect(wrapper.text()).toContain('Chan Siu Ming')
+    // They have signed in: nothing to invite them to.
+    expect(button(wrapper, 'Invite again')).toBeUndefined()
+
+    seatWrite.mockResolvedValue(executed({ member_id: 'm-chan' }))
+    await button(wrapper, 'Seat as instructor')!.trigger('click')
+    await flushPromises()
+    expect(seatWrite).toHaveBeenCalledWith('course.seat_instructor', { course_id: COURSE, actor_id: 'chan' })
+    expect(wrapper.emitted('seated')).toEqual([['m-chan', 'chan']])
+    // Names are not links into the directory, which is not theirs.
+    expect(wrapper.findAll('a').map((a) => a.attributes('href'))).not.toContain('/admin/actors/chan')
+    expect(directoryCalls()).toEqual([])
+    wrapper.unmount()
+  })
+
+  it('offers "Me" from what the session knows', async () => {
+    const { wrapper } = await mountCard([], ada)
+    await button(wrapper, 'Me')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Ada Lovelace')
+    seatWrite.mockResolvedValue(executed({ member_id: 'm-ada' }))
+    await button(wrapper, 'Seat as instructor')!.trigger('click')
+    await flushPromises()
+    expect(seatWrite).toHaveBeenCalledWith('course.seat_instructor', { course_id: COURSE, actor_id: 'ada' })
+    expect(directoryCalls()).toEqual([])
+    wrapper.unmount()
+  })
+
+  it('invites someone new, shows the link once, then seats them', async () => {
+    answers['actor.lookup_by_email'] = async () => {
+      throw new ApiError({ status: 404, code: 'not_found', message: 'nobody is registered with that email' })
+    }
+    const { wrapper } = await mountCard([], ada, true)
+    await find(wrapper, 'pat@example.edu')
+    expect(wrapper.text()).toContain('Nobody is registered with that email. You can invite them.')
+
+    await button(wrapper, 'Invite someone new')!.trigger('click')
+    await flushPromises()
+    const email = document.body.querySelector<HTMLInputElement>('input[name=invite-email]')!
+    expect(email.value).toBe('pat@example.edu')
+    const name = document.body.querySelector<HTMLInputElement>('input[name=invite-name]')!
+    name.value = 'Pat Lee'
+    name.dispatchEvent(new Event('input'))
+    await flushPromises()
+    seatWrite.mockResolvedValue(
+      executed({ actor_id: 'pat', token: 'aisinv_secret', email: 'pat@example.edu', expires_at: '2026-10-05T00:00:00Z' }),
+    )
+    bodyButton('Register and invite')!.click()
+    await flushPromises()
+    expect(seatWrite).toHaveBeenCalledWith('actor.invite_new', { display_name: 'Pat Lee', email: 'pat@example.edu', expires_in_days: 7 })
+
+    // The link, the once.
+    const link = document.body.querySelector<HTMLTextAreaElement>('#reveal-invite-link')!
+    expect(link.value).toContain('#token=aisinv_secret')
+    bodyButton('Copy')!.click()
+    await flushPromises()
+    bodyButton('Done')!.click()
+    await flushPromises()
+    await new Promise((r) => setTimeout(r, 100))
+    await flushPromises()
+    // Once the dialog has gone, the link is nowhere in the page.
+    const shown = [...document.body.querySelectorAll('textarea')].map((t) => t.value)
+    expect(shown.join(' ')).not.toContain('aisinv_secret')
+
+    // Then they are offered to be seated.
+    seatWrite.mockResolvedValue(executed({ member_id: 'm-pat' }))
+    await button(wrapper, 'Seat Pat Lee as instructor')!.trigger('click')
+    await flushPromises()
+    expect(seatWrite).toHaveBeenLastCalledWith('course.seat_instructor', { course_id: COURSE, actor_id: 'pat' })
+    expect(directoryCalls()).toEqual([])
+    wrapper.unmount()
+  })
+
+  it('an email already registered finds that person instead', async () => {
+    let calls = 0
+    answers['actor.lookup_by_email'] = async () => {
+      if (calls++ === 0) throw new ApiError({ status: 404, code: 'not_found', message: 'nobody' })
+      return chan
+    }
+    const { wrapper } = await mountCard([], ada)
+    await find(wrapper, 'chan@example.edu')
+    await button(wrapper, 'Invite someone new')!.trigger('click')
+    await flushPromises()
+    const name = document.body.querySelector<HTMLInputElement>('input[name=invite-name]')!
+    name.value = 'Chan'
+    name.dispatchEvent(new Event('input'))
+    seatWrite.mockRejectedValue(
+      new ApiError({
+        status: 409,
+        code: 'conflict',
+        message: 'that email is already registered',
+        details: { reason: 'email_taken', actor_id: 'chan' },
+        actionId: 'a1',
+        actionStatus: 'failed',
+      }),
+    )
+    bodyButton('Register and invite')!.click()
+    await flushPromises()
+    expect(document.body.textContent).toContain('That email is already registered. Seat that person instead.')
+    expect(wrapper.text()).toContain('Chan Siu Ming')
+    expect(button(wrapper, 'Seat as instructor')).toBeDefined()
+    wrapper.unmount()
+  })
+
+  it('offers to invite again only someone they may invite who has not signed in', async () => {
+    const pending = { ...chan, actor_id: 'kim', display_name: 'Kim', can_sign_in: false, invite_expires_at: '2026-10-05T00:00:00Z' }
+    answers['actor.lookup_by_email'] = async () => ({ ...pending, invitable: false })
+    const { wrapper } = await mountCard([], ada)
+    await find(wrapper, 'kim@example.edu')
+    expect(wrapper.text()).toContain('Has not signed in yet.')
+    expect(button(wrapper, 'Invite again')).toBeUndefined()
+
+    answers['actor.lookup_by_email'] = async () => ({ ...pending, invitable: true })
+    await find(wrapper, 'kim@example.edu')
+    seatWrite.mockResolvedValue(executed({ token: 'aisinv_again', email: 'kim@example.edu', expires_at: '2026-10-05T00:00:00Z' }))
+    await button(wrapper, 'Invite again')!.trigger('click')
+    await flushPromises()
+    expect(seatWrite).toHaveBeenCalledWith('actor.invite', { actor_id: 'kim' })
+    expect(document.body.querySelector<HTMLTextAreaElement>('#reveal-invite-link')!.value).toContain('aisinv_again')
     wrapper.unmount()
   })
 })
