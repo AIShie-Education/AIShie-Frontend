@@ -118,6 +118,9 @@ export type Term = ListItem<'term.list', 'terms'>
 export type Department = ListItem<'department.list', 'departments'>
 export type Preset = ListItem<'preset.list', 'presets'>
 
+// Invite links (course.join_link_*): a link as the course's list shows it, never its token.
+export type JoinLink = ListItem<'course.join_link_list', 'links'>
+
 // Departments: a tree, and who administers each (docs/schema.md §2.10)
 /** A department the caller is appointed to administer (me.get): they administer everything beneath it too. */
 export type Administered = ListItem<'me.get', 'administers'>

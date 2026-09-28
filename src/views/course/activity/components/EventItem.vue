@@ -231,6 +231,8 @@ const facts = computed<Fact[]>(() => {
   if (type === 'member.added') {
     const role = payloadString(e, 'role')
     if (role) out.push({ kind: 'tag', vocab: 'role', value: role })
+    // A person who took their seat through an invite link.
+    if (payloadString(e, 'via') === 'join_link') out.push({ kind: 'text', text: t('join.via') })
   }
   if (type === 'member.removed') {
     const reason = payloadString(e, 'reason')

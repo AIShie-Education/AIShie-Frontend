@@ -223,6 +223,8 @@ export default {
     'course.updated': 'Course updated',
     'course.activated': 'Course activated',
     'course.archived': 'Course archived',
+    'course.join_link_created': 'Invite link created',
+    'course.join_link_revoked': 'Invite link revoked',
     'document.created': 'Document created',
     'document.version_added': 'New document version',
     'document.published': 'Document published',

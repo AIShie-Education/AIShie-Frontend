@@ -52,6 +52,15 @@ describe('joinRefusal', () => {
       'This invite link is only for emails at @hainanu.edu.cn, @example.edu, and this one is not at any of them.',
     )
   })
+  it('says the members page’s own refusals in words of their own', () => {
+    expect(joinRefusal(refused('not_by_proposal'), 'join.links.errors')).toMatch(
+      /never created by a request for approval/,
+    )
+    expect(joinRefusal(refused('permission_denied', 403), 'join.links.errors')).toMatch(/may not create or revoke/)
+    expect(joinRefusal(refused('course_archived', 403), 'join.links.errors')).toMatch(/no invite link can be created/)
+    // and the join page does not take them for its own
+    expect(joinRefusal(refused('not_by_proposal'))).toBeNull()
+  })
   it('in the reader’s language', () => {
     setLocale('zh-Hant')
     expect(joinRefusal(refused('revoked'))).toBe('此邀請連結已被撤銷。請向你的講師索取新的連結。')

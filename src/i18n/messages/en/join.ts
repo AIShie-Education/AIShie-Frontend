@@ -1,7 +1,96 @@
-// The page a course's invite link opens (/join/<token>), where anyone with it
-// joins the course as a student, signing in or creating an account on the way.
+// A course's invite links: making, showing and revoking them on the members
+// page, and the page a link opens (/join/<token>), where anyone with it joins
+// the course as a student, signing in or creating an account on the way.
 // Every link works for ten minutes: it is for showing a class, as a QR code.
 export default {
+  links: {
+    button: 'Invite link',
+    title: 'Invite link',
+    explain:
+      'The link works for {n} minutes. Anyone who has it can join this course as a student, or create an account through it and join.',
+    anyEmail: 'Any email',
+    noLimit: 'No limit',
+    upTo: 'Up to {n} people',
+    usesOf: '{uses} of {max} joined',
+    usesNoLimit: '{uses} joined',
+    status: {
+      live: 'Working',
+      expired: 'Expired',
+      used_up: 'Used up',
+      revoked: 'Revoked',
+    },
+    revoke: 'Revoke',
+    revokeTitle: 'Revoke this invite link?',
+    revokeConfirm:
+      'Nobody can join through it any more. The {n} person who joined through it stays in the course. | Nobody can join through it any more. The {n} people who joined through it stay in the course.',
+    revoked: 'The invite link is revoked',
+    proposed: 'Revoking the link waits for approval. It keeps working until someone approves, or until it expires.',
+    notByProposal:
+      'You create invite links only with approval, and an invite link is never created by a request for approval: it is shown once, to whoever creates it. Ask someone who creates them without approval. You can still see and revoke links here.',
+    // A link that has not ended but lets nobody in now, and why (Core's reason).
+    stopped: {
+      course_archived: 'Works for nobody: the course is archived',
+      creator_lost_authority: 'Works for nobody: whoever created it can no longer add students',
+      other: 'Works for nobody now',
+    },
+    form: {
+      maxUses: 'Most people who may join',
+      noLimit: 'No limit',
+      maxUsesHint: 'Leave empty for no limit.',
+      domains: 'Only emails at these domains',
+      domainsPlaceholder: 'Type a domain, e.g. hainanu.edu.cn, and press Enter',
+      domainsHint: 'Leave empty to let anyone join. With domains, only people whose email is at one of them can join or register.',
+      badDomain: '“{d}” is not a domain',
+      tooManyDomains: 'At most {n} domains',
+      submit: 'Create link',
+    },
+    created: {
+      link: 'Invite link',
+      qrLabel: 'QR code of the invite link to {course}',
+      timeLeft: 'Time left',
+      timeLeftSpoken: '{m} min {s} s left',
+      download: 'Download QR (PNG)',
+      fullscreen: 'Show full screen',
+      how: 'Students scan the code with their phone’s camera, or open the link.',
+      shownOnce: 'The link is shown only here. Closing this does not stop it: revoke it below to stop it early.',
+      expired: 'This link has expired',
+      expiredHint: 'Nobody can join through it any more.',
+      renew: 'Create a new link',
+      otherSettings: 'New link with other settings',
+      lost: 'The link was created, but the answer with it was lost on the way, and it cannot be shown again. Create another.',
+    },
+    // Core's refusals of making or revoking a link, by the reason it names.
+    errors: {
+      permission_denied: 'You may not create or revoke invite links in this course.',
+      course_archived: 'The course is archived: no invite link can be created or revoked in it.',
+      not_by_proposal:
+        'An invite link is never created by a request for approval: it is shown once, to whoever creates it. Ask someone who creates invite links without approval.',
+    },
+    alreadyRevoked: 'That link had been revoked already.',
+    fullscreen: {
+      label: 'Invite link, full screen',
+      scan: 'Scan to join',
+      exit: 'Exit full screen',
+    },
+    list: {
+      title: 'Links',
+      empty: 'No invite links yet.',
+      noneLive: 'No link works right now.',
+      showEnded: 'Show ended links ({n})',
+      shownAbove: 'Shown above',
+      timeLeft: 'Time left',
+      ended: 'Ended',
+      uses: 'Joined',
+      domains: 'Email domains',
+      createdBy: 'Created by',
+      revokedBy: 'Revoked by',
+    },
+  },
+  // Where a seat was taken through a link, on the members' pages.
+  via: 'Joined by invite link',
+  viaHint: 'Joined as a student through an invite link',
+  filtered: 'Joined through one invite link',
+  seeWho: 'See who',
   page: {
     title: 'Join a course',
     lead: 'You have been invited to join',

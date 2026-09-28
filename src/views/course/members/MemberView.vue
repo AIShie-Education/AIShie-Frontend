@@ -475,6 +475,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.added')">
               <TimeText :value="m.created_at" />
+              <div v-if="m.join_link_id" class="member__hint">
+                <el-icon class="member__via"><Link /></el-icon>{{ t('join.viaHint') }}
+              </div>
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.expires')">
               <template v-if="m.expires_at">
@@ -743,6 +746,10 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   line-height: 1.5;
   color: var(--el-text-color-secondary);
   margin-top: 4px;
+}
+.member__via {
+  margin-right: 4px;
+  vertical-align: -2px;
 }
 .member__gap {
   margin-left: 6px;

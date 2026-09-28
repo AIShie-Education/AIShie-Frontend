@@ -4,8 +4,9 @@
 // and the preset its levels were copied from.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
+import { isUuid } from '@/utils/format'
 import { ROLES, type Member, type MemberSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
 import { useNarrow } from '@/composables/useMediaQuery'
@@ -18,12 +19,14 @@ import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AddMemberDialog from './components/AddMemberDialog.vue'
+import JoinLinksDialog from './components/JoinLinksDialog.vue'
 import ScopeSummary from './components/ScopeSummary.vue'
 import { isExpired, presetLabel, usePresets } from './components/seat'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const course = useCourseStore()
 const session = useSessionStore()
 const narrow = useNarrow(767)
@@ -33,6 +36,15 @@ const PAGE = 100
 const roleFilter = ref<string>('')
 const includeRemoved = ref(false)
 const kind = ref<'all' | 'human' | 'agent'>('all')
+/** The invite link whose joiners alone are listed (?link=, from the invite links' list). */
+const linkFilter = computed(() => {
+  const v = route.query.link
+  return typeof v === 'string' && isUuid(v) ? v : null
+})
+function clearLinkFilter() {
+  const { link: _link, ...rest } = route.query
+  void router.replace({ query: rest })
+}
 
 const list = usePaged<MemberSummary>(
   (after) =>
@@ -40,10 +52,11 @@ const list = usePaged<MemberSummary>(
       course_id: props.courseId,
       role: roleFilter.value || undefined,
       include_removed: includeRemoved.value || undefined,
+      join_link_id: linkFilter.value ?? undefined,
       limit: PAGE,
       after,
     }).then((o) => ({ items: o.members, next: o.next })),
-  { watch: [roleFilter, includeRemoved] },
+  { watch: [roleFilter, includeRemoved, linkFilter] },
 )
 
 const counts = computed(() => {
@@ -119,7 +132,11 @@ function presetName(id: string | null | undefined): string | null {
 }
 
 const canManage = computed(() => course.can('member_manage'))
+// Invite links are their own permission (member_invite), which a seat may
+// hold without managing members, or manage members without.
+const canInvite = computed(() => course.can('member_invite'))
 const addOpen = ref(false)
+const linksOpen = ref(false)
 const proposedAction = ref<string | null>(null)
 
 function onAdded(out: { status: 'executed'; memberId: string } | { status: 'proposed'; actionId: string }) {
@@ -148,14 +165,23 @@ function rowClass({ row }: { row: MemberSummary }) {
 <template>
   <div class="members">
     <PageHeader :title="t('members.title')" :subtitle="t('members.subtitle')">
-      <div v-if="canManage" class="members__add">
-        <el-tooltip :content="t('common.archivedCourse')" :disabled="course.writable" placement="bottom">
+      <div v-if="canManage || canInvite" class="members__add">
+        <el-button v-if="canInvite" class="members__invite" @click="linksOpen = true">
+          <el-icon><Link /></el-icon>
+          <span>{{ t('join.links.button') }}</span>
+        </el-button>
+        <el-tooltip
+          v-if="canManage"
+          :content="t('common.archivedCourse')"
+          :disabled="course.writable"
+          placement="bottom"
+        >
           <el-button type="primary" :disabled="!course.writable" @click="addOpen = true">
             <el-icon><Plus /></el-icon>
             <span>{{ t('members.addMember') }}</span>
           </el-button>
         </el-tooltip>
-        <el-tag v-if="course.needsApproval('member_manage')" type="warning" effect="plain">
+        <el-tag v-if="canManage && course.needsApproval('member_manage')" type="warning" effect="plain">
           {{ t('enums.level.confirm_required') }}
         </el-tag>
       </div>
@@ -192,6 +218,9 @@ function rowClass({ row }: { row: MemberSummary }) {
           </el-radio-button>
         </el-radio-group>
         <span class="app-toolbar__spacer" />
+        <el-tag v-if="linkFilter" closable type="primary" effect="plain" size="large" @close="clearLinkFilter">
+          <el-icon class="members__tab-icon"><Link /></el-icon>{{ t('join.filtered') }}
+        </el-tag>
         <el-select v-model="roleFilter" class="members__role" :placeholder="t('members.filters.anyRole')" clearable>
           <el-option value="" :label="t('members.filters.anyRole')" />
           <el-option v-for="r in ROLES" :key="r" :value="r" :label="t(`enums.role.${r}`)" />
@@ -224,6 +253,11 @@ function rowClass({ row }: { row: MemberSummary }) {
                 <span class="members__name-text">{{ row.display_name }}</span>
                 <span v-if="row.id === course.myMemberId" class="members__me">({{ t('common.labels.you') }})</span>
                 <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" />
+                <el-tooltip v-if="row.join_link_id" :content="t('join.viaHint')" placement="top">
+                  <el-tag size="small" type="info" effect="plain" class="members__via" tabindex="0">
+                    <el-icon><Link /></el-icon>{{ t('join.via') }}
+                  </el-tag>
+                </el-tooltip>
               </div>
               <div v-if="narrow" class="members__stack">
                 <StatusTag vocab="role" :value="row.role" />
@@ -301,6 +335,7 @@ function rowClass({ row }: { row: MemberSummary }) {
       @done="onAdded"
       @retry-presets="presets.reload"
     />
+    <JoinLinksDialog v-if="canInvite" v-model="linksOpen" :course-id="courseId" />
   </div>
 </template>
 
@@ -345,6 +380,11 @@ function rowClass({ row }: { row: MemberSummary }) {
 }
 .members__kind-icon.is-agent {
   color: var(--el-color-primary);
+}
+.members__via :deep(.el-tag__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 .members__me {
   color: var(--el-text-color-secondary);

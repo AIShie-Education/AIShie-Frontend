@@ -219,6 +219,8 @@ export default {
     'course.updated': '更新課程',
     'course.activated': '課程已啟用',
     'course.archived': '課程已封存',
+    'course.join_link_created': '建立邀請連結',
+    'course.join_link_revoked': '撤銷邀請連結',
     'document.created': '建立文件',
     'document.version_added': '文件新版本',
     'document.published': '發佈文件',

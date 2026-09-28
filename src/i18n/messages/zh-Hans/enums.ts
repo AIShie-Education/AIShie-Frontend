@@ -219,6 +219,8 @@ export default {
     'course.updated': '更新课程',
     'course.activated': '课程已启用',
     'course.archived': '课程已归档',
+    'course.join_link_created': '创建邀请链接',
+    'course.join_link_revoked': '撤销邀请链接',
     'document.created': '创建文档',
     'document.version_added': '文档新版本',
     'document.published': '发布文档',

@@ -76,3 +76,54 @@ describe('EventItem, an event filed while no published assignment used the docum
     w.unmount()
   })
 })
+
+describe('EventItem, invite links', () => {
+  it('says that a member joined through an invite link', async () => {
+    const w = mountItem({
+      seq: 2,
+      type: 'member.added',
+      occurred_at: '2026-09-01T00:00:00Z',
+      subject_type: 'course_member',
+      subject_id: 'm-1',
+      payload: { role: 'student', via: 'join_link', join_link_id: 'l-1' },
+    })
+    await flushPromises()
+    expect(w.text()).toContain('Member added')
+    expect(w.text()).toContain('Student')
+    expect(w.text()).toContain('Joined by invite link')
+    w.unmount()
+  })
+
+  it('says nothing of a link for a member added by hand', async () => {
+    const w = mountItem({
+      seq: 3,
+      type: 'member.added',
+      occurred_at: '2026-09-01T00:00:00Z',
+      subject_type: 'course_member',
+      subject_id: 'm-2',
+      payload: { role: 'student' },
+    })
+    await flushPromises()
+    expect(w.text()).not.toContain('invite link')
+    w.unmount()
+  })
+
+  it('names a link made and a link revoked', async () => {
+    for (const [type, words] of [
+      ['course.join_link_created', 'Invite link created'],
+      ['course.join_link_revoked', 'Invite link revoked'],
+    ]) {
+      const w = mountItem({
+        seq: 4,
+        type: type!,
+        occurred_at: '2026-09-01T00:00:00Z',
+        subject_type: 'course_join_link',
+        subject_id: 'l-1',
+        payload: {},
+      })
+      await flushPromises()
+      expect(w.text()).toContain(words)
+      w.unmount()
+    }
+  })
+})
