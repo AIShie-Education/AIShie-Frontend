@@ -295,11 +295,26 @@ export function payloadBool(e: CourseEvent, key: string): boolean | undefined {
   return typeof v === 'boolean' ? v : undefined
 }
 
+/**
+ * An event about one of a student's totals: written again, overridden, its
+ * override taken off, or commented on. Its subject is the total's grade, and
+ * its payload names the component (component_id).
+ */
+export function isTotalEvent(type: string): boolean {
+  return (
+    type === 'grade.total_updated' ||
+    type === 'grade.total_overridden' ||
+    type === 'grade.total_override_cleared' ||
+    type === 'grade.total_commented'
+  )
+}
+
 /** What the event's subject is, for the words and the link beside it. */
 export type SubjectKind =
   | 'assignment'
   | 'submission'
   | 'grade'
+  | 'gradebook'
   | 'material'
   | 'submissionFile'
   | 'feedbackFile'
@@ -317,6 +332,8 @@ export function subjectKind(e: CourseEvent): SubjectKind {
       return 'submission'
     case 'grade':
       return 'grade'
+    case 'gradebook':
+      return 'gradebook'
     case 'course_member':
       return 'member'
     case 'action':
@@ -371,10 +388,15 @@ export function subjectRoute(e: CourseEvent, courseId: string, reach: Reach): Ro
       return id ? { name: 'course-submission', params: { courseId, submissionId: id } } : null
     case 'grade':
       // A computed total is read in the gradebook, with the rest of the student's standing.
-      if (e.type === 'grade.total_updated' && e.student_member_id) {
+      if (isTotalEvent(e.type) && e.student_member_id) {
         return { name: 'course-gradebook', params: { courseId, studentMemberId: e.student_member_id } }
       }
       return id ? { name: 'course-grade', params: { courseId, gradeId: id } } : null
+    case 'gradebook': {
+      // A student's totals as a whole (grade.undo_ungraded_as_zero): the subject is the student.
+      const student = e.student_member_id ?? id
+      return student ? { name: 'course-gradebook', params: { courseId, studentMemberId: student } } : null
+    }
     case 'material':
       return id ? { name: 'course-document', params: { courseId, documentId: id } } : null
     case 'submissionFile':

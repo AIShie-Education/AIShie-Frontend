@@ -23,18 +23,44 @@ const SHARED_REASONS = new Map<string, string>([
   ['owner_not_autonomous', 'common.errors.ownerNotAutonomous'],
 ])
 
+/** Where a page keeps words of its own for the refusals of what it does, by reason. */
+export interface ReasonScopes {
+  /**
+   * Message trees keyed by Core's reasons (details.reason), asked first, in
+   * order: 'grades.refusal' finds grades.refusal.no_total. A reason two tools
+   * give for different things (not_a_person) is said in the words of the page
+   * that met it.
+   */
+  reasons?: string | readonly string[]
+}
+
+/** The words the scopes given have for the refusal's reason, and nothing else; null when none has them. */
+export function scopedReasonMessage(e: unknown, opts: ReasonScopes): string | null {
+  if (!(e instanceof ApiError)) return null
+  const reason = e.details?.reason
+  if (typeof reason !== 'string' || !WORD.test(reason)) return null
+  const scopes = typeof opts.reasons === 'string' ? [opts.reasons] : (opts.reasons ?? [])
+  for (const scope of scopes) {
+    const key = `${scope}.${reason}`
+    if (has(key)) return t(key, { ...e.details })
+  }
+  return null
+}
+
 /**
  * Words of the app's own for a refusal whose reason Core names
- * (details.reason) and which has them (SHARED_REASONS, or
+ * (details.reason) and which has them (the scopes given, SHARED_REASONS, or
  * deptAdmin.errors.<reason>), with the refusal's details for its
  * placeholders; null for any other. An invitation a department administrator
  * may not make says which rule it failed (details.why). A level above what a
  * seat may hold at all says which permission, how far it may go, and why
  * (ceilingRefusalText).
  */
-export function reasonMessage(e: ApiError): string | null {
+export function reasonMessage(e: ApiError, opts: ReasonScopes = {}): string | null {
   const reason = e.details?.reason
   if (typeof reason !== 'string' || !WORD.test(reason)) return null
+  const scoped = scopedReasonMessage(e, opts)
+  if (scoped) return scoped
   const ceiling = ceilingRefusalText(e.details)
   if (ceiling) return ceiling
   const shared = SHARED_REASONS.get(reason)
@@ -49,10 +75,10 @@ export function reasonMessage(e: ApiError): string | null {
 }
 
 /** A sentence for the person, in their language, with Core's own words where they help. */
-export function errorMessage(e: unknown): string {
+export function errorMessage(e: unknown, opts: ReasonScopes = {}): string {
   if (!(e instanceof ApiError)) return (e as Error)?.message ?? String(e)
   if (e.isNetwork) return t('common.errors.network')
-  const byReason = reasonMessage(e)
+  const byReason = reasonMessage(e, opts)
   if (byReason) return byReason
   if (e.actionStatus === 'denied') return t('common.outcome.denied')
   switch (e.code) {
@@ -79,8 +105,8 @@ export function errorMessage(e: unknown): string {
 }
 
 /** Shows an error the way the app shows errors. */
-export function notifyError(e: unknown, title?: string) {
-  const msg = errorMessage(e)
+export function notifyError(e: unknown, title?: string, opts: ReasonScopes = {}) {
+  const msg = errorMessage(e, opts)
   if (e instanceof ApiError && e.recorded) {
     ElNotification({
       type: e.actionStatus === 'denied' ? 'warning' : 'error',

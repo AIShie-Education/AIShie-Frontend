@@ -2,7 +2,9 @@
 // Creating an assignment, or changing one (assignment.create / .update). Its
 // instructions and rubric can be chosen from the course's documents or
 // written here: a new one is created (document.create) and, if asked,
-// published (document.publish) before the assignment is saved.
+// published (document.publish) before the assignment is saved. A change of
+// what it is worth after grades have been entered for it says what becomes
+// of them (existing_grades), explained in the actual numbers.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
@@ -13,6 +15,8 @@ import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isDecimal } from '@/utils/format'
+import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
+import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
 import DocChoiceField from './DocChoiceField.vue'
 import { allDocuments, useScheme } from './useAssignmentData'
 import { emptyDocChoice, type DocChoice } from './types'
@@ -50,6 +54,40 @@ const form = reactive<FormState>({
 const formRef = ref<FormInstance>()
 /** Something the person should know about a document before saving again. */
 const docNotice = ref<string | null>(null)
+
+// --- What becomes of grades already entered when the points change -------------
+/** The live entered scores on it, where the caller may read them; null while not known. */
+const graded = ref<string[] | null>(null)
+/** Core said grades have been entered (existing_grades_required) where they could not be read. */
+const coreAsked = ref(false)
+const existing = ref<ExistingGrades | ''>('')
+let gradedFor = 0
+async function loadGraded() {
+  const n = ++gradedFor
+  graded.value = null
+  const a = props.assignment
+  if (!a || !course.can('grade_read')) return
+  try {
+    const scores = await enteredScores(props.courseId, { assignmentId: a.id })
+    if (n === gradedFor) graded.value = scores
+  } catch {
+    /* not readable: Core says so when saving, and the choice is asked for then */
+  }
+}
+const pointsChanged = computed(
+  () =>
+    !!props.assignment && isDecimal(form.points) && !sameDecimal(form.points.trim(), props.assignment.points_possible),
+)
+const hasGrades = computed(() => (graded.value?.length ?? 0) > 0 || coreAsked.value)
+/** Changing the points changes the grades too, which takes grading and posting as well. */
+const pointsLocked = computed(() => hasGrades.value && !course.canAll(['grade_submit', 'grade_post']))
+const askExisting = computed(() => pointsChanged.value && hasGrades.value && !pointsLocked.value)
+watch(pointsLocked, (locked) => {
+  if (locked && props.assignment) form.points = String(props.assignment.points_possible)
+})
+/** Saving was pressed without saying what becomes of the grades. */
+const existingMissing = ref(false)
+watch([() => form.points, existing], () => (existingMissing.value = false))
 
 // --- The documents it can point at --------------------------------------------
 const docs = reactive<Record<DocKind, DocumentSummary[]>>({ instructions: [], rubric: [] })
@@ -91,9 +129,12 @@ function init() {
   form.instructions = emptyDocChoice('instructions', a?.instructions_document_id)
   form.rubric = emptyDocChoice('rubric', a?.rubric_document_id)
   docNotice.value = null
+  existing.value = ''
+  coreAsked.value = false
   formRef.value?.clearValidate()
   void loadDocs()
   void scheme.reload()
+  void loadGraded()
 }
 watch(visible, (v) => v && init(), { immediate: true })
 
@@ -334,6 +375,7 @@ async function update(a: Assignment, made: Made, instructionsId?: string, rubric
   const points = form.points.trim()
   if (!sameDecimal(points, a.points_possible)) {
     args.points_possible = points
+    if (askExisting.value && existing.value) args.existing_grades = existing.value
     changed = true
   }
   const oldDue = a.due_at ? dayjs(a.due_at).valueOf() : null
@@ -365,10 +407,25 @@ async function update(a: Assignment, made: Made, instructionsId?: string, rubric
   }
   const out = await updateAssignment.run(args, { notify: false })
   if (!out) {
-    if (updateAssignment.lastError.value) notifyError(updateAssignment.lastError.value)
+    const err = updateAssignment.lastError.value
+    // Grades were entered that the form could not see: ask what becomes of them.
+    if (err?.details?.reason === 'existing_grades_required') {
+      coreAsked.value = true
+      if (course.can('grade_read')) void loadGraded()
+    }
+    if (err) notifyError(err, undefined, { reasons: 'grades.pointsChange.refusal' })
     return noteCreatedDocs()
   }
-  announceSaved(out, 'saved', made)
+  if (out.status === 'executed' && (out.result.rescaled || out.result.snapshots) && !out.replayed) {
+    ElMessage({
+      type: 'success',
+      message: out.result.rescaled
+        ? t('grades.pointsChange.done', { r: out.result.rescaled, s: out.result.snapshots })
+        : t('grades.pointsChange.doneTotals', { s: out.result.snapshots }),
+    })
+  } else {
+    announceSaved(out, 'saved', made)
+  }
   course.invalidate('assignments')
   visible.value = false
   emit('saved', { status: out.status, id: a.id })
@@ -380,7 +437,9 @@ async function submit() {
   // publication that waited for approval, say): look again before refusing it.
   if ((['instructions', 'rubric'] as DocKind[]).some((k) => mustPublish(k) && choiceUnpublished(k))) await loadDocs()
   const valid = await formRef.value.validate().catch(() => false)
-  if (!valid) return
+  // What becomes of the grades is asked for before anything is sent.
+  existingMissing.value = askExisting.value && !existing.value
+  if (!valid || existingMissing.value) return
   busy.value = true
   docNotice.value = null
   createdTitles.value = []
@@ -406,7 +465,11 @@ const defaultDocTitle = (kind: DocKind) =>
 /** Saving writes a new document first, which takes document_write as well. */
 const writesDocument = computed(() => form.instructions.mode === 'new' || form.rubric.mode === 'new')
 const saveNeedsApproval = computed(() =>
-  course.needsApprovalAll(writesDocument.value ? ['assignment_write', 'document_write'] : ['assignment_write']),
+  course.needsApprovalAll([
+    'assignment_write',
+    ...(writesDocument.value ? (['document_write'] as const) : []),
+    ...(askExisting.value ? (['grade_submit', 'grade_post'] as const) : []),
+  ]),
 )
 const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 </script>
@@ -445,8 +508,11 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 
       <div class="assignment-form__row">
         <el-form-item :label="t('assignments.form.points')" prop="points" class="assignment-form__points">
-          <el-input v-model="form.points" inputmode="decimal" placeholder="10" />
-          <div v-if="editing" class="app-form-hint">{{ t('assignments.form.pointsHint') }}</div>
+          <el-input v-model="form.points" inputmode="decimal" placeholder="10" :disabled="pointsLocked" />
+          <div v-if="pointsLocked" class="app-form-hint assignment-form__lock">
+            <el-icon><Lock /></el-icon>{{ t('grades.pointsChange.locked') }}
+          </div>
+          <div v-else-if="editing" class="app-form-hint">{{ t('assignments.form.pointsHint') }}</div>
         </el-form-item>
         <el-form-item :label="t('assignments.form.due')" prop="due" class="assignment-form__due">
           <el-date-picker
@@ -460,6 +526,21 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
           <div class="app-form-hint">{{ t('assignments.form.dueHint') }}</div>
         </el-form-item>
       </div>
+
+      <el-form-item
+        v-if="askExisting && assignment"
+        class="assignment-form__existing"
+        :error="existingMissing ? t('grades.pointsChange.required') : ''"
+      >
+        <ExistingGradesChoice
+          v-model="existing"
+          :scores="graded"
+          :from="assignment.points_possible"
+          :to="form.points.trim()"
+          :needs-approval="course.needsApprovalAll(['assignment_write', 'grade_submit', 'grade_post'])"
+          :disabled="disabled || busy"
+        />
+      </el-form-item>
 
       <el-form-item :label="t('assignments.form.component')" prop="componentId">
         <el-select
@@ -551,6 +632,16 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 }
 .assignment-form__due :deep(.el-date-editor) {
   width: 100%;
+}
+.assignment-form__lock {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--el-color-warning-dark-2);
+}
+.assignment-form__lock .el-icon {
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 .assignment-form__footer {
   display: flex;

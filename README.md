@@ -13,6 +13,16 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   rubrics; students' drafts, files and hand-in; grading with rubric, per-criterion breakdown and
   feedback files; posting, regrading and the gradebook; the grading scheme; members with their
   permissions and scope; the course's activity feed.
+- **Records that change after the fact** — whoever manages a course's members changes a seat's
+  roster role (student, TA, instructor), which changes nothing it may do, and the course's title and
+  description; its code, section, term and department stay its administrators'. A change of what
+  graded work is worth asks what becomes of the grades already entered, rescaled or kept as they are,
+  each shown in the actual numbers, and says how many were rescaled and how many totals written
+  again. A grader overrides a student's total with a reason, beside the figure worked out, takes the
+  override off, and comments on a total; the student sees the override and the comment, never who or
+  why. Final grades are undone for one student or all. Material is renamed, reordered, archived and
+  brought back; an administrator of the course purges a version or a whole document uploaded by
+  mistake, which leaves a tombstone saying who purged it, when and why.
 - **Invite links** — whoever holds `member_invite` in a course makes a link to it on the members
   page, for showing a class as a QR code (full screen, to project): it works for ten minutes, for
   as many people and only for the email domains its maker says, and is counted down as it runs.

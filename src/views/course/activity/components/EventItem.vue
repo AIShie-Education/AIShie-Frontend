@@ -19,7 +19,9 @@ import { componentName, documentTitle, ensureComponentNames, ensureDocumentTitle
 import {
   CATEGORY_ICON,
   categoryOf,
+  isTotalEvent,
   payloadBool,
+  payloadField,
   payloadNumber,
   payloadString,
   reachOf,
@@ -100,8 +102,10 @@ const subjectText = computed(() => {
       return course.assignmentTitle(e.subject_id) ?? t('activity.subject.assignment')
     case 'submission':
       return t('activity.subject.submission')
+    case 'gradebook':
+      return t('activity.subject.gradebook')
     case 'grade':
-      if (e.type === 'grade.total_updated') {
+      if (isTotalEvent(e.type)) {
         const c = component.value
         if (!c) return t('activity.subject.total')
         return c.root ? t('activity.subject.courseTotal') : t('activity.subject.componentTotal', { name: c.name })
@@ -169,6 +173,9 @@ const BY_ACTION: Record<string, 'byDecision' | 'byReview' | 'byCancel'> = {
   'action.cancelled': 'byCancel',
 }
 
+/** A document, or a submitted or feedback file, renamed or moved in its list (document.update). */
+const RENAMED = /^(document\.updated|submission\.file_updated|grade\.feedback_updated)/
+
 // What the payload says, by event type. Payloads were read off Core's emit
 // sites; anything not recognised here is simply not shown.
 const facts = computed<Fact[]>(() => {
@@ -214,6 +221,56 @@ const facts = computed<Fact[]>(() => {
   }
   if (type === 'assignment.updated' && payloadBool(e, 'due_at_changed')) {
     out.push({ kind: 'text', text: t('activity.fact.dueChanged'), tone: 'warning' })
+  }
+  if (type === 'assignment.updated' && payloadBool(e, 'component_changed')) {
+    out.push({ kind: 'text', text: t('activity.fact.componentChanged'), tone: 'warning' })
+  }
+  // What the work is worth changed after grades were entered for it, and what
+  // became of them (existing_grades, and how many were written again).
+  if ((type === 'assignment.updated' || type === 'component.updated') && payloadBool(e, 'points_changed')) {
+    out.push({ kind: 'text', text: t('activity.fact.pointsChanged'), tone: 'warning' })
+    const how = payloadString(e, 'existing_grades')
+    if (how === 'rescale') {
+      out.push({
+        kind: 'text',
+        text: t('activity.fact.existingGrades.rescale', { n: payloadNumber(e, 'rescaled') ?? 0 }),
+      })
+    } else if (how === 'keep_scores') {
+      out.push({ kind: 'text', text: t('activity.fact.existingGrades.keep_scores') })
+    }
+  }
+  if (type === 'member.role_changed') {
+    const from = payloadString(e, 'from')
+    const to = payloadString(e, 'to')
+    if (from && to) {
+      out.push({
+        kind: 'text',
+        text: t('activity.fact.roleChanged', { from: label('enums.role', from), to: label('enums.role', to) }),
+      })
+    }
+  }
+  if (type === 'course.updated') {
+    const fields = payloadField(e, 'fields')
+    for (const f of Array.isArray(fields) ? fields : []) {
+      if (f === 'title' || f === 'description') out.push({ kind: 'text', text: t(`activity.fact.courseFields.${f}`) })
+    }
+  }
+  // A document, or a file of a submission or a grade, renamed or moved in its list.
+  if (RENAMED.test(type)) {
+    if (payloadBool(e, 'title_changed')) out.push({ kind: 'text', text: t('activity.fact.renamed') })
+    if (payloadBool(e, 'sort_order_changed')) out.push({ kind: 'text', text: t('activity.fact.reordered') })
+  }
+  if (type.startsWith('document.purged')) {
+    const n = payloadNumber(e, 'versions') ?? 0
+    out.push(
+      payloadString(e, 'version_id')
+        ? { kind: 'text', text: t('activity.fact.purgedVersion'), tone: 'danger' }
+        : { kind: 'text', text: t('activity.fact.purgedWhole', { n }, n), tone: 'danger' },
+    )
+  }
+  // A grade written again in a new number of points (existing_grades rescale).
+  if ((type === 'grade.regraded' || type === 'grade.created') && payloadBool(e, 'rescaled')) {
+    out.push({ kind: 'text', text: t('activity.fact.rescaled'), tone: 'info' })
   }
   if (type.startsWith('document.')) {
     // Named by its title where known; its kind then goes beside it.

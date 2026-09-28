@@ -196,6 +196,39 @@ export default {
     nothing: 'Nothing was changed.',
     noManage: 'Your seat does not allow managing members here.',
     callerNotLive: 'Your own seat is paused or has ended, so nothing you do here is accepted.',
+    // Core's refusals of a change to a seat, by the reason it names (details.reason).
+    reason: {
+      delegate_seat:
+        'This seat is an agent’s, seated as someone’s delegate: it is always Assistant, and on no roster. Its role does not change.',
+      not_your_principal:
+        'An agent does not manage the seat of the person it acts for, nor the seats of their other agents.',
+    },
+  },
+  role: {
+    change: 'Change role',
+    title: 'Change the roster role of {name}',
+    current: 'Role now:',
+    newRole: 'New role',
+    isCurrent: 'Current',
+    onlyRoleTitle: 'This changes the roster role only',
+    onlyRole:
+      'The role says who is on the gradebook and hands work in. It grants nothing: {name}’s permissions and reach stay exactly as they are. To change what this seat may do or whom it reaches, change those as well.',
+    effect: {
+      leavesRoster:
+        '{name} leaves the roster: no longer listed as a student, not marked missing when a due date passes, and handing in nothing new. What they handed in and every grade they were given stay, and work already handed in may still be graded.',
+      joinsRoster:
+        '{name} joins the roster: listed as a student, handing work in and graded, and may be listed in other seats’ reach.',
+      nameOnly: 'Only the name on the roster changes: {name} is on no gradebook either way.',
+    },
+    submit: 'Change to {role}',
+    submitNone: 'Choose a role',
+    done: '{name} is now {role}',
+    unchanged: '{name} was {role} already: nothing changed.',
+    blocked: {
+      delegateSeat: 'An agent seated as someone’s delegate is always Assistant, and on no roster.',
+      agent: 'An agent’s seat is on no roster: its role does not change here.',
+      notYourPrincipal: 'This is the seat of the person you act for: an agent does not manage it.',
+    },
   },
   rescope: {
     title: 'Change reach: {name}',

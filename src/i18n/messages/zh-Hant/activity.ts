@@ -45,6 +45,7 @@ export default {
     feedbackFile: '回饋',
     action: '操作',
     component: '評分結構',
+    gradebook: '成績冊',
   },
   target: {
     submission: '一份提交',
@@ -82,6 +83,22 @@ export default {
     decidedByOwner: '由代理的擁有者決定',
     reviewedByOwner: '由代理的擁有者覆核',
     withdrawnByOwner: '由代理的擁有者撤回',
+    roleChanged: '{from} → {to}',
+    courseFields: {
+      title: '標題已更改',
+      description: '說明已更改',
+    },
+    renamed: '已改名',
+    reordered: '已調整列表次序',
+    purgedVersion: '清除了一個版本',
+    purgedWhole: '清除了整份文件（{n} 個版本）',
+    rescaled: '已按新滿分換算',
+    pointsChanged: '滿分已更改',
+    componentChanged: '改為計入其他項目',
+    existingGrades: {
+      rescale: '已換算成績：{n} 份',
+      keep_scores: '保留原有分數',
+    },
   },
   cancelReason: {
     proposal_expired: '等候過久',

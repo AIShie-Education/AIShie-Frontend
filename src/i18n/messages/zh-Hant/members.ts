@@ -182,6 +182,36 @@ export default {
     nothing: '沒有任何變更。',
     noManage: '你的席位不允許在此管理成員。',
     callerNotLive: '你自己的席位已暫停或到期，因此你在此的任何操作都不會被接受。',
+    // Core 以原因（details.reason）拒絕更改席位時的說明。
+    reason: {
+      delegate_seat: '這是以某人代表身份加入的代理席位：角色永遠是「助理」，不在名冊上，不能更改。',
+      not_your_principal: '代理不能管理其所代表之人的席位，也不能管理該人其他代理的席位。',
+    },
+  },
+  role: {
+    change: '更改角色',
+    title: '更改 {name} 的名冊角色',
+    current: '目前角色：',
+    newRole: '新角色',
+    isCurrent: '目前',
+    onlyRoleTitle: '這只會更改名冊角色',
+    onlyRole:
+      '角色只決定誰列入成績冊、誰要繳交作業，本身不授予任何權限：{name} 的權限及範圍會維持原樣。如要更改此席位可做的事或涵蓋的對象，請另行修改。',
+    effect: {
+      leavesRoster:
+        '{name} 將離開名冊：不再列為學生，截止後不會被標記為缺交，也不能再繳交新作業。已繳交的作業及已獲得的所有成績都會保留，已繳交的作業仍可評分。',
+      joinsRoster: '{name} 將加入名冊：列為學生、可繳交作業並獲評分，也可被列入其他席位的範圍。',
+      nameOnly: '只有名冊上的名稱改變：{name} 無論如何都不在成績冊上。',
+    },
+    submit: '改為{role}',
+    submitNone: '請選擇角色',
+    done: '{name} 現在是{role}',
+    unchanged: '{name} 本來就是{role}，沒有任何改變。',
+    blocked: {
+      delegateSeat: '以某人代表身份加入的代理，角色永遠是「助理」，不在名冊上。',
+      agent: '代理的席位不在名冊上，不能在此更改角色。',
+      notYourPrincipal: '這是你所代表之人的席位：代理不能管理它。',
+    },
   },
   rescope: {
     title: '調整範圍：{name}',

@@ -9,11 +9,11 @@ import { ref } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
 import { ApiError, newIdempotencyKey, write, type ToolIn, type WriteOutcome, type WriteTool, type ToolOut } from '@/api/http'
 import { i18n } from '@/i18n'
-import { notifyError } from './useErrors'
+import { notifyError, type ReasonScopes } from './useErrors'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
 
-export interface RunOptions {
+export interface RunOptions extends ReasonScopes {
   /** Shown when it was executed; defaults to "Done". False shows nothing. */
   success?: string | false
   /** Shown as the title when it failed. */
@@ -52,7 +52,7 @@ export function useWrite<N extends WriteTool>(name: N) {
       // Retrying under the same key is only useful when Core never answered.
       const unanswered = err.isNetwork || err.status >= 500 || err.code === 'rate_limited'
       if (!unanswered) key = null
-      if (opts.notify !== false) notifyError(err, opts.errorTitle)
+      if (opts.notify !== false) notifyError(err, opts.errorTitle, opts)
       return null
     } finally {
       pending.value = false

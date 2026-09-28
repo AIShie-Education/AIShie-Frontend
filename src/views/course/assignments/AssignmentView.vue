@@ -18,6 +18,7 @@ import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFileLink from '@/components/DocumentFileLink.vue'
+import Tombstone from '@/views/course/materials/components/Tombstone.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -380,7 +381,12 @@ function refresh() {
                         : t('assignments.detail.draftVersionNone', { seq: instructionsDoc.version.seq })
                     "
                   />
-                  <template v-if="instructionsDoc.version">
+                  <Tombstone
+                    v-if="instructionsDoc.version?.purged"
+                    :purge="instructionsDoc.version.purged"
+                    of="version"
+                  />
+                  <template v-else-if="instructionsDoc.version">
                     <MarkdownView v-if="instructionsDoc.version.body_md" :source="instructionsDoc.version.body_md" />
                     <p v-else-if="!instructionsDoc.version.download_url" class="app-muted assignment-view__none">
                       {{ t('assignments.detail.noText') }}

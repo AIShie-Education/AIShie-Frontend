@@ -110,3 +110,18 @@ describe('errorMessage, by the reason Core gives', () => {
     expect(errorMessage(refusal('conflict', { reason: '../../x' }, { status: 409 }))).toMatch(/^This conflicts/)
   })
 })
+
+describe('errorMessage, with words of the page’s own for a reason', () => {
+  it('asks the page’s scopes first, then everything else', () => {
+    const e = refusal('failed_precondition', { reason: 'no_total' }, { actionId: 'a1', actionStatus: 'failed' })
+    expect(errorMessage(e, { reasons: 'grades.override.refusal' })).toMatch(/^No total has been written here/)
+    // Without the scope, Core's own words after the lead.
+    expect(errorMessage(e)).toContain('core’s own words')
+  })
+  it('looks through the scopes in order', () => {
+    const e = refusal('failed_precondition', { reason: 'delegate_seat' }, { actionId: 'a1', actionStatus: 'failed' })
+    expect(errorMessage(e, { reasons: ['grades.override.refusal', 'members.refusal.reason'] })).toMatch(
+      /^This seat is an agent’s, seated as someone’s delegate/,
+    )
+  })
+})

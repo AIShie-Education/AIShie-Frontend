@@ -10,6 +10,7 @@ export default {
   added: 'Added',
   published: 'Published',
   unpublished: 'Not published',
+  purged: 'Purged',
   pendingLink: 'See my actions',
   pending: {
     create: '“{title}” was sent for approval. It will appear here once someone approves it.',
@@ -79,7 +80,7 @@ export default {
       },
     },
     archivedAlert:
-      'This document is archived. It can no longer be edited or published, and it is withdrawn from everyone who cannot read drafts; a version that someone’s submission was handed in under stays readable to them.',
+      'This document is archived. It cannot be edited or published until it is brought back, and it is withdrawn from everyone who cannot read drafts; a version that someone’s submission was handed in under stays readable to them.',
     rules: {
       material:
         'Students read the published version. Members who can read drafts see the latest version and the history of every version.',
@@ -99,10 +100,13 @@ export default {
       newVersion: 'New version',
       publishThis: 'Publish this version',
       archive: 'Archive',
+      details: 'Title and place',
+      unarchive: 'Bring back',
+      purge: 'Purge…',
     },
     versions: {
       title: 'Versions',
-      hint: 'Versions are never changed or removed. Publishing chooses which one is read, and can go back to an earlier one.',
+      hint: 'Versions are never changed. Publishing chooses which one is read, and can go back to an earlier one; only an administrator purges one uploaded by mistake, which leaves a tombstone.',
       empty: 'No versions yet.',
       text: 'Text',
       showing: 'Showing',
@@ -127,10 +131,56 @@ export default {
     },
     archive: {
       title: 'Archive “{title}”?',
-      body: 'It disappears from lists and can no longer be edited or published. Everyone who cannot read drafts loses access to it. Nothing is deleted: a version that someone’s submission was handed in under stays readable to them.',
+      body: 'It disappears from lists and can no longer be edited or published until someone brings it back. Everyone who cannot read drafts loses access to it. Nothing is deleted: a version that someone’s submission was handed in under stays readable to them.',
       usedBy: 'The assignment “{assignment}” refers to it: those who cannot read drafts will no longer see it there.',
       done: 'Document archived',
       pending: 'Archiving was sent for approval. The document stays as it is until someone approves it.',
+    },
+    details: {
+      title: 'Title and place of “{title}”',
+      name: 'Title',
+      sortOrder: 'Place in the list',
+      sortOrderHint: 'Material is listed by this number, lowest first.',
+      versionsKept:
+        'Its versions stay exactly as they are: only what the document is called, and where it is listed, change.',
+      done: 'Saved',
+      unchanged: 'Nothing changed.',
+      pending: 'The change was sent for approval. The document stays as it is until someone approves it.',
+    },
+    unarchive: {
+      title: 'Bring back “{title}”?',
+      body: 'It is back in lists and can be edited and published again, and its published version is read again by everyone who may read this kind of document.',
+      done: 'Document brought back',
+      pending: 'Bringing it back was sent for approval. It stays archived until someone approves it.',
+    },
+    purge: {
+      title: 'Purge “{title}”',
+      titleVersion: 'Purge version {seq} of “{title}”',
+      intro:
+        'For what was uploaded by mistake, such as someone’s personal data. The text and the file of every version are removed, and the files deleted from storage. The document is archived for good, and a tombstone says who purged it, when and why, to everyone who reads it.',
+      introVersion:
+        'The text and the file of version {seq} are removed, and the file deleted from storage. The version keeps its place in the history as a tombstone that says who purged it, when and why; if it is the published one, it stays so until another is published.',
+      pinned: 'Work handed in under it still names it and reads the tombstone; grades are untouched.',
+      irreversible: 'This cannot be undone: nothing purged can be brought back.',
+      reason: 'Why',
+      reasonPlaceholder: 'e.g. A student’s personal data was uploaded by mistake',
+      reasonHint: 'Kept on the tombstone, and shown to whoever reads what was purged.',
+      reasonLong: 'At most 500 characters',
+      understand: 'I understand that this removes it for good',
+      submit: 'Purge',
+      done: 'Purged: {v} versions, {f} files deleted from storage.',
+      adminOnly:
+        'Only a platform administrator, or an administrator of the course’s department, purges anything: removing data is not a seat’s to do.',
+      version: 'Purge this version',
+    },
+    tombstone: {
+      tag: 'Purged',
+      document: 'This document was purged {time} by {who}.',
+      version: 'This version was purged {time} by {who}.',
+      why: 'Why: {reason}',
+      gone: 'Its text and its file are gone.',
+      anAdministrator: 'an administrator',
+      you: 'you',
     },
     approvalNote:
       'Writing material needs approval here: this becomes a proposal and takes effect only once someone approves it.',
@@ -157,5 +207,12 @@ export default {
       pending: 'The new version was sent for approval. It will be added once someone approves it.',
       pendingPublish: 'The new version was sent for approval. Once approved, it is added and published.',
     },
+  },
+  // Core's refusals of changes to documents, by the reason it names.
+  refusal: {
+    purged: 'This document was purged: it stays archived, and nothing is added to it or brought back.',
+    owned_file:
+      'A submitted or feedback file belongs to its submission or grade, is archived with it, and is never purged.',
+    already_purged: 'This has been purged already.',
   },
 }

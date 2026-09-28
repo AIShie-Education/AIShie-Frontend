@@ -1,18 +1,21 @@
 <script setup lang="ts">
 // Moves a component, with everything beneath it, under another parent
 // (component.move). A component cannot go beneath itself, nor under one that
-// is graded directly or holds assignments; once a grade has been entered
-// beneath it, it stays where it is. Core refuses all of these too. A place
-// that may hold assignments the caller cannot see is offered with a caution.
+// is graded directly or holds assignments; Core refuses these too. Once a
+// grade has been entered beneath it, moving it writes again, at once, every
+// posted total it changes, which the dialog says, and how many it wrote. A
+// place that may hold assignments the caller cannot see is offered with a
+// caution.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import { useWrite } from '@/composables/useWrite'
 import { formatDecimal } from '@/utils/format'
 import {
+  gradedBeneath,
   moveBlock,
   nodeName,
   pct,
-  placementFrozen,
   shareWith,
   type GradeFacts,
   type Scheme,
@@ -65,7 +68,7 @@ const options = computed(() => {
   })
 })
 const anywhere = computed(() => options.value.some((o) => !o.disabled))
-const frozen = computed(() => !!props.target && placementFrozen(props.target, props.facts))
+const graded = computed(() => !!props.target && gradedBeneath(props.target, props.facts))
 const newParent = computed(() => (newParentId.value ? (props.scheme.byId.get(newParentId.value) ?? null) : null))
 /** What is known now about the chosen place: the assignments may have been read again since it was chosen. */
 const newParentOption = computed(() => options.value.find((o) => o.node.id === newParentId.value) ?? null)
@@ -82,15 +85,23 @@ const preview = computed(() => {
 
 async function submit() {
   const n = props.target
-  if (!n || !newParentId.value || frozen.value || newParentOption.value?.disabled) return
+  if (!n || !newParentId.value || newParentOption.value?.disabled) return
   const out = await run(
     { course_id: props.courseId, component_id: n.id, new_parent_id: newParentId.value },
-    { success: t('scheme.outcome.moved') },
+    { success: false, reasons: 'grades.pointsChange.refusal' },
   )
   if (!out) {
     const err = lastError.value
     if (err && (err.code === 'failed_precondition' || err.code === 'conflict')) emit('refused')
     return
+  }
+  if (out.status === 'executed' && !out.replayed) {
+    ElMessage({
+      type: 'success',
+      message: out.result.snapshots
+        ? t('scheme.outcome.movedTotals', { n: out.result.snapshots })
+        : t('scheme.outcome.moved'),
+    })
   }
   visible.value = false
   emit('done', out.status)
@@ -115,15 +126,15 @@ async function submit() {
       class="md-alert"
     />
     <el-alert
-      v-if="frozen"
-      type="error"
+      v-if="graded"
+      type="warning"
       :closable="false"
       show-icon
-      :title="t('scheme.tree.frozen.placement')"
+      :title="t('scheme.move.graded')"
       class="md-alert"
     />
     <el-alert
-      v-else-if="!anywhere"
+      v-if="!anywhere"
       type="info"
       :closable="false"
       show-icon
@@ -131,7 +142,7 @@ async function submit() {
       class="md-alert"
     />
     <p class="md-help">{{ t('scheme.move.help') }}</p>
-    <el-form label-position="top" :disabled="pending || frozen" @submit.prevent="submit">
+    <el-form label-position="top" :disabled="pending" @submit.prevent="submit">
       <el-form-item :label="t('scheme.move.newParent')" required>
         <el-select v-model="newParentId" filterable :placeholder="t('common.actions.select')">
           <el-option
@@ -164,7 +175,7 @@ async function submit() {
       <el-button
         type="primary"
         :loading="pending"
-        :disabled="!newParentId || frozen || newParentOption?.disabled"
+        :disabled="!newParentId || newParentOption?.disabled"
         @click="submit"
       >
         {{ t('scheme.move.submit') }}

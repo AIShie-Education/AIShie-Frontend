@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Every version of a document (document.versions), newest first: which one is
-// published, which is the latest, which is on screen, and a way to look at
-// or publish any of them.
+// published, which is the latest, which is on screen, which was purged, and a
+// way to look at or publish any of them; for an administrator, to purge one.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
@@ -23,8 +23,10 @@ const props = defineProps<{
   /** Offer publishing (the seat may write this document, and it is active). */
   canPublish: boolean
   publishDisabled: boolean
+  /** Offer purging a version (the caller administers the course). */
+  canPurge?: boolean
 }>()
-const emit = defineEmits<{ publish: [version: DocumentVersion]; retry: [] }>()
+const emit = defineEmits<{ publish: [version: DocumentVersion]; purge: [version: DocumentVersion]; retry: [] }>()
 const { t } = useI18n()
 const course = useCourseStore()
 
@@ -57,6 +59,9 @@ function linkTo(v: DocumentVersion) {
           <el-tag v-if="v.id === latestId" size="small" effect="plain" disable-transitions>
             {{ t('materials.document.latest') }}
           </el-tag>
+          <el-tag v-if="v.purged_at" type="danger" size="small" effect="dark" disable-transitions>
+            {{ t('materials.document.tombstone.tag') }}
+          </el-tag>
         </div>
         <div class="version-item__meta">
           <!-- Names come from the member list; without it only one's own name is known. -->
@@ -66,7 +71,12 @@ function linkTo(v: DocumentVersion) {
           </template>
           <TimeText :value="v.created_at" relative />
         </div>
-        <div class="version-item__meta">
+        <div v-if="v.purged_at" class="version-item__meta version-item__purged">
+          <el-icon><Delete /></el-icon>
+          <span>{{ t('materials.document.tombstone.gone') }}</span>
+          <TimeText :value="v.purged_at" relative />
+        </div>
+        <div v-else class="version-item__meta">
           <template v-if="v.has_file">
             <el-icon><Paperclip /></el-icon>
             <span class="version-item__file">{{ v.content_type ?? t('materials.document.file') }}</span>
@@ -85,8 +95,12 @@ function linkTo(v: DocumentVersion) {
           <router-link v-else :to="linkTo(v)" class="version-item__link">
             {{ t('materials.document.versions.view') }}
           </router-link>
+          <el-button v-if="canPurge && !v.purged_at" link type="danger" size="small" @click="emit('purge', v)">
+            <el-icon><Delete /></el-icon>
+            <span>{{ t('materials.document.purge.version') }}</span>
+          </el-button>
           <el-button
-            v-if="canPublish && !v.published"
+            v-if="canPublish && !v.published && !v.purged_at"
             link
             type="primary"
             size="small"
@@ -103,6 +117,9 @@ function linkTo(v: DocumentVersion) {
 </template>
 
 <style scoped>
+.version-item__purged {
+  color: var(--el-color-danger);
+}
 .version-list {
   list-style: none;
   margin: 0;

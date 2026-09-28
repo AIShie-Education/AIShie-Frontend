@@ -30,7 +30,7 @@ const items: { key: string; icon: string }[] = [
   { key: 'direct', icon: 'EditPen' },
   { key: 'drop', icon: 'Bottom' },
   { key: 'ungraded', icon: 'Clock' },
-  { key: 'frozen', icon: 'Lock' },
+  { key: 'graded', icon: 'Warning' },
   { key: 'posted', icon: 'View' },
 ]
 </script>

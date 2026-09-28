@@ -6,7 +6,7 @@ import { useRoute } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { courseTabClaim } from '@/composables/useCourseTab'
-import { useDepartmentTree } from '@/composables/useDepartmentTree'
+import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { findCourse } from '@/views/admin/components/adminShared'
 import type { Perm } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
@@ -113,15 +113,7 @@ const adminWithoutSeat = computed(
 )
 
 // The way to the course's administration page, for whoever administers it.
-const departments = useDepartmentTree({ immediate: false })
-watch(
-  () => session.isDeptAdmin && !session.isAdmin,
-  (deptAdmin) => void (deptAdmin && departments.ensure()),
-  { immediate: true },
-)
-const administers = computed(
-  () => session.isAdmin || (!!course.course && !!departments.byId.value.get(course.course.dept_id)?.administers),
-)
+const administers = useAdministersCourse()
 
 // Where the tabs do not fit (a phone), they scroll sideways: the active one
 // is kept in view, and each end fades while there is more beyond it. Wider

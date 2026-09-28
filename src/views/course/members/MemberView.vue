@@ -1,8 +1,9 @@
 <script setup lang="ts">
-// One seat in full (member.get), and managing it: permissions
-// (member.update_perms), reach and lifetime (member.rescope), pause and resume
-// (member.pause / member.resume) and removal (member.remove). Nobody manages
-// their own seat, and a removed or expired seat is only read.
+// One seat in full (member.get), and managing it: its roster role
+// (member.set_role), permissions (member.update_perms), reach and lifetime
+// (member.rescope), pause and resume (member.pause / member.resume) and removal
+// (member.remove). Nobody manages their own seat, and a removed or expired
+// seat is only read.
 import { computed, h, ref, watch, type VNode } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -25,6 +26,8 @@ import { ceilingsOf } from '@/utils/ceilings'
 import { shortId } from '@/utils/format'
 import RefusalAlert from './components/RefusalAlert.vue'
 import RescopeDialog from './components/RescopeDialog.vue'
+import RoleDialog from './components/RoleDialog.vue'
+import { roleChangeBlock } from './components/roles'
 import {
   fullPerms,
   grantProblems,
@@ -218,6 +221,33 @@ async function savePerms() {
   announce(out, { success: t('members.detail.perms.saved') })
   editing.value = false
   await afterWrite(out.status, out.actionId)
+}
+
+// --- Roster role ------------------------------------------------------------------
+const roleOpen = ref(false)
+/** Why the role is not offered for change here, or null when it is. */
+const roleBlock = computed(() =>
+  m.value
+    ? roleChangeBlock(m.value, { memberId: course.myMemberId, principalMemberId: course.principalMemberId }, live.value)
+    : 'gone',
+)
+const roleOffered = computed(() => canManage.value && !roleBlock.value)
+/** Said under the role where a change of it is never offered, whoever asks. */
+const roleNote = computed(() => {
+  switch (roleBlock.value) {
+    case 'delegateSeat':
+      return t('members.role.blocked.delegateSeat')
+    case 'agent':
+      return t('members.role.blocked.agent')
+    case 'notYourPrincipal':
+      return canManage.value ? t('members.role.blocked.notYourPrincipal') : null
+  }
+  return null
+})
+const permsCard = ref<HTMLElement | null>(null)
+function editPermsFromRole() {
+  startEdit()
+  permsCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 // --- Reach and lifetime ------------------------------------------------------------
@@ -466,8 +496,17 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               <el-tag v-if="expired" size="small" type="info" class="member__gap">{{ t('members.expired') }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.role')">
-              <StatusTag vocab="role" :value="m.role" />
-              <div class="member__hint">{{ t('members.detail.roleHelp') }}</div>
+              <span class="member__role">
+                <StatusTag vocab="role" :value="m.role" />
+                <el-tooltip v-if="roleOffered" :content="disabledReason" :disabled="!disabledReason" placement="top">
+                  <span>
+                    <el-button link type="primary" size="small" :disabled="!manageable" @click="roleOpen = true">
+                      <el-icon><Switch /></el-icon><span>{{ t('members.role.change') }}</span>
+                    </el-button>
+                  </span>
+                </el-tooltip>
+              </span>
+              <div class="member__hint">{{ roleNote ?? t('members.detail.roleHelp') }}</div>
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.preset')">
               <template v-if="preset">
@@ -616,7 +655,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         </section>
 
         <!-- Levels -->
-        <section class="app-card">
+        <section ref="permsCard" class="app-card">
           <h2 class="app-card__title">
             <span>{{ t('members.detail.perms.title') }}</span>
             <el-tooltip
@@ -701,6 +740,15 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         </section>
 
         <RescopeDialog v-if="showManage" v-model="rescopeOpen" :course-id="courseId" :member="m" @done="onRescoped" />
+        <RoleDialog
+          v-if="roleOffered"
+          v-model="roleOpen"
+          :course-id="courseId"
+          :member="m"
+          @done="afterWrite"
+          @edit-perms="editPermsFromRole"
+          @change-reach="rescopeOpen = true"
+        />
       </template>
     </AsyncState>
   </div>
@@ -737,6 +785,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   word-break: break-word;
 }
 .member__actor,
+.member__role,
 .member__id-line {
   display: inline-flex;
   align-items: center;

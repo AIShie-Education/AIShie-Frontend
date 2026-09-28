@@ -45,6 +45,7 @@ export default {
     feedbackFile: 'Feedback',
     action: 'Action',
     component: 'Grading scheme',
+    gradebook: 'Gradebook',
   },
   target: {
     submission: 'a submission',
@@ -82,6 +83,23 @@ export default {
     decidedByOwner: 'Decided by its agent’s owner',
     reviewedByOwner: 'Reviewed by its agent’s owner',
     withdrawnByOwner: 'Taken back by its agent’s owner',
+    roleChanged: '{from} → {to}',
+    courseFields: {
+      title: 'Title changed',
+      description: 'Description changed',
+    },
+    renamed: 'Renamed',
+    reordered: 'Moved in the list',
+    purgedVersion: 'One version purged',
+    purgedWhole:
+      'The whole document purged ({n} versions) | The whole document purged ({n} version) | The whole document purged ({n} versions)',
+    rescaled: 'Rescaled to new points',
+    pointsChanged: 'Points changed',
+    componentChanged: 'Now counts elsewhere',
+    existingGrades: {
+      rescale: 'Grades rescaled: {n}',
+      keep_scores: 'Scores kept as they were',
+    },
   },
   cancelReason: {
     proposal_expired: 'Waited too long',

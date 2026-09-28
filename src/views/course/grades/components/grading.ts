@@ -243,6 +243,37 @@ export function mulDecimals(a: Decimal | null | undefined, b: Decimal | null | u
   return unscale(divRound(x.n * y.n * 10n ** BigInt(places), 10n ** BigInt(x.scale + y.scale)), places)
 }
 
+/**
+ * A score out of from, as a score out of to, to four decimal places, half
+ * away from zero, as Core rescales one (existing_grades rescale): 45 of 50 is
+ * 90 of 100. Null when a value is not a decimal or from is zero, which has
+ * nothing to rescale from.
+ */
+export function rescaleScore(
+  score: Decimal | null | undefined,
+  from: Decimal | null | undefined,
+  to: Decimal | null | undefined,
+): string | null {
+  const s = scaled(score)
+  const f = scaled(from)
+  const t = scaled(to)
+  if (!s || !f || !t || f.n === 0n) return null
+  // score × to ÷ from, in ten-thousandths: s·t·10^4 / f, each brought to a common scale.
+  const n = s.n * t.n * 10n ** BigInt(f.scale) * 10000n
+  const d = f.n * 10n ** BigInt(s.scale + t.scale)
+  return unscale(divRound(n, d), 4)
+}
+
+/** Compares two decimals exactly: -1, 0 or 1; null when one is not a decimal. */
+export function compareDecimals(a: Decimal | null | undefined, b: Decimal | null | undefined): -1 | 0 | 1 | null {
+  const x = scaled(a)
+  const y = scaled(b)
+  if (!x || !y) return null
+  const l = x.n * 10n ** BigInt(y.scale)
+  const r = y.n * 10n ** BigInt(x.scale)
+  return l < r ? -1 : l > r ? 1 : 0
+}
+
 /** A score, points or weight: every decimal place it has, none added. */
 export function formatScore(v: Decimal | null | undefined): string {
   const s = plainDecimal(v)
