@@ -1,0 +1,99 @@
+/* The brand's design tokens, defined once: every colour the app paints is one
+   of these, directly or through Element Plus's variables (styles/element.css
+   maps them). The light theme is the brand's own palette; the dark theme keeps
+   its character: deep ink and indigo grounds, warm off-white text, a lighter
+   indigo that reads on them, and the same warm light. Each pairing of text
+   and ground below meets WCAG AA (4.5:1 for text, 3:1 for a control's edge
+   and the focus ring), in both themes. */
+:root {
+  /* Grounds and surfaces */
+  --app-ground: #f6f3ec;
+  --app-ground-2: #ede7da;
+  --app-card: #ffffff;
+  --app-overlay: #ffffff;
+  --app-line: #e2ddd1;
+  --app-line-soft: #ece8de;
+  /* The edge of a field, a checkbox or a radio: 3:1 on a card and on the ground. */
+  --app-control-border: #8f887a;
+  --app-control-border-hover: #6c665b;
+
+  /* Ink */
+  --app-ink: #1b1d24;
+  --app-ink-2: #4a4d58;
+  --app-ink-3: #5a5d68;
+  --app-ink-placeholder: #74767f;
+  --app-ink-disabled: #a9a8a3;
+
+  /* Indigo, the brand's colour, and what is written on it */
+  --app-indigo: #22407a;
+  --app-indigo-dark: #152b55;
+  --app-indigo-tint: #e3e9f4;
+  --app-indigo-line: #b9c4da;
+  --app-on-indigo: #ffffff;
+  --app-focus: #22407a;
+
+  /* The light: the warm dot on the i, and what teaching passes on */
+  --app-light: #e0934f;
+  --app-light-halo: #f0d8c0;
+
+  /* Pills: planned, waiting, done, refused */
+  --app-planned-bg: #f3eac8;
+  --app-planned-fg: #5a4a00;
+  --app-wait-bg: #fbf0d9;
+  --app-wait-fg: #8a5a00;
+  --app-done-bg: #e1f2e8;
+  --app-done-fg: #1e6b47;
+  --app-danger-bg: #fbe9e6;
+  --app-danger-fg: #a93a2f;
+  --app-neutral-bg: #ede7da;
+  --app-neutral-fg: #5a5d68;
+
+  /* Shapes */
+  --app-radius-control: 8px;
+  --app-radius-item: 12px;
+  --app-radius-card: 16px;
+  --app-radius-pill: 999px;
+  --app-shadow-raised: 0 24px 48px -24px rgb(27 29 36 / 18%);
+  --app-shadow-pop: 0 12px 32px -8px rgb(27 29 36 / 16%), 0 2px 6px rgb(27 29 36 / 6%);
+}
+
+html.dark {
+  --app-ground: #10131c;
+  --app-ground-2: #161a26;
+  --app-card: #1a1f2d;
+  --app-overlay: #212739;
+  --app-line: #2b3245;
+  --app-line-soft: #242a3a;
+  --app-control-border: #737889;
+  --app-control-border-hover: #9a9eab;
+
+  --app-ink: #eeeae1;
+  --app-ink-2: #c9c6bd;
+  --app-ink-3: #a9a7a0;
+  --app-ink-placeholder: #95938d;
+  --app-ink-disabled: #62646d;
+
+  --app-indigo: #9db3e6;
+  --app-indigo-dark: #b8c8ee;
+  --app-indigo-tint: #1f2b47;
+  --app-indigo-line: #3a4a6e;
+  --app-on-indigo: #10131c;
+  --app-focus: #9db3e6;
+
+  --app-light: #e0934f;
+  --app-light-halo: #a8704f;
+
+  --app-planned-bg: #36311a;
+  --app-planned-fg: #e6d48a;
+  --app-wait-bg: #3a2e14;
+  --app-wait-fg: #edc06a;
+  --app-done-bg: #163326;
+  --app-done-fg: #86d1a8;
+  --app-danger-bg: #3c1f1f;
+  --app-danger-fg: #f2a195;
+  --app-neutral-bg: #242938;
+  --app-neutral-fg: #a9a7a0;
+
+  --app-shadow-raised: 0 24px 48px -24px rgb(0 0 0 / 60%);
+  --app-shadow-pop: 0 12px 32px -8px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
+}

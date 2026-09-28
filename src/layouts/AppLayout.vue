@@ -201,8 +201,8 @@ const pageTitle = computed(() => {
   min-height: 100vh;
 }
 .app-aside {
-  border-right: 1px solid var(--el-border-color-light);
-  background: var(--app-aside-bg);
+  border-right: 1px solid var(--app-line);
+  background: var(--app-ground);
 }
 .app-aside__inner {
   display: flex;
@@ -294,8 +294,8 @@ const pageTitle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--el-border-color-light);
-  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--app-line);
+  background: var(--app-ground);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -350,9 +350,10 @@ const pageTitle = computed(() => {
   background: var(--el-fill-color-light);
 }
 .app-user__avatar {
-  background: var(--el-color-primary);
-  color: #fff;
+  background: var(--app-indigo-tint);
+  color: var(--app-indigo);
   font-size: 13px;
+  font-weight: 600;
 }
 .app-user__name {
   max-width: 160px;

@@ -245,9 +245,9 @@ function sso() {
   justify-content: center;
   padding: 24px 16px;
   background:
-    radial-gradient(1200px 600px at 10% -10%, var(--el-color-primary-light-9), transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, var(--el-color-danger-light-9), transparent 60%),
-    var(--app-page-bg);
+    radial-gradient(1200px 600px at 10% -10%, var(--app-indigo-tint), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, var(--app-light) 16%, transparent), transparent 60%),
+    var(--app-ground);
   position: relative;
 }
 .login__lang {
@@ -258,11 +258,11 @@ function sso() {
 .login__card {
   width: 100%;
   max-width: 420px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
+  background: var(--app-card);
+  border: 1px solid var(--app-line);
   border-radius: 14px;
   padding: 32px 28px 20px;
-  box-shadow: var(--el-box-shadow-light);
+  box-shadow: var(--app-shadow-raised);
 }
 .login__brand {
   display: flex;

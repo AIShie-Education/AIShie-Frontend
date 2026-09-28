@@ -1,0 +1,226 @@
+/* Element Plus in the brand's colours and shapes: its theme variables, set
+   from the tokens (styles/tokens.css), and the few component variables that
+   are not derived from those. Loaded after Element Plus's own style sheets,
+   which it overrides; html.dark follows its dark theme's selector.
+
+   The colours are the tokens'. The primary colour's steps are derived from
+   it as Element Plus derives them: light-N mixes N0% of the ground into it
+   (white in the light theme, the card in the dark one), and dark-2 mixes 20%
+   of black (white in the dark theme); they are written out, as Element Plus
+   needs, and the -rgb triplets repeat the colours they name. Success,
+   warning and danger are the pills' colours: the colour is the pill's text
+   (done, waiting, refused), light-9 its ground, and the steps between are
+   mixed the same way. Info is the neutral pill's, the third ink. */
+
+:root {
+  --el-color-white: #ffffff;
+  --el-color-primary: var(--app-indigo);
+  --el-color-primary-rgb: 34, 64, 122;
+  --el-color-primary-light-3: #6479a2;
+  --el-color-primary-light-5: #91a0bd;
+  --el-color-primary-light-7: #bdc6d7;
+  --el-color-primary-light-8: #d3d9e4;
+  --el-color-primary-light-9: #e9ecf2;
+  --el-color-primary-dark-2: #1b3362;
+
+  --el-color-success: var(--app-done-fg);
+  --el-color-success-rgb: 30, 107, 71;
+  --el-color-success-light-3: #62977e;
+  --el-color-success-light-5: #8fb5a3;
+  --el-color-success-light-7: #bcd3c8;
+  --el-color-success-light-8: #d2e1da;
+  --el-color-success-light-9: var(--app-done-bg);
+  --el-color-success-dark-2: #185639;
+
+  --el-color-warning: var(--app-wait-fg);
+  --el-color-warning-rgb: 138, 90, 0;
+  --el-color-warning-light-3: #ad8c4d;
+  --el-color-warning-light-5: #c5ad80;
+  --el-color-warning-light-7: #dcceb3;
+  --el-color-warning-light-8: #e8decc;
+  --el-color-warning-light-9: var(--app-wait-bg);
+  --el-color-warning-dark-2: #6e4800;
+
+  --el-color-danger: var(--app-danger-fg);
+  --el-color-danger-rgb: 169, 58, 47;
+  --el-color-danger-light-3: #c3756d;
+  --el-color-danger-light-5: #d49d97;
+  --el-color-danger-light-7: #e5c4c1;
+  --el-color-danger-light-8: #eed8d5;
+  --el-color-danger-light-9: var(--app-danger-bg);
+  --el-color-danger-dark-2: #872e26;
+  --el-color-error: var(--el-color-danger);
+  --el-color-error-rgb: var(--el-color-danger-rgb);
+  --el-color-error-light-3: var(--el-color-danger-light-3);
+  --el-color-error-light-5: var(--el-color-danger-light-5);
+  --el-color-error-light-7: var(--el-color-danger-light-7);
+  --el-color-error-light-8: var(--el-color-danger-light-8);
+  --el-color-error-light-9: var(--el-color-danger-light-9);
+  --el-color-error-dark-2: var(--el-color-danger-dark-2);
+
+  --el-color-info: var(--app-neutral-fg);
+  --el-color-info-rgb: 90, 93, 104;
+  --el-color-info-light-3: #8c8e95;
+  --el-color-info-light-5: #adaeb4;
+  --el-color-info-light-7: #ceced2;
+  --el-color-info-light-8: #dedfe1;
+  --el-color-info-light-9: var(--app-neutral-bg);
+  --el-color-info-dark-2: #484a53;
+
+  --el-bg-color: var(--app-card);
+  --el-bg-color-page: var(--app-ground);
+  --el-bg-color-overlay: var(--app-overlay);
+
+  --el-text-color-primary: var(--app-ink);
+  --el-text-color-regular: var(--app-ink-2);
+  --el-text-color-secondary: var(--app-ink-3);
+  --el-text-color-placeholder: var(--app-ink-placeholder);
+  --el-text-color-disabled: var(--app-ink-disabled);
+
+  --el-border-color: var(--app-control-border);
+  --el-border-color-hover: var(--app-control-border-hover);
+  --el-border-color-dark: #7a7468;
+  --el-border-color-darker: #6c665b;
+  --el-border-color-light: var(--app-line);
+  --el-border-color-lighter: var(--app-line-soft);
+  --el-border-color-extra-light: #f3f0e9;
+
+  --el-fill-color-blank: var(--app-card);
+  --el-fill-color-extra-light: #fcfaf6;
+  --el-fill-color-lighter: #faf8f3;
+  --el-fill-color-light: var(--app-ground);
+  --el-fill-color: #f1ede4;
+  --el-fill-color-dark: var(--app-ground-2);
+  --el-fill-color-darker: #e6dfd0;
+
+  --el-disabled-bg-color: var(--el-fill-color-light);
+  --el-disabled-text-color: var(--el-text-color-disabled);
+  --el-disabled-border-color: var(--el-border-color-light);
+
+  --el-mask-color: rgb(246 243 236 / 90%);
+  --el-mask-color-extra-light: rgb(246 243 236 / 30%);
+  --el-overlay-color: rgb(27 29 36 / 80%);
+  --el-overlay-color-light: rgb(27 29 36 / 70%);
+  --el-overlay-color-lighter: rgb(27 29 36 / 45%);
+
+  --el-box-shadow: 0 24px 48px -12px rgb(27 29 36 / 22%), 0 4px 12px rgb(27 29 36 / 8%);
+  --el-box-shadow-light: var(--app-shadow-pop);
+  --el-box-shadow-lighter: 0 2px 8px rgb(27 29 36 / 8%);
+  --el-box-shadow-dark: 0 32px 64px -16px rgb(27 29 36 / 30%), 0 8px 16px -8px rgb(27 29 36 / 16%);
+
+  --el-border-radius-base: var(--app-radius-control);
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: var(--app-radius-pill);
+}
+
+/* In the dark theme the brand colour is a lighter indigo, which reads on the
+   dark grounds; what is written on it, and on every coloured fill, is ink.
+   Element Plus writes that as white (a button's text, a checkbox's tick, a
+   radio's dot, a switch's knob, a badge's number), so white is ink here. */
+html.dark {
+  --el-color-white: var(--app-on-indigo);
+  --el-color-primary: var(--app-indigo);
+  --el-color-primary-rgb: 157, 179, 230;
+  --el-color-primary-light-3: #7687af;
+  --el-color-primary-light-5: #5c698a;
+  --el-color-primary-light-7: #414b65;
+  --el-color-primary-light-8: #343d52;
+  --el-color-primary-light-9: #272e40;
+  --el-color-primary-dark-2: #b1c2eb;
+
+  --el-color-success: var(--app-done-fg);
+  --el-color-success-rgb: 134, 209, 168;
+  --el-color-success-light-3: #669c83;
+  --el-color-success-light-5: #50786b;
+  --el-color-success-light-7: #3a5452;
+  --el-color-success-light-8: #304346;
+  --el-color-success-light-9: var(--app-done-bg);
+  --el-color-success-dark-2: #9edab9;
+
+  --el-color-warning: var(--app-wait-fg);
+  --el-color-warning-rgb: 237, 192, 106;
+  --el-color-warning-light-3: #ae9058;
+  --el-color-warning-light-5: #84704c;
+  --el-color-warning-light-7: #594f3f;
+  --el-color-warning-light-8: #443f39;
+  --el-color-warning-light-9: var(--app-wait-bg);
+  --el-color-warning-dark-2: #f1cd88;
+
+  --el-color-danger: var(--app-danger-fg);
+  --el-color-danger-rgb: 242, 161, 149;
+  --el-color-danger-light-3: #b17a76;
+  --el-color-danger-light-5: #866061;
+  --el-color-danger-light-7: #5b464c;
+  --el-color-danger-light-8: #453942;
+  --el-color-danger-light-9: var(--app-danger-bg);
+  --el-color-danger-dark-2: #f5b4aa;
+  --el-color-error: var(--el-color-danger);
+  --el-color-error-rgb: var(--el-color-danger-rgb);
+  --el-color-error-light-3: var(--el-color-danger-light-3);
+  --el-color-error-light-5: var(--el-color-danger-light-5);
+  --el-color-error-light-7: var(--el-color-danger-light-7);
+  --el-color-error-light-8: var(--el-color-danger-light-8);
+  --el-color-error-light-9: var(--el-color-danger-light-9);
+  --el-color-error-dark-2: var(--el-color-danger-dark-2);
+
+  --el-color-info: var(--app-neutral-fg);
+  --el-color-info-rgb: 169, 167, 160;
+  --el-color-info-light-3: #7e7e7e;
+  --el-color-info-light-5: #626367;
+  --el-color-info-light-7: #454850;
+  --el-color-info-light-8: #373a44;
+  --el-color-info-light-9: var(--app-neutral-bg);
+  --el-color-info-dark-2: #bab9b3;
+
+  --el-bg-color: var(--app-card);
+  --el-bg-color-page: var(--app-ground);
+  --el-bg-color-overlay: var(--app-overlay);
+
+  --el-text-color-primary: var(--app-ink);
+  --el-text-color-regular: var(--app-ink-2);
+  --el-text-color-secondary: var(--app-ink-3);
+  --el-text-color-placeholder: var(--app-ink-placeholder);
+  --el-text-color-disabled: var(--app-ink-disabled);
+
+  --el-border-color: var(--app-control-border);
+  --el-border-color-hover: var(--app-control-border-hover);
+  --el-border-color-dark: #80859a;
+  --el-border-color-darker: #8c91a5;
+  --el-border-color-light: var(--app-line);
+  --el-border-color-lighter: var(--app-line-soft);
+  --el-border-color-extra-light: #202636;
+
+  --el-fill-color-blank: var(--app-card);
+  --el-fill-color-extra-light: #1c2130;
+  --el-fill-color-lighter: #1e2333;
+  --el-fill-color-light: #212739;
+  --el-fill-color: #252b3e;
+  --el-fill-color-dark: #2a3145;
+  --el-fill-color-darker: #30374c;
+
+  --el-mask-color: rgb(16 19 28 / 80%);
+  --el-mask-color-extra-light: rgb(16 19 28 / 30%);
+  --el-overlay-color: rgb(0 0 0 / 80%);
+  --el-overlay-color-light: rgb(0 0 0 / 70%);
+  --el-overlay-color-lighter: rgb(0 0 0 / 55%);
+
+  --el-box-shadow: 0 24px 48px -12px rgb(0 0 0 / 60%), 0 4px 12px rgb(0 0 0 / 35%);
+  --el-box-shadow-light: var(--app-shadow-pop);
+  --el-box-shadow-lighter: 0 2px 8px rgb(0 0 0 / 35%);
+  --el-box-shadow-dark: 0 32px 64px -16px rgb(0 0 0 / 70%), 0 8px 16px -8px rgb(0 0 0 / 50%);
+}
+html.dark .el-card {
+  --el-card-bg-color: var(--app-card);
+}
+
+/* Shapes: 8px for a control (the base radius), 16px for a card and for
+   whatever stands on the page as one, a dialog. */
+.el-card {
+  --el-card-border-radius: var(--app-radius-card);
+}
+.el-dialog {
+  --el-dialog-border-radius: var(--app-radius-card);
+}
+.el-message-box {
+  --el-messagebox-border-radius: var(--app-radius-card);
+}

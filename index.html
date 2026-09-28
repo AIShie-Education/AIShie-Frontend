@@ -42,12 +42,13 @@
     </script>
     <style>
       /* The loading screen in #app, until the app mounts over it (main.ts). Plain CSS, here:
-         nothing else has loaded yet. */
+         nothing else has loaded yet; its colours are the brand's (src/styles/tokens.css). */
       .boot {
-        --boot-bg: #ffffff;
-        --boot-fg: #303133;
-        --boot-track: #ebeef5;
-        --boot-bar: #409eff;
+        --boot-bg: #f6f3ec;
+        --boot-fg: #1b1d24;
+        --boot-track: #e2ddd1;
+        --boot-bar: #22407a;
+        --boot-on-bar: #ffffff;
         position: fixed;
         inset: 0;
         display: flex;
@@ -62,15 +63,19 @@
       }
       @media (prefers-color-scheme: dark) {
         html:not([data-boot-theme]) .boot {
-          --boot-bg: #111214;
-          --boot-fg: #e5eaf3;
-          --boot-track: #2b2d31;
+          --boot-bg: #10131c;
+          --boot-fg: #eeeae1;
+          --boot-track: #2b3245;
+          --boot-bar: #9db3e6;
+          --boot-on-bar: #10131c;
         }
       }
       html[data-boot-theme='dark'] .boot {
-        --boot-bg: #111214;
-        --boot-fg: #e5eaf3;
-        --boot-track: #2b2d31;
+        --boot-bg: #10131c;
+        --boot-fg: #eeeae1;
+        --boot-track: #2b3245;
+        --boot-bar: #9db3e6;
+        --boot-on-bar: #10131c;
       }
       /* A quick load shows only the background; the rest fades in if it takes a moment. */
       .boot__inner {
@@ -156,9 +161,9 @@
       .boot__retry {
         padding: 8px 20px;
         border: 0;
-        border-radius: 6px;
+        border-radius: 8px;
         background: var(--boot-bar);
-        color: #ffffff;
+        color: var(--boot-on-bar);
         font: inherit;
         font-size: 14px;
         cursor: pointer;
