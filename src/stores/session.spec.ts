@@ -5,12 +5,25 @@ import { ApiError } from '@/api/http'
 // Who me.get says is signed in, and what taking up an invitation answers.
 let me: { id: string; display_name: string; platform_role?: string | null; administers?: unknown[] | null } | null =
   null
-let invite: () => Promise<{ actor_id: string; email: string; expires_at: string }>
+let invite: () => Promise<{ actor_id: string; email?: string | null; login_id?: string | null; expires_at: string }>
+/** Signed in with a password someone else set: me.get is refused until they set their own. */
+let mustChange = false
+let signIn: () => Promise<{ actor_id: string; expires_at: string; password_change_required?: boolean }>
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
     ...real,
     read: vi.fn((tool: string) => {
+      if (tool === 'me.get' && mustChange) {
+        return Promise.reject(
+          new ApiError({
+            status: 403,
+            code: 'forbidden',
+            message: 'not permitted',
+            details: { reason: 'password_change_required' },
+          }),
+        )
+      }
       if (tool === 'me.get') {
         return me
           ? Promise.resolve(me)
@@ -20,6 +33,7 @@ vi.mock('@/api/http', async (orig) => {
       return Promise.reject(new Error(`no answer for ${tool}`))
     }),
     acceptInvite: vi.fn(() => invite()),
+    login: vi.fn(() => signIn()),
   }
 })
 
@@ -32,6 +46,7 @@ const { useSessionStore } = await import('./session')
 beforeEach(() => {
   setActivePinia(createPinia())
   me = null
+  mustChange = false
   forgetRuntimeAssertion.mockClear()
 })
 
@@ -46,6 +61,7 @@ describe('signInWithInvite', () => {
     }
     await expect(session.signInWithInvite('aisinv_x', 'a long enough password')).resolves.toEqual({
       email: 'chan@example.edu',
+      loginId: null,
     })
     expect(session.status).toBe('signedIn')
     expect(session.me?.id).toBe('p1')
@@ -169,5 +185,43 @@ describe('who administers', () => {
     session.clear()
     expect(session.isDeptAdmin).toBe(false)
     expect(session.canAdminister).toBe(false)
+  })
+})
+
+describe('a password someone else set', () => {
+  it('is said by the sign-in, and nothing about the caller is asked until they set their own', async () => {
+    const session = useSessionStore()
+    await session.ensure()
+    signIn = async () => ({ actor_id: 's1', expires_at: '2026-10-01T00:00:00Z', password_change_required: true })
+    await expect(session.signInWithPassword('S2023001', 'temporary', { asLogin: true })).resolves.toEqual({
+      passwordChangeRequired: true,
+    })
+    expect(session.status).toBe('mustChangePassword')
+    expect(session.me).toBeNull()
+    // Set, who they are is asked again.
+    me = { id: 's1', display_name: 'Sam' }
+    await session.passwordChanged()
+    expect(session.status).toBe('signedIn')
+    expect(session.me?.id).toBe('s1')
+  })
+
+  it('is found when the page loads again, by Core refusing who they are', async () => {
+    mustChange = true
+    const session = useSessionStore()
+    await session.ensure()
+    expect(session.status).toBe('mustChangePassword')
+  })
+
+  it('says which login ID an invited person signs in with', async () => {
+    const session = useSessionStore()
+    await session.ensure()
+    invite = async () => {
+      me = { id: 'p2', display_name: 'Lee' }
+      return { actor_id: 'p2', login_id: 'S2023002', expires_at: '2026-09-26T00:00:00Z' }
+    }
+    await expect(session.signInWithInvite('aisinv_y', 'a long enough password')).resolves.toEqual({
+      email: null,
+      loginId: 'S2023002',
+    })
   })
 })

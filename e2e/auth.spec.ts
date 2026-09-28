@@ -4,10 +4,10 @@ import { demo, signIn, signInWithToken } from './support'
 test('a wrong password is refused and says so', async ({ page }) => {
   const d = demo()
   await page.goto('/login')
-  await page.fill('input[name=email]', d.actors.yuki.email!)
+  await page.fill('input[name=login]', d.actors.yuki.email!)
   await page.fill('input[name=password]', 'definitely-not-it')
   await page.click('button[type=submit]')
-  await expect(page.getByText('Email or password is not correct.')).toBeVisible()
+  await expect(page.getByText('The student/staff number or email, or the password, is not correct.')).toBeVisible()
   await expect(page).toHaveURL(/\/login/)
 })
 
@@ -35,7 +35,7 @@ test('a deep link survives signing in', async ({ page }) => {
   const d = demo()
   await page.goto(`/courses/${d.course.id}/assignments`)
   await expect(page).toHaveURL(/\/login\?next=/)
-  await page.fill('input[name=email]', d.actors.ken.email!)
+  await page.fill('input[name=login]', d.actors.ken.email!)
   await page.fill('input[name=password]', process.env.E2E_PASSWORD!)
   await page.click('button[type=submit]')
   await expect(page).toHaveURL(new RegExp(`/courses/${d.course.id}/assignments`))

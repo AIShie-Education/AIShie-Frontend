@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// Who the caller is (me.get).
+// Who the caller is (me.get): with the email and the login ID (a student or
+// staff number) a person signs in with.
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
 import type { Me } from '@/api/types'
@@ -34,6 +35,17 @@ const { t } = useI18n()
             <span v-if="me.email" class="profile-card__email">{{ me.email }}</span>
             <span v-else class="app-muted">{{ t('account.profile.noEmail') }}</span>
           </dd>
+          <template v-if="me.kind === 'human'">
+            <dt>{{ t('account.profile.loginId') }}</dt>
+            <dd>
+              <code v-if="me.login_id" class="profile-card__login-id">{{ me.login_id }}</code>
+              <span v-else class="app-muted">{{ t('account.profile.noLoginId') }}</span>
+              <el-tag v-if="me.login_id && me.login_id_verified === false" size="small" type="warning" effect="plain">
+                {{ t('account.profile.unverified') }}
+              </el-tag>
+              <div class="app-form-hint">{{ t('account.profile.loginIdNote') }}</div>
+            </dd>
+          </template>
           <dt>{{ t('account.profile.kind') }}</dt>
           <dd>
             {{ t(`enums.actorKind.${me.kind}`) }}
@@ -55,6 +67,10 @@ const { t } = useI18n()
 </template>
 
 <style scoped>
+.profile-card__login-id {
+  font-family: var(--app-font-mono);
+  margin-right: 6px;
+}
 .profile-card__head {
   display: flex;
   align-items: center;

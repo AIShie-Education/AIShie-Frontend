@@ -234,3 +234,21 @@ describe('EventItem, the flexible records', () => {
     w.unmount()
   })
 })
+
+describe('EventItem, a student’s password reset', () => {
+  it('says so, and how many of their sessions were signed out', async () => {
+    const w = mountItem({
+      seq: 4,
+      type: 'member.password_reset',
+      occurred_at: '2026-09-28T10:00:00Z',
+      subject_type: 'course_member',
+      subject_id: 's1',
+      student_member_id: 's1',
+      payload: { reset_by_member_id: 'm1', sessions_ended: 2 },
+    } as CourseEvent)
+    await flushPromises()
+    expect(w.text()).toContain('Student’s password reset')
+    expect(w.text()).toContain('2 sessions signed out')
+    w.unmount()
+  })
+})

@@ -35,8 +35,18 @@ const leaving = ref(false)
 const failure = shallowRef<{ err: ApiError; wait: true } | { err: unknown } | null>(null)
 /** Core refused the invitation: nothing more can be done with it. */
 const invalid = ref(false)
-/** The email they sign in with from now on, once the password is set. */
-const doneEmail = ref<string | null>(null)
+/**
+ * What they sign in with from now on, once the password is set: their email,
+ * their login ID (a student or staff number), or either.
+ */
+const done = ref<{ email: string | null; loginId: string | null } | null>(null)
+const doneText = computed(() => {
+  const d = done.value
+  if (!d) return ''
+  if (d.loginId && d.email) return t('auth.invite.doneEither', { loginId: d.loginId, email: d.email })
+  if (d.loginId) return t('auth.invite.doneLoginId', { loginId: d.loginId })
+  return t('auth.invite.done', { email: d.email ?? '' })
+})
 
 /** The invitation, read before the address loses it. */
 const token = ref<string | null>(null)
@@ -55,7 +65,7 @@ watch(
     token.value = found
     invalid.value = false
     failure.value = null
-    doneEmail.value = null
+    done.value = null
     form.password = ''
     form.repeat = ''
     formRef.value?.clearValidate()
@@ -127,7 +137,7 @@ async function submit() {
     const out = await session.signInWithInvite(invitation, form.password)
     form.password = ''
     form.repeat = ''
-    doneEmail.value = out.email
+    done.value = out
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) invalid.value = true
     else if (e instanceof ApiError && e.status === 429) failure.value = { err: e, wait: true }
@@ -163,9 +173,9 @@ function proceed() {
         <p class="welcome__tagline">{{ t('common.tagline') }}</p>
       </div>
 
-      <el-result v-if="doneEmail" icon="success" :title="t('auth.invite.doneTitle')" class="welcome__result">
+      <el-result v-if="done" icon="success" :title="t('auth.invite.doneTitle')" class="welcome__result">
         <template #sub-title>
-          <p class="welcome__done">{{ t('auth.invite.done', { email: doneEmail }) }}</p>
+          <p class="welcome__done">{{ doneText }}</p>
         </template>
         <template #extra>
           <el-button type="primary" size="large" :loading="leaving" @click="proceed">

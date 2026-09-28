@@ -9,14 +9,31 @@
 // caller goes, the course store is dropped here; and since views keep caches
 // of their own, the next sign-in in this tab starts the page again from
 // nothing (see startsAfresh and LoginView).
+//
+// Someone whose password someone else set (an instructor's reset of a
+// student's, member.reset_password) is signed in but may do nothing until
+// they have set their own: Core refuses every other call, me.get included
+// (password_change_required). Such a caller is 'mustChangePassword', and the
+// router takes them to the page that sets it.
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { acceptInvite, ApiError, bearer, joinRegister, login, logout as apiLogout, read, type Joined } from '@/api/http'
+import {
+  acceptInvite,
+  ApiError,
+  bearer,
+  isPasswordChangeRequired,
+  joinRegister,
+  login,
+  logout as apiLogout,
+  read,
+  type JoinRegistration,
+  type Joined,
+} from '@/api/http'
 import { forgetRuntimeAssertion } from '@/api/runtime'
 import type { Me, Membership } from '@/api/types'
 import { useCourseStore } from './course'
 
-export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut'
+export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut' | 'mustChangePassword'
 
 /**
  * Where earlier versions of the administration pages kept, in this browser,
@@ -60,8 +77,30 @@ export const useSessionStore = defineStore('session', () => {
         clear()
         return
       }
+      // Signed in, with a password someone else set: nothing but setting
+      // one's own is let through, who they are included.
+      if (isPasswordChangeRequired(e)) {
+        requirePasswordChange()
+        return
+      }
       throw e
     }
+  }
+
+  /**
+   * Core has said the caller must set a password of their own before
+   * anything else (at sign-in, or refusing a call). What was held of them
+   * goes, as nothing else may be asked until then.
+   */
+  function requirePasswordChange() {
+    forgetCaller()
+    status.value = 'mustChangePassword'
+  }
+
+  /** The caller has set their own password: who they are is asked again. */
+  async function passwordChanged(): Promise<void> {
+    status.value = 'unknown'
+    await ensure()
   }
 
   /** Establishes the session once; later calls wait for the same answer. */
@@ -103,13 +142,28 @@ export const useSessionStore = defineStore('session', () => {
     return memberships.value.find((m) => m.course_id === courseId && m.status !== 'removed')
   }
 
-  async function signInWithPassword(email: string, password: string) {
+  /**
+   * Signs in with a name (an email, or a login ID where Core takes one:
+   * asLogin) and a password. Resolves with whether the person must set a
+   * password of their own before anything else, which the sign-in said.
+   */
+  async function signInWithPassword(
+    name: string,
+    password: string,
+    opts: { asLogin?: boolean } = {},
+  ): Promise<{ passwordChangeRequired: boolean }> {
     forgetCaller()
     bearer.set(null)
     usingToken.value = false
-    await login(email, password)
+    const out = await login(name, password, opts)
+    if (out?.password_change_required) {
+      requirePasswordChange()
+      return { passwordChangeRequired: true }
+    }
     status.value = 'unknown'
     await ensure()
+    // A Core that says so only by refusing who they are (me.get).
+    return { passwordChangeRequired: (status.value as SessionStatus) === 'mustChangePassword' }
   }
 
   /**
@@ -120,14 +174,17 @@ export const useSessionStore = defineStore('session', () => {
    * the invitation is used up, so failing to read who they are afterwards is
    * not a failure here: the next page asks again.
    */
-  async function signInWithInvite(token: string, password: string): Promise<{ email: string }> {
+  async function signInWithInvite(
+    token: string,
+    password: string,
+  ): Promise<{ email: string | null; loginId: string | null }> {
     const out = await acceptInvite(token, password)
     forgetCaller()
     bearer.set(null)
     usingToken.value = false
     status.value = 'unknown'
     await ensure().catch(() => undefined)
-    return { email: out.email }
+    return { email: out.email ?? null, loginId: out.login_id ?? null }
   }
 
   /**
@@ -137,10 +194,7 @@ export const useSessionStore = defineStore('session', () => {
    * until Core has said yes, and failing to read who they are afterwards is
    * not a failure here. The seat they were given comes back.
    */
-  async function registerThroughJoinLink(
-    token: string,
-    form: { display_name: string; email: string; password: string },
-  ): Promise<Joined> {
+  async function registerThroughJoinLink(token: string, form: JoinRegistration): Promise<Joined> {
     const out = await joinRegister(token, form)
     forgetCaller()
     bearer.set(null)
@@ -249,6 +303,8 @@ export const useSessionStore = defineStore('session', () => {
     loadMemberships,
     membershipFor,
     signInWithPassword,
+    requirePasswordChange,
+    passwordChanged,
     signInWithInvite,
     registerThroughJoinLink,
     signInWithToken,

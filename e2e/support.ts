@@ -44,7 +44,7 @@ export async function signIn(page: Page, who: DemoActor) {
     } catch {}
   })
   await page.goto('/login')
-  await page.fill('input[name=email]', who.email)
+  await page.fill('input[name=login]', who.email)
   await page.fill('input[name=password]', process.env.E2E_PASSWORD!)
   await page.click('button[type=submit]')
   await expect(page).not.toHaveURL(/\/login/)

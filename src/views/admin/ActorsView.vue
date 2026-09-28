@@ -189,7 +189,13 @@ async function openById() {
       </div>
       <h3 class="actors__subhead">{{ t('admin.registered.nextSteps') }}</h3>
       <ol v-if="justRegistered.kind === 'human'" class="actors__steps">
-        <li>{{ justRegistered.email ? t('admin.registered.human.invite') : t('admin.registered.human.email') }}</li>
+        <li>
+          {{
+            justRegistered.email || justRegistered.login_id
+              ? t('admin.registered.human.invite')
+              : t('admin.registered.human.email')
+          }}
+        </li>
         <li>
           {{ t('admin.registered.human.seat') }}
           <router-link :to="{ name: 'admin-courses' }">{{ t('admin.nav.courses') }}</router-link>
@@ -210,7 +216,9 @@ async function openById() {
         <router-link :to="{ name: 'admin-actor', params: { actorId: justRegistered.id } }">
           <el-button type="primary">
             <span v-if="justRegistered.kind !== 'human'">{{ t('admin.registered.open') }}</span>
-            <span v-else-if="justRegistered.email">{{ t('admin.registered.human.inviteButton') }}</span>
+            <span v-else-if="justRegistered.email || justRegistered.login_id">{{
+              t('admin.registered.human.inviteButton')
+            }}</span>
             <span v-else>{{ t('admin.registered.human.emailButton') }}</span>
             <el-icon class="el-icon--right"><Right /></el-icon>
           </el-button>
@@ -373,7 +381,13 @@ async function openById() {
           <el-table-column :label="t('admin.actors.col.email')" min-width="250">
             <template #default="{ row }">
               <span v-if="row.email" class="actors__email">{{ row.email }}</span>
-              <span v-else class="app-muted">—</span>
+              <span v-else-if="!row.login_id" class="app-muted">—</span>
+              <div v-if="row.login_id" class="actors__login-id">
+                <code>{{ row.login_id }}</code>
+                <el-tag v-if="row.login_id_verified === false" size="small" type="warning" effect="plain">
+                  {{ t('admin.loginId.unverified') }}
+                </el-tag>
+              </div>
             </template>
           </el-table-column>
           <el-table-column :label="t('admin.actors.col.status')" width="110">
@@ -517,6 +531,16 @@ async function openById() {
 }
 .actors__link:hover {
   text-decoration: underline;
+}
+.actors__login-id {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.actors__login-id code {
+  font-family: var(--app-font-mono);
 }
 .actors__email {
   overflow-wrap: anywhere;

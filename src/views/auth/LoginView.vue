@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, reactive, ref, shallowRef, watch } from 
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules, InputInstance } from 'element-plus'
-import { ApiError, authMethods, health, ssoStartUrl, type SsoMethod } from '@/api/http'
+import { acceptsLoginId, ApiError, authMethods, health, ssoStartUrl, type SsoMethod } from '@/api/http'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
@@ -16,7 +16,9 @@ const router = useRouter()
 const session = useSessionStore()
 const ui = useUiStore()
 
-const form = reactive({ email: '', password: '' })
+// The account's name: an email, or where Core takes one a login ID, a student
+// or staff number (authMethods' passwordAccepts); as before when Core does not say.
+const form = reactive({ login: '', password: '' })
 const formRef = ref<FormInstance>()
 const busy = ref(false)
 // Why signing in did not work, kept as its cause and put into words when shown,
@@ -26,6 +28,8 @@ const failure = shallowRef<Failure | null>(route.query.expired ? { key: 'auth.ex
 const error = computed(() =>
   !failure.value ? null : 'key' in failure.value ? t(failure.value.key) : errorMessage(failure.value.err),
 )
+/** Core takes a login ID as well as an email: the field says so, and the name goes as `login`. */
+const byLoginId = ref(false)
 const showToken = ref(false)
 const token = ref('')
 const tokenInput = ref<InputInstance>()
@@ -51,9 +55,9 @@ const next = computed(() => {
 // The rules are words in the page's language; changing it does not check the
 // form again (validate-on-rule-change is off), it only puts a message already
 // shown into the new language.
-const touched = reactive({ email: false, password: false })
+const touched = reactive({ login: false, password: false })
 const submitted = ref(false)
-function required(field: 'email' | 'password') {
+function required(field: 'login' | 'password') {
   return {
     required: true,
     validator: (_r: unknown, v: string, cb: (e?: Error) => void) =>
@@ -62,14 +66,14 @@ function required(field: 'email' | 'password') {
   }
 }
 const rules = computed<FormRules>(() => ({
-  email: [required('email')],
+  login: [required('login')],
   password: [required('password')],
 }))
 watch(
   () => ui.locale,
   () =>
     nextTick(() => {
-      const shown = (['email', 'password'] as const).filter(
+      const shown = (['login', 'password'] as const).filter(
         (p) => formRef.value?.getField(p)?.validateState === 'error',
       )
       if (shown.length) void formRef.value?.validateField([...shown]).catch(() => undefined)
@@ -77,7 +81,10 @@ watch(
 )
 
 onMounted(async () => {
-  void authMethods().then((m) => (ssoMethod.value = m.sso))
+  void authMethods().then((m) => {
+    ssoMethod.value = m.sso
+    byLoginId.value = acceptsLoginId(m)
+  })
   try {
     const h = await health()
     version.value = h?.version ?? null
@@ -103,6 +110,14 @@ function proceed(): boolean {
   return false
 }
 
+/**
+ * The password signed in with is one someone else set: the person sets their
+ * own first, and is then taken where they were going.
+ */
+function changePasswordFirst() {
+  void router.replace({ name: 'change-password', query: next.value !== '/' ? { next: next.value } : {} })
+}
+
 async function signIn() {
   submitted.value = true
   if (!(await formRef.value?.validate().catch(() => false))) return
@@ -110,10 +125,19 @@ async function signIn() {
   failure.value = null
   let leaving = false
   try {
-    await session.signInWithPassword(form.email.trim(), form.password)
-    leaving = proceed()
+    const out = await session.signInWithPassword(form.login.trim(), form.password, { asLogin: byLoginId.value })
+    form.password = ''
+    if (out.passwordChangeRequired) {
+      leaving = true
+      changePasswordFirst()
+    } else {
+      leaving = proceed()
+    }
   } catch (e) {
-    failure.value = e instanceof ApiError && e.isUnauthenticated ? { key: 'auth.failed' } : { err: e }
+    failure.value =
+      e instanceof ApiError && e.isUnauthenticated
+        ? { key: byLoginId.value ? 'auth.failedLogin' : 'auth.failed' }
+        : { err: e }
   } finally {
     if (!leaving) busy.value = false
   }
@@ -173,14 +197,16 @@ function sso() {
         label-position="top"
         @submit.prevent="signIn"
       >
-        <el-form-item :label="t('auth.email')" prop="email">
+        <el-form-item :label="byLoginId ? t('auth.loginOrEmail') : t('auth.email')" prop="login">
           <el-input
-            v-model="form.email"
-            type="email"
+            v-model="form.login"
+            :type="byLoginId ? 'text' : 'email'"
             autocomplete="username"
+            autocapitalize="off"
+            spellcheck="false"
             size="large"
-            name="email"
-            @input="touched.email = true"
+            name="login"
+            @input="touched.login = true"
           />
         </el-form-item>
         <el-form-item :label="t('auth.password')" prop="password">

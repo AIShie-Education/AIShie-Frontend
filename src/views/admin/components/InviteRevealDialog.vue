@@ -102,7 +102,13 @@ function finish() {
       <dl class="reveal__facts">
         <div>
           <dt>{{ t('admin.invite.email') }}</dt>
-          <dd class="reveal__email">{{ issued.email }}</dd>
+          <dd class="reveal__email">
+            <template v-if="issued.login_id">
+              <code>{{ issued.login_id }}</code>
+              <template v-if="issued.email"> · {{ issued.email }}</template>
+            </template>
+            <template v-else>{{ issued.email }}</template>
+          </dd>
         </div>
         <div>
           <dt>{{ t('admin.invite.expires') }}</dt>

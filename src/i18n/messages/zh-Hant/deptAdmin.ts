@@ -71,9 +71,11 @@ export default {
   },
 
   lookup: {
-    email: '電子郵件',
+    email: '電子郵件或學號／工號',
     placeholder: "name{'@'}example.edu",
-    hint: '請輸入對方完整的電子郵件地址，不設部分搜尋。',
+    hint: '請輸入對方完整的電子郵件地址，或完整的學號／工號，不設部分搜尋。',
+    invalid: "請輸入完整的電子郵件地址（例如 name{'@'}example.edu），或完整的學號／工號。",
+    notFoundLoginId: '沒有人以此學號／工號登記。要邀請新成員，請以對方的電子郵件查找。',
     find: '查找',
     notFound: '沒有人以此電子郵件登記。你可以邀請對方。',
     notFoundPlain: '沒有人以此電子郵件登記。',

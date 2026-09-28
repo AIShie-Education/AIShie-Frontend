@@ -100,6 +100,8 @@ export default {
     register: '注册账号',
     haveAccount: '已经有账号？',
     wrongDomain: '你以 {email} 登录，但此链接只供 {domains} 的邮箱使用。请以属于其中一个域名的账号登录后再加入。',
+    noEmailForDomains:
+      '此链接只供 {domains} 的邮箱使用，而你的账号没有邮箱。请联系讲师，或请管理员为你的账号添加邮箱。',
     agent: '你正以智能体的 API 令牌登录。只有人员可以通过邀请链接加入课程。',
     member: '你已经是此课程的成员。',
     toHome: '前往 AIshie',
@@ -120,6 +122,12 @@ export default {
     displayName: '你的名称',
     displayNameHint: '讲师与同学会看到这个名称。',
     email: '邮箱',
+    loginId: '学号',
+    loginIdHint: '学校发给你的学号。今后用它登录。',
+    loginIdEmail: '学号不含 @：邮箱请填在下一栏',
+    loginIdLong: '最多 {n} 个字符',
+    loginIdChars: '只能使用英文字母、数字、句点、连字符及下划线，不能有空格',
+    emailOptionalHint: '如有的话。也可以用它登录。',
     emailHint: '今后用它登录。',
     emailDomainHint: '请使用你在 {domains} 的邮箱。',
     badEmail: '请输入完整的邮箱地址',
@@ -147,5 +155,6 @@ export default {
     registration_disabled: '此处不能通过邀请链接注册账号。请先登录，再打开链接加入。',
     actor_not_active: '你的账号已被停用，无法加入课程。请联系管理员。',
     email_taken: '已有账号使用此邮箱。请以该账号登录后加入课程。',
+    login_id_taken: '已有账号使用此学号。请以该账号登录后加入课程。',
   },
 }

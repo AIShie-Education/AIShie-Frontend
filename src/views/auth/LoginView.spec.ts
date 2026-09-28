@@ -71,7 +71,7 @@ describe('the sign-in page', () => {
     vi.spyOn(useSessionStore(), 'signInWithPassword').mockRejectedValue(
       new ApiError({ status: 401, code: 'unauthenticated', message: 'no' }),
     )
-    await w.find('input[name="email"]').setValue('someone@example.edu')
+    await w.find('input[name="login"]').setValue('someone@example.edu')
     await w.find('input[name="password"]').setValue('not the password')
     await w.find('form.el-form').trigger('submit')
     await flushPromises()
@@ -160,12 +160,73 @@ describe('single sign-on on the sign-in page', () => {
     let answer!: (m: AuthMethods) => void
     vi.mocked(authMethods).mockReturnValue(new Promise((resolve) => (answer = resolve)))
     const w = await mountAt('/login', 'en')
-    expect(w.find('input[name="email"]').exists()).toBe(true)
+    expect(w.find('input[name="login"]').exists()).toBe(true)
     expect(w.find('.login__version').text()).toBe('Server 1.0.0')
     expect(ssoButton(w)).toBeUndefined()
     answer({ password: true, sso: { label: 'PolyU NetID', start: START } })
     await flushPromises()
     expect(ssoButton(w)?.text()).toBe('Sign in with PolyU NetID')
+    w.unmount()
+  })
+})
+
+describe('the sign-in name, as Core takes it', () => {
+  const label = (w: Awaited<ReturnType<typeof mountAt>>) => w.find('.el-form-item__label').text()
+
+  it('says a student or staff number or an email where Core takes a login ID, and sends it as login', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, passwordAccepts: ['login_id', 'email'], sso: null })
+    const w = await mountAt('/login', 'en')
+    expect(label(w)).toBe('Student/staff number or email')
+    expect(w.find('input[name="login"]').attributes('type')).toBe('text')
+    const signIn = vi
+      .spyOn(useSessionStore(), 'signInWithPassword')
+      .mockRejectedValue(new ApiError({ status: 401, code: 'unauthenticated', message: 'no' }))
+    await w.find('input[name="login"]').setValue(' S2023001 ')
+    await w.find('input[name="password"]').setValue('not the password')
+    await w.find('form.el-form').trigger('submit')
+    await flushPromises()
+    expect(signIn).toHaveBeenCalledWith('S2023001', 'not the password', { asLogin: true })
+    expect(alertText(w)).toBe('The student/staff number or email, or the password, is not correct.')
+    w.unmount()
+  })
+
+  it('says it in Traditional and Simplified Chinese', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, passwordAccepts: ['login_id', 'email'], sso: null })
+    const hant = await mountAt('/login', 'zh-Hant')
+    expect(label(hant)).toBe('學號／工號或電子郵件')
+    hant.unmount()
+    const hans = await mountAt('/login', 'zh-Hans')
+    expect(label(hans)).toBe('学号／工号或邮箱')
+    hans.unmount()
+  })
+
+  it('keeps asking for an email, sent as email, where Core does not say', async () => {
+    const w = await mountAt('/login', 'en')
+    expect(label(w)).toBe('Email')
+    expect(w.find('input[name="login"]').attributes('type')).toBe('email')
+    const signIn = vi
+      .spyOn(useSessionStore(), 'signInWithPassword')
+      .mockResolvedValue({ passwordChangeRequired: false })
+    await w.find('input[name="login"]').setValue('someone@example.edu')
+    await w.find('input[name="password"]').setValue('a long enough password')
+    await w.find('form.el-form').trigger('submit')
+    await flushPromises()
+    expect(signIn).toHaveBeenCalledWith('someone@example.edu', 'a long enough password', { asLogin: false })
+    w.unmount()
+  })
+
+  it('goes to set a password of one’s own first when the sign-in says so, keeping where it was going', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, passwordAccepts: ['login_id', 'email'], sso: null })
+    const w = await mountAt('/login?next=/courses/c1', 'en')
+    const router = (w.vm as unknown as { $router: import('vue-router').Router }).$router
+    router.addRoute({ path: '/change-password', name: 'change-password', component: { render: () => null } })
+    vi.spyOn(useSessionStore(), 'signInWithPassword').mockResolvedValue({ passwordChangeRequired: true })
+    await w.find('input[name="login"]').setValue('S2023001')
+    await w.find('input[name="password"]').setValue('the temporary one')
+    await w.find('form.el-form').trigger('submit')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('change-password')
+    expect(router.currentRoute.value.query.next).toBe('/courses/c1')
     w.unmount()
   })
 })

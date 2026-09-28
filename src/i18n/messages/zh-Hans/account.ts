@@ -11,6 +11,10 @@ export default {
     kind: '类型',
     email: '邮箱',
     noEmail: '未设置邮箱',
+    loginId: '学号／工号',
+    noLoginId: '没有',
+    loginIdNote: '可与邮箱一样用来登录。只有管理员可以更改。',
+    unverified: '尚未经管理员确认',
     status: '状态',
     platformRole: '平台角色',
     noPlatformRole: '无：你能做什么，由各课程分别设置',
@@ -31,10 +35,11 @@ export default {
   password: {
     title: '密码',
     isSet: '你可以用邮箱地址和密码登录。',
+    isSetLoginId: '你可以用学号／工号或邮箱，加上密码登录。',
     setOn: '设置于',
     notSet: '尚未设置密码。你以其他方式登录：单点登录或令牌。',
     noEmail:
-      '此账号没有邮箱地址，因此无法以密码登录（密码须配合邮箱地址使用）。在管理员为此账号添加邮箱之前，请以单点登录或令牌登录。',
+      '此账号既没有学号／工号，也没有邮箱地址，因此无法以密码登录（密码须配合其中之一使用）。在管理员为此账号添加之前，请以单点登录或令牌登录。',
     unknown: '无法读取是否已设置密码。',
     set: '设置密码',
     change: '更改密码',

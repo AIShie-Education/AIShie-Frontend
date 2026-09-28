@@ -4,9 +4,11 @@
 // piece of their name or email, or by a pasted ID (actor.get), so that they
 // see who they are about to seat; on a Core without the directory, a pasted
 // ID is the way. A department's administrator has no directory: they find
-// the person by their whole email (actor.lookup_by_email), register and
-// invite someone who is not registered yet (actor.invite_new), and invite
-// again someone who has never signed in and whom they may (actor.invite).
+// the person by their whole email or student/staff number
+// (actor.lookup_by_email), register and invite someone who is not registered
+// yet (actor.invite_new, by email: so a number that finds nobody offers no
+// invitation), and invite again someone who has never signed in and whom
+// they may (actor.invite).
 //
 // Once the course is known to have members the card no longer offers the
 // form first: it shows the instructors where the administrator's own seat
@@ -377,7 +379,7 @@ async function seat() {
           </el-button>
         </template>
         <template #missing="{ email }">
-          <el-button type="primary" plain :disabled="disabled" @click="startInvite(email)">
+          <el-button v-if="email" type="primary" plain :disabled="disabled" @click="startInvite(email)">
             <el-icon><Message /></el-icon>
             <span>{{ t('deptAdmin.invite.new') }}</span>
           </el-button>

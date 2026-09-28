@@ -12,6 +12,10 @@ export default {
     kind: 'Kind',
     email: 'Email',
     noEmail: 'No email address',
+    loginId: 'Student/staff number',
+    noLoginId: 'None',
+    loginIdNote: 'You sign in with it as with your email. Only an administrator changes it.',
+    unverified: 'Not yet confirmed by an administrator',
     status: 'Status',
     platformRole: 'Platform role',
     noPlatformRole: 'None: what you may do is set course by course',
@@ -32,10 +36,11 @@ export default {
   password: {
     title: 'Password',
     isSet: 'You can sign in with your email address and password.',
+    isSetLoginId: 'You can sign in with your student or staff number, or your email, and your password.',
     setOn: 'Set',
     notSet: 'No password is set. You sign in another way: single sign-on, or a token.',
     noEmail:
-      'This account has no email address, so it cannot sign in with a password, which is always entered with one. It signs in with single sign-on or a token instead, until an administrator gives it an email.',
+      'This account has neither a student/staff number nor an email address, so it cannot sign in with a password, which is always entered with one. It signs in with single sign-on or a token instead, until an administrator gives it one.',
     unknown: 'Whether a password is set could not be read.',
     set: 'Set a password',
     change: 'Change password',

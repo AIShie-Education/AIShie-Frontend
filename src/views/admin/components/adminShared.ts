@@ -66,6 +66,8 @@ export interface RegisteredActor {
   kind: 'human' | 'agent'
   display_name: string
   email: string | null
+  /** A person's student or staff number, which they sign in with as with an email. */
+  login_id?: string | null
   platform_role: string | null
 }
 

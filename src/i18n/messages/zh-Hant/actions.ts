@@ -180,6 +180,8 @@ export default {
     students: '學生',
     purged_versions: '已清除的版本',
     files_removed: '已刪除的檔案',
+    sessions_ended: '已登出的工作階段',
+    login_id: '學號／工號',
   },
   types: {
     action: {
@@ -252,6 +254,7 @@ export default {
       update_perms_bulk: '按角色批量更改權限',
       remove_orphan: '移除已與擁有者脫鈎的代理',
       set_role: '更改席位的名冊角色',
+      reset_password: '重設學生密碼',
     },
     submission: {
       create: '開始提交',

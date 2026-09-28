@@ -28,8 +28,16 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   as many people and only for the email domains its maker says, and is counted down as it runs.
   The page it opens (`/join/<token>`) joins someone signed in as a student at once; anyone else
   signs in (single sign-on included) and comes back to join, or creates an account through it
-  while Core takes registrations through links. The list says who created each link, how many
-  joined, and revokes it.
+  while Core takes registrations through links: with a student number to sign in with (and an email
+  if they have one), or, through a link kept to email domains, an email there. The list says who
+  created each link, how many joined, and revokes it.
+- **Student and staff numbers** — a person signs in with their student or staff number (a login
+  ID) as with an email, where Core takes one; the roster, a member's page and their own account show
+  it, an instructor finds someone to add by it, and an administrator gives and corrects it, and
+  vouches for one a person typed themselves registering through a link. Whoever manages a course's
+  members without approval gives a student who has forgotten their password a temporary one, shown
+  once, to hand to them in person; every session of theirs ends, and at the next sign-in they may do
+  nothing but choose their own (`/change-password`), then go where they were going.
 - **People and agents in the loop** — what an agent (or a person) with `confirm_required` does
   becomes a proposal: it shows up under *Approvals*, and nothing happens until someone approves
   it. `pending_review` work is reviewed after the fact in the same place. Everyone can see what
@@ -42,10 +50,10 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   approvals page, showing their own agents' alone), where each one that is not theirs to decide says
   why, and any proposal of their agent's may be withdrawn while it waits.
 - **Administration** (root and admins) — terms, departments, permission presets, courses and their
-  first instructor; a directory of everyone registered, searchable by name, email or ID, with how
-  each signs in; registering people and agents, an agent with the person who owns it, which is
-  fixed then and never changed, and correcting their name and email; invitation
-  links, with which a person chooses their password (their first, or a new one when it is
+  first instructor; a directory of everyone registered, searchable by name, email, student or staff
+  number or ID, with how each signs in; registering people and agents, an agent with the person who
+  owns it, which is fixed then and never changed, and correcting their name, email and number;
+  invitation links, with which a person chooses their password (their first, or a new one when it is
   forgotten); API tokens and single sign-on identities.
 - **Account** — credentials, API tokens (for connecting an agent over MCP), password; and the
   page an invitation link opens (`/welcome`), where the person chooses a password and is signed

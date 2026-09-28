@@ -84,6 +84,7 @@ export default {
     reviewedByOwner: 'Reviewed by its agent’s owner',
     withdrawnByOwner: 'Taken back by its agent’s owner',
     roleChanged: '{from} → {to}',
+    sessionsEnded: 'no session was open | {n} session signed out | {n} sessions signed out',
     courseFields: {
       title: 'Title changed',
       description: 'Description changed',

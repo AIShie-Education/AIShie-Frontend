@@ -249,6 +249,10 @@ const facts = computed<Fact[]>(() => {
       })
     }
   }
+  if (type === 'member.password_reset') {
+    const n = payloadNumber(e, 'sessions_ended')
+    if (n !== undefined) out.push({ kind: 'text', text: t('activity.fact.sessionsEnded', { n }, n), tone: 'info' })
+  }
   if (type === 'course.updated') {
     const fields = payloadField(e, 'fields')
     for (const f of Array.isArray(fields) ? fields : []) {

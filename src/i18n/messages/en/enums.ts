@@ -269,6 +269,7 @@ export default {
     'member.removed': 'Member removed',
     'member.rescoped': 'Member scope changed',
     'member.role_changed': 'Roster role changed',
+    'member.password_reset': 'Student’s password reset',
     'submission.submitted': 'Work handed in',
     'submission.lateness_changed': 'Lateness corrected',
     'submission.missing': 'Marked missing',

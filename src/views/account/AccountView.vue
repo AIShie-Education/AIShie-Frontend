@@ -32,7 +32,12 @@ const creds = useAsync(
   { keepData: true },
 )
 
-const hasEmail = computed(() => !!(me.data.value ?? session.me)?.email)
+/** A name to sign in with a password: an email, or a login ID (a student or staff number). */
+const hasEmail = computed(() => {
+  const m = me.data.value ?? session.me
+  return !!m?.email || !!m?.login_id
+})
+const hasLoginId = computed(() => !!(me.data.value ?? session.me)?.login_id)
 /** Only a person owns agents (agent.create refuses an agent). */
 const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human')
 </script>
@@ -63,6 +68,7 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
         :loading="creds.loading.value"
         :error="creds.error.value"
         :has-email="hasEmail"
+        :has-login-id="hasLoginId"
         @changed="creds.reload"
         @retry="creds.reload"
       />

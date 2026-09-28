@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // Setting or replacing the caller's own password (credential.set_password).
 // Whether one is set, and since when, is read from the credential list. A
-// password is used only with an email address (auth.Login finds the account
-// by it), which only an administrator can give an account later
-// (actor.update): without it, there is nothing to set.
+// password is entered with a name, an email address or a login ID (a student
+// or staff number; auth.Login finds the account by either), which only an
+// administrator can give an account later (actor.update): without one, there
+// is nothing to set.
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -19,7 +20,10 @@ const props = defineProps<{
   credentials: Credential[] | undefined
   loading: boolean
   error: ApiError | null
+  /** The account has a name to sign in with: an email, or a login ID. */
   hasEmail: boolean
+  /** The account has a login ID to sign in with. */
+  hasLoginId?: boolean
 }>()
 const emit = defineEmits<{ changed: []; retry: [] }>()
 const { t } = useI18n()
@@ -93,7 +97,7 @@ async function save() {
       <div class="password-card__text">
         <p v-if="!hasEmail">{{ t('account.password.noEmail') }}</p>
         <template v-else-if="current">
-          <p>{{ t('account.password.isSet') }}</p>
+          <p>{{ hasLoginId ? t('account.password.isSetLoginId') : t('account.password.isSet') }}</p>
           <p class="app-muted password-card__since">
             {{ t('account.password.setOn') }} <TimeText :value="current.created_at" />
           </p>

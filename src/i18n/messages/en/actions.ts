@@ -185,6 +185,8 @@ export default {
     students: 'Students',
     purged_versions: 'Versions purged',
     files_removed: 'Files deleted',
+    sessions_ended: 'Sessions signed out',
+    login_id: 'Student/staff number',
   },
   types: {
     action: {
@@ -257,6 +259,7 @@ export default {
       update_perms_bulk: 'Change permissions for a whole role',
       remove_orphan: 'Remove an agent no longer tied to its owner',
       set_role: 'Change a seat’s roster role',
+      reset_password: 'Reset a student’s password',
     },
     submission: {
       create: 'Start a submission',

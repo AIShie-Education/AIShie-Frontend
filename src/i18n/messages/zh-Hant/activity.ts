@@ -84,6 +84,7 @@ export default {
     reviewedByOwner: '由代理的擁有者覆核',
     withdrawnByOwner: '由代理的擁有者撤回',
     roleChanged: '{from} → {to}',
+    sessionsEnded: '沒有登入中的工作階段 | 登出了 {n} 個工作階段 | 登出了 {n} 個工作階段',
     courseFields: {
       title: '標題已更改',
       description: '說明已更改',

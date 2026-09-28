@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { roleChangeBlock, roleChangeEffect, ROSTER_ROLES } from './roles'
+import { resetPasswordOffer, roleChangeBlock, roleChangeEffect, ROSTER_ROLES } from './roles'
 
 const person = { id: 's1', kind: 'human', principal_member_id: null }
 const caller = { memberId: 'me', principalMemberId: null }
@@ -40,5 +40,32 @@ describe('roleChangeBlock', () => {
   })
   it('offers nothing on a seat removed or ended', () => {
     expect(roleChangeBlock(person, caller, false)).toBe('gone')
+  })
+})
+
+describe('resetPasswordOffer', () => {
+  const student = { id: 's1', kind: 'human', role: 'student', status: 'active', principal_member_id: null }
+  const instructor = { memberId: 'me', isPerson: true, level: 'autonomous' }
+
+  it('offers it on a person’s active student seat, to a person who manages members without approval', () => {
+    expect(resetPasswordOffer(student, instructor, true)).toBe('offer')
+    // Levels not known yet: offered, and Core decides.
+    expect(resetPasswordOffer(student, { ...instructor, level: null }, true)).toBe('offer')
+  })
+  it('hides it on an agent’s seat, anyone but a student’s, and one’s own', () => {
+    expect(resetPasswordOffer({ ...student, kind: 'agent' }, instructor, true)).toBe('hide')
+    expect(resetPasswordOffer({ ...student, principal_member_id: 'p1' }, instructor, true)).toBe('hide')
+    expect(resetPasswordOffer({ ...student, role: 'ta' }, instructor, true)).toBe('hide')
+    expect(resetPasswordOffer({ ...student, id: 'me' }, instructor, true)).toBe('hide')
+    expect(resetPasswordOffer(student, instructor, false)).toBe('hide')
+  })
+  it('hides it from an agent, and from a seat that does not manage members', () => {
+    expect(resetPasswordOffer(student, { ...instructor, isPerson: false }, true)).toBe('hide')
+    expect(resetPasswordOffer(student, { ...instructor, level: 'denied' }, true)).toBe('hide')
+  })
+  it('greys it out, with why, for a caller who manages members only with approval, or a paused seat', () => {
+    expect(resetPasswordOffer(student, { ...instructor, level: 'confirm_required' }, true)).toBe('notAutonomous')
+    expect(resetPasswordOffer(student, { ...instructor, level: 'pending_review' }, true)).toBe('notAutonomous')
+    expect(resetPasswordOffer({ ...student, status: 'paused' }, instructor, true)).toBe('seatNotActive')
   })
 })

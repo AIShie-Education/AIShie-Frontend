@@ -182,6 +182,87 @@ describe('the join page', () => {
     w.unmount()
   })
 
+  it('asks for a student number, and an email only if they have one, where the link asks for no email', async () => {
+    preview = async () => ({ ...open, email_required: false })
+    const { w, router, session } = await mountJoin()
+    const register = vi
+      .spyOn(session, 'registerThroughJoinLink')
+      .mockResolvedValue({ course_id: COURSE, member_id: 'm-1' })
+    await w.findAll('button').find((b) => b.text() === 'Create an account')!.trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('Student number')
+    expect(w.text()).toContain('You sign in with it from now on.')
+    expect(w.text()).toContain('(optional)')
+    await w.find('input[name="name"]').setValue('Mei Lin')
+    await w.find('input[name="login_id"]').setValue(' 2024001 ')
+    await w.find('input[name="password"]').setValue('a long enough password')
+    await w.find('input[name="repeat"]').setValue('a long enough password')
+    await w.find('form.join-register').trigger('submit')
+    await flushPromises()
+    // No email typed: none is sent.
+    expect(register).toHaveBeenCalledWith(TOKEN, {
+      display_name: 'Mei Lin',
+      login_id: '2024001',
+      password: 'a long enough password',
+    })
+    expect(router.currentRoute.value.fullPath).toBe(`/courses/${COURSE}`)
+    w.unmount()
+  })
+
+  it('sends the email given beside a student number (the rules they are held to first are in join.spec.ts)', async () => {
+    preview = async () => ({ ...open, email_required: false })
+    const { w, session } = await mountJoin({ locale: 'zh-Hant' })
+    const register = vi
+      .spyOn(session, 'registerThroughJoinLink')
+      .mockResolvedValue({ course_id: COURSE, member_id: 'm-1' })
+    await w.findAll('button').find((b) => b.text() === '建立帳戶')!.trigger('click')
+    await flushPromises()
+    await w.find('input[name="name"]').setValue('林美')
+    await w.find('input[name="login_id"]').setValue('2024-001')
+    await w.find('input[name="email"]').setValue(' mei@example.edu ')
+    await w.find('input[name="password"]').setValue('a long enough password')
+    await w.find('input[name="repeat"]').setValue('a long enough password')
+    await w.find('form.join-register').trigger('submit')
+    await flushPromises()
+    expect(register).toHaveBeenCalledWith(TOKEN, {
+      display_name: '林美',
+      login_id: '2024-001',
+      email: 'mei@example.edu',
+      password: 'a long enough password',
+    })
+    w.unmount()
+  })
+
+  it('keeps asking for an email where the link asks for one, as before student numbers', async () => {
+    preview = async () => ({ ...open, email_required: true, allowed_email_domains: ['hainanu.edu.cn'] })
+    const { w } = await mountJoin()
+    await w.findAll('button').find((b) => b.text() === 'Create an account')!.trigger('click')
+    await flushPromises()
+    expect(w.find('input[name="login_id"]').exists()).toBe(false)
+    expect(w.find('input[name="email"]').exists()).toBe(true)
+    expect(w.text()).not.toContain('(optional)')
+    w.unmount()
+  })
+
+  it('tells someone whose student number is taken to sign in instead', async () => {
+    preview = async () => ({ ...open, email_required: false })
+    const { w, session } = await mountJoin()
+    vi.spyOn(session, 'registerThroughJoinLink').mockRejectedValue(
+      new ApiError({ status: 409, code: 'conflict', message: 'taken', details: { reason: 'login_id_taken' } }),
+    )
+    await w.findAll('button').find((b) => b.text() === 'Create an account')!.trigger('click')
+    await flushPromises()
+    await w.find('input[name="name"]').setValue('Ken')
+    await w.find('input[name="login_id"]').setValue('2024002')
+    await w.find('input[name="password"]').setValue('a long enough password')
+    await w.find('input[name="repeat"]').setValue('a long enough password')
+    await w.find('form.join-register').trigger('submit')
+    await flushPromises()
+    expect(w.text()).toContain('An account with this student number already exists')
+    expect(w.findAll('a').some((a) => a.text().includes('Sign in instead'))).toBe(true)
+    w.unmount()
+  })
+
   it('joins someone signed in, at a click, and takes them to the course', async () => {
     joinCourse.mockResolvedValue({ course_id: COURSE, member_id: 'm-2', status: 'active' })
     const { w, router } = await mountJoin({ me: { email: 'yuki@example.edu' } })

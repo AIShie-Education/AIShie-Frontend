@@ -11,6 +11,9 @@ export default {
   partialCounts: 'The counts cover the members loaded so far. Load more to see everyone.',
   agentsHint: 'Course agents, how their replies reach students, and whether students may bring their own agents:',
   agentsPage: 'Agents page',
+  loginId: 'Student/staff number',
+  noLoginId: 'None',
+  loginIdHelp: 'What they sign in with, as well as an email; only an administrator changes it.',
   tabs: {
     all: 'All',
     people: 'People',
@@ -90,13 +93,15 @@ export default {
       'Filled in when you pick someone above; an actor ID can also be pasted. It is not a member ID: that is made when they are seated here.',
     noSearch:
       'This Core cannot search by name or email yet (it needs updating): paste the actor ID. It is not a member ID: that is made when they are seated here.',
-    findEmail: 'Find by email',
-    emailPlaceholder: "name{'@'}example.edu",
+    findEmail: 'Find by student/staff number or email',
+    emailPlaceholder: "20231234 or name{'@'}example.edu",
     findButton: 'Find',
-    emailHelp: 'Their whole email address, in upper or lower case: nobody is found by a part of one.',
-    emailPartial: "Give their whole email address, such as name{'@'}example.edu: a part of one finds nobody.",
+    emailHelp:
+      'Their whole student or staff number, or their whole email address, in upper or lower case: nobody is found by a part of one.',
+    emailPartial:
+      "Give their whole student or staff number, or their whole email address such as name{'@'}example.edu: a part of one finds nobody.",
     emailNobody:
-      'Nobody is registered with that email. Ask a platform administrator to register them, then find them here.',
+      'Nobody is registered with that number or email. Ask a platform administrator to register them, then find them here.',
     actorHelpEmail:
       'Filled in when you find someone by email above. An agent has no email: ask a platform administrator, who can tell you their actor ID. It is not a member ID: that is made when they are seated here.',
     noSearchEmail:
@@ -202,7 +207,53 @@ export default {
         'This seat is an agent’s, seated as someone’s delegate: it is always Assistant, and on no roster. Its role does not change.',
       not_your_principal:
         'An agent does not manage the seat of the person it acts for, nor the seats of their other agents.',
+      // member.reset_password
+      people_only: 'A password is reset by a person, who hands it on: an agent is never given one.',
+      not_autonomous:
+        'You manage members here only with approval or review, and a password is not reset that way. Ask someone who manages members without approval.',
+      not_by_proposal:
+        'A password is never reset by a request for approval: it is shown once, to whoever resets it. Ask someone who manages members without approval.',
+      own_seat: 'That is your own seat: set your own password on your Account page.',
+      not_a_person: 'That seat is an agent’s, which signs in with a token and has no password.',
+      not_a_student: 'Only a student’s password is reset here. Anyone else’s is an administrator’s to reset.',
+      seat_not_active: 'Their seat is not active (paused, removed or ended). Resume it first, or ask an administrator.',
+      seated_other_than_student:
+        'They hold a seat other than a student’s in some course, so their password is an administrator’s to reset.',
+      platform_role: 'They hold a platform role, so their password is an administrator’s to reset.',
+      administers: 'They administer a department, so their password is an administrator’s to reset.',
+      sso_linked: 'They sign in through the school’s identity provider, whose password is not this system’s to set.',
+      no_sign_in_name:
+        'They have neither a student/staff number nor an email to sign in with. An administrator gives them one first.',
+      beyond_your_seat:
+        'Their seat holds more than your own seat does, and whoever holds the password holds the seat. Ask someone who holds at least as much.',
     },
+  },
+  // member.reset_password: a temporary password for a student.
+  reset: {
+    action: 'Reset password',
+    title: 'Reset the password of {name}?',
+    intro: 'A new, temporary password is made for {name}, for you to hand to them. Their old password stops working.',
+    sessions: 'Every session {name} has is signed out now.',
+    mustChange:
+      'The next time {name} signs in, with it, they must choose a password of their own before anything else.',
+    shownOnce: 'The temporary password is shown to you once, here, and kept nowhere.',
+    onlyStudents:
+      'Only for a student whose account reaches nothing beyond a student’s seat: anyone else’s password is an administrator’s to reset.',
+    submit: 'Reset password',
+    resultTitle: 'Temporary password for {name}',
+    onceTitle: 'Shown only now',
+    once: 'It is not stored, and cannot be shown again. Hand it to them in person or through a private message — never in a class group or any public channel.',
+    signInWith: 'They sign in with',
+    theirEmail: 'Their email',
+    password: 'Temporary password',
+    copied: 'Copied',
+    copiedShort: 'Copied',
+    copyFailed: 'The browser did not let it be copied: select it and copy it by hand.',
+    replayed:
+      'The password was set, but this answer was a repeat of an earlier request, which does not show it again. Reset it again to get a new one.',
+    ended: 'They had no session open. | Their {n} session was signed out. | Their {n} sessions were signed out.',
+    next: 'At the next sign-in, {name} chooses their own password.',
+    close: 'Done',
   },
   role: {
     change: 'Change role',
