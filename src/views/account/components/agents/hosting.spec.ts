@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { i18n, setLocale } from '@/i18n'
+import { LOCALES, i18n, setLocale } from '@/i18n'
 import { ApiError } from '@/api/http'
 import { RuntimeError } from '@/api/runtime'
 import {
@@ -49,7 +49,8 @@ const g = i18n.global as unknown as {
   te: (key: string, locale: string) => boolean
 }
 const t = (key: string, params?: Record<string, unknown>) => g.t(key, params ?? {})
-const te = (key: string) => g.te(key, 'en') && g.te(key, 'zh-Hant')
+// A key every language has.
+const te = (key: string) => LOCALES.every((l) => g.te(key, l.value))
 
 function err(reason: string, details: Record<string, unknown> = {}, status = 400) {
   return new RuntimeError({ status, code: 'x', message: `developer words for ${reason}`, reason, details })
@@ -147,13 +148,17 @@ describe('the words for each error reason', () => {
     expect(te(key), key).toBe(true)
   })
 
-  it.each(Object.entries(NAMED))('%s names what the runtime refused, in both languages', (reason, [field, words]) => {
+  it.each(Object.entries(NAMED))('%s names what the runtime refused, in every language', (reason, [field, words]) => {
     const e = err(reason, { field })
     expect(hostingErrorText(e, t)).toBe(words)
     setLocale('zh-Hant')
     const zh = hostingErrorText(e, t)
     expect(zh).toContain(`「${field}」`)
     expect(zh).toMatch(/[一-鿿]/)
+    setLocale('zh-Hans')
+    const zhHans = hostingErrorText(e, t)
+    expect(zhHans).toContain(`“${field}”`)
+    expect(zhHans).not.toBe(zh)
     setLocale('en')
     // Without a name, the app's generic words, with the runtime's message.
     expect(hostingErrorKey(err(reason))).toBeNull()
@@ -196,7 +201,7 @@ describe('the words for each error reason', () => {
 })
 
 describe('statuses and problems', () => {
-  it('have a title and a body for every status, and a sentence for every problem, in both languages', () => {
+  it('have a title and a body for every status, and a sentence for every problem, in every language', () => {
     for (const s of HOSTED_STATUSES) {
       expect(te(`hosting.status.${s}.title`), s).toBe(true)
       expect(te(`hosting.status.${s}.body`), s).toBe(true)
@@ -258,6 +263,14 @@ describe('seat sentences', () => {
     expect(seatSentences(seat(), t)[0]).toBe('在 CS101 · A 作為你的代表：讀取課程資料和學生作業；只回答你。')
     expect(seatSentences(seat({ reads_work: false, reads_material: false, kind: 'member' }), t)[0]).toBe(
       'CS101 · A 的成員：讀取不到任何內容。',
+    )
+  })
+
+  it('read naturally in Simplified Chinese', () => {
+    setLocale('zh-Hans')
+    expect(seatSentences(seat(), t)[0]).toBe('在 CS101 · A 作为你的代表：读取课程教材和学生作业；只回答你。')
+    expect(seatSentences(seat({ kind: 'course_tutor', section: '', reads_work: false }), t)[0]).toBe(
+      'CS101 的辅导智能体：回答所有学生；读取课程教材。',
     )
   })
 })

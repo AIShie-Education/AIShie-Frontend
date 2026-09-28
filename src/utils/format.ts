@@ -1,12 +1,25 @@
 import dayjs from 'dayjs'
 import type { Decimal } from '@/api/types'
 
+// Numbers are written as the page's language writes them, as dates are:
+// i18n's setLocale gives the language as Intl names it (zh-CN, zh-TW, en).
+let numberLocale: string | undefined
+
+export function setNumberLocale(tag: string | undefined): void {
+  numberLocale = tag
+}
+
+/** n with at most maxFraction decimals, in the page's language. */
+export function formatNumber(n: number, maxFraction: number): string {
+  return n.toLocaleString(numberLocale, { maximumFractionDigits: maxFraction })
+}
+
 /** A decimal from Core, shown without float noise: 12.50 → "12.5". */
 export function formatDecimal(v: Decimal | null | undefined, maxFraction = 2): string {
   if (v === null || v === undefined || v === '') return '—'
   const n = typeof v === 'number' ? v : Number(v)
   if (!Number.isFinite(n)) return String(v)
-  return n.toLocaleString(undefined, { maximumFractionDigits: maxFraction })
+  return formatNumber(n, maxFraction)
 }
 
 /** score / points as a percentage, or "—" when either is missing. */
@@ -14,7 +27,7 @@ export function formatPercent(score: Decimal | null | undefined, of: Decimal | n
   const s = Number(score)
   const p = Number(of)
   if (score === null || score === undefined || !Number.isFinite(s) || !Number.isFinite(p) || p === 0) return '—'
-  return `${((s / p) * 100).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`
+  return `${formatNumber((s / p) * 100, 1)}%`
 }
 
 /** A fraction in [0, 1] (or beyond, with extra credit) as a percentage. */
@@ -22,7 +35,7 @@ export function formatFraction(f: Decimal | null | undefined): string {
   if (f === null || f === undefined || f === '') return '—'
   const n = Number(f)
   if (!Number.isFinite(n)) return String(f)
-  return `${(n * 100).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`
+  return `${formatNumber(n * 100, 1)}%`
 }
 
 export function formatDateTime(v: string | null | undefined): string {
@@ -49,7 +62,7 @@ export function formatBytes(n: number | null | undefined): string {
     v /= 1024
     i++
   }
-  return `${v.toLocaleString(undefined, { maximumFractionDigits: i ? 1 : 0 })} ${units[i]}`
+  return `${formatNumber(v, i ? 1 : 0)} ${units[i]}`
 }
 
 /**

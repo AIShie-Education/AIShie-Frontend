@@ -5,7 +5,7 @@
 //
 //   DEMO_FILE=demo.json DEMO_PASSWORD=… node scripts/shot.mjs \
 //     --as instructor --path '/courses/{course}/members' --out members.png \
-//     [--base http://localhost:5173] [--width 1280] [--height 900] [--dark] [--lang en|zh-Hant]
+//     [--base http://localhost:5173] [--width 1280] [--height 900] [--dark] [--lang en|zh-Hant|zh-Hans]
 //     [--click 'text=Add member'] [--wait 800] [--full]
 //
 // --as is a key in the demo file's actors (instructor, ta, yuki, ken, mei,
@@ -58,7 +58,7 @@ const browser = await chromium.launch()
 const context = await browser.newContext({
   viewport: { width: Number(opt.width || 1280), height: Number(opt.height || 900) },
   colorScheme: opt.dark ? 'dark' : 'light',
-  locale: opt.lang === 'zh-Hant' ? 'zh-TW' : 'en-US',
+  locale: { 'zh-Hant': 'zh-TW', 'zh-Hans': 'zh-CN' }[opt.lang] || 'en-US',
 })
 await context.addInitScript(
   ([lang, dark]) => {

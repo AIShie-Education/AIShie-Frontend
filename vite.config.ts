@@ -76,8 +76,9 @@ export default defineConfig(({ mode }) => {
           manualChunks(id: string) {
             if (id.includes('node_modules/element-plus') || id.includes('node_modules/@element-plus')) return 'element-plus'
             if (/node_modules\/(markdown-it|dompurify|katex|highlight\.js)\//.test(id)) return 'markdown'
-            // A typeface goes where it is imported: Chinese's into the chunk
-            // loaded only for a page in Chinese (src/styles/fonts.ts).
+            // A typeface goes where it is imported: each Chinese script's into
+            // the chunk loaded only for a page in that script, Traditional's
+            // (fonts-zh-hant) or Simplified's (fonts-zh-hans), src/styles/fonts.ts.
             if (id.includes('node_modules/@fontsource/')) return undefined
             if (id.includes('node_modules')) return 'vendor'
           },

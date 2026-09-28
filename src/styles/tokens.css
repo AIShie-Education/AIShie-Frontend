@@ -75,15 +75,26 @@
   --app-line-height-prose: 1.7;
 }
 
-/* In Traditional Chinese, Noto Sans TC and Noto Serif TC, headings bold and
-   untracked, lines further apart; <html lang> is set with the language. */
+/* In Chinese, either script, headings bold and untracked, lines further
+   apart; <html lang> is set with the language (zh-Hans or zh-Hant). */
 html:lang(zh) {
-  --app-font-sans: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-  --app-font-serif: 'Noto Serif TC', 'Source Serif 4', 'Songti TC', 'PMingLiU', serif;
   --app-heading-weight: 700;
   --app-heading-tracking: 0;
   --app-line-height: 1.65;
   --app-line-height-prose: 1.85;
+}
+
+/* Traditional Chinese in Noto Sans TC and Noto Serif TC, */
+html:lang(zh-Hant) {
+  --app-font-sans: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --app-font-serif: 'Noto Serif TC', 'Source Serif 4', 'Songti TC', 'PMingLiU', serif;
+}
+
+/* and Simplified Chinese in Noto Sans SC and Noto Serif SC, whose glyphs take
+   the Mainland's forms. */
+html:lang(zh-Hans) {
+  --app-font-sans: 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --app-font-serif: 'Noto Serif SC', 'Source Serif 4', 'Songti SC', 'SimSun', serif;
 }
 
 html.dark {

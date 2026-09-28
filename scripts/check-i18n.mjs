@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// Checks the messages: every key the code names exists in every language,
-// and every language has the same keys as English.
+// Checks the messages: every language the app offers (LOCALES in
+// src/i18n/index.ts) has its messages and no other language does, every key
+// the code names exists in every language, and every language has the same
+// keys as English, with the same placeholders.
 //
 //   node scripts/check-i18n.mjs
 //
@@ -29,6 +31,12 @@ async function walk(dir) {
 
 // --- Load messages ------------------------------------------------------------
 const locales = (await readdir(messagesDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name)
+
+// The languages the app offers, as its language list names them.
+const indexTs = await readFile(join(src, 'i18n/index.ts'), 'utf8')
+const offered = [...(indexTs.match(/export const LOCALES[^=]*=\s*\[([\s\S]*?)\n\]/)?.[1] ?? '').matchAll(/value:\s*'([^']+)'/g)].map(
+  (m) => m[1],
+)
 const messages = {}
 for (const l of locales) {
   messages[l] = {}
@@ -63,6 +71,11 @@ function placeholders(s) {
 }
 
 const problems = []
+
+// --- Every language offered has messages, and only those -----------------------
+if (!offered.length) problems.push('src/i18n/index.ts: no languages found in LOCALES')
+for (const l of offered) if (!locales.includes(l)) problems.push(`${l} is offered in LOCALES but has no messages`)
+for (const l of locales) if (!offered.includes(l)) problems.push(`${l} has messages but is not offered in LOCALES`)
 
 // --- Same keys in every language, same placeholders ----------------------------
 const base = 'en'

@@ -1,0 +1,344 @@
+// Hosting an agent on the school's runtime (M2): the choice of where an agent
+// runs, connecting it, its model and key, its hosted card, and the runtime's
+// errors by reason. The words for statuses, problems and errors are the
+// contract's (m2.api.spec.md §6.1 and §9.5).
+export default {
+  // Where the agent runs: one brain at a time.
+  choice: {
+    title: '这个智能体如何运行',
+    intro: '智能体同一时间只能有一个“大脑”：由 AIshie 托管，或由你的 AI 工具或运行环境运行。不能两者同时运行，否则每个问题都会有两个回答。',
+    hosted: '交给 AIshie 托管',
+    hostedHint: 'AIshie 会替你运行它，使用你选择的模型和你自己的 API 密钥。无须安装任何程序，也无须处理令牌。',
+    recommended: '推荐',
+    tool: '用其他 AI 工具连接（Claude、ChatGPT、智能体 SDK…）',
+    toolHint: '由你自己的 AI 工具通过 MCP、以智能体的其中一个令牌担任这个智能体。',
+    runtime: '自行部署运行环境（高级）',
+    runtimeHint: '适用于自行运维 AIshie Agent Runtime 的人。',
+    hostedIntro: 'AIshie 会为智能体创建一个令牌，并在不显示的情况下交给学校的运行环境；然后由你选择模型并提供 API 密钥。',
+    host: '设置托管',
+    hostSuspended: '这个智能体已停用：请先重新启用它。',
+    paste: '我已有这个智能体的令牌',
+    selfWhileHosted: '改用其他 AI 工具连接，或自行部署运行环境',
+    selfWhileHostedNote:
+      '这些只适用于停止托管之后：请先从 AIshie 托管中删除这个智能体（更多 ▸ 删除），这样会撤销运行环境所用的令牌。两者同时运行时，每个问题都会有两个回答。',
+  },
+
+  // The wizard's first step, and giving a hosted agent a new token.
+  connect: {
+    title: '在学校的运行环境托管 {name}',
+    steps: {
+      confirm: '确认',
+      model: '模型与密钥',
+    },
+    body: '学校的运行环境会按照这个智能体在 AIshie 中的席位运行它。运行环境会加密保存智能体的令牌，你不会看到它。下一步请选择模型并提供你的 API 密钥。',
+    seats: '它所在的课程',
+    noSeats: '它还未加入任何课程。托管后，在你把它带入课程之前，它没有任何问题要回答。',
+    purpose: {
+      personal: '只回答你',
+      course: '回答所有学生',
+    },
+    submit: '连接',
+    done: '{name} 已托管到学校的运行环境',
+    replaceTitle: '为学校运行环境上的 {name} 更换令牌',
+    replaceBody: '系统会创建一个标签为“AIShie runtime”的新令牌并交给运行环境，运行环境随后会撤销原有的令牌。两个令牌你都不会看到。',
+    replaceSubmit: '更换令牌',
+    reconnectTitle: '重新连接 {name}',
+    reconnectBody: 'AIshie 拒绝了运行环境原有的令牌。系统会创建一个标签为“AIShie runtime”的新令牌并交给运行环境；你不会看到它。',
+    reconnectSubmit: '重新连接',
+    replaced: '运行环境已获得 {name} 的新令牌',
+  },
+
+  // A token the runtime could not revoke, after replacing or deleting (§9.4).
+  unrevoked: {
+    title: '这个智能体的一个令牌可能仍然有效',
+    body: '学校的运行环境未能在 AIshie 中撤销令牌 {token}（{why}），所以持有它的程序仍可能以你的智能体身份行事。请以智能体拥有者的身份在这里撤销它。',
+    why: {
+      agent_suspended: '这个智能体在 AIshie 中已停用',
+      core_unavailable: '它无法连接 AIshie',
+      core_refused: 'AIshie 拒绝了它的请求',
+      unknown: '它无法确定是否已撤销',
+    },
+    revoke: '在 AIshie 中撤销',
+    later: '暂不',
+    revoked: '已撤销 {token}。',
+    gone: '{token} 已经失效：没有需要撤销的。',
+    held: '运行环境正在使用 {token}，所以没有撤销它。',
+    failed: '在这里也未能撤销它。请在下方“令牌”列表中撤销它。',
+  },
+
+  // The agent's other tokens, as the runtime lists them on inspect and connect
+  // (A.1), or as the page works them out from Core's list before it issues one.
+  otherTokens: {
+    inUseTitle: '这个智能体似乎正在其他地方运行',
+    inUse:
+      '它的令牌 {token} 最近一次使用是 {ago}。智能体同一时间只能有一个“大脑”。请停止另一个运行环境，或在 AIshie 中撤销那个令牌，让只有这个运行环境以你的智能体身份回答。',
+    unusedTitle: '这个智能体还有其他令牌',
+    unused: '它们仍然有效，但最近没有使用。如果你没有程序需要它们，可以撤销。',
+    unknown: '无法检查这个智能体是否有其他副本。',
+    unlabelled: '没有标签',
+    recent: '使用中',
+    lastUsed: '上次使用',
+    neverUsed: '从未使用',
+    revoke: '撤销',
+    revoked: '已撤销 {token}：现在没有程序能再用它以你的智能体身份行事。',
+    gone: '{token} 已经失效：没有需要撤销的。',
+    revokeFailed: '未能撤销它。请再试一次，或在下方“令牌”列表中撤销它。',
+    anyway: '仍然连接',
+    anywayReplace: '仍然继续',
+  },
+
+  // The one-brain rule, when resuming a hosted agent, and for a pasted token used lately.
+  oneBrain: {
+    title: '有其他程序正在运行这个智能体',
+    body: '它的另一个令牌在过去几分钟内曾被使用：你自己的运行环境或其他 MCP 客户端正在运行它。如果学校的运行环境也运行它，每个问题都会有两个回答。请撤销那些令牌以停止它，或者你会自行停止它的话，可以继续。',
+    revokeResume: '撤销它们并恢复',
+    anywayResume: '仍然恢复',
+    revokeFailed: '部分令牌未能撤销，所以没有进行下一步。请再试一次，或在下方“令牌”列表中撤销它们。',
+    sameTokenTitle: '这个令牌正在使用中',
+    sameToken: '如果你自己的运行环境正在使用这个令牌，请先停止它，否则每个问题都会有两个回答。它上次使用于',
+  },
+
+  // "I have a token for this agent".
+  paste: {
+    title: '用你已有的令牌托管 {name}',
+    intro: '粘贴这个智能体的其中一个令牌。运行环境会加密保存它，之后不会再显示。本页永远不会撤销你粘贴的令牌：由你决定还有什么在使用它。',
+    token: '智能体令牌',
+    placeholder: 'ais_…',
+    check: '检查',
+    agent: '智能体',
+    seats: '它所在的课程',
+    alreadyConnected: '已经连接。',
+    takesOver: '连接后会取代前任拥有者留下的副本。',
+    submit: '连接',
+  },
+
+  // The model and the owner's own key (F3).
+  model: {
+    title: '{name} 的模型与密钥',
+    provider: '供应商',
+    providerPlaceholder: '选择供应商',
+    adapter: 'API 形式',
+    adapters: {
+      openai_chat: 'Chat Completions',
+      openai_responses: 'Responses',
+      anthropic: 'Messages',
+      gemini: 'Gemini API',
+      bedrock_converse: 'Converse',
+    },
+    endpoint: '端点',
+    resource: 'Azure 资源名称',
+    resourceHint: '你的 Azure OpenAI 资源名称，例如 {example}。',
+    region: 'AWS 区域',
+    model: '模型',
+    modelPlaceholder: '选择或输入模型',
+    priceUnknown: '价格未知',
+    key: 'API 密钥',
+    keyKeep: '保留已保存的密钥 {hint}',
+    keyNew: '输入新的密钥',
+    keyPlaceholder: '你在 {provider} 的 API 密钥',
+    keyPlaceholderPrefix: '你在 {provider} 的 API 密钥（{prefix}…）',
+    keyNotStored: '密钥会交给学校的运行环境，为这个智能体加密保存。本页不会保留它，也不会再显示它。',
+    advanced: '高级',
+    maxOutputTokens: '每个回答的输出 token 上限',
+    maxOutputTokensHint: '256 至 32000。留空则使用运行环境的默认值。',
+    reasoningEffort: '推理强度',
+    reasoningDefault: '模型默认',
+    effort: {
+      minimal: '最少',
+      low: '低',
+      medium: '中',
+      high: '高',
+    },
+    warning:
+      '你的提问，以及你的智能体读取的课程教材和作业，都会以你的密钥、按照 {provider} 的条款发送给 {provider}。只有你自己的智能体会使用这个密钥。',
+    noProviders: '学校的运行环境没有提供可使用你自己密钥的供应商。',
+    test: '测试密钥',
+    later: '稍后',
+    saved: '已保存。运行环境正以这些设置启动你的智能体。',
+    confirmUntestedTitle: '保存未通过测试的密钥？',
+    confirmUntested: '这个密钥未通过测试（{result}）。仍然保存？',
+    saveAnyway: '仍然保存',
+    changedElsewhere: '这个智能体已在另一个标签页或窗口中被更改；请检查后再保存一次。',
+    invalid: {
+      required: '必填',
+      model: '模型名称只能包含字母、数字及 . _ : / @ + -，最多 128 个字符。',
+      resource: '只能包含小写字母、数字和连字符，与 Azure 的资源命名方式相同。',
+      region: 'AWS 区域，例如 us-east-1。',
+      maxOutputTokens: '256 至 32000 之间的整数。',
+    },
+  },
+
+  // One token's test of a key (POST /keys/test).
+  keyTest: {
+    ok: '这个密钥可以使用 {model}。',
+    key_refused: '{provider} 拒绝了这个密钥。',
+    model_not_found: '密钥有效，但 {provider} 没有 {model} 这个模型。',
+    key_accepted: '密钥已被接受，但测试调用失败（HTTP {status}）。你仍可保存。',
+    unreachable: '无法连接 {provider}。请再试一次。',
+    short: {
+      ok: '可以使用',
+      key_refused: '密钥被拒绝',
+      model_not_found: '没有这个模型',
+      key_accepted: '测试调用失败',
+      unreachable: '无法连接供应商',
+      none: '未测试',
+    },
+  },
+
+  // A hosted agent's status (§6.1).
+  status: {
+    needs_model: {
+      title: '请选择模型',
+      body: '你的智能体已连接，但还没有模型。请选择供应商和模型，并提供你的 API 密钥来启动它。',
+    },
+    starting: {
+      title: '启动中',
+      body: '运行环境正以最新的设置启动你的智能体，需要几秒钟。',
+    },
+    running: {
+      title: '运行中',
+      body: '你的智能体正在学校的运行环境上运行，并在它的课程中回答问题。',
+    },
+    paused: {
+      title: '已暂停',
+      body: '你的智能体不会回答任何人，也不会发出任何调用，因此会显示为离线。恢复后它会再次启动。（这不是“停用”：智能体在 AIshie 中仍处于启用状态。）',
+    },
+    needs_token: {
+      title: '需要新令牌',
+      body: 'AIshie 拒绝了你智能体的令牌：它已被撤销或已过期。请重新连接，让运行环境获得新的令牌。',
+    },
+    error: {
+      title: '没有运行',
+      body: '运行环境没有在运行你的智能体。',
+    },
+    stopped: {
+      title: '重新启动中',
+      body: '运行环境在重新启动或把你的智能体交给另一个工作进程时暂时停止了它。它会自行再次启动。',
+    },
+  },
+
+  // Why it needs a token or does not run (problem.reason).
+  problem: {
+    token_refused: 'AIshie 拒绝了智能体的令牌。',
+    settings_rejected: '它的设置在这里无法使用：{detail}。请更改模型或密钥。',
+    runtime_misconfigured: '学校的运行环境尚未设置为可运行托管智能体。请通知你的管理员。',
+    operator_agent: '学校的运维方已经在运行这个智能体，所以这个副本不会运行。',
+    actor_in_use: '这里已有另一个智能体使用了这个智能体的身份。',
+    token_other_agent: '它的令牌属于另一个智能体。请重新连接。',
+    token_not_agent: '它的令牌属于一个人，而不是这个智能体。请重新连接。',
+    owner_changed: '这个智能体在 AIshie 中现已属于其他人，所以运行环境停止了它。请在这里删除它。',
+    core_too_old: '这个 AIshie 服务器无法说明智能体属于谁。请通知你的管理员。',
+    agent_suspended: '这个智能体在 AIshie 中已停用。重新启用后，它会自行再次启动。',
+    failing: '它未能启动，稍后会再试：{detail}。',
+  },
+
+  // A seat, in sentences from the runtime's facts.
+  seat: {
+    delegate: '在 {course} 作为你的代表：读取{reads}；只回答你。',
+    tutor: '{course} 的辅导智能体：回答所有学生；读取{reads}。',
+    member: '{course} 的成员：读取{reads}。',
+    reads: {
+      both: '课程教材和学生作业',
+      material: '课程教材',
+      work: '学生作业',
+      nothing: '不到任何内容',
+    },
+    silent: '当前不会回答（{why}）。',
+    why: {
+      seatPaused: '席位已暂停',
+      courseArchived: '课程已归档',
+      answeringOff: '回答功能已关闭',
+    },
+    waitsApproval: '它的回答需要等待批准。',
+    none: '它不在任何课程中：没有问题要回答。',
+  },
+
+  // The hosted card.
+  card: {
+    title: '由 AIshie 托管',
+    details: '详细信息',
+    since: '开始于',
+    model: '模型',
+    noModel: '尚未选择',
+    key: '密钥',
+    token: '令牌',
+    today: '今天',
+    answers: '没有回答 | 1 个回答 | {n} 个回答',
+    costUnknown: '费用未知',
+    proposals: '1 个回答正等待批准。 | {n} 个回答正等待批准。',
+    seats: '课程',
+    primary: {
+      chooseModel: '选择模型',
+      reconnect: '重新连接',
+      changeModel: '更改模型或密钥',
+    },
+    pause: '暂停',
+    resume: '恢复',
+    pauseHint: '只在这里停止智能体；它在 AIshie 中仍处于启用状态。',
+    paused: '已在学校的运行环境上暂停',
+    resumed: '已在学校的运行环境上恢复',
+    more: '更多',
+    replaceToken: '更换令牌',
+    delete: '从学校的运行环境删除',
+    usedByRuntime: '由学校的运行环境使用',
+    ownKeyOff: '学校的运行环境暂时不接受你自己的模型与密钥，所以无法在这里更改。',
+    connectOff: '学校的运行环境暂时不接受新的令牌，所以无法在这里为它更换令牌。',
+    issueWhileHosted: '学校的运行环境正在运行这个智能体。你用新令牌启动的任何程序也会回答：如要自己运行，请先从学校的运行环境删除它。',
+  },
+
+  // Deleting it from the runtime.
+  delete: {
+    title: '从学校的运行环境删除 {name}？',
+    body: '运行环境会停止这个智能体，删除它的设置和你的密钥，并撤销它的令牌“AIShie runtime”。智能体会保留在 AIshie 中；你之后可以再次托管它。',
+    proposals: '1 个仍在等待批准的回答会保留在 AIshie 中。 | {n} 个仍在等待批准的回答会保留在 AIshie 中。',
+    alsoRevoke: '同时撤销它的令牌',
+    alsoRevokeHint: '它的令牌（“{label}”）并非由本页创建。只有在其他程序仍在使用它时才保留。',
+    alsoRevokeHintUnlabelled: '它的令牌并非由本页创建。只有在其他程序仍在使用它时才保留。',
+    submit: '删除',
+    done: '{name} 已不在学校的运行环境上',
+    notAttempted: '它的令牌仍然有效；如没有其他程序使用，请在下方撤销它。',
+  },
+
+  // The runtime's errors, by reason (§9.5).
+  errors: {
+    details: '详细信息',
+    assertion: '无法让你登录学校的运行环境。请重新加载页面后再试。',
+    unavailable: '学校的运行环境当前无法使用。请一分钟后再试。',
+    network: '无法连接学校的运行环境。请检查网络连接后再试。',
+    core_unavailable: '运行环境无法连接 AIshie。请一分钟后再试。',
+    rate_limited: '尝试次数太多。请等待 {seconds} 秒。',
+    token_malformed: '这不是 AIshie 的智能体令牌（它应以 ais_ 开头）。',
+    token_refused: 'AIshie 拒绝了这个令牌：它已被撤销或已过期。',
+    token_not_agent: '这个令牌属于一个人，而不是智能体。运行环境只接受智能体自己的令牌。',
+    agent_suspended: '这个智能体在 AIshie 中已停用。请先重新启用它。',
+    token_other_agent: '这个令牌属于另一个智能体。',
+    agent_unowned: '这个智能体在 AIshie 中没有拥有者，所以无法在这里连接。请联系管理员。',
+    not_owner: '这个智能体属于其他人。只有它的拥有者才能连接它。',
+    core_too_old: '这个 AIshie 服务器版本太旧，无法托管。请通知你的管理员。',
+    already_hosted: '这个智能体已经在学校的运行环境上。',
+    operator_agent: '学校的运维方已经在运行这个智能体。',
+    agent_not_found: '这个智能体已不在学校的运行环境上。',
+    version_mismatch: '这个智能体已在另一个标签页或窗口中被更改。请检查最新的设置后再保存一次。',
+    changedMeanwhile: '这个智能体刚在另一个标签页或窗口中被更改。这里显示的是它现在的状态：请检查后再试一次。',
+    school_key_not_offered: '学校的密钥暂未提供。',
+    own_key_required: '请输入你在 {provider} 的 API 密钥。',
+    own_key_provider_mismatch: '你已保存的密钥属于另一个供应商。请输入 {provider} 的密钥。',
+    model_denied: '学校不允许使用这个模型。请选择另一个。',
+    settings_rejected: '运行环境无法使用这些设置运行。',
+    key_malformed: '这看起来不像 {provider} 的 API 密钥。请按 {provider} 给你的原样粘贴密钥，不要加入空格。',
+    key_is_aishie_token:
+      '这是 AIshie 的令牌（你的或智能体的），不是 {provider} 的 API 密钥。AIshie 令牌绝不会发送给供应商：请粘贴 {provider} 给你的密钥。',
+    unknown_provider: '请从提供的供应商中选择。',
+    adapter_not_offered: '请从提供的 API 形式中选择。',
+    unknown_endpoint: '请从提供的端点中选择。',
+    invalid_field: '这里不接受这个值。',
+    unknown_field: '学校的运行环境不接受这个请求：它没有“{field}”这个字段。请重新加载页面后再试。',
+    unknown_parameter: '学校的运行环境不接受这个请求：网址中不能有“{field}”。请重新加载页面后再试。',
+  },
+
+  // Hosting that is not for this person, or not here after all.
+  unavailable: {
+    account: '这个账号无法使用学校运行环境的托管服务。',
+    absent: '这个服务器上没有可用的学校运行环境。请重新加载页面。',
+  },
+}
