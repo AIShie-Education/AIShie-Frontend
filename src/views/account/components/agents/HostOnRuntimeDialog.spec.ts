@@ -359,43 +359,57 @@ describe('HostOnRuntimeDialog: a new token for a hosted agent', () => {
     expect(w.text()).toContain('New token for Study helper on the school’s runtime')
     await press(w, '.host-dialog__submit')
     expect(JSON.parse(s.to('PUT', RUNTIME.token)[0].body!)).toEqual({ token: s.issued[0].token })
+    expect(s.to('PUT', RUNTIME.token)[0].headers['If-Match']).toBeUndefined()
     expect(s.to('GET', CORE.credentials)).toHaveLength(0)
     expect(w.emitted('replaced')![0][0]).toMatchObject({ status: 'starting' })
+    expect(w.emitted('unrevoked')).toBeUndefined()
   })
 
-  it('revokes the old token as the owner when the runtime could not', async () => {
+  it.each(['already_invalid', 'not_attempted'])('asks nothing more of the owner when the old token is %s', async (revocation) => {
     const hosted = hostedAgent()
-    s.on('GET', CORE.credentials, () =>
-      executed({ credentials: [credential({ id: 'cred_old_runtime', token_prefix: hosted.token.prefix, label: 'AIShie runtime' })] }),
-    )
     s.on('PUT', RUNTIME.token, () =>
-      json(200, {
-        agent: hostedAgent({ status: 'starting' }),
-        previous_token: { ...hosted.token, revocation: 'failed', problem: 'agent_suspended' },
-      }),
-    )
-    const w = await open({ mode: 'reconnect', hosted })
-    expect(w.text()).toContain('Connect Study helper again')
-    await press(w, '.host-dialog__submit')
-    expect(s.revoked).toEqual(['cred_old_runtime'])
-    expect(w.emitted('replaced')).toBeTruthy()
-  })
-
-  it('tells the owner to revoke the old token when neither could', async () => {
-    const hosted = hostedAgent()
-    s.on('GET', CORE.credentials, () =>
-      executed({ credentials: [credential({ id: 'cred_old_runtime', token_prefix: hosted.token.prefix })] }),
-    )
-    s.on('POST', CORE.revoke, () => json(403, { status: 'denied', action_id: 'a', error: { code: 'forbidden', message: 'no' } }))
-    s.on('PUT', RUNTIME.token, () =>
-      json(200, { agent: hostedAgent(), previous_token: { ...hosted.token, revocation: 'failed', problem: 'core_unavailable' } }),
+      json(200, { agent: hostedAgent(), previous_token: { ...hosted.token, revocation, problem: null } }),
     )
     const w = await open({ mode: 'replace', hosted })
     await press(w, '.host-dialog__submit')
-    expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({
-      type: 'warning',
-      message: expect.stringContaining('Revoke the older “AIShie runtime” token'),
-    })
+    expect(w.emitted('replaced')).toBeTruthy()
+    expect(w.emitted('unrevoked')).toBeUndefined()
+    expect(s.to('GET', CORE.credentials)).toHaveLength(0)
+  })
+
+  it.each(['agent_suspended', 'core_unavailable', 'core_refused'])(
+    'tells the owner the old token may still work when the runtime could not revoke it (%s), and revokes nothing by itself',
+    async (problem) => {
+      const hosted = hostedAgent()
+      s.on('PUT', RUNTIME.token, () =>
+        json(200, {
+          agent: hostedAgent({ status: 'starting' }),
+          previous_token: { ...hosted.token, revocation: 'failed', problem },
+        }),
+      )
+      const w = await open({ mode: problem === 'agent_suspended' ? 'reconnect' : 'replace', hosted })
+      await press(w, '.host-dialog__submit')
+      expect(w.emitted('replaced')).toBeTruthy()
+      expect(w.emitted('unrevoked')).toEqual([[{ hint: hosted.token.hint, prefix: hosted.token.prefix, problem }]])
+      expect(s.revoked).toEqual([])
+      expect(s.to('GET', CORE.credentials)).toHaveLength(0)
+    },
+  )
+
+  it('tells the owner the old token may still work when the answer was lost but the runtime has the new one', async () => {
+    const hosted = hostedAgent()
+    s.on('PUT', RUNTIME.token, () => Promise.reject(new TypeError('Failed to fetch')))
+    s.on('GET', RUNTIME.agent, () => json(200, hostedAgent({ token: { hint: 'x', prefix: s.issued[0].prefix } })))
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const w = await open({ mode: 'replace', hosted })
+      await w.find('.host-dialog__submit').trigger('click')
+      await vi.waitFor(() => expect(w.emitted('replaced')).toBeTruthy(), { timeout: 5000 })
+      expect(w.emitted('unrevoked')).toEqual([[{ hint: hosted.token.hint, prefix: hosted.token.prefix, problem: null }]])
+      expect(s.revoked).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('revokes the issued token when the runtime refuses it for another agent', async () => {

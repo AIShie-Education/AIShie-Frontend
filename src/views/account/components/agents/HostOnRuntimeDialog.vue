@@ -26,8 +26,16 @@ import type { AgentCredential, AgentSeat } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
 import { seatPurpose } from '@/utils/agents'
 import OtherTokensNotice from './OtherTokensNotice.vue'
-import { connectedParts, hostingErrorText, otherTokensFrom, withoutTokens, type HostMode } from './hosting'
-import { handOverNewToken, ownerRevokeByPrefix } from './hostingFlow'
+import {
+  connectedParts,
+  hostingErrorText,
+  otherTokensFrom,
+  unrevoked,
+  withoutTokens,
+  type HostMode,
+  type UnrevokedToken,
+} from './hosting'
+import { handOverNewToken } from './hostingFlow'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -45,6 +53,8 @@ const emit = defineEmits<{
   /** Hosted: the agent, and its other live tokens as the runtime listed them (undefined when it did not). */
   connected: [agent: HostedAgent, others: OtherTokens | null | undefined]
   replaced: [agent: HostedAgent]
+  /** The token the runtime had may still work: the owner is offered to revoke it (§9.4). */
+  unrevoked: [token: UnrevokedToken]
   /** The runtime's list should be read again (already hosted; gone). */
   refresh: []
   /** Tokens were issued or revoked: Core's list should be read again. */
@@ -54,14 +64,12 @@ const { t } = useI18n()
 
 const pending = ref(false)
 const error = shallowRef<unknown>(null)
-const note = ref('')
 /** Tokens revoked from this dialog, left out until Core's list is read again. */
 const revokedHere = ref<string[]>([])
 
 watch(open, (v) => {
   if (!v) return
   error.value = null
-  note.value = ''
   revokedHere.value = []
 })
 
@@ -119,17 +127,15 @@ async function replace() {
       return r.data.token.prefix === iss.prefix ? { agent: r.data, previous: null } : null
     },
   })
-  // The runtime revokes the token it had with the new one; when it could not
-  // (or it cannot be told), the owner does, as §9.4 says.
+  // The runtime revokes the token it had with the new one. When it could not,
+  // whatever the reason (core_refused included: another replacement at the
+  // same moment), or when it cannot be told (its answer was lost), the old
+  // token may still work: the owner is told, and offered to revoke it (§9.4).
   const previous = result.previous
-  const oldPrefix = previous?.prefix ?? h.token.prefix
-  if ((!previous || previous.revocation === 'failed') && oldPrefix && oldPrefix !== issued.prefix) {
-    const r = await ownerRevokeByPrefix(props.actorId, oldPrefix)
-    if (r === 'failed') note.value = t('hosting.connect.previousNotRevoked')
-  }
-  if (note.value) ElMessage({ type: 'warning', message: note.value, duration: 10_000, showClose: true })
-  else ElMessage({ type: 'success', message: t('hosting.connect.replaced', { name: props.name }) })
+  const left = previous ? unrevoked(previous) : { ...h.token, problem: null }
+  ElMessage({ type: 'success', message: t('hosting.connect.replaced', { name: props.name }) })
   emit('replaced', result.agent)
+  if (left && left.prefix !== issued.prefix) emit('unrevoked', left)
 }
 
 async function go() {

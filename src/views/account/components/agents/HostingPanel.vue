@@ -14,6 +14,10 @@
 // above the hosted card, and in the model step too, since the agent starts
 // answering once it has a model: something else may be running it, and an
 // agent has one brain at a time. Each of those tokens can be revoked there.
+//
+// When replacing the agent's token or deleting its hosting left the old
+// token working (the runtime could not revoke it), the panel says so above
+// whatever card follows, and offers the owner to revoke it (§9.4).
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isRuntimeError, runtime } from '@/api/runtime'
@@ -26,8 +30,9 @@ import HostOnRuntimeDialog from './HostOnRuntimeDialog.vue'
 import ModelKeyDialog from './ModelKeyDialog.vue'
 import OtherTokensNotice from './OtherTokensNotice.vue'
 import PasteTokenDialog from './PasteTokenDialog.vue'
+import UnrevokedTokenNotice from './UnrevokedTokenNotice.vue'
 import type { AgentStanding, SetupProgress } from './agents'
-import { hostingErrorText, withoutTokens, type HostMode } from './hosting'
+import { hostingErrorText, withoutTokens, type HostMode, type UnrevokedToken } from './hosting'
 
 const props = defineProps<{
   agent: AgentFull
@@ -118,6 +123,16 @@ function onOtherRevoked(prefix: string) {
   afterConnect.value = left?.tokens.length ? left : null
 }
 
+// --- Tokens the runtime could not revoke --------------------------------------------------
+/** Each shown until the owner revokes it, or puts it aside. */
+const leftovers = shallowRef<UnrevokedToken[]>([])
+function onUnrevoked(u: UnrevokedToken) {
+  leftovers.value = [...leftovers.value.filter((x) => x.prefix !== u.prefix), u]
+}
+function onLeftoverDone(prefix: string) {
+  leftovers.value = leftovers.value.filter((x) => x.prefix !== prefix)
+}
+
 function onConnected(a: HostedAgent, others: OtherTokens | null | undefined) {
   hosted.value = a
   afterConnect.value = others?.tokens.length ? others : null
@@ -140,6 +155,16 @@ function onDeleted() {
 
 <template>
   <div class="hosting-panel">
+    <UnrevokedTokenNotice
+      v-for="u in leftovers"
+      :key="u.prefix"
+      :actor-id="agent.actor_id"
+      :token="u"
+      :held="hosted?.token.prefix ?? null"
+      class="hosting-panel__notice hosting-panel__unrevoked"
+      @done="onLeftoverDone(u.prefix)"
+      @creds-changed="emit('credsChanged')"
+    />
     <OtherTokensNotice
       v-if="hosted && afterConnect"
       :actor-id="agent.actor_id"
@@ -179,6 +204,7 @@ function onDeleted() {
       @choose-model="chooseModel"
       @new-token="onNewToken"
       @creds-changed="emit('credsChanged')"
+      @unrevoked="onUnrevoked"
     />
 
     <ConnectRuntimeCard
@@ -243,6 +269,7 @@ function onDeleted() {
         :hosted="hosted"
         @connected="onConnected"
         @replaced="hosted = $event"
+        @unrevoked="onUnrevoked"
         @refresh="load"
         @creds-changed="emit('credsChanged')"
       />

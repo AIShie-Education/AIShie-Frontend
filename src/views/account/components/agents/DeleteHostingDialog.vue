@@ -2,9 +2,10 @@
 // Deleting an agent from the school's runtime (DELETE /agents/{id}; the
 // contract's §9.4). The runtime stops it, forgets its settings and key, and
 // revokes its token in Core (D7). When the runtime could not revoke the
-// token, the owner does, from this page (agent.revoke_credential); when that
-// fails too, they are told to revoke it in the Tokens list. A token the page
-// did not make (a pasted one) may be kept, for whatever else uses it.
+// token (the agent suspended, Core out of reach or refusing), or the agent
+// turned out to be gone already, the token may still work: the page is told
+// (unrevoked), and offers the owner to revoke it themselves. A token the
+// page did not make (a pasted one) may be kept, for whatever else uses it.
 // Deleting is also how an owner goes from hosted to running the agent
 // themselves: one brain at a time.
 import { computed, ref, shallowRef, watch } from 'vue'
@@ -12,10 +13,9 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
 import { ApiError } from '@/api/http'
 import { isRuntimeError, runtime } from '@/api/runtime'
-import type { HostedAgent, Revocation } from '@/api/runtime-types'
+import type { HostedAgent, RevokedToken } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
-import { RUNTIME_TOKEN_LABEL, credentialByPrefix, hostingErrorText } from './hosting'
-import { ownerRevokeByPrefix } from './hostingFlow'
+import { RUNTIME_TOKEN_LABEL, credentialByPrefix, hostingErrorText, unrevoked, type UnrevokedToken } from './hosting'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -24,7 +24,11 @@ const props = defineProps<{
   agent: HostedAgent
   credentials?: AgentCredential[] | null
 }>()
-const emit = defineEmits<{ deleted: [] }>()
+const emit = defineEmits<{
+  deleted: []
+  /** Its token may still work: the owner is offered to revoke it (§9.4). */
+  unrevoked: [token: UnrevokedToken]
+}>()
 const { t } = useI18n()
 
 const pending = ref(false)
@@ -44,43 +48,31 @@ watch(open, (v) => {
 const errorText = computed(() => (error.value ? hostingErrorText(error.value, t) : ''))
 const errorDetail = computed(() => (error.value instanceof ApiError ? error.value.message : ''))
 
-/** The owner's fallback, told as §9.4 says. */
-async function fallback(prefix: string) {
-  const r = await ownerRevokeByPrefix(props.actorId, prefix)
-  if (r === 'failed') {
-    ElNotification({ type: 'warning', title: t('hosting.delete.done', { name: props.name }), message: t('hosting.delete.fallbackFailed'), duration: 0 })
-  } else {
-    ElMessage({ type: 'success', message: t('hosting.delete.done', { name: props.name }) })
-  }
-}
-
 async function submit() {
   if (pending.value) return
   pending.value = true
   error.value = null
   // Read before deleting: after it, the runtime knows nothing of it.
-  const prefix = props.agent.token.prefix
+  const token = props.agent.token
   const revokeToken = ownToken.value || revoke.value
   try {
-    let revocation: Revocation
+    let left: RevokedToken
     try {
-      revocation = (await runtime.remove(props.agent.id, revokeToken)).data.token.revocation
+      left = (await runtime.remove(props.agent.id, revokeToken)).data.token
     } catch (e) {
-      // Gone already (an earlier try went through): deleted, and the token revoked as the owner.
+      // Gone already (an earlier try went through, or another tab deleted
+      // it): deleted, and whether its token was revoked cannot be told.
       if (!(isRuntimeError(e) && e.reason === 'agent_not_found')) throw e
-      revocation = revokeToken ? 'failed' : 'not_attempted'
+      left = { ...token, revocation: revokeToken ? 'failed' : 'not_attempted', problem: null }
     }
-    switch (revocation) {
-      case 'failed':
-        await fallback(prefix)
-        break
-      case 'not_attempted':
-        ElNotification({ type: 'info', title: t('hosting.delete.done', { name: props.name }), message: t('hosting.delete.notAttempted'), duration: 10_000 })
-        break
-      default:
-        ElMessage({ type: 'success', message: t('hosting.delete.done', { name: props.name }) })
+    if (left.revocation === 'not_attempted') {
+      ElNotification({ type: 'info', title: t('hosting.delete.done', { name: props.name }), message: t('hosting.delete.notAttempted'), duration: 10_000 })
+    } else {
+      ElMessage({ type: 'success', message: t('hosting.delete.done', { name: props.name }) })
     }
     open.value = false
+    const u = unrevoked(left)
+    if (u) emit('unrevoked', u)
     emit('deleted')
   } catch (e) {
     error.value = e

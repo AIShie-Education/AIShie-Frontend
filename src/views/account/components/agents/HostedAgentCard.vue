@@ -33,6 +33,7 @@ import {
   pollInterval,
   providerLabel,
   seatSentences,
+  type UnrevokedToken,
 } from './hosting'
 import { revokeAllAsOwner } from './hostingFlow'
 import type { AgentStanding } from './agents'
@@ -55,6 +56,8 @@ const emit = defineEmits<{
   /** Give it a new token: 'reconnect' when AIShie refused the one it had. */
   newToken: [mode: 'replace' | 'reconnect']
   credsChanged: []
+  /** Deleting left its token working: the owner is offered to revoke it (§9.4). */
+  unrevoked: [token: UnrevokedToken]
 }>()
 const { t } = useI18n()
 
@@ -299,6 +302,7 @@ defineExpose({ onCommand })
       :agent="agent"
       :credentials="credentials"
       @deleted="emit('deleted')"
+      @unrevoked="emit('unrevoked', $event)"
     />
   </section>
 </template>

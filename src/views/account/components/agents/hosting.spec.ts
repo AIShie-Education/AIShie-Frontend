@@ -7,6 +7,8 @@ import {
   HOSTED_STATUSES,
   KEY_TEST_RESULTS,
   PROBLEM_REASONS,
+  REVOCATIONS,
+  REVOCATION_PROBLEMS,
   RUNTIME_ERROR_REASONS,
 } from '@/api/runtime-types'
 import {
@@ -34,6 +36,7 @@ import {
   problemsOf,
   seatSentences,
   tokenHint,
+  unrevoked,
   usedRecently,
   withoutTokens,
 } from './hosting'
@@ -335,6 +338,17 @@ describe('tokens', () => {
     expect(connectedParts({ ...agent, other_tokens: null })).toEqual({ agent, others: null })
     expect(connectedParts(agent)).toEqual({ agent, others: undefined })
     expect('other_tokens' in connectedParts({ ...agent, other_tokens: others }).agent).toBe(false)
+  })
+
+  it('leave the owner a token to revoke only when the runtime’s revocation failed, whatever the problem', () => {
+    const info = { hint: 'ais_oldruntimetk…', prefix: 'oldruntimetk' }
+    for (const revocation of REVOCATIONS) {
+      for (const problem of [...REVOCATION_PROBLEMS, null]) {
+        const left = unrevoked({ ...info, revocation, problem })
+        if (revocation === 'failed') expect(left, `${revocation} ${problem}`).toEqual({ ...info, problem })
+        else expect(left, `${revocation} ${problem}`).toBeNull()
+      }
+    }
   })
 
   it('know an agent token by its shape', () => {

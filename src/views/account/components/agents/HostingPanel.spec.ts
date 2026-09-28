@@ -276,6 +276,61 @@ describe('HostingPanel: after connecting, one brain at a time', () => {
   })
 })
 
+describe('HostingPanel: a token the runtime could not revoke', () => {
+  const ownCred = () => credential({ id: 'cred_runtime', token_prefix: 'runtimetoken', label: 'AIShie runtime' })
+
+  it('after a deletion, says the token may still work above the three ways, and revokes it when asked', async () => {
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent()] }))
+    s.on('DELETE', RUNTIME.agent, () =>
+      json(200, {
+        deleted: { id: 'agt_1', core_actor_id: ACTOR },
+        token: { hint: 'ais_runtimetoken…', prefix: 'runtimetoken', revocation: 'failed', problem: 'core_unavailable' },
+      }),
+    )
+    s.on('GET', CORE.credentials, () => executed({ credentials: [ownCred()] }))
+    const w = await panel({ credentials: [ownCred()] })
+    ;(w.findComponent({ name: 'HostedAgentCard' }).vm as unknown as { onCommand: (c: string) => void }).onCommand('delete')
+    await flushPromises()
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+    ;(document.body.querySelector('.delete-hosting__submit') as HTMLElement).click()
+    await vi.waitFor(() => expect(w.find('.hosting-panel__unrevoked').exists()).toBe(true))
+    await flushPromises()
+    expect(w.find('.hosted-card').exists()).toBe(false)
+    expect(w.find('.connect-card').exists()).toBe(true)
+    expect(w.find('.hosting-panel__unrevoked').text()).toContain(
+      'The school’s runtime could not revoke the token ais_runtimetoken… in AIShie (it could not reach AIShie)',
+    )
+    // Offered, not done.
+    expect(s.revoked).toEqual([])
+
+    await w.find('.unrevoked__revoke').trigger('click')
+    await vi.waitFor(() => expect(s.revoked).toEqual(['cred_runtime']))
+    await flushPromises()
+    expect(w.find('.hosting-panel__unrevoked').exists()).toBe(false)
+    expect(w.emitted('credsChanged')).toBeTruthy()
+  })
+
+  it('after a replacement, says the old token may still work above the hosted card', async () => {
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent()] }))
+    s.on('PUT', RUNTIME.token, () =>
+      json(200, {
+        agent: hostedAgent({ status: 'starting', token: { hint: 'x', prefix: s.issued[0].prefix } }),
+        previous_token: { hint: 'ais_runtimetoken…', prefix: 'runtimetoken', revocation: 'failed', problem: 'core_refused' },
+      }),
+    )
+    const w = await panel()
+    ;(w.findComponent({ name: 'HostedAgentCard' }).vm as unknown as { onCommand: (c: string) => void }).onCommand('replace')
+    await flushPromises()
+    ;(document.body.querySelector('.host-dialog__submit') as HTMLElement).click()
+    await vi.waitFor(() => expect(w.find('.hosting-panel__unrevoked').exists()).toBe(true))
+    expect(w.find('.hosting-panel__unrevoked').text()).toContain('(AIShie refused its request)')
+    expect(w.find('.hosted-card').exists()).toBe(true)
+    await w.find('.unrevoked__later').trigger('click')
+    expect(w.find('.hosting-panel__unrevoked').exists()).toBe(false)
+    expect(s.revoked).toEqual([])
+  })
+})
+
 describe('AgentTokensCard', () => {
   it('marks the token the school’s runtime holds', async () => {
     const pinia = createPinia()

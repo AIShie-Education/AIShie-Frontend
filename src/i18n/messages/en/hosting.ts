@@ -50,8 +50,24 @@ export default {
       'AIShie refused the token the runtime had. A new token labelled “AIShie runtime” is made and handed to the runtime; you will not see it.',
     reconnectSubmit: 'Connect again',
     replaced: 'The runtime has a new token for {name}',
-    previousNotRevoked:
-      'The runtime has the new token, but its old one could not be revoked. Revoke the older “AIShie runtime” token in the Tokens list below.',
+  },
+
+  // A token the runtime could not revoke, after replacing or deleting (§9.4).
+  unrevoked: {
+    title: 'A token of this agent may still work',
+    body: 'The school’s runtime could not revoke the token {token} in AIShie ({why}), so whatever has it may still act as your agent. Revoke it here, as the agent’s owner.',
+    why: {
+      agent_suspended: 'the agent is suspended in AIShie',
+      core_unavailable: 'it could not reach AIShie',
+      core_refused: 'AIShie refused its request',
+      unknown: 'it could not tell whether it did',
+    },
+    revoke: 'Revoke it in AIShie',
+    later: 'Not now',
+    revoked: '{token} is revoked.',
+    gone: '{token} no longer works: there was nothing to revoke.',
+    held: 'The runtime holds {token} now, so it was not revoked.',
+    failed: 'It could not be revoked here either. Revoke it in the Tokens list below.',
   },
 
   // The agent's other tokens, as the runtime lists them on inspect and connect
@@ -287,7 +303,6 @@ export default {
     alsoRevokeHintUnlabelled: 'This page did not make its token. Keep it only if something else uses it.',
     submit: 'Delete',
     done: '{name} is no longer on the school’s runtime',
-    fallbackFailed: 'Revoke the token “AIShie runtime” in the Tokens list below.',
     notAttempted: 'Its token still works; revoke it below if nothing else uses it.',
   },
 

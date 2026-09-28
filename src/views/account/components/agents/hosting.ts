@@ -16,7 +16,10 @@ import type {
   OwnModelChoice,
   ProviderOffer,
   ReasoningEffort,
+  RevokedToken,
+  RevocationProblem,
   Seat,
+  TokenInfo,
 } from '@/api/runtime-types'
 import { REASONING_EFFORTS } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
@@ -281,6 +284,27 @@ export function otherRecentTokens(
       (!except || c.token_prefix !== except) &&
       usedRecently(c, now),
   )
+}
+
+/**
+ * A token the runtime could not revoke in Core, which may still work (§9.4):
+ * its public part, and why (null when it cannot be told whether it was
+ * revoked at all: the runtime's answer was lost, or the agent was gone
+ * already when it was deleted).
+ */
+export interface UnrevokedToken extends TokenInfo {
+  problem: RevocationProblem | null
+}
+
+/**
+ * The token a replacement or a deletion left working, for its owner to be
+ * offered to revoke, or null when there is nothing to do: revoked, or
+ * already not working. not_attempted is not this: a replay of the same
+ * token, or a token kept on purpose.
+ */
+export function unrevoked(t: RevokedToken): UnrevokedToken | null {
+  if (t.revocation !== 'failed') return null
+  return { hint: t.hint, prefix: t.prefix, problem: t.problem ?? null }
 }
 
 /** A token as the runtime shows one, by its public prefix: ais_k7v2m4qhx3ab… */

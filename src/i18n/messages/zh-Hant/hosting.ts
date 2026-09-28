@@ -46,7 +46,24 @@ export default {
     reconnectBody: 'AIShie 拒絕了執行環境原有的權杖。系統會建立一個標籤為「AIShie runtime」的新權杖並交給執行環境；你不會看到它。',
     reconnectSubmit: '重新連接',
     replaced: '執行環境已取得 {name} 的新權杖',
-    previousNotRevoked: '執行環境已取得新權杖，但舊權杖未能撤銷。請在下方「權杖」清單中撤銷較舊的「AIShie runtime」權杖。',
+  },
+
+  // A token the runtime could not revoke, after replacing or deleting (§9.4).
+  unrevoked: {
+    title: '這個代理的一個權杖可能仍然有效',
+    body: '學校的執行環境未能在 AIShie 中撤銷權杖 {token}（{why}），所以持有它的程式仍可能以你的代理身分行事。請以代理擁有者的身分在這裡撤銷它。',
+    why: {
+      agent_suspended: '這個代理在 AIShie 中已停用',
+      core_unavailable: '它無法連接 AIShie',
+      core_refused: 'AIShie 拒絕了它的請求',
+      unknown: '它無法確定是否已撤銷',
+    },
+    revoke: '在 AIShie 中撤銷',
+    later: '暫時不要',
+    revoked: '已撤銷 {token}。',
+    gone: '{token} 已經失效：沒有需要撤銷的。',
+    held: '執行環境現正使用 {token}，所以沒有撤銷它。',
+    failed: '在這裡也未能撤銷它。請在下方「權杖」清單中撤銷它。',
   },
 
   // The agent's other tokens, as the runtime lists them on inspect and connect
@@ -277,7 +294,6 @@ export default {
     alsoRevokeHintUnlabelled: '它的權杖並非由本頁建立。只有在其他程式仍在使用它時才保留。',
     submit: '刪除',
     done: '{name} 已不在學校的執行環境上',
-    fallbackFailed: '請在下方「權杖」清單中撤銷權杖「AIShie runtime」。',
     notAttempted: '它的權杖仍然有效；如沒有其他程式使用，請在下方撤銷它。',
   },
 
