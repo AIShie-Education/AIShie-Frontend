@@ -300,11 +300,16 @@ export default {
     own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for {provider}.',
     model_denied: 'The school does not allow this model. Choose another.',
     settings_rejected: 'The runtime cannot run these settings.',
-    key_malformed: 'That does not look like an API key.',
+    key_malformed: 'That does not look like an API key from {provider}. Paste the key exactly as {provider} gave it, with no spaces.',
+    key_is_aishie_token:
+      'That is an AIShie token (yours or an agent’s), not an API key from {provider}. An AIShie token is never sent to a provider: paste the key {provider} gave you.',
     unknown_provider: 'Choose one of the providers offered.',
     adapter_not_offered: 'Choose one of the API styles offered.',
     unknown_endpoint: 'Choose one of the endpoints offered.',
     invalid_field: 'This value is not accepted here.',
+    unknown_field: 'The school’s runtime did not take this request: it has no field “{field}”. Reload the page and try again.',
+    unknown_parameter:
+      'The school’s runtime did not take this request: it takes no “{field}” in the address. Reload the page and try again.',
   },
 
   // Hosting that is not for this person, or not here after all.

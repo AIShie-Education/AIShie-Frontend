@@ -31,7 +31,8 @@ import {
   formFromModel,
   formProblems,
   hostingErrorText,
-  isKeyShaped,
+  isAishieToken,
+  keyProblem,
   offerFor,
   problemsOf,
   type FormField,
@@ -149,19 +150,25 @@ function validChoice(needKey: boolean) {
   const problems = formProblems(form, o)
   for (const [f, k] of Object.entries(problems)) fieldErrors[f as FormField] = t(k as string)
   if (needKey) {
-    if (!key.value) fieldErrors.key = t('hosting.errors.own_key_required', { provider: providerName.value })
-    else if (!isKeyShaped(key.value)) fieldErrors.key = t('hosting.errors.key_malformed')
+    const problem = key.value ? keyProblem(key.value) : 'hosting.errors.own_key_required'
+    if (problem) fieldErrors.key = t(problem, { provider: providerName.value })
   }
   if (!o || Object.keys(fieldErrors).length) return null
   return choiceFrom(form, o)
 }
 
-/** Shows a refusal where it belongs: on its field, or above the form. */
-function showError(e: unknown) {
+/**
+ * Shows a refusal where it belongs: on its field, or above the form. A key
+ * refused as malformed that holds an AIShie token is said to be one.
+ */
+function showError(e: unknown, sentKey = '') {
   if (isRuntimeError(e) && FIELD_REASONS.has(e.reason)) {
     const f = fieldOfPointer(e.details?.field) ?? (e.reason === 'key_malformed' ? 'key' : null)
     if (f) {
-      fieldErrors[f] = hostingErrorText(e, t, { provider: providerName.value })
+      fieldErrors[f] =
+        e.reason === 'key_malformed' && isAishieToken(sentKey)
+          ? t('hosting.errors.key_is_aishie_token', { provider: providerName.value })
+          : hostingErrorText(e, t, { provider: providerName.value })
       return
     }
   }
@@ -178,11 +185,12 @@ async function test() {
   if (!choice) return
   testing.value = true
   lastTest.value = null
+  const sent = key.value
   try {
-    const r = await runtime.testKey({ ...choice, key: key.value })
+    const r = await runtime.testKey({ ...choice, key: sent })
     lastTest.value = { ...r.data, choice: choiceKey(choice) }
   } catch (e) {
-    showError(e)
+    showError(e, sent)
   } finally {
     testing.value = false
   }
@@ -225,7 +233,8 @@ async function save() {
     if (!ok) return
   }
   const patch: AgentPatch = { model: { own: choice } }
-  if (withKey) patch.own_key = { value: key.value }
+  const sent = withKey ? key.value : ''
+  if (withKey) patch.own_key = { value: sent }
   saving.value = true
   try {
     const r = await runtime.update(agent.value.id, agent.value.version, patch)
@@ -247,7 +256,7 @@ async function save() {
       notice.value = t('hosting.model.changedElsewhere')
       return
     }
-    showError(e)
+    showError(e, sent)
   } finally {
     saving.value = false
   }

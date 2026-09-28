@@ -86,7 +86,16 @@ const REASON_KEY: Record<string, string> = {
   adapter_not_offered: 'errors.adapter_not_offered',
   unknown_endpoint: 'errors.unknown_endpoint',
   invalid_field: 'errors.invalid_field',
+  // The runtime reads a member only by exactly its name, and takes no query
+  // but DELETE's revoke_token (A.3.1, A.3.2): this page never sends another,
+  // so one refused is a page older or newer than the runtime. Worded with
+  // the name refused, when the runtime gave one.
+  unknown_field: 'errors.unknown_field',
+  unknown_parameter: 'errors.unknown_parameter',
 }
+
+/** Reasons worded with the name the runtime refused (details.field), and generically without one. */
+const NAMED_REASONS: ReadonlySet<string> = new Set(['unknown_field', 'unknown_parameter'])
 
 /** Reasons whose words belong on one field of the model form (details.field names it). */
 export const FIELD_REASONS: ReadonlySet<string> = new Set([
@@ -100,8 +109,15 @@ export const FIELD_REASONS: ReadonlySet<string> = new Set([
 /** The full message key (hosting.…) for an error's reason, or null for the generic words. */
 export function hostingErrorKey(e: unknown): string | null {
   if (!isRuntimeError(e)) return null
+  if (NAMED_REASONS.has(e.reason) && !fieldNamed(e)) return null
   const k = REASON_KEY[e.reason]
   return k ? `hosting.${k}` : null
+}
+
+/** The member or parameter an error names (details.field), or '' when it names none. */
+function fieldNamed(e: ApiError): string {
+  const f = e.details?.field
+  return typeof f === 'string' ? f : ''
 }
 
 /**
@@ -118,6 +134,7 @@ export function hostingErrorText(e: unknown, t: T, opts: { provider?: string } =
   return t(key, {
     seconds: Number.isFinite(wait) && wait > 0 ? Math.ceil(wait) : 10,
     provider: opts.provider ?? '',
+    field: fieldNamed(err),
   })
 }
 
@@ -413,12 +430,39 @@ export function formProblems(form: ModelForm, offer: ProviderOffer | undefined):
 }
 
 /**
+ * A Core token or invitation anywhere in a string, as Core makes them: ais_
+ * or aisinv_, a 12-character public prefix, _ and the secret. The runtime
+ * looks for the same (A.3.7).
+ */
+const CORE_TOKEN_INSIDE = /ais(?:inv)?_[a-z2-7]{12}_[A-Za-z0-9_-]{16,}/
+
+/**
+ * Whether what was pasted as a provider's key is an AIShie token instead, a
+ * person's or an agent's: one that begins as a Core token or invitation
+ * does, or holds one anywhere (in quotes, or after other text). The runtime
+ * refuses it as key_malformed, and it must never go to a provider.
+ */
+export function isAishieToken(key: string): boolean {
+  return key.startsWith('ais_') || key.startsWith('aisinv_') || CORE_TOKEN_INSIDE.test(key)
+}
+
+/**
  * Whether a key could be one the runtime takes (§5.4): 8 to 4096 printable
- * ASCII characters with no whitespace, and never a Core token, which must
- * never go to a provider (nor, as a key, to the runtime).
+ * ASCII characters with no whitespace, and never an AIShie token, which
+ * must never go to a provider (nor, as a key, to the runtime).
  */
 export function isKeyShaped(key: string): boolean {
   if (key.length < 8 || key.length > 4096) return false
   if (!/^[\x21-\x7e]+$/.test(key)) return false
-  return !key.startsWith('ais_') && !key.startsWith('aisinv_')
+  return !isAishieToken(key)
+}
+
+/**
+ * The message key (hosting.…) for what is wrong with a key, or null when
+ * nothing is: an AIShie token pasted in its place is said to be one, so
+ * that its owner knows to paste the provider's key instead.
+ */
+export function keyProblem(key: string): string | null {
+  if (isAishieToken(key)) return 'hosting.errors.key_is_aishie_token'
+  return isKeyShaped(key) ? null : 'hosting.errors.key_malformed'
 }

@@ -22,8 +22,10 @@ import {
   formProblems,
   hostingErrorKey,
   hostingErrorText,
+  isAishieToken,
   isDefinitive,
   isKeyShaped,
+  keyProblem,
   otherRecentTokens,
   ownerFallbackCredential,
   pollInterval,
@@ -75,7 +77,7 @@ const EN: Record<string, string> = {
   own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for OpenAI.',
   model_denied: 'The school does not allow this model. Choose another.',
   settings_rejected: 'The runtime cannot run these settings.',
-  key_malformed: 'That does not look like an API key.',
+  key_malformed: 'That does not look like an API key from OpenAI. Paste the key exactly as OpenAI gave it, with no spaces.',
   unknown_provider: 'Choose one of the providers offered.',
   adapter_not_offered: 'Choose one of the API styles offered.',
   unknown_endpoint: 'Choose one of the endpoints offered.',
@@ -88,15 +90,25 @@ const EN: Record<string, string> = {
   runtime_absent: 'The school’s runtime is not available on this server. Reload the page.',
 }
 
+// Refused names (A.3.1, A.3.2): a page out of step with the runtime, said with the name refused.
+const NAMED: Record<string, [string, string]> = {
+  unknown_field: [
+    '/model/Own',
+    'The school’s runtime did not take this request: it has no field “/model/Own”. Reload the page and try again.',
+  ],
+  unknown_parameter: [
+    'revoke',
+    'The school’s runtime did not take this request: it takes no “revoke” in the address. Reload the page and try again.',
+  ],
+}
+
 // The rest (§9.5's last row): the request itself was wrong; the app's generic words, with the message.
 const GENERIC = [
   'cross_origin',
   'not_json',
   'body_too_large',
   'malformed_json',
-  'unknown_field',
   'missing_field',
-  'unknown_parameter',
   'bad_if_match',
   'version_required',
   'method_not_allowed',
@@ -107,7 +119,7 @@ const GENERIC = [
 describe('the words for each error reason', () => {
   it('cover the contract’s whole closed list, and this client’s own reasons', () => {
     const all = [...RUNTIME_ERROR_REASONS, ...CLIENT_ERROR_REASONS]
-    for (const r of all) expect(r in EN || GENERIC.includes(r), r).toBe(true)
+    for (const r of all) expect(r in EN || r in NAMED || GENERIC.includes(r), r).toBe(true)
     for (const r of Object.keys(EN)) expect(all as readonly string[], r).toContain(r)
   })
 
@@ -125,6 +137,19 @@ describe('the words for each error reason', () => {
     expect(words).not.toContain('developer words')
     const key = hostingErrorKey(e)!
     expect(te(key), key).toBe(true)
+  })
+
+  it.each(Object.entries(NAMED))('%s names what the runtime refused, in both languages', (reason, [field, words]) => {
+    const e = err(reason, { field })
+    expect(hostingErrorText(e, t)).toBe(words)
+    setLocale('zh-Hant')
+    const zh = hostingErrorText(e, t)
+    expect(zh).toContain(`「${field}」`)
+    expect(zh).toMatch(/[一-鿿]/)
+    setLocale('en')
+    // Without a name, the app's generic words, with the runtime's message.
+    expect(hostingErrorKey(err(reason))).toBeNull()
+    expect(hostingErrorText(err(reason), t)).toContain(`developer words for ${reason}`)
   })
 
   it.each(GENERIC)('%s gets the app’s generic words, with the runtime’s message', (reason) => {
@@ -343,5 +368,27 @@ describe('the model form', () => {
     expect(isKeyShaped(newToken().token)).toBe(false)
     expect(isKeyShaped('aisinv_abcdefghijkl_x')).toBe(false)
     expect(isKeyShaped('x'.repeat(4097))).toBe(false)
+    // Anywhere in it, as the runtime looks (A.3.7): in quotes, or after other text.
+    const token = newToken().token
+    expect(isKeyShaped(`"${token}"`)).toBe(false)
+    expect(isKeyShaped(`key=${token}`)).toBe(false)
+    expect(isKeyShaped(`aisinv_${'abcdefghijkl'}_${'x'.repeat(20)}`)).toBe(false)
+  })
+
+  it('tells an AIShie token pasted as a key from a key that is merely malformed', () => {
+    const token = newToken().token
+    for (const k of [token, `"${token}"`, `Bearer ${token}`, `x${token}`, 'ais_short', 'aisinv_short']) {
+      expect(isAishieToken(k), k).toBe(true)
+      expect(keyProblem(k), k).toBe('hosting.errors.key_is_aishie_token')
+    }
+    expect(isAishieToken('sk-ais_abc')).toBe(false)
+    expect(keyProblem('sk-with space')).toBe('hosting.errors.key_malformed')
+    expect(keyProblem('short')).toBe('hosting.errors.key_malformed')
+    expect(keyProblem('sk-abcdefgh')).toBeNull()
+    expect(t('hosting.errors.key_is_aishie_token', { provider: 'OpenAI' })).toBe(
+      'That is an AIShie token (yours or an agent’s), not an API key from OpenAI. An AIShie token is never sent to a provider: paste the key OpenAI gave you.',
+    )
+    setLocale('zh-Hant')
+    expect(t('hosting.errors.key_is_aishie_token', { provider: 'OpenAI' })).toContain('AIShie 的權杖')
   })
 })

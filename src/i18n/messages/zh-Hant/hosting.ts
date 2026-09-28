@@ -290,11 +290,15 @@ export default {
     own_key_provider_mismatch: '你已儲存的金鑰屬於另一個供應商。請輸入 {provider} 的金鑰。',
     model_denied: '學校不允許使用這個模型。請選擇另一個。',
     settings_rejected: '執行環境無法使用這些設定運行。',
-    key_malformed: '這看起來不像 API 金鑰。',
+    key_malformed: '這看起來不像 {provider} 的 API 金鑰。請按 {provider} 給你的原樣貼上金鑰，不要加入空格。',
+    key_is_aishie_token:
+      '這是 AIShie 的權杖（你的或代理的），不是 {provider} 的 API 金鑰。AIShie 權杖絕不會傳送給供應商：請貼上 {provider} 給你的金鑰。',
     unknown_provider: '請從提供的供應商中選擇。',
     adapter_not_offered: '請從提供的 API 形式中選擇。',
     unknown_endpoint: '請從提供的端點中選擇。',
     invalid_field: '這裡不接受這個值。',
+    unknown_field: '學校的執行環境不接受這個請求：它沒有「{field}」這個欄位。請重新載入頁面後再試。',
+    unknown_parameter: '學校的執行環境不接受這個請求：網址中不能有「{field}」。請重新載入頁面後再試。',
   },
 
   // Hosting that is not for this person, or not here after all.
