@@ -261,6 +261,23 @@ describe('HostedAgentCard: what the owner can do', () => {
     expect(items).toEqual(['Replace token', 'Delete from the school’s runtime'])
   })
 
+  it.each(['pause', 'resume'] as const)('reads the agent again when %s finds it changed meanwhile (412), and says so', async (what) => {
+    const paused = what === 'resume'
+    s.on('POST', what === 'pause' ? RUNTIME.pause : RUNTIME.resume, () =>
+      refusal(412, 'version_mismatch', 'version_mismatch', { current_version: 7 }),
+    )
+    s.on('GET', RUNTIME.agent, () => json(200, hostedAgent({ version: 7, status: 'needs_token' })))
+    const w = await card(hostedAgent({ paused, status: paused ? 'paused' : 'running' }))
+    await w.find(`.hosted-card__${what}`).trigger('click')
+    await flushPromises()
+    expect(s.to('POST', what === 'pause' ? RUNTIME.pause : RUNTIME.resume)[0].headers['If-Match']).toBeUndefined()
+    expect(s.to('GET', RUNTIME.agent)).toHaveLength(1)
+    expect(w.emitted('update')![0][0]).toMatchObject({ version: 7, status: 'needs_token' })
+    expect(w.find('.hosted-card__alert').text()).toBe(
+      'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
+    )
+  })
+
   it('takes a hosting deleted elsewhere for gone', async () => {
     s.on('POST', RUNTIME.pause, () => refusal(404, 'not_found', 'agent_not_found'))
     const w = await card(hostedAgent())
@@ -395,6 +412,33 @@ describe('HostedAgentCard: deleting', () => {
       message: 'Its token still works; revoke it below if nothing else uses it.',
     })
     expect(s.revoked).toEqual([])
+  })
+
+  it('reads the agent again when it changed meanwhile (412), keeps it, and deletes when asked again', async () => {
+    s.once('DELETE', RUNTIME.agent, () => refusal(412, 'version_mismatch', 'version_mismatch', { current_version: 8 }))
+    s.on('GET', RUNTIME.agent, () => json(200, hostedAgent({ version: 8, status: 'starting' })))
+    const w = await deleteDialog(hostedAgent(), { credentials: [ownCred()] })
+    await submit(w)
+    expect(s.to('GET', RUNTIME.agent)).toHaveLength(1)
+    expect(w.emitted('update')![0][0]).toMatchObject({ version: 8, status: 'starting' })
+    expect(w.emitted('deleted')).toBeUndefined()
+    expect(w.find('.delete-hosting').text()).toContain(
+      'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
+    )
+    s.on('DELETE', RUNTIME.agent, () => answer('revoked'))
+    await submit(w)
+    expect(s.to('DELETE', RUNTIME.agent)).toHaveLength(2)
+    expect(s.to('DELETE', RUNTIME.agent)[1].headers['If-Match']).toBeUndefined()
+    expect(w.emitted('deleted')).toBeTruthy()
+  })
+
+  it('takes a hosting found gone when read again after a 412 for deleted', async () => {
+    s.on('DELETE', RUNTIME.agent, () => refusal(412, 'version_mismatch', 'version_mismatch', { current_version: 8 }))
+    s.on('GET', RUNTIME.agent, () => refusal(404, 'not_found', 'agent_not_found'))
+    const w = await deleteDialog(hostedAgent(), { credentials: [ownCred()] })
+    await submit(w)
+    expect(w.emitted('deleted')).toBeTruthy()
+    expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({ message: 'This agent is no longer on the school’s runtime.' })
   })
 
   it('shows the runtime’s refusal and keeps the hosting', async () => {

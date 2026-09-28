@@ -8,11 +8,17 @@
 // page did not make (a pasted one) may be kept, for whatever else uses it.
 // Deleting is also how an owner goes from hosted to running the agent
 // themselves: one brain at a time.
+//
+// DELETE names no version (§9.1): the runtime deletes the row holding
+// whichever token it revoked, and reads it again when a new token was put
+// in meanwhile. After three such races it answers 412 and keeps the agent
+// (A.3.3): the dialog reads it again, shows it as it is now, and the owner
+// deletes again if they still mean to.
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
 import { ApiError } from '@/api/http'
-import { isRuntimeError, runtime } from '@/api/runtime'
+import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { HostedAgent, RevokedToken } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
 import { RUNTIME_TOKEN_LABEL, credentialByPrefix, hostingErrorText, unrevoked, type UnrevokedToken } from './hosting'
@@ -26,6 +32,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   deleted: []
+  /** The agent as it is now, read again after it changed meanwhile (412). */
+  changed: [agent: HostedAgent]
   /** Its token may still work: the owner is offered to revoke it (§9.4). */
   unrevoked: [token: UnrevokedToken]
 }>()
@@ -45,8 +53,24 @@ watch(open, (v) => {
   error.value = null
 })
 
-const errorText = computed(() => (error.value ? hostingErrorText(error.value, t) : ''))
+const errorText = computed(() => {
+  if (!error.value) return ''
+  if (isVersionMismatch(error.value)) return t('hosting.errors.changedMeanwhile')
+  return hostingErrorText(error.value, t)
+})
 const errorDetail = computed(() => (error.value instanceof ApiError ? error.value.message : ''))
+
+/** Reads the agent again after DELETE found it changed: kept, as it is now, or gone meanwhile. */
+async function reread() {
+  try {
+    emit('changed', (await runtime.get(props.agent.id)).data)
+  } catch (e) {
+    if (!(isRuntimeError(e) && e.reason === 'agent_not_found')) return
+    ElMessage({ type: 'info', message: hostingErrorText(e, t) })
+    open.value = false
+    emit('deleted')
+  }
+}
 
 async function submit() {
   if (pending.value) return
@@ -76,6 +100,7 @@ async function submit() {
     emit('deleted')
   } catch (e) {
     error.value = e
+    if (isVersionMismatch(e)) await reread()
   } finally {
     pending.value = false
   }

@@ -412,6 +412,42 @@ describe('HostOnRuntimeDialog: a new token for a hosted agent', () => {
     }
   })
 
+  const mismatch = () => refusal(412, 'version_mismatch', 'version_mismatch', { current_version: 5 })
+
+  it('when the agent changed meanwhile (412), revokes the token the runtime did not take, reads it again, and lets the owner try again', async () => {
+    const hosted = hostedAgent()
+    s.once('PUT', RUNTIME.token, mismatch)
+    s.on('GET', RUNTIME.agent, () => json(200, hostedAgent({ version: 5 })))
+    const w = await open({ mode: 'replace', hosted })
+    await press(w, '.host-dialog__submit')
+    // Asked, not assumed: the runtime holds the token it had.
+    expect(s.to('GET', RUNTIME.agent)).toHaveLength(1)
+    expect(s.revoked).toEqual([s.issued[0].credentialId])
+    expect(w.text()).toContain('This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.')
+    expect(w.emitted('refresh')).toBeTruthy()
+    expect(w.emitted('replaced')).toBeUndefined()
+    expect(w.emitted('update:modelValue')).toBeUndefined()
+
+    // Again, with a new token.
+    s.on('PUT', RUNTIME.token, () =>
+      json(200, { agent: hostedAgent({ version: 6 }), previous_token: { ...hosted.token, revocation: 'revoked', problem: null } }),
+    )
+    await press(w, '.host-dialog__submit')
+    expect(s.issued).toHaveLength(2)
+    expect(JSON.parse(s.to('PUT', RUNTIME.token)[1].body!)).toEqual({ token: s.issued[1].token })
+    expect(w.emitted('replaced')).toBeTruthy()
+  })
+
+  it('takes a 412 for done when the runtime holds the new token after all', async () => {
+    const hosted = hostedAgent()
+    s.on('PUT', RUNTIME.token, mismatch)
+    s.on('GET', RUNTIME.agent, () => json(200, hostedAgent({ version: 5, token: { hint: 'x', prefix: s.issued[0].prefix } })))
+    const w = await open({ mode: 'replace', hosted })
+    await press(w, '.host-dialog__submit')
+    expect(s.revoked).toEqual([])
+    expect(w.emitted('replaced')![0][0]).toMatchObject({ version: 5 })
+  })
+
   it('revokes the issued token when the runtime refuses it for another agent', async () => {
     s.on('PUT', RUNTIME.token, () => refusal(422, 'failed_precondition', 'token_other_agent'))
     const w = await open({ mode: 'replace', hosted: hostedAgent() })

@@ -326,6 +326,7 @@ export default {
     operator_agent: 'The school’s operator already runs this agent.',
     agent_not_found: 'This agent is no longer on the school’s runtime.',
     version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
+    changedMeanwhile: 'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
     school_key_not_offered: 'The school’s key is not offered yet.',
     own_key_required: 'Enter your API key for {provider}.',
     own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for {provider}.',

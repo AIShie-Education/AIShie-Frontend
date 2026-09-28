@@ -20,7 +20,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { ApiError } from '@/api/http'
-import { isRuntimeError, runtime } from '@/api/runtime'
+import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { ConnectAnswer, HostedAgent, OtherTokens, RevokedToken } from '@/api/runtime-types'
 import type { AgentCredential, AgentSeat } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
@@ -55,7 +55,7 @@ const emit = defineEmits<{
   replaced: [agent: HostedAgent]
   /** The token the runtime had may still work: the owner is offered to revoke it (§9.4). */
   unrevoked: [token: UnrevokedToken]
-  /** The runtime's list should be read again (already hosted; gone). */
+  /** The runtime's list should be read again (already hosted; gone; changed meanwhile). */
   refresh: []
   /** Tokens were issued or revoked: Core's list should be read again. */
   credsChanged: []
@@ -95,7 +95,12 @@ const submitText = computed(() => {
   if (props.mode === 'reconnect') return t('hosting.connect.reconnectSubmit')
   return t(props.mode === 'replace' ? 'hosting.connect.replaceSubmit' : 'hosting.connect.submit')
 })
-const errorText = computed(() => (error.value ? hostingErrorText(error.value, t) : ''))
+const errorText = computed(() => {
+  if (!error.value) return ''
+  // The agent changed while its token was being replaced: it is read again, to try once more.
+  if (isVersionMismatch(error.value)) return t('hosting.errors.changedMeanwhile')
+  return hostingErrorText(error.value, t)
+})
 const errorDetail = computed(() => (error.value instanceof ApiError ? error.value.message : ''))
 
 function courseName(s: { code: string; section: string }): string {
@@ -148,7 +153,7 @@ async function go() {
     open.value = false
   } catch (e) {
     if (isRuntimeError(e)) {
-      if (e.reason === 'already_hosted' || e.reason === 'agent_not_found') emit('refresh')
+      if (e.reason === 'already_hosted' || e.reason === 'agent_not_found' || isVersionMismatch(e)) emit('refresh')
       error.value = e
     } else {
       // Core's own refusals (issuing a token, say) are shown as the app shows them.

@@ -187,6 +187,8 @@ describe('the words for each error reason', () => {
     expect(isDefinitive(err('token_refused', {}, 422))).toBe(true)
     expect(isDefinitive(err('already_hosted', {}, 409))).toBe(true)
     expect(isDefinitive(err('assertion_invalid', {}, 401))).toBe(false)
+    // Changed meanwhile: a request sent again after a lost answer is told so too.
+    expect(isDefinitive(err('version_mismatch', { current_version: 4 }, 412))).toBe(false)
     expect(isDefinitive(err('core_unavailable', {}, 503))).toBe(false)
     expect(isDefinitive(err('network', {}, 0))).toBe(false)
   })

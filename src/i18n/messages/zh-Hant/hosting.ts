@@ -317,6 +317,7 @@ export default {
     operator_agent: '學校的營運者已經在運行這個代理。',
     agent_not_found: '這個代理已不在學校的執行環境上。',
     version_mismatch: '這個代理已在另一個分頁或視窗中被更改。請檢查最新的設定後再儲存一次。',
+    changedMeanwhile: '這個代理剛在另一個分頁或視窗中被更改。這裡顯示的是它現在的狀態：請檢查後再試一次。',
     school_key_not_offered: '學校的金鑰暫未提供。',
     own_key_required: '請輸入你在 {provider} 的 API 金鑰。',
     own_key_provider_mismatch: '你已儲存的金鑰屬於另一個供應商。請輸入 {provider} 的金鑰。',

@@ -16,7 +16,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ApiError } from '@/api/http'
-import { isRuntimeError, runtime } from '@/api/runtime'
+import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { HostedAgent, ProviderOffer } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
 import { usePolling } from '@/composables/usePolling'
@@ -122,6 +122,8 @@ watch(
 )
 
 // --- Pause and resume ------------------------------------------------------------------
+// Sent without a version (§9.1). Should the runtime all the same answer 412,
+// the agent changed meanwhile: it is read again, and the owner told.
 async function pause() {
   busy.value = 'pause'
   error.value = null
@@ -129,7 +131,7 @@ async function pause() {
     emit('update', (await runtime.pause(props.agent.id)).data)
     ElMessage({ type: 'success', message: t('hosting.card.paused') })
   } catch (e) {
-    onError(e)
+    await onError(e)
   } finally {
     busy.value = null
   }
@@ -167,22 +169,37 @@ async function resume() {
     emit('update', (await runtime.resume(props.agent.id)).data)
     ElMessage({ type: 'success', message: t('hosting.card.resumed') })
   } catch (e) {
-    onError(e)
+    await onError(e)
   } finally {
     busy.value = null
   }
 }
 
-function onError(e: unknown) {
+async function onError(e: unknown) {
   if (isRuntimeError(e) && e.reason === 'agent_not_found') {
     ElMessage({ type: 'info', message: hostingErrorText(e, t) })
     emit('deleted')
     return
   }
   error.value = e
+  // Changed meanwhile (412): read it again, and show it as it is now.
+  if (isVersionMismatch(e)) await reread()
 }
 
-const errorText = computed(() => (error.value ? hostingErrorText(error.value, t) : ''))
+/** Reads the agent again after a write found it changed; a hosting gone meanwhile is gone. */
+async function reread() {
+  try {
+    emit('update', (await runtime.get(props.agent.id)).data)
+  } catch (again) {
+    if (isRuntimeError(again) && again.reason === 'agent_not_found') return onError(again)
+  }
+}
+
+const errorText = computed(() => {
+  if (!error.value) return ''
+  if (isVersionMismatch(error.value)) return t('hosting.errors.changedMeanwhile')
+  return hostingErrorText(error.value, t)
+})
 
 // --- The primary action, by status ------------------------------------------------------
 type Primary = 'chooseModel' | 'reconnect' | 'changeModel'
@@ -302,6 +319,7 @@ defineExpose({ onCommand })
       :agent="agent"
       :credentials="credentials"
       @deleted="emit('deleted')"
+      @changed="emit('update', $event)"
       @unrevoked="emit('unrevoked', $event)"
     />
   </section>

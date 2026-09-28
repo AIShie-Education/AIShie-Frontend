@@ -155,9 +155,15 @@ export function problemsOf(e: unknown): string[] {
   return Array.isArray(p) ? p.filter((x): x is string => typeof x === 'string').slice(0, 20) : []
 }
 
-/** Whether an error is final for the request (a refusal), as the wizard's revoke rule counts it (§9.2). */
+/**
+ * Whether an error is final for the request (a refusal), as the wizard's
+ * revoke rule counts it (§9.2): a 4xx other than 401, and other than 412. A
+ * 412 says the agent changed meanwhile, which a token replacement sent
+ * again after a lost answer would be told as well: whether the runtime has
+ * the token must be asked, not assumed.
+ */
 export function isDefinitive(e: unknown): boolean {
-  return e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401
+  return e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401 && e.status !== 412
 }
 
 /** Whether nothing can be said of what became of the request: no answer, or the server's failure. */
