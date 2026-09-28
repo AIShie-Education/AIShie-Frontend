@@ -8,19 +8,26 @@
 // if not, the card offers all three, hosting first, by an issued token (the
 // wizard) or a pasted one. After connecting comes the model and key (the
 // wizard's second step).
+//
+// Connecting answers with the agent's other live tokens (the contract's
+// A.1). When one was used lately, or others still work, the panel says so
+// above the hosted card, and in the model step too, since the agent starts
+// answering once it has a model: something else may be running it, and an
+// agent has one brain at a time. Each of those tokens can be revoked there.
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isRuntimeError, runtime } from '@/api/runtime'
-import type { HostedAgent, ProviderOffer } from '@/api/runtime-types'
+import type { HostedAgent, OtherTokens, ProviderOffer } from '@/api/runtime-types'
 import type { AgentCredential, AgentFull } from '@/api/types'
 import { useRuntime } from '@/composables/useRuntime'
 import ConnectRuntimeCard from './ConnectRuntimeCard.vue'
 import HostedAgentCard from './HostedAgentCard.vue'
 import HostOnRuntimeDialog from './HostOnRuntimeDialog.vue'
 import ModelKeyDialog from './ModelKeyDialog.vue'
+import OtherTokensNotice from './OtherTokensNotice.vue'
 import PasteTokenDialog from './PasteTokenDialog.vue'
 import type { AgentStanding, SetupProgress } from './agents'
-import { hostingErrorText, type HostMode } from './hosting'
+import { hostingErrorText, withoutTokens, type HostMode } from './hosting'
 
 const props = defineProps<{
   agent: AgentFull
@@ -103,8 +110,17 @@ function onNewToken(mode: 'replace' | 'reconnect') {
   hostMode.value = mode
   hostOpen.value = true
 }
-function onConnected(a: HostedAgent) {
+// --- The agent's other tokens, as connecting found them ------------------------------------
+/** Shown after connecting while any are listed; null once put away, or when there are none to show. */
+const afterConnect = shallowRef<OtherTokens | null>(null)
+function onOtherRevoked(prefix: string) {
+  const left = withoutTokens(afterConnect.value, [prefix])
+  afterConnect.value = left?.tokens.length ? left : null
+}
+
+function onConnected(a: HostedAgent, others: OtherTokens | null | undefined) {
   hosted.value = a
+  afterConnect.value = others?.tokens.length ? others : null
   emit('credsChanged')
   // Step two: the model and key, with the card behind it.
   modelWizard.value = true
@@ -116,128 +132,159 @@ function chooseModel() {
 }
 function onDeleted() {
   hosted.value = null
+  afterConnect.value = null
   emit('credsChanged')
   void load()
 }
 </script>
 
 <template>
-  <section v-if="!rt.checked.value" v-loading="true" class="app-card hosting-panel__checking" />
+  <div class="hosting-panel">
+    <OtherTokensNotice
+      v-if="hosted && afterConnect"
+      :actor-id="agent.actor_id"
+      :others="afterConnect"
+      closable
+      class="hosting-panel__notice hosting-panel__others"
+      @revoked="onOtherRevoked"
+      @creds-changed="emit('credsChanged')"
+      @close="afterConnect = null"
+    />
 
-  <ConnectRuntimeCard
-    v-else-if="!canHost"
-    :name="agent.display_name"
-    :actor-id="agent.actor_id"
-    :progress="progress"
-    :last-seen-at="agent.last_seen_at"
-    :seats="(agent.seats ?? []).length"
-    :watching="watching"
-    :disabled="!active"
-    @issue="emit('issue')"
-    @bring="emit('bring')"
-  />
+    <section v-if="!rt.checked.value" v-loading="true" class="app-card hosting-panel__checking" />
 
-  <HostedAgentCard
-    v-else-if="hosted"
-    :agent="hosted"
-    :actor-id="agent.actor_id"
-    :name="agent.display_name"
-    :credentials="credentials"
-    :standing="standing"
-    :offers="offers"
-    @update="hosted = $event"
-    @deleted="onDeleted"
-    @choose-model="chooseModel"
-    @new-token="onNewToken"
-    @creds-changed="emit('credsChanged')"
-  />
+    <ConnectRuntimeCard
+      v-else-if="!canHost"
+      :name="agent.display_name"
+      :actor-id="agent.actor_id"
+      :progress="progress"
+      :last-seen-at="agent.last_seen_at"
+      :seats="(agent.seats ?? []).length"
+      :watching="watching"
+      :disabled="!active"
+      @issue="emit('issue')"
+      @bring="emit('bring')"
+    />
 
-  <ConnectRuntimeCard
-    v-else
-    hosting
-    :name="agent.display_name"
-    :actor-id="agent.actor_id"
-    :progress="progress"
-    :last-seen-at="agent.last_seen_at"
-    :seats="(agent.seats ?? []).length"
-    :watching="watching"
-    :disabled="!active"
-    @issue="emit('issue')"
-    @bring="emit('bring')"
-  >
-    <template #hosted>
-      <div class="hosting-offer">
-        <p class="hosting-offer__intro">{{ t('hosting.choice.hostedIntro') }}</p>
-        <div v-if="!listed" v-loading="true" class="hosting-offer__loading" />
-        <el-alert
-          v-else-if="accountRefused"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="t('hosting.unavailable.account')"
-          class="hosting-offer__unavailable"
-        />
-        <el-alert
-          v-else-if="loadError"
-          type="error"
-          :closable="false"
-          show-icon
-          :title="hostingErrorText(loadError, t)"
-          class="hosting-offer__error"
-        >
-          <el-button size="small" @click="load">{{ t('common.actions.retry') }}</el-button>
-        </el-alert>
-        <div v-else class="hosting-offer__actions">
-          <el-tooltip :disabled="active" :content="t('hosting.choice.hostSuspended')" placement="top">
-            <span>
-              <el-button type="primary" class="hosting-offer__host" :disabled="!active" @click="openHost">
-                {{ t('hosting.choice.host') }}
-              </el-button>
-            </span>
-          </el-tooltip>
-          <el-button link type="primary" class="hosting-offer__paste" :disabled="!active" @click="pasteOpen = true">
-            {{ t('hosting.choice.paste') }}
-          </el-button>
+    <HostedAgentCard
+      v-else-if="hosted"
+      :agent="hosted"
+      :actor-id="agent.actor_id"
+      :name="agent.display_name"
+      :credentials="credentials"
+      :standing="standing"
+      :offers="offers"
+      @update="hosted = $event"
+      @deleted="onDeleted"
+      @choose-model="chooseModel"
+      @new-token="onNewToken"
+      @creds-changed="emit('credsChanged')"
+    />
+
+    <ConnectRuntimeCard
+      v-else
+      hosting
+      :name="agent.display_name"
+      :actor-id="agent.actor_id"
+      :progress="progress"
+      :last-seen-at="agent.last_seen_at"
+      :seats="(agent.seats ?? []).length"
+      :watching="watching"
+      :disabled="!active"
+      @issue="emit('issue')"
+      @bring="emit('bring')"
+    >
+      <template #hosted>
+        <div class="hosting-offer">
+          <p class="hosting-offer__intro">{{ t('hosting.choice.hostedIntro') }}</p>
+          <div v-if="!listed" v-loading="true" class="hosting-offer__loading" />
+          <el-alert
+            v-else-if="accountRefused"
+            type="info"
+            :closable="false"
+            show-icon
+            :title="t('hosting.unavailable.account')"
+            class="hosting-offer__unavailable"
+          />
+          <el-alert
+            v-else-if="loadError"
+            type="error"
+            :closable="false"
+            show-icon
+            :title="hostingErrorText(loadError, t)"
+            class="hosting-offer__error"
+          >
+            <el-button size="small" @click="load">{{ t('common.actions.retry') }}</el-button>
+          </el-alert>
+          <div v-else class="hosting-offer__actions">
+            <el-tooltip :disabled="active" :content="t('hosting.choice.hostSuspended')" placement="top">
+              <span>
+                <el-button type="primary" class="hosting-offer__host" :disabled="!active" @click="openHost">
+                  {{ t('hosting.choice.host') }}
+                </el-button>
+              </span>
+            </el-tooltip>
+            <el-button link type="primary" class="hosting-offer__paste" :disabled="!active" @click="pasteOpen = true">
+              {{ t('hosting.choice.paste') }}
+            </el-button>
+          </div>
         </div>
-      </div>
-    </template>
-  </ConnectRuntimeCard>
+      </template>
+    </ConnectRuntimeCard>
 
-  <template v-if="canHost">
-    <HostOnRuntimeDialog
-      v-model="hostOpen"
-      :mode="hostMode"
-      :actor-id="agent.actor_id"
-      :name="agent.display_name"
-      :seats="agent.seats"
-      :credentials="credentials"
-      :hosted="hosted"
-      @connected="onConnected"
-      @replaced="hosted = $event"
-      @refresh="load"
-      @creds-changed="emit('credsChanged')"
-    />
-    <PasteTokenDialog
-      v-model="pasteOpen"
-      :actor-id="agent.actor_id"
-      :name="agent.display_name"
-      :credentials="credentials"
-      @connected="onConnected"
-      @refresh="load"
-      @creds-changed="emit('credsChanged')"
-    />
-    <ModelKeyDialog
-      v-if="hosted"
-      v-model="modelOpen"
-      :agent-id="hosted.id"
-      :name="agent.display_name"
-      :wizard="modelWizard"
-      @saved="hosted = $event"
-    />
-  </template>
+    <template v-if="canHost">
+      <HostOnRuntimeDialog
+        v-model="hostOpen"
+        :mode="hostMode"
+        :actor-id="agent.actor_id"
+        :name="agent.display_name"
+        :seats="agent.seats"
+        :credentials="credentials"
+        :hosted="hosted"
+        @connected="onConnected"
+        @replaced="hosted = $event"
+        @refresh="load"
+        @creds-changed="emit('credsChanged')"
+      />
+      <PasteTokenDialog
+        v-model="pasteOpen"
+        :actor-id="agent.actor_id"
+        :name="agent.display_name"
+        :credentials="credentials"
+        @connected="onConnected"
+        @refresh="load"
+        @creds-changed="emit('credsChanged')"
+      />
+      <ModelKeyDialog
+        v-if="hosted"
+        v-model="modelOpen"
+        :agent-id="hosted.id"
+        :name="agent.display_name"
+        :wizard="modelWizard"
+        @saved="hosted = $event"
+      >
+        <template #notice>
+          <OtherTokensNotice
+            v-if="modelWizard && afterConnect"
+            :actor-id="agent.actor_id"
+            :others="afterConnect"
+            class="hosting-panel__model-notice"
+            @revoked="onOtherRevoked"
+            @creds-changed="emit('credsChanged')"
+          />
+        </template>
+      </ModelKeyDialog>
+    </template>
+  </div>
 </template>
 
 <style scoped>
+.hosting-panel__notice {
+  margin-bottom: 12px;
+}
+.hosting-panel__model-notice {
+  margin-bottom: 12px;
+}
 .hosting-panel__checking {
   min-height: 160px;
 }

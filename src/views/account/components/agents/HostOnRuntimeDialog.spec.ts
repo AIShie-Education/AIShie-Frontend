@@ -16,6 +16,8 @@ import {
   executed,
   hostedAgent,
   json,
+  otherToken,
+  otherTokens,
   refusal,
 } from './hostingFakes'
 
@@ -264,19 +266,30 @@ describe('HostOnRuntimeDialog: connecting', () => {
 describe('HostOnRuntimeDialog: one brain at a time', () => {
   const NOW = Date.now()
   const busy = (): AgentCredential[] => [
-    credential({ id: 'cred_laptop', label: 'my laptop', last_used_at: new Date(NOW - 60_000).toISOString() }),
-    credential({ id: 'cred_old', label: 'old', last_used_at: new Date(NOW - 3 * 3600_000).toISOString() }),
+    credential({ id: 'cred_laptop', token_prefix: 'laptoplaptop', label: 'my laptop', last_used_at: new Date(NOW - 3 * 60_000).toISOString() }),
+    credential({ id: 'cred_old', token_prefix: 'oldoldoldold', label: 'old', last_used_at: new Date(NOW - 3 * 3600_000).toISOString() }),
   ]
+  const listed = () => s.on('GET', CORE.credentials, () => executed({ credentials: busy() }))
 
-  it('says something else runs the agent, and connects only after revoking those tokens when asked', async () => {
+  it('says the agent seems to run somewhere else, from Core’s list, and offers to revoke each of its other tokens', async () => {
     connected()
+    listed()
     const w = await open({ credentials: busy() })
-    expect(w.find('.one-brain').text()).toContain('Something else is running this agent')
-    expect(w.find('.one-brain').text()).toContain('my laptop')
-    expect(w.find('.one-brain').text()).not.toContain('old')
-    expect(w.find('.host-dialog__submit').exists()).toBe(false)
-    await press(w, '.one-brain__revoke')
+    const notice = w.find('.other-tokens')
+    expect(notice.text()).toContain('This agent seems to be running somewhere else')
+    expect(notice.text()).toContain('Its token ais_laptoplaptop… was used 3 minutes ago.')
+    expect(w.findAll('.other-tokens__token').map((r) => r.find('.other-tokens__label').text())).toEqual(['my laptop', 'old'])
+    expect(w.find('.host-dialog__submit').text()).toBe('Connect anyway')
+
+    await press(w, '.other-tokens__revoke')
     expect(s.revoked).toEqual(['cred_laptop'])
+    expect(w.emitted('credsChanged')).toBeTruthy()
+    // The one left is not in use: a quieter note, and connecting as usual.
+    expect(w.find('.other-tokens').classes()).toContain('is-unused')
+    expect(w.find('.host-dialog__submit').text()).toBe('Connect')
+    expect(s.to('POST', CORE.issue)).toHaveLength(0)
+
+    await press(w, '.host-dialog__submit')
     const revokeAt = s.calls.findIndex((c) => CORE.revoke.test(c.url))
     const issueAt = s.calls.findIndex((c) => CORE.issue.test(c.url))
     expect(revokeAt).toBeLessThan(issueAt)
@@ -286,29 +299,50 @@ describe('HostOnRuntimeDialog: one brain at a time', () => {
   it('connects anyway, revoking nothing, when the owner says so', async () => {
     connected()
     const w = await open({ credentials: busy() })
-    await press(w, '.one-brain__anyway')
+    await press(w, '.host-dialog__submit')
     expect(s.revoked).toEqual([])
     expect(w.emitted('connected')).toBeTruthy()
   })
 
-  it('stops when a token could not be revoked', async () => {
-    s.on('POST', CORE.revoke, () => json(500, { error: { code: 'internal', message: 'x' } }))
+  it('says so on the token’s row when it could not be revoked, and issues nothing', async () => {
+    listed()
+    s.on('POST', CORE.revoke, () => json(403, { status: 'denied', action_id: 'a', error: { code: 'forbidden', message: 'no' } }))
     const w = await open({ credentials: busy() })
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    try {
-      await w.find('.one-brain__revoke').trigger('click')
-      await vi.waitFor(() => expect(w.text()).toContain('Not every one of those tokens could be revoked'), { timeout: 8000 })
-    } finally {
-      vi.useRealTimers()
-    }
+    await press(w, '.other-tokens__revoke')
+    expect(w.find('.other-tokens__token').text()).toContain('It could not be revoked.')
+    expect(w.find('.host-dialog__submit').text()).toBe('Connect anyway')
     expect(s.to('POST', CORE.issue)).toHaveLength(0)
+  })
+
+  it('passes on the other tokens connect names, to warn again after', async () => {
+    const others = otherTokens([otherToken({ prefix: 'laptoplaptop', recent: true, last_used_at: new Date().toISOString() })])
+    s.on('POST', RUNTIME.agents, () => json(201, { ...hostedAgent({ status: 'needs_model' }), other_tokens: others }))
+    const w = await open()
+    await press(w, '.host-dialog__submit')
+    const [agent, passed] = w.emitted('connected')![0] as [Record<string, unknown>, unknown]
+    expect(agent).toMatchObject({ id: AGENT_ID, status: 'needs_model' })
+    expect(agent).not.toHaveProperty('other_tokens')
+    expect(passed).toEqual(others)
+  })
+
+  it('says it could not check for other copies without Core’s list of tokens', async () => {
+    const w = await open({ credentials: null })
+    expect(w.find('.other-tokens__unknown').text()).toBe('Could not check for other copies of this agent.')
+    expect(w.find('.host-dialog__submit').text()).toBe('Connect')
   })
 
   it('does not count the runtime’s own token when replacing it', async () => {
     const hosted = hostedAgent()
     const creds = [credential({ token_prefix: hosted.token.prefix, last_used_at: new Date().toISOString() })]
     const w = await open({ mode: 'replace', hosted, credentials: creds })
-    expect(w.find('.one-brain').exists()).toBe(false)
+    expect(w.find('.other-tokens').exists()).toBe(false)
+    expect(w.find('.host-dialog__submit').text()).toBe('Replace token')
+  })
+
+  it('goes on anyway when replacing while another token is in use', async () => {
+    const hosted = hostedAgent()
+    const w = await open({ mode: 'replace', hosted, credentials: busy() })
+    expect(w.find('.host-dialog__submit').text()).toBe('Go on anyway')
   })
 })
 

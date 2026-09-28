@@ -49,15 +49,31 @@ export default {
     previousNotRevoked: '執行環境已取得新權杖，但舊權杖未能撤銷。請在下方「權杖」清單中撤銷較舊的「AIShie runtime」權杖。',
   },
 
-  // The one-brain rule.
+  // The agent's other tokens, as the runtime lists them on inspect and connect
+  // (A.1), or as the page works them out from Core's list before it issues one.
+  otherTokens: {
+    inUseTitle: '這個代理似乎正在其他地方運行',
+    inUse:
+      '它的權杖 {token} 最近一次使用是 {ago}。代理同一時間只能有一個「大腦」。請停止另一個執行環境，或在 AIShie 中撤銷那個權杖，讓只有這個執行環境以你的代理身分回答。',
+    unusedTitle: '這個代理還有其他權杖',
+    unused: '它們仍然有效，但最近沒有使用。如果你沒有程式需要它們，可以撤銷。',
+    unknown: '無法檢查這個代理是否有其他副本。',
+    unlabelled: '沒有標籤',
+    recent: '使用中',
+    lastUsed: '上次使用',
+    neverUsed: '從未使用',
+    revoke: '撤銷',
+    revoked: '已撤銷 {token}：現在沒有程式能再用它以你的代理身分行事。',
+    gone: '{token} 已經失效：沒有需要撤銷的。',
+    revokeFailed: '未能撤銷它。請再試一次，或在下方「權杖」清單中撤銷它。',
+    anyway: '仍然連接',
+    anywayReplace: '仍然繼續',
+  },
+
+  // The one-brain rule, when resuming a hosted agent, and for a pasted token used lately.
   oneBrain: {
     title: '有其他程式正在運行這個代理',
     body: '它的另一個權杖在過去數分鐘內曾被使用：你自己的執行環境或其他 MCP 用戶端正在運行它。如果學校的執行環境也運行它，每個問題都會有兩個回答。請撤銷那些權杖以停止它，或者你會自行停止它的話，可以繼續。',
-    used: '上次使用',
-    revoke: '撤銷它們並連接',
-    anyway: '仍然連接',
-    revokeReplace: '撤銷它們並繼續',
-    anywayReplace: '仍然繼續',
     revokeResume: '撤銷它們並恢復',
     anywayResume: '仍然恢復',
     revokeFailed: '部分權杖未能撤銷，所以沒有進行下一步。請再試一次，或在下方「權杖」清單中撤銷它們。',

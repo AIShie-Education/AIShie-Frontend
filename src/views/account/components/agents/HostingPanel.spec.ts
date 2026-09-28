@@ -4,7 +4,18 @@ import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
 import { createPinia, setActivePinia } from 'pinia'
 import type { AgentFull } from '@/api/types'
-import { ACTOR, CORE, RUNTIME, Servers, credential, hostedAgent, json } from './hostingFakes'
+import {
+  ACTOR,
+  CORE,
+  RUNTIME,
+  Servers,
+  credential,
+  executed,
+  hostedAgent,
+  json,
+  otherToken,
+  otherTokens,
+} from './hostingFakes'
 
 vi.mock('element-plus', async (orig) => {
   const real = await orig<typeof import('element-plus')>()
@@ -204,6 +215,64 @@ describe('HostingPanel: the runtime is here', () => {
     expect(document.body.innerHTML).not.toContain(token)
     expect(s.calls.filter((c) => JSON.stringify(c).includes(token)).map((c) => c.url)).toEqual(['/runtime/api/v1/agents'])
     expect(s.to('POST', CORE.issue)).toHaveLength(1)
+  })
+})
+
+describe('HostingPanel: after connecting, one brain at a time', () => {
+  const busy = () =>
+    otherTokens([
+      otherToken({ prefix: 'laptoplaptop', label: 'my laptop', last_used_at: new Date(Date.now() - 180_000).toISOString(), recent: true }),
+    ])
+  const needsModel = () => hostedAgent({ status: 'needs_model', model: { own: null, school: null }, own_key: null })
+
+  async function host(others: unknown) {
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+    s.on('POST', RUNTIME.agents, () => json(201, { ...needsModel(), other_tokens: others }))
+    s.on('GET', RUNTIME.agent, () => json(200, needsModel()))
+    const w = await panel()
+    await w.find('.hosting-offer__host').trigger('click')
+    await flushPromises()
+    await w.find('.host-dialog__submit').trigger('click')
+    await vi.waitFor(() => expect(w.find('.hosted-card').exists()).toBe(true))
+    await flushPromises()
+    return w
+  }
+
+  it('warns again, above the card and in the model step, when connect says another token is in use', async () => {
+    const w = await host(busy())
+    const above = w.find('.hosting-panel__others')
+    expect(above.text()).toContain('This agent seems to be running somewhere else')
+    expect(above.text()).toContain('ais_laptoplaptop…')
+    // Before a model starts the agent answering.
+    const step = document.body.querySelector('.model-dialog .hosting-panel__model-notice')
+    expect(step?.textContent).toContain('Its token ais_laptoplaptop… was used 3 minutes ago.')
+  })
+
+  it('stops warning once that token is revoked, from either', async () => {
+    s.on('GET', CORE.credentials, () => executed({ credentials: [credential({ id: 'cred_laptop', token_prefix: 'laptoplaptop' })] }))
+    const w = await host(busy())
+    await w.find('.hosting-panel__others .other-tokens__revoke').trigger('click')
+    await vi.waitFor(() => expect(s.revoked).toEqual(['cred_laptop']))
+    await flushPromises()
+    expect(w.find('.hosting-panel__others').exists()).toBe(false)
+    expect(document.body.querySelector('.hosting-panel__model-notice')).toBeNull()
+  })
+
+  it('can be put away', async () => {
+    const w = await host(busy())
+    await w.find('.hosting-panel__others .el-alert__close-btn').trigger('click')
+    await flushPromises()
+    expect(w.find('.hosting-panel__others').exists()).toBe(false)
+  })
+
+  it('says nothing more when there are no other tokens, or none could be listed', async () => {
+    for (const others of [otherTokens([]), null]) {
+      const w = await host(others)
+      expect(w.find('.other-tokens').exists()).toBe(false)
+      expect(w.find('.other-tokens__unknown').exists()).toBe(false)
+      w.unmount()
+      document.body.innerHTML = ''
+    }
   })
 })
 

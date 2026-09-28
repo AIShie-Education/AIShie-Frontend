@@ -6,8 +6,12 @@
 import { ApiError } from '@/api/http'
 import { isRuntimeError } from '@/api/runtime'
 import type {
+  ConnectAnswer,
   EndpointOffer,
+  HostedAgent,
   HostedStatus,
+  OtherToken,
+  OtherTokens,
   OwnModel,
   OwnModelChoice,
   ProviderOffer,
@@ -26,12 +30,15 @@ export const RUNTIME_TOKEN_LABEL = 'AIShie runtime'
 
 /**
  * How recent a use of one of the agent's other tokens counts as something
- * else running it now. Core notes a use at most once a minute, and a runtime
- * that is running asks for work at least every minute or two; ten minutes
- * leaves room for a quiet spell without taking a runtime stopped an hour ago
- * for one still running.
+ * else running it now: the runtime's own window (window_seconds, 900; the
+ * contract's A.1), so that the page and the runtime warn alike. Core notes
+ * a token's use at most once a minute, and a runtime running an agent calls
+ * Core far more often than that.
  */
-export const RECENT_USE_MS = 10 * 60_000
+export const RECENT_USE_MS = 15 * 60_000
+
+/** How many of the agent's other tokens the runtime lists at most (A.1). */
+const MAX_OTHER_TOKENS = 20
 
 /**
  * What the wizard does with the token it issues: host the agent (connect),
@@ -274,6 +281,79 @@ export function otherRecentTokens(
       (!except || c.token_prefix !== except) &&
       usedRecently(c, now),
   )
+}
+
+/** A token as the runtime shows one, by its public prefix: ais_k7v2m4qhx3ab… */
+export function tokenHint(prefix: string): string {
+  return `ais_${prefix}…`
+}
+
+/** The most recently used first, never-used ones last (the newest of those first), as the runtime lists them. */
+function byUse(a: OtherToken, b: OtherToken): number {
+  if (!a.last_used_at || !b.last_used_at) {
+    if (a.last_used_at) return -1
+    if (b.last_used_at) return 1
+    return Date.parse(b.created_at) - Date.parse(a.created_at)
+  }
+  return Date.parse(b.last_used_at) - Date.parse(a.last_used_at)
+}
+
+/**
+ * The one-brain check the runtime makes when a token is inspected or
+ * connected (other_tokens, A.1), made here from Core's list of the agent's
+ * tokens, for where there is no such answer yet: before the page issues a
+ * token of its own. The live API tokens but except (the runtime's own, when
+ * it is given a new one), each marked recent when used within the runtime's
+ * window. Null when there is no list to go by.
+ */
+export function otherTokensFrom(
+  creds: readonly AgentCredential[] | null | undefined,
+  except: string | null | undefined,
+  now = Date.now(),
+): OtherTokens | null {
+  if (!creds) return null
+  const tokens = creds
+    .filter(
+      (c) =>
+        c.kind === 'api_token' &&
+        !!c.token_prefix &&
+        credentialState(c, now) === 'active' &&
+        (!except || c.token_prefix !== except),
+    )
+    .map(
+      (c): OtherToken => ({
+        prefix: c.token_prefix!,
+        label: c.label?.trim() || null,
+        created_at: c.created_at,
+        last_used_at: c.last_used_at ?? null,
+        expires_at: c.expires_at ?? null,
+        recent: usedRecently(c, now),
+      }),
+    )
+    .sort(byUse)
+  return { in_use: tokens.some((x) => x.recent), window_seconds: RECENT_USE_MS / 1000, tokens: tokens.slice(0, MAX_OTHER_TOKENS) }
+}
+
+/** o without the tokens of those prefixes (revoked here since), and in use only while one left is recent. */
+export function withoutTokens(o: OtherTokens, prefixes: readonly string[]): OtherTokens
+export function withoutTokens(o: OtherTokens | null | undefined, prefixes: readonly string[]): OtherTokens | null | undefined
+export function withoutTokens(o: OtherTokens | null | undefined, prefixes: readonly string[]): OtherTokens | null | undefined {
+  if (!o || !prefixes.length) return o
+  const tokens = o.tokens.filter((x) => !prefixes.includes(x.prefix))
+  return { ...o, tokens, in_use: tokens.some((x) => x.recent) }
+}
+
+/**
+ * POST /agents' answer parted into the agent and its other tokens: undefined
+ * when the answer did not carry them (the agent found by the runtime's list
+ * after a lost answer, or a runtime that does not say).
+ */
+export function connectedParts(a: ConnectAnswer | HostedAgent): {
+  agent: HostedAgent
+  others: OtherTokens | null | undefined
+} {
+  const { other_tokens: others, ...agent } = a as Partial<Pick<ConnectAnswer, 'other_tokens'>> & HostedAgent
+  return { agent, others }
 }
 
 // --- The model form -----------------------------------------------------------------

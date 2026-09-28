@@ -278,6 +278,8 @@ const title = computed(() => t('hosting.model.title', { name: props.name }))
       <el-step :title="t('hosting.connect.steps.confirm')" />
       <el-step :title="t('hosting.connect.steps.model')" />
     </el-steps>
+    <!-- What the page has to say before a model starts the agent (the one-brain warning, after connecting). -->
+    <slot name="notice" />
 
     <div v-if="loading" v-loading="true" class="model-dialog__loading" />
     <el-alert

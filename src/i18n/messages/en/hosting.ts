@@ -54,15 +54,31 @@ export default {
       'The runtime has the new token, but its old one could not be revoked. Revoke the older “AIShie runtime” token in the Tokens list below.',
   },
 
-  // The one-brain rule.
+  // The agent's other tokens, as the runtime lists them on inspect and connect
+  // (A.1), or as the page works them out from Core's list before it issues one.
+  otherTokens: {
+    inUseTitle: 'This agent seems to be running somewhere else',
+    inUse:
+      'Its token {token} was used {ago}. An agent has one brain at a time. Stop the other runtime, or revoke that token in AIShie, so that only this runtime answers as your agent.',
+    unusedTitle: 'This agent has other tokens',
+    unused: 'They still work, but have not been used lately. Revoke any that nothing of yours needs.',
+    unknown: 'Could not check for other copies of this agent.',
+    unlabelled: 'No label',
+    recent: 'In use',
+    lastUsed: 'last used',
+    neverUsed: 'never used',
+    revoke: 'Revoke',
+    revoked: '{token} is revoked: nothing can act as your agent with it now.',
+    gone: '{token} no longer works: there was nothing to revoke.',
+    revokeFailed: 'It could not be revoked. Try again, or revoke it in the Tokens list below.',
+    anyway: 'Connect anyway',
+    anywayReplace: 'Go on anyway',
+  },
+
+  // The one-brain rule, when resuming a hosted agent, and for a pasted token used lately.
   oneBrain: {
     title: 'Something else is running this agent',
     body: 'Another of its tokens was used in the last few minutes: a runtime of your own, or another MCP client, is running it. If the school’s runtime runs it too, both answer every question. Revoke those tokens to stop it, or go on if you will stop it yourself.',
-    used: 'last used',
-    revoke: 'Revoke them and connect',
-    anyway: 'Connect anyway',
-    revokeReplace: 'Revoke them and go on',
-    anywayReplace: 'Go on anyway',
     revokeResume: 'Revoke them and resume',
     anywayResume: 'Resume anyway',
     revokeFailed: 'Not every one of those tokens could be revoked, so nothing more was done. Try again, or revoke them in the Tokens list below.',

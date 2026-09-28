@@ -6,7 +6,21 @@ import { createPinia, setActivePinia } from 'pinia'
 import { i18n, setLocale } from '@/i18n'
 import type { InspectAnswer } from '@/api/runtime-types'
 import PasteTokenDialog from './PasteTokenDialog.vue'
-import { ACTOR, CORE, RUNTIME, Servers, credential, hostedAgent, json, newToken, refusal, seat } from './hostingFakes'
+import {
+  ACTOR,
+  CORE,
+  RUNTIME,
+  Servers,
+  credential,
+  executed,
+  hostedAgent,
+  json,
+  newToken,
+  otherToken,
+  otherTokens,
+  refusal,
+  seat,
+} from './hostingFakes'
 
 vi.mock('element-plus', async (orig) => {
   const real = await orig<typeof import('element-plus')>()
@@ -181,23 +195,84 @@ describe('PasteTokenDialog', () => {
     expect(s.to('POST', CORE.revoke)).toHaveLength(0)
   })
 
-  it('warns when another token is in use, and revokes those (never the pasted one) when asked', async () => {
+  it('warns before connecting when the runtime says another token is in use, and offers to revoke it', async () => {
     const { token, prefix } = newToken()
-    const creds = [
-      credential({ id: 'cred_laptop', label: 'laptop', last_used_at: new Date().toISOString() }),
-      credential({ id: 'cred_pasted', token_prefix: prefix, last_used_at: new Date().toISOString() }),
-    ]
-    s.on('POST', RUNTIME.inspect, () => json(200, inspection(prefix)))
-    s.on('POST', RUNTIME.agents, () => json(201, hostedAgent()))
-    const w = await open({ credentials: creds })
+    const others = otherTokens([
+      otherToken({ prefix: 'laptoplaptop', label: 'laptop', last_used_at: new Date(Date.now() - 180_000).toISOString(), recent: true }),
+    ])
+    s.on('POST', RUNTIME.inspect, () => json(200, inspection(prefix, { other_tokens: others })))
+    s.on('GET', CORE.credentials, () =>
+      executed({ credentials: [credential({ id: 'cred_laptop', token_prefix: 'laptoplaptop' }), credential({ id: 'cred_pasted', token_prefix: prefix })] }),
+    )
+    s.on('POST', RUNTIME.agents, () => json(201, { ...hostedAgent(), other_tokens: otherTokens([]) }))
+    const w = await open()
     await type(w, token)
     await press(w, '.el-dialog__footer .el-button--primary')
-    expect(w.find('.one-brain').text()).toContain('laptop')
+    const warning = w.find('.other-tokens')
+    expect(warning.text()).toContain('This agent seems to be running somewhere else')
+    expect(warning.text()).toContain('Its token ais_laptoplaptop… was used 3 minutes ago. An agent has one brain at a time.')
+    expect(warning.text()).toContain('laptop')
+    // Connecting is not refused: the owner goes on regardless, or revokes first.
+    expect(w.find('.paste-dialog__submit').text()).toBe('Connect anyway')
+    expect(s.revoked).toEqual([])
+
+    await press(w, '.other-tokens__revoke')
+    expect(s.revoked).toEqual(['cred_laptop'])
+    expect(w.emitted('credsChanged')).toBeTruthy()
+    expect(w.find('.other-tokens').exists()).toBe(false)
+    expect(w.find('.paste-dialog__submit').text()).toBe('Connect')
+    await press(w, '.paste-dialog__submit')
+    expect(w.emitted('connected')).toBeTruthy()
+    // Never the pasted token.
+    expect(s.revoked).not.toContain('cred_pasted')
+  })
+
+  it('connects anyway, revoking nothing, and passes on the other tokens connect names, to warn again after', async () => {
+    const { token, prefix } = newToken()
+    const busy = otherTokens([otherToken({ prefix: 'laptoplaptop', last_used_at: new Date().toISOString(), recent: true })])
+    s.on('POST', RUNTIME.inspect, () => json(200, inspection(prefix, { other_tokens: busy })))
+    s.on('POST', RUNTIME.agents, () => json(201, { ...hostedAgent({ status: 'needs_model' }), other_tokens: busy }))
+    const w = await open()
+    await type(w, token)
+    await press(w, '.el-dialog__footer .el-button--primary')
+    await press(w, '.paste-dialog__submit')
+    expect(s.to('POST', CORE.revoke)).toHaveLength(0)
+    const [agent, others] = w.emitted('connected')![0] as [Record<string, unknown>, unknown]
+    expect(agent).toMatchObject({ status: 'needs_model' })
+    expect(agent).not.toHaveProperty('other_tokens')
+    expect(others).toEqual(busy)
+  })
+
+  it('lists other tokens still working but unused in a quieter note, and connects without “anyway”', async () => {
+    const { token, prefix } = newToken()
+    const quiet = otherTokens([otherToken({ prefix: 'oldoldoldold', label: 'old laptop', last_used_at: '2026-01-01T00:00:00Z' })])
+    s.on('POST', RUNTIME.inspect, () => json(200, inspection(prefix, { other_tokens: quiet })))
+    const w = await open()
+    await type(w, token)
+    await press(w, '.el-dialog__footer .el-button--primary')
+    expect(w.find('.other-tokens').classes()).toContain('is-unused')
+    expect(w.find('.other-tokens').text()).toContain('old laptop')
+    expect(w.find('.paste-dialog__submit').text()).toBe('Connect')
+  })
+
+  it('says it could not check for other copies when Core would not list the tokens', async () => {
+    const { token, prefix } = newToken()
+    s.on('POST', RUNTIME.inspect, () => json(200, inspection(prefix, { other_tokens: null })))
+    const w = await open()
+    await type(w, token)
+    await press(w, '.el-dialog__footer .el-button--primary')
+    expect(w.find('.other-tokens__unknown').text()).toBe('Could not check for other copies of this agent.')
+    expect(w.find('.paste-dialog__submit').text()).toBe('Connect')
+  })
+
+  it('says the pasted token itself is in use when Core saw it used lately', async () => {
+    const { token, prefix } = newToken()
+    s.on('POST', RUNTIME.inspect, () => json(200, inspection(prefix)))
+    const w = await open({ credentials: [credential({ token_prefix: prefix, last_used_at: new Date().toISOString() })] })
+    await type(w, token)
+    await press(w, '.el-dialog__footer .el-button--primary')
     // This very token was used lately: what runs on it would answer too.
     expect(w.find('.one-brain-same').text()).toContain('If a runtime of your own uses this token, stop it first')
-    await press(w, '.one-brain__revoke')
-    expect(s.revoked).toEqual(['cred_laptop'])
-    expect(w.emitted('connected')).toBeTruthy()
   })
 
   it('forgets the answer when the token changes, and the token when it closes', async () => {

@@ -14,6 +14,7 @@ import {
   RECENT_USE_MS,
   choiceFrom,
   choiceKey,
+  connectedParts,
   courseLabel,
   credentialByPrefix,
   emptyModelForm,
@@ -27,13 +28,16 @@ import {
   isKeyShaped,
   keyProblem,
   otherRecentTokens,
+  otherTokensFrom,
   ownerFallbackCredential,
   pollInterval,
   problemsOf,
   seatSentences,
+  tokenHint,
   usedRecently,
+  withoutTokens,
 } from './hosting'
-import { OFFERS, credential, newToken, seat } from './hostingFakes'
+import { OFFERS, credential, hostedAgent, newToken, otherToken, otherTokens, seat } from './hostingFakes'
 
 // The message functions, as plainly typed as the helpers take them.
 const g = i18n.global as unknown as {
@@ -270,7 +274,7 @@ describe('tokens', () => {
     expect(credentialByPrefix(creds, 'aaaaaaaaaaaa')?.revoked_at).toBeTruthy()
   })
 
-  it('take another live token used in the last ten minutes for something else running the agent', () => {
+  it('take another live token used in the runtime’s window (15 minutes) for something else running the agent', () => {
     const creds = [
       credential({ id: 'recent', last_used_at: ago(RECENT_USE_MS - 1000) }),
       credential({ id: 'old', last_used_at: ago(RECENT_USE_MS + 1000) }),
@@ -284,6 +288,53 @@ describe('tokens', () => {
     expect(otherRecentTokens(creds, 'runtimetoken', NOW).map((c) => c.id)).toEqual(['recent', 'ahead'])
     expect(otherRecentTokens(creds, null, NOW).map((c) => c.id)).toEqual(['recent', 'runtime', 'ahead'])
     expect(usedRecently({ last_used_at: 'not a date' }, NOW)).toBe(false)
+  })
+
+  it('are listed as the runtime lists the agent’s other tokens, from Core’s list, before a token is issued', () => {
+    const creds = [
+      credential({ token_prefix: 'neverusedold', last_used_at: null, created_at: '2026-09-01T00:00:00Z', label: '  ' }),
+      credential({ token_prefix: 'usedhoursago', last_used_at: ago(3 * 3600_000), label: 'old laptop' }),
+      credential({ token_prefix: 'neverusednew', last_used_at: null, created_at: '2026-09-20T00:00:00Z' }),
+      credential({ token_prefix: 'usedrecently', last_used_at: ago(3 * 60_000), label: 'my laptop' }),
+      credential({ token_prefix: 'revokedtoken', last_used_at: ago(1000), revoked_at: ago(500) }),
+      credential({ token_prefix: 'sessiontoken', kind: 'session', last_used_at: ago(1000) }),
+      credential({ token_prefix: 'runtimetoken', last_used_at: ago(1000) }),
+    ]
+    const o = otherTokensFrom(creds, 'runtimetoken', NOW)!
+    expect(o.in_use).toBe(true)
+    expect(o.window_seconds).toBe(900)
+    expect(o.tokens.map((x) => x.prefix)).toEqual(['usedrecently', 'usedhoursago', 'neverusednew', 'neverusedold'])
+    expect(o.tokens[0]).toMatchObject({ label: 'my laptop', recent: true, last_used_at: ago(3 * 60_000), expires_at: null })
+    expect(o.tokens[1].recent).toBe(false)
+    // A label of spaces is none.
+    expect(o.tokens[3].label).toBeNull()
+    // Just past the window, nothing is in use.
+    expect(otherTokensFrom([credential({ last_used_at: ago(RECENT_USE_MS + 1000) })], null, NOW)!.in_use).toBe(false)
+    expect(otherTokensFrom(Array.from({ length: 25 }, () => credential()), null, NOW)!.tokens).toHaveLength(20)
+    // No list to go by: nothing can be said.
+    expect(otherTokensFrom(null, null, NOW)).toBeNull()
+    expect(otherTokensFrom([], null, NOW)).toEqual({ in_use: false, window_seconds: 900, tokens: [] })
+  })
+
+  it('leave out what was revoked here, and stop warning once none left is in use', () => {
+    const recent = otherToken({ prefix: 'recentrecent', recent: true })
+    const quiet = otherToken({ prefix: 'quietquietqu' })
+    const o = otherTokens([recent, quiet])
+    expect(o.in_use).toBe(true)
+    expect(withoutTokens(o, ['recentrecent'])).toEqual({ in_use: false, window_seconds: 900, tokens: [quiet] })
+    expect(withoutTokens(o, [])).toBe(o)
+    expect(withoutTokens(null, ['x'])).toBeNull()
+    expect(withoutTokens(undefined, ['x'])).toBeUndefined()
+    expect(tokenHint('k7v2m4qhx3ab')).toBe('ais_k7v2m4qhx3ab…')
+  })
+
+  it('part connect’s answer into the agent and its other tokens, which it may not carry', () => {
+    const others = otherTokens([otherToken({ recent: true })])
+    const agent = hostedAgent()
+    expect(connectedParts({ ...agent, other_tokens: others })).toEqual({ agent, others })
+    expect(connectedParts({ ...agent, other_tokens: null })).toEqual({ agent, others: null })
+    expect(connectedParts(agent)).toEqual({ agent, others: undefined })
+    expect('other_tokens' in connectedParts({ ...agent, other_tokens: others }).agent).toBe(false)
   })
 
   it('know an agent token by its shape', () => {

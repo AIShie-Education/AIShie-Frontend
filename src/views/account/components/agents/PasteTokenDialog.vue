@@ -7,28 +7,32 @@
 // cleared once the runtime has the token, or the dialog closes. The page
 // never revokes a pasted token: the owner decides what else uses it.
 //
-// The one-brain rule holds here too: another of the agent's live tokens used
-// in the last few minutes means something else runs it; and this very token,
-// used lately, may be what a runtime of the owner's own runs on.
+// The one-brain rule holds here too (the contract's A.1): the runtime's
+// answer names the agent's other live tokens (other_tokens), and when one was
+// used lately the agent seems to run somewhere else. The dialog says so before
+// connecting, and each of those tokens can be revoked from it; connecting then
+// goes on only when the owner says so. Connect's answer names them again, for
+// the page to warn once more after. And this very token, used lately, may be
+// what a runtime of the owner's own runs on.
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { ApiError } from '@/api/http'
 import { runtime, RuntimeError } from '@/api/runtime'
-import type { HostedAgent, InspectAnswer } from '@/api/runtime-types'
+import type { HostedAgent, InspectAnswer, OtherTokens } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
 import TimeText from '@/components/TimeText.vue'
-import { maskedToken } from '../credentials'
+import OtherTokensNotice from './OtherTokensNotice.vue'
 import {
   AGENT_TOKEN_SHAPE,
+  connectedParts,
   credentialByPrefix,
   courseLabel,
   hostingErrorText,
-  otherRecentTokens,
   seatSentences,
   usedRecently,
+  withoutTokens,
 } from './hosting'
-import { revokeAllAsOwner } from './hostingFlow'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -36,7 +40,12 @@ const props = defineProps<{
   name: string
   credentials?: AgentCredential[] | null
 }>()
-const emit = defineEmits<{ connected: [agent: HostedAgent]; refresh: []; credsChanged: [] }>()
+const emit = defineEmits<{
+  /** Connected: the agent, and its other live tokens as the runtime listed them (undefined when it did not). */
+  connected: [agent: HostedAgent, others: OtherTokens | null | undefined]
+  refresh: []
+  credsChanged: []
+}>()
 const { t } = useI18n()
 
 // What is typed: kept in the field alone, and cleared as soon as it is not needed.
@@ -60,9 +69,9 @@ watch(token, () => {
 })
 onBeforeUnmount(clear)
 
-const others = computed(() =>
-  inspected.value ? otherRecentTokens(props.credentials, inspected.value.token.prefix) : [],
-)
+/** The agent's other live tokens, as inspect listed them, less those revoked here since. */
+const others = computed(() => inspected.value?.other_tokens ?? null)
+const othersInUse = computed(() => !!others.value?.in_use)
 const sameTokenUse = computed(() => {
   const c = inspected.value ? credentialByPrefix(props.credentials, inspected.value.token.prefix) : undefined
   return c && usedRecently(c) ? c.last_used_at : null
@@ -101,29 +110,25 @@ async function check() {
   }
 }
 
-async function connect(revokeOthers: boolean) {
+/** A token revoked from the notice: left out, and the warning with it once none in use is left. */
+function onRevoked(prefix: string) {
+  const i = inspected.value
+  if (i) inspected.value = { ...i, other_tokens: withoutTokens(i.other_tokens, [prefix]) ?? null }
+}
+
+async function connect() {
   if (pending.value || !inspected.value) return
   const v = typed()
   if (!v) return
   pending.value = 'connect'
   error.value = null
   try {
-    if (revokeOthers && others.value.length) {
-      const failed = await revokeAllAsOwner(
-        props.actorId,
-        others.value.map((c) => c.id),
-      )
-      emit('credsChanged')
-      if (failed) {
-        error.value = new ApiError({ status: 0, code: 'revoke_failed', message: t('hosting.oneBrain.revokeFailed') })
-        return
-      }
-    }
     const r = await runtime.connect({ token: v, core_actor_id: props.actorId })
     clear()
     ElMessage({ type: 'success', message: t('hosting.connect.done', { name: props.name }) })
     open.value = false
-    emit('connected', r.data)
+    const { agent, others } = connectedParts(r.data)
+    emit('connected', agent, others)
   } catch (e) {
     if (e instanceof RuntimeError && e.reason === 'already_hosted') emit('refresh')
     error.value = e
@@ -200,22 +205,14 @@ async function connect(revokeOthers: boolean) {
         <span>{{ t('hosting.oneBrain.sameToken') }}</span>
         <TimeText :value="sameTokenUse" relative />
       </el-alert>
-      <el-alert
-        v-if="others.length"
-        type="warning"
-        :closable="false"
-        show-icon
-        :title="t('hosting.oneBrain.title')"
-        class="paste-dialog__alert one-brain"
-      >
-        <p class="one-brain__body">{{ t('hosting.oneBrain.body') }}</p>
-        <ul class="one-brain__list">
-          <li v-for="c in others" :key="c.id">
-            <strong>{{ c.label?.trim() || t('agents.tokens.unlabelled') }}</strong>
-            <code>{{ maskedToken(c.token_prefix) }}</code>
-          </li>
-        </ul>
-      </el-alert>
+      <OtherTokensNotice
+        :actor-id="actorId"
+        :others="others"
+        say-unknown
+        class="paste-dialog__alert"
+        @revoked="onRevoked"
+        @creds-changed="emit('credsChanged')"
+      />
     </div>
 
     <el-alert v-if="error" type="error" :closable="false" show-icon :title="errorText" class="paste-dialog__alert">
@@ -230,16 +227,15 @@ async function connect(revokeOthers: boolean) {
       <el-button v-if="!inspected" type="primary" :loading="pending === 'check'" :disabled="!token" @click="check">
         {{ t('hosting.paste.check') }}
       </el-button>
-      <template v-else-if="others.length">
-        <el-button class="one-brain__anyway" :disabled="!!pending" @click="connect(false)">
-          {{ t('hosting.oneBrain.anyway') }}
-        </el-button>
-        <el-button type="primary" class="one-brain__revoke" :loading="pending === 'connect'" @click="connect(true)">
-          {{ t('hosting.oneBrain.revoke') }}
-        </el-button>
-      </template>
-      <el-button v-else type="primary" class="paste-dialog__submit" :loading="pending === 'connect'" @click="connect(false)">
-        {{ t('hosting.paste.submit') }}
+      <el-button
+        v-else
+        :type="othersInUse ? 'warning' : 'primary'"
+        class="paste-dialog__submit"
+        :class="{ 'is-anyway': othersInUse }"
+        :loading="pending === 'connect'"
+        @click="connect"
+      >
+        {{ othersInUse ? t('hosting.otherTokens.anyway') : t('hosting.paste.submit') }}
       </el-button>
     </template>
   </el-dialog>
@@ -293,18 +289,6 @@ async function connect(revokeOthers: boolean) {
 }
 .paste-dialog__alert {
   margin-top: 12px;
-}
-.one-brain__body {
-  margin: 0 0 6px;
-  line-height: 1.5;
-}
-.one-brain__list {
-  margin: 0;
-  padding-left: 18px;
-}
-.one-brain__list code {
-  font-family: var(--app-font-mono);
-  margin-left: 6px;
 }
 .paste-dialog__details summary {
   cursor: pointer;
