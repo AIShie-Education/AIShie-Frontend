@@ -1,0 +1,20 @@
+# The build takes the sources and the lockfile: nothing a machine made or
+# holds, and no .env, whose settings would be built into the app.
+.git
+.github
+.claude
+node_modules
+dist
+coverage
+test-results
+playwright-report
+docs
+deploy
+Dockerfile
+.dockerignore
+*.local
+.env
+.env.*
+.DS_Store
+*.tsbuildinfo
+e2e/.demo.json
