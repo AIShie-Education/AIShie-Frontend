@@ -4,11 +4,14 @@ import { call, courseTab, coursePath, demo, signIn, toast } from './support'
 // Agents a person owns, told through the app: a student makes an agent and a
 // token for it, and asks to bring it into the course, where bringing in an
 // agent needs an instructor's approval (the student preset's agent_delegate is
-// confirm_required); the instructor approves it; the student asks it a
-// question from the chat drawer; the agent answers through Core's REST API
-// with its own token, as a runtime would; and the answer appears in the
-// drawer by polling. Then an instructor adds a course agent, which answers
-// the course, and a student finds it among those they may ask.
+// confirm_required); the instructor approves it; what runs the agent says,
+// with its token, that it answers in the site (me.site_chat), as a runtime
+// does when it starts it; the student asks it a question from the chat
+// drawer; the agent answers through Core's REST API with its own token, as a
+// runtime would; and the answer appears in the drawer by polling. Then an
+// instructor adds a course agent, which answers the course, its runtime says
+// it answers in the site, and a student finds it among those they may ask.
+// (An agent nothing runs here is asked nothing here: site-chat.spec.ts.)
 
 const STAMP = Date.now().toString(36)
 const AGENT = `Mei's helper ${STAMP}`
@@ -112,6 +115,12 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
 
   test('the student asks their agent; it answers through the API; the drawer shows it', async ({ page }) => {
     const d = demo()
+    // What runs the agent starts, and says with its token that it answers in the site: until it
+    // has, nobody there is offered to ask it.
+    const declared = await call(agentToken, 'POST', '/v1/me/site-chat', { on: true })
+    expect(declared.body.status, JSON.stringify(declared.body)).toBe('executed')
+    expect(declared.body.result.site_chat).toBe(true)
+
     await signIn(page, d.actors.mei)
     await page.goto(coursePath())
     const drawer = await openChat(page)
@@ -183,6 +192,18 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     expect(seat, 'the course agent is seated').toBeTruthy()
     expect(seat.answers_course).toBe(true)
     await instructor.close()
+
+    // Nothing runs it yet, so no student is offered to ask it. Its runtime starts, with a token
+    // its owner gave it, and says it answers in the site.
+    const before = await call(d.actors.mei.token, 'GET', `/v1/courses/${d.course.id}/conversations/respondents`)
+    const names = (before.body.result.respondents ?? []).map((x: { display_name: string }) => x.display_name)
+    expect(names).not.toContain(TUTOR)
+    const token = await call(d.actors.instructor.token, 'POST', `/v1/me/agents/${seat.actor_id}/tokens`, {
+      label: `e2e runtime ${STAMP}`,
+    })
+    expect(token.body.status, JSON.stringify(token.body)).toBe('executed')
+    const declared = await call(token.body.result.token, 'POST', '/v1/me/site-chat', { on: true })
+    expect(declared.body.result?.site_chat, JSON.stringify(declared.body)).toBe(true)
 
     const page = await browser.newPage()
     await signIn(page, d.actors.mei)
