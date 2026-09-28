@@ -34,7 +34,7 @@ export default {
   },
   departments: {
     title: '部門',
-    subtitle: '部門用來將課程分組，並可擁有自己的權限預設。部門與「誰可以做甚麼」無關。',
+    subtitle: '部門以樹狀架構將課程分組，並可擁有自己的權限預設。部門管理員在此管理該部門及其下屬部門的所有課程。',
     new: '建立部門',
     filter: '依名稱篩選',
     empty: '尚未建立任何部門',
@@ -48,7 +48,7 @@ export default {
       title: '建立部門',
       name: '名稱',
       namePlaceholder: '例如：電子計算學系',
-      permanent: '部門建立後無法改名或刪除。',
+      permanent: '部門建立後不能刪除，但可以改名或搬移。',
       done: '已建立部門',
     },
   },

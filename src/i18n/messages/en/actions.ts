@@ -388,6 +388,7 @@ export default {
     student_out_of_scope: 'That student is outside the seat’s reach.',
     assignment_out_of_scope: 'That assignment is outside the seat’s reach.',
     platform_role_required: 'Only administrators may do this.',
+    department_out_of_scope: 'Outside the departments the caller administers.',
     principal_not_active: 'The agent’s owner has no active seat here, so the agent can do nothing.',
     not_addressable: 'That member cannot be asked by you, or no longer can.',
   },

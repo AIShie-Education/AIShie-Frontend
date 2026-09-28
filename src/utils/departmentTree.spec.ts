@@ -5,6 +5,7 @@ import {
   administeredList,
   administeredRoots,
   courseDestinations,
+  deptActions,
   destinationsFor,
   indexTree,
   pathLabel,
@@ -161,5 +162,21 @@ describe('where a department may be moved', () => {
     expect(values(ds)).toEqual(['S', 'D'])
     expect(find(ds, 'D')).toMatchObject({ disabled: true, reason: 'here' })
     expect(values(courseDestinations(world('F'), 'D'))).toEqual(['F', 'S', 'D', 'S2'])
+  })
+})
+
+describe('what may be done with a department', () => {
+  it('follows the flags Core gives it', () => {
+    const t = world('F')
+    const acts = (id: string) => deptActions(t.byId.get(id)!)
+    // Her own appointment's department: make departments beneath it and see who administers it, but not reshape or staff it.
+    expect(acts('F')).toEqual(['newChild', 'admins'])
+    // Beneath her appointment: all of it.
+    expect(acts('S')).toEqual(['newChild', 'rename', 'move', 'admins'])
+    // Above or beside it: nothing.
+    expect(acts('U')).toEqual([])
+    expect(acts('F2')).toEqual([])
+    // A platform administrator: everything, everywhere.
+    expect(deptActions(world('platform').byId.get('U')!)).toEqual(['newChild', 'rename', 'move', 'admins'])
   })
 })

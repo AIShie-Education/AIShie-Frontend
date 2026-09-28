@@ -384,6 +384,7 @@ export default {
     student_out_of_scope: '該學生不在席位的範圍內。',
     assignment_out_of_scope: '該作業不在席位的範圍內。',
     platform_role_required: '只有管理員可以這樣做。',
+    department_out_of_scope: '不在呼叫者所管理的部門範圍內。',
     principal_not_active: '代理的擁有者在此沒有有效席位，因此代理甚麼都不能做。',
     not_addressable: '你不能向該成員提問，或已不再可以。',
   },

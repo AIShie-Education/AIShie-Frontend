@@ -225,3 +225,20 @@ export function courseDestinations(tree: DeptTree, deptId: string): Destination[
 export function roomBeneath(node: DepartmentNode, maxDepth = DEFAULT_MAX_DEPTH): boolean {
   return node.depth < maxDepth
 }
+
+/** What the departments page offers to do with a department. */
+export type DeptAction = 'newChild' | 'rename' | 'move' | 'admins'
+
+/**
+ * What may be done with a department, by the flags Core gives it: beneath
+ * one the caller administers they make departments and see its
+ * administrators; one they manage (an appointment of theirs is above it, or
+ * they are a platform administrator) they rename, move and staff.
+ */
+export function deptActions(node: Pick<DepartmentNode, 'administers' | 'manages'>): DeptAction[] {
+  const out: DeptAction[] = []
+  if (node.administers) out.push('newChild')
+  if (node.manages) out.push('rename', 'move')
+  if (node.administers) out.push('admins')
+  return out
+}
