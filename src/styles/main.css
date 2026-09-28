@@ -55,7 +55,7 @@ summary:focus-visible,
 }
 
 /* A card that holds a section of a page. */
-/* A card: white on the ground, a line around it, generous room inside. */
+/* A card: ivory on the ground, a line around it, generous room inside. */
 .app-card {
   background: var(--app-card);
   border: 1px solid var(--app-line);

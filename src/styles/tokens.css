@@ -9,8 +9,11 @@
   /* Grounds and surfaces */
   --app-ground: #f6f3ec;
   --app-ground-2: #ede7da;
-  --app-card: #ffffff;
-  --app-overlay: #ffffff;
+  /* Cards and what floats above them are a warm ivory, a step lighter than
+     the ground; a field stays white, the one surface that asks for input. */
+  --app-card: #fbf8f2;
+  --app-overlay: #fbf8f2;
+  --app-field: #ffffff;
   --app-line: #e2ddd1;
   --app-line-soft: #ece8de;
   --app-line-strong: #cfc8b8;
@@ -88,6 +91,7 @@ html.dark {
   --app-ground-2: #161a26;
   --app-card: #1a1f2d;
   --app-overlay: #212739;
+  --app-field: #1a1f2d;
   --app-line: #2b3245;
   --app-line-soft: #242a3a;
   --app-line-strong: #3a4156;
