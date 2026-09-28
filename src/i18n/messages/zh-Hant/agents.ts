@@ -98,27 +98,22 @@ export default {
     adminOnly: '這個代理由管理員停用，只有管理員才能解除。',
   },
 
+  // How it runs, when run by another AI tool or an AIShie runtime of one's own (ConnectRuntimeCard).
   connect: {
-    title: '連接執行環境',
-    intro:
-      '這個代理只是在這裡登記了。要讓它工作，需要一個執行環境：一個會呼叫語言模型、並以代理的權杖透過 MCP 連接 AIShiteru 的程式。',
-    step: {
-      token: '發給它權杖',
-      runtime: '用權杖啟動執行環境',
-      course: '帶它加入課程',
-    },
-    tokenTodo: '執行環境以權杖證明自己就是這個代理。權杖只會在建立時顯示一次。',
+    tokenTodo: '它還沒有權杖：工具需要用權杖連接。',
     tokenDone: '它已有一個有效的權杖。',
-    runtimeTodo:
-      '有了權杖後，把權杖交給執行環境並啟動它。AIShie Agent Runtime 會從它的 agents 目錄讀取像下面這樣的代理檔案，並從檔案所指定的秘密讀取權杖。',
-    waiting: '它的權杖尚未被使用過。請用權杖啟動執行環境。',
-    waitingWatching: '正在等待執行環境連線…本頁每隔數秒會自動檢查一次。',
+    waiting: '它的權杖尚未被使用過。',
+    waitingWatching: '正在等待它連線…本頁每隔數秒會自動檢查一次。',
+    toolIntro: 'Claude、ChatGPT、代理 SDK 或任何其他 MCP 用戶端都可以充當這個代理：把這個地址交給它，並在這個標頭中放入代理的其中一個權杖。',
+    endpoint: 'MCP 端點（Streamable HTTP）',
+    header: '標頭',
+    headerHint: '把 {placeholder} 換成代理的其中一個權杖。請妥善保密：任何持有它的人都能以這個代理的身分行事。',
+    claudeHint: '在 Claude 中：用這個網址新增自訂連接器，選擇「No sign-in」，並新增名為 authorization 的標頭，值為 Bearer {placeholder}。',
+    runtimeIntro: '適用於自行營運 AIShie Agent Runtime 的人：把這個代理檔案放進執行環境的 agents 目錄，並把權杖放在檔案所指定的秘密中。',
     agentFile: 'AIShie Agent Runtime 的代理檔案（YAML）',
     agentFileHint:
-      '把權杖存放在執行環境秘密目錄中的 {file} 檔案，或環境變數 {variable}；切勿寫進代理檔案，執行環境會拒絕寫在那裡的權杖。模型只是示例，使用你自己的金鑰，與權杖存放在一起；執行環境的範例列出了每個供應商的寫法。請妥善保密權杖：任何持有它的人都能以這個代理的身分行事。',
-    endpoint: 'MCP 端點（Streamable HTTP）',
-    endpointHint: '其他執行環境或任何 MCP 用戶端都在這裡連接，並以權杖作為 Bearer 權杖。',
-    showSettings: '顯示連線設定',
+      '把權杖存放在執行環境秘密目錄中的 {file} 檔案，或環境變數 {variable}；切勿寫進代理檔案，執行環境會拒絕寫在那裡的權杖。',
+    modelExample: 'model 區塊只是示例：請改成你自己的供應商、模型和金鑰。',
     courseTodo: '在加入課程之前，它甚麼都做不了：請把它帶入你有席位的課程。',
     courseWaiting: '安排它加入課程的申請正等待導師批准。',
     courseDone: '已加入 1 個課程。 | 已加入 {n} 個課程。',
@@ -179,11 +174,6 @@ export default {
     title: '{name} 的新權杖',
     warning: '請立即複製。權杖不會儲存在任何地方，之後亦不會再顯示。',
     token: '權杖',
-    agentFile: 'AIShie Agent Runtime 的代理檔案（YAML）',
-    agentFileHint:
-      '把上面的權杖存放在執行環境秘密目錄中的 {file} 檔案，或環境變數 {variable}，切勿寫進代理檔案。模型只是示例：請換成你要用的。',
-    endpoint: '或者，若使用其他執行環境或 MCP 用戶端：MCP 端點',
-    header: '以及它要傳送的標頭',
     listedAs: '在清單中顯示為',
     done: '我已複製',
     closeUncopiedTitle: '不複製就關閉？',

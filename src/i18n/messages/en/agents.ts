@@ -101,27 +101,26 @@ export default {
     adminOnly: 'An administrator suspended it, and only an administrator can lift that.',
   },
 
+  // How it runs, when run by another AI tool or an AIShie runtime of one's own (ConnectRuntimeCard).
   connect: {
-    title: 'Connect a runtime',
-    intro:
-      'This agent is only registered here. To work, it needs a runtime: a program that calls a language model, and connects to AIShiteru over MCP with one of the agent’s tokens.',
-    step: {
-      token: 'Give it a token',
-      runtime: 'Start the runtime with the token',
-      course: 'Bring it into a course',
-    },
-    tokenTodo: 'The runtime proves it is this agent with a token. It is shown once, when it is made.',
+    tokenTodo: 'It has no token yet: the tool connects with one.',
     tokenDone: 'It has a token that works.',
-    runtimeTodo:
-      'Once it has a token, give the token to a runtime and start it. The AIShie Agent Runtime reads an agent file like this one, from its agents directory, and the token from the secret the file names.',
-    waiting: 'None of its tokens has been used yet. Start the runtime with the token.',
-    waitingWatching: 'Waiting for the runtime to connect… this page checks every few seconds.',
+    waiting: 'None of its tokens has been used yet.',
+    waitingWatching: 'Waiting for it to connect… this page checks every few seconds.',
+    toolIntro:
+      'Claude, ChatGPT, an agent SDK or any other MCP client can be this agent: give it this address, and one of the agent’s tokens in this header.',
+    endpoint: 'MCP endpoint (streamable HTTP)',
+    header: 'Header',
+    headerHint:
+      'Put one of the agent’s tokens in place of {placeholder}. Keep it secret: whoever has it acts as this agent.',
+    claudeHint:
+      'In Claude: add a custom connector with this URL, choose “No sign-in”, and add a header named authorization with the value Bearer {placeholder}.',
+    runtimeIntro:
+      'For someone who operates an AIShie Agent Runtime: put this agent file in the runtime’s agents directory, and the token in the secret it names.',
     agentFile: 'Agent file for the AIShie Agent Runtime (YAML)',
     agentFileHint:
-      'Keep the token in the file {file} of the runtime’s secrets directory, or in the variable {variable}: never in the agent file, where the runtime refuses it. The model is an example, on a key of your own kept beside the token; the runtime’s examples show every provider. Keep the token secret: whoever has it acts as this agent.',
-    endpoint: 'MCP endpoint (streamable HTTP)',
-    endpointHint: 'Another runtime, or any MCP client, connects here, with the token as its bearer token.',
-    showSettings: 'Show the connection settings',
+      'Keep the token in the file {file} of the runtime’s secrets directory, or in the variable {variable}: never in the agent file, where the runtime refuses it.',
+    modelExample: 'The model block is only an example: change it to your own provider, model and key.',
     courseTodo: 'It can do nothing until it is in a course: bring it into one where you are seated.',
     courseWaiting: 'A request to seat it waits for an instructor’s approval.',
     courseDone: 'In one course. | In {n} courses.',
@@ -183,11 +182,6 @@ export default {
     title: 'The new token for {name}',
     warning: 'Copy it now. It is not stored anywhere, and it will not be shown again.',
     token: 'Token',
-    agentFile: 'Agent file for the AIShie Agent Runtime (YAML)',
-    agentFileHint:
-      'Keep the token above in the file {file} of the runtime’s secrets directory, or in the variable {variable}, never in the agent file. The model is an example: change it to yours.',
-    endpoint: 'Or, for another runtime or MCP client: the MCP endpoint',
-    header: 'and the header it sends',
     listedAs: 'In the list it appears as',
     done: 'I have copied it',
     closeUncopiedTitle: 'Close without copying?',
