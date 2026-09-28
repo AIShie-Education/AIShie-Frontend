@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { i18n, setLocale } from '@/i18n'
+import { i18n, setLocale, type Locale } from '@/i18n'
 import { ApiError, authMethods, ssoStartUrl, type AuthMethods } from '@/api/http'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
@@ -36,7 +36,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-async function mountAt(path: string, locale: 'en' | 'zh-Hant') {
+async function mountAt(path: string, locale: Locale) {
   setLocale(locale)
   const pinia = createPinia()
   setActivePinia(pinia)
@@ -131,6 +131,18 @@ describe('single sign-on on the sign-in page', () => {
     await button!.trigger('click')
     expect(ssoStartUrl).toHaveBeenCalledWith('/courses/c1', START)
     expect(window.location.hash).toBe('#sso-started')
+    w.unmount()
+  })
+
+  it('is put in Simplified Chinese when that is chosen, the message already shown too', async () => {
+    const w = await mountAt('/login?expired=1', 'en')
+    useUiStore().locale = 'zh-Hans'
+    await flushPromises()
+    expect(alertText(w)).toContain('登录已过期，请重新登录。')
+    expect(w.find('button[type="submit"]').text()).toBe('登录')
+    expect(document.documentElement.lang).toBe('zh-Hans')
+    useUiStore().locale = 'en'
+    await flushPromises()
     w.unmount()
   })
 
