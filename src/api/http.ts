@@ -421,6 +421,93 @@ export async function acceptInvite(
   return raw.body
 }
 
+// ---------------------------------------------------------------------------
+// Joining a course by an invite link (course.join_link_create)
+// ---------------------------------------------------------------------------
+//
+// A join link's token is taken at Core's join endpoints, which are REST only
+// and in no catalogue: GET /v1/join/{token} says what the link is to, to
+// anyone; POST /v1/join/{token} seats the person signed in, as a student
+// (course.join, a tool no adapter offers, recorded like any write); and
+// POST /v1/join/{token}/register makes someone with no account, seats them
+// and signs this browser in as them, as a sign-in does. A token that finds no
+// link is one 404, however it is wrong.
+
+/** Where a join link's token is presented to Core. */
+export const JOIN_PATH = '/v1/join/'
+
+/**
+ * What anyone who holds a join link may learn of it: the course's code,
+ * section and title, whether the link seats anyone now and, when not, why
+ * (revoked, expired, used_up, course_archived, creator_lost_authority), when
+ * it stops working, and the email domains it is kept to, when it is.
+ */
+export interface JoinPreview {
+  course: { code: string; section: string; title: string }
+  joinable: boolean
+  reason?: string
+  /** Someone with no account may register through it: whenever it seats anyone. */
+  registration?: boolean
+  allowed_email_domains?: string[] | null
+  /** When it stops working, on Core's clock: ten minutes after it was created. */
+  expires_at?: string
+}
+
+/**
+ * A seat taken through a link: the course and the seat. already_member says
+ * the person had a seat there already, which is given back as it is.
+ */
+export interface Joined {
+  course_id: string
+  member_id: string
+  status?: string
+  already_member?: boolean
+  join_link_id?: string
+}
+
+function joinPath(token: string, sub = ''): string {
+  return `${JOIN_PATH}${encodeURIComponent(token)}${sub}`
+}
+
+/** What a join link is to. Public. */
+export async function joinPreview(token: string): Promise<JoinPreview> {
+  const raw = await sendWithRetry('GET', joinPath(token), {})
+  if (raw.status !== 200 || !raw.body?.course) throw signInError(raw)
+  return raw.body
+}
+
+/**
+ * Seats the person signed in through a join link, as a student: course.join,
+ * under an idempotency key the caller keeps for as long as it retries the
+ * same join. Core answers as it answers any write; a refusal names its
+ * reason in details.reason.
+ */
+export async function joinCourse(token: string, idempotencyKey: string): Promise<Joined> {
+  const raw = await sendWithRetry('POST', joinPath(token), { body: {}, headers: { 'Idempotency-Key': idempotencyKey } })
+  const b = raw.body as Outcome<Joined> | null
+  if (raw.status !== 200 || b?.status !== 'executed' || !b.result) throw errorFrom(raw)
+  return b.result
+}
+
+/**
+ * Registers someone with no account through a join link, seats them as a
+ * student and signs this browser in as them, with the session cookie a
+ * sign-in gives: public, as login is, since the link is what lets them in.
+ * Core answers 409 (details.reason email_taken) for an email registered
+ * already, whose owner is to sign in; 422 when the link seats nobody now or
+ * takes no email at that domain; 400 for a field outside its rules; and 429,
+ * with how long to wait, when this address or this link has registered too
+ * often.
+ */
+export async function joinRegister(
+  token: string,
+  body: { display_name: string; email: string; password: string },
+): Promise<{ actor_id: string; expires_at: string; course_id: string; member_id: string; action_id: string }> {
+  const raw = await send('POST', joinPath(token, '/register'), { body })
+  if (raw.status !== 200) throw signInError(raw)
+  return raw.body
+}
+
 export async function logout(): Promise<void> {
   const raw = await send('POST', '/v1/auth/logout')
   if (raw.status !== 204 && raw.status !== 401) throw errorFrom(raw)

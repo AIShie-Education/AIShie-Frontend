@@ -39,6 +39,15 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true, title: 'auth.invite.title' },
   },
   {
+    // Where a course's invite link lands (course.join_link_create): anyone
+    // with it joins the course as a student, signed in or registering here.
+    path: '/join/:token',
+    name: 'join',
+    component: () => import('@/views/join/JoinView.vue'),
+    props: true,
+    meta: { public: true, title: 'join.page.title' },
+  },
+  {
     path: '/',
     component: AppLayout,
     children: [

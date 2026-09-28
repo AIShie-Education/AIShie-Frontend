@@ -1,0 +1,75 @@
+// The page a course's invite link opens (/join/<token>), where anyone with it
+// joins the course as a student, signing in or creating an account on the way.
+// Every link works for ten minutes: it is for showing a class, as a QR code.
+export default {
+  page: {
+    title: 'Join a course',
+    lead: 'You have been invited to join',
+    asStudent: 'You will join as a student, straight away.',
+    timeLeft: 'This link works for another {t}.',
+    domains: 'Only people with an email at {domains} can join through this link.',
+    signedInAs: 'Signed in as {name}',
+    join: 'Join course',
+    notYou: 'Not you?',
+    switchAccount: 'Sign in as someone else',
+    signedOutLead: 'To join, sign in, or create an account if you have none.',
+    signedOutLeadSignInOnly: 'To join, sign in.',
+    signIn: 'Sign in to join',
+    register: 'Create an account',
+    haveAccount: 'Already have an account?',
+    wrongDomain:
+      'You are signed in with {email}, but this link is only for emails at {domains}. Sign in with an account at one of them to join.',
+    agent: 'You are signed in with an agent’s API token. Only a person can join a course through an invite link.',
+    member: 'You are already in this course.',
+    toHome: 'Go to AIshie',
+    retry: 'Try again',
+    loadFailed: 'The invite link could not be checked.',
+    invalidTitle: 'This link isn’t valid',
+    invalid: 'Check that you have the whole link, as it was shared with you, or ask your instructor for a new one.',
+    closedTitle: 'You can no longer join through this link',
+    closed: {
+      expired:
+        'This invite link has expired. Invite links work for only a few minutes, for joining in class: ask your instructor for a new one.',
+      used_up: 'As many people as this link allows have already joined through it. Ask your instructor for a new one.',
+      revoked: 'This invite link has been revoked. Ask your instructor for a new one.',
+      course_archived: 'This course has been archived, and nobody can join it any more.',
+      creator_lost_authority:
+        'Whoever created this invite link can no longer add students to the course, so it no longer works. Ask your instructor for a new one.',
+      invalid: 'This invite link no longer works. Ask your instructor for a new one.',
+    },
+    registerTitle: 'Create an account and join',
+    displayName: 'Your name',
+    displayNameHint: 'As your instructor and classmates will see it.',
+    email: 'Email',
+    emailHint: 'You sign in with it from now on.',
+    emailDomainHint: 'Use your email at {domains}.',
+    badEmail: 'Enter a whole email address',
+    emailWrongDomain: 'This link is only for emails at {domains}',
+    password: 'Password',
+    repeat: 'Repeat the password',
+    rule: 'At least 10 characters. Longer is stronger: a short sentence works well.',
+    tooShort: 'At least 10 characters (letters outside English count as two or three each)',
+    tooLong: 'At most 1024 characters',
+    mismatch: 'The two passwords are not the same',
+    tooLongName: 'At most {n} characters',
+    submitRegister: 'Create account and join',
+    signInInstead: 'Sign in instead',
+    wait: 'Too many attempts. Wait {n} second and try again. | Too many attempts. Wait {n} seconds and try again.',
+  },
+  // Core's refusals, by the reason it names (details.reason).
+  errors: {
+    revoked: 'This invite link has been revoked. Ask your instructor for a new one.',
+    expired:
+      'This invite link has expired. Invite links work for only a few minutes, for joining in class: ask your instructor for a new one.',
+    used_up: 'As many people as this link allows have already joined through it. Ask your instructor for a new one.',
+    course_archived: 'This course has been archived, and nobody can join it any more.',
+    creator_lost_authority:
+      'Whoever created this invite link can no longer add students to the course, so it no longer works. Ask your instructor for a new one.',
+    people_only: 'Only a person can join a course through an invite link.',
+    email_domain_not_allowed: 'This invite link is only for emails at certain domains, and this one is not at any of them.',
+    email_domain_not_allowed_at: 'This invite link is only for emails at {domains}, and this one is not at any of them.',
+    registration_disabled: 'Accounts cannot be created through invite links here. Sign in, then open the link again to join.',
+    actor_not_active: 'Your account is suspended, so it cannot join a course. Ask an administrator.',
+    email_taken: 'An account with this email already exists. Sign in with it to join the course.',
+  },
+}

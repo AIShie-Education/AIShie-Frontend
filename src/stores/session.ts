@@ -11,7 +11,7 @@
 // nothing (see startsAfresh and LoginView).
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { acceptInvite, ApiError, bearer, login, logout as apiLogout, read } from '@/api/http'
+import { acceptInvite, ApiError, bearer, joinRegister, login, logout as apiLogout, read, type Joined } from '@/api/http'
 import { forgetRuntimeAssertion } from '@/api/runtime'
 import type { Me, Membership } from '@/api/types'
 import { useCourseStore } from './course'
@@ -130,6 +130,26 @@ export const useSessionStore = defineStore('session', () => {
     return { email: out.email }
   }
 
+  /**
+   * Creates a person through a course's invite link, and signs this browser
+   * in as them: Core makes the account, seats it as a student and starts
+   * its session, all at once. As with an invitation, nothing is dropped
+   * until Core has said yes, and failing to read who they are afterwards is
+   * not a failure here. The seat they were given comes back.
+   */
+  async function registerThroughJoinLink(
+    token: string,
+    form: { display_name: string; email: string; password: string },
+  ): Promise<Joined> {
+    const out = await joinRegister(token, form)
+    forgetCaller()
+    bearer.set(null)
+    usingToken.value = false
+    status.value = 'unknown'
+    await ensure().catch(() => undefined)
+    return { course_id: out.course_id, member_id: out.member_id }
+  }
+
   async function signInWithToken(token: string) {
     forgetCaller()
     bearer.set(token.trim())
@@ -230,6 +250,7 @@ export const useSessionStore = defineStore('session', () => {
     membershipFor,
     signInWithPassword,
     signInWithInvite,
+    registerThroughJoinLink,
     signInWithToken,
     signOut,
     clear,
