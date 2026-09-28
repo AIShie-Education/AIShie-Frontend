@@ -103,7 +103,7 @@ start() {
     command -v docker >/dev/null 2>&1 || die "there is no docker here: run a binary of Core with CORE_BIN"
     if ! docker pull -q "$IMAGE"; then
       if in_actions; then
-        echo "::error::Could not pull $IMAGE. The package is private, and this repository's workflows can read it only once an owner of the AIShiteru-LMS organization (or an admin of the package) grants it, once: https://github.com/orgs/AIShiteru-LMS/packages/container/aishiteru-core/settings → Manage Actions access → Add Repository → AIShiteru-Frontend, role Read. (If the error above is not denied, unauthorized or not found, GHCR may be having trouble: re-run the job.)"
+        echo "::error::Could not pull $IMAGE. The package is private, and this repository's workflows can read it only once an owner of the AIShie-Education organization (or an admin of the package) grants it, once: https://github.com/orgs/AIShie-Education/packages/container/aishie-core/settings → Manage Actions access → Add Repository → AIShie-Frontend, role Read. (If the error above is not denied, unauthorized or not found, GHCR may be having trouble: re-run the job.)"
         exit 1
       fi
       die "could not pull $IMAGE: docker login ghcr.io with a token that can read the package (classic, read:packages), or run a binary of Core with CORE_BIN"

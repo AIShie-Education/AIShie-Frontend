@@ -4,7 +4,7 @@ The front end is a directory of static files, and it is served from the same
 origin as AIShiteru Core: Core's session cookie is `SameSite=Lax`, and its
 guard refuses writes from other origins. So it lives on the server Core runs
 on, one per environment, set up with Core's `deploy/setup-server.sh`
-([Core's docs/deploying.md](https://github.com/AIShiteru-LMS/AIShiteru-Core/blob/main/docs/deploying.md)).
+([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md)).
 Caddy, which already serves HTTPS there, sends `/v1/*`, `/mcp`, `/mcp/*` and
 `/healthz` to Core on `127.0.0.1:8080`, and everything else to the files in
 `/srv/aishiteru-web/current`, falling back to `index.html` for the app's own
@@ -170,7 +170,7 @@ Run these as root on the server.
 - **The e2e job cannot pull Core's image.** Core's image is private, and this
   repository's workflows can read it only once an owner of the organization
   grants it: the package's settings
-  (github.com/orgs/AIShiteru-LMS/packages/container/aishiteru-core/settings)
+  (github.com/orgs/AIShie-Education/packages/container/aishie-core/settings)
   → Manage Actions access → Add Repository → `AIShiteru-Frontend`, role
   Read. It is done once.
 - **"refused the build".** The archive held something other than plain files
@@ -201,7 +201,7 @@ Run these as root on the server.
 - **Core does not answer.** The front end was deployed, but for two minutes
   `/healthz` got 502, 503 or 504 from Caddy, or no answer: Core is down, or
   its own deploy was restarting it for longer than that. See to Core
-  ([Core's docs/deploying.md](https://github.com/AIShiteru-LMS/AIShiteru-Core/blob/main/docs/deploying.md));
+  ([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md));
   the front end needs nothing more.
 - **`setup-web.sh` stops at a link, or at a line of `authorized_keys`.**
   Neither it nor `aishiteru-web-deploy` makes a link there, nor a key line

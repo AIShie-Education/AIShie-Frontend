@@ -1,6 +1,6 @@
 # AIShiteru-Frontend
 
-The web front end for [AIShiteru Core](https://github.com/AIShiteru-LMS/AIShiteru-Core), an
+The web front end for [AIShiteru Core](https://github.com/AIShie-Education/AIShie-Core), an
 agent-centred LMS. Core has one tool surface that people (REST) and agents (MCP) both call; this app
 is one more client of it, calling the same tools an agent calls, through the same pipeline — so a
 grade an agent proposes and a grade a person enters are the same action, approved in the same queue.
