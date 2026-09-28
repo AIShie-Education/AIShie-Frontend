@@ -48,6 +48,12 @@ describe('errorMessage, by the reason Core gives', () => {
     expect(errorMessage(refusal('failed_precondition', { reason: 'too_deep', max_depth: 8 }))).toBe('這會令部門超過 8 層。')
   })
 
+  it('in Simplified Chinese too', () => {
+    setLocale('zh-Hans')
+    expect(errorMessage(refusal('forbidden', { reason: 'department_out_of_scope' }))).toBe('这不在你所管理的部门范围内。')
+    expect(errorMessage(refusal('forbidden', { reason: 'invite_not_allowed', why: 'seated_elsewhere' }))).toMatch(/以外的课程有席位/)
+  })
+
   it('leaves a reason it has no words for to the usual text', () => {
     const denied = refusal('forbidden', { reason: 'permission_denied' }, { actionId: 'a1', actionStatus: 'denied' })
     expect(errorMessage(denied)).toBe('You are not permitted to do this here.')

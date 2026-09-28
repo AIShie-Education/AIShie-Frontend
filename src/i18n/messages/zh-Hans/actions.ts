@@ -384,6 +384,7 @@ export default {
     student_out_of_scope: '该学生不在席位的范围内。',
     assignment_out_of_scope: '该作业不在席位的范围内。',
     platform_role_required: '只有管理员可以这样做。',
+    department_out_of_scope: '不在调用者所管理的部门范围内。',
     principal_not_active: '智能体的拥有者在此没有有效席位，因此智能体什么都不能做。',
     not_addressable: '你不能向该成员提问，或已不再可以。',
   },
