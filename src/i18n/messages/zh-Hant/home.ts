@@ -3,7 +3,7 @@ export default {
   subtitle: '你所在的課程',
   noCourses: '你尚未加入任何課程。',
   noCoursesAdmin: '你尚未加入任何課程。作為管理員，你可以建立課程並指派講師。',
-  goAdmin: '前往平台管理',
+  goAdmin: '前往管理頁面',
   memberId: '成員 ID',
   expires: '席位到期：{t}',
   scopeStudents: '學生範圍：{scope}',

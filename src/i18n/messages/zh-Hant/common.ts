@@ -65,7 +65,7 @@ export default {
     home: '我的課程',
     account: '帳戶',
     agents: '我的代理',
-    admin: '平台管理',
+    admin: '管理',
     language: '語言',
     theme: '主題',
     themeLight: '淺色',
