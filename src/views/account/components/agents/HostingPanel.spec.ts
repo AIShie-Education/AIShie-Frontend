@@ -7,6 +7,7 @@ import type { AgentFull } from '@/api/types'
 import {
   ACTOR,
   CORE,
+  INFO,
   RUNTIME,
   Servers,
   credential,
@@ -215,6 +216,49 @@ describe('HostingPanel: the runtime is here', () => {
     expect(document.body.innerHTML).not.toContain(token)
     expect(s.calls.filter((c) => JSON.stringify(c).includes(token)).map((c) => c.url)).toEqual(['/runtime/api/v1/agents'])
     expect(s.to('POST', CORE.issue)).toHaveLength(1)
+  })
+})
+
+describe('HostingPanel: what the runtime offers', () => {
+  const offering = (features: Record<string, boolean>) =>
+    s.on('GET', /^\/runtime\/api\/v1\/info$/, () => json(200, { ...INFO, features: { ...INFO.features, ...features } }))
+
+  it.each([
+    ['connect_by_token', { connect_by_token: false }],
+    ['own_key', { own_key: false }],
+  ])('offers no hosting to an agent not hosted when %s is false, and no error', async (_, features) => {
+    offering(features)
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+    const w = await panel()
+    expect(w.findAll('.connect-choice__title').map((c) => c.text())).toEqual([
+      'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
+      'Run the AIShie runtime yourself (advanced)',
+    ])
+    expect(w.find('.hosting-offer__host').exists()).toBe(false)
+    expect(w.find('.hosting-offer__paste').exists()).toBe(false)
+    expect(w.find('.el-alert--error').exists()).toBe(false)
+  })
+
+  it('shows an agent hosted already whatever the features say, without the actions they do not offer', async () => {
+    offering({ connect_by_token: false, own_key: false })
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent({ status: 'needs_token' })] }))
+    const w = await panel()
+    expect(w.find('.hosted-card').exists()).toBe(true)
+    // Neither a new token nor a model can be given: nothing to press for either.
+    expect(w.find('.hosted-card__primary').exists()).toBe(false)
+    expect(w.text()).toContain('The school’s runtime does not take new tokens at the moment')
+    expect(w.text()).toContain('The school’s runtime does not take a model and key of your own at the moment')
+    const items = Array.from(document.body.querySelectorAll('.el-dropdown-menu__item'), (e) => e.textContent?.trim())
+    expect(items).toEqual(['Delete from the school’s runtime'])
+    // Pausing and deleting stay.
+    expect(w.find('.hosted-card__pause').exists()).toBe(true)
+  })
+
+  it('offers all of it when every feature is true', async () => {
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent()] }))
+    const w = await panel()
+    expect(w.find('.hosted-card__primary').text()).toBe('Change model or key')
+    expect(w.find('.hosted-card__off').exists()).toBe(false)
   })
 })
 

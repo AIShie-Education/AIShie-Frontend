@@ -163,6 +163,15 @@ export const OFFERS: ProviderOffer[] = [
     key_prefix: 'sk-',
     suggested_models: [{ model: 'kimi-k2', priced: true }],
   },
+  {
+    // As the runtime offers it: the global endpoint alone, until the mainland one has passed a live test (§11, 7).
+    provider: 'glm',
+    label: 'Zhipu GLM',
+    adapters: ['openai_chat'],
+    endpoint: { kind: 'choice', choices: [{ id: 'global', label: 'Global', base_url: 'https://api.z.ai/api/paas/v4' }] },
+    key_prefix: null,
+    suggested_models: [],
+  },
 ]
 
 export function credential(over: Partial<AgentCredential> = {}): AgentCredential {

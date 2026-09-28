@@ -38,16 +38,23 @@ import {
 import { revokeAllAsOwner } from './hostingFlow'
 import type { AgentStanding } from './agents'
 
-const props = defineProps<{
-  agent: HostedAgent
-  actorId: string
-  name: string
-  credentials?: AgentCredential[] | null
-  /** Core's standing of the agent: a suspended one cannot be given a token. */
-  standing?: AgentStanding
-  /** GET /models' providers, for their names; the provider's id stands in without them. */
-  offers?: ProviderOffer[] | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    agent: HostedAgent
+    actorId: string
+    name: string
+    credentials?: AgentCredential[] | null
+    /** Core's standing of the agent: a suspended one cannot be given a token. */
+    standing?: AgentStanding
+    /** GET /models' providers, for their names; the provider's id stands in without them. */
+    offers?: ProviderOffer[] | null
+    /** The runtime takes a new token for it (features.connect_by_token). */
+    canConnect?: boolean
+    /** The runtime takes a model and key of the owner's (features.own_key). */
+    canChooseModel?: boolean
+  }>(),
+  { credentials: null, standing: 'active', offers: null, canConnect: true, canChooseModel: true },
+)
 const emit = defineEmits<{
   update: [agent: HostedAgent]
   /** No longer on the runtime (deleted here, or elsewhere). */
@@ -202,18 +209,19 @@ const errorText = computed(() => {
 })
 
 // --- The primary action, by status ------------------------------------------------------
+// None where the runtime does not offer it (a feature false in GET /info).
 type Primary = 'chooseModel' | 'reconnect' | 'changeModel'
-const primary = computed<Primary>(() => {
-  if (status.value === 'needs_model') return 'chooseModel'
-  if (status.value === 'needs_token') return 'reconnect'
-  return 'changeModel'
+const primary = computed<Primary | null>(() => {
+  if (status.value === 'needs_token') return props.canConnect ? 'reconnect' : null
+  if (!props.canChooseModel) return null
+  return status.value === 'needs_model' ? 'chooseModel' : 'changeModel'
 })
 function onPrimary() {
   if (primary.value === 'reconnect') emit('newToken', 'reconnect')
   else emit('chooseModel')
 }
 function onCommand(cmd: string) {
-  if (cmd === 'replace') emit('newToken', 'replace')
+  if (cmd === 'replace' && props.canConnect) emit('newToken', 'replace')
   else if (cmd === 'delete') deleteOpen.value = true
 }
 defineExpose({ onCommand })
@@ -266,8 +274,16 @@ defineExpose({ onCommand })
 
     <el-alert v-if="error" type="error" :closable="false" show-icon :title="errorText" class="hosted-card__alert" />
 
+    <p v-if="!canChooseModel" class="app-form-hint hosted-card__off">{{ t('hosting.card.ownKeyOff') }}</p>
+    <p v-if="!canConnect" class="app-form-hint hosted-card__off">{{ t('hosting.card.connectOff') }}</p>
+
     <div class="hosted-card__actions">
-      <el-tooltip :disabled="primary !== 'reconnect' || active" :content="t('hosting.choice.hostSuspended')" placement="top">
+      <el-tooltip
+        v-if="primary"
+        :disabled="primary !== 'reconnect' || active"
+        :content="t('hosting.choice.hostSuspended')"
+        placement="top"
+      >
         <span>
           <el-button
             type="primary"
@@ -296,8 +312,10 @@ defineExpose({ onCommand })
         </el-button>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="replace" :disabled="!active">{{ t('hosting.card.replaceToken') }}</el-dropdown-item>
-            <el-dropdown-item command="delete" divided>{{ t('hosting.card.delete') }}</el-dropdown-item>
+            <el-dropdown-item v-if="canConnect" command="replace" :disabled="!active">
+              {{ t('hosting.card.replaceToken') }}
+            </el-dropdown-item>
+            <el-dropdown-item command="delete" :divided="canConnect">{{ t('hosting.card.delete') }}</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -405,6 +423,9 @@ defineExpose({ onCommand })
 }
 .hosted-card__alert {
   margin-top: 12px;
+}
+.hosted-card__off {
+  margin: 8px 0 0;
 }
 .hosted-card__actions {
   display: flex;

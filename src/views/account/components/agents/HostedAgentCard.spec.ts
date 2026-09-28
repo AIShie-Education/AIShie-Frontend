@@ -193,6 +193,26 @@ describe('HostedAgentCard: what the owner can do', () => {
     if (event === 'newToken') expect(w.emitted('newToken')![0]).toEqual(['reconnect'])
   })
 
+  it.each([
+    ['needs_token', { canConnect: false }],
+    ['needs_model', { canChooseModel: false }],
+    ['running', { canChooseModel: false }],
+  ] as const)('%s: offers no primary action the runtime does not take (%o)', async (status, props) => {
+    const w = await card(hostedAgent({ status }), props)
+    expect(w.find('.hosted-card__primary').exists()).toBe(false)
+    expect(w.find('.hosted-card__off').exists()).toBe(true)
+  })
+
+  it('offers no new token from its menu when the runtime takes none', async () => {
+    const w = await card(hostedAgent(), { canConnect: false })
+    ;(w.vm as unknown as { onCommand: (c: string) => void }).onCommand('replace')
+    expect(w.emitted('newToken')).toBeUndefined()
+    const items = Array.from(document.body.querySelectorAll('.el-dropdown-menu__item'), (e) => e.textContent?.trim())
+    expect(items).toEqual(['Delete from the school’s runtime'])
+    // A model can still be changed.
+    expect(w.find('.hosted-card__primary').text()).toBe('Change model or key')
+  })
+
   it('cannot give a suspended agent a new token', async () => {
     const w = await card(hostedAgent({ status: 'needs_token' }), { standing: 'suspendedByAdmin' })
     expect(w.find('.hosted-card__primary').attributes('disabled')).toBeDefined()

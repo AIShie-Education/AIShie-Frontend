@@ -288,6 +288,8 @@ export default {
     replaceToken: 'Replace token',
     delete: 'Delete from the school’s runtime',
     usedByRuntime: 'Used by the school’s runtime',
+    ownKeyOff: 'The school’s runtime does not take a model and key of your own at the moment, so they cannot be changed here.',
+    connectOff: 'The school’s runtime does not take new tokens at the moment, so it cannot be given one here.',
     issueWhileHosted:
       'The school’s runtime runs this agent. Anything you start with a new token would answer too: to run it yourself, delete it from the school’s runtime first.',
   },

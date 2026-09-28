@@ -99,7 +99,7 @@ describe('ModelKeyDialog', () => {
     expect(s.to('GET', RUNTIME.models)).toHaveLength(1)
     expect(s.to('GET', RUNTIME.agent)).toHaveLength(1)
     const labels = Array.from(document.body.querySelectorAll('.el-select-dropdown__item'), (o) => o.textContent?.trim())
-    expect(labels).toEqual(['OpenAI', 'Azure OpenAI', 'Amazon Bedrock', 'Moonshot (Kimi)'])
+    expect(labels).toEqual(['OpenAI', 'Azure OpenAI', 'Amazon Bedrock', 'Moonshot (Kimi)', 'Zhipu GLM'])
     // Nothing chosen yet: nothing to save.
     expect(w.find('.model-dialog__save').attributes('disabled')).toBeDefined()
   })
@@ -130,6 +130,30 @@ describe('ModelKeyDialog', () => {
     await flushPromises()
     expect(w.find('.model-form__endpoint').exists()).toBe(true)
     expect(vm.form.endpoint).toBe('global')
+  })
+
+  it('offers a provider’s endpoints as GET /models lists them: GLM’s global one alone, and sends it', async () => {
+    const { w, vm } = await open()
+    vm.onProvider('glm')
+    await flushPromises()
+    expect(vm.form.endpoint).toBe('global')
+    const endpoint = w.find('.model-form__endpoint')
+    expect(endpoint.exists()).toBe(true)
+    const options = Array.from(document.body.querySelectorAll('.el-select-dropdown__item'), (o) => o.textContent?.trim())
+    expect(options).toContain('Global')
+    expect(options).not.toContain('China')
+    vm.form.model = 'glm-4.6'
+    vm.key = newKey()
+    await flushPromises()
+    answerTest('ok')
+    await click(w, '.model-dialog__test-button')
+    expect(JSON.parse(s.to('POST', RUNTIME.keyTest)[0].body!)).toMatchObject({ provider: 'glm', endpoint: 'global' })
+
+    // Moonshot lists both of its own, so both are offered.
+    vm.onProvider('moonshot')
+    await flushPromises()
+    const all = Array.from(document.body.querySelectorAll('.el-select-dropdown__item'), (o) => o.textContent?.trim())
+    expect(all).toContain('China')
   })
 
   it.each([

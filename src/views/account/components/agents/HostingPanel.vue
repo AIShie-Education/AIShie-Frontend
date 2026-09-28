@@ -9,6 +9,14 @@
 // wizard) or a pasted one. After connecting comes the model and key (the
 // wizard's second step).
 //
+// What the runtime offers, it says in GET /info's features, each true or
+// false: connect_by_token for connecting an agent by its token (the wizard,
+// pasting, and a new token for a hosted one), own_key for a model and key of
+// the owner's. Each entry point shows only while its feature is true. Hosting
+// an agent not hosted yet needs both, since the school's key (school_key) is
+// not offered in v1 and a hosted agent without a model never runs. An agent
+// hosted already shows as hosted whatever the features say.
+//
 // Connecting answers with the agent's other live tokens (the contract's
 // A.1). When one was used lately, or others still work, the panel says so
 // above the hosted card, and in the model step too, since the agent starts
@@ -52,7 +60,13 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const rt = useRuntime()
-const canHost = computed(() => rt.available.value && (rt.info.value?.features.connect_by_token ?? false))
+const features = computed(() => rt.info.value?.features ?? null)
+/** Agents are connected by their token: the wizard, pasting one, and a new token for a hosted one. */
+const canConnect = computed(() => !!features.value?.connect_by_token)
+/** A model and a key of the owner's: the model step, and changing them. */
+const canChooseModel = computed(() => !!features.value?.own_key)
+/** Hosting is offered to an agent not hosted yet. */
+const offerHosting = computed(() => canConnect.value && canChooseModel.value)
 const actorId = computed(() => props.agent.actor_id.toLowerCase())
 const active = computed(() => props.standing === 'active')
 
@@ -65,7 +79,7 @@ let generation = 0
 async function load() {
   const g = ++generation
   loadError.value = null
-  if (!canHost.value) {
+  if (!rt.available.value) {
     hosted.value = null
     listed.value = false
     return
@@ -82,7 +96,7 @@ async function load() {
     if (g === generation) listed.value = true
   }
 }
-watch([canHost, actorId], () => void load(), { immediate: true })
+watch([() => rt.available.value, actorId], () => void load(), { immediate: true })
 watch(hosted, (h) => emit('hosted', h?.token.prefix ?? null), { immediate: true })
 
 // The providers' names, for the card's model line: asked once, and not missed if they never come.
@@ -138,6 +152,7 @@ function onConnected(a: HostedAgent, others: OtherTokens | null | undefined) {
   afterConnect.value = others?.tokens.length ? others : null
   emit('credsChanged')
   // Step two: the model and key, with the card behind it.
+  if (!canChooseModel.value) return
   modelWizard.value = true
   modelOpen.value = true
 }
@@ -178,27 +193,16 @@ function onDeleted() {
 
     <section v-if="!rt.checked.value" v-loading="true" class="app-card hosting-panel__checking" />
 
-    <ConnectRuntimeCard
-      v-else-if="!canHost"
-      :name="agent.display_name"
-      :actor-id="agent.actor_id"
-      :progress="progress"
-      :last-seen-at="agent.last_seen_at"
-      :seats="(agent.seats ?? []).length"
-      :watching="watching"
-      :disabled="!active"
-      @issue="emit('issue')"
-      @bring="emit('bring')"
-    />
-
     <HostedAgentCard
-      v-else-if="hosted"
+      v-else-if="rt.available.value && hosted"
       :agent="hosted"
       :actor-id="agent.actor_id"
       :name="agent.display_name"
       :credentials="credentials"
       :standing="standing"
       :offers="offers"
+      :can-connect="canConnect"
+      :can-choose-model="canChooseModel"
       @update="hosted = $event"
       @deleted="onDeleted"
       @choose-model="chooseModel"
@@ -209,7 +213,7 @@ function onDeleted() {
 
     <ConnectRuntimeCard
       v-else
-      hosting
+      :hosting="rt.available.value && offerHosting"
       :name="agent.display_name"
       :actor-id="agent.actor_id"
       :progress="progress"
@@ -258,8 +262,9 @@ function onDeleted() {
       </template>
     </ConnectRuntimeCard>
 
-    <template v-if="canHost">
+    <template v-if="rt.available.value">
       <HostOnRuntimeDialog
+        v-if="canConnect"
         v-model="hostOpen"
         :mode="hostMode"
         :actor-id="agent.actor_id"
@@ -274,6 +279,7 @@ function onDeleted() {
         @creds-changed="emit('credsChanged')"
       />
       <PasteTokenDialog
+        v-if="canConnect"
         v-model="pasteOpen"
         :actor-id="agent.actor_id"
         :name="agent.display_name"
@@ -283,7 +289,7 @@ function onDeleted() {
         @creds-changed="emit('credsChanged')"
       />
       <ModelKeyDialog
-        v-if="hosted"
+        v-if="hosted && canChooseModel"
         v-model="modelOpen"
         :agent-id="hosted.id"
         :name="agent.display_name"

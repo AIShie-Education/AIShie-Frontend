@@ -19,6 +19,7 @@ import {
   connectedParts,
   courseLabel,
   credentialByPrefix,
+  defaultsFor,
   emptyModelForm,
   fieldOfPointer,
   formFromModel,
@@ -411,6 +412,30 @@ describe('the model form', () => {
       maxOutputTokens: 'hosting.model.invalid.maxOutputTokens',
     })
     expect(formProblems(emptyModelForm(), undefined)).toEqual({ provider: 'hosting.model.invalid.required' })
+  })
+
+  it('takes a provider’s endpoint choices from the runtime’s offer alone', () => {
+    const glm = OFFERS.find((o) => o.provider === 'glm')!
+    const form = defaultsFor({ ...emptyModelForm(), model: 'glm-4.6' }, glm)
+    expect(form.endpoint).toBe('global')
+    expect(choiceFrom(form, glm)).toEqual({ provider: 'glm', adapter: 'openai_chat', model: 'glm-4.6', endpoint: 'global' })
+    // A saved endpoint the runtime no longer offers is shown as it is, and must be chosen again: never switched silently.
+    const saved = formFromModel(
+      {
+        provider: 'glm',
+        adapter: 'openai_chat',
+        model: 'glm-4.6',
+        endpoint: 'china',
+        resource: null,
+        region: null,
+        max_output_tokens: null,
+        reasoning_effort: null,
+        price_known: true,
+      },
+      OFFERS,
+    )
+    expect(saved.endpoint).toBe('china')
+    expect(formProblems(saved, glm)).toEqual({ endpoint: 'hosting.errors.unknown_endpoint' })
   })
 
   it('tells one choice from another whatever the order of its members', () => {
