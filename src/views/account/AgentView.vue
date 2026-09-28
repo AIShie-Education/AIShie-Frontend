@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // One of the caller's agents (agent.get): its name (agent.update), its
 // standing (agent.suspend, agent.reactivate: an administrator's suspension is
-// theirs to lift), how it runs (HostingPanel: hosted by AIShie where the
+// theirs to lift), whether it takes conversations in the site, and switching
+// them off (SiteChatCard), how it runs (HostingPanel: hosted by AIShie where the
 // school's runtime is there, another AI tool, or an AIShie runtime of the
 // owner's, one at a time), connecting a runtime to it with a token
 // (agent.issue_token, agent.list_credentials, agent.revoke_credential), the
@@ -31,6 +32,7 @@ import AgentTokensCard from './components/agents/AgentTokensCard.vue'
 import BringIntoCourseDialog from './components/agents/BringIntoCourseDialog.vue'
 import HostingPanel from './components/agents/HostingPanel.vue'
 import RenameAgentDialog from './components/agents/RenameAgentDialog.vue'
+import SiteChatCard from './components/agents/SiteChatCard.vue'
 import { agentStanding, noteAgentLimit, setupProgress } from './components/agents/agents'
 
 const props = defineProps<{ actorId: string }>()
@@ -239,21 +241,24 @@ function onBrought() {
             @creds-changed="creds.reload"
             @hosted="hostedPrefix = $event"
           />
-          <section class="app-card">
-            <h2 class="app-card__title">{{ t('agents.detail.about') }}</h2>
-            <el-descriptions :column="1" border size="small" class="agent-view__desc">
-              <el-descriptions-item :label="t('agents.detail.presence')">
-                <PresenceText :value="agent.last_seen_at" />
-              </el-descriptions-item>
-              <el-descriptions-item :label="t('agents.detail.created')">
-                <TimeText :value="agent.created_at" />
-              </el-descriptions-item>
-              <el-descriptions-item :label="t('agents.detail.id')">
-                <IdText :id="agent.actor_id" />
-              </el-descriptions-item>
-            </el-descriptions>
-            <p class="app-form-hint agent-view__note">{{ t('agents.detail.delegateNote') }}</p>
-          </section>
+          <div class="agent-view__side">
+            <section class="app-card">
+              <h2 class="app-card__title">{{ t('agents.detail.about') }}</h2>
+              <el-descriptions :column="1" border size="small" class="agent-view__desc">
+                <el-descriptions-item :label="t('agents.detail.presence')">
+                  <PresenceText :value="agent.last_seen_at" />
+                </el-descriptions-item>
+                <el-descriptions-item :label="t('agents.detail.created')">
+                  <TimeText :value="agent.created_at" />
+                </el-descriptions-item>
+                <el-descriptions-item :label="t('agents.detail.id')">
+                  <IdText :id="agent.actor_id" />
+                </el-descriptions-item>
+              </el-descriptions>
+              <p class="app-form-hint agent-view__note">{{ t('agents.detail.delegateNote') }}</p>
+            </section>
+            <SiteChatCard :agent="agent" :hosted="!!hostedPrefix" @changed="state.reload" />
+          </div>
         </div>
 
         <AgentSeatsCard :agent="agent" class="agent-view__section" @changed="state.reload" />
@@ -310,8 +315,8 @@ function onBrought() {
   gap: 16px;
   align-items: start;
 }
-.agent-view__grid > .app-card + .app-card {
-  margin-top: 0;
+.agent-view__side {
+  min-width: 0;
 }
 .agent-view__desc :deep(.el-descriptions__label) {
   white-space: nowrap;

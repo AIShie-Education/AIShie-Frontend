@@ -147,23 +147,52 @@ export function closedReasonOf(reason: string | null | undefined): ClosedReason 
   return { text: r }
 }
 
+// --- Site chat ---------------------------------------------------------------------
+
+/**
+ * Core's reason (details.reason) for refusing a new question, conversation.open's
+ * or conversation.ask's, to an agent that takes no conversations in the site:
+ * it is operated from an external tool (Claude through MCP, say), and nothing
+ * that answers questions here runs it.
+ */
+export const AGENT_ANSWERS_ELSEWHERE = 'agent_answers_elsewhere'
+
+/** Whether Core refused a question because the agent asked takes no conversations in the site. */
+export function answersElsewhere(e: { details?: Record<string, unknown> | null } | null | undefined): boolean {
+  return e?.details?.reason === AGENT_ANSWERS_ELSEWHERE
+}
+
+/**
+ * Whether the caller may ask a member here now, by conversation.respondents:
+ * true when it lists them, false when it does not, null while it has not been
+ * read (or could not be). The list leaves out every agent that takes no
+ * conversations in the site, whoever else the caller may address.
+ */
+export function offeredIn(respondents: readonly { member_id: string }[] | null | undefined, memberId: string) {
+  if (!respondents) return null
+  return respondents.some((r) => r.member_id === memberId)
+}
+
 /**
  * What the line above the composer says. waiting: the caller asked and the
  * respondent has not answered (with how likely an answer is); yourTurn: the
  * caller is asked; pendingApproval: an answer waits for someone's approval
- * (the caller's own, mine); start: nothing asked yet.
+ * (the caller's own, mine); start: nothing asked yet; elsewhere: the agent
+ * asked takes no conversations in the site, and nothing more is asked of it
+ * here.
  */
 export type Notice =
   | { kind: 'closed'; reason: ClosedReason | null }
   | { kind: 'waiting'; availability: Availability; approval: boolean }
   | { kind: 'unavailable'; availability: 'gone' | 'paused' | 'notAnswering' }
+  | { kind: 'elsewhere' }
   | { kind: 'pendingApproval'; mine: boolean }
   | { kind: 'yourTurn' }
   | { kind: 'start' }
   | { kind: 'overseeing' }
 
 /** Why the caller cannot write here now; null when they can. */
-export type WriteBlock = 'closed' | 'overseer' | 'unavailable' | 'nothingToAnswer' | 'answerPending'
+export type WriteBlock = 'closed' | 'overseer' | 'unavailable' | 'elsewhere' | 'nothingToAnswer' | 'answerPending'
 
 export interface ChatStatus {
   state: ConversationState
@@ -176,11 +205,17 @@ export interface ChatStatus {
   replyTo: string | null
 }
 
-/** Everything the pane shows about where a conversation stands, for the caller. */
+/**
+ * Everything the pane shows about where a conversation stands, for the caller.
+ * offered: whether the caller may ask its respondent now (offeredIn), or null
+ * when that is not known; an agent they may not, whose seat is there and
+ * which may answer, takes no conversations in the site. It is asked nothing
+ * more here; what was written stays readable, and it may still answer.
+ */
 export function chatStatus(
   view: ConversationView,
   myMemberId: string | null | undefined,
-  opts: { now?: number; empty?: boolean } = {},
+  opts: { now?: number; empty?: boolean; offered?: boolean | null } = {},
 ): ChatStatus {
   const role = roleIn(view, myMemberId)
   const state = stateOf(view)
@@ -205,6 +240,9 @@ export function chatStatus(
   const availability = availabilityOf(view.respondent, opts.now)
   if (availability === 'gone' || availability === 'paused' || availability === 'notAnswering') {
     return { ...base, notice: { kind: 'unavailable', availability }, block: 'unavailable' }
+  }
+  if (view.respondent.kind === 'agent' && opts.offered === false) {
+    return { ...base, notice: { kind: 'elsewhere' }, block: 'elsewhere' }
   }
   if (state === 'reply_pending_approval')
     return { ...base, notice: { kind: 'pendingApproval', mine: false }, block: null }

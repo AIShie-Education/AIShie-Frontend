@@ -54,6 +54,26 @@ describe('errorMessage, by the reason Core gives', () => {
     expect(errorMessage(refusal('forbidden', { reason: 'invite_not_allowed', why: 'seated_elsewhere' }))).toMatch(/以外的课程有席位/)
   })
 
+  it('says of a question to an agent operated from outside what every page says of such an agent', () => {
+    const e = refusal(
+      'failed_precondition',
+      { reason: 'agent_answers_elsewhere' },
+      { status: 422, actionId: 'a1', actionStatus: 'failed' },
+    )
+    expect(errorMessage(e)).toBe(
+      'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.',
+    )
+    setLocale('zh-Hant')
+    expect(errorMessage(e)).toBe('這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。')
+    setLocale('zh-Hans')
+    expect(errorMessage(e)).toBe('这个智能体是从外部工具操作的（例如 Claude 通过 MCP），不在站内对话。')
+  })
+
+  it('never takes a reason for one of an object’s own properties', () => {
+    expect(errorMessage(refusal('conflict', { reason: 'constructor' }, { status: 409 }))).toMatch(/^This conflicts/)
+    expect(errorMessage(refusal('conflict', { reason: 'to_string' }, { status: 409 }))).toMatch(/^This conflicts/)
+  })
+
   it('leaves a reason it has no words for to the usual text', () => {
     const denied = refusal('forbidden', { reason: 'permission_denied' }, { actionId: 'a1', actionStatus: 'denied' })
     expect(errorMessage(denied)).toBe('You are not permitted to do this here.')

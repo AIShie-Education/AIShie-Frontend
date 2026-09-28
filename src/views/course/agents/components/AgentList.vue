@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // One group of the course's agents (course agents, personal assistants, or
-// agents nobody owns): who each is and whose, what it was seated as, when it
-// was last connected (where the caller may know), how its replies go out, and
-// pausing, resuming and removing it. A course agent's replies can be switched
+// agents nobody owns): who each is and whose, what it was seated as, whether
+// it is operated from outside (it takes no conversations in the site, so
+// students cannot ask it there), when it was last connected (where the caller
+// may know), how its replies go out, and pausing, resuming and removing it. A course agent's replies can be switched
 // here (member.update_perms, conversation_answer); what its owner's seat
 // allows caps it, as Core does.
 import { computed, h, ref } from 'vue'
@@ -18,7 +19,14 @@ import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import RefusalAlert from '@/views/course/members/components/RefusalAlert.vue'
 import { presetLabel } from '@/views/course/members/components/seat'
-import { levelRank, presenceFor, REPLY_LEVELS, type AgentGroup, type CourseAgentRow } from './courseAgents'
+import {
+  levelRank,
+  operatedFromOutside,
+  presenceFor,
+  REPLY_LEVELS,
+  type AgentGroup,
+  type CourseAgentRow,
+} from './courseAgents'
 
 const props = defineProps<{
   courseId: string
@@ -140,6 +148,11 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
           <AgentBadge v-if="r.member.owner_name || isMine(r)" :owner-name="r.member.owner_name" :mine="isMine(r)" />
           <StatusTag v-if="r.member.status !== 'active'" vocab="memberStatus" :value="r.member.status" />
           <el-tag v-else-if="!r.live" size="small" type="info">{{ t('members.expired') }}</el-tag>
+          <el-tooltip v-if="operatedFromOutside(r.member)" :content="t('courseAgents.row.externalHelp')" placement="top">
+            <el-tag size="small" type="info" effect="plain" class="agent-row__external" disable-transitions>
+              {{ t('common.agent.external') }}
+            </el-tag>
+          </el-tooltip>
         </div>
         <div class="agent-row__meta">
           <span v-if="presetText(r)">{{ presetText(r) }}</span>
@@ -160,6 +173,9 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
             <span class="app-muted">{{ t('courseAgents.row.presenceUnknown') }}</span>
           </el-tooltip>
         </div>
+        <p v-if="group === 'course' && r.live && operatedFromOutside(r.member)" class="agent-row__external-note">
+          {{ t('courseAgents.row.externalCourse') }}
+        </p>
       </div>
 
       <div
@@ -290,6 +306,12 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
 }
 .agent-row__dot {
   color: var(--el-text-color-placeholder);
+}
+.agent-row__external-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-color-warning-dark-2);
 }
 .agent-row__replies {
   display: flex;

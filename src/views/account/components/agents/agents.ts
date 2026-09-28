@@ -32,6 +32,25 @@ export function agentStanding(a: Pick<AgentSummary, 'status' | 'suspended_by_me'
   return a.suspended_by_me ? 'suspendedByMe' : 'suspendedByAdmin'
 }
 
+/**
+ * Whether an agent takes conversations in the site, as its page tells its
+ * owner: on (whatever runs it said it answers there, me.site_chat); off while
+ * it is suspended; off for now while AIShie's runtime hosts it, which says so
+ * again whenever it starts it (the owner switched it off, or it has not
+ * started it yet); and otherwise operated from an external tool (Claude
+ * through MCP, say), which never says so.
+ */
+export type SiteChatState = 'on' | 'suspended' | 'hostedOff' | 'external'
+
+export function siteChatState(
+  a: Pick<AgentSummary, 'site_chat' | 'status'>,
+  opts: { hosted?: boolean } = {},
+): SiteChatState {
+  if (a.site_chat) return 'on'
+  if (a.status === 'suspended') return 'suspended'
+  return opts.hosted ? 'hostedOff' : 'external'
+}
+
 /** How many agents count against the per-person limit: those not suspended. */
 export function countedAgents(list: readonly Pick<AgentSummary, 'status'>[] | null | undefined): number {
   return (list ?? []).filter((a) => a.status !== 'suspended').length

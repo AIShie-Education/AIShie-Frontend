@@ -23,6 +23,7 @@ export default {
     empty: '这里暂时没有你可以提问的对象。',
     offlineHint: '这个智能体目前似乎没有在运行，回复可能需要一段时间。',
     sharedHint: '它也会回答其他成员，会记住每个人写给它的内容，并可能转述给他们。',
+    agentPage: '前往它的页面',
   },
   list: {
     mine: '你的对话',

@@ -87,6 +87,11 @@ export default {
     ownersAgent: '{owner}’s agent',
     delegateOf: 'Acts for {owner}, never with more than their seat',
     yourDelegate: 'Acts for you, never with more than your seat',
+    // An agent that takes no conversations in the site (Core's site_chat false): operated from an external tool.
+    external: 'Operated from outside',
+    externalNote:
+      'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.',
+    hostedTakesChat: 'When AIshie’s runtime hosts it, it takes conversations on the site by itself.',
   },
   outcome: {
     executed: 'Done',

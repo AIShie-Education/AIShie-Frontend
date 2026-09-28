@@ -6,7 +6,7 @@ import * as icons from '@element-plus/icons-vue'
 import { defineComponent, h } from 'vue'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 
-let server: { messages: ConversationMessage[]; view: ConversationView }
+let server: { messages: ConversationMessage[]; view: ConversationView; respondents: Respondent[] }
 const writes: { tool: string; args: Record<string, unknown> }[] = []
 let writeAnswer: (tool: string) => unknown
 
@@ -17,6 +17,7 @@ vi.mock('@/api/http', async (orig) => {
     read: vi.fn(async (tool: string) => {
       if (tool === 'conversation.get') return { ...server.view, visible_to: ['participants'] }
       if (tool === 'conversation.messages') return { messages: server.messages, conversation: server.view, more: false }
+      if (tool === 'conversation.respondents') return { respondents: server.respondents }
       throw new Error(`no answer for ${tool}`)
     }),
     write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
@@ -82,6 +83,30 @@ function view(over: Partial<ConversationView> = {}): ConversationView {
   }
 }
 
+/** The course tutor as conversation.respondents lists it, while it takes conversations in the site. */
+const tutorOffered: Respondent = {
+  member_id: 'tutor',
+  display_name: 'Course tutor',
+  kind: 'agent',
+  role: 'assistant',
+  is_my_delegate: false,
+  answers_course: true,
+  answer_level: 'autonomous',
+  last_seen_at: '2026-09-26T11:59:30Z',
+}
+
+/** Core's refusal of a question to an agent that takes no conversations in the site. */
+const answersElsewhere = () =>
+  new ApiError({
+    status: 422,
+    code: 'failed_precondition',
+    message: 'that agent takes no conversations in the site: it is operated from an external tool, and acts there',
+    details: { reason: 'agent_answers_elsewhere' },
+    actionId: 'a7',
+    actionStatus: 'failed',
+  })
+const NOTE = 'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.'
+
 function seat(memberId: string) {
   const course = useCourseStore()
   course.courseId = 'k1'
@@ -119,8 +144,10 @@ beforeEach(() => {
       msg(3, 'student', { body: 'line one\nline two' }),
     ],
     view: view(),
+    respondents: [tutorOffered],
   }
   writeAnswer = () => executed({ message_id: 'm4' })
+  document.querySelectorAll('.el-notification, .el-message').forEach((n) => n.remove())
 })
 afterEach(() => vi.useRealTimers())
 enableAutoUnmount(afterEach)
@@ -258,6 +285,130 @@ describe('ChatPane', () => {
       args: { course_id: 'k1', respondent_member_id: 'tutor', body: 'What is due Friday?' },
     })
     expect(w.emitted('opened')?.[0]).toEqual(['c2'])
+  })
+})
+
+describe('ChatPane, with an agent operated from outside', () => {
+  it('puts why in place of the composer, and keeps what was written readable', async () => {
+    seat('student')
+    server.respondents = []
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.findAll('.chat-msg__text').map((t) => t.text())).toEqual(['message 1', 'line one\nline two'])
+    expect(w.find('.chat-msg__markdown strong').text()).toBe('bold')
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(NOTE)
+    // Nothing here will answer: nobody is shown at work.
+    expect(w.find('.chat-pane__typing').exists()).toBe(false)
+    // It may still be closed.
+    expect(w.find('.chat-pane__head-actions button').text()).toBe('Close')
+  })
+
+  it('tells its owner, too, how that would change', async () => {
+    seat('student')
+    server.view = view({
+      respondent: { ...view().respondent, display_name: 'My helper', is_delegate_of_opener: true },
+    })
+    server.respondents = []
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const note = w.find('.chat-pane__notice.is-elsewhere')
+    expect(note.text()).toContain(NOTE)
+    expect(note.find('.chat-pane__notice-sub').text()).toBe(
+      'When AIshie’s runtime hosts it, it takes conversations on the site by itself.',
+    )
+  })
+
+  it('in Traditional and Simplified Chinese too', async () => {
+    seat('student')
+    server.respondents = []
+    setLocale('zh-Hant')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(
+      '這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。',
+    )
+    setLocale('zh-Hans')
+    await flushPromises()
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(
+      '这个智能体是从外部工具操作的（例如 Claude 通过 MCP），不在站内对话。',
+    )
+  })
+
+  it('keeps the composer while the agent is offered, and for the one answering', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('textarea').exists()).toBe(true)
+    expect(w.find('.chat-pane__notice.is-elsewhere').exists()).toBe(false)
+    seat('tutor')
+    server.respondents = []
+    const r = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(r.find('textarea').exists()).toBe(true)
+  })
+
+  it('says why a question was refused as asked of such an agent, and puts that in place of the composer', async () => {
+    seat('student')
+    writeAnswer = () => {
+      // Switched off since the conversation was read: Core leaves it out now.
+      server.respondents = []
+      throw answersElsewhere()
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const ta = await type(w, 'One more question')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(writes.map((x) => x.tool)).toEqual(['conversation.ask'])
+    expect(document.querySelector('.el-notification')?.textContent).toContain(NOTE)
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(NOTE)
+    expect(w.emitted('changed')).toBeTruthy()
+  })
+
+  it('says so when a new conversation is refused because the agent answers elsewhere now', async () => {
+    seat('student')
+    writeAnswer = () => {
+      throw answersElsewhere()
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    const ta = await type(w, 'What is due Friday?')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(document.querySelector('.el-notification')?.textContent).toContain(NOTE)
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('.chat-pane__notice').text()).toBe(NOTE)
+    expect(w.emitted('opened')).toBeUndefined()
+    expect(w.emitted('changed')).toBeTruthy()
+  })
+
+  it('offers no new conversation after a closed one with such an agent, and says why', async () => {
+    seat('student')
+    server.view = view({ status: 'closed', state: 'closed', closed_reason: 'Thanks' })
+    server.respondents = []
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__closed button').exists()).toBe(false)
+    expect(w.find('.chat-pane__closed-elsewhere').text()).toBe(NOTE)
+  })
+
+  it('never says it of an agent that has left the course, which is why it is not offered', async () => {
+    seat('student')
+    server.view = view({
+      status: 'closed',
+      state: 'closed',
+      closed_reason: 'seat_removed',
+      respondent: { ...view().respondent, seat_status: 'removed' },
+    })
+    server.respondents = []
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__closed').text()).toContain('A participant left the course')
+    expect(w.find('.chat-pane__closed-elsewhere').exists()).toBe(false)
+    expect(w.text()).not.toContain('external tool')
+    expect(w.find('.chat-pane__closed button').exists()).toBe(false)
   })
 })
 

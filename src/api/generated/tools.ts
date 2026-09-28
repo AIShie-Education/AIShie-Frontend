@@ -645,6 +645,10 @@ export interface AgentGetOut {
         title: string
       }[]
   /**
+   * whether people in the site may start conversations with it and ask it: what runs it, an agent runtime that answers on its own, said so with a token of the agent's that still works (me.site_chat); false for an agent operated from an external tool, which acts through that tool alone
+   */
+  site_chat: boolean
+  /**
    * active or suspended
    */
   status: string
@@ -697,6 +701,10 @@ export interface AgentListOut {
          * requests to bring it into a course that wait for a decision
          */
         pending_requests: number
+        /**
+         * whether people in the site may start conversations with it and ask it: what runs it, an agent runtime that answers on its own, said so with a token of the agent's that still works (me.site_chat); false for an agent operated from an external tool, which acts through that tool alone
+         */
+        site_chat: boolean
         /**
          * active or suspended
          */
@@ -773,10 +781,17 @@ export interface AgentSuspendOut {
   ok: boolean
 }
 
-/** agent.update (write): Rename one of your agents. */
+/** agent.update (write): Rename one of your agents, or switch off its conversations in the site (site_chat false): people there then no longer start conversations with it or ask it more, until what runs it says it answers again. Only what runs it switches them on (me.site_chat), never you. */
 export interface AgentUpdateIn {
   actor_id: string
-  display_name: string
+  /**
+   * its new name; omit to keep the one it has
+   */
+  display_name?: null | string
+  /**
+   * false: people in the site may no longer start conversations with it or ask it, until what runs it says so again; true is refused, since only what runs it says so (me.site_chat)
+   */
+  site_chat?: null | boolean
 }
 export interface AgentUpdateOut {
   ok: boolean
@@ -1069,7 +1084,7 @@ export interface ConversationAnswerOut {
   message_id: string
 }
 
-/** conversation.ask (write): Write in a conversation you opened: a question, or anything more you have to say. It is refused once the conversation is closed, or once you may no longer address its respondent; start a new conversation then. */
+/** conversation.ask (write): Write in a conversation you opened: a question, or anything more you have to say. It is refused once the conversation is closed, or once you may no longer address its respondent; start a new conversation then. It is refused too, as agent_answers_elsewhere, while its respondent is an agent that takes no conversations in the site: what was written stays readable. */
 export interface ConversationAskIn {
   /**
    * at most 20000 characters
@@ -1485,7 +1500,7 @@ export interface ConversationMessagesOut {
   more: boolean
 }
 
-/** conversation.open (write): Start a conversation with one member of the course — the course's tutor agent, your own agent — and, if you give body, ask the first question. You may address only someone who can see and do nothing you cannot, or your own agent: conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it; and a respondent that answers others too, such as the course's tutor, may repeat to them what you write. */
+/** conversation.open (write): Start a conversation with one member of the course — the course's tutor agent, your own agent — and, if you give body, ask the first question. You may address only someone who can see and do nothing you cannot, or your own agent, and an agent only while what runs it answers in the site (agent_answers_elsewhere otherwise: it is operated from an external tool): conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it; and a respondent that answers others too, such as the course's tutor, may repeat to them what you write. */
 export interface ConversationOpenIn {
   /**
    * the first question, if you have it now; at most 20000 characters
@@ -1512,7 +1527,7 @@ export interface ConversationOpenOut {
   message_id?: null | string
 }
 
-/** conversation.respondents (read): Whom you may start a conversation with here: members who answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents. Each says how its answers arrive, whether it answers others too (answers_course: it may repeat to them what you write), and, for an agent, when it was last seen. */
+/** conversation.respondents (read): Whom you may start a conversation with here: members who answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents, an agent only while what runs it answers in the site. Each says how its answers arrive, whether it answers others too (answers_course: it may repeat to them what you write), and, for an agent, when it was last seen. */
 export interface ConversationRespondentsIn {
   /**
    * the course this call is about
@@ -2578,6 +2593,20 @@ export interface MeMembershipsOut {
       }[]
 }
 
+/** me.site_chat (write): Say whether people in the site may start conversations with you and ask you there. Turn it on only if what runs you polls conversation_inbox and answers on its own, as an AIShie agent runtime does, and on each start, under a new idempotency key: it holds while the token you call with works, and ends when that token is revoked. An assistant a person drives from a tool of their own never turns it on: it acts only while they use it, so questions would wait unanswered. Turn it off when you stop answering. Your owner may turn it off, never on. For agents only. */
+export interface MeSiteChatIn {
+  /**
+   * true: people in the site may start conversations with you and ask you, for as long as the credential you call with works; false: they may not
+   */
+  on: boolean
+}
+export interface MeSiteChatOut {
+  /**
+   * whether you take conversations in the site now; with on true, false only while your owner is suspended
+   */
+  site_chat: boolean
+}
+
 /** member.add (write): Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own. An agent someone owns is not seated here: its owner brings it in as their delegate, with member.add_delegate. */
 export interface MemberAddIn {
   actor_id: string
@@ -2761,6 +2790,10 @@ export interface MemberGetOut {
    * roster fact; the gradebook is the members whose role is student
    */
   role: string
+  /**
+   * for an agent's seat: whether people in the site may start conversations with it and ask it, since what runs it, an agent runtime that answers on its own, says so (me.site_chat); false for an agent operated from an external tool. Absent for a person's seat
+   */
+  site_chat?: null | boolean
   status: string
   student_scope: string
 }
@@ -2825,6 +2858,10 @@ export interface MemberListOut {
          * roster fact; the gradebook is the members whose role is student
          */
         role: string
+        /**
+         * for an agent's seat: whether people in the site may start conversations with it and ask it, since what runs it, an agent runtime that answers on its own, says so (me.site_chat); false for an agent operated from an external tool. Absent for a person's seat
+         */
+        site_chat?: null | boolean
         status: string
         student_scope: string
       }[]
@@ -3655,6 +3692,7 @@ export interface ToolMap {
   'gradebook.get': { in: GradebookGetIn; out: GradebookGetOut; kind: 'read' }
   'me.get': { in: MeGetIn; out: MeGetOut; kind: 'read' }
   'me.memberships': { in: MeMembershipsIn; out: MeMembershipsOut; kind: 'read' }
+  'me.site_chat': { in: MeSiteChatIn; out: MeSiteChatOut; kind: 'write' }
   'member.add': { in: MemberAddIn; out: MemberAddOut; kind: 'write' }
   'member.add_delegate': { in: MemberAddDelegateIn; out: MemberAddDelegateOut; kind: 'write' }
   'member.delegate_defaults': { in: MemberDelegateDefaultsIn; out: MemberDelegateDefaultsOut; kind: 'read' }
@@ -3785,6 +3823,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'gradebook.get': { method: 'GET', path: '/v1/courses/{course_id}/gradebook/{student_member_id}', kind: 'read' },
   'me.get': { method: 'GET', path: '/v1/me', kind: 'read' },
   'me.memberships': { method: 'GET', path: '/v1/me/memberships', kind: 'read' },
+  'me.site_chat': { method: 'POST', path: '/v1/me/site-chat', kind: 'write' },
   'member.add': { method: 'POST', path: '/v1/courses/{course_id}/members', kind: 'write' },
   'member.add_delegate': { method: 'POST', path: '/v1/courses/{course_id}/delegates', kind: 'write' },
   'member.delegate_defaults': { method: 'GET', path: '/v1/courses/{course_id}/delegates/defaults', kind: 'read' },

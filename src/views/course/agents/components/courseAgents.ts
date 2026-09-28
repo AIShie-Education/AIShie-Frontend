@@ -116,6 +116,16 @@ export function agentRows(
   )
 }
 
+/**
+ * Whether an agent's seat is operated from outside: its agent takes no
+ * conversations in the site (member.list's site_chat false), so nobody is
+ * offered to ask it there. A record without the field (an older Core, or a
+ * person's seat) says nothing.
+ */
+export function operatedFromOutside(m: Pick<MemberSummary, 'kind' | 'site_chat'>): boolean {
+  return m.kind === 'agent' && m.site_chat === false
+}
+
 /** How the seats with one role hold one permission. */
 export interface LevelTally {
   /** Live seats with that role (the ones member.update_perms_bulk changes, less the caller's). */

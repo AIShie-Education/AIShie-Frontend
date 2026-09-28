@@ -74,6 +74,24 @@ export default {
     done: '已重命名',
   },
 
+  // Whether it takes conversations on the site (agent.get's site_chat), and switching them off (agent.update).
+  siteChat: {
+    title: '站内对话',
+    on: '在站内接受对话',
+    off: '不在站内接受对话',
+    onBody: '它所在课程中的人可以在站内与它开始对话、向它提问：运行它的程序已表明会回答这些问题。',
+    hostedOff: '它由 AIshie 的运行环境托管；运行环境下次启动它时，它会再次在站内接受对话。',
+    suspended: '它停用期间不会在站内接受对话。',
+    switchOff: '关闭',
+    confirmTitle: '关闭 {name} 的站内对话？',
+    confirmBody:
+      '它所在课程中的人将不能再在站内与它开始对话，也不能再向它提问。已写下的内容仍可阅读，它也仍可回答之前收到的问题。',
+    confirmReturns:
+      '运行它的程序（例如 AIshie 的运行环境）下次启动这个智能体时，会再次开启站内对话。撤销它运行时所用的令牌，或结束 AIshie 的托管，也会使站内对话结束。',
+    confirm: '关闭',
+    done: '{name} 已不再在站内接受对话',
+  },
+
   detail: {
     title: '智能体',
     subtitle: '它的运行环境、令牌，以及它工作的课程',

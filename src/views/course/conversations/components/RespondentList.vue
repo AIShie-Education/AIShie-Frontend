@@ -3,6 +3,11 @@
 // agents, their own agents, anyone who can see and do nothing they cannot.
 // Each says whether it is running (for an agent), and how its answers arrive
 // when that is not at once.
+//
+// An agent operated from an external tool takes no conversations in the
+// site, and Core leaves it out. The caller's own such agents seated here are
+// listed after the rest, with no way to ask them, saying why and what would
+// change it: they would be looked for.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Respondent } from '@/api/types'
@@ -11,13 +16,17 @@ import AsyncState from '@/components/AsyncState.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNow } from '@/composables/useNow'
+import { useCourseStore } from '@/stores/course'
+import { useSessionStore } from '@/stores/session'
 import { availabilityOf } from '../chat'
-import { useRespondents } from '../useConversationList'
+import { useAgentsElsewhere, useRespondents } from '../useConversationList'
 
 const props = defineProps<{ courseId: string; enabled?: boolean }>()
 const emit = defineEmits<{ start: [respondent: Respondent] }>()
 const { t } = useI18n()
 const now = useNow()
+const course = useCourseStore()
+const session = useSessionStore()
 
 // A course agent (answers_course: it answers other members too, and may repeat
 // to them what the caller writes) is labelled so and listed first, then the
@@ -36,18 +45,36 @@ const sorted = computed(() =>
     .sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i)
     .map((x) => x.r),
 )
-defineExpose({ refresh: list.refresh })
+
+// Only a person owns agents.
+const elsewhere = useAgentsElsewhere({
+  courseId: props.courseId,
+  myMemberId: () => course.myMemberId,
+  enabled: () => props.enabled !== false && session.me?.kind === 'human',
+})
+/** Those not offered, less any Core offers after all (it said so since agent.list was read). */
+const notHere = computed(() => {
+  const offered = new Set(list.items.value.map((r) => r.member_id))
+  return elsewhere.items.value.filter((a) => !offered.has(a.memberId))
+})
+
+function refresh() {
+  void elsewhere.refresh()
+  return list.refresh()
+}
+defineExpose({ refresh })
 </script>
 
 <template>
   <AsyncState
     :loading="list.loading.value && !list.loaded.value"
     :error="list.error.value"
-    :empty="list.loaded.value && !list.items.value.length"
+    :empty="list.loaded.value && !list.items.value.length && !notHere.length"
     :empty-text="t('chat.respondents.empty')"
     @retry="list.reload()"
   >
-    <ul class="resp-list">
+    <p v-if="!list.items.value.length" class="resp-list__none app-muted">{{ t('chat.respondents.empty') }}</p>
+    <ul v-else class="resp-list">
       <li v-for="r in sorted" :key="r.member_id">
         <button type="button" class="resp-row" @click="emit('start', r)">
           <span class="resp-row__icon" aria-hidden="true">
@@ -76,6 +103,32 @@ defineExpose({ refresh: list.refresh })
           </span>
           <el-icon class="resp-row__go" aria-hidden="true"><ChatLineRound /></el-icon>
         </button>
+      </li>
+    </ul>
+    <ul v-if="notHere.length" class="resp-list resp-list--elsewhere">
+      <li v-for="a in notHere" :key="a.memberId">
+        <div class="resp-row is-elsewhere">
+          <span class="resp-row__icon" aria-hidden="true">
+            <el-icon :size="18"><Cpu /></el-icon>
+          </span>
+          <span class="resp-row__main">
+            <span class="resp-row__line">
+              <span class="resp-row__name">{{ a.displayName }}</span>
+              <AgentBadge mine />
+              <StatusTag v-if="a.purpose" vocab="seatPurpose" :value="a.purpose" />
+              <el-tag size="small" type="info" effect="plain" disable-transitions>
+                {{ t('common.agent.external') }}
+              </el-tag>
+            </span>
+            <span class="resp-row__note">{{ t('common.agent.externalNote') }}</span>
+            <span class="resp-row__note">
+              {{ t('common.agent.hostedTakesChat') }}
+              <router-link :to="{ name: 'account-agent', params: { actorId: a.actorId } }">
+                {{ t('chat.respondents.agentPage') }}
+              </router-link>
+            </span>
+          </span>
+        </div>
       </li>
     </ul>
   </AsyncState>
@@ -151,5 +204,21 @@ defineExpose({ refresh: list.refresh })
 .resp-row__go {
   color: var(--el-color-primary);
   flex-shrink: 0;
+}
+.resp-list__none {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.resp-list--elsewhere {
+  margin-top: 6px;
+}
+/* Not a button: nothing here asks it. */
+.resp-row.is-elsewhere,
+.resp-row.is-elsewhere:hover {
+  align-items: flex-start;
+  cursor: default;
+  border-color: var(--el-border-color-lighter);
+  background: var(--el-fill-color-lighter);
 }
 </style>
