@@ -87,6 +87,10 @@ export default {
     ownersAgent: '{owner} 的代理',
     delegateOf: '代表 {owner} 行事，權限永不超過其席位',
     yourDelegate: '代表你行事，權限永不超過你的席位',
+    // An agent that takes no conversations in the site (Core's site_chat false): operated from an external tool.
+    external: '外部操作',
+    externalNote: '這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。',
+    hostedTakesChat: '交由 AIshie 的執行環境代管時，它會自行在站內接受對話。',
   },
   outcome: {
     executed: '已完成',

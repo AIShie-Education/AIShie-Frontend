@@ -23,6 +23,7 @@ export default {
     empty: '這裡暫時沒有你可以提問的對象。',
     offlineHint: '這個代理目前似乎沒有在運行，回覆可能需要一段時間。',
     sharedHint: '它也會回答其他成員，會記住每個人寫給它的內容，並可能轉述給他們。',
+    agentPage: '前往它的頁面',
   },
   list: {
     mine: '你的對話',

@@ -163,6 +163,14 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`@/utils/agents`) tells a course agent from a personal assistant by the seat's `answers_course`;
   `delegateArgsFor()` gives `member.add_delegate` both the preset and `answers_course`, always said
   outright.
+- An agent takes conversations in the site only while whatever runs it says so (`me.site_chat`, as
+  AIShie's runtime does); one operated from an external tool (Claude through MCP) never does, and has
+  no chat box anywhere. Where Core says `site_chat: false` (`agent.get`/`.list`, an agent's seat in
+  `member.get`/`.list`), offer nothing to ask it and say why: `common.agent.external` ("Operated from
+  outside") and `common.agent.externalNote`, with `common.agent.hostedTakesChat` for its owner.
+  `conversation.respondents` leaves such agents out, and a conversation's opener learns from it
+  (`offeredIn`) whether its agent may still be asked; Core refuses a question to one as
+  `agent_answers_elsewhere`, which `errorMessage()` says in the same words.
 - Anything kept fresh by asking again (a chat, an inbox): `usePolling(fn, { intervalMs, enabled })`
   from `@/composables/usePolling` — one poll at a time, backing off after failures, paused while the
   page is hidden, stopped on unmount; `pollNow()` after sending something.

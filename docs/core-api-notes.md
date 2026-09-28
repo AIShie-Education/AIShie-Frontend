@@ -94,6 +94,12 @@ end; the "works around it" notes say what the front end does meanwhile.
 - **Pending proposals are invisible to non-deciders**, so a TA can enter a draft while an agent's
   proposal for the same work waits, and learns only at approval that it failed ("a newer draft
   was entered").
+- **A conversation does not say whether its agent takes conversations in the site.** Its respondent
+  (`conversation.get`, `.list`) has no `site_chat`, and a student may not read `member.get`. *Works
+  around it:* the opener's pane asks `conversation.respondents`, which leaves such an agent out; but
+  it also leaves out one the opener may no longer address (its seat rescoped, its owner no longer
+  managing the members), and such an agent is then said to be operated from outside too. `site_chat`
+  on the conversation's respondent would settle it.
 - **`me.get` does not say which credential the caller used**, so the account page cannot mark
   "this browser's session" among the sessions it lists.
 - **Summaries lack "has unpublished changes":** no latest version on `document.list` /

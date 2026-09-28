@@ -23,6 +23,7 @@ export default {
     empty: 'Nobody here answers questions you may ask yet.',
     offlineHint: 'Nothing seems to be running this agent now: an answer may take a while.',
     sharedHint: 'It answers other members too, holds what each one writes, and may repeat it to them.',
+    agentPage: 'Go to its page',
   },
   list: {
     mine: 'Your conversations',

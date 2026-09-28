@@ -5,6 +5,11 @@
 // message, then conversation.ask); the respondent answers the opener's latest
 // message (conversation.answer); course staff overseeing it only read, and may
 // withdraw a message. Either participant may close it.
+//
+// An agent operated from an external tool takes no conversations in the
+// site: Core no longer offers it to be asked (conversation.respondents), and
+// refuses a question to it (agent_answers_elsewhere). A conversation with one
+// stays readable, and in place of the composer the opener is told why.
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -20,6 +25,7 @@ import type { ApiError } from '@/api/http'
 import { useCourseStore } from '@/stores/course'
 import { fromNow } from '@/utils/format'
 import {
+  answersElsewhere,
   availabilityOf,
   bodyProblem,
   charCount,
@@ -29,7 +35,9 @@ import {
   draftKey,
   getDraft,
   lastSeq,
+  offeredIn,
   REASON_MAX,
+  roleIn,
   setDraft,
   TITLE_MAX,
   visibleToLines,
@@ -37,6 +45,7 @@ import {
   type ChatRole,
 } from '../chat'
 import { useConversation } from '../useConversation'
+import { useRespondents } from '../useConversationList'
 import ChatComposer from './ChatComposer.vue'
 import ChatMessage from './ChatMessage.vue'
 
@@ -74,10 +83,32 @@ const conv = props.conversationId
 const view = computed<ConversationView | null>(() => conv?.view.value ?? null)
 const messages = computed<ConversationMessage[]>(() => conv?.messages.value ?? [])
 const me = computed(() => course.myMemberId)
-const status = computed(() =>
-  view.value ? chatStatus(view.value, me.value, { now: now.value, empty: messages.value.length === 0 }) : null,
+const role = computed(() => (view.value ? roleIn(view.value, me.value) : 'opener'))
+
+// --- Whether its agent may still be asked here -------------------------------------
+// Only the opener asks, and only an agent may take no conversations in the
+// site; so only then is whom the caller may ask read (and kept fresh).
+const needsOffer = computed(
+  () => !!conv && role.value === 'opener' && view.value?.respondent.kind === 'agent' && course.can('conversation_ask'),
 )
-const role = computed(() => status.value?.role ?? 'opener')
+const offers = useRespondents({ courseId: props.courseId, enabled: () => props.active && needsOffer.value, lazy: true })
+/** Core refused a question here because the agent takes no conversations in the site. */
+const refusedElsewhere = ref(false)
+// Until whom one may ask has been read again since.
+watch(offers.items, () => (refusedElsewhere.value = false))
+/** Whether the opener may still ask the agent here; null while that is not known. */
+const offered = computed<boolean | null>(() => {
+  if (refusedElsewhere.value) return false
+  const v = view.value
+  if (!v || !needsOffer.value || !offers.loaded.value) return null
+  return offeredIn(offers.items.value, v.respondent.member_id)
+})
+
+const status = computed(() =>
+  view.value
+    ? chatStatus(view.value, me.value, { now: now.value, empty: messages.value.length === 0, offered: offered.value })
+    : null,
+)
 watch(
   () => status.value?.role,
   (r) => r && emit('role', r),
@@ -230,10 +261,16 @@ const openProposed = ref(false)
 
 const writeBlocked = computed(() => {
   if (!course.writable) return true
-  if (isDraft.value) return !props.respondent || openProposed.value
+  if (isDraft.value) return !props.respondent || openProposed.value || refusedElsewhere.value
   if (!conv?.loaded.value) return true
+  // Not known yet whether the agent may still be asked here: in a moment.
+  if (needsOffer.value && offered.value === null && !offers.error.value) return true
   return !!status.value?.block
 })
+/** In place of the composer, why its agent is asked nothing here. */
+const elsewhere = computed(() =>
+  isDraft.value ? refusedElsewhere.value : status.value?.block === 'elsewhere',
+)
 const placeholder = computed(() => {
   const name = other.value?.name ?? ''
   if (role.value === 'respondent') return t('chat.composer.answerPlaceholder', { name })
@@ -258,12 +295,24 @@ function afterWrite(out: { reviewState: string } | null) {
   if (out?.reviewState === 'pending') ElMessage({ type: 'info', message: t('common.outcome.pendingReview') })
 }
 
+/**
+ * The agent takes no conversations in the site after all (Core refused a
+ * question to it): the composer gives way to why, and the lists are read
+ * again, where it is no longer offered.
+ */
+function noteElsewhere() {
+  refusedElsewhere.value = true
+  void offers.refresh()
+  emit('changed')
+}
+
 /** Tells the person why a write was refused; a conflict in words for its reason, then reads again. */
 function refused(err: ApiError | null) {
   if (!err) return
   const reason = conflictReasonOf(err)
   if (reason) ElMessage({ type: 'warning', message: t(`chat.conflict.${reason}`), duration: 6000 })
   else notifyError(err)
+  if (answersElsewhere(err)) noteElsewhere()
   if (err.code === 'conflict') {
     void conv?.refresh()
     emit('changed')
@@ -285,7 +334,11 @@ async function send() {
       },
       { success: false },
     )
-    if (!out) return
+    if (!out) {
+      // Said already, in the words every page has for such an agent.
+      if (answersElsewhere(openWrite.lastError.value)) noteElsewhere()
+      return
+    }
     draft.value = ''
     emit('changed')
     if (out.status === 'proposed') {
@@ -434,12 +487,21 @@ function availabilityText(a: Availability, name: string, lastSeenAt?: string | n
   }
   return ''
 }
+/** What the opener is told of an agent operated from outside; its owner, how that would change. */
+function elsewhereNotice(mine: boolean) {
+  return {
+    type: 'info' as const,
+    text: t('common.agent.externalNote'),
+    sub: mine ? t('common.agent.hostedTakesChat') : undefined,
+  }
+}
 const notice = computed<{ type: 'info' | 'warning' | 'success'; text: string; sub?: string } | null>(() => {
   const n = status.value?.notice
   const name = other.value?.name ?? ''
   if (isDraft.value) {
     const a = draftAvailability.value
     if (openProposed.value) return null
+    if (refusedElsewhere.value) return elsewhereNotice(!!props.respondent?.is_my_delegate)
     if (a === 'never' || a === 'offline')
       return { type: 'warning', text: availabilityText(a, name, props.respondent?.last_seen_at) }
     return null
@@ -455,6 +517,8 @@ const notice = computed<{ type: 'info' | 'warning' | 'success'; text: string; su
     }
     case 'unavailable':
       return { type: 'warning', text: availabilityText(n.availability, name) }
+    case 'elsewhere':
+      return elsewhereNotice(!!view.value?.respondent.is_delegate_of_opener)
     case 'pendingApproval':
       return { type: 'info', text: n.mine ? t('chat.state.yourAnswerPending') : t('chat.state.answerPending') }
     case 'yourTurn':
@@ -475,7 +539,19 @@ const closedReason = computed(() => {
     ? t(`enums.closedReason.${n.reason.code}`)
     : t('chat.closed.said', { reason: n.reason.text })
 })
-const canStartAgain = computed(() => role.value === 'opener' && course.can('conversation_ask') && course.writable)
+const canStartAgain = computed(
+  () => role.value === 'opener' && course.can('conversation_ask') && course.writable && offered.value !== false,
+)
+/**
+ * A closed conversation with an agent that is asked nothing here now, though
+ * its seat is there and it may answer: said instead of offering another.
+ */
+const closedElsewhere = computed(() => {
+  const v = view.value
+  if (!v || status.value?.state !== 'closed' || offered.value !== false) return false
+  const a = availabilityOf(v.respondent, now.value)
+  return a !== 'gone' && a !== 'paused' && a !== 'notAnswering'
+})
 </script>
 
 <template>
@@ -598,7 +674,12 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
       <div v-if="conv && conv.failures.value >= 2" class="chat-pane__trouble">
         <el-icon aria-hidden="true"><WarningFilled /></el-icon>{{ t('chat.trouble') }}
       </div>
-      <div v-if="notice" class="chat-pane__notice" :class="`is-${notice.type}`" role="status">
+      <div
+        v-if="notice"
+        class="chat-pane__notice"
+        :class="[`is-${notice.type}`, { 'is-elsewhere': elsewhere }]"
+        role="status"
+      >
         <el-icon aria-hidden="true">
           <WarningFilled v-if="notice.type === 'warning'" />
           <InfoFilled v-else />
@@ -614,6 +695,9 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
           <strong>{{ t('chat.closed.title') }}</strong>
           <div v-if="closedReason" class="chat-pane__closed-reason">{{ closedReason }}</div>
           <div class="app-muted">{{ t('chat.closed.readOnly') }}</div>
+          <div v-if="closedElsewhere" class="app-muted chat-pane__closed-elsewhere">
+            {{ t('common.agent.externalNote') }}
+          </div>
         </div>
         <el-button v-if="canStartAgain" type="primary" plain size="small" @click="startAgain">
           {{ t('chat.closed.startNew') }}
@@ -621,7 +705,7 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
       </div>
       <template v-else-if="!(isDraft && openProposed)">
         <p v-if="blockText" class="chat-pane__blocked app-muted">{{ blockText }}</p>
-        <template v-if="status?.block !== 'overseer'">
+        <template v-if="status?.block !== 'overseer' && !elsewhere">
           <el-input
             v-if="isDraft"
             v-model="title"
@@ -864,6 +948,13 @@ const canStartAgain = computed(() => role.value === 'opener' && course.can('conv
 .chat-pane__notice-sub {
   font-size: 12px;
   opacity: 0.85;
+}
+/* In place of the composer: nothing follows it. */
+.chat-pane__notice.is-elsewhere {
+  margin-bottom: 0;
+}
+.chat-pane__closed-elsewhere {
+  margin-top: 4px;
 }
 .chat-pane__closed {
   display: flex;

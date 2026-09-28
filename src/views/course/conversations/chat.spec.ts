@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { ConversationMessage, ConversationView } from '@/api/types'
 import {
+  AGENT_ANSWERS_ELSEWHERE,
+  answersElsewhere,
   availabilityOf,
   BODY_MAX,
   bodyProblem,
@@ -15,6 +17,7 @@ import {
   isSendKey,
   lastSeq,
   mergeMessages,
+  offeredIn,
   pollDelayMs,
   POLL_MS,
   retractedBy,
@@ -285,6 +288,32 @@ describe('chatStatus', () => {
     })
   })
 
+  it('tells the opener an agent that is no longer offered takes no conversations in the site', () => {
+    for (const state of ['answered', 'awaiting_answer', 'reply_pending_approval'] as const) {
+      const s = chatStatus(view({ state }), 'opener', { ...at, offered: false })
+      expect(s.block).toBe('elsewhere')
+      expect(s.notice).toEqual({ kind: 'elsewhere' })
+      expect(s.typing).toBe(false)
+    }
+    // Offered, or not known yet: as before.
+    expect(chatStatus(view({ state: 'awaiting_answer' }), 'opener', { ...at, offered: true }).block).toBeNull()
+    expect(chatStatus(view({ state: 'awaiting_answer' }), 'opener', { ...at, offered: null }).block).toBeNull()
+  })
+
+  it('says first that an agent has left, is paused or does not answer, which being offered would not change', () => {
+    const s = chatStatus(view({}, { seat_status: 'paused' }), 'opener', { ...at, offered: false })
+    expect(s.notice).toEqual({ kind: 'unavailable', availability: 'paused' })
+  })
+
+  it('never says it of a person, nor to the one answering or staff, nor of a closed conversation', () => {
+    const person = view({}, { kind: 'human', last_seen_at: null })
+    expect(chatStatus(person, 'opener', { ...at, offered: false }).block).toBeNull()
+    expect(chatStatus(view({ state: 'awaiting_answer' }), 'agent', { ...at, offered: false }).block).toBeNull()
+    expect(chatStatus(view(), 'staff', { ...at, offered: false }).block).toBe('overseer')
+    const closed = chatStatus(view({ status: 'closed', state: 'closed' }), 'opener', { ...at, offered: false })
+    expect(closed.block).toBe('closed')
+  })
+
   it('follows the conversation from question to answer to close', () => {
     const steps: [Partial<ConversationView>, string, boolean][] = [
       [{ state: 'answered' }, 'start', false],
@@ -375,5 +404,23 @@ describe('drafts', () => {
     expect(getDraft(k2)).toBe('')
     setDraft(k1, '')
     expect(getDraft(k1)).toBe('')
+  })
+})
+
+describe('site chat', () => {
+  it('knows Core’s refusal of a question to an agent operated from outside, whatever its code', () => {
+    expect(AGENT_ANSWERS_ELSEWHERE).toBe('agent_answers_elsewhere')
+    expect(answersElsewhere({ details: { reason: 'agent_answers_elsewhere' } })).toBe(true)
+    expect(answersElsewhere({ details: { reason: 'not_addressable' } })).toBe(false)
+    expect(answersElsewhere({ details: null })).toBe(false)
+    expect(answersElsewhere(null)).toBe(false)
+  })
+
+  it('says whether someone is offered by whom the caller may ask, or nothing before that is read', () => {
+    const list = [{ member_id: 'a' }, { member_id: 'b' }]
+    expect(offeredIn(list, 'a')).toBe(true)
+    expect(offeredIn(list, 'c')).toBe(false)
+    expect(offeredIn([], 'a')).toBe(false)
+    expect(offeredIn(null, 'a')).toBeNull()
   })
 })
