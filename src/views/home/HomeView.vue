@@ -158,8 +158,7 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
 }
 .home-unseated__title {
   margin: 0;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 20px;
 }
 .home-unseated__explain {
   margin: 6px 0 16px;
@@ -217,9 +216,11 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
 }
 .course-card__title {
   margin: 0;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.35;
+  font-family: var(--app-font-serif);
+  font-size: 19px;
+  font-weight: var(--app-heading-weight);
+  letter-spacing: var(--app-heading-tracking);
+  line-height: 1.3;
 }
 .course-card__meta {
   display: flex;

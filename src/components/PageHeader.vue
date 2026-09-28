@@ -77,8 +77,7 @@ function filled(nodes: VNode[] | undefined): boolean {
 }
 .page-header__title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 24px;
   line-height: 32px;
   display: flex;
   align-items: center;

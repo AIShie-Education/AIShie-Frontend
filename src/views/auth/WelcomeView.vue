@@ -279,8 +279,8 @@ function proceed() {
 }
 .welcome__title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 650;
+  font-size: 24px;
+  line-height: 1.3;
 }
 .welcome__tagline {
   margin: 4px 0 0;

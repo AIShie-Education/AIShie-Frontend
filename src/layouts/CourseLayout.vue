@@ -232,9 +232,8 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 .course-head__title {
   margin: 2px 0 0;
-  font-size: 24px;
-  font-weight: 650;
-  line-height: 1.3;
+  font-size: 28px;
+  line-height: 1.25;
   word-break: break-word;
 }
 .course-head__tags {

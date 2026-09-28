@@ -7,6 +7,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-tw'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
+import { loadFontsFor } from '@/styles/fonts'
 
 dayjs.extend(relativeTime)
 dayjs.extend(localizedFormat)
@@ -56,7 +57,9 @@ export function dayjsLocale(l: Locale): string {
 export function setLocale(l: Locale) {
   i18n.global.locale.value = l
   dayjs.locale(dayjsLocale(l))
+  // <html lang> chooses the typefaces too (styles/tokens.css); those it names are loaded.
   document.documentElement.lang = l
+  loadFontsFor(l)
   try {
     localStorage.setItem(STORAGE_KEY, l)
   } catch {

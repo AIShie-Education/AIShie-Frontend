@@ -111,6 +111,8 @@
   --el-border-radius-base: var(--app-radius-control);
   --el-border-radius-small: 4px;
   --el-border-radius-round: var(--app-radius-pill);
+
+  --el-font-family: var(--app-font-sans);
 }
 
 /* In the dark theme the brand colour is a lighter indigo, which reads on the
