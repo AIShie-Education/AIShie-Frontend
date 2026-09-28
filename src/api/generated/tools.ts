@@ -272,6 +272,14 @@ export interface ActorGetOut {
   invite_expires_at?: null | string
   kind: string
   /**
+   * a person's student or staff number, which they sign in with as with an email
+   */
+  login_id?: null | string
+  /**
+   * false for a person who typed their own login ID registering through a join link, which nobody has checked; setting it with actor.update vouches for it
+   */
+  login_id_verified: boolean
+  /**
    * for an agent a person owns, that person
    */
   owner_actor_id?: null | string
@@ -284,7 +292,7 @@ export interface ActorGetOut {
   suspended_by_actor_id?: null | string
 }
 
-/** actor.invite (write): Invite a registered person to choose their password. The token is for the front end's page that takes invitations; the person opens it, chooses a password there (POST /v1/auth/invite) and is signed in. It works once, until it expires, and only the newest invitation works: inviting again replaces it. Taken up by someone who has a password already, it replaces that password. It is withdrawn when the person sets a password some other way, and when their email changes. The person needs an email, which is what they will sign in with (actor.update gives one). An agent is given a token instead (actor.issue_token). A department administrator invites only a person who has never been able to sign in and holds nothing beyond the departments they administer: no platform role, no appointment, no agent, and seats only in those departments' courses; otherwise invite_not_allowed says why. That is asked again when the invitation is taken up, and it is refused if it no longer holds. */
+/** actor.invite (write): Invite a registered person to choose their password. The token is for the front end's page that takes invitations; the person opens it, chooses a password there (POST /v1/auth/invite) and is signed in. It works once, until it expires, and only the newest invitation works: inviting again replaces it. Taken up by someone who has a password already, it replaces that password. It is withdrawn when the person sets a password some other way, and when their email changes. The person needs an email or a login ID, which is what they will sign in with (actor.update gives either). An agent is given a token instead (actor.issue_token). A department administrator invites only a person who has never been able to sign in and holds nothing beyond the departments they administer: no platform role, no appointment, no agent, and seats only in those departments' courses; otherwise invite_not_allowed says why. That is asked again when the invitation is taken up, and it is refused if it no longer holds. */
 export interface ActorInviteIn {
   actor_id: string
   /**
@@ -294,10 +302,14 @@ export interface ActorInviteIn {
 }
 export interface ActorInviteOut {
   /**
-   * what the person will sign in with
+   * what the person will sign in with, if they have an email
    */
-  email: string
+  email?: null | string
   expires_at: string
+  /**
+   * what the person will sign in with, if they have a login ID
+   */
+  login_id?: null | string
   /**
    * what the invitation link carries; shown once, and a replay of this call comes back without it
    */
@@ -377,7 +389,7 @@ export interface ActorListIn {
    */
   owner_actor_id?: null | string
   /**
-   * a piece of the name or of the email, in any case
+   * a piece of the name, of the email or of the login ID, in any case
    */
   search?: null | string
   /**
@@ -409,6 +421,14 @@ export interface ActorListOut {
         invite_expires_at?: null | string
         kind: string
         /**
+         * a person's student or staff number, which they sign in with as with an email
+         */
+        login_id?: null | string
+        /**
+         * false for a person who typed their own login ID registering through a join link, which nobody has checked; setting it with actor.update vouches for it
+         */
+        login_id_verified: boolean
+        /**
          * for an agent a person owns, that person
          */
         owner_actor_id?: null | string
@@ -435,7 +455,7 @@ export interface ActorListCredentialsOut {
         expires_at?: null | string
         id: string
         /**
-         * who issued a token: the actor themself or an administrator; absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field
+         * who issued a token: the actor themself or an administrator; who set a temporary password (member.reset_password); absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field
          */
         issued_by_actor_id?: null | string
         /**
@@ -445,6 +465,10 @@ export interface ActorListCredentialsOut {
         kind: string
         label?: null | string
         last_used_at?: null | string
+        /**
+         * a password someone else set (member.reset_password): until its person sets their own with credential.set_password, every other call of theirs is refused (password_change_required)
+         */
+        must_change?: boolean
         provider?: null | string
         revoked_at?: null | string
         subject?: null | string
@@ -455,12 +479,16 @@ export interface ActorListCredentialsOut {
       }[]
 }
 
-/** actor.lookup_by_email (read): Find the person a whole email address belongs to, to seat them as a course's instructor or appoint them a department's administrator. The whole address must match, in any case; there is no partial search, and nobody is listed. It says who they are, whether they can sign in yet, and whether you may invite them again. For platform and department administrators. */
+/** actor.lookup_by_email (read): Find the person a whole email address, or a whole login ID (a student or staff number), belongs to, to seat them as a course's instructor or appoint them a department's administrator. Give one of email and login_id; it must match whole, in any case; there is no partial search, and nobody is listed. It says who they are, whether they can sign in yet, and whether you may invite them again. For platform and department administrators. */
 export interface ActorLookupByEmailIn {
   /**
    * the whole address, in any case
    */
-  email: string
+  email?: string
+  /**
+   * or the whole login ID, a student or staff number, in any case
+   */
+  login_id?: string
 }
 export interface ActorLookupByEmailOut {
   actor_id: string
@@ -495,17 +523,21 @@ export interface ActorReactivateOut {
   ok: boolean
 }
 
-/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's. */
+/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in with their email or their login ID (a student or staff number), either or both of which you give here, once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso). A login ID taken already is refused (login_id_taken). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. Give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's. */
 export interface ActorRegisterIn {
   display_name: string
   /**
-   * needed for a person to sign in with a password
+   * what a person signs in with, with a password; they need this or a login_id
    */
   email?: null | string
   /**
    * human or agent; recorded for display and audit, and read by nothing else
    */
   kind: string
+  /**
+   * for a person only: their student or staff number, which they sign in with as with an email; 1 to 64 letters, digits, dots, hyphens and underscores, and never an @; unique in any case
+   */
+  login_id?: null | string
   /**
    * for an agent only: the active person who owns it, and whose delegate alone it will be, for good
    */
@@ -536,7 +568,7 @@ export interface ActorSuspendOut {
   ok: boolean
 }
 
-/** actor.update (write): Correct an actor's display name or email, or give an email to a person registered without one, so that they can sign in with a password. What is left out stays as it is. A change of email withdraws an invitation waiting (actor.invite): it went to the old one. An email you set is one you vouch for: a person who registered through a join link has email_verified false, until you do. */
+/** actor.update (write): Correct an actor's display name, email or login ID (a person's student or staff number), or give a person registered without one an email or a login ID, so that they can sign in with a password. What is left out stays as it is. A change of email withdraws an invitation waiting (actor.invite): it went to the old one. An email or a login ID you set is one you vouch for: a person who registered through a join link has email_verified or login_id_verified false, until you do. Nobody changes their own login ID but an administrator: it is what they are known by to their instructors. One someone else has is refused (login_id_taken). */
 export interface ActorUpdateIn {
   actor_id: string
   display_name?: null | string
@@ -544,6 +576,10 @@ export interface ActorUpdateIn {
    * what a person signs in with; it can be changed, not removed
    */
   email?: null | string
+  /**
+   * a person's student or staff number, which they sign in with as with an email; it can be given, corrected and changed, not removed, and only by an administrator
+   */
+  login_id?: null | string
 }
 export interface ActorUpdateOut {
   created_at: string
@@ -565,6 +601,14 @@ export interface ActorUpdateOut {
    */
   invite_expires_at?: null | string
   kind: string
+  /**
+   * a person's student or staff number, which they sign in with as with an email
+   */
+  login_id?: null | string
+  /**
+   * false for a person who typed their own login ID registering through a join link, which nobody has checked; setting it with actor.update vouches for it
+   */
+  login_id_verified: boolean
   /**
    * for an agent a person owns, that person
    */
@@ -744,7 +788,7 @@ export interface AgentListCredentialsOut {
         expires_at?: null | string
         id: string
         /**
-         * who issued a token: the actor themself or an administrator; absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field
+         * who issued a token: the actor themself or an administrator; who set a temporary password (member.reset_password); absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field
          */
         issued_by_actor_id?: null | string
         /**
@@ -754,6 +798,10 @@ export interface AgentListCredentialsOut {
         kind: string
         label?: null | string
         last_used_at?: null | string
+        /**
+         * a password someone else set (member.reset_password): until its person sets their own with credential.set_password, every other call of theirs is refused (password_change_required)
+         */
+        must_change?: boolean
         provider?: null | string
         revoked_at?: null | string
         subject?: null | string
@@ -1688,10 +1736,10 @@ export interface CourseGetOut {
   title: string
 }
 
-/** course.join_link_create (write): Make a link that seats whoever opens it as a student of the course, at once and with no approval — typically shown as a QR code in class: a person signed in joins, and someone with no account registers through it (name, email, password) and joins. Nobody registers any other way. Every link works for ten minutes from now, and then never again; make another for the next class. It seats max_uses people at most if given, and only emails at allowed_email_domains if given. The seat is the course's student preset, as member.add gives it, and is yours to give: it must be within what you hold, now and at every join, so the link stops working (creator_lost_authority) once you are paused or removed, lose member_invite, or no longer hold what the preset gives; a seat taken through it ends when yours does. The token is returned once and only its hash is kept. Revoke it with course.join_link_revoke. Not by proposal: with member_invite at confirm_required, ask someone who holds it without approval. */
+/** course.join_link_create (write): Make a link that seats whoever opens it as a student of the course, at once and with no approval — typically shown as a QR code in class: a person signed in joins, and someone with no account registers through it (name, login ID — their student number — or email or both, and password) and joins. Nobody registers any other way. Every link works for ten minutes from now, and then never again; make another for the next class. It seats max_uses people at most if given, and only emails at allowed_email_domains if given, which then asks everyone registering for an email. The seat is the course's student preset, as member.add gives it, and is yours to give: it must be within what you hold, now and at every join, so the link stops working (creator_lost_authority) once you are paused or removed, lose member_invite, or no longer hold what the preset gives; a seat taken through it ends when yours does. The token is returned once and only its hash is kept. Revoke it with course.join_link_revoke. Not by proposal: with member_invite at confirm_required, ask someone who holds it without approval. */
 export interface CourseJoinLinkCreateIn {
   /**
-   * only people whose email is at one of these domains, exactly: example.edu does not take mail.example.edu; at most 20. Anyone's unless given. Core cannot check an email, so this keeps out whoever gives another, not whoever claims one of these
+   * only people whose email is at one of these domains, exactly: example.edu does not take mail.example.edu; at most 20. Anyone's unless given. Given, someone registering through it must give an email, and someone with none is not let in. Core cannot check an email, so this keeps out whoever gives another, not whoever claims one of these
    */
   allowed_email_domains?: null | string[]
   /**
@@ -1907,7 +1955,7 @@ export interface CredentialListOut {
         expires_at?: null | string
         id: string
         /**
-         * who issued a token: the actor themself or an administrator; absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field
+         * who issued a token: the actor themself or an administrator; who set a temporary password (member.reset_password); absent for other kinds, for tokens made on the command line, and for tokens issued by a release before this field
          */
         issued_by_actor_id?: null | string
         /**
@@ -1917,6 +1965,10 @@ export interface CredentialListOut {
         kind: string
         label?: null | string
         last_used_at?: null | string
+        /**
+         * a password someone else set (member.reset_password): until its person sets their own with credential.set_password, every other call of theirs is refused (password_change_required)
+         */
+        must_change?: boolean
         provider?: null | string
         revoked_at?: null | string
         subject?: null | string
@@ -1935,7 +1987,7 @@ export interface CredentialRevokeOut {
   ok: boolean
 }
 
-/** credential.set_password (write): Set or replace the caller's own password. The previous password stops working at once. */
+/** credential.set_password (write): Set or replace the caller's own password. The previous password stops working at once. It is the one call a person whose password someone else set (member.reset_password) may make: every other is refused (password_change_required) until they have set their own here, which may not be the one they were given (password_unchanged). */
 export interface CredentialSetPasswordIn {
   password: string
 }
@@ -2936,7 +2988,7 @@ export interface GradebookGetOut {
   student_member_id: string
 }
 
-/** me.get (read): Who the caller is: the actor this credential belongs to, for an agent a person owns, who owns it, and for a department's administrator, the departments they are appointed to administer. */
+/** me.get (read): Who the caller is: the actor this credential belongs to, with the email and the login ID (a student or staff number) a person signs in with, for an agent a person owns, who owns it, and for a department's administrator, the departments they are appointed to administer. */
 export interface MeGetIn {}
 export interface MeGetOut {
   /**
@@ -2961,6 +3013,14 @@ export interface MeGetOut {
    * human, agent or system; for display only
    */
   kind: string
+  /**
+   * what you sign in with besides your email, if you have one: your student or staff number; only an administrator changes it
+   */
+  login_id?: null | string
+  /**
+   * with a login ID: false when you gave it registering through a join link, and no administrator has set it since
+   */
+  login_id_verified?: null | boolean
   /**
    * for an agent a person owns, that person's actor id, the same for as long as the agent exists; absent for a person, and for an agent nobody owns
    */
@@ -3182,7 +3242,7 @@ export interface MemberDelegateDefaultsOut {
   student_scope: string
 }
 
-/** member.get (read): One member in full, including exactly which students and assignments a 'listed' scope lists, and the most the seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous). */
+/** member.get (read): One member in full, including exactly which students and assignments a 'listed' scope lists, for a person who has one, the login ID (student or staff number) they sign in with, and the most the seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous). */
 export interface MemberGetIn {
   /**
    * the course this call is about
@@ -3211,6 +3271,10 @@ export interface MemberGetOut {
   kind: string
   listed_assignments?: null | string[]
   listed_students?: null | string[]
+  /**
+   * for a person who has one, their login ID: the student or staff number they sign in with, and are known by to the course's staff
+   */
+  login_id?: null | string
   /**
    * for an agent a person owns, that person
    */
@@ -3251,7 +3315,7 @@ export interface MemberGetOut {
   student_scope: string
 }
 
-/** member.list (read): The members of a course — people and agents alike — with their roster role, status, permissions and scope, and for each seat the most it may be given of each permission (perm_ceilings), and why where that is below autonomous (perm_ceiling_reasons): offer nothing above it. */
+/** member.list (read): The members of a course — people and agents alike — with their roster role, status, permissions and scope, for a person who has one, the login ID (student or staff number) they sign in with, and for each seat the most it may be given of each permission (perm_ceilings), and why where that is below autonomous (perm_ceiling_reasons): offer nothing above it. */
 export interface MemberListIn {
   /**
    * the id of the last item already seen
@@ -3300,6 +3364,10 @@ export interface MemberListOut {
         listed_assignments?: null | string[]
         listed_students?: null | string[]
         /**
+         * for a person who has one, their login ID: the student or staff number they sign in with, and are known by to the course's staff
+         */
+        login_id?: null | string
+        /**
          * for an agent a person owns, that person
          */
         owner_actor_id?: null | string
@@ -3341,7 +3409,7 @@ export interface MemberListOut {
   next?: null | string
 }
 
-/** member.lookup_actor (read): Find the registered person an email address belongs to, to seat them with member.add, or see whom an actor id names (an agent has no email: it is seated by the id an administrator gives). Give one of email or actor_id. The whole address must match, in any case; there is no partial search. */
+/** member.lookup_actor (read): Find the registered person an email address or a login ID (a student or staff number) belongs to, to seat them with member.add, or see whom an actor id names (an agent has neither: it is seated by the id an administrator gives). Give one of email, login_id and actor_id. The whole address or number must match, in any case; there is no partial search. */
 export interface MemberLookupActorIn {
   /**
    * or the actor id an administrator gave, to see whom it names
@@ -3355,6 +3423,10 @@ export interface MemberLookupActorIn {
    * the person's whole email address, in any case
    */
   email?: null | string
+  /**
+   * or the person's whole login ID, their student or staff number, in any case
+   */
+  login_id?: null | string
 }
 export interface MemberLookupActorOut {
   /**
@@ -3427,6 +3499,32 @@ export interface MemberRescopeIn {
 }
 export interface MemberRescopeOut {
   ok: boolean
+}
+
+/** member.reset_password (write): Give a student of the course a new, temporary password, for one who has forgotten theirs and has no email to reset it by. It is returned once, to hand to them; only its hash is kept. Every session they have is signed out, and the next time they sign in, with it, they must set a password of their own before anything else. For people who manage the course's members without approval (member_manage autonomous); never by proposal (not_by_proposal), and never by an agent (people_only), which is never handed a password. Only for a person's active student seat in this course (not_a_person, not_a_student, seat_not_active) whose account reaches nothing beyond it: seated as a student and nothing else in every course (seated_other_than_student), holding no platform role (platform_role), administering no department (administers), signing in by no identity provider (sso_linked), and with a login ID or an email to sign in with (no_sign_in_name); and whose seat holds nothing you do not (beyond_your_seat). Anyone else's is an administrator's to reset (actor.invite). */
+export interface MemberResetPasswordIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  member_id: string
+}
+export interface MemberResetPasswordOut {
+  actor_id: string
+  display_name: string
+  /**
+   * what they sign in with, if they have a login ID; otherwise it is their email, which they know
+   */
+  login_id?: null | string
+  member_id: string
+  /**
+   * how many sessions of theirs were signed out
+   */
+  sessions_ended: number
+  /**
+   * for you to hand to the student; shown once: it is not stored, and a replay of this call comes back without it
+   */
+  temporary_password?: string
 }
 
 /** member.resume (write): Resume a paused member, exactly as they were. That is a grant of everything they hold, which must be within what you hold yourself. */
@@ -4209,6 +4307,7 @@ export interface ToolMap {
   'member.pause': { in: MemberPauseIn; out: MemberPauseOut; kind: 'write' }
   'member.remove': { in: MemberRemoveIn; out: MemberRemoveOut; kind: 'write' }
   'member.rescope': { in: MemberRescopeIn; out: MemberRescopeOut; kind: 'write' }
+  'member.reset_password': { in: MemberResetPasswordIn; out: MemberResetPasswordOut; kind: 'write' }
   'member.resume': { in: MemberResumeIn; out: MemberResumeOut; kind: 'write' }
   'member.set_role': { in: MemberSetRoleIn; out: MemberSetRoleOut; kind: 'write' }
   'member.update_perms': { in: MemberUpdatePermsIn; out: MemberUpdatePermsOut; kind: 'write' }
@@ -4351,6 +4450,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'member.pause': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/pause', kind: 'write' },
   'member.remove': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/remove', kind: 'write' },
   'member.rescope': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/scope', kind: 'write' },
+  'member.reset_password': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/reset-password', kind: 'write' },
   'member.resume': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/resume', kind: 'write' },
   'member.set_role': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/role', kind: 'write' },
   'member.update_perms': { method: 'POST', path: '/v1/courses/{course_id}/members/{member_id}/perms', kind: 'write' },

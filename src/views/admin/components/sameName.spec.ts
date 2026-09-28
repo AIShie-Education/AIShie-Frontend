@@ -32,6 +32,7 @@ function actor(display_name: string, over: Partial<ActorRow> = {}): ActorRow {
     has_password: true,
     has_sso: false,
     email_verified: true,
+    login_id_verified: true,
     ...over,
   }
 }

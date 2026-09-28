@@ -37,6 +37,7 @@ function actor(over: Partial<Actor> = {}): Actor {
     has_password: true,
     has_sso: false,
     email_verified: true,
+    login_id_verified: true,
     ...over,
   }
 }
