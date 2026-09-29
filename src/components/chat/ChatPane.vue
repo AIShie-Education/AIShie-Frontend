@@ -51,8 +51,12 @@ import {
   closedConflict,
   draftKey,
   getDraft,
+  groupedWith,
+  lastSent,
   lastSeq,
+  noteSent,
   offeredIn,
+  questionWithdrawn,
   REASON_MAX,
   roleIn,
   setDraft,
@@ -64,8 +68,10 @@ import {
 import { useChatSeat } from './seat'
 import { useConversation } from './useConversation'
 import { useRespondents } from './useConversationList'
-import ChatComposer from './ChatComposer.vue'
+import ChatComposer, { type ComposerCommand } from './ChatComposer.vue'
+import { courseMentions } from './mentions'
 import ChatMessage from './ChatMessage.vue'
+import ChatStatusLine from './ChatStatusLine.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -92,6 +98,10 @@ const emit = defineEmits<{
   changed: []
   /** Core has recorded that the caller read the conversation, as far as it is shown. */
   read: [conversationId: string]
+  /** The composer's /new: a new conversation. */
+  new: []
+  /** The composer's /history: the caller's conversations. */
+  history: []
 }>()
 const { t } = useI18n()
 const seat = useChatSeat(() => props.courseId)
@@ -141,12 +151,15 @@ const offered = computed<boolean | null>(() => {
   return offeredIn(offers.items.value, v.respondent.member_id)
 })
 
+/** The question awaiting its answer was taken back: nothing is awaited, though Core still says so. */
+const withdrawn = computed(() => questionWithdrawn(messages.value, view.value?.opener.member_id))
 const status = computed(() =>
   view.value
     ? chatStatus(view.value, props.oversee ? null : me.value, {
         now: now.value,
         empty: messages.value.length === 0,
         offered: offered.value,
+        withdrawn: withdrawn.value,
       })
     : null,
 )
@@ -222,6 +235,19 @@ const canRetract = (m: ConversationMessage) =>
   seat.value.writable &&
   !m.retracted &&
   (m.author_member_id === me.value || (role.value === 'overseer' && seat.value.can('action_decide')))
+/** Whether a message follows the one before it closely, by the same author: its name is not said again. */
+const grouped = (i: number) => groupedWith(messages.value[i - 1], messages.value[i]!)
+/**
+ * The question the caller asked last, while it waits for its answer: it may
+ * be taken back to the composer, changed and sent again (it is withdrawn,
+ * which no agent answers).
+ */
+const pendingQuestion = computed<ConversationMessage | null>(() => {
+  const last = messages.value.at(-1)
+  if (!last || role.value !== 'opener' || !seat.value.writable) return null
+  if (last.author_member_id !== me.value || last.retracted || !last.body) return null
+  return status.value?.state === 'awaiting_answer' ? last : null
+})
 
 /** Questions the caller asked that wait for someone's approval, shown until they appear. */
 interface Held {
@@ -277,7 +303,8 @@ async function older() {
 
 const key = draftKey(props.courseId, props.conversationId, props.respondent?.member_id)
 const draft = ref(getDraft(key))
-watch(draft, (v) => setDraft(key, v))
+// Kept as it changes: a command (/history) may take the pane away in the same tick.
+watch(draft, (v) => setDraft(key, v), { flush: 'sync' })
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
 
 const openWrite = useWrite('conversation.open')
@@ -350,6 +377,7 @@ async function send() {
       return
     }
     draft.value = ''
+    noteSent(body)
     emit('changed')
     if (out.status === 'proposed') {
       openProposed.value = true
@@ -369,6 +397,7 @@ async function send() {
     return
   }
   draft.value = ''
+  noteSent(body)
   if (out.status === 'proposed') held.value = [...held.value, { actionId: out.actionId, body, at: Date.now() }]
   afterWrite(out)
   await conv.refresh()
@@ -412,6 +441,59 @@ async function close() {
   emit('changed')
 }
 
+/**
+ * Takes the question waiting for its answer back to the composer: it is
+ * withdrawn (conversation.retract, as its author), which no agent answers
+ * (Core's inbox leaves it out, and a runtime treats it as moved on), and
+ * its words are put back where they can be changed and sent again. An agent
+ * that had begun its answer may still post it. To stop the wait, or to edit.
+ */
+const withdrawing = ref<string | null>(null)
+async function withdrawToComposer(m: ConversationMessage, why: 'edit' | 'stop') {
+  if (!conv || !m.body || withdrawing.value) return
+  const body = m.body
+  withdrawing.value = m.id
+  const out = await retractWrite.run({ course_id: props.courseId, message_id: m.id }, { success: false })
+  withdrawing.value = null
+  if (!out) return
+  if (out.status === 'executed') {
+    conv.markRetracted(m.id, me.value, null)
+    draft.value = cleanBody(draft.value) ? `${body}\n\n${draft.value}` : body
+    ElMessage({
+      type: 'info',
+      message: t(why === 'stop' ? 'chat.stop.done' : 'chat.edit.done', { name: other.value?.name ?? '' }),
+      duration: 6000,
+    })
+    void nextTick(() => composer.value?.focus())
+  }
+  await conv.refresh()
+}
+
+/** Stops waiting: the question awaiting its answer, taken back to the composer (withdrawToComposer). */
+function stop() {
+  const q = pendingQuestion.value
+  if (q) void withdrawToComposer(q, 'stop')
+}
+
+// --- The line that says an answer is being waited for -----------------------------------
+/** When the question awaiting its answer was asked, on Core's clock: the line counts from it. */
+const askedAt = computed(() => {
+  const last = messages.value.at(-1)
+  const at = last ? Date.parse(last.created_at) : NaN
+  return Number.isFinite(at) ? at : null
+})
+/** The agent at work, where something runs it; else only that it is waited for. */
+const statusLabel = computed(() => {
+  const n = status.value?.notice
+  const name = other.value?.name ?? ''
+  if (n?.kind === 'waiting' && n.availability !== 'online') return t('chat.typing', { name })
+  return t('chat.status.thinking')
+})
+const statusSub = computed(() => {
+  const n = status.value?.notice
+  return n?.kind === 'waiting' && n.approval ? t('chat.state.waitingApproval') : null
+})
+
 const retracting = ref<string | null>(null)
 async function retract(m: ConversationMessage) {
   if (!conv) return
@@ -449,6 +531,40 @@ function startAgain() {
     last_seen_at: r.last_seen_at,
     answer_level: r.answer_level,
   })
+}
+
+// --- What the composer offers beyond writing ------------------------------------------------
+/** The slash commands: a new conversation, the history, and closing this one where the caller may. */
+const commands = computed<ComposerCommand[]>(() => [
+  { name: 'new', label: t('chat.commands.new') },
+  { name: 'history', label: t('chat.commands.history') },
+  ...(canClose.value ? [{ name: 'close', label: t('chat.commands.close') }] : []),
+])
+function onCommand(name: string) {
+  if (name === 'new') emit('new')
+  else if (name === 'history') emit('history')
+  else if (name === 'close') void close()
+}
+/** What ↑ brings back: the last message sent from this page, else the caller's last one here. */
+const recall = computed(() => {
+  const sent = lastSent()
+  if (sent) return sent
+  const mine = [...messages.value].reverse().find((m) => m.author_member_id === me.value && !m.retracted && m.body)
+  return mine?.body ?? null
+})
+/** What @ offers: the course's assignments and materials, as the caller may read them. */
+const loadMentions = () => courseMentions(props.courseId)
+
+/** A new conversation's first words, offered to start with. */
+const suggestions = computed(() => [
+  t('chat.suggestions.explainAssignment'),
+  t('chat.suggestions.checkReasoning'),
+  t('chat.suggestions.summarizeWeek'),
+  t('chat.suggestions.practice'),
+])
+function suggest(text: string) {
+  draft.value = text
+  void nextTick(() => composer.value?.focus())
 }
 
 // --- The ⋯ menu: who can read it, how its answers arrive, closing it --------------------
@@ -493,17 +609,16 @@ const notice = computed<{ type: 'info' | 'warning' | 'success'; text: string; su
   if (!n) return null
   switch (n.kind) {
     case 'waiting':
-      return {
-        type: 'info',
-        text: t('chat.state.waiting', { name }),
-        sub: n.approval ? t('chat.state.waitingApproval') : undefined,
-      }
+      // Said by the status line in the messages instead.
+      return null
     case 'unavailable':
       return { type: 'warning', text: availabilityText(n.availability, name) }
     case 'elsewhere':
       return elsewhereNotice(!!view.value?.respondent.is_delegate_of_opener)
     case 'pendingApproval':
       return { type: 'info', text: t('chat.state.answerPending') }
+    case 'withdrawn':
+      return { type: 'info', text: t('chat.state.withdrawn', { name }) }
     case 'start':
       return { type: 'info', text: t('chat.state.start', { name }) }
     case 'overseeing':
@@ -631,16 +746,20 @@ const closedLine = computed(() => {
             {{ role === 'opener' ? t('chat.empty.opener', { name: other?.name ?? '' }) : t('chat.empty.other') }}
           </div>
           <ul class="chat-pane__list" :aria-label="t('chat.messagesLabel')">
-            <li v-for="m in messages" :key="m.id">
+            <li v-for="(m, i) in messages" :key="m.id" :class="{ 'is-grouped': grouped(i) }">
               <ChatMessage
                 :message="m"
                 :author-name="authorName(m)"
                 :from-opener="fromOpener(m)"
                 :mine="m.author_member_id === me"
                 :my-member-id="me"
+                :grouped="grouped(i)"
                 :can-retract="canRetract(m)"
                 :retracting="retracting === m.id"
+                :can-edit="pendingQuestion?.id === m.id"
+                :editing="withdrawing === m.id"
                 @retract="retract(m)"
+                @edit="withdrawToComposer(m, 'edit')"
               />
             </li>
             <li v-for="h in heldShown" :key="h.actionId" class="chat-pane__held">
@@ -655,9 +774,8 @@ const closedLine = computed(() => {
                 }}</router-link>
               </div>
             </li>
-            <li v-if="status?.typing" class="chat-pane__typing" aria-live="polite">
-              <span class="chat-pane__dots" aria-hidden="true"><i /><i /><i /></span>
-              <span class="app-muted">{{ t('chat.typing', { name: other?.name ?? '' }) }}</span>
+            <li v-if="status?.typing" class="chat-pane__typing">
+              <ChatStatusLine :label="statusLabel" :since="askedAt" :sub="statusSub" />
             </li>
           </ul>
         </AsyncState>
@@ -676,10 +794,22 @@ const closedLine = computed(() => {
             </template>
           </el-result>
         </div>
-        <div v-else class="chat-pane__intro app-muted">
-          <p>{{ t('chat.new.intro', { name: respondent.display_name }) }}</p>
-          <p v-if="respondent.is_my_delegate">{{ t('chat.new.yourAgent') }}</p>
+        <div v-else class="chat-pane__intro chat-pane__start">
+          <span class="chat-pane__start-mark" aria-hidden="true">✻</span>
+          <p class="chat-pane__start-title">{{ t('chat.new.intro', { name: respondent.display_name }) }}</p>
+          <p v-if="respondent.is_my_delegate" class="app-muted">{{ t('chat.new.yourAgent') }}</p>
           <p v-if="sharedNote" class="chat-pane__shared">{{ t('chat.visibleTo.sharedNote') }}</p>
+          <div
+            v-if="!writeBlocked"
+            class="chat-pane__suggestions"
+            role="group"
+            :aria-label="t('chat.suggestions.title')"
+          >
+            <p class="chat-pane__suggestions-title">{{ t('chat.suggestions.title') }}</p>
+            <button v-for="s in suggestions" :key="s" type="button" class="chat-pane__suggestion" @click="suggest(s)">
+              {{ s }}
+            </button>
+          </div>
         </div>
       </template>
     </div>
@@ -718,7 +848,14 @@ const closedLine = computed(() => {
           :placeholder="placeholder"
           :disabled="writeBlocked"
           :pending="sending"
+          :stoppable="!!pendingQuestion && !!status?.typing"
+          :stopping="!!withdrawing"
+          :recall="recall"
+          :commands="commands"
+          :load-mentions="loadMentions"
           @send="send"
+          @stop="stop"
+          @command="onCommand"
         />
       </template>
     </footer>
@@ -830,13 +967,75 @@ const closedLine = computed(() => {
 .chat-pane__intro p {
   margin: 0 0 8px;
 }
+/* A new conversation: who it is with, and a few ways to begin, which fill the box. */
+.chat-pane__start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 8px 16px;
+}
+.chat-pane__start-mark {
+  margin-bottom: 10px;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--app-light);
+}
+.chat-pane__start-title {
+  max-width: 34ch;
+  font-size: 15px;
+  color: var(--app-ink-2);
+}
+.chat-pane__suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: min(100%, 360px);
+  margin-top: 18px;
+}
+.chat-pane__suggestions-title {
+  margin: 0 0 2px !important;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: var(--el-text-color-secondary);
+}
+.chat-pane__suggestion {
+  padding: 9px 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--el-bg-color);
+  color: var(--app-ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+.chat-pane__suggestion:hover {
+  border-color: var(--app-indigo-line);
+  background: var(--app-indigo-tint);
+}
+.chat-pane__suggestion:focus-visible {
+  outline-offset: 1px;
+}
 .chat-pane__list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+}
+/* A run of messages by one author sits close; a new author, further apart. */
+.chat-pane__list > li + li {
+  margin-top: 14px;
+}
+.chat-pane__list > li.is-grouped {
+  margin-top: 0;
 }
 .chat-pane__held {
   display: flex;
@@ -866,50 +1065,9 @@ const closedLine = computed(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
-.chat-pane__typing {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-.chat-pane__dots {
-  display: inline-flex;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  border-top-left-radius: 4px;
-  background: var(--el-fill-color-light);
-}
-.chat-pane__dots i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--el-text-color-placeholder);
-  animation: chat-dot 1.2s infinite ease-in-out;
-}
-.chat-pane__dots i:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.chat-pane__dots i:nth-child(3) {
-  animation-delay: 0.4s;
-}
-@keyframes chat-dot {
-  0%,
-  60%,
-  100% {
-    opacity: 0.3;
-    transform: translateY(0);
-  }
-  30% {
-    opacity: 1;
-    transform: translateY(-3px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .chat-pane__dots i {
-    animation: none;
-    opacity: 0.6;
-  }
+/* The working line follows the question closely. */
+.chat-pane__list > li.chat-pane__typing {
+  margin-top: 2px;
 }
 .chat-pane__foot {
   padding: 6px 12px 12px;

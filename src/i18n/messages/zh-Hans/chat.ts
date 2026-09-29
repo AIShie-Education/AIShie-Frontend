@@ -42,6 +42,12 @@ export default {
     opener: '还没有任何消息。在下方向 {name} 提出你的问题吧。',
     other: '还没有任何消息。',
   },
+  // The line in the messages while an answer is awaited: the agent at work, and for how long.
+  status: {
+    thinking: '思考中…',
+    seconds: '{s}s',
+    minutes: '{m}m {s}s',
+  },
   typing: '正在等待 {name}…',
   held: '等待批准中：获批准后才会在这里显示。',
   myActions: '我的操作',
@@ -56,9 +62,9 @@ export default {
   },
   // What the line above the composer says.
   state: {
-    waiting: '{name} 已收到你的问题。',
     waitingApproval: '每条回复都须经批准，你才会看到。',
     answerPending: '有一条回复正在等待批准。',
+    withdrawn: '你撤回了问题，{name} 不会回答它。',
     start: '有任何关于课程的问题，都可以问 {name}。',
     overseeing: '你正以课程教职员的身份阅读这段对话。',
     readOnly: '现在由智能体在对话中回答问题，你可以阅读这段对话。',
@@ -82,7 +88,39 @@ export default {
     askPlaceholder: '向 {name} 提问…',
     send: '发送',
     sendTip: '发送（Enter）· Shift+Enter 换行',
+    stop: '停止',
+    stopTip: '停止：撤回问题，放回输入框',
+    // The list a slash opens (commands), and what the empty box hints at.
+    commands: '指令',
+    hintCommands: '/ 指令',
+    hintMentions: "{'@'} 引用作业或教材",
     count: '{n} / {max} 字',
+  },
+  // What a slash at the start of the box offers.
+  commands: {
+    new: '新对话',
+    history: '对话记录',
+    close: '结束对话',
+  },
+  // What an @ offers: the course's assignments and materials, whose title it writes in, quoted.
+  mention: {
+    label: '作业与教材',
+    insert: '「{title}」',
+    loading: '正在加载作业与教材…',
+    none: '没有标题含「{q}」的作业或教材。',
+    empty: '这门课程还没有你看得到的作业或教材。',
+    kind: {
+      assignment: '作业',
+      material: '教材',
+    },
+  },
+  // A new conversation's first words, offered to start with; a click puts them in the box.
+  suggestions: {
+    title: '可以这样开始',
+    explainAssignment: '解释这份作业的要求',
+    checkReasoning: '帮我检查我的思路',
+    summarizeWeek: '总结这周的教材',
+    practice: '出几道练习题给我',
   },
   conflict: {
     closed: '这段对话已经关闭，不能再写入任何内容。',
@@ -100,6 +138,10 @@ export default {
   },
   message: {
     retract: '撤回',
+    // Under a message, on hover: copy it (as Markdown), and take the question awaiting its answer back to edit it.
+    copy: '复制消息',
+    edit: '编辑',
+    editTip: '撤回这条问题，放回输入框修改后再发送',
     retractedByYou: '你已撤回这条消息。',
     retractedBy: '{name} 已撤回这条消息。',
     retractedByStaff: '课程教职员已撤回这条消息。',
@@ -116,6 +158,13 @@ export default {
     bodyOpener: '结束后无法再发言，但内容仍可阅读。你填写的原因会显示给对方。',
     confirm: '结束对话',
     done: '对话已结束',
+  },
+  // A question awaiting its answer, taken back to the composer: to edit it, or to stop waiting.
+  edit: {
+    done: '问题已撤回并放回输入框，修改后再发送即可。{name} 不会回答已撤回的问题；如果它已开始作答，答案仍可能送达。',
+  },
+  stop: {
+    done: '已停止：问题已撤回并放回输入框。{name} 不会回答已撤回的问题；如果它已开始作答，答案仍可能送达。',
   },
   retract: {
     title: '要撤回这条消息吗？',

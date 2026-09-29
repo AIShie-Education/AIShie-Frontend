@@ -2,6 +2,7 @@
 // messages, whose turn it is, what to tell the person about the one they are
 // talking to, and which key sends. Only for display: Core decides who may
 // write what, and refuses the rest.
+import { shallowRef } from 'vue'
 import { CLOSED_SEAT_REMOVED, CONVERSATION_STATES, CONVERSATIONS_ARE_WITH_AGENTS } from '@/api/types'
 import type { ConversationMessage, ConversationState, ConversationView } from '@/api/types'
 import { presenceOf, ONLINE_WITHIN_MS } from '@/utils/presence'
@@ -105,6 +106,37 @@ export function lastSeq(ms: readonly ConversationMessage[]): number | null {
 /** The seq to read older messages before: the oldest held, or null. */
 export function firstSeq(ms: readonly ConversationMessage[]): number | null {
   return ms.length ? ms[0]!.seq : null
+}
+
+/** Messages by the same author this close together are one run: the name is said once, over the first. */
+export const GROUP_MS = 5 * 60_000
+
+/**
+ * Whether a message follows the one before it in a run: the same author,
+ * written within GROUP_MS of it.
+ */
+export function groupedWith(
+  prev: Pick<ConversationMessage, 'author_member_id' | 'created_at'> | null | undefined,
+  m: Pick<ConversationMessage, 'author_member_id' | 'created_at'>,
+): boolean {
+  if (!prev || prev.author_member_id !== m.author_member_id) return false
+  const a = Date.parse(prev.created_at)
+  const b = Date.parse(m.created_at)
+  return Number.isFinite(a) && Number.isFinite(b) && b - a >= 0 && b - a <= GROUP_MS
+}
+
+/**
+ * Whether the question awaiting an answer was withdrawn: the opener wrote
+ * last, and retracted it. Core still says the conversation awaits an answer
+ * (its opener wrote last), but no agent answers a retracted question: the
+ * inbox leaves it out, and a runtime treats it as moved on.
+ */
+export function questionWithdrawn(
+  messages: readonly Pick<ConversationMessage, 'author_member_id' | 'retracted'>[],
+  openerMemberId: string | null | undefined,
+): boolean {
+  const last = messages.at(-1)
+  return !!last && !!openerMemberId && last.author_member_id === openerMemberId && !!last.retracted
 }
 
 /** Whether two copies of the messages say the same (so nothing moved on the screen). */
@@ -219,8 +251,9 @@ export function offeredIn(respondents: readonly { member_id: string }[] | null |
  * agent has not answered (with how likely an answer is); pendingApproval: an
  * answer waits for someone's approval; start: nothing asked yet; elsewhere:
  * the agent asked takes no conversations in the site, and nothing more is
- * asked of it here; readOnly: the caller is not the one asking (staff, or the
- * one asked), and reads it.
+ * asked of it here; withdrawn: the opener took back the question waiting
+ * for its answer, which no agent answers; readOnly: the caller is not the
+ * one asking (staff, or the one asked), and reads it.
  */
 export type Notice =
   | { kind: 'closed'; reason: ClosedReason | null }
@@ -228,6 +261,7 @@ export type Notice =
   | { kind: 'unavailable'; availability: 'gone' | 'paused' | 'notAnswering' }
   | { kind: 'elsewhere' }
   | { kind: 'pendingApproval' }
+  | { kind: 'withdrawn' }
   | { kind: 'start' }
   | { kind: 'overseeing' }
   | { kind: 'readOnly' }
@@ -251,12 +285,13 @@ export interface ChatStatus {
  * (offeredIn), or null when that is not known; an agent they may not, whose
  * seat is there and which may answer, takes no conversations in the site. It
  * is asked nothing more here; what was written stays readable, and it may
- * still answer.
+ * still answer. withdrawn: the question awaiting its answer was retracted
+ * (questionWithdrawn): nothing is awaited.
  */
 export function chatStatus(
   view: ConversationView,
   myMemberId: string | null | undefined,
-  opts: { now?: number; empty?: boolean; offered?: boolean | null } = {},
+  opts: { now?: number; empty?: boolean; offered?: boolean | null; withdrawn?: boolean } = {},
 ): ChatStatus {
   const role = roleIn(view, myMemberId)
   const state = stateOf(view)
@@ -275,6 +310,7 @@ export function chatStatus(
   }
   if (opts.offered === false) return { ...base, notice: { kind: 'elsewhere' }, block: 'elsewhere' }
   if (state === 'reply_pending_approval') return { ...base, notice: { kind: 'pendingApproval' }, block: null }
+  if (state === 'awaiting_answer' && opts.withdrawn) return { ...base, notice: { kind: 'withdrawn' }, block: null }
   if (state === 'awaiting_answer') {
     return {
       ...base,
@@ -498,4 +534,18 @@ export function getDraft(key: string): string {
 export function setDraft(key: string, text: string) {
   if (text) drafts.set(key, text)
   else drafts.delete(key)
+}
+
+// What the caller sent last from this page, for ↑ in an empty box to bring
+// back (as drafts, for this page's life only).
+const lastSentBody = shallowRef<string | null>(null)
+export function noteSent(body: string) {
+  if (body.trim()) lastSentBody.value = body
+}
+export function lastSent(): string | null {
+  return lastSentBody.value
+}
+/** Forgets it (tests). */
+export function forgetSent() {
+  lastSentBody.value = null
 }

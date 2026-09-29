@@ -15,11 +15,38 @@ md.use(mathPlugin)
 const LINK_REL = 'noopener noreferrer nofollow'
 
 // Links open elsewhere, and do not hand this page to what they open.
-const defaultLink = md.renderer.rules.link_open ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
+const defaultLink =
+  md.renderer.rules.link_open ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
 md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
   tokens[idx].attrSet('target', '_blank')
   tokens[idx].attrSet('rel', LINK_REL)
   return defaultLink(tokens, idx, options, env, self)
+}
+
+// Fenced code, where the page asks for it (renderMarkdown's code option): in
+// a box with a bar over it naming its language and a button to copy it, as
+// an editor's agent chat shows code. The button is the page's to work
+// (MarkdownView copies the code under it); its words come in the options, in
+// the reader's language.
+export interface CodeTools {
+  /** The copy button's words. */
+  copy: string
+}
+const defaultFence =
+  md.renderer.rules.fence ?? ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const html = defaultFence(tokens, idx, options, env, self)
+  const tools = (env as { code?: CodeTools } | undefined)?.code
+  if (!tools) return html
+  const lang = tokens[idx]!.info.trim().split(/\s+/)[0] ?? ''
+  const esc = md.utils.escapeHtml
+  const label = lang ? `<span class="md-code__lang">${esc(lang)}</span>` : '<span class="md-code__lang"></span>'
+  return (
+    `<div class="md-code">` +
+    `<div class="md-code__bar">${label}` +
+    `<button type="button" class="md-code__copy" data-md-copy="">${esc(tools.copy)}</button></div>` +
+    `${html}</div>\n`
+  )
 }
 
 /**
@@ -76,7 +103,7 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
 // be read out after the formula).
 const PURIFY = { ADD_ATTR: ['target', 'loading', 'referrerpolicy'], ADD_FORBID_CONTENTS: ['annotation'] }
 
-export function renderMarkdown(src: string | null | undefined): string {
+export function renderMarkdown(src: string | null | undefined, opts: { code?: CodeTools } = {}): string {
   if (!src) return ''
-  return DOMPurify.sanitize(md.render(src), PURIFY)
+  return DOMPurify.sanitize(md.render(src, opts.code ? { code: opts.code } : {}), PURIFY)
 }

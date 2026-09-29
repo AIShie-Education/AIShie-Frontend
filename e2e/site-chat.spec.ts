@@ -193,7 +193,8 @@ test.describe.serial('site chat: an agent is asked here only while something tha
     await composer.fill(QUESTION)
     await composer.press('Enter')
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await expect(panel.locator('.chat-pane__typing')).toContainText(`Waiting for ${TUTOR}`)
+    // The agent at work (something runs it): the working line, counting the seconds.
+    await expect(panel.locator('.chat-pane__typing .chat-status')).toContainText('Thinking…')
     await expect(panel.locator('.chat-pane__notice.is-elsewhere')).toHaveCount(0)
     // The page stays where it was; the conversation is in the panel.
     await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))

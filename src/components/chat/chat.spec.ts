@@ -18,12 +18,15 @@ import {
   draftKey,
   firstSeq,
   getDraft,
+  groupedWith,
+  GROUP_MS,
   isSendKey,
   lastSeq,
   mergeMessages,
   offeredIn,
   pollDelayMs,
   POLL_MS,
+  questionWithdrawn,
   refusesWaiting,
   retractedBy,
   roleIn,
@@ -234,6 +237,15 @@ describe('chatStatus', () => {
     expect(s.typing).toBe(true)
     expect(s.block).toBeNull()
     expect(s.notice).toEqual({ kind: 'waiting', availability: 'online', approval: false })
+  })
+
+  it('awaits nothing once the opener withdrew the question, though Core still says an answer is awaited', () => {
+    const s = chatStatus(view({ state: 'awaiting_answer' }), 'opener', { ...at, withdrawn: true })
+    expect(s.typing).toBe(false)
+    expect(s.block).toBeNull()
+    expect(s.notice).toEqual({ kind: 'withdrawn' })
+    // Answered since (an answer already begun): as ever.
+    expect(chatStatus(view({ state: 'answered' }), 'opener', { ...at, withdrawn: true }).notice).toBeNull()
   })
 
   it('warns the opener when nothing runs the agent, and when answers need approval', () => {
@@ -516,5 +528,36 @@ describe('site chat', () => {
     expect(offeredIn(list, 'c')).toBe(false)
     expect(offeredIn([], 'a')).toBe(false)
     expect(offeredIn(null, 'a')).toBeNull()
+  })
+})
+
+describe('runs of messages', () => {
+  const m = (author: string, at: string) => ({ author_member_id: author, created_at: at })
+  it('groups a message with the one before it by the same author, written soon after', () => {
+    expect(groupedWith(null, m('a', '2026-09-26T12:00:00Z'))).toBe(false)
+    expect(groupedWith(m('a', '2026-09-26T12:00:00Z'), m('a', '2026-09-26T12:04:59Z'))).toBe(true)
+    expect(groupedWith(m('a', '2026-09-26T12:00:00Z'), m('b', '2026-09-26T12:00:01Z'))).toBe(false)
+    const later = new Date(Date.parse('2026-09-26T12:00:00Z') + GROUP_MS + 1000).toISOString()
+    expect(groupedWith(m('a', '2026-09-26T12:00:00Z'), m('a', later))).toBe(false)
+  })
+})
+
+describe('questionWithdrawn', () => {
+  it('says whether the opener’s last word, awaiting an answer, was retracted', () => {
+    const r = { at: 'x', by_member_id: 'o', reason: null }
+    expect(questionWithdrawn([], 'o')).toBe(false)
+    expect(questionWithdrawn([{ author_member_id: 'o', retracted: r }], 'o')).toBe(true)
+    expect(questionWithdrawn([{ author_member_id: 'o', retracted: null }], 'o')).toBe(false)
+    // An answer after it: the answer is the last word.
+    expect(
+      questionWithdrawn(
+        [
+          { author_member_id: 'o', retracted: r },
+          { author_member_id: 't', retracted: null },
+        ],
+        'o',
+      ),
+    ).toBe(false)
+    expect(questionWithdrawn([{ author_member_id: 'o', retracted: r }], null)).toBe(false)
   })
 })

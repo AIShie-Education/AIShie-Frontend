@@ -288,7 +288,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   conversation on screen is long-polled (`useConversation`, and `chat.ts` for the numbers): one
   `conversation.messages` read after the last seq held waits for news (`wait_s: 25`, with
   `seen_state`, the state held), and the next is made as soon as it answers, so an answer shows as
-  soon as it is written and the typing line (`awaiting_answer`) goes with it. Only one waits for a
+  soon as it is written and the working line (`awaiting_answer`) goes with it. Only one waits for a
   pane, and it is cut short (aborted) when the pane goes off screen or away (another conversation,
   the history, the panel closed, signing out), the page is hidden, or the caller writes; after a
   pause the pane reads at once, then waits again. Where Core answers a wait at once with nothing
@@ -303,11 +303,29 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   anything runs it (`PresenceText`) and, only once it is closed, its state, and a ⋯ menu for who can
   read it, how its answers arrive and closing it; the messages; and the composer (`ChatComposer.vue`),
   one bordered box whose send button, small and icon-only, sits inside it at the bottom right, with
-  its keys in the button's tooltip and the count near Core's limit beside it. Whatever stops the
-  caller writing (an agent paused, gone, not answering or operated elsewhere, a closed conversation,
-  one waiting for approval), or an answer being waited for, is one muted line above the composer,
-  never an alert box. A new conversation has no title field: it is titled by the first line of its
-  first message (`titleFrom`).
+  its keys in the button's tooltip and the count near Core's limit beside it. The agent's messages
+  (`ChatMessage.vue`) take the whole width with no bubble, as Markdown set for reading
+  (`styles/chat-prose.css`), their code in a box with its language and a copy button
+  (`<MarkdownView code-tools>`); the person's are a quiet bubble on the right; a run of messages by
+  one author is named once (`groupedWith`), and each message's time and actions (copy it as written;
+  edit the question awaiting its answer; withdraw it) show under it on hover or focus, always on a
+  touch screen. While an answer is awaited, a working line in the messages (`ChatStatusLine`, the
+  turning glyph of `ChatSpinner`) says 「思考中…」 and counts the seconds since the question, or
+  that the agent is waited for where nothing runs it; and the send button, while nothing is
+  written, is a stop button. Stopping, or editing that question, withdraws it
+  (`conversation.retract`, as its author) and puts its words back in the box: Core's inbox leaves
+  out a conversation whose latest question is retracted and a runtime treats it as moved on, so
+  nothing answers it, though an answer already begun may still be posted; Core still says
+  `awaiting_answer`, which the pane reads as nothing awaited (`questionWithdrawn`). In the box, ↑
+  when it is empty brings back the last message sent, Escape leaves it, a slash at the start opens
+  the commands (`/new`, `/history`, `/close` where the caller may close it), and an @ at the start
+  of a word the course's assignments and materials (`mentions.ts`: `assignment.list` and
+  `document.list`, the reads the Assignments and Materials pages make), whose title it writes in,
+  quoted, for the agent to find; their list works from the keyboard and never takes the Enter an
+  input method uses. Whatever stops the caller writing (an agent paused, gone, not answering or
+  operated elsewhere, a closed conversation, one waiting for approval) is one muted line above the
+  composer, never an alert box. A new conversation has no title field: it is titled by the first
+  line of its first message (`titleFrom`), and it offers a few ways to begin, which fill the box.
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

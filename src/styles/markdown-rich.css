@@ -132,3 +132,82 @@ html.dark {
   color: var(--hl-del-fg);
   background-color: var(--hl-del-bg);
 }
+
+/* Fenced code with its tools (MarkdownView's code-tools, the chat's): a box
+   with a bar over it naming the language and a button that copies it, the
+   code scrolling sideways inside, never the text around it. */
+:root {
+  --md-code-bg: #f7f5f0;
+  --md-code-bar: #eeeae1;
+  --md-code-line: #e2ddd1;
+}
+html.dark {
+  --md-code-bg: #0f131c;
+  --md-code-bar: #171c28;
+  --md-code-line: #2b3245;
+}
+.markdown-body .md-code {
+  margin: 0 0 1em;
+  border: 1px solid var(--md-code-line);
+  border-radius: 8px;
+  background: var(--md-code-bg);
+  overflow: hidden;
+}
+.markdown-body .md-code__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 4px 0 12px;
+  border-bottom: 1px solid var(--md-code-line);
+  background: var(--md-code-bar);
+  font-family: var(--app-font-mono);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--app-ink-3);
+}
+.markdown-body .md-code__lang {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: lowercase;
+}
+.markdown-body .md-code__copy {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--app-ink-3);
+  font-family: var(--app-font-sans);
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.markdown-body .md-code__copy:hover {
+  background: var(--md-code-line);
+  color: var(--app-ink);
+}
+.markdown-body .md-code__copy:focus-visible {
+  outline-offset: -2px;
+}
+.markdown-body .md-code__copy.is-copied {
+  color: var(--app-done-fg);
+}
+.markdown-body .md-code pre {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  white-space: pre;
+  word-wrap: normal;
+  font-size: 13px;
+  line-height: 1.55;
+  tab-size: 4;
+}
+.markdown-body .md-code pre code {
+  font-size: inherit;
+  white-space: inherit;
+}

@@ -151,7 +151,7 @@ describe('AgentConversationLog', () => {
     expect(drawer.querySelector('.chat-pane textarea')).toBeNull()
     expect(drawer.textContent).toContain('You are reading this as course staff.')
     // Someone who decides actions may withdraw a message.
-    expect([...drawer.querySelectorAll('.chat-msg__actions button')].map((b) => b.textContent!.trim())).toEqual([
+    expect([...drawer.querySelectorAll('.chat-msg__retract')].map((b) => b.textContent!.trim())).toEqual([
       'Withdraw',
       'Withdraw',
     ])
