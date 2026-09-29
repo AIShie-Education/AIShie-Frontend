@@ -72,6 +72,7 @@ import ChatComposer, { type ComposerCommand } from './ChatComposer.vue'
 import { courseMentions } from './mentions'
 import ChatMessage from './ChatMessage.vue'
 import ChatStatusLine from './ChatStatusLine.vue'
+import ChatDraft from './ChatDraft.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -122,6 +123,8 @@ const conv = props.conversationId
   : null
 const view = computed<ConversationView | null>(() => conv?.view.value ?? null)
 const messages = computed<ConversationMessage[]>(() => conv?.messages.value ?? [])
+/** The answer being written, where Core sends it (null until it does: useConversation). */
+const answerDraft = computed(() => conv?.draft.value ?? null)
 const me = computed(() => seat.value.memberId)
 const role = computed<ChatRole>(() => {
   if (props.oversee) return 'overseer'
@@ -774,7 +777,10 @@ const closedLine = computed(() => {
                 }}</router-link>
               </div>
             </li>
-            <li v-if="status?.typing" class="chat-pane__typing">
+            <li v-if="status?.typing && answerDraft" class="chat-pane__typing chat-pane__draft">
+              <ChatDraft :draft="answerDraft" :author-name="other?.name ?? ''" :since="askedAt" />
+            </li>
+            <li v-else-if="status?.typing" class="chat-pane__typing">
               <ChatStatusLine :label="statusLabel" :since="askedAt" :sub="statusSub" />
             </li>
           </ul>
@@ -1065,7 +1071,7 @@ const closedLine = computed(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
-/* The working line follows the question closely. */
+/* The working line (or the answer being written) follows the question closely. */
 .chat-pane__list > li.chat-pane__typing {
   margin-top: 2px;
 }

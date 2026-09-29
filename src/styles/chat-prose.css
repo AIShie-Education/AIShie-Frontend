@@ -105,3 +105,30 @@
 .markdown-body.chat-prose tbody tr:nth-child(even) td {
   background: color-mix(in srgb, var(--app-ground-2) 45%, transparent);
 }
+
+/* An answer being written (ChatDraft): a caret at the end of the text so far,
+   after the last block's words, or after the last item of a list. */
+.markdown-body.chat-prose.is-streaming
+  > :last-child:not(ul):not(ol):not(pre):not(table):not(.md-code):not(.md-math)::after,
+.markdown-body.chat-prose.is-streaming > ul:last-child > li:last-child::after,
+.markdown-body.chat-prose.is-streaming > ol:last-child > li:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: var(--app-indigo);
+  animation: chat-caret 1s steps(1) infinite;
+}
+@keyframes chat-caret {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown-body.chat-prose.is-streaming *::after {
+    animation: none;
+  }
+}

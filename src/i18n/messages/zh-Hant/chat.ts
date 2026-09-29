@@ -132,6 +132,65 @@ export default {
     summarizeWeek: '總結這週的教材',
     practice: '出幾道練習題給我',
   },
+  // An answer in the making (the draft: ChatDraft, ChatDraftSteps): the agent's steps, running and done, with
+  // what each works on (target) or without, and the answer's text, or that it shows once confirmed.
+  draft: {
+    consulted: '已查閱 {n} 項',
+    stepsLabel: '代理正在做的事',
+    done: '已完成',
+    running: '進行中',
+    hidden: '答案需經確認後才會顯示。',
+    steps: {
+      thinking: {
+        running: '思考中…',
+        done: '已思考',
+        runningTarget: '思考中：{target}…',
+        doneTarget: '已思考：{target}',
+      },
+      reading_document: {
+        running: '正在閱讀文件…',
+        done: '已閱讀文件',
+        runningTarget: '正在閱讀《{target}》…',
+        doneTarget: '已閱讀《{target}》',
+      },
+      listing_documents: {
+        running: '正在查看教材列表…',
+        done: '已查看教材列表',
+        runningTarget: '正在查看{target}…',
+        doneTarget: '已查看{target}',
+      },
+      reading_assignment: {
+        running: '正在閱讀作業…',
+        done: '已閱讀作業',
+        runningTarget: '正在閱讀作業《{target}》…',
+        doneTarget: '已閱讀作業《{target}》',
+      },
+      reading_submission: {
+        running: '正在查看提交…',
+        done: '已查看提交',
+        runningTarget: '正在查看提交《{target}》…',
+        doneTarget: '已查看提交《{target}》',
+      },
+      searching_memory: {
+        running: '正在搜尋記憶…',
+        done: '已搜尋記憶',
+        runningTarget: '正在搜尋記憶：{target}…',
+        doneTarget: '已搜尋記憶：{target}',
+      },
+      writing: {
+        running: '正在撰寫回答…',
+        done: '已撰寫回答',
+        runningTarget: '正在撰寫：{target}…',
+        doneTarget: '已撰寫：{target}',
+      },
+      tool: {
+        running: '正在使用工具…',
+        done: '已使用工具',
+        runningTarget: '正在使用 {target}…',
+        doneTarget: '已使用 {target}',
+      },
+    },
+  },
   conflict: {
     closed: '這段對話已經關閉，不能再寫入任何內容。',
   },

@@ -329,6 +329,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   operated elsewhere, a closed conversation, one waiting for approval) is one muted line above the
   composer, never an alert box. A new conversation has no title field: it is titled by the first
   line of its first message (`titleFrom`), and it offers a few ways to begin, which fill the box.
+  An answer in the making (`draft.ts`, the contract Core, the runtime and this app share) takes the
+  working line's place: `ChatDraft` under the agent's name, its steps (`ChatDraftSteps`: each done
+  step with a tick, 「已閱讀《HW1.pdf》」, the running one with the turning glyph, and the steps
+  done summed up, 「已查閱 3 項」, once text begins), then the text so far as Markdown with a caret;
+  where the answer waits for someone's confirmation (`text_hidden`), the steps and
+  「答案需經確認後才會顯示」. They are driven by the draft alone; `useConversation` holds it
+  (`draft`, null until Core sends one).
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

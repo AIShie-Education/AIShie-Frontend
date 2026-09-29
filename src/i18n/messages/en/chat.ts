@@ -132,6 +132,65 @@ export default {
     summarizeWeek: 'Summarise this week’s materials',
     practice: 'Give me a few practice questions',
   },
+  // An answer in the making (the draft: ChatDraft, ChatDraftSteps): the agent's steps, running and done, with
+  // what each works on (target) or without, and the answer's text, or that it shows once confirmed.
+  draft: {
+    consulted: 'Consulted {n} item | Consulted {n} items',
+    stepsLabel: 'What the agent is doing',
+    done: 'done',
+    running: 'under way',
+    hidden: 'The answer shows once someone confirms it.',
+    steps: {
+      thinking: {
+        running: 'Thinking…',
+        done: 'Thought',
+        runningTarget: 'Thinking: {target}…',
+        doneTarget: 'Thought: {target}',
+      },
+      reading_document: {
+        running: 'Reading a document…',
+        done: 'Read a document',
+        runningTarget: 'Reading “{target}”…',
+        doneTarget: 'Read “{target}”',
+      },
+      listing_documents: {
+        running: 'Looking through the materials…',
+        done: 'Looked through the materials',
+        runningTarget: 'Looking through {target}…',
+        doneTarget: 'Looked through {target}',
+      },
+      reading_assignment: {
+        running: 'Reading an assignment…',
+        done: 'Read an assignment',
+        runningTarget: 'Reading the assignment “{target}”…',
+        doneTarget: 'Read the assignment “{target}”',
+      },
+      reading_submission: {
+        running: 'Reading a submission…',
+        done: 'Read a submission',
+        runningTarget: 'Reading the submission “{target}”…',
+        doneTarget: 'Read the submission “{target}”',
+      },
+      searching_memory: {
+        running: 'Searching its memory…',
+        done: 'Searched its memory',
+        runningTarget: 'Searching its memory for “{target}”…',
+        doneTarget: 'Searched its memory for “{target}”',
+      },
+      writing: {
+        running: 'Writing the answer…',
+        done: 'Wrote the answer',
+        runningTarget: 'Writing: {target}…',
+        doneTarget: 'Wrote: {target}',
+      },
+      tool: {
+        running: 'Using a tool…',
+        done: 'Used a tool',
+        runningTarget: 'Using {target}…',
+        doneTarget: 'Used {target}',
+      },
+    },
+  },
   conflict: {
     closed: 'This conversation is closed, so nothing more can be written in it.',
   },

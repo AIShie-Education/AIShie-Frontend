@@ -24,11 +24,19 @@
 // (conversation.mark_read, up to the newest message held): when it opens, if
 // Core says the other has written since they last read it (conversation.get's
 // unread), and each time the other writes while it is shown.
+//
+// An answer in the making (draft): the agent's steps and its text so far, as
+// Core will send them with each read (the draft contract, draft.ts). Core's
+// catalogue has no conversation.draft yet, so `draft` stays null here and the
+// pane shows its working line instead. Wiring it is one small step once it
+// has: take the read's `draft` in take() (null when it has none), and give
+// the read that waits seen_draft_version, the version held.
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import { ApiError, read, write, type ToolOut } from '@/api/http'
 import type { ConversationMessage, ConversationView } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { usePolling, type PollContext } from '@/composables/usePolling'
+import type { ConversationDraft } from './draft'
 import {
   EARLY_MS,
   firstSeq,
@@ -84,6 +92,8 @@ export function useConversation(opts: UseConversationOptions) {
   const loadingOlder = ref(false)
   const olderError = ref<ApiError | null>(null)
   const loaded = ref(false)
+  /** The answer being written, as Core shows it to the caller; null until Core sends drafts (see above). */
+  const draft = shallowRef<ConversationDraft | null>(null)
 
   let disposed = false
   let lastFetchAt = 0
@@ -367,6 +377,7 @@ export function useConversation(opts: UseConversationOptions) {
   return {
     messages,
     view,
+    draft,
     visibleTo,
     loading,
     loaded,
