@@ -129,29 +129,28 @@ export const CORE_ORIGIN: string = (import.meta.env.VITE_CORE_PUBLIC_URL ?? '').
 /** Where an agent's MCP client connects (streamable HTTP, bearer token). */
 export const MCP_ENDPOINT = `${CORE_ORIGIN}/mcp`
 
-const TOKEN_KEY = 'aishiteru.bearer'
+/**
+ * Where a tab kept an API token pasted in on the sign-in page, when that page
+ * offered one. It no longer does: people sign in with a password, single
+ * sign-on or an invitation, and API tokens are for agents, which do not use
+ * the browser. Nothing sends what is kept there; a tab still holding one from
+ * an earlier version of the page is signed out (see the session store).
+ */
+const PASTED_TOKEN_KEY = 'aishiteru.bearer'
 
 /**
- * A browser normally signs in with a session cookie it cannot read. A bearer
- * token (an API token pasted in, for looking at the system as an agent sees
- * it) is kept for this tab only.
+ * Forgets an API token an earlier version of the page kept in this tab, and
+ * says whether there was one.
  */
-export const bearer = {
-  get(): string | null {
-    try {
-      return sessionStorage.getItem(TOKEN_KEY)
-    } catch {
-      return null
-    }
-  },
-  set(token: string | null) {
-    try {
-      if (token) sessionStorage.setItem(TOKEN_KEY, token)
-      else sessionStorage.removeItem(TOKEN_KEY)
-    } catch {
-      /* storage unavailable: the token lives only as long as nothing asks for it */
-    }
-  },
+export function forgetPastedToken(): boolean {
+  try {
+    if (sessionStorage.getItem(PASTED_TOKEN_KEY) === null) return false
+    sessionStorage.removeItem(PASTED_TOKEN_KEY)
+    return true
+  } catch {
+    // No storage: nothing was kept.
+    return false
+  }
 }
 
 type Listener = (e: ApiError) => void
@@ -205,9 +204,8 @@ async function send(
   path: string,
   init: { body?: unknown; headers?: Record<string, string>; signal?: AbortSignal } = {},
 ): Promise<RawResponse> {
+  // The browser's session cookie is the caller's only credential here.
   const headers: Record<string, string> = { Accept: 'application/json', ...init.headers }
-  const token = bearer.get()
-  if (token) headers.Authorization = `Bearer ${token}`
   let body: BodyInit | undefined
   if (init.body !== undefined) {
     headers['Content-Type'] = 'application/json'
@@ -685,8 +683,8 @@ export interface CoreAssertion {
 
 /**
  * Asks Core for an assertion of who is signed in, for the audience given
- * (the runtime's, as its GET /info names it), with the session cookie or the
- * pasted token, as every call to Core goes. The body is exactly
+ * (the runtime's, as its GET /info names it), with the session cookie, as
+ * every call to Core goes. The body is exactly
  * {"audience": …}: Core refuses anything more. Nothing is kept here, and the
  * assertion is in no error: Core's refusals are its own words.
  *

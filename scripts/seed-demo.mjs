@@ -9,21 +9,59 @@
 // Everything it creates stays: Core deletes nothing. Run it against a
 // development or scratch instance, not against one people use.
 //
-//   CORE_URL=http://localhost:8080 ROOT_TOKEN=ais_… DEMO_PASSWORD=… \
+//   CORE_URL=http://localhost:8080 ROOT_EMAIL=… ROOT_PASSWORD=… DEMO_PASSWORD=… \
 //     node scripts/seed-demo.mjs [--out demo.json]
 //
-// Every person it registers gets DEMO_PASSWORD, and an email under
-// @demo.test tagged with this run, so the script can run again. --out writes
-// what was made (ids, emails, API tokens for each actor) as JSON.
+// It acts as root, or another platform administrator: signed in with
+// ROOT_EMAIL and ROOT_PASSWORD, or with a session of theirs already, in
+// ROOT_TOKEN (the end-to-end tests' E2E_ROOT_TOKEN). People hold no API
+// tokens: only agents do.
+//
+// Every person it registers gets an email under @demo.test tagged with this
+// run, so the script can run again, and chooses DEMO_PASSWORD through an
+// invitation, as a person does; the session that signs them in is what the
+// script acts as them with. Each agent is given an API token. --out writes
+// what was made (ids, emails, the agents' API tokens and the people's
+// sessions, which last 12 hours) as JSON.
 
 import { writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 
 const CORE = (process.env.CORE_URL || 'http://localhost:8080').replace(/\/+$/, '')
-const ROOT = process.env.ROOT_TOKEN
 const PASSWORD = process.env.DEMO_PASSWORD
-if (!ROOT) throw new Error('ROOT_TOKEN is required: an API token of a root or admin actor')
 if (!PASSWORD || PASSWORD.length < 10) throw new Error('DEMO_PASSWORD is required, 10 characters or more')
+
+/** The session a sign-in or an invitation taken up gives: the cookie Core sets, which it takes as a bearer token too. */
+function sessionOf(res) {
+  return res.headers
+    .getSetCookie()
+    .map((c) => /^ais_session=([^;]+)/.exec(c)?.[1])
+    .find((v) => !!v)
+}
+
+async function post(path, body) {
+  const res = await fetch(CORE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const session = sessionOf(res)
+  if (res.status !== 200 || !session) throw new Error(`POST ${path}: HTTP ${res.status} ${await res.text()}, and no session`)
+  const out = await res.json()
+  if (out.password_change_required) throw new Error(`POST ${path}: signed in, but the password must be changed first`)
+  return session
+}
+
+async function rootSession() {
+  if (process.env.ROOT_TOKEN) return process.env.ROOT_TOKEN
+  const email = process.env.ROOT_EMAIL
+  const password = process.env.ROOT_PASSWORD
+  if (!email || !password) {
+    throw new Error("ROOT_EMAIL and ROOT_PASSWORD (a root or admin actor's), or ROOT_TOKEN (a session of theirs), are required")
+  }
+  return post('/v1/auth/login', { email, password })
+}
+const ROOT = await rootSession()
 const outIdx = process.argv.indexOf('--out')
 const outFile = outIdx === -1 ? null : process.argv[outIdx + 1]
 const tag = (process.env.DEMO_TAG || randomUUID().slice(0, 6)).toLowerCase()
@@ -98,9 +136,15 @@ const people = {
 for (const [key, p] of Object.entries(people)) {
   const email = p.kind === 'human' ? `${key}+${tag}@demo.test` : undefined
   const { actor_id } = await call(ROOT, 'actor.register', { ...p, email })
-  const tok = await call(ROOT, 'actor.issue_token', { actor_id, label: `demo ${tag}`, expires_in_days: 90 })
-  if (p.kind === 'human') await call(tok.token, 'credential.set_password', { password: PASSWORD })
-  made.actors[key] = { actor_id, email, display_name: p.display_name, kind: p.kind, token: tok.token }
+  let token
+  if (p.kind === 'human') {
+    // A person chooses their password through an invitation, and is signed in.
+    const invite = await call(ROOT, 'actor.invite', { actor_id, expires_in_days: 1 })
+    token = await post('/v1/auth/invite', { token: invite.token, password: PASSWORD })
+  } else {
+    token = (await call(ROOT, 'actor.issue_token', { actor_id, label: `demo ${tag}`, expires_in_days: 90 })).token
+  }
+  made.actors[key] = { actor_id, email, display_name: p.display_name, kind: p.kind, token }
 }
 const A = made.actors
 

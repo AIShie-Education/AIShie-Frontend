@@ -1,6 +1,8 @@
 <script setup lang="ts">
-// actor.issue_token: an API token for another actor, shown once. Says
-// `issued` when Core has made one, for the list of their tokens to show it.
+// actor.issue_token: an API token for an agent, shown once. Only agents are
+// given one: a person signs in with a password, single sign-on or an
+// invitation. Says `issued` when Core has made one, for the list of its
+// tokens to show it.
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -8,7 +10,7 @@ import type { Actor, ToolOut } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import TokenRevealDialog from './TokenRevealDialog.vue'
 
-const props = defineProps<{ actor: Actor; isSelf?: boolean; blockedReason?: string | null }>()
+const props = defineProps<{ actor: Actor; blockedReason?: string | null }>()
 const emit = defineEmits<{ issued: [] }>()
 const { t } = useI18n()
 
@@ -75,7 +77,7 @@ function forget() {
 <template>
   <section class="app-card">
     <h2 class="app-card__title">{{ t('admin.token.title') }}</h2>
-    <p class="app-muted token__intro">{{ isSelf ? t('admin.token.introSelf') : t('admin.token.intro') }}</p>
+    <p class="app-muted token__intro">{{ t('admin.token.intro') }}</p>
     <el-alert v-if="blockedReason" type="info" :closable="false" show-icon :title="blockedReason" />
     <el-form v-else ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <el-alert
@@ -129,7 +131,7 @@ function forget() {
       </div>
     </el-form>
 
-    <TokenRevealDialog v-model="revealing" :issued="issued" :actor-kind="actor.kind" @closed="forget" />
+    <TokenRevealDialog v-model="revealing" :issued="issued" @closed="forget" />
   </section>
 </template>
 

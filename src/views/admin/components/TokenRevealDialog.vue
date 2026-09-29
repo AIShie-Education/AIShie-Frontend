@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// A token just issued, shown the one time it can be: Core keeps only its
-// hash. With how to connect with it over MCP.
+// A token just issued to an agent, shown the one time it can be: Core keeps
+// only its hash. With how to connect with it over MCP.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -10,7 +10,7 @@ import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
 
 const open = defineModel<boolean>({ required: true })
-const props = defineProps<{ issued: ToolOut<'actor.issue_token'> | null; actorKind: string }>()
+const props = defineProps<{ issued: ToolOut<'actor.issue_token'> | null }>()
 const emit = defineEmits<{ closed: [] }>()
 const { t } = useI18n()
 
@@ -126,7 +126,6 @@ function finish() {
         </div>
       </div>
       <p class="app-form-hint">{{ t('admin.token.mcpNotes') }}</p>
-      <p v-if="actorKind === 'human'" class="app-form-hint">{{ t('admin.token.humanHint') }}</p>
     </template>
     <template #footer>
       <el-button type="primary" @click="finish">{{ t('admin.token.doneCopying') }}</el-button>

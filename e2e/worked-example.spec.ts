@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { courseTab, coursePath, demo, pickOption, signIn, signInWithToken, toast } from './support'
+import { call, courseTab, coursePath, demo, pickOption, signIn, toast } from './support'
 
 // Core's schema §5, told through the app: a grading agent proposes a grade,
 // the instructor approves it, posts it, and the student sees it.
@@ -107,19 +107,19 @@ test.describe.serial('the worked example', () => {
     await expect(page.locator('.gradebook__total-value')).not.toHaveText('—')
   })
 
-  test('the grader sees in My actions that its proposal was approved and carried out', async ({ page }) => {
+  // The grader, an agent, learns it from Core (it does not sign in to the
+  // app); the proposal's page says the same to the people in the course.
+  test('the grader learns its proposal was approved and carried out; the proposal’s page says so', async ({ page }) => {
     const d = demo()
-    await signInWithToken(page, d.actors.grader)
-    await page.goto(coursePath())
-    await courseTab(page, 'My actions').click()
-    // (Other specs may have had the grader propose more; this is the 9.5.)
-    const row = page.locator('.el-table__row').filter({ hasText: 'Enter a grade' }).filter({ hasText: '9.5 / 10' })
-    await expect(row).toHaveCount(1)
-    await expect(row).toContainText('Executed')
-    // The grader may not read the member list, so who decided is not named here.
+    const mine = await call(d.actors.grader.token, 'GET', `/v1/courses/${d.course.id}/actions/mine?limit=100`)
+    expect(mine.status, JSON.stringify(mine.body)).toBe(200)
+    const its = (mine.body.result.actions as { id: string; status: string }[]).find(
+      (a) => a.id === d.course.proposed_grade_action,
+    )
+    expect(its?.status, JSON.stringify(its)).toBe('executed')
 
-    await row.getByRole('link', { name: 'Enter a grade' }).click()
-    await expect(page).toHaveURL(new RegExp(`/actions/${d.course.proposed_grade_action}$`))
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath(`actions/${d.course.proposed_grade_action}`))
     await expect(page.locator('.page-header').getByText('Executed')).toBeVisible()
     const history = page.locator('.action-timeline')
     await expect(history).toContainText('Approved by')

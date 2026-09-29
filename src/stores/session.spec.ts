@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { ApiError } from '@/api/http'
+import { ApiError, read } from '@/api/http'
 
 // Who me.get says is signed in, and what taking up an invitation answers.
 let me: { id: string; display_name: string; platform_role?: string | null; administers?: unknown[] | null } | null =
@@ -48,6 +48,34 @@ beforeEach(() => {
   me = null
   mustChange = false
   forgetRuntimeAssertion.mockClear()
+})
+
+describe('a tab an earlier version of the page signed in with a pasted API token', () => {
+  it('starts signed out, forgets the token, and asks Core nothing with it', async () => {
+    // The browser may be signed in all the same, with a session cookie from another tab.
+    me = { id: 'p1', display_name: 'Chan Tai Man' }
+    sessionStorage.setItem('aishiteru.bearer', 'ais_abcdefghijkl_pasted-in-an-earlier-version')
+    vi.mocked(read).mockClear()
+    const session = useSessionStore()
+    await session.ensure()
+    expect(session.status).toBe('signedOut')
+    expect(session.me).toBeNull()
+    expect(sessionStorage.getItem('aishiteru.bearer')).toBeNull()
+    expect(read).not.toHaveBeenCalled()
+
+    // Loaded again, nothing of it is left: the tab is whoever the browser is signed in as.
+    setActivePinia(createPinia())
+    const again = useSessionStore()
+    await again.ensure()
+    expect(again.status).toBe('signedIn')
+    expect(again.me?.id).toBe('p1')
+  })
+
+  it('is a way in no more: the store signs in with no token', () => {
+    const session = useSessionStore()
+    expect('signInWithToken' in session).toBe(false)
+    expect('usingToken' in session).toBe(false)
+  })
 })
 
 describe('signInWithInvite', () => {

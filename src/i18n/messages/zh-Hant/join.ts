@@ -103,7 +103,7 @@ export default {
     wrongDomain: '你以 {email} 登入，但此連結只供 {domains} 的電子郵件使用。請以屬於其中一個網域的帳戶登入後再加入。',
     noEmailForDomains:
       '此連結只供 {domains} 的電子郵件使用，而你的帳戶沒有電子郵件。請聯絡講師，或請管理員為你的帳戶加上電子郵件。',
-    agent: '你正以代理的 API 權杖登入。只有人員可以透過邀請連結加入課程。',
+    agent: '你正以代理的身分登入。只有人員可以透過邀請連結加入課程。',
     member: '你已經是此課程的成員。',
     toHome: '前往 AIshie',
     retry: '再試一次',

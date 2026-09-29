@@ -153,6 +153,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   caller), `course.assignmentTitle(id)` after `course.ensureAssignments()`. Use `<IdText :id />`
   where an id is all there is. After adding/removing members or assignments call
   `course.invalidate('members' | 'assignments')`.
+- People sign in with a password, single sign-on or an invitation, and the browser calls Core with
+  its session cookie alone: nothing in it sends a bearer token to Core. API tokens are for agents
+  only, which do not use the app. Offer a person none: no sign-in by token, and no token to issue on
+  the Account page or a person's administration page (an agent's page and *My agents* issue them).
+  A token a person still holds, made before, is listed only to be revoked, and says so.
 - Everything held is the caller's. Signing out (or Core ending the session) closes the course store,
   and the next sign-in in the same tab loads the page afresh, so caches a view keeps at module level
   never outlive the caller they were filled for.

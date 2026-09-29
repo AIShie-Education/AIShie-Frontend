@@ -1,8 +1,11 @@
 // Who is signed in, and the courses they are seated in.
 //
 // A browser signs in with a session cookie it cannot read, so "am I signed
-// in" is answered by asking Core who the caller is (me.get). A pasted API
-// token is the other way in, for seeing the system as an agent sees it.
+// in" is answered by asking Core who the caller is (me.get). People sign in
+// with a password, single sign-on or an invitation; API tokens are for
+// agents, which do not use the browser. A tab that an earlier version of the
+// page signed in with a pasted API token still holds it: the token is
+// forgotten, never sent, and the tab starts signed out (forgetPastedToken).
 //
 // Everything else the page holds (the open course, the seat's permissions,
 // names and look-ups cached by the views) belongs to one caller. When the
@@ -20,7 +23,7 @@ import { computed, ref } from 'vue'
 import {
   acceptInvite,
   ApiError,
-  bearer,
+  forgetPastedToken,
   isPasswordChangeRequired,
   joinRegister,
   login,
@@ -46,8 +49,8 @@ const RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
 export const useSessionStore = defineStore('session', () => {
   const me = ref<Me | null>(null)
   const memberships = ref<Membership[]>([])
-  const status = ref<SessionStatus>('unknown')
-  const usingToken = ref(!!bearer.get())
+  // A pasted token found in this tab: signed out, without asking Core.
+  const status = ref<SessionStatus>(forgetPastedToken() ? 'signedOut' : 'unknown')
   let loading: Promise<void> | null = null
   /** Whether this page has held a caller who has since gone. */
   let heldCaller = false
@@ -153,8 +156,6 @@ export const useSessionStore = defineStore('session', () => {
     opts: { asLogin?: boolean } = {},
   ): Promise<{ passwordChangeRequired: boolean }> {
     forgetCaller()
-    bearer.set(null)
-    usingToken.value = false
     const out = await login(name, password, opts)
     if (out?.password_change_required) {
       requirePasswordChange()
@@ -180,8 +181,6 @@ export const useSessionStore = defineStore('session', () => {
   ): Promise<{ email: string | null; loginId: string | null }> {
     const out = await acceptInvite(token, password)
     forgetCaller()
-    bearer.set(null)
-    usingToken.value = false
     status.value = 'unknown'
     await ensure().catch(() => undefined)
     return { email: out.email ?? null, loginId: out.login_id ?? null }
@@ -197,35 +196,14 @@ export const useSessionStore = defineStore('session', () => {
   async function registerThroughJoinLink(token: string, form: JoinRegistration): Promise<Joined> {
     const out = await joinRegister(token, form)
     forgetCaller()
-    bearer.set(null)
-    usingToken.value = false
     status.value = 'unknown'
     await ensure().catch(() => undefined)
     return { course_id: out.course_id, member_id: out.member_id }
   }
 
-  async function signInWithToken(token: string) {
-    forgetCaller()
-    bearer.set(token.trim())
-    usingToken.value = true
-    status.value = 'unknown'
-    await ensure().catch(() => undefined)
-    if (!signedIn()) {
-      bearer.set(null)
-      usingToken.value = false
-      status.value = 'signedOut'
-      throw new ApiError({ status: 401, code: 'unauthenticated', message: 'the token was not accepted' })
-    }
-  }
-
-  function signedIn(): boolean {
-    return status.value === 'signedIn'
-  }
-
   async function signOut() {
     try {
-      if (usingToken.value) bearer.set(null)
-      else await apiLogout()
+      await apiLogout()
     } finally {
       clear()
     }
@@ -235,10 +213,6 @@ export const useSessionStore = defineStore('session', () => {
   function clear() {
     forgetCaller()
     status.value = 'signedOut'
-    if (usingToken.value) {
-      bearer.set(null)
-      usingToken.value = false
-    }
   }
 
   /**
@@ -292,7 +266,6 @@ export const useSessionStore = defineStore('session', () => {
     memberships,
     liveMemberships,
     status,
-    usingToken,
     isRoot,
     isAdmin,
     administers,
@@ -307,7 +280,6 @@ export const useSessionStore = defineStore('session', () => {
     passwordChanged,
     signInWithInvite,
     registerThroughJoinLink,
-    signInWithToken,
     signOut,
     clear,
     startsAfresh,

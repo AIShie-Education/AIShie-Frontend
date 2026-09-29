@@ -1,25 +1,24 @@
 <script setup lang="ts">
-// Every way into the caller's account (credential.list), revoking one
-// (credential.revoke), and making an API token (credential.issue_token). A
-// token an administrator issued them says who.
+// Every way into the caller's account (credential.list), and revoking one
+// (credential.revoke): their password, single sign-on, an invitation, and the
+// browser sessions these began. API tokens are for agents only, and none is
+// made here. One a person still holds (made before, or issued by an
+// administrator) is listed, with who issued it, and says it is to be revoked.
 import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ApiError } from '@/api/http'
-import type { Credential, ToolOut } from '@/api/types'
+import type { Credential } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
-import IssueTokenDialog from './IssueTokenDialog.vue'
-import TokenRevealDialog from './TokenRevealDialog.vue'
 import {
   credentialState,
   invitedBy,
-  isCurrentToken,
   linkedBy,
   maskedToken,
   sessionOrigin,
@@ -40,11 +39,10 @@ const router = useRouter()
 const session = useSessionStore()
 
 const showInactive = ref(false)
-// The session this browser signs in with, when it can be told; null when it
-// cannot, and when this tab signs in with a token instead.
+// The session this browser signs in with, when it can be told; null when it cannot.
 const thisSession = computed(() => thisBrowserSession(props.credentials ?? [], props.listedAt))
 function isCurrent(c: Credential): boolean {
-  return isCurrentToken(c) || (!!thisSession.value && c.id === thisSession.value)
+  return !!thisSession.value && c.id === thisSession.value
 }
 const all = computed(() =>
   (props.credentials ?? []).map((c) => ({ c, state: credentialState(c), current: isCurrent(c) })),
@@ -53,7 +51,7 @@ const inactiveCount = computed(() => all.value.filter((x) => x.state !== 'active
 const shown = computed(() =>
   all.value
     .filter((x) => showInactive.value || x.state === 'active')
-    // This tab's own token or session first, then live before dead; Core's order (newest first) otherwise.
+    // This browser's own session first, then live before dead; Core's order (newest first) otherwise.
     .sort(
       (a, b) => Number(b.current) - Number(a.current) || Number(b.state === 'active') - Number(a.state === 'active'),
     ),
@@ -127,14 +125,12 @@ function revokeLines(c: Credential, current: boolean): string[] {
   switch (c.kind) {
     case 'api_token':
       lines.push(t('account.revoke.api_token', { name: maskedToken(c.token_prefix) }))
-      if (current) lines.push(t('account.revoke.current'))
       break
     case 'session':
       lines.push(t('account.revoke.session'))
       if (current) lines.push(t('account.revoke.currentSession'))
-      // When this browser's session cannot be told from the others, warn
-      // whenever this tab signs in with a cookie at all.
-      else if (!session.usingToken && !thisSession.value) lines.push(t('account.revoke.sessionMaybeMine'))
+      // When this browser's session cannot be told from the others, it may be any of them.
+      else if (!thisSession.value) lines.push(t('account.revoke.sessionMaybeMine'))
       break
     case 'password':
       lines.push(t('account.revoke.password'))
@@ -179,42 +175,11 @@ async function revoke(c: Credential) {
   if (out.status === 'executed' && current) {
     // Signed out already: reading the list again would only be refused.
     await session.signOut().catch(() => undefined)
-    const message = c.kind === 'session' ? t('account.revoke.signedOutSession') : t('account.revoke.signedOut')
-    ElMessage({ type: 'warning', message, duration: 6000 })
+    ElMessage({ type: 'warning', message: t('account.revoke.signedOutSession'), duration: 6000 })
     router.push({ name: 'login' })
     return
   }
   emit('changed')
-}
-
-async function revokeById(id: string) {
-  // The list may not have caught up with a token just made: what is known of
-  // it from the call that made it is enough to revoke it.
-  const fromList = props.credentials?.find((x) => x.id === id)
-  const made = issued.value
-  const c: Credential | null =
-    fromList ??
-    (made && made.credential_id === id
-      ? { id, kind: 'api_token', token_prefix: made.token_prefix, created_at: new Date().toISOString() }
-      : null)
-  if (c) await revoke(c)
-}
-
-// --- Issuing ----------------------------------------------------------------
-const issueOpen = ref(false)
-const revealOpen = ref(false)
-const issued = ref<ToolOut<'credential.issue_token'> | null>(null)
-
-function onIssued(out: ToolOut<'credential.issue_token'>) {
-  issued.value = out
-  revealOpen.value = true
-  emit('changed')
-}
-
-// The token is not kept any longer than the dialog that shows it: what is
-// left is enough to revoke it by (revokeById).
-function forgetSecret() {
-  if (issued.value) issued.value = { ...issued.value, token: '' }
 }
 </script>
 
@@ -222,10 +187,6 @@ function forgetSecret() {
   <section class="app-card creds-card">
     <h2 class="app-card__title">
       <span>{{ t('account.credentials.title') }}</span>
-      <el-button type="primary" @click="issueOpen = true">
-        <el-icon><Plus /></el-icon>
-        <span>{{ t('account.credentials.newToken') }}</span>
-      </el-button>
     </h2>
     <p class="app-form-hint creds-card__sub">{{ t('account.credentials.subtitle') }}</p>
 
@@ -258,7 +219,7 @@ function forgetSecret() {
                 {{ t(`account.credentials.state.${state}`) }}
               </el-tag>
               <el-tag v-if="current" type="warning" effect="dark" size="small" disable-transitions>
-                {{ c.kind === 'session' ? t('account.credentials.thisBrowser') : t('account.credentials.thisTab') }}
+                {{ t('account.credentials.thisBrowser') }}
               </el-tag>
             </div>
             <div class="creds-item__meta">
@@ -306,6 +267,9 @@ function forgetSecret() {
                 {{ note(c) }}
               </span>
             </div>
+            <p v-if="c.kind === 'api_token' && state === 'active'" class="creds-item__agents-only">
+              {{ t('account.credentials.agentsOnly') }}
+            </p>
           </div>
           <div v-if="state === 'active'" class="creds-item__actions">
             <el-button type="danger" plain size="small" :loading="revoking === c.id" @click="revoke(c)">
@@ -314,13 +278,10 @@ function forgetSecret() {
           </div>
         </li>
       </ul>
-      <p v-if="hasSessions && !session.usingToken" class="app-form-hint creds-card__note">
+      <p v-if="hasSessions" class="app-form-hint creds-card__note">
         {{ thisSession ? t('account.credentials.sessionNote') : t('account.credentials.sessionNoteUnsure') }}
       </p>
     </AsyncState>
-
-    <IssueTokenDialog v-model="issueOpen" @issued="onIssued" @proposed="emit('changed')" />
-    <TokenRevealDialog v-model="revealOpen" :issued="issued" @revoke="revokeById" @closed="forgetSecret" />
   </section>
 </template>
 
@@ -403,6 +364,11 @@ function forgetSecret() {
 }
 .creds-item__note {
   word-break: break-word;
+}
+.creds-item__agents-only {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--el-color-warning-dark-2);
 }
 .creds-item__actions {
   flex-shrink: 0;

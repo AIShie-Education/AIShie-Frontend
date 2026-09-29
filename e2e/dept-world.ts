@@ -10,12 +10,14 @@
 // role: Bob is appointed during the tests, Chan is an instructor to seat,
 // Dora a student. A course sits in AI, Computing, Design and History each.
 import { randomUUID } from 'node:crypto'
+import { acceptInvitation } from './support'
 
 export interface Person {
   actor_id: string
   display_name: string
   email: string
   kind: 'human'
+  /** Their signed-in session, which the tests call Core with as them: people hold no API tokens. */
   token: string
 }
 export interface DeptWorld {
@@ -83,12 +85,14 @@ export async function buildDeptWorld(core: string, rootToken: string, password: 
   const humanities = await dept('Humanities', university.id)
   const history = await dept('History', humanities.id)
 
+  // A person chooses their password through an invitation, as people do, and
+  // is signed in by it.
   async function person(key: string, display_name: string): Promise<Person> {
     const email = `${key}+${tag}@dept.test`
     const { actor_id } = await call(rootToken, 'actor.register', { kind: 'human', display_name, email })
-    const tok = await call(rootToken, 'actor.issue_token', { actor_id, label: `dept ${tag}`, expires_in_days: 7 })
-    await call(tok.token, 'credential.set_password', { password })
-    return { actor_id, display_name, email, kind: 'human', token: tok.token }
+    const invite = await call(rootToken, 'actor.invite', { actor_id, expires_in_days: 1 })
+    const token = await acceptInvitation(base, invite.token, password)
+    return { actor_id, display_name, email, kind: 'human', token }
   }
   const people = {
     ada: await person('ada', 'Ada Lovelace'),

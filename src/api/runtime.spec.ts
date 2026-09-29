@@ -567,16 +567,18 @@ describe('the assertion stays secret', () => {
   })
 
   it('goes only to the runtime, and Core’s own credential never does', async () => {
-    http.bearer.set('ais_abcdefghijkl_pasted-core-token')
+    // A token an earlier version of the sign-in page kept in this tab, which nothing sends now.
+    sessionStorage.setItem('aishiteru.bearer', 'ais_abcdefghijkl_pasted-core-token')
     runtimeAnswers.push(json(200, {}))
     await rt.runtimeApi.get('/a')
-    // Core is asked with the pasted token, as every call to Core is …
-    expect(mintCalls()[0].headers.Authorization).toBe('Bearer ais_abcdefghijkl_pasted-core-token')
+    // Core is asked with the session cookie alone, as every call to Core is …
+    expect(mintCalls()[0].credentials).toBe('include')
+    expect(mintCalls()[0].headers.Authorization).toBeUndefined()
     // … and the runtime sees the assertion alone, with no cookie.
     const call = runtimeCalls()[0]
     expect(call.headers.Authorization).toBe(`Bearer ${minted[0]}`)
     expect(call.credentials).toBe('omit')
-    expect(JSON.stringify(calls.filter((c) => c.url.startsWith('/runtime/')))).not.toContain('ais_abcdefghijkl')
+    expect(JSON.stringify(calls)).not.toContain('ais_abcdefghijkl')
   })
 })
 

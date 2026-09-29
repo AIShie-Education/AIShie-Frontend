@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { call, demo, signInWithToken, type DemoActor } from './support'
+import { call, demo, signInAsRoot } from './support'
 
 // An administrator who has just created a course holds no seat in it, and a
 // platform role opens no course. The app has to show them the course anyway,
 // say why its pages refuse them, and lead them to seating an instructor.
 test.describe('an administrator and a course they have no seat in', () => {
+  // Root's signed-in session (scripts/ci-core.sh), for arranging things through Core.
   const rootToken = process.env.E2E_ROOT_TOKEN!
-  const root: DemoActor = { actor_id: '', display_name: 'root', kind: 'agent', token: rootToken }
   const title = `Seatless course ${Date.now().toString(36)}`
   let courseId = ''
 
@@ -24,7 +24,7 @@ test.describe('an administrator and a course they have no seat in', () => {
   })
 
   test('home lists it apart, and its own pages say how to get in', async ({ page }) => {
-    await signInWithToken(page, root)
+    await signInAsRoot(page)
     await page.goto('/')
     const section = page.locator('section.home-unseated')
     await expect(section.getByRole('heading', { name: 'Courses you administer without a seat' })).toBeVisible()
@@ -38,7 +38,7 @@ test.describe('an administrator and a course they have no seat in', () => {
   })
 
   test('seating oneself as instructor opens the course', async ({ page }) => {
-    await signInWithToken(page, root)
+    await signInAsRoot(page)
     await page.goto(`/admin/courses/${courseId}`)
     await page.getByRole('button', { name: 'Me', exact: true }).click()
     await page.getByRole('button', { name: 'Seat as instructor' }).click()

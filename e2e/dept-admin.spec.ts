@@ -9,6 +9,7 @@ import { toast } from './support'
 // themselves to work inside a course, and are told why Core refuses them.
 // The world is this run's own (dept-world.ts): Ada administers Engineering.
 const core = process.env.E2E_CORE_URL || 'http://localhost:8080'
+// Root's signed-in session (scripts/ci-core.sh), which Core takes as a bearer token.
 const rootToken = () => process.env.E2E_ROOT_TOKEN!
 let w: DeptWorld
 

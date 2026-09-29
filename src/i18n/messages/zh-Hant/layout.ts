@@ -1,7 +1,6 @@
 export default {
   courses: '課程',
   menu: '選單',
-  tokenMode: '以權杖登入',
   // The tab's name on a page that does not exist (the router's catch-all).
   notFound: '找不到頁面',
   // Labels Element Plus gives screen readers on tables (i18n/elementPlus.ts).

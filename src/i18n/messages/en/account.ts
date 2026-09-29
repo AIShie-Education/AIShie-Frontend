@@ -3,10 +3,6 @@
 export default {
   title: 'Account',
   subtitle: 'Who you are signed in as, where you are seated, and the ways into this account',
-  tokenMode: {
-    title: 'This tab is signed in with an API token',
-    body: 'Everything done here is done as the owner of the token. Signing out forgets the token in this tab only; it keeps working everywhere else until it is revoked or expires.',
-  },
   profile: {
     title: 'Profile',
     kind: 'Kind',
@@ -38,9 +34,9 @@ export default {
     isSet: 'You can sign in with your email address and password.',
     isSetLoginId: 'You can sign in with your student or staff number, or your email, and your password.',
     setOn: 'Set',
-    notSet: 'No password is set. You sign in another way: single sign-on, or a token.',
+    notSet: 'No password is set. You sign in another way, such as single sign-on.',
     noEmail:
-      'This account has neither a student/staff number nor an email address, so it cannot sign in with a password, which is always entered with one. It signs in with single sign-on or a token instead, until an administrator gives it one.',
+      'This account has neither a student/staff number nor an email address, so it cannot sign in with a password, which is always entered with one. It signs in with single sign-on instead, until an administrator gives it one.',
     unknown: 'Whether a password is set could not be read.',
     set: 'Set a password',
     change: 'Change password',
@@ -52,16 +48,15 @@ export default {
     tooShort: 'At least 10 characters (letters outside English count as two or three each)',
     tooLong: 'At most 1024 characters',
     mismatch: 'The two passwords are not the same',
-    effect: 'Your old password stops working at once. Browsers and tokens already signed in stay signed in.',
+    effect: 'Your old password stops working at once. Browsers already signed in stay signed in.',
     done: 'Password saved',
   },
   credentials: {
-    title: 'Sign-ins and tokens',
-    subtitle: 'Every way into this account. Secrets are never shown again after they are made.',
-    newToken: 'New API token',
+    title: 'Sign-in methods and sessions',
+    subtitle:
+      'Every way into this account: a password, single sign-on, an invitation link, and the browser sessions they began.',
     showInactive: 'Show revoked and expired ({n})',
     empty: 'No active credentials',
-    thisTab: 'This tab',
     thisBrowser: 'This browser',
     sessionVia: {
       password: 'Signed in with a password',
@@ -69,6 +64,8 @@ export default {
       invite: 'Signed in by accepting an invitation',
     },
     token: 'Token',
+    // Under an API token a person still holds: only agents are given them.
+    agentsOnly: 'API tokens are for agents only: revoke this one.',
     subject: 'Account',
     linkedBy: 'Linked by',
     invitedBy: 'Invited by',
@@ -96,7 +93,6 @@ export default {
     api_token: 'Anything using the token {name} is refused from its next call.',
     session: 'The browser signed in with this session is signed out on its next request.',
     sessionMaybeMine: 'If it is the session this browser is using, you will be signed out here as well.',
-    current: 'This is the token this tab is signed in with: you will be signed out here.',
     currentSession: 'This is the session this browser is signed in with: you will be signed out here.',
     password: 'You will no longer be able to sign in with your password, until you set a new one.',
     sso: 'You will no longer be able to sign in through {provider}, until an administrator links that identity to this account again.',
@@ -104,46 +100,6 @@ export default {
     irreversible: 'A revoked credential cannot be brought back.',
     confirm: 'Revoke',
     done: 'Revoked',
-    signedOut: 'The token this tab used is revoked; you have been signed out.',
     signedOutSession: 'This browser’s session is revoked; you have been signed out.',
-  },
-  issue: {
-    title: 'New API token',
-    intro:
-      'A token lets a program or an agent do anything you can: with your seats and permissions in every course you are seated in, and with this account itself (it can set your password and make or revoke tokens).',
-    platformRole:
-      'This token also carries your platform role ({role}): whoever holds it can administer the platform, as you can.',
-    label: 'Label',
-    labelPlaceholder: 'e.g. grading script on my laptop',
-    labelHelp: 'What it is for, so that you can recognise it in the list later.',
-    labelRequired: 'A label is required',
-    expiry: 'Expires',
-    never: 'Never',
-    after: 'After a number of days',
-    days: 'days',
-    daysHelp: 'From 1 to 3650 days.',
-    daysInvalid: 'Enter a whole number of days from 1 to 3650',
-    noExpiryWarn:
-      'A token that never expires keeps working until it is revoked. Prefer an expiry for anything you do not watch.',
-    submit: 'Create token',
-  },
-  token: {
-    title: 'Your new API token',
-    warning: 'Copy it now. It is not stored anywhere, and it will not be shown again.',
-    copy: 'Copy',
-    copied: 'Copied to the clipboard',
-    copyFailed: 'It could not be copied automatically. Select the token and copy it yourself.',
-    usage: 'Send it in the Authorization header of each request:',
-    listedAs: 'In your list it appears as',
-    expires: 'Expires',
-    never: 'Never expires',
-    done: 'I have copied it',
-    closeUncopiedTitle: 'Close without copying?',
-    closeUncopied: 'The token will not be shown again. If you lose it, revoke it and make a new one.',
-    closeAnyway: 'Close anyway',
-    missingTitle: 'The token cannot be shown',
-    missing:
-      'This token was made by an earlier attempt of the same request, and a token is shown only once. If you did not keep it, revoke it and make a new one.',
-    revokeIt: 'Revoke it',
   },
 }

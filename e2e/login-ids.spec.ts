@@ -8,7 +8,7 @@ import {
   registerPerson,
   root,
   signIn,
-  signInWithToken,
+  signInAsRoot,
   toast,
   type DemoActor,
 } from './support'
@@ -170,8 +170,9 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await expect(result.locator('.reset-dialog__login')).toHaveText(lena.login_id)
     const shown = result.locator('[data-test="temporary-password"]')
     await expect(shown).toHaveText(/^[a-z2-9]{4}(-[a-z2-9]{4}){3}$/)
-    // Lena was signed in, in the test before: that session ends.
-    await expect(result).toContainText('Their 1 session was signed out.')
+    // Lena was signed in twice: by the invitation she took up when she was
+    // registered (beforeAll), and in the test before. Both sessions end.
+    await expect(result).toContainText('Their 2 sessions were signed out.')
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     await result.getByRole('button', { name: 'Copy' }).click()
     await expect(toast(page, 'Copied')).toBeVisible()
@@ -186,7 +187,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await page.goto(`/courses/${courseId}/activity`)
     const item = page.locator('.event-item').filter({ hasText: 'Student’s password reset' }).first()
     await expect(item).toBeVisible()
-    await expect(item).toContainText('1 session signed out')
+    await expect(item).toContainText('2 sessions signed out')
 
     // In Traditional Chinese: a second reset, whose password is the one handed on.
     await inTraditionalChinese(page)
@@ -212,7 +213,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     expect(temporary, 'the password from the test before').not.toBe('')
     // An administrator sees the password is a temporary one, and who set it.
     const admin = await stranger(browser, baseURL)
-    await signInWithToken(admin.page, root())
+    await signInAsRoot(admin.page)
     await admin.page.goto(`/admin/actors/${lena.actor_id}`)
     const set = admin.page.locator('.creds-other').filter({ hasText: 'Temporary' })
     await expect(set).toHaveCount(1)
@@ -353,7 +354,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
   })
 
   test('an administrator gives a person a number, and vouches for one typed in through a link', async ({ page }) => {
-    await signInWithToken(page, root())
+    await signInAsRoot(page)
     await page.goto('/admin/actors')
     await page.locator('.page-header').getByRole('button', { name: 'Register' }).click()
     const register = page.getByRole('dialog', { name: 'Register a person or agent' })

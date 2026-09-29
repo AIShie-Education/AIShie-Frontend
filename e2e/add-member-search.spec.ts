@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { call, coursePath, demo, root, signIn, signInWithToken, toast } from './support'
+import { call, coursePath, demo, root, signIn, signInAsRoot, toast } from './support'
 
 // A platform administrator seated in a course finds whom to add by name or
 // email, since the directory (actor.list) answers them; the search fills in
@@ -51,7 +51,7 @@ test('an administrator finds whom to add by name, and the search fills in their 
       return route.continue()
     },
   )
-  await signInWithToken(page, root())
+  await signInAsRoot(page)
   await page.goto(`/courses/${courseId}/members`)
   await page.getByRole('button', { name: 'Add member' }).click()
   const dialog = page.getByRole('dialog', { name: 'Add a member' })
@@ -143,7 +143,7 @@ test('on a Core without the directory, an administrator finds people by their ID
       })
     },
   )
-  await signInWithToken(page, root())
+  await signInAsRoot(page)
 
   // People & agents: no list, a way to open someone by ID, and Register as before.
   await page.goto('/admin/actors')

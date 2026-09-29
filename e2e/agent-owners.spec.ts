@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Browser, type Page } from '@playwright/test'
-import { call, courseTab, coursePath, demo, root, signIn, signInWithToken, toast, type DemoActor } from './support'
+import { call, courseTab, coursePath, demo, registerPerson, root, signIn, signInAsRoot, toast, type DemoActor } from './support'
 
 // An agent's owner decides what it did where they could have done it
 // themselves, and nobody else of theirs. Two students of the course each
@@ -55,20 +55,17 @@ async function inChinese(browser: Browser, who: DemoActor) {
   return page
 }
 
-/** A student of the course, registered and seated as the demo's people are, who owns an agent with a token. */
+/**
+ * A student of the course, registered and seated as the demo's people are
+ * (signed in through an invitation: people hold no API tokens), who owns an
+ * agent with a token.
+ */
 async function student(key: string, name: string): Promise<Owner> {
   const d = demo()
   const email = `${key}+${STAMP}@owners.test`
-  const reg = await call(root().token, 'POST', '/v1/actors', { kind: 'human', display_name: name, email })
-  expect(reg.body.status, JSON.stringify(reg.body)).toBe('executed')
-  const actorId = reg.body.result.actor_id as string
-  const tok = await call(root().token, 'POST', `/v1/actors/${actorId}/tokens`, {
-    label: `e2e ${STAMP}`,
-    expires_in_days: 1,
-  })
-  const token = tok.body.result.token as string
-  const pw = await call(token, 'POST', '/v1/me/password', { password: process.env.E2E_PASSWORD })
-  expect(pw.body.status, JSON.stringify(pw.body)).toBe('executed')
+  const who = await registerPerson(name, { email })
+  const actorId = who.actor_id
+  const token = who.token
   const seat = await call(d.actors.instructor.token, 'POST', `/v1/courses/${d.course.id}/members`, {
     actor_id: actorId,
     preset: 'student',
@@ -337,7 +334,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
   })
 
   test('an agent’s owner is fixed: its page says so, and offers nothing to change it', async ({ page }) => {
-    await signInWithToken(page, root())
+    await signInAsRoot(page)
     await page.goto(`/admin/actors/${nora.agent.actor_id}`)
     await expect(page.locator('.page-header')).toContainText(NORA_AGENT)
     const owner = page.locator('.el-descriptions__cell').filter({ hasText: nora.display_name }).first()
