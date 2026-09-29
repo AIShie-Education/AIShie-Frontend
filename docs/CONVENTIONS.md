@@ -220,6 +220,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `conversation.respondents` leaves such agents out, and a conversation's opener learns from it
   (`offeredIn`) whether its agent may still be asked; Core refuses a question to one as
   `agent_answers_elsewhere`, which `errorMessage()` says in the same words.
+- The chat with agents is one panel beside every signed-in page (`src/components/chat/ChatPanel.vue`,
+  mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
+  agent. `useChatStore()` (`@/stores/chat`) opens it on a conversation (`showConversation(courseId, id,
+  { open: true })`) or on a course (`showCourse`); a link to a conversation is still
+  `{ name: 'course-conversations', params: { courseId, conversationId } }`, the address the course's
+  conversations page once had, which opens the panel on it and leaves the page where it was. The chat
+  reads the caller's seat in a conversation's course from their memberships (`useChatSeat`), never from
+  the course store, since the page may show another course or none. It offers agents alone
+  (`agentsOnly`: `conversation.respondents` lists people too), and nobody answers in it but agents.
+  Those who decide actions read each agent's conversations from the course's *Agents* page (its
+  conversation log). What the caller has read, and which of their questions wait for an answer, is
+  kept in this browser for them (`components/chat/unread.ts`): Core records neither.
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose
