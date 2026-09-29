@@ -54,8 +54,11 @@ async function download() {
   downloading.value = true
   try {
     await downloadQrPng(props.url, qrFileName(props.code, props.section))
-  } catch (e) {
-    ElMessage({ type: 'error', message: (e as Error)?.message || String(e), showClose: true })
+  } catch {
+    // The browser could not draw the image (no canvas, or no PNG made of
+    // it). What it says is in English and of no use to a teacher; the code
+    // is still on the page to show full screen or take a picture of.
+    ElMessage({ type: 'error', message: t('join.links.created.downloadFailed'), showClose: true })
   } finally {
     downloading.value = false
   }

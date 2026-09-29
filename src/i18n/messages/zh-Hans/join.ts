@@ -46,6 +46,7 @@ export default {
       timeLeft: '剩余时间',
       timeLeftSpoken: '还剩 {m} 分 {s} 秒',
       download: '下载二维码（PNG）',
+      downloadFailed: '这个浏览器无法把二维码保存为图片。请改用全屏显示，或截图保存。',
       fullscreen: '全屏显示',
       how: '学生用手机相机扫描二维码，或打开链接，即可加入。',
       shownOnce: '链接只会在这里显示。关闭此窗口不会让链接失效；如要提前停用，请在下方撤销。',
