@@ -37,6 +37,27 @@ export function cleanBody(s: string): string {
   return s.replace(/^(?:[ \t]*\r?\n)+/, '').trimEnd()
 }
 
+/**
+ * The title a new conversation is given, from its first message: its first
+ * line with anything on it, trimmed, cut to TITLE_MAX characters (counted as
+ * Core counts them) with an ellipsis when it is longer. The history lists it
+ * by that. Empty only for a message with nothing in it, which is not sent.
+ */
+export function titleFrom(body: string): string {
+  const line =
+    body
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .find((l) => l) ?? ''
+  if (charCount(line) <= TITLE_MAX) return line
+  return (
+    Array.from(line)
+      .slice(0, TITLE_MAX - 1)
+      .join('')
+      .trimEnd() + '…'
+  )
+}
+
 export type BodyProblem = 'empty' | 'tooLong'
 
 /** Why a draft cannot be sent as it is, or null when it can. */

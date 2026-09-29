@@ -260,7 +260,16 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the first page of `me.conversations`, read again every 30 seconds while the page is shown. The
   browser keeps only the course the caller last asked in (`aishiteru.chatCourse.<actorId>`). Those
   who decide actions read each agent's conversations from the course's *Agents* page (its
-  conversation log: `conversation.list` as overseer, with `respondent_member_id`).
+  conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
+  (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent, whether
+  anything runs it (`PresenceText`) and, only once it is closed, its state, and a ⋯ menu for who can
+  read it, how its answers arrive and closing it; the messages; and the composer (`ChatComposer.vue`),
+  one bordered box whose send button, small and icon-only, sits inside it at the bottom right, with
+  its keys in the button's tooltip and the count near Core's limit beside it. Whatever stops the
+  caller writing (an agent paused, gone, not answering or operated elsewhere, a closed conversation,
+  one waiting for approval), or an answer being waited for, is one muted line above the composer,
+  never an alert box. A new conversation has no title field: it is titled by the first line of its
+  first message (`titleFrom`).
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

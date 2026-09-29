@@ -157,7 +157,11 @@ async function setup(opts: { at?: string; phone?: boolean; width?: number } = {}
     global: {
       plugins: [pinia, router, i18n, ElementPlus],
       components: icons,
-      stubs: { ElTooltip: Passthrough('ElTooltip'), RouterLink: Passthrough('RouterLink') },
+      stubs: {
+        ElTooltip: Passthrough('ElTooltip'),
+        ElDropdown: Passthrough('ElDropdown'),
+        RouterLink: Passthrough('RouterLink'),
+      },
     },
   })
   await flushPromises()
@@ -341,8 +345,9 @@ describe('ChatPanel', () => {
     await flushPromises()
     expect(chat.draft).toMatchObject({ courseId: 'k1', agent: { member_id: 'tutor' } })
     expect(w.find('.chat-pane__name-row').text()).toMatch(/^CS101\s*·\s*Course tutor/)
-    expect(w.find('.chat-pane__title-input').exists()).toBe(true)
-    expect(w.find('textarea').exists()).toBe(true)
+    // No title to fill in: the first line of the first message is its title.
+    expect(w.find('.chat-pane__foot input').exists()).toBe(false)
+    expect(w.find('.chat-composer textarea').exists()).toBe(true)
     // New chat goes back to choosing an agent.
     await w.find('.chat-panel__new').trigger('click')
     expect(chat.draft).toBeNull()

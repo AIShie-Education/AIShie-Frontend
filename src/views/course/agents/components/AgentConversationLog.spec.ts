@@ -125,7 +125,12 @@ describe('AgentConversationLog', () => {
       global: {
         plugins: [i18n, ElementPlus],
         components: icons,
-        stubs: { ElTooltip: Passthrough('ElTooltip'), ElPopover: Passthrough('ElPopover'), RouterLink: true },
+        stubs: {
+          ElTooltip: Passthrough('ElTooltip'),
+          ElPopover: Passthrough('ElPopover'),
+          ElDropdown: Passthrough('ElDropdown'),
+          RouterLink: true,
+        },
       },
     })
     await flushPromises()
@@ -162,7 +167,12 @@ describe('AgentConversationLog', () => {
       global: {
         plugins: [i18n, ElementPlus],
         components: icons,
-        stubs: { ElTooltip: Passthrough('ElTooltip'), ElPopover: Passthrough('ElPopover'), RouterLink: true },
+        stubs: {
+          ElTooltip: Passthrough('ElTooltip'),
+          ElPopover: Passthrough('ElPopover'),
+          ElDropdown: Passthrough('ElDropdown'),
+          RouterLink: true,
+        },
       },
     })
     await flushPromises()

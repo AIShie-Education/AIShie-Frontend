@@ -48,7 +48,6 @@ export default {
   new: {
     intro: 'Start a conversation with {name}. Your first message opens it.',
     yourAgent: 'This is your own agent: it acts for you, and never with more than your seat.',
-    titlePlaceholder: 'Title (optional)',
   },
   proposed: {
     title: 'Waiting for approval',
@@ -65,8 +64,6 @@ export default {
   },
   // Why an answer may not come.
   availability: {
-    never: '{name} has never connected: nothing may be running it, so an answer may not come.',
-    offline: '{name} was last seen {time}: an answer may take a while.',
     gone: '{name} is no longer in the course. Start a new conversation with someone else.',
     paused: '{name} is paused in this course and cannot answer now.',
     notAnswering: '{name} is not answering questions now.',
@@ -77,15 +74,13 @@ export default {
   closed: {
     title: 'This conversation is closed.',
     said: 'They said: “{reason}”',
-    readOnly: 'It stays readable; nothing more can be written in it.',
     startNew: 'Start a new conversation',
   },
   composer: {
     label: 'Your message',
     askPlaceholder: 'Ask {name}…',
     send: 'Send',
-    hint: 'Enter to send, Shift+Enter for a new line',
-    hintTouch: 'Tap the button to send',
+    sendTip: 'Send (Enter) · Shift+Enter for a new line',
     count: '{n} / {max} characters',
   },
   conflict: {
@@ -112,8 +107,11 @@ export default {
   },
   reasonPlaceholder: 'Reason (optional)',
   reasonTooLong: 'At most {max} characters',
+  // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
+  menu: {
+    label: 'Conversation options',
+  },
   close: {
-    button: 'Close',
     title: 'Close this conversation?',
     bodyOpener:
       'Nothing more can be written in it; it stays readable. Anything you give as a reason is shown to the other participant.',

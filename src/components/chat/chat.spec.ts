@@ -13,6 +13,8 @@ import {
   cleanBody,
   closedConflict,
   closedReasonOf,
+  titleFrom,
+  TITLE_MAX,
   draftKey,
   firstSeq,
   getDraft,
@@ -198,6 +200,27 @@ describe('roles and states', () => {
     expect(closedReasonOf('  Thanks, all sorted ')).toEqual({ text: 'Thanks, all sorted' })
     expect(closedReasonOf('')).toBeNull()
     expect(closedReasonOf(null)).toBeNull()
+  })
+})
+
+describe('titleFrom', () => {
+  it('is the first line with anything on it, trimmed', () => {
+    expect(titleFrom('How do I stop a while loop?\nI tried break.')).toBe('How do I stop a while loop?')
+    expect(titleFrom('\n \t\n  迴圈怎樣停止？  \r\n第二行')).toBe('迴圈怎樣停止？')
+    expect(titleFrom('\u3000\nSecond')).toBe('Second')
+    expect(titleFrom('   ')).toBe('')
+  })
+
+  it('is cut to what Core takes, with an ellipsis, counting characters as Core does', () => {
+    expect(titleFrom('a'.repeat(TITLE_MAX))).toBe('a'.repeat(TITLE_MAX))
+    const cut = titleFrom('a'.repeat(TITLE_MAX + 50))
+    expect(cut).toBe('a'.repeat(TITLE_MAX - 1) + '…')
+    expect(charCount(cut)).toBe(TITLE_MAX)
+    // An emoji is one character, never cut in half; a space before the cut is not kept.
+    const emoji = titleFrom('😀'.repeat(TITLE_MAX + 1))
+    expect(charCount(emoji)).toBe(TITLE_MAX)
+    expect(emoji.endsWith('😀…')).toBe(true)
+    expect(titleFrom('a'.repeat(TITLE_MAX - 2) + ' bcd')).toBe('a'.repeat(TITLE_MAX - 2) + '…')
   })
 })
 

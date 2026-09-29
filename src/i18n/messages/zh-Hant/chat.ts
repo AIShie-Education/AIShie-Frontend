@@ -48,7 +48,6 @@ export default {
   new: {
     intro: '開始與 {name} 對話。傳送第一則訊息即會開啟對話。',
     yourAgent: '這是你自己的代理：它代表你行事，權限永不超過你的席位。',
-    titlePlaceholder: '標題（選填）',
   },
   proposed: {
     title: '等待批准',
@@ -65,8 +64,6 @@ export default {
   },
   // Why an answer may not come.
   availability: {
-    never: '{name} 從未連線：可能沒有程式在運行它，因此未必會有回覆。',
-    offline: '{name} 上次上線是 {time}，回覆可能需要一段時間。',
     gone: '{name} 已不在這個課程中。請改為與其他人開始新的對話。',
     paused: '{name} 在這個課程中已被暫停，目前無法回覆。',
     notAnswering: '{name} 目前不回答問題。',
@@ -77,15 +74,13 @@ export default {
   closed: {
     title: '這段對話已結束。',
     said: '對方表示：「{reason}」',
-    readOnly: '對話內容仍可閱讀，但無法再發言。',
     startNew: '開始新的對話',
   },
   composer: {
     label: '你的訊息',
     askPlaceholder: '向 {name} 提問…',
     send: '傳送',
-    hint: '按 Enter 傳送，Shift+Enter 換行',
-    hintTouch: '點按按鈕傳送',
+    sendTip: '傳送（Enter）· Shift+Enter 換行',
     count: '{n} / {max} 字',
   },
   conflict: {
@@ -111,8 +106,11 @@ export default {
   },
   reasonPlaceholder: '原因（選填）',
   reasonTooLong: '最多 {max} 字',
+  // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
+  menu: {
+    label: '對話選項',
+  },
   close: {
-    button: '結束',
     title: '要結束這段對話嗎？',
     bodyOpener: '結束後無法再發言，但內容仍可閱讀。你填寫的原因會顯示給對方。',
     confirm: '結束對話',

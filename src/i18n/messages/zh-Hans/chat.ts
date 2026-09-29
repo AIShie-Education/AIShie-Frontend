@@ -48,7 +48,6 @@ export default {
   new: {
     intro: '开始与 {name} 对话。发送第一条消息即会发起对话。',
     yourAgent: '这是你自己的智能体：它代表你行事，权限永不超过你的席位。',
-    titlePlaceholder: '标题（选填）',
   },
   proposed: {
     title: '等待批准',
@@ -65,8 +64,6 @@ export default {
   },
   // Why an answer may not come.
   availability: {
-    never: '{name} 从未连接：可能没有程序在运行它，因此未必会有回复。',
-    offline: '{name} 上次上线是 {time}，回复可能需要一段时间。',
     gone: '{name} 已不在这门课程中。请改为与其他人开始新的对话。',
     paused: '{name} 在这门课程中已被暂停，目前无法回复。',
     notAnswering: '{name} 目前不回答问题。',
@@ -77,15 +74,13 @@ export default {
   closed: {
     title: '这段对话已结束。',
     said: '对方表示：“{reason}”',
-    readOnly: '对话内容仍可阅读，但无法再发言。',
     startNew: '开始新的对话',
   },
   composer: {
     label: '你的消息',
     askPlaceholder: '向 {name} 提问…',
     send: '发送',
-    hint: '按 Enter 发送，Shift+Enter 换行',
-    hintTouch: '点击按钮发送',
+    sendTip: '发送（Enter）· Shift+Enter 换行',
     count: '{n} / {max} 字',
   },
   conflict: {
@@ -111,8 +106,11 @@ export default {
   },
   reasonPlaceholder: '原因（选填）',
   reasonTooLong: '最多 {max} 字',
+  // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
+  menu: {
+    label: '对话选项',
+  },
   close: {
-    button: '结束',
     title: '要结束这段对话吗？',
     bodyOpener: '结束后无法再发言，但内容仍可阅读。你填写的原因会显示给对方。',
     confirm: '结束对话',

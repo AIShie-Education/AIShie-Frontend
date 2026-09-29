@@ -7,6 +7,7 @@ import {
   coursePath,
   demo,
   floatingChatButton,
+  inTraditionalChinese,
   photograph,
   rail,
   showSideView,
@@ -29,6 +30,7 @@ import {
 
 const STAMP = Date.now().toString(36)
 const TUTOR = `Panel tutor ${STAMP}`
+/** The first line of Yuki's first message, which is the conversation's title. */
 const TITLE = `Loops (${STAMP})`
 const QUESTION = `How do I stop a while loop? (${STAMP})`
 const ANSWER = `Use **break**, or make its condition false (${STAMP}).`
@@ -236,9 +238,10 @@ test.describe.serial('the chat panel', () => {
     await page.mouse.move(0, 400)
     await photograph(page, 'chat-panel-agents')
     await row.click()
-    await panel.getByPlaceholder('Title (optional)').fill(TITLE)
+    // No title to give: the first line of the first message is the conversation's.
+    await expect(panel.locator('.chat-pane__foot input')).toHaveCount(0)
     const composer = panel.locator('textarea')
-    await composer.fill(QUESTION)
+    await composer.fill(`${TITLE}\n${QUESTION}`)
     await composer.press('Enter')
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
     await expect(panel.locator('.chat-pane__typing')).toContainText(`Waiting for ${TUTOR}`)
@@ -267,6 +270,7 @@ test.describe.serial('the chat panel', () => {
     await panel.getByRole('button', { name: 'History', exact: true }).click()
     const item = panel.locator('.hist-row').filter({ hasText: TITLE })
     await expect(item).toContainText(`CS101 · ${TUTOR}`)
+    await expect(item.locator('.hist-row__title')).toHaveText(TITLE)
     await expect(item).toContainText('Answered')
     await page.mouse.move(0, 400)
     await photograph(page, 'chat-panel-history')
@@ -431,6 +435,106 @@ test.describe.serial('the chat panel', () => {
     }
   })
 
+  test('lays a conversation out as an editor’s agent chat does, in English and in Chinese', async ({ page }) => {
+    const d = demo()
+    // The words each language has for what is checked.
+    const words = {
+      en: {
+        lastSeen: /^Last seen \d+ minutes ago$/,
+        waiting: `${TUTOR} has your question.`,
+        options: 'Conversation options',
+        readers: 'Who can read this',
+        close: 'Close conversation',
+        closed: 'This conversation is closed. They said: “Done, thanks”',
+        tag: 'Closed',
+      },
+      'zh-Hant': {
+        lastSeen: /^最後上線：\d+ 分鐘前$/,
+        waiting: `${TUTOR} 已收到你的問題。`,
+        options: '對話選項',
+        readers: '誰可以閱讀',
+        close: '結束對話',
+        closed: '這段對話已結束。 對方表示：「Done, thanks」',
+        tag: '已結束',
+      },
+    } as const
+    await signIn(page, d.actors.yuki)
+    // The course agent as it would be listed 37 minutes after whatever ran it stopped: the only
+    // way to see an agent that is not running, in a run where it answers.
+    await page.route('**/conversations/respondents', async (route) => {
+      const res = await route.fetch()
+      const body = await res.json()
+      for (const r of body.result?.respondents ?? []) {
+        if (r.display_name === TUTOR) r.last_seen_at = new Date(Date.now() - 37 * 60_000).toISOString()
+      }
+      await route.fulfill({ response: res, json: body })
+    })
+    for (const lang of ['en', 'zh-Hant'] as const) {
+      const w = words[lang]
+      if (lang === 'zh-Hant') await inTraditionalChinese(page)
+      await page.goto(coursePath())
+      await expect(page.locator('.course-head')).toBeVisible()
+      await page.locator('#chat-panel-toggle').click()
+      const panel = panelOf(page)
+      await panel.locator('button.resp-row').filter({ hasText: TUTOR }).click()
+
+      // A new conversation: one row on top, the agent and when it was last seen; no box saying
+      // so, no title to give; the composer one box, its send button inside it.
+      const head = panel.locator('.chat-pane__head')
+      await expect(head.locator('.chat-pane__name')).toHaveText(`CS101 · ${TUTOR}`)
+      await expect(head.locator('.chat-pane__presence')).toHaveText(w.lastSeen)
+      await expect(panel.locator('.chat-pane__notice')).toHaveCount(0)
+      await expect(panel.locator('.el-alert')).toHaveCount(0)
+      await expect(panel.locator('.chat-pane__foot input')).toHaveCount(0)
+      const box = panel.locator('.chat-composer')
+      await expect(box.locator('textarea')).toBeVisible()
+      await expect(box.locator('.chat-composer__bar .chat-composer__send')).toBeVisible()
+      // Nothing of the app's own before the text: the box starts with it.
+      expect(await box.evaluate((el) => el.firstElementChild?.firstElementChild?.tagName)).toBe('TEXTAREA')
+      const boxAt = (await box.boundingBox())!
+      const sendAt = (await box.locator('.chat-composer__send').boundingBox())!
+      expect(sendAt.x + sendAt.width).toBeLessThanOrEqual(boxAt.x + boxAt.width)
+      expect(sendAt.y + sendAt.height).toBeLessThanOrEqual(boxAt.y + boxAt.height)
+      expect(sendAt.x).toBeGreaterThan(boxAt.x + boxAt.width / 2)
+      await page.mouse.move(0, 400)
+      await photograph(page, `chat-new-offline-${lang}`)
+
+      // Asked: waiting for it is one quiet line.
+      const first = `${lang} ${STAMP}: what is a for loop?`
+      await box.locator('textarea').fill(`${first}\nWith an example, please.`)
+      await box.locator('textarea').press('Enter')
+      await expect(panel.locator('.chat-msg').filter({ hasText: first })).toBeVisible()
+      await expect(panel.locator('.chat-pane__notice')).toHaveText(w.waiting)
+      await expect(panel.locator('.chat-pane__typing')).toBeVisible()
+      await expect(head.locator('.el-tag')).toHaveCount(0)
+      await page.mouse.move(0, 400)
+      await photograph(page, `chat-waiting-${lang}`)
+
+      // The ⋯ menu: who can read it, and closing it.
+      await head.getByRole('button', { name: w.options }).click()
+      const menu = page.locator('.chat-pane__menu:visible')
+      await expect(menu.getByRole('menuitem', { name: w.readers })).toBeVisible()
+      await expect(menu.getByRole('menuitem', { name: w.close })).toBeVisible()
+      await photograph(page, `chat-menu-${lang}`)
+      await menu.getByRole('menuitem', { name: w.close }).click()
+      const ask = page.locator('.el-message-box')
+      await ask.locator('textarea').fill('Done, thanks')
+      await ask.getByRole('button', { name: w.close }).click()
+
+      // Closed: one line, why, and the state beside the name.
+      await expect(panel.locator('.chat-pane__closed-text')).toHaveText(w.closed)
+      await expect(head.locator('.el-tag')).toHaveText(w.tag)
+      await expect(box).toHaveCount(0)
+      await page.mouse.move(0, 400)
+      await photograph(page, `chat-closed-${lang}`)
+
+      // Its title in the history is its first line.
+      await panel.locator('.chat-panel__bar .chat-panel__icon').first().click()
+      await expect(panel.locator('.hist-row__title').filter({ hasText: first })).toHaveText(first)
+      await page.locator('#chat-panel-toggle').click()
+    }
+  })
+
   test('shows the instructor what students asked the course agent, on the course’s agents page', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
@@ -484,9 +588,9 @@ test.describe.serial('the chat panel', () => {
       await panel.getByRole('button', { name: 'History', exact: true }).click()
       await panel.locator('.hist-row').filter({ hasText: TITLE }).click()
       await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-      // On a touch screen Enter is a new line, and the button sends.
-      await expect(panel.locator('.chat-composer__hint')).toHaveText('Tap the button to send')
-      await expect(panel.getByRole('button', { name: 'Send' })).toBeVisible()
+      // On a touch screen Enter is a new line, and the button, inside the box, sends; no hint under it.
+      await expect(panel.locator('.chat-composer__hint')).toHaveCount(0)
+      await expect(panel.locator('.chat-composer').getByRole('button', { name: 'Send' })).toBeVisible()
       const wide = await page.evaluate(() => {
         const el = document.querySelector('#chat-panel')!
         return { scroll: el.scrollWidth, client: el.clientWidth, page: document.documentElement.scrollWidth }
