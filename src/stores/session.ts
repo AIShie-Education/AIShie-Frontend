@@ -45,6 +45,13 @@ export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut' | 'mustChangePa
  * deleted when the caller goes.
  */
 const RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
+/**
+ * Where earlier versions of the chat kept, in this browser, what each caller
+ * had read, before Core kept it (conversation.mark_read). Nothing writes
+ * there now; what those versions left is deleted when the caller goes, as
+ * above.
+ */
+const CHAT_MEMORY_PREFIX = 'aishiteru.chat.'
 
 export const useSessionStore = defineStore('session', () => {
   const me = ref<Me | null>(null)
@@ -218,14 +225,15 @@ export const useSessionStore = defineStore('session', () => {
   /**
    * Drops the lists kept in this browser for one caller, so that none
    * outlives them: the actors seen recently that earlier versions of the
-   * administration pages kept (RECENT_ACTORS_PREFIX).
+   * administration pages kept (RECENT_ACTORS_PREFIX), and what earlier
+   * versions of the chat kept of what they had read (CHAT_MEMORY_PREFIX).
    */
   function forgetStoredLists() {
     try {
       const doomed: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key?.startsWith(RECENT_ACTORS_PREFIX)) doomed.push(key)
+        if (key?.startsWith(RECENT_ACTORS_PREFIX) || key?.startsWith(CHAT_MEMORY_PREFIX)) doomed.push(key)
       }
       for (const key of doomed) localStorage.removeItem(key)
     } catch {

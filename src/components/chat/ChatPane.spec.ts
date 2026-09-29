@@ -208,21 +208,80 @@ describe('ChatPane', () => {
     expect(w.find('.chat-pane__head-actions button').exists()).toBe(false)
   })
 
-  it('asks a person nothing more in a conversation from before, and keeps it readable', async () => {
+  it('keeps a conversation from before with a person readable, closed, saying that conversations are with agents', async () => {
     seat('student')
     server.view = view({
+      status: 'closed',
+      state: 'closed',
+      closed_reason: 'conversations_are_with_agents',
       respondent: { ...view().respondent, member_id: 'ta', display_name: 'Ms Wong', kind: 'human', last_seen_at: null },
     })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     expect(w.findAll('.chat-msg')).toHaveLength(3)
     expect(w.find('textarea').exists()).toBe(false)
-    expect(w.find('.chat-pane__notice').text()).toContain(
-      'Ms Wong is a person, and people no longer answer in the chat',
-    )
     expect(w.find('.chat-pane__typing').exists()).toBe(false)
-    // It is still the opener's to close.
-    expect(w.find('.chat-pane__head-actions button').text()).toBe('Close')
+    expect(w.find('.chat-pane__closed').text()).toContain('This conversation is closed.')
+    expect(w.find('.chat-pane__closed-reason').text()).toBe('It was with a person, and conversations are with agents now')
+    // Nothing more to do in it: not closed again, and no new conversation with a person.
+    expect(w.find('.chat-pane__head-actions button').exists()).toBe(false)
+    expect(w.find('.chat-pane__closed button').exists()).toBe(false)
+    setLocale('zh-Hant')
+    await flushPromises()
+    expect(w.find('.chat-pane__closed-reason').text()).toBe('這段對話的對象是真人，而現在對話只與代理進行')
+  })
+
+  it('marks it read on opening when Core says the agent wrote since the caller last read it, and says so', async () => {
+    seat('student')
+    server.view = view({ state: 'answered', unread: true })
+    server.messages = [msg(1, 'student'), msg(2, 'tutor')]
+    writeAnswer = (tool) =>
+      tool === 'conversation.mark_read' ? executed({ read_up_to_seq: 2, unread: false }) : executed({})
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(writes).toEqual([
+      { tool: 'conversation.mark_read', args: { course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm2' } },
+    ])
+    expect(w.emitted('read')).toEqual([['c1']])
+  })
+
+  it('marks the answer read when it comes while the conversation is shown, and nothing while it is not', async () => {
+    seat('student')
+    writeAnswer = (tool) =>
+      tool === 'conversation.mark_read' ? executed({ read_up_to_seq: 4, unread: false }) : executed({})
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(writes).toEqual([])
+    server.messages = [...server.messages, msg(4, 'tutor', { body: 'An answer' })]
+    server.view = view({ state: 'answered' })
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+    expect(w.text()).toContain('An answer')
+    expect(writes.map((x) => x.args)).toEqual([{ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm4' }])
+    expect(w.emitted('read')).toEqual([['c1']])
+
+    // Off screen (the panel closed): an answer read then is not marked until it is shown again.
+    await w.setProps({ active: false })
+    server.messages = [...server.messages, msg(5, 'student'), msg(6, 'tutor', { body: 'Another' })]
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(writes).toHaveLength(1)
+    await w.setProps({ active: true })
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+    expect(w.text()).toContain('Another')
+    expect(writes.map((x) => x.args.up_to_message_id)).toEqual(['m4', 'm6'])
+  })
+
+  it('marks nothing read for staff reading it', async () => {
+    seat('staff', { action_decide: 'autonomous' })
+    server.view = view({ state: 'answered', unread: true })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', oversee: true }, global })
+    await flushPromises()
+    server.messages = [...server.messages, msg(4, 'tutor')]
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+    expect(writes).toEqual([])
+    expect(w.emitted('read')).toBeUndefined()
   })
 
   it('says a question was refused because the conversation was closed meanwhile, keeps the draft, and reads again', async () => {
@@ -264,7 +323,6 @@ describe('ChatPane', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', courseLabel: 'CS101' }, global })
     await flushPromises()
     expect(w.find('.chat-pane__name-row').text()).toMatch(/^CS101\s*·\s*Course tutor/)
-    expect(w.emitted('view')?.[0]?.[0]).toMatchObject({ id: 'c1', state: 'awaiting_answer' })
   })
 
   it('keeps a question that waits for approval on screen, marked so', async () => {

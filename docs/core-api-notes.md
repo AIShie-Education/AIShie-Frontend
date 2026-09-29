@@ -101,25 +101,30 @@ end; the "works around it" notes say what the front end does meanwhile.
   it also leaves out one the opener may no longer address (its seat rescoped, its owner no longer
   managing the members), and such an agent is then said to be operated from outside too. `site_chat`
   on the conversation's respondent would settle it.
-- **The caller's conversations are listed one course at a time, oldest first.** The chat panel's
-  history is across every course where the caller may ask, so it calls `conversation.list` (as
-  opener) once per course, several at once and at most 20 courses, reading each course's pages to
-  the end, since the newest come last. *Works around it:* reads a course only when its history is
-  shown, and says which courses could not be read. A `me.conversations` (the caller's own, every
-  course, newest activity first, with the course's id) would be one call.
-- **Nothing says which answers the caller has read, or pushes an answer.** *Works around it:* this
-  browser keeps, for each caller, when they last had each conversation on screen, and which of their
-  questions wait for an answer; those are read again (`conversation.get`) every 30 seconds to count
-  a new answer on the chat's button. A read marker on the conversation, or a cross-course "answered
-  since" list, would make it the same on every device.
-- **`conversation.respondents` offers people, and `conversation.open` accepts them.** A member who
-  answers questions (`conversation_answer`) and can see nothing the caller cannot is listed and may be
-  asked, whatever their kind. People no longer answer in the chat (agents do), so *the front end
-  only leaves people out* (`agentsOnly`), and asks nothing more of a person in a conversation from
-  before; Core would still take a question to one from any other client.
-- **An agent's conversations cannot be listed by agent.** `conversation.list` (as overseer) has no
-  respondent filter, so the course's *Agents* page reads the conversations the caller oversees and
-  keeps those with the agent.
+- **The caller's conversations were listed one course at a time, oldest first** (resolved). The
+  chat panel's history called `conversation.list` (as opener) once per course, several at once and
+  at most 20 courses, reading each course's pages to the end, and said which courses it could not
+  read or read whole. Core's `me.conversations` (since `1bcb5ef`) lists the caller's own in every
+  course, newest activity first, a page at a time, with each one's course and agent, or one
+  course's with `course_id`; the history is that list, and the fan-out is gone.
+- **Nothing said which answers the caller had read** (resolved). This browser kept, for each caller,
+  when they last had each conversation on screen and which of their questions waited for an answer,
+  and read those again (`conversation.get`) every 30 seconds. Core now keeps a read marker for each
+  of the two taking part (`conversation.mark_read`), and says `unread` on `conversation.list`,
+  `conversation.get` and `me.conversations`. The chat marks a conversation read while it is on
+  screen, and counts what is unread on its button from the first page of `me.conversations`, read
+  again every 30 seconds while the page is shown: the same on every device. What earlier versions
+  kept in a browser is deleted when the caller goes. Nothing is pushed yet, so that count is up to
+  half a minute behind.
+- **`conversation.respondents` offered people, and `conversation.open` accepted them** (resolved).
+  Core lists agents alone now, refuses a person as a respondent, or answering, as
+  `conversations_are_with_agents`, caps a person's `conversation_answer` at denied for that reason,
+  and closed every conversation from before with a person, with that reason. The front end no
+  longer leaves people out itself (`agentsOnly` is gone), shows such a conversation as closed and
+  why, and leaves it out of the history, as before.
+- **An agent's conversations could not be listed by agent** (resolved). The course's *Agents* page
+  read every conversation the caller oversees and kept those with the agent; `conversation.list`
+  takes `respondent_member_id` now, and the page asks for that agent's alone.
 - **`me.get` does not say which credential the caller used**, so the account page cannot mark
   "this browser's session" among the sessions it lists.
 - **Summaries lack "has unpublished changes":** no latest version on `document.list` /

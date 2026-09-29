@@ -134,6 +134,16 @@ describe('ceilingRefusalText', () => {
       }),
     ).toMatch(/^撰寫提交在這裡最多只能是「需批准」，因為/)
   })
+  it('says why a person cannot be given conversation_answer, in each language', () => {
+    const refusal = { reason: 'conversations_are_with_agents', permission: 'conversation_answer', ceiling: 'denied' }
+    expect(ceilingRefusalText(refusal)).toBe(
+      'Answer questions cannot be given here at all, because conversations are with agents, and a person answers none of them.',
+    )
+    setLocale('zh-Hant')
+    expect(ceilingRefusalText(refusal)).toMatch(/在這裡完全不能授予，因為對話只與代理進行，真人不回答任何對話。$/)
+    setLocale('zh-Hans')
+    expect(ceilingRefusalText(refusal)).toMatch(/在这里完全不能授予，因为对话只与智能体进行，真人不回答任何对话。$/)
+  })
   it('says nothing of any other refusal', () => {
     expect(ceilingRefusalText({ reason: 'permission_denied' })).toBeNull()
     expect(ceilingRefusalText({ reason: 'agent_never' })).toBeNull()
@@ -142,12 +152,16 @@ describe('ceilingRefusalText', () => {
 })
 
 describe('newSeatCeilings', () => {
-  it('keeps an agent seated with member.add to deciding by proposal, and a person to nothing', () => {
+  it('keeps an agent seated with member.add to deciding by proposal, and a person from answering conversations', () => {
     const c = newSeatCeilings('agent')
     expect(ceilingOf(c, 'action_decide')).toBe('confirm_required')
     expect(c?.reasons.action_decide).toBe('agent_decides_by_proposal')
     expect(ceilingOf(c, 'grade_post')).toBeNull()
-    expect(newSeatCeilings('human')).toBeNull()
+    expect(ceilingOf(c, 'conversation_answer')).toBeNull()
+    const person = newSeatCeilings('human')
+    expect(ceilingOf(person, 'conversation_answer')).toBe('denied')
+    expect(person?.reasons.conversation_answer).toBe('conversations_are_with_agents')
+    expect(ceilingOf(person, 'action_decide')).toBeNull()
     expect(newSeatCeilings(null)).toBeNull()
   })
 })

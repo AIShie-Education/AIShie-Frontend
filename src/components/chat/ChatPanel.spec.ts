@@ -5,10 +5,33 @@ import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent, h } from 'vue'
-import type { Respondent } from '@/api/types'
+import type { ConversationView, MyConversation, Respondent } from '@/api/types'
 
 let respondents: Respondent[] = []
+/** The caller's conversations (me.conversations), and whether each is unread. */
+let mine: MyConversation[] = []
 const reads: { tool: string; args: Record<string, unknown> }[] = []
+const writes: { tool: string; args: Record<string, unknown> }[] = []
+
+/** Conversation c1, as conversation.get and conversation.messages give it: the tutor has answered. */
+const c1: ConversationView = {
+  id: 'c1',
+  status: 'open',
+  state: 'answered',
+  created_at: '2026-09-26T11:00:00Z',
+  last_message_at: '2026-09-26T11:01:00Z',
+  last_author_member_id: 'tutor',
+  opener: { member_id: 'me-k1', display_name: 'Ada', kind: 'human' },
+  respondent: {
+    member_id: 'tutor',
+    display_name: 'Course tutor',
+    kind: 'agent',
+    role: 'assistant',
+    seat_status: 'active',
+    is_delegate_of_opener: false,
+    answer_level: 'autonomous',
+  },
+}
 
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
@@ -18,15 +41,41 @@ vi.mock('@/api/http', async (orig) => {
       reads.push({ tool, args })
       if (tool === 'conversation.respondents') return { respondents }
       if (tool === 'agent.list') return { agents: [] }
-      if (tool === 'conversation.list') return { conversations: [] }
+      if (tool === 'me.conversations') {
+        return { conversations: mine.filter((c) => !args.course_id || c.course.course_id === args.course_id) }
+      }
+      if (tool === 'conversation.get') return { ...c1, unread: mine.some((c) => c.unread), visible_to: [] }
+      if (tool === 'conversation.messages') {
+        return {
+          conversation: c1,
+          more: false,
+          messages: [
+            { id: 'm1', seq: 1, author_member_id: 'me-k1', body: 'When is it due?', created_at: c1.created_at },
+            { id: 'm2', seq: 2, author_member_id: 'tutor', body: 'On Friday.', created_at: c1.created_at },
+          ],
+        }
+      }
       throw new Error(`no answer for ${tool}`)
+    }),
+    write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+      writes.push({ tool, args })
+      if (tool !== 'conversation.mark_read') throw new Error(`no answer for ${tool}`)
+      mine = mine.map((c) => (c.conversation_id === args.conversation_id ? { ...c, unread: false } : c))
+      return {
+        status: 'executed',
+        actionId: 'a1',
+        reviewState: 'none',
+        replayed: false,
+        result: { read_up_to_seq: 2, unread: false },
+      }
     }),
   }
 })
 
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
-const { useChatStore } = await import('@/stores/chat')
+const { useChatStore, UNREAD_PAGE } = await import('@/stores/chat')
+const { UNREAD_POLL_MS } = await import('./panel')
 const { default: ChatPanel } = await import('./ChatPanel.vue')
 
 const Passthrough = (name: string) =>
@@ -122,11 +171,30 @@ async function pointer(el: { element: Element }, type: string, clientX: number) 
   await flushPromises()
 }
 
+/** One of Ada's conversations as me.conversations lists it. */
+function myConversation(id: string, unread: boolean): MyConversation {
+  return {
+    conversation_id: id,
+    member_id: 'me-k1',
+    course: { course_id: 'k1', code: 'CS101', section: '', title: 'CS101 course' },
+    respondent: { member_id: 'tutor', actor_id: 'tutor-actor', display_name: 'Course tutor', kind: 'agent' },
+    status: 'open',
+    state: 'answered',
+    created_at: '2026-09-26T11:00:00Z',
+    last_activity_at: '2026-09-26T11:01:00Z',
+    unread,
+    may_ask: true,
+  }
+}
+
 beforeEach(() => {
   localStorage.clear()
   setLocale('en')
   reads.length = 0
+  writes.length = 0
   respondents = [tutor]
+  mine = []
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
 })
 enableAutoUnmount(afterEach)
 afterEach(() => {
@@ -232,10 +300,8 @@ describe('ChatPanel', () => {
 
   it('asks in the course of the page it is on, and elsewhere in the course last used', async () => {
     localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
-    localStorage.setItem(
-      'aishiteru.chat.ada',
-      JSON.stringify({ since: '2026-01-01T00:00:00Z', seen: {}, pending: {}, course: 'k2' }),
-    )
+    // Kept in this browser for Ada, as it is: not what she has read, which Core keeps.
+    localStorage.setItem('aishiteru.chatCourse.ada', 'k2')
     const home = await setup({ at: '/' })
     expect(home.chat.courseId).toBe('k2')
     expect(home.w.find('.chat-panel__course input').element.getAttribute('aria-label')).toBe('Course')
@@ -283,7 +349,10 @@ describe('ChatPanel', () => {
     expect(chat.screen).toBe('history')
     expect(toggle.attributes('aria-pressed')).toBe('true')
     expect(w.find('.chat-history').exists()).toBe(true)
-    expect(reads.filter((r) => r.tool === 'conversation.list').map((r) => r.args.course_id)).toEqual(['k1'])
+    // The course's history, from the caller's conversations in every course.
+    expect(reads.filter((r) => r.tool === 'me.conversations' && r.args.course_id).map((r) => r.args)).toEqual([
+      { course_id: 'k1', limit: 50 },
+    ])
     await toggle.trigger('click')
     expect(chat.screen).toBe('new')
   })
@@ -311,6 +380,58 @@ describe('ChatPanel', () => {
     await router.push('/courses/k1/grades')
     await flushPromises()
     expect(chat.open).toBe(false)
+  })
+
+  it('counts what is unread from the newest of the caller’s conversations, read again every 30 seconds, open or not', async () => {
+    vi.useFakeTimers()
+    try {
+      mine = [myConversation('c1', true), myConversation('c2', false)]
+      const { chat } = await setup()
+      expect(chat.open).toBe(false)
+      expect(reads.filter((r) => r.tool === 'me.conversations').map((r) => r.args)).toEqual([{ limit: UNREAD_PAGE }])
+      expect(chat.unreadCount).toBe(1)
+      // Read elsewhere: counted no more once read again.
+      mine = [myConversation('c1', false), myConversation('c2', true), myConversation('c3', true)]
+      await vi.advanceTimersByTimeAsync(UNREAD_POLL_MS - 1000)
+      expect(chat.unreadCount).toBe(1)
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(chat.unreadCount).toBe(2)
+      expect(reads.filter((r) => r.tool === 'me.conversations')).toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('asks for nothing unread where the caller may ask in no course', async () => {
+    vi.useFakeTimers()
+    try {
+      const { chat } = await setup()
+      reads.length = 0
+      useSessionStore().memberships = [membership('k3', 'CS303', { conversation_ask: 'denied' })]
+      await flushPromises()
+      expect(chat.courses).toEqual([])
+      await vi.advanceTimersByTimeAsync(UNREAD_POLL_MS * 3)
+      expect(reads.filter((r) => r.tool === 'me.conversations')).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('marks a conversation read once it is shown, and counts it no more', async () => {
+    mine = [myConversation('c1', true)]
+    const { w, chat } = await setup()
+    expect(chat.unreadCount).toBe(1)
+    chat.showConversation('k1', 'c1', { open: true })
+    await flushPromises()
+    expect(w.text()).toContain('On Friday.')
+    expect(writes).toEqual([
+      { tool: 'conversation.mark_read', args: { course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm2' } },
+    ])
+    // Not counted, with it shown or once the panel is closed.
+    expect(chat.unreadCount).toBe(0)
+    chat.setOpen(false)
+    await flushPromises()
+    expect(chat.unreadCount).toBe(0)
   })
 
   it('says so where the caller may ask in no course', async () => {

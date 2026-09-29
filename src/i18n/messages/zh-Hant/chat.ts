@@ -26,9 +26,7 @@ export default {
     emptyAll: '你還沒有向任何代理提問。',
     untitled: '未命名',
     unread: '新回覆',
-    failed: '無法讀取你在 {courses} 的對話。',
-    leftOut: '只顯示你 {total} 個課程中 {n} 個的對話。選擇一個課程即可查看它的對話。',
-    truncated: '{courses} 的對話太多，未能全部讀取，最新的對話可能沒有列出。',
+    moreFailed: '無法載入更多對話，請再試一次。',
   },
   respondents: {
     empty: '這裡暫時沒有可以回答你問題的代理。',
@@ -65,7 +63,6 @@ export default {
     start: '有任何關於課程的問題，都可以問 {name}。',
     overseeing: '你正以課程教職員的身分閱讀這段對話。',
     readOnly: '現在由代理在對話中回答問題，你可以閱讀這段對話。',
-    person: '{name} 是真人，而真人已不再在對話中回答問題。這段對話仍可閱讀。',
   },
   // Why an answer may not come.
   availability: {

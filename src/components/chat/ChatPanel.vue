@@ -16,13 +16,15 @@
 // in that course or in all of them; a conversation is read and written in
 // the same pane as ever.
 //
-// Mounted once, open or not: it keeps watching the conversations that wait
-// for an answer, so that one answered is counted on its button.
+// Mounted once, open or not: it reads the newest of the caller's
+// conversations again every UNREAD_POLL_MS while the page is shown, so that an
+// answer, wherever it came and whichever device read the others, is counted on
+// its button until it is read. A conversation on screen is marked read as it
+// is read (ChatPane).
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { ApiError, read } from '@/api/http'
-import type { ConversationView, Respondent } from '@/api/types'
+import type { Respondent } from '@/api/types'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePolling } from '@/composables/usePolling'
 import { useChatStore } from '@/stores/chat'
@@ -36,8 +38,7 @@ import {
   PANEL_MIN,
   PANEL_SHEET_MAX_WIDTH,
   panelMax,
-  PENDING_PER_POLL,
-  PENDING_POLL_MS,
+  UNREAD_POLL_MS,
   widthForKey,
 } from './panel'
 import { courseLabel } from './seat'
@@ -178,47 +179,14 @@ const courseName = computed(() => {
 })
 const inHistory = computed(() => chat.screen === 'history')
 
-/** The conversation on screen, as last read: its answers are read while it is. */
-const shownView = ref<ConversationView | null>(null)
-watch(
-  () => chat.conversation?.id,
-  () => (shownView.value = null),
-)
-const onScreen = computed(() => chat.open && chat.screen === 'conversation')
-function onView(courseId: string, v: ConversationView) {
-  chat.note([{ courseId, view: v }])
-  if (v.id === chat.conversation?.id) shownView.value = v
-  if (onScreen.value && v.id === chat.conversation?.id) chat.markSeen(v)
-}
-watch(onScreen, (on) => {
-  if (on && shownView.value) chat.markSeen(shownView.value)
-})
-
-/** A course's history is read again after something changed there (started, closed). */
-function changed(courseId: string) {
-  if (chat.histories[courseId]?.loaded) void chat.loadHistory([courseId], { force: true })
-}
 function startAgain(courseId: string, agent: Respondent) {
   chat.startNew(courseId)
   chat.pickAgent(agent)
 }
 
 // --- Answers noticed with the panel closed ------------------------------------
-async function pollPending() {
-  const shown = onScreen.value ? chat.conversation?.id : null
-  for (const p of chat.pending.slice(0, PENDING_PER_POLL)) {
-    if (p.id === shown) continue
-    try {
-      const v = await read('conversation.get', { course_id: p.courseId, conversation_id: p.id })
-      chat.note([{ courseId: p.courseId, view: v }])
-    } catch (e) {
-      // Gone, or no longer the caller's to read: no longer watched.
-      if (e instanceof ApiError && (e.isNotFound || e.isForbidden)) chat.forget(p.id)
-      else throw e
-    }
-  }
-}
-usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pending.length > 0 })
+// Where the caller may ask somewhere, as the button that shows the count is offered.
+usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () => chat.courses.length > 0 })
 </script>
 
 <template>
@@ -321,9 +289,8 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
         :conversation-id="chat.conversation.id"
         :course-label="labelOf(chat.conversation.courseId)"
         :active="chat.open"
-        @view="(v: ConversationView) => onView(chat.conversation!.courseId, v)"
+        @read="(id: string) => chat.markedRead(id)"
         @start="(r: Respondent) => startAgain(chat.conversation!.courseId, r)"
-        @changed="changed(chat.conversation!.courseId)"
       >
         <template #actions>
           <el-button size="small" :aria-label="t('chat.panel.backToHistory')" @click="chat.showHistory()">
@@ -350,7 +317,6 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
         :course-label="labelOf(chat.draft.courseId)"
         :active="chat.open"
         @opened="(id: string) => chat.showConversation(chat.draft!.courseId, id)"
-        @changed="changed(chat.draft!.courseId)"
       >
         <template #actions>
           <el-button size="small" :aria-label="t('chat.panel.backToAgents')" @click="chat.startNew()">

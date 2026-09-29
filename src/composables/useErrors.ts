@@ -18,6 +18,12 @@ const has = (key: string): boolean => (i18n.global as unknown as { te: (k: strin
  */
 const SHARED_REASONS = new Map<string, string>([
   ['agent_answers_elsewhere', 'common.agent.externalNote'],
+  // A person asked, or answering, in a conversation: conversations are with
+  // agents. (Refusing a person conversation_answer names the permission and
+  // the ceiling too, and is said as a ceiling is: ceilingRefusalText.)
+  ['conversations_are_with_agents', 'common.errors.conversationsAreWithAgents'],
+  // Marking read a conversation one only oversees.
+  ['not_a_participant', 'common.errors.notAParticipant'],
   // An agent's owner decides or reviews what it did only where they could
   // have done it themselves without anyone's confirmation.
   ['owner_not_autonomous', 'common.errors.ownerNotAutonomous'],

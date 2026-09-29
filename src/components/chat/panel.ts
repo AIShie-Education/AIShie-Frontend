@@ -1,6 +1,6 @@
 // The chat panel's frame, apart from what it shows: how wide it may be, what
-// this browser remembers of it (open or not, its width), and the key that
-// opens and closes it.
+// this browser remembers of it (open or not, its width, and for each caller
+// the course they last asked in), and the key that opens and closes it.
 
 /** The narrowest the panel may be, in pixels. */
 export const PANEL_MIN = 320
@@ -12,10 +12,8 @@ export const PANEL_MAX_SHARE = 0.5
 export const PANEL_STEP = 16
 /** At this width and below, the panel is a sheet over the whole screen instead. */
 export const PANEL_SHEET_MAX_WIDTH = 899
-/** How often the caller's conversations waiting for an answer are looked at, open or not. */
-export const PENDING_POLL_MS = 30_000
-/** At most this many of them are looked at each time. */
-export const PENDING_PER_POLL = 10
+/** How often the newest of the caller's conversations are read again for what is unread, open or not. */
+export const UNREAD_POLL_MS = 30_000
 
 /** The widest the panel may be in a window this wide (never narrower than the narrowest). */
 export function panelMax(viewport: number): number {
@@ -81,6 +79,37 @@ export function loadFrame(): PanelFrame {
 export function saveFrame(f: PanelFrame) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ open: f.open, width: Math.round(f.width) }))
+  } catch {
+    /* no storage: it lasts for this page only */
+  }
+}
+
+const LAST_COURSE_PREFIX = 'aishiteru.chatCourse.'
+/**
+ * Where earlier versions kept, for each caller, what they had read and the
+ * course they last asked in: Core keeps what they have read now. Its course
+ * is taken once, and the rest dropped when a course is next kept.
+ */
+const LEGACY_PREFIX = 'aishiteru.chat.'
+
+/** The course a caller last asked in, in this browser, or null: none kept, or no storage. */
+export function loadLastCourse(actorId: string): string | null {
+  try {
+    const kept = localStorage.getItem(LAST_COURSE_PREFIX + actorId)
+    if (kept) return kept
+    const legacy = localStorage.getItem(LEGACY_PREFIX + actorId)
+    if (!legacy) return null
+    const course = (JSON.parse(legacy) as { course?: unknown } | null)?.course
+    return typeof course === 'string' && course ? course : null
+  } catch {
+    return null
+  }
+}
+
+export function saveLastCourse(actorId: string, courseId: string) {
+  try {
+    localStorage.setItem(LAST_COURSE_PREFIX + actorId, courseId)
+    localStorage.removeItem(LEGACY_PREFIX + actorId)
   } catch {
     /* no storage: it lasts for this page only */
   }

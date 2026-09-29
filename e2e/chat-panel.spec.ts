@@ -22,7 +22,8 @@ import {
 // agent made for this run, which its runtime says answers in the site, and
 // Yuki, a student, who asks it. The panel stays open, on what it shows, while
 // she moves between pages, and as wide as she left it; an answer that comes
-// while it is closed is counted on its button.
+// while it is closed is counted on its button. What she has read is Core's
+// (conversation.mark_read), so the count follows her from browser to browser.
 
 const STAMP = Date.now().toString(36)
 const TUTOR = `Panel tutor ${STAMP}`
@@ -31,6 +32,8 @@ const QUESTION = `How do I stop a while loop? (${STAMP})`
 const ANSWER = `Use **break**, or make its condition false (${STAMP}).`
 const LATER = `And a for loop? (${STAMP})`
 const LATER_ANSWER = `The same: break leaves it (${STAMP}).`
+const ELSEWHERE = `And a do-while loop? (${STAMP})`
+const ELSEWHERE_ANSWER = `It runs once before the test (${STAMP}).`
 
 const w = { tutorToken: '' }
 
@@ -57,6 +60,14 @@ async function tutorAnswers(body: string) {
     }),
     'conversation.answer',
   )
+}
+
+/** Yuki's conversation of this run, as Core lists it for her (me.conversations). */
+async function yukisConversation() {
+  const r = await call(demo().actors.yuki.token, 'GET', `/v1/me/conversations?course_id=${demo().course.id}`)
+  const c = (r.body.result?.conversations ?? []).find((x: { title?: string }) => x.title === TITLE)
+  expect(c, `Yuki's conversation "${TITLE}": ${JSON.stringify(r.body)}`).toBeTruthy()
+  return c as { conversation_id: string; unread: boolean }
 }
 
 function panelOf(page: Page) {
@@ -309,6 +320,67 @@ test.describe.serial('the chat panel', () => {
     await expect(panel.locator('.chat-msg').filter({ hasText: 'break leaves it' })).toBeVisible()
     await expect(chatButton(page)).toHaveAccessibleName('Chat with agents')
     await expect(rail(page).locator('.el-badge__content')).toBeHidden()
+    // Read in Core, not only in this browser: after a reload it is still read.
+    await expect.poll(async () => (await yukisConversation()).unread).toBe(false)
+    await page.reload()
+    await expect(chatButton(page)).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    await expect(chatButton(page)).toHaveAccessibleName('Chat with agents')
+  })
+
+  test('counts an answer as unread in every browser she is signed in to, until she reads it in any of them', async ({
+    browser,
+  }) => {
+    const d = demo()
+    const here = await browser.newContext()
+    const there = await browser.newContext()
+    try {
+      const a = await here.newPage()
+      const b = await there.newPage()
+      await signIn(a, d.actors.yuki)
+      await signIn(b, d.actors.yuki)
+
+      // She asks once more (as from a third device), and the course agent answers.
+      const { conversation_id } = await yukisConversation()
+      done(
+        await call(d.actors.yuki.token, 'POST', `/v1/courses/${d.course.id}/conversations/${conversation_id}/ask`, {
+          body: ELSEWHERE,
+        }),
+        'conversation.ask',
+      )
+      await tutorAnswers(ELSEWHERE_ANSWER)
+
+      // Both browsers count it.
+      for (const page of [a, b]) {
+        await page.goto(coursePath())
+        await expect(chatButton(page)).toHaveAccessibleName('Chat with agents: 1 unread', { timeout: 40_000 })
+      }
+
+      // She reads it in one.
+      await chatButton(a).click()
+      const panel = panelOf(a)
+      await panel.getByRole('button', { name: 'History', exact: true }).click()
+      const item = panel.locator('.hist-row').filter({ hasText: TITLE })
+      await expect(item).toHaveClass(/is-unread/)
+      await item.click()
+      await expect(panel.locator('.chat-msg').filter({ hasText: 'runs once before the test' })).toBeVisible()
+      await expect(chatButton(a)).toHaveAccessibleName('Chat with agents')
+      await expect.poll(async () => (await yukisConversation()).unread).toBe(false)
+
+      // The other, left as it was, stops counting it when it next asks (every 30 seconds)…
+      await expect(chatButton(b)).toHaveAccessibleName('Chat with agents', { timeout: 45_000 })
+      await expect(rail(b).locator('.el-badge__content')).toBeHidden()
+      // …and its history, reloaded, marks it read.
+      await b.reload()
+      await chatButton(b).click()
+      await panelOf(b).getByRole('button', { name: 'History', exact: true }).click()
+      const row = panelOf(b).locator('.hist-row').filter({ hasText: TITLE })
+      await expect(row).toBeVisible()
+      await expect(row).not.toHaveClass(/is-unread/)
+    } finally {
+      await here.close()
+      await there.close()
+    }
   })
 
   test('shows the instructor what students asked the course agent, on the course’s agents page', async ({ page }) => {

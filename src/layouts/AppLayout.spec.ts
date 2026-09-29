@@ -5,6 +5,9 @@ import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
+/** The caller's conversations with an answer they have not read, as me.conversations says. */
+let unread = 0
+
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
@@ -12,6 +15,7 @@ vi.mock('@/api/http', async (orig) => {
     read: vi.fn(async (tool: string) => {
       if (tool === 'conversation.respondents') return { respondents: [] }
       if (tool === 'agent.list') return { agents: [] }
+      if (tool === 'me.conversations') return { conversations: Array.from({ length: unread }, (_, i) => answered(i)) }
       throw new Error(`no answer for ${tool}`)
     }),
   }
@@ -73,42 +77,27 @@ async function mountAs(ask: string, opts: { phone?: boolean } = {}) {
 beforeEach(() => {
   localStorage.clear()
   setLocale('en')
+  unread = 0
 })
 enableAutoUnmount(afterEach)
 afterEach(() => {
   document.body.innerHTML = ''
 })
 
-const unreadMemory = () =>
-  localStorage.setItem(
-    'aishiteru.chat.ada',
-    JSON.stringify({ since: '2026-01-01T00:00:00Z', seen: {}, pending: {}, course: null }),
-  )
-/** An answer from the course's agent the caller has not read. */
-function answered(chat: ReturnType<typeof useChatStore>) {
-  chat.note([
-    {
-      courseId: 'k1',
-      view: {
-        id: 'c1',
-        status: 'open',
-        state: 'answered',
-        created_at: '2026-09-26T11:00:00Z',
-        last_message_at: '2026-09-26T11:01:00Z',
-        last_author_member_id: 'tutor',
-        opener: { member_id: 'me-k1', display_name: 'Ada', kind: 'human' },
-        respondent: {
-          member_id: 'tutor',
-          display_name: 'Course tutor',
-          kind: 'agent',
-          role: 'assistant',
-          seat_status: 'active',
-          is_delegate_of_opener: false,
-          answer_level: 'autonomous',
-        },
-      },
-    },
-  ])
+/** An answer from the course's agent the caller has not read, as me.conversations lists it. */
+function answered(i: number) {
+  return {
+    conversation_id: `c${i}`,
+    member_id: 'me-k1',
+    course: { course_id: 'k1', code: 'CS101', section: '', title: 'Programming' },
+    respondent: { member_id: 'tutor', actor_id: 'tutor-actor', display_name: 'Course tutor', kind: 'agent' },
+    status: 'open',
+    state: 'answered',
+    created_at: '2026-09-26T11:00:00Z',
+    last_activity_at: '2026-09-26T11:01:00Z',
+    unread: true,
+    may_ask: true,
+  }
 }
 
 describe('AppLayout’s rail', () => {
@@ -187,11 +176,11 @@ describe('AppLayout’s rail', () => {
     expect(document.activeElement).toBe(w.get('.app-rail #chat-panel-toggle').element)
   })
 
-  it('counts the answers not read yet on the chat’s button', async () => {
-    unreadMemory()
+  it('counts the answers not read yet on the chat’s button, as Core says', async () => {
     const { w, chat } = await mountAs('autonomous')
     expect(w.find('.app-rail__badge .el-badge__content').exists()).toBe(false)
-    answered(chat)
+    unread = 1
+    await chat.pollUnread()
     await flushPromises()
     expect(w.get('.app-rail__badge .el-badge__content').text()).toBe('1')
     expect(w.get('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')
@@ -238,9 +227,8 @@ describe('on a phone', () => {
   })
 
   it('counts the answers not read yet on the floating button', async () => {
-    unreadMemory()
-    const { w, chat } = await mountAs('autonomous', { phone: true })
-    answered(chat)
+    unread = 1
+    const { w } = await mountAs('autonomous', { phone: true })
     await flushPromises()
     expect(w.get('.app-chat-fab .el-badge__content').text()).toBe('1')
     expect(w.get('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')

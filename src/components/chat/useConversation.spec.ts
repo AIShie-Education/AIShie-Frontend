@@ -3,8 +3,17 @@ import { effectScope, nextTick, ref } from 'vue'
 import type { ConversationMessage, ConversationView } from '@/api/types'
 
 // A conversation as a Core would hold it, answering conversation.messages
-// and conversation.get the way Core does (tail, after_seq, before_seq).
-let server: { messages: ConversationMessage[]; view: ConversationView; fail: boolean }
+// and conversation.get the way Core does (tail, after_seq, before_seq), and
+// keeping what the opener has read (conversation.mark_read).
+let server: {
+  messages: ConversationMessage[]
+  view: ConversationView
+  fail: boolean
+  /** The seq the opener has read up to. */
+  readUpTo: number
+  /** What conversation.mark_read throws, if anything. */
+  markFails?: Error
+}
 const calls: { tool: string; args: Record<string, unknown> }[] = []
 
 vi.mock('@/api/http', async (orig) => {
@@ -14,7 +23,10 @@ vi.mock('@/api/http', async (orig) => {
     read: vi.fn(async (tool: string, args: Record<string, unknown>) => {
       calls.push({ tool, args })
       if (server.fail) throw new real.ApiError({ status: 0, code: 'network', message: 'down', network: true } as never)
-      if (tool === 'conversation.get') return { ...server.view, visible_to: ['participants'] }
+      if (tool === 'conversation.get') {
+        const unread = server.messages.some((m) => m.seq > server.readUpTo && m.author_member_id === 'agent')
+        return { ...server.view, unread, visible_to: ['participants'] }
+      }
       if (tool !== 'conversation.messages') throw new Error(`no answer for ${tool}`)
       const limit = (args.limit as number) ?? 50
       const all = server.messages
@@ -27,9 +39,25 @@ vi.mock('@/api/http', async (orig) => {
       }
       return { messages: page.map((m) => ({ ...m })), conversation: { ...server.view }, more: page.length === limit }
     }),
+    write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+      calls.push({ tool, args })
+      if (tool !== 'conversation.mark_read') throw new Error(`no answer for ${tool}`)
+      if (server.markFails) throw server.markFails
+      const upTo = server.messages.find((m) => m.id === args.up_to_message_id)!.seq
+      server.readUpTo = Math.max(server.readUpTo, upTo)
+      const unread = server.messages.some((m) => m.seq > server.readUpTo && m.author_member_id === 'agent')
+      return {
+        status: 'executed',
+        actionId: 'a1',
+        reviewState: 'none',
+        replayed: false,
+        result: { read_up_to_seq: server.readUpTo, unread },
+      }
+    }),
   }
 })
 
+const { ApiError } = await import('@/api/http')
 const { useConversation } = await import('./useConversation')
 
 function msg(seq: number, over: Partial<ConversationMessage> = {}): ConversationMessage {
@@ -64,10 +92,20 @@ function view(over: Partial<ConversationView> = {}): ConversationView {
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => msg(from + i))
 
 let clock = 0
-function start(active = ref(true)) {
+function start(active = ref(true), reader = ref<string | null>(null)) {
   const scope = effectScope()
-  const c = scope.run(() => useConversation({ courseId: 'k1', conversationId: 'c1', active, now: () => clock }))!
-  return { c, active, dispose: () => scope.stop() }
+  const read: unknown[] = []
+  const c = scope.run(() =>
+    useConversation({
+      courseId: 'k1',
+      conversationId: 'c1',
+      active,
+      reader,
+      onRead: (out) => read.push(out),
+      now: () => clock,
+    }),
+  )!
+  return { c, active, reader, read, dispose: () => scope.stop() }
 }
 /** Moves the page's clock and the timers together. */
 async function advance(ms: number) {
@@ -75,13 +113,20 @@ async function advance(ms: number) {
   await vi.advanceTimersByTimeAsync(ms)
 }
 const messageCalls = () => calls.filter((c) => c.tool === 'conversation.messages')
+const marks = () => calls.filter((c) => c.tool === 'conversation.mark_read').map((c) => c.args)
+let visibility: DocumentVisibilityState = 'visible'
+function setVisibility(v: DocumentVisibilityState) {
+  visibility = v
+  document.dispatchEvent(new Event('visibilitychange'))
+}
 
 beforeEach(() => {
   vi.useFakeTimers()
   clock = 1_000_000
   calls.length = 0
-  server = { messages: range(1, 4), view: view({ state: 'awaiting_answer' }), fail: false }
-  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+  server = { messages: range(1, 4), view: view({ state: 'awaiting_answer' }), fail: false, readUpTo: 4 }
+  visibility = 'visible'
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility })
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -257,5 +302,95 @@ describe('useConversation', () => {
     // What was shown stays.
     expect(c.messages.value).toHaveLength(4)
     dispose()
+  })
+})
+
+describe('useConversation, marking what is read', () => {
+  const opener = () => ref<string | null>('opener')
+
+  it('marks it read on opening, up to the newest message held, when Core says the agent has written since', async () => {
+    server.readUpTo = 1
+    const { read, dispose } = start(ref(true), opener())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(marks()).toEqual([{ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm4' }])
+    expect(read).toEqual([{ read_up_to_seq: 4, unread: false }])
+    // Nothing new: not marked again.
+    await advance(3000)
+    expect(marks()).toHaveLength(1)
+    dispose()
+  })
+
+  it('marks nothing on opening when nothing is unread, and then each answer that comes while it is shown', async () => {
+    const { read, dispose } = start(ref(true), opener())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(marks()).toEqual([])
+    // The opener writes (5), and the agent answers (6).
+    server.messages = range(1, 6)
+    await advance(3000)
+    expect(marks()).toEqual([{ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm6' }])
+    expect(read).toHaveLength(1)
+    // What the opener writes themselves is never unread to them.
+    server.messages = range(1, 7)
+    await advance(3000)
+    expect(marks()).toHaveLength(1)
+    dispose()
+  })
+
+  it('marks nothing for staff reading it, nor while it is off screen or the page hidden, and does once it is shown', async () => {
+    server.readUpTo = 1
+    const reader = ref<string | null>(null)
+    const { c, dispose } = start(ref(true), reader)
+    await vi.advanceTimersByTimeAsync(0)
+    await advance(3000)
+    expect(marks()).toEqual([])
+
+    setVisibility('hidden')
+    reader.value = 'opener'
+    await vi.advanceTimersByTimeAsync(0)
+    expect(marks()).toEqual([])
+    setVisibility('visible')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(marks()).toEqual([{ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm4' }])
+
+    // An answer read while the page is hidden is marked once it is shown again.
+    setVisibility('hidden')
+    server.messages = range(1, 6)
+    await c.refresh()
+    expect(c.messages.value).toHaveLength(6)
+    expect(marks()).toHaveLength(1)
+    setVisibility('visible')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(marks().at(-1)).toEqual({ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm6' })
+    dispose()
+  })
+
+  it('tries again after a failure Core never answered, and never after a refusal', async () => {
+    server.readUpTo = 1
+    server.markFails = new ApiError({ status: 0, code: 'network', message: 'down', network: true } as never)
+    const { read, dispose } = start(ref(true), opener())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(marks()).toHaveLength(1)
+    expect(read).toEqual([])
+    server.markFails = undefined
+    await advance(3000)
+    expect(marks()).toHaveLength(2)
+    expect(read).toEqual([{ read_up_to_seq: 4, unread: false }])
+    dispose()
+
+    calls.length = 0
+    server.readUpTo = 1
+    server.markFails = new ApiError({
+      status: 403,
+      code: 'forbidden',
+      message: 'only the two who take part in a conversation mark it read',
+      details: { reason: 'not_a_participant' },
+    })
+    const again = start(ref(true), opener())
+    await vi.advanceTimersByTimeAsync(0)
+    server.messages = range(1, 6)
+    await advance(3000)
+    await advance(3000)
+    expect(marks()).toHaveLength(1)
+    again.dispose()
   })
 })

@@ -1,16 +1,17 @@
 // The lists the chat shows beside a conversation, each kept fresh by asking
 // again: conversations in one course as one of the caller's parts (those they
-// started, or those they oversee), the agents they may ask, and their own
-// agents that take no conversations in the site. A refresh replaces what is
-// shown only once it has all of it, so a list never empties or flickers while
-// it is read again.
+// started, or those they oversee, of every agent or of one), the agents they
+// may ask, and their own agents that take no conversations in the site. A
+// refresh replaces what is shown only once it has all of it, so a list never
+// empties or flickers while it is read again. (The caller's own conversations
+// across their courses, the chat's history, are the chat store's.)
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import { ApiError, read } from '@/api/http'
 import type { AgentSummary, ConversationRole, ConversationView, Respondent } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { usePolling } from '@/composables/usePolling'
 import { seatPurpose, type SeatPurpose } from '@/utils/agents'
-import { agentPurpose, agentsOnly, byActivity } from './chat'
+import { agentPurpose, byActivity } from './chat'
 
 /** Conversations per page (Core's most is 200). */
 export const LIST_PAGE = 100
@@ -67,22 +68,36 @@ function useQuietList<T>(fetchAll: () => Promise<T[]>) {
 
 /**
  * The caller's conversations as one of their parts, the latest activity
- * first. Core lists them oldest first by page; each refresh reads again as
- * many pages as were loaded (one, for nearly everyone), and loadMore one
- * more.
+ * first: with respondent, only those with that agent (an overseer reads one
+ * agent's conversations so), and none while it is null. Core lists them
+ * oldest first by page; each refresh reads again as many pages as were
+ * loaded (one, for nearly everyone), and loadMore one more. A new respondent
+ * is read afresh from its first page.
  */
-export function useConversationList(opts: { courseId: string; as: ConversationRole; enabled?: Enabled }) {
+export function useConversationList(opts: {
+  courseId: string
+  as: ConversationRole
+  respondent?: MaybeRefOrGetter<string | null | undefined>
+  enabled?: Enabled
+}) {
   let pages = 1
   const hasMore = ref(false)
+  const respondent = () => (opts.respondent === undefined ? undefined : (toValue(opts.respondent) ?? null))
   const list = useQuietList<ConversationView>(async () => {
     const all: ConversationView[] = []
+    const only = respondent()
     let after: string | undefined
     let more = false
+    if (only === null) {
+      hasMore.value = false
+      return all
+    }
     for (let i = 0; i < pages; i++) {
       const out = await read('conversation.list', {
         course_id: opts.courseId,
         as: opts.as,
         limit: LIST_PAGE,
+        ...(only ? { respondent_member_id: only } : {}),
         ...(after ? { after } : {}),
       })
       all.push(...(out.conversations ?? []))
@@ -116,6 +131,14 @@ export function useConversationList(opts: { courseId: string; as: ConversationRo
     enabled: () => on(opts.enabled) && list.loaded.value,
   })
   void list.load()
+  if (opts.respondent !== undefined) {
+    watch(respondent, () => {
+      pages = 1
+      list.items.value = []
+      list.loaded.value = false
+      void list.load()
+    })
+  }
 
   return {
     items,
@@ -132,15 +155,15 @@ export function useConversationList(opts: { courseId: string; as: ConversationRo
 }
 
 /**
- * The agents the caller may ask here (conversation.respondents, less any
- * person it lists): the course's first, then their own, each by name. Read
- * at once, or, lazy, only once it is first enabled (a conversation that needs
- * to know whether its agent is still offered).
+ * The agents the caller may ask here (conversation.respondents, which lists
+ * agents alone): the course's first, then their own, each by name. Read at
+ * once, or, lazy, only once it is first enabled (a conversation that needs to
+ * know whether its agent is still offered).
  */
 export function useRespondents(opts: { courseId: string; enabled?: Enabled; lazy?: boolean }) {
   const list = useQuietList<Respondent>(async () => {
     const out = await read('conversation.respondents', { course_id: opts.courseId })
-    return sortRespondents(agentsOnly(out.respondents))
+    return sortRespondents(out.respondents ?? [])
   })
   const polling = usePolling(list.refresh, {
     intervalMs: RESPONDENTS_POLL_MS,
@@ -234,59 +257,4 @@ export function useAgentsElsewhere(opts: {
 export function sortRespondents(list: readonly Respondent[]): Respondent[] {
   const rank = (r: Respondent) => (agentPurpose(r) === 'course' ? 0 : 1)
   return list.slice().sort((a, b) => rank(a) - rank(b) || a.display_name.localeCompare(b.display_name))
-}
-
-// --- The caller's conversations in several courses -----------------------------------
-
-/** Conversations per page when reading one course's whole list. */
-export const HISTORY_PAGE = 200
-/** At most this many pages of one course are read (Core lists them oldest first). */
-export const HISTORY_PAGES = 5
-
-/**
- * The conversations the caller started in one course, all of them up to
- * HISTORY_PAGES pages; truncated when there were more (the newest are then
- * the ones missing, as Core lists them oldest first).
- */
-export async function readStarted(courseId: string): Promise<{ items: ConversationView[]; truncated: boolean }> {
-  const items: ConversationView[] = []
-  let after: string | undefined
-  for (let i = 0; i < HISTORY_PAGES; i++) {
-    const out = await read('conversation.list', {
-      course_id: courseId,
-      as: 'opener',
-      limit: HISTORY_PAGE,
-      ...(after ? { after } : {}),
-    })
-    items.push(...(out.conversations ?? []))
-    after = out.next ?? undefined
-    if (!after) return { items, truncated: false }
-  }
-  return { items, truncated: true }
-}
-
-/**
- * Runs fn over every item, at most `limit` at a time, and gives each one's
- * outcome in the items' order: a failure is kept, never thrown, so that one
- * course that cannot be read does not hide the others.
- */
-export async function eachLimited<T, R>(
-  items: readonly T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<PromiseSettledResult<R>[]> {
-  const out: PromiseSettledResult<R>[] = new Array(items.length)
-  let next = 0
-  async function worker() {
-    while (next < items.length) {
-      const i = next++
-      try {
-        out[i] = { status: 'fulfilled', value: await fn(items[i]!) }
-      } catch (reason) {
-        out[i] = { status: 'rejected', reason }
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
-  return out
 }

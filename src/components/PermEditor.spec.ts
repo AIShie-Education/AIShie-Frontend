@@ -21,9 +21,15 @@ const agentSeat = ceilingsOf({
   perm_ceiling_reasons: { action_decide: 'agent_decides_by_proposal', agent_delegate: 'agent_never' },
 })
 
-function mountEditor(props: { modelValue: PermLevels; readonly?: boolean }) {
+// A person's seat as member.get says it: a person answers no conversation.
+const personSeat = ceilingsOf({
+  perm_ceilings: { conversation_answer: 'denied', conversation_ask: 'autonomous' },
+  perm_ceiling_reasons: { conversation_answer: 'conversations_are_with_agents' },
+})
+
+function mountEditor(props: { modelValue: PermLevels; readonly?: boolean }, ceilings = agentSeat) {
   const w = mount(PermEditor, {
-    props: { ...props, ceilings: agentSeat },
+    props: { ...props, ceilings },
     attachTo: document.body,
     global: {
       plugins: [
@@ -86,5 +92,22 @@ describe('PermEditor with a seat’s ceilings', () => {
     setLocale('zh-Hant')
     const w = mountEditor({ modelValue: {} })
     expect(row(w, 'action_decide').find('.perm-editor__ceiling').text()).toBe('最多：需批准')
+  })
+
+  it('locks a person’s answering of conversations, saying that conversations are with agents', () => {
+    const w = mountEditor({ modelValue: { conversation_ask: 'autonomous' } }, personSeat)
+    const answer = row(w, 'conversation_answer')
+    expect(answer.find('.perm-editor__ceiling').text()).toBe('Never here')
+    expect(answer.findComponent({ name: 'ElSelect' }).props('disabled')).toBe(true)
+    const note = w
+      .findAllComponents({ name: 'ElTooltip' })
+      .map((tip) => tip.props('content') as unknown)
+      .find((c) => typeof c === 'string' && c.startsWith('Never held here'))
+    expect(note).toBe('Never held here: conversations are with agents, and a person answers none of them.')
+    // Asking is theirs as ever.
+    expect(row(w, 'conversation_ask').find('.perm-editor__ceiling').exists()).toBe(false)
+    setLocale('zh-Hans')
+    const zh = mountEditor({ modelValue: {} }, personSeat)
+    expect(row(zh, 'conversation_answer').find('.perm-editor__ceiling').text()).toBe('此处不可拥有')
   })
 })

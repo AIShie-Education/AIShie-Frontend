@@ -26,9 +26,7 @@ export default {
     emptyAll: '你还没有向任何智能体提问。',
     untitled: '未命名',
     unread: '新回复',
-    failed: '无法读取你在 {courses} 的对话。',
-    leftOut: '只显示你 {total} 门课程中 {n} 门的对话。选择一门课程即可查看它的对话。',
-    truncated: '{courses} 的对话太多，未能全部读取，最新的对话可能没有列出。',
+    moreFailed: '无法加载更多对话，请再试一次。',
   },
   respondents: {
     empty: '这里暂时没有可以回答你问题的智能体。',
@@ -65,7 +63,6 @@ export default {
     start: '有任何关于课程的问题，都可以问 {name}。',
     overseeing: '你正以课程教职员的身份阅读这段对话。',
     readOnly: '现在由智能体在对话中回答问题，你可以阅读这段对话。',
-    person: '{name} 是真人，而真人已不再在对话中回答问题。这段对话仍可阅读。',
   },
   // Why an answer may not come.
   availability: {

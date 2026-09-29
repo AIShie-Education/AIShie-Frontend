@@ -16,10 +16,11 @@ vi.mock('@/api/http', async (orig) => {
     read: vi.fn(async (tool: string, args: Record<string, unknown>) => {
       calls.push({ tool, args })
       if (tool === 'conversation.list') {
-        // Oldest first by id, paged after an id, as Core lists them.
+        // Oldest first by id, paged after an id, as Core lists them; one agent's, when asked.
         const limit = args.limit as number
         const after = args.after as string | undefined
-        const rest = conversations.filter((c) => !after || c.id > after)
+        const only = args.respondent_member_id as string | undefined
+        const rest = conversations.filter((c) => (!after || c.id > after) && (!only || c.respondent.member_id === only))
         const page = rest.slice(0, limit)
         return { conversations: page, next: page.length === limit ? page.at(-1)!.id : undefined }
       }
@@ -36,10 +37,6 @@ vi.mock('@/api/http', async (orig) => {
 })
 
 const {
-  eachLimited,
-  HISTORY_PAGE,
-  HISTORY_PAGES,
-  readStarted,
   useConversationList,
   useRespondents,
   ownAgentsElsewhere,
@@ -50,7 +47,7 @@ const {
 } = await import('./useConversationList')
 const { ApiError } = await import('@/api/http')
 
-function conv(n: number, lastAt: string | null = null): ConversationView {
+function conv(n: number, lastAt: string | null = null, respondent = 'r'): ConversationView {
   return {
     id: `c${String(n).padStart(4, '0')}`,
     status: 'open',
@@ -59,7 +56,7 @@ function conv(n: number, lastAt: string | null = null): ConversationView {
     last_message_at: lastAt,
     opener: { member_id: 'o', display_name: 'Opener', kind: 'human' },
     respondent: {
-      member_id: 'r',
+      member_id: respondent,
       display_name: 'Tutor',
       kind: 'agent',
       role: 'assistant',
@@ -114,6 +111,31 @@ describe('useConversationList', () => {
     dispose()
   })
 
+  it('lists one agent’s conversations when given its seat, asking Core for those alone, and reads afresh for another', async () => {
+    conversations = [conv(1, null, 'tutor'), conv(2, null, 'helper'), conv(3, '2026-09-26T00:00:00Z', 'tutor')]
+    const agent = ref<string | null>('tutor')
+    const { out, dispose } = inScope(() => useConversationList({ courseId: 'k', as: 'overseer', respondent: agent }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls.map((c) => c.args)).toEqual([
+      { course_id: 'k', as: 'overseer', limit: LIST_PAGE, respondent_member_id: 'tutor' },
+    ])
+    expect(out.items.value.map((c) => c.id)).toEqual(['c0003', 'c0001'])
+
+    calls.length = 0
+    agent.value = 'helper'
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls.map((c) => c.args.respondent_member_id)).toEqual(['helper'])
+    expect(out.items.value.map((c) => c.id)).toEqual(['c0002'])
+
+    // No agent: nothing is asked, and nothing listed (never every agent's).
+    calls.length = 0
+    agent.value = null
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toHaveLength(0)
+    expect(out.items.value).toEqual([])
+    dispose()
+  })
+
   it('keeps itself fresh while enabled', async () => {
     conversations = [conv(1)]
     const { out, dispose } = inScope(() => useConversationList({ courseId: 'k', as: 'overseer' }))
@@ -122,49 +144,6 @@ describe('useConversationList', () => {
     await vi.advanceTimersByTimeAsync(LIST_POLL_MS)
     expect(out.items.value.map((c) => c.id)).toEqual(['c0002', 'c0001'])
     dispose()
-  })
-})
-
-describe('readStarted', () => {
-  it('reads every page of the conversations the caller started in a course', async () => {
-    conversations = Array.from({ length: HISTORY_PAGE + 3 }, (_, i) => conv(i + 1))
-    const out = await readStarted('k')
-    expect(out.items).toHaveLength(HISTORY_PAGE + 3)
-    expect(out.truncated).toBe(false)
-    expect(calls.map((c) => c.args)).toEqual([
-      { course_id: 'k', as: 'opener', limit: HISTORY_PAGE },
-      { course_id: 'k', as: 'opener', limit: HISTORY_PAGE, after: conv(HISTORY_PAGE).id },
-    ])
-  })
-
-  it('stops after its most pages, and says there were more', async () => {
-    conversations = Array.from({ length: HISTORY_PAGE * HISTORY_PAGES + 1 }, (_, i) => conv(i + 1))
-    const out = await readStarted('k')
-    expect(out.items).toHaveLength(HISTORY_PAGE * HISTORY_PAGES)
-    expect(out.truncated).toBe(true)
-  })
-})
-
-describe('eachLimited', () => {
-  it('runs a few at a time, and keeps each one’s outcome in order, failures included', async () => {
-    let running = 0
-    let most = 0
-    const out = await eachLimited([1, 2, 3, 4, 5], 2, async (n) => {
-      running++
-      most = Math.max(most, running)
-      await Promise.resolve()
-      running--
-      if (n === 3) throw new Error('three')
-      return n * 10
-    })
-    expect(most).toBe(2)
-    expect(out.map((r) => (r.status === 'fulfilled' ? r.value : (r.reason as Error).message))).toEqual([
-      10,
-      20,
-      'three',
-      40,
-      50,
-    ])
   })
 })
 
@@ -185,23 +164,6 @@ describe('sortRespondents', () => {
 })
 
 describe('useRespondents', () => {
-  it('never lists a person, though Core does', async () => {
-    const r = (name: string, kind: string) =>
-      ({
-        member_id: name,
-        display_name: name,
-        kind,
-        role: 'ta',
-        is_my_delegate: false,
-        answer_level: 'autonomous',
-      }) as Respondent
-    respondents = [r('Ms Wong', 'human'), r('Tutor', 'agent')]
-    const { out, dispose } = inScope(() => useRespondents({ courseId: 'k' }))
-    await vi.advanceTimersByTimeAsync(0)
-    expect(out.items.value.map((x) => x.display_name)).toEqual(['Tutor'])
-    dispose()
-  })
-
   it('reads at once, or, lazy, only once first enabled', async () => {
     respondents = []
     const eager = inScope(() => useRespondents({ courseId: 'k' }))

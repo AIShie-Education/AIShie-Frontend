@@ -26,9 +26,7 @@ export default {
     emptyAll: 'You have not asked an agent anything yet.',
     untitled: 'Untitled',
     unread: 'New answer',
-    failed: 'Could not read your conversations in {courses}.',
-    leftOut: 'Showing your conversations in {n} of your {total} courses. Choose a course to see its own.',
-    truncated: 'Your newest conversations in {courses} may be missing: there are too many to read.',
+    moreFailed: 'Could not load more of them. Try again.',
   },
   respondents: {
     empty: 'No agent here answers your questions yet.',
@@ -65,7 +63,6 @@ export default {
     start: 'Ask {name} anything about the course.',
     overseeing: 'You are reading this as course staff.',
     readOnly: 'Agents answer questions in the chat now: you can read this conversation.',
-    person: '{name} is a person, and people no longer answer in the chat. This conversation stays readable.',
   },
   // Why an answer may not come.
   availability: {

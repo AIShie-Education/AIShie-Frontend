@@ -2,7 +2,7 @@
 // messages, whose turn it is, what to tell the person about the one they are
 // talking to, and which key sends. Only for display: Core decides who may
 // write what, and refuses the rest.
-import { CLOSED_SEAT_REMOVED, CONVERSATION_STATES } from '@/api/types'
+import { CLOSED_SEAT_REMOVED, CONVERSATION_STATES, CONVERSATIONS_ARE_WITH_AGENTS } from '@/api/types'
 import type { ConversationMessage, ConversationState, ConversationView } from '@/api/types'
 import { presenceOf, ONLINE_WITHIN_MS } from '@/utils/presence'
 
@@ -101,8 +101,9 @@ export function sameMessages(a: readonly ConversationMessage[], b: readonly Conv
 
 /**
  * The caller's part in a conversation: who opened it, who is asked, or staff
- * reading it. People no longer answer in the chat (agents do), so a person
- * asked in a conversation from before only reads it, as staff do.
+ * reading it. Only agents are asked: a person asked in a conversation from
+ * before, which Core has closed since (conversations_are_with_agents), only
+ * reads it, as staff do.
  */
 export type ChatRole = 'opener' | 'respondent' | 'overseer'
 
@@ -141,26 +142,21 @@ export function availabilityOf(
   return p === 'seen' ? 'offline' : p
 }
 
+/** Core's codes for why a conversation was closed, which the app has words for (enums.closedReason). */
+export const CLOSED_REASON_CODES = [CLOSED_SEAT_REMOVED, CONVERSATIONS_ARE_WITH_AGENTS] as const
+export type ClosedReasonCode = (typeof CLOSED_REASON_CODES)[number]
+
 /** Why a conversation was closed: a code the app has words for, or the closer's own words. */
-export type ClosedReason = { code: typeof CLOSED_SEAT_REMOVED } | { text: string }
+export type ClosedReason = { code: ClosedReasonCode } | { text: string }
 
 export function closedReasonOf(reason: string | null | undefined): ClosedReason | null {
   const r = reason?.trim()
   if (!r) return null
-  if (r === CLOSED_SEAT_REMOVED) return { code: CLOSED_SEAT_REMOVED }
-  return { text: r }
+  const code = CLOSED_REASON_CODES.find((c) => c === r)
+  return code ? { code } : { text: r }
 }
 
 // --- Only agents are asked ---------------------------------------------------------
-
-/**
- * Whom the chat offers to ask: agents alone. Core's conversation.respondents
- * lists a person too when they answer questions and can see nothing the
- * caller cannot; people are talked to elsewhere now, so they are left out.
- */
-export function agentsOnly<T extends { kind: string }>(list: readonly T[] | null | undefined): T[] {
-  return (list ?? []).filter((r) => r.kind === 'agent')
-}
 
 /**
  * What an agent one may ask is to the caller: their own personal assistant
@@ -202,23 +198,21 @@ export function offeredIn(respondents: readonly { member_id: string }[] | null |
  * agent has not answered (with how likely an answer is); pendingApproval: an
  * answer waits for someone's approval; start: nothing asked yet; elsewhere:
  * the agent asked takes no conversations in the site, and nothing more is
- * asked of it here; person: the one asked is a person, who no longer answers
- * in the chat; readOnly: the caller is not the one asking (staff, or a person
- * asked), and reads it.
+ * asked of it here; readOnly: the caller is not the one asking (staff, or the
+ * one asked), and reads it.
  */
 export type Notice =
   | { kind: 'closed'; reason: ClosedReason | null }
   | { kind: 'waiting'; availability: Availability; approval: boolean }
   | { kind: 'unavailable'; availability: 'gone' | 'paused' | 'notAnswering' }
   | { kind: 'elsewhere' }
-  | { kind: 'person' }
   | { kind: 'pendingApproval' }
   | { kind: 'start' }
   | { kind: 'overseeing' }
   | { kind: 'readOnly' }
 
 /** Why the caller cannot write here now; null when they can. */
-export type WriteBlock = 'closed' | 'overseer' | 'respondent' | 'unavailable' | 'elsewhere' | 'person'
+export type WriteBlock = 'closed' | 'overseer' | 'respondent' | 'unavailable' | 'elsewhere'
 
 export interface ChatStatus {
   state: ConversationState
@@ -231,11 +225,12 @@ export interface ChatStatus {
 
 /**
  * Everything the pane shows about where a conversation stands, for the caller.
- * Only its opener writes in it, and only to an agent. offered: whether the
- * caller may ask its agent now (offeredIn), or null when that is not known;
- * an agent they may not, whose seat is there and which may answer, takes no
- * conversations in the site. It is asked nothing more here; what was written
- * stays readable, and it may still answer.
+ * Only its opener writes in it, to its agent (one with a person, from before,
+ * Core has closed). offered: whether the caller may ask its agent now
+ * (offeredIn), or null when that is not known; an agent they may not, whose
+ * seat is there and which may answer, takes no conversations in the site. It
+ * is asked nothing more here; what was written stays readable, and it may
+ * still answer.
  */
 export function chatStatus(
   view: ConversationView,
@@ -257,7 +252,6 @@ export function chatStatus(
   if (availability === 'gone' || availability === 'paused' || availability === 'notAnswering') {
     return { ...base, notice: { kind: 'unavailable', availability }, block: 'unavailable' }
   }
-  if (view.respondent.kind !== 'agent') return { ...base, notice: { kind: 'person' }, block: 'person' }
   if (opts.offered === false) return { ...base, notice: { kind: 'elsewhere' }, block: 'elsewhere' }
   if (state === 'reply_pending_approval') return { ...base, notice: { kind: 'pendingApproval' }, block: null }
   if (state === 'awaiting_answer') {

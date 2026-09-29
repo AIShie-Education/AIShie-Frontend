@@ -4,9 +4,13 @@
 // one waiting for approval, closed), and the composer. The caller asks
 // (conversation.open for the first message, then conversation.ask) and the
 // agent answers, through whatever runs it; course staff overseeing it only
-// read, and may withdraw a message. Its opener may close it. People no longer
-// answer in the chat: a conversation from before in which a person was asked
-// stays readable, and nothing more is written in it here.
+// read, and may withdraw a message. Its opener may close it. Only agents are
+// asked: a conversation from before in which a person was asked is closed
+// (conversations_are_with_agents), and stays readable.
+//
+// While the caller reads it as one of the two taking part, what is shown is
+// marked read in Core (useConversation's reader), so that it is not counted
+// as unread on any device; staff reading it mark nothing.
 //
 // The seat it goes by is the caller's in the conversation's course, from
 // their memberships: the chat is beside every page, whatever course (if any)
@@ -16,7 +20,7 @@
 // site: Core no longer offers it to be asked (conversation.respondents), and
 // refuses a question to it (agent_answers_elsewhere). A conversation with one
 // stays readable, and in place of the composer the opener is told why.
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
@@ -78,8 +82,8 @@ const emit = defineEmits<{
   start: [respondent: Respondent]
   /** Something the lists show changed (started, closed). */
   changed: []
-  /** The conversation as it stands, each time it is read (what is unread, what waits for an answer). */
-  view: [view: ConversationView]
+  /** Core has recorded that the caller read the conversation, as far as it is shown. */
+  read: [conversationId: string]
 }>()
 const { t, locale } = useI18n()
 const seat = useChatSeat(() => props.courseId)
@@ -87,8 +91,16 @@ const now = useNow()
 
 // This component is keyed by the conversation (or by whom a new one is for),
 // so what it holds is for one conversation only.
+/** The caller's seat while they read it on screen as one of the two taking part (set below, once their part is known). */
+const reader = ref<string | null>(null)
 const conv = props.conversationId
-  ? useConversation({ courseId: props.courseId, conversationId: props.conversationId, active: () => props.active })
+  ? useConversation({
+      courseId: props.courseId,
+      conversationId: props.conversationId,
+      active: () => props.active,
+      reader,
+      onRead: () => emit('read', props.conversationId!),
+    })
   : null
 const view = computed<ConversationView | null>(() => conv?.view.value ?? null)
 const messages = computed<ConversationMessage[]>(() => conv?.messages.value ?? [])
@@ -97,7 +109,9 @@ const role = computed<ChatRole>(() => {
   if (props.oversee) return 'overseer'
   return view.value ? roleIn(view.value, me.value) : 'opener'
 })
-watch(view, (v) => v && emit('view', v))
+watchEffect(() => {
+  reader.value = props.active && view.value && role.value !== 'overseer' ? me.value : null
+})
 
 // --- Whether its agent may still be asked here -------------------------------------
 // Only the opener asks, and only an agent may take no conversations in the
@@ -278,10 +292,10 @@ const writeBlocked = computed(() => {
   if (needsOffer.value && offered.value === null && !offers.error.value) return true
   return !!status.value?.block
 })
-/** The caller writes nothing here: staff reading it, or a person asked in it, or a person asked by them. */
+/** The caller writes nothing here: staff reading it, or the one asked in it. */
 const readOnly = computed(() => {
   const b = status.value?.block
-  return b === 'overseer' || b === 'respondent' || b === 'person'
+  return b === 'overseer' || b === 'respondent'
 })
 /** In place of the composer, why its agent is asked nothing here. */
 const elsewhere = computed(() =>
@@ -490,8 +504,6 @@ const notice = computed<{ type: 'info' | 'warning' | 'success'; text: string; su
       return elsewhereNotice(!!view.value?.respondent.is_delegate_of_opener)
     case 'pendingApproval':
       return { type: 'info', text: t('chat.state.answerPending') }
-    case 'person':
-      return { type: 'info', text: t('chat.state.person', { name }) }
     case 'start':
       return { type: 'info', text: t('chat.state.start', { name }) }
     case 'overseeing':
@@ -594,11 +606,7 @@ const closedElsewhere = computed(() => {
             <span v-if="conv.olderError.value" class="chat-pane__older-error">{{ t('chat.olderFailed') }}</span>
           </div>
           <div v-if="conv.loaded.value && !messages.length && !heldShown.length" class="chat-pane__empty app-muted">
-            {{
-              role === 'opener' && status?.block !== 'person'
-                ? t('chat.empty.opener', { name: other?.name ?? '' })
-                : t('chat.empty.other')
-            }}
+            {{ role === 'opener' ? t('chat.empty.opener', { name: other?.name ?? '' }) : t('chat.empty.other') }}
           </div>
           <ul class="chat-pane__list" :aria-label="t('chat.messagesLabel')">
             <li v-for="m in messages" :key="m.id">

@@ -244,11 +244,19 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   address the course's conversations page once had, which opens the panel on it and leaves the page
   where it was. The chat
   reads the caller's seat in a conversation's course from their memberships (`useChatSeat`), never from
-  the course store, since the page may show another course or none. It offers agents alone
-  (`agentsOnly`: `conversation.respondents` lists people too), and nobody answers in it but agents.
-  Those who decide actions read each agent's conversations from the course's *Agents* page (its
-  conversation log). What the caller has read, and which of their questions wait for an answer, is
-  kept in this browser for them (`components/chat/unread.ts`): Core records neither.
+  the course store, since the page may show another course or none. Conversations are with agents
+  alone: `conversation.respondents` lists nobody else, Core refuses a person as a respondent or an
+  answerer (`conversations_are_with_agents`, which `errorMessage()` puts in words), and a
+  conversation from before with a person is closed with that reason, shown as closed and left out
+  of the history. The history is `me.conversations`: the caller's own in every course, newest
+  activity first, a page at a time, or one course's (`course_id`), kept in the chat store
+  (`loadHistory`, `loadMoreHistory`). What the caller has read is Core's: a conversation on screen
+  is marked read (`conversation.mark_read`, by `useConversation`'s `reader`) when it opens unread
+  and as the agent writes, never by staff reading it, and the button's count is the `unread` of
+  the first page of `me.conversations`, read again every 30 seconds while the page is shown. The
+  browser keeps only the course the caller last asked in (`aishiteru.chatCourse.<actorId>`). Those
+  who decide actions read each agent's conversations from the course's *Agents* page (its
+  conversation log: `conversation.list` as overseer, with `respondent_member_id`).
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

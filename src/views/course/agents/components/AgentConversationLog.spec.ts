@@ -7,6 +7,7 @@ import { defineComponent, h } from 'vue'
 import type { ConversationView } from '@/api/types'
 
 const reads: { tool: string; args: Record<string, unknown> }[] = []
+const writes: string[] = []
 
 function conv(id: string, respondent: string, opener: string, at: string): ConversationView {
   return {
@@ -40,7 +41,11 @@ vi.mock('@/api/http', async (orig) => {
     ...real,
     read: vi.fn(async (tool: string, args: Record<string, unknown>) => {
       reads.push({ tool, args })
-      if (tool === 'conversation.list') return { conversations: list }
+      // One agent's, when asked for them, as Core lists them.
+      if (tool === 'conversation.list') {
+        const only = args.respondent_member_id as string | undefined
+        return { conversations: list.filter((c) => !only || c.respondent.member_id === only) }
+      }
       if (tool === 'conversation.messages') {
         const c = list.find((x) => x.id === args.conversation_id)!
         return {
@@ -58,7 +63,11 @@ vi.mock('@/api/http', async (orig) => {
           ],
         }
       }
-      if (tool === 'conversation.get') return { ...list[0], visible_to: ['participants'] }
+      if (tool === 'conversation.get') return { ...list[0], unread: true, visible_to: ['participants'] }
+      throw new Error(`no answer for ${tool}`)
+    }),
+    write: vi.fn(async (tool: string) => {
+      writes.push(tool)
       throw new Error(`no answer for ${tool}`)
     }),
   }
@@ -86,6 +95,7 @@ beforeEach(() => {
   })) as unknown as typeof window.matchMedia
   setLocale('en')
   reads.length = 0
+  writes.length = 0
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().memberships = [
@@ -119,7 +129,11 @@ describe('AgentConversationLog', () => {
       },
     })
     await flushPromises()
-    expect(reads[0]).toMatchObject({ tool: 'conversation.list', args: { course_id: 'k1', as: 'overseer' } })
+    // Core is asked for this agent's conversations alone.
+    expect(reads[0]).toEqual({
+      tool: 'conversation.list',
+      args: { course_id: 'k1', as: 'overseer', limit: 100, respondent_member_id: 'tutor' },
+    })
     const drawer = document.body.querySelector('.agent-log')!
     expect(drawer.textContent).toContain('Conversation log: Course tutor')
     const rows = [...drawer.querySelectorAll<HTMLButtonElement>('.log-row')]
@@ -137,5 +151,27 @@ describe('AgentConversationLog', () => {
       'Withdraw',
     ])
     expect(w.emitted('update:modelValue')).toBeUndefined()
+    // Staff reading it mark nothing read.
+    expect(writes).toEqual([])
+  })
+
+  it('reads another agent’s conversations afresh when it shows that agent', async () => {
+    const w = mount(AgentConversationLog, {
+      props: { modelValue: true, courseId: 'k1', agent: { id: 'tutor', display_name: 'Course tutor' } },
+      attachTo: document.body,
+      global: {
+        plugins: [i18n, ElementPlus],
+        components: icons,
+        stubs: { ElTooltip: Passthrough('ElTooltip'), ElPopover: Passthrough('ElPopover'), RouterLink: true },
+      },
+    })
+    await flushPromises()
+    reads.length = 0
+    await w.setProps({ agent: { id: 'other', display_name: 'Other agent' } })
+    await flushPromises()
+    expect(reads.map((r) => r.args.respondent_member_id)).toEqual(['other'])
+    const drawer = document.body.querySelector('.agent-log')!
+    expect([...drawer.querySelectorAll('.log-row__name')].map((r) => r.textContent)).toEqual(['Ken'])
+    expect(drawer.textContent).toContain('Conversation log: Other agent')
   })
 })

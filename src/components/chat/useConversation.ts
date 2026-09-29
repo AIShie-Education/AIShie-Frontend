@@ -8,8 +8,14 @@
 // (last_retracted_at): when that moves, the messages held are read again, so
 // a withdrawal shows wherever the message is. One the caller retracts is
 // marked at once.
-import { computed, onScopeDispose, ref, shallowRef, toValue, type MaybeRefOrGetter } from 'vue'
-import { ApiError, read } from '@/api/http'
+//
+// Core keeps what each of the two taking part has read. While one of them
+// has it before their eyes (reader), what is shown is marked read
+// (conversation.mark_read, up to the newest message held): when it opens, if
+// Core says the other has written since they last read it (conversation.get's
+// unread), and each time the other writes while it is shown.
+import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
+import { ApiError, read, write, type ToolOut } from '@/api/http'
 import type { ConversationMessage, ConversationView } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { usePolling } from '@/composables/usePolling'
@@ -27,6 +33,15 @@ export interface UseConversationOptions {
   conversationId: string
   /** Whether it is on screen: polling runs only then (and not while the page is hidden). */
   active?: MaybeRefOrGetter<boolean>
+  /**
+   * The caller's seat while they read it as one of the two taking part, with
+   * it on screen: what is shown is then marked read, while the page is not
+   * hidden. Null, or left out, marks nothing (staff reading it keep no place
+   * in it).
+   */
+  reader?: MaybeRefOrGetter<string | null | undefined>
+  /** Core has recorded what the reader has read (conversation.mark_read's answer). */
+  onRead?: (out: ToolOut<'conversation.mark_read'>) => void
   /** Called with the page's time (tests). */
   now?: () => number
 }
@@ -57,6 +72,58 @@ export function useConversation(opts: UseConversationOptions) {
   onScopeDispose(() => {
     disposed = true
   })
+
+  // --- What the reader has read ------------------------------------------------------
+  /**
+   * Every message up to this seq is read, as far as is known: null until
+   * conversation.get has said whether anything is unread.
+   */
+  let readSeq: number | null = null
+  let marking: Promise<void> | null = null
+  /** Core refused to mark it read (the caller takes no part in it after all): not asked again. */
+  let markRefused = false
+  const hidden = () => typeof document !== 'undefined' && document.visibilityState === 'hidden'
+  const shown = ref(!hidden())
+  const onVisibility = () => (shown.value = !hidden())
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibility)
+    onScopeDispose(() => document.removeEventListener('visibilitychange', onVisibility))
+  }
+  const reader = () => (opts.reader === undefined ? null : (toValue(opts.reader) ?? null))
+
+  /**
+   * Marks read, up to the newest message held, what the other has written
+   * since what is known read, when the reader has it before their eyes.
+   * Never twice at once; again at once when more came meanwhile.
+   */
+  function markRead(): Promise<void> {
+    if (marking) return marking
+    const me = reader()
+    const held = messages.value
+    const last = held.at(-1)
+    const since = readSeq
+    if (!me || since === null || markRefused || disposed || !shown.value || !last) return Promise.resolve()
+    if (!held.some((m) => m.seq > since && m.author_member_id !== me && !m.retracted)) return Promise.resolve()
+    marking = (async () => {
+      let done = false
+      try {
+        const out = await write('conversation.mark_read', { ...base(), up_to_message_id: last.id })
+        if (disposed || out.status !== 'executed') return
+        readSeq = Math.max(readSeq ?? 0, out.result.read_up_to_seq, last.seq)
+        done = true
+        opts.onRead?.(out.result)
+      } catch (e) {
+        // Refused: not asked again. Not answered: asked again after the next poll.
+        const err = toApiError(e)
+        if (!err.isNetwork && err.status > 0 && err.status < 500 && err.code !== 'rate_limited') markRefused = true
+      } finally {
+        marking = null
+      }
+      if (done) await markRead()
+    })()
+    return marking
+  }
+  watch([reader, shown], () => void markRead())
 
   const base = () => ({ course_id: opts.courseId, conversation_id: opts.conversationId })
 
@@ -94,15 +161,22 @@ export function useConversation(opts: UseConversationOptions) {
     } finally {
       if (!disposed) loading.value = false
     }
-    // Who can read it: said once, and not needed to show the messages.
+    // Who can read it, and whether the other has written since the caller
+    // last read it: said once, and not needed to show the messages.
     if (loaded.value && !visibleTo.value) {
       read('conversation.get', base())
         .then((d) => {
           if (disposed) return
           visibleTo.value = d.visible_to ?? []
           if (d && !view.value) view.value = d
+          // Unread: whatever the other wrote that is held. Otherwise all held is read.
+          readSeq = d.unread ? 0 : (lastSeq(messages.value) ?? 0)
+          void markRead()
         })
-        .catch(() => undefined)
+        .catch(() => {
+          // Not known: what is held counts as read, and what comes next is marked.
+          if (!disposed && readSeq === null) readSeq = lastSeq(messages.value) ?? 0
+        })
     }
   }
 
@@ -133,6 +207,7 @@ export function useConversation(opts: UseConversationOptions) {
     }
     if (reread && (await readHeldAgain())) changed = true
     quiet = changed ? 0 : quiet + 1
+    void markRead()
   }
 
   /**
@@ -222,5 +297,7 @@ export function useConversation(opts: UseConversationOptions) {
     loadOlder,
     refresh,
     markRetracted,
+    /** Marks read what is shown, if anything the other wrote is not yet (tests; it happens by itself). */
+    markRead,
   }
 }

@@ -58,6 +58,7 @@ export default {
       '不管理本课程成员的人，其智能体做这件事只能以提议的方式进行，因为这超出了“个人助手”预设所给的权限',
     principal_level: '代表他人行事的智能体，权限永不超过该人',
     principal_level_conversation_answer: '代表他人行事的智能体，回答的自主程度不会超过该人提问的权限',
+    conversations_are_with_agents: '对话只与智能体进行，真人不回答任何对话',
   },
   // The built-in presets, by Core's name for them.
   preset: {
@@ -190,6 +191,7 @@ export default {
   // closed_reason codes; anything else is what the closer wrote, shown as it is.
   closedReason: {
     seat_removed: '有参与者已离开课程',
+    conversations_are_with_agents: '这段对话的对象是真人，而现在对话只与智能体进行',
   },
   // A respondent's conversation_answer, as the person asking should read it.
   answerLevel: {
