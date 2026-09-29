@@ -21,7 +21,7 @@ import { ApiError } from '@/api/http'
 import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { HostedAgent, RevokedToken } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
-import { RUNTIME_TOKEN_LABEL, credentialByPrefix, hostingErrorText, unrevoked, type UnrevokedToken } from './hosting'
+import { credentialByPrefix, hostingErrorText, isRuntimeTokenLabel, unrevoked, type UnrevokedToken } from './hosting'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -44,7 +44,7 @@ const error = shallowRef<unknown>(null)
 const revoke = ref(true)
 
 /** The token is one this page made for the runtime: it is revoked, no question asked. */
-const ownToken = computed(() => credentialByPrefix(props.credentials, props.agent.token.prefix)?.label === RUNTIME_TOKEN_LABEL)
+const ownToken = computed(() => isRuntimeTokenLabel(credentialByPrefix(props.credentials, props.agent.token.prefix)?.label))
 const label = computed(() => credentialByPrefix(props.credentials, props.agent.token.prefix)?.label?.trim() || '')
 
 watch(open, (v) => {

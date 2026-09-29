@@ -30,7 +30,18 @@ import { credentialState } from '../credentials'
 type T = (key: string, params?: Record<string, unknown>) => string
 
 /** The label of the token this page issues for the runtime, in Core's Tokens list. */
-export const RUNTIME_TOKEN_LABEL = 'AIShie runtime'
+export const RUNTIME_TOKEN_LABEL = 'AIshie runtime'
+/**
+ * The label earlier versions of this page gave the runtime's token, spelt
+ * "AIShie runtime": tokens issued then are still hosted agents' own, and are
+ * known by it.
+ */
+const EARLIER_RUNTIME_TOKEN_LABEL = 'AIShie runtime'
+
+/** Whether a token's label is the one this page gives the runtime's token, as spelt now or before. */
+export function isRuntimeTokenLabel(label: string | null | undefined): boolean {
+  return label === RUNTIME_TOKEN_LABEL || label === EARLIER_RUNTIME_TOKEN_LABEL
+}
 
 /**
  * How recent a use of one of the agent's other tokens counts as something
@@ -46,7 +57,7 @@ const MAX_OTHER_TOKENS = 20
 
 /**
  * What the wizard does with the token it issues: host the agent (connect),
- * or give a hosted one a new token (replace; reconnect, when AIShie refused
+ * or give a hosted one a new token (replace; reconnect, when AIshie refused
  * the one it had).
  */
 export type HostMode = 'connect' | 'replace' | 'reconnect'
@@ -561,7 +572,7 @@ export function formProblems(form: ModelForm, offer: ProviderOffer | undefined):
 const CORE_TOKEN_INSIDE = /ais(?:inv)?_[a-z2-7]{12}_[A-Za-z0-9_-]{16,}/
 
 /**
- * Whether what was pasted as a provider's key is an AIShie token instead, a
+ * Whether what was pasted as a provider's key is an AIshie token instead, a
  * person's or an agent's: one that begins as a Core token or invitation
  * does, or holds one anywhere (in quotes, or after other text). The runtime
  * refuses it as key_malformed, and it must never go to a provider.
@@ -572,7 +583,7 @@ export function isAishieToken(key: string): boolean {
 
 /**
  * Whether a key could be one the runtime takes (§5.4): 8 to 4096 printable
- * ASCII characters with no whitespace, and never an AIShie token, which
+ * ASCII characters with no whitespace, and never an AIshie token, which
  * must never go to a provider (nor, as a key, to the runtime).
  */
 export function isKeyShaped(key: string): boolean {
@@ -583,7 +594,7 @@ export function isKeyShaped(key: string): boolean {
 
 /**
  * The message key (hosting.…) for what is wrong with a key, or null when
- * nothing is: an AIShie token pasted in its place is said to be one, so
+ * nothing is: an AIshie token pasted in its place is said to be one, so
  * that its owner knows to paste the provider's key instead.
  */
 export function keyProblem(key: string): string | null {

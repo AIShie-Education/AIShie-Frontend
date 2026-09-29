@@ -1,12 +1,12 @@
 {
-  "name": "aishiteru-frontend",
+  "name": "aishie-frontend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Web front end for AIShiteru Core: one client of the same tool layer agents call over MCP.",
+  "description": "Web front end for AIshie Core: one client of the same tool layer agents call over MCP.",
   "scripts": {
     "dev": "vite",
-    "dev:local": "AISHITERU_API_TARGET=http://localhost:8080 vite",
+    "dev:local": "AISHIE_API_TARGET=http://localhost:8080 vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc -b --noEmit",

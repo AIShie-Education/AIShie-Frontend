@@ -60,7 +60,7 @@ describe('siteChatState', () => {
   it('tells an agent that takes conversations here from one operated from outside', () => {
     expect(siteChatState({ site_chat: true, status: 'active' })).toBe('on')
     expect(siteChatState({ site_chat: false, status: 'active' })).toBe('external')
-    // AIShie's runtime hosts it: it says so again when it next starts it.
+    // AIshie's runtime hosts it: it says so again when it next starts it.
     expect(siteChatState({ site_chat: false, status: 'active' }, { hosted: true })).toBe('hostedOff')
     expect(siteChatState({ site_chat: false, status: 'suspended' }, { hosted: true })).toBe('suspended')
     expect(siteChatState({ site_chat: true, status: 'active' }, { hosted: true })).toBe('on')

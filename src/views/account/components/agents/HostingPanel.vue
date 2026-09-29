@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Where an agent runs, on its page (the contract's §9.2): hosted by AIShie
+// Where an agent runs, on its page (the contract's §9.2): hosted by AIshie
 // on the school's runtime, or run by another AI tool or a runtime of the
 // owner's. Hosting shows only where the runtime's API is there (useRuntime):
 // until it has answered, a placeholder; where it is not, the card offers the

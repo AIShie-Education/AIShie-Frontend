@@ -78,7 +78,7 @@ export interface HandOff<T> {
 }
 
 /**
- * Issues a token for the agent, labelled "AIShie runtime", and hands it to
+ * Issues a token for the agent, labelled "AIshie runtime", and hands it to
  * the runtime, as the contract's §9.2 says:
  *
  * 1. an assertion first, so that a runtime that cannot be called stops the

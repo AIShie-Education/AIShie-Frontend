@@ -3,13 +3,13 @@
 // what thinks and answers runs elsewhere, and an agent has one brain at a
 // time, so the card asks for one of three, in this order:
 //
-// 1. Host it on AIShie (hosting): the school's runtime runs it, on the
+// 1. Host it on AIshie (hosting): the school's runtime runs it, on the
 //    school's plan or a model and key the owner chooses; no token or file
 //    is ever shown. Offered only
 //    where the runtime's API is there; its content is the hosted slot.
 // 2. Connect another AI tool: any MCP client (Claude, ChatGPT, an agent SDK)
 //    with Core's MCP endpoint and one of the agent's tokens in a header.
-// 3. Run the AIShie runtime yourself (advanced): the agent file an operator
+// 3. Run the AIshie runtime yourself (advanced): the agent file an operator
 //    of their own runtime needs, folded away.
 //
 // For 2 and 3 the card also says whether the agent has a token and whether
@@ -33,7 +33,7 @@ const props = defineProps<{
   watching?: boolean
   /** Offering a token or a course makes no sense now (a suspended agent). */
   disabled?: boolean
-  /** AIShie can host it: offer that first. */
+  /** AIshie can host it: offer that first. */
   hosting?: boolean
   /** Hosting may be on the school's plan (features.school_key). */
   school?: boolean

@@ -77,7 +77,7 @@ async function panel(props: Record<string, unknown> = {}) {
   return w
 }
 
-/** Another AI tool, or the AIShie runtime run oneself: no word of hosting, and no error. */
+/** Another AI tool, or the AIshie runtime run oneself: no word of hosting, and no error. */
 function expectSelfOnly(w: VueWrapper) {
   expect(w.text()).toContain('How this agent runs')
   expect(w.findAll('.connect-choice__title').map((c) => c.text())).toEqual([
@@ -141,7 +141,7 @@ describe('HostingPanel: no runtime here', () => {
 })
 
 describe('HostingPanel: the runtime is here', () => {
-  it('offers hosting on AIShie first, before the other two, when the agent is not hosted', async () => {
+  it('offers hosting on AIshie first, before the other two, when the agent is not hosted', async () => {
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent({ core_actor_id: 'someone-else' })] }))
     const w = await panel()
     expect(w.text()).toContain('How this agent runs')
@@ -332,7 +332,7 @@ describe('HostingPanel: after connecting, one brain at a time', () => {
 })
 
 describe('HostingPanel: a token the runtime could not revoke', () => {
-  const ownCred = () => credential({ id: 'cred_runtime', token_prefix: 'runtimetoken', label: 'AIShie runtime' })
+  const ownCred = () => credential({ id: 'cred_runtime', token_prefix: 'runtimetoken', label: 'AIshie runtime' })
 
   it('after a deletion, says the token may still work above the three ways, and revokes it when asked', async () => {
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent()] }))
@@ -391,7 +391,7 @@ describe('AgentTokensCard', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const creds = [
-      credential({ id: 'a', label: 'AIShie runtime', token_prefix: 'runtimetoken' }),
+      credential({ id: 'a', label: 'AIshie runtime', token_prefix: 'runtimetoken' }),
       credential({ id: 'b', label: 'laptop' }),
     ]
     const w = mount(AgentTokensCard, {
@@ -401,6 +401,6 @@ describe('AgentTokensCard', () => {
     const tags = w.findAll('.token__hosted')
     expect(tags).toHaveLength(1)
     expect(tags[0].text()).toBe('Used by the school’s runtime')
-    expect(tags[0].element.closest('.token')!.textContent).toContain('AIShie runtime')
+    expect(tags[0].element.closest('.token')!.textContent).toContain('AIshie runtime')
   })
 })

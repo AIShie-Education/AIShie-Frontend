@@ -44,10 +44,10 @@ export default {
     submit: '连接',
     done: '{name} 已托管到学校的运行环境',
     replaceTitle: '为学校运行环境上的 {name} 更换令牌',
-    replaceBody: '系统会创建一个标签为“AIShie runtime”的新令牌并交给运行环境，运行环境随后会撤销原有的令牌。两个令牌你都不会看到。',
+    replaceBody: '系统会创建一个标签为“AIshie runtime”的新令牌并交给运行环境，运行环境随后会撤销原有的令牌。两个令牌你都不会看到。',
     replaceSubmit: '更换令牌',
     reconnectTitle: '重新连接 {name}',
-    reconnectBody: 'AIshie 拒绝了运行环境原有的令牌。系统会创建一个标签为“AIShie runtime”的新令牌并交给运行环境；你不会看到它。',
+    reconnectBody: 'AIshie 拒绝了运行环境原有的令牌。系统会创建一个标签为“AIshie runtime”的新令牌并交给运行环境；你不会看到它。',
     reconnectSubmit: '重新连接',
     replaced: '运行环境已获得 {name} 的新令牌',
   },
@@ -322,7 +322,7 @@ export default {
   // Deleting it from the runtime.
   delete: {
     title: '从学校的运行环境删除 {name}？',
-    body: '运行环境会停止这个智能体，删除它的设置和你的密钥，并撤销它的令牌“AIShie runtime”。智能体会保留在 AIshie 中；你之后可以再次托管它。',
+    body: '运行环境会停止这个智能体，删除它的设置和你的密钥，并撤销它的令牌“AIshie runtime”。智能体会保留在 AIshie 中；你之后可以再次托管它。',
     proposals: '1 个仍在等待批准的回答会保留在 AIshie 中。 | {n} 个仍在等待批准的回答会保留在 AIshie 中。',
     alsoRevoke: '同时撤销它的令牌',
     alsoRevokeHint: '它的令牌（“{label}”）并非由本页创建。只有在其他程序仍在使用它时才保留。',

@@ -77,8 +77,8 @@ describe('UnrevokedTokenNotice', () => {
         credentials: [
           credential({ id: 'cred_revoked', token_prefix: 'oldruntimetk', revoked_at: '2026-09-01T00:00:00Z' }),
           credential({ id: 'cred_session', token_prefix: 'oldruntimetk', kind: 'session' }),
-          credential({ id: 'cred_old', token_prefix: 'oldruntimetk', label: 'AIShie runtime' }),
-          credential({ id: 'cred_new', token_prefix: 'newruntimetk', label: 'AIShie runtime' }),
+          credential({ id: 'cred_old', token_prefix: 'oldruntimetk', label: 'AIshie runtime' }),
+          credential({ id: 'cred_new', token_prefix: 'newruntimetk', label: 'AIshie runtime' }),
         ],
       }),
     )

@@ -35,7 +35,7 @@ export function agentStanding(a: Pick<AgentSummary, 'status' | 'suspended_by_me'
 /**
  * Whether an agent takes conversations in the site, as its page tells its
  * owner: on (whatever runs it said it answers there, me.site_chat); off while
- * it is suspended; off for now while AIShie's runtime hosts it, which says so
+ * it is suspended; off for now while AIshie's runtime hosts it, which says so
  * again whenever it starts it (the owner switched it off, or it has not
  * started it yet); and otherwise operated from an external tool (Claude
  * through MCP, say), which never says so.
@@ -247,7 +247,7 @@ export function setupProgress(input: {
 }
 
 /**
- * What the AIShie Agent Runtime is given to run an agent its owner runs
+ * What the AIshie Agent Runtime is given to run an agent its owner runs
  * themselves: an agent file, YAML in the runtime's agents directory, whose
  * core section says where Core is (its base URL: the runtime finds /mcp
  * there) and which secret holds the agent's token. The token is never in the

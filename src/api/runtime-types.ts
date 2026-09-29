@@ -1,4 +1,4 @@
-// The objects of the AIShie Agent Runtime's API v1 (M2), written by hand from
+// The objects of the AIshie Agent Runtime's API v1 (M2), written by hand from
 // its contract (m2.api.spec.md §4 and §5). Generating them (gen:runtime-api)
 // is a follow-up once the runtime publishes a schema. Answers may gain
 // members within v1; what is not named here is ignored.

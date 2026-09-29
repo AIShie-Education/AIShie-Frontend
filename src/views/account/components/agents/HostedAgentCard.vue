@@ -12,7 +12,7 @@
 // page is hidden.
 //
 // An agent has one brain at a time. While the runtime hosts it, the other
-// two ways to run it (another AI tool, or an AIShie runtime of one's own)
+// two ways to run it (another AI tool, or an AIshie runtime of one's own)
 // are folded away, with a note that they apply only once hosting is
 // deleted; resuming while another of its tokens is in use says so first.
 import { computed, ref, shallowRef, watch } from 'vue'
@@ -66,7 +66,7 @@ const emit = defineEmits<{
   /** No longer on the runtime (deleted here, or elsewhere). */
   deleted: []
   chooseModel: []
-  /** Give it a new token: 'reconnect' when AIShie refused the one it had. */
+  /** Give it a new token: 'reconnect' when AIshie refused the one it had. */
   newToken: [mode: 'replace' | 'reconnect']
   credsChanged: []
   /** Deleting left its token working: the owner is offered to revoke it (§9.4). */

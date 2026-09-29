@@ -1,7 +1,7 @@
 # Deploying the web front end
 
 The front end is a directory of static files, and it is served from the same
-origin as AIShiteru Core: Core's session cookie is `SameSite=Lax`, and its
+origin as AIshie Core: Core's session cookie is `SameSite=Lax`, and its
 guard refuses writes from other origins. One proxy in front of both sends
 `/v1/*`, `/mcp`, `/mcp/*` and `/healthz` to Core, and everything else to the
 front end's files, falling back to `index.html` for the app's own routes.
@@ -208,7 +208,7 @@ The server Core runs on, one per environment, set up with Core's
 ([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md)),
 serves the files itself. Caddy, which already serves HTTPS there, sends
 `/v1/*`, `/mcp`, `/mcp/*` and `/healthz` to Core on `127.0.0.1:8080`, and
-everything else to the files in `/srv/aishiteru-web/current`. This is retired
+everything else to the files in `/srv/aishie-web/current`. This is retired
 once the compose stack runs; until then it works as it did.
 
 The scripts in [`deploy/`](../deploy) do the work:
@@ -216,7 +216,7 @@ The scripts in [`deploy/`](../deploy) do the work:
 - `setup-web.sh` sets a server up for the front end, once. Run again, it
   installs a newer copy of the other script and leaves everything else as it
   is.
-- `aishiteru-web-deploy` puts a build on the server, or goes back to one it
+- `aishie-web-deploy` puts a build on the server, or goes back to one it
   keeps. The Deploy workflow runs it; so can you.
 
 ## How a build gets there
@@ -228,14 +228,14 @@ A build is made once, and what is deployed is what was checked:
    `.github/core-image`), and hands them to the Deploy workflow for
    `staging`.
 2. A version tag runs all of CI again on the tagged commit and publishes that
-   build on the release page, as `aishiteru-web-vX.Y.Z.tar.gz`
+   build on the release page, as `aishie-web-vX.Y.Z.tar.gz`
    ([CONTRIBUTING.md](../CONTRIBUTING.md#releasing)). A pre-release
    (`v1.2.3-rc.1`) is then deployed to `staging` too.
 3. `production` gets a release's tarball, and only when somebody runs Deploy
    for it by hand, from the release's tag.
 
 The Deploy workflow packs the build, connects to the server with SSH as the
-user `webdeploy`, whose key can do nothing but run `aishiteru-web-deploy`, and
+user `webdeploy`, whose key can do nothing but run `aishie-web-deploy`, and
 sends the tarball on its standard input, named by a release ID: the release's
 tag for a release's build, the short commit otherwise. The script checks the
 archive before it unpacks anything, unpacks it beside the releases it keeps,
@@ -258,12 +258,12 @@ The server runs Core already. As root:
    ```
 
    It creates the user `webdeploy`, with no password, and
-   `/srv/aishiteru-web`, which `webdeploy` owns and everyone can read. It
-   installs `aishiteru-web-deploy` in `/usr/local/bin`, and serves a
+   `/srv/aishie-web`, which `webdeploy` owns and everyone can read. It
+   installs `aishie-web-deploy` in `/usr/local/bin`, and serves a
    placeholder page until the first deploy. It gives `webdeploy` an SSH key
-   whose only command is `aishiteru-web-deploy`. That line, the `.ssh` it is
+   whose only command is `aishie-web-deploy`. That line, the `.ssh` it is
    in and `webdeploy`'s home are root's, so `webdeploy` cannot change what
-   its key may do; and under `/srv/aishiteru-web` the script writes as
+   its key may do; and under `/srv/aishie-web` the script writes as
    `webdeploy`, never as root.
 
    Then it changes Caddy's site for the name, but only if
@@ -276,7 +276,7 @@ The server runs Core already. As root:
    /etc/caddy/Caddyfile && systemctl restart caddy`.
 
 2. Add the settings it prints to GitHub (next section), then delete
-   `/root/aishiteru-web-deploy-key` from the server.
+   `/root/aishie-web-deploy-key` from the server.
 
 3. Deploy: push to `main`, or run Deploy by hand (Actions → Deploy → Run
    workflow, from `main`, environment `staging`). Until then
@@ -297,7 +297,7 @@ repository's Settings → Secrets and variables → Actions:
 | --- | --- | --- |
 | Variable | `DEPLOY_WEB_TARGET_STAGING` | `webdeploy@test.aishie.app` |
 | Variable | `DEPLOY_WEB_KNOWN_HOSTS_STAGING` | the server's host key line, as printed |
-| Secret | `DEPLOY_WEB_SSH_KEY_STAGING` | the whole of `/root/aishiteru-web-deploy-key` |
+| Secret | `DEPLOY_WEB_SSH_KEY_STAGING` | the whole of `/root/aishie-web-deploy-key` |
 | Variable (optional) | `DEPLOY_WEB_URL_STAGING` | the site's origin, when it is not `https://` + the target's host |
 
 For production, the names end in `_PRODUCTION`. They are the repository's,
@@ -315,13 +315,13 @@ Until `DEPLOY_WEB_TARGET_STAGING` is set, a deploy says which build is ready
 and passes. A secret or host key set without the target fails the run, so
 that half a configuration is not taken for none.
 
-The key can only run `aishiteru-web-deploy`, but that puts any build it is
+The key can only run `aishie-web-deploy`, but that puts any build it is
 given on the site, which is Core's origin: whoever can deploy can run
 JavaScript as every person who signs in. Anyone with write access to this
 repository can run a workflow that reads the secret. On GitHub Free nothing
 narrows that down to a branch or to people. When someone loses write access,
 replace the key: on the server, delete `~webdeploy/.ssh/authorized_keys` and
-any `/root/aishiteru-web-deploy-key*` left, run `setup-web.sh` again as in
+any `/root/aishie-web-deploy-key*` left, run `setup-web.sh` again as in
 step 1, and put the new key it prints into the secret.
 
 ## Day to day
@@ -331,16 +331,16 @@ Run these as root on the server.
 - **What is served**, and what else is kept, newest first:
 
   ```
-  sudo -u webdeploy aishiteru-web-deploy list
+  sudo -u webdeploy aishie-web-deploy list
   ```
 
-  `/srv/aishiteru-web/deploy.log` lists every deploy and switch, from what to
+  `/srv/aishie-web/deploy.log` lists every deploy and switch, from what to
   what. The Deploy run's summary names the commit, the version and the files.
 - **Rolling back** to a release the server keeps (the newest five, and the one
   served before the current one) is immediate:
 
   ```
-  sudo -u webdeploy aishiteru-web-deploy activate v1.2.2
+  sudo -u webdeploy aishie-web-deploy activate v1.2.2
   ```
 
   From GitHub instead: run Deploy from the newest release's tag, with
@@ -351,13 +351,24 @@ Run these as root on the server.
 - **Deploying without GitHub**, a release's tarball, say:
 
   ```
-  sha256sum -c aishiteru-web-v1.2.3.tar.gz.sha256
-  sudo -u webdeploy aishiteru-web-deploy v1.2.3 < aishiteru-web-v1.2.3.tar.gz
+  sha256sum -c aishie-web-v1.2.3.tar.gz.sha256
+  sudo -u webdeploy aishie-web-deploy v1.2.3 < aishie-web-v1.2.3.tar.gz
   ```
 
 - **Updating the script:** when `deploy/` changes, copy it to the server again
   and run `setup-web.sh` as in step 1. It installs the new script and leaves
   the rest.
+- **A server set up before the name AIshie** has the script as
+  `aishiteru-web-deploy`, its files in `/srv/aishiteru-web`, and `webdeploy`'s
+  key held to that command. It deploys as it did: the Deploy workflow names no
+  program, the key's forced command does. It takes a newer script as any
+  server does, by running `setup-web.sh` again, which installs
+  `aishie-web-deploy`, holds the same key to it (the secret in GitHub stays as
+  it is), and removes `aishiteru-web-deploy`. The releases stay in
+  `/srv/aishiteru-web`, where both scripts look when `/srv/aishie-web` is not
+  there, and Caddy's site, which differs from the one `setup-web.sh` writes
+  now in its comments alone, is left as it is. Any
+  `/root/aishiteru-web-deploy-key` left can go.
 - **Caching:** files under `/assets/` have the hash of their contents in
   their names, and are served `immutable` for a year. Everything else,
   `index.html` first, is served `no-cache`: browsers ask each time, and a
@@ -382,7 +393,7 @@ Run these as root on the server.
   repository's workflows can read it only once an owner of the organization
   grants it: the package's settings
   (github.com/orgs/AIShie-Education/packages/container/aishie-core/settings)
-  → Manage Actions access → Add Repository → `AIShiteru-Frontend`, role
+  → Manage Actions access → Add Repository → `AIShie-Frontend`, role
   Read. It is done once.
 - **"refused the build".** The archive held something other than plain files
   and directories, a name with a character other than letters, digits and
@@ -415,7 +426,7 @@ Run these as root on the server.
   ([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md));
   the front end needs nothing more.
 - **`setup-web.sh` stops at a link, or at a line of `authorized_keys`.**
-  Neither it nor `aishiteru-web-deploy` makes a link there, nor a key line
+  Neither it nor `aishie-web-deploy` makes a link there, nor a key line
   that is not the forced command: something else changed what `webdeploy`
   owns, or its key. Find out what before you run it again.
 - **A re-run of an older push to `main` fails.** Once `main` has moved on,

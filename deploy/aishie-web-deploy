@@ -1,12 +1,12 @@
 #!/bin/sh
-# Puts a build of the AIShiteru web front end on this server, or goes back to
+# Puts a build of the AIshie web front end on this server, or goes back to
 # one it keeps. The Deploy workflow runs it over SSH as the user webdeploy,
 # whose key can run nothing else (deploy/setup-web.sh, docs/deploying.md). By
-# hand, as root: sudo -u webdeploy aishiteru-web-deploy ...
+# hand, as root: sudo -u webdeploy aishie-web-deploy ...
 #
-#   aishiteru-web-deploy ID < build.tar.gz    unpack a build as release ID, and serve it
-#   aishiteru-web-deploy activate ID          serve release ID, one kept here, again
-#   aishiteru-web-deploy list                 the releases kept here, newest first
+#   aishie-web-deploy ID < build.tar.gz    unpack a build as release ID, and serve it
+#   aishie-web-deploy activate ID          serve release ID, one kept here, again
+#   aishie-web-deploy list                 the releases kept here, newest first
 #
 # ID is what the Deploy workflow calls the build: a release's tag (v1.2.3) or
 # a commit (abc1234). Letters, digits, dots, dashes and underscores, not
@@ -27,7 +27,7 @@
 # which is served again, and refused if it is not.
 #
 # The paths below are the ones deploy/setup-web.sh creates. The variables that
-# override them are for deploy/aishiteru-web-deploy_test.sh, and are not read
+# override them are for deploy/aishie-web-deploy_test.sh, and are not read
 # over SSH: what a client may set there is sshd's AcceptEnv, not this script.
 set -eu
 umask 022
@@ -36,20 +36,24 @@ LC_ALL=C
 export LC_ALL
 
 if [ -n "${SSH_CONNECTION:-}" ]; then
-  unset AISHITERU_WEB_ROOT AISHITERU_WEB_MAX_BYTES AISHITERU_WEB_MAX_UNPACKED AISHITERU_WEB_MAX_ENTRIES \
-    AISHITERU_WEB_LOCK_WAIT AISHITERU_WEB_READ_WAIT AISHITERU_WEB_FLOCK
+  unset AISHIE_WEB_ROOT AISHIE_WEB_MAX_BYTES AISHIE_WEB_MAX_UNPACKED AISHIE_WEB_MAX_ENTRIES \
+    AISHIE_WEB_LOCK_WAIT AISHIE_WEB_READ_WAIT AISHIE_WEB_FLOCK
 fi
-ROOT=${AISHITERU_WEB_ROOT:-/srv/aishiteru-web}
-MAX_BYTES=${AISHITERU_WEB_MAX_BYTES:-52428800}        # 50 MiB, as sent
-MAX_UNPACKED=${AISHITERU_WEB_MAX_UNPACKED:-268435456} # 256 MiB, unpacked
-MAX_ENTRIES=${AISHITERU_WEB_MAX_ENTRIES:-10000}
-LOCK_WAIT=${AISHITERU_WEB_LOCK_WAIT:-300}
-READ_WAIT=${AISHITERU_WEB_READ_WAIT:-600}
-FLOCK=${AISHITERU_WEB_FLOCK:-flock}
+root=/srv/aishie-web
+# Compatibility: a server set up before the rename to AIshie keeps its
+# releases in /srv/aishiteru-web, and setup-web.sh leaves them there.
+[ -e "$root" ] || [ ! -e /srv/aishiteru-web ] || root=/srv/aishiteru-web
+ROOT=${AISHIE_WEB_ROOT:-$root}
+MAX_BYTES=${AISHIE_WEB_MAX_BYTES:-52428800}        # 50 MiB, as sent
+MAX_UNPACKED=${AISHIE_WEB_MAX_UNPACKED:-268435456} # 256 MiB, unpacked
+MAX_ENTRIES=${AISHIE_WEB_MAX_ENTRIES:-10000}
+LOCK_WAIT=${AISHIE_WEB_LOCK_WAIT:-300}
+READ_WAIT=${AISHIE_WEB_READ_WAIT:-600}
+FLOCK=${AISHIE_WEB_FLOCK:-flock}
 KEEP=5
 REL=$ROOT/releases
 LOG=$ROOT/deploy.log
-me=aishiteru-web-deploy
+me=aishie-web-deploy
 
 say() { echo "$me: $*"; }
 die() { echo "$me: $*" >&2; exit 1; }

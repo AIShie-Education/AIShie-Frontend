@@ -41,6 +41,6 @@ export default defineConfig({
     command: `npx ${serve} --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
     reuseExistingServer: true,
-    env: { AISHITERU_API_TARGET: core },
+    env: { AISHIE_API_TARGET: core },
   },
 })

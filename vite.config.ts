@@ -19,18 +19,18 @@ const fontsourceWoff2Only = {
 // In development the front end is served from this machine and every API call
 // goes through the dev server's proxy to Core, so that the browser sees one
 // origin: the session cookie is first-party, and Core's cross-origin guard
-// sees a same-origin request. AISHITERU_API_TARGET picks the Core instance.
+// sees a same-origin request. AISHIE_API_TARGET picks the Core instance.
 //
 // The agent runtime's API, /runtime/api, is proxied the same way, to
-// AISHITERU_RUNTIME_TARGET: by default where Core is, since on a server one
+// AISHIE_RUNTIME_TARGET: by default where Core is, since on a server one
 // proxy sends that path to the runtime beside Core's; http://localhost:9091
 // for a runtime on this machine (its API_ADDR). As that proxy does, this one
 // strips the Cookie header: the runtime takes a bearer assertion, and never
 // Core's session.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const target = env.AISHITERU_API_TARGET || 'https://test.aishie.app'
-  const runtimeTarget = env.AISHITERU_RUNTIME_TARGET || target
+  const target = env.AISHIE_API_TARGET || 'https://test.aishie.app'
+  const runtimeTarget = env.AISHIE_RUNTIME_TARGET || target
   // The dev server does not forward /mcp (Core refuses what a proxy forwards
   // there unless it is a trusted one), so pages that tell people where an
   // agent connects point at the proxied Core itself.

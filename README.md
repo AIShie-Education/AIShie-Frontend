@@ -1,6 +1,6 @@
-# AIShiteru-Frontend
+# AIShie-Frontend
 
-The web front end for [AIShiteru Core](https://github.com/AIShie-Education/AIShie-Core), an
+The web front end for [AIshie Core](https://github.com/AIShie-Education/AIShie-Core), an
 agent-centred LMS. Core has one tool surface that people (REST) and agents (MCP) both call; this app
 is one more client of it, calling the same tools an agent calls, through the same pipeline — so a
 grade an agent proposes and a grade a person enters are the same action, approved in the same queue.
@@ -75,10 +75,10 @@ npm run dev
 
 The dev server is at http://localhost:5173 and proxies `/v1` and `/healthz` to Core, so the
 browser sees one origin and Core's session cookie and cross-origin guard work as they will in
-production. Which Core it talks to is `AISHITERU_API_TARGET` (default `https://test.aishie.app`):
+production. Which Core it talks to is `AISHIE_API_TARGET` (default `https://test.aishie.app`):
 
 ```bash
-AISHITERU_API_TARGET=http://localhost:8080 npm run dev
+AISHIE_API_TARGET=http://localhost:8080 npm run dev
 ```
 
 (`npm run dev:local` is the same for a Core on this machine.) Sign in with an email (or a student or
@@ -86,17 +86,17 @@ staff number) and a password, or with single sign-on where Core has it. Only peo
 app; agents call Core with their API tokens, over MCP or REST.
 
 The agent runtime's API, `/runtime/api`, is proxied too, without the `Cookie` header, as the
-server's proxy sends it: to `AISHITERU_RUNTIME_TARGET`, by default the same place as Core, whose
+server's proxy sends it: to `AISHIE_RUNTIME_TARGET`, by default the same place as Core, whose
 server routes that path to its runtime. For a runtime on this machine, point it at the runtime's
 `API_ADDR`; the runtime's `API_AUDIENCE` must then be one of the local Core's `RUNTIME_AUDIENCES`:
 
 ```bash
-AISHITERU_RUNTIME_TARGET=http://localhost:9091 npm run dev:local
+AISHIE_RUNTIME_TARGET=http://localhost:9091 npm run dev:local
 ```
 
 Without a runtime there the path answers 404 or 502, and the pages simply offer no hosting.
 
-To run Core locally, see its README (`make build`, `aishiterud migrate up`, `seed`, `bootstrap`,
+To run Core locally, see its README (`make build`, `aishie-core migrate up`, `seed`, `bootstrap`,
 `serve`). Start it with `INSECURE_COOKIES=true` so that the session cookie is accepted over plain
 `http://localhost`.
 
@@ -208,14 +208,14 @@ lms.example.edu {
 	}
 
 	handle /assets/* {
-		root * /srv/aishiteru-web/current
+		root * /srv/aishie-web/current
 		@found file
 		header @found Cache-Control "public, max-age=31536000, immutable"
 		encode zstd gzip
 		file_server
 	}
 	handle {
-		root * /srv/aishiteru-web/current
+		root * /srv/aishie-web/current
 		header Cache-Control "no-cache"
 		encode zstd gzip
 		try_files {path} /index.html
@@ -247,7 +247,7 @@ set Core's `COOKIE_SAMESITE=none`.
   **Production** is deployed by hand: Actions → Deploy → Run workflow, from the release's tag,
   environment `production` ([CONTRIBUTING.md](CONTRIBUTING.md#releasing)).
 - **Rolling back** is immediate on the server, which keeps the last few releases:
-  `sudo -u webdeploy aishiteru-web-deploy list`, then `… activate <release>`; or run Deploy from the
+  `sudo -u webdeploy aishie-web-deploy list`, then `… activate <release>`; or run Deploy from the
   newest release's tag with the older tag as the ref ([docs/deploying.md](docs/deploying.md#day-to-day)).
 
 A server needs `deploy/setup-web.sh` once, and the repository needs its deploy settings and read access
@@ -270,7 +270,7 @@ scripts/                  type generator, i18n check, demo data, screenshot help
                           the image's test (test-image.sh)
 .github/                  CI, Publish, Deploy and Release workflows, the pinned Core (core-image), Dependabot
 Dockerfile, Caddyfile     the image: the build, served by Caddy on :8080 (docs/deploying.md)
-deploy/                   the SSH deploy's server side: setup-web.sh and aishiteru-web-deploy (docs/deploying.md)
+deploy/                   the SSH deploy's server side: setup-web.sh and aishie-web-deploy (docs/deploying.md)
 src/api/                  the client: http.ts (read, write, upload), generated types, named shapes
 src/stores/               session (who is signed in), course (the open course and the caller's seat)
 src/composables/          useAsync / usePaged, useWrite (idempotent writes and their outcomes), errors
@@ -284,4 +284,4 @@ docs/deploying.md         the image and its tags; setting a server up, deploying
 
 ## License
 
-AIShie Frontend is copyright 2026 XIE Hanming, and source-available under the [Elastic License 2.0](LICENSE) (ELv2), governed by the laws of Hong Kong. You may use, copy, change and redistribute it on the terms in LICENSE, which include that you may not offer it to others as a hosted or managed service.
+AIshie Frontend is copyright 2026 XIE Hanming, and source-available under the [Elastic License 2.0](LICENSE) (ELv2), governed by the laws of Hong Kong. You may use, copy, change and redistribute it on the terms in LICENSE, which include that you may not offer it to others as a hosted or managed service.

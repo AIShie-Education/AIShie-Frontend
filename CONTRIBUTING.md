@@ -15,7 +15,7 @@ request, on every push to `main` and once a week:
   them, and the image, which builds the sources again, must hold them file
   for file.
 - **workflows and deploy scripts:** actionlint over the workflows, ShellCheck
-  over the scripts, and `deploy/aishiteru-web-deploy_test.sh`. ShellCheck is
+  over the scripts, and `deploy/aishie-web-deploy_test.sh`. ShellCheck is
   0.11.0, pinned in `ci.yml` (`brew install shellcheck` gives the same), not
   the runner's 0.9.0, which reports lines 0.11.0 lets pass.
 - **npm audit:** advisories of high severity in what the build bundles.
@@ -44,9 +44,9 @@ npm ci
 npm run gen:api && git diff --exit-code src/api/generated
 npm run check && npm run build
 go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12   # uses the shellcheck on PATH
-shellcheck -s sh deploy/aishiteru-web-deploy deploy/setup-web.sh scripts/pack-dist.sh
-shellcheck deploy/aishiteru-web-deploy_test.sh scripts/ci-core.sh scripts/test-image.sh
-deploy/aishiteru-web-deploy_test.sh
+shellcheck -s sh deploy/aishie-web-deploy deploy/setup-web.sh scripts/pack-dist.sh
+shellcheck deploy/aishie-web-deploy_test.sh scripts/ci-core.sh scripts/test-image.sh
+deploy/aishie-web-deploy_test.sh
 ```
 
 and the image, with Docker, against the build `npm run build` made:
@@ -62,8 +62,8 @@ and the end-to-end tests against a throwaway Core, from its image (Docker, and
 binary of Core:
 
 ```bash
-CORE_BIN=../AIShiteru-Core/bin/aishiterud DATABASE_URL=postgres:///aishiteru_e2e scripts/ci-core.sh start
-. "${TMPDIR:-/tmp}/aishiteru-ci-core/env"
+CORE_BIN=../AIShie-Core/bin/aishie-core DATABASE_URL=postgres:///aishie_e2e scripts/ci-core.sh start
+. "${TMPDIR:-/tmp}/aishie-ci-core/env"
 npm run gen:api -- --from "$E2E_CORE_URL" --check
 npx playwright test                         # E2E_PREVIEW=1 to test dist/, as CI does
 scripts/ci-core.sh stop
@@ -113,7 +113,7 @@ git push origin v0.1.0
 checked: first its image, tested, as `ghcr.io/aishie-education/aishie-frontend:0.1.0`
 and `:0.1` (and `:latest`, when it is the highest stable release), for
 `linux/amd64` and `linux/arm64`; then the release page, with
-`aishiteru-web-v0.1.0.tar.gz` and its `.sha256`. The notes list what is new
+`aishie-web-v0.1.0.tar.gz` and its `.sha256`. The notes list what is new
 since the release before (for a stable release, since the last stable one),
 name the image, and say which Core the build was checked against: deploy it
 beside that version of Core or a later one. A tag with a hyphen
@@ -135,7 +135,7 @@ Before the first push to `main` after the CI/CD workflows land, in GitHub:
 
 - **Core's image** (organization Settings → Packages, or the package's own
   page, github.com/orgs/AIShie-Education/packages/container/aishie-core/settings):
-  Manage Actions access → Add Repository → `AIShiteru-Frontend`, role Read.
+  Manage Actions access → Add Repository → `AIShie-Frontend`, role Read.
   The image is private, and without this the end-to-end job cannot pull it and
   says so. An owner of the organization, or an admin of the package, does it
   once.

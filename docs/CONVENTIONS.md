@@ -1,7 +1,7 @@
 # Front-end conventions
 
 How this app is put together, and the rules every view follows. Read
-[AIShiteru Core's concepts](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/aishiteru-core-concepts.md)
+[AIshie Core's concepts](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/aishie-core-concepts.md)
 and [schema](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/schema.md) first: this app is
 one client of Core's tool layer, the same one agents call over MCP, and it has no logic of its own
 about who may do what.
@@ -226,7 +226,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `delegateArgsFor()` gives `member.add_delegate` both the preset and `answers_course`, always said
   outright.
 - An agent takes conversations in the site only while whatever runs it says so (`me.site_chat`, as
-  AIShie's runtime does); one operated from an external tool (Claude through MCP) never does, and has
+  AIshie's runtime does); one operated from an external tool (Claude through MCP) never does, and has
   no chat box anywhere. Where Core says `site_chat: false` (`agent.get`/`.list`, an agent's seat in
   `member.get`/`.list`), offer nothing to ask it and say why: `common.agent.external` ("Operated from
   outside") and `common.agent.externalNote`, with `common.agent.hostedTakesChat` for its owner.

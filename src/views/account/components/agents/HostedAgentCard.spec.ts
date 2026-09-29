@@ -219,7 +219,7 @@ describe('HostedAgentCard: what the owner can do', () => {
     expect(w.find('.hosted-card__primary').attributes('disabled')).toBeDefined()
   })
 
-  it('pauses on the runtime, with the tooltip saying the agent stays active in AIShie', async () => {
+  it('pauses on the runtime, with the tooltip saying the agent stays active in AIshie', async () => {
     s.on('POST', RUNTIME.pause, () => json(200, hostedAgent({ status: 'paused', paused: true })))
     const w = await card(hostedAgent())
     expect(w.find('.hosted-card__pause').text()).toBe('Pause')
@@ -362,7 +362,7 @@ describe('HostedAgentCard: deleting', () => {
     await flushPromises()
   }
   const ownCred = (over = {}) =>
-    credential({ id: 'cred_runtime', token_prefix: 'runtimetoken', label: 'AIShie runtime', ...over })
+    credential({ id: 'cred_runtime', token_prefix: 'runtimetoken', label: 'AIshie runtime', ...over })
   const answer = (revocation: string, problem: string | null = null) =>
     json(200, {
       deleted: { id: 'agt_1', core_actor_id: ACTOR },
@@ -373,10 +373,15 @@ describe('HostedAgentCard: deleting', () => {
     const w = await deleteDialog(hostedAgent({ proposals_waiting: 3 }), { credentials: [ownCred()] })
     const text = w.find('.delete-hosting').text()
     expect(text).toContain(
-      'The runtime stops this agent, forgets its settings and your key, and revokes its token “AIShie runtime”. The agent stays in AIshie; you can host it again later.',
+      'The runtime stops this agent, forgets its settings and your key, and revokes its token “AIshie runtime”. The agent stays in AIshie; you can host it again later.',
     )
     expect(text).toContain('3 answers still waiting for approval stay in AIshie.')
     // Its own token is revoked without asking.
+    expect(w.find('.delete-hosting__revoke').exists()).toBe(false)
+  })
+
+  it('knows its own token by the label earlier versions gave it, “AIShie runtime”, and revokes it without asking too', async () => {
+    const w = await deleteDialog(hostedAgent(), { credentials: [ownCred({ label: 'AIShie runtime' })] })
     expect(w.find('.delete-hosting__revoke').exists()).toBe(false)
   })
 

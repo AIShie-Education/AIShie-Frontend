@@ -195,7 +195,7 @@ jobs:
           IMAGE_REF: ${{ needs.image.outputs.image }}
         run: |
           tag=$GITHUB_REF_NAME
-          name=aishiteru-web-$tag.tar.gz
+          name=aishie-web-$tag.tar.gz
           scripts/pack-dist.sh dist "$name"
           sha256sum "$name" > "$name.sha256"
           # The notes cover what is new since the release before: for a stable
@@ -217,7 +217,7 @@ jobs:
           core=${pin##*:sha-}
           core=${core%%@*}
           {
-            echo "## Checked against AIShiteru Core $core"
+            echo "## Checked against AIshie Core $core"
             echo
             echo "Its end-to-end tests ran against \`$pin\`, and its API types are that Core's tool catalogue: deploy it beside that version of Core, or a later one that keeps its tools."
             echo

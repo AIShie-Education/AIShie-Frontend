@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Shows an agent's new token once, ready to connect with: the token; Core's
 // MCP endpoint and the header that carries the token, for another AI tool
-// (Claude, ChatGPT, an agent SDK); and, for someone who runs an AIShie
+// (Claude, ChatGPT, an agent SDK); and, for someone who runs an AIshie
 // runtime themselves, the agent file it reads, folded away (it names the
 // secret the token is kept in, never the token). Core keeps only its hash,
 // and a replay

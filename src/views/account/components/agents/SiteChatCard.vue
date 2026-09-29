@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Whether one of the caller's agents takes conversations in the site
 // (agent.get's site_chat). Whatever runs it says so with the agent's own token
-// (me.site_chat), as AIShie's runtime does each time it starts it; an agent
+// (me.site_chat), as AIshie's runtime does each time it starts it; an agent
 // operated from an external tool (Claude through MCP, say) never does, and
 // nobody in the site is offered to ask it. While it takes them, its owner may
 // switch them off (agent.update, site_chat false), and never on: only what
@@ -15,7 +15,7 @@ import { siteChatState } from './agents'
 
 const props = defineProps<{
   agent: AgentFull
-  /** AIShie's runtime hosts it (HostingPanel found it there). */
+  /** AIshie's runtime hosts it (HostingPanel found it there). */
   hosted?: boolean
 }>()
 const emit = defineEmits<{ changed: [] }>()

@@ -15,7 +15,7 @@ name: Deploy
 # serves the front end's files and sends /v1, /mcp and /healthz on to Core, on
 # one origin. Once the repository variable DEPLOY_WEB_TARGET_STAGING (or
 # _PRODUCTION) names it, the deploy job connects to it with SSH, as a user that
-# can do nothing but run deploy/aishiteru-web-deploy, and hands it the build as
+# can do nothing but run deploy/aishie-web-deploy, and hands it the build as
 # a tarball on standard input, with a release ID: a release's tag, or the
 # commit. That script
 # checks the archive, unpacks it beside the releases it keeps, and switches
@@ -160,7 +160,7 @@ jobs:
             || { echo "::error::$TAG has no release: release.yml publishes one for each version tag it passes"; exit 1; }
           [ "$state" = "false false" ] || { echo "::error::$TAG's release is a draft or a pre-release (draft, pre-release: $state)"; exit 1; }
           dir=$RUNNER_TEMP/release
-          name=aishiteru-web-$TAG.tar.gz
+          name=aishie-web-$TAG.tar.gz
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir "$dir" --pattern "$name" --pattern "$name.sha256"
           (cd "$dir" && sha256sum -c "$name.sha256")
           # Deployed as it was published; unpacked here only to be described.
@@ -341,7 +341,7 @@ jobs:
           trap 'rm -rf "$dir"' EXIT
           (umask 077 && printf '%s\n' "$SSH_KEY" | tr -d '\r' > "$dir/key")
           printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > "$dir/known_hosts"
-          # The server runs aishiteru-web-deploy with the release ID, and
+          # The server runs aishie-web-deploy with the release ID, and
           # nothing else; the build goes on its standard input. After --,
           # ssh reads no option, before the destination or after it.
           ssh -F /dev/null -i "$dir/key" -o IdentitiesOnly=yes -o BatchMode=yes \

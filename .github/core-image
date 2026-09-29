@@ -1,4 +1,4 @@
-# The AIShiteru Core the front end is checked against, in one place. CI's end
+# The AIshie Core the front end is checked against, in one place. CI's end
 # to end tests run against it (scripts/ci-core.sh), and api/catalogue.json must
 # be its tool catalogue. The tag names Core's commit; the digest is what is
 # pulled, so the tag moving on changes nothing here.

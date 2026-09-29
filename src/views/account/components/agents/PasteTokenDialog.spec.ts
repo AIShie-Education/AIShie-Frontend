@@ -145,7 +145,7 @@ describe('PasteTokenDialog', () => {
     expect(w.html()).not.toContain(token)
   })
 
-  it('says when the runtime could not reach AIShie, after trying again', async () => {
+  it('says when the runtime could not reach AIshie, after trying again', async () => {
     const { token } = newToken()
     s.on('POST', RUNTIME.inspect, () => refusal(503, 'unavailable', 'core_unavailable'))
     vi.useFakeTimers({ shouldAdvanceTime: true })

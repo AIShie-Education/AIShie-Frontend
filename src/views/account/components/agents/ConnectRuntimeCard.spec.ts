@@ -35,7 +35,7 @@ afterEach(() => setLocale('en'))
 enableAutoUnmount(afterEach)
 
 describe('ConnectRuntimeCard: three ways, one brain', () => {
-  it('offers hosting on AIShie first, then another AI tool, then the AIShie runtime as the advanced way', () => {
+  it('offers hosting on AIshie first, then another AI tool, then the AIshie runtime as the advanced way', () => {
     const w = card({ token: 'todo', connected: 'todo', course: 'todo' }, { hosting: true }, { hosted: '<p class="offer">host</p>' })
     expect(w.text()).toContain('How this agent runs')
     expect(w.text()).toContain('one brain at a time')
@@ -81,9 +81,9 @@ describe('ConnectRuntimeCard: another AI tool', () => {
     expect(issue.text()).toBe('New token')
     await issue.trigger('click')
     expect(w.emitted('issue')).toBeTruthy()
-    // No agent file here: that is for someone who runs the AIShie runtime.
+    // No agent file here: that is for someone who runs the AIshie runtime.
     expect(w.text()).not.toContain('token_ref')
-    expect(w.text()).not.toMatch(/CORE_MCP_URL|AISHITERU_TOKEN/)
+    expect(w.text()).not.toMatch(/CORE_MCP_URL|AISHIE_TOKEN/)
   })
 
   it('says it in Traditional Chinese too', async () => {
@@ -100,7 +100,7 @@ describe('ConnectRuntimeCard: another AI tool', () => {
   })
 })
 
-describe('ConnectRuntimeCard: the AIShie runtime, run oneself', () => {
+describe('ConnectRuntimeCard: the AIshie runtime, run oneself', () => {
   it('keeps the agent file folded away until asked for, says its model is an example, and never holds a token', async () => {
     const w = card({ token: 'done', connected: 'done', course: 'done' }, { hosting: true })
     await choose(w, 'runtime')
