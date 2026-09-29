@@ -5,8 +5,9 @@
 // will carry it as `draft`, null when there is none; the posted message then
 // takes its place.
 //
-// Not in Core's catalogue yet: useConversation holds `draft` as null until it
-// is, and the pane shows it only when it is not (ChatDraft).
+// useConversation takes it from the reads of a Core that sends it (their
+// `draft`, null or not), and waits naming the version it holds; the pane
+// shows it (ChatDraft) while an answer is awaited.
 
 /** What a step of the agent's work is, as the runtime names it; anything else reads as "tool". */
 export const DRAFT_STEP_KINDS = [
@@ -66,4 +67,10 @@ export function stepMessage(step: DraftStep): { key: string; target?: string } {
  */
 export function consulted(steps: readonly DraftStep[] | null | undefined): DraftStep[] {
   return (steps ?? []).filter((s) => stepDone(s) && !['thinking', 'writing'].includes(stepKind(s)))
+}
+
+/** Whether two drafts are the same write: none, or the same attempt at the same version. */
+export function sameDraft(a: ConversationDraft | null | undefined, b: ConversationDraft | null | undefined): boolean {
+  if (!a || !b) return !a === !b
+  return a.attempt === b.attempt && a.version === b.version
 }

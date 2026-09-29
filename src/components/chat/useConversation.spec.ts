@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
 import type { ConversationMessage, ConversationView } from '@/api/types'
+import type { ConversationDraft } from './draft'
 
 // A conversation as a Core would hold it, answering conversation.messages
 // and conversation.get the way Core does (tail, after_seq, before_seq), and
@@ -21,6 +22,8 @@ let server: {
   markFails?: Error
   /** How Core takes wait_s: waits for news, answers at once all the same, or refuses it. */
   waits: 'wait' | 'at once' | 'refuse'
+  /** The answer being written, as a Core with drafts sends it (null for none); left out by a Core without. */
+  draft?: ConversationDraft | null
 }
 interface Call {
   tool: string
@@ -58,7 +61,12 @@ vi.mock('@/api/http', async (orig) => {
       const before = typeof args.before_seq === 'number' ? (args.before_seq as number) : Infinity
       page = all.filter((m) => m.seq < before).slice(-limit)
     }
-    return { messages: page.map((m) => ({ ...m })), conversation: { ...server.view }, more: page.length === limit }
+    return {
+      messages: page.map((m) => ({ ...m })),
+      conversation: { ...server.view },
+      more: page.length === limit,
+      ...(server.draft !== undefined ? { draft: server.draft && { ...server.draft } } : {}),
+    }
   }
   /** Waits, as Core does, while there is nothing new for this read; rejects as fetch does when aborted. */
   function waitForNews(args: Record<string, unknown>, signal?: AbortSignal) {
@@ -66,6 +74,7 @@ vi.mock('@/api/http', async (orig) => {
     const nothing = () =>
       !server.messages.some((m) => m.seq > (args.after_seq as number)) &&
       (args.seen_state == null || args.seen_state === server.view.state) &&
+      (args.seen_draft_version == null || args.seen_draft_version === (server.draft?.version ?? 0)) &&
       standing(server.view) === first
     if (!nothing()) return Promise.resolve()
     return new Promise<void>((resolve, reject) => {
@@ -731,5 +740,84 @@ describe('useConversation, marking what is read', () => {
     await advance(25_000)
     expect(marks()).toHaveLength(1)
     again.dispose()
+  })
+})
+
+describe('useConversation, with a Core that keeps drafts', () => {
+  const draft = (version: number, over: Partial<ConversationDraft> = {}): ConversationDraft => ({
+    attempt: 'a1',
+    version,
+    updated_at: '2026-09-26T12:00:00Z',
+    steps: [{ kind: 'reading_document', target: 'HW1.pdf', state: version > 1 ? 'done' : 'running' }],
+    ...over,
+  })
+
+  it('holds no draft, and never names one, where Core sends none', async () => {
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(c.draft.value).toBeNull()
+    expect(last().args).not.toHaveProperty('seen_draft_version')
+    dispose()
+  })
+
+  it('takes the draft its reads carry, and waits naming the version held, 0 for none', async () => {
+    server.draft = null
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(c.draft.value).toBeNull()
+    expect(last().args).toMatchObject({ wait_s: 25, seen_state: 'awaiting_answer', seen_draft_version: 0 })
+    const waited = waits().length
+
+    // The agent begins: the waiting read answers at once with it, and the next names its version.
+    server.draft = draft(1)
+    commit()
+    await soon()
+    expect(c.draft.value?.version).toBe(1)
+    expect(c.draft.value?.steps?.[0]?.target).toBe('HW1.pdf')
+    expect(waits().length).toBe(waited + 1)
+    expect(last().args).toMatchObject({ seen_draft_version: 1 })
+    // Its text comes, a version at a time; the wait goes on as before (a draft is news, not Core not waiting).
+    server.draft = draft(2, { text: 'Convert with' })
+    commit()
+    await soon()
+    expect(c.draft.value?.text).toBe('Convert with')
+    expect(last().args).toMatchObject({ seen_draft_version: 2, wait_s: 25 })
+    await advance(NO_WAIT_MS / 2)
+    expect(plain()).toHaveLength(0)
+
+    // The answer is posted: the draft goes in the same read, the message in its place.
+    server.messages = [...server.messages, msg(6, { author_member_id: 'agent', body: 'Convert with c * 9 / 5 + 32.' })]
+    server.view = view({ state: 'answered' })
+    server.draft = null
+    commit()
+    await soon()
+    expect(c.draft.value).toBeNull()
+    expect(c.messages.value.at(-1)?.body).toBe('Convert with c * 9 / 5 + 32.')
+    dispose()
+  })
+
+  it('reads on its schedule, as ever, where Core refuses to be asked about drafts', async () => {
+    server.draft = null
+    const r = vi.mocked(read)
+    const real = r.getMockImplementation()!
+    r.mockImplementation(async (tool, args, opts) => {
+      if ((args as Record<string, unknown>).seen_draft_version !== undefined) {
+        calls.push({ tool, args: args as Record<string, unknown>, opts, at: Date.now() })
+        throw new ApiError({
+          status: 400,
+          code: 'invalid_argument',
+          message: 'unexpected additional properties ["seen_draft_version"]',
+        })
+      }
+      return real(tool, args, opts)
+    })
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(c.loaded.value).toBe(true)
+    expect(c.failures.value).toBe(0)
+    // Refused once, it is read at once instead, and on the schedule for a while.
+    expect(plain().length).toBeGreaterThanOrEqual(1)
+    r.mockImplementation(real)
+    dispose()
   })
 })

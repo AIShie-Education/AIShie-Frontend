@@ -123,7 +123,7 @@ const conv = props.conversationId
   : null
 const view = computed<ConversationView | null>(() => conv?.view.value ?? null)
 const messages = computed<ConversationMessage[]>(() => conv?.messages.value ?? [])
-/** The answer being written, where Core sends it (null until it does: useConversation). */
+/** The answer being written, as Core sends it while the agent writes (useConversation). */
 const answerDraft = computed(() => conv?.draft.value ?? null)
 const me = computed(() => seat.value.memberId)
 const role = computed<ChatRole>(() => {
@@ -282,7 +282,14 @@ function toBottom() {
   if (el) el.scrollTop = el.scrollHeight
 }
 watch(
-  () => [lastSeq(messages.value), heldShown.value.length, status.value?.typing, status.value?.notice?.kind] as const,
+  () =>
+    [
+      lastSeq(messages.value),
+      heldShown.value.length,
+      status.value?.typing,
+      status.value?.notice?.kind,
+      answerDraft.value?.version,
+    ] as const,
   (_, old) => {
     const first = !old || old[0] === null
     const mineLast = messages.value.at(-1)?.author_member_id === me.value

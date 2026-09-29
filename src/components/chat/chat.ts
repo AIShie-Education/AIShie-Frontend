@@ -406,12 +406,13 @@ export const NO_WAIT_MS = 60_000
 export const FRESH_MS = 1_000
 
 /**
- * Whether Core refused a read because it asked to wait (wait_s, seen_state):
+ * Whether Core refused a read because it asked to wait (wait_s, seen_state,
+ * seen_draft_version):
  * a Core from before waiting refuses any argument it does not know
  * (invalid_argument, naming it).
  */
 export function refusesWaiting(e: { status?: number; code?: string; message?: string } | null | undefined): boolean {
-  return !!e && e.code === 'invalid_argument' && /\b(wait_s|seen_state)\b/.test(e.message ?? '')
+  return !!e && e.code === 'invalid_argument' && /\b(wait_s|seen_state|seen_draft_version)\b/.test(e.message ?? '')
 }
 
 /**

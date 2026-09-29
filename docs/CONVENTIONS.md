@@ -290,7 +290,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the first page of `me.conversations`, read again every 30 seconds while the page is shown. A
   conversation on screen is long-polled (`useConversation`, and `chat.ts` for the numbers): one
   `conversation.messages` read after the last seq held waits for news (`wait_s: 25`, with
-  `seen_state`, the state held), and the next is made as soon as it answers, so an answer shows as
+  `seen_state`, the state held, and `seen_draft_version` where Core keeps drafts), and the next is
+  made as soon as it answers, so an answer shows as
   soon as it is written and the working line (`awaiting_answer`) goes with it. Only one waits for a
   pane, and it is cut short (aborted) when the pane goes off screen or away (another conversation,
   the history, the panel closed, signing out), the page is hidden, or the caller writes; after a
@@ -334,8 +335,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   step with a tick, 「已閱讀《HW1.pdf》」, the running one with the turning glyph, and the steps
   done summed up, 「已查閱 3 項」, once text begins), then the text so far as Markdown with a caret;
   where the answer waits for someone's confirmation (`text_hidden`), the steps and
-  「答案需經確認後才會顯示」. They are driven by the draft alone; `useConversation` holds it
-  (`draft`, null until Core sends one).
+  「答案需經確認後才會顯示」. They are driven by the draft alone: `useConversation` takes it from
+  every read of a Core that keeps drafts (`draft`, null for none) and, once one has carried it,
+  waits naming the version held (`seen_draft_version`), so that each new version shows as soon as
+  the agent writes it; the posted answer takes its place.
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

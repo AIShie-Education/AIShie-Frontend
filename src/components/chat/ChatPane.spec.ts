@@ -6,7 +6,13 @@ import * as icons from '@element-plus/icons-vue'
 import { defineComponent, h, inject, provide } from 'vue'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 
-let server: { messages: ConversationMessage[]; view: ConversationView; respondents: Respondent[] }
+let server: {
+  messages: ConversationMessage[]
+  view: ConversationView
+  respondents: Respondent[]
+  /** The answer being written, as a Core with drafts sends it; left out by one without. */
+  draft?: unknown
+}
 const writes: { tool: string; args: Record<string, unknown> }[] = []
 let writeAnswer: (tool: string) => unknown
 
@@ -16,7 +22,13 @@ vi.mock('@/api/http', async (orig) => {
     ...real,
     read: vi.fn(async (tool: string) => {
       if (tool === 'conversation.get') return { ...server.view, visible_to: ['participants'] }
-      if (tool === 'conversation.messages') return { messages: server.messages, conversation: server.view, more: false }
+      if (tool === 'conversation.messages')
+        return {
+          messages: server.messages,
+          conversation: server.view,
+          more: false,
+          ...(server.draft !== undefined ? { draft: server.draft } : {}),
+        }
       if (tool === 'conversation.respondents') return { respondents: server.respondents }
       throw new Error(`no answer for ${tool}`)
     }),
@@ -236,6 +248,27 @@ describe('ChatPane', () => {
     await flushPromises()
     expect(line.find('.chat-status__time').text()).toBe('1m 05s')
     expect(w.find('.chat-pane__dots').exists()).toBe(false)
+  })
+
+  it('shows the answer being written where Core sends it, in place of the working line, until it is posted', async () => {
+    seat('student')
+    server.draft = {
+      attempt: 'a1',
+      version: 4,
+      updated_at: '2026-09-26T12:00:00Z',
+      steps: [
+        { kind: 'reading_assignment', target: 'HW1 — Temperature converter', state: 'done' },
+        { kind: 'writing', state: 'running' },
+      ],
+      text: 'Start **here**',
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const draft = w.get('.chat-pane__draft .chat-draft')
+    expect(draft.find('.chat-msg__author').text()).toBe('Course tutor')
+    expect(draft.find('.chat-steps__summary').text()).toBe('Consulted 1 item')
+    expect(draft.find('.is-streaming strong').text()).toBe('here')
+    expect(w.find('.chat-pane__typing .chat-status').exists()).toBe(false)
   })
 
   it('stops the wait with the button that sends, while nothing is written: the question comes back to the box', async () => {
