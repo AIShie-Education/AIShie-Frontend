@@ -18,7 +18,6 @@ function savedTheme(): Theme {
 export const useUiStore = defineStore('ui', () => {
   const theme = ref<Theme>(savedTheme())
   const locale = ref<Locale>(i18n.global.locale.value as Locale)
-  const sidebarCollapsed = ref(false)
 
   const media = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null
   const dark = ref(false)
@@ -43,5 +42,5 @@ export const useUiStore = defineStore('ui', () => {
 
   watch(locale, (l) => setLocale(l))
 
-  return { theme, dark, locale, sidebarCollapsed }
+  return { theme, dark, locale }
 })

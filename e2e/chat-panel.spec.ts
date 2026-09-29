@@ -9,6 +9,7 @@ import {
   floatingChatButton,
   photograph,
   rail,
+  showSideView,
   signIn,
   signInAsRoot,
   type CoreReply,
@@ -244,7 +245,7 @@ test.describe.serial('the chat panel', () => {
     await courseTab(page, 'Assignments').click()
     await expect(page).toHaveURL(new RegExp(`${coursePath('assignments')}$`))
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await page.locator('.app-nav').getByRole('link', { name: 'My courses' }).click()
+    await (await showSideView(page, 'Courses')).getByRole('link', { name: 'My courses' }).click()
     await expect(page).toHaveURL(/\/$/)
     await expect(panel).toBeVisible()
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()

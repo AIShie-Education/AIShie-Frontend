@@ -220,6 +220,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `conversation.respondents` leaves such agents out, and a conversation's opener learns from it
   (`offeredIn`) whether its agent may still be asked; Core refuses a question to one as
   `agent_answers_elsewhere`, which `errorMessage()` says in the same words.
+- The left of every signed-in page is laid out as an editor's: an activity bar along the window's edge
+  (`src/components/sidebar/ActivityBar.vue`, mounted by `AppLayout`), with the brand's mark and a button
+  for each view the caller is offered (their courses; their agents, for a person; administration, for
+  whoever may open its pages), and beside it the side bar (`SideBar.vue`) showing the one chosen, at a
+  fixed 260 px, with no edge to resize it by. A view's button, pressed again, collapses the side bar.
+  Going to a page of a view (a course's pages, `/account/agents…`, `/admin…`) shows that view, and never
+  opens a collapsed side bar. `useSideBarStore()` (`@/stores/sidebar`) holds the view and whether it is
+  open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
+  icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
+  no activity bar: the header's menu button opens the views in a drawer, as tabs along its top, and
+  following a link in it closes it.
 - The chat with agents is one panel beside every signed-in page (`src/components/chat/ChatPanel.vue`,
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
   agent. Its button is on the rail along the window's right edge, as an editor's activity bar is,

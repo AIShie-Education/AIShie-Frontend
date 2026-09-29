@@ -1,0 +1,51 @@
+<script setup lang="ts">
+// The brand's mark: the "a" of the wordmark on an indigo square, with the
+// light at its corner, as the browser's tab shows it (public/favicon.svg).
+// It follows the theme: the square is the indigo that reads on the ground
+// (--app-indigo), the letter what is written on it (--app-on-indigo), and the
+// light's halo darkens in the dark (--app-light-halo). It is sized by its
+// height, in CSS.
+//
+// It names the app ("aishie") to a screen reader, unless it is decorative:
+// inside a link that is named already.
+defineProps<{ decorative?: boolean }>()
+</script>
+
+<template>
+  <svg
+    class="app-mark"
+    viewBox="0 0 132 132"
+    :role="decorative ? undefined : 'img'"
+    :aria-label="decorative ? undefined : 'aishie'"
+    :aria-hidden="decorative ? 'true' : undefined"
+    focusable="false"
+  >
+    <rect class="app-mark__ground" width="132" height="132" rx="30" />
+    <path
+      class="app-mark__letter"
+      d="M51.25 105.46Q45.54 105.46 41.78 102.21Q38.03 98.96 38.03 92.8Q38.03 89.33 39.54 86.3Q41.06 83.28 44.92 80.65Q48.78 78.02 55.84 75.89Q57.74 75.22 60.21 74.54Q62.67 73.87 65.75 73.03Q68.83 72.19 72.19 71.41V73.42Q67.15 74.99 63.74 76.06Q60.32 77.12 58.64 77.9Q54.83 79.58 52.7 81.49Q50.58 83.39 49.68 85.52Q48.78 87.65 48.78 90.22Q48.78 94.82 51.02 96.89Q53.26 98.96 56.62 98.96Q58.75 98.96 60.54 98.46Q62.34 97.95 64.46 96.55Q66.59 95.15 69.39 92.35L70.29 96.72H66.93Q64.58 99.86 62.11 101.82Q59.65 103.78 56.96 104.62Q54.27 105.46 51.25 105.46ZM76.11 105.23Q71.3 105.23 68.83 102.82Q66.37 100.42 66.14 96.16V95.82V69.06Q66.14 63.57 65.19 60.43Q64.24 57.3 62.22 55.95Q60.21 54.61 56.74 54.61Q54.83 54.61 53.04 55.11Q51.25 55.62 49.34 56.29L52.59 53.82L51.14 62.34Q50.69 65.92 48.95 67.54Q47.22 69.17 44.98 69.17Q42.74 69.17 41.56 67.94Q40.38 66.7 39.94 64.46Q40.83 58.75 46.49 55.17Q52.14 51.58 60.54 51.58Q66.26 51.58 69.95 53.54Q73.65 55.5 75.38 59.65Q77.12 63.79 77.12 70.29V95.26Q77.12 97.95 77.96 99.02Q78.8 100.08 80.14 100.08Q81.38 100.08 82.33 99.46Q83.28 98.85 84.62 97.28L85.97 98.4Q84.74 101.42 82.27 103.33Q79.81 105.23 76.11 105.23Z"
+    />
+    <circle class="app-mark__halo" cx="99" cy="35" r="21" />
+    <circle class="app-mark__light" cx="99" cy="35" r="14" />
+  </svg>
+</template>
+
+<style scoped>
+.app-mark {
+  display: block;
+  height: 28px;
+  width: auto;
+}
+.app-mark__ground {
+  fill: var(--app-indigo);
+}
+.app-mark__letter {
+  fill: var(--app-on-indigo);
+}
+.app-mark__halo {
+  fill: var(--app-light-halo);
+}
+.app-mark__light {
+  fill: var(--app-light);
+}
+</style>
