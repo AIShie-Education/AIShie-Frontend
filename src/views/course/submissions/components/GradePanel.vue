@@ -448,6 +448,10 @@ async function submit() {
 .grade-panel__hint {
   margin: -4px 0 12px;
 }
+/* The card's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+.grade-panel {
+  container-type: inline-size;
+}
 .grade-panel__grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -515,7 +519,8 @@ async function submit() {
   gap: 8px;
   flex-wrap: wrap;
 }
-@media (max-width: 900px) {
+/* Two columns (3 : 2) while the grading one keeps 420 px or more. */
+@container (max-width: 723px) {
   .grade-panel__grid {
     grid-template-columns: minmax(0, 1fr);
   }

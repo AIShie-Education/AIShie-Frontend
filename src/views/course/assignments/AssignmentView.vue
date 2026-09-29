@@ -342,8 +342,8 @@ function refresh() {
           </template>
         </el-alert>
 
-        <div class="assignment-view__layout">
-          <div class="assignment-view__main">
+        <div class="assignment-view__layout app-columns">
+          <div class="assignment-view__main app-column">
             <!-- Instructions -->
             <section class="app-card">
               <h2 class="app-card__title">
@@ -416,7 +416,7 @@ function refresh() {
             />
           </div>
 
-          <aside class="assignment-view__side">
+          <aside class="assignment-view__side app-column">
             <!-- Details -->
             <section class="app-card">
               <h2 class="app-card__title">{{ t('assignments.detail.details') }}</h2>
@@ -519,23 +519,14 @@ function refresh() {
 .assignment-view__approval {
   align-self: center;
 }
+/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+.assignment-view {
+  container-type: inline-size;
+}
 .assignment-view__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 16px;
-  align-items: start;
-}
-.assignment-view__main,
-.assignment-view__side {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-/* The cards are spaced by the column's gap. */
-.assignment-view__main .app-card + .app-card,
-.assignment-view__side .app-card + .app-card {
-  margin-top: 0;
 }
 .assignment-view__doclink {
   display: inline-flex;
@@ -589,7 +580,8 @@ function refresh() {
   flex-wrap: wrap;
   margin-top: 12px;
 }
-@media (max-width: 960px) {
+/* Two columns while the main one keeps 420 px or more beside the 300 px one. */
+@container (max-width: 739px) {
   .assignment-view__layout {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -169,7 +169,8 @@ function onDeleted() {
 </script>
 
 <template>
-  <div class="hosting-panel">
+  <!-- A column of the agent's page: its notices, then its card, which grows to the column's end. -->
+  <div class="hosting-panel app-column">
     <UnrevokedTokenNotice
       v-for="u in leftovers"
       :key="u.prefix"
@@ -312,9 +313,6 @@ function onDeleted() {
 </template>
 
 <style scoped>
-.hosting-panel__notice {
-  margin-bottom: 12px;
-}
 .hosting-panel__model-notice {
   margin-bottom: 12px;
 }

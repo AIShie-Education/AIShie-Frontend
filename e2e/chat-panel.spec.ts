@@ -17,14 +17,14 @@ import {
 } from './support'
 
 // The chat is a panel beside every page, docked on the right as an editor's
-// side panel is, 380 px wide and never resized, opened from its button on the
-// rail along the window's right edge (never from the header); in a window
-// narrower than 1200 px it floats over the page against the rail instead; and
-// on a phone it is a sheet over the whole screen, opened from a button
-// floating at the bottom right. Told through a course
+// side panel is, 380 px wide until its left edge is dragged, opened from its
+// button on the rail along the window's right edge (never from the header);
+// in a window narrower than 1200 px it floats over the page against the rail
+// instead; and on a phone it is a sheet over the whole screen, opened from a
+// button floating at the bottom right. Told through a course
 // agent made for this run, which its runtime says answers in the site, and
 // Yuki, a student, who asks it. The panel stays open, on what it shows, while
-// she moves between pages, and after a reload; an answer that comes
+// she moves between pages, and as wide as she left it; an answer that comes
 // while it is closed is counted on its button. What she has read is Core's
 // (conversation.mark_read), so the count follows her from browser to browser.
 
@@ -78,6 +78,10 @@ function panelOf(page: Page) {
   return page.locator('#chat-panel')
 }
 
+async function box_(l: ReturnType<Page['locator']>) {
+  return (await l.boundingBox())!
+}
+
 /** The window's width and height, less any scroll bar. */
 function inner(page: Page) {
   return page.evaluate(() => ({
@@ -104,6 +108,23 @@ async function expectRail(page: Page, what: string) {
   expect(box.width, `${what}: the rail's width`).toBeLessThanOrEqual(48)
   await expect(page.locator('.app-header [aria-controls="chat-panel"]'), what).toHaveCount(0)
   await expect(page.locator('.app-header').getByRole('button', { name: /chat/i }), what).toHaveCount(0)
+}
+
+/** Drags the panel's edge this far to the left (a negative distance, to the right), as a mouse does. */
+async function dragEdge(page: Page, by: number) {
+  const edge = (await panelOf(page).getByRole('separator', { name: 'Resize the chat panel' }).boundingBox())!
+  const [x, y] = [edge.x + edge.width / 2, edge.y + edge.height / 2]
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x - by, y, { steps: 12 })
+  // While it moves: nothing on the page is selected, and the cursor is the edge's.
+  const during = await page.evaluate(() => ({
+    resizing: document.body.classList.contains('is-resizing-chat'),
+    select: getComputedStyle(document.body).userSelect,
+  }))
+  await page.mouse.up()
+  expect(during).toEqual({ resizing: true, select: 'none' })
+  expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
 }
 
 /** Open, the panel is docked between the page and the rail, and nothing scrolls sideways. */
@@ -277,11 +298,23 @@ test.describe.serial('the chat panel', () => {
     await item.click()
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
 
-    // Nothing resizes it: no edge to drag, and nothing to take the keys that once did. Open, and as wide, after a reload.
-    await expect(panel.getByRole('separator')).toHaveCount(0)
-    await expect(page.locator('.chat-panel__handle')).toHaveCount(0)
+    // Wider by its edge, from the keyboard, and dragged; the page gives it the width; as wide, and open, after a reload.
+    const edge = panel.getByRole('separator', { name: 'Resize the chat panel' })
+    await edge.focus()
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('ArrowLeft')
+    await expect(edge).toHaveAttribute('aria-valuenow', '412')
+    await expectDocked(page, 412)
+    const pageBefore = (await page.locator('.app-main').boundingBox())!.width
+    await dragEdge(page, 60)
+    await expect(edge).toHaveAttribute('aria-valuenow', '472')
+    await expectDocked(page, 472)
+    expect(Math.round((await page.locator('.app-main').boundingBox())!.width)).toBe(Math.round(pageBefore - 60))
     await page.reload()
     await expect(panelOf(page)).toBeVisible()
+    await expectDocked(page, 472)
+    // A double click on its edge: 380 again.
+    await panelOf(page).getByRole('separator').dblclick()
     await expectDocked(page, 380)
 
     // Ctrl+J closes it, and opens it again.
@@ -323,7 +356,14 @@ test.describe.serial('the chat panel', () => {
       })
       expect(look.position).toBe('fixed')
       expect(look.shadow).not.toBe('none')
-      await expect(panel.getByRole('separator')).toHaveCount(0)
+      // Its edge drags it here too, over the page, never wider than 70 % of the window.
+      await dragEdge(page, 60)
+      expect(Math.round((await box_(panel)).width)).toBe(440)
+      await dragEdge(page, 2000)
+      expect(Math.round((await box_(panel)).width)).toBe(Math.floor(width * 0.7))
+      expect(Math.round((await page.locator('.app-main').boundingBox())!.width)).toBe(Math.round(before.width))
+      await panel.getByRole('separator').dblclick()
+      expect(Math.round((await box_(panel)).width)).toBe(380)
       const win = await inner(page)
       expect(win.scrollWidth).toBeLessThanOrEqual(win.width)
       await expectRail(page, `${width} px, with the panel open`)

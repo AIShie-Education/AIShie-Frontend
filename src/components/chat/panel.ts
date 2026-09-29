@@ -1,10 +1,20 @@
-// The chat panel's frame, apart from what it shows: how wide it is and where
-// it docks, what this browser remembers of it (open or not, and for each
-// caller the course they last asked in), and the key that opens and closes
-// it.
+// The chat panel's frame, apart from what it shows: how wide it may be and
+// where it docks, what this browser remembers of it (open or not, its width,
+// and for each caller the course they last asked in), and the key that opens
+// and closes it.
 
-/** The panel's width, docked or floating, in pixels: fixed, not resized. */
-export const PANEL_WIDTH = 380
+/** Its width until someone drags its edge, in pixels, and what a double click on the edge goes back to. */
+export const PANEL_DEFAULT = 380
+/** The narrowest it may be. */
+export const PANEL_MIN = 320
+/** Docked, the widest it may be is this share of the window… */
+export const PANEL_MAX_SHARE = 0.5
+/** …and never so wide that the page beside it is left less than this. */
+export const PAGE_MIN = 420
+/** Floating over the page, the widest it may be is this share of the window. */
+export const PANEL_FLOAT_MAX_SHARE = 0.7
+/** How far one press of an arrow key moves its edge; with Shift, four times as far. */
+export const PANEL_STEP = 16
 /**
  * The narrowest window the panel is docked in, taking its width from the
  * page. Below it (but above a phone's), the page would be left too little,
@@ -14,6 +24,47 @@ export const PANEL_WIDTH = 380
 export const PANEL_DOCKED_MIN_WIDTH = 1200
 /** At this width and below, the panel is a sheet over the whole screen instead. */
 export const PANEL_SHEET_MAX_WIDTH = 899
+
+/**
+ * The widest the panel may be in a window this wide. Docked, half the window,
+ * and less where the page would be left less than PAGE_MIN: room is the
+ * width shared by the page and the panel (the page's row, less the rail),
+ * when it is known. Floating, PANEL_FLOAT_MAX_SHARE of the window. Never
+ * narrower than the narrowest.
+ */
+export function panelMax(viewport: number, opts: { room?: number | null; floating?: boolean } = {}): number {
+  const cap = opts.floating
+    ? Math.floor(viewport * PANEL_FLOAT_MAX_SHARE)
+    : Math.min(Math.floor(viewport * PANEL_MAX_SHARE), opts.room == null ? Infinity : opts.room - PAGE_MIN)
+  return Math.max(PANEL_MIN, cap)
+}
+
+/** A width within the bounds, up to max, in whole pixels; anything not a number is the default. */
+export function clampWidth(width: number, max: number): number {
+  const w = Number.isFinite(width) ? Math.round(width) : PANEL_DEFAULT
+  return Math.min(Math.max(PANEL_MIN, max), Math.max(PANEL_MIN, w))
+}
+
+/**
+ * The width a key press on the panel's edge asks for, or null for a key that
+ * does nothing there. The edge is the panel's left one: the arrow towards
+ * the page (left) widens it, the other narrows it; Home and End go to the
+ * narrowest and the widest.
+ */
+export function widthForKey(key: string, width: number, max: number, opts: { shift?: boolean } = {}): number | null {
+  const step = PANEL_STEP * (opts.shift ? 4 : 1)
+  switch (key) {
+    case 'ArrowLeft':
+      return clampWidth(width + step, max)
+    case 'ArrowRight':
+      return clampWidth(width - step, max)
+    case 'Home':
+      return PANEL_MIN
+    case 'End':
+      return clampWidth(max, max)
+  }
+  return null
+}
 /** How often the newest of the caller's conversations are read again for what is unread, open or not. */
 export const UNREAD_POLL_MS = 30_000
 
@@ -21,26 +72,29 @@ const STORAGE_KEY = 'aishiteru.chatPanel'
 
 export interface PanelFrame {
   open: boolean
+  width: number
 }
 
-/**
- * What this browser remembers of the panel, or closed. A width earlier
- * versions kept, when it could be resized, is not read, and goes when the
- * frame is next kept.
- */
+/** What this browser remembers of the panel, or closed at its default width. */
 export function loadFrame(): PanelFrame {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { open: (JSON.parse(raw) as Partial<PanelFrame> | null)?.open === true }
+    if (raw) {
+      const v = JSON.parse(raw) as Partial<PanelFrame> | null
+      return {
+        open: v?.open === true,
+        width: typeof v?.width === 'number' && Number.isFinite(v.width) ? Math.round(v.width) : PANEL_DEFAULT,
+      }
+    }
   } catch {
     /* no storage, or something unreadable in it: as new */
   }
-  return { open: false }
+  return { open: false, width: PANEL_DEFAULT }
 }
 
 export function saveFrame(f: PanelFrame) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ open: f.open }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ open: f.open, width: Math.round(f.width) }))
   } catch {
     /* no storage: it lasts for this page only */
   }

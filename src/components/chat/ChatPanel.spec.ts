@@ -172,6 +172,13 @@ function press(key: string, init: KeyboardEventInit = {}) {
   window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }))
 }
 const frame = () => JSON.parse(localStorage.getItem('aishiteru.chatPanel') ?? 'null')
+/** A pointer event as a mouse makes it (jsdom has no PointerEvent). */
+async function pointer(el: { element: Element }, type: string, clientX: number) {
+  el.element.dispatchEvent(new MouseEvent(type, { clientX, button: 0, bubbles: true, cancelable: true }))
+  await flushPromises()
+}
+/** After the next frame, when a drag's width is shown. */
+const nextFrame = () => new Promise((r) => setTimeout(r, 40)).then(() => flushPromises())
 
 /** One of Ada's conversations as me.conversations lists it. */
 function myConversation(id: string, unread: boolean): MyConversation {
@@ -252,49 +259,94 @@ describe('ChatPanel', () => {
     expect(document.activeElement).toBe(toggle)
   })
 
-  it('opens as this browser left it, open, and as wide as ever, whatever width an earlier version kept', async () => {
+  it('opens as this browser left it, open and as wide', async () => {
     localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 480 }))
-    const { w, chat } = await setup()
+    const { w } = await setup()
     const panel = w.find('#chat-panel')
     expect(panel.exists()).toBe(true)
-    expect(panel.attributes('style')).toBe('width: 380px;')
-    chat.setOpen(false)
-    await flushPromises()
-    expect(frame()).toEqual({ open: false })
+    expect(panel.attributes('style')).toBe('width: 480px;')
+    expect(w.find('[role="separator"]').attributes('aria-valuenow')).toBe('480')
   })
 
-  it('is docked beside the page, 380 px wide, with nothing to resize it by', async () => {
+  it('opens 380 px wide where nothing was kept, or only whether it was open', async () => {
     localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
-    const { w } = await setup({ width: 1400 })
-    const panel = w.find('#chat-panel')
-    expect(panel.classes()).not.toContain('is-sheet')
-    expect(panel.classes()).not.toContain('is-floating')
-    expect(panel.attributes('role')).toBe('complementary')
-    expect(panel.attributes('style')).toBe('width: 380px;')
-    expect(w.find('[role="separator"]').exists()).toBe(false)
-    expect(w.find('.chat-panel__handle').exists()).toBe(false)
-    // Keys that once resized it do nothing to it.
-    await panel.trigger('keydown', { key: 'ArrowLeft' })
-    await panel.trigger('keydown', { key: 'End' })
-    await panel.trigger('dblclick')
-    expect(panel.attributes('style')).toBe('width: 380px;')
-    expect(frame()).toEqual({ open: true })
-    // From 1200 px up.
-    w.unmount()
-    const edge = await setup({ width: 1200 })
-    expect(edge.w.find('#chat-panel').classes()).not.toContain('is-floating')
+    const { w } = await setup()
+    expect(w.find('#chat-panel').attributes('style')).toBe('width: 380px;')
   })
 
-  it('floats over the page, against the rail, in a window narrower than 1200 px, and is a sheet on a phone', async () => {
+  it('is docked beside the page, and resized by its edge within its bounds, with the keys or by dragging, and kept once let go', async () => {
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
+    const { w, chat } = await setup({ width: 1400 })
+    const edge = w.find('[role="separator"]')
+    expect(w.find('#chat-panel').classes()).not.toContain('is-sheet')
+    expect(w.find('#chat-panel').classes()).not.toContain('is-floating')
+    expect(w.find('#chat-panel').attributes('role')).toBe('complementary')
+    expect(edge.attributes('aria-orientation')).toBe('vertical')
+    expect(edge.attributes('aria-label')).toBe('Resize the chat panel')
+    expect(edge.attributes('aria-valuemin')).toBe('320')
+    expect(edge.attributes('aria-valuemax')).toBe('700')
+    expect(edge.attributes('tabindex')).toBe('0')
+
+    await edge.trigger('keydown', { key: 'ArrowLeft' })
+    expect(edge.attributes('aria-valuenow')).toBe('416')
+    await edge.trigger('keydown', { key: 'ArrowRight', shiftKey: true })
+    expect(edge.attributes('aria-valuenow')).toBe('352')
+    await edge.trigger('keydown', { key: 'End' })
+    expect(edge.attributes('aria-valuenow')).toBe('700')
+    await edge.trigger('keydown', { key: 'Home' })
+    expect(edge.attributes('aria-valuenow')).toBe('320')
+    await edge.trigger('keydown', { key: 'ArrowRight' })
+    expect(edge.attributes('aria-valuenow')).toBe('320')
+    expect(frame()).toEqual({ open: true, width: 320 })
+
+    // Dragged: it follows the pointer a frame at a time, selects nothing on the page meanwhile, and is kept once let go.
+    await pointer(edge, 'pointerdown', 1000)
+    expect(document.body.classList.contains('is-resizing-chat')).toBe(true)
+    await pointer(edge, 'pointermove', 800)
+    await nextFrame()
+    expect(edge.attributes('aria-valuenow')).toBe('520')
+    expect(w.find('#chat-panel').attributes('style')).toBe('width: 520px;')
+    expect(frame()).toEqual({ open: true, width: 320 })
+    // Far past half the window: half the window.
+    await pointer(edge, 'pointermove', 100)
+    await pointer(edge, 'pointerup', 100)
+    expect(chat.width).toBe(700)
+    expect(frame()).toEqual({ open: true, width: 700 })
+    expect(document.body.classList.contains('is-resizing-chat')).toBe(false)
+    // And narrower than the least: the least.
+    await pointer(edge, 'pointerdown', 700)
+    await pointer(edge, 'pointermove', 1390)
+    await pointer(edge, 'pointerup', 1390)
+    expect(chat.width).toBe(320)
+    // A double click goes back to 380.
+    await edge.trigger('dblclick')
+    expect(chat.width).toBe(380)
+    expect(frame()).toEqual({ open: true, width: 380 })
+  })
+
+  it('is as wide as it may be in a smaller window, keeping the width it was given for a wider one', async () => {
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 640 }))
+    const { w, chat } = await setup({ width: 1200 })
+    expect(w.find('[role="separator"]').attributes('aria-valuenow')).toBe('600')
+    expect(w.find('#chat-panel').attributes('style')).toBe('width: 600px;')
+    expect(chat.width).toBe(640)
+  })
+
+  it('floats over the page, against the rail, in a window narrower than 1200 px, its edge dragging it up to 70 % of the window', async () => {
     localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
-    const narrow = await setup({ width: 1199 })
+    const narrow = await setup({ width: 1100 })
     const panel = narrow.w.find('#chat-panel')
     expect(panel.classes()).toContain('is-floating')
     expect(panel.classes()).not.toContain('is-sheet')
     expect(panel.attributes('role')).toBe('complementary')
     expect(panel.attributes('aria-modal')).toBeUndefined()
     expect(panel.attributes('style')).toBe('width: 380px;')
-    expect(narrow.w.find('[role="separator"]').exists()).toBe(false)
+    const edge = narrow.w.find('[role="separator"]')
+    expect(edge.attributes('aria-valuemax')).toBe('770')
+    await pointer(edge, 'pointerdown', 700)
+    await pointer(edge, 'pointermove', 0)
+    await pointer(edge, 'pointerup', 0)
+    expect(narrow.chat.width).toBe(770)
     // It opens and closes as ever.
     press('j', { ctrlKey: true })
     await flushPromises()
@@ -304,12 +356,14 @@ describe('ChatPanel', () => {
     expect(narrow.w.find('#chat-panel').classes()).toContain('is-floating')
     narrow.w.unmount()
 
-    const floating = await setup({ width: 900 })
-    expect(floating.w.find('#chat-panel').classes()).toContain('is-floating')
-    floating.w.unmount()
+    // Docked from 1200 px; a sheet, with no edge, on a phone.
+    const docked = await setup({ width: 1200 })
+    expect(docked.w.find('#chat-panel').classes()).not.toContain('is-floating')
+    docked.w.unmount()
     const phone = await setup({ width: 899 })
     expect(phone.w.find('#chat-panel').classes()).toEqual(expect.arrayContaining(['chat-panel', 'is-sheet']))
     expect(phone.w.find('#chat-panel').classes()).not.toContain('is-floating')
+    expect(phone.w.find('[role="separator"]').exists()).toBe(false)
   })
 
   it('asks in the course of the page it is on, and elsewhere in the course last used', async () => {
