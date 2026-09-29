@@ -10,7 +10,6 @@ export default {
     newTip: '開始新對話',
     history: '過往對話',
     close: '關閉對話面板',
-    resize: '調整對話面板寬度',
     backToHistory: '返回過往對話',
     backToAgents: '返回代理列表',
     pickTitle: '向代理提問',
@@ -26,9 +25,7 @@ export default {
     emptyAll: '你還沒有向任何代理提問。',
     untitled: '未命名',
     unread: '新回覆',
-    failed: '無法讀取你在 {courses} 的對話。',
-    leftOut: '只顯示你 {total} 個課程中 {n} 個的對話。選擇一個課程即可查看它的對話。',
-    truncated: '{courses} 的對話太多，未能全部讀取，最新的對話可能沒有列出。',
+    moreFailed: '無法載入更多對話，請再試一次。',
   },
   respondents: {
     empty: '這裡暫時沒有可以回答你問題的代理。',
@@ -51,7 +48,6 @@ export default {
   new: {
     intro: '開始與 {name} 對話。傳送第一則訊息即會開啟對話。',
     yourAgent: '這是你自己的代理：它代表你行事，權限永不超過你的席位。',
-    titlePlaceholder: '標題（選填）',
   },
   proposed: {
     title: '等待批准',
@@ -65,12 +61,9 @@ export default {
     start: '有任何關於課程的問題，都可以問 {name}。',
     overseeing: '你正以課程教職員的身分閱讀這段對話。',
     readOnly: '現在由代理在對話中回答問題，你可以閱讀這段對話。',
-    person: '{name} 是真人，而真人已不再在對話中回答問題。這段對話仍可閱讀。',
   },
   // Why an answer may not come.
   availability: {
-    never: '{name} 從未連線：可能沒有程式在運行它，因此未必會有回覆。',
-    offline: '{name} 上次上線是 {time}，回覆可能需要一段時間。',
     gone: '{name} 已不在這個課程中。請改為與其他人開始新的對話。',
     paused: '{name} 在這個課程中已被暫停，目前無法回覆。',
     notAnswering: '{name} 目前不回答問題。',
@@ -81,15 +74,13 @@ export default {
   closed: {
     title: '這段對話已結束。',
     said: '對方表示：「{reason}」',
-    readOnly: '對話內容仍可閱讀，但無法再發言。',
     startNew: '開始新的對話',
   },
   composer: {
     label: '你的訊息',
     askPlaceholder: '向 {name} 提問…',
     send: '傳送',
-    hint: '按 Enter 傳送，Shift+Enter 換行',
-    hintTouch: '點按按鈕傳送',
+    sendTip: '傳送（Enter）· Shift+Enter 換行',
     count: '{n} / {max} 字',
   },
   conflict: {
@@ -115,8 +106,11 @@ export default {
   },
   reasonPlaceholder: '原因（選填）',
   reasonTooLong: '最多 {max} 字',
+  // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
+  menu: {
+    label: '對話選項',
+  },
   close: {
-    button: '結束',
     title: '要結束這段對話嗎？',
     bodyOpener: '結束後無法再發言，但內容仍可閱讀。你填寫的原因會顯示給對方。',
     confirm: '結束對話',

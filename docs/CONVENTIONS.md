@@ -235,20 +235,41 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
   agent. Its button is on the rail along the window's right edge, as an editor's activity bar is,
   where any other side panel's would go too (the header holds only the language, the theme and the
-  account); the panel opens between the page and the rail, and Ctrl/⌘+J opens and closes it. On a
-  phone there is no rail: the button floats at the bottom right, the page keeps room below its last
-  item for it, and it stays under everything Element Plus lays over the page (the layers are in
-  `styles/tokens.css`). `useChatStore()` (`@/stores/chat`) opens it on a conversation
+  account); the panel opens between the page and the rail, and Ctrl/⌘+J opens and closes it. It is
+  380 px wide (`PANEL_WIDTH`), and nobody resizes it; this browser remembers only whether it is
+  open. In a window narrower than 1200 px (`PANEL_DOCKED_MIN_WIDTH`), where docking it would leave
+  the page too little beside the activity bar and the side bar, it floats over the page instead,
+  against the rail and under the header, with a shadow cast to the left (`--app-z-panel`,
+  `--app-shadow-side`), and the page keeps its width. On a phone there is no rail: the button floats at the bottom right, the page
+  keeps room below its last item for it, and it stays under everything Element Plus lays over the
+  page (the layers are in `styles/tokens.css`). `useChatStore()` (`@/stores/chat`) opens it on a conversation
   (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a link to a
   conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`, the
   address the course's conversations page once had, which opens the panel on it and leaves the page
   where it was. The chat
   reads the caller's seat in a conversation's course from their memberships (`useChatSeat`), never from
-  the course store, since the page may show another course or none. It offers agents alone
-  (`agentsOnly`: `conversation.respondents` lists people too), and nobody answers in it but agents.
-  Those who decide actions read each agent's conversations from the course's *Agents* page (its
-  conversation log). What the caller has read, and which of their questions wait for an answer, is
-  kept in this browser for them (`components/chat/unread.ts`): Core records neither.
+  the course store, since the page may show another course or none. Conversations are with agents
+  alone: `conversation.respondents` lists nobody else, Core refuses a person as a respondent or an
+  answerer (`conversations_are_with_agents`, which `errorMessage()` puts in words), and a
+  conversation from before with a person is closed with that reason, shown as closed and left out
+  of the history. The history is `me.conversations`: the caller's own in every course, newest
+  activity first, a page at a time, or one course's (`course_id`), kept in the chat store
+  (`loadHistory`, `loadMoreHistory`). What the caller has read is Core's: a conversation on screen
+  is marked read (`conversation.mark_read`, by `useConversation`'s `reader`) when it opens unread
+  and as the agent writes, never by staff reading it, and the button's count is the `unread` of
+  the first page of `me.conversations`, read again every 30 seconds while the page is shown. The
+  browser keeps only the course the caller last asked in (`aishiteru.chatCourse.<actorId>`). Those
+  who decide actions read each agent's conversations from the course's *Agents* page (its
+  conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
+  (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent, whether
+  anything runs it (`PresenceText`) and, only once it is closed, its state, and a ⋯ menu for who can
+  read it, how its answers arrive and closing it; the messages; and the composer (`ChatComposer.vue`),
+  one bordered box whose send button, small and icon-only, sits inside it at the bottom right, with
+  its keys in the button's tooltip and the count near Core's limit beside it. Whatever stops the
+  caller writing (an agent paused, gone, not answering or operated elsewhere, a closed conversation,
+  one waiting for approval), or an answer being waited for, is one muted line above the composer,
+  never an alert box. A new conversation has no title field: it is titled by the first line of its
+  first message (`titleFrom`).
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

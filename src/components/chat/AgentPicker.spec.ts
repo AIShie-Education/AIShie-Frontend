@@ -135,24 +135,8 @@ describe('AgentPicker', () => {
     expect(w.emitted('pick')?.[0]?.[0]).toMatchObject({ member_id: 'tutor' })
   })
 
-  it('never offers a person, though Core lists one who answers questions', async () => {
-    const person: Respondent = {
-      member_id: 'ta',
-      display_name: 'Ms Wong',
-      kind: 'human',
-      role: 'ta',
-      is_my_delegate: false,
-      answers_course: false,
-      answer_level: 'autonomous',
-    }
-    respondents = [person, tutor]
-    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
-    await flushPromises()
-    expect(w.findAll('button.resp-row').map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutor'])
-    expect(w.text()).not.toContain('Ms Wong')
-
-    // Only a person: nobody to ask.
-    respondents = [person]
+  it('says so when Core lists no agent to ask', async () => {
+    respondents = []
     const none = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     expect(none.findAll('button.resp-row')).toHaveLength(0)

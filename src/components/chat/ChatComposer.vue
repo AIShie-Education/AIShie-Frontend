@@ -1,8 +1,10 @@
 <script setup lang="ts">
-// Where a message is written: Enter sends, Shift+Enter starts a new line,
-// and the Enter an input method uses to pick a word never sends. On a touch
-// keyboard Enter is a new line and the button sends. Core takes at most
-// 20 000 characters; the count shows as the draft nears that.
+// Where a message is written, as an editor's agent chat has it: one box, its
+// text growing with what is written, and along its bottom the send button
+// (and, as the draft nears Core's limit of 20 000 characters, the count).
+// Enter sends, Shift+Enter starts a new line, and the Enter an input method
+// uses to pick a word never sends; the send button's tooltip says so. On a
+// touch keyboard Enter is a new line and the button sends.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMediaQuery } from '@/composables/useMediaQuery'
@@ -44,79 +46,101 @@ defineExpose({ focus: () => input.value?.focus() })
 </script>
 
 <template>
-  <div class="chat-composer">
-    <div class="chat-composer__row">
-      <el-input
-        ref="input"
-        class="chat-composer__input"
-        type="textarea"
-        :model-value="modelValue"
-        :autosize="{ minRows: 1, maxRows: 8 }"
-        resize="none"
-        :placeholder="placeholder"
-        :aria-label="placeholder ?? t('chat.composer.label')"
-        :disabled="disabled"
-        @update:model-value="emit('update:modelValue', $event)"
-        @keydown="onKeydown"
-        @compositionstart="composing = true"
-        @compositionend="onCompositionEnd"
-      />
-      <el-button
-        type="primary"
-        circle
-        class="chat-composer__send"
-        :loading="pending"
-        :disabled="!canSend"
-        :aria-label="t('chat.composer.send')"
-        :title="t('chat.composer.send')"
-        @click="emit('send')"
-      >
-        <el-icon v-if="!pending" aria-hidden="true"><Promotion /></el-icon>
-      </el-button>
-    </div>
-    <div class="chat-composer__foot">
-      <span v-if="!disabled" class="chat-composer__hint">
-        {{ touch ? t('chat.composer.hintTouch') : t('chat.composer.hint') }}
-      </span>
+  <div class="chat-composer" :class="{ 'is-disabled': disabled }">
+    <el-input
+      ref="input"
+      class="chat-composer__input"
+      type="textarea"
+      :model-value="modelValue"
+      :autosize="{ minRows: 2, maxRows: 10 }"
+      resize="none"
+      :placeholder="placeholder"
+      :aria-label="placeholder ?? t('chat.composer.label')"
+      :disabled="disabled"
+      @update:model-value="emit('update:modelValue', $event)"
+      @keydown="onKeydown"
+      @compositionstart="composing = true"
+      @compositionend="onCompositionEnd"
+    />
+    <div class="chat-composer__bar">
       <span v-if="showCount" class="chat-composer__count" :class="{ 'is-over': problem === 'tooLong' }">
         {{ t('chat.composer.count', { n: count, max: BODY_MAX }) }}
       </span>
+      <el-tooltip
+        :content="touch ? t('chat.composer.send') : t('chat.composer.sendTip')"
+        placement="top"
+        :show-after="400"
+        :disabled="touch || !canSend"
+      >
+        <el-button
+          type="primary"
+          size="small"
+          class="chat-composer__send"
+          :loading="pending"
+          :disabled="!canSend"
+          :aria-label="t('chat.composer.send')"
+          :aria-keyshortcuts="touch ? undefined : 'Enter'"
+          @click="emit('send')"
+        >
+          <el-icon v-if="!pending" aria-hidden="true"><Top /></el-icon>
+        </el-button>
+      </el-tooltip>
     </div>
   </div>
 </template>
 
 <style scoped>
-.chat-composer__row {
+/* One box, as an editor's agent chat has it: the text, then a row along its bottom with the send button. */
+.chat-composer {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  flex-direction: column;
+  border: 1px solid var(--el-border-color);
+  border-radius: 10px;
+  background: var(--el-fill-color-blank);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
-.chat-composer__input {
-  flex: 1;
-  min-width: 0;
+.chat-composer:focus-within {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 1px var(--el-color-primary);
+}
+.chat-composer.is-disabled {
+  background: var(--el-disabled-bg-color);
 }
 .chat-composer__input :deep(.el-textarea__inner) {
+  display: block;
+  padding: 9px 12px 2px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
   line-height: 1.5;
-  padding-top: 7px;
-  padding-bottom: 7px;
 }
-.chat-composer__send {
-  flex-shrink: 0;
+.chat-composer__input :deep(.el-textarea__inner:focus),
+.chat-composer__input :deep(.el-textarea__inner:hover) {
+  box-shadow: none;
 }
-.chat-composer__foot {
+.chat-composer__bar {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
-  min-height: 18px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
+  min-height: 34px;
+  padding: 0 6px 6px 12px;
 }
 .chat-composer__count {
-  margin-left: auto;
+  margin-right: auto;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
+  color: var(--el-text-color-placeholder);
 }
 .chat-composer__count.is-over {
   color: var(--el-color-danger);
+}
+.chat-composer__send.el-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
 }
 </style>

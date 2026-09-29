@@ -58,6 +58,7 @@ export default {
       '不管理本課程成員的人，其代理做這件事只能以提案的方式進行，因為這超出了「個人助手」預設所給的權限',
     principal_level: '代表他人行事的代理，權限永不超過該人',
     principal_level_conversation_answer: '代表他人行事的代理，回答的自主程度不會超過該人提問的權限',
+    conversations_are_with_agents: '對話只與代理進行，真人不回答任何對話',
   },
   // The built-in presets, by Core's name for them.
   preset: {
@@ -190,6 +191,7 @@ export default {
   // closed_reason codes; anything else is what the closer wrote, shown as it is.
   closedReason: {
     seat_removed: '有參與者已離開課程',
+    conversations_are_with_agents: '這段對話的對象是真人，而現在對話只與代理進行',
   },
   // A respondent's conversation_answer, as the person asking should read it.
   answerLevel: {

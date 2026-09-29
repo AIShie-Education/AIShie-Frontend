@@ -37,6 +37,48 @@ describe('errorMessage, to an agent’s owner who could not have done it themsel
   })
 })
 
+describe('errorMessage, of conversations, which are with agents', () => {
+  it('says a person is never asked, and answers none, in each language', () => {
+    // conversation.open with a person as respondent, or conversation.answer by a person.
+    const e = refusal(
+      'forbidden',
+      { reason: 'conversations_are_with_agents' },
+      { actionId: 'a1', actionStatus: 'failed' },
+    )
+    expect(errorMessage(e)).toBe(
+      'Conversations here are with agents: a person is never asked in one, and answers none. People talk to each other elsewhere.',
+    )
+    setLocale('zh-Hant')
+    expect(errorMessage(e)).toBe(
+      '這裡的對話只與代理進行：真人不會在對話中被提問，也不回答任何對話。人與人之間請在其他地方交流。',
+    )
+    setLocale('zh-Hans')
+    expect(errorMessage(e)).toBe(
+      '这里的对话只与智能体进行：真人不会在对话中被提问，也不回答任何对话。人与人之间请在其他地方交流。',
+    )
+  })
+  it('says why a person’s seat cannot be given conversation_answer, as a ceiling', () => {
+    const e = refusal(
+      'forbidden',
+      { reason: 'conversations_are_with_agents', permission: 'conversation_answer', ceiling: 'denied' },
+      { actionId: 'a1', actionStatus: 'failed' },
+    )
+    expect(errorMessage(e)).toBe(
+      'Answer questions cannot be given here at all, because conversations are with agents, and a person answers none of them.',
+    )
+  })
+  it('says only the two taking part mark a conversation read, in each language', () => {
+    const e = refusal('forbidden', { reason: 'not_a_participant' }, { actionId: 'a1', actionStatus: 'failed' })
+    expect(errorMessage(e)).toBe(
+      'Only the two taking part in a conversation mark it read: reading it as course staff keeps no place in it.',
+    )
+    setLocale('zh-Hant')
+    expect(errorMessage(e)).toBe('只有參與對話的雙方才會將對話標示為已讀；以課程教職員身分閱讀，不會在對話中留下閱讀進度。')
+    setLocale('zh-Hans')
+    expect(errorMessage(e)).toBe('只有参与对话的双方才会将对话标记为已读；以课程教职员身份阅读，不会在对话中留下阅读进度。')
+  })
+})
+
 describe('errorMessage, by the reason Core gives', () => {
   it('says what a department administrator reached beyond, recorded denial or not', () => {
     const denied = refusal('forbidden', { reason: 'department_out_of_scope' }, { actionId: 'a1', actionStatus: 'denied' })

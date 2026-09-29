@@ -1,9 +1,7 @@
 <script setup lang="ts">
 // The agents the caller may ask in a course (conversation.respondents): the
 // course's agents first, then their own personal assistant. Never a person:
-// Core lists one who answers questions and can see nothing the caller
-// cannot, and the chat leaves them out, since people are talked to elsewhere.
-// Each says what it is to the caller, whether anything is running it, and how
+// conversations are with agents, and Core lists agents alone. Each says what it is to the caller, whether anything is running it, and how
 // its answers arrive when that is not at once.
 //
 // An agent operated from an external tool takes no conversations in the
@@ -30,7 +28,7 @@ const now = useNow()
 const seat = useChatSeat(() => props.courseId)
 const session = useSessionStore()
 
-// Agents alone, the course's first (useRespondents).
+// The course's agents first (useRespondents).
 const list = useRespondents({ courseId: props.courseId, enabled: () => props.enabled !== false })
 const offline = (r: Respondent) => {
   const a = availabilityOf(r, now.value)

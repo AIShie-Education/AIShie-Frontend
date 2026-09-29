@@ -325,8 +325,9 @@ watch(
 )
 /**
  * The most the new seat may hold of each permission: nothing above
- * confirm_required of action_decide for an agent (newSeatCeilings). A level
- * chosen above it before the agent was named is let go.
+ * confirm_required of action_decide for an agent, and no conversation_answer
+ * for a person (newSeatCeilings). A level chosen above it before the actor was
+ * named is let go.
  */
 const ceilings = computed(() =>
   newSeatCeilings(actorInfo.value && actorInfo.value !== 'missing' ? actorInfo.value.kind : null),

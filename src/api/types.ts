@@ -173,9 +173,16 @@ export type ConversationStatus = 'open' | 'closed'
 export type ConversationRole = 'opener' | 'respondent' | 'overseer'
 /**
  * closed_reason is either what the closer wrote (free text, shown as it is)
- * or this code, set when a participant's seat was removed.
+ * or one of Core's codes: this one, set when a participant's seat was removed,
  */
 export const CLOSED_SEAT_REMOVED = 'seat_removed'
+/**
+ * or this one, set on every conversation whose respondent was a person, from
+ * before conversations were with agents alone. It is also the reason Core
+ * gives for refusing a person as a respondent, and for capping a person's
+ * conversation_answer at denied.
+ */
+export const CONVERSATIONS_ARE_WITH_AGENTS = 'conversations_are_with_agents'
 /** A conversation as every conversation tool returns it, without its messages. */
 export type ConversationView = ListItem<'conversation.list', 'conversations'>
 /** conversation.get: the view, and who can read it (visible_to, as codes: participants, overseers, action_record, respondent_answers_others). */
@@ -191,6 +198,13 @@ export type ConversationMessagesPage = ToolOut<'conversation.messages'>
 export type Respondent = ListItem<'conversation.respondents', 'respondents'>
 /** A conversation waiting for the caller's answer (conversation.inbox). */
 export type InboxItem = ListItem<'conversation.inbox', 'conversations'>
+/**
+ * One of the caller's own conversations, as the one who asked, in any course
+ * (me.conversations): its course, its agent, its state, when it was last
+ * active, whether the agent has written since the caller last read it
+ * (unread), and whether they may ask in its course now.
+ */
+export type MyConversation = ListItem<'me.conversations', 'conversations'>
 
 /** A decimal as Core sends it: a JSON number, or a string where exactness matters. */
 export type Decimal = number | string

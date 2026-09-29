@@ -60,6 +60,7 @@ export default {
       'the agent of someone who does not manage this course’s members does this only by proposal, as it goes beyond what the personal assistant preset gives',
     principal_level: 'an agent acting for someone never holds more than that person does',
     principal_level_conversation_answer: 'an agent acting for someone answers no more freely than that person may ask',
+    conversations_are_with_agents: 'conversations are with agents, and a person answers none of them',
   },
   // The built-in presets, by Core's name for them.
   preset: {
@@ -194,6 +195,7 @@ export default {
   // closed_reason codes; anything else is what the closer wrote, shown as it is.
   closedReason: {
     seat_removed: 'A participant left the course',
+    conversations_are_with_agents: 'It was with a person, and conversations are with agents now',
   },
   // A respondent's conversation_answer, as the person asking should read it.
   answerLevel: {

@@ -1,17 +1,21 @@
 <script setup lang="ts">
 // The caller's conversations with agents, the latest activity first: in the
-// course the panel asks in, or in every course where they may ask. Each says
-// where and with whom (course code · agent), its title, where it stands, and
-// whether an answer in it is unread. Core lists conversations one course at a
-// time, so each course is read as it is first needed, several at once, at
-// most HISTORY_COURSES_MAX of them; a course that could not be read is named.
+// course the panel asks in, or in every course they are seated in
+// (me.conversations, with course_id for one course), a page at a time. Each
+// says where and with whom (course code · agent), its title, where it
+// stands, and whether the agent has written since the caller last read it
+// (unread, which Core keeps). A conversation from before, with a person, is
+// closed and not listed. Kept fresh while it is shown.
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { MyConversation } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
+import LoadMore from '@/components/LoadMore.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { usePolling } from '@/composables/usePolling'
-import { HISTORY_COURSES_MAX, useChatStore, type ChatItem } from '@/stores/chat'
+import { historyKey, useChatStore } from '@/stores/chat'
+import { useSessionStore } from '@/stores/session'
 import { stateOf } from './chat'
 import { courseLabel } from './seat'
 import { LIST_POLL_MS } from './useConversationList'
@@ -20,39 +24,34 @@ const props = withDefaults(defineProps<{ active?: boolean }>(), { active: true }
 const emit = defineEmits<{ open: [courseId: string, conversationId: string] }>()
 const { t } = useI18n()
 const chat = useChatStore()
+const session = useSessionStore()
 
-const ids = computed<string[]>(() => {
-  if (chat.historyScope === 'all') return chat.courseIds.slice(0, HISTORY_COURSES_MAX)
-  return chat.courseId ? [chat.courseId] : []
-})
-/** Courses left out of every course's history, past the most read at once. */
-const leftOut = computed(() =>
-  chat.historyScope === 'all' ? Math.max(0, chat.courseIds.length - HISTORY_COURSES_MAX) : 0,
+const key = computed(() => historyKey(chat.historyScope, chat.courseId))
+const list = computed(() => (key.value ? chat.histories[key.value] : undefined))
+const items = computed<MyConversation[]>(() => list.value?.items ?? [])
+
+// Read when it is first shown, and read again, quietly, each time it is shown after.
+watch(
+  key,
+  (k) => {
+    if (k) void chat.loadHistory(k, { quiet: true }).catch(() => undefined)
+  },
+  { immediate: true },
 )
-watch(ids, (list) => void chat.loadHistory(list), { immediate: true })
-usePolling(() => chat.loadHistory(ids.value, { force: true }), {
+usePolling(() => (key.value ? chat.loadHistory(key.value, { quiet: true }) : undefined), {
   intervalMs: LIST_POLL_MS,
   immediate: false,
-  enabled: () => props.active,
+  enabled: () => props.active && !!list.value?.loaded,
 })
 
-const items = computed(() => chat.historyOf(ids.value))
-const loading = computed(() => ids.value.some((id) => chat.histories[id]?.loading && !chat.histories[id]?.loaded))
-const loaded = computed(() => ids.value.some((id) => chat.histories[id]?.loaded))
-const byCourse = computed(() => new Map(chat.courses.map((m) => [m.course_id, m])))
-const failed = computed(() => ids.value.filter((id) => chat.histories[id]?.error))
-const truncated = computed(() => ids.value.filter((id) => chat.histories[id]?.truncated))
-const names = (list: string[]) =>
-  list.map((id) => (byCourse.value.get(id) ? courseLabel(byCourse.value.get(id)!, chat.courses) : id)).join(', ')
-/** Every course asked could not be read: nothing to show but that. */
-const allFailed = computed(() => !!ids.value.length && failed.value.length === ids.value.length && !items.value.length)
-
-function where(it: ChatItem): string {
-  const m = byCourse.value.get(it.courseId)
-  return m ? courseLabel(m, chat.courses) : ''
+function where(c: MyConversation): string {
+  return courseLabel(c.course, session.liveMemberships)
 }
 function retry() {
-  void chat.loadHistory(failed.value, { force: true })
+  if (key.value) void chat.loadHistory(key.value)
+}
+function more() {
+  if (key.value) void chat.loadMoreHistory(key.value)
 }
 </script>
 
@@ -65,53 +64,44 @@ function retry() {
       </el-radio-group>
     </div>
 
-    <el-alert v-if="failed.length && !allFailed" type="warning" :closable="false" show-icon class="chat-history__note">
-      {{ t('chat.history.failed', { courses: names(failed) }) }}
-      <el-button link type="primary" size="small" @click="retry">{{ t('common.actions.retry') }}</el-button>
-    </el-alert>
-    <p v-if="leftOut" class="chat-history__hint">
-      {{ t('chat.history.leftOut', { n: HISTORY_COURSES_MAX, total: chat.courseIds.length }) }}
-    </p>
-    <p v-if="truncated.length" class="chat-history__hint">
-      {{ t('chat.history.truncated', { courses: names(truncated) }) }}
-    </p>
-
     <AsyncState
-      :loading="loading && !loaded"
-      :error="allFailed ? chat.histories[failed[0]!]?.error : null"
-      :empty="loaded && !items.length"
+      :loading="!!list?.loading && !list?.loaded"
+      :error="list?.loaded ? null : (list?.error ?? null)"
+      :empty="!!list?.loaded && !items.length"
       :empty-text="chat.historyScope === 'all' ? t('chat.history.emptyAll') : t('chat.history.empty')"
       @retry="retry"
     >
       <ul class="chat-history__list" :aria-label="t('chat.history.title')">
-        <li v-for="it in items" :key="it.view.id">
+        <li v-for="c in items" :key="c.conversation_id">
           <button
             type="button"
             class="hist-row"
             :class="{
-              'is-unread': chat.unreadIds.has(it.view.id),
-              'is-selected': chat.conversation?.id === it.view.id,
+              'is-unread': chat.unreadIds.has(c.conversation_id),
+              'is-selected': chat.conversation?.id === c.conversation_id,
             }"
-            @click="emit('open', it.courseId, it.view.id)"
+            @click="emit('open', c.course.course_id, c.conversation_id)"
           >
             <span class="hist-row__line">
-              <span v-if="chat.unreadIds.has(it.view.id)" class="hist-row__dot" aria-hidden="true" />
+              <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__dot" aria-hidden="true" />
               <span class="hist-row__where"
-                ><span class="hist-row__course">{{ where(it) }}</span> ·
-                <span class="hist-row__agent">{{ it.view.respondent.display_name }}</span></span
+                ><span class="hist-row__course">{{ where(c) }}</span> ·
+                <span class="hist-row__agent">{{ c.respondent.display_name }}</span></span
               >
-              <span class="hist-row__time"
-                ><TimeText :value="it.view.last_message_at ?? it.view.created_at" relative
-              /></span>
+              <span class="hist-row__time"><TimeText :value="c.last_activity_at" relative /></span>
             </span>
             <span class="hist-row__line hist-row__sub">
-              <span class="hist-row__title">{{ it.view.title || t('chat.history.untitled') }}</span>
-              <span v-if="chat.unreadIds.has(it.view.id)" class="hist-row__unread">{{ t('chat.history.unread') }}</span>
-              <StatusTag vocab="conversationState" :value="stateOf(it.view)" />
+              <span class="hist-row__title">{{ c.title || t('chat.history.untitled') }}</span>
+              <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__unread">{{
+                t('chat.history.unread')
+              }}</span>
+              <StatusTag vocab="conversationState" :value="stateOf(c)" />
             </span>
           </button>
         </li>
       </ul>
+      <LoadMore :has-more="!!list?.hasMore" :loading="!!list?.loadingMore" @more="more" />
+      <p v-if="list?.moreError" class="chat-history__hint" role="alert">{{ t('chat.history.moreFailed') }}</p>
     </AsyncState>
   </div>
 </template>
@@ -120,11 +110,9 @@ function retry() {
 .chat-history__scope {
   margin-bottom: 10px;
 }
-.chat-history__note {
-  margin-bottom: 8px;
-}
 .chat-history__hint {
-  margin: 0 0 8px;
+  margin: 0;
+  text-align: center;
   font-size: 12px;
   line-height: 1.5;
   color: var(--el-text-color-secondary);

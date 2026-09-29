@@ -1,86 +1,77 @@
-// The chat panel's frame, apart from what it shows: how wide it may be, what
-// this browser remembers of it (open or not, its width), and the key that
-// opens and closes it.
+// The chat panel's frame, apart from what it shows: how wide it is and where
+// it docks, what this browser remembers of it (open or not, and for each
+// caller the course they last asked in), and the key that opens and closes
+// it.
 
-/** The narrowest the panel may be, in pixels. */
-export const PANEL_MIN = 320
-/** Its width until someone changes it. */
-export const PANEL_DEFAULT = 400
-/** The widest, as a share of the window's width. */
-export const PANEL_MAX_SHARE = 0.5
-/** How far one press of an arrow key moves its edge; with Shift, four times as far. */
-export const PANEL_STEP = 16
+/** The panel's width, docked or floating, in pixels: fixed, not resized. */
+export const PANEL_WIDTH = 380
+/**
+ * The narrowest window the panel is docked in, taking its width from the
+ * page. Below it (but above a phone's), the page would be left too little,
+ * beside the activity bar, the side bar and the rail: the panel floats over
+ * the page instead.
+ */
+export const PANEL_DOCKED_MIN_WIDTH = 1200
 /** At this width and below, the panel is a sheet over the whole screen instead. */
 export const PANEL_SHEET_MAX_WIDTH = 899
-/** How often the caller's conversations waiting for an answer are looked at, open or not. */
-export const PENDING_POLL_MS = 30_000
-/** At most this many of them are looked at each time. */
-export const PENDING_PER_POLL = 10
-
-/** The widest the panel may be in a window this wide (never narrower than the narrowest). */
-export function panelMax(viewport: number): number {
-  return Math.max(PANEL_MIN, Math.floor(viewport * PANEL_MAX_SHARE))
-}
-
-/** A width within the bounds for a window this wide, in whole pixels. */
-export function clampWidth(width: number, viewport: number): number {
-  const w = Number.isFinite(width) ? Math.round(width) : PANEL_DEFAULT
-  return Math.min(panelMax(viewport), Math.max(PANEL_MIN, w))
-}
-
-/**
- * The width a key press on the panel's edge asks for, or null for a key that
- * does nothing there. The edge is the panel's left one: the arrow towards
- * the page (left) widens it, the other narrows it; Home and End go to the
- * narrowest and the widest.
- */
-export function widthForKey(
-  key: string,
-  width: number,
-  viewport: number,
-  opts: { shift?: boolean } = {},
-): number | null {
-  const step = PANEL_STEP * (opts.shift ? 4 : 1)
-  switch (key) {
-    case 'ArrowLeft':
-      return clampWidth(width + step, viewport)
-    case 'ArrowRight':
-      return clampWidth(width - step, viewport)
-    case 'Home':
-      return PANEL_MIN
-    case 'End':
-      return panelMax(viewport)
-  }
-  return null
-}
+/** How often the newest of the caller's conversations are read again for what is unread, open or not. */
+export const UNREAD_POLL_MS = 30_000
 
 const STORAGE_KEY = 'aishiteru.chatPanel'
 
 export interface PanelFrame {
   open: boolean
-  width: number
 }
 
-/** What this browser remembers of the panel, or closed at its default width. */
+/**
+ * What this browser remembers of the panel, or closed. A width earlier
+ * versions kept, when it could be resized, is not read, and goes when the
+ * frame is next kept.
+ */
 export function loadFrame(): PanelFrame {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const v = JSON.parse(raw) as Partial<PanelFrame>
-      return {
-        open: v.open === true,
-        width: typeof v.width === 'number' && Number.isFinite(v.width) ? Math.round(v.width) : PANEL_DEFAULT,
-      }
-    }
+    if (raw) return { open: (JSON.parse(raw) as Partial<PanelFrame> | null)?.open === true }
   } catch {
     /* no storage, or something unreadable in it: as new */
   }
-  return { open: false, width: PANEL_DEFAULT }
+  return { open: false }
 }
 
 export function saveFrame(f: PanelFrame) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ open: f.open, width: Math.round(f.width) }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ open: f.open }))
+  } catch {
+    /* no storage: it lasts for this page only */
+  }
+}
+
+const LAST_COURSE_PREFIX = 'aishiteru.chatCourse.'
+/**
+ * Where earlier versions kept, for each caller, what they had read and the
+ * course they last asked in: Core keeps what they have read now. Its course
+ * is taken once, and the rest dropped when a course is next kept.
+ */
+const LEGACY_PREFIX = 'aishiteru.chat.'
+
+/** The course a caller last asked in, in this browser, or null: none kept, or no storage. */
+export function loadLastCourse(actorId: string): string | null {
+  try {
+    const kept = localStorage.getItem(LAST_COURSE_PREFIX + actorId)
+    if (kept) return kept
+    const legacy = localStorage.getItem(LEGACY_PREFIX + actorId)
+    if (!legacy) return null
+    const course = (JSON.parse(legacy) as { course?: unknown } | null)?.course
+    return typeof course === 'string' && course ? course : null
+  } catch {
+    return null
+  }
+}
+
+export function saveLastCourse(actorId: string, courseId: string) {
+  try {
+    localStorage.setItem(LAST_COURSE_PREFIX + actorId, courseId)
+    localStorage.removeItem(LEGACY_PREFIX + actorId)
   } catch {
     /* no storage: it lasts for this page only */
   }

@@ -253,8 +253,10 @@ test.describe.serial('site chat: an agent is asked here only while something tha
     await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
     await expect(panel.locator('.chat-pane__notice.is-elsewhere')).toHaveText(NOTE)
     await expect(panel.locator('.chat-pane textarea')).toHaveCount(0)
-    // His to close, and still listed among his conversations.
-    await expect(panel.locator('.chat-pane').getByRole('button', { name: 'Close' })).toBeVisible()
+    // His to close, from the conversation's menu, and still listed among his conversations.
+    await panel.getByRole('button', { name: 'Conversation options' }).click()
+    await expect(student.getByRole('menuitem', { name: 'Close conversation' })).toBeVisible()
+    await student.keyboard.press('Escape')
     await panel.getByRole('button', { name: 'History', exact: true }).click()
     await expect(panel.locator('.hist-row').filter({ hasText: TUTOR })).toContainText('CS101')
 

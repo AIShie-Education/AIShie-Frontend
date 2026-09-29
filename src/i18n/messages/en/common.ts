@@ -122,6 +122,10 @@ export default {
     invalidEmail: 'Enter a valid email address',
     ownerNotAutonomous:
       'You decide what your agent did only where you could have done it yourself without anyone’s confirmation. Here your own level for it is lower, or it is beyond your reach, so someone else in the course decides it.',
+    conversationsAreWithAgents:
+      'Conversations here are with agents: a person is never asked in one, and answers none. People talk to each other elsewhere.',
+    notAParticipant:
+      'Only the two taking part in a conversation mark it read: reading it as course staff keeps no place in it.',
   },
   // A seat's ceilings (perm_ceilings): the most it may hold of a permission, whoever grants it.
   ceiling: {

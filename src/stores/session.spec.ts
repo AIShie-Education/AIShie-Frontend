@@ -113,6 +113,8 @@ describe('signInWithInvite', () => {
     const session = useSessionStore()
     await session.ensure()
     localStorage.setItem('aishiteru.admin.recentActors.admin', '[]')
+    localStorage.setItem('aishiteru.chat.admin', '{"since":"2026-09-01T00:00:00Z","seen":{},"pending":{}}')
+    localStorage.setItem('aishiteru.chatCourse.admin', 'k1')
     localStorage.setItem('aishiteru.locale', 'en')
     invite = () => Promise.reject(new ApiError({ status: 401, code: 'unauthenticated', message: 'not valid' }))
     await session.signInWithInvite('aisinv_x', 'a long enough password').catch(() => undefined)
@@ -124,6 +126,9 @@ describe('signInWithInvite', () => {
     }
     await session.signInWithInvite('aisinv_y', 'a long enough password')
     expect(localStorage.getItem('aishiteru.admin.recentActors.admin')).toBeNull()
+    // What the chat once kept of what they had read goes; the course they last asked in, not memory of reading, stays.
+    expect(localStorage.getItem('aishiteru.chat.admin')).toBeNull()
+    expect(localStorage.getItem('aishiteru.chatCourse.admin')).toBe('k1')
     expect(localStorage.getItem('aishiteru.locale')).toBe('en')
     localStorage.clear()
   })

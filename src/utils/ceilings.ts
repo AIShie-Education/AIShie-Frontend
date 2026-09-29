@@ -12,14 +12,23 @@ import { i18n } from '@/i18n'
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
 const te = (key: string): boolean => (i18n.global as unknown as { te: (k: string) => boolean }).te(key)
 
-/** Why a ceiling is below autonomous, in Core's codes. */
+/**
+ * Why a ceiling is below autonomous, in Core's codes. conversations_are_with_agents:
+ * a person's conversation_answer, at denied, since a person answers no
+ * conversation.
+ */
 export type CeilingReason =
-  'agent_never' | 'agent_decides_by_proposal' | 'student_agent_by_proposal' | 'principal_level'
+  | 'agent_never'
+  | 'agent_decides_by_proposal'
+  | 'student_agent_by_proposal'
+  | 'principal_level'
+  | 'conversations_are_with_agents'
 export const CEILING_REASONS: readonly CeilingReason[] = [
   'agent_never',
   'agent_decides_by_proposal',
   'student_agent_by_proposal',
   'principal_level',
+  'conversations_are_with_agents',
 ]
 
 export function isCeilingReason(v: unknown): v is CeilingReason {
@@ -143,14 +152,23 @@ export function ceilingRefusalText(details: Record<string, unknown> | null | und
 /**
  * The ceilings of the seat member.add would make for an actor of this kind,
  * for the dialog that makes it, where there is no seat yet for Core to say
- * them of. member.add says the one rule that applies there: an agent decides
- * and reviews only by proposal, a preset's action_decide cut down to
- * confirm_required and a level named above it refused. (An agent someone
- * owns is not seated with member.add at all, and a person's seat has no
- * ceiling below autonomous.) Core decides; this only keeps the form from
- * offering what it would refuse.
+ * them of. Two rules apply there: an agent decides and reviews only by
+ * proposal, a preset's action_decide cut down to confirm_required and a level
+ * named above it refused (agent_decides_by_proposal); and a person answers no
+ * conversation, conversation_answer above denied being refused
+ * (conversations_are_with_agents). (An agent someone owns is not seated with
+ * member.add at all.) Core decides; this only keeps the form from offering
+ * what it would refuse.
  */
 export function newSeatCeilings(kind: string | null | undefined): Ceilings | null {
-  if (kind !== 'agent') return null
-  return { levels: { action_decide: 'confirm_required' }, reasons: { action_decide: 'agent_decides_by_proposal' } }
+  if (kind === 'agent') {
+    return { levels: { action_decide: 'confirm_required' }, reasons: { action_decide: 'agent_decides_by_proposal' } }
+  }
+  if (kind === 'human') {
+    return {
+      levels: { conversation_answer: 'denied' },
+      reasons: { conversation_answer: 'conversations_are_with_agents' },
+    }
+  }
+  return null
 }

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import ElementPlus from 'element-plus'
+import ElementPlus, { ElMessageBox } from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, inject, provide } from 'vue'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 
 let server: { messages: ConversationMessage[]; view: ConversationView; respondents: Respondent[] }
@@ -41,15 +41,64 @@ const Passthrough = (name: string) =>
       () =>
         h('span', slots.default?.() ?? slots.reference?.()),
   })
+/** Element Plus's tooltip, which it opens on hover: its content as an attribute, to be read. */
+const Tooltip = defineComponent({
+  name: 'ElTooltip',
+  props: { content: { type: String, default: '' }, disabled: Boolean },
+  setup:
+    (props, { slots }) =>
+    () =>
+      h('span', { class: 'tooltip-stub', 'data-tip': props.disabled ? null : props.content }, slots.default?.()),
+})
+/**
+ * Element Plus's dropdown, whose menu it lays over the page when its trigger
+ * is clicked: here the trigger and the menu both, each item a button that
+ * gives the dropdown its command, as a click on it does.
+ */
+const Dropdown = defineComponent({
+  name: 'ElDropdown',
+  emits: ['command'],
+  setup(_, { slots, emit }) {
+    provide('stub-dropdown', (c: unknown) => emit('command', c))
+    return () =>
+      h('div', { class: 'dropdown-stub' }, [slots.default?.(), h('div', { role: 'menu' }, slots.dropdown?.())])
+  },
+})
+const DropdownItem = defineComponent({
+  name: 'ElDropdownItem',
+  props: { command: { type: String, default: undefined }, disabled: Boolean, divided: Boolean },
+  setup(props, { slots }) {
+    const command = inject<(c: unknown) => void>('stub-dropdown')
+    return () =>
+      h(
+        'button',
+        {
+          type: 'button',
+          role: 'menuitem',
+          class: 'menu-item',
+          disabled: props.disabled,
+          onClick: () => props.command && command?.(props.command),
+        },
+        slots.default?.(),
+      )
+  },
+})
 const global = {
   plugins: [i18n, ElementPlus],
   components: icons,
   stubs: {
-    ElTooltip: Passthrough('ElTooltip'),
+    ElTooltip: Tooltip,
     ElPopover: Passthrough('ElPopover'),
+    ElDropdown: Dropdown,
+    ElDropdownMenu: Passthrough('ElDropdownMenu'),
+    ElDropdownItem: DropdownItem,
     RouterLink: Passthrough('RouterLink'),
   },
 }
+
+/** What the header's ⋯ menu offers, by its items' words. */
+const menu = (w: { findAll: (s: string) => { text: () => string }[] }) =>
+  w.findAll('.chat-pane__head [role="menuitem"]').map((b) => b.text())
 
 function msg(seq: number, author: string, over: Partial<ConversationMessage> = {}): ConversationMessage {
   return {
@@ -105,7 +154,8 @@ const answersElsewhere = () =>
     actionId: 'a7',
     actionStatus: 'failed',
   })
-const NOTE = 'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.'
+const NOTE =
+  'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.'
 
 /** The caller's seat in course k1, as me.memberships gives it: the chat reads it from there, on any page. */
 function seat(memberId: string, perms: Record<string, string> = {}) {
@@ -205,24 +255,93 @@ describe('ChatPane', () => {
     expect(w.findAll('.chat-msg')).toHaveLength(3)
     expect(w.find('textarea').exists()).toBe(false)
     expect(w.find('.chat-pane__notice').text()).toContain('Agents answer questions in the chat now')
-    expect(w.find('.chat-pane__head-actions button').exists()).toBe(false)
+    expect(menu(w)).toEqual(['Who can read this'])
   })
 
-  it('asks a person nothing more in a conversation from before, and keeps it readable', async () => {
+  it('keeps a conversation from before with a person readable, closed, saying that conversations are with agents', async () => {
     seat('student')
     server.view = view({
+      status: 'closed',
+      state: 'closed',
+      closed_reason: 'conversations_are_with_agents',
       respondent: { ...view().respondent, member_id: 'ta', display_name: 'Ms Wong', kind: 'human', last_seen_at: null },
     })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     expect(w.findAll('.chat-msg')).toHaveLength(3)
     expect(w.find('textarea').exists()).toBe(false)
-    expect(w.find('.chat-pane__notice').text()).toContain(
-      'Ms Wong is a person, and people no longer answer in the chat',
-    )
     expect(w.find('.chat-pane__typing').exists()).toBe(false)
-    // It is still the opener's to close.
-    expect(w.find('.chat-pane__head-actions button').text()).toBe('Close')
+    expect(w.find('.chat-pane__closed').text()).toContain('This conversation is closed.')
+    // One line, read as one: that it is closed, and why.
+    expect(w.find('.chat-pane__closed-text').element.tagName).toBe('P')
+    expect(w.find('.chat-pane__closed-text').element.textContent).toBe(
+      'This conversation is closed. It was with a person, and conversations are with agents now',
+    )
+    expect(w.find('.chat-pane__closed-reason').text()).toBe(
+      'It was with a person, and conversations are with agents now',
+    )
+    // Nothing more to do in it: not closed again, and no new conversation with a person.
+    expect(menu(w)).toEqual(['Who can read this'])
+    expect(w.find('.chat-pane__closed button').exists()).toBe(false)
+    // Its state, closed, is said beside the name, and nobody is said to be online.
+    expect(w.find('.chat-pane__name-row').text()).toContain('Closed')
+    expect(w.find('.chat-pane__presence').exists()).toBe(false)
+    setLocale('zh-Hant')
+    await flushPromises()
+    expect(w.find('.chat-pane__closed-reason').text()).toBe('這段對話的對象是真人，而現在對話只與代理進行')
+  })
+
+  it('marks it read on opening when Core says the agent wrote since the caller last read it, and says so', async () => {
+    seat('student')
+    server.view = view({ state: 'answered', unread: true })
+    server.messages = [msg(1, 'student'), msg(2, 'tutor')]
+    writeAnswer = (tool) =>
+      tool === 'conversation.mark_read' ? executed({ read_up_to_seq: 2, unread: false }) : executed({})
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(writes).toEqual([
+      { tool: 'conversation.mark_read', args: { course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm2' } },
+    ])
+    expect(w.emitted('read')).toEqual([['c1']])
+  })
+
+  it('marks the answer read when it comes while the conversation is shown, and nothing while it is not', async () => {
+    seat('student')
+    writeAnswer = (tool) =>
+      tool === 'conversation.mark_read' ? executed({ read_up_to_seq: 4, unread: false }) : executed({})
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(writes).toEqual([])
+    server.messages = [...server.messages, msg(4, 'tutor', { body: 'An answer' })]
+    server.view = view({ state: 'answered' })
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+    expect(w.text()).toContain('An answer')
+    expect(writes.map((x) => x.args)).toEqual([{ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm4' }])
+    expect(w.emitted('read')).toEqual([['c1']])
+
+    // Off screen (the panel closed): an answer read then is not marked until it is shown again.
+    await w.setProps({ active: false })
+    server.messages = [...server.messages, msg(5, 'student'), msg(6, 'tutor', { body: 'Another' })]
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(writes).toHaveLength(1)
+    await w.setProps({ active: true })
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+    expect(w.text()).toContain('Another')
+    expect(writes.map((x) => x.args.up_to_message_id)).toEqual(['m4', 'm6'])
+  })
+
+  it('marks nothing read for staff reading it', async () => {
+    seat('staff', { action_decide: 'autonomous' })
+    server.view = view({ state: 'answered', unread: true })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', oversee: true }, global })
+    await flushPromises()
+    server.messages = [...server.messages, msg(4, 'tutor')]
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+    expect(writes).toEqual([])
+    expect(w.emitted('read')).toBeUndefined()
   })
 
   it('says a question was refused because the conversation was closed meanwhile, keeps the draft, and reads again', async () => {
@@ -256,7 +375,7 @@ describe('ChatPane', () => {
     expect(w.find('textarea').exists()).toBe(false)
     expect(w.find('.chat-pane__notice').text()).toContain('You are reading this as course staff.')
     expect(w.findAll('.chat-msg__actions button').map((b) => b.text())).toEqual(['Withdraw', 'Withdraw', 'Withdraw'])
-    expect(w.find('.chat-pane__head-actions button').exists()).toBe(false)
+    expect(menu(w)).toEqual(['Who can read this'])
   })
 
   it('names the course beside the agent, where it is given', async () => {
@@ -264,7 +383,6 @@ describe('ChatPane', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', courseLabel: 'CS101' }, global })
     await flushPromises()
     expect(w.find('.chat-pane__name-row').text()).toMatch(/^CS101\s*·\s*Course tutor/)
-    expect(w.emitted('view')?.[0]?.[0]).toMatchObject({ id: 'c1', state: 'awaiting_answer' })
   })
 
   it('keeps a question that waits for approval on screen, marked so', async () => {
@@ -301,7 +419,7 @@ describe('ChatPane', () => {
     expect(w.find('.chat-msg.is-retracted').text()).toContain('Off topic')
   })
 
-  it('opens a new conversation with its first message, and warns when nothing runs the agent', async () => {
+  it('opens a new conversation with its first message, titled by its first line, and says quietly that nothing runs the agent', async () => {
     seat('student')
     writeAnswer = () => executed({ conversation_id: 'c2', message_id: 'm1' })
     const respondent: Respondent = {
@@ -316,17 +434,84 @@ describe('ChatPane', () => {
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', respondent }, global })
     await flushPromises()
-    expect(w.find('.chat-pane__notice').text()).toContain('never connected')
+    // Beside its name, not in a box of its own; and no title to fill in.
+    expect(w.find('.chat-pane__name-row').text()).toMatch(/^Course tutor\s*Never connected$/)
+    expect(w.find('.chat-pane__notice').exists()).toBe(false)
+    expect(w.find('.el-alert').exists()).toBe(false)
+    expect(w.findAll('input')).toHaveLength(0)
     // A course agent answers others too: the opener is told before writing.
     expect(w.find('.chat-pane__shared').text()).toContain('may repeat to them')
-    const ta = await type(w, 'What is due Friday?')
+    const ta = await type(w, '\n  What is due Friday?  \nAnd how long should it be?')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
     expect(writes[0]).toEqual({
       tool: 'conversation.open',
-      args: { course_id: 'k1', respondent_member_id: 'tutor', body: 'What is due Friday?' },
+      args: {
+        course_id: 'k1',
+        respondent_member_id: 'tutor',
+        body: '  What is due Friday?  \nAnd how long should it be?',
+        title: 'What is due Friday?',
+      },
     })
     expect(w.emitted('opened')?.[0]).toEqual(['c2'])
+  })
+
+  it('keeps its header to one row: the agent, whether it runs, and a menu for who can read it, its answers and closing', async () => {
+    seat('student')
+    server.view = view({
+      title: 'Loops',
+      respondent: { ...view().respondent, answer_level: 'confirm_required', last_seen_at: '2026-09-26T11:23:00Z' },
+    })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const row = w.find('.chat-pane__name-row')
+    expect(row.text()).toMatch(/^Course tutor\s*Last seen 37 minutes ago$/)
+    expect(row.attributes('title')).toBe('Loops')
+    // An open conversation shows no state; nothing but the row and the menu in the header.
+    expect(row.find('.status-tag, .el-tag').exists()).toBe(false)
+    expect(w.find('.chat-pane__head').text()).not.toContain('Who can read this conversation')
+    expect(w.find('.chat-pane__more').attributes('aria-label')).toBe('Conversation options')
+    expect(menu(w)).toEqual(['Who can read this', 'Each answer waits for approval', 'Close conversation'])
+    expect(w.find('.chat-pane__head [role="menuitem"][disabled]').text()).toBe('Each answer waits for approval')
+
+    // Who can read it, in a box of its own.
+    await w.findAll('.chat-pane__head [role="menuitem"]')[0]!.trigger('click')
+    await flushPromises()
+    const readers = document.body.querySelector('.chat-pane__readers')!
+    expect(readers.textContent).toContain('Who can read this conversation')
+    expect(readers.textContent).toContain('The two taking part')
+
+    // Closing it asks for a reason first, then closes it.
+    const prompt = vi.spyOn(ElMessageBox, 'prompt').mockResolvedValue({ value: '', action: 'confirm' } as never)
+    writeAnswer = () => executed({})
+    await w.findAll('.chat-pane__head [role="menuitem"]')[2]!.trigger('click')
+    await flushPromises()
+    expect(prompt).toHaveBeenCalledOnce()
+    expect(writes).toEqual([{ tool: 'conversation.close', args: { course_id: 'k1', conversation_id: 'c1' } }])
+    prompt.mockRestore()
+  })
+
+  it('says an answer is awaited in one quiet line, and nothing of the agent being offline there', async () => {
+    seat('student')
+    server.view = view({ respondent: { ...view().respondent, last_seen_at: '2026-09-26T09:00:00Z' } })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__notice').element.tagName).toBe('P')
+    expect(w.find('.chat-pane__notice').text()).toBe('Course tutor has your question.')
+    expect(w.find('.chat-pane__presence').text()).toBe('Last seen 3 hours ago')
+    expect(w.find('.chat-pane__typing').text()).toContain('Waiting for Course tutor')
+    expect(w.find('textarea').exists()).toBe(true)
+  })
+
+  it('says in one muted line what stops the caller writing', async () => {
+    seat('student')
+    server.view = view({ respondent: { ...view().respondent, seat_status: 'paused' } })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const line = w.find('.chat-pane__notice')
+    expect(line.element.tagName).toBe('P')
+    expect(line.text()).toBe('Course tutor is paused in this course and cannot answer now.')
+    expect(w.find('textarea').attributes('disabled')).toBeDefined()
   })
 })
 
@@ -343,7 +528,7 @@ describe('ChatPane, with an agent operated from outside', () => {
     // Nothing here will answer: nobody is shown at work.
     expect(w.find('.chat-pane__typing').exists()).toBe(false)
     // It may still be closed.
-    expect(w.find('.chat-pane__head-actions button').text()).toBe('Close')
+    expect(menu(w)).toContain('Close conversation')
   })
 
   it('tells its owner, too, how that would change', async () => {
@@ -355,7 +540,7 @@ describe('ChatPane, with an agent operated from outside', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const note = w.find('.chat-pane__notice.is-elsewhere')
-    expect(note.text()).toContain(NOTE)
+    expect(note.text()).toContain(`${NOTE} When`)
     expect(note.find('.chat-pane__notice-sub').text()).toBe(
       'When AIshie’s runtime hosts it, it takes conversations on the site by itself.',
     )
@@ -462,10 +647,59 @@ describe('ChatComposer', () => {
     expect(w.emitted('send')).toHaveLength(1)
   })
 
-  it('shows the count as the draft nears Core’s limit', async () => {
-    const w = mount(ChatComposer, { props: { modelValue: 'x'.repeat(19_500) }, global })
-    expect(w.find('.chat-composer__count').text()).toContain('19500 / 20000')
+  it('shows the count, inside the box beside the send button, only as the draft nears Core’s limit', async () => {
+    const w = mount(ChatComposer, { props: { modelValue: 'x'.repeat(17_900) }, global })
+    expect(w.find('.chat-composer__count').exists()).toBe(false)
+    await w.setProps({ modelValue: 'x'.repeat(19_500) })
+    expect(w.find('.chat-composer__bar .chat-composer__count').text()).toContain('19500 / 20000')
     await w.setProps({ modelValue: 'x'.repeat(20_001) })
     expect(w.find('.chat-composer__count').classes()).toContain('is-over')
+  })
+
+  it('on a touch screen, leaves Enter to the keyboard’s new line and sends with the button, which names no key', async () => {
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('coarse'),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as unknown as typeof window.matchMedia
+    const w = mount(ChatComposer, { props: { modelValue: 'hello' }, global })
+    await w.find('textarea').trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('send')).toBeUndefined()
+    const send = w.find('.chat-composer__send')
+    expect(send.attributes('aria-keyshortcuts')).toBeUndefined()
+    expect(w.find('.chat-composer__bar .tooltip-stub').attributes('data-tip')).toBeUndefined()
+    await send.trigger('click')
+    expect(w.emitted('send')).toHaveLength(1)
+  })
+
+  it('is one box: the text, and along its bottom a small send button, with the keys in its tooltip and no hint below', async () => {
+    const w = mount(ChatComposer, { props: { modelValue: 'hello', placeholder: 'Ask Course tutor…' }, global })
+    const box = w.find('.chat-composer')
+    // Nothing before the text, inside the box or beside it.
+    expect([...box.element.children].map((c) => c.className.split(' ')[0])).toEqual([
+      'el-textarea',
+      'chat-composer__bar',
+    ])
+    expect(box.find('.el-textarea').element.children[0]!.tagName).toBe('TEXTAREA')
+    expect(w.find('textarea').attributes('aria-label')).toBe('Ask Course tutor…')
+    const send = w.find('.chat-composer__bar .chat-composer__send')
+    expect(send.attributes('aria-label')).toBe('Send')
+    expect(send.attributes('aria-keyshortcuts')).toBe('Enter')
+    expect(send.text()).toBe('')
+    expect(w.find('.chat-composer__bar .tooltip-stub').attributes('data-tip')).toBe(
+      'Send (Enter) · Shift+Enter for a new line',
+    )
+    expect(w.text()).not.toContain('Enter to send')
+    expect(w.find('.chat-composer__hint').exists()).toBe(false)
+    // Nothing to send, or sending: the button says so, and the tooltip is not offered.
+    await w.setProps({ modelValue: '' })
+    expect(w.find('.chat-composer__send').attributes('disabled')).toBeDefined()
+    await w.setProps({ modelValue: 'hello', pending: true })
+    expect(w.find('.chat-composer__send').classes()).toContain('is-loading')
+    // Disabled, the box is too.
+    await w.setProps({ pending: false, disabled: true })
+    expect(w.find('.chat-composer').classes()).toContain('is-disabled')
+    expect(w.find('textarea').attributes('disabled')).toBeDefined()
   })
 })

@@ -10,7 +10,6 @@ export default {
     newTip: '开始新对话',
     history: '过往对话',
     close: '关闭对话面板',
-    resize: '调整对话面板宽度',
     backToHistory: '返回过往对话',
     backToAgents: '返回智能体列表',
     pickTitle: '向智能体提问',
@@ -26,9 +25,7 @@ export default {
     emptyAll: '你还没有向任何智能体提问。',
     untitled: '未命名',
     unread: '新回复',
-    failed: '无法读取你在 {courses} 的对话。',
-    leftOut: '只显示你 {total} 门课程中 {n} 门的对话。选择一门课程即可查看它的对话。',
-    truncated: '{courses} 的对话太多，未能全部读取，最新的对话可能没有列出。',
+    moreFailed: '无法加载更多对话，请再试一次。',
   },
   respondents: {
     empty: '这里暂时没有可以回答你问题的智能体。',
@@ -51,7 +48,6 @@ export default {
   new: {
     intro: '开始与 {name} 对话。发送第一条消息即会发起对话。',
     yourAgent: '这是你自己的智能体：它代表你行事，权限永不超过你的席位。',
-    titlePlaceholder: '标题（选填）',
   },
   proposed: {
     title: '等待批准',
@@ -65,12 +61,9 @@ export default {
     start: '有任何关于课程的问题，都可以问 {name}。',
     overseeing: '你正以课程教职员的身份阅读这段对话。',
     readOnly: '现在由智能体在对话中回答问题，你可以阅读这段对话。',
-    person: '{name} 是真人，而真人已不再在对话中回答问题。这段对话仍可阅读。',
   },
   // Why an answer may not come.
   availability: {
-    never: '{name} 从未连接：可能没有程序在运行它，因此未必会有回复。',
-    offline: '{name} 上次上线是 {time}，回复可能需要一段时间。',
     gone: '{name} 已不在这门课程中。请改为与其他人开始新的对话。',
     paused: '{name} 在这门课程中已被暂停，目前无法回复。',
     notAnswering: '{name} 目前不回答问题。',
@@ -81,15 +74,13 @@ export default {
   closed: {
     title: '这段对话已结束。',
     said: '对方表示：“{reason}”',
-    readOnly: '对话内容仍可阅读，但无法再发言。',
     startNew: '开始新的对话',
   },
   composer: {
     label: '你的消息',
     askPlaceholder: '向 {name} 提问…',
     send: '发送',
-    hint: '按 Enter 发送，Shift+Enter 换行',
-    hintTouch: '点击按钮发送',
+    sendTip: '发送（Enter）· Shift+Enter 换行',
     count: '{n} / {max} 字',
   },
   conflict: {
@@ -115,8 +106,11 @@ export default {
   },
   reasonPlaceholder: '原因（选填）',
   reasonTooLong: '最多 {max} 字',
+  // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
+  menu: {
+    label: '对话选项',
+  },
   close: {
-    button: '结束',
     title: '要结束这段对话吗？',
     bodyOpener: '结束后无法再发言，但内容仍可阅读。你填写的原因会显示给对方。',
     confirm: '结束对话',

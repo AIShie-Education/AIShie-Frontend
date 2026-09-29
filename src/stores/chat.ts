@@ -1,58 +1,81 @@
-// The chat panel beside every signed-in page: whether it is open and how wide
-// (this browser's, for everyone who uses it), and what it shows: the course
+// The chat panel beside every signed-in page: whether it is open (this
+// browser's, for everyone who uses it), and what it shows: the course
 // the caller asks in, a new conversation with one of its agents, the
 // caller's conversations across their courses, or one of them. Every
 // conversation in it is in a course and with an agent.
 //
-// Core keeps no record of what anyone has read, and pushes nothing. What the
-// caller has read, which of their conversations wait for an answer, and the
-// course they last asked in are kept in this browser for them
-// (components/chat/unread.ts); the conversations waiting for an answer are
-// read again now and then, so that an answer is noticed with the panel
-// closed, and counted on its button until it is read.
+// Core lists the caller's conversations in every course, the latest activity
+// first, each saying whether its agent has written since the caller last
+// read it (me.conversations), and keeps what they have read
+// (conversation.mark_read): the same on every device. The history is that
+// list, of one course or of all of them, read a page at a time. Its first
+// page is read again now and then (the chat panel does, open or not), so
+// that an answer is counted on the panel's button until it is read. What is
+// kept in this browser, for each caller, is only the course they last asked
+// in.
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
-import { ApiError } from '@/api/http'
-import type { ConversationView, Respondent } from '@/api/types'
+import { ApiError, read, type ToolIn, type ToolOut } from '@/api/http'
+import type { MyConversation, Respondent } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
-import { byActivity } from '@/components/chat/chat'
-import { loadFrame, saveFrame } from '@/components/chat/panel'
+import { loadFrame, loadLastCourse, saveFrame, saveLastCourse } from '@/components/chat/panel'
 import { askableCourses } from '@/components/chat/seat'
-import { awaitsAnswer, freshMemory, isUnread, loadMemory, saveMemory, type ChatMemory } from '@/components/chat/unread'
-import { eachLimited, readStarted } from '@/components/chat/useConversationList'
 import { useSessionStore } from './session'
 
 /** What the panel shows: a new conversation (choosing its agent, then writing), the history, or one conversation. */
 export type ChatScreen = 'new' | 'history' | 'conversation'
 
-/** A conversation, and the course it is in. */
-export interface ChatItem {
-  courseId: string
-  view: ConversationView
-}
+/** Which of the caller's conversations the history lists: in the course the panel asks in, or in every course. */
+export type HistoryScope = 'course' | 'all'
 
-/** One course's list of the caller's conversations, as far as it has been read. */
-export interface CourseHistory {
+/** The caller's conversations with agents as the history lists them, as far as they have been read. */
+export interface HistoryList {
+  items: MyConversation[]
   loading: boolean
   loaded: boolean
   error: ApiError | null
-  /** More were started there than are read (Core lists them oldest first). */
-  truncated: boolean
+  /** Core lists more after the pages read (me.conversations' next). */
+  hasMore: boolean
+  loadingMore: boolean
+  moreError: ApiError | null
 }
 
-/** At most this many courses' conversations are read for the history at once. */
-export const HISTORY_COURSES_MAX = 20
-/** How many courses are read at the same time. */
-export const HISTORY_CONCURRENCY = 4
+/** Conversations per page of the history (Core's default; its most is 100). */
+export const HISTORY_PAGE = 50
+/** The newest conversations read for the count on the chat's button: one page. */
+export const UNREAD_PAGE = 50
+
+/**
+ * Whether the history shows a conversation: one with an agent. A conversation
+ * from before, with a person, is closed (conversations_are_with_agents), and
+ * left out of the history as it always was, and out of the count.
+ */
+export const withAgent = (c: Pick<MyConversation, 'respondent'>) => c.respondent.kind === 'agent'
+
+/** The history's key: a course's (course:<id>), or every course's (all). */
+export function historyKey(scope: HistoryScope, courseId: string | null | undefined): string | null {
+  if (scope === 'all') return 'all'
+  return courseId ? `course:${courseId}` : null
+}
+
+function emptyHistory(): HistoryList {
+  return {
+    items: [],
+    loading: false,
+    loaded: false,
+    error: null,
+    hasMore: false,
+    loadingMore: false,
+    moreError: null,
+  }
+}
 
 export const useChatStore = defineStore('chat', () => {
   const session = useSessionStore()
 
-  // --- The frame: open, and how wide (this browser's) ----------------------------
-  const frame = loadFrame()
-  const open = ref(frame.open)
-  const width = ref(frame.width)
-  watch([open, width], () => saveFrame({ open: open.value, width: width.value }))
+  // --- The frame: open or not (this browser's) ------------------------------------
+  const open = ref(loadFrame().open)
+  watch(open, () => saveFrame({ open: open.value }))
 
   function setOpen(v: boolean) {
     open.value = v
@@ -61,16 +84,12 @@ export const useChatStore = defineStore('chat', () => {
     open.value = !open.value
   }
 
-  // --- The caller: what this browser keeps for them -------------------------------
-  const memory = ref<ChatMemory>(freshMemory())
+  // --- The caller -----------------------------------------------------------------
   let actorId: string | null = null
   /** Bumped when the caller changes: what was read for the one before is dropped. */
   let generation = 0
-
-  function remember(next: ChatMemory) {
-    memory.value = next
-    if (actorId) saveMemory(actorId, next)
-  }
+  /** The course the caller last asked in, or looked at (this browser's, for them). */
+  const lastCourse = ref<string | null>(null)
 
   // --- Where the panel is -------------------------------------------------------
   /** The courses where the caller may ask agents now. */
@@ -86,7 +105,7 @@ export const useChatStore = defineStore('chat', () => {
    */
   const courseId = computed<string | null>(() => {
     const ids = courseIds.value
-    for (const id of [chosenCourseId.value, pageCourseId.value, memory.value.course]) {
+    for (const id of [chosenCourseId.value, pageCourseId.value, lastCourse.value]) {
       if (id && ids.includes(id)) return id
     }
     return ids[0] ?? null
@@ -97,10 +116,12 @@ export const useChatStore = defineStore('chat', () => {
   /** The agent a new conversation is being written to, in a course. */
   const draft = ref<{ courseId: string; agent: Respondent } | null>(null)
   /** The history lists the course asked in, or every course. */
-  const historyScope = ref<'course' | 'all'>('course')
+  const historyScope = ref<HistoryScope>('course')
 
   function useCourse(id: string) {
-    if (memory.value.course !== id) remember({ ...memory.value, course: id })
+    if (lastCourse.value === id) return
+    lastCourse.value = id
+    if (actorId) saveLastCourse(actorId, id)
   }
 
   /** The caller chose a course to ask in: a new conversation there, unless the history is shown. */
@@ -166,123 +187,146 @@ export const useChatStore = defineStore('chat', () => {
     else screen.value = conversation.value ? 'conversation' : 'new'
   }
 
-  // --- Conversations known, and what is unread ----------------------------------
-  const items = shallowRef(new Map<string, ChatItem>())
-  const histories = ref<Record<string, CourseHistory>>({})
-
-  const myMemberIn = (id: string) => session.membershipFor(id)?.member_id ?? null
-
-  /** What the caller has open waiting for an answer, as far as is known: watched until it is answered. */
-  function trackPending(next: ChatMemory, it: ChatItem): ChatMemory {
-    const waits = it.view.respondent.kind === 'agent' && awaitsAnswer(it.view, myMemberIn(it.courseId))
-    const has = it.view.id in next.pending
-    if (waits === has) return next
-    const pending = { ...next.pending }
-    if (waits) pending[it.view.id] = it.courseId
-    else delete pending[it.view.id]
-    return { ...next, pending }
-  }
-
-  /** Conversations read (a list, a conversation on screen, a check on one waiting): the latest read of each is kept. */
-  function note(list: ChatItem[]) {
-    if (!list.length) return
-    const map = new Map(items.value)
-    let mem = memory.value
-    for (const it of list) {
-      map.set(it.view.id, it)
-      mem = trackPending(mem, it)
-    }
-    items.value = map
-    if (mem !== memory.value) remember(mem)
-  }
-
-  /** A conversation the caller can no longer read: no longer watched. */
-  function forget(conversationId: string) {
-    if (items.value.has(conversationId)) {
-      const map = new Map(items.value)
-      map.delete(conversationId)
-      items.value = map
-    }
-    if (conversationId in memory.value.pending) {
-      const pending = { ...memory.value.pending }
-      delete pending[conversationId]
-      remember({ ...memory.value, pending })
-    }
-  }
-
-  /** The caller has the conversation on screen, as it stood then: its answers so far are read. */
-  function markSeen(v: Pick<ConversationView, 'id' | 'last_message_at' | 'created_at'>) {
-    const at = v.last_message_at ?? v.created_at
-    const had = memory.value.seen[v.id]
-    if (had && Date.parse(had) >= Date.parse(at)) return
-    remember({ ...memory.value, seen: { ...memory.value.seen, [v.id]: at } })
-  }
-
-  /** The conversations with an answer the caller has not read, in courses where they may still ask. */
-  const unread = computed(() =>
-    [...items.value.values()].filter(
-      (it) => courseIds.value.includes(it.courseId) && isUnread(it.view, myMemberIn(it.courseId), memory.value),
-    ),
-  )
-  const unreadIds = computed(() => new Set(unread.value.map((it) => it.view.id)))
-  const unreadCount = computed(() => unread.value.length)
-
-  /** The conversations watched for an answer, and their courses. */
-  const pending = computed(() =>
-    Object.entries(memory.value.pending)
-      .filter(([, c]) => courseIds.value.includes(c))
-      .map(([id, c]) => ({ id, courseId: c })),
-  )
+  // --- What is unread ---------------------------------------------------------------
+  /**
+   * Whether the agent has written in each of the caller's conversations since
+   * they last read it, as the latest read of it said (me.conversations), or
+   * since they read it here (markedRead).
+   */
+  const unreadOf = shallowRef(new Map<string, boolean>())
+  /** Counts the conversations marked read here, so that a list read before one was can be told from one read after. */
+  let marks = 0
+  const markedAt = new Map<string, number>()
 
   /**
-   * The caller's conversations with agents in the given courses, the latest
-   * activity first: those they started, as each course's list and anything
-   * read since say.
+   * What a page of me.conversations says of each conversation in it, unless
+   * the caller has read it here since that page was asked for.
    */
-  function historyOf(ids: readonly string[]): ChatItem[] {
-    const want = new Set(ids)
-    const mine = [...items.value.values()].filter(
-      (it) =>
-        want.has(it.courseId) &&
-        it.view.respondent.kind === 'agent' &&
-        it.view.opener.member_id === myMemberIn(it.courseId),
-    )
-    const order = byActivity(mine.map((it) => it.view)).map((v) => v.id)
-    const byId = new Map(mine.map((it) => [it.view.id, it]))
-    return order.map((id) => byId.get(id)!)
+  function noteUnread(list: readonly MyConversation[], askedAt: number) {
+    let next: Map<string, boolean> | null = null
+    for (const c of list) {
+      if (!withAgent(c) || (markedAt.get(c.conversation_id) ?? 0) > askedAt) continue
+      if (unreadOf.value.get(c.conversation_id) === c.unread) continue
+      next ??= new Map(unreadOf.value)
+      next.set(c.conversation_id, c.unread)
+    }
+    if (next) unreadOf.value = next
   }
 
-  /**
-   * Reads the caller's conversations in each course given, several at a time:
-   * the courses not read yet, or all of them again with force. A course that
-   * cannot be read keeps what was read of it before, and says so.
-   */
-  async function loadHistory(ids: readonly string[], opts: { force?: boolean } = {}) {
+  /** Reads a page of the caller's conversations (me.conversations), and notes what is unread in it. */
+  async function readMine(args: ToolIn<'me.conversations'>): Promise<ToolOut<'me.conversations'>> {
     const g = generation
-    const want = ids.filter((id) => {
-      const h = histories.value[id]
-      return !h?.loading && (opts.force || !h?.loaded)
-    })
-    if (!want.length) return
-    const next = { ...histories.value }
-    for (const id of want)
-      next[id] = { ...(next[id] ?? { loaded: false, truncated: false, error: null }), loading: true }
-    histories.value = next
-    const results = await eachLimited(want, HISTORY_CONCURRENCY, (id) => readStarted(id))
-    if (g !== generation) return
-    const done = { ...histories.value }
-    const read: ChatItem[] = []
-    results.forEach((r, i) => {
-      const id = want[i]!
-      if (r.status === 'fulfilled') {
-        done[id] = { loading: false, loaded: true, error: null, truncated: r.value.truncated }
-        for (const view of r.value.items) read.push({ courseId: id, view })
-      } else {
-        done[id] = { ...done[id]!, loading: false, error: toApiError(r.reason) }
+    const askedAt = marks
+    const out = await read('me.conversations', args)
+    if (g === generation) noteUnread(out.conversations ?? [], askedAt)
+    return out
+  }
+
+  /** Core has recorded that the caller read a conversation (conversation.mark_read): it is not unread. */
+  function markedRead(conversationId: string) {
+    markedAt.set(conversationId, ++marks)
+    if (!unreadOf.value.get(conversationId)) return
+    const next = new Map(unreadOf.value)
+    next.set(conversationId, false)
+    unreadOf.value = next
+  }
+
+  /** The conversation on screen now, if one is: what comes in it is read as it comes. */
+  const onScreen = computed(() =>
+    open.value && screen.value === 'conversation' ? (conversation.value?.id ?? null) : null,
+  )
+
+  /** The caller's conversations with an answer they have not read, less the one on screen. */
+  const unreadIds = computed(() => {
+    const ids = new Set<string>()
+    for (const [id, unread] of unreadOf.value) if (unread && id !== onScreen.value) ids.add(id)
+    return ids
+  })
+  const unreadCount = computed(() => unreadIds.value.size)
+
+  /** Reads the newest page of the caller's conversations again, for the count on the chat's button. */
+  async function pollUnread() {
+    await readMine({ limit: UNREAD_PAGE })
+  }
+
+  // --- The history ----------------------------------------------------------------------
+  const histories = ref<Record<string, HistoryList>>({})
+  /** How many pages of each history were read: each refresh reads as many again. */
+  const pagesOf = new Map<string, number>()
+  /** The latest read of each history: an earlier one that ends after it is dropped. */
+  const historyReads = new Map<string, number>()
+
+  function setHistory(key: string, h: HistoryList) {
+    histories.value = { ...histories.value, [key]: h }
+  }
+
+  /**
+   * Reads a history from the top: as many pages as were read before (one,
+   * the first time), since a conversation that moves goes to the top of the
+   * list. Quiet, once it has been read, it keeps showing what it has while it
+   * is read again, and a failure is thrown (polling backs off) rather than
+   * shown; otherwise a failure is shown, with a retry.
+   */
+  async function loadHistory(key: string, opts: { quiet?: boolean } = {}) {
+    const g = generation
+    const mine = (historyReads.get(key) ?? 0) + 1
+    historyReads.set(key, mine)
+    const before = histories.value[key] ?? emptyHistory()
+    const quiet = !!opts.quiet && before.loaded
+    if (!quiet) setHistory(key, { ...before, loading: true, error: null })
+    const courseArg = key.startsWith('course:') ? { course_id: key.slice('course:'.length) } : {}
+    const pages = pagesOf.get(key) ?? 1
+    const current = () => g === generation && historyReads.get(key) === mine
+    try {
+      const all: MyConversation[] = []
+      const seen = new Set<string>()
+      let after: string | undefined
+      for (let i = 0; i < pages; i++) {
+        const out = await readMine({ ...courseArg, limit: HISTORY_PAGE, ...(after ? { after } : {}) })
+        // One that moved to the top while the pages were read is listed where it was first read.
+        for (const c of out.conversations ?? []) {
+          if (seen.has(c.conversation_id)) continue
+          seen.add(c.conversation_id)
+          all.push(c)
+        }
+        after = out.next ?? undefined
+        if (!after) break
       }
-    })
-    histories.value = done
-    note(read)
+      if (!current()) return
+      setHistory(key, {
+        items: all.filter(withAgent),
+        loading: false,
+        loaded: true,
+        error: null,
+        hasMore: !!after,
+        loadingMore: false,
+        moreError: null,
+      })
+    } catch (e) {
+      if (!current()) return
+      const now = histories.value[key] ?? before
+      if (quiet) {
+        // It may have been reading a page more for loadMoreHistory, whose own read it replaced.
+        if (now.loadingMore) setHistory(key, { ...now, loadingMore: false })
+        throw e
+      }
+      setHistory(key, { ...now, loading: false, error: toApiError(e) })
+    }
+  }
+
+  /** Reads one more page of a history (all of them again, from the top). */
+  async function loadMoreHistory(key: string) {
+    const h = histories.value[key]
+    if (!h?.loaded || !h.hasMore || h.loadingMore) return
+    pagesOf.set(key, (pagesOf.get(key) ?? 1) + 1)
+    setHistory(key, { ...h, loadingMore: true, moreError: null })
+    try {
+      await loadHistory(key, { quiet: true })
+    } catch (e) {
+      pagesOf.set(key, Math.max(1, (pagesOf.get(key) ?? 2) - 1))
+      const now = histories.value[key] ?? h
+      setHistory(key, { ...now, loadingMore: false, moreError: toApiError(e) })
+    }
   }
 
   // --- A new caller -------------------------------------------------------------
@@ -292,9 +336,12 @@ export const useChatStore = defineStore('chat', () => {
       if (id === actorId) return
       generation++
       actorId = id
-      memory.value = id ? loadMemory(id) : freshMemory()
-      items.value = new Map()
+      lastCourse.value = id ? loadLastCourse(id) : null
+      unreadOf.value = new Map()
+      markedAt.clear()
       histories.value = {}
+      pagesOf.clear()
+      historyReads.clear()
       chosenCourseId.value = null
       conversation.value = null
       draft.value = null
@@ -306,13 +353,13 @@ export const useChatStore = defineStore('chat', () => {
 
   return {
     open,
-    width,
     setOpen,
     toggle,
     courses,
     courseIds,
     courseId,
     pageCourseId,
+    lastCourse,
     screen,
     conversation,
     draft,
@@ -325,17 +372,13 @@ export const useChatStore = defineStore('chat', () => {
     showCourse,
     showHistory,
     toggleHistory,
-    items,
-    histories,
-    note,
-    forget,
-    markSeen,
-    unread,
+    readMine,
+    markedRead,
     unreadIds,
     unreadCount,
-    pending,
-    historyOf,
+    pollUnread,
+    histories,
     loadHistory,
-    memory,
+    loadMoreHistory,
   }
 })

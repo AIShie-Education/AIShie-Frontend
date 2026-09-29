@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // One agent's conversation log, for those who decide actions here: the
 // conversations the members they oversee have had with it in this course
-// (conversation.list as overseer), the latest activity first, and each one
-// read as course staff read it: nothing written, and a message withdrawn
-// where the seat decides actions for its opener (Core checks).
+// (conversation.list as overseer, with the agent's seat as
+// respondent_member_id), the latest activity first, and each one read as
+// course staff read it: nothing written, nothing marked read, and a message
+// withdrawn where the seat decides actions for its opener (Core checks).
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConversationView } from '@/api/types'
@@ -39,11 +40,10 @@ watch(
 const list = useConversationList({
   courseId: props.courseId,
   as: 'overseer',
+  respondent: () => props.agent?.id ?? null,
   enabled: () => open.value && !shown.value,
 })
-const items = computed<ConversationView[]>(() =>
-  props.agent ? list.items.value.filter((c) => c.respondent.member_id === props.agent!.id) : [],
-)
+const items = computed<ConversationView[]>(() => list.items.value)
 // Read again each time it is opened: others may have written since.
 watch(open, (v) => {
   if (v) void list.refresh()

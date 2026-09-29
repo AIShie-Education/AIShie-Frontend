@@ -3,7 +3,6 @@ import type { ConversationMessage, ConversationView } from '@/api/types'
 import {
   AGENT_ANSWERS_ELSEWHERE,
   agentPurpose,
-  agentsOnly,
   answersElsewhere,
   availabilityOf,
   BODY_MAX,
@@ -14,6 +13,8 @@ import {
   cleanBody,
   closedConflict,
   closedReasonOf,
+  titleFrom,
+  TITLE_MAX,
   draftKey,
   firstSeq,
   getDraft,
@@ -195,9 +196,31 @@ describe('roles and states', () => {
 
   it('translates only the closing code; anything else is the closer’s own words', () => {
     expect(closedReasonOf('seat_removed')).toEqual({ code: 'seat_removed' })
+    expect(closedReasonOf('conversations_are_with_agents')).toEqual({ code: 'conversations_are_with_agents' })
     expect(closedReasonOf('  Thanks, all sorted ')).toEqual({ text: 'Thanks, all sorted' })
     expect(closedReasonOf('')).toBeNull()
     expect(closedReasonOf(null)).toBeNull()
+  })
+})
+
+describe('titleFrom', () => {
+  it('is the first line with anything on it, trimmed', () => {
+    expect(titleFrom('How do I stop a while loop?\nI tried break.')).toBe('How do I stop a while loop?')
+    expect(titleFrom('\n \t\n  迴圈怎樣停止？  \r\n第二行')).toBe('迴圈怎樣停止？')
+    expect(titleFrom('\u3000\nSecond')).toBe('Second')
+    expect(titleFrom('   ')).toBe('')
+  })
+
+  it('is cut to what Core takes, with an ellipsis, counting characters as Core does', () => {
+    expect(titleFrom('a'.repeat(TITLE_MAX))).toBe('a'.repeat(TITLE_MAX))
+    const cut = titleFrom('a'.repeat(TITLE_MAX + 50))
+    expect(cut).toBe('a'.repeat(TITLE_MAX - 1) + '…')
+    expect(charCount(cut)).toBe(TITLE_MAX)
+    // An emoji is one character, never cut in half; a space before the cut is not kept.
+    const emoji = titleFrom('😀'.repeat(TITLE_MAX + 1))
+    expect(charCount(emoji)).toBe(TITLE_MAX)
+    expect(emoji.endsWith('😀…')).toBe(true)
+    expect(titleFrom('a'.repeat(TITLE_MAX - 2) + ' bcd')).toBe('a'.repeat(TITLE_MAX - 2) + '…')
   })
 })
 
@@ -273,11 +296,15 @@ describe('chatStatus', () => {
     })
   })
 
-  it('stops the opener writing to a person, who no longer answers in the chat, and keeps it readable', () => {
-    for (const state of ['awaiting_answer', 'answered'] as const) {
-      const s = chatStatus(view({ state }, { kind: 'human', last_seen_at: null }), 'opener', at)
-      expect(s.block).toBe('person')
-      expect(s.notice).toEqual({ kind: 'person' })
+  it('keeps a conversation from before with a person readable, closed, saying that conversations are with agents', () => {
+    const closed = view(
+      { status: 'closed', state: 'closed', closed_reason: 'conversations_are_with_agents' },
+      { kind: 'human', last_seen_at: null },
+    )
+    for (const who of ['opener', 'staff']) {
+      const s = chatStatus(closed, who, at)
+      expect(s.block).toBe('closed')
+      expect(s.notice).toEqual({ kind: 'closed', reason: { code: 'conversations_are_with_agents' } })
       expect(s.typing).toBe(false)
     }
     // A person who has left is said to have left, as anyone is.
@@ -316,9 +343,7 @@ describe('chatStatus', () => {
     expect(s.notice).toEqual({ kind: 'unavailable', availability: 'paused' })
   })
 
-  it('never says it of a person, nor to the one answering or staff, nor of a closed conversation', () => {
-    const person = view({}, { kind: 'human', last_seen_at: null })
-    expect(chatStatus(person, 'opener', { ...at, offered: false }).block).toBe('person')
+  it('never says it to the one answering or staff, nor of a closed conversation', () => {
     expect(chatStatus(view({ state: 'awaiting_answer' }), 'agent', { ...at, offered: false }).block).toBe('respondent')
     expect(chatStatus(view(), 'staff', { ...at, offered: false }).block).toBe('overseer')
     const closed = chatStatus(view({ status: 'closed', state: 'closed' }), 'opener', { ...at, offered: false })
@@ -420,12 +445,6 @@ describe('drafts', () => {
 
 describe('agents only', () => {
   const r = (kind: string, mine = false) => ({ member_id: `${kind}-${mine}`, kind, is_my_delegate: mine })
-
-  it('offers no person to ask, whatever Core lists', () => {
-    const listed = [r('human'), r('agent'), r('agent', true), r('system')]
-    expect(agentsOnly(listed).map((x) => x.member_id)).toEqual(['agent-false', 'agent-true'])
-    expect(agentsOnly(null)).toEqual([])
-  })
 
   it('tells the caller’s own assistant from the course’s agents', () => {
     expect(agentPurpose(r('agent', true))).toBe('personal')

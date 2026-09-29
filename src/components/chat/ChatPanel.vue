@@ -1,13 +1,14 @@
 <script setup lang="ts">
 // The chat, docked on the right of every signed-in page, as an editor's side
-// panel is: open, it takes its width from the page beside it; its left edge
-// is dragged (or moved with the arrow keys) to make it wider or narrower,
-// between PANEL_MIN and half the window. It is opened and closed from its
-// button on the rail along the window's right edge (AppLayout), between
-// which and the page it is docked, and with Ctrl/⌘+J; this browser remembers
-// whether it was open and how wide. On a phone (up to 899 px wide) it is a
-// sheet over the whole screen instead, opened from a button floating at the
-// bottom right, with a button that closes it.
+// panel is: open, it is PANEL_WIDTH (380 px) wide, taken from the page beside
+// it, and nobody resizes it. It is opened and closed from its button on the
+// rail along the window's right edge (AppLayout), between which and the page
+// it is docked, and with Ctrl/⌘+J; this browser remembers whether it was
+// open. In a window narrower than PANEL_DOCKED_MIN_WIDTH (1200 px), where the
+// page would be left too little, it floats over the page instead, against the
+// rail, with a shadow, and the page keeps its width. On a phone (up to 899 px
+// wide) it is a sheet over the whole screen, opened from a button floating at
+// the bottom right, with a button that closes it.
 //
 // On top, the course asked in (one of the caller's courses where they may ask:
 // the page's own on a course page, else the last one used), a new
@@ -16,77 +17,31 @@
 // in that course or in all of them; a conversation is read and written in
 // the same pane as ever.
 //
-// Mounted once, open or not: it keeps watching the conversations that wait
-// for an answer, so that one answered is counted on its button.
+// Mounted once, open or not: it reads the newest of the caller's
+// conversations again every UNREAD_POLL_MS while the page is shown, so that an
+// answer, wherever it came and whichever device read the others, is counted on
+// its button until it is read. A conversation on screen is marked read as it
+// is read (ChatPane).
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { ApiError, read } from '@/api/http'
-import type { ConversationView, Respondent } from '@/api/types'
+import type { Respondent } from '@/api/types'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePolling } from '@/composables/usePolling'
 import { useChatStore } from '@/stores/chat'
 import AgentPicker from './AgentPicker.vue'
 import ChatHistory from './ChatHistory.vue'
 import ChatPane from './ChatPane.vue'
-import {
-  clampWidth,
-  isPanelShortcut,
-  PANEL_DEFAULT,
-  PANEL_MIN,
-  PANEL_SHEET_MAX_WIDTH,
-  panelMax,
-  PENDING_PER_POLL,
-  PENDING_POLL_MS,
-  widthForKey,
-} from './panel'
+import { isPanelShortcut, PANEL_DOCKED_MIN_WIDTH, PANEL_SHEET_MAX_WIDTH, PANEL_WIDTH, UNREAD_POLL_MS } from './panel'
 import { courseLabel } from './seat'
 
 const { t } = useI18n()
 const chat = useChatStore()
 const route = useRoute()
 const sheet = useMediaQuery(`(max-width: ${PANEL_SHEET_MAX_WIDTH}px)`)
-
-// --- Width -----------------------------------------------------------------
-const viewport = ref(typeof window === 'undefined' ? 1280 : window.innerWidth)
-function onResize() {
-  viewport.value = window.innerWidth
-}
-/** The width while its edge is being dragged, kept once it is let go. */
-const dragWidth = ref<number | null>(null)
-const shownWidth = computed(() => clampWidth(dragWidth.value ?? chat.width, viewport.value))
-const maxWidth = computed(() => panelMax(viewport.value))
-
-let drag: { x: number; width: number } | null = null
-function onPointerDown(e: PointerEvent) {
-  if (e.button !== 0) return
-  e.preventDefault()
-  drag = { x: e.clientX, width: shownWidth.value }
-  dragWidth.value = shownWidth.value
-  ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
-  document.body.classList.add('is-resizing-chat')
-}
-function onPointerMove(e: PointerEvent) {
-  if (!drag) return
-  dragWidth.value = clampWidth(drag.width + (drag.x - e.clientX), viewport.value)
-}
-function onPointerUp(e: PointerEvent) {
-  if (!drag) return
-  drag = null
-  ;(e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId)
-  document.body.classList.remove('is-resizing-chat')
-  if (dragWidth.value !== null) chat.width = dragWidth.value
-  dragWidth.value = null
-}
-function onHandleKey(e: KeyboardEvent) {
-  const w = widthForKey(e.key, shownWidth.value, viewport.value, { shift: e.shiftKey })
-  if (w === null) return
-  e.preventDefault()
-  chat.width = w
-}
-function resetWidth() {
-  chat.width = PANEL_DEFAULT
-}
+/** A window too narrow to give the panel's width from the page: it floats over the page instead (not on a phone, where it is a sheet). */
+const narrowWindow = useMediaQuery(`(max-width: ${PANEL_DOCKED_MIN_WIDTH - 1}px)`)
+const floating = computed(() => narrowWindow.value && !sheet.value)
 
 // --- Opening and closing ---------------------------------------------------
 const panel = ref<HTMLElement | null>(null)
@@ -137,12 +92,9 @@ function onKeydown(e: KeyboardEvent) {
 }
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
-  window.addEventListener('resize', onResize)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
-  window.removeEventListener('resize', onResize)
-  document.body.classList.remove('is-resizing-chat')
   document.documentElement.classList.remove('chat-sheet-open')
 })
 
@@ -178,47 +130,14 @@ const courseName = computed(() => {
 })
 const inHistory = computed(() => chat.screen === 'history')
 
-/** The conversation on screen, as last read: its answers are read while it is. */
-const shownView = ref<ConversationView | null>(null)
-watch(
-  () => chat.conversation?.id,
-  () => (shownView.value = null),
-)
-const onScreen = computed(() => chat.open && chat.screen === 'conversation')
-function onView(courseId: string, v: ConversationView) {
-  chat.note([{ courseId, view: v }])
-  if (v.id === chat.conversation?.id) shownView.value = v
-  if (onScreen.value && v.id === chat.conversation?.id) chat.markSeen(v)
-}
-watch(onScreen, (on) => {
-  if (on && shownView.value) chat.markSeen(shownView.value)
-})
-
-/** A course's history is read again after something changed there (started, closed). */
-function changed(courseId: string) {
-  if (chat.histories[courseId]?.loaded) void chat.loadHistory([courseId], { force: true })
-}
 function startAgain(courseId: string, agent: Respondent) {
   chat.startNew(courseId)
   chat.pickAgent(agent)
 }
 
 // --- Answers noticed with the panel closed ------------------------------------
-async function pollPending() {
-  const shown = onScreen.value ? chat.conversation?.id : null
-  for (const p of chat.pending.slice(0, PENDING_PER_POLL)) {
-    if (p.id === shown) continue
-    try {
-      const v = await read('conversation.get', { course_id: p.courseId, conversation_id: p.id })
-      chat.note([{ courseId: p.courseId, view: v }])
-    } catch (e) {
-      // Gone, or no longer the caller's to read: no longer watched.
-      if (e instanceof ApiError && (e.isNotFound || e.isForbidden)) chat.forget(p.id)
-      else throw e
-    }
-  }
-}
-usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pending.length > 0 })
+// Where the caller may ask somewhere, as the button that shows the count is offered.
+usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () => chat.courses.length > 0 })
 </script>
 
 <template>
@@ -227,32 +146,13 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
     id="chat-panel"
     ref="panel"
     class="chat-panel"
-    :class="{ 'is-sheet': sheet }"
-    :style="sheet ? undefined : { width: `${shownWidth}px` }"
+    :class="{ 'is-sheet': sheet, 'is-floating': floating }"
+    :style="sheet ? undefined : { width: `${PANEL_WIDTH}px` }"
     :role="sheet ? 'dialog' : 'complementary'"
     :aria-modal="sheet ? 'true' : undefined"
     aria-labelledby="chat-panel-title"
     tabindex="-1"
   >
-    <div
-      v-if="!sheet"
-      class="chat-panel__handle"
-      role="separator"
-      aria-orientation="vertical"
-      :aria-valuenow="shownWidth"
-      :aria-valuemin="PANEL_MIN"
-      :aria-valuemax="maxWidth"
-      :aria-label="t('chat.panel.resize')"
-      :title="t('chat.panel.resize')"
-      tabindex="0"
-      @pointerdown="onPointerDown"
-      @pointermove="onPointerMove"
-      @pointerup="onPointerUp"
-      @pointercancel="onPointerUp"
-      @keydown="onHandleKey"
-      @dblclick="resetWidth"
-    />
-
     <header class="chat-panel__bar">
       <h2 id="chat-panel-title" class="chat-panel__title">{{ t('chat.panel.title') }}</h2>
       <el-select
@@ -321,9 +221,8 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
         :conversation-id="chat.conversation.id"
         :course-label="labelOf(chat.conversation.courseId)"
         :active="chat.open"
-        @view="(v: ConversationView) => onView(chat.conversation!.courseId, v)"
+        @read="(id: string) => chat.markedRead(id)"
         @start="(r: Respondent) => startAgain(chat.conversation!.courseId, r)"
-        @changed="changed(chat.conversation!.courseId)"
       >
         <template #actions>
           <el-button size="small" :aria-label="t('chat.panel.backToHistory')" @click="chat.showHistory()">
@@ -350,7 +249,6 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
         :course-label="labelOf(chat.draft.courseId)"
         :active="chat.open"
         @opened="(id: string) => chat.showConversation(chat.draft!.courseId, id)"
-        @changed="changed(chat.draft!.courseId)"
       >
         <template #actions>
           <el-button size="small" :aria-label="t('chat.panel.backToAgents')" @click="chat.startNew()">
@@ -388,6 +286,19 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
   background: var(--el-bg-color);
   outline: none;
 }
+/* In a window too narrow to dock it, over the page, against the rail (48 px wide, AppLayout), under the header. */
+.chat-panel.is-floating {
+  position: fixed;
+  top: 56px;
+  right: 48px;
+  bottom: 0;
+  z-index: var(--app-z-panel);
+  /* From the header to the bottom: its parent, the page's row, aligns it to the top otherwise. */
+  align-self: stretch;
+  height: auto;
+  border-left-color: var(--app-line-strong);
+  box-shadow: var(--app-shadow-side);
+}
 .chat-panel.is-sheet {
   position: fixed;
   inset: 0;
@@ -396,34 +307,6 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
   height: 100vh;
   height: 100dvh;
   border-left: none;
-}
-.chat-panel__handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -4px;
-  width: 8px;
-  cursor: col-resize;
-  z-index: 2;
-  touch-action: none;
-}
-.chat-panel__handle::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 3px;
-  width: 2px;
-  background: transparent;
-  transition: background-color 0.15s;
-}
-.chat-panel__handle:hover::after,
-.chat-panel__handle:focus-visible::after,
-:global(body.is-resizing-chat) .chat-panel__handle::after {
-  background: var(--el-color-primary);
-}
-.chat-panel__handle:focus-visible {
-  outline: none;
 }
 .chat-panel__bar {
   display: flex;
@@ -514,11 +397,6 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
 <style>
 html.chat-sheet-open {
   overflow: hidden;
-}
-/* While the panel's edge is dragged, the page neither selects text nor shows another cursor. */
-body.is-resizing-chat {
-  cursor: col-resize;
-  user-select: none;
 }
 /* The courses' names are longer than the list is wide. */
 .chat-panel__course-popper {
