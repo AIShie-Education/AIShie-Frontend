@@ -316,6 +316,29 @@ describe('SeatInstructorCard, for a department administrator', () => {
     wrapper.unmount()
   })
 
+  it('finds the instructor by their whole staff number too, and offers no invitation to a number nobody has', async () => {
+    answers['actor.lookup_by_email'] = async () => chan
+    const { wrapper } = await mountCard([], ada)
+    await find(wrapper, ' T0042 ')
+    expect(asked.find((a) => a.tool === 'actor.lookup_by_email')?.args).toEqual({ login_id: 'T0042' })
+    expect(wrapper.text()).toContain('Chan Siu Ming')
+    expect(button(wrapper, 'Seat as instructor')).toBeDefined()
+
+    answers['actor.lookup_by_email'] = async () => {
+      throw new ApiError({ status: 404, code: 'not_found', message: 'nobody' })
+    }
+    await find(wrapper, 'T0043')
+    expect(wrapper.text()).toContain('Nobody is registered with that student or staff number.')
+    // An invitation goes to an email, which a number is not.
+    expect(button(wrapper, 'Invite someone new')).toBeUndefined()
+
+    const before = asked.length
+    await find(wrapper, 'T 0043')
+    expect(wrapper.text()).toContain('Give a whole email address')
+    expect(asked.length).toBe(before)
+    wrapper.unmount()
+  })
+
   it('offers "Me" from what the session knows', async () => {
     const { wrapper } = await mountCard([], ada)
     await button(wrapper, 'Me')!.trigger('click')

@@ -49,7 +49,7 @@ async function openAddMember(page: Page) {
   await page.goto(`/courses/${courseId}/members`)
   await page.getByRole('button', { name: 'Add member' }).click()
   const dialog = page.getByRole('dialog', { name: 'Add a member' })
-  const email = dialog.getByLabel('Find by email')
+  const email = dialog.getByLabel('Find by student/staff number or email')
   const idField = dialog.getByPlaceholder(ID_PLACEHOLDER)
   await expect(idField).toBeVisible()
   // Once Core has said it has the lookup, the email field is there; the
@@ -81,13 +81,13 @@ test('an instructor finds a registered person by their whole email, in any case,
   // A part of an address finds nobody, and the form says so without asking.
   await email.fill(`pat+${tag}`)
   await find.click()
-  await expect(dialog).toContainText('Give their whole email address')
+  await expect(dialog).toContainText('Give their whole student or staff number, or their whole email address')
   await expect(idField).toHaveValue('')
 
   // An address nobody is registered with: said in the form, not in a toast.
   await email.fill(`nobody+${tag}@e2e.test`)
   await email.press('Enter')
-  await expect(dialog).toContainText('Nobody is registered with that email. Ask a platform administrator')
+  await expect(dialog).toContainText('Nobody is registered with that number or email. Ask a platform administrator')
   await expect(page.locator('.el-message')).toHaveCount(0)
   await expect(idField).toHaveValue('')
 

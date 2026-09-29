@@ -39,6 +39,14 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true, title: 'auth.invite.title' },
   },
   {
+    // Where someone whose password someone else set (member.reset_password)
+    // comes first: they set their own before anything else.
+    path: '/change-password',
+    name: 'change-password',
+    component: () => import('@/views/auth/ChangePasswordView.vue'),
+    meta: { title: 'auth.change.title' },
+  },
+  {
     // Where a course's invite link lands (course.join_link_create): anyone
     // with it joins the course as a student, signed in or registering here.
     path: '/join/:token',
@@ -91,6 +99,20 @@ router.beforeEach(async (to) => {
   } catch {
     // Core could not be reached. Public pages still show; others show the
     // layout's own error state once they ask for something.
+  }
+  // A password someone else set: nothing but setting one's own, or signing in
+  // as someone else, until it is changed. Where they were going waits.
+  if (session.status === 'mustChangePassword') {
+    if (to.name === 'change-password' || to.name === 'login') return true
+    const next = to.name === 'home' || to.fullPath === '/' ? undefined : to.fullPath
+    return { name: 'change-password', query: next ? { next } : {} }
+  }
+  if (to.name === 'change-password') {
+    // Nothing to change: signed out, the sign-in page; signed in, where they were going.
+    if (session.status !== 'signedIn') return { name: 'login' }
+    const n = to.query.next
+    const next = typeof n === 'string' && n.startsWith('/') && !n.startsWith('//') ? n : '/'
+    return next
   }
   if (to.meta.public) {
     // Signed in, the sign-in page has nothing to offer; the welcome page

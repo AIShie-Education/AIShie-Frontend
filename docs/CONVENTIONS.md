@@ -156,6 +156,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Everything held is the caller's. Signing out (or Core ending the session) closes the course store,
   and the next sign-in in the same tab loads the page afresh, so caches a view keeps at module level
   never outlive the caller they were filled for.
+- Someone signed in with a password someone else set (a temporary one, `member.reset_password`) may
+  do nothing but set their own until they have: Core says so at sign-in (`password_change_required`)
+  or refuses any other call with 403 and that reason. `http.ts` tells whoever listens
+  (`onPasswordChangeRequired`); the session is then `mustChangePassword`, and the router takes every
+  page to `/change-password?next=…`, which offers setting it and signing out alone. No view handles
+  that refusal itself.
+- A person's sign-in name is their email or their login ID (a student or staff number, 1–64 of
+  `[0-9A-Za-z._-]`, never an @: `@/utils/loginId`). Where a whole one is looked up, an @ tells them
+  apart; show `login_id` beside the email wherever a person's email is shown to those who manage
+  them, and `login_id_verified: false` (typed by the person, registering through a link) as
+  unverified.
 
 ## Building a view
 

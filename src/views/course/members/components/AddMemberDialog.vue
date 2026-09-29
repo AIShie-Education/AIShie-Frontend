@@ -8,7 +8,8 @@
 // them fills in, never both at once: a platform administrator, whom the
 // directory (actor.list) answers, searches it by name or email; anyone else,
 // or an administrator whose Core has no directory, gives a person's whole
-// email (member.lookup_actor, which lists nobody). An ID can be pasted too:
+// student or staff number (their login ID) or whole email (member.lookup_actor,
+// which lists nobody). An ID can be pasted too:
 // an agent has no email, and an administrator gives its ID. Whatever ID is in
 // the field is looked up to show whom it names, to start from the preset for
 // their kind, and to stop a second seat for someone who already has one here.
@@ -26,6 +27,7 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { capToCeilings, newSeatCeilings } from '@/utils/ceilings'
 import { isUuid, shortId } from '@/utils/format'
+import { isLoginId } from '@/utils/loginId'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -215,16 +217,20 @@ let emailFound: SeatCandidate | null = null
 let emailSeq = 0
 
 async function findByEmail() {
-  const address = wholeEmail(email.value)
-  if (!address) {
-    emailState.value = email.value.trim() ? 'partial' : null
+  // A whole email, or a whole login ID (a student or staff number): an @ tells them apart.
+  const text = email.value.trim()
+  const kind = wholeEmail(text) ? 'email' : isLoginId(text) ? 'loginId' : null
+  if (!kind) {
+    emailState.value = text ? 'partial' : null
     return
   }
   const mine = ++emailSeq
   const before = form.actorId
   emailState.value = 'finding'
   try {
-    const out = await lookupActor({ course_id: props.courseId, email: address })
+    const out = await lookupActor(
+      kind === 'email' ? { course_id: props.courseId, email: text } : { course_id: props.courseId, login_id: text },
+    )
     if (mine !== emailSeq) return
     emailState.value = null
     // An ID typed or pasted while this was on its way is the one meant: it stays.

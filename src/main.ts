@@ -12,7 +12,7 @@ import App from './App.vue'
 import { router } from './router'
 import { installChunkReload } from './router/chunkReload'
 import { i18n } from './i18n'
-import { onUnauthenticated } from './api/http'
+import { onPasswordChangeRequired, onUnauthenticated } from './api/http'
 import { useSessionStore } from './stores/session'
 
 const app = createApp(App)
@@ -51,6 +51,19 @@ onUnauthenticated(() => {
   if (wasSignedIn && !current.meta.public) {
     router.push({ name: 'login', query: { next: current.fullPath, expired: '1' } })
   }
+})
+
+// Someone else set the caller's password since this page loaded (an
+// instructor's reset): Core refuses everything until they set their own, and
+// the page that sets it comes next, keeping where they were.
+onPasswordChangeRequired(() => {
+  const session = useSessionStore()
+  if (session.status === 'mustChangePassword') return
+  session.requirePasswordChange()
+  const current = router.currentRoute.value
+  // Before the first page is open, the router's guard takes them there itself.
+  if (current.name === 'change-password' || !current.matched.length) return
+  router.push({ name: 'change-password', query: current.fullPath !== '/' ? { next: current.fullPath } : {} })
 })
 
 /**

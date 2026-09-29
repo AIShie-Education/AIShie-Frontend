@@ -147,3 +147,13 @@ describe('tokenIssuer', () => {
     expect(tokenIssuer(cred({ kind: 'session', issued_by_actor_id: ROOT }), AGENT)).toBeNull()
   })
 })
+
+describe('isTemporaryPassword', () => {
+  it('is a password someone else set, which its person must replace, and nothing else', async () => {
+    const { isTemporaryPassword } = await page()
+    expect(isTemporaryPassword({ kind: 'password', must_change: true })).toBe(true)
+    expect(isTemporaryPassword({ kind: 'password', must_change: false })).toBe(false)
+    expect(isTemporaryPassword({ kind: 'password' })).toBe(false)
+    expect(isTemporaryPassword({ kind: 'api_token', must_change: true })).toBe(false)
+  })
+})

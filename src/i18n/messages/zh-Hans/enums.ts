@@ -265,6 +265,7 @@ export default {
     'member.removed': '成员已移除',
     'member.rescoped': '成员范围变更',
     'member.role_changed': '更改名册角色',
+    'member.password_reset': '重置学生密码',
     'submission.submitted': '已提交作业',
     'submission.lateness_changed': '更正迟交状态',
     'submission.missing': '标记为缺交',

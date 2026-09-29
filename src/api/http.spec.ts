@@ -1,5 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { acceptInvite, ApiError, authMethods, blobUrl, onUnauthenticated, read, write } from './http'
+import {
+  acceptInvite,
+  acceptsLoginId,
+  ApiError,
+  authMethods,
+  blobUrl,
+  isPasswordChangeRequired,
+  login,
+  onPasswordChangeRequired,
+  onUnauthenticated,
+  read,
+  write,
+} from './http'
 
 interface Call {
   url: string
@@ -310,5 +322,48 @@ describe('blobUrl', () => {
   })
   it('leaves an object store’s URL alone', () => {
     expect(blobUrl('https://bucket.s3.example.com/k?sig=1')).toBe('https://bucket.s3.example.com/k?sig=1')
+  })
+})
+
+describe('signing in with a login ID', () => {
+  it('reads what password sign-in takes, and whether a login ID is among it', async () => {
+    responses.push(json(200, { password: true, password_accepts: ['login_id', 'email'], sso: null }))
+    const m = await authMethods()
+    expect(m).toEqual({ password: true, passwordAccepts: ['login_id', 'email'], sso: null })
+    expect(acceptsLoginId(m)).toBe(true)
+    expect(acceptsLoginId({})).toBe(false)
+    expect(acceptsLoginId(null)).toBe(false)
+  })
+
+  it('sends the name as login where Core takes a login ID, and as email where it does not', async () => {
+    responses.push(json(200, { actor_id: 'a1', expires_at: '2026-10-01T00:00:00Z' }))
+    responses.push(json(200, { actor_id: 'a1', expires_at: '2026-10-01T00:00:00Z', password_change_required: true }))
+    await login('chan@example.edu', 'pw', { asLogin: false })
+    const out = await login('S2023001', 'pw', { asLogin: true })
+    expect(JSON.parse(calls[0].body!)).toEqual({ email: 'chan@example.edu', password: 'pw' })
+    expect(JSON.parse(calls[1].body!)).toEqual({ login: 'S2023001', password: 'pw' })
+    expect(out.password_change_required).toBe(true)
+  })
+
+  it('tells whoever listens when Core refuses a call until the caller sets their own password', async () => {
+    const heard: string[] = []
+    const stop = onPasswordChangeRequired((e) => heard.push(String(e.details?.reason)))
+    responses.push(
+      json(403, {
+        status: 'denied',
+        error: { code: 'forbidden', message: 'not permitted', details: { reason: 'password_change_required' } },
+      }),
+    )
+    const err = await read('me.get', {}).catch((e) => e)
+    expect(isPasswordChangeRequired(err)).toBe(true)
+    expect(heard).toEqual(['password_change_required'])
+    // Any other refusal is not that.
+    responses.push(
+      json(403, { status: 'denied', error: { code: 'forbidden', message: 'not permitted', details: { reason: 'x' } } }),
+    )
+    const other = await read('me.get', {}).catch((e) => e)
+    expect(isPasswordChangeRequired(other)).toBe(false)
+    expect(heard).toHaveLength(1)
+    stop()
   })
 })

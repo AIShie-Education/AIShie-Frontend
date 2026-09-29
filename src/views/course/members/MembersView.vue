@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // The course's members, people and agents alike (member.list), and adding one
 // (member.add). Each row is a seat: its roster role, status, reach, lifetime
-// and the preset its levels were copied from.
+// and the preset its levels were copied from, and for a person who has one,
+// the student or staff number they sign in with.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -252,6 +253,9 @@ function rowClass({ row }: { row: MemberSummary }) {
                 </el-icon>
                 <span class="members__name-text">{{ row.display_name }}</span>
                 <span v-if="row.id === course.myMemberId" class="members__me">({{ t('common.labels.you') }})</span>
+                <el-tooltip v-if="row.login_id" :content="t('members.loginId')" placement="top">
+                  <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
+                </el-tooltip>
                 <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" />
                 <el-tooltip v-if="row.join_link_id" :content="t('join.viaHint')" placement="top">
                   <el-tag size="small" type="info" effect="plain" class="members__via" tabindex="0">
@@ -385,6 +389,12 @@ function rowClass({ row }: { row: MemberSummary }) {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+}
+.members__login-id {
+  font-family: var(--app-font-mono);
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
 }
 .members__me {
   color: var(--el-text-color-secondary);

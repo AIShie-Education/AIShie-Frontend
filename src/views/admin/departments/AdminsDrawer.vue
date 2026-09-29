@@ -6,7 +6,8 @@
 // Whoever administers the department above it appoints and removes its
 // administrators (department.add_admin, .remove_admin): so a department's
 // own administrators never staff it, and nobody widens their own reach or
-// removes whoever is above them. The person is found by their whole email.
+// removes whoever is above them. The person is found by their whole email,
+// or their whole student or staff number.
 // What Core would refuse is said before it is asked: an agent, someone
 // suspended, oneself, or someone appointed here already.
 import { computed, ref, watch } from 'vue'

@@ -180,6 +180,8 @@ export default {
     students: '学生',
     purged_versions: '已清除的版本',
     files_removed: '已删除的文件',
+    sessions_ended: '已退出的会话',
+    login_id: '学号／工号',
   },
   types: {
     action: {
@@ -252,6 +254,7 @@ export default {
       update_perms_bulk: '按角色批量更改权限',
       remove_orphan: '移除已与拥有者脱钩的智能体',
       set_role: '更改席位的名册角色',
+      reset_password: '重置学生密码',
     },
     submission: {
       create: '开始提交',

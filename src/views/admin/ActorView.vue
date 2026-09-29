@@ -289,6 +289,19 @@ async function reactivate() {
               <span v-if="actor.email" class="actor__email">{{ actor.email }}</span>
               <span v-else class="app-muted">{{ t('admin.actor.noEmail') }}</span>
             </el-descriptions-item>
+            <el-descriptions-item v-if="actor.kind === 'human'" :label="t('admin.loginId.label')">
+              <code v-if="actor.login_id" class="actor__login-id">{{ actor.login_id }}</code>
+              <span v-else class="app-muted">{{ t('admin.actor.noEmail') }}</span>
+              <el-tooltip
+                v-if="actor.login_id && actor.login_id_verified === false"
+                :content="t('admin.loginId.unverifiedHint')"
+                placement="top"
+              >
+                <el-tag size="small" type="warning" effect="plain" class="actor__unverified" tabindex="0">
+                  {{ t('admin.loginId.unverified') }}
+                </el-tag>
+              </el-tooltip>
+            </el-descriptions-item>
             <el-descriptions-item :label="t('admin.actor.status')">
               <StatusTag vocab="actorStatus" :value="actor.status" />
             </el-descriptions-item>
@@ -416,6 +429,12 @@ async function reactivate() {
 }
 .actor__name {
   word-break: break-word;
+}
+.actor__login-id {
+  font-family: var(--app-font-mono);
+}
+.actor__unverified {
+  margin-left: 8px;
 }
 .actor__email {
   word-break: break-all;

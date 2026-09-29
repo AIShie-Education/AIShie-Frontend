@@ -4,6 +4,7 @@
 import { ApiError, type JoinPreview } from '@/api/http'
 import { i18n } from '@/i18n'
 import { emailDomainAllowed } from '@/utils/joinLink'
+import { loginIdProblem as loginIdIssue, MAX_LOGIN_ID } from '@/utils/loginId'
 import { passwordProblem } from '@/utils/password'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
@@ -66,10 +67,31 @@ export function nameProblem(name: string): Problem {
   return null
 }
 
-/** What is wrong with an email: none given, not an address, or at no domain the link takes. */
-export function emailProblem(email: string, domains: readonly string[]): Problem {
+/**
+ * What is wrong with a student number (a login ID): none given, or not 1 to
+ * 64 letters, digits, dots, hyphens and underscores, as Core takes them.
+ */
+export function loginIdProblem(loginId: string): Problem {
+  switch (loginIdIssue(loginId)) {
+    case 'empty':
+      return { key: 'common.errors.required' }
+    case 'email':
+      return { key: 'join.page.loginIdEmail' }
+    case 'long':
+      return { key: 'join.page.loginIdLong', args: { n: MAX_LOGIN_ID } }
+    case 'chars':
+      return { key: 'join.page.loginIdChars' }
+  }
+  return null
+}
+
+/**
+ * What is wrong with an email: none given (unless it is optional), not an
+ * address, or at no domain the link takes.
+ */
+export function emailProblem(email: string, domains: readonly string[], opts: { optional?: boolean } = {}): Problem {
   const e = email.trim()
-  if (!e) return { key: 'common.errors.required' }
+  if (!e) return opts.optional ? null : { key: 'common.errors.required' }
   if (!EMAIL.test(e)) return { key: 'join.page.badEmail' }
   if (!emailDomainAllowed(e, domains))
     return { key: 'join.page.emailWrongDomain', args: { domains: domains.map((d) => `@${d}`).join(', ') } }

@@ -11,7 +11,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ApiError, joinCourse, joinPreview, newIdempotencyKey, type JoinPreview } from '@/api/http'
+import { ApiError, joinCourse, joinPreview, newIdempotencyKey, type JoinPreview, type JoinRegistration } from '@/api/http'
 import { errorMessage } from '@/composables/useErrors'
 import { useCountdown } from '@/composables/useCountdown'
 import { useSessionStore } from '@/stores/session'
@@ -148,11 +148,21 @@ const signInRoute = computed(() => ({ name: 'login', query: { next: here.value }
  * sign-on), and then the link is for signing in and joining alone.
  */
 const mayRegister = computed(() => preview.value?.registration !== false)
+/**
+ * Whether registering asks for an email (a link kept to email domains), or
+ * for a student number, which they will sign in with, and an email only if
+ * they have one. A Core from before login IDs always asks for an email.
+ */
+const emailRequired = computed(() => preview.value?.email_required !== false)
 const registering = ref(false)
 const registerBusy = ref(false)
 const registerFailure = shallowRef<unknown>(null)
+/** What they typed is someone's already (their email, or their student number): signing in is offered instead. */
 const emailTaken = computed(
-  () => registerFailure.value instanceof ApiError && registerFailure.value.details?.reason === 'email_taken',
+  () =>
+    registerFailure.value instanceof ApiError &&
+    (registerFailure.value.details?.reason === 'email_taken' ||
+      registerFailure.value.details?.reason === 'login_id_taken'),
 )
 const registerFailureText = computed(() => {
   const e = registerFailure.value
@@ -164,7 +174,7 @@ const registerFailureText = computed(() => {
   return joinRefusal(e) ?? errorMessage(e)
 })
 const registerForm = ref<InstanceType<typeof JoinRegisterForm>>()
-async function register(form: { display_name: string; email: string; password: string }) {
+async function register(form: JoinRegistration) {
   const tok = token.value
   if (!tok || registerBusy.value) return
   registerBusy.value = true
@@ -296,7 +306,9 @@ function goToCourse(courseId: string) {
             <div class="join__who">
               <el-icon><User /></el-icon>
               <span>{{ t('join.page.signedInAs', { name: session.me?.display_name }) }}</span>
-              <span v-if="session.me?.email" class="join__email">{{ session.me.email }}</span>
+              <span v-if="session.me?.email || session.me?.login_id" class="join__email">{{
+                session.me.email ?? session.me.login_id
+              }}</span>
             </div>
             <el-alert v-if="isAgent" type="warning" :closable="false" show-icon :title="t('join.page.agent')" />
             <el-alert
@@ -304,7 +316,11 @@ function goToCourse(courseId: string) {
               type="warning"
               :closable="false"
               show-icon
-              :title="t('join.page.wrongDomain', { email: session.me?.email, domains: domainList })"
+              :title="
+                session.me?.email
+                  ? t('join.page.wrongDomain', { email: session.me.email, domains: domainList })
+                  : t('join.page.noEmailForDomains', { domains: domainList })
+              "
             />
             <el-alert v-if="failureText" type="error" :closable="false" show-icon :title="failureText" class="join__alert" />
             <el-button
@@ -362,7 +378,13 @@ function goToCourse(courseId: string) {
                   <el-button type="primary" size="small" class="join__instead">{{ t('join.page.signInInstead') }}</el-button>
                 </router-link>
               </el-alert>
-              <JoinRegisterForm ref="registerForm" :domains="domains" :busy="registerBusy || leaving" @submit="register" />
+              <JoinRegisterForm
+                ref="registerForm"
+                :domains="domains"
+                :email-required="emailRequired"
+                :busy="registerBusy || leaving"
+                @submit="register"
+              />
               <p class="join__switch">
                 {{ t('join.page.haveAccount') }}
                 <router-link :to="signInRoute">{{ t('join.page.signIn') }}</router-link>

@@ -71,9 +71,11 @@ export default {
   },
 
   lookup: {
-    email: '邮箱',
+    email: '邮箱或学号／工号',
     placeholder: "name{'@'}example.edu",
-    hint: '请输入对方完整的邮箱地址，不支持部分搜索。',
+    hint: '请输入对方完整的邮箱地址，或完整的学号／工号，不支持部分搜索。',
+    invalid: "请输入完整的邮箱地址（例如 name{'@'}example.edu），或完整的学号／工号。",
+    notFoundLoginId: '没有人用此学号／工号注册。要邀请新成员，请用对方的邮箱查找。',
     find: '查找',
     notFound: '没有人用此邮箱注册。你可以邀请对方。',
     notFoundPlain: '没有人用此邮箱注册。',

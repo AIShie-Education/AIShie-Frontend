@@ -45,3 +45,28 @@ export function roleChangeBlock(
   if (caller.principalMemberId && m.id === caller.principalMemberId) return 'notYourPrincipal'
   return null
 }
+
+/**
+ * Whether a student's password is offered for reset here (member.reset_password),
+ * and why not. It is hidden where Core would refuse and the page can tell for
+ * good: a seat removed or ended, the caller's own, an agent's, anyone's but a
+ * student's, and for a caller who is an agent or does not manage members.
+ * It is greyed out, with why, where the caller could be given what it takes:
+ * member_manage without approval (not_autonomous), or the seat resumed
+ * (seat_not_active). What only Core knows (their seats elsewhere, a platform
+ * role, a linked identity) it says when it refuses.
+ */
+export type ResetOffer = 'hide' | 'notAutonomous' | 'seatNotActive' | 'offer'
+
+export function resetPasswordOffer(
+  m: Pick<Member, 'id' | 'kind' | 'role' | 'status' | 'principal_member_id'>,
+  caller: { memberId: string | null; isPerson: boolean; level: string | null },
+  live: boolean,
+): ResetOffer {
+  if (!live || m.id === caller.memberId) return 'hide'
+  if (m.kind !== 'human' || m.principal_member_id || m.role !== 'student') return 'hide'
+  if (!caller.isPerson || caller.level === 'denied') return 'hide'
+  if (caller.level === 'confirm_required' || caller.level === 'pending_review') return 'notAutonomous'
+  if (m.status !== 'active') return 'seatNotActive'
+  return 'offer'
+}

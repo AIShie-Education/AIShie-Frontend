@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ApiError } from '@/api/http'
 import { i18n, setLocale } from '@/i18n'
-import { closedReason, emailProblem, joinRefusal, nameProblem, passwordProblems } from './join'
+import { closedReason, emailProblem, joinRefusal, loginIdProblem, nameProblem, passwordProblems } from './join'
 
 beforeEach(() => setLocale('en'))
 
@@ -97,6 +97,24 @@ describe('what the registration form says before Core is asked', () => {
     expect(emailProblem('ken@mail.hainanu.edu.cn', ['hainanu.edu.cn'])?.key).toBe('join.page.emailWrongDomain')
   })
 
+  it('takes no email at all where it is optional, but holds one given to the same rules', () => {
+    expect(emailProblem('', [], { optional: true })).toBeNull()
+    expect(emailProblem('  ', [], { optional: true })).toBeNull()
+    expect(emailProblem('mei', [], { optional: true })).toEqual({ key: 'join.page.badEmail' })
+    expect(emailProblem('mei@example.edu', [], { optional: true })).toBeNull()
+  })
+
+  it('wants a student number of 1 to 64 letters, digits, dots, hyphens and underscores', () => {
+    expect(loginIdProblem(' ')).toEqual({ key: 'common.errors.required' })
+    expect(loginIdProblem(' 2024001 ')).toBeNull()
+    expect(loginIdProblem('s.lin_2024-A')).toBeNull()
+    expect(loginIdProblem('mei@example.edu')).toEqual({ key: 'join.page.loginIdEmail' })
+    expect(loginIdProblem('x'.repeat(64))).toBeNull()
+    expect(loginIdProblem('x'.repeat(65))).toEqual({ key: 'join.page.loginIdLong', args: { n: 64 } })
+    expect(loginIdProblem('2024 001')).toEqual({ key: 'join.page.loginIdChars' })
+    expect(loginIdProblem('學號2024')).toEqual({ key: 'join.page.loginIdChars' })
+  })
+
   it('wants a password of 10 bytes or more, typed the same twice', () => {
     expect(passwordProblems('', '')).toEqual({
       password: { key: 'common.errors.required' },
@@ -119,6 +137,10 @@ describe('what the registration form says before Core is asked', () => {
         nameProblem('x'.repeat(201)),
         emailProblem('x', []),
         emailProblem('x@y.z', ['a.b']),
+        loginIdProblem(''),
+        loginIdProblem('a@b'),
+        loginIdProblem('x'.repeat(65)),
+        loginIdProblem('a b'),
         passwordProblems('x', 'y').password,
         passwordProblems('x', 'y').repeat,
       ]) {

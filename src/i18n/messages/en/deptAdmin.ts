@@ -76,9 +76,12 @@ export default {
   },
 
   lookup: {
-    email: 'Email',
+    email: 'Email or student/staff number',
     placeholder: "name{'@'}example.edu",
-    hint: 'The person’s whole email address. There is no partial search.',
+    hint: 'The person’s whole email address, or their whole student or staff number. There is no partial search.',
+    invalid: "Give a whole email address, such as name{'@'}example.edu, or a whole student or staff number.",
+    notFoundLoginId:
+      'Nobody is registered with that student or staff number. To invite someone new, find them by their email.',
     find: 'Find',
     notFound: 'Nobody is registered with that email. You can invite them.',
     notFoundPlain: 'Nobody is registered with that email.',

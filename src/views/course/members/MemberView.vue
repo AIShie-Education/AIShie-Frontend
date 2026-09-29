@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// One seat in full (member.get), and managing it: its roster role
-// (member.set_role), permissions (member.update_perms), reach and lifetime
-// (member.rescope), pause and resume (member.pause / member.resume) and removal
-// (member.remove). Nobody manages their own seat, and a removed or expired
-// seat is only read.
+// One seat in full (member.get), with the login ID a person signs in with,
+// and managing it: its roster role (member.set_role), permissions
+// (member.update_perms), reach and lifetime (member.rescope), pause and resume
+// (member.pause / member.resume), removal (member.remove), and for a student a
+// temporary password (member.reset_password). Nobody manages their own seat,
+// and a removed or expired seat is only read.
 import { computed, h, ref, watch, type VNode } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -26,8 +27,9 @@ import { ceilingsOf } from '@/utils/ceilings'
 import { shortId } from '@/utils/format'
 import RefusalAlert from './components/RefusalAlert.vue'
 import RescopeDialog from './components/RescopeDialog.vue'
+import ResetPasswordDialog from './components/ResetPasswordDialog.vue'
 import RoleDialog from './components/RoleDialog.vue'
-import { roleChangeBlock } from './components/roles'
+import { resetPasswordOffer, roleChangeBlock } from './components/roles'
 import {
   fullPerms,
   grantProblems,
@@ -250,6 +252,30 @@ function editPermsFromRole() {
   permsCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+// --- A student's password ----------------------------------------------------------
+const resetOpen = ref(false)
+/** Whether a temporary password is offered for this seat, and why not (member.reset_password). */
+const resetOffer = computed(() =>
+  m.value
+    ? resetPasswordOffer(
+        m.value,
+        {
+          memberId: course.myMemberId,
+          // A password is handed to a person, never to an agent (people_only).
+          isPerson: session.me?.kind === 'human' && !course.isDelegate,
+          level: course.level('member_manage'),
+        },
+        live.value,
+      )
+    : 'hide',
+)
+const resetDisabledReason = computed(() => {
+  if (!course.writable) return t('common.archivedCourse')
+  if (resetOffer.value === 'notAutonomous') return t('members.refusal.reason.not_autonomous')
+  if (resetOffer.value === 'seatNotActive') return t('members.refusal.reason.seat_not_active')
+  return ''
+})
+
 // --- Reach and lifetime ------------------------------------------------------------
 const rescopeOpen = ref(false)
 function onRescoped(status: 'executed' | 'proposed', actionId: string) {
@@ -363,6 +389,18 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
       <template v-if="m && showManage">
         <el-tooltip :content="disabledReason" :disabled="!disabledReason" placement="bottom">
           <div class="member__actions">
+            <el-tooltip
+              v-if="resetOffer !== 'hide'"
+              :content="resetDisabledReason"
+              :disabled="!resetDisabledReason"
+              placement="bottom"
+            >
+              <span>
+                <el-button :disabled="!!resetDisabledReason || busy" @click="resetOpen = true">
+                  <el-icon><Key /></el-icon><span>{{ t('members.reset.action') }}</span>
+                </el-button>
+              </span>
+            </el-tooltip>
             <el-button
               v-if="m.status === 'active'"
               :disabled="!manageable || busy"
@@ -480,6 +518,11 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                 <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" />
                 <StatusTag v-else vocab="actorKind" :value="m.kind" />
               </span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="m.kind === 'human'" :label="t('members.loginId')">
+              <code v-if="m.login_id" class="member__login-id">{{ m.login_id }}</code>
+              <span v-else class="app-muted">{{ t('members.noLoginId') }}</span>
+              <div class="member__hint">{{ t('members.loginIdHelp') }}</div>
             </el-descriptions-item>
             <el-descriptions-item
               v-if="principalId"
@@ -740,6 +783,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         </section>
 
         <RescopeDialog v-if="showManage" v-model="rescopeOpen" :course-id="courseId" :member="m" @done="onRescoped" />
+        <ResetPasswordDialog v-if="resetOffer === 'offer'" v-model="resetOpen" :course-id="courseId" :member="m" />
         <RoleDialog
           v-if="roleOffered"
           v-model="roleOpen"
@@ -791,6 +835,10 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+}
+.member__login-id {
+  font-family: var(--app-font-mono);
+  font-size: 13px;
 }
 .member__small-link {
   font-size: 12px;

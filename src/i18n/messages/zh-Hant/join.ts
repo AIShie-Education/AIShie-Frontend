@@ -100,6 +100,8 @@ export default {
     register: '建立帳戶',
     haveAccount: '已經有帳戶？',
     wrongDomain: '你以 {email} 登入，但此連結只供 {domains} 的電子郵件使用。請以屬於其中一個網域的帳戶登入後再加入。',
+    noEmailForDomains:
+      '此連結只供 {domains} 的電子郵件使用，而你的帳戶沒有電子郵件。請聯絡講師，或請管理員為你的帳戶加上電子郵件。',
     agent: '你正以代理的 API 權杖登入。只有人員可以透過邀請連結加入課程。',
     member: '你已經是此課程的成員。',
     toHome: '前往 AIshie',
@@ -120,6 +122,12 @@ export default {
     displayName: '你的名稱',
     displayNameHint: '講師與同學會看到這個名稱。',
     email: '電子郵件',
+    loginId: '學號',
+    loginIdHint: '學校發給你的學號。日後以此登入。',
+    loginIdEmail: '學號不含 @：電子郵件請填在下一欄',
+    loginIdLong: '最多 {n} 個字元',
+    loginIdChars: '只可使用英文字母、數字、句點、連字號及底線，不可有空格',
+    emailOptionalHint: '如有的話。亦可以此登入。',
     emailHint: '日後以此登入。',
     emailDomainHint: '請使用你在 {domains} 的電子郵件。',
     badEmail: '請輸入完整的電子郵件地址',
@@ -147,5 +155,6 @@ export default {
     registration_disabled: '此處不能透過邀請連結建立帳戶。請先登入，再開啟連結加入。',
     actor_not_active: '你的帳戶已被停用，無法加入課程。請聯絡管理員。',
     email_taken: '已有帳戶使用此電子郵件。請以該帳戶登入後加入課程。',
+    login_id_taken: '已有帳戶使用此學號。請以該帳戶登入後加入課程。',
   },
 }

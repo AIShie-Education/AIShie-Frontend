@@ -37,6 +37,14 @@ export async function listActorCredentials(actorId: string): Promise<ActorCreden
   }
 }
 
+/**
+ * A password someone else set (member.reset_password), which its person must
+ * replace with their own at the next sign-in (must_change).
+ */
+export function isTemporaryPassword(c: Pick<ActorCredential, 'kind' | 'must_change'>): boolean {
+  return c.kind === 'password' && !!c.must_change
+}
+
 export interface CredentialRow {
   c: ActorCredential
   state: CredentialState

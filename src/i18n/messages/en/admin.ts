@@ -143,7 +143,7 @@ export default {
       'Everyone registered on the platform: find them, register someone new, and manage their standing and how they sign in',
     register: 'Register',
     search: 'Search',
-    searchPlaceholder: 'Search by name or email, or paste an ID',
+    searchPlaceholder: 'Search by name, email or student/staff number, or paste an ID',
     allKinds: 'All kinds',
     anyStatus: 'Any status',
     kinds: {
@@ -153,7 +153,7 @@ export default {
     col: {
       name: 'Name',
       kind: 'Kind',
-      email: 'Email',
+      email: 'Email / number',
       status: 'Status',
       role: 'Platform role',
       signIn: 'Sign-in',
@@ -199,10 +199,10 @@ export default {
       invite:
         'Create an invitation link on their page and send it to them: with it they choose a password and are signed in. Where single sign-on is used, you can link their identity there instead.',
       email:
-        'Give them an email first, on their page: a password is always entered with one. Then create an invitation link there. Where single sign-on is used, you can link their identity instead.',
+        'Give them a student/staff number or an email first, on their page: a password is always entered with one. Then create an invitation link there. Where single sign-on is used, you can link their identity instead.',
       seat: "Seat them in a course: as its first instructor from the course's administration page, or ask the course's instructor to add them.",
       inviteButton: 'Create an invitation link',
-      emailButton: 'Give them an email',
+      emailButton: 'Give them a number or an email',
     },
     agent: {
       token: 'Issue it an API token on its page. The token is shown once.',
@@ -403,6 +403,10 @@ export default {
     subject: 'Account',
     linkedBy: 'Linked by',
     invitedBy: 'Invited by',
+    // A password someone else set (member.reset_password).
+    temporary: 'Temporary',
+    setBy: 'Set by',
+    temporaryHint: 'They must choose their own at their next sign-in.',
     note: 'Note',
     revoke: 'Revoke',
     revoked: 'Revoked',
@@ -464,8 +468,9 @@ export default {
       system: 'The system account never signs in.',
       agent: 'Agents connect with API tokens, not passwords: issue it a token instead.',
       suspended: 'They are suspended. Reactivate them to invite them.',
-      noEmail: 'They have no email, which is what they would sign in with. Give them one first.',
-      giveEmail: 'Give them an email',
+      noEmail:
+        'They have neither a student/staff number nor an email, which is what they would sign in with. Give them one first.',
+      giveEmail: 'Give them a number or an email',
     },
     revealTitle: 'Copy the invitation link now',
     once: 'This is the only time the link is shown. If it is lost, create a new one: that replaces this one.',
@@ -493,5 +498,26 @@ export default {
     linkedAs: 'Linked {subject}',
     once: 'One identity links to one person, for good: once linked it is never reassigned to anyone else.',
     agent: 'Agents connect with API tokens, not single sign-on.',
+  },
+  // A person's login ID: the student or staff number they sign in with, as with an email.
+  loginId: {
+    label: 'Student/staff number',
+    registerHint:
+      'What they sign in with, as with an email: their student or staff number. Give it, an email or both. It can be given or changed later, not removed, and belongs to one person only.',
+    editHint: 'What they sign in with, as with an email. It can be changed, not removed; setting it vouches for it.',
+    unverified: 'Unverified',
+    unverifiedHint:
+      'They typed it themselves, registering through an invite link, and nobody has checked it. Setting it on their page vouches for it.',
+    vouch: 'I have checked it: save it as confirmed',
+    problem: {
+      empty: 'Required',
+      long: 'At most {n} characters',
+      email: 'A student or staff number has no @: an email goes in its own field',
+      chars: 'Only letters, digits, dots, hyphens and underscores, with no spaces',
+    },
+    // Core's refusals, by the reason it names.
+    refusal: {
+      login_id_taken: 'Someone is already registered with that student or staff number.',
+    },
   },
 }

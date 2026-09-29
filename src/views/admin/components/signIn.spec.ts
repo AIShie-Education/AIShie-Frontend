@@ -48,10 +48,17 @@ describe('signInState', () => {
     expect(both).toMatchObject({ password: true, invite: 'pending', canSignIn: true })
   })
 
-  it('does not count a password without the email it is entered with', () => {
+  it('does not count a password without an email or a login ID it is entered with', () => {
     expect(signInState(person({ has_password: true, email: null }), NOW)).toMatchObject({
       password: false,
       canSignIn: false,
+    })
+  })
+
+  it('counts a password entered with a student or staff number', () => {
+    expect(signInState(person({ has_password: true, email: null, login_id: 'S2023001' }), NOW)).toMatchObject({
+      password: true,
+      canSignIn: true,
     })
   })
 
@@ -95,6 +102,8 @@ describe('inviteBlocker', () => {
     expect(inviteBlocker(person({ platform_role: 'admin' }), root)).toBeNull()
     expect(inviteBlocker(person({ kind: 'agent', email: null }), admin)).toBe('agent')
     expect(inviteBlocker(person({ email: null, status: 'suspended' }), admin)).toBe('noEmail')
+    // A login ID is something to sign in with, as an email is.
+    expect(inviteBlocker(person({ email: null, login_id: 'S2023001' }), admin)).toBeNull()
     expect(inviteBlocker(person({ status: 'suspended' }), admin)).toBe('suspended')
   })
 })

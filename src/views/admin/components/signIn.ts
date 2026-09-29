@@ -7,7 +7,7 @@ import type { Actor } from '@/api/types'
 export type InviteState = 'none' | 'pending' | 'expired'
 
 export interface SignIn {
-  /** They can sign in with a password: they have one, and the email it is entered with. */
+  /** They can sign in with a password: they have one, and an email or a login ID it is entered with. */
   password: boolean
   /** An identity at the identity provider is linked. */
   sso: boolean
@@ -18,17 +18,19 @@ export interface SignIn {
   canSignIn: boolean
 }
 
-type SignInFields = Pick<Actor, 'kind' | 'email' | 'has_password' | 'has_sso' | 'invite_expires_at'>
+type SignInFields = Pick<Actor, 'kind' | 'email' | 'has_password' | 'has_sso' | 'invite_expires_at'> & {
+  login_id?: string | null
+}
 
 /**
  * How a person can sign in; null for an agent or the system actor, which
  * sign in with API tokens or not at all. A password is entered with an email
- * (auth.Login finds the account by it), so one kept by someone who has no
- * email is no way in.
+ * or a login ID, a student or staff number (auth.Login finds the account by
+ * either), so one kept by someone who has neither is no way in.
  */
 export function signInState(a: SignInFields, now: number = Date.now()): SignIn | null {
   if (a.kind !== 'human') return null
-  const password = !!a.has_password && !!a.email
+  const password = !!a.has_password && (!!a.email || !!a.login_id)
   const sso = !!a.has_sso
   const at = a.invite_expires_at ?? null
   const invite: InviteState = !at ? 'none' : new Date(at).getTime() > now ? 'pending' : 'expired'
@@ -60,15 +62,19 @@ export type InviteBlocker = 'self' | 'system' | 'role' | 'agent' | 'noEmail' | '
  * Why inviting someone (actor.invite) is not offered, in the order Core
  * checks: not oneself (whose password is set on the Account page), nor the
  * system actor, only root for a holder of a platform role; then someone with
- * an email to sign in with, who is not suspended. That it is a person is the
+ * an email or a login ID to sign in with ('noEmail': neither), who is not
+ * suspended. That it is a person is the
  * front end's own steering, not Core's rule: an agent is given a token.
  */
-export function inviteBlocker(a: RuleFields & Pick<Actor, 'email' | 'status'>, caller: Caller): InviteBlocker | null {
+export function inviteBlocker(
+  a: RuleFields & Pick<Actor, 'email' | 'status'> & { login_id?: string | null },
+  caller: Caller,
+): InviteBlocker | null {
   if (a.id === caller.id) return 'self'
   if (a.kind === 'system') return 'system'
   if (a.platform_role && !caller.isRoot) return 'role'
   if (a.kind !== 'human') return 'agent'
-  if (!a.email) return 'noEmail'
+  if (!a.email && !a.login_id) return 'noEmail'
   if (a.status !== 'active') return 'suspended'
   return null
 }

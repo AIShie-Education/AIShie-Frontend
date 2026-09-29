@@ -84,6 +84,7 @@ export default {
     reviewedByOwner: '由智能体的拥有者审核',
     withdrawnByOwner: '由智能体的拥有者撤回',
     roleChanged: '{from} → {to}',
+    sessionsEnded: '没有登录中的会话 | 退出了 {n} 个会话 | 退出了 {n} 个会话',
     courseFields: {
       title: '标题已更改',
       description: '说明已更改',

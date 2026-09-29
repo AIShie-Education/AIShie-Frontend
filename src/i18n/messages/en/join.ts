@@ -108,6 +108,8 @@ export default {
     haveAccount: 'Already have an account?',
     wrongDomain:
       'You are signed in with {email}, but this link is only for emails at {domains}. Sign in with an account at one of them to join.',
+    noEmailForDomains:
+      'This link is only for emails at {domains}, and your account has no email. Ask your instructor, or an administrator to give your account one.',
     agent: 'You are signed in with an agent’s API token. Only a person can join a course through an invite link.',
     member: 'You are already in this course.',
     toHome: 'Go to AIshie',
@@ -130,6 +132,12 @@ export default {
     displayName: 'Your name',
     displayNameHint: 'As your instructor and classmates will see it.',
     email: 'Email',
+    loginId: 'Student number',
+    loginIdHint: 'Your student number, as your school gives it. You sign in with it from now on.',
+    loginIdEmail: 'A student number has no @: put your email in the field below',
+    loginIdLong: 'At most {n} characters',
+    loginIdChars: 'Only letters, digits, dots, hyphens and underscores, with no spaces',
+    emailOptionalHint: 'If you have one. You can sign in with it as well.',
     emailHint: 'You sign in with it from now on.',
     emailDomainHint: 'Use your email at {domains}.',
     badEmail: 'Enter a whole email address',
@@ -160,5 +168,6 @@ export default {
     registration_disabled: 'Accounts cannot be created through invite links here. Sign in, then open the link again to join.',
     actor_not_active: 'Your account is suspended, so it cannot join a course. Ask an administrator.',
     email_taken: 'An account with this email already exists. Sign in with it to join the course.',
+    login_id_taken: 'An account with this student number already exists. Sign in with it to join the course.',
   },
 }

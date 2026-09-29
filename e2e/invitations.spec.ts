@@ -24,7 +24,7 @@ test.describe.serial('the directory and invitations', () => {
     await page.goto('/admin/actors')
     await expect(page.locator('.page-header')).toContainText('People & agents')
     const rows = page.locator('.actors__table .el-table__body tr')
-    const search = page.getByPlaceholder('Search by name or email, or paste an ID')
+    const search = page.getByPlaceholder('Search by name, email or student/staff number, or paste an ID')
 
     // The run's six people have emails that end in +<the run's tag>@demo.test.
     await search.fill(`+${d.tag}@demo.test`)
@@ -81,7 +81,9 @@ test.describe.serial('the directory and invitations', () => {
     await expect(panel.getByRole('button', { name: 'Create an invitation link' })).toBeVisible()
 
     // Found again in the directory by a piece of the email, any case.
-    await page.getByPlaceholder('Search by name or email, or paste an ID').fill(`IRIS+${stamp}`.toUpperCase())
+    await page
+      .getByPlaceholder('Search by name, email or student/staff number, or paste an ID')
+      .fill(`IRIS+${stamp}`.toUpperCase())
     await expect(page).toHaveURL(/[?&]q=IRIS/)
     const rows = page.locator('.actors__table .el-table__body tr')
     await expect(rows).toHaveCount(1)
@@ -144,7 +146,7 @@ test.describe.serial('the directory and invitations', () => {
     await page.locator('.app-user').click()
     await page.getByText('Sign out').click()
     await expect(page).toHaveURL(/\/login/)
-    await page.fill('input[name=email]', PERSON.email)
+    await page.fill('input[name=login]', PERSON.email)
     await page.fill('input[name=password]', PASSWORD)
     await page.click('button[type=submit]')
     await expect(page).not.toHaveURL(/\/login/)
@@ -235,12 +237,12 @@ test('an email is given, and a new one withdraws the invitation waiting', async 
   expect(reg.body.status, JSON.stringify(reg.body)).toBe('executed')
   const id: string = reg.body.result.actor_id
 
-  // Registered without an email: nothing to invite them to sign in with yet.
+  // Registered without an email or a number: nothing to invite them to sign in with yet.
   await signInWithToken(page, root())
   await page.goto(`/admin/actors/${id}`)
   const card = page.locator('.invite')
-  await expect(card).toContainText('They have no email')
-  await card.getByRole('button', { name: 'Give them an email' }).click()
+  await expect(card).toContainText('They have neither a student/staff number nor an email')
+  await card.getByRole('button', { name: 'Give them a number or an email' }).click()
   const dialog = page.getByRole('dialog', { name: 'Edit registration' })
   await dialog.getByLabel('Email').fill(`wanda+${stamp}@e2e.test`)
   await dialog.getByRole('button', { name: 'Save' }).click()

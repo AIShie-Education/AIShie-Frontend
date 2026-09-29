@@ -156,11 +156,31 @@ export const bearer = {
 
 type Listener = (e: ApiError) => void
 const unauthenticatedListeners = new Set<Listener>()
+const passwordChangeListeners = new Set<Listener>()
 
 /** Called whenever Core says the caller is not signed in (401). */
 export function onUnauthenticated(fn: Listener): () => void {
   unauthenticatedListeners.add(fn)
   return () => unauthenticatedListeners.delete(fn)
+}
+
+/** The reason Core refuses every call but setting one's own password, from someone whose password another set. */
+export const PASSWORD_CHANGE_REQUIRED = 'password_change_required'
+
+/**
+ * Called whenever Core refuses a call because the caller must set a
+ * password of their own first (403, reason password_change_required):
+ * someone else set theirs (member.reset_password), and every other call is
+ * refused until they have.
+ */
+export function onPasswordChangeRequired(fn: Listener): () => void {
+  passwordChangeListeners.add(fn)
+  return () => passwordChangeListeners.delete(fn)
+}
+
+/** Whether Core refused this because the caller must set a password of their own first. */
+export function isPasswordChangeRequired(e: unknown): boolean {
+  return e instanceof ApiError && e.details?.reason === PASSWORD_CHANGE_REQUIRED
 }
 
 export function newIdempotencyKey(): string {
@@ -221,6 +241,12 @@ async function send(
 }
 
 function errorFrom(raw: RawResponse): ApiError {
+  const err = outcomeError(raw)
+  if (isPasswordChangeRequired(err)) passwordChangeListeners.forEach((fn) => fn(err))
+  return err
+}
+
+function outcomeError(raw: RawResponse): ApiError {
   const b = raw.body ?? {}
   // A recorded outcome (denied, failed, rejected, cancelled) …
   if (b && typeof b.status === 'string' && b.action_id) {
@@ -397,8 +423,26 @@ function signInError(raw: RawResponse): ApiError {
   })
 }
 
-export async function login(email: string, password: string): Promise<{ actor_id: string; expires_at: string }> {
-  const raw = await send('POST', '/v1/auth/login', { body: { email, password } })
+/**
+ * What a sign-in answers. password_change_required: the password signed in
+ * with is one someone else set (member.reset_password), and the person must
+ * set their own before anything else; every other call is refused until then.
+ */
+export interface SignedIn {
+  actor_id: string
+  expires_at: string
+  password_change_required?: boolean
+}
+
+/**
+ * Signs in with a name and a password. A Core that takes a login ID (a
+ * student or staff number) as well as an email (authMethods'
+ * passwordAccepts) is sent the name as `login`, and tells the two apart by
+ * the @ an email has; an older one is sent it as `email`, as it always was.
+ */
+export async function login(name: string, password: string, opts: { asLogin?: boolean } = {}): Promise<SignedIn> {
+  const body = opts.asLogin ? { login: name, password } : { email: name, password }
+  const raw = await send('POST', '/v1/auth/login', { body })
   if (raw.status !== 200) throw signInError(raw)
   return raw.body
 }
@@ -415,7 +459,7 @@ export async function login(email: string, password: string): Promise<{ actor_id
 export async function acceptInvite(
   token: string,
   password: string,
-): Promise<{ actor_id: string; email: string; expires_at: string }> {
+): Promise<{ actor_id: string; email?: string | null; login_id?: string | null; expires_at: string }> {
   const raw = await send('POST', '/v1/auth/invite', { body: { token, password } })
   if (raw.status !== 200) throw signInError(raw)
   return raw.body
@@ -451,6 +495,13 @@ export interface JoinPreview {
   allowed_email_domains?: string[] | null
   /** When it stops working, on Core's clock: ten minutes after it was created. */
   expires_at?: string
+  /**
+   * Whether someone registering through it must give an email (a link kept
+   * to email domains asks for one); otherwise a login ID, their student
+   * number, will do, with an email or without. Absent from a Core from before
+   * login IDs, which always asks for an email.
+   */
+  email_required?: boolean
 }
 
 /**
@@ -490,18 +541,30 @@ export async function joinCourse(token: string, idempotencyKey: string): Promise
 }
 
 /**
+ * Who registers through a join link: a name, a login ID (their student
+ * number) or an email or both, and a password.
+ */
+export interface JoinRegistration {
+  display_name: string
+  login_id?: string
+  email?: string
+  password: string
+}
+
+/**
  * Registers someone with no account through a join link, seats them as a
  * student and signs this browser in as them, with the session cookie a
  * sign-in gives: public, as login is, since the link is what lets them in.
- * Core answers 409 (details.reason email_taken) for an email registered
- * already, whose owner is to sign in; 422 when the link seats nobody now or
- * takes no email at that domain; 400 for a field outside its rules; and 429,
- * with how long to wait, when this address or this link has registered too
- * often.
+ * Core answers 409 (details.reason email_taken, or login_id_taken) for an
+ * email or a login ID registered already, whose owner is to sign in; 422
+ * when the link seats nobody now or takes no email at that domain, or asks
+ * for an email and was given none; 400 for a field outside its rules; and
+ * 429, with how long to wait, when this address or this link has registered
+ * too often.
  */
 export async function joinRegister(
   token: string,
-  body: { display_name: string; email: string; password: string },
+  body: JoinRegistration,
 ): Promise<{ actor_id: string; expires_at: string; course_id: string; member_id: string; action_id: string }> {
   const raw = await send('POST', joinPath(token, '/register'), { body })
   if (raw.status !== 200) throw signInError(raw)
@@ -548,6 +611,12 @@ export interface SsoMethod {
  */
 export interface AuthMethods {
   password: boolean
+  /**
+   * What password sign-in takes for the account's name, in the order the
+   * field's label names them: 'login_id' (a student or staff number) and
+   * 'email'. Absent from a Core from before login IDs, which takes an email.
+   */
+  passwordAccepts?: string[]
   sso: SsoMethod | null
 }
 
@@ -556,11 +625,22 @@ const corePath = /^\/(?![/\\])[^?#]*$/
 
 function authMethodsFrom(b: any): AuthMethods | null {
   if (!b || typeof b !== 'object' || typeof b.password !== 'boolean' || !('sso' in b)) return null
+  const accepts = Array.isArray(b.password_accepts)
+    ? b.password_accepts.filter((x: unknown): x is string => typeof x === 'string')
+    : null
+  const base: Omit<AuthMethods, 'sso'> = accepts
+    ? { password: b.password, passwordAccepts: accepts }
+    : { password: b.password }
   const s = b.sso
-  if (s === null) return { password: b.password, sso: null }
+  if (s === null) return { ...base, sso: null }
   if (!s || typeof s !== 'object' || typeof s.start !== 'string' || !corePath.test(s.start)) return null
   if (s.label !== null && typeof s.label !== 'string') return null
-  return { password: b.password, sso: { label: s.label || null, start: s.start } }
+  return { ...base, sso: { label: s.label || null, start: s.start } }
+}
+
+/** Whether password sign-in takes a login ID, a student or staff number, as well as an email. */
+export function acceptsLoginId(m: Pick<AuthMethods, 'passwordAccepts'> | null | undefined): boolean {
+  return !!m?.passwordAccepts?.includes('login_id')
 }
 
 /**
