@@ -1,38 +1,40 @@
-// Conversations with the course's agents and one's own (the chat launcher and /courses/:courseId/conversations).
+// 与课程智能体的对话：每个页面旁的对话面板，以及其中的一段对话。
 export default {
-  title: '对话',
-  nothingHere: '你在这门课程中既不提问，也不回答问题。',
-  page: {
-    subtitle: '向课程的智能体或你自己的智能体提问，回复会出现在这里。',
-    pick: '选择一段对话，或选择要提问的对象。',
-    all: '所有对话',
+  panel: {
+    title: '对话',
+    toggle: '与智能体对话',
+    toggleUnread: '与智能体对话：{n} 条未读',
+    toggleTip: '与智能体对话（{key}）',
+    course: '课程',
+    new: '新对话',
+    newTip: '开始新对话',
+    history: '过往对话',
+    close: '关闭对话面板',
+    resize: '调整对话面板宽度',
+    backToHistory: '返回过往对话',
+    backToAgents: '返回智能体列表',
+    pickTitle: '向智能体提问',
+    pickHint: '你在 {course} 可以提问的智能体：课程自己的智能体，以及你的个人助理。',
+    noCourses: '你的课程都不允许你向智能体提问。',
   },
-  launcher: {
-    open: '提问',
-    back: '返回列表',
-    fullPage: '以完整页面打开',
-  },
-  tabs: {
-    ask: '提问',
-    answer: '向我提问',
-    oversee: '监督',
+  history: {
+    title: '你的对话',
+    scope: '课程范围',
+    thisCourse: '这门课程',
+    allCourses: '所有课程',
+    empty: '你还没有在这门课程向智能体提问。',
+    emptyAll: '你还没有向任何智能体提问。',
+    untitled: '未命名',
+    unread: '新回复',
+    failed: '无法读取你在 {courses} 的对话。',
+    leftOut: '只显示你 {total} 门课程中 {n} 门的对话。选择一门课程即可查看它的对话。',
+    truncated: '{courses} 的对话太多，未能全部读取，最新的对话可能没有列出。',
   },
   respondents: {
-    title: '可以提问的对象',
-    hint: '权限不超过你的智能体和成员，以及你自己的智能体。',
-    empty: '这里暂时没有你可以提问的对象。',
+    empty: '这里暂时没有可以回答你问题的智能体。',
     offlineHint: '这个智能体目前似乎没有在运行，回复可能需要一段时间。',
     sharedHint: '它也会回答其他成员，会记住每个人写给它的内容，并可能转述给他们。',
     agentPage: '前往它的页面',
-  },
-  list: {
-    mine: '你的对话',
-    respondentHint: '别人向你提出的问题。红点表示正在等你回复。',
-    overseerHint: '由你负责审批其操作的成员所发起的对话。你可以阅读并撤回消息，但不能在其中发言。',
-    emptyOpener: '你在这里还没有发起任何对话。',
-    emptyRespondent: '这里还没有人向你提问。',
-    emptyOverseer: '没有需要监督的对话。',
-    waitsForYou: '正在等你回复',
   },
   between: '{opener} → {respondent}',
   messagesLabel: '消息',
@@ -60,10 +62,10 @@ export default {
     waiting: '{name} 已收到你的问题。',
     waitingApproval: '每条回复都须经批准，你才会看到。',
     answerPending: '有一条回复正在等待批准。',
-    yourAnswerPending: '你的回复正在等待批准，有结果后才能再次发言。',
-    yourTurn: '{name} 正在等你回复。',
     start: '有任何关于课程的问题，都可以问 {name}。',
     overseeing: '你正以课程教职员的身份阅读这段对话。',
+    readOnly: '现在由智能体在对话中回答问题，你可以阅读这段对话。',
+    person: '{name} 是真人，而真人已不再在对话中回答问题。这段对话仍可阅读。',
   },
   // Why an answer may not come.
   availability: {
@@ -75,9 +77,6 @@ export default {
   },
   blocked: {
     archived: '这门课程已归档，无法再发言。',
-    overseer: '只有对话双方可以在这里发言。',
-    nothingToAnswer: '对方还没有提出任何问题。',
-    answerPending: '你的回复正在等待批准。',
   },
   closed: {
     title: '这段对话已结束。',
@@ -88,19 +87,15 @@ export default {
   composer: {
     label: '你的消息',
     askPlaceholder: '向 {name} 提问…',
-    answerPlaceholder: '回复 {name}…',
     send: '发送',
     hint: '按 Enter 发送，Shift+Enter 换行',
     hintTouch: '点击按钮发送',
     count: '{n} / {max} 字',
   },
-  // Who can read a conversation (Core's visible_to).
   conflict: {
-    moved_on: '在你的回复发出前，对方又写了新消息。现已显示最新一条，请回复那一条。',
-    already_answered: '那条消息已经回复过了，所以你的回复没有发出。',
-    answer_pending: '你对那条消息的回复已在等待批准。',
     closed: '这段对话已经关闭，不能再写入任何内容。',
   },
+  // Who can read a conversation (Core's visible_to).
   visibleTo: {
     button: '谁可以阅读',
     title: '谁可以阅读这段对话',
@@ -124,7 +119,6 @@ export default {
     button: '结束',
     title: '要结束这段对话吗？',
     bodyOpener: '结束后无法再发言，但内容仍可阅读。你填写的原因会显示给对方。',
-    bodyRespondent: '结束后无法再发言，{name} 须另外开始新的对话。你填写的原因会显示给对方。',
     confirm: '结束对话',
     done: '对话已结束',
   },

@@ -6,7 +6,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMediaQuery } from '@/composables/useMediaQuery'
-import { BODY_MAX, bodyProblem, charCount, isSendKey } from '../chat'
+import { BODY_MAX, bodyProblem, charCount, isSendKey } from './chat'
 
 const props = defineProps<{
   modelValue: string

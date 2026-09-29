@@ -1,4 +1,22 @@
-import type { RouteRecordRaw } from 'vue-router'
+import type { NavigationGuardWithThis, RouteRecordRaw } from 'vue-router'
+import { useChatStore } from '@/stores/chat'
+
+/**
+ * An old link to a course's conversations: the chat panel opens on the
+ * conversation named, or on the course. From a page of the app the
+ * navigation goes no further (the page stays, the panel beside it); coming
+ * from outside it (a bookmark, a new tab, signing in first), the course's
+ * overview is shown.
+ */
+export const openChatFromLink: NavigationGuardWithThis<undefined> = (to, from) => {
+  const courseId = String(to.params.courseId)
+  const id = typeof to.params.conversationId === 'string' ? to.params.conversationId : ''
+  const chat = useChatStore()
+  if (id) chat.showConversation(courseId, id, { open: true })
+  else chat.showCourse(courseId)
+  const inApp = from.matched[0]?.path === '/'
+  return inApp ? false : { name: 'course-overview', params: { courseId }, replace: true }
+}
 
 // Everything inside one course. Each view receives the route params as props
 // (courseId always, plus its own id). The course itself, the caller's seat and
@@ -132,12 +150,16 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'courseAgents.title' },
   },
   {
-    // The caller's conversations, and one of them when conversationId is given.
+    // Where a course's conversations were once a page of their own: the chat
+    // is a panel beside every page now. A link here (a bookmark, a
+    // notification, a proposal's conversation) opens the panel on the
+    // conversation, or on the course when none is named; followed from a
+    // page of the app, that page stays, and otherwise the course's overview
+    // is shown beside it.
     path: 'conversations/:conversationId?',
     name: 'course-conversations',
-    component: () => import('@/views/course/conversations/ConversationsView.vue'),
-    props: true,
-    meta: { title: 'chat.title' },
+    component: { render: () => null },
+    beforeEnter: openChatFromLink,
   },
 ]
 export default routes

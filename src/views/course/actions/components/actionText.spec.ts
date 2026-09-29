@@ -194,7 +194,7 @@ describe('reasonText', () => {
 })
 
 describe('routeFor', () => {
-  it('leads a conversation to the conversations page', () => {
+  it('leads a conversation to its old page’s address, which opens it in the chat panel', () => {
     expect(routeFor(COURSE, 'conversation', 'cv1')).toEqual({
       name: 'course-conversations',
       params: { courseId: COURSE, conversationId: 'cv1' },

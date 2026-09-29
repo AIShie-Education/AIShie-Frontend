@@ -8,7 +8,7 @@ import { useI18n } from 'vue-i18n'
 import type { ConversationMessage } from '@/api/types'
 import MarkdownView from '@/components/MarkdownView.vue'
 import TimeText from '@/components/TimeText.vue'
-import { retractedBy } from '../chat'
+import { retractedBy } from './chat'
 
 const props = defineProps<{
   message: ConversationMessage
