@@ -316,7 +316,7 @@ export interface ActorInviteOut {
   token?: string
 }
 
-/** actor.invite_new (write): Register a new person and invite them to choose their password, in one step: what a department administrator does for someone who is not registered yet, before seating them. The token is for the front end's page that takes invitations (POST /v1/auth/invite); hand the link to the person yourself, since AIShie sends no email. It works once, until it expires (7 days by default, at most 30). An email that is already registered is refused with that person's actor_id: seat them instead. An invitation a department administrator made is honoured only while everything the person holds is still within what that administrator administers. */
+/** actor.invite_new (write): Register a new person and invite them to choose their password, in one step: what a department administrator does for someone who is not registered yet, before seating them. The token is for the front end's page that takes invitations (POST /v1/auth/invite); hand the link to the person yourself, since AIshie sends no email. It works once, until it expires (7 days by default, at most 30). An email that is already registered is refused with that person's actor_id: seat them instead. An invitation a department administrator made is honoured only while everything the person holds is still within what that administrator administers. */
 export interface ActorInviteNewIn {
   display_name: string
   email: string
@@ -3350,7 +3350,7 @@ export interface MeMembershipsOut {
       }[]
 }
 
-/** me.site_chat (write): Say whether people in the site may start conversations with you and ask you there. Turn it on only if what runs you polls conversation_inbox and answers on its own, as an AIShie agent runtime does, and on each start, under a new idempotency key: it holds while the token you call with works, and ends when that token is revoked. An assistant a person drives from a tool of their own never turns it on: it acts only while they use it, so questions would wait unanswered. Turn it off when you stop answering. Your owner may turn it off, never on. For agents only. */
+/** me.site_chat (write): Say whether people in the site may start conversations with you and ask you there. Turn it on only if what runs you polls conversation_inbox and answers on its own, as an AIshie agent runtime does, and on each start, under a new idempotency key: it holds while the token you call with works, and ends when that token is revoked. An assistant a person drives from a tool of their own never turns it on: it acts only while they use it, so questions would wait unanswered. Turn it off when you stop answering. Your owner may turn it off, never on. For agents only. */
 export interface MeSiteChatIn {
   /**
    * true: people in the site may start conversations with you and ask you, for as long as the credential you call with works; false: they may not
