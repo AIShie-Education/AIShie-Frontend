@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
-import { courseTab, coursePath, demo, signIn } from './support'
+import { courseTab, coursePath, demo, floatingChatButton, rail, signIn } from './support'
 
 /**
  * What scrolls sideways that should not: the page itself, or the app's main
@@ -70,8 +70,10 @@ test.describe('language', () => {
     }
     await expect(page.getByRole('link', { name: 'Overview' })).toHaveCount(0)
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
-    // The chat with the course's agents, beside every page, and no longer a tab of the course.
-    await expect(page.getByRole('button', { name: '與代理對話' })).toBeVisible()
+    // The chat with the course's agents, beside every page from the rail on the right, and no longer a tab of the course.
+    await expect(
+      page.getByRole('toolbar', { name: '側邊面板' }).getByRole('button', { name: '與代理對話' }),
+    ).toBeVisible()
     await expect(zhTabs.getByRole('link', { name: '對話' })).toHaveCount(0)
     // Core's vocabularies too: the course's status and the caller's role.
     await expect(page.locator('.course-head')).not.toContainText('Active')
@@ -109,7 +111,9 @@ test.describe('language', () => {
       await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
-    await expect(page.getByRole('button', { name: '与智能体对话' })).toBeVisible()
+    await expect(
+      page.getByRole('toolbar', { name: '侧边面板' }).getByRole('button', { name: '与智能体对话' }),
+    ).toBeVisible()
     // Simplified glyphs, from Noto Sans SC: the SC faces are fetched, the TC ones never.
     await expect.poll(() => fonts.includes('sc'), { message: 'an SC face is fetched' }).toBe(true)
     expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Noto Sans SC/)
@@ -165,11 +169,15 @@ test.describe('at phone width', () => {
     }
   })
 
-  test('the chat is a sheet over the whole screen, and fits it', async ({ page }) => {
+  test('the chat is a sheet over the whole screen, opened from a floating button, and fits it', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('grades'))
-    await page.getByRole('button', { name: /^Chat with agents/ }).click()
+    // No rail on a phone: the chat's button floats at the bottom right, within the screen.
+    await expect(page.locator('.page-header').first()).toBeVisible()
+    await expect(rail(page)).toHaveCount(0)
+    await expectWithinViewport(page, '.app-chat-fab')
+    await floatingChatButton(page).click()
     const sheet = page.locator('#chat-panel')
     await expect(sheet.getByRole('heading', { name: 'Ask an agent' })).toBeVisible()
     await expectWithinViewport(page, '#chat-panel')
@@ -182,6 +190,7 @@ test.describe('at phone width', () => {
     await sheet.getByRole('button', { name: 'Close the chat' }).click()
     await expect(sheet).toHaveCount(0)
     await expect(page.locator('.page-header').first()).toBeVisible()
+    await expect(floatingChatButton(page)).toBeVisible()
   })
 
   test('dialogs fit a phone', async ({ page }) => {

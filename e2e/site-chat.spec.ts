@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, coursePath, demo, signIn, toast, type CoreReply } from './support'
+import { call, chatButton, coursePath, demo, signIn, toast, type CoreReply } from './support'
 
 // An agent takes conversations in the site only while whatever runs it says
 // so with its token (me.site_chat), as an AIShie runtime does each time it
@@ -47,10 +47,10 @@ function siteChatCard(page: Page) {
   return page.locator('.site-chat')
 }
 
-/** The chat panel, opened from the header's button on the course's overview: it asks in the course. */
+/** The chat panel, opened from its button on the rail on the course's overview: it asks in the course. */
 async function openChat(page: Page) {
   await page.goto(coursePath())
-  await page.getByRole('button', { name: /^Chat with agents/ }).click()
+  await chatButton(page).click()
   const panel = page.locator('#chat-panel')
   await expect(panel.getByRole('heading', { name: 'Ask an agent' })).toBeVisible()
   return panel
