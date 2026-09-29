@@ -159,12 +159,17 @@ describe('DepartmentsView', () => {
     )
     // "New department here" under Computing, with a name no sibling has here but Core refuses anyway (someone was quicker).
     await w.find('button[aria-label="What you can do with Computing"]').trigger('click')
-    await flushPromises()
     // Every row's menu is in the page; the one just opened is the one shown.
-    const item = [...document.body.querySelectorAll('.el-dropdown-menu__item')].find(
-      (i) => i.textContent?.includes('New department here') && (i.closest('.el-popper') as HTMLElement | null)?.style.display !== 'none',
-    )
-    ;(item as HTMLElement).click()
+    // It is shown on a timer (Element Plus opens a menu with setTimeout, even
+    // at no delay), which flushPromises (setImmediate) does not wait for.
+    const item = await vi.waitFor(() => {
+      const shown = [...document.body.querySelectorAll<HTMLElement>('.el-dropdown-menu__item')].find(
+        (i) => i.textContent?.includes('New department here') && (i.closest('.el-popper') as HTMLElement | null)?.style.display !== 'none',
+      )
+      if (!shown) throw new Error('the menu of Computing is not shown yet')
+      return shown
+    })
+    item.click()
     await flushPromises()
     const input = document.body.querySelector<HTMLInputElement>('input[name=department-name]')!
     input.value = 'Robotics'
