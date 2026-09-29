@@ -86,6 +86,63 @@ describe('read', () => {
   })
 })
 
+describe('a read that waits for news', () => {
+  /** A Core that never answers: the fetch ends only when it is aborted, as a browser's does. */
+  function silent() {
+    const signals: AbortSignal[] = []
+    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+      calls.push({ url, method: init.method ?? 'GET', headers: init.headers as Record<string, string> })
+      const signal = init.signal
+      signals.push(signal!)
+      return new Promise((_, reject) => {
+        if (!signal) return
+        if (signal.aborted) reject(new DOMException('The operation was aborted.', 'AbortError'))
+        signal.addEventListener('abort', () => reject(new DOMException('The operation was aborted.', 'AbortError')))
+      })
+    })
+    return signals
+  }
+  const args = { course_id: 'k1', conversation_id: 'c1', after_seq: 4, wait_s: 25, seen_state: 'answered' }
+
+  it('is given up after its limit as a network failure, and tried again as one', async () => {
+    silent()
+    const p = read('conversation.messages', args, { timeoutMs: 40_000 }).catch((e) => e)
+    await vi.advanceTimersByTimeAsync(40_000 + 500 + 40_000 + 1000 + 40_000)
+    const err = await p
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.isNetwork).toBe(true)
+    expect(err.message).toBe('no answer in 40 s')
+    expect(calls).toHaveLength(3)
+    expect(calls[0]!.url).toBe('/v1/courses/k1/conversations/c1/messages?after_seq=4&wait_s=25&seen_state=answered')
+  })
+
+  it('is never cut short before its limit, and a read without one never is', async () => {
+    const signals = silent()
+    void read('conversation.messages', args, { timeoutMs: 40_000 }).catch(() => undefined)
+    void read('conversation.messages', { course_id: 'k1', conversation_id: 'c1' }).catch(() => undefined)
+    await vi.advanceTimersByTimeAsync(39_999)
+    expect(signals[0]!.aborted).toBe(false)
+    expect(signals[1]).toBeUndefined()
+    expect(calls).toHaveLength(2)
+    await vi.advanceTimersByTimeAsync(10 * 60_000)
+    expect(signals[0]!.aborted).toBe(true)
+  })
+
+  it('passes on the caller’s abort as it is, and is not tried again', async () => {
+    const signals = silent()
+    const ctrl = new AbortController()
+    const p = read('conversation.messages', args, { signal: ctrl.signal, timeoutMs: 40_000 }).catch((e) => e)
+    await vi.advanceTimersByTimeAsync(1000)
+    ctrl.abort()
+    const err = await p
+    expect(err).not.toBeInstanceOf(ApiError)
+    expect(err.name).toBe('AbortError')
+    expect(signals[0]!.aborted).toBe(true)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(calls).toHaveLength(1)
+  })
+})
+
 describe('write', () => {
   it('posts the arguments, less those in the path, with an idempotency key', async () => {
     responses.push(json(200, { status: 'executed', action_id: 'a1', review_state: 'none', result: { ok: true } }))

@@ -114,8 +114,27 @@ end; the "works around it" notes say what the front end does meanwhile.
   `conversation.get` and `me.conversations`. The chat marks a conversation read while it is on
   screen, and counts what is unread on its button from the first page of `me.conversations`, read
   again every 30 seconds while the page is shown: the same on every device. What earlier versions
-  kept in a browser is deleted when the caller goes. Nothing is pushed yet, so that count is up to
-  half a minute behind.
+  kept in a browser is deleted when the caller goes. Nothing is pushed, and Core has no read that
+  waits for news across a person's courses, so that count is up to half a minute behind; a
+  conversation on screen is not (below).
+- **A conversation could only be polled** (resolved). The pane read `conversation.messages` after
+  the last seq it held every 3 seconds while an answer was awaited, and every 10, then 30 seconds
+  once it had been answered and nothing came, so an answer showed up to 3 seconds after it was
+  written. Core (since `2c1fe1b`) lets `conversation.messages`, `conversation.inbox` and
+  `event.list` wait for news: with `wait_s` (up to 25 seconds), a read that finds nothing new
+  waits until something it would read is committed, and answers within milliseconds of it.
+  `conversation.messages` waits only with `after_seq` (never with `before_seq`), for a message
+  after it, a retraction, or a change of state; `seen_state`, the state its reader holds, makes it
+  answer at once when the conversation is in another. The pane on screen now keeps one such read
+  waiting (`wait_s: 25`, `seen_state`, a client limit of 40 seconds) and makes the next as soon as
+  it answers; it cuts it short (the fetch aborted) when the pane goes off screen or away, the page
+  is hidden, or the caller writes, and after a pause reads at once before waiting again. An answer
+  shows within some tens of milliseconds of the agent writing it. *Where Core does not wait:* past
+  its bounds (16 reads waiting for one actor, 1000 in a server) or shutting down, a read answers
+  at once with nothing; one that comes back with nothing in under half its wait is taken for that,
+  and the pane reads on the old schedule for a minute before it asks to wait again. A Core from
+  before `wait_s` refuses it (`invalid_argument`, as it refuses any argument it does not know,
+  naming it), and the pane reads on the old schedule then too, rather than failing.
 - **`conversation.respondents` offered people, and `conversation.open` accepted them** (resolved).
   Core lists agents alone now, refuses a person as a respondent, or answering, as
   `conversations_are_with_agents`, caps a person's `conversation_answer` at denied for that reason,

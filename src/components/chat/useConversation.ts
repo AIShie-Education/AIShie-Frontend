@@ -1,7 +1,17 @@
 // One conversation, kept fresh: its newest messages first, then whatever is
-// written after them, read by polling after the last seq held (Core pushes
-// nothing); older ones on request, before the first seq held. The view that
-// comes with every page (state, respondent's presence) replaces the one held.
+// written after them, read after the last seq held (Core pushes nothing);
+// older ones on request, before the first seq held. The view that comes with
+// every page (state, respondent's presence) replaces the one held.
+//
+// What is written next is long-polled (chat.ts, Polling): while the
+// conversation is on screen and the page shown, one read after the last seq
+// waits for news (wait_s, with seen_state, the state held), and the next is
+// made as soon as it answers, so an answer shows within moments of being
+// written. The read under way is cut short (its fetch aborted) when the pane
+// goes off screen or away, the page is hidden, or the caller writes; after a
+// pause, or a write (refresh), the pane reads at once without waiting, then
+// waits again. Where Core does not wait, it reads on pollDelayMs's schedule
+// for a while (NO_WAIT_MS). It stops once the conversation is closed.
 //
 // Retracting a message does not give it a new seq. The view that comes with
 // every page says when a message in it was last retracted
@@ -18,12 +28,27 @@ import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRe
 import { ApiError, read, write, type ToolOut } from '@/api/http'
 import type { ConversationMessage, ConversationView } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
-import { usePolling } from '@/composables/usePolling'
-import { firstSeq, lastSeq, mergeMessages, POLL_MS, pollDelayMs, sameMessages, stateOf } from './chat'
+import { usePolling, type PollContext } from '@/composables/usePolling'
+import {
+  EARLY_MS,
+  firstSeq,
+  FRESH_MS,
+  lastSeq,
+  mergeMessages,
+  NO_WAIT_MS,
+  POLL_MS,
+  pollDelayMs,
+  refusesWaiting,
+  sameMessages,
+  sameStanding,
+  stateOf,
+  WAIT_S,
+  WAIT_TIMEOUT_MS,
+} from './chat'
 
 /** Messages per page: the newest on opening, older ones on request. */
 export const PAGE = 50
-/** At most this many new messages per poll; a fuller page is read on at once. */
+/** At most this many new messages per read; a fuller page is read on at once. */
 const POLL_PAGE = 100
 /** At most this many pages are read again after a retraction; the rest on the next. */
 const REREAD_PAGES = 20
@@ -31,7 +56,7 @@ const REREAD_PAGES = 20
 export interface UseConversationOptions {
   courseId: string
   conversationId: string
-  /** Whether it is on screen: polling runs only then (and not while the page is hidden). */
+  /** Whether it is on screen: it is kept fresh only then (and not while the page is hidden). */
   active?: MaybeRefOrGetter<boolean>
   /**
    * The caller's seat while they read it as one of the two taking part, with
@@ -62,6 +87,10 @@ export function useConversation(opts: UseConversationOptions) {
 
   let disposed = false
   let lastFetchAt = 0
+  /** When a read last answered: the next waits for news only right after one (FRESH_MS). */
+  let answeredAt = -Infinity
+  /** Until then Core is taken not to wait (it answered at once, or refused to): the schedule is kept. */
+  let noWaitUntil = -Infinity
   /** The last_retracted_at the messages held were read under. */
   let readRetractedAt: string | null = null
   /** A retraction happened since the messages held were read: read them again. */
@@ -154,7 +183,7 @@ export function useConversation(opts: UseConversationOptions) {
       take(out.messages, out.conversation)
       hasOlder.value = !!out.more
       loaded.value = true
-      lastFetchAt = now()
+      lastFetchAt = answeredAt = now()
       quiet = 0
     } catch (e) {
       if (!disposed) error.value = toApiError(e)
@@ -180,41 +209,83 @@ export function useConversation(opts: UseConversationOptions) {
     }
   }
 
-  /** Reads what was written after the last message held, and the newest page now and then. */
-  async function poll() {
+  /** Whether what comes next is waited for: Core waits, as far as is known, and there is a message to read after. */
+  const longPolls = () => now() >= noWaitUntil && lastSeq(messages.value) !== null
+
+  /**
+   * Reads what was written after `after`: waiting for news when wait says
+   * so (answering with how long it waited), or at once. A Core from before
+   * waiting, which refuses wait_s, is read at once, and on the schedule for
+   * a while.
+   */
+  async function readAfter(after: number | null, wait: boolean, signal: AbortSignal) {
+    const args = { ...base(), limit: POLL_PAGE, ...(after === null ? {} : { after_seq: after }) }
+    if (wait && after !== null) {
+      const asked = now()
+      const seen = view.value ? { seen_state: view.value.state } : {}
+      try {
+        const out = await read(
+          'conversation.messages',
+          { ...args, wait_s: WAIT_S, ...seen },
+          { signal, timeoutMs: WAIT_TIMEOUT_MS },
+        )
+        return { out, waited: now() - asked }
+      } catch (e) {
+        if (!(e instanceof ApiError) || !refusesWaiting(e)) throw e
+        noWaitUntil = now() + NO_WAIT_MS
+      }
+    }
+    return { out: await read('conversation.messages', args, { signal }), waited: null }
+  }
+
+  /**
+   * Reads what was written after the last message held, waiting for it
+   * while Core waits; where it does not, now and then, as the schedule says.
+   */
+  async function poll({ signal }: PollContext) {
     if (!loaded.value) {
       if (!loading.value) await load()
       return
     }
     const t = now()
-    const due = view.value ? pollDelayMs(stateOf(view.value), quiet) : POLL_MS
-    if (!force && (due === null || t - lastFetchAt < due - 50)) return
+    const waits = longPolls()
+    if (!force && !waits) {
+      const due = view.value ? pollDelayMs(stateOf(view.value), quiet) : POLL_MS
+      if (due === null || t - lastFetchAt < due - 50) return
+    }
+    // Waits only right after a read answered, and not when asked to read now:
+    // otherwise what it would compare with may be out of date.
+    const wait = waits && !force && t - answeredAt < FRESH_MS
     force = false
     lastFetchAt = t
     let changed = false
     // A full page means more is waiting: read on (a few pages at most per poll).
     for (let i = 0; i < 5; i++) {
       const after = lastSeq(messages.value)
-      const out = await read('conversation.messages', {
-        ...base(),
-        limit: POLL_PAGE,
-        ...(after === null ? {} : { after_seq: after }),
-      })
+      const held = view.value
+      const { out, waited } = await readAfter(after, wait && i === 0, signal)
       if (disposed) return
-      if (take(out.messages, out.conversation)) changed = true
+      const took = take(out.messages, out.conversation)
+      if (took) changed = true
+      // Nothing new, well before the wait was up: Core did not wait (too many
+      // of the caller's reads wait, or it is shutting down). Its schedule, for a while.
+      const news = took || !held || !out.conversation || !sameStanding(held, out.conversation)
+      if (waited !== null && waited < EARLY_MS && !news) noWaitUntil = now() + NO_WAIT_MS
       if (after === null) hasOlder.value = !!out.more
       if (!out.more || after === null) break
     }
-    if (reread && (await readHeldAgain())) changed = true
+    if (reread && (await readHeldAgain(signal))) changed = true
     quiet = changed ? 0 : quiet + 1
+    answeredAt = now()
     void markRead()
   }
 
   /**
    * Reads every message held again, oldest first, after a retraction (whose
-   * message may be any of them). True when anything changed.
+   * message may be any of them). True when anything changed. Cut short, it
+   * is done again on the next read.
    */
-  async function readHeldAgain(): Promise<boolean> {
+  async function readHeldAgain(signal?: AbortSignal): Promise<boolean> {
     const first = firstSeq(messages.value)
     const target = view.value?.last_retracted_at ?? null
     reread = false
@@ -223,15 +294,20 @@ export function useConversation(opts: UseConversationOptions) {
     let changed = false
     let after = first - 1
     const last = lastSeq(messages.value) ?? first
-    for (let i = 0; i < REREAD_PAGES && after < last; i++) {
-      const out = await read('conversation.messages', { ...base(), limit: POLL_PAGE, after_seq: after })
-      if (disposed) return changed
-      // A newer retraction while reading: go over them again next time.
-      if ((out.conversation?.last_retracted_at ?? null) !== target) reread = true
-      const page = out.messages ?? []
-      if (take(page, null)) changed = true
-      if (!out.more || !page.length) break
-      after = page[page.length - 1]!.seq
+    try {
+      for (let i = 0; i < REREAD_PAGES && after < last; i++) {
+        const out = await read('conversation.messages', { ...base(), limit: POLL_PAGE, after_seq: after }, { signal })
+        if (disposed) return changed
+        // A newer retraction while reading: go over them again next time.
+        if ((out.conversation?.last_retracted_at ?? null) !== target) reread = true
+        const page = out.messages ?? []
+        if (take(page, null)) changed = true
+        if (!out.more || !page.length) break
+        after = page[page.length - 1]!.seq
+      }
+    } catch (e) {
+      reread = true
+      throw e
     }
     return changed
   }
@@ -256,16 +332,25 @@ export function useConversation(opts: UseConversationOptions) {
 
   const open = computed(() => !view.value || stateOf(view.value) !== 'closed')
   const polling = usePolling(poll, {
-    intervalMs: POLL_MS,
+    // Again at once while Core waits; where it does not, every POLL_MS, to see whether the schedule says to read.
+    get intervalMs() {
+      return longPolls() ? 0 : POLL_MS
+    },
+    // After a failure, as ever: 6, 12, 24, then 48 seconds.
+    failureIntervalMs: POLL_MS,
+    maxIntervalMs: POLL_MS * 16,
     immediate: false,
     enabled: () => (opts.active === undefined ? true : toValue(opts.active)) && loaded.value && open.value,
   })
 
-  /** Reads now, whatever the schedule says: after the caller wrote, say. */
+  /**
+   * Reads now, whatever the schedule says, and without waiting: after the
+   * caller wrote, say. A read waiting for news is cut short for it.
+   */
   async function refresh() {
     force = true
     quiet = 0
-    await polling.pollNow()
+    await polling.pollNow({ interrupt: true })
   }
 
   /** Marks a message retracted at once (the caller just retracted it); the next read confirms it. */
@@ -289,9 +374,9 @@ export function useConversation(opts: UseConversationOptions) {
     hasOlder,
     loadingOlder,
     olderError,
-    /** Whether a poll is under way. */
+    /** Whether a read of what comes next is under way (one waiting for news included). */
     polling: polling.inFlight,
-    /** Polls that failed in a row (the pane says it is having trouble). */
+    /** Reads of what comes next that failed in a row (the pane says it is having trouble). */
     failures: polling.failures,
     load,
     loadOlder,

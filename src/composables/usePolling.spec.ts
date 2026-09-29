@@ -146,6 +146,131 @@ describe('usePolling', () => {
     dispose()
   })
 
+  it('polls again at once with an interval of 0 (a long poll), and still backs off after failures', async () => {
+    let fail = false
+    const fn = vi.fn(async () => {
+      if (fail) throw new Error('down')
+      await new Promise((r) => setTimeout(r, 25_000))
+    })
+    const { out, dispose } = inScope(() =>
+      usePolling(fn, { intervalMs: 0, failureIntervalMs: 3000, maxIntervalMs: 48_000 }),
+    )
+    expect(fn).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(25_000)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fn).toHaveBeenCalledTimes(2)
+    fail = true
+    await vi.advanceTimersByTimeAsync(25_000)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fn).toHaveBeenCalledTimes(3)
+    expect(out.failures.value).toBe(1)
+    // 6 s after one failure, 12 s after two, as with an interval of 3 s.
+    await vi.advanceTimersByTimeAsync(5999)
+    expect(fn).toHaveBeenCalledTimes(3)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fn).toHaveBeenCalledTimes(4)
+    await vi.advanceTimersByTimeAsync(11_999)
+    expect(fn).toHaveBeenCalledTimes(4)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fn).toHaveBeenCalledTimes(5)
+    // Three failures: 24 s; then one that answers, after its wait, and the next at once.
+    fail = false
+    await vi.advanceTimersByTimeAsync(24_000)
+    expect(fn).toHaveBeenCalledTimes(6)
+    await vi.advanceTimersByTimeAsync(25_000)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(out.failures.value).toBe(0)
+    expect(fn).toHaveBeenCalledTimes(7)
+    dispose()
+  })
+
+  it('gives each poll a signal, aborted when polling stops, pauses for the hidden page, or goes away', async () => {
+    const signals: AbortSignal[] = []
+    const fn = vi.fn(
+      ({ signal }: { signal: AbortSignal }) =>
+        new Promise<void>((_, reject) => {
+          signals.push(signal)
+          signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+        }),
+    )
+    const on = ref(true)
+    const { out, dispose } = inScope(() => usePolling(fn, { intervalMs: 0, enabled: on }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(signals).toHaveLength(1)
+    expect(signals[0]!.aborted).toBe(false)
+
+    on.value = false
+    await nextTick()
+    expect(signals[0]!.aborted).toBe(true)
+    await vi.advanceTimersByTimeAsync(1000)
+    // Cut short is no failure.
+    expect(out.failures.value).toBe(0)
+    expect(out.lastError.value).toBeNull()
+    expect(fn).toHaveBeenCalledTimes(1)
+
+    on.value = true
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(signals).toHaveLength(2)
+    setVisibility('hidden')
+    expect(signals[1]!.aborted).toBe(true)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(fn).toHaveBeenCalledTimes(2)
+    expect(out.failures.value).toBe(0)
+    setVisibility('visible')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(signals).toHaveLength(3)
+
+    dispose()
+    expect(signals[2]!.aborted).toBe(true)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(fn).toHaveBeenCalledTimes(3)
+  })
+
+  it('keeps a poll under way while hidden when it polls while hidden', async () => {
+    const signals: AbortSignal[] = []
+    const fn = vi.fn(({ signal }: { signal: AbortSignal }) => {
+      signals.push(signal)
+      return new Promise<void>((r) => setTimeout(r, 1000))
+    })
+    const { dispose } = inScope(() => usePolling(fn, { intervalMs: 1000, hiddenIntervalMs: 30_000 }))
+    setVisibility('hidden')
+    expect(signals[0]!.aborted).toBe(false)
+    dispose()
+  })
+
+  it('cuts the poll under way short for pollNow({ interrupt: true }), and polls again at once', async () => {
+    let n = 0
+    const signals: AbortSignal[] = []
+    const fn = vi.fn(({ signal }: { signal: AbortSignal }) => {
+      signals.push(signal)
+      // The first waits long; the next answers at once.
+      if (n++ > 0) return Promise.resolve()
+      return new Promise<void>((resolve, reject) => {
+        const t = setTimeout(resolve, 25_000)
+        signal.addEventListener('abort', () => {
+          clearTimeout(t)
+          reject(new DOMException('aborted', 'AbortError'))
+        })
+      })
+    })
+    const { out, dispose } = inScope(() => usePolling(fn, { intervalMs: 3000 }))
+    expect(fn).toHaveBeenCalledTimes(1)
+    let done = false
+    const p = out.pollNow({ interrupt: true }).then(() => (done = true))
+    expect(signals[0]!.aborted).toBe(true)
+    await p
+    expect(done).toBe(true)
+    expect(fn).toHaveBeenCalledTimes(2)
+    expect(out.failures.value).toBe(0)
+    // And the wait starts again from there.
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(fn).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fn).toHaveBeenCalledTimes(3)
+    dispose()
+  })
+
   it('waits for start() when manual, and polls once for pollNow() while stopped', async () => {
     const fn = vi.fn(async () => undefined)
     const { out, dispose } = inScope(() => usePolling(fn, { intervalMs: 1000, manual: true }))

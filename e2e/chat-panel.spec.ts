@@ -38,6 +38,8 @@ const LATER = `And a for loop? (${STAMP})`
 const LATER_ANSWER = `The same: break leaves it (${STAMP}).`
 const ELSEWHERE = `And a do-while loop? (${STAMP})`
 const ELSEWHERE_ANSWER = `It runs once before the test (${STAMP}).`
+/** The title of the conversation whose answers are timed. */
+const LIVE = `Recursion (${STAMP})`
 
 const w = { tutorToken: '' }
 
@@ -323,6 +325,96 @@ test.describe.serial('the chat panel', () => {
     await expect(panelOf(page)).toHaveCount(0)
     await page.keyboard.press('Control+j')
     await expect(panelOf(page)).toBeVisible()
+  })
+
+  test('shows an answer within a second of its agent writing it, from a read that waited for it, not a poll', async ({
+    page,
+  }) => {
+    const d = demo()
+    const c = d.course.id
+    await signIn(page, d.actors.yuki)
+    await page.goto(coursePath())
+    await chatButton(page).click()
+    const panel = panelOf(page)
+    await panel.locator('button.resp-row').filter({ hasText: TUTOR }).click()
+    const composer = panel.locator('textarea')
+    const measured: { fromPost: number; fromSend: number; waitedBefore: number }[] = []
+    let id = ''
+    for (let i = 1; i <= 3; i++) {
+      const question = `What is recursion, take ${i}? (${STAMP})`
+      await composer.fill(i === 1 ? `${LIVE}\n${question}` : question)
+      await composer.press('Enter')
+      await expect(panel.locator('.chat-msg').filter({ hasText: question })).toBeVisible()
+      await expect(panel.locator('.chat-pane__typing')).toBeVisible()
+      if (!id) {
+        const r = await call(d.actors.yuki.token, 'GET', `/v1/me/conversations?course_id=${c}`)
+        id = (r.body.result?.conversations ?? []).find((x: { title?: string }) => x.title === LIVE)?.conversation_id
+        expect(id, `Yuki's conversation "${LIVE}": ${JSON.stringify(r.body)}`).toBeTruthy()
+      }
+      // The course agent's inbox has the question.
+      let waiting: string | null = null
+      await expect
+        .poll(async () => {
+          const inbox = await call(w.tutorToken, 'GET', `/v1/courses/${c}/conversations/inbox`)
+          const conv = (inbox.body.result?.conversations ?? []).find((x: { id: string }) => x.id === id)
+          waiting = conv?.latest_opener_message_id ?? null
+          return waiting
+        })
+        .not.toBeNull()
+      // Long enough for the pane's read to be waiting, and for a pane polling every 3 s to be between polls.
+      await page.waitForTimeout(1500)
+      const answer = `Recursion is a function calling itself, take ${i} (${STAMP}).`
+      // When the answer is on the screen, by the page's clock (this machine's, as the test's is).
+      await page.evaluate((text) => {
+        const w = window as unknown as { shownAt?: number }
+        delete w.shownAt
+        const seen = () =>
+          [...document.querySelectorAll('#chat-panel .chat-msg')].some((m) => m.textContent?.includes(text))
+        const watch = new MutationObserver(() => {
+          if (!seen()) return
+          w.shownAt = Date.now()
+          watch.disconnect()
+        })
+        watch.observe(document.body, { childList: true, subtree: true, characterData: true })
+      }, answer)
+      const carried = page.waitForResponse(
+        async (r) =>
+          r.url().includes(`/conversations/${id}/messages?`) && (await r.text().catch(() => '')).includes(answer),
+      )
+      const sent = Date.now()
+      done(
+        await call(w.tutorToken, 'POST', `/v1/courses/${c}/conversations/${id}/answer`, {
+          in_reply_to_message_id: waiting,
+          body: answer,
+        }),
+        'conversation.answer',
+      )
+      const posted = Date.now()
+      await expect(panel.locator('.chat-msg').filter({ hasText: answer })).toBeVisible()
+      await expect(panel.locator('.chat-pane__typing')).toHaveCount(0)
+      const shownAt = await page.evaluate(() => (window as unknown as { shownAt?: number }).shownAt)
+      expect(shownAt, 'the answer was seen coming on the screen').toBeTruthy()
+      // It came with a read that asked to wait (wait_s, and the state the pane held), made well before it was written.
+      const res = await carried
+      const url = new URL(res.url())
+      expect(url.searchParams.get('wait_s')).toBe('25')
+      expect(url.searchParams.get('seen_state')).toBe('awaiting_answer')
+      const waitedBefore = sent - res.request().timing().startTime
+      expect(waitedBefore, 'the read that brought it was made before the answer was written').toBeGreaterThan(1000)
+      measured.push({ fromPost: shownAt! - posted, fromSend: shownAt! - sent, waitedBefore: Math.round(waitedBefore) })
+    }
+    const summary = measured.map((m) => `${m.fromPost} ms (${m.fromSend} ms from sending it)`).join(', ')
+    console.log(`an answer, from written to shown: ${summary}`)
+    test.info().annotations.push({ type: 'answer shown after', description: summary })
+    for (const m of measured) expect(m.fromPost, `shown after ${summary}`).toBeLessThan(1000)
+    // Read on the screen, so counted nowhere.
+    await expect
+      .poll(async () => {
+        const r = await call(d.actors.yuki.token, 'GET', `/v1/me/conversations?course_id=${c}`)
+        return (r.body.result?.conversations ?? []).find((x: { conversation_id: string }) => x.conversation_id === id)
+          ?.unread
+      })
+      .toBe(false)
   })
 
   test('floats over the page, against the rail and with a shadow, in a window narrower than 1200 px', async ({

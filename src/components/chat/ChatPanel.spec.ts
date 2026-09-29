@@ -12,6 +12,10 @@ let respondents: Respondent[] = []
 let mine: MyConversation[] = []
 const reads: { tool: string; args: Record<string, unknown> }[] = []
 const writes: { tool: string; args: Record<string, unknown> }[] = []
+/** Whether a read of what comes next that asks to wait waits (until it is aborted), as Core's does while nothing is written. */
+let holdWaits = false
+/** Those reads, with the signal each was given. */
+const waitingReads: { args: Record<string, unknown>; signal: AbortSignal }[] = []
 
 /** Conversation c1, as conversation.get and conversation.messages give it: the tutor has answered. */
 const c1: ConversationView = {
@@ -37,8 +41,15 @@ vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
     ...real,
-    read: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+    read: vi.fn(async (tool: string, args: Record<string, unknown>, opts?: { signal?: AbortSignal }) => {
       reads.push({ tool, args })
+      if (tool === 'conversation.messages' && holdWaits && args.wait_s !== undefined) {
+        const signal = opts!.signal!
+        waitingReads.push({ args, signal })
+        await new Promise((_, reject) =>
+          signal.addEventListener('abort', () => reject(new DOMException('The operation was aborted.', 'AbortError'))),
+        )
+      }
       if (tool === 'conversation.respondents') return { respondents }
       if (tool === 'agent.list') return { agents: [] }
       if (tool === 'me.conversations') {
@@ -201,6 +212,8 @@ beforeEach(() => {
   setLocale('en')
   reads.length = 0
   writes.length = 0
+  holdWaits = false
+  waitingReads.length = 0
   respondents = [tutor]
   mine = []
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
@@ -501,6 +514,50 @@ describe('ChatPanel', () => {
     chat.setOpen(false)
     await flushPromises()
     expect(chat.unreadCount).toBe(0)
+  })
+
+  it('waits on the conversation shown, one read at a time, cut short when another is shown, the panel closes, or the caller signs out', async () => {
+    holdWaits = true
+    const { chat } = await setup()
+    const live = () => waitingReads.filter((r) => !r.signal.aborted)
+    chat.showConversation('k1', 'c1', { open: true })
+    await vi.waitFor(() => expect(waitingReads).toHaveLength(1))
+    expect(waitingReads[0]!.args).toMatchObject({
+      conversation_id: 'c1',
+      after_seq: 2,
+      wait_s: 25,
+      seen_state: 'answered',
+    })
+
+    // Another conversation: the first's wait is cut short, and the other's is waited on.
+    chat.showConversation('k1', 'c2')
+    await vi.waitFor(() => expect(waitingReads).toHaveLength(2))
+    expect(waitingReads[0]!.signal.aborted).toBe(true)
+    expect(waitingReads[1]!.args).toMatchObject({ conversation_id: 'c2' })
+    expect(live()).toHaveLength(1)
+
+    // The history instead: cut short.
+    chat.showHistory()
+    await flushPromises()
+    expect(live()).toHaveLength(0)
+    chat.showConversation('k1', 'c2')
+    await vi.waitFor(() => expect(waitingReads).toHaveLength(3))
+
+    // The panel closed: cut short; open again on it: waited on again.
+    chat.setOpen(false)
+    await flushPromises()
+    expect(live()).toHaveLength(0)
+    chat.setOpen(true)
+    await vi.waitFor(() => expect(waitingReads).toHaveLength(4))
+    expect(live()).toHaveLength(1)
+
+    // The caller signs out: cut short, and nothing more is read.
+    useSessionStore().clear()
+    await flushPromises()
+    expect(live()).toHaveLength(0)
+    const n = reads.length
+    await new Promise((r) => setTimeout(r, 50))
+    expect(reads.slice(n).filter((r) => r.tool === 'conversation.messages')).toEqual([])
   })
 
   it('says so where the caller may ask in no course', async () => {

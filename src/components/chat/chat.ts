@@ -341,13 +341,70 @@ export function visibleToLines(
 
 // --- Polling -------------------------------------------------------------------------
 
-/** How often the pane asks for new messages while an answer is expected. */
+// The pane long-polls the conversation on screen: it reads what comes after
+// the last message held with wait_s, and Core holds the read until there is
+// something new (a message, the conversation in another state than
+// seen_state, a message retracted) and answers within a few milliseconds of
+// it, or with nothing after WAIT_S. It then reads again at once. Where Core
+// does not wait (too many of the caller's reads wait already, it is shutting
+// down, or it is from before wait_s and refuses it), the pane reads on its
+// schedule (pollDelayMs) for NO_WAIT_MS, then asks to wait again.
+
+/** How long a read waits for news (conversation.messages' wait_s): the most Core waits. */
+export const WAIT_S = 25
+/**
+ * A read that waits is given up after this long, as a network failure: Core
+ * answers it by WAIT_S, and one whose connection was dropped on the way
+ * would otherwise hang for as long as the browser lets it.
+ */
+export const WAIT_TIMEOUT_MS = (WAIT_S + 15) * 1000
+/** An answer to a read that waited, bringing nothing, sooner than this means Core did not wait. */
+export const EARLY_MS = (WAIT_S * 1000) / 2
+/** After Core did not wait, the pane reads on its schedule for this long before it asks to wait again. */
+export const NO_WAIT_MS = 60_000
+/**
+ * A read waits only when the one before it answered less than this long
+ * ago, so that what it compares with is what Core had then: after a pause
+ * (the page hidden, the pane off screen, a failure) the pane reads at once.
+ */
+export const FRESH_MS = 1_000
+
+/**
+ * Whether Core refused a read because it asked to wait (wait_s, seen_state):
+ * a Core from before waiting refuses any argument it does not know
+ * (invalid_argument, naming it).
+ */
+export function refusesWaiting(e: { status?: number; code?: string; message?: string } | null | undefined): boolean {
+  return !!e && e.code === 'invalid_argument' && /\b(wait_s|seen_state)\b/.test(e.message ?? '')
+}
+
+/**
+ * Whether a conversation stands as it did, as Core judges it for a read
+ * that waits: in the same state, the same answer waiting for approval,
+ * nothing retracted since, and closed (if it is) for the same reason. A read
+ * that waited answers early without a message only when one of these moved.
+ */
+export function sameStanding(
+  a: Pick<ConversationView, 'state' | 'status' | 'pending_reply_action_id' | 'last_retracted_at' | 'closed_reason'>,
+  b: Pick<ConversationView, 'state' | 'status' | 'pending_reply_action_id' | 'last_retracted_at' | 'closed_reason'>,
+): boolean {
+  return (
+    a.state === b.state &&
+    a.status === b.status &&
+    (a.pending_reply_action_id ?? null) === (b.pending_reply_action_id ?? null) &&
+    (a.last_retracted_at ?? null) === (b.last_retracted_at ?? null) &&
+    (a.closed_reason ?? null) === (b.closed_reason ?? null)
+  )
+}
+
+/** How often the pane asks for new messages while an answer is expected, where Core does not wait. */
 export const POLL_MS = 3_000
 
 /**
- * How long to leave between reads of a conversation: every few seconds while
- * an answer is expected; less often the longer nothing happens once it has
- * been answered; not at all once it is closed.
+ * How long to leave between reads of a conversation where Core does not
+ * wait: every few seconds while an answer is expected; less often the
+ * longer nothing happens once it has been answered; not at all once it is
+ * closed.
  */
 export function pollDelayMs(state: ConversationState, quietPolls: number): number | null {
   switch (state) {

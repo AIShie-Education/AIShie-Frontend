@@ -272,7 +272,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`loadHistory`, `loadMoreHistory`). What the caller has read is Core's: a conversation on screen
   is marked read (`conversation.mark_read`, by `useConversation`'s `reader`) when it opens unread
   and as the agent writes, never by staff reading it, and the button's count is the `unread` of
-  the first page of `me.conversations`, read again every 30 seconds while the page is shown. The
+  the first page of `me.conversations`, read again every 30 seconds while the page is shown. A
+  conversation on screen is long-polled (`useConversation`, and `chat.ts` for the numbers): one
+  `conversation.messages` read after the last seq held waits for news (`wait_s: 25`, with
+  `seen_state`, the state held), and the next is made as soon as it answers, so an answer shows as
+  soon as it is written and the typing line (`awaiting_answer`) goes with it. Only one waits for a
+  pane, and it is cut short (aborted) when the pane goes off screen or away (another conversation,
+  the history, the panel closed, signing out), the page is hidden, or the caller writes; after a
+  pause the pane reads at once, then waits again. Where Core answers a wait at once with nothing
+  (too many of the caller's reads wait, or it is shutting down), or refuses `wait_s` (a Core from
+  before it), the pane reads every 3 seconds while an answer is awaited and less often once it is
+  quiet (`pollDelayMs`), for a minute, then asks to wait again; it stops once the conversation is
+  closed. The
   browser keeps only the course the caller last asked in (`aishiteru.chatCourse.<actorId>`). Those
   who decide actions read each agent's conversations from the course's *Agents* page (its
   conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
@@ -292,7 +303,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   white in either theme; `downloadQrPng()` (`@/utils/qr`) saves it as a PNG.
 - Anything kept fresh by asking again (a chat, an inbox): `usePolling(fn, { intervalMs, enabled })`
   from `@/composables/usePolling` — one poll at a time, backing off after failures, paused while the
-  page is hidden, stopped on unmount; `pollNow()` after sending something.
+  page is hidden, stopped on unmount; `pollNow()` after sending something. A long poll (a read Core
+  holds until there is news, `wait_s`) is polled again at once (`intervalMs: 0`, with
+  `failureIntervalMs` to back off from), passes on the `signal` each poll is given, which is
+  aborted when polling stops or pauses, and is cut short by `pollNow({ interrupt: true })`; give the
+  read a `timeoutMs` past the wait (`read(name, args, { signal, timeoutMs })`), the only reads with
+  a time limit.
 - Formatting: Prettier with the repo's `.prettierrc` (no semicolons, single quotes, width 120).
 
 ## Text
