@@ -247,6 +247,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
   title alone (and, on a phone, the menu's button): nothing else is offered there.
+- A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,
+  mounted by `AppLayout`) reads `index.html` again (`cache: 'no-store'`) every five minutes and when the
+  tab is shown again, and compares the entry script it names (`/assets/index-<hash>.js`) with the one
+  this page loaded; another one is a small notice, 「已有新版本」, with Reload and Later. It never reloads
+  by itself: someone may be writing. It is off in development, and says nothing against the one build a
+  preview serves.
 - The chat with agents is one panel beside every signed-in page (`src/components/chat/ChatPanel.vue`,
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
   agent. Its button is on the rail along the window's right edge, as an editor's activity bar is,

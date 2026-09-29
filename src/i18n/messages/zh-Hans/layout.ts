@@ -10,6 +10,12 @@ export default {
     button: '账号：{name}',
     settings: '账号设置',
   },
+  // A newer build deployed since this tab loaded the app (NewVersionNotice): load it, or later.
+  newVersion: {
+    available: '已有新版本',
+    reload: '重新加载',
+    later: '稍后',
+  },
   // The rail along the window's right edge, with a button for each side panel (the chat's).
   panels: '侧边面板',
   // The side bar on the window's left edge: the activity bar, with a button for each view (on a phone, the

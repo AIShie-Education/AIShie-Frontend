@@ -10,7 +10,8 @@
 // phone there is neither bar nor rail: the header's menu button opens the
 // views in a drawer, as tabs along its top, with the account at its bottom,
 // and the chat's button floats at the bottom right, the panel a sheet over
-// the page.
+// the page. A newer build deployed while the tab is open is said in a small
+// notice (NewVersionNotice), which reloads only when asked.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -18,6 +19,7 @@ import { useChatStore } from '@/stores/chat'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import { shortcutLabel } from '@/components/chat/panel'
 import AccountMenu from '@/components/sidebar/AccountMenu.vue'
+import NewVersionNotice from '@/components/NewVersionNotice.vue'
 import ActivityBar from '@/components/sidebar/ActivityBar.vue'
 import SideBar from '@/components/sidebar/SideBar.vue'
 import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
@@ -177,6 +179,8 @@ const pageTitle = computed(() => {
         </button>
       </el-badge>
     </el-container>
+    <!-- A newer build deployed since this tab loaded: said, never reloaded without asking. -->
+    <NewVersionNotice />
   </el-container>
 </template>
 

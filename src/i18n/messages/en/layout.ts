@@ -10,6 +10,12 @@ export default {
     button: 'Account: {name}',
     settings: 'Account settings',
   },
+  // A newer build deployed since this tab loaded the app (NewVersionNotice): load it, or later.
+  newVersion: {
+    available: 'A new version is available',
+    reload: 'Reload',
+    later: 'Later',
+  },
   // The rail along the window's right edge, with a button for each side panel (the chat's).
   panels: 'Side panels',
   // The side bar on the window's left edge: the activity bar, with a button for each view (on a phone, the
