@@ -38,9 +38,10 @@ function membership(courseId: string, ask: string) {
   } as never
 }
 
-async function mountAs(ask: string) {
+/** Signed in as someone who may ask agents in one course (or not), on a wide screen or a phone's. */
+async function mountAs(ask: string, opts: { phone?: boolean } = {}) {
   window.matchMedia = ((query: string) => ({
-    matches: false,
+    matches: !!opts.phone && query.includes('max-width'),
     media: query,
     addEventListener() {},
     removeEventListener() {},
@@ -78,13 +79,59 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('AppLayout’s chat button', () => {
-  it('opens and closes the panel beside the page, and says its shortcut', async () => {
+const unreadMemory = () =>
+  localStorage.setItem(
+    'aishiteru.chat.ada',
+    JSON.stringify({ since: '2026-01-01T00:00:00Z', seen: {}, pending: {}, course: null }),
+  )
+/** An answer from the course's agent the caller has not read. */
+function answered(chat: ReturnType<typeof useChatStore>) {
+  chat.note([
+    {
+      courseId: 'k1',
+      view: {
+        id: 'c1',
+        status: 'open',
+        state: 'answered',
+        created_at: '2026-09-26T11:00:00Z',
+        last_message_at: '2026-09-26T11:01:00Z',
+        last_author_member_id: 'tutor',
+        opener: { member_id: 'me-k1', display_name: 'Ada', kind: 'human' },
+        respondent: {
+          member_id: 'tutor',
+          display_name: 'Course tutor',
+          kind: 'agent',
+          role: 'assistant',
+          seat_status: 'active',
+          is_delegate_of_opener: false,
+          answer_level: 'autonomous',
+        },
+      },
+    },
+  ])
+}
+
+describe('AppLayout’s rail', () => {
+  it('runs along the right edge, a toolbar of the side panels', async () => {
+    const { w } = await mountAs('autonomous')
+    const rail = w.get('.app-body > .app-rail')
+    expect(rail.attributes('role')).toBe('toolbar')
+    expect(rail.attributes('aria-label')).toBe('Side panels')
+    expect(rail.attributes('aria-orientation')).toBe('vertical')
+    // The page first, then the rail: nothing after it.
+    expect(w.find('.app-body > .app-main + .app-rail').exists()).toBe(true)
+    expect(rail.element.nextElementSibling).toBeNull()
+  })
+
+  it('holds the chat’s button, which opens and closes the panel between the page and the rail, and says its shortcut', async () => {
     const { w, chat } = await mountAs('autonomous')
-    const button = w.find('#chat-panel-toggle')
+    const button = w.get('.app-rail #chat-panel-toggle')
+    expect(button.element.tagName).toBe('BUTTON')
     expect(button.attributes('aria-label')).toBe('Chat with agents')
     expect(button.attributes('aria-expanded')).toBe('false')
     expect(button.attributes('aria-controls')).toBe('chat-panel')
+    expect(button.attributes('aria-keyshortcuts')).toBe('Control+J Meta+J')
+    expect(button.classes()).not.toContain('is-active')
     const tips = w.findAllComponents({ name: 'ElTooltip' }).map((c) => c.props('content') as string | undefined)
     expect(tips).toContainEqual(expect.stringMatching(/^Chat with agents \((Ctrl\+J|⌘J)\)$/))
 
@@ -92,56 +139,122 @@ describe('AppLayout’s chat button', () => {
     await flushPromises()
     expect(chat.open).toBe(true)
     expect(button.attributes('aria-expanded')).toBe('true')
-    // Docked beside the page, in the same row.
-    expect(w.find('.app-body > .app-main + #chat-panel').exists()).toBe(true)
+    expect(button.classes()).toContain('is-active')
+    // Docked between the page and the rail, in the same row; the rail stays.
+    expect(w.find('.app-body > .app-main + #chat-panel + .app-rail').exists()).toBe(true)
 
     await button.trigger('click')
     await flushPromises()
     expect(w.find('#chat-panel').exists()).toBe(false)
+    expect(w.find('.app-body > .app-main + .app-rail').exists()).toBe(true)
+    expect(button.attributes('aria-expanded')).toBe('false')
   })
 
-  it('counts the answers not read yet', async () => {
-    localStorage.setItem(
-      'aishiteru.chat.ada',
-      JSON.stringify({ since: '2026-01-01T00:00:00Z', seen: {}, pending: {}, course: null }),
-    )
-    const { w, chat } = await mountAs('autonomous')
-    chat.note([
-      {
-        courseId: 'k1',
-        view: {
-          id: 'c1',
-          status: 'open',
-          state: 'answered',
-          created_at: '2026-09-26T11:00:00Z',
-          last_message_at: '2026-09-26T11:01:00Z',
-          last_author_member_id: 'tutor',
-          opener: { member_id: 'me-k1', display_name: 'Ada', kind: 'human' },
-          respondent: {
-            member_id: 'tutor',
-            display_name: 'Course tutor',
-            kind: 'agent',
-            role: 'assistant',
-            seat_status: 'active',
-            is_delegate_of_opener: false,
-            answer_level: 'autonomous',
-          },
-        },
-      },
-    ])
+  it('leaves Enter and Space to the chat’s button, which its tooltip would otherwise take', async () => {
+    const { w } = await mountAs('autonomous')
+    for (const [key, code] of [
+      ['Enter', 'Enter'],
+      [' ', 'Space'],
+    ]) {
+      const e = new KeyboardEvent('keydown', { key, code, bubbles: true, cancelable: true })
+      w.get('#chat-panel-toggle').element.dispatchEvent(e)
+      expect(e.defaultPrevented, key).toBe(false)
+    }
+  })
+
+  it('moves between its buttons with the arrow keys, Home and End', async () => {
+    const { w } = await mountAs('autonomous')
+    const button = w.get<HTMLButtonElement>('#chat-panel-toggle')
+    button.element.focus()
+    for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End']) {
+      const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+      button.element.dispatchEvent(e)
+      expect(e.defaultPrevented, key).toBe(true)
+      // One button, for now: it keeps focus.
+      expect(document.activeElement).toBe(button.element)
+    }
+    const other = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true })
+    button.element.dispatchEvent(other)
+    expect(other.defaultPrevented).toBe(false)
+  })
+
+  it('is where focus comes back to when the panel closes', async () => {
+    const { w } = await mountAs('autonomous')
+    await w.get('#chat-panel-toggle').trigger('click')
     await flushPromises()
-    expect(w.find('.app-chat-badge .el-badge__content').text()).toBe('1')
-    expect(w.find('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')
+    await w.get('.chat-panel__close').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.get('.app-rail #chat-panel-toggle').element)
   })
 
-  it('is not offered where the caller may ask in no course', async () => {
+  it('counts the answers not read yet on the chat’s button', async () => {
+    unreadMemory()
+    const { w, chat } = await mountAs('autonomous')
+    expect(w.find('.app-rail__badge .el-badge__content').exists()).toBe(false)
+    answered(chat)
+    await flushPromises()
+    expect(w.get('.app-rail__badge .el-badge__content').text()).toBe('1')
+    expect(w.get('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')
+  })
+
+  it('stays, without the chat’s button, where the caller may ask in no course', async () => {
     const { w } = await mountAs('denied')
+    expect(w.find('.app-rail').exists()).toBe(true)
     expect(w.find('#chat-panel-toggle').exists()).toBe(false)
   })
 })
 
+describe('the header', () => {
+  it('has no chat button: the chat is the rail’s', async () => {
+    const { w } = await mountAs('autonomous')
+    const header = w.get('.app-header')
+    expect(header.find('[aria-controls="chat-panel"]').exists()).toBe(false)
+    const names = header.findAll('button').map((b) => b.attributes('aria-label') ?? b.text())
+    expect(names).toEqual(['Language', 'Theme', expect.stringContaining('Ada')])
+  })
+})
+
+describe('on a phone', () => {
+  it('has no rail, and a floating chat button, which opens the sheet and is gone while it is open', async () => {
+    const { w, chat } = await mountAs('autonomous', { phone: true })
+    expect(w.find('.app-rail').exists()).toBe(false)
+    expect(w.get('.app-header').find('[aria-controls="chat-panel"]').exists()).toBe(false)
+    const fab = w.get('.app-chat-fab #chat-panel-toggle')
+    expect(fab.attributes('aria-label')).toBe('Chat with agents')
+    expect(fab.attributes('aria-haspopup')).toBe('dialog')
+    // The page leaves room below its last item for it.
+    expect(w.get('.app-main').classes()).toContain('has-chat-fab')
+
+    await fab.trigger('click')
+    await flushPromises()
+    expect(chat.open).toBe(true)
+    expect(w.get('#chat-panel').classes()).toContain('is-sheet')
+    expect(w.find('.app-chat-fab').exists()).toBe(false)
+
+    await w.get('.chat-panel__close').trigger('click')
+    await flushPromises()
+    expect(w.find('#chat-panel').exists()).toBe(false)
+    expect(document.activeElement).toBe(w.get('.app-chat-fab #chat-panel-toggle').element)
+  })
+
+  it('counts the answers not read yet on the floating button', async () => {
+    unreadMemory()
+    const { w, chat } = await mountAs('autonomous', { phone: true })
+    answered(chat)
+    await flushPromises()
+    expect(w.get('.app-chat-fab .el-badge__content').text()).toBe('1')
+    expect(w.get('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')
+  })
+
+  it('offers no floating button, nor room for one, where the caller may ask in no course', async () => {
+    const { w } = await mountAs('denied', { phone: true })
+    expect(w.find('.app-chat-fab').exists()).toBe(false)
+    expect(w.get('.app-main').classes()).not.toContain('has-chat-fab')
+  })
+})
+
 describe('the language button', () => {
-  it('shows the language in use as a mark, not the speech bubble the chat button has', async () => {
+  it('shows the language in use as a mark, not a speech bubble, which would read as the chat’s', async () => {
     const { w } = await mountAs('autonomous')
     const lang = w.get('button[aria-label="Language"]')
     expect(lang.text()).toBe('EN')

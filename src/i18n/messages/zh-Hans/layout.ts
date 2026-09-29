@@ -1,6 +1,8 @@
 export default {
   courses: '课程',
   menu: '菜单',
+  // The rail along the window's right edge, with a button for each side panel (the chat's).
+  panels: '侧边面板',
   // The tab's name on a page that does not exist (the router's catch-all).
   notFound: '找不到页面',
   // Labels Element Plus gives screen readers on tables (i18n/elementPlus.ts).

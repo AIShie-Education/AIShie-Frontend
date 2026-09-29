@@ -61,6 +61,16 @@
   --app-shadow-raised: 0 24px 48px -24px rgb(27 29 36 / 18%);
   --app-shadow-pop: 0 12px 32px -8px rgb(27 29 36 / 16%), 0 2px 6px rgb(27 29 36 / 6%);
 
+  /* Layers, lowest first. Element Plus lays its overlays over the page from
+     2000 up, one above another as each opens: a drawer (the phone's side
+     menu) and its dimmed layer, a dialog, a message box, a dropdown, a
+     tooltip. What the app floats itself stays under 2000, so that all of them
+     cover it: the header, the chat's floating button on a phone, and the
+     chat's sheet, which a confirmation or a list opened from it still covers. */
+  --app-z-header: 10;
+  --app-z-fab: 20;
+  --app-z-sheet: 1500;
+
   /* Type: IBM Plex Sans for text, Source Serif 4 for headings (styles/fonts.ts
      loads them), each followed by the system's fonts while they load and for
      what they do not cover. */

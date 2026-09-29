@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, courseTab, coursePath, demo, signIn, toast } from './support'
+import { call, chatButton, courseTab, coursePath, demo, signIn, toast } from './support'
 
 // Agents a person owns, told through the app: a student makes an agent and a
 // token for it, and asks to bring it into the course, where bringing in an
@@ -22,9 +22,9 @@ const TUTOR = `CS101 tutor ${STAMP}`
 let agentId = ''
 let agentToken = ''
 
-/** The chat panel, opened from the header's button: on a course page, it asks in that course. */
+/** The chat panel, opened from its button on the rail: on a course page, it asks in that course. */
 async function openChat(page: Page) {
-  await page.getByRole('button', { name: /^Chat with agents/ }).click()
+  await chatButton(page).click()
   const panel = page.locator('#chat-panel')
   await expect(panel).toBeVisible()
   await expect(panel.getByRole('heading', { name: 'Ask an agent' })).toBeVisible()

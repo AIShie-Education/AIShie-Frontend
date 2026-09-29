@@ -101,6 +101,24 @@ export function courseTab(page: Page, name: string | RegExp) {
   return page.getByRole('navigation', { name: 'Course sections' }).getByRole('link', { name })
 }
 
+/**
+ * The rail along the window's right edge, under the header, as an editor's
+ * activity bar: a button for each side panel (the chat's). A phone has none.
+ */
+export function rail(page: Page) {
+  return page.getByRole('toolbar', { name: 'Side panels' })
+}
+
+/** The chat's button, on the rail. */
+export function chatButton(page: Page) {
+  return rail(page).getByRole('button', { name: /^Chat with agents/ })
+}
+
+/** On a phone, the chat's button, floating at the bottom right while the chat's sheet is closed. */
+export function floatingChatButton(page: Page) {
+  return page.locator('.app-chat-fab').getByRole('button', { name: /^Chat with agents/ })
+}
+
 /** Picks an option from an Element Plus select, opened by clicking `trigger`. */
 export async function pickOption(page: Page, trigger: ReturnType<Page['locator']>, option: string | RegExp) {
   await trigger.click()

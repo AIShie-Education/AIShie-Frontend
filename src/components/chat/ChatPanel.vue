@@ -2,10 +2,12 @@
 // The chat, docked on the right of every signed-in page, as an editor's side
 // panel is: open, it takes its width from the page beside it; its left edge
 // is dragged (or moved with the arrow keys) to make it wider or narrower,
-// between PANEL_MIN and half the window. It is opened and closed from the
-// header's button and with Ctrl/⌘+J, and this browser remembers whether it
-// was open and how wide. On a phone (up to 899 px wide) it is a sheet over
-// the whole screen instead, with a button that closes it.
+// between PANEL_MIN and half the window. It is opened and closed from its
+// button on the rail along the window's right edge (AppLayout), between
+// which and the page it is docked, and with Ctrl/⌘+J; this browser remembers
+// whether it was open and how wide. On a phone (up to 899 px wide) it is a
+// sheet over the whole screen instead, opened from a button floating at the
+// bottom right, with a button that closes it.
 //
 // On top, the course asked in (one of the caller's courses where they may ask:
 // the page's own on a course page, else the last one used), a new
@@ -15,7 +17,7 @@
 // the same pane as ever.
 //
 // Mounted once, open or not: it keeps watching the conversations that wait
-// for an answer, so that one answered is counted on the header's button.
+// for an answer, so that one answered is counted on its button.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -102,6 +104,7 @@ async function focusPanel() {
     el.querySelector<HTMLElement>('button')
   ;(first ?? el).focus()
 }
+/** Back to the button that opens it: the rail's, or on a phone the floating one, shown again once it is closed. */
 function focusToggle() {
   document.getElementById('chat-panel-toggle')?.focus()
 }
@@ -388,7 +391,7 @@ usePolling(pollPending, { intervalMs: PENDING_POLL_MS, enabled: () => chat.pendi
 .chat-panel.is-sheet {
   position: fixed;
   inset: 0;
-  z-index: 1500;
+  z-index: var(--app-z-sheet);
   width: auto;
   height: 100vh;
   height: 100dvh;
