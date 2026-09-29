@@ -16,12 +16,14 @@ import {
 } from './support'
 
 // The chat is a panel beside every page, docked on the right as an editor's
-// side panel is, opened from its button on the rail along the window's right
-// edge (never from the header), and a sheet over the whole screen on a phone,
-// opened from a button floating at the bottom right. Told through a course
+// side panel is, 380 px wide and never resized, opened from its button on the
+// rail along the window's right edge (never from the header); in a window
+// narrower than 1200 px it floats over the page against the rail instead; and
+// on a phone it is a sheet over the whole screen, opened from a button
+// floating at the bottom right. Told through a course
 // agent made for this run, which its runtime says answers in the site, and
 // Yuki, a student, who asks it. The panel stays open, on what it shows, while
-// she moves between pages, and as wide as she left it; an answer that comes
+// she moves between pages, and after a reload; an answer that comes
 // while it is closed is counted on its button. What she has read is Core's
 // (conversation.mark_read), so the count follows her from browser to browser.
 
@@ -224,8 +226,8 @@ test.describe.serial('the chat panel', () => {
     await expect(panel).toBeVisible()
     await expect(chatButton(page)).toHaveAttribute('aria-expanded', 'true')
 
-    // Docked on the right, beside the rail: the page is beside it, not under it.
-    await expectDocked(page, 400)
+    // Docked on the right, beside the rail, 380 px wide: the page is beside it, not under it.
+    await expectDocked(page, 380)
 
     // On a course page it asks in that course, and offers its agents.
     await expect(panel.locator('.chat-panel__course')).toContainText('CS101')
@@ -271,16 +273,12 @@ test.describe.serial('the chat panel', () => {
     await item.click()
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
 
-    // Wider by its edge, from the keyboard; as wide, and open, after a reload.
-    const edge = panel.getByRole('separator', { name: 'Resize the chat panel' })
-    await edge.focus()
-    await page.keyboard.press('ArrowLeft')
-    await page.keyboard.press('ArrowLeft')
-    await expect(edge).toHaveAttribute('aria-valuenow', '432')
+    // Nothing resizes it: no edge to drag, and nothing to take the keys that once did. Open, and as wide, after a reload.
+    await expect(panel.getByRole('separator')).toHaveCount(0)
+    await expect(page.locator('.chat-panel__handle')).toHaveCount(0)
     await page.reload()
     await expect(panelOf(page)).toBeVisible()
-    await expect(panelOf(page).getByRole('separator')).toHaveAttribute('aria-valuenow', '432')
-    expect(Math.round((await panelOf(page).boundingBox())!.width)).toBe(432)
+    await expectDocked(page, 380)
 
     // Ctrl+J closes it, and opens it again.
     await page.locator('.app-main').click({ position: { x: 5, y: 5 } })
@@ -288,6 +286,56 @@ test.describe.serial('the chat panel', () => {
     await expect(panelOf(page)).toHaveCount(0)
     await page.keyboard.press('Control+j')
     await expect(panelOf(page)).toBeVisible()
+  })
+
+  test('floats over the page, against the rail and with a shadow, in a window narrower than 1200 px', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.yuki)
+    for (const width of [1100, 960]) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(coursePath())
+      await expect(page.locator('.course-head')).toBeVisible()
+      const before = (await page.locator('.app-main').boundingBox())!
+      await chatButton(page).click()
+      const panel = panelOf(page)
+      await expect(panel).toBeVisible()
+      await expect(panel).toHaveClass(/is-floating/)
+      const box = (await panel.boundingBox())!
+      const bar = (await rail(page).boundingBox())!
+      // Against the rail, from under the header to the bottom, 380 px wide.
+      expect(Math.round(box.x + box.width), `${width}: the panel's right edge`).toBe(Math.round(bar.x))
+      expect(Math.round(box.width)).toBe(380)
+      expect(Math.round(box.y)).toBe(56)
+      expect(Math.round(box.y + box.height)).toBe(800)
+      // Over the page, which keeps its width and goes on under the panel.
+      const after = (await page.locator('.app-main').boundingBox())!
+      expect(Math.round(after.width)).toBe(Math.round(before.width))
+      expect(after.x + after.width).toBeGreaterThan(box.x + 1)
+      const look = await panel.evaluate((el) => {
+        const cs = getComputedStyle(el)
+        return { position: cs.position, shadow: cs.boxShadow }
+      })
+      expect(look.position).toBe('fixed')
+      expect(look.shadow).not.toBe('none')
+      await expect(panel.getByRole('separator')).toHaveCount(0)
+      const win = await inner(page)
+      expect(win.scrollWidth).toBeLessThanOrEqual(win.width)
+      await expectRail(page, `${width} px, with the panel open`)
+      if (width === 1100) {
+        await page.mouse.move(0, 400)
+        await photograph(page, 'chat-panel-floating')
+      }
+      await chatButton(page).click()
+      await expect(panelOf(page)).toHaveCount(0)
+    }
+    // At 1200 px it is docked again, and the page gives it its width.
+    await page.setViewportSize({ width: 1200, height: 800 })
+    await chatButton(page).click()
+    await expect(panelOf(page)).not.toHaveClass(/is-floating/)
+    await expectDocked(page, 380)
+    await chatButton(page).click()
   })
 
   test('counts an answer that came while it was closed on its button, until it is read', async ({ page }) => {

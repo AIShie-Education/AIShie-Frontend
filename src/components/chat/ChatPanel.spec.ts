@@ -117,19 +117,22 @@ function membership(
   } as never
 }
 
-/** A phone's width or not: whether the panel is a sheet. */
-function screen(phone: boolean) {
-  window.matchMedia = ((query: string) => ({
-    matches: phone && query.includes('max-width'),
-    media: query,
-    addEventListener() {},
-    removeEventListener() {},
-  })) as unknown as typeof window.matchMedia
+/** A window this wide, as media queries of max-width see it: a phone's is a sheet; one under 1200 px, a floating panel. */
+function screen(width: number) {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+  window.matchMedia = ((query: string) => {
+    const max = /max-width:\s*(\d+)px/.exec(query)
+    return {
+      matches: !!max && width <= Number(max[1]),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    }
+  }) as unknown as typeof window.matchMedia
 }
 
 async function setup(opts: { at?: string; phone?: boolean; width?: number } = {}) {
-  screen(!!opts.phone)
-  Object.defineProperty(window, 'innerWidth', { configurable: true, value: opts.width ?? 1400 })
+  screen(opts.width ?? (opts.phone ? 390 : 1400))
   const pinia = createPinia()
   setActivePinia(pinia)
   const session = useSessionStore()
@@ -165,11 +168,6 @@ function press(key: string, init: KeyboardEventInit = {}) {
   window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }))
 }
 const frame = () => JSON.parse(localStorage.getItem('aishiteru.chatPanel') ?? 'null')
-/** A pointer event as a mouse makes it (jsdom has no PointerEvent). */
-async function pointer(el: { element: Element }, type: string, clientX: number) {
-  el.element.dispatchEvent(new MouseEvent(type, { clientX, button: 0, bubbles: true, cancelable: true }))
-  await flushPromises()
-}
 
 /** One of Ada's conversations as me.conversations lists it. */
 function myConversation(id: string, unread: boolean): MyConversation {
@@ -250,56 +248,68 @@ describe('ChatPanel', () => {
     expect(document.activeElement).toBe(toggle)
   })
 
-  it('opens as this browser left it, open and as wide', async () => {
+  it('opens as this browser left it, open, and as wide as ever, whatever width an earlier version kept', async () => {
     localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 480 }))
-    const { w } = await setup()
+    const { w, chat } = await setup()
     const panel = w.find('#chat-panel')
     expect(panel.exists()).toBe(true)
-    expect(panel.attributes('style')).toContain('width: 480px')
-    expect(w.find('[role="separator"]').attributes('aria-valuenow')).toBe('480')
+    expect(panel.attributes('style')).toBe('width: 380px;')
+    chat.setOpen(false)
+    await flushPromises()
+    expect(frame()).toEqual({ open: false })
   })
 
-  it('is docked beside the page, and resized by its edge within its bounds, with the keys or by dragging', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
-    const { w, chat } = await setup({ width: 1400 })
-    const edge = w.find('[role="separator"]')
-    expect(w.find('#chat-panel').classes()).not.toContain('is-sheet')
-    expect(w.find('#chat-panel').attributes('role')).toBe('complementary')
-    expect(edge.attributes('aria-orientation')).toBe('vertical')
-    expect(edge.attributes('aria-valuemin')).toBe('320')
-    expect(edge.attributes('aria-valuemax')).toBe('700')
-    expect(edge.attributes('tabindex')).toBe('0')
+  it('is docked beside the page, 380 px wide, with nothing to resize it by', async () => {
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    const { w } = await setup({ width: 1400 })
+    const panel = w.find('#chat-panel')
+    expect(panel.classes()).not.toContain('is-sheet')
+    expect(panel.classes()).not.toContain('is-floating')
+    expect(panel.attributes('role')).toBe('complementary')
+    expect(panel.attributes('style')).toBe('width: 380px;')
+    expect(w.find('[role="separator"]').exists()).toBe(false)
+    expect(w.find('.chat-panel__handle').exists()).toBe(false)
+    // Keys that once resized it do nothing to it.
+    await panel.trigger('keydown', { key: 'ArrowLeft' })
+    await panel.trigger('keydown', { key: 'End' })
+    await panel.trigger('dblclick')
+    expect(panel.attributes('style')).toBe('width: 380px;')
+    expect(frame()).toEqual({ open: true })
+    // From 1200 px up.
+    w.unmount()
+    const edge = await setup({ width: 1200 })
+    expect(edge.w.find('#chat-panel').classes()).not.toContain('is-floating')
+  })
 
-    await edge.trigger('keydown', { key: 'ArrowLeft' })
-    expect(edge.attributes('aria-valuenow')).toBe('416')
-    await edge.trigger('keydown', { key: 'ArrowRight', shiftKey: true })
-    expect(edge.attributes('aria-valuenow')).toBe('352')
-    await edge.trigger('keydown', { key: 'End' })
-    expect(edge.attributes('aria-valuenow')).toBe('700')
-    await edge.trigger('keydown', { key: 'Home' })
-    expect(edge.attributes('aria-valuenow')).toBe('320')
-    await edge.trigger('keydown', { key: 'ArrowRight' })
-    expect(edge.attributes('aria-valuenow')).toBe('320')
-    expect(frame()).toEqual({ open: true, width: 320 })
+  it('floats over the page, against the rail, in a window narrower than 1200 px, and is a sheet on a phone', async () => {
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    const narrow = await setup({ width: 1199 })
+    const panel = narrow.w.find('#chat-panel')
+    expect(panel.classes()).toContain('is-floating')
+    expect(panel.classes()).not.toContain('is-sheet')
+    expect(panel.attributes('role')).toBe('complementary')
+    expect(panel.attributes('aria-modal')).toBeUndefined()
+    expect(panel.attributes('style')).toBe('width: 380px;')
+    expect(narrow.w.find('[role="separator"]').exists()).toBe(false)
+    // It opens and closes as ever.
+    press('j', { ctrlKey: true })
+    await flushPromises()
+    expect(narrow.w.find('#chat-panel').exists()).toBe(false)
+    press('j', { ctrlKey: true })
+    await flushPromises()
+    expect(narrow.w.find('#chat-panel').classes()).toContain('is-floating')
+    narrow.w.unmount()
 
-    // Dragged far past half the window: half the window.
-    await pointer(edge, 'pointerdown', 1000)
-    await pointer(edge, 'pointermove', 100)
-    expect(edge.attributes('aria-valuenow')).toBe('700')
-    expect(document.body.classList.contains('is-resizing-chat')).toBe(true)
-    await pointer(edge, 'pointerup', 100)
-    expect(chat.width).toBe(700)
-    expect(frame()).toEqual({ open: true, width: 700 })
-    expect(document.body.classList.contains('is-resizing-chat')).toBe(false)
-    // And narrower than the least: the least.
-    await pointer(edge, 'pointerdown', 700)
-    await pointer(edge, 'pointermove', 1390)
-    await pointer(edge, 'pointerup', 1390)
-    expect(chat.width).toBe(320)
+    const floating = await setup({ width: 900 })
+    expect(floating.w.find('#chat-panel').classes()).toContain('is-floating')
+    floating.w.unmount()
+    const phone = await setup({ width: 899 })
+    expect(phone.w.find('#chat-panel').classes()).toEqual(expect.arrayContaining(['chat-panel', 'is-sheet']))
+    expect(phone.w.find('#chat-panel').classes()).not.toContain('is-floating')
   })
 
   it('asks in the course of the page it is on, and elsewhere in the course last used', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
     // Kept in this browser for Ada, as it is: not what she has read, which Core keeps.
     localStorage.setItem('aishiteru.chatCourse.ada', 'k2')
     const home = await setup({ at: '/' })
@@ -323,7 +333,7 @@ describe('ChatPanel', () => {
   })
 
   it('offers the course’s agents, and writes to the one chosen', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
     const { w, chat } = await setup({ at: '/courses/k1' })
     const row = w.find('button.resp-row')
     expect(row.text()).toContain('Course tutor')
@@ -340,7 +350,7 @@ describe('ChatPanel', () => {
   })
 
   it('shows the history and back, from its toggle', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
     const { w, chat } = await setup({ at: '/courses/k1' })
     const toggle = w.findAll('.chat-panel__icon').find((b) => b.attributes('aria-label') === 'History')!
     expect(toggle.attributes('aria-pressed')).toBe('false')
@@ -358,7 +368,7 @@ describe('ChatPanel', () => {
   })
 
   it('is a sheet over the whole screen on a phone, which closes with its button or Escape', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
     const { w, chat, router } = await setup({ phone: true, width: 390 })
     const panel = w.find('#chat-panel')
     expect(panel.classes()).toContain('is-sheet')
@@ -435,7 +445,7 @@ describe('ChatPanel', () => {
   })
 
   it('says so where the caller may ask in no course', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
     const { w, chat } = await setup()
     useSessionStore().memberships = [membership('k3', 'CS303', { conversation_ask: 'denied' })]
     await flushPromises()

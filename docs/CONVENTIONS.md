@@ -235,10 +235,14 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
   agent. Its button is on the rail along the window's right edge, as an editor's activity bar is,
   where any other side panel's would go too (the header holds only the language, the theme and the
-  account); the panel opens between the page and the rail, and Ctrl/⌘+J opens and closes it. On a
-  phone there is no rail: the button floats at the bottom right, the page keeps room below its last
-  item for it, and it stays under everything Element Plus lays over the page (the layers are in
-  `styles/tokens.css`). `useChatStore()` (`@/stores/chat`) opens it on a conversation
+  account); the panel opens between the page and the rail, and Ctrl/⌘+J opens and closes it. It is
+  380 px wide (`PANEL_WIDTH`), and nobody resizes it; this browser remembers only whether it is
+  open. In a window narrower than 1200 px (`PANEL_DOCKED_MIN_WIDTH`), where docking it would leave
+  the page too little beside the activity bar and the side bar, it floats over the page instead,
+  against the rail and under the header, with a shadow cast to the left (`--app-z-panel`,
+  `--app-shadow-side`), and the page keeps its width. On a phone there is no rail: the button floats at the bottom right, the page
+  keeps room below its last item for it, and it stays under everything Element Plus lays over the
+  page (the layers are in `styles/tokens.css`). `useChatStore()` (`@/stores/chat`) opens it on a conversation
   (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a link to a
   conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`, the
   address the course's conversations page once had, which opens the panel on it and leaves the page

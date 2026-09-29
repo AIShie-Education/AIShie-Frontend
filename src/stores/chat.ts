@@ -1,5 +1,5 @@
-// The chat panel beside every signed-in page: whether it is open and how wide
-// (this browser's, for everyone who uses it), and what it shows: the course
+// The chat panel beside every signed-in page: whether it is open (this
+// browser's, for everyone who uses it), and what it shows: the course
 // the caller asks in, a new conversation with one of its agents, the
 // caller's conversations across their courses, or one of them. Every
 // conversation in it is in a course and with an agent.
@@ -73,11 +73,9 @@ function emptyHistory(): HistoryList {
 export const useChatStore = defineStore('chat', () => {
   const session = useSessionStore()
 
-  // --- The frame: open, and how wide (this browser's) ----------------------------
-  const frame = loadFrame()
-  const open = ref(frame.open)
-  const width = ref(frame.width)
-  watch([open, width], () => saveFrame({ open: open.value, width: width.value }))
+  // --- The frame: open or not (this browser's) ------------------------------------
+  const open = ref(loadFrame().open)
+  watch(open, () => saveFrame({ open: open.value }))
 
   function setOpen(v: boolean) {
     open.value = v
@@ -355,7 +353,6 @@ export const useChatStore = defineStore('chat', () => {
 
   return {
     open,
-    width,
     setOpen,
     toggle,
     courses,

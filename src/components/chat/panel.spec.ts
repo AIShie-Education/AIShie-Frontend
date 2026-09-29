@@ -1,59 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  clampWidth,
-  isMac,
-  isPanelShortcut,
-  loadFrame,
-  PANEL_DEFAULT,
-  PANEL_MIN,
-  panelMax,
-  saveFrame,
-  shortcutLabel,
-  widthForKey,
-} from './panel'
+import { isMac, isPanelShortcut, loadFrame, saveFrame, shortcutLabel } from './panel'
 
 beforeEach(() => localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 
-describe('the panel’s width', () => {
-  it('is never narrower than the least, nor wider than half the window', () => {
-    expect(clampWidth(100, 1600)).toBe(PANEL_MIN)
-    expect(clampWidth(500, 1600)).toBe(500)
-    expect(clampWidth(1200, 1600)).toBe(800)
-    expect(clampWidth(700, 1000)).toBe(500)
-    expect(clampWidth(412.6, 1600)).toBe(413)
-    expect(clampWidth(Number.NaN, 1600)).toBe(PANEL_DEFAULT)
-    // A window too narrow for half of it to hold the least: the least.
-    expect(panelMax(500)).toBe(PANEL_MIN)
-    expect(clampWidth(900, 500)).toBe(PANEL_MIN)
-  })
-
-  it('moves with the arrow keys on its edge, and goes to either end with Home and End', () => {
-    expect(widthForKey('ArrowLeft', 400, 1600)).toBe(416)
-    expect(widthForKey('ArrowRight', 400, 1600)).toBe(384)
-    expect(widthForKey('ArrowLeft', 400, 1600, { shift: true })).toBe(464)
-    expect(widthForKey('ArrowRight', 330, 1600)).toBe(PANEL_MIN)
-    expect(widthForKey('ArrowLeft', 795, 1600)).toBe(800)
-    expect(widthForKey('Home', 600, 1600)).toBe(PANEL_MIN)
-    expect(widthForKey('End', 400, 1600)).toBe(800)
-    expect(widthForKey('Enter', 400, 1600)).toBeNull()
-    expect(widthForKey('a', 400, 1600)).toBeNull()
-  })
-})
-
 describe('what this browser remembers of it', () => {
-  it('keeps whether it is open and how wide', () => {
-    expect(loadFrame()).toEqual({ open: false, width: PANEL_DEFAULT })
-    saveFrame({ open: true, width: 512.4 })
-    expect(JSON.parse(localStorage.getItem('aishiteru.chatPanel')!)).toEqual({ open: true, width: 512 })
-    expect(loadFrame()).toEqual({ open: true, width: 512 })
+  it('keeps whether it is open, and nothing of its width, which is fixed', () => {
+    expect(loadFrame()).toEqual({ open: false })
+    saveFrame({ open: true })
+    expect(JSON.parse(localStorage.getItem('aishiteru.chatPanel')!)).toEqual({ open: true })
+    expect(loadFrame()).toEqual({ open: true })
+  })
+
+  it('reads no width an earlier version kept, and drops it when it next keeps the frame', () => {
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 512 }))
+    expect(loadFrame()).toEqual({ open: true })
+    saveFrame({ open: false })
+    expect(JSON.parse(localStorage.getItem('aishiteru.chatPanel')!)).toEqual({ open: false })
   })
 
   it('starts as new from anything it cannot read', () => {
     localStorage.setItem('aishiteru.chatPanel', '{not json')
-    expect(loadFrame()).toEqual({ open: false, width: PANEL_DEFAULT })
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: 'yes', width: 'wide' }))
-    expect(loadFrame()).toEqual({ open: false, width: PANEL_DEFAULT })
+    expect(loadFrame()).toEqual({ open: false })
+    localStorage.setItem('aishiteru.chatPanel', 'null')
+    expect(loadFrame()).toEqual({ open: false })
+    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: 'yes' }))
+    expect(loadFrame()).toEqual({ open: false })
   })
 
   it('does without storage where the browser refuses it', () => {
@@ -63,8 +35,8 @@ describe('what this browser remembers of it', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('denied')
     })
-    expect(() => saveFrame({ open: true, width: 450 })).not.toThrow()
-    expect(loadFrame()).toEqual({ open: false, width: PANEL_DEFAULT })
+    expect(() => saveFrame({ open: true })).not.toThrow()
+    expect(loadFrame()).toEqual({ open: false })
   })
 })
 
