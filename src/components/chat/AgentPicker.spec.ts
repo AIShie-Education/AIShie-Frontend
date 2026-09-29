@@ -26,9 +26,8 @@ vi.mock('@/api/http', async (orig) => {
 })
 
 const { i18n, setLocale } = await import('@/i18n')
-const { useCourseStore } = await import('@/stores/course')
 const { useSessionStore } = await import('@/stores/session')
-const { default: RespondentList } = await import('./RespondentList.vue')
+const { default: AgentPicker } = await import('./AgentPicker.vue')
 
 const Passthrough = (name: string) =>
   defineComponent({
@@ -92,10 +91,21 @@ function helper(siteChat: boolean): { summary: AgentSummary; full: AgentFull } {
 beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
-  const course = useCourseStore()
-  course.courseId = 'k1'
-  course.membership = { member_id: 'student', course_id: 'k1', role: 'student' } as never
-  useSessionStore().me = { id: 'me', kind: 'human', display_name: 'Chan Tai Man' } as never
+  const session = useSessionStore()
+  session.me = { id: 'me', kind: 'human', display_name: 'Chan Tai Man' } as never
+  session.memberships = [
+    {
+      member_id: 'student',
+      course_id: 'k1',
+      code: 'CS101',
+      section: '',
+      title: 'Programming',
+      role: 'student',
+      status: 'active',
+      course_status: 'active',
+      perms: { conversation_ask: 'autonomous' },
+    } as never,
+  ]
   reads.length = 0
   respondents = [tutor]
   const h = helper(false)
@@ -104,9 +114,9 @@ beforeEach(() => {
 })
 enableAutoUnmount(afterEach)
 
-describe('RespondentList', () => {
-  it('offers whom Core lists, and lists the caller’s own agent operated from outside with no way to ask it', async () => {
-    const w = mount(RespondentList, { props: { courseId: 'k1', enabled: true }, global })
+describe('AgentPicker', () => {
+  it('offers the agents Core lists, and lists the caller’s own agent operated from outside with no way to ask it', async () => {
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     const offered = w.findAll('button.resp-row')
     expect(offered.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutor'])
@@ -122,7 +132,48 @@ describe('RespondentList', () => {
     )
     expect(row.text()).toContain('When AIshie’s runtime hosts it, it takes conversations on the site by itself.')
     await offered[0]!.trigger('click')
-    expect(w.emitted('start')?.[0]?.[0]).toMatchObject({ member_id: 'tutor' })
+    expect(w.emitted('pick')?.[0]?.[0]).toMatchObject({ member_id: 'tutor' })
+  })
+
+  it('never offers a person, though Core lists one who answers questions', async () => {
+    const person: Respondent = {
+      member_id: 'ta',
+      display_name: 'Ms Wong',
+      kind: 'human',
+      role: 'ta',
+      is_my_delegate: false,
+      answers_course: false,
+      answer_level: 'autonomous',
+    }
+    respondents = [person, tutor]
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    expect(w.findAll('button.resp-row').map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutor'])
+    expect(w.text()).not.toContain('Ms Wong')
+
+    // Only a person: nobody to ask.
+    respondents = [person]
+    const none = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    expect(none.findAll('button.resp-row')).toHaveLength(0)
+    expect(none.text()).toContain('No agent here answers your questions yet.')
+  })
+
+  it('says what each agent is to the caller, and whether it is running', async () => {
+    respondents = [
+      { ...tutor, last_seen_at: null },
+      { ...tutor, member_id: 'mine', display_name: 'My helper', is_my_delegate: true, answers_course: false },
+    ]
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    const rows = w.findAll('button.resp-row')
+    expect(rows.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutor', 'My helper'])
+    expect(rows[0]!.text()).toContain('Course agent')
+    expect(rows[0]!.text()).toContain('Never connected')
+    expect(rows[0]!.text()).toContain('It answers other members too')
+    expect(rows[1]!.text()).toContain('Personal assistant')
+    expect(rows[1]!.text()).toContain('Your agent')
+    expect(rows[1]!.text()).not.toContain('It answers other members too')
   })
 
   it('lists no agent as operated from outside once it takes conversations in the site', async () => {
@@ -130,7 +181,7 @@ describe('RespondentList', () => {
     agents = [h.summary]
     agentsById = { helper: h.full }
     respondents = [tutor, { ...tutor, member_id: 'helper-seat', display_name: 'My helper', is_my_delegate: true }]
-    const w = mount(RespondentList, { props: { courseId: 'k1', enabled: true }, global })
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     expect(w.findAll('button.resp-row')).toHaveLength(2)
     expect(w.find('.resp-row.is-elsewhere').exists()).toBe(false)
@@ -141,9 +192,9 @@ describe('RespondentList', () => {
   it('says nobody may be asked, and still why its own agent is not among them', async () => {
     respondents = []
     setLocale('zh-Hant')
-    const w = mount(RespondentList, { props: { courseId: 'k1', enabled: true }, global })
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
-    expect(w.find('.resp-list__none').text()).toBe('這裡暫時沒有你可以提問的對象。')
+    expect(w.find('.resp-list__none').text()).toBe('這裡暫時沒有可以回答你問題的代理。')
     expect(w.find('.resp-row.is-elsewhere').text()).toContain(
       '這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。',
     )
@@ -152,7 +203,7 @@ describe('RespondentList', () => {
 
   it('asks nothing of agents for an agent signed in', async () => {
     useSessionStore().me = { id: 'bot', kind: 'agent', display_name: 'Bot' } as never
-    const w = mount(RespondentList, { props: { courseId: 'k1', enabled: true }, global })
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     expect(reads).toEqual(['conversation.respondents'])
     expect(w.find('.resp-row.is-elsewhere').exists()).toBe(false)

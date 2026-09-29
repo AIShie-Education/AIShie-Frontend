@@ -75,7 +75,7 @@ async function mountAs(platformRole: string | null, administers: boolean) {
   const w = mount(CourseLayout, {
     props: { courseId: COURSE },
     attachTo: document.body,
-    global: { plugins: [pinia, router, i18n, ElementPlus], components: icons, stubs: { ChatLauncher: true } },
+    global: { plugins: [pinia, router, i18n, ElementPlus], components: icons },
   })
   await flushPromises()
   return w

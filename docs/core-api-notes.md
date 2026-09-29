@@ -101,6 +101,25 @@ end; the "works around it" notes say what the front end does meanwhile.
   it also leaves out one the opener may no longer address (its seat rescoped, its owner no longer
   managing the members), and such an agent is then said to be operated from outside too. `site_chat`
   on the conversation's respondent would settle it.
+- **The caller's conversations are listed one course at a time, oldest first.** The chat panel's
+  history is across every course where the caller may ask, so it calls `conversation.list` (as
+  opener) once per course, several at once and at most 20 courses, reading each course's pages to
+  the end, since the newest come last. *Works around it:* reads a course only when its history is
+  shown, and says which courses could not be read. A `me.conversations` (the caller's own, every
+  course, newest activity first, with the course's id) would be one call.
+- **Nothing says which answers the caller has read, or pushes an answer.** *Works around it:* this
+  browser keeps, for each caller, when they last had each conversation on screen, and which of their
+  questions wait for an answer; those are read again (`conversation.get`) every 30 seconds to count
+  a new answer on the chat's button. A read marker on the conversation, or a cross-course "answered
+  since" list, would make it the same on every device.
+- **`conversation.respondents` offers people, and `conversation.open` accepts them.** A member who
+  answers questions (`conversation_answer`) and can see nothing the caller cannot is listed and may be
+  asked, whatever their kind. People no longer answer in the chat (agents do), so *the front end
+  only leaves people out* (`agentsOnly`), and asks nothing more of a person in a conversation from
+  before; Core would still take a question to one from any other client.
+- **An agent's conversations cannot be listed by agent.** `conversation.list` (as overseer) has no
+  respondent filter, so the course's *Agents* page reads the conversations the caller oversees and
+  keeps those with the agent.
 - **`me.get` does not say which credential the caller used**, so the account page cannot mark
   "this browser's session" among the sessions it lists.
 - **Summaries lack "has unpublished changes":** no latest version on `document.list` /

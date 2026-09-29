@@ -1,39 +1,40 @@
-// Conversations with the course's agents and one's own (the chat launcher and /courses/:courseId/conversations).
+// The chat with the courses' agents: the panel beside every page, and a conversation in it.
 export default {
-  title: 'Conversations',
-  nothingHere: 'You neither ask nor answer questions in this course.',
-  page: {
-    subtitle: 'Ask the course’s agents and your own; answers come back here.',
-    pick: 'Choose a conversation, or someone to ask.',
-    all: 'All conversations',
+  panel: {
+    title: 'Chat',
+    toggle: 'Chat with agents',
+    toggleUnread: 'Chat with agents: {n} unread',
+    toggleTip: 'Chat with agents ({key})',
+    course: 'Course',
+    new: 'New chat',
+    newTip: 'New conversation',
+    history: 'History',
+    close: 'Close the chat',
+    resize: 'Resize the chat panel',
+    backToHistory: 'Back to the history',
+    backToAgents: 'Back to the agents',
+    pickTitle: 'Ask an agent',
+    pickHint: 'The agents you can ask in {course}: the course’s own, and your personal assistant.',
+    noCourses: 'None of your courses lets you ask agents questions.',
   },
-  launcher: {
-    open: 'Ask a question',
-    back: 'Back to the list',
-    fullPage: 'Open as a page',
-  },
-  tabs: {
-    ask: 'Ask',
-    answer: 'Addressed to me',
-    oversee: 'Oversight',
+  history: {
+    title: 'Your conversations',
+    scope: 'Which courses',
+    thisCourse: 'This course',
+    allCourses: 'All courses',
+    empty: 'You have not asked an agent anything in this course yet.',
+    emptyAll: 'You have not asked an agent anything yet.',
+    untitled: 'Untitled',
+    unread: 'New answer',
+    failed: 'Could not read your conversations in {courses}.',
+    leftOut: 'Showing your conversations in {n} of your {total} courses. Choose a course to see its own.',
+    truncated: 'Your newest conversations in {courses} may be missing: there are too many to read.',
   },
   respondents: {
-    title: 'Whom you can ask',
-    hint: 'Agents and people who can see nothing you cannot, and your own agents.',
-    empty: 'Nobody here answers questions you may ask yet.',
+    empty: 'No agent here answers your questions yet.',
     offlineHint: 'Nothing seems to be running this agent now: an answer may take a while.',
     sharedHint: 'It answers other members too, holds what each one writes, and may repeat it to them.',
     agentPage: 'Go to its page',
-  },
-  list: {
-    mine: 'Your conversations',
-    respondentHint: 'Questions people have asked you. A red dot marks one waiting for your answer.',
-    overseerHint:
-      'Conversations started by the members you decide actions for. You can read them and withdraw a message; you cannot write in them.',
-    emptyOpener: 'You have not started a conversation here yet.',
-    emptyRespondent: 'Nobody has asked you anything here yet.',
-    emptyOverseer: 'No conversations to oversee.',
-    waitsForYou: 'Waiting for your answer',
   },
   between: '{opener} → {respondent}',
   messagesLabel: 'Messages',
@@ -61,10 +62,10 @@ export default {
     waiting: '{name} has your question.',
     waitingApproval: 'Each answer waits for someone’s approval before you see it.',
     answerPending: 'An answer is waiting for approval.',
-    yourAnswerPending: 'Your answer is waiting for approval. You can write again once it is decided.',
-    yourTurn: '{name} is waiting for your answer.',
     start: 'Ask {name} anything about the course.',
     overseeing: 'You are reading this as course staff.',
+    readOnly: 'Agents answer questions in the chat now: you can read this conversation.',
+    person: '{name} is a person, and people no longer answer in the chat. This conversation stays readable.',
   },
   // Why an answer may not come.
   availability: {
@@ -76,9 +77,6 @@ export default {
   },
   blocked: {
     archived: 'This course is archived: nothing more can be written.',
-    overseer: 'Only the two taking part write here.',
-    nothingToAnswer: 'Nothing has been asked yet.',
-    answerPending: 'Your answer is waiting for approval.',
   },
   closed: {
     title: 'This conversation is closed.',
@@ -89,19 +87,15 @@ export default {
   composer: {
     label: 'Your message',
     askPlaceholder: 'Ask {name}…',
-    answerPlaceholder: 'Answer {name}…',
     send: 'Send',
     hint: 'Enter to send, Shift+Enter for a new line',
     hintTouch: 'Tap the button to send',
     count: '{n} / {max} characters',
   },
-  // Who can read a conversation (Core's visible_to).
   conflict: {
-    moved_on: 'They wrote again before your answer went in. Their newest message is shown now: answer that one.',
-    already_answered: 'That message has been answered already, so your answer was not posted.',
-    answer_pending: 'An answer of yours to that message is waiting for approval already.',
     closed: 'This conversation is closed, so nothing more can be written in it.',
   },
+  // Who can read a conversation (Core's visible_to).
   visibleTo: {
     button: 'Who can read this',
     title: 'Who can read this conversation',
@@ -127,8 +121,6 @@ export default {
     title: 'Close this conversation?',
     bodyOpener:
       'Nothing more can be written in it; it stays readable. Anything you give as a reason is shown to the other participant.',
-    bodyRespondent:
-      'Nothing more can be written in it, and {name} will have to start a new one. Anything you give as a reason is shown to them.',
     confirm: 'Close conversation',
     done: 'Conversation closed',
   },

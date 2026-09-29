@@ -1,38 +1,40 @@
-// Conversations with the course's agents and one's own (the chat launcher and /courses/:courseId/conversations).
+// 與課程代理的對話：每個頁面旁的對話面板，以及其中的一段對話。
 export default {
-  title: '對話',
-  nothingHere: '你在這個課程中既不提問，也不回答問題。',
-  page: {
-    subtitle: '向課程的代理或你自己的代理提問，回覆會出現在這裡。',
-    pick: '選擇一段對話，或選擇要提問的對象。',
-    all: '所有對話',
+  panel: {
+    title: '對話',
+    toggle: '與代理對話',
+    toggleUnread: '與代理對話：{n} 則未讀',
+    toggleTip: '與代理對話（{key}）',
+    course: '課程',
+    new: '新對話',
+    newTip: '開始新對話',
+    history: '過往對話',
+    close: '關閉對話面板',
+    resize: '調整對話面板寬度',
+    backToHistory: '返回過往對話',
+    backToAgents: '返回代理列表',
+    pickTitle: '向代理提問',
+    pickHint: '你在 {course} 可以提問的代理：課程自己的代理，以及你的個人助理。',
+    noCourses: '你的課程都不允許你向代理提問。',
   },
-  launcher: {
-    open: '提問',
-    back: '返回列表',
-    fullPage: '以完整頁面開啟',
-  },
-  tabs: {
-    ask: '提問',
-    answer: '向我提問',
-    oversee: '監督',
+  history: {
+    title: '你的對話',
+    scope: '課程範圍',
+    thisCourse: '這個課程',
+    allCourses: '所有課程',
+    empty: '你還沒有在這個課程向代理提問。',
+    emptyAll: '你還沒有向任何代理提問。',
+    untitled: '未命名',
+    unread: '新回覆',
+    failed: '無法讀取你在 {courses} 的對話。',
+    leftOut: '只顯示你 {total} 個課程中 {n} 個的對話。選擇一個課程即可查看它的對話。',
+    truncated: '{courses} 的對話太多，未能全部讀取，最新的對話可能沒有列出。',
   },
   respondents: {
-    title: '可以提問的對象',
-    hint: '權限不超過你的代理和成員，以及你自己的代理。',
-    empty: '這裡暫時沒有你可以提問的對象。',
+    empty: '這裡暫時沒有可以回答你問題的代理。',
     offlineHint: '這個代理目前似乎沒有在運行，回覆可能需要一段時間。',
     sharedHint: '它也會回答其他成員，會記住每個人寫給它的內容，並可能轉述給他們。',
     agentPage: '前往它的頁面',
-  },
-  list: {
-    mine: '你的對話',
-    respondentHint: '別人向你提出的問題。紅點表示正在等你回覆。',
-    overseerHint: '由你負責審批其操作的成員所開啟的對話。你可以閱讀並撤回訊息，但不能在其中發言。',
-    emptyOpener: '你在這裡還沒有開啟任何對話。',
-    emptyRespondent: '這裡還沒有人向你提問。',
-    emptyOverseer: '沒有需要監督的對話。',
-    waitsForYou: '正在等你回覆',
   },
   between: '{opener} → {respondent}',
   messagesLabel: '訊息',
@@ -60,10 +62,10 @@ export default {
     waiting: '{name} 已收到你的問題。',
     waitingApproval: '每則回覆都須經批准，你才會看到。',
     answerPending: '有一則回覆正在等待批准。',
-    yourAnswerPending: '你的回覆正在等待批准，有結果後才可再次發言。',
-    yourTurn: '{name} 正在等你回覆。',
     start: '有任何關於課程的問題，都可以問 {name}。',
     overseeing: '你正以課程教職員的身分閱讀這段對話。',
+    readOnly: '現在由代理在對話中回答問題，你可以閱讀這段對話。',
+    person: '{name} 是真人，而真人已不再在對話中回答問題。這段對話仍可閱讀。',
   },
   // Why an answer may not come.
   availability: {
@@ -75,9 +77,6 @@ export default {
   },
   blocked: {
     archived: '這個課程已封存，無法再發言。',
-    overseer: '只有對話雙方可以在這裡發言。',
-    nothingToAnswer: '對方還沒有提出任何問題。',
-    answerPending: '你的回覆正在等待批准。',
   },
   closed: {
     title: '這段對話已結束。',
@@ -88,19 +87,15 @@ export default {
   composer: {
     label: '你的訊息',
     askPlaceholder: '向 {name} 提問…',
-    answerPlaceholder: '回覆 {name}…',
     send: '傳送',
     hint: '按 Enter 傳送，Shift+Enter 換行',
     hintTouch: '點按按鈕傳送',
     count: '{n} / {max} 字',
   },
-  // Who can read a conversation (Core's visible_to).
   conflict: {
-    moved_on: '在你的回覆送出前，對方又寫了新訊息。現已顯示最新一則，請回覆那一則。',
-    already_answered: '那則訊息已經回覆過了，所以你的回覆沒有發出。',
-    answer_pending: '你對那則訊息的回覆已在等待批准。',
     closed: '這段對話已經關閉，不能再寫入任何內容。',
   },
+  // Who can read a conversation (Core's visible_to).
   visibleTo: {
     button: '誰可以閱讀',
     title: '誰可以閱讀這段對話',
@@ -124,7 +119,6 @@ export default {
     button: '結束',
     title: '要結束這段對話嗎？',
     bodyOpener: '結束後無法再發言，但內容仍可閱讀。你填寫的原因會顯示給對方。',
-    bodyRespondent: '結束後無法再發言，{name} 須另外開始新的對話。你填寫的原因會顯示給對方。',
     confirm: '結束對話',
     done: '對話已結束',
   },

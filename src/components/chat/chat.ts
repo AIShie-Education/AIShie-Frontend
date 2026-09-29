@@ -99,7 +99,11 @@ export function sameMessages(a: readonly ConversationMessage[], b: readonly Conv
 
 // --- The conversation ---------------------------------------------------------------
 
-/** The caller's part in a conversation: who opened it, who is asked, or staff reading it. */
+/**
+ * The caller's part in a conversation: who opened it, who is asked, or staff
+ * reading it. People no longer answer in the chat (agents do), so a person
+ * asked in a conversation from before only reads it, as staff do.
+ */
 export type ChatRole = 'opener' | 'respondent' | 'overseer'
 
 export function roleIn(
@@ -147,6 +151,26 @@ export function closedReasonOf(reason: string | null | undefined): ClosedReason 
   return { text: r }
 }
 
+// --- Only agents are asked ---------------------------------------------------------
+
+/**
+ * Whom the chat offers to ask: agents alone. Core's conversation.respondents
+ * lists a person too when they answer questions and can see nothing the
+ * caller cannot; people are talked to elsewhere now, so they are left out.
+ */
+export function agentsOnly<T extends { kind: string }>(list: readonly T[] | null | undefined): T[] {
+  return (list ?? []).filter((r) => r.kind === 'agent')
+}
+
+/**
+ * What an agent one may ask is to the caller: their own personal assistant
+ * (seated as their delegate), or the course's (anyone else's that answers
+ * them: a course agent, or an agent the course seated itself).
+ */
+export function agentPurpose(r: { is_my_delegate: boolean }): 'personal' | 'course' {
+  return r.is_my_delegate ? 'personal' : 'course'
+}
+
 // --- Site chat ---------------------------------------------------------------------
 
 /**
@@ -175,42 +199,43 @@ export function offeredIn(respondents: readonly { member_id: string }[] | null |
 
 /**
  * What the line above the composer says. waiting: the caller asked and the
- * respondent has not answered (with how likely an answer is); yourTurn: the
- * caller is asked; pendingApproval: an answer waits for someone's approval
- * (the caller's own, mine); start: nothing asked yet; elsewhere: the agent
- * asked takes no conversations in the site, and nothing more is asked of it
- * here.
+ * agent has not answered (with how likely an answer is); pendingApproval: an
+ * answer waits for someone's approval; start: nothing asked yet; elsewhere:
+ * the agent asked takes no conversations in the site, and nothing more is
+ * asked of it here; person: the one asked is a person, who no longer answers
+ * in the chat; readOnly: the caller is not the one asking (staff, or a person
+ * asked), and reads it.
  */
 export type Notice =
   | { kind: 'closed'; reason: ClosedReason | null }
   | { kind: 'waiting'; availability: Availability; approval: boolean }
   | { kind: 'unavailable'; availability: 'gone' | 'paused' | 'notAnswering' }
   | { kind: 'elsewhere' }
-  | { kind: 'pendingApproval'; mine: boolean }
-  | { kind: 'yourTurn' }
+  | { kind: 'person' }
+  | { kind: 'pendingApproval' }
   | { kind: 'start' }
   | { kind: 'overseeing' }
+  | { kind: 'readOnly' }
 
 /** Why the caller cannot write here now; null when they can. */
-export type WriteBlock = 'closed' | 'overseer' | 'unavailable' | 'elsewhere' | 'nothingToAnswer' | 'answerPending'
+export type WriteBlock = 'closed' | 'overseer' | 'respondent' | 'unavailable' | 'elsewhere' | 'person'
 
 export interface ChatStatus {
   state: ConversationState
   role: ChatRole
-  /** Show the respondent "typing": a question waits for them and they may answer it. */
+  /** Show the agent "typing": a question waits for it and it may answer it. */
   typing: boolean
   notice: Notice | null
   block: WriteBlock | null
-  /** What an answer replies to, for the respondent. */
-  replyTo: string | null
 }
 
 /**
  * Everything the pane shows about where a conversation stands, for the caller.
- * offered: whether the caller may ask its respondent now (offeredIn), or null
- * when that is not known; an agent they may not, whose seat is there and
- * which may answer, takes no conversations in the site. It is asked nothing
- * more here; what was written stays readable, and it may still answer.
+ * Only its opener writes in it, and only to an agent. offered: whether the
+ * caller may ask its agent now (offeredIn), or null when that is not known;
+ * an agent they may not, whose seat is there and which may answer, takes no
+ * conversations in the site. It is asked nothing more here; what was written
+ * stays readable, and it may still answer.
  */
 export function chatStatus(
   view: ConversationView,
@@ -219,33 +244,22 @@ export function chatStatus(
 ): ChatStatus {
   const role = roleIn(view, myMemberId)
   const state = stateOf(view)
-  const replyTo = view.latest_opener_message_id ?? null
-  const base = { state, role, replyTo, typing: false }
+  const base = { state, role, typing: false }
   if (state === 'closed') {
     return { ...base, notice: { kind: 'closed', reason: closedReasonOf(view.closed_reason) }, block: 'closed' }
   }
-  if (role === 'overseer') {
-    if (state === 'reply_pending_approval')
-      return { ...base, notice: { kind: 'pendingApproval', mine: false }, block: 'overseer' }
-    return { ...base, notice: { kind: 'overseeing' }, block: 'overseer' }
+  if (role !== 'opener') {
+    const block = role === 'overseer' ? 'overseer' : 'respondent'
+    if (state === 'reply_pending_approval') return { ...base, notice: { kind: 'pendingApproval' }, block }
+    return { ...base, notice: { kind: role === 'overseer' ? 'overseeing' : 'readOnly' }, block }
   }
-  if (role === 'respondent') {
-    if (state === 'reply_pending_approval')
-      return { ...base, notice: { kind: 'pendingApproval', mine: true }, block: 'answerPending' }
-    if (!replyTo) return { ...base, notice: null, block: 'nothingToAnswer' }
-    if (state === 'awaiting_answer') return { ...base, notice: { kind: 'yourTurn' }, block: null }
-    return { ...base, notice: null, block: null }
-  }
-  // The opener.
   const availability = availabilityOf(view.respondent, opts.now)
   if (availability === 'gone' || availability === 'paused' || availability === 'notAnswering') {
     return { ...base, notice: { kind: 'unavailable', availability }, block: 'unavailable' }
   }
-  if (view.respondent.kind === 'agent' && opts.offered === false) {
-    return { ...base, notice: { kind: 'elsewhere' }, block: 'elsewhere' }
-  }
-  if (state === 'reply_pending_approval')
-    return { ...base, notice: { kind: 'pendingApproval', mine: false }, block: null }
+  if (view.respondent.kind !== 'agent') return { ...base, notice: { kind: 'person' }, block: 'person' }
+  if (opts.offered === false) return { ...base, notice: { kind: 'elsewhere' }, block: 'elsewhere' }
+  if (state === 'reply_pending_approval') return { ...base, notice: { kind: 'pendingApproval' }, block: null }
   if (state === 'awaiting_answer') {
     return {
       ...base,
@@ -260,20 +274,13 @@ export function chatStatus(
 // --- Refusals -------------------------------------------------------------------------
 
 /**
- * Why Core refused a write in a conversation as a conflict (details.reason):
- * moved_on, the opener wrote again since the message answered; already_answered,
- * that message has its answer; answer_pending, an answer of the caller's to it
- * waits for approval; closed, the conversation is closed.
+ * Whether Core refused a question as a conflict because the conversation is
+ * closed (details.reason closed): it was closed since it was read.
  */
-export type ConflictReason = 'moved_on' | 'already_answered' | 'answer_pending' | 'closed'
-const CONFLICT_REASONS: ConflictReason[] = ['moved_on', 'already_answered', 'answer_pending', 'closed']
-
-export function conflictReasonOf(
+export function closedConflict(
   e: { code?: string; details?: Record<string, unknown> | null } | null | undefined,
-): ConflictReason | null {
-  if (!e || e.code !== 'conflict') return null
-  const r = e.details?.reason
-  return typeof r === 'string' && (CONFLICT_REASONS as string[]).includes(r) ? (r as ConflictReason) : null
+): boolean {
+  return !!e && e.code === 'conflict' && e.details?.reason === 'closed'
 }
 
 // --- Who can read it -------------------------------------------------------------------

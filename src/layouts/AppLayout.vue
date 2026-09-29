@@ -1,22 +1,31 @@
 <script setup lang="ts">
 // The frame around every signed-in page: the caller's courses and, for
-// administrators, the administration pages on the left; language, theme and
-// the account menu on top. A department's administrator is offered the
-// courses and departments they administer; people, terms and presets are a
-// platform administrator's.
+// administrators, the administration pages on the left; the chat with the
+// courses' agents, language, theme and the account menu on top; and the chat
+// panel, docked on the right while it is open (a sheet over the page on a
+// phone). A department's administrator is offered the courses and
+// departments they administer; people, terms and presets are a platform
+// administrator's.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import { useChatStore } from '@/stores/chat'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore, type Theme } from '@/stores/ui'
 import { LOCALES, type Locale } from '@/i18n'
 import AppWordmark from '@/components/AppWordmark.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import ChatPanel from '@/components/chat/ChatPanel.vue'
+import { shortcutLabel } from '@/components/chat/panel'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { titleKey } from '@/router/title'
 
 const session = useSessionStore()
 const ui = useUiStore()
+// The language button shows the language in use in a mark of its own (繁, 简,
+// EN), not a speech-bubble icon, which the chat panel's button beside it uses.
+const localeMark = computed(() => ({ 'zh-Hant': '繁', 'zh-Hans': '简', en: 'EN' })[ui.locale as Locale] ?? 'EN')
+const chat = useChatStore()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
@@ -58,6 +67,18 @@ function onUserCommand(cmd: string) {
   if (cmd === 'account') router.push({ name: 'account' })
   else if (cmd === 'agents') router.push({ name: 'account-agents' })
   else if (cmd === 'signout') void signOut()
+}
+
+// The chat's button: offered where the caller may ask agents somewhere (or
+// while the panel is open), with how many answers they have not read.
+const chatOffered = computed(() => chat.courses.length > 0 || chat.open)
+const chatPanel = ref<InstanceType<typeof ChatPanel> | null>(null)
+const chatLabel = computed(() =>
+  chat.unreadCount ? t('chat.panel.toggleUnread', { n: chat.unreadCount }) : t('chat.panel.toggle'),
+)
+function toggleChat() {
+  chat.toggle()
+  if (chat.open) void chatPanel.value?.focusPanel()
 }
 
 // The browser's tab is named by the router (router/title.ts); this is the header's.
@@ -134,9 +155,33 @@ const pageTitle = computed(() => {
           <span class="app-header__title">{{ pageTitle }}</span>
         </div>
         <div class="app-header__right">
+          <el-tooltip
+            v-if="chatOffered"
+            :content="t('chat.panel.toggleTip', { key: shortcutLabel() })"
+            placement="bottom"
+            :show-after="300"
+          >
+            <el-badge :value="chat.unreadCount" :hidden="!chat.unreadCount" :max="99" class="app-chat-badge">
+              <el-button
+                id="chat-panel-toggle"
+                text
+                circle
+                class="app-chat-toggle"
+                :class="{ 'is-open': chat.open }"
+                :aria-label="chatLabel"
+                :aria-expanded="chat.open ? 'true' : 'false'"
+                aria-controls="chat-panel"
+                aria-keyshortcuts="Control+J Meta+J"
+                @click="toggleChat"
+              >
+                <el-icon :size="18"><ChatDotRound /></el-icon>
+              </el-button>
+            </el-badge>
+          </el-tooltip>
+
           <el-dropdown trigger="click" @command="(l: Locale) => (ui.locale = l)">
             <el-button text circle :aria-label="t('common.nav.language')">
-              <el-icon :size="18"><ChatLineSquare /></el-icon>
+              <span class="app-lang" aria-hidden="true">{{ localeMark }}</span>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -185,9 +230,12 @@ const pageTitle = computed(() => {
         </div>
       </el-header>
 
-      <el-main class="app-main">
-        <router-view />
-      </el-main>
+      <div class="app-body">
+        <el-main class="app-main">
+          <router-view />
+        </el-main>
+        <ChatPanel ref="chatPanel" />
+      </div>
     </el-container>
   </el-container>
 </template>
@@ -313,6 +361,12 @@ const pageTitle = computed(() => {
 .app-header__right {
   flex-shrink: 0;
 }
+.app-lang {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
 .app-user {
   display: flex;
   align-items: center;
@@ -349,11 +403,28 @@ const pageTitle = computed(() => {
     display: none;
   }
 }
+/* The page, and beside it the chat panel while it is open: the panel takes its width from the page. */
+.app-body {
+  flex: 1 0 auto;
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
 .app-main {
+  flex: 1 1 0;
+  min-width: 0;
   padding: 24px;
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
+}
+.app-chat-badge :deep(.el-badge__content) {
+  top: 6px;
+  right: 10px;
+}
+.app-header .app-chat-toggle.is-open {
+  background-color: var(--app-indigo-tint);
+  color: var(--app-indigo);
 }
 @media (max-width: 600px) {
   .app-main {

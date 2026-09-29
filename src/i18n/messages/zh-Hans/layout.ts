@@ -27,7 +27,6 @@ export default {
     myActions: '我的操作',
     activity: '动态',
     agents: '智能体',
-    conversations: '对话',
     adminNoSeat: {
       title: '你在这门课程没有席位',
       body: '平台管理员的身份不会让你进入课程：每个人在课程里看到什么，取决于他在该课程的席位。请到这门课程的管理页指派讲师，或指派你自己。',

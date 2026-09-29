@@ -29,7 +29,7 @@ vi.mock('@/api/http', async (orig) => {
 
 const { ApiError } = await import('@/api/http')
 const { i18n, setLocale } = await import('@/i18n')
-const { useCourseStore } = await import('@/stores/course')
+const { useSessionStore } = await import('@/stores/session')
 const { default: ChatPane } = await import('./ChatPane.vue')
 const { default: ChatComposer } = await import('./ChatComposer.vue')
 
@@ -107,13 +107,22 @@ const answersElsewhere = () =>
   })
 const NOTE = 'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.'
 
-function seat(memberId: string) {
-  const course = useCourseStore()
-  course.courseId = 'k1'
-  course.course = { id: 'k1', status: 'active' } as never
-  course.membership = { member_id: memberId, course_id: 'k1', role: 'student' } as never
-  course.permsSource = 'exact'
-  course.perms = { conversation_ask: 'autonomous', conversation_answer: 'autonomous', document_read: 'autonomous' }
+/** The caller's seat in course k1, as me.memberships gives it: the chat reads it from there, on any page. */
+function seat(memberId: string, perms: Record<string, string> = {}) {
+  const session = useSessionStore()
+  session.memberships = [
+    {
+      member_id: memberId,
+      course_id: 'k1',
+      code: 'CS101',
+      section: '',
+      title: 'Programming',
+      role: 'student',
+      status: 'active',
+      course_status: 'active',
+      perms: { conversation_ask: 'autonomous', document_read: 'autonomous', ...perms },
+    } as never,
+  ]
 }
 
 const executed = (result: unknown) => ({
@@ -189,40 +198,73 @@ describe('ChatPane', () => {
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('')
   })
 
-  it('answers the opener’s latest message when the caller is the respondent', async () => {
-    seat('tutor')
+  it('lets the one asked only read it: people no longer answer in the chat', async () => {
+    seat('tutor', { conversation_answer: 'autonomous' })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(w.find('.chat-pane__notice').text()).toContain('Chan Tai Man is waiting for your answer')
-    const ta = await type(w, 'Here is the answer')
-    await ta.trigger('keydown', { key: 'Enter' })
-    await flushPromises()
-    expect(writes[0]).toEqual({
-      tool: 'conversation.answer',
-      args: { course_id: 'k1', conversation_id: 'c1', in_reply_to_message_id: 'm3', body: 'Here is the answer' },
-    })
+    expect(w.findAll('.chat-msg')).toHaveLength(3)
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('.chat-pane__notice').text()).toContain('Agents answer questions in the chat now')
+    expect(w.find('.chat-pane__head-actions button').exists()).toBe(false)
   })
 
-  it('says why an answer was refused as a conflict, keeps the draft, and reads again', async () => {
-    seat('tutor')
+  it('asks a person nothing more in a conversation from before, and keeps it readable', async () => {
+    seat('student')
+    server.view = view({
+      respondent: { ...view().respondent, member_id: 'ta', display_name: 'Ms Wong', kind: 'human', last_seen_at: null },
+    })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.findAll('.chat-msg')).toHaveLength(3)
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('.chat-pane__notice').text()).toContain(
+      'Ms Wong is a person, and people no longer answer in the chat',
+    )
+    expect(w.find('.chat-pane__typing').exists()).toBe(false)
+    // It is still the opener's to close.
+    expect(w.find('.chat-pane__head-actions button').text()).toBe('Close')
+  })
+
+  it('says a question was refused because the conversation was closed meanwhile, keeps the draft, and reads again', async () => {
+    seat('student')
     writeAnswer = () => {
       throw new ApiError({
         status: 409,
         code: 'conflict',
-        message: 'the conversation moved on; answer the latest message',
-        details: { reason: 'moved_on', latest_opener_message_id: 'm5' },
+        message: 'the conversation is closed; start a new one',
+        details: { reason: 'closed' },
       })
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const reads = (await import('@/api/http')).read as unknown as { mock: { calls: unknown[][] } }
     const before = reads.mock.calls.length
-    const ta = await type(w, 'An answer to the old question')
+    const ta = await type(w, 'One more thing')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(document.body.textContent).toContain('They wrote again before your answer went in')
-    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('An answer to the old question')
+    expect(document.body.textContent).toContain('This conversation is closed, so nothing more can be written in it.')
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('One more thing')
     expect(reads.mock.calls.length).toBeGreaterThan(before)
+    expect(w.emitted('changed')).toBeTruthy()
+  })
+
+  it('reads a conversation as staff when overseeing it, and offers to withdraw a message where the seat decides', async () => {
+    seat('staff', { action_decide: 'autonomous' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', oversee: true }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__name').text()).toBe('Chan Tai Man → Course tutor')
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('.chat-pane__notice').text()).toContain('You are reading this as course staff.')
+    expect(w.findAll('.chat-msg__actions button').map((b) => b.text())).toEqual(['Withdraw', 'Withdraw', 'Withdraw'])
+    expect(w.find('.chat-pane__head-actions button').exists()).toBe(false)
+  })
+
+  it('names the course beside the agent, where it is given', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', courseLabel: 'CS101' }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__name-row').text()).toMatch(/^CS101\s*·\s*Course tutor/)
+    expect(w.emitted('view')?.[0]?.[0]).toMatchObject({ id: 'c1', state: 'awaiting_answer' })
   })
 
   it('keeps a question that waits for approval on screen, marked so', async () => {
@@ -335,17 +377,12 @@ describe('ChatPane, with an agent operated from outside', () => {
     )
   })
 
-  it('keeps the composer while the agent is offered, and for the one answering', async () => {
+  it('keeps the composer while the agent is offered', async () => {
     seat('student')
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     expect(w.find('textarea').exists()).toBe(true)
     expect(w.find('.chat-pane__notice.is-elsewhere').exists()).toBe(false)
-    seat('tutor')
-    server.respondents = []
-    const r = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
-    await flushPromises()
-    expect(r.find('textarea').exists()).toBe(true)
   })
 
   it('says why a question was refused as asked of such an agent, and puts that in place of the composer', async () => {

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { ConversationMessage, ConversationView } from '@/api/types'
 import {
   AGENT_ANSWERS_ELSEWHERE,
+  agentPurpose,
+  agentsOnly,
   answersElsewhere,
   availabilityOf,
   BODY_MAX,
@@ -10,6 +12,7 @@ import {
   charCount,
   chatStatus,
   cleanBody,
+  closedConflict,
   closedReasonOf,
   draftKey,
   firstSeq,
@@ -238,7 +241,7 @@ describe('chatStatus', () => {
 
   it('says an answer waits for approval, and lets the opener write on', () => {
     const s = chatStatus(view({ state: 'reply_pending_approval' }), 'opener', at)
-    expect(s.notice).toEqual({ kind: 'pendingApproval', mine: false })
+    expect(s.notice).toEqual({ kind: 'pendingApproval' })
     expect(s.block).toBeNull()
     expect(s.typing).toBe(false)
   })
@@ -256,23 +259,32 @@ describe('chatStatus', () => {
     }
   })
 
-  it('has the respondent answer the opener’s latest message', () => {
-    const s = chatStatus(view({ state: 'awaiting_answer', latest_opener_message_id: 'm9' }), 'agent', at)
-    expect(s.role).toBe('respondent')
-    expect(s.notice).toEqual({ kind: 'yourTurn' })
-    expect(s.block).toBeNull()
-    expect(s.replyTo).toBe('m9')
-    expect(s.typing).toBe(false)
+  it('lets the one asked only read: people no longer answer in the chat', () => {
+    for (const state of ['awaiting_answer', 'answered'] as const) {
+      const s = chatStatus(view({ state, latest_opener_message_id: 'm9' }), 'agent', at)
+      expect(s.role).toBe('respondent')
+      expect(s.notice).toEqual({ kind: 'readOnly' })
+      expect(s.block).toBe('respondent')
+      expect(s.typing).toBe(false)
+    }
+    expect(chatStatus(view({ state: 'reply_pending_approval' }), 'agent', at)).toMatchObject({
+      block: 'respondent',
+      notice: { kind: 'pendingApproval' },
+    })
   })
 
-  it('holds the respondent back while their answer waits, and until something is asked', () => {
-    expect(chatStatus(view({ state: 'reply_pending_approval' }), 'agent', at)).toMatchObject({
-      block: 'answerPending',
-      notice: { kind: 'pendingApproval', mine: true },
+  it('stops the opener writing to a person, who no longer answers in the chat, and keeps it readable', () => {
+    for (const state of ['awaiting_answer', 'answered'] as const) {
+      const s = chatStatus(view({ state }, { kind: 'human', last_seen_at: null }), 'opener', at)
+      expect(s.block).toBe('person')
+      expect(s.notice).toEqual({ kind: 'person' })
+      expect(s.typing).toBe(false)
+    }
+    // A person who has left is said to have left, as anyone is.
+    expect(chatStatus(view({}, { kind: 'human', seat_status: 'removed' }), 'opener', at).notice).toEqual({
+      kind: 'unavailable',
+      availability: 'gone',
     })
-    expect(chatStatus(view({ latest_opener_message_id: null }), 'agent', at).block).toBe('nothingToAnswer')
-    // Answered already: they may add to it.
-    expect(chatStatus(view({ state: 'answered' }), 'agent', at).block).toBeNull()
   })
 
   it('lets staff read, never write', () => {
@@ -284,7 +296,6 @@ describe('chatStatus', () => {
     })
     expect(chatStatus(view({ state: 'reply_pending_approval' }), 'staff', at).notice).toEqual({
       kind: 'pendingApproval',
-      mine: false,
     })
   })
 
@@ -307,8 +318,8 @@ describe('chatStatus', () => {
 
   it('never says it of a person, nor to the one answering or staff, nor of a closed conversation', () => {
     const person = view({}, { kind: 'human', last_seen_at: null })
-    expect(chatStatus(person, 'opener', { ...at, offered: false }).block).toBeNull()
-    expect(chatStatus(view({ state: 'awaiting_answer' }), 'agent', { ...at, offered: false }).block).toBeNull()
+    expect(chatStatus(person, 'opener', { ...at, offered: false }).block).toBe('person')
+    expect(chatStatus(view({ state: 'awaiting_answer' }), 'agent', { ...at, offered: false }).block).toBe('respondent')
     expect(chatStatus(view(), 'staff', { ...at, offered: false }).block).toBe('overseer')
     const closed = chatStatus(view({ status: 'closed', state: 'closed' }), 'opener', { ...at, offered: false })
     expect(closed.block).toBe('closed')
@@ -407,6 +418,21 @@ describe('drafts', () => {
   })
 })
 
+describe('agents only', () => {
+  const r = (kind: string, mine = false) => ({ member_id: `${kind}-${mine}`, kind, is_my_delegate: mine })
+
+  it('offers no person to ask, whatever Core lists', () => {
+    const listed = [r('human'), r('agent'), r('agent', true), r('system')]
+    expect(agentsOnly(listed).map((x) => x.member_id)).toEqual(['agent-false', 'agent-true'])
+    expect(agentsOnly(null)).toEqual([])
+  })
+
+  it('tells the caller’s own assistant from the course’s agents', () => {
+    expect(agentPurpose(r('agent', true))).toBe('personal')
+    expect(agentPurpose(r('agent'))).toBe('course')
+  })
+})
+
 describe('site chat', () => {
   it('knows Core’s refusal of a question to an agent operated from outside, whatever its code', () => {
     expect(AGENT_ANSWERS_ELSEWHERE).toBe('agent_answers_elsewhere')
@@ -414,6 +440,13 @@ describe('site chat', () => {
     expect(answersElsewhere({ details: { reason: 'not_addressable' } })).toBe(false)
     expect(answersElsewhere({ details: null })).toBe(false)
     expect(answersElsewhere(null)).toBe(false)
+  })
+
+  it('knows a question refused because the conversation was closed meanwhile', () => {
+    expect(closedConflict({ code: 'conflict', details: { reason: 'closed' } })).toBe(true)
+    expect(closedConflict({ code: 'conflict', details: { reason: 'moved_on' } })).toBe(false)
+    expect(closedConflict({ code: 'failed_precondition', details: { reason: 'closed' } })).toBe(false)
+    expect(closedConflict(null)).toBe(false)
   })
 
   it('says whether someone is offered by whom the caller may ask, or nothing before that is read', () => {

@@ -70,6 +70,9 @@ test.describe('language', () => {
     }
     await expect(page.getByRole('link', { name: 'Overview' })).toHaveCount(0)
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
+    // The chat with the course's agents, beside every page, and no longer a tab of the course.
+    await expect(page.getByRole('button', { name: '與代理對話' })).toBeVisible()
+    await expect(zhTabs.getByRole('link', { name: '對話' })).toHaveCount(0)
     // Core's vocabularies too: the course's status and the caller's role.
     await expect(page.locator('.course-head')).not.toContainText('Active')
     await expect(page.locator('.course-head')).not.toContainText('Instructor')
@@ -106,6 +109,7 @@ test.describe('language', () => {
       await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
+    await expect(page.getByRole('button', { name: '与智能体对话' })).toBeVisible()
     // Simplified glyphs, from Noto Sans SC: the SC faces are fetched, the TC ones never.
     await expect.poll(() => fonts.includes('sc'), { message: 'an SC face is fetched' }).toBe(true)
     expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Noto Sans SC/)
@@ -159,6 +163,25 @@ test.describe('at phone width', () => {
       await page.waitForLoadState('networkidle')
       await expectFits(page, what)
     }
+  })
+
+  test('the chat is a sheet over the whole screen, and fits it', async ({ page }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath('grades'))
+    await page.getByRole('button', { name: /^Chat with agents/ }).click()
+    const sheet = page.locator('#chat-panel')
+    await expect(sheet.getByRole('heading', { name: 'Ask an agent' })).toBeVisible()
+    await expectWithinViewport(page, '#chat-panel')
+    const box = (await sheet.boundingBox())!
+    expect(Math.round(box.width)).toBe(390)
+    expect(Math.round(box.height)).toBe(844)
+    await expectFits(page, 'the chat sheet')
+    await sheet.getByRole('button', { name: 'History', exact: true }).click()
+    await expectFits(page, 'the chat sheet’s history')
+    await sheet.getByRole('button', { name: 'Close the chat' }).click()
+    await expect(sheet).toHaveCount(0)
+    await expect(page.locator('.page-header').first()).toBeVisible()
   })
 
   test('dialogs fit a phone', async ({ page }) => {

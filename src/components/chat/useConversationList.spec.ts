@@ -4,7 +4,6 @@ import { ref } from 'vue'
 import type { AgentFull, AgentSummary, ConversationView, Respondent } from '@/api/types'
 
 let conversations: ConversationView[] = []
-let inbox: () => Promise<unknown>
 let agents: () => Promise<{ agents: AgentSummary[] }>
 let agentsById: Record<string, AgentFull> = {}
 let respondents: Respondent[] = []
@@ -24,7 +23,6 @@ vi.mock('@/api/http', async (orig) => {
         const page = rest.slice(0, limit)
         return { conversations: page, next: page.length === limit ? page.at(-1)!.id : undefined }
       }
-      if (tool === 'conversation.inbox') return inbox()
       if (tool === 'conversation.respondents') return { respondents }
       if (tool === 'agent.list') return agents()
       if (tool === 'agent.get') {
@@ -38,8 +36,11 @@ vi.mock('@/api/http', async (orig) => {
 })
 
 const {
+  eachLimited,
+  HISTORY_PAGE,
+  HISTORY_PAGES,
+  readStarted,
   useConversationList,
-  useInbox,
   useRespondents,
   ownAgentsElsewhere,
   sortRespondents,
@@ -124,29 +125,51 @@ describe('useConversationList', () => {
   })
 })
 
-describe('useInbox', () => {
-  it('counts what waits for the caller’s answer', async () => {
-    inbox = async () => ({ conversations: [conv(1), conv(2)] })
-    const { out, dispose } = inScope(() => useInbox({ courseId: 'k' }))
-    await vi.advanceTimersByTimeAsync(0)
-    expect(out.count.value).toBe(2)
-    expect(out.ids.value.has('c0002')).toBe(true)
-    dispose()
+describe('readStarted', () => {
+  it('reads every page of the conversations the caller started in a course', async () => {
+    conversations = Array.from({ length: HISTORY_PAGE + 3 }, (_, i) => conv(i + 1))
+    const out = await readStarted('k')
+    expect(out.items).toHaveLength(HISTORY_PAGE + 3)
+    expect(out.truncated).toBe(false)
+    expect(calls.map((c) => c.args)).toEqual([
+      { course_id: 'k', as: 'opener', limit: HISTORY_PAGE },
+      { course_id: 'k', as: 'opener', limit: HISTORY_PAGE, after: conv(HISTORY_PAGE).id },
+    ])
   })
 
-  it('counts nothing for a seat that may not answer', async () => {
-    inbox = async () => {
-      throw new ApiError({ status: 403, code: 'forbidden', message: 'no' })
-    }
-    const { out, dispose } = inScope(() => useInbox({ courseId: 'k' }))
-    await vi.advanceTimersByTimeAsync(0)
-    expect(out.count.value).toBe(0)
-    dispose()
+  it('stops after its most pages, and says there were more', async () => {
+    conversations = Array.from({ length: HISTORY_PAGE * HISTORY_PAGES + 1 }, (_, i) => conv(i + 1))
+    const out = await readStarted('k')
+    expect(out.items).toHaveLength(HISTORY_PAGE * HISTORY_PAGES)
+    expect(out.truncated).toBe(true)
+  })
+})
+
+describe('eachLimited', () => {
+  it('runs a few at a time, and keeps each one’s outcome in order, failures included', async () => {
+    let running = 0
+    let most = 0
+    const out = await eachLimited([1, 2, 3, 4, 5], 2, async (n) => {
+      running++
+      most = Math.max(most, running)
+      await Promise.resolve()
+      running--
+      if (n === 3) throw new Error('three')
+      return n * 10
+    })
+    expect(most).toBe(2)
+    expect(out.map((r) => (r.status === 'fulfilled' ? r.value : (r.reason as Error).message))).toEqual([
+      10,
+      20,
+      'three',
+      40,
+      50,
+    ])
   })
 })
 
 describe('sortRespondents', () => {
-  it('puts the caller’s own agents first, then agents, then people, each by name', () => {
+  it('puts the course’s agents first, then the caller’s own, each by name', () => {
     const r = (name: string, kind: string, mine = false) =>
       ({
         member_id: name,
@@ -156,17 +179,29 @@ describe('sortRespondents', () => {
         is_my_delegate: mine,
         answer_level: 'autonomous',
       }) as Respondent
-    const out = sortRespondents([
-      r('Zed', 'human'),
-      r('Tutor B', 'agent'),
-      r('Mine', 'agent', true),
-      r('Tutor A', 'agent'),
-    ])
-    expect(out.map((x) => x.display_name)).toEqual(['Mine', 'Tutor A', 'Tutor B', 'Zed'])
+    const out = sortRespondents([r('Tutor B', 'agent'), r('Mine', 'agent', true), r('Tutor A', 'agent')])
+    expect(out.map((x) => x.display_name)).toEqual(['Tutor A', 'Tutor B', 'Mine'])
   })
 })
 
 describe('useRespondents', () => {
+  it('never lists a person, though Core does', async () => {
+    const r = (name: string, kind: string) =>
+      ({
+        member_id: name,
+        display_name: name,
+        kind,
+        role: 'ta',
+        is_my_delegate: false,
+        answer_level: 'autonomous',
+      }) as Respondent
+    respondents = [r('Ms Wong', 'human'), r('Tutor', 'agent')]
+    const { out, dispose } = inScope(() => useRespondents({ courseId: 'k' }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(out.items.value.map((x) => x.display_name)).toEqual(['Tutor'])
+    dispose()
+  })
+
   it('reads at once, or, lazy, only once first enabled', async () => {
     respondents = []
     const eager = inScope(() => useRespondents({ courseId: 'k' }))

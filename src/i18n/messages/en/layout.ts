@@ -27,7 +27,6 @@ export default {
     myActions: 'My actions',
     activity: 'Activity',
     agents: 'Agents',
-    conversations: 'Conversations',
     adminNoSeat: {
       title: 'You have no seat in this course',
       body: 'Administering the platform does not open a course: what anyone sees inside one comes from their seat in it. Seat this course’s instructor, or yourself, on its administration page.',

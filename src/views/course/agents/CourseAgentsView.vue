@@ -4,7 +4,9 @@
 // assistants and agents nobody owns; adding a course agent (one of the
 // caller's own, member.add_delegate with course_tutor); how each course
 // agent's replies go out; and whether students may bring their own agents or
-// start conversations (member.update_perms_bulk, role student).
+// start conversations (member.update_perms_bulk, role student). Those who
+// decide actions here, whether or not they manage the members, read each
+// answering agent's conversation log.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
@@ -16,6 +18,7 @@ import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { usePresets } from '@/views/course/members/components/seat'
 import AddCourseAgentDialog from './components/AddCourseAgentDialog.vue'
+import AgentConversationLog from './components/AgentConversationLog.vue'
 import AgentList from './components/AgentList.vue'
 import StudentPolicyCard from './components/StudentPolicyCard.vue'
 import { AGENT_GROUPS, agentRows, isLive, loadAllMembers, type AgentGroup } from './components/courseAgents'
@@ -27,6 +30,15 @@ const session = useSessionStore()
 const presets = usePresets()
 
 const canManage = computed(() => course.can('member_manage'))
+const canOversee = computed(() => course.can('action_decide'))
+
+// The conversation log of one agent, made the first time one is opened.
+const logAgent = ref<{ id: string; display_name: string } | null>(null)
+const logOpen = ref(false)
+function openLog(agent: { id: string; display_name: string }) {
+  logAgent.value = agent
+  logOpen.value = true
+}
 
 const members = useAsync(() => loadAllMembers(props.courseId), { watch: [() => props.courseId], keepData: true })
 const all = computed(() => members.data.value?.members ?? [])
@@ -122,7 +134,7 @@ const GROUP_ICONS: Record<AgentGroup, string> = { course: 'School', personal: 'U
     </PageHeader>
 
     <el-result
-      v-if="!canManage"
+      v-if="!canManage && !canOversee"
       icon="warning"
       :title="t('common.errors.forbidden')"
       :sub-title="t('courseAgents.noPermission')"
@@ -187,9 +199,10 @@ const GROUP_ICONS: Record<AgentGroup, string> = { course: 'School', personal: 'U
             :my-agents="mine.data.value ?? new Map()"
             :askable="askable.data.value ?? new Map()"
             @changed="onChanged"
+            @log="openLog"
           />
           <el-empty v-else :image-size="64" :description="t(`courseAgents.groups.${g.group}.empty`)">
-            <el-button v-if="canAdd && course.writable" type="primary" plain @click="addOpen = true">
+            <el-button v-if="canManage && canAdd && course.writable" type="primary" plain @click="addOpen = true">
               {{ t('courseAgents.add') }}
             </el-button>
           </el-empty>
@@ -199,6 +212,7 @@ const GROUP_ICONS: Record<AgentGroup, string> = { course: 'School', personal: 'U
         </section>
 
         <StudentPolicyCard
+          v-if="canManage"
           :course-id="courseId"
           :members="all"
           :complete="members.data.value?.complete ?? true"
@@ -206,8 +220,10 @@ const GROUP_ICONS: Record<AgentGroup, string> = { course: 'School', personal: 'U
         />
       </AsyncState>
 
+      <AgentConversationLog v-if="logAgent" v-model="logOpen" :course-id="courseId" :agent="logAgent" />
+
       <AddCourseAgentDialog
-        v-if="canAdd"
+        v-if="canManage && canAdd"
         v-model="addOpen"
         :course-id="courseId"
         :seated-actor-ids="seatedActorIds"

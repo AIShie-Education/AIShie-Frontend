@@ -1,15 +1,16 @@
 // The lists the chat shows beside a conversation, each kept fresh by asking
-// again: the caller's conversations in one part (opener, respondent,
-// overseer), whom they may ask, and how many questions wait for their answer.
-// A refresh replaces what is shown only once it has all of it, so a list
-// never empties or flickers while it is read again.
+// again: conversations in one course as one of the caller's parts (those they
+// started, or those they oversee), the agents they may ask, and their own
+// agents that take no conversations in the site. A refresh replaces what is
+// shown only once it has all of it, so a list never empties or flickers while
+// it is read again.
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import { ApiError, read } from '@/api/http'
-import type { AgentSummary, ConversationRole, ConversationView, InboxItem, Respondent } from '@/api/types'
+import type { AgentSummary, ConversationRole, ConversationView, Respondent } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { usePolling } from '@/composables/usePolling'
 import { seatPurpose, type SeatPurpose } from '@/utils/agents'
-import { byActivity } from './chat'
+import { agentPurpose, agentsOnly, byActivity } from './chat'
 
 /** Conversations per page (Core's most is 200). */
 export const LIST_PAGE = 100
@@ -17,8 +18,6 @@ export const LIST_PAGE = 100
 export const LIST_POLL_MS = 20_000
 /** How often whom one may ask is read again (their presence moves). */
 export const RESPONDENTS_POLL_MS = 60_000
-/** How often the questions waiting for the caller are counted. */
-export const INBOX_POLL_MS = 30_000
 
 type Enabled = MaybeRefOrGetter<boolean>
 const on = (e: Enabled | undefined) => (e === undefined ? true : toValue(e))
@@ -133,15 +132,15 @@ export function useConversationList(opts: { courseId: string; as: ConversationRo
 }
 
 /**
- * Whom the caller may ask here (conversation.respondents): their own agents
- * first, then by name. Read at once, or, lazy, only once it is first enabled
- * (a conversation that needs to know whether its respondent is still
- * offered).
+ * The agents the caller may ask here (conversation.respondents, less any
+ * person it lists): the course's first, then their own, each by name. Read
+ * at once, or, lazy, only once it is first enabled (a conversation that needs
+ * to know whether its agent is still offered).
  */
 export function useRespondents(opts: { courseId: string; enabled?: Enabled; lazy?: boolean }) {
   const list = useQuietList<Respondent>(async () => {
     const out = await read('conversation.respondents', { course_id: opts.courseId })
-    return sortRespondents(out.respondents ?? [])
+    return sortRespondents(agentsOnly(out.respondents))
   })
   const polling = usePolling(list.refresh, {
     intervalMs: RESPONDENTS_POLL_MS,
@@ -231,43 +230,63 @@ export function useAgentsElsewhere(opts: {
   return { ...list, reload: list.load, refresh: () => (started() ? polling.pollNow() : Promise.resolve()) }
 }
 
+/** The course's agents first, then the caller's own, each by name. */
 export function sortRespondents(list: readonly Respondent[]): Respondent[] {
-  return list
-    .slice()
-    .sort(
-      (a, b) =>
-        Number(b.is_my_delegate) - Number(a.is_my_delegate) ||
-        Number(b.kind === 'agent') - Number(a.kind === 'agent') ||
-        a.display_name.localeCompare(b.display_name),
-    )
+  const rank = (r: Respondent) => (agentPurpose(r) === 'course' ? 0 : 1)
+  return list.slice().sort((a, b) => rank(a) - rank(b) || a.display_name.localeCompare(b.display_name))
+}
+
+// --- The caller's conversations in several courses -----------------------------------
+
+/** Conversations per page when reading one course's whole list. */
+export const HISTORY_PAGE = 200
+/** At most this many pages of one course are read (Core lists them oldest first). */
+export const HISTORY_PAGES = 5
+
+/**
+ * The conversations the caller started in one course, all of them up to
+ * HISTORY_PAGES pages; truncated when there were more (the newest are then
+ * the ones missing, as Core lists them oldest first).
+ */
+export async function readStarted(courseId: string): Promise<{ items: ConversationView[]; truncated: boolean }> {
+  const items: ConversationView[] = []
+  let after: string | undefined
+  for (let i = 0; i < HISTORY_PAGES; i++) {
+    const out = await read('conversation.list', {
+      course_id: courseId,
+      as: 'opener',
+      limit: HISTORY_PAGE,
+      ...(after ? { after } : {}),
+    })
+    items.push(...(out.conversations ?? []))
+    after = out.next ?? undefined
+    if (!after) return { items, truncated: false }
+  }
+  return { items, truncated: true }
 }
 
 /**
- * The conversations waiting for the caller's answer (conversation.inbox):
- * those whose opener wrote last, with no answer of theirs waiting for
- * approval. Polled while enabled; a refusal (the seat does not answer) stops
- * nothing but leaves the count at zero.
+ * Runs fn over every item, at most `limit` at a time, and gives each one's
+ * outcome in the items' order: a failure is kept, never thrown, so that one
+ * course that cannot be read does not hide the others.
  */
-export function useInbox(opts: { courseId: string; enabled?: Enabled }) {
-  const items = shallowRef<InboxItem[]>([])
-  let disposed = false
-  onScopeDispose(() => {
-    disposed = true
-  })
-  async function poll() {
-    try {
-      const out = await read('conversation.inbox', { course_id: opts.courseId, limit: 100 })
-      if (!disposed) items.value = out.conversations ?? []
-    } catch (e) {
-      // Not allowed to answer here: nothing waits, and asking again will not change that soon.
-      if (e instanceof ApiError && (e.isForbidden || e.isNotFound)) {
-        if (!disposed) items.value = []
-        return
+export async function eachLimited<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
+  const out: PromiseSettledResult<R>[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      try {
+        out[i] = { status: 'fulfilled', value: await fn(items[i]!) }
+      } catch (reason) {
+        out[i] = { status: 'rejected', reason }
       }
-      throw e
     }
   }
-  const polling = usePolling(poll, { intervalMs: INBOX_POLL_MS, enabled: () => on(opts.enabled) })
-  const ids = computed(() => new Set(items.value.map((c) => c.id)))
-  return { items, ids, count: computed(() => items.value.length), refresh: () => polling.pollNow() }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return out
 }
