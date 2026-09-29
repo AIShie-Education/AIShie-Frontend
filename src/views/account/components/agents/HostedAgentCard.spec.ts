@@ -15,6 +15,7 @@ import {
   credential,
   hostedAgent,
   json,
+  onSchoolPlan,
   refusal,
   seat,
 } from './hostingFakes'
@@ -469,5 +470,79 @@ describe('HostedAgentCard: deleting', () => {
     await vi.advanceTimersByTimeAsync(20_000)
     await vi.waitFor(() => expect(w.text()).toContain('Too many tries. Wait 7 seconds.'))
     expect(w.emitted('deleted')).toBeUndefined()
+  })
+})
+
+describe('HostedAgentCard: on the school’s plan', () => {
+  it('shows the plan’s label, not a key, and the owner’s use of it today against the quota, with no cost', async () => {
+    const w = await card(onSchoolPlan(false), { canChooseSchool: true })
+    expect(w.find('.hosted-card__model').text()).toBe('School AI (Claude Haiku) claude-haiku-4-5')
+    expect(w.find('.hosted-card__plan').text()).toBe('School plan (paid by the school)')
+    expect(w.find('.hosted-card__fallback').text()).toBe('None: answers pause until tomorrow once the allowance is used up')
+    expect(w.find('.hosted-card__school-count').text()).toBe('12 / 100 today')
+    expect(w.find('.hosted-card__school-hint').text()).toBe('The school plan, across all your agents. Starts again at 00:00 UTC.')
+    expect(w.find('.hosted-card__per-asker').text()).toBe('Each person who asks: up to 20 a day')
+    expect(w.find('.hosted-card__agent-today').text()).toBe('4 answers')
+    expect(w.text()).not.toContain('cost unknown')
+    expect(w.text()).not.toContain('$')
+    expect(w.text()).not.toContain('Key')
+    expect(w.find('.hosted-card__spent').exists()).toBe(false)
+    expect(w.find('.hosted-card__primary').text()).toBe('Change model or key')
+  })
+
+  it('shows the owner’s own model and key behind the plan', async () => {
+    const w = await card(onSchoolPlan(true))
+    expect(w.find('.hosted-card__fallback').text()).toBe('OpenAI · gpt-4.1-mini, sk-…3f9a')
+  })
+
+  it('says the day’s allowance is used up, and what happens until 00:00 UTC', async () => {
+    const spent = (fallback: boolean) => {
+      const a = onSchoolPlan(fallback)
+      a.today.school!.used = 100
+      return a
+    }
+    let w = await card(spent(false))
+    expect(w.find('.hosted-card__school-count').classes()).toContain('is-spent')
+    expect(w.find('.hosted-card__spent').text()).toBe(
+      'Today’s school allowance is used up: until 00:00 UTC your agent asks people to try again tomorrow.',
+    )
+    w.unmount()
+    w = await card(spent(true))
+    expect(w.find('.hosted-card__spent').text()).toBe('Today’s school allowance is used up: your own key answers until 00:00 UTC.')
+  })
+
+  it('says so when the school no longer offers the plan', async () => {
+    const a = onSchoolPlan(false)
+    a.model.school = { ...a.model.school!, offered: false, label: 'standard', model: '' }
+    const w = await card(a)
+    expect(w.find('.hosted-card__model').text()).toBe('standard')
+    expect(w.find('.hosted-card__withdrawn').text()).toBe('The school no longer offers this plan. Choose another, or your own key.')
+  })
+
+  it('reads 「今日 12 / 100 次」 in Traditional Chinese', async () => {
+    setLocale('zh-Hant')
+    const w = await card(onSchoolPlan(false), { canChooseSchool: true })
+    expect(w.find('.hosted-card__plan').text()).toBe('學校方案（由學校付費）')
+    expect(w.find('.hosted-card__school-count').text()).toBe('今日 12 / 100 次')
+    expect(w.find('.hosted-card__per-asker').text()).toBe('每位提問者每天最多 20 次')
+  })
+
+  it('offers choosing a model where only the school’s plan is offered, and asks for one on it', async () => {
+    const w = await card(hostedAgent({ status: 'needs_model', model: { own: null, school: null }, own_key: null }), {
+      canChooseModel: false,
+      canChooseSchool: true,
+    })
+    expect(w.find('.hosted-card__primary').text()).toBe('Choose a model')
+    expect(w.find('.hosted-card__off').exists()).toBe(false)
+    expect(body(w)).toBe(
+      'Your agent is connected, but it has no model yet. Choose the school’s plan, or a provider and model with your API key, to start it.',
+    )
+  })
+
+  it('keeps cost unknown for a model on the owner’s key that the runtime has no price for', async () => {
+    const a = hostedAgent()
+    a.model.own = { ...a.model.own!, price_known: false }
+    const w = await card(a)
+    expect(w.find('.hosted-card__today').text()).toBe('4 answers, cost unknown')
   })
 })

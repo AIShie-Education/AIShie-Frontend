@@ -1,7 +1,10 @@
 <script setup lang="ts">
 // An agent the school's runtime hosts (the contract's §9.4): what it is
 // doing and why (its status and problem), its model and key, its seats in
-// sentences built from the runtime's facts, today's answers and cost, and
+// sentences built from the runtime's facts, today's answers and cost (on
+// the school's plan: the plan's label in place of a key, the owner's use of
+// the plan today against its quota, and whether their own key stands
+// behind it; the school pays, so no cost is shown), and
 // what the owner can do: choose or change the model and key (F3), give it a
 // new token, pause or resume it (on the runtime only: this is not Core's
 // Suspend), and delete it from the runtime. It is read again every few
@@ -32,6 +35,7 @@ import {
   otherRecentTokens,
   pollInterval,
   providerLabel,
+  schoolSpent,
   seatSentences,
   type UnrevokedToken,
 } from './hosting'
@@ -52,8 +56,10 @@ const props = withDefaults(
     canConnect?: boolean
     /** The runtime takes a model and key of the owner's (features.own_key). */
     canChooseModel?: boolean
+    /** The runtime offers the school's plan (features.school_key). */
+    canChooseSchool?: boolean
   }>(),
-  { credentials: null, standing: 'active', offers: null, canConnect: true, canChooseModel: true },
+  { credentials: null, standing: 'active', offers: null, canConnect: true, canChooseModel: true, canChooseSchool: false },
 )
 const emit = defineEmits<{
   update: [agent: HostedAgent]
@@ -71,6 +77,10 @@ const { t } = useI18n()
 const status = computed(() => props.agent.status)
 const problem = computed(() => props.agent.problem)
 const own = computed(() => props.agent.model.own)
+const school = computed(() => props.agent.model.school ?? null)
+const schoolUse = computed(() => props.agent.today.school ?? null)
+/** A model and key, or the school's plan, may be chosen here. */
+const canChoose = computed(() => props.canChooseModel || props.canChooseSchool)
 const busy = ref<'pause' | 'resume' | null>(null)
 const error = shallowRef<unknown>(null)
 const deleteOpen = ref(false)
@@ -81,9 +91,17 @@ const statusTitle = computed(() => t(`hosting.status.${status.value}.title`))
 const statusBody = computed(() => {
   const p = problem.value
   if (status.value === 'error' && p) return t(`hosting.problem.${p.reason}`, { detail: p.detail })
+  if (status.value === 'needs_model' && props.canChooseSchool) return t('hosting.status.needs_model.bodySchool')
   return t(`hosting.status.${status.value}.body`)
 })
-const modelLine = computed(() => (own.value ? `${providerLabel(props.offers, own.value.provider)} · ${own.value.model}` : ''))
+const ownLine = computed(() => (own.value ? `${providerLabel(props.offers, own.value.provider)} · ${own.value.model}` : ''))
+const modelLine = computed(() => (school.value ? school.value.label : ownLine.value))
+/** The model's id beside the plan's label, unless the label says it already. */
+const schoolModel = computed(() => {
+  const s = school.value
+  return s && s.model && !s.label.includes(s.model) ? s.model : ''
+})
+const spent = computed(() => schoolSpent(schoolUse.value))
 const seats = computed(() => props.agent.seats ?? [])
 const cost = computed(() =>
   own.value && !own.value.price_known ? t('hosting.card.costUnknown') : `$${props.agent.today.cost_usd}`,
@@ -213,7 +231,7 @@ const errorText = computed(() => {
 type Primary = 'chooseModel' | 'reconnect' | 'changeModel'
 const primary = computed<Primary | null>(() => {
   if (status.value === 'needs_token') return props.canConnect ? 'reconnect' : null
-  if (!props.canChooseModel) return null
+  if (!canChoose.value) return null
   return status.value === 'needs_model' ? 'chooseModel' : 'changeModel'
 })
 function onPrimary() {
@@ -246,19 +264,63 @@ defineExpose({ onCommand })
 
     <dl class="hosted-card__facts">
       <dt>{{ t('hosting.card.model') }}</dt>
-      <dd class="hosted-card__model">{{ modelLine || t('hosting.card.noModel') }}</dd>
-      <template v-if="agent.own_key">
+      <dd class="hosted-card__model">
+        {{ modelLine || t('hosting.card.noModel') }}
+        <span v-if="schoolModel" class="app-muted hosted-card__model-id">{{ schoolModel }}</span>
+      </dd>
+      <template v-if="school">
+        <dt>{{ t('hosting.card.plan') }}</dt>
+        <dd class="hosted-card__plan">{{ t('hosting.card.schoolPlan') }}</dd>
+        <dt>{{ t('hosting.card.fallback') }}</dt>
+        <dd class="hosted-card__fallback">
+          <template v-if="school.fallback && own">
+            {{ ownLine }}<template v-if="agent.own_key">, <code>{{ agent.own_key.hint }}</code></template>
+          </template>
+          <span v-else class="app-muted">{{ t('hosting.card.fallbackNone') }}</span>
+        </dd>
+      </template>
+      <template v-else-if="agent.own_key">
         <dt>{{ t('hosting.card.key') }}</dt>
         <dd><code>{{ agent.own_key.hint }}</code></dd>
       </template>
       <dt>{{ t('hosting.card.token') }}</dt>
       <dd><code>{{ agent.token.hint }}</code></dd>
-      <dt>{{ t('hosting.card.today') }}</dt>
-      <dd class="hosted-card__today">
-        {{ t('hosting.card.answers', { n: agent.today.answers }, agent.today.answers) }},
-        {{ cost }}
-      </dd>
+      <template v-if="school && schoolUse">
+        <dt>{{ t('hosting.card.schoolAllowance') }}</dt>
+        <dd class="hosted-card__today hosted-card__school-use">
+          <span class="hosted-card__school-count" :class="{ 'is-spent': spent }">
+            {{ t('hosting.card.todaySchool', { used: schoolUse.used, limit: schoolUse.limit }) }}
+          </span>
+          <span class="app-muted hosted-card__school-hint">{{ t('hosting.card.todaySchoolHint') }}</span>
+          <span class="app-muted hosted-card__per-asker">{{ t('hosting.card.perAsker', { n: schoolUse.per_asker_limit }) }}</span>
+        </dd>
+        <dt>{{ t('hosting.card.thisAgent') }}</dt>
+        <dd class="hosted-card__agent-today">{{ t('hosting.card.answers', { n: agent.today.answers }, agent.today.answers) }}</dd>
+      </template>
+      <template v-else>
+        <dt>{{ t('hosting.card.today') }}</dt>
+        <dd class="hosted-card__today">
+          {{ t('hosting.card.answers', { n: agent.today.answers }, agent.today.answers) }},
+          {{ cost }}
+        </dd>
+      </template>
     </dl>
+    <el-alert
+      v-if="school && spent"
+      type="warning"
+      :closable="false"
+      show-icon
+      :title="t(school.fallback ? 'hosting.card.spentFallback' : 'hosting.card.spentNone')"
+      class="hosted-card__alert hosted-card__spent"
+    />
+    <el-alert
+      v-if="school && !school.offered"
+      type="warning"
+      :closable="false"
+      show-icon
+      :title="t('hosting.card.offerWithdrawn')"
+      class="hosted-card__alert hosted-card__withdrawn"
+    />
     <p v-if="agent.proposals_waiting > 0" class="hosted-card__proposals">
       {{ t('hosting.card.proposals', { n: agent.proposals_waiting }, agent.proposals_waiting) }}
     </p>
@@ -274,7 +336,7 @@ defineExpose({ onCommand })
 
     <el-alert v-if="error" type="error" :closable="false" show-icon :title="errorText" class="hosted-card__alert" />
 
-    <p v-if="!canChooseModel" class="app-form-hint hosted-card__off">{{ t('hosting.card.ownKeyOff') }}</p>
+    <p v-if="!canChoose" class="app-form-hint hosted-card__off">{{ t('hosting.card.ownKeyOff') }}</p>
     <p v-if="!canConnect" class="app-form-hint hosted-card__off">{{ t('hosting.card.connectOff') }}</p>
 
     <div class="hosted-card__actions">
@@ -392,6 +454,25 @@ defineExpose({ onCommand })
 }
 .hosted-card__facts code {
   font-family: var(--app-font-mono);
+  font-size: 12px;
+}
+.hosted-card__model-id {
+  margin-left: 6px;
+  font-size: 12px;
+}
+.hosted-card__school-use {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hosted-card__school-count {
+  font-weight: 600;
+}
+.hosted-card__school-count.is-spent {
+  color: var(--el-color-warning-dark-2);
+}
+.hosted-card__school-hint,
+.hosted-card__per-asker {
   font-size: 12px;
 }
 .hosted-card__proposals {

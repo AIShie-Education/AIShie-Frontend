@@ -46,6 +46,8 @@ const props = defineProps<{
   seats?: AgentSeat[] | null
   /** Core's list of its tokens, for the one-brain rule. */
   credentials?: AgentCredential[] | null
+  /** The next step may be the school's plan (features.school_key). */
+  school?: boolean
   /** The hosted agent, when replacing its token. */
   hosted?: HostedAgent | null
 }>()
@@ -183,7 +185,7 @@ async function go() {
     </el-steps>
 
     <template v-if="mode === 'connect'">
-      <p class="host-dialog__body">{{ t('hosting.connect.body') }}</p>
+      <p class="host-dialog__body">{{ t(school ? 'hosting.connect.bodySchool' : 'hosting.connect.body') }}</p>
       <h3 class="host-dialog__h">{{ t('hosting.connect.seats') }}</h3>
       <ul v-if="sortedSeats.length" class="host-dialog__seats">
         <li v-for="s in sortedSeats" :key="s.course_id" class="host-dialog__seat">

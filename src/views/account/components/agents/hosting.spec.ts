@@ -35,6 +35,7 @@ import {
   ownerFallbackCredential,
   pollInterval,
   problemsOf,
+  schoolSpent,
   seatSentences,
   tokenHint,
   unrevoked,
@@ -81,7 +82,8 @@ const EN: Record<string, string> = {
   operator_agent: 'The school’s operator already runs this agent.',
   agent_not_found: 'This agent is no longer on the school’s runtime.',
   version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
-  school_key_not_offered: 'The school’s key is not offered yet.',
+  school_key_not_offered: 'The school’s plan is not offered here.',
+  unknown_offer: 'The school no longer offers this model. Choose another.',
   own_key_required: 'Enter your API key for OpenAI.',
   own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for OpenAI.',
   model_denied: 'The school does not allow this model. Choose another.',
@@ -123,6 +125,8 @@ const GENERIC = [
   'method_not_allowed',
   'no_route',
   'internal',
+  // An administrators' route, which this page never calls.
+  'not_admin',
 ]
 
 describe('the words for each error reason', () => {
@@ -463,6 +467,7 @@ describe('the model form', () => {
     expect(fieldOfPointer('/key')).toBe('key')
     expect(fieldOfPointer('/model/own/max_output_tokens')).toBe('maxOutputTokens')
     expect(fieldOfPointer('/model/school')).toBeNull()
+    expect(fieldOfPointer('/model/school/offer')).toBe('offer')
     expect(fieldOfPointer(7)).toBeNull()
   })
 
@@ -495,5 +500,15 @@ describe('the model form', () => {
     )
     setLocale('zh-Hant')
     expect(t('hosting.errors.key_is_aishie_token', { provider: 'OpenAI' })).toContain('AIshie 的權杖')
+  })
+})
+
+describe('the school’s plan', () => {
+  it('is spent once the owner’s answers today reach its quota', () => {
+    const use = { scope: 'owner' as const, used: 99, limit: 100, used_usd: '0.000000', limit_usd: null, per_asker_limit: 20 }
+    expect(schoolSpent(use)).toBe(false)
+    expect(schoolSpent({ ...use, used: 100 })).toBe(true)
+    expect(schoolSpent(null)).toBe(false)
+    expect(schoolSpent(undefined)).toBe(false)
   })
 })

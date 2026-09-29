@@ -12,10 +12,12 @@
 // What the runtime offers, it says in GET /info's features, each true or
 // false: connect_by_token for connecting an agent by its token (the wizard,
 // pasting, and a new token for a hosted one), own_key for a model and key of
-// the owner's. Each entry point shows only while its feature is true. Hosting
-// an agent not hosted yet needs both, since the school's key (school_key) is
-// not offered in v1 and a hosted agent without a model never runs. An agent
-// hosted already shows as hosted whatever the features say.
+// the owner's, school_key for the school's plan (D8), a model the school
+// provides and pays for. Each entry point shows only while its feature is
+// true. Hosting an agent not hosted yet needs connect_by_token and a way to
+// give it a model, own_key or school_key, since a hosted agent without a
+// model never runs. An agent hosted already shows as hosted whatever the
+// features say.
 //
 // Connecting answers with the agent's other live tokens (the contract's
 // A.1). When one was used lately, or others still work, the panel says so
@@ -65,8 +67,12 @@ const features = computed(() => rt.info.value?.features ?? null)
 const canConnect = computed(() => !!features.value?.connect_by_token)
 /** A model and a key of the owner's: the model step, and changing them. */
 const canChooseModel = computed(() => !!features.value?.own_key)
+/** The school's plan: a model the school provides and pays for. */
+const canChooseSchool = computed(() => !!features.value?.school_key)
+/** A model may be given: the owner's own, or the school's plan. */
+const canGiveModel = computed(() => canChooseModel.value || canChooseSchool.value)
 /** Hosting is offered to an agent not hosted yet. */
-const offerHosting = computed(() => canConnect.value && canChooseModel.value)
+const offerHosting = computed(() => canConnect.value && canGiveModel.value)
 const actorId = computed(() => props.agent.actor_id.toLowerCase())
 const active = computed(() => props.standing === 'active')
 
@@ -151,8 +157,8 @@ function onConnected(a: HostedAgent, others: OtherTokens | null | undefined) {
   hosted.value = a
   afterConnect.value = others?.tokens.length ? others : null
   emit('credsChanged')
-  // Step two: the model and key, with the card behind it.
-  if (!canChooseModel.value) return
+  // Step two: the model and key, or the school's plan, with the card behind it.
+  if (!canGiveModel.value) return
   modelWizard.value = true
   modelOpen.value = true
 }
@@ -204,6 +210,7 @@ function onDeleted() {
       :offers="offers"
       :can-connect="canConnect"
       :can-choose-model="canChooseModel"
+      :can-choose-school="canChooseSchool"
       @update="hosted = $event"
       @deleted="onDeleted"
       @choose-model="chooseModel"
@@ -215,6 +222,7 @@ function onDeleted() {
     <ConnectRuntimeCard
       v-else
       :hosting="rt.available.value && offerHosting"
+      :school="canChooseSchool"
       :name="agent.display_name"
       :actor-id="agent.actor_id"
       :progress="progress"
@@ -227,7 +235,9 @@ function onDeleted() {
     >
       <template #hosted>
         <div class="hosting-offer">
-          <p class="hosting-offer__intro">{{ t('hosting.choice.hostedIntro') }}</p>
+          <p class="hosting-offer__intro">
+            {{ t(canChooseSchool ? 'hosting.choice.hostedIntroSchool' : 'hosting.choice.hostedIntro') }}
+          </p>
           <div v-if="!listed" v-loading="true" class="hosting-offer__loading" />
           <el-alert
             v-else-if="accountRefused"
@@ -273,6 +283,7 @@ function onDeleted() {
         :seats="agent.seats"
         :credentials="credentials"
         :hosted="hosted"
+        :school="canChooseSchool"
         @connected="onConnected"
         @replaced="hosted = $event"
         @unrevoked="onUnrevoked"
@@ -290,11 +301,13 @@ function onDeleted() {
         @creds-changed="emit('credsChanged')"
       />
       <ModelKeyDialog
-        v-if="hosted && canChooseModel"
+        v-if="hosted && canGiveModel"
         v-model="modelOpen"
         :agent-id="hosted.id"
         :name="agent.display_name"
         :wizard="modelWizard"
+        :own-key="canChooseModel"
+        :school-key="canChooseSchool"
         @saved="hosted = $event"
       >
         <template #notice>

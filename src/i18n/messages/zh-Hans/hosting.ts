@@ -16,6 +16,8 @@ export default {
     runtimeHint: '适用于自行运维 AIshie Agent Runtime 的人。',
     hostedIntro: 'AIshie 会为智能体创建一个令牌，并在不显示的情况下交给学校的运行环境；然后由你选择模型并提供 API 密钥。',
     host: '设置托管',
+    hostedHintSchool: 'AIshie 会替你运行它，使用学校的 AI 方案，或你选择的模型和你自己的 API 密钥。无须安装任何程序，也无须处理令牌。',
+    hostedIntroSchool: 'AIshie 会为智能体创建一个令牌，并在不显示的情况下交给学校的运行环境；然后由你选择学校方案，或选择模型并提供自己的 API 密钥。',
     hostSuspended: '这个智能体已停用：请先重新启用它。',
     paste: '我已有这个智能体的令牌',
     selfWhileHosted: '改用其他 AI 工具连接，或自行部署运行环境',
@@ -31,6 +33,8 @@ export default {
       model: '模型与密钥',
     },
     body: '学校的运行环境会按照这个智能体在 AIshie 中的席位运行它。运行环境会加密保存智能体的令牌，你不会看到它。下一步请选择模型并提供你的 API 密钥。',
+    bodySchool:
+      '学校的运行环境会按照这个智能体在 AIshie 中的席位运行它。运行环境会加密保存智能体的令牌，你不会看到它。下一步请选择学校方案，或选择模型并提供你的 API 密钥。',
     seats: '它所在的课程',
     noSeats: '它还未加入任何课程。托管后，在你把它带入课程之前，它没有任何问题要回答。',
     purpose: {
@@ -168,6 +172,22 @@ export default {
     },
   },
 
+  // The school's AI plan (D8): the school provides the model and pays for it.
+  school: {
+    choice: '学校方案',
+    choiceHint: '由学校提供模型并支付费用，不必自备 API 密钥。',
+    own: '你自己的密钥',
+    ownHint: '自选供应商与模型，使用你自己的 API 密钥。',
+    offer: '模型',
+    limits: '你所有的智能体合计每天最多回答 {owner} 次，每位提问者每天最多 {asker} 次。每天 00:00 UTC 重新计算。',
+    noKey: '学校的密钥只保存在学校的服务器上，任何人（包括你）都看不到。',
+    warning: '你的提问，以及智能体读到的课程资料与作业，会按学校与模型供应商的协议发送给该供应商。',
+    fallbackTitle: '备用：你自己的密钥',
+    fallbackOn: '学校额度用完后，改用我自己的密钥回答',
+    fallbackHint: '可选。不设置时，当天额度用完后，智能体会告诉提问者“今天的学校 AI 额度已用完，请明天再试。”',
+    saved: '已保存。运行环境正以学校方案启动你的智能体。',
+  },
+
   // One token's test of a key (POST /keys/test).
   keyTest: {
     ok: '这个密钥可以使用 {model}。',
@@ -190,6 +210,7 @@ export default {
     needs_model: {
       title: '请选择模型',
       body: '你的智能体已连接，但还没有模型。请选择供应商和模型，并提供你的 API 密钥来启动它。',
+      bodySchool: '你的智能体已连接，但还没有模型。请选择学校方案，或选择供应商和模型并提供你的 API 密钥来启动它。',
     },
     starting: {
       title: '启动中',
@@ -283,6 +304,18 @@ export default {
     usedByRuntime: '由学校的运行环境使用',
     ownKeyOff: '学校的运行环境暂时不接受你自己的模型与密钥，所以无法在这里更改。',
     connectOff: '学校的运行环境暂时不接受新的令牌，所以无法在这里为它更换令牌。',
+    plan: '方案',
+    schoolPlan: '学校方案（由学校付费）',
+    fallback: '备用',
+    fallbackNone: '无：额度用完后暂停回答，明天再开始',
+    schoolAllowance: '学校额度',
+    todaySchool: '今日 {used} / {limit} 次',
+    todaySchoolHint: '学校方案，你所有的智能体合计；每天 00:00 UTC 重新计算。',
+    perAsker: '每位提问者每天最多 {n} 次',
+    thisAgent: '这个智能体今日',
+    spentFallback: '今天的学校额度已用完：在 00:00 UTC 之前改用你自己的密钥回答。',
+    spentNone: '今天的学校额度已用完：在 00:00 UTC 之前，智能体会请提问者明天再试。',
+    offerWithdrawn: '学校已不再提供这个方案。请选择其他方案，或改用你自己的密钥。',
     issueWhileHosted: '学校的运行环境正在运行这个智能体。你用新令牌启动的任何程序也会回答：如要自己运行，请先从学校的运行环境删除它。',
   },
 
@@ -320,7 +353,8 @@ export default {
     agent_not_found: '这个智能体已不在学校的运行环境上。',
     version_mismatch: '这个智能体已在另一个标签页或窗口中被更改。请检查最新的设置后再保存一次。',
     changedMeanwhile: '这个智能体刚在另一个标签页或窗口中被更改。这里显示的是它现在的状态：请检查后再试一次。',
-    school_key_not_offered: '学校的密钥暂未提供。',
+    school_key_not_offered: '这里没有提供学校方案。',
+    unknown_offer: '学校已不再提供这个模型。请选择其他模型。',
     own_key_required: '请输入你在 {provider} 的 API 密钥。',
     own_key_provider_mismatch: '你已保存的密钥属于另一个供应商。请输入 {provider} 的密钥。',
     model_denied: '学校不允许使用这个模型。请选择另一个。',
