@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# aishiteru-web-deploy against a root of its own in a temporary directory:
+# aishie-web-deploy against a root of its own in a temporary directory:
 # builds packed as CI packs them, the same ID twice, going back, the releases
 # it keeps, and archives made to get out of the root or to fill the disk.
 #
-#   deploy/aishiteru-web-deploy_test.sh
+#   deploy/aishie-web-deploy_test.sh
 #
 # Needs python3, to make the archives tar itself will not.
 set -euo pipefail
@@ -20,15 +20,15 @@ fail() { echo "FAIL $case: $*" >&2; failed=1; }
 # placeholder, the default limits, and a temporary directory of its own.
 setup() {
   case=$1
-  export AISHITERU_WEB_ROOT=$work/$case/root TMPDIR=$work/$case/tmp
-  ROOT=$AISHITERU_WEB_ROOT
+  export AISHIE_WEB_ROOT=$work/$case/root TMPDIR=$work/$case/tmp
+  ROOT=$AISHIE_WEB_ROOT
   unlock "$work/$case"
   rm -rf "${work:?}/$case"
   mkdir -p "$ROOT/releases/placeholder" "$TMPDIR"
   echo placeholder > "$ROOT/releases/placeholder/index.html"
   ln -s releases/placeholder "$ROOT/current"
-  unset AISHITERU_WEB_MAX_BYTES AISHITERU_WEB_MAX_UNPACKED AISHITERU_WEB_MAX_ENTRIES AISHITERU_WEB_LOCK_WAIT \
-    AISHITERU_WEB_READ_WAIT AISHITERU_WEB_FLOCK SSH_CONNECTION
+  unset AISHIE_WEB_MAX_BYTES AISHIE_WEB_MAX_UNPACKED AISHIE_WEB_MAX_ENTRIES AISHIE_WEB_LOCK_WAIT \
+    AISHIE_WEB_READ_WAIT AISHIE_WEB_FLOCK SSH_CONNECTION
 }
 # unlock DIR: whatever modes a test left in it, removable again.
 unlock() { if [ -d "$1" ]; then chmod -R u+rwX "$1" 2>/dev/null || true; fi; }
@@ -36,7 +36,7 @@ unlock() { if [ -d "$1" ]; then chmod -R u+rwX "$1" 2>/dev/null || true; fi; }
 out=
 run() {
   local rc=0
-  "$here/aishiteru-web-deploy" "$@" > "$work/out" 2>&1 || rc=$?
+  "$here/aishie-web-deploy" "$@" > "$work/out" 2>&1 || rc=$?
   out=$(cat "$work/out")
   return "$rc"
 }
@@ -193,12 +193,12 @@ refuse() {
   [ "$(served)" = placeholder ] || fail "$why: serving $(served)"
   [ "$(kept)" = placeholder ] || fail "$why: made a release: $(kept)"
   [ -z "$(find "$work/bad-$i" -name 'evil*' 2>/dev/null)" ] || fail "$why: wrote $(find "$work/bad-$i" -name 'evil*')"
-  [ ! -e /tmp/aishiteru-web-deploy-evil ] || fail "$why: wrote /tmp/aishiteru-web-deploy-evil"
+  [ ! -e /tmp/aishie-web-deploy-evil ] || fail "$why: wrote /tmp/aishie-web-deploy-evil"
   clean
 }
 refuse "a ../ path" f:index.html f:../evil f:../../evil
 refuse "a ../ inside a path" f:index.html d:assets f:assets/../../evil
-refuse "an absolute path" f:index.html f:/tmp/aishiteru-web-deploy-evil
+refuse "an absolute path" f:index.html f:/tmp/aishie-web-deploy-evil
 refuse "a symlink" f:index.html l:evil:/etc/passwd
 refuse "a symlink to a directory, then a file through it" f:index.html l:out:.. f:out/evil
 refuse "the top as a symlink" l:.:.. f:index.html f:evil
@@ -228,7 +228,7 @@ grep -q "nothing came on standard input" <<< "$out" || fail "said: $out"
 
 # Over the limit as sent: refused without reading the rest.
 setup oversize
-export AISHITERU_WEB_MAX_BYTES=65536
+export AISHIE_WEB_MAX_BYTES=65536
 head -c 200000 /dev/urandom | gzip -1 > "$work/big.tar.gz"
 if run big < "$work/big.tar.gz"; then fail "accepted $(wc -c < "$work/big.tar.gz") bytes over a limit of 65536"; fi
 grep -q "more than 65536 bytes" <<< "$out" || fail "said: $out"
@@ -242,7 +242,7 @@ clean
 
 # Small as sent, large unpacked: refused before it is unpacked.
 setup bomb
-export AISHITERU_WEB_MAX_UNPACKED=1048576
+export AISHIE_WEB_MAX_UNPACKED=1048576
 evil "$work/bomb.tar.gz" f:index.html z:zeros:8388608
 [ "$(wc -c < "$work/bomb.tar.gz")" -lt 65536 ] || fail "the bomb is not small: $(wc -c < "$work/bomb.tar.gz")"
 if run bomb < "$work/bomb.tar.gz"; then fail "unpacked 8 MiB with a limit of 1 MiB"; fi
@@ -251,7 +251,7 @@ grep -q "more than 1048576 bytes unpacked" <<< "$out" || fail "said: $out"
 clean
 
 setup entries
-export AISHITERU_WEB_MAX_ENTRIES=10
+export AISHIE_WEB_MAX_ENTRIES=10
 args=(f:index.html)
 for n in $(seq 1 12); do args+=("f:f$n"); done
 evil "$work/many.tar.gz" "${args[@]}"
@@ -311,7 +311,7 @@ if [ -n "$gtar" ]; then
   python3 -c 'import sys; open(sys.argv[1], "wb").truncate(64 << 20)' "$work/sparse/big.bin"
   for format in gnu pax; do
     setup "sparse-$format"
-    export AISHITERU_WEB_MAX_UNPACKED=1048576
+    export AISHIE_WEB_MAX_UNPACKED=1048576
     "$gtar" --sparse --format="$format" -czf "$work/sparse-$format.tar.gz" -C "$work/sparse" index.html big.bin
     stream=$(gzip -dc < "$work/sparse-$format.tar.gz" | wc -c | tr -d ' ')
     [ "$stream" -lt 1048576 ] || fail "not sparse: its stream is $stream bytes"
@@ -325,12 +325,13 @@ else
 fi
 
 # Over SSH, the variables that move the root and the limits are not read:
-# what a client may set is sshd's to say.
+# what a client may set is sshd's to say. Tried only where neither root the
+# script would take is there (/srv/aishiteru-web, from before the rename).
 setup over-ssh
-if [ ! -e /srv/aishiteru-web ]; then
+if [ ! -e /srv/aishie-web ] && [ ! -e /srv/aishiteru-web ]; then
   export SSH_CONNECTION="192.0.2.1 50000 192.0.2.2 22"
-  if run list < /dev/null; then fail "took AISHITERU_WEB_ROOT over SSH"; fi
-  grep -q "/srv/aishiteru-web/releases is missing" <<< "$out" || fail "said: $out"
+  if run list < /dev/null; then fail "took AISHIE_WEB_ROOT over SSH"; fi
+  grep -q "/srv/aishie-web/releases is missing" <<< "$out" || fail "said: $out"
   unset SSH_CONNECTION
 fi
 
@@ -375,15 +376,15 @@ clean
 setup stalled
 run abc1234 < "$work/builds/a.tar.gz" || fail "exit $?: $out"
 run def5678 < "$work/builds/b.tar.gz" || fail "exit $?: $out"
-export AISHITERU_WEB_LOCK_WAIT=2
-{ sleep 5 | "$here/aishiteru-web-deploy" slow > "$work/slow.out" 2>&1; } &
+export AISHIE_WEB_LOCK_WAIT=2
+{ sleep 5 | "$here/aishie-web-deploy" slow > "$work/slow.out" 2>&1; } &
 sleep 1
 run activate abc1234 < /dev/null || fail "activate waited for an upload: $out"
 [ "$(served)" = abc1234 ] || fail "serving $(served)"
 wait || true
 grep -q "nothing came on standard input" "$work/slow.out" || fail "the slow upload: $(cat "$work/slow.out")"
 if command -v timeout > /dev/null; then
-  export AISHITERU_WEB_READ_WAIT=1
+  export AISHIE_WEB_READ_WAIT=1
   if run stalled < <(sleep 3); then fail "waited for a build that did not come"; fi
   grep -q "did not come whole within 1 seconds" <<< "$out" || fail "said: $out"
   [ "$(served)" = abc1234 ] || fail "serving $(served)"
@@ -394,7 +395,7 @@ clean
 
 # One at a time: a deploy waits for the lock, and says so when it gives up.
 setup lock-dir
-export AISHITERU_WEB_FLOCK=no-such-flock AISHITERU_WEB_LOCK_WAIT=2
+export AISHIE_WEB_FLOCK=no-such-flock AISHIE_WEB_LOCK_WAIT=2
 mkdir "$ROOT/.lock.d"
 if run abc1234 < "$work/builds/a.tar.gz"; then fail "deployed while the lock was held"; fi
 grep -q "remove it" <<< "$out" || fail "said: $out"
@@ -404,7 +405,7 @@ run abc1234 < "$work/builds/a.tar.gz" || fail "exit $?: $out"
 [ ! -e "$ROOT/.lock.d" ] || fail "left its lock behind"
 if command -v flock > /dev/null; then
   setup lock-flock
-  export AISHITERU_WEB_LOCK_WAIT=1
+  export AISHIE_WEB_LOCK_WAIT=1
   flock "$ROOT/.lock" sleep 4 &
   sleep 1
   if run abc1234 < "$work/builds/a.tar.gz"; then fail "deployed while the lock was held"; fi
@@ -425,5 +426,5 @@ mkdir "$ROOT/current"
 if run abc1234 < "$work/builds/a.tar.gz"; then fail "ran with current a directory"; fi
 if [ -L "$ROOT/current" ] || [ ! -d "$ROOT/current" ]; then fail "current was changed"; fi
 
-[ "$failed" = 0 ] && echo "aishiteru-web-deploy: ok ($(tar --version | head -n 1))"
+[ "$failed" = 0 ] && echo "aishie-web-deploy: ok ($(tar --version | head -n 1))"
 exit "$failed"

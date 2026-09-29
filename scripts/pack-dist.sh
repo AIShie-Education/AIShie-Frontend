@@ -1,8 +1,8 @@
 #!/bin/sh
-# Packs a build into the tarball deploy/aishiteru-web-deploy takes, and a
+# Packs a build into the tarball deploy/aishie-web-deploy takes, and a
 # release carries:
 #
-#   scripts/pack-dist.sh dist aishiteru-web.tar.gz
+#   scripts/pack-dist.sh dist aishie-web.tar.gz
 #
 # Files and directories only, the build's own and nothing a machine adds. With
 # GNU tar (CI), the same build packs to the same bytes: sorted, owned by

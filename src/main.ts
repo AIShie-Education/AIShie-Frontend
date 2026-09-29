@@ -1,3 +1,7 @@
+// First, before anything that reads what this browser remembers (the
+// language is read as the i18n module loads): the keys earlier versions kept
+// are moved to the names read now.
+import './migrateStorage'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'

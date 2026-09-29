@@ -28,6 +28,7 @@ import {
   hostingErrorText,
   isAishieToken,
   isDefinitive,
+  isRuntimeTokenLabel,
   isKeyShaped,
   keyProblem,
   otherRecentTokens,
@@ -297,6 +298,14 @@ describe('tokens', () => {
     expect(credentialByPrefix(creds, 'aaaaaaaaaaaa')?.revoked_at).toBeTruthy()
   })
 
+  it('know the runtime’s own by its label, as spelt now and as earlier versions spelt it', () => {
+    expect(isRuntimeTokenLabel('AIshie runtime')).toBe(true)
+    expect(isRuntimeTokenLabel('AIShie runtime')).toBe(true)
+    for (const other of ['aishie runtime', 'AIshie runtime ', 'laptop', '', null, undefined]) {
+      expect(isRuntimeTokenLabel(other), String(other)).toBe(false)
+    }
+  })
+
   it('take another live token used in the runtime’s window (15 minutes) for something else running the agent', () => {
     const creds = [
       credential({ id: 'recent', last_used_at: ago(RECENT_USE_MS - 1000) }),
@@ -485,7 +494,7 @@ describe('the model form', () => {
     expect(isKeyShaped(`aisinv_${'abcdefghijkl'}_${'x'.repeat(20)}`)).toBe(false)
   })
 
-  it('tells an AIShie token pasted as a key from a key that is merely malformed', () => {
+  it('tells an AIshie token pasted as a key from a key that is merely malformed', () => {
     const token = newToken().token
     for (const k of [token, `"${token}"`, `Bearer ${token}`, `x${token}`, 'ais_short', 'aisinv_short']) {
       expect(isAishieToken(k), k).toBe(true)

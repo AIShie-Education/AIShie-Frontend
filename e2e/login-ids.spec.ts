@@ -62,7 +62,7 @@ async function stranger(browser: Browser, baseURL: string | undefined, lang: 'en
   const page = await context.newPage()
   await page.addInitScript((l) => {
     try {
-      localStorage.setItem('aishiteru.locale', l)
+      localStorage.setItem('aishie.locale', l)
     } catch {}
   }, lang)
   return { context, page }

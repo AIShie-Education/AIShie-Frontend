@@ -1,6 +1,6 @@
 # Notes on Core's API, from building the front end
 
-What building a complete client of AIShiteru Core (at `de4f548` / `fdfcbec`) turned up: behaviour
+What building a complete client of AIshie Core (at `de4f548` / `fdfcbec`) turned up: behaviour
 that looks like a bug, and places where the API makes a client guess, page through everything, or
 make one call per row. Each item names where in Core it comes from. None of them blocks the front
 end; the "works around it" notes say what the front end does meanwhile.

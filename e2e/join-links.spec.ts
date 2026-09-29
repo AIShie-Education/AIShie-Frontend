@@ -57,7 +57,7 @@ async function stranger(browser: Browser, opts: BrowserContextOptions & { locale
   const lang = opts.locale === 'zh-HK' ? 'zh-Hant' : 'en'
   await page.addInitScript((l) => {
     try {
-      localStorage.setItem('aishiteru.locale', l)
+      localStorage.setItem('aishie.locale', l)
     } catch {}
   }, lang)
   return { context, page }

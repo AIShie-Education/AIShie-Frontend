@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { call, chatButton, coursePath, demo, signIn, toast, type CoreReply } from './support'
 
 // An agent takes conversations in the site only while whatever runs it says
-// so with its token (me.site_chat), as an AIShie runtime does each time it
+// so with its token (me.site_chat), as an AIshie runtime does each time it
 // starts it; one operated from an external tool, such as Claude through MCP,
 // never does, and has no chat box anywhere in the site. Told through two
 // agents made for this run: the instructor's course agent, and Ken's own

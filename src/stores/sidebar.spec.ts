@@ -19,7 +19,7 @@ function page(who: { kind?: 'human' | 'agent'; admin?: 'platform' | 'department'
   return { side: useSideBarStore(), session }
 }
 
-const kept = () => JSON.parse(localStorage.getItem('aishiteru.sideBar') ?? 'null')
+const kept = () => JSON.parse(localStorage.getItem('aishie.sideBar') ?? 'null')
 
 beforeEach(() => localStorage.clear())
 
@@ -85,7 +85,7 @@ describe('the side bar’s store', () => {
   })
 
   it('shows the courses where the view kept is one the caller is no longer offered', async () => {
-    localStorage.setItem('aishiteru.sideBar', JSON.stringify({ open: true, view: 'admin', width: 300 }))
+    localStorage.setItem('aishie.sideBar', JSON.stringify({ open: true, view: 'admin', width: 300 }))
     const { side, session } = page({ admin: 'platform' })
     expect(side.shown).toBe('admin')
     session.me = { ...session.me!, platform_role: undefined } as never

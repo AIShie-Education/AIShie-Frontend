@@ -49,11 +49,11 @@ export default {
     done: '{name} is on the school’s runtime',
     replaceTitle: 'New token for {name} on the school’s runtime',
     replaceBody:
-      'A new token labelled “AIShie runtime” is made and handed to the runtime, which then revokes the one it had. You will not see either.',
+      'A new token labelled “AIshie runtime” is made and handed to the runtime, which then revokes the one it had. You will not see either.',
     replaceSubmit: 'Replace token',
     reconnectTitle: 'Connect {name} again',
     reconnectBody:
-      'AIshie refused the token the runtime had. A new token labelled “AIShie runtime” is made and handed to the runtime; you will not see it.',
+      'AIshie refused the token the runtime had. A new token labelled “AIshie runtime” is made and handed to the runtime; you will not see it.',
     reconnectSubmit: 'Connect again',
     replaced: 'The runtime has a new token for {name}',
   },
@@ -335,7 +335,7 @@ export default {
   // Deleting it from the runtime.
   delete: {
     title: 'Delete {name} from the school’s runtime?',
-    body: 'The runtime stops this agent, forgets its settings and your key, and revokes its token “AIShie runtime”. The agent stays in AIshie; you can host it again later.',
+    body: 'The runtime stops this agent, forgets its settings and your key, and revokes its token “AIshie runtime”. The agent stays in AIshie; you can host it again later.',
     proposals:
       'One answer still waiting for approval stays in AIshie. | {n} answers still waiting for approval stay in AIshie.',
     alsoRevoke: 'Also revoke its token',

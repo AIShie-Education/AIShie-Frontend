@@ -69,8 +69,8 @@ const context = await browser.newContext({
 await context.addInitScript(
   ([lang, dark]) => {
     try {
-      if (lang) localStorage.setItem('aishiteru.locale', lang)
-      localStorage.setItem('aishiteru.theme', dark ? 'dark' : 'light')
+      if (lang) localStorage.setItem('aishie.locale', lang)
+      localStorage.setItem('aishie.theme', dark ? 'dark' : 'light')
     } catch {}
   },
   [opt.lang || 'en', !!opt.dark],

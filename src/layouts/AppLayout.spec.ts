@@ -386,7 +386,7 @@ describe('the account menu', () => {
     radios()[1]!.click()
     await flushPromises()
     expect(document.documentElement.classList.contains('dark')).toBe(true)
-    expect(localStorage.getItem('aishiteru.theme')).toBe('dark')
+    expect(localStorage.getItem('aishie.theme')).toBe('dark')
     await w.get('#account-button').trigger('click')
     await flushPromises()
     menuOf()!.querySelector<HTMLElement>('[data-opens="theme"]')!.click()

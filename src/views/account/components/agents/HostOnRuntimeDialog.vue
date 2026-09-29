@@ -2,7 +2,7 @@
 // Hosting an agent on the school's runtime, with a token this page issues
 // and hands over unseen (D6; the contract's §9.2): step one of the wizard,
 // "Confirm", before "Model and key" (ModelKeyDialog). The same flow gives a
-// hosted agent a new token (mode replace, or reconnect when AIShie refused
+// hosted agent a new token (mode replace, or reconnect when AIshie refused
 // the one it had), calling PUT /token instead of POST /agents.
 //
 // The one-brain rule (the contract's A.1): an agent has one brain at a time.

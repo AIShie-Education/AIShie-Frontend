@@ -22,7 +22,9 @@
       ;(function () {
         var theme = 'auto'
         try {
-          theme = localStorage.getItem('aishiteru.theme') || 'auto'
+          // This runs before the app moves what earlier versions kept (src/migrateStorage.ts):
+          // on the first load since, the theme is still under their name.
+          theme = localStorage.getItem('aishie.theme') || localStorage.getItem('aishiteru.theme') || 'auto'
         } catch (e) {
           /* no storage: follow the system */
         }

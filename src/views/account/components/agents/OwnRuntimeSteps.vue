@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// "Run the AIShie runtime yourself (advanced)": for someone who operates an
-// AIShie Agent Runtime of their own. The runtime reads an agent file (YAML)
+// "Run the AIshie runtime yourself (advanced)": for someone who operates an
+// AIshie Agent Runtime of their own. The runtime reads an agent file (YAML)
 // from its agents directory, which names Core's base URL and the secret the
 // token is kept in; the token is never in the file, and the runtime refuses
 // one written there. The file is folded away until asked for, and its model

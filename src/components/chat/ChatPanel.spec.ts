@@ -182,7 +182,7 @@ async function setup(opts: { at?: string; phone?: boolean; width?: number } = {}
 function press(key: string, init: KeyboardEventInit = {}) {
   window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }))
 }
-const frame = () => JSON.parse(localStorage.getItem('aishiteru.chatPanel') ?? 'null')
+const frame = () => JSON.parse(localStorage.getItem('aishie.chatPanel') ?? 'null')
 /** A pointer event as a mouse makes it (jsdom has no PointerEvent). */
 async function pointer(el: { element: Element }, type: string, clientX: number) {
   el.element.dispatchEvent(new MouseEvent(type, { clientX, button: 0, bubbles: true, cancelable: true }))
@@ -273,7 +273,7 @@ describe('ChatPanel', () => {
   })
 
   it('opens as this browser left it, open and as wide', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 480 }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true, width: 480 }))
     const { w } = await setup()
     const panel = w.find('#chat-panel')
     expect(panel.exists()).toBe(true)
@@ -282,13 +282,13 @@ describe('ChatPanel', () => {
   })
 
   it('opens 380 px wide where nothing was kept, or only whether it was open', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true }))
     const { w } = await setup()
     expect(w.find('#chat-panel').attributes('style')).toBe('width: 380px;')
   })
 
   it('is docked beside the page, and resized by its edge within its bounds, with the keys or by dragging, and kept once let go', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 400 }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true, width: 400 }))
     const { w, chat } = await setup({ width: 1400 })
     const edge = w.find('[role="separator"]')
     expect(w.find('#chat-panel').classes()).not.toContain('is-sheet')
@@ -338,7 +338,7 @@ describe('ChatPanel', () => {
   })
 
   it('is as wide as it may be in a smaller window, keeping the width it was given for a wider one', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 640 }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true, width: 640 }))
     const { w, chat } = await setup({ width: 1200 })
     expect(w.find('[role="separator"]').attributes('aria-valuenow')).toBe('600')
     expect(w.find('#chat-panel').attributes('style')).toBe('width: 600px;')
@@ -346,7 +346,7 @@ describe('ChatPanel', () => {
   })
 
   it('floats over the page, against the rail, in a window narrower than 1200 px, its edge dragging it up to 70 % of the window', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true }))
     const narrow = await setup({ width: 1100 })
     const panel = narrow.w.find('#chat-panel')
     expect(panel.classes()).toContain('is-floating')
@@ -380,9 +380,9 @@ describe('ChatPanel', () => {
   })
 
   it('asks in the course of the page it is on, and elsewhere in the course last used', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true }))
     // Kept in this browser for Ada, as it is: not what she has read, which Core keeps.
-    localStorage.setItem('aishiteru.chatCourse.ada', 'k2')
+    localStorage.setItem('aishie.chatCourse.ada', 'k2')
     const home = await setup({ at: '/' })
     expect(home.chat.courseId).toBe('k2')
     expect(home.w.find('.chat-panel__course input').element.getAttribute('aria-label')).toBe('Course')
@@ -404,7 +404,7 @@ describe('ChatPanel', () => {
   })
 
   it('offers the course’s agents, and writes to the one chosen', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true }))
     const { w, chat } = await setup({ at: '/courses/k1' })
     const row = w.find('button.resp-row')
     expect(row.text()).toContain('Course tutor')
@@ -422,7 +422,7 @@ describe('ChatPanel', () => {
   })
 
   it('shows the history and back, from its toggle', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true }))
     const { w, chat } = await setup({ at: '/courses/k1' })
     const toggle = w.findAll('.chat-panel__icon').find((b) => b.attributes('aria-label') === 'History')!
     expect(toggle.attributes('aria-pressed')).toBe('false')
@@ -440,7 +440,7 @@ describe('ChatPanel', () => {
   })
 
   it('is a sheet over the whole screen on a phone, which closes with its button or Escape', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true }))
     const { w, chat, router } = await setup({ phone: true, width: 390 })
     const panel = w.find('#chat-panel')
     expect(panel.classes()).toContain('is-sheet')
@@ -561,7 +561,7 @@ describe('ChatPanel', () => {
   })
 
   it('says so where the caller may ask in no course', async () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true }))
     const { w, chat } = await setup()
     useSessionStore().memberships = [membership('k3', 'CS303', { conversation_ask: 'denied' })]
     await flushPromises()

@@ -120,7 +120,7 @@ describe('HostOnRuntimeDialog: confirm', () => {
 })
 
 describe('HostOnRuntimeDialog: connecting', () => {
-  it('issues a token labelled “AIShie runtime” under a key, hands it to the runtime, and never shows it', async () => {
+  it('issues a token labelled “AIshie runtime” under a key, hands it to the runtime, and never shows it', async () => {
     let release!: () => void
     const gate = new Promise<void>((r) => (release = r))
     s.on('POST', RUNTIME.agents, async () => {
@@ -146,7 +146,7 @@ describe('HostOnRuntimeDialog: connecting', () => {
     // The runtime can be called before any token exists.
     expect(assertion).toBeLessThan(issue)
     const issueCall = s.calls[issue]
-    expect(JSON.parse(issueCall.body!)).toEqual({ label: 'AIShie runtime' })
+    expect(JSON.parse(issueCall.body!)).toEqual({ label: 'AIshie runtime' })
     expect(issueCall.headers['Idempotency-Key']).toMatch(/\S{8,}/)
     expect(JSON.parse(s.to('POST', RUNTIME.agents)[0].body!)).toEqual({ token, core_actor_id: ACTOR })
     expect(s.revoked).toEqual([])

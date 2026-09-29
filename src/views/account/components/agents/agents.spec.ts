@@ -219,7 +219,7 @@ describe('setupProgress', () => {
 describe('runtimeAgentFile', () => {
   const ACTOR = '0192f3c1-7d2e-7c3a-9b1f-2a4c6e8f0a1b'
 
-  it('is the agent file the AIShie runtime reads, with the token in the secret it names', () => {
+  it('is the agent file the AIshie runtime reads, with the token in the secret it names', () => {
     const f = runtimeAgentFile({ coreUrl: 'https://lms.example.edu', name: 'Study helper', actorId: ACTOR })
     expect(f.yaml).toBe(
       [
@@ -242,7 +242,7 @@ describe('runtimeAgentFile', () => {
     // The runtime's own rule (secrets.EnvName): upper case, '_' for all but letters and digits.
     expect(f.tokenVar).toBe('AISHIE_SECRET_AGENTS_STUDY_HELPER_CORE_TOKEN')
     // Neither the variables the runtime does not read, nor Core's MCP path: it finds /mcp itself.
-    expect(f.yaml).not.toMatch(/CORE_MCP_URL|AISHITERU_TOKEN|\/mcp/)
+    expect(f.yaml).not.toMatch(/CORE_MCP_URL|AISHIE_TOKEN|\/mcp/)
   })
 
   it('writes any name so that YAML reads it back as it is', () => {

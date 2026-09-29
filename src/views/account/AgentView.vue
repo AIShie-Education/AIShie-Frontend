@@ -2,8 +2,8 @@
 // One of the caller's agents (agent.get): its name (agent.update), its
 // standing (agent.suspend, agent.reactivate: an administrator's suspension is
 // theirs to lift), whether it takes conversations in the site, and switching
-// them off (SiteChatCard), how it runs (HostingPanel: hosted by AIShie where the
-// school's runtime is there, another AI tool, or an AIShie runtime of the
+// them off (SiteChatCard), how it runs (HostingPanel: hosted by AIshie where the
+// school's runtime is there, another AI tool, or an AIshie runtime of the
 // owner's, one at a time), connecting a runtime to it with a token
 // (agent.issue_token, agent.list_credentials, agent.revoke_credential), the
 // courses it is seated in (agent.withdraw) and the requests to seat it that

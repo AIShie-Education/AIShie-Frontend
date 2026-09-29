@@ -35,7 +35,7 @@ for (const [path, mod] of Object.entries(modules)) {
   messages[locale][ns] = mod.default
 }
 
-const STORAGE_KEY = 'aishiteru.locale'
+const STORAGE_KEY = 'aishie.locale'
 
 /**
  * The language for a browser that asks for tag (navigator.language): Chinese

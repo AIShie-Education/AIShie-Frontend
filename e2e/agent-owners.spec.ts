@@ -49,7 +49,7 @@ async function inChinese(browser: Browser, who: DemoActor) {
   await signIn(page, who)
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('aishiteru.locale', 'zh-Hant')
+      localStorage.setItem('aishie.locale', 'zh-Hant')
     } catch {}
   })
   return page

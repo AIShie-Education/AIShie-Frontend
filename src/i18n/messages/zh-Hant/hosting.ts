@@ -44,10 +44,10 @@ export default {
     submit: '連接',
     done: '{name} 已在學校的執行環境上',
     replaceTitle: '為學校執行環境上的 {name} 換新權杖',
-    replaceBody: '系統會建立一個標籤為「AIShie runtime」的新權杖並交給執行環境，執行環境隨後會撤銷原有的權杖。兩個權杖你都不會看到。',
+    replaceBody: '系統會建立一個標籤為「AIshie runtime」的新權杖並交給執行環境，執行環境隨後會撤銷原有的權杖。兩個權杖你都不會看到。',
     replaceSubmit: '更換權杖',
     reconnectTitle: '重新連接 {name}',
-    reconnectBody: 'AIshie 拒絕了執行環境原有的權杖。系統會建立一個標籤為「AIShie runtime」的新權杖並交給執行環境；你不會看到它。',
+    reconnectBody: 'AIshie 拒絕了執行環境原有的權杖。系統會建立一個標籤為「AIshie runtime」的新權杖並交給執行環境；你不會看到它。',
     reconnectSubmit: '重新連接',
     replaced: '執行環境已取得 {name} 的新權杖',
   },
@@ -322,7 +322,7 @@ export default {
   // Deleting it from the runtime.
   delete: {
     title: '從學校的執行環境刪除 {name}？',
-    body: '執行環境會停止這個代理，刪除它的設定和你的金鑰，並撤銷它的權杖「AIShie runtime」。代理會保留在 AIshie 中；你之後可以再次託管它。',
+    body: '執行環境會停止這個代理，刪除它的設定和你的金鑰，並撤銷它的權杖「AIshie runtime」。代理會保留在 AIshie 中；你之後可以再次託管它。',
     proposals: '1 個仍在等待批准的回答會保留在 AIshie 中。 | {n} 個仍在等待批准的回答會保留在 AIshie 中。',
     alsoRevoke: '同時撤銷它的權杖',
     alsoRevokeHint: '它的權杖（「{label}」）並非由本頁建立。只有在其他程式仍在使用它時才保留。',

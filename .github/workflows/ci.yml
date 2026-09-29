@@ -7,7 +7,7 @@ name: CI
 # release.yml, on version tags, which runs these same checks by calling this
 # workflow.
 #
-# The end-to-end tests run the build against a real AIShiteru Core: the one
+# The end-to-end tests run the build against a real AIshie Core: the one
 # pinned in .github/core-image, pulled from GHCR, and api/catalogue.json must
 # be that Core's tool catalogue.
 
@@ -113,10 +113,10 @@ jobs:
         run: go run "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
       - name: shellcheck
         run: |
-          shellcheck -s sh deploy/aishiteru-web-deploy deploy/setup-web.sh scripts/pack-dist.sh
-          shellcheck deploy/aishiteru-web-deploy_test.sh scripts/ci-core.sh scripts/test-image.sh
+          shellcheck -s sh deploy/aishie-web-deploy deploy/setup-web.sh scripts/pack-dist.sh
+          shellcheck deploy/aishie-web-deploy_test.sh scripts/ci-core.sh scripts/test-image.sh
       # On Ubuntu, like the server: GNU tar and mv, and dash as /bin/sh.
-      - run: deploy/aishiteru-web-deploy_test.sh
+      - run: deploy/aishie-web-deploy_test.sh
 
   audit:
     name: npm audit
@@ -191,7 +191,7 @@ jobs:
           --health-interval 2s --health-timeout 5s --health-retries 30
     env:
       # scripts/ci-core.sh creates it for Core, and Core alone uses it.
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/aishiteru_e2e?sslmode=disable
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/aishie_e2e?sslmode=disable
       E2E_PREVIEW: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -250,7 +250,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
-            ${{ runner.temp }}/aishiteru-ci-core/core.log
+            ${{ runner.temp }}/aishie-ci-core/core.log
           if-no-files-found: ignore
           retention-days: 14
 

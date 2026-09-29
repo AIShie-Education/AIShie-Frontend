@@ -1,7 +1,7 @@
 # Front-end conventions
 
 How this app is put together, and the rules every view follows. Read
-[AIShiteru Core's concepts](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/aishiteru-core-concepts.md)
+[AIshie Core's concepts](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/aishie-core-concepts.md)
 and [schema](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/schema.md) first: this app is
 one client of Core's tool layer, the same one agents call over MCP, and it has no logic of its own
 about who may do what.
@@ -198,6 +198,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   mobile width in mind (`min-width` on columns, not fixed widths everywhere).
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
+- What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,
+  read and written in a `try`, since a browser may refuse storage. Versions from before the name
+  AIshie kept theirs under `aishiteru.`: `src/migrateStorage.ts`, the first thing `main.ts` imports,
+  moves those at start, before anything reads a key, so nothing else reads the old names.
 - Views are responsive down to phone width, and work in light and dark (use Element Plus CSS
   variables, never hard-coded colours). `useNarrow()` / `useMediaQuery()` from
   `@/composables/useMediaQuery` switch a wide table to cards on a phone.
@@ -222,7 +226,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `delegateArgsFor()` gives `member.add_delegate` both the preset and `answers_course`, always said
   outright.
 - An agent takes conversations in the site only while whatever runs it says so (`me.site_chat`, as
-  AIShie's runtime does); one operated from an external tool (Claude through MCP) never does, and has
+  AIshie's runtime does); one operated from an external tool (Claude through MCP) never does, and has
   no chat box anywhere. Where Core says `site_chat: false` (`agent.get`/`.list`, an agent's seat in
   `member.get`/`.list`), offer nothing to ask it and say why: `common.agent.external` ("Operated from
   outside") and `common.agent.externalNote`, with `common.agent.hostedTakesChat` for its owner.
@@ -300,7 +304,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   before it), the pane reads every 3 seconds while an answer is awaited and less often once it is
   quiet (`pollDelayMs`), for a minute, then asks to wait again; it stops once the conversation is
   closed. The
-  browser keeps only the course the caller last asked in (`aishiteru.chatCourse.<actorId>`). Those
+  browser keeps only the course the caller last asked in (`aishie.chatCourse.<actorId>`). Those
   who decide actions read each agent's conversations from the course's *Agents* page (its
   conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
   (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent, whether

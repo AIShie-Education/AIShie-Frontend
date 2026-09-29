@@ -302,7 +302,7 @@ describe('ModelKeyDialog', () => {
     expect(w.find('.model-form__key').exists()).toBe(true)
   })
 
-  it('refuses to send a key that is not one, and a Core token above all, saying it is an AIShie token', async () => {
+  it('refuses to send a key that is not one, and a Core token above all, saying it is an AIshie token', async () => {
     const { w, vm } = await open()
     const token = newToken().token
     for (const pasted of [token, `"${token}"`, `Bearer ${token}`]) {

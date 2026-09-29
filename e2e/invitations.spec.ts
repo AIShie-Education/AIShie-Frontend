@@ -12,7 +12,7 @@ let link = ''
 function englishFirst(page: Page) {
   return page.addInitScript(() => {
     try {
-      localStorage.setItem('aishiteru.locale', 'en')
+      localStorage.setItem('aishie.locale', 'en')
     } catch {}
   })
 }

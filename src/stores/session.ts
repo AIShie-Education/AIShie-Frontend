@@ -44,14 +44,14 @@ export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut' | 'mustChangePa
  * actors. Nothing writes there now; what those versions left is still
  * deleted when the caller goes.
  */
-const RECENT_ACTORS_PREFIX = 'aishiteru.admin.recentActors.'
+const RECENT_ACTORS_PREFIX = 'aishie.admin.recentActors.'
 /**
  * Where earlier versions of the chat kept, in this browser, what each caller
  * had read, before Core kept it (conversation.mark_read). Nothing writes
  * there now; what those versions left is deleted when the caller goes, as
  * above.
  */
-const CHAT_MEMORY_PREFIX = 'aishiteru.chat.'
+const CHAT_MEMORY_PREFIX = 'aishie.chat.'
 
 export const useSessionStore = defineStore('session', () => {
   const me = ref<Me | null>(null)

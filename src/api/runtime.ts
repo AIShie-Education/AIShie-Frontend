@@ -1,4 +1,4 @@
-// The AIShie Agent Runtime's API: what this front end calls to host a
+// The AIshie Agent Runtime's API: what this front end calls to host a
 // person's agents on the school's runtime (M2). The contract is
 // m2.api.spec.md; its objects are in runtime-types.ts.
 //

@@ -201,7 +201,7 @@ function validChoice(needKey: boolean) {
 
 /**
  * Shows a refusal where it belongs: on its field, or above the form. A key
- * refused as malformed that holds an AIShie token is said to be one.
+ * refused as malformed that holds an AIshie token is said to be one.
  */
 function showError(e: unknown, sentKey = '') {
   if (isRuntimeError(e) && FIELD_REASONS.has(e.reason)) {
