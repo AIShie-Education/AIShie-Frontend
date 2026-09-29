@@ -139,3 +139,18 @@ describe('AppLayout’s chat button', () => {
     expect(w.find('#chat-panel-toggle').exists()).toBe(false)
   })
 })
+
+describe('the language button', () => {
+  it('shows the language in use as a mark, not the speech bubble the chat button has', async () => {
+    const { w } = await mountAs('autonomous')
+    const lang = w.get('button[aria-label="Language"]')
+    expect(lang.text()).toBe('EN')
+    expect(lang.find('svg').exists()).toBe(false)
+    await lang.trigger('click')
+    await flushPromises()
+    const item = [...document.body.querySelectorAll<HTMLElement>('.el-dropdown-menu__item')].find((i) => i.textContent?.includes('繁體中文'))
+    item?.click()
+    await flushPromises()
+    expect(w.get('button[aria-label="語言"]').text()).toBe('繁')
+  })
+})

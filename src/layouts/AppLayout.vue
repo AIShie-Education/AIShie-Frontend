@@ -22,6 +22,9 @@ import { titleKey } from '@/router/title'
 
 const session = useSessionStore()
 const ui = useUiStore()
+// The language button shows the language in use in a mark of its own (繁, 简,
+// EN), not a speech-bubble icon, which the chat panel's button beside it uses.
+const localeMark = computed(() => ({ 'zh-Hant': '繁', 'zh-Hans': '简', en: 'EN' })[ui.locale as Locale] ?? 'EN')
 const chat = useChatStore()
 const route = useRoute()
 const router = useRouter()
@@ -178,7 +181,7 @@ const pageTitle = computed(() => {
 
           <el-dropdown trigger="click" @command="(l: Locale) => (ui.locale = l)">
             <el-button text circle :aria-label="t('common.nav.language')">
-              <el-icon :size="18"><ChatLineSquare /></el-icon>
+              <span class="app-lang" aria-hidden="true">{{ localeMark }}</span>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -357,6 +360,12 @@ const pageTitle = computed(() => {
 }
 .app-header__right {
   flex-shrink: 0;
+}
+.app-lang {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 .app-user {
   display: flex;
