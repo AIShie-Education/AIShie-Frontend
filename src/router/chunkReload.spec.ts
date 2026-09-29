@@ -53,7 +53,7 @@ describe('claimReload', () => {
   })
   it('treats a marker that does not parse as none', () => {
     const s = memoryStorage()
-    s.map.set('aishiteru.chunkReload', '{not json')
+    s.map.set('aishie.chunkReload', '{not json')
     expect(claimReload('/a', 1_000, s)).toBe(true)
     expect(claimReload('/a', 1_001, s)).toBe(false)
   })
@@ -118,7 +118,7 @@ describe('installChunkReload', () => {
       await router.push('/b/7#token=aisinv_secret').catch(() => {})
       expect(assign).not.toHaveBeenCalled()
       expect(reload).toHaveBeenCalledTimes(1)
-      expect(JSON.parse(storage.map.get('aishiteru.chunkReload')!).target).toBe('/b/7')
+      expect(JSON.parse(storage.map.get('aishie.chunkReload')!).target).toBe('/b/7')
       expect([...storage.map.values()].join()).not.toContain('aisinv_secret')
     } finally {
       window.history.replaceState(null, '', '/')
@@ -131,7 +131,7 @@ describe('installChunkReload', () => {
     await router.push('/b/8?x=1#token=aisinv_secret').catch(() => {})
     expect(reload).not.toHaveBeenCalled()
     expect(assign).toHaveBeenCalledWith('/b/8?x=1#token=aisinv_secret')
-    expect(JSON.parse(storage.map.get('aishiteru.chunkReload')!).target).toBe('/b/8?x=1')
+    expect(JSON.parse(storage.map.get('aishie.chunkReload')!).target).toBe('/b/8?x=1')
   })
 
   it('does nothing for a navigation that fails for another reason', async () => {
@@ -166,7 +166,7 @@ describe('installChunkReload', () => {
       expect(event.defaultPrevented).toBe(true)
       expect(reload).toHaveBeenCalledTimes(1)
       // Where it was, without the fragment.
-      expect(JSON.parse(storage.map.get('aishiteru.chunkReload')!).target).toBe('/?q=1')
+      expect(JSON.parse(storage.map.get('aishie.chunkReload')!).target).toBe('/?q=1')
       // Straight after that reload, the same failure is left to surface.
       const again = new Event('vite:preloadError', { cancelable: true })
       window.dispatchEvent(again)

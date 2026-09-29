@@ -38,12 +38,15 @@ test('a tab an earlier version signed in with a pasted token is signed out, and 
     const auth = req.headers().authorization
     if (auth) sent.push(`${req.method()} ${new URL(req.url()).pathname}`)
   })
-  // What an earlier version kept in the tab after a token was pasted in: here, an agent's.
+  // What an earlier version kept in the tab after a token was pasted in: here, an agent's. Those
+  // versions came before the name AIshie, and kept it under theirs; the app moves it at start.
   await page.goto('/login')
   await page.evaluate((token) => sessionStorage.setItem('aishiteru.bearer', token), d.actors.grader.token)
   await page.goto(`/courses/${d.course.id}`)
   await expect(page).toHaveURL(/\/login\?next=/)
-  expect(await page.evaluate(() => sessionStorage.getItem('aishiteru.bearer'))).toBeNull()
+  expect(
+    await page.evaluate(() => [sessionStorage.getItem('aishiteru.bearer'), sessionStorage.getItem('aishie.bearer')]),
+  ).toEqual([null, null])
   await expect(accountButton(page)).toHaveCount(0)
   expect(sent).toEqual([])
 
@@ -54,6 +57,35 @@ test('a tab an earlier version signed in with a pasted token is signed out, and 
   await expect(page).toHaveURL(new RegExp(`/courses/${d.course.id}$`))
   await expectSignedInAs(page, 'Ken Wong')
   expect(sent).toEqual([])
+})
+
+test('what a version from before the name AIshie remembered in this browser is kept: its language and its theme', async ({
+  page,
+}) => {
+  // As those versions kept them, under their names, there before the page's first script: the
+  // first load since. Once only, so that nothing is put back when the page loads again.
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('e2e.seeded')) return
+    sessionStorage.setItem('e2e.seeded', '1')
+    localStorage.clear()
+    localStorage.setItem('aishiteru.locale', 'zh-Hant')
+    localStorage.setItem('aishiteru.theme', 'dark')
+  })
+  await page.goto('/login')
+  // Dark before the app has loaded (index.html reads the earlier name too), and after.
+  await expect(page.locator('html')).toHaveAttribute('data-boot-theme', 'dark')
+  await expect(page.locator('html')).toHaveClass(/\bdark\b/)
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
+  await expect(page.locator('button[type=submit]')).toHaveText('登入')
+  // Under the names now, and nothing left under theirs.
+  expect(await page.evaluate(() => ({ ...localStorage }))).toEqual({
+    'aishie.locale': 'zh-Hant',
+    'aishie.theme': 'dark',
+  })
+  // Loaded again, both are read under the names now.
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-boot-theme', 'dark')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
 })
 
 test('a deep link survives signing in', async ({ page }) => {

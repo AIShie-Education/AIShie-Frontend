@@ -74,6 +74,10 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id: string) {
+            // Moving what earlier versions kept in the browser (src/migrateStorage.ts) is a chunk
+            // of its own, which the entry imports first: in the entry itself it would run after
+            // the shared chunks it imports, whose modules read what they kept as they load.
+            if (/[\\/]src[\\/](migrateStorage|utils[\\/]storageMigration)\.ts$/.test(id)) return 'migrate-storage'
             if (id.includes('node_modules/element-plus') || id.includes('node_modules/@element-plus')) return 'element-plus'
             if (/node_modules\/(markdown-it|dompurify|katex|highlight\.js)\//.test(id)) return 'markdown'
             // A typeface goes where it is imported: each Chinese script's into

@@ -79,18 +79,18 @@ describe('the first language', () => {
 
   it('is the one chosen before in this browser, whatever the browser asks for', () => {
     browserAsks('en-US')
-    localStorage.setItem('aishiteru.locale', 'zh-Hans')
+    localStorage.setItem('aishie.locale', 'zh-Hans')
     expect(initialLocale()).toBe('zh-Hans')
     browserAsks('zh-CN')
-    localStorage.setItem('aishiteru.locale', 'zh-Hant')
+    localStorage.setItem('aishie.locale', 'zh-Hant')
     expect(initialLocale()).toBe('zh-Hant')
-    localStorage.setItem('aishiteru.locale', 'en')
+    localStorage.setItem('aishie.locale', 'en')
     expect(initialLocale()).toBe('en')
   })
 
   it('is the browser’s when what was kept is not a language the app offers', () => {
     browserAsks('zh-SG')
-    localStorage.setItem('aishiteru.locale', 'zh-CN')
+    localStorage.setItem('aishie.locale', 'zh-CN')
     expect(initialLocale()).toBe('zh-Hans')
   })
 
@@ -113,7 +113,7 @@ describe('setLocale', () => {
     const numbers = vi.spyOn(Number.prototype, 'toLocaleString')
     expect(formatDecimal(1234.5)).toBe('1,234.5')
     expect(numbers).toHaveBeenCalledWith('zh-CN', { maximumFractionDigits: 2 })
-    expect(localStorage.getItem('aishiteru.locale')).toBe('zh-Hans')
+    expect(localStorage.getItem('aishie.locale')).toBe('zh-Hans')
   })
 
   it('sets it in Traditional Chinese, and back in English', () => {
@@ -124,7 +124,7 @@ describe('setLocale', () => {
     setLocale('en')
     expect(document.documentElement.lang).toBe('en')
     expect(fromNow(dayjs().subtract(3, 'minute').toISOString())).toBe('3 minutes ago')
-    expect(localStorage.getItem('aishiteru.locale')).toBe('en')
+    expect(localStorage.getItem('aishie.locale')).toBe('en')
   })
 
   it('names each language to dayjs and to Intl', () => {

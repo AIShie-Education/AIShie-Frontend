@@ -54,7 +54,7 @@ export async function signIn(
     throw new Error(`${who.display_name} has no email to sign in with (an agent never signs in to the app)`)
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('aishiteru.locale', 'en')
+      localStorage.setItem('aishie.locale', 'en')
     } catch {}
   })
   await page.goto('/login')
@@ -290,7 +290,7 @@ export async function photograph(page: Page, name: string) {
 export async function inTraditionalChinese(page: Page) {
   await page.addInitScript(() => {
     try {
-      localStorage.setItem('aishiteru.locale', 'zh-Hant')
+      localStorage.setItem('aishie.locale', 'zh-Hant')
     } catch {}
   })
 }

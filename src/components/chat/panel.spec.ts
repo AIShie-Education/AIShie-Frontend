@@ -62,21 +62,21 @@ describe('what this browser remembers of it', () => {
   it('keeps whether it is open and how wide', () => {
     expect(loadFrame()).toEqual({ open: false, width: PANEL_DEFAULT })
     saveFrame({ open: true, width: 512.4 })
-    expect(JSON.parse(localStorage.getItem('aishiteru.chatPanel')!)).toEqual({ open: true, width: 512 })
+    expect(JSON.parse(localStorage.getItem('aishie.chatPanel')!)).toEqual({ open: true, width: 512 })
     expect(loadFrame()).toEqual({ open: true, width: 512 })
   })
 
   it('opens at the default width where a version that kept no width left the frame', () => {
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true }))
     expect(loadFrame()).toEqual({ open: true, width: PANEL_DEFAULT })
   })
 
   it('starts as new from anything it cannot read', () => {
-    localStorage.setItem('aishiteru.chatPanel', '{not json')
+    localStorage.setItem('aishie.chatPanel', '{not json')
     expect(loadFrame()).toEqual({ open: false, width: PANEL_DEFAULT })
-    localStorage.setItem('aishiteru.chatPanel', 'null')
+    localStorage.setItem('aishie.chatPanel', 'null')
     expect(loadFrame()).toEqual({ open: false, width: PANEL_DEFAULT })
-    localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: 'yes', width: 'wide' }))
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: 'yes', width: 'wide' }))
     expect(loadFrame()).toEqual({ open: false, width: PANEL_DEFAULT })
   })
 

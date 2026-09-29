@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import { i18n, setLocale, type Locale } from '@/i18n'
 
 export type Theme = 'auto' | 'light' | 'dark'
-const THEME_KEY = 'aishiteru.theme'
+const THEME_KEY = 'aishie.theme'
 
 function savedTheme(): Theme {
   try {

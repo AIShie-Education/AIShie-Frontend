@@ -139,7 +139,7 @@ async function pointer(el: { element: Element }, type: string, clientX: number) 
   el.element.dispatchEvent(new MouseEvent(type, { clientX, button: 0, bubbles: true, cancelable: true }))
   await flushPromises()
 }
-const kept = () => JSON.parse(localStorage.getItem('aishiteru.sideBar') ?? 'null')
+const kept = () => JSON.parse(localStorage.getItem('aishie.sideBar') ?? 'null')
 
 beforeEach(() => {
   localStorage.clear()
@@ -306,7 +306,7 @@ describe('the side bar', () => {
 
   it('is 260 px wide, with no edge to resize it by', async () => {
     // A width an earlier version kept is not taken.
-    localStorage.setItem('aishiteru.sideBar', JSON.stringify({ open: true, view: 'courses', width: 380 }))
+    localStorage.setItem('aishie.sideBar', JSON.stringify({ open: true, view: 'courses', width: 380 }))
     const { w } = await mountAs('student')
     const bar = w.get('#side-bar')
     expect(bar.attributes('style')).toContain('width: 260px')

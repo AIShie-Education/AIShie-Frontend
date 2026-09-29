@@ -136,7 +136,7 @@ export const MCP_ENDPOINT = `${CORE_ORIGIN}/mcp`
  * the browser. Nothing sends what is kept there; a tab still holding one from
  * an earlier version of the page is signed out (see the session store).
  */
-const PASTED_TOKEN_KEY = 'aishiteru.bearer'
+const PASTED_TOKEN_KEY = 'aishie.bearer'
 
 /**
  * Forgets an API token an earlier version of the page kept in this tab, and

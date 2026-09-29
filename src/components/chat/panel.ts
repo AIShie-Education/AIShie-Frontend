@@ -68,7 +68,7 @@ export function widthForKey(key: string, width: number, max: number, opts: { shi
 /** How often the newest of the caller's conversations are read again for what is unread, open or not. */
 export const UNREAD_POLL_MS = 30_000
 
-const STORAGE_KEY = 'aishiteru.chatPanel'
+const STORAGE_KEY = 'aishie.chatPanel'
 
 export interface PanelFrame {
   open: boolean
@@ -100,13 +100,13 @@ export function saveFrame(f: PanelFrame) {
   }
 }
 
-const LAST_COURSE_PREFIX = 'aishiteru.chatCourse.'
+const LAST_COURSE_PREFIX = 'aishie.chatCourse.'
 /**
  * Where earlier versions kept, for each caller, what they had read and the
  * course they last asked in: Core keeps what they have read now. Its course
  * is taken once, and the rest dropped when a course is next kept.
  */
-const LEGACY_PREFIX = 'aishiteru.chat.'
+const LEGACY_PREFIX = 'aishie.chat.'
 
 /** The course a caller last asked in, in this browser, or null: none kept, or no storage. */
 export function loadLastCourse(actorId: string): string | null {

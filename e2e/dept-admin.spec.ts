@@ -16,7 +16,7 @@ let w: DeptWorld
 async function signInAs(page: Page, who: Person, locale: 'en' | 'zh-Hant' = 'en') {
   await page.addInitScript((l) => {
     try {
-      localStorage.setItem('aishiteru.locale', l)
+      localStorage.setItem('aishie.locale', l)
     } catch {}
   }, locale)
   await page.goto('/login')

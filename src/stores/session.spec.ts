@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ApiError, read } from '@/api/http'
+import { migrateStorage } from '@/utils/storageMigration'
 
 // Who me.get says is signed in, and what taking up an invitation answers.
 let me: { id: string; display_name: string; platform_role?: string | null; administers?: unknown[] | null } | null =
@@ -54,13 +55,13 @@ describe('a tab an earlier version of the page signed in with a pasted API token
   it('starts signed out, forgets the token, and asks Core nothing with it', async () => {
     // The browser may be signed in all the same, with a session cookie from another tab.
     me = { id: 'p1', display_name: 'Chan Tai Man' }
-    sessionStorage.setItem('aishiteru.bearer', 'ais_abcdefghijkl_pasted-in-an-earlier-version')
+    sessionStorage.setItem('aishie.bearer', 'ais_abcdefghijkl_pasted-in-an-earlier-version')
     vi.mocked(read).mockClear()
     const session = useSessionStore()
     await session.ensure()
     expect(session.status).toBe('signedOut')
     expect(session.me).toBeNull()
-    expect(sessionStorage.getItem('aishiteru.bearer')).toBeNull()
+    expect(sessionStorage.getItem('aishie.bearer')).toBeNull()
     expect(read).not.toHaveBeenCalled()
 
     // Loaded again, nothing of it is left: the tab is whoever the browser is signed in as.
@@ -112,24 +113,38 @@ describe('signInWithInvite', () => {
     me = { id: 'admin', display_name: 'Root' }
     const session = useSessionStore()
     await session.ensure()
-    localStorage.setItem('aishiteru.admin.recentActors.admin', '[]')
-    localStorage.setItem('aishiteru.chat.admin', '{"since":"2026-09-01T00:00:00Z","seen":{},"pending":{}}')
-    localStorage.setItem('aishiteru.chatCourse.admin', 'k1')
-    localStorage.setItem('aishiteru.locale', 'en')
+    localStorage.setItem('aishie.admin.recentActors.admin', '[]')
+    localStorage.setItem('aishie.chat.admin', '{"since":"2026-09-01T00:00:00Z","seen":{},"pending":{}}')
+    localStorage.setItem('aishie.chatCourse.admin', 'k1')
+    localStorage.setItem('aishie.locale', 'en')
     invite = () => Promise.reject(new ApiError({ status: 401, code: 'unauthenticated', message: 'not valid' }))
     await session.signInWithInvite('aisinv_x', 'a long enough password').catch(() => undefined)
     // Refused: nobody changed.
-    expect(localStorage.getItem('aishiteru.admin.recentActors.admin')).toBe('[]')
+    expect(localStorage.getItem('aishie.admin.recentActors.admin')).toBe('[]')
     invite = async () => {
       me = { id: 'p1', display_name: 'Chan Tai Man' }
       return { actor_id: 'p1', email: 'chan@example.edu', expires_at: '2026-09-26T00:00:00Z' }
     }
     await session.signInWithInvite('aisinv_y', 'a long enough password')
-    expect(localStorage.getItem('aishiteru.admin.recentActors.admin')).toBeNull()
+    expect(localStorage.getItem('aishie.admin.recentActors.admin')).toBeNull()
     // What the chat once kept of what they had read goes; the course they last asked in, not memory of reading, stays.
-    expect(localStorage.getItem('aishiteru.chat.admin')).toBeNull()
-    expect(localStorage.getItem('aishiteru.chatCourse.admin')).toBe('k1')
-    expect(localStorage.getItem('aishiteru.locale')).toBe('en')
+    expect(localStorage.getItem('aishie.chat.admin')).toBeNull()
+    expect(localStorage.getItem('aishie.chatCourse.admin')).toBe('k1')
+    expect(localStorage.getItem('aishie.locale')).toBe('en')
+    localStorage.clear()
+  })
+
+  it('drops on going what versions from before the name AIshie kept for the caller, once moved at start', async () => {
+    // Their keys, as they left them; migrateStorage moves them before anything reads one.
+    localStorage.setItem('aishiteru.admin.recentActors.admin', '[]')
+    localStorage.setItem('aishiteru.chat.admin', '{"since":"2026-09-01T00:00:00Z","seen":{},"pending":{}}')
+    localStorage.setItem('aishiteru.chatCourse.admin', 'k1')
+    migrateStorage()
+    me = { id: 'admin', display_name: 'Root' }
+    const session = useSessionStore()
+    await session.ensure()
+    session.clear()
+    expect(Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))).toEqual(['aishie.chatCourse.admin'])
     localStorage.clear()
   })
 

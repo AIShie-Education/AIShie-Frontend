@@ -109,17 +109,17 @@ describe('the chat store', () => {
     chat.selectCourse('k1')
     expect(chat.courseId).toBe('k1')
     // The course last used is kept in this browser for the caller, as it is.
-    expect(localStorage.getItem('aishiteru.chatCourse.ada')).toBe('k1')
+    expect(localStorage.getItem('aishie.chatCourse.ada')).toBe('k1')
   })
 
   it('asks in the course the caller last used, kept for them alone, and takes it once from what earlier versions kept', () => {
-    localStorage.setItem('aishiteru.chatCourse.ada', 'k2')
+    localStorage.setItem('aishie.chatCourse.ada', 'k2')
     expect(signIn().courseId).toBe('k2')
 
     // Someone else, whose course an earlier version kept with what they had read.
     setActivePinia(createPinia())
     localStorage.setItem(
-      'aishiteru.chat.bo',
+      'aishie.chat.bo',
       JSON.stringify({
         since: '2026-09-01T00:00:00Z',
         seen: { c1: '2026-09-02T00:00:00Z' },
@@ -130,8 +130,8 @@ describe('the chat store', () => {
     const chat = signIn('bo')
     expect(chat.courseId).toBe('k2')
     chat.selectCourse('k1')
-    expect(localStorage.getItem('aishiteru.chatCourse.bo')).toBe('k1')
-    expect(localStorage.getItem('aishiteru.chat.bo')).toBeNull()
+    expect(localStorage.getItem('aishie.chatCourse.bo')).toBe('k1')
+    expect(localStorage.getItem('aishie.chat.bo')).toBeNull()
   })
 
   it('asks in the first course where storage is refused', () => {

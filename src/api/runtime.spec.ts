@@ -568,7 +568,7 @@ describe('the assertion stays secret', () => {
 
   it('goes only to the runtime, and Core’s own credential never does', async () => {
     // A token an earlier version of the sign-in page kept in this tab, which nothing sends now.
-    sessionStorage.setItem('aishiteru.bearer', 'ais_abcdefghijkl_pasted-core-token')
+    sessionStorage.setItem('aishie.bearer', 'ais_abcdefghijkl_pasted-core-token')
     runtimeAnswers.push(json(200, {}))
     await rt.runtimeApi.get('/a')
     // Core is asked with the session cookie alone, as every call to Core is …

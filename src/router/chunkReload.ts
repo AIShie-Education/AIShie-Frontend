@@ -12,7 +12,7 @@
 // secret), so a later deploy can still reload the tab again.
 import type { Router } from 'vue-router'
 
-const MARKER_KEY = 'aishiteru.chunkReload'
+const MARKER_KEY = 'aishie.chunkReload'
 /** How long a reload to one target counts as the one attempt. */
 export const RELOAD_WINDOW_MS = 10_000
 

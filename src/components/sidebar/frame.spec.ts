@@ -65,25 +65,25 @@ describe('what this browser remembers of it', () => {
 
   it('keeps whether it is open and its view, and no width', () => {
     saveFrame({ open: false, view: 'admin' })
-    expect(JSON.parse(localStorage.getItem('aishiteru.sideBar')!)).toEqual({ open: false, view: 'admin' })
+    expect(JSON.parse(localStorage.getItem('aishie.sideBar')!)).toEqual({ open: false, view: 'admin' })
     expect(loadFrame()).toEqual({ open: false, view: 'admin' })
   })
 
   it('leaves out a width kept by an earlier version', () => {
-    localStorage.setItem('aishiteru.sideBar', JSON.stringify({ open: true, view: 'agents', width: 333 }))
+    localStorage.setItem('aishie.sideBar', JSON.stringify({ open: true, view: 'agents', width: 333 }))
     expect(loadFrame()).toEqual({ open: true, view: 'agents' })
     saveFrame(loadFrame())
-    expect(JSON.parse(localStorage.getItem('aishiteru.sideBar')!)).toEqual({ open: true, view: 'agents' })
+    expect(JSON.parse(localStorage.getItem('aishie.sideBar')!)).toEqual({ open: true, view: 'agents' })
   })
 
   it('takes what it can read, and the rest as new', () => {
-    localStorage.setItem('aishiteru.sideBar', '{not json')
+    localStorage.setItem('aishie.sideBar', '{not json')
     expect(loadFrame()).toEqual({ open: true, view: 'courses' })
-    localStorage.setItem('aishiteru.sideBar', JSON.stringify({ open: 'no', view: 'files' }))
+    localStorage.setItem('aishie.sideBar', JSON.stringify({ open: 'no', view: 'files' }))
     expect(loadFrame()).toEqual({ open: true, view: 'courses' })
-    localStorage.setItem('aishiteru.sideBar', JSON.stringify({ open: false }))
+    localStorage.setItem('aishie.sideBar', JSON.stringify({ open: false }))
     expect(loadFrame()).toEqual({ open: false, view: 'courses' })
-    localStorage.setItem('aishiteru.sideBar', 'null')
+    localStorage.setItem('aishie.sideBar', 'null')
     expect(loadFrame()).toEqual({ open: true, view: 'courses' })
   })
 

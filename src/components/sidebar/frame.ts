@@ -56,7 +56,7 @@ export function viewForPath(path: string): SideView | null {
   return null
 }
 
-const STORAGE_KEY = 'aishiteru.sideBar'
+const STORAGE_KEY = 'aishie.sideBar'
 
 export interface SideFrame {
   open: boolean
