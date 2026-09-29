@@ -30,6 +30,7 @@ import {
 import {
   arrangeCredentials,
   credentialListMissing,
+  isTemporaryPassword as temporary,
   listActorCredentials,
   tokenIssuer,
   type ActorCredential,
@@ -379,8 +380,16 @@ defineExpose({ reload: () => list.reload() })
                 <el-tag v-if="state !== 'active'" :type="STATE_TAG[state]" size="small" disable-transitions>
                   {{ t(`admin.credentials.state.${state}`) }}
                 </el-tag>
+                <el-tag v-else-if="temporary(c)" type="warning" size="small" disable-transitions>
+                  {{ t('admin.credentials.temporary') }}
+                </el-tag>
               </div>
               <div class="creds__meta">
+                <span v-if="temporary(c) && c.issued_by_name">
+                  <span class="creds__k">{{ t('admin.credentials.setBy') }}</span>
+                  {{ c.issued_by_name }}
+                </span>
+                <span v-if="temporary(c) && state === 'active'">{{ t('admin.credentials.temporaryHint') }}</span>
                 <span v-if="c.kind === 'sso' && c.subject" class="creds__subject">
                   <span class="creds__k">{{ t('admin.credentials.subject') }}</span>
                   {{ c.subject }}

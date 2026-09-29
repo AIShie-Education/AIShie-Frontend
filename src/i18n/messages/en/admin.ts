@@ -403,6 +403,10 @@ export default {
     subject: 'Account',
     linkedBy: 'Linked by',
     invitedBy: 'Invited by',
+    // A password someone else set (member.reset_password).
+    temporary: 'Temporary',
+    setBy: 'Set by',
+    temporaryHint: 'They must choose their own at their next sign-in.',
     note: 'Note',
     revoke: 'Revoke',
     revoked: 'Revoked',

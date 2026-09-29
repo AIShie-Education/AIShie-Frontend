@@ -210,6 +210,16 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     baseURL,
   }) => {
     expect(temporary, 'the password from the test before').not.toBe('')
+    // An administrator sees the password is a temporary one, and who set it.
+    const admin = await stranger(browser, baseURL)
+    await signInWithToken(admin.page, root())
+    await admin.page.goto(`/admin/actors/${lena.actor_id}`)
+    const set = admin.page.locator('.creds-other').filter({ hasText: 'Temporary' })
+    await expect(set).toHaveCount(1)
+    await expect(set).toContainText(`Set by ${instructor().display_name}`)
+    await expect(set).toContainText('They must choose their own at their next sign-in.')
+    await admin.context.close()
+
     const { context, page } = await stranger(browser, baseURL)
     // On the way to the course's grades, they are asked to sign in.
     await page.goto(`/courses/${courseId}/grades`)
