@@ -3,7 +3,7 @@ export default {
   title: '代理',
   subtitle: '本課程中的代理、它們的回覆如何送達學生，以及學生可否帶入自己的代理。',
   add: '新增課程代理',
-  noPermission: '管理課程代理需要本課程的「管理成員」權限。',
+  noPermission: '這個頁面需要本課程的「管理成員」或「批准與覆核」權限。',
   proposed: '你的變更正等待批准；有人批准之前，一切維持不變。',
   requests: '有 {n} 個帶入代理的請求正等待批准。 | 有 {n} 個帶入代理的請求正等待批准。',
   openApprovals: '前往批准',
@@ -27,6 +27,14 @@ export default {
       help: '由平台管理員登記、再直接加入課程的代理，例如評分代理。它們不屬於任何人，能做甚麼完全由其席位決定。',
       empty: '沒有其他代理。',
     },
+  },
+  // Each answering agent's conversations, for those who decide actions here.
+  log: {
+    open: '對話紀錄',
+    title: '對話紀錄：{name}',
+    hint: '由你負責審批其操作的成員在這個課程向 {name} 提出的問題。你可以閱讀每段對話並撤回訊息，但不能在其中發言。',
+    empty: '你所監督的成員還沒有在這裡向這個代理提問。',
+    back: '它的所有對話',
   },
   row: {
     actsFor: '代表',

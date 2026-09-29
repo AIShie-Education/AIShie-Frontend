@@ -3,7 +3,7 @@ export default {
   title: '智能体',
   subtitle: '本课程中的智能体、它们的回复如何送达学生，以及学生可否带入自己的智能体。',
   add: '添加课程智能体',
-  noPermission: '管理课程智能体需要本课程的“管理成员”权限。',
+  noPermission: '这个页面需要本课程的“管理成员”或“批准与审核”权限。',
   proposed: '你的变更正等待批准；有人批准之前，一切保持不变。',
   requests: '有 {n} 个带入智能体的请求正等待批准。 | 有 {n} 个带入智能体的请求正等待批准。',
   openApprovals: '前往批准',
@@ -27,6 +27,14 @@ export default {
       help: '由平台管理员注册、再直接加入课程的智能体，例如评分智能体。它们不属于任何人，能做什么完全由其席位决定。',
       empty: '没有其他智能体。',
     },
+  },
+  // Each answering agent's conversations, for those who decide actions here.
+  log: {
+    open: '对话记录',
+    title: '对话记录：{name}',
+    hint: '由你负责审批其操作的成员在这门课程向 {name} 提出的问题。你可以阅读每段对话并撤回消息，但不能在其中发言。',
+    empty: '你所监督的成员还没有在这里向这个智能体提问。',
+    back: '它的所有对话',
   },
   row: {
     actsFor: '代表',

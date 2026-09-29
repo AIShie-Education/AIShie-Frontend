@@ -6,7 +6,8 @@
 // may know), how its replies go out, and pausing, resuming and removing it. A course agent's replies can be switched
 // here (member.update_perms, conversation_answer); what its owner's seat
 // allows caps it, as Core does, and a way of replying above the seat's
-// ceiling (perm_ceilings) is offered greyed out, saying why.
+// ceiling (perm_ceilings) is offered greyed out, saying why. Those who decide
+// actions here open each answering agent's conversation log from its row.
 import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -40,12 +41,20 @@ const props = defineProps<{
   /** When the agents the caller may ask were last seen, by member id (conversation.respondents). */
   askable: Map<string, string | null>
 }>()
-const emit = defineEmits<{ changed: [status: 'executed' | 'proposed', actionId: string] }>()
+const emit = defineEmits<{
+  changed: [status: 'executed' | 'proposed', actionId: string]
+  /** Open the agent's conversation log. */
+  log: [agent: { id: string; display_name: string }]
+}>()
 const { t } = useI18n()
 const course = useCourseStore()
 const session = useSessionStore()
 
 const canManage = computed(() => course.can('member_manage') && course.writable)
+/** Those who decide actions read what the members they oversee asked the agents. */
+const canOversee = computed(() => course.can('action_decide'))
+/** An agent that answers questions, or a course agent (whose log stays when its replies are off). */
+const answers = (r: CourseAgentRow) => r.group === 'course' || r.ownAnswer !== 'denied'
 const approval = computed(() => course.needsApproval('member_manage'))
 
 function presetText(r: CourseAgentRow): string | null {
@@ -235,8 +244,24 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
         </el-tooltip>
       </div>
 
-      <div v-if="canManage && r.live && r.member.status !== 'removed'" class="agent-row__actions">
-        <el-dropdown trigger="click" @command="(c: 'pause' | 'resume' | 'remove') => onCommand(r, c)">
+      <div
+        v-if="(canOversee && answers(r)) || (canManage && r.live && r.member.status !== 'removed')"
+        class="agent-row__actions"
+      >
+        <el-button
+          v-if="canOversee && answers(r)"
+          size="small"
+          class="agent-row__log"
+          @click="emit('log', { id: r.member.id, display_name: r.member.display_name })"
+        >
+          <el-icon aria-hidden="true"><ChatLineSquare /></el-icon>
+          <span>{{ t('courseAgents.log.open') }}</span>
+        </el-button>
+        <el-dropdown
+          v-if="canManage && r.live && r.member.status !== 'removed'"
+          trigger="click"
+          @command="(c: 'pause' | 'resume' | 'remove') => onCommand(r, c)"
+        >
           <el-button size="small" :loading="busy === r.member.id" :aria-label="t('courseAgents.row.more')">
             <el-icon><MoreFilled /></el-icon>
           </el-button>
@@ -363,7 +388,13 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
   color: var(--el-text-color-secondary);
 }
 .agent-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-left: auto;
+}
+.agent-row__actions .el-button + .el-dropdown {
+  margin-left: 0;
 }
 .agent-row__error {
   flex: 1 1 100%;

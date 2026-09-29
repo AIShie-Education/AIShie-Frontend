@@ -43,7 +43,8 @@ const tabs: Tab[] = [
   { name: 'course-grades', label: 'layout.course.grades', icon: 'Medal', perms: ['grade_read'], also: ['course-grade'] },
   { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
   { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read', 'member_invite'], also: ['course-member'] },
-  { name: 'course-agents', label: 'layout.course.agents', icon: 'Cpu', perms: ['member_manage'] },
+  // Those who manage the members manage the agents; those who decide actions oversee what they answered.
+  { name: 'course-agents', label: 'layout.course.agents', icon: 'Cpu', perms: ['member_manage', 'action_decide'] },
   { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
   { name: 'course-my-actions', label: 'layout.course.myActions', icon: 'List', perms: ['document_read'] },
   { name: 'course-gradebook', label: 'layout.course.gradebook', icon: 'Tickets', perms: ['grade_read'] },

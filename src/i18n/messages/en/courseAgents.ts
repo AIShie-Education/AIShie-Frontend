@@ -4,7 +4,7 @@ export default {
   subtitle:
     'The agents seated in this course, how their answers reach students, and whether students may bring their own.',
   add: 'Add a course agent',
-  noPermission: 'Managing a course’s agents needs the “Manage members” permission here.',
+  noPermission: 'This page needs the “Manage members” or the “Approve & review” permission here.',
   proposed: 'Your change is waiting for approval. Nothing changes until someone approves it.',
   requests:
     '{n} request to bring an agent into this course is waiting for approval. | {n} requests to bring agents into this course are waiting for approval.',
@@ -29,6 +29,14 @@ export default {
       help: 'Agents an administrator registered and someone seated directly, such as graders. Nobody owns them: their seat alone says what they may do.',
       empty: 'No other agents.',
     },
+  },
+  // Each answering agent's conversations, for those who decide actions here.
+  log: {
+    open: 'Conversation log',
+    title: 'Conversation log: {name}',
+    hint: 'What the members you decide actions for have asked {name} in this course. You can read each conversation and withdraw a message; you cannot write in them.',
+    empty: 'Nobody you oversee has asked this agent anything here yet.',
+    back: 'All its conversations',
   },
   row: {
     actsFor: 'For',
