@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
 import { buildDeptWorld, type DeptWorld, type Person } from './dept-world'
-import { toast } from './support'
+import { activityBar, showSideView, sideBar, toast } from './support'
 
 // A department's administrator, from signing in to losing the appointment:
 // they see and manage the courses and departments beneath their appointment
@@ -42,7 +42,8 @@ async function asRoot(method: 'GET' | 'POST', path: string, body?: unknown) {
   return out.result
 }
 
-const adminNav = (page: Page) => page.locator('.app-nav__section').filter({ hasText: 'Administration' })
+/** The administration pages she may open, in the side bar: its Administration view, shown from the activity bar. */
+const adminNav = (page: Page) => showSideView(page, 'Administration')
 const courseRows = (page: Page) => page.locator('.courses__table .el-table__body tr')
 const deptRows = (page: Page) => page.locator('.dept-tree .el-table__body tr')
 
@@ -77,7 +78,7 @@ test.describe.serial('a department administrator', () => {
 
   test('sees the courses and departments she administers, and nothing platform-only', async ({ page }) => {
     await signInAs(page, w.people.ada)
-    const nav = adminNav(page)
+    const nav = await adminNav(page)
     await expect(nav.getByRole('link', { name: 'Courses' })).toBeVisible()
     await expect(nav.getByRole('link', { name: 'Departments' })).toBeVisible()
     for (const name of ['People & agents', 'Terms', 'Permission presets']) {
@@ -248,7 +249,7 @@ test.describe.serial('a department administrator', () => {
 
   test('Bob sees only what is beneath his appointment', async ({ page }) => {
     await signInAs(page, w.people.bob)
-    await expect(adminNav(page).getByRole('link', { name: 'Departments' })).toBeVisible()
+    await expect((await adminNav(page)).getByRole('link', { name: 'Departments' })).toBeVisible()
     await page.goto('/admin/departments')
     await expect(page.locator('.dept-name__text')).toHaveText(['Computing', 'AI', 'Robotics & Control'])
     await expect(deptRows(page).first()).toContainText(`in University ${w.tag} › Engineering`)
@@ -273,10 +274,14 @@ test.describe.serial('a department administrator', () => {
   test('once her appointment ends, the administration pages are gone', async ({ page }) => {
     await signInAs(page, w.people.ada)
     await page.goto('/admin/departments')
-    await expect(adminNav(page)).toBeVisible()
+    await expect((await adminNav(page)).getByRole('link', { name: 'Departments' })).toBeVisible()
     await asRoot('POST', `/v1/departments/${w.depts.engineering.id}/admins/${w.people.ada.actor_id}/remove`, {})
     await page.reload()
     await expect(page).toHaveURL(/\/$/)
-    await expect(adminNav(page)).toHaveCount(0)
+    // The activity bar no longer offers Administration, and the side bar, left on it, shows her courses.
+    await expect(activityBar(page).getByRole('button', { name: 'Courses', exact: true })).toBeVisible()
+    await expect(activityBar(page).getByRole('button', { name: 'Administration' })).toHaveCount(0)
+    await expect(sideBar(page).getByRole('heading', { name: 'Courses', exact: true })).toBeVisible()
+    await expect(sideBar(page).getByRole('link', { name: 'Departments' })).toHaveCount(0)
   })
 })

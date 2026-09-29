@@ -40,7 +40,8 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     // agent.list says how many one may have: none yet, out of Core's limit.
     await expect(page.locator('.agents-list__count')).toHaveText(/^0 of \d+ active$/)
 
-    await page.getByRole('button', { name: 'New agent' }).click()
+    // The page's own button (the side bar, on My agents' view, has one too).
+    await page.locator('.page-header').getByRole('button', { name: 'New agent' }).click()
     const create = page.getByRole('dialog', { name: 'New agent' })
     await create.getByLabel('Name').fill(AGENT)
     await create.getByRole('button', { name: 'Create agent' }).click()

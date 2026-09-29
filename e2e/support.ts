@@ -119,6 +119,30 @@ export function floatingChatButton(page: Page) {
   return page.locator('.app-chat-fab').getByRole('button', { name: /^Chat with agents/ })
 }
 
+/**
+ * The activity bar along the window's left edge, as an editor's: a button for
+ * each view of the side bar beside it (Courses, Agents, Administration). A
+ * phone has none: the header's menu shows the views as tabs.
+ */
+export function activityBar(page: Page) {
+  return page.getByRole('toolbar', { name: 'Side bar views' })
+}
+
+/** The side bar, beside the activity bar, with the view chosen; absent while it is collapsed. */
+export function sideBar(page: Page) {
+  return page.locator('#side-bar')
+}
+
+/** Shows a view in the side bar by its button on the activity bar, unless it is shown already. */
+export async function showSideView(page: Page, name: 'Courses' | 'Agents' | 'Administration') {
+  const button = activityBar(page).getByRole('button', { name, exact: true })
+  await expect(button).toBeVisible()
+  if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click()
+  await expect(button).toHaveAttribute('aria-expanded', 'true')
+  await expect(sideBar(page).getByRole('heading', { name, exact: true })).toBeVisible()
+  return sideBar(page)
+}
+
 /** Picks an option from an Element Plus select, opened by clicking `trigger`. */
 export async function pickOption(page: Page, trigger: ReturnType<Page['locator']>, option: string | RegExp) {
   await trigger.click()
