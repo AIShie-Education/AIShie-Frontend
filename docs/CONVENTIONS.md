@@ -232,7 +232,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - The left of every signed-in page is laid out as an editor's: an activity bar along the window's edge
   (`src/components/sidebar/ActivityBar.vue`, mounted by `AppLayout`), with the brand's mark and a button
   for each view the caller is offered (their courses; their agents, for a person; administration, for
-  whoever may open its pages), and beside it the side bar (`SideBar.vue`) showing the one chosen, at a
+  whoever may open its pages), the caller's account at its bottom, and beside it the side bar (`SideBar.vue`) showing the one chosen, at a
   fixed 260 px, with no edge to resize it by. A view's button, pressed again, collapses the side bar.
   Going to a page of a view (a course's pages, `/account/agents…`, `/admin…`) shows that view, and never
   opens a collapsed side bar. `useSideBarStore()` (`@/stores/sidebar`) holds the view and whether it is
@@ -240,11 +240,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
   no activity bar: the header's menu button opens the views in a drawer, as tabs along its top, and
   following a link in it closes it.
+- The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
+  initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
+  side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
+  account's settings, the language and the theme, each a submenu with the choice in use checked, and
+  signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
+  submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
+  title alone (and, on a phone, the menu's button): nothing else is offered there.
 - The chat with agents is one panel beside every signed-in page (`src/components/chat/ChatPanel.vue`,
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
   agent. Its button is on the rail along the window's right edge, as an editor's activity bar is,
-  where any other side panel's would go too (the header holds only the language, the theme and the
-  account); the panel opens between the page and the rail, and Ctrl/⌘+J opens and closes it. It is
+  where any other side panel's would go too (the header holds only the page's title); the panel opens between the page and the rail, and Ctrl/⌘+J opens and closes it. It is
   380 px wide (`PANEL_DEFAULT`) until its left edge is dragged, or moved with the arrow keys (a
   separator), from 320 px up to half the window, and never so wide that the page is left less than
   420 px (`panelMax`); a double click on the edge goes back to 380. The page reflows as it is

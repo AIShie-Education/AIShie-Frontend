@@ -4,6 +4,12 @@ export default {
   courses: '课程',
   agents: '智能体',
   menu: '菜单',
+  // The caller's account, at the bottom of the activity bar (on a phone, of the side menu): its button, named by
+  // whose it is, and its menu, which also holds the language, the theme and signing out (common.nav, common.actions).
+  account: {
+    button: '账号：{name}',
+    settings: '账号设置',
+  },
   // The rail along the window's right edge, with a button for each side panel (the chat's).
   panels: '侧边面板',
   // The side bar on the window's left edge: the activity bar, with a button for each view (on a phone, the

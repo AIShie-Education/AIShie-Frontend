@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
-import { courseTab, coursePath, demo, floatingChatButton, rail, signIn } from './support'
+import { chooseLanguage, courseTab, coursePath, demo, floatingChatButton, rail, signIn } from './support'
 
 /**
  * What scrolls sideways that should not: the page itself, or the app's main
@@ -61,8 +61,7 @@ test.describe('language', () => {
     await expect(tabs.getByRole('link', { name: 'Overview' })).toBeVisible()
     await expect(tabs.getByRole('link', { name: 'Members' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Language' }).click()
-    await page.locator('.el-dropdown-menu:visible').getByText('繁體中文').click()
+    await chooseLanguage(page, '繁體中文')
 
     const zhTabs = page.getByRole('navigation', { name: '課程分頁' })
     for (const name of ['概覽', '教材', '作業', '提交', '成績', '成員', '審批', '我的操作']) {
@@ -85,8 +84,7 @@ test.describe('language', () => {
     await expect(page.getByRole('button', { name: 'Add member' })).toHaveCount(0)
     await expect(page.getByRole('heading', { name: '成員' })).toBeVisible()
 
-    await page.getByRole('button', { name: '語言' }).click()
-    await page.locator('.el-dropdown-menu:visible').getByText('English').click()
+    await chooseLanguage(page, 'English')
     await expect(courseTab(page, 'Overview')).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   })
@@ -103,8 +101,7 @@ test.describe('language', () => {
     await page.goto(coursePath())
     await expect(courseTab(page, 'Overview')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Language' }).click()
-    await page.locator('.el-dropdown-menu:visible').getByText('简体中文').click()
+    await chooseLanguage(page, '简体中文')
 
     const zhTabs = page.getByRole('navigation', { name: '课程栏目' })
     for (const name of ['概览', '教材', '作业', '提交', '成绩', '成员', '审批', '我的操作']) {
@@ -119,8 +116,7 @@ test.describe('language', () => {
     expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Noto Sans SC/)
     expect(fonts).not.toContain('tc')
 
-    await page.getByRole('button', { name: '语言' }).click()
-    await page.locator('.el-dropdown-menu:visible').getByText('English').click()
+    await chooseLanguage(page, 'English')
     await expect(courseTab(page, 'Overview')).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   })

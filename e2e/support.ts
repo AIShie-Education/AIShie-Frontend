@@ -143,6 +143,49 @@ export async function showSideView(page: Page, name: 'Courses' | 'Agents' | 'Adm
   return sideBar(page)
 }
 
+/**
+ * The caller's account: a menu button at the bottom of the activity bar,
+ * named by whose it is ("Account: Yuki Tanaka", in the language shown). Its
+ * menu holds the account's settings, the language, the theme and signing
+ * out. A phone has none: the account is at the bottom of the side menu.
+ */
+export function accountButton(page: Page) {
+  return page.locator('#account-button')
+}
+
+/** The account's menu, open. */
+export function accountMenu(page: Page) {
+  return page.locator('#account-menu')
+}
+
+/** Opens the account's menu from its button. */
+export async function openAccountMenu(page: Page) {
+  await accountButton(page).click()
+  await expect(accountMenu(page)).toBeVisible()
+  return accountMenu(page)
+}
+
+/** Says who is signed in, as the account's button names them. */
+export async function expectSignedInAs(page: Page, name: string) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  await expect(accountButton(page)).toHaveAttribute('aria-label', new RegExp(`[:：]\\s*${escaped}$`))
+}
+
+/** Signs out, from the account's menu. */
+export async function signOut(page: Page) {
+  const menu = await openAccountMenu(page)
+  await menu.getByRole('menuitem', { name: /^(Sign out|登出|退出登录)$/ }).click()
+  await expect(page).toHaveURL(/\/login/)
+}
+
+/** Chooses the language the app is read in, from the account's menu. */
+export async function chooseLanguage(page: Page, label: '繁體中文' | '简体中文' | 'English') {
+  const menu = await openAccountMenu(page)
+  await menu.locator('[data-opens="language"]').click()
+  await menu.getByRole('menuitemradio', { name: label }).click()
+  await expect(accountMenu(page)).toHaveCount(0)
+}
+
 /** Picks an option from an Element Plus select, opened by clicking `trigger`. */
 export async function pickOption(page: Page, trigger: ReturnType<Page['locator']>, option: string | RegExp) {
   await trigger.click()

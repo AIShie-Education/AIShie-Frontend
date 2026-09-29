@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, demo, pickOption, root, signInAsRoot, toast } from './support'
+import { call, demo, expectSignedInAs, pickOption, root, signInAsRoot, signOut, toast } from './support'
 
 // Everyone registered is in the administrators' directory, and a person an
 // administrator registers gets in by an invitation link: they open it, choose
@@ -144,17 +144,15 @@ test.describe.serial('the directory and invitations', () => {
     ).toBeVisible()
     await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.locator('.app-user')).toContainText(PERSON.name)
+    await expectSignedInAs(page, PERSON.name)
 
     // Signing out, and in again with the email and the new password.
-    await page.locator('.app-user').click()
-    await page.getByText('Sign out').click()
-    await expect(page).toHaveURL(/\/login/)
+    await signOut(page)
     await page.fill('input[name=login]', PERSON.email)
     await page.fill('input[name=password]', PASSWORD)
     await page.click('button[type=submit]')
     await expect(page).not.toHaveURL(/\/login/)
-    await expect(page.locator('.app-user')).toContainText(PERSON.name)
+    await expectSignedInAs(page, PERSON.name)
 
     // The same link again, in this browser signed in as them: it says whom
     // it would sign in instead, and then that it is no longer valid.
@@ -168,7 +166,7 @@ test.describe.serial('the directory and invitations', () => {
     // Refused, it changed nothing: still signed in, with the password chosen first.
     await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.locator('.app-user')).toContainText(PERSON.name)
+    await expectSignedInAs(page, PERSON.name)
     await context.close()
 
     // The directory says they have a password now, and no invitation waiting.
