@@ -676,6 +676,10 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
   justify-content: center;
   margin-top: 8px;
 }
+/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+.doc-view {
+  container-type: inline-size;
+}
 .doc-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -686,7 +690,8 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
 .doc-layout__side {
   min-width: 0;
 }
-@media (max-width: 1000px) {
+/* Two columns while the text keeps 420 px or more beside the 320 px one. */
+@container (max-width: 759px) {
   .doc-layout {
     grid-template-columns: minmax(0, 1fr);
   }

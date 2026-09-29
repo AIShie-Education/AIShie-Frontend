@@ -519,6 +519,10 @@ function refresh() {
 .assignment-view__approval {
   align-self: center;
 }
+/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+.assignment-view {
+  container-type: inline-size;
+}
 .assignment-view__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -589,7 +593,8 @@ function refresh() {
   flex-wrap: wrap;
   margin-top: 12px;
 }
-@media (max-width: 960px) {
+/* Two columns while the main one keeps 420 px or more beside the 300 px one. */
+@container (max-width: 739px) {
   .assignment-view__layout {
     grid-template-columns: minmax(0, 1fr);
   }

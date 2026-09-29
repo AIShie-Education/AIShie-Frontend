@@ -99,6 +99,10 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
 </template>
 
 <style scoped>
+/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+.account-view {
+  container-type: inline-size;
+}
 .account-view__top {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -143,7 +147,8 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
     padding-left: 42px;
   }
 }
-@media (max-width: 900px) {
+/* Two columns (3 : 2) while the main one keeps 420 px or more. */
+@container (max-width: 719px) {
   .account-view__top {
     grid-template-columns: minmax(0, 1fr);
   }

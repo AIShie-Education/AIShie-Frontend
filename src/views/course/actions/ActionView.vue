@@ -550,6 +550,10 @@ const errorTitle = computed(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
+/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+.action-view {
+  container-type: inline-size;
+}
 .action-view__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
@@ -567,7 +571,8 @@ const errorTitle = computed(() => {
 .action-view__side .app-card + .app-card {
   margin-top: 0;
 }
-@media (max-width: 960px) {
+/* Two columns while the main one keeps 420 px or more beside the 360 px one. */
+@container (max-width: 799px) {
   .action-view__grid {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -38,6 +38,10 @@ const course = useCourseStore()
 </template>
 
 <style scoped>
+/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+.overview {
+  container-type: inline-size;
+}
 .overview__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
@@ -48,7 +52,8 @@ const course = useCourseStore()
 .overview__side {
   min-width: 0;
 }
-@media (max-width: 960px) {
+/* Two columns while the main one keeps 420 px or more beside the 360 px one. */
+@container (max-width: 799px) {
   .overview__grid {
     grid-template-columns: minmax(0, 1fr);
   }

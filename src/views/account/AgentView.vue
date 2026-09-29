@@ -309,6 +309,10 @@ function onBrought() {
 .agent-view__alert {
   margin-bottom: 12px;
 }
+/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+.agent-view {
+  container-type: inline-size;
+}
 .agent-view__grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -327,7 +331,8 @@ function onBrought() {
 .agent-view__section {
   margin-top: 16px;
 }
-@media (max-width: 900px) {
+/* Two columns (3 : 2) while the main one keeps 420 px or more. */
+@container (max-width: 719px) {
   .agent-view__grid {
     grid-template-columns: minmax(0, 1fr);
   }

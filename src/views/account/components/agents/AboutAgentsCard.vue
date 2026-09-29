@@ -36,6 +36,10 @@ const { t } = useI18n()
 </template>
 
 <style scoped>
+/* The card's own width decides how its points sit, not the window's. */
+.agents-about {
+  container-type: inline-size;
+}
 .agents-about__points {
   list-style: none;
   margin: 0;
@@ -60,7 +64,8 @@ const { t } = useI18n()
   margin-top: 1px;
   color: var(--el-color-primary);
 }
-@media (max-width: 900px) {
+/* Three side by side while each keeps 200 px or more. */
+@container (max-width: 639px) {
   .agents-about__points {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
