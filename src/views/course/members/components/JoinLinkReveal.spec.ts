@@ -110,6 +110,18 @@ describe('JoinLinkReveal', () => {
     expect(w.text()).toContain('全螢幕顯示')
     w.unmount()
   })
+
+  it('says in words, in the page’s language, that the QR code could not be saved, not what the browser said', async () => {
+    setLocale('zh-Hant')
+    download.mockRejectedValueOnce(new Error('the image could not be made'))
+    const w = mountReveal()
+    await w.findAll('button').find((b) => b.text() === '下載二維碼（PNG）')!.trigger('click')
+    await flushPromises()
+    const shown = document.body.querySelector('.el-message')!.textContent
+    expect(shown).toContain('這個瀏覽器無法把二維碼存成圖片')
+    expect(shown).not.toContain('the image could not be made')
+    w.unmount()
+  })
 })
 
 describe('JoinLinkFullscreen', () => {

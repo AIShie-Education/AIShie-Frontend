@@ -46,6 +46,7 @@ export default {
       timeLeft: '剩餘時間',
       timeLeftSpoken: '尚餘 {m} 分 {s} 秒',
       download: '下載二維碼（PNG）',
+      downloadFailed: '這個瀏覽器無法把二維碼存成圖片。請改用全螢幕顯示，或截圖保存。',
       fullscreen: '全螢幕顯示',
       how: '學生用手機相機掃描二維碼，或開啟連結，即可加入。',
       shownOnce: '連結只會在這裡顯示。關閉此視窗不會令連結失效；如要提早停用，請在下方撤銷。',

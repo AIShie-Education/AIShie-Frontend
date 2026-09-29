@@ -50,6 +50,7 @@ export default {
       timeLeft: 'Time left',
       timeLeftSpoken: '{m} min {s} s left',
       download: 'Download QR (PNG)',
+      downloadFailed: 'The QR code could not be saved as an image in this browser. Show it full screen, or take a screenshot of it.',
       fullscreen: 'Show full screen',
       how: 'Students scan the code with their phone’s camera, or open the link.',
       shownOnce: 'The link is shown only here. Closing this does not stop it: revoke it below to stop it early.',
