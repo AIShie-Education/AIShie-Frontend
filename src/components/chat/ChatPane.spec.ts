@@ -6,7 +6,13 @@ import * as icons from '@element-plus/icons-vue'
 import { defineComponent, h, inject, provide } from 'vue'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 
-let server: { messages: ConversationMessage[]; view: ConversationView; respondents: Respondent[] }
+let server: {
+  messages: ConversationMessage[]
+  view: ConversationView
+  respondents: Respondent[]
+  /** The answer being written, as a Core with drafts sends it; left out by one without. */
+  draft?: unknown
+}
 const writes: { tool: string; args: Record<string, unknown> }[] = []
 let writeAnswer: (tool: string) => unknown
 
@@ -16,7 +22,13 @@ vi.mock('@/api/http', async (orig) => {
     ...real,
     read: vi.fn(async (tool: string) => {
       if (tool === 'conversation.get') return { ...server.view, visible_to: ['participants'] }
-      if (tool === 'conversation.messages') return { messages: server.messages, conversation: server.view, more: false }
+      if (tool === 'conversation.messages')
+        return {
+          messages: server.messages,
+          conversation: server.view,
+          more: false,
+          ...(server.draft !== undefined ? { draft: server.draft } : {}),
+        }
       if (tool === 'conversation.respondents') return { respondents: server.respondents }
       throw new Error(`no answer for ${tool}`)
     }),
@@ -32,6 +44,7 @@ const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { default: ChatPane } = await import('./ChatPane.vue')
 const { default: ChatComposer } = await import('./ChatComposer.vue')
+const { forgetSent } = await import('./chat')
 
 const Passthrough = (name: string) =>
   defineComponent({
@@ -196,6 +209,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
   vi.setSystemTime(new Date('2026-09-26T12:00:00Z'))
   writes.length = 0
+  forgetSent()
   server = {
     messages: [
       msg(1, 'student'),
@@ -225,7 +239,73 @@ describe('ChatPane', () => {
     const texts = w.findAll('.chat-msg__text')
     expect(texts.map((t) => t.text())).toEqual(['message 1', 'line one\nline two'])
     expect(w.find('.chat-msg__markdown strong').text()).toBe('bold')
-    expect(w.find('.chat-pane__typing').text()).toContain('Waiting for Course tutor')
+    // The agent at work, in a line of its own, counting the seconds since the question (asked at 11:59:00).
+    const line = w.get('.chat-pane__typing .chat-status')
+    expect(line.attributes('role')).toBe('status')
+    expect(line.find('.chat-status__label').text()).toBe('Thinking…')
+    expect(line.find('.chat-status__time').text()).toBe('1m 00s')
+    vi.advanceTimersByTime(5000)
+    await flushPromises()
+    expect(line.find('.chat-status__time').text()).toBe('1m 05s')
+    expect(w.find('.chat-pane__dots').exists()).toBe(false)
+  })
+
+  it('shows the answer being written where Core sends it, in place of the working line, until it is posted', async () => {
+    seat('student')
+    server.draft = {
+      attempt: 'a1',
+      version: 4,
+      updated_at: '2026-09-26T12:00:00Z',
+      steps: [
+        { kind: 'reading_assignment', target: 'HW1 — Temperature converter', state: 'done' },
+        { kind: 'writing', state: 'running' },
+      ],
+      text: 'Start **here**',
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const draft = w.get('.chat-pane__draft .chat-draft')
+    expect(draft.find('.chat-msg__author').text()).toBe('Course tutor')
+    expect(draft.find('.chat-steps__summary').text()).toBe('Consulted 1 item')
+    expect(draft.find('.is-streaming strong').text()).toBe('here')
+    expect(w.find('.chat-pane__typing .chat-status').exists()).toBe(false)
+  })
+
+  it('stops the wait with the button that sends, while nothing is written: the question comes back to the box', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const stop = w.get('.chat-composer__stop')
+    expect(stop.attributes('aria-label')).toBe('Stop')
+    expect(w.find('.chat-composer__send:not(.chat-composer__stop)').exists()).toBe(false)
+    // Something written: it sends that instead, as a follow-up.
+    await type(w, 'And another thing')
+    expect(w.find('.chat-composer__stop').exists()).toBe(false)
+    expect(w.get('.chat-composer__send').attributes('aria-label')).toBe('Send')
+    await type(w, '')
+    writeAnswer = () => {
+      server.messages = server.messages.map((m) =>
+        m.id === 'm3' ? { ...m, body: null, retracted: { at: 'x', by_member_id: 'student', reason: null } } : m,
+      )
+      return executed({ ok: true })
+    }
+    await w.get('.chat-composer__stop').trigger('click')
+    await flushPromises()
+    expect(writes).toEqual([{ tool: 'conversation.retract', args: { course_id: 'k1', message_id: 'm3' } }])
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('line one\nline two')
+    expect(document.body.querySelector('.el-message')?.textContent).toContain('Stopped: your question was withdrawn')
+    expect(w.find('.chat-pane__typing').exists()).toBe(false)
+    expect(w.find('.chat-composer__stop').exists()).toBe(false)
+  })
+
+  it('offers no stop to staff reading it, nor once the question is answered', async () => {
+    seat('student')
+    server.view = view({ state: 'answered' })
+    server.messages = [msg(1, 'student'), msg(2, 'tutor')]
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('.chat-composer__stop').exists()).toBe(false)
+    expect(w.find('.chat-msg__edit').exists()).toBe(false)
   })
 
   it('asks in the opener’s conversation when Enter is pressed, not while composing', async () => {
@@ -246,6 +326,106 @@ describe('ChatPane', () => {
       { tool: 'conversation.ask', args: { course_id: 'k1', conversation_id: 'c1', body: '還有一個問題' } },
     ])
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('')
+  })
+
+  it('takes the question awaiting its answer back to the composer to edit: withdrawn, which no agent answers', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    // Only the last question, awaiting its answer, may be edited.
+    const edits = w.findAll('.chat-msg__edit')
+    expect(edits).toHaveLength(1)
+    expect(w.findAll('.chat-msg').at(-1)!.find('.chat-msg__edit').exists()).toBe(true)
+    writeAnswer = () => {
+      server.messages = server.messages.map((m) =>
+        m.id === 'm3' ? { ...m, body: null, retracted: { at: 'x', by_member_id: 'student', reason: null } } : m,
+      )
+      server.view = view({ last_retracted_at: '2026-09-26T12:00:00Z' })
+      return executed({ ok: true })
+    }
+    await edits[0]!.trigger('click')
+    await flushPromises()
+    expect(writes).toEqual([{ tool: 'conversation.retract', args: { course_id: 'k1', message_id: 'm3' } }])
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('line one\nline two')
+    expect(w.find('.chat-msg.is-retracted').text()).toContain('You withdrew this message.')
+    expect(document.body.querySelector('.el-message')?.textContent).toContain(
+      'Course tutor does not answer a withdrawn question',
+    )
+    // Core still says an answer is awaited; nothing is, and the line says why.
+    expect(w.find('.chat-pane__typing').exists()).toBe(false)
+    expect(w.find('.chat-pane__notice').text()).toBe('You withdrew your question: Course tutor will not answer it.')
+    expect(w.find('.chat-msg__edit').exists()).toBe(false)
+  })
+
+  it('groups a run of messages by one author under one name', async () => {
+    seat('student')
+    server.messages = [
+      msg(1, 'student', { created_at: '2026-09-26T11:50:00Z' }),
+      msg(2, 'tutor', { created_at: '2026-09-26T11:51:00Z' }),
+      msg(3, 'tutor', { created_at: '2026-09-26T11:52:00Z' }),
+      msg(4, 'tutor', { created_at: '2026-09-26T11:59:00Z' }),
+    ]
+    server.view = view({ state: 'answered' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.findAll('.chat-pane__list > li').map((li) => li.classes().includes('is-grouped'))).toEqual([
+      false,
+      false,
+      true,
+      false,
+    ])
+    expect(w.findAll('.chat-msg__author').map((a) => a.text())).toEqual(['Course tutor', 'Course tutor'])
+  })
+
+  it('offers a new conversation a few ways to begin, which fill the box', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    const chips = w.findAll('.chat-pane__suggestion')
+    expect(chips.map((c) => c.text())).toEqual([
+      'Explain what this assignment asks for',
+      'Check my reasoning',
+      'Summarise this week’s materials',
+      'Give me a few practice questions',
+    ])
+    expect(w.get('.chat-pane__suggestions').attributes('role')).toBe('group')
+    await chips[1]!.trigger('click')
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('Check my reasoning')
+    expect(writes).toHaveLength(0)
+  })
+
+  it('takes the composer’s /new and /history to the panel, and /close to closing it', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const composer = w.findComponent(ChatComposer)
+    expect((composer.props('commands') as { name: string }[]).map((c) => c.name)).toEqual(['new', 'history', 'close'])
+    composer.vm.$emit('command', 'new')
+    composer.vm.$emit('command', 'history')
+    expect(w.emitted('new')).toHaveLength(1)
+    expect(w.emitted('history')).toHaveLength(1)
+    const prompt = vi.spyOn(ElMessageBox, 'prompt').mockRejectedValue('cancel')
+    composer.vm.$emit('command', 'close')
+    await flushPromises()
+    expect(prompt).toHaveBeenCalledTimes(1)
+    prompt.mockRestore()
+    // ↑ brings back what the caller wrote last here; once they send from this page, that.
+    expect(composer.props('recall')).toBe('line one\nline two')
+    await w.find('textarea').setValue('Sent just now')
+    await w.find('textarea').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(composer.props('recall')).toBe('Sent just now')
+  })
+
+  it('offers no /close to one who may not close it', async () => {
+    seat('student')
+    server.view = view({ status: 'closed', state: 'answered' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    expect((w.findComponent(ChatComposer).props('commands') as { name: string }[]).map((c) => c.name)).toEqual([
+      'new',
+      'history',
+    ])
   })
 
   it('lets the one asked only read it: people no longer answer in the chat', async () => {
@@ -374,7 +554,7 @@ describe('ChatPane', () => {
     expect(w.find('.chat-pane__name').text()).toBe('Chan Tai Man → Course tutor')
     expect(w.find('textarea').exists()).toBe(false)
     expect(w.find('.chat-pane__notice').text()).toContain('You are reading this as course staff.')
-    expect(w.findAll('.chat-msg__actions button').map((b) => b.text())).toEqual(['Withdraw', 'Withdraw', 'Withdraw'])
+    expect(w.findAll('.chat-msg__retract').map((b) => b.text())).toEqual(['Withdraw', 'Withdraw', 'Withdraw'])
     expect(menu(w)).toEqual(['Who can read this'])
   })
 
@@ -491,15 +671,15 @@ describe('ChatPane', () => {
     prompt.mockRestore()
   })
 
-  it('says an answer is awaited in one quiet line, and nothing of the agent being offline there', async () => {
+  it('says an answer is awaited in one quiet line, not that the agent thinks when nothing runs it', async () => {
     seat('student')
     server.view = view({ respondent: { ...view().respondent, last_seen_at: '2026-09-26T09:00:00Z' } })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(w.find('.chat-pane__notice').element.tagName).toBe('P')
-    expect(w.find('.chat-pane__notice').text()).toBe('Course tutor has your question.')
+    // Nothing runs it now: it is waited for, not "thinking", and the line above the composer says nothing more.
+    expect(w.find('.chat-pane__notice').exists()).toBe(false)
     expect(w.find('.chat-pane__presence').text()).toBe('Last seen 3 hours ago')
-    expect(w.find('.chat-pane__typing').text()).toContain('Waiting for Course tutor')
+    expect(w.find('.chat-pane__typing .chat-status__label').text()).toBe('Waiting for Course tutor…')
     expect(w.find('textarea').exists()).toBe(true)
   })
 

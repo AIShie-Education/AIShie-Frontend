@@ -120,7 +120,12 @@ for (const { tool, name } of entries) {
   body += `  '${tool.name}': { in: ${name}In; out: ${name}Out; kind: '${tool.kind}' }\n`
 }
 body += `}\n\nexport type ToolName = keyof ToolMap\n\n`
-body += `export interface ToolRoute {\n  method: 'GET' | 'POST'\n  path: string\n  kind: 'read' | 'write'\n}\n\n`
+// A tool's kind: a read; a write, recorded as an action, which takes an
+// idempotency key; or ephemeral, a write recorded nowhere, which takes none
+// (an agent's draft of its answer). The app reads and writes; it makes no
+// ephemeral call.
+body += `export type ToolKind = 'read' | 'write' | 'ephemeral'\n\n`
+body += `export interface ToolRoute {\n  method: 'GET' | 'POST'\n  path: string\n  kind: ToolKind\n}\n\n`
 body += `export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {\n`
 for (const { tool } of entries) {
   body += `  '${tool.name}': { method: '${tool.method}', path: '${tool.path}', kind: '${tool.kind}' },\n`

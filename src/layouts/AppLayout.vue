@@ -1,24 +1,25 @@
 <script setup lang="ts">
 // The frame around every signed-in page, laid out as an editor is. On the
 // left, an activity bar along the window's edge, with a button for each view
-// the caller is offered (their courses, their agents, administration), and
-// the side bar beside it showing the one chosen; on top, language, theme and
-// the account menu; and on the right, a rail along the window's edge with a
+// the caller is offered (their courses, their agents, administration) and,
+// at its bottom, their account (language, theme and signing out are in its
+// menu), and the side bar beside it showing the view chosen; on top, the
+// page's title; and on the right, a rail along the window's edge with a
 // button for each side panel (the chat with the courses' agents, for now),
 // the panel docked between the page and the rail while it is open. On a
 // phone there is neither bar nor rail: the header's menu button opens the
-// views in a drawer, as tabs along its top, and the chat's button floats at
-// the bottom right, the panel a sheet over the page.
+// views in a drawer, as tabs along its top, with the account at its bottom,
+// and the chat's button floats at the bottom right, the panel a sheet over
+// the page. A newer build deployed while the tab is open is said in a small
+// notice (NewVersionNotice), which reloads only when asked.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
-import { useSessionStore } from '@/stores/session'
-import { useUiStore, type Theme } from '@/stores/ui'
-import { LOCALES, type Locale } from '@/i18n'
-import StatusTag from '@/components/StatusTag.vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import { shortcutLabel } from '@/components/chat/panel'
+import AccountMenu from '@/components/sidebar/AccountMenu.vue'
+import NewVersionNotice from '@/components/NewVersionNotice.vue'
 import ActivityBar from '@/components/sidebar/ActivityBar.vue'
 import SideBar from '@/components/sidebar/SideBar.vue'
 import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
@@ -26,14 +27,8 @@ import { useSideBarStore } from '@/stores/sidebar'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { titleKey } from '@/router/title'
 
-const session = useSessionStore()
-const ui = useUiStore()
-// The language button shows the language in use in a mark of its own (繁, 简,
-// EN), not a speech-bubble icon, which would read as the chat's.
-const localeMark = computed(() => ({ 'zh-Hant': '繁', 'zh-Hans': '简', en: 'EN' })[ui.locale as Locale] ?? 'EN')
 const chat = useChatStore()
 const route = useRoute()
-const router = useRouter()
 const { t } = useI18n()
 
 const narrow = useMediaQuery(`(max-width: ${SIDEBAR_DRAWER_MAX_WIDTH}px)`)
@@ -52,24 +47,6 @@ watch(
   (path) => side.follow(path),
   { immediate: true },
 )
-
-const themes: { value: Theme; label: string; icon: string }[] = [
-  { value: 'auto', label: 'common.nav.themeAuto', icon: 'Monitor' },
-  { value: 'light', label: 'common.nav.themeLight', icon: 'Sunny' },
-  { value: 'dark', label: 'common.nav.themeDark', icon: 'Moon' },
-]
-const themeIcon = computed(() => themes.find((x) => x.value === ui.theme)?.icon ?? 'Monitor')
-
-async function signOut() {
-  await session.signOut().catch(() => undefined)
-  router.push({ name: 'login' })
-}
-
-function onUserCommand(cmd: string) {
-  if (cmd === 'account') router.push({ name: 'account' })
-  else if (cmd === 'agents') router.push({ name: 'account-agents' })
-  else if (cmd === 'signout') void signOut()
-}
 
 // The chat's button, on the rail (on a phone, floating over the page while
 // the sheet is closed): offered where the caller may ask agents somewhere
@@ -124,7 +101,10 @@ const pageTitle = computed(() => {
       destroy-on-close
       class="app-nav-drawer"
     >
-      <SideBar mode="drawer" @follow="drawer = false" />
+      <div class="app-nav-drawer__body">
+        <SideBar mode="drawer" @follow="drawer = false" />
+        <AccountMenu variant="drawer" />
+      </div>
     </el-drawer>
 
     <el-container direction="vertical" class="app-main-wrap">
@@ -134,68 +114,6 @@ const pageTitle = computed(() => {
             <el-icon :size="20"><Menu /></el-icon>
           </el-button>
           <span class="app-header__title">{{ pageTitle }}</span>
-        </div>
-        <div class="app-header__right">
-          <el-dropdown trigger="click" @command="(l: Locale) => (ui.locale = l)">
-            <el-button text circle :aria-label="t('common.nav.language')">
-              <span class="app-lang" aria-hidden="true">{{ localeMark }}</span>
-            </el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item
-                  v-for="l in LOCALES"
-                  :key="l.value"
-                  :command="l.value"
-                  :disabled="ui.locale === l.value"
-                >
-                  {{ l.label }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-
-          <el-dropdown trigger="click" @command="(v: Theme) => (ui.theme = v)">
-            <el-button text circle :aria-label="t('common.nav.theme')">
-              <el-icon :size="18"><component :is="themeIcon" /></el-icon>
-            </el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item
-                  v-for="th in themes"
-                  :key="th.value"
-                  :command="th.value"
-                  :disabled="ui.theme === th.value"
-                >
-                  <el-icon><component :is="th.icon" /></el-icon>
-                  {{ t(th.label) }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-
-          <el-dropdown trigger="click" @command="onUserCommand">
-            <button type="button" class="app-user">
-              <el-avatar :size="28" class="app-user__avatar">{{
-                session.me?.display_name?.slice(0, 1) ?? '?'
-              }}</el-avatar>
-              <span class="app-user__name">{{ session.me?.display_name }}</span>
-              <StatusTag v-if="session.me?.platform_role" vocab="platformRole" :value="session.me.platform_role" />
-              <el-icon><ArrowDown /></el-icon>
-            </button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="account">
-                  <el-icon><User /></el-icon>{{ t('common.nav.account') }}
-                </el-dropdown-item>
-                <el-dropdown-item v-if="session.me?.kind === 'human'" command="agents">
-                  <el-icon><Cpu /></el-icon>{{ t('common.nav.agents') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="signout" divided>
-                  <el-icon><SwitchButton /></el-icon>{{ t('common.actions.signOut') }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
         </div>
       </el-header>
 
@@ -261,6 +179,8 @@ const pageTitle = computed(() => {
         </button>
       </el-badge>
     </el-container>
+    <!-- A newer build deployed since this tab loaded: said, never reloaded without asking. -->
+    <NewVersionNotice />
   </el-container>
 </template>
 
@@ -277,7 +197,6 @@ const pageTitle = computed(() => {
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   border-bottom: 1px solid var(--app-line);
   background: var(--app-ground);
   position: sticky;
@@ -286,69 +205,21 @@ const pageTitle = computed(() => {
   gap: 12px;
 }
 .app-header__left {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+/* The header's menu button, on the ground: its hover is the ground's second shade. */
+.app-header .el-button.is-text:not(.is-disabled):hover {
+  background-color: var(--app-ground-2);
 }
 .app-header__title {
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.app-header__right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.app-header__left {
-  flex: 1 1 auto;
-}
-.app-header__right {
-  flex-shrink: 0;
-}
-.app-lang {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.02em;
-}
-.app-user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--el-text-color-primary);
-  padding: 4px 8px;
-  border-radius: var(--app-radius-control);
-  font: inherit;
-}
-.app-user:hover {
-  background: var(--app-ground-2);
-}
-/* The header's icon buttons, on the ground: their hover is the ground's second shade. */
-.app-header .el-button.is-text:not(.is-disabled):hover {
-  background-color: var(--app-ground-2);
-}
-.app-user__avatar {
-  background: var(--app-indigo-tint);
-  color: var(--app-indigo);
-  font-size: 13px;
-  font-weight: 600;
-}
-.app-user__name {
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-@media (max-width: 600px) {
-  .app-user__name {
-    display: none;
-  }
 }
 /* The page, and beside it the chat panel while it is open: the panel takes its width from the page. */
 .app-body {
@@ -464,6 +335,16 @@ const pageTitle = computed(() => {
 /* Room below the page's last item for the button, so that it never covers it. */
 .app-main.has-chat-fab {
   padding-bottom: calc(var(--app-fab-size) + 2 * var(--app-fab-inset) + env(safe-area-inset-bottom, 0px));
+}
+/* On a phone, the side menu: the views, and the account at its bottom. */
+.app-nav-drawer__body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.app-nav-drawer__body > .side-bar {
+  flex: 1;
+  min-height: 0;
 }
 @media print {
   .app-rail,

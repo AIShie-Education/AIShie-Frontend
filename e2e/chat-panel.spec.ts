@@ -267,7 +267,8 @@ test.describe.serial('the chat panel', () => {
     await composer.fill(`${TITLE}\n${QUESTION}`)
     await composer.press('Enter')
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await expect(panel.locator('.chat-pane__typing')).toContainText(`Waiting for ${TUTOR}`)
+    // The agent at work (something runs it): the working line, counting the seconds.
+    await expect(panel.locator('.chat-pane__typing .chat-status')).toContainText('Thinking…')
     await expect(panel.locator('.chat-pane__name')).toContainText(`CS101 · ${TUTOR}`)
 
     await tutorAnswers(ANSWER)
@@ -573,7 +574,7 @@ test.describe.serial('the chat panel', () => {
     const words = {
       en: {
         lastSeen: /^Last seen \d+ minutes ago$/,
-        waiting: `${TUTOR} has your question.`,
+        waiting: 'Thinking…',
         options: 'Conversation options',
         readers: 'Who can read this',
         close: 'Close conversation',
@@ -582,7 +583,7 @@ test.describe.serial('the chat panel', () => {
       },
       'zh-Hant': {
         lastSeen: /^最後上線：\d+ 分鐘前$/,
-        waiting: `${TUTOR} 已收到你的問題。`,
+        waiting: '思考中…',
         options: '對話選項',
         readers: '誰可以閱讀',
         close: '結束對話',
@@ -631,13 +632,15 @@ test.describe.serial('the chat panel', () => {
       await page.mouse.move(0, 400)
       await photograph(page, `chat-new-offline-${lang}`)
 
-      // Asked: waiting for it is one quiet line.
+      // Asked: waiting for it is one quiet line in the messages, the agent at work (its conversation
+      // says it was seen just now), counting the seconds; nothing above the composer.
       const first = `${lang} ${STAMP}: what is a for loop?`
       await box.locator('textarea').fill(`${first}\nWith an example, please.`)
       await box.locator('textarea').press('Enter')
       await expect(panel.locator('.chat-msg').filter({ hasText: first })).toBeVisible()
-      await expect(panel.locator('.chat-pane__notice')).toHaveText(w.waiting)
-      await expect(panel.locator('.chat-pane__typing')).toBeVisible()
+      await expect(panel.locator('.chat-pane__typing .chat-status__label')).toHaveText(w.waiting)
+      await expect(panel.locator('.chat-pane__typing .chat-status__time')).toHaveText(/^\d+s$/)
+      await expect(panel.locator('.chat-pane__notice')).toHaveCount(0)
       await expect(head.locator('.el-tag')).toHaveCount(0)
       await page.mouse.move(0, 400)
       await photograph(page, `chat-waiting-${lang}`)

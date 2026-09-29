@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type BrowserContextOptions, type Page } from '@playwright/test'
-import { call, coursePath, demo, registerPerson, signIn, toast, type CoreReply } from './support'
+import { call, coursePath, demo, expectSignedInAs, registerPerson, signIn, toast, type CoreReply } from './support'
 
 // A course's invite link, shown to a class as a QR code: whoever may create
 // one (member_invite, which the instructor holds and the TA does not) makes
@@ -166,7 +166,7 @@ test.describe.serial('invite links', () => {
     await page.getByRole('button', { name: 'Create account and join' }).click()
 
     await expect(page).toHaveURL(new RegExp(`/courses/${demo().course.id}$`))
-    await expect(page.locator('.app-user')).toContainText(name)
+    await expectSignedInAs(page, name)
 
     // Core seated them as a student, through that link.
     const d = demo()

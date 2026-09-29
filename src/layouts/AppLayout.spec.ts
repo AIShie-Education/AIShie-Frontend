@@ -43,7 +43,7 @@ function membership(courseId: string, ask: string) {
 }
 
 /** Signed in as someone who may ask agents in one course (or not), on a wide screen or a phone's. */
-async function mountAs(ask: string, opts: { phone?: boolean } = {}) {
+async function mountAs(ask: string, opts: { phone?: boolean; email?: string; role?: string } = {}) {
   window.matchMedia = ((query: string) => ({
     matches: !!opts.phone && query.includes('max-width'),
     media: query,
@@ -53,7 +53,14 @@ async function mountAs(ask: string, opts: { phone?: boolean } = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const session = useSessionStore()
-  session.me = { id: 'ada', kind: 'human', display_name: 'Ada', status: 'active' } as never
+  session.me = {
+    id: 'ada',
+    kind: 'human',
+    display_name: 'Ada',
+    status: 'active',
+    email: opts.email ?? null,
+    platform_role: opts.role ?? null,
+  } as never
   session.status = 'signedIn'
   session.memberships = [membership('k1', ask)]
   const router = createRouter({
@@ -63,6 +70,7 @@ async function mountAs(ask: string, opts: { phone?: boolean } = {}) {
       { path: '/courses/:courseId', name: 'course-overview', component: View },
       { path: '/account', name: 'account', component: View },
       { path: '/account/agents', name: 'account-agents', component: View },
+      { path: '/login', name: 'login', component: View },
     ],
   })
   await router.push('/')
@@ -71,11 +79,12 @@ async function mountAs(ask: string, opts: { phone?: boolean } = {}) {
     global: { plugins: [pinia, router, i18n, ElementPlus], components: icons },
   })
   await flushPromises()
-  return { w, chat: useChatStore() }
+  return { w, chat: useChatStore(), router }
 }
 
 beforeEach(() => {
   localStorage.clear()
+  document.documentElement.classList.remove('dark')
   setLocale('en')
   unread = 0
 })
@@ -194,12 +203,12 @@ describe('AppLayout’s rail', () => {
 })
 
 describe('the header', () => {
-  it('has no chat button: the chat is the rail’s', async () => {
+  it('holds the page’s title alone: no chat button, and no menus, which are the account’s', async () => {
     const { w } = await mountAs('autonomous')
     const header = w.get('.app-header')
     expect(header.find('[aria-controls="chat-panel"]').exists()).toBe(false)
-    const names = header.findAll('button').map((b) => b.attributes('aria-label') ?? b.text())
-    expect(names).toEqual(['Language', 'Theme', expect.stringContaining('Ada')])
+    expect(header.findAll('button')).toHaveLength(0)
+    expect(header.find('.el-dropdown').exists()).toBe(false)
   })
 })
 
@@ -241,17 +250,200 @@ describe('on a phone', () => {
   })
 })
 
-describe('the language button', () => {
-  it('shows the language in use as a mark, not a speech bubble, which would read as the chat’s', async () => {
+/** The menu the account's button opens, wherever it was put (beside the activity bar, it is in the body). */
+const menuOf = () => document.body.querySelector<HTMLElement>('#account-menu')
+const itemNames = (root: HTMLElement | null) =>
+  [
+    ...(root?.querySelectorAll<HTMLElement>(':scope > [role="menuitem"], :scope > [role="none"] > [role="menuitem"]') ??
+      []),
+  ].map((el) => el.querySelector('.account-menu__label')?.textContent?.trim())
+function key(el: Element, k: string) {
+  const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })
+  el.dispatchEvent(e)
+  return e
+}
+
+describe('the account menu', () => {
+  it('is a menu button at the bottom of the activity bar, with the initial of the caller’s name', async () => {
     const { w } = await mountAs('autonomous')
-    const lang = w.get('button[aria-label="Language"]')
-    expect(lang.text()).toBe('EN')
-    expect(lang.find('svg').exists()).toBe(false)
-    await lang.trigger('click')
+    const button = w.get('.activity-bar .activity-bar__foot #account-button')
+    expect(button.element.tagName).toBe('BUTTON')
+    expect(button.text()).toBe('A')
+    expect(button.attributes('aria-label')).toBe('Account: Ada')
+    expect(button.attributes('aria-haspopup')).toBe('menu')
+    expect(button.attributes('aria-expanded')).toBe('false')
+    expect(button.attributes('aria-controls')).toBe('account-menu')
+    // Its tooltip, the caller's name, takes no keys from it.
+    const tip = w.findAllComponents({ name: 'ElTooltip' }).find((c) => c.props('content') === 'Ada')
+    expect(tip?.props('triggerKeys')).toEqual([])
+    // Last in the bar: after the views.
+    expect(w.get('.activity-bar').element.lastElementChild?.classList.contains('activity-bar__foot')).toBe(true)
+  })
+
+  it('opens on its first item, and says who is signed in, their platform role, the settings, language, theme and signing out', async () => {
+    const { w } = await mountAs('autonomous', { email: 'ada@example.edu', role: 'root' })
+    const button = w.get('#account-button')
+    await button.trigger('click')
     await flushPromises()
-    const item = [...document.body.querySelectorAll<HTMLElement>('.el-dropdown-menu__item')].find((i) => i.textContent?.includes('繁體中文'))
-    item?.click()
+    const menu = menuOf()!
+    expect(menu.getAttribute('role')).toBe('menu')
+    expect(button.attributes('aria-expanded')).toBe('true')
+    expect(menu.querySelector('.account-menu__name')?.textContent).toBe('Ada')
+    expect(menu.querySelector('.account-menu__email')?.textContent).toBe('ada@example.edu')
+    expect(menu.querySelector('.account-menu__role')?.textContent?.trim()).toBe('Root')
+    expect(menu.getAttribute('aria-labelledby')).toBe('account-menu-name')
+    expect(itemNames(menu)).toEqual(['Account settings', 'Language', 'Theme', 'Sign out'])
+    // No agents here: they are the side bar's.
+    expect(menu.textContent).not.toContain('My agents')
+    expect(document.activeElement?.textContent).toContain('Account settings')
+    // The language and the theme in use are said beside them.
+    expect(menu.querySelector('[data-opens="language"] .account-menu__value')?.textContent).toBe('English')
+  })
+
+  it('moves among its items with the arrow keys, Home and End, and closes with Escape, back on its button', async () => {
+    const { w } = await mountAs('autonomous')
+    const button = w.get<HTMLButtonElement>('#account-button')
+    button.element.focus()
+    // ArrowUp on the button opens it on its last item.
+    expect(key(button.element, 'ArrowUp').defaultPrevented).toBe(true)
     await flushPromises()
-    expect(w.get('button[aria-label="語言"]').text()).toBe('繁')
+    const menu = menuOf()!
+    expect(document.activeElement?.textContent).toContain('Sign out')
+    key(document.activeElement!, 'ArrowDown')
+    expect(document.activeElement?.textContent).toContain('Account settings')
+    key(document.activeElement!, 'End')
+    expect(document.activeElement?.textContent).toContain('Sign out')
+    key(document.activeElement!, 'Home')
+    key(document.activeElement!, 'ArrowDown')
+    expect(document.activeElement?.getAttribute('data-opens')).toBe('language')
+    key(document.activeElement!, 'Escape')
+    await flushPromises()
+    expect(menu.isConnected).toBe(false)
+    expect(document.activeElement).toBe(button.element)
+    expect(button.attributes('aria-expanded')).toBe('false')
+  })
+
+  it('opens the language’s submenu with ArrowRight on the language in use, checked, and ArrowLeft goes back', async () => {
+    const { w } = await mountAs('autonomous')
+    await w.get('#account-button').trigger('click')
+    await flushPromises()
+    const lang = menuOf()!.querySelector<HTMLElement>('[data-opens="language"]')!
+    lang.focus()
+    expect(lang.getAttribute('aria-haspopup')).toBe('menu')
+    expect(lang.getAttribute('aria-expanded')).toBe('false')
+    key(lang, 'ArrowRight')
+    await flushPromises()
+    expect(lang.getAttribute('aria-expanded')).toBe('true')
+    const sub = document.getElementById(lang.getAttribute('aria-controls')!)!
+    expect(sub.getAttribute('role')).toBe('menu')
+    const radios = [...sub.querySelectorAll<HTMLElement>('[role="menuitemradio"]')]
+    expect(radios.map((r) => r.textContent?.trim())).toEqual(['繁體中文', '简体中文', 'English'])
+    expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true'])
+    expect(radios[2]!.querySelector('svg')).not.toBeNull()
+    expect(document.activeElement).toBe(radios[2])
+    // Within the submenu, the arrow keys go round its choices alone.
+    key(document.activeElement!, 'ArrowDown')
+    expect(document.activeElement).toBe(radios[0])
+    key(document.activeElement!, 'ArrowLeft')
+    await flushPromises()
+    expect(document.activeElement).toBe(lang)
+    expect(lang.getAttribute('aria-expanded')).toBe('false')
+    // Escape in a submenu closes it alone.
+    key(lang, 'ArrowRight')
+    await flushPromises()
+    key(document.activeElement!, 'Escape')
+    await flushPromises()
+    expect(menuOf()).not.toBeNull()
+    expect(document.activeElement).toBe(lang)
+  })
+
+  it('sets the language chosen, and closes', async () => {
+    const { w } = await mountAs('autonomous')
+    await w.get('#account-button').trigger('click')
+    await flushPromises()
+    menuOf()!.querySelector<HTMLElement>('[data-opens="language"]')!.click()
+    await flushPromises()
+    ;[...menuOf()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')]
+      .find((r) => r.textContent?.includes('繁體中文'))!
+      .click()
+    await flushPromises()
+    expect(menuOf()).toBeNull()
+    expect(w.get('#account-button').attributes('aria-label')).toBe('帳戶：Ada')
+    await w.get('#account-button').trigger('click')
+    await flushPromises()
+    expect(itemNames(menuOf())).toEqual(['帳戶設定', '語言', '主題', '登出'])
+  })
+
+  it('sets the theme chosen: light, dark, or the system’s', async () => {
+    const { w } = await mountAs('autonomous')
+    await w.get('#account-button').trigger('click')
+    await flushPromises()
+    menuOf()!.querySelector<HTMLElement>('[data-opens="theme"]')!.click()
+    await flushPromises()
+    const radios = () => [...menuOf()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')]
+    expect(radios().map((r) => r.textContent?.trim())).toEqual(['Light', 'Dark', 'System'])
+    expect(radios().map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true'])
+    radios()[1]!.click()
+    await flushPromises()
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(localStorage.getItem('aishiteru.theme')).toBe('dark')
+    await w.get('#account-button').trigger('click')
+    await flushPromises()
+    menuOf()!.querySelector<HTMLElement>('[data-opens="theme"]')!.click()
+    await flushPromises()
+    expect(radios().map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false'])
+    radios()[2]!.click()
+    await flushPromises()
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+  })
+
+  it('goes to the account’s page, and closes when anything else is pressed', async () => {
+    const { w, router } = await mountAs('autonomous')
+    await w.get('#account-button').trigger('click')
+    await flushPromises()
+    ;[...menuOf()!.querySelectorAll<HTMLElement>('[role="menuitem"]')][0]!.click()
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('account')
+    expect(menuOf()).toBeNull()
+    await w.get('#account-button').trigger('click')
+    await flushPromises()
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    await flushPromises()
+    expect(menuOf()).toBeNull()
+  })
+
+  it('signs out', async () => {
+    const { w, router } = await mountAs('autonomous')
+    const session = useSessionStore()
+    const out = vi.spyOn(session, 'signOut').mockResolvedValue()
+    await w.get('#account-button').trigger('click')
+    await flushPromises()
+    ;[...menuOf()!.querySelectorAll<HTMLElement>('[role="menuitem"]')].at(-1)!.click()
+    await flushPromises()
+    expect(out).toHaveBeenCalled()
+    expect(router.currentRoute.value.name).toBe('login')
+  })
+
+  it('is at the bottom of the side menu on a phone, its submenus opening beneath their items', async () => {
+    const { w } = await mountAs('autonomous', { phone: true, email: 'ada@example.edu' })
+    expect(w.find('#account-button').exists()).toBe(false)
+    await w.get('.app-header button[aria-label="Menu"]').trigger('click')
+    await flushPromises()
+    const drawer = document.body.querySelector<HTMLElement>('.app-nav-drawer')!
+    const row = drawer.querySelector<HTMLElement>('#account-button-drawer')!
+    expect(row.parentElement?.parentElement?.lastElementChild).toBe(row.parentElement)
+    expect(row.textContent).toContain('Ada')
+    expect(row.textContent).toContain('ada@example.edu')
+    expect(row.getAttribute('aria-haspopup')).toBe('menu')
+    row.click()
+    await flushPromises()
+    const menu = drawer.querySelector<HTMLElement>('#account-menu-drawer')!
+    expect(menu.classList).toContain('is-drawer')
+    expect(itemNames(menu)).toEqual(['Account settings', 'Language', 'Theme', 'Sign out'])
+    const theme = menu.querySelector<HTMLElement>('[data-opens="theme"]')!
+    theme.click()
+    await flushPromises()
+    // Beneath its item, in the menu itself.
+    expect(theme.nextElementSibling?.getAttribute('role')).toBe('menu')
   })
 })

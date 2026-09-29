@@ -1,7 +1,9 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import {
+  accountButton,
   call,
   demo,
+  expectSignedInAs,
   inTraditionalChinese,
   photograph,
   pickOption,
@@ -116,7 +118,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     // In any case, as Core matches it.
     await signInAs(page, lena.login_id.toLowerCase(), PASSWORD)
     await expect(page).not.toHaveURL(/\/login/)
-    await expect(page.locator('.app-user')).toContainText(lena.display_name)
+    await expectSignedInAs(page, lena.display_name)
     // Their own number, on their account page.
     await page.goto('/account')
     const profile = page.locator('.profile-card')
@@ -233,7 +235,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await expect(page.getByRole('heading', { name: 'Choose your own password' })).toBeVisible()
     await expect(page.getByText('set for you by your instructor')).toBeVisible()
     // Nothing else is offered: no menu, no course.
-    await expect(page.locator('.app-user')).toHaveCount(0)
+    await expect(accountButton(page)).toHaveCount(0)
     await photograph(page, 'forced-change-en')
 
     // Anywhere else, Core refuses them, and they are brought back.
@@ -257,7 +259,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await page.fill('input[name=repeat]', OWN_PASSWORD)
     await page.getByRole('button', { name: '設定密碼並繼續' }).click()
     await expect(page).toHaveURL(new RegExp(`/courses/${courseId}$`))
-    await expect(page.locator('.app-user')).toContainText(lena.display_name)
+    await expectSignedInAs(page, lena.display_name)
     await context.close()
 
     // Their own password is the one they sign in with now.
@@ -300,7 +302,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await photograph(page, 'join-student-number-en')
     await page.getByRole('button', { name: 'Create account and join' }).click()
     await expect(page).toHaveURL(new RegExp(`/courses/${courseId}$`))
-    await expect(page.locator('.app-user')).toContainText(joiner.name)
+    await expectSignedInAs(page, joiner.name)
     // They typed it themselves: their account page says nobody has confirmed it yet.
     await page.goto('/account')
     await expect(page.locator('.profile-card')).toContainText(joiner.loginId)

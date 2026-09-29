@@ -24,11 +24,21 @@
 // (conversation.mark_read, up to the newest message held): when it opens, if
 // Core says the other has written since they last read it (conversation.get's
 // unread), and each time the other writes while it is shown.
+//
+// An answer in the making (draft): the agent's steps and its text so far, as
+// Core sends them with every read of the conversation while its agent writes
+// the answer (the draft contract, draft.ts), null when there is none; the
+// posted answer takes its place in the same read. Once a read has carried
+// `draft` (null or not), Core is known to keep drafts, and the read that
+// waits names the version held (seen_draft_version, 0 for none), so that it
+// answers as soon as the draft moves; a Core from before drafts is never
+// asked about them.
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import { ApiError, read, write, type ToolOut } from '@/api/http'
 import type { ConversationMessage, ConversationView } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { usePolling, type PollContext } from '@/composables/usePolling'
+import { sameDraft, type ConversationDraft } from './draft'
 import {
   EARLY_MS,
   firstSeq,
@@ -84,6 +94,10 @@ export function useConversation(opts: UseConversationOptions) {
   const loadingOlder = ref(false)
   const olderError = ref<ApiError | null>(null)
   const loaded = ref(false)
+  /** The answer being written, as Core shows it to the caller; null for none, or from a Core without drafts. */
+  const draft = shallowRef<ConversationDraft | null>(null)
+  /** Core's reads carry drafts: the read that waits names the version held. */
+  let draftsKnown = false
 
   let disposed = false
   let lastFetchAt = 0
@@ -170,6 +184,19 @@ export function useConversation(opts: UseConversationOptions) {
     return changedMessages || changedView
   }
 
+  /**
+   * Takes the draft a read carries, where Core sends drafts: another
+   * attempt, a newer version, or none any more. True when it changed.
+   */
+  function takeDraft(out: { draft?: ConversationDraft | null }): boolean {
+    if (!('draft' in out)) return false
+    draftsKnown = true
+    const next = out.draft ?? null
+    if (sameDraft(draft.value, next)) return false
+    draft.value = next
+    return true
+  }
+
   /** Reads the newest page: the first load, and a retry after it failed. */
   async function load() {
     loading.value = true
@@ -181,6 +208,7 @@ export function useConversation(opts: UseConversationOptions) {
       readRetractedAt = out.conversation?.last_retracted_at ?? null
       reread = false
       take(out.messages, out.conversation)
+      takeDraft(out)
       hasOlder.value = !!out.more
       loaded.value = true
       lastFetchAt = answeredAt = now()
@@ -222,7 +250,10 @@ export function useConversation(opts: UseConversationOptions) {
     const args = { ...base(), limit: POLL_PAGE, ...(after === null ? {} : { after_seq: after }) }
     if (wait && after !== null) {
       const asked = now()
-      const seen = view.value ? { seen_state: view.value.state } : {}
+      const seen = {
+        ...(view.value ? { seen_state: view.value.state } : {}),
+        ...(draftsKnown ? { seen_draft_version: draft.value?.version ?? 0 } : {}),
+      }
       try {
         const out = await read(
           'conversation.messages',
@@ -266,10 +297,11 @@ export function useConversation(opts: UseConversationOptions) {
       const { out, waited } = await readAfter(after, wait && i === 0, signal)
       if (disposed) return
       const took = take(out.messages, out.conversation)
-      if (took) changed = true
+      const drafted = takeDraft(out)
+      if (took || drafted) changed = true
       // Nothing new, well before the wait was up: Core did not wait (too many
       // of the caller's reads wait, or it is shutting down). Its schedule, for a while.
-      const news = took || !held || !out.conversation || !sameStanding(held, out.conversation)
+      const news = took || drafted || !held || !out.conversation || !sameStanding(held, out.conversation)
       if (waited !== null && waited < EARLY_MS && !news) noWaitUntil = now() + NO_WAIT_MS
       if (after === null) hasOlder.value = !!out.more
       if (!out.more || after === null) break
@@ -367,6 +399,7 @@ export function useConversation(opts: UseConversationOptions) {
   return {
     messages,
     view,
+    draft,
     visibleTo,
     loading,
     loaded,

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { demo, signIn } from './support'
+import { accountButton, demo, expectSignedInAs, signIn, signOut } from './support'
 
 test('a wrong password is refused and says so', async ({ page }) => {
   const d = demo()
@@ -15,9 +15,7 @@ test('a person signs in, sees their course, and signs out', async ({ page }) => 
   const d = demo()
   await signIn(page, d.actors.yuki)
   await expect(page.getByText('Introduction to Programming').first()).toBeVisible()
-  await page.locator('.app-user').click()
-  await page.getByText('Sign out').click()
-  await expect(page).toHaveURL(/\/login/)
+  await signOut(page)
   // The session is gone on the server too: a page that needs it goes back to sign-in.
   await page.goto(`/courses/${d.course.id}`)
   await expect(page).toHaveURL(/\/login\?next=/)
@@ -46,7 +44,7 @@ test('a tab an earlier version signed in with a pasted token is signed out, and 
   await page.goto(`/courses/${d.course.id}`)
   await expect(page).toHaveURL(/\/login\?next=/)
   expect(await page.evaluate(() => sessionStorage.getItem('aishiteru.bearer'))).toBeNull()
-  await expect(page.locator('.app-user')).toHaveCount(0)
+  await expect(accountButton(page)).toHaveCount(0)
   expect(sent).toEqual([])
 
   // A person signs in there as anywhere else.
@@ -54,7 +52,7 @@ test('a tab an earlier version signed in with a pasted token is signed out, and 
   await page.fill('input[name=password]', process.env.E2E_PASSWORD!)
   await page.click('button[type=submit]')
   await expect(page).toHaveURL(new RegExp(`/courses/${d.course.id}$`))
-  await expect(page.locator('.app-user')).toContainText('Ken Wong')
+  await expectSignedInAs(page, 'Ken Wong')
   expect(sent).toEqual([])
 })
 

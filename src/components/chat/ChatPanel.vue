@@ -293,7 +293,8 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         />
       </el-select>
       <span v-else class="chat-panel__spacer" />
-      <el-tooltip :content="t('chat.panel.newTip')" placement="bottom" :show-after="400">
+      <!-- No trigger keys on these tooltips: they would take Enter and Space from their buttons. -->
+      <el-tooltip :content="t('chat.panel.newTip')" placement="bottom" :show-after="400" :trigger-keys="[]">
         <el-button
           size="small"
           class="chat-panel__new"
@@ -305,7 +306,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
           <span>{{ t('chat.panel.new') }}</span>
         </el-button>
       </el-tooltip>
-      <el-tooltip :content="t('chat.panel.history')" placement="bottom" :show-after="400">
+      <el-tooltip :content="t('chat.panel.history')" placement="bottom" :show-after="400" :trigger-keys="[]">
         <el-button
           size="small"
           class="chat-panel__icon"
@@ -344,6 +345,8 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         :active="chat.open"
         @read="(id: string) => chat.markedRead(id)"
         @start="(r: Respondent) => startAgain(chat.conversation!.courseId, r)"
+        @new="chat.startNew()"
+        @history="chat.showHistory()"
       >
         <template #actions>
           <el-button size="small" :aria-label="t('chat.panel.backToHistory')" @click="chat.showHistory()">
@@ -370,6 +373,8 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         :course-label="labelOf(chat.draft.courseId)"
         :active="chat.open"
         @opened="(id: string) => chat.showConversation(chat.draft!.courseId, id)"
+        @new="chat.startNew()"
+        @history="chat.showHistory()"
       >
         <template #actions>
           <el-button size="small" :aria-label="t('chat.panel.backToAgents')" @click="chat.startNew()">

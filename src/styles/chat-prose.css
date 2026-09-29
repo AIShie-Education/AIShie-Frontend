@@ -1,0 +1,134 @@
+/* The agent's words in the chat, as Markdown set for reading in a narrow
+   column (ChatMessage, ChatDraft): headings a step up from the text, lists
+   and tables close, inline code quiet, a table scrolling sideways within
+   the message. It is always a .markdown-body too (MarkdownView), and these
+   rules name both, to win over main.css's and markdown-rich.css's whatever
+   order the build puts them in. */
+.markdown-body.chat-prose {
+  font-size: 15px;
+  line-height: var(--app-line-height-prose);
+}
+.markdown-body.chat-prose > :first-child {
+  margin-top: 0;
+}
+.markdown-body.chat-prose > :last-child {
+  margin-bottom: 0;
+}
+.markdown-body.chat-prose h1,
+.markdown-body.chat-prose h2,
+.markdown-body.chat-prose h3,
+.markdown-body.chat-prose h4 {
+  margin: 1.1em 0 0.45em;
+  line-height: 1.35;
+  font-family: var(--app-font-sans);
+  font-weight: 600;
+  letter-spacing: 0;
+  border: none;
+  padding: 0;
+}
+.markdown-body.chat-prose h1 {
+  font-size: 1.3em;
+}
+.markdown-body.chat-prose h2 {
+  font-size: 1.18em;
+}
+.markdown-body.chat-prose h3 {
+  font-size: 1.06em;
+}
+.markdown-body.chat-prose h4 {
+  font-size: 1em;
+  color: var(--app-ink-2);
+}
+.markdown-body.chat-prose p,
+.markdown-body.chat-prose ul,
+.markdown-body.chat-prose ol,
+.markdown-body.chat-prose blockquote,
+.markdown-body.chat-prose table {
+  margin: 0 0 0.8em;
+}
+.markdown-body.chat-prose ul,
+.markdown-body.chat-prose ol {
+  padding-left: 1.5em;
+}
+.markdown-body.chat-prose li {
+  margin: 0.2em 0;
+}
+.markdown-body.chat-prose li > p {
+  margin: 0 0 0.35em;
+}
+.markdown-body.chat-prose li::marker {
+  color: var(--app-ink-3);
+}
+.markdown-body.chat-prose blockquote {
+  margin-left: 0;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--app-indigo-line);
+  color: var(--app-ink-2);
+}
+.markdown-body.chat-prose :not(pre) > code {
+  padding: 0.12em 0.36em;
+  border: 1px solid var(--app-line-soft);
+  border-radius: 5px;
+  background: var(--app-ground-2);
+  font-size: 0.86em;
+}
+.markdown-body.chat-prose hr {
+  margin: 1.2em 0;
+  border: none;
+  border-top: 1px solid var(--app-line);
+}
+.markdown-body.chat-prose a {
+  color: var(--app-indigo);
+  text-underline-offset: 2px;
+}
+/* A table scrolls sideways within the message, ruled lightly, its head a step off the ground. */
+.markdown-body.chat-prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.markdown-body.chat-prose th,
+.markdown-body.chat-prose td {
+  padding: 6px 12px;
+  border: 1px solid var(--app-line);
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-body.chat-prose th {
+  background: var(--app-ground-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.markdown-body.chat-prose tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--app-ground-2) 45%, transparent);
+}
+
+/* An answer being written (ChatDraft): a caret at the end of the text so far,
+   after the last block's words, or after the last item of a list. */
+.markdown-body.chat-prose.is-streaming
+  > :last-child:not(ul):not(ol):not(pre):not(table):not(.md-code):not(.md-math)::after,
+.markdown-body.chat-prose.is-streaming > ul:last-child > li:last-child::after,
+.markdown-body.chat-prose.is-streaming > ol:last-child > li:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: var(--app-indigo);
+  animation: chat-caret 1s steps(1) infinite;
+}
+@keyframes chat-caret {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown-body.chat-prose.is-streaming *::after {
+    animation: none;
+  }
+}

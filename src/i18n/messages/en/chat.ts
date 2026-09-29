@@ -27,6 +27,16 @@ export default {
     untitled: 'Untitled',
     unread: 'New answer',
     moreFailed: 'Could not load more of them. Try again.',
+    // Searching the history (title and agent), and its groups by last activity.
+    search: 'Search titles and agents',
+    noMatch: 'No conversation matches “{q}”.',
+    searchLoaded: 'Only the conversations loaded are searched: load more to search them too.',
+    groups: {
+      today: 'Today',
+      yesterday: 'Yesterday',
+      week: 'This week',
+      earlier: 'Earlier',
+    },
   },
   respondents: {
     empty: 'No agent here answers your questions yet.',
@@ -42,6 +52,12 @@ export default {
     opener: 'Nothing has been written yet. Ask {name} your question below.',
     other: 'Nothing has been written yet.',
   },
+  // The line in the messages while an answer is awaited: the agent at work, and for how long.
+  status: {
+    thinking: 'Thinking…',
+    seconds: '{s}s',
+    minutes: '{m}m {s}s',
+  },
   typing: 'Waiting for {name}…',
   held: 'Waiting for approval: it appears here once someone approves it.',
   myActions: 'My actions',
@@ -56,9 +72,9 @@ export default {
   },
   // What the line above the composer says.
   state: {
-    waiting: '{name} has your question.',
     waitingApproval: 'Each answer waits for someone’s approval before you see it.',
     answerPending: 'An answer is waiting for approval.',
+    withdrawn: 'You withdrew your question: {name} will not answer it.',
     start: 'Ask {name} anything about the course.',
     overseeing: 'You are reading this as course staff.',
     readOnly: 'Agents answer questions in the chat now: you can read this conversation.',
@@ -82,7 +98,98 @@ export default {
     askPlaceholder: 'Ask {name}…',
     send: 'Send',
     sendTip: 'Send (Enter) · Shift+Enter for a new line',
+    stop: 'Stop',
+    stopTip: 'Stop: withdraw the question, back into the box',
+    // The list a slash opens (commands), and what the empty box hints at.
+    commands: 'Commands',
+    hintCommands: '/ for commands',
+    hintMentions: "{'@'} to cite an assignment or material",
     count: '{n} / {max} characters',
+  },
+  // What a slash at the start of the box offers.
+  commands: {
+    new: 'New conversation',
+    history: 'Conversation history',
+    close: 'End this conversation',
+  },
+  // What an @ offers: the course's assignments and materials, whose title it writes in, quoted.
+  mention: {
+    label: 'Assignments and materials',
+    insert: '“{title}” ',
+    loading: 'Loading assignments and materials…',
+    none: 'No assignment or material has “{q}” in its title.',
+    empty: 'This course has no assignments or materials you can see yet.',
+    kind: {
+      assignment: 'Assignment',
+      material: 'Material',
+    },
+  },
+  // A new conversation's first words, offered to start with; a click puts them in the box.
+  suggestions: {
+    title: 'Try asking',
+    explainAssignment: 'Explain what this assignment asks for',
+    checkReasoning: 'Check my reasoning',
+    summarizeWeek: 'Summarise this week’s materials',
+    practice: 'Give me a few practice questions',
+  },
+  // An answer in the making (the draft: ChatDraft, ChatDraftSteps): the agent's steps, running and done, with
+  // what each works on (target) or without, and the answer's text, or that it shows once confirmed.
+  draft: {
+    consulted: 'Consulted {n} item | Consulted {n} items',
+    stepsLabel: 'What the agent is doing',
+    done: 'done',
+    running: 'under way',
+    hidden: 'The answer shows once someone confirms it.',
+    steps: {
+      thinking: {
+        running: 'Thinking…',
+        done: 'Thought',
+        runningTarget: 'Thinking: {target}…',
+        doneTarget: 'Thought: {target}',
+      },
+      reading_document: {
+        running: 'Reading a document…',
+        done: 'Read a document',
+        runningTarget: 'Reading “{target}”…',
+        doneTarget: 'Read “{target}”',
+      },
+      listing_documents: {
+        running: 'Looking through the materials…',
+        done: 'Looked through the materials',
+        runningTarget: 'Looking through {target}…',
+        doneTarget: 'Looked through {target}',
+      },
+      reading_assignment: {
+        running: 'Reading an assignment…',
+        done: 'Read an assignment',
+        runningTarget: 'Reading the assignment “{target}”…',
+        doneTarget: 'Read the assignment “{target}”',
+      },
+      reading_submission: {
+        running: 'Reading a submission…',
+        done: 'Read a submission',
+        runningTarget: 'Reading the submission “{target}”…',
+        doneTarget: 'Read the submission “{target}”',
+      },
+      searching_memory: {
+        running: 'Searching its memory…',
+        done: 'Searched its memory',
+        runningTarget: 'Searching its memory for “{target}”…',
+        doneTarget: 'Searched its memory for “{target}”',
+      },
+      writing: {
+        running: 'Writing the answer…',
+        done: 'Wrote the answer',
+        runningTarget: 'Writing: {target}…',
+        doneTarget: 'Wrote: {target}',
+      },
+      tool: {
+        running: 'Using a tool…',
+        done: 'Used a tool',
+        runningTarget: 'Using {target}…',
+        doneTarget: 'Used {target}',
+      },
+    },
   },
   conflict: {
     closed: 'This conversation is closed, so nothing more can be written in it.',
@@ -101,6 +208,10 @@ export default {
   },
   message: {
     retract: 'Withdraw',
+    // Under a message, on hover: copy it (as Markdown), and take the question awaiting its answer back to edit it.
+    copy: 'Copy message',
+    edit: 'Edit',
+    editTip: 'Withdraw this question and put it back in the box, to change and send again',
     retractedByYou: 'You withdrew this message.',
     retractedBy: '{name} withdrew this message.',
     retractedByStaff: 'Course staff withdrew this message.',
@@ -118,6 +229,13 @@ export default {
       'Nothing more can be written in it; it stays readable. Anything you give as a reason is shown to the other participant.',
     confirm: 'Close conversation',
     done: 'Conversation closed',
+  },
+  // A question awaiting its answer, taken back to the composer: to edit it, or to stop waiting.
+  edit: {
+    done: 'Your question was withdrawn and put back in the box: change it and send it again. {name} does not answer a withdrawn question, though an answer it had already begun may still arrive.',
+  },
+  stop: {
+    done: 'Stopped: your question was withdrawn and put back in the box. {name} does not answer a withdrawn question, though an answer it had already begun may still arrive.',
   },
   retract: {
     title: 'Withdraw this message?',

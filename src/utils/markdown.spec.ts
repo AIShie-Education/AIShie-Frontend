@@ -223,3 +223,24 @@ describe('code', () => {
     expect(html).toContain('&lt;script&gt;')
   })
 })
+
+describe('code tools', () => {
+  it('puts fenced code in a box with its language and a copy button, when asked', () => {
+    const html = renderMarkdown('```python\nprint(1)\n```', { code: { copy: 'Copy' } })
+    expect(html).toMatch(
+      /^<div class="md-code"><div class="md-code__bar"><span class="md-code__lang">python<\/span><button (?=[^>]*type="button")(?=[^>]*class="md-code__copy")(?=[^>]*data-md-copy="")[^>]*>Copy<\/button><\/div><pre><code class="language-python">/,
+    )
+    // With no language, no name; and nothing of the kind unless asked.
+    expect(renderMarkdown('```\nx\n```', { code: { copy: 'Copy' } })).toContain('<span class="md-code__lang"></span>')
+    expect(renderMarkdown('```python\nprint(1)\n```')).not.toContain('md-code')
+  })
+
+  it('escapes the language and the words it is given', () => {
+    const html = renderMarkdown('```"><img src=x onerror=alert(1)>\nx\n```', { code: { copy: '<b>複製</b>' } })
+    const box = document.createElement('div')
+    box.innerHTML = html
+    expect(box.querySelector('img, b')).toBeNull()
+    expect(box.querySelector('.md-code__lang')?.textContent).toBe('"><img')
+    expect(box.querySelector('.md-code__copy')?.textContent).toBe('<b>複製</b>')
+  })
+})

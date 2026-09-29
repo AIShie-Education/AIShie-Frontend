@@ -4,6 +4,18 @@ export default {
   courses: '課程',
   agents: '代理',
   menu: '選單',
+  // The caller's account, at the bottom of the activity bar (on a phone, of the side menu): its button, named by
+  // whose it is, and its menu, which also holds the language, the theme and signing out (common.nav, common.actions).
+  account: {
+    button: '帳戶：{name}',
+    settings: '帳戶設定',
+  },
+  // A newer build deployed since this tab loaded the app (NewVersionNotice): load it, or later.
+  newVersion: {
+    available: '已有新版本',
+    reload: '重新載入',
+    later: '稍後',
+  },
   // The rail along the window's right edge, with a button for each side panel (the chat's).
   panels: '側邊面板',
   // The side bar on the window's left edge: the activity bar, with a button for each view (on a phone, the

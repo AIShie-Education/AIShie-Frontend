@@ -135,6 +135,17 @@ end; the "works around it" notes say what the front end does meanwhile.
   and the pane reads on the old schedule for a minute before it asks to wait again. A Core from
   before `wait_s` refuses it (`invalid_argument`, as it refuses any argument it does not know,
   naming it), and the pane reads on the old schedule then too, rather than failing.
+- **An answer showed only once it was posted** (resolved where Core keeps drafts). A Core with
+  `conversation.draft` (an ephemeral write, `kind: "ephemeral"` in its catalogue, which only the
+  conversation's agent makes and nothing records) keeps one draft per conversation while its agent
+  writes the answer, and `conversation.messages` and `conversation.get` carry it as `draft`, null
+  or the steps and, where the reader may see it, the text so far (`text_hidden` where the answer
+  waits for someone's confirmation). The pane takes it from every read, and once a read has
+  carried the field, the read that waits names the version it holds (`seen_draft_version`, 0 for
+  none): without it Core wakes no wait for a draft. It shows the draft while an answer is awaited
+  (`ChatDraft`); the read that brings the posted answer carries no draft. A Core without drafts
+  sends no `draft` and is never asked about one; one that refused `seen_draft_version` would be
+  read on the old schedule, as for `wait_s`.
 - **`conversation.respondents` offered people, and `conversation.open` accepted them** (resolved).
   Core lists agents alone now, refuses a person as a respondent, or answering, as
   `conversations_are_with_agents`, caps a person's `conversation_answer` at denied for that reason,

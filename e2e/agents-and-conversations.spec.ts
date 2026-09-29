@@ -135,7 +135,8 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await composer.fill(QUESTION)
     await composer.press('Enter')
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await expect(panel.locator('.chat-pane__typing')).toContainText(`Waiting for ${AGENT}`)
+    // The agent at work (something runs it): the working line, counting the seconds.
+    await expect(panel.locator('.chat-pane__typing .chat-status')).toContainText('Thinking…')
 
     // The agent's runtime: what waits in its inbox, and the answer to the latest message.
     const c = d.course.id

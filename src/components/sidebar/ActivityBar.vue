@@ -5,11 +5,15 @@
 // shows its view in the side bar beside it (SideBar), or, pressed again while
 // its view is shown, collapses the side bar. It is a vertical toolbar: one
 // of its buttons is reached with Tab, and the arrow keys, Home and End move
-// between them. A phone has none: the header's menu opens the views instead.
+// between them. At its bottom, as an editor's Accounts, the caller's account
+// (AccountMenu): their language, the theme and signing out are there. A phone
+// has none: the header's menu opens the views instead, with the account at
+// the menu's bottom.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppMark from '@/components/AppMark.vue'
 import { useSideBarStore } from '@/stores/sidebar'
+import AccountMenu from './AccountMenu.vue'
 import { VIEW_META, type SideView } from './frame'
 
 const { t } = useI18n()
@@ -79,6 +83,9 @@ function onKey(e: KeyboardEvent) {
         </span>
       </el-tooltip>
     </div>
+    <div class="activity-bar__foot">
+      <AccountMenu />
+    </div>
   </div>
 </template>
 
@@ -120,6 +127,13 @@ function onKey(e: KeyboardEvent) {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  padding: 8px 0;
+}
+/* The account, at the bottom, as an editor's Accounts. */
+.activity-bar__foot {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
   padding: 8px 0;
 }
 .activity-bar__slot {
