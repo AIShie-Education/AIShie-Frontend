@@ -47,6 +47,27 @@ function siteChatCard(page: Page) {
   return page.locator('.site-chat')
 }
 
+/** The chat panel, opened from the header's button on the course's overview: it asks in the course. */
+async function openChat(page: Page) {
+  await page.goto(coursePath())
+  await page.getByRole('button', { name: /^Chat with agents/ }).click()
+  const panel = page.locator('#chat-panel')
+  await expect(panel.getByRole('heading', { name: 'Ask an agent' })).toBeVisible()
+  return panel
+}
+
+/** The conversation Ken started with the course agent, as Core lists his. */
+async function kensConversation(): Promise<string> {
+  const d = demo()
+  const r = await call(d.actors.ken.token, 'GET', `/v1/courses/${d.course.id}/conversations?as=opener&limit=200`)
+  expect(r.status, JSON.stringify(r.body)).toBe(200)
+  const c = (r.body.result.conversations ?? []).find(
+    (x: { respondent: { display_name: string } }) => x.respondent.display_name === TUTOR,
+  )
+  expect(c, 'Ken’s conversation with the course agent').toBeTruthy()
+  return c.id as string
+}
+
 test.describe.serial('site chat: an agent is asked here only while something that answers here runs it', () => {
   test.beforeAll(async () => {
     const d = demo()
@@ -100,14 +121,13 @@ test.describe.serial('site chat: an agent is asked here only while something tha
     expect(agent.site_chat).toBe(false)
 
     await signIn(page, d.actors.ken)
-    await page.goto(coursePath('conversations'))
-    await expect(page.getByRole('heading', { name: 'Whom you can ask' })).toBeVisible()
+    const panel = await openChat(page)
     // Nothing to click for either: no chat box can be opened with them.
-    await expect(page.locator('button.resp-row').filter({ hasText: TUTOR })).toHaveCount(0)
-    await expect(page.locator('button.resp-row').filter({ hasText: HELPER })).toHaveCount(0)
-    await expect(page.locator('.resp-row').filter({ hasText: TUTOR })).toHaveCount(0)
+    await expect(panel.locator('button.resp-row').filter({ hasText: TUTOR })).toHaveCount(0)
+    await expect(panel.locator('button.resp-row').filter({ hasText: HELPER })).toHaveCount(0)
+    await expect(panel.locator('.resp-row').filter({ hasText: TUTOR })).toHaveCount(0)
     // His own is listed, with why he cannot ask it here, and what would change that.
-    const own = page.locator('.resp-row.is-elsewhere').filter({ hasText: HELPER })
+    const own = panel.locator('.resp-row.is-elsewhere').filter({ hasText: HELPER })
     await expect(own).toBeVisible()
     await expect(own).toContainText('Your agent')
     await expect(own).toContainText('Personal assistant')
@@ -145,10 +165,14 @@ test.describe.serial('site chat: an agent is asked here only while something tha
     const row = page.locator('.agent-row').filter({ hasText: TUTOR })
     await expect(row).toContainText('Operated from outside')
     await expect(row).toContainText('Students cannot ask it on the site: it is operated from an external tool.')
-    // Its owner asks it nothing here either: listed among their own agents, with why.
+    // Its owner asks it nothing here either: listed among their own agents, with why. (The address
+    // the course's conversations once had opens the panel on the course.)
     await page.goto(coursePath('conversations'))
-    await expect(page.locator('button.resp-row').filter({ hasText: TUTOR })).toHaveCount(0)
-    await expect(page.locator('.resp-row.is-elsewhere').filter({ hasText: TUTOR })).toContainText(NOTE)
+    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
+    const panel = page.locator('#chat-panel')
+    await expect(panel.getByRole('heading', { name: 'Ask an agent' })).toBeVisible()
+    await expect(panel.locator('button.resp-row').filter({ hasText: TUTOR })).toHaveCount(0)
+    await expect(panel.locator('.resp-row.is-elsewhere').filter({ hasText: TUTOR })).toContainText(NOTE)
   })
 
   test('once its runtime says it answers in the site, the student finds it and opens a conversation', async ({
@@ -160,19 +184,20 @@ test.describe.serial('site chat: an agent is asked here only while something tha
     expect(await respondentNames(d.actors.ken.token)).toContain(TUTOR)
 
     await signIn(page, d.actors.ken)
-    await page.goto(coursePath('conversations'))
-    const row = page.locator('button.resp-row').filter({ hasText: TUTOR })
+    const panel = await openChat(page)
+    const row = panel.locator('button.resp-row').filter({ hasText: TUTOR })
     await expect(row).toContainText('Course agent')
     await row.click()
-    const composer = page.locator('.chat-pane textarea')
+    const composer = panel.locator('.chat-pane textarea')
     await expect(composer).toBeVisible()
     await composer.fill(QUESTION)
     await composer.press('Enter')
-    await expect(page).toHaveURL(/\/conversations\/[0-9a-f-]{36}$/)
-    w.conversationId = page.url().split('/').pop()!
-    await expect(page.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await expect(page.locator('.chat-pane__typing')).toContainText(`Waiting for ${TUTOR}`)
-    await expect(page.locator('.chat-pane__notice.is-elsewhere')).toHaveCount(0)
+    await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
+    await expect(panel.locator('.chat-pane__typing')).toContainText(`Waiting for ${TUTOR}`)
+    await expect(panel.locator('.chat-pane__notice.is-elsewhere')).toHaveCount(0)
+    // The page stays where it was; the conversation is in the panel.
+    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
+    w.conversationId = await kensConversation()
 
     // Its owner's page says it takes them now, and offers to switch them off.
     const owner = await browser.newPage()
@@ -218,16 +243,20 @@ test.describe.serial('site chat: an agent is asked here only while something tha
       'conversation.answer',
     )
 
+    // A link to it as it once was (a notification, a bookmark) opens it in the panel, beside the course.
     const student = await browser.newPage()
     await signIn(student, d.actors.ken)
     await student.goto(coursePath(`conversations/${w.conversationId}`))
-    await expect(student.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await expect(student.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
-    await expect(student.locator('.chat-pane__notice.is-elsewhere')).toHaveText(NOTE)
-    await expect(student.locator('.chat-pane textarea')).toHaveCount(0)
-    // Still listed among his conversations, and his to close.
-    await expect(student.locator('.conv-row').filter({ hasText: TUTOR })).toBeVisible()
-    await expect(student.locator('.chat-pane').getByRole('button', { name: 'Close' })).toBeVisible()
+    await expect(student).toHaveURL(new RegExp(`${coursePath()}$`))
+    const panel = student.locator('#chat-panel')
+    await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
+    await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
+    await expect(panel.locator('.chat-pane__notice.is-elsewhere')).toHaveText(NOTE)
+    await expect(panel.locator('.chat-pane textarea')).toHaveCount(0)
+    // His to close, and still listed among his conversations.
+    await expect(panel.locator('.chat-pane').getByRole('button', { name: 'Close' })).toBeVisible()
+    await panel.getByRole('button', { name: 'History', exact: true }).click()
+    await expect(panel.locator('.hist-row').filter({ hasText: TUTOR })).toContainText('CS101')
 
     // Core refuses a question to it, and says why.
     const refused = await call(d.actors.ken.token, 'POST', `/v1/courses/${c}/conversations/${w.conversationId}/ask`, {
@@ -244,7 +273,7 @@ test.describe.serial('site chat: an agent is asked here only while something tha
     await tutorSays(true)
     await signIn(page, d.actors.ken)
     await page.goto(coursePath(`conversations/${w.conversationId}`))
-    const composer = page.locator('.chat-pane textarea')
+    const composer = page.locator('#chat-panel .chat-pane textarea')
     await expect(composer).toBeEnabled()
 
     // Switched off while the page is open, before it has looked again.

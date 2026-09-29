@@ -7,8 +7,8 @@ import { call, courseTab, coursePath, demo, signIn, toast } from './support'
 // confirm_required); the instructor approves it; what runs the agent says,
 // with its token, that it answers in the site (me.site_chat), as a runtime
 // does when it starts it; the student asks it a question from the chat
-// drawer; the agent answers through Core's REST API with its own token, as a
-// runtime would; and the answer appears in the drawer by polling. Then an
+// panel; the agent answers through Core's REST API with its own token, as a
+// runtime would; and the answer appears in the panel by polling. Then an
 // instructor adds a course agent, which answers the course, its runtime says
 // it answers in the site, and a student finds it among those they may ask.
 // (An agent nothing runs here is asked nothing here: site-chat.spec.ts.)
@@ -22,12 +22,13 @@ const TUTOR = `CS101 tutor ${STAMP}`
 let agentId = ''
 let agentToken = ''
 
-/** The chat drawer, opened from the course's floating button. */
+/** The chat panel, opened from the header's button: on a course page, it asks in that course. */
 async function openChat(page: Page) {
-  await page.getByRole('button', { name: 'Ask a question' }).click()
-  const drawer = page.locator('.chat-drawer')
-  await expect(drawer).toBeVisible()
-  return drawer
+  await page.getByRole('button', { name: /^Chat with agents/ }).click()
+  const panel = page.locator('#chat-panel')
+  await expect(panel).toBeVisible()
+  await expect(panel.getByRole('heading', { name: 'Ask an agent' })).toBeVisible()
+  return panel
 }
 
 test.describe.serial('an agent of one’s own, and a course agent', () => {
@@ -113,7 +114,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     expect(seats[0].answers_course).toBe(false)
   })
 
-  test('the student asks their agent; it answers through the API; the drawer shows it', async ({ page }) => {
+  test('the student asks their agent; it answers through the API; the panel shows it', async ({ page }) => {
     const d = demo()
     // What runs the agent starts, and says with its token that it answers in the site: until it
     // has, nobody there is offered to ask it.
@@ -123,17 +124,17 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
 
     await signIn(page, d.actors.mei)
     await page.goto(coursePath())
-    const drawer = await openChat(page)
+    const panel = await openChat(page)
 
-    const row = drawer.locator('.resp-row').filter({ hasText: AGENT })
+    const row = panel.locator('.resp-row').filter({ hasText: AGENT })
     await expect(row).toContainText('Your agent')
     await expect(row).toContainText('Personal assistant')
     await row.click()
-    const composer = drawer.locator('textarea')
+    const composer = panel.locator('textarea')
     await composer.fill(QUESTION)
     await composer.press('Enter')
-    await expect(drawer.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await expect(drawer.locator('.chat-pane__typing')).toContainText(`Waiting for ${AGENT}`)
+    await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
+    await expect(panel.locator('.chat-pane__typing')).toContainText(`Waiting for ${AGENT}`)
 
     // The agent's runtime: what waits in its inbox, and the answer to the latest message.
     const c = d.course.id
@@ -167,9 +168,9 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     expect(again.status).toBe(409)
     expect(again.body.error?.details?.reason).toBe('already_answered')
 
-    // Nothing is pushed: the drawer finds the answer by polling.
-    await expect(drawer.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible({ timeout: 20_000 })
-    await expect(drawer.locator('.chat-pane__typing')).toHaveCount(0)
+    // Nothing is pushed: the panel finds the answer by polling.
+    await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible({ timeout: 20_000 })
+    await expect(panel.locator('.chat-pane__typing')).toHaveCount(0)
   })
 
   test('an instructor adds a course agent, and a student finds it among those to ask', async ({ browser }) => {
@@ -208,16 +209,16 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     const page = await browser.newPage()
     await signIn(page, d.actors.mei)
     await page.goto(coursePath())
-    const drawer = await openChat(page)
-    const row = drawer.locator('.resp-row').filter({ hasText: TUTOR })
+    const panel = await openChat(page)
+    const row = panel.locator('.resp-row').filter({ hasText: TUTOR })
     await expect(row).toContainText('Course agent')
     await expect(row).toContainText('It answers other members too')
     // Course agents are listed before one's own.
-    await expect(drawer.locator('.resp-row').first()).toContainText('Course agent')
+    await expect(panel.locator('.resp-row').first()).toContainText('Course agent')
 
     // Before writing, the student is told it may repeat what they write.
     await row.click()
-    await expect(drawer.locator('.chat-pane__shared')).toContainText('may repeat to them')
+    await expect(panel.locator('.chat-pane__shared')).toContainText('may repeat to them')
 
     const resp = await call(d.actors.mei.token, 'GET', `/v1/courses/${d.course.id}/conversations/respondents`)
     const r = (resp.body.result.respondents ?? []).find((x: { display_name: string }) => x.display_name === TUTOR)
