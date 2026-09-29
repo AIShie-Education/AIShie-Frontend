@@ -193,6 +193,21 @@ if [ -n "${EXPECT_COMMIT:-}" ]; then
   check "/version.json's commit is $EXPECT_COMMIT" like "$body" "*,\"commit\":\"$EXPECT_COMMIT\"}"
 fi
 
+# The icons index.html names, and the ones browsers ask for unasked: files of
+# their own, served as images. Were one missing, the app's page would answer
+# in its place, and a browser would keep that as the icon.
+for icon in '/favicon.svg image/svg+xml' '/favicon.ico image/*icon' '/apple-touch-icon.png image/png'; do
+  path=${icon% *}
+  type=${icon#* }
+  get icon "$path"
+  check "$path answers 200" is "$status" 200
+  check "$path is served as an image ($type)" like "$(header icon Content-Type)" "$type*"
+  check "$path is not the app" is "$(grep -c '<div id="app"' "$work/icon.body" || true)" 0
+  if [ -n "$DIST" ]; then
+    check "$path is the build's" same "$work/icon.body" "$DIST$path"
+  fi
+done
+
 # The image's own health check passes.
 health=
 for _ in $(seq 1 45); do

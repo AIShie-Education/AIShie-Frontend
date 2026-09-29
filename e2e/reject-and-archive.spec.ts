@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test'
-import { call, courseTab, coursePath, demo, root, signIn, signInWithToken, toast } from './support'
+import { call, courseTab, coursePath, demo, registerPerson, root, signIn, signInAsRoot, toast } from './support'
 
 const STAMP = Date.now().toString(36)
 const FEEDBACK = `Second opinion (${STAMP}): the testing is thin.`
 const REASON = `Already graded at 9.5; this one misreads the rubric (${STAMP}).`
+const PIA_FEEDBACK = `A third opinion (${STAMP}).`
+const PIA_REASON = `Leave HW1 to its grader (${STAMP}).`
 let proposalId = ''
 
 test.describe.serial('rejecting a proposal, then archiving the course', () => {
@@ -56,28 +58,75 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     expect((grades.body.result.grades ?? []).some((g: { score: string | number }) => Number(g.score) === 6)).toBe(false)
   })
 
-  test('the grader sees in My actions that it was rejected, and why', async ({ page }) => {
+  // The grader, an agent, learns it from Core (it does not sign in to the
+  // app); the proposal's page says the same to the people in the course.
+  test('the grader learns it was rejected, and why; the proposal’s page says so', async ({ page }) => {
     const d = demo()
-    await signInWithToken(page, d.actors.grader)
-    await page.goto(coursePath('my-actions'))
-    const row = page.locator('.el-table__row').filter({ hasText: REASON })
-    await expect(row).toHaveCount(1)
-    await expect(row).toContainText('Enter a grade')
-    await expect(row).toContainText('6 / 10')
-    await expect(row).toContainText('Rejected')
-    await expect(row).toContainText(`Why: ${REASON}`)
+    const mine = await call(d.actors.grader.token, 'GET', `/v1/courses/${d.course.id}/actions/mine?limit=100`)
+    expect(mine.status, JSON.stringify(mine.body)).toBe(200)
+    const theirs = (mine.body.result.actions as { id: string; status: string; result?: any }[]).find(
+      (a) => a.id === proposalId,
+    )
+    expect(theirs?.status, JSON.stringify(theirs)).toBe('rejected')
+    expect(theirs?.result?.decision?.reason).toBe(REASON)
 
-    await row.getByRole('link', { name: 'Enter a grade' }).click()
-    await expect(page).toHaveURL(new RegExp(`/actions/${proposalId}$`))
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath(`actions/${proposalId}`))
+    await expect(page.locator('.page-header')).toContainText('Enter a grade')
     await expect(page.locator('.page-header')).toContainText('Rejected')
     await expect(page.locator('.action-timeline')).toContainText('Rejected by')
     await expect(page.getByText(`Why: ${REASON}`)).toBeVisible()
   })
 
+  test('a person whose grades need approval sees in My actions that one was rejected, and why', async ({ page }) => {
+    const d = demo()
+    const I = d.actors.instructor.token
+    // A teaching assistant of the test's own, whose grades wait for the instructor.
+    const pia = await registerPerson(`Pia Proposer ${STAMP}`, { email: `pia+${STAMP}@e2e.test` })
+    const seat = await call(I, 'POST', `/v1/courses/${d.course.id}/members`, {
+      actor_id: pia.actor_id,
+      preset: 'ta',
+      perms: { grade_submit: 'confirm_required' },
+    })
+    expect(seat.body.status, JSON.stringify(seat.body)).toBe('executed')
+    const proposed = await call(pia.token, 'POST', `/v1/courses/${d.course.id}/grades`, {
+      submission_id: d.course.submissions.yuki_hw1,
+      score: '7',
+      feedback: PIA_FEEDBACK,
+    })
+    expect(proposed.body.status, JSON.stringify(proposed.body)).toBe('proposed')
+    const piaProposal = proposed.body.action_id!
+    const rejected = await call(I, 'POST', `/v1/courses/${d.course.id}/actions/${piaProposal}/decide`, {
+      decision: 'reject',
+      reason: PIA_REASON,
+    })
+    expect(rejected.status, JSON.stringify(rejected.body)).toBe(200)
+
+    await signIn(page, pia)
+    await page.goto(coursePath())
+    await courseTab(page, 'My actions').click()
+    const row = page.locator('.el-table__row').filter({ hasText: PIA_REASON })
+    await expect(row).toHaveCount(1)
+    await expect(row).toContainText('Enter a grade')
+    await expect(row).toContainText('7 / 10')
+    await expect(row).toContainText('Rejected')
+    await expect(row).toContainText(`Why: ${PIA_REASON}`)
+
+    await row.getByRole('link', { name: 'Enter a grade' }).click()
+    await expect(page).toHaveURL(new RegExp(`/actions/${piaProposal}$`))
+    await expect(page.locator('.page-header')).toContainText('Rejected')
+    await expect(page.locator('.action-timeline')).toContainText('Rejected by')
+    await expect(page.getByText(`Why: ${PIA_REASON}`)).toBeVisible()
+
+    // The run's course is shared: the seat goes again.
+    const gone = await call(I, 'POST', `/v1/courses/${d.course.id}/members/${seat.body.result.member_id}/remove`, {})
+    expect(gone.body.status, JSON.stringify(gone.body)).toBe('executed')
+  })
+
   // Last: it archives the run's course (reopened again after the file).
   test('root archives the course; the instructor finds it read-only', async ({ page, browser }) => {
     const d = demo()
-    await signInWithToken(page, root())
+    await signInAsRoot(page)
     await page.goto(`/admin/courses/${d.course.id}`)
     const header = page.locator('.page-header')
     await expect(header).toContainText('Introduction to Programming')

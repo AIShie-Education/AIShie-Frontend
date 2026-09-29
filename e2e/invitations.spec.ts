@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, demo, pickOption, root, signInWithToken, toast } from './support'
+import { call, demo, pickOption, root, signInAsRoot, toast } from './support'
 
 // Everyone registered is in the administrators' directory, and a person an
 // administrator registers gets in by an invitation link: they open it, choose
@@ -20,7 +20,7 @@ function englishFirst(page: Page) {
 test.describe.serial('the directory and invitations', () => {
   test('the directory lists everyone, narrowed by a search, a kind or an ID', async ({ page }) => {
     const d = demo()
-    await signInWithToken(page, root())
+    await signInAsRoot(page)
     await page.goto('/admin/actors')
     await expect(page.locator('.page-header')).toContainText('People & agents')
     const rows = page.locator('.actors__table .el-table__body tr')
@@ -67,7 +67,7 @@ test.describe.serial('the directory and invitations', () => {
   })
 
   test('an administrator registers a person, finds them, and makes an invitation link', async ({ page }) => {
-    await signInWithToken(page, root())
+    await signInAsRoot(page)
     await page.goto('/admin/actors')
     await page.locator('.page-header').getByRole('button', { name: 'Register' }).click()
     const dialog = page.getByRole('dialog', { name: 'Register a person or agent' })
@@ -78,6 +78,8 @@ test.describe.serial('the directory and invitations', () => {
 
     const panel = page.locator('.actors__new')
     await expect(panel).toContainText('Create an invitation link on their page')
+    // A person's next steps give them no token: only agents are given one.
+    await expect(panel).not.toContainText(/token/i)
     await expect(panel.getByRole('button', { name: 'Create an invitation link' })).toBeVisible()
 
     // Found again in the directory by a piece of the email, any case.
@@ -96,6 +98,8 @@ test.describe.serial('the directory and invitations', () => {
 
     const card = page.locator('.invite')
     await expect(card).toContainText('Invitation link')
+    // A person is issued no API token: only agents are.
+    await expect(page.getByRole('button', { name: 'Issue token' })).toHaveCount(0)
     await card.getByRole('button', { name: 'Create invitation link' }).click()
     const reveal = page.getByRole('dialog', { name: 'Copy the invitation link now' })
     await expect(reveal).toContainText('This is the only time the link is shown.')
@@ -176,7 +180,7 @@ test.describe.serial('the directory and invitations', () => {
   })
 
   test('the directory shows the password the invitation set', async ({ page }) => {
-    await signInWithToken(page, root())
+    await signInAsRoot(page)
     await page.goto(`/admin/actors?q=${encodeURIComponent(PERSON.email)}`)
     const row = page.locator('.actors__table .el-table__body tr').filter({ hasText: PERSON.name })
     await expect(row).toContainText('Password')
@@ -238,7 +242,7 @@ test('an email is given, and a new one withdraws the invitation waiting', async 
   const id: string = reg.body.result.actor_id
 
   // Registered without an email or a number: nothing to invite them to sign in with yet.
-  await signInWithToken(page, root())
+  await signInAsRoot(page)
   await page.goto(`/admin/actors/${id}`)
   const card = page.locator('.invite')
   await expect(card).toContainText('They have neither a student/staff number nor an email')

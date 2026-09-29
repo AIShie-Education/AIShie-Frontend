@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type BrowserContextOptions, type Page } from '@playwright/test'
-import { call, coursePath, demo, root, signIn, toast, type CoreReply } from './support'
+import { call, coursePath, demo, registerPerson, signIn, toast, type CoreReply } from './support'
 
 // A course's invite link, shown to a class as a QR code: whoever may create
 // one (member_invite, which the instructor holds and the TA does not) makes
@@ -39,15 +39,10 @@ async function core(method: 'GET' | 'POST', path: string, body?: unknown) {
   return { status: res.status, body: await res.json() }
 }
 
-/** Someone with an account and a password, in no course of the run's. */
+/** Someone with an account and a password (chosen through an invitation), in no course of the run's. */
 async function person(name: string, email: string) {
-  const r = root().token
-  const made = await call(r, 'POST', '/v1/actors', { kind: 'human', display_name: name, email })
-  expect(made.status, JSON.stringify(made.body)).toBe(200)
-  const actor = made.body.result.actor_id as string
-  const tok = done(await call(r, 'POST', `/v1/actors/${actor}/tokens`, { label: `join ${STAMP}` }), 'actor.issue_token')
-  done(await call(tok.token, 'POST', '/v1/me/password', { password: PASSWORD }), 'credential.set_password')
-  return { actor, token: tok.token as string, email }
+  const who = await registerPerson(name, { email }, PASSWORD)
+  return { actor: who.actor_id, token: who.token, email }
 }
 
 async function seatOf(token: string): Promise<{ role: string } | undefined> {

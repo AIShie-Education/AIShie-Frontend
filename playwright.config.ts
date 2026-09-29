@@ -6,6 +6,11 @@ import { defineConfig, devices } from '@playwright/test'
 //
 //   E2E_CORE_URL=http://localhost:8080 E2E_ROOT_TOKEN=ais_… E2E_PASSWORD=… npm run e2e
 //
+// E2E_ROOT_TOKEN is root's signed-in session (the ais_session cookie of a
+// POST /v1/auth/login), not an API token: people hold none. E2E_PASSWORD is
+// root's password, which root signs in to the app with, and the one the
+// tests give the people they register.
+//
 // The dev server is started (or reused) with its proxy pointed at that Core.
 // With E2E_PREVIEW set, the build in dist/ is served instead (vite preview,
 // with the same proxy): CI does that, so that the tests pass on the very

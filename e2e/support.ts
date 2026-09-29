@@ -11,6 +11,11 @@ export interface DemoActor {
   email?: string
   display_name: string
   kind: 'human' | 'agent'
+  /**
+   * What the tests call Core with as them: an agent's API token, or a
+   * person's signed-in session (people hold no API tokens), which lasts
+   * Core's SESSION_TTL, 12 hours.
+   */
   token: string
 }
 export interface Demo {
@@ -35,9 +40,18 @@ export function demo(): Demo {
   return JSON.parse(readFileSync(resolve(here, '.demo.json'), 'utf8'))
 }
 
-/** Signs in through the sign-in form, as a person does. */
-export async function signIn(page: Page, who: DemoActor) {
-  if (!who.email) throw new Error(`${who.display_name} is an agent; use signInWithToken`)
+/**
+ * Signs in through the sign-in form, as a person does, with their email and
+ * the run's password (E2E_PASSWORD). Only people sign in to the app: an
+ * agent is seen through Core, with its token (call).
+ */
+export async function signIn(
+  page: Page,
+  who: Pick<DemoActor, 'email' | 'display_name'>,
+  password = process.env.E2E_PASSWORD!,
+) {
+  if (!who.email)
+    throw new Error(`${who.display_name} has no email to sign in with (an agent never signs in to the app)`)
   await page.addInitScript(() => {
     try {
       localStorage.setItem('aishiteru.locale', 'en')
@@ -45,30 +59,35 @@ export async function signIn(page: Page, who: DemoActor) {
   })
   await page.goto('/login')
   await page.fill('input[name=login]', who.email)
-  await page.fill('input[name=password]', process.env.E2E_PASSWORD!)
+  await page.fill('input[name=password]', password)
   await page.click('button[type=submit]')
   await expect(page).not.toHaveURL(/\/login/)
 }
 
-/** Signs in with the actor's API token, as the app's token option does. */
-export async function signInWithToken(page: Page, who: Pick<DemoActor, 'token'>) {
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem('aishiteru.locale', 'en')
-    } catch {}
-  })
-  await page.goto('/login')
-  await page.getByText('Use an API token').click()
-  await page.getByPlaceholder('ais_…').fill(who.token)
-  await page.getByRole('button', { name: 'Continue with token' }).click()
-  await expect(page).not.toHaveURL(/\/login/)
-}
-
-/** The platform's root, by the token the run was given. */
+/**
+ * The platform's root, by the session the run was given: E2E_ROOT_TOKEN is
+ * root's signed-in session (scripts/ci-core.sh), not an API token.
+ */
 export function root(): Pick<DemoActor, 'token'> {
   const token = process.env.E2E_ROOT_TOKEN
   if (!token) throw new Error('E2E_ROOT_TOKEN is required')
   return { token }
+}
+
+let rootEmail: Promise<string> | undefined
+
+/**
+ * Signs root in through the sign-in form, as any person signs in: with the
+ * email Core has for root (asked once, with root's session) and the run's
+ * password, which scripts/ci-core.sh gives root as well.
+ */
+export async function signInAsRoot(page: Page) {
+  rootEmail ??= call(root().token, 'GET', '/v1/me').then((me) => {
+    const email = me.body.result?.email
+    if (!email) throw new Error(`root has no email to sign in with: ${JSON.stringify(me.body)}`)
+    return email as string
+  })
+  await signIn(page, { email: await rootEmail, display_name: 'root' })
 }
 
 /** A path inside the run's course: coursePath('grades') → /courses/<id>/grades. */
@@ -127,23 +146,45 @@ export async function call(
 }
 
 /**
- * Registers a person as the platform's root, gives them the run's password
- * (through an API token of theirs, as they would set it themselves) and
- * returns them with that token. They sign in by their email or their login
- * ID, whichever they were given.
+ * Takes up an invitation (actor.invite) with a password, as the page an
+ * invitation link opens does (POST /v1/auth/invite), and returns the session
+ * Core signs the person in with: the value of the cookie it sets, which Core
+ * takes as a bearer token too.
+ */
+export async function acceptInvitation(core: string, invitation: string, password: string): Promise<string> {
+  const res = await fetch(`${core.replace(/\/+$/, '')}/v1/auth/invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ token: invitation, password }),
+  })
+  const session = res.headers
+    .getSetCookie()
+    .map((c) => /^ais_session=([^;]+)/.exec(c)?.[1])
+    .find((v) => !!v)
+  if (res.status !== 200 || !session) {
+    throw new Error(`POST /v1/auth/invite: HTTP ${res.status} ${await res.text()}, and no session`)
+  }
+  return session
+}
+
+/**
+ * Registers a person as the platform's root and gives them a password as a
+ * person gets one, by an invitation they take up (the run's password, unless
+ * another is given); returns them with the session that signed them in. They
+ * sign in by their email or their login ID, whichever they were given. People
+ * are given no API tokens.
  */
 export async function registerPerson(
   name: string,
   signInBy: { email?: string; login_id?: string },
+  password = process.env.E2E_PASSWORD!,
 ): Promise<DemoActor & { login_id?: string }> {
   const reg = await call(root().token, 'POST', '/v1/actors', { kind: 'human', display_name: name, ...signInBy })
   expect(reg.body.status, JSON.stringify(reg.body)).toBe('executed')
   const actorId = reg.body.result.actor_id as string
-  const tok = await call(root().token, 'POST', `/v1/actors/${actorId}/tokens`, { label: 'e2e', expires_in_days: 1 })
-  expect(tok.body.status, JSON.stringify(tok.body)).toBe('executed')
-  const token = tok.body.result.token as string
-  const pw = await call(token, 'POST', '/v1/me/password', { password: process.env.E2E_PASSWORD })
-  expect(pw.body.status, JSON.stringify(pw.body)).toBe('executed')
+  const invited = await call(root().token, 'POST', `/v1/actors/${actorId}/invite`, { expires_in_days: 1 })
+  expect(invited.body.status, JSON.stringify(invited.body)).toBe('executed')
+  const token = await acceptInvitation(demo().core, invited.body.result.token as string, password)
   return { actor_id: actorId, display_name: name, kind: 'human', token, ...signInBy }
 }
 

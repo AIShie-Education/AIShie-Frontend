@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Starts an AIShiteru Core for the end-to-end tests, and stops it again. It is
-# a throwaway: a database of its own, a root actor whose password and API token
-# are made up for the run, files in a temporary directory, and the limits that
-# would slow the tests down turned off. Never point it at a database people
-# use.
+# a throwaway: a database of its own, a root actor whose password is made up
+# for the run, files in a temporary directory, and the limits that would slow
+# the tests down turned off. Never point it at a database people use.
 #
 # CI runs the image pinned in .github/core-image, in Docker. Without Docker,
 # give it a binary of Core instead:
@@ -14,11 +13,21 @@
 #   npx playwright test
 #   scripts/ci-core.sh stop
 #
+# E2E_ROOT_TOKEN is root's signed-in session, not an API token: people hold
+# no API tokens, only agents do. Root is bootstrapped with the email
+# root@e2e.test and the password E2E_PASSWORD, and start signs it in with
+# them (POST /v1/auth/login), as the sign-in page does. The session is the
+# one Core sets as its cookie, and Core takes it as a bearer token as it
+# takes an API token. It lasts Core's SESSION_TTL, 12 hours: a Core kept
+# longer than that is stopped and started again. A Core from before people
+# held no API tokens still prints one for root at bootstrap; start throws it
+# away unread.
+#
 # start creates the database when it is missing (with psql, on DATABASE_URL's
 # server), and stop drops it again. A database that has been bootstrapped
 # before is refused: bootstrap runs once per database.
 #
-# In GitHub Actions, start masks the token and the password in the log and
+# In GitHub Actions, start masks the session and the password in the log and
 # puts the three E2E_* variables in $GITHUB_ENV for the steps after it. stop
 # leaves Core's log in core.log, next to the env file, for the job to upload.
 #
@@ -137,18 +146,15 @@ start() {
   core migrate up </dev/null
   core seed </dev/null
 
-  local password token
+  local password session
   password=$(openssl rand -hex 16)
-  # The token is the only thing bootstrap prints on standard output; what it
-  # says around it goes to the log.
-  token=$(printf '%s\n' "$password" | core bootstrap --name Root --email root@e2e.test --password-stdin 2>>"$DIR/core.log") ||
+  if in_actions; then echo "::add-mask::$password"; fi
+  # Root signs in with this email and password once Core is up (sign_in,
+  # below). What bootstrap says goes to the log; its standard output, where
+  # a Core from before people held no API tokens prints root's, goes nowhere.
+  printf '%s\n' "$password" | core bootstrap --name Root --email root@e2e.test --password-stdin >/dev/null 2>>"$DIR/core.log" ||
     die "bootstrap failed; a database that was bootstrapped before cannot be used again: $(tail -n 3 "$DIR/core.log")"
-  echo "(scripts/ci-core.sh keeps it in $DIR/env, not here)" >> "$DIR/core.log"
-  [[ $token =~ ^ais_[A-Za-z0-9_-]+$ ]] || die "bootstrap printed no token"
-  if in_actions; then
-    echo "::add-mask::$token"
-    echo "::add-mask::$password"
-  fi
+  echo "(scripts/ci-core.sh keeps no API token for root, and threw away any printed here: root signs in with its password)" >> "$DIR/core.log"
 
   # Tests sign in dozens of times a minute from one address, and a proposal
   # the tests make should not wait a minute to be swept.
@@ -188,16 +194,45 @@ start() {
     sleep 0.5
   done
 
+  session=$(sign_in root@e2e.test "$password") || die "root could not sign in with the password bootstrap was given"
+  if in_actions; then echo "::add-mask::$session"; fi
+
   (
     umask 077
-    printf "export E2E_CORE_URL='%s'\nexport E2E_ROOT_TOKEN='%s'\nexport E2E_PASSWORD='%s'\n" "$URL" "$token" "$password" > "$DIR/env"
+    # E2E_ROOT_TOKEN is root's signed-in session, not an API token (see the
+    # top of this script); the name stays, so that nothing reading it changes.
+    printf "export E2E_CORE_URL='%s'\nexport E2E_ROOT_TOKEN='%s'\nexport E2E_PASSWORD='%s'\n" "$URL" "$session" "$password" > "$DIR/env"
   )
   if in_actions; then
-    printf 'E2E_CORE_URL=%s\nE2E_ROOT_TOKEN=%s\nE2E_PASSWORD=%s\n' "$URL" "$token" "$password" >> "$GITHUB_ENV"
+    printf 'E2E_CORE_URL=%s\nE2E_ROOT_TOKEN=%s\nE2E_PASSWORD=%s\n' "$URL" "$session" "$password" >> "$GITHUB_ENV"
   fi
-  echo "Core is up on $URL, on the database $dbname; root's API token and password are in $DIR/env:"
+  echo "Core is up on $URL, on the database $dbname; root's session and password are in $DIR/env:"
   echo "  . $DIR/env"
   trap - EXIT
+}
+
+# sign_in EMAIL PASSWORD prints the session Core gives for them at
+# POST /v1/auth/login, as the sign-in page asks: the value of the ais_session
+# cookie it sets (the body says only whose it is and until when). The body,
+# password and all, reaches curl on its standard input, never on a command
+# line. A sign-in Core refuses, or one whose password must be changed first,
+# fails with what Core said, which holds no secret.
+sign_in() {
+  local headers session
+  headers=$(printf '{"email":"%s","password":"%s"}' "$1" "$2" |
+    curl -sS --max-time 30 -D - -o "$DIR/sign-in.json" -H 'Content-Type: application/json' --data-binary @- "$URL/v1/auth/login" |
+    tr -d '\r') || return 1
+  session=$(printf '%s\n' "$headers" | sed -n 's/^[Ss]et-[Cc]ookie: *ais_session=\([^;]*\).*/\1/p' | head -n 1)
+  if ! [[ $session =~ ^ais_[A-Za-z0-9_-]+$ ]]; then
+    echo "ci-core: POST /v1/auth/login: $(printf '%s\n' "$headers" | head -n 1), and no session: $(cat "$DIR/sign-in.json")" >&2
+    return 1
+  fi
+  if grep -q '"password_change_required": *true' "$DIR/sign-in.json"; then
+    echo "ci-core: $1 signed in, but must change their password before anything else" >&2
+    return 1
+  fi
+  rm -f "$DIR/sign-in.json"
+  printf '%s\n' "$session"
 }
 
 running() {
@@ -236,7 +271,7 @@ stop() {
     psql -X -q -d "$maint" -c "DROP DATABASE IF EXISTS \"$dbname\" WITH (FORCE)" && echo "dropped the database $dbname"
     rm -f "$DIR/created-db"
   fi
-  rm -rf "$DIR/env" "$DIR/blobs"
+  rm -rf "$DIR/env" "$DIR/blobs" "$DIR/sign-in.json"
 }
 
 case ${1:-} in

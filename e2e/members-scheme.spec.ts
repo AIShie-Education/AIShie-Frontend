@@ -8,6 +8,7 @@ let actorId = ''
 // them in a course is then the instructor's to do, in the app.
 test.beforeAll(async () => {
   const d = demo()
+  // Root's signed-in session (scripts/ci-core.sh), which Core takes as a bearer token.
   const root = process.env.E2E_ROOT_TOKEN
   if (!root) throw new Error('E2E_ROOT_TOKEN is required')
   const out = await call(root, 'POST', '/v1/actors', {

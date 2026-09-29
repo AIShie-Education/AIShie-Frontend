@@ -134,13 +134,6 @@ const pageTitle = computed(() => {
           <span class="app-header__title">{{ pageTitle }}</span>
         </div>
         <div class="app-header__right">
-          <el-tooltip v-if="session.usingToken" :content="t('layout.tokenMode')" placement="bottom">
-            <el-tag type="warning" effect="plain" size="small" class="app-header__token">
-              <el-icon><Key /></el-icon>
-              <span class="app-header__token-text">{{ t('layout.tokenMode') }}</span>
-            </el-tag>
-          </el-tooltip>
-
           <el-dropdown trigger="click" @command="(l: Locale) => (ui.locale = l)">
             <el-button text circle :aria-label="t('common.nav.language')">
               <el-icon :size="18"><ChatLineSquare /></el-icon>
@@ -313,16 +306,6 @@ const pageTitle = computed(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-.app-header__token :deep(.el-tag__content) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-@media (max-width: 600px) {
-  .app-header__token-text {
-    display: none;
-  }
 }
 .app-header__left {
   flex: 1 1 auto;

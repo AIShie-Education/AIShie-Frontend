@@ -1,7 +1,6 @@
 export default {
   courses: 'Courses',
   menu: 'Menu',
-  tokenMode: 'Signed in with a token',
   // The tab's name on a page that does not exist (the router's catch-all).
   notFound: 'Page not found',
   // Labels Element Plus gives screen readers on tables (i18n/elementPlus.ts).

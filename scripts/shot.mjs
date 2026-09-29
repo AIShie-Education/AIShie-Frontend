@@ -8,9 +8,11 @@
 //     [--base http://localhost:5173] [--width 1280] [--height 900] [--dark] [--lang en|zh-Hant|zh-Hans]
 //     [--click 'text=Add member'] [--wait 800] [--full]
 //
-// --as is a key in the demo file's actors (instructor, ta, yuki, ken, mei,
-// observer, grader, tutor), or root (with ROOT_TOKEN set). People sign in through the sign-in form with
-// DEMO_PASSWORD; agents, which have no password, with their API token.
+// --as is a key in the demo file's people (instructor, ta, yuki, ken, mei,
+// observer), or root (with ROOT_EMAIL and ROOT_PASSWORD set). Each signs in
+// through the sign-in form, the demo's people with DEMO_PASSWORD. Agents
+// (grader, tutor) do not sign in to the app: they call Core with their
+// token, and are seen through the pages of the people they work with.
 // {course}, {hw1}, {hw2}, {yuki_hw1}, {week1}, … in --path are filled from
 // the demo file, as are {member:yuki} and {actor:yuki}.
 // --click may be given more than once; each is a Playwright selector clicked
@@ -33,12 +35,16 @@ function args() {
 const opt = args()
 const demo = JSON.parse(await readFile(process.env.DEMO_FILE || 'demo.json', 'utf8'))
 const base = (opt.base || 'http://localhost:5173').replace(/\/+$/, '')
-// --as root signs in with ROOT_TOKEN, for the administration pages.
+// --as root signs in with ROOT_EMAIL and ROOT_PASSWORD, for the administration pages.
 const who =
   opt.as === 'root'
-    ? { kind: 'agent', token: process.env.ROOT_TOKEN, display_name: 'root' }
-    : demo.actors[opt.as || 'instructor']
-if (!who || !who.token) throw new Error(`no demo actor ${opt.as} (or no ROOT_TOKEN for root)`)
+    ? { kind: 'human', email: process.env.ROOT_EMAIL, password: process.env.ROOT_PASSWORD, display_name: 'root' }
+    : { ...demo.actors[opt.as || 'instructor'], password: process.env.DEMO_PASSWORD }
+if (!who || !who.kind) throw new Error(`no demo actor ${opt.as}`)
+if (who.kind !== 'human') throw new Error(`${opt.as} is an agent: agents do not sign in to the app`)
+if (!who.email || !who.password) {
+  throw new Error(opt.as === 'root' ? 'ROOT_EMAIL and ROOT_PASSWORD are required for root' : 'DEMO_PASSWORD is required')
+}
 
 const fill = (p) =>
   p
@@ -89,16 +95,10 @@ page.on('response', async (r) => {
   }
 })
 
-if (who.kind === 'human') {
-  if (!process.env.DEMO_PASSWORD) throw new Error('DEMO_PASSWORD is required to sign in as a person')
-  await page.goto(`${base}/login`)
-  await page.fill('input[name=email]', who.email)
-  await page.fill('input[name=password]', process.env.DEMO_PASSWORD)
-  await Promise.all([page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 15000 }), page.click('button[type=submit]')])
-} else {
-  await page.goto(`${base}/login`)
-  await page.evaluate((t) => sessionStorage.setItem('aishiteru.bearer', t), who.token)
-}
+await page.goto(`${base}/login`)
+await page.fill('input[name=login]', who.email)
+await page.fill('input[name=password]', who.password)
+await Promise.all([page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 15000 }), page.click('button[type=submit]')])
 
 const target = fill(opt.path || '/')
 recording = true

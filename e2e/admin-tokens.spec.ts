@@ -1,16 +1,17 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { call, root, signInWithToken, toast } from './support'
+import { call, demo, root, signInAsRoot, toast } from './support'
 
 // An administrator sees an agent's API tokens on its page, with who issued
 // each, and revokes one that has leaked without suspending the agent: the
 // revoked token is refused from its next call, and the other goes on working.
+// Only agents are given API tokens: a person's page, one's own included,
+// offers none to issue.
 const stamp = Date.now().toString(36)
 const AGENT = `token-agent-${stamp}`
 const FIRST = `leaky grader ${stamp}`
 const SECOND = `replacement grader ${stamp}`
 let agentId = ''
 let firstToken = ''
-let secondToken = ''
 let rootId = ''
 let rootName = ''
 
@@ -49,12 +50,11 @@ test.beforeAll(async () => {
   firstToken = issued.body.result.token
 })
 
-// The second test reads the token the first issues: they run, and are retried, together.
-test.describe.serial('an agent’s tokens on its admin page', () => {
+test.describe('an agent’s tokens on its admin page', () => {
   test('an administrator lists an agent’s tokens with their issuer, and revokes the one that leaked', async ({
     page,
   }) => {
-    await signInWithToken(page, root())
+    await signInAsRoot(page)
     await page.goto(`/admin/actors/${agentId}`)
     await expect(page.locator('.page-header')).toContainText(AGENT)
     const card = credentialsCard(page)
@@ -81,7 +81,7 @@ test.describe.serial('an agent’s tokens on its admin page', () => {
     await issue.getByRole('button', { name: 'Issue token' }).click()
     const reveal = page.getByRole('dialog', { name: 'Copy the token now' })
     await expect(reveal).toContainText('This is the only time the token is shown.')
-    secondToken = await reveal.locator('#reveal-token').inputValue()
+    const secondToken = await reveal.locator('#reveal-token').inputValue()
     expect(secondToken).toMatch(/^ais_[a-z2-7]{12}_/)
     await reveal.getByRole('button', { name: 'Done' }).click()
     await page
@@ -123,31 +123,39 @@ test.describe.serial('an agent’s tokens on its admin page', () => {
     expect(agent.body.result.status).toBe('active')
     await expect(page.locator('.page-header')).toContainText('Active')
   })
-
-  test('the agent sees on its Account page who issued its token', async ({ browser }) => {
-    expect(secondToken, 'the token from the test before').not.toBe('')
-    const context = await browser.newContext()
-    const page = await context.newPage()
-    await signInWithToken(page, { token: secondToken })
-    await page.goto('/account')
-    const item = page.locator('.creds-item').filter({ hasText: SECOND })
-    await expect(item).toContainText('Issued by')
-    await expect(item).toContainText(rootName)
-    await context.close()
-  })
 })
 
 test('on one’s own page, credentials are listed but revoked on the Account page', async ({ page }) => {
-  await signInWithToken(page, root())
+  await signInAsRoot(page)
   await page.goto(`/admin/actors/${rootId}`)
   const card = credentialsCard(page)
   await expect(card).toContainText('These are your own.')
   await card.getByRole('link', { name: 'Open my account' }).click()
   await expect(page).toHaveURL(/\/account$/)
   await page.goBack()
-  await expect(credentialsCard(page).locator('.el-table__row, .creds-token').first()).toBeVisible()
+  // Root's sessions: the run's own, and this browser's.
+  await expect(credentialsCard(page).locator('.creds-other').first()).toBeVisible()
   await expect(credentialsCard(page).getByRole('button', { name: 'Revoke' })).toHaveCount(0)
   await expect(credentialsCard(page).getByRole('button', { name: 'Sign out' })).toHaveCount(0)
+  // A person, root included, is issued no token.
+  await expect(page.getByRole('heading', { name: 'API token', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Issue token' })).toHaveCount(0)
+})
+
+test('a person’s page offers no token to issue, and lists how they sign in', async ({ page }) => {
+  const yuki = demo().actors.yuki
+  await signInAsRoot(page)
+  await page.goto(`/admin/actors/${yuki.actor_id}`)
+  await expect(page.locator('.page-header')).toContainText(yuki.display_name)
+  // How a person gets in: an invitation link, and single sign-on.
+  await expect(page.locator('.invite')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'API token', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Issue token' })).toHaveCount(0)
+  const card = credentialsCard(page)
+  await expect(card.getByRole('heading', { name: 'Tokens and sign-ins' })).toBeVisible()
+  await expect(card.getByRole('heading', { name: 'API tokens' })).toHaveCount(0)
+  await expect(card.locator('.creds-other').filter({ hasText: 'Password' }).first()).toBeVisible()
+  await expect(card.locator('.creds-other').filter({ hasText: 'Signed in by accepting an invitation' }).first()).toBeVisible()
 })
 
 test('on a Core without the list, the page says so and still issues tokens', async ({ page }) => {
@@ -162,7 +170,7 @@ test('on a Core without the list, the page says so and still issues tokens', asy
             json: { error: { code: 'not_found', message: 'no such route; GET /v1/tools lists what there is' } },
           }),
   )
-  await signInWithToken(page, root())
+  await signInAsRoot(page)
   await page.goto(`/admin/actors/${agentId}`)
   await expect(page.getByText('This Core cannot list an actor’s tokens and sign-ins yet')).toBeVisible()
   await expect(credentialsCard(page)).toHaveCount(0)

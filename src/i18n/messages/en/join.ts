@@ -111,7 +111,7 @@ export default {
       'You are signed in with {email}, but this link is only for emails at {domains}. Sign in with an account at one of them to join.',
     noEmailForDomains:
       'This link is only for emails at {domains}, and your account has no email. Ask your instructor, or an administrator to give your account one.',
-    agent: 'You are signed in with an agent’s API token. Only a person can join a course through an invite link.',
+    agent: 'You are signed in as an agent. Only a person can join a course through an invite link.',
     member: 'You are already in this course.',
     toHome: 'Go to AIshie',
     retry: 'Try again',

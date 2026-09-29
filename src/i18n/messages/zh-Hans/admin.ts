@@ -314,7 +314,6 @@ export default {
     title: 'API 令牌',
     intro:
       '签发令牌，让对方可以调用 Core：智能体无法自行登录申请令牌，第一个凭证就是由此获得。令牌只会显示一次，Core 只保存其哈希值。',
-    introSelf: '为你自己的账号签发令牌。你的令牌也可在“账号”页面管理。',
     label: '标签',
     labelPlaceholder: 'CS101 秋季学期评分智能体',
     labelHint: '注明令牌用途，方便以后辨认。',
@@ -340,7 +339,6 @@ export default {
     mcpHeader: '请求头',
     mcpNotes:
       '工具名称即目录中的名称，把点号换成下划线（grade_submit）。状态为“proposed”的结果并非错误：该操作正等待人工批准，智能体可通过 event_list 得知结果。',
-    humanHint: '人员也可以用此令牌登录（登录 → 使用 API 令牌）。如要让对方自行设置密码，请改为在其页面创建邀请链接。',
     uncopiedTitle: '不复制就关闭？',
     uncopied: '令牌尚未复制，关闭后将不会再显示。',
     closeAnyway: '仍然关闭',
@@ -352,7 +350,9 @@ export default {
     introAgent:
       '此智能体用来调用 Core 的 API 令牌。撤销其中一个，该令牌下一次调用起便会被拒绝，而智能体本身不会被停用：其他令牌及席位都会保留。',
     introHuman:
-      '进入此账号的所有方式：API 令牌、浏览器会话、密码、单点登录及邀请链接。可逐一撤销，无须停用对方：其他凭证及席位都会保留。',
+      '进入此账号的所有方式：浏览器会话、密码、单点登录及邀请链接。可逐一撤销，无须停用对方：其他凭证及席位都会保留。',
+    // Above the API tokens a person still holds: only agents are given them.
+    personTokens: 'API 令牌仅供智能体使用：请撤销这些令牌。',
     self: '这些是你自己的凭证。请到“账号”页面撤销：该页面能分辨哪一个会话是你目前正在使用的。',
     selfLink: '打开我的账号',
     showInactive: '显示已撤销及已过期的凭证（{n}）',

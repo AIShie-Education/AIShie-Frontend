@@ -314,7 +314,6 @@ export default {
     title: 'API 權杖',
     intro:
       '發出權杖，讓對方可以呼叫 Core：代理無法自行登入申請權杖，第一個憑證便是由此取得。權杖只會顯示一次，Core 只保存其雜湊值。',
-    introSelf: '為你自己的帳戶發出權杖。你的權杖也可在「帳戶」頁面管理。',
     label: '標籤',
     labelPlaceholder: 'CS101 秋季學期評分代理',
     labelHint: '註明權杖用途，方便日後辨認。',
@@ -340,7 +339,6 @@ export default {
     mcpHeader: '標頭',
     mcpNotes:
       '工具名稱即目錄中的名稱，把點號換成底線（grade_submit）。狀態為「proposed」的結果並非錯誤：該操作正等待人手批准，代理可透過 event_list 得知結果。',
-    humanHint: '人員也可以用此權杖登入（登入 → 使用 API 權杖）。如要讓對方自行設定密碼，請改為在其頁面建立邀請連結。',
     uncopiedTitle: '不複製就關閉？',
     uncopied: '權杖尚未複製，關閉後將不會再顯示。',
     closeAnyway: '仍然關閉',
@@ -352,7 +350,9 @@ export default {
     introAgent:
       '此代理用來呼叫 Core 的 API 權杖。撤銷其中一個，該權杖下一次呼叫起便會被拒絕，而代理本身不會被停用：其他權杖及席位都會保留。',
     introHuman:
-      '進入此帳戶的所有方式：API 權杖、瀏覽器登入階段、密碼、單一登入及邀請連結。可逐一撤銷，無須停用對方：其他憑證及席位都會保留。',
+      '進入此帳戶的所有方式：瀏覽器登入階段、密碼、單一登入及邀請連結。可逐一撤銷，無須停用對方：其他憑證及席位都會保留。',
+    // Above the API tokens a person still holds: only agents are given them.
+    personTokens: 'API 權杖只供代理使用：請撤銷這些權杖。',
     self: '這些是你自己的憑證。請到「帳戶」頁面撤銷：該頁面能分辨哪一個登入階段是你目前正在使用的。',
     selfLink: '開啟我的帳戶',
     showInactive: '顯示已撤銷及已過期的項目（{n}）',

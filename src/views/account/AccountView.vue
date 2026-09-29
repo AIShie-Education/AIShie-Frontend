@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// The caller's own account, for every signed-in actor: who they are
-// (me.get), where they are seated (me.memberships), and the ways into the
-// account (credential.list), with a password to set, tokens to make and
-// credentials to revoke.
+// The caller's own account: who they are (me.get), where they are seated
+// (me.memberships), and the ways into the account (credential.list), with a
+// password to set and credentials to revoke. Only agents have API tokens: none
+// is made here, and one a person still holds is shown to be revoked.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
@@ -45,16 +45,6 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
 <template>
   <div class="account-view">
     <PageHeader :title="t('account.title')" :subtitle="t('account.subtitle')" />
-
-    <el-alert
-      v-if="session.usingToken"
-      type="warning"
-      :closable="false"
-      show-icon
-      :title="t('account.tokenMode.title')"
-      :description="t('account.tokenMode.body')"
-      class="account-view__banner"
-    />
 
     <div class="account-view__top">
       <ProfileCard
@@ -109,9 +99,6 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
 </template>
 
 <style scoped>
-.account-view__banner {
-  margin-bottom: 16px;
-}
 .account-view__top {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);

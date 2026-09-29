@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import type { FormInstance, FormRules, InputInstance } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { acceptsLoginId, ApiError, authMethods, health, ssoStartUrl, type SsoMethod } from '@/api/http'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
@@ -30,12 +30,6 @@ const error = computed(() =>
 )
 /** Core takes a login ID as well as an email: the field says so, and the name goes as `login`. */
 const byLoginId = ref(false)
-const showToken = ref(false)
-const token = ref('')
-const tokenInput = ref<InputInstance>()
-/** Continue was pressed with no token pasted. */
-const tokenMissing = ref(false)
-watch(token, () => (tokenMissing.value = false))
 const version = ref<string | null>(null)
 const serverDown = ref(false)
 
@@ -96,8 +90,8 @@ onMounted(async () => {
 
 /**
  * Where to go once signed in. If this page has held someone else (they signed
- * out, or their session lapsed, and now another person or an agent's token
- * signs in here), load the page again: views cache names and look-ups, and
+ * out, or their session lapsed, and now another person signs in here), load
+ * the page again: views cache names and look-ups, and
  * only a fresh page is sure to hold nothing of the caller before. The button
  * stays busy until it has gone.
  */
@@ -138,27 +132,6 @@ async function signIn() {
       e instanceof ApiError && e.isUnauthenticated
         ? { key: byLoginId.value ? 'auth.failedLogin' : 'auth.failed' }
         : { err: e }
-  } finally {
-    if (!leaving) busy.value = false
-  }
-}
-
-async function signInWithToken() {
-  if (!token.value.trim()) {
-    // Said beside the field (an alert, read out) and the field is focused, so
-    // that pressing again, which adds no new alert, still says what is wrong.
-    tokenMissing.value = true
-    tokenInput.value?.focus()
-    return
-  }
-  busy.value = true
-  failure.value = null
-  let leaving = false
-  try {
-    await session.signInWithToken(token.value)
-    leaving = proceed()
-  } catch (e) {
-    failure.value = { err: e }
   } finally {
     if (!leaving) busy.value = false
   }
@@ -230,33 +203,6 @@ function sso() {
         <el-button size="large" class="login__submit login__sso" @click="sso">{{ t('auth.sso', { provider: ssoLabel }) }}</el-button>
       </template>
 
-      <div class="login__token">
-        <el-button link type="info" @click="showToken = !showToken">
-          <el-icon><Key /></el-icon>
-          {{ t('auth.token') }}
-        </el-button>
-        <el-collapse-transition>
-          <form v-show="showToken" class="login__token-form" @submit.prevent="signInWithToken">
-            <p id="login-token-hint" class="app-form-hint">{{ t('auth.tokenHint') }}</p>
-            <el-input
-              ref="tokenInput"
-              v-model="token"
-              type="password"
-              show-password
-              :aria-label="t('auth.tokenLabel')"
-              :aria-invalid="tokenMissing || undefined"
-              :aria-describedby="tokenMissing ? 'login-token-hint login-token-missing' : 'login-token-hint'"
-              :placeholder="t('auth.tokenPlaceholder')"
-              autocomplete="off"
-            />
-            <div v-if="tokenMissing" id="login-token-missing" role="alert" class="login__token-missing">
-              {{ t('auth.tokenMissing') }}
-            </div>
-            <el-button native-type="submit" type="primary" plain :loading="busy">{{ t('auth.tokenSignIn') }}</el-button>
-          </form>
-        </el-collapse-transition>
-      </div>
-
       <p v-if="version" class="login__version">{{ t('auth.serverVersion', { version }) }}</p>
     </div>
   </div>
@@ -315,20 +261,6 @@ function sso() {
 }
 .login__submit {
   width: 100%;
-}
-.login__token {
-  margin-top: 16px;
-}
-.login__token-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-}
-.login__token-missing {
-  margin-top: -4px;
-  font-size: 12px;
-  color: var(--el-color-danger);
 }
 .login__version {
   margin: 20px 0 0;

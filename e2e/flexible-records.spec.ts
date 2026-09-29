@@ -7,7 +7,7 @@ import {
   registerPerson,
   root,
   signIn,
-  signInWithToken,
+  signInAsRoot,
   toast,
   type DemoActor,
 } from './support'
@@ -435,7 +435,7 @@ test.describe.serial('records that change after the fact', () => {
     const rootMe = await ok(root().token, 'GET', '/v1/me')
     await ok(instructor().token, 'POST', `/v1/courses/${courseId}/members`, { actor_id: rootMe.id, preset: 'ta' })
     const admin = await browser.newPage()
-    await signInWithToken(admin, root())
+    await signInAsRoot(admin)
     await admin.goto(`/courses/${courseId}/documents/${docId}`)
     const history = admin.locator('.version-list')
     await history
@@ -490,7 +490,7 @@ test.describe.serial('records that change after the fact', () => {
       title: 'Seating plan',
       body_md: 'Names and seats.',
     })
-    await signInWithToken(page, root())
+    await signInAsRoot(page)
     await page.goto(`/courses/${courseId}/documents/${doc.document_id ?? doc.id}`)
     await page.locator('.page-header').getByRole('button', { name: 'Purge…' }).click()
     const purge = page.getByRole('dialog', { name: 'Purge “Seating plan”' })

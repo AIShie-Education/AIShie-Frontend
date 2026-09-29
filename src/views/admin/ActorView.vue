@@ -1,8 +1,10 @@
 <script setup lang="ts">
 // One actor: their registration and how they sign in (actor.get, corrected
 // with actor.update), their standing (actor.suspend, actor.reactivate) and
-// their ways in (actor.invite, actor.issue_token, actor.link_sso), listed and
-// revoked one by one (actor.list_credentials, actor.revoke_credential). What an
+// their ways in, listed and revoked one by one (actor.list_credentials,
+// actor.revoke_credential): a person's by an invitation or single sign-on
+// (actor.invite, actor.link_sso), an agent's by API tokens (actor.issue_token),
+// which only agents are given. What an
 // administrator may do to whom is Core's rule, mirrored here to say why a
 // control is off: not to yourself (though your own name and email are yours
 // to correct), only root to a holder of a platform role, and nobody to the
@@ -390,8 +392,9 @@ async function reactivate() {
         </section>
 
         <div class="actor__grid">
-          <!-- A person signs in by an invitation or single sign-on; an agent by a token. An agent (or the
-               system) has no identity at the identity provider: no single sign-on card. -->
+          <!-- A person signs in by an invitation or single sign-on; an agent by a token, and only an agent is
+               issued one. An agent (or the system) has no identity at the identity provider: no single
+               sign-on card. -->
           <template v-if="actor.kind === 'human'">
             <InviteCard :actor="actor" @edit="editing = true" @changed="onSignInChanged" />
             <LinkSsoCard :actor="actor" :blocked-reason="credentialBlocker" @linked="onSignInChanged" />
@@ -406,8 +409,8 @@ async function reactivate() {
             @changed="state.reload"
           />
           <IssueTokenCard
+            v-if="actor.kind === 'agent'"
             :actor="actor"
-            :is-self="isSelf"
             :blocked-reason="credentialBlocker"
             @issued="reloadCredentials"
           />

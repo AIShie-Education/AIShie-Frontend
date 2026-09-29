@@ -3,7 +3,9 @@
 // (actor.revoke_credential) without suspending the actor: a token that has
 // leaked, a browser left signed in. API tokens come first, with who issued
 // each; sessions, a password, single sign-on and an invitation follow,
-// compactly. Listing and revoking are held to the rule for issuing
+// compactly. Only agents are given API tokens: a person's list shows the
+// tokens only when they still hold one (made before), saying it is to be
+// revoked. Listing and revoking are held to the rule for issuing
 // (blockedReason): where Core would refuse, the card says why and reads
 // nothing. One's own are listed but revoked on the Account page, which can
 // tell which session is the one in use. A Core without the tool gets a line
@@ -68,7 +70,12 @@ const arranged = computed(() =>
 )
 const tokens = computed(() => arranged.value.tokens.map((r) => ({ ...r, issuer: tokenIssuer(r.c, props.actor.id) })))
 // A person signs in in several ways; an agent normally has tokens only.
-const showOthers = computed(() => props.actor.kind === 'human' || arranged.value.others.length > 0)
+const isPerson = computed(() => props.actor.kind === 'human')
+const showOthers = computed(() => isPerson.value || arranged.value.others.length > 0)
+// A person is given no token, so no "none" is said of theirs: only one they still hold is shown.
+const showTokens = computed(() => !isPerson.value || tokens.value.length > 0)
+/** A person holds a token that still works: it is to be revoked. */
+const personHoldsToken = computed(() => isPerson.value && tokens.value.some((r) => r.state === 'active'))
 const canRevoke = computed(() => !props.isSelf && !props.blockedReason)
 
 const rowKey = (r: CredentialRow) => r.c.id
@@ -230,138 +237,145 @@ defineExpose({ reload: () => list.reload() })
       :error="current ? null : list.error.value"
       @retry="list.reload"
     >
-      <h3 class="creds__subhead">{{ t('admin.credentials.tokens') }}</h3>
-      <p v-if="!tokens.length" class="app-muted creds__empty">
-        {{ arranged.inactive && !showInactive ? t('admin.credentials.noLiveTokens') : t('admin.credentials.noTokens') }}
-      </p>
+      <template v-if="showTokens">
+        <h3 class="creds__subhead">{{ t('admin.credentials.tokens') }}</h3>
+        <p v-if="personHoldsToken" class="creds__agents-only">{{ t('admin.credentials.personTokens') }}</p>
+        <p v-if="!tokens.length" class="app-muted creds__empty">
+          {{
+            arranged.inactive && !showInactive ? t('admin.credentials.noLiveTokens') : t('admin.credentials.noTokens')
+          }}
+        </p>
 
-      <!-- Short of a wide screen, a card per token. -->
-      <ul v-else-if="narrow" class="creds__list">
-        <li
-          v-for="{ c, state, issuer } in tokens"
-          :key="c.id"
-          class="creds__item creds-token"
-          :class="{ 'is-inactive': state !== 'active' }"
-        >
-          <el-icon :size="20" class="creds__icon"><Key /></el-icon>
-          <div class="creds__main">
-            <div class="creds__head">
-              <span class="creds__name" :class="{ 'app-muted': !c.label?.trim() }">{{ tokenLabel(c) }}</span>
-              <el-tag :type="STATE_TAG[state]" size="small" disable-transitions>
-                {{ t(`admin.credentials.state.${state}`) }}
-              </el-tag>
+        <!-- Short of a wide screen, a card per token. -->
+        <ul v-else-if="narrow" class="creds__list">
+          <li
+            v-for="{ c, state, issuer } in tokens"
+            :key="c.id"
+            class="creds__item creds-token"
+            :class="{ 'is-inactive': state !== 'active' }"
+          >
+            <el-icon :size="20" class="creds__icon"><Key /></el-icon>
+            <div class="creds__main">
+              <div class="creds__head">
+                <span class="creds__name" :class="{ 'app-muted': !c.label?.trim() }">{{ tokenLabel(c) }}</span>
+                <el-tag :type="STATE_TAG[state]" size="small" disable-transitions>
+                  {{ t(`admin.credentials.state.${state}`) }}
+                </el-tag>
+              </div>
+              <div class="creds__meta">
+                <span>
+                  <span class="creds__k">{{ t('admin.credentials.col.token') }}</span>
+                  <code class="creds__code">{{ maskedToken(c.token_prefix) }}</code>
+                </span>
+                <span>
+                  <span class="creds__k">{{ t('admin.credentials.col.issuedBy') }}</span>
+                  <span v-if="issuer?.by === 'self'">{{ t('admin.credentials.selfIssued') }}</span>
+                  <template v-else-if="issuer?.by === 'other'">
+                    <router-link :to="{ name: 'admin-actor', params: { actorId: issuer.id } }" class="creds__issuer">
+                      <template v-if="issuer.name">{{ issuer.name }}</template>
+                      <IdText v-else :id="issuer.id" />
+                    </router-link>
+                    <span v-if="issuer.id === session.me?.id" class="app-muted"> ({{ t('common.labels.you') }})</span>
+                  </template>
+                  <span v-else class="app-muted">{{ t('admin.credentials.issuerUnknown') }}</span>
+                </span>
+                <span>
+                  <span class="creds__k">{{ t('admin.credentials.col.created') }}</span>
+                  <TimeText :value="c.created_at" />
+                </span>
+                <span>
+                  <span class="creds__k">{{ t('admin.credentials.col.expires') }}</span>
+                  <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                  <template v-else>{{ t('common.labels.never') }}</template>
+                </span>
+                <span>
+                  <span class="creds__k">{{ t('admin.credentials.col.lastUsed') }}</span>
+                  <TimeText v-if="c.last_used_at" :value="c.last_used_at" relative />
+                  <template v-else>{{ t('admin.credentials.neverUsed') }}</template>
+                </span>
+                <span v-if="c.revoked_at">
+                  <span class="creds__k">{{ t('admin.credentials.revokedAt') }}</span>
+                  <TimeText :value="c.revoked_at" />
+                </span>
+              </div>
             </div>
-            <div class="creds__meta">
-              <span>
-                <span class="creds__k">{{ t('admin.credentials.col.token') }}</span>
-                <code class="creds__code">{{ maskedToken(c.token_prefix) }}</code>
-              </span>
-              <span>
-                <span class="creds__k">{{ t('admin.credentials.col.issuedBy') }}</span>
-                <span v-if="issuer?.by === 'self'">{{ t('admin.credentials.selfIssued') }}</span>
-                <template v-else-if="issuer?.by === 'other'">
-                  <router-link :to="{ name: 'admin-actor', params: { actorId: issuer.id } }" class="creds__issuer">
-                    <template v-if="issuer.name">{{ issuer.name }}</template>
-                    <IdText v-else :id="issuer.id" />
-                  </router-link>
-                  <span v-if="issuer.id === session.me?.id" class="app-muted"> ({{ t('common.labels.you') }})</span>
-                </template>
-                <span v-else class="app-muted">{{ t('admin.credentials.issuerUnknown') }}</span>
-              </span>
-              <span>
-                <span class="creds__k">{{ t('admin.credentials.col.created') }}</span>
-                <TimeText :value="c.created_at" />
-              </span>
-              <span>
-                <span class="creds__k">{{ t('admin.credentials.col.expires') }}</span>
-                <TimeText v-if="c.expires_at" :value="c.expires_at" />
-                <template v-else>{{ t('common.labels.never') }}</template>
-              </span>
-              <span>
-                <span class="creds__k">{{ t('admin.credentials.col.lastUsed') }}</span>
-                <TimeText v-if="c.last_used_at" :value="c.last_used_at" relative />
-                <template v-else>{{ t('admin.credentials.neverUsed') }}</template>
-              </span>
-              <span v-if="c.revoked_at">
+            <div v-if="canRevoke && state === 'active'" class="creds__actions">
+              <el-button type="danger" plain size="small" :loading="revoking === c.id" @click="revoke(c)">
+                {{ t('admin.credentials.revoke') }}
+              </el-button>
+            </div>
+          </li>
+        </ul>
+
+        <el-table v-else :data="tokens" :row-key="rowKey" :row-class-name="rowClass" class="creds__table">
+          <el-table-column :label="t('admin.credentials.col.label')" min-width="170">
+            <template #default="{ row }">
+              <div class="creds__head">
+                <span class="creds__name" :class="{ 'app-muted': !row.c.label?.trim() }">{{ tokenLabel(row.c) }}</span>
+                <el-tag :type="STATE_TAG[row.state as CredentialState]" size="small" disable-transitions>
+                  {{ t(`admin.credentials.state.${row.state}`) }}
+                </el-tag>
+              </div>
+              <div v-if="row.c.revoked_at" class="creds__when">
                 <span class="creds__k">{{ t('admin.credentials.revokedAt') }}</span>
-                <TimeText :value="c.revoked_at" />
-              </span>
-            </div>
-          </div>
-          <div v-if="canRevoke && state === 'active'" class="creds__actions">
-            <el-button type="danger" plain size="small" :loading="revoking === c.id" @click="revoke(c)">
-              {{ t('admin.credentials.revoke') }}
-            </el-button>
-          </div>
-        </li>
-      </ul>
-
-      <el-table v-else :data="tokens" :row-key="rowKey" :row-class-name="rowClass" class="creds__table">
-        <el-table-column :label="t('admin.credentials.col.label')" min-width="170">
-          <template #default="{ row }">
-            <div class="creds__head">
-              <span class="creds__name" :class="{ 'app-muted': !row.c.label?.trim() }">{{ tokenLabel(row.c) }}</span>
-              <el-tag :type="STATE_TAG[row.state as CredentialState]" size="small" disable-transitions>
-                {{ t(`admin.credentials.state.${row.state}`) }}
-              </el-tag>
-            </div>
-            <div v-if="row.c.revoked_at" class="creds__when">
-              <span class="creds__k">{{ t('admin.credentials.revokedAt') }}</span>
-              <TimeText :value="row.c.revoked_at" />
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('admin.credentials.col.token')" min-width="165">
-          <template #default="{ row }">
-            <code class="creds__code">{{ maskedToken(row.c.token_prefix) }}</code>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('admin.credentials.col.issuedBy')" min-width="130">
-          <template #default="{ row }">
-            <span v-if="row.issuer?.by === 'self'">{{ t('admin.credentials.selfIssued') }}</span>
-            <template v-else-if="row.issuer?.by === 'other'">
-              <router-link :to="{ name: 'admin-actor', params: { actorId: row.issuer.id } }" class="creds__issuer">
-                <template v-if="row.issuer.name">{{ row.issuer.name }}</template>
-                <IdText v-else :id="row.issuer.id" />
-              </router-link>
-              <span v-if="row.issuer.id === session.me?.id" class="app-muted"> ({{ t('common.labels.you') }})</span>
+                <TimeText :value="row.c.revoked_at" />
+              </div>
             </template>
-            <span v-else class="app-muted">{{ t('admin.credentials.issuerUnknown') }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('admin.credentials.col.created')" min-width="150">
-          <template #default="{ row }"><TimeText :value="row.c.created_at" /></template>
-        </el-table-column>
-        <el-table-column :label="t('admin.credentials.col.expires')" min-width="150">
-          <template #default="{ row }">
-            <TimeText v-if="row.c.expires_at" :value="row.c.expires_at" />
-            <span v-else class="app-muted">{{ t('common.labels.never') }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('admin.credentials.col.lastUsed')" min-width="110">
-          <template #default="{ row }">
-            <TimeText v-if="row.c.last_used_at" :value="row.c.last_used_at" relative />
-            <span v-else class="app-muted">{{ t('admin.credentials.neverUsed') }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column v-if="canRevoke" :label="t('common.labels.actions')" width="100" align="right" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-if="row.state === 'active'"
-              type="danger"
-              plain
-              size="small"
-              :loading="revoking === row.c.id"
-              @click="revoke(row.c)"
-            >
-              {{ t('admin.credentials.revoke') }}
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+          </el-table-column>
+          <el-table-column :label="t('admin.credentials.col.token')" min-width="165">
+            <template #default="{ row }">
+              <code class="creds__code">{{ maskedToken(row.c.token_prefix) }}</code>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('admin.credentials.col.issuedBy')" min-width="130">
+            <template #default="{ row }">
+              <span v-if="row.issuer?.by === 'self'">{{ t('admin.credentials.selfIssued') }}</span>
+              <template v-else-if="row.issuer?.by === 'other'">
+                <router-link :to="{ name: 'admin-actor', params: { actorId: row.issuer.id } }" class="creds__issuer">
+                  <template v-if="row.issuer.name">{{ row.issuer.name }}</template>
+                  <IdText v-else :id="row.issuer.id" />
+                </router-link>
+                <span v-if="row.issuer.id === session.me?.id" class="app-muted"> ({{ t('common.labels.you') }})</span>
+              </template>
+              <span v-else class="app-muted">{{ t('admin.credentials.issuerUnknown') }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('admin.credentials.col.created')" min-width="150">
+            <template #default="{ row }"><TimeText :value="row.c.created_at" /></template>
+          </el-table-column>
+          <el-table-column :label="t('admin.credentials.col.expires')" min-width="150">
+            <template #default="{ row }">
+              <TimeText v-if="row.c.expires_at" :value="row.c.expires_at" />
+              <span v-else class="app-muted">{{ t('common.labels.never') }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('admin.credentials.col.lastUsed')" min-width="110">
+            <template #default="{ row }">
+              <TimeText v-if="row.c.last_used_at" :value="row.c.last_used_at" relative />
+              <span v-else class="app-muted">{{ t('admin.credentials.neverUsed') }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column v-if="canRevoke" :label="t('common.labels.actions')" width="100" align="right" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.state === 'active'"
+                type="danger"
+                plain
+                size="small"
+                :loading="revoking === row.c.id"
+                @click="revoke(row.c)"
+              >
+                {{ t('admin.credentials.revoke') }}
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </template>
 
       <template v-if="showOthers">
-        <h3 class="creds__subhead creds__subhead--others">{{ t('admin.credentials.signIns') }}</h3>
+        <h3 class="creds__subhead" :class="{ 'creds__subhead--others': showTokens }">
+          {{ t('admin.credentials.signIns') }}
+        </h3>
         <p v-if="!arranged.others.length" class="app-muted creds__empty">{{ t('admin.credentials.noSignIns') }}</p>
         <ul v-else class="creds__list">
           <li
@@ -477,6 +491,11 @@ defineExpose({ reload: () => list.reload() })
 .creds__empty {
   margin: 0;
   font-size: 13px;
+}
+.creds__agents-only {
+  margin: -4px 0 8px;
+  font-size: 12px;
+  color: var(--el-color-warning-dark-2);
 }
 .creds__table :deep(.el-table__row.is-inactive) {
   color: var(--el-text-color-secondary);

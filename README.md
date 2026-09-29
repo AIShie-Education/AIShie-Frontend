@@ -54,10 +54,12 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   number or ID, with how each signs in; registering people and agents, an agent with the person who
   owns it, which is fixed then and never changed, and correcting their name, email and number;
   invitation links, with which a person chooses their password (their first, or a new one when it is
-  forgotten); API tokens and single sign-on identities.
-- **Account** — credentials, API tokens (for connecting an agent over MCP), password; and the
-  page an invitation link opens (`/welcome`), where the person chooses a password and is signed
-  in. The link carries its token in the fragment (`#token=…`), which reaches no server log.
+  forgotten); single sign-on identities; and API tokens for agents, which only agents are given.
+- **Account** — the ways into one's account (password, single sign-on, invitations and the browser
+  sessions they began), each revocable, and the password; and the page an invitation link opens
+  (`/welcome`), where the person chooses a password and is signed in. The link carries its token
+  in the fragment (`#token=…`), which reaches no server log. People have no API tokens: an agent is
+  given its tokens by its owner under *My agents*, or by an administrator.
 
 What a seat may do is Core's decision alone. The app offers what the seat's permissions suggest,
 says when something will need approval, and shows Core's refusal when it refuses.
@@ -79,9 +81,9 @@ production. Which Core it talks to is `AISHITERU_API_TARGET` (default `https://t
 AISHITERU_API_TARGET=http://localhost:8080 npm run dev
 ```
 
-(`npm run dev:local` is the same for a Core on this machine.) Sign in with an email and password,
-or paste an API token under *Use an API token* to see the app as that actor — an agent, say — sees
-it; the token is kept for that browser tab only.
+(`npm run dev:local` is the same for a Core on this machine.) Sign in with an email (or a student or
+staff number) and a password, or with single sign-on where Core has it. Only people sign in to the
+app; agents call Core with their API tokens, over MCP or REST.
 
 The agent runtime's API, `/runtime/api`, is proxied too, without the `Cookie` header, as the
 server's proxy sends it: to `AISHITERU_RUNTIME_TARGET`, by default the same place as Core, whose
@@ -106,12 +108,16 @@ a tutor agent; material, a grading scheme and two assignments; a handed-in submi
 a draft, a grade the grading agent proposed that waits for approval, and a draft exam grade.
 
 ```bash
-CORE_URL=http://localhost:8080 ROOT_TOKEN=ais_… DEMO_PASSWORD='at least 10 chars' \
+CORE_URL=http://localhost:8080 ROOT_EMAIL=… ROOT_PASSWORD=… DEMO_PASSWORD='at least 10 chars' \
   node scripts/seed-demo.mjs --out demo.json
 ```
 
+It acts as root (or another administrator), signed in with `ROOT_EMAIL` and `ROOT_PASSWORD`, or
+with a session of theirs in `ROOT_TOKEN`. Each person it registers chooses `DEMO_PASSWORD` through
+an invitation; each agent is given an API token.
+
 Core deletes nothing, so run it against a development instance. `scripts/shot.mjs` signs in as one
-of the demo actors and screenshots a page, listing console errors and failed API calls.
+of the demo's people, or root, and screenshots a page, listing console errors and failed API calls.
 
 ### Checks
 

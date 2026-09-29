@@ -82,27 +82,28 @@ describe('the sign-in page', () => {
     w.unmount()
   })
 
-  it('says a missing token beside the field, read out, and moves to the field', async () => {
-    const w = await mountAt('/login', 'en')
-    const signIn = vi.spyOn(useSessionStore(), 'signInWithToken')
-    const input = w.find<HTMLInputElement>('.login__token-form input')
-    expect(input.attributes('aria-label')).toBe('API token')
-    expect(input.attributes('aria-invalid')).toBeUndefined()
-
-    await w.find('.login__token-form').trigger('submit')
-    await flushPromises()
-    const missing = w.find('#login-token-missing')
-    expect(missing.attributes('role')).toBe('alert')
-    expect(missing.text()).toBe('Paste a token first.')
-    expect(input.attributes('aria-invalid')).toBe('true')
-    expect(input.attributes('aria-describedby')?.split(' ')).toContain('login-token-missing')
-    expect(document.activeElement).toBe(input.element)
-    expect(signIn).not.toHaveBeenCalled()
-
-    await input.setValue('ais_x')
-    expect(w.find('#login-token-missing').exists()).toBe(false)
-    expect(input.attributes('aria-invalid')).toBeUndefined()
-    w.unmount()
+  it('offers no API token to sign in with, in any language: people sign in with a password or single sign-on', async () => {
+    vi.mocked(authMethods).mockResolvedValue({
+      password: true,
+      sso: { label: 'PolyU NetID', start: '/v1/auth/sso/start' },
+    })
+    for (const [locale, words] of [
+      ['en', ['API token', 'token']],
+      ['zh-Hant', ['API 權杖', '權杖']],
+      ['zh-Hans', ['API 令牌', '令牌']],
+    ] as const) {
+      const w = await mountAt('/login', locale)
+      const text = w.text()
+      for (const word of words) expect(text).not.toContain(word)
+      expect(w.find('.login__token').exists()).toBe(false)
+      // What there is to fill in: the account's name and its password, and nothing else.
+      expect(w.findAll('.login__card input').map((i) => i.attributes('name'))).toEqual(['login', 'password'])
+      expect(w.find('input[placeholder^="ais_"]').exists()).toBe(false)
+      expect(w.findAll('.login__card form')).toHaveLength(1)
+      expect(w.find('button.login__sso').exists()).toBe(true)
+      expect('signInWithToken' in useSessionStore()).toBe(false)
+      w.unmount()
+    }
   })
 })
 

@@ -328,7 +328,6 @@ export default {
     title: 'API token',
     intro:
       'Issue a token so they can call Core: this is how an agent gets its first credential, since it cannot sign in to ask for one. The token is shown once; Core keeps only its hash.',
-    introSelf: 'A token for your own account. Your tokens are also on your Account page.',
     label: 'Label',
     labelPlaceholder: 'grader for CS101, autumn term',
     labelHint: 'What the token is for, so it can be recognised later.',
@@ -355,8 +354,6 @@ export default {
     mcpHeader: 'Header',
     mcpNotes:
       'Tool names are the catalogue\'s with the dot turned into an underscore (grade_submit). A result whose status is "proposed" is not an error: the action waits for a person, and the agent learns the decision from event_list.',
-    humanHint:
-      'A person can sign in with this token (Sign in → Use an API token). To let them choose a password, create an invitation link on their page instead.',
     uncopiedTitle: 'Close without copying?',
     uncopied: 'The token has not been copied, and it will not be shown again.',
     closeAnyway: 'Close anyway',
@@ -368,7 +365,9 @@ export default {
     introAgent:
       'The API tokens this agent calls Core with. Revoking one stops that token from its next call without suspending the agent: its other tokens and its seats are kept.',
     introHuman:
-      'Every way into this account: API tokens, browser sessions, a password, single sign-on and an invitation link. Revoke one without suspending them: their other credentials and their seats are kept.',
+      'Every way into this account: browser sessions, a password, single sign-on and an invitation link. Revoke one without suspending them: their other credentials and their seats are kept.',
+    // Above the API tokens a person still holds: only agents are given them.
+    personTokens: 'API tokens are for agents only: revoke these.',
     self: 'These are your own. Revoke them on your Account page, which can tell which session is the one you are using now.',
     selfLink: 'Open my account',
     showInactive: 'Show revoked and expired ({n})',

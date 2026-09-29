@@ -103,7 +103,7 @@ export default {
     wrongDomain: '你以 {email} 登录，但此链接只供 {domains} 的邮箱使用。请以属于其中一个域名的账号登录后再加入。',
     noEmailForDomains:
       '此链接只供 {domains} 的邮箱使用，而你的账号没有邮箱。请联系讲师，或请管理员为你的账号添加邮箱。',
-    agent: '你正以智能体的 API 令牌登录。只有人员可以通过邀请链接加入课程。',
+    agent: '你正以智能体的身份登录。只有人员可以通过邀请链接加入课程。',
     member: '你已经是此课程的成员。',
     toHome: '前往 AIshie',
     retry: '重试',
