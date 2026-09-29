@@ -46,7 +46,7 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
   <div class="account-view">
     <PageHeader :title="t('account.title')" :subtitle="t('account.subtitle')" />
 
-    <div class="account-view__top">
+    <div class="account-view__top app-columns">
       <ProfileCard
         :me="me.data.value ?? session.me ?? undefined"
         :loading="me.loading.value"
@@ -107,7 +107,6 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: 16px;
-  align-items: start;
 }
 .account-view__top > .app-card + .app-card {
   margin-top: 0;

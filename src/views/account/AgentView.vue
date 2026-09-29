@@ -229,7 +229,7 @@ function onBrought() {
           class="agent-view__alert"
         />
 
-        <div class="agent-view__grid">
+        <div class="agent-view__grid app-columns">
           <HostingPanel
             :agent="agent"
             :credentials="creds.data.value"
@@ -241,7 +241,7 @@ function onBrought() {
             @creds-changed="creds.reload"
             @hosted="hostedPrefix = $event"
           />
-          <div class="agent-view__side">
+          <div class="agent-view__side app-column">
             <section class="app-card">
               <h2 class="app-card__title">{{ t('agents.detail.about') }}</h2>
               <el-descriptions :column="1" border size="small" class="agent-view__desc">
@@ -317,10 +317,6 @@ function onBrought() {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: 16px;
-  align-items: start;
-}
-.agent-view__side {
-  min-width: 0;
 }
 .agent-view__desc :deep(.el-descriptions__label) {
   white-space: nowrap;

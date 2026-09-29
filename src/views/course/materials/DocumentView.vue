@@ -472,8 +472,8 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
           :title="readersNote.text"
         />
 
-        <div class="doc-layout">
-          <main class="doc-layout__main">
+        <div class="doc-layout app-columns">
+          <main class="doc-layout__main app-column">
             <section class="app-card doc-content">
               <template v-if="shown">
                 <div class="doc-content__meta">
@@ -553,7 +553,7 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
             </section>
           </main>
 
-          <aside class="doc-layout__side">
+          <aside class="doc-layout__side app-column">
             <section v-if="showVersions" class="app-card">
               <h2 class="app-card__title">{{ t('materials.document.versions.title') }}</h2>
               <p class="doc-side__hint">{{ t('materials.document.versions.hint') }}</p>
@@ -684,11 +684,6 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
-  align-items: start;
-}
-.doc-layout__main,
-.doc-layout__side {
-  min-width: 0;
 }
 /* Two columns while the text keeps 420 px or more beside the 320 px one. */
 @container (max-width: 759px) {

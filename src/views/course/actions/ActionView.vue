@@ -357,8 +357,8 @@ const errorTitle = computed(() => {
           <p class="action-view__rule">{{ t('actions.decision.ruleNote') }}</p>
         </section>
 
-        <div class="action-view__grid">
-          <div class="action-view__main">
+        <div class="action-view__grid app-columns">
+          <div class="action-view__main app-column">
             <section class="app-card">
               <h2 class="app-card__title">{{ t('actions.detail.facts') }}</h2>
               <dl class="action-view__facts">
@@ -448,7 +448,7 @@ const errorTitle = computed(() => {
             </section>
           </div>
 
-          <div class="action-view__side">
+          <div class="action-view__side app-column">
             <section class="app-card">
               <h2 class="app-card__title">{{ t('actions.detail.history') }}</h2>
               <ActionTimeline :action="action" />
@@ -558,18 +558,6 @@ const errorTitle = computed(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
   gap: 16px;
-  align-items: start;
-}
-.action-view__main,
-.action-view__side {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-.action-view__main .app-card + .app-card,
-.action-view__side .app-card + .app-card {
-  margin-top: 0;
 }
 /* Two columns while the main one keeps 420 px or more beside the 360 px one. */
 @container (max-width: 799px) {

@@ -201,6 +201,15 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Views are responsive down to phone width, and work in light and dark (use Element Plus CSS
   variables, never hard-coded colours). `useNarrow()` / `useMediaQuery()` from
   `@/composables/useMediaQuery` switch a wide table to cards on a phone.
+- A page's two columns follow the page's own width, not the window's, since the side bar and the
+  chat panel take from it: the view's root is an inline-size container (`container-type:
+  inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
+  left less than about 420 px (the overview at 800 px of page, an assignment at 740). A dialog's
+  breakpoints, and a phone's (640 px and narrower), stay `@media` queries on the window. Columns of
+  cards use the shared `.app-columns` (the grid) and `.app-column` (a stack of cards, 16 px apart)
+  from `styles/main.css`: side by side, both columns are as tall as their row and the last card of
+  each grows to fill it, so that they end on one line, with what each card holds at its top;
+  stacked, nothing grows. Leave `align-items` off such a grid, or it wins over `.app-columns`.
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;

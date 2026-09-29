@@ -342,8 +342,8 @@ function refresh() {
           </template>
         </el-alert>
 
-        <div class="assignment-view__layout">
-          <div class="assignment-view__main">
+        <div class="assignment-view__layout app-columns">
+          <div class="assignment-view__main app-column">
             <!-- Instructions -->
             <section class="app-card">
               <h2 class="app-card__title">
@@ -416,7 +416,7 @@ function refresh() {
             />
           </div>
 
-          <aside class="assignment-view__side">
+          <aside class="assignment-view__side app-column">
             <!-- Details -->
             <section class="app-card">
               <h2 class="app-card__title">{{ t('assignments.detail.details') }}</h2>
@@ -527,19 +527,6 @@ function refresh() {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 16px;
-  align-items: start;
-}
-.assignment-view__main,
-.assignment-view__side {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-/* The cards are spaced by the column's gap. */
-.assignment-view__main .app-card + .app-card,
-.assignment-view__side .app-card + .app-card {
-  margin-top: 0;
 }
 .assignment-view__doclink {
   display: inline-flex;

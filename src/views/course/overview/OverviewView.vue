@@ -22,14 +22,14 @@ const course = useCourseStore()
 <template>
   <div class="overview">
     <PageHeader :title="t('overview.title')" :subtitle="t('overview.subtitle')" />
-    <div class="overview__grid">
-      <div class="overview__main">
+    <div class="overview__grid app-columns">
+      <div class="overview__main app-column">
         <AttentionCard :course-id="courseId" />
         <AboutCard />
         <AssignmentsCard v-if="course.can('document_read')" :course-id="courseId" />
         <RecentActivityCard v-if="course.can('document_read')" :course-id="courseId" />
       </div>
-      <aside class="overview__side">
+      <aside class="overview__side app-column">
         <SeatCard :course-id="courseId" />
         <PermsCard />
       </aside>
@@ -46,7 +46,6 @@ const course = useCourseStore()
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
   gap: 16px;
-  align-items: start;
 }
 .overview__main,
 .overview__side {
@@ -57,9 +56,5 @@ const course = useCourseStore()
   .overview__grid {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-.overview__side {
-  display: flex;
-  flex-direction: column;
 }
 </style>

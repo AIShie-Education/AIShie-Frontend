@@ -70,6 +70,34 @@ summary:focus-visible,
 .app-card + .app-card {
   margin-top: 16px;
 }
+/*
+ * A page's two columns of cards (docs/CONVENTIONS.md): the grid is
+ * .app-columns, and each column is a card of its own or an .app-column, a
+ * stack of cards 16 px apart. Side by side, both columns are as tall as
+ * their row, and the last card of each (its only one, for a single card)
+ * grows to fill it, so that the two end on one line; what a card holds
+ * stays at its top. Stacked into one column (by the page's own container
+ * query), each column is alone in its row, as tall as what it holds:
+ * nothing grows.
+ */
+.app-columns {
+  align-items: stretch;
+}
+.app-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.app-column > *,
+.app-column > .app-card + .app-card {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+/* Its last card, whatever follows it (a dialog kept in place, say). */
+.app-column > :nth-last-child(1 of .app-card) {
+  flex-grow: 1;
+}
 .app-card__title {
   margin: 0 0 16px;
   font-size: 18px;
