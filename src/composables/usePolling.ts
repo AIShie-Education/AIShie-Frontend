@@ -1,5 +1,6 @@
 // Asking Core again and again for what may have changed: Core pushes nothing,
-// so a chat, an inbox or a "last seen" is kept fresh by polling.
+// so a chat, an inbox or a "last seen" is kept fresh by polling, or by a long
+// poll, a read that Core holds until there is news (wait_s).
 //
 //   const { pollNow } = usePolling(() => loadNewer(), { intervalMs: 3000, enabled: () => open.value })
 //
@@ -9,12 +10,29 @@
 // back. While the page is hidden, polling pauses (or slows to
 // hiddenIntervalMs); when it is shown again, it polls at once. It stops when
 // the component (or effect scope) that started it goes away.
+//
+// A long poll is polled again at once (intervalMs 0), and waits after a
+// failure all the same (failureIntervalMs). Each poll is given a signal,
+// aborted when polling stops or pauses while the poll is under way, or when
+// pollNow({ interrupt: true }) cuts it short: a read that waits passes it on,
+// so that nothing is left waiting for a page that no longer wants the answer.
+// A poll cut short is neither a failure nor a success.
 import { getCurrentScope, onScopeDispose, readonly, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 
 export interface PollingOptions {
-  /** How long to wait between the end of one poll and the start of the next. */
+  /**
+   * How long to wait between the end of one poll and the start of the next;
+   * read before each wait, so a getter may change it. 0 polls again at once
+   * (a long poll).
+   */
   intervalMs: number
-  /** The longest wait after failures; by default sixteen times intervalMs. */
+  /**
+   * What the wait after failures doubles from (one failure waits twice it,
+   * two four times…) when it is more than intervalMs: a long poll, polled
+   * again at once, still backs off.
+   */
+  failureIntervalMs?: number
+  /** The longest wait after failures; by default sixteen times intervalMs (or failureIntervalMs). */
   maxIntervalMs?: number
   /** While the page is hidden: poll this often, or (null, the default) not at all. */
   hiddenIntervalMs?: number | null
@@ -28,7 +46,16 @@ export interface PollingOptions {
   manual?: boolean
 }
 
-export function usePolling(fn: () => unknown, opts: PollingOptions) {
+/** What each poll is given. */
+export interface PollContext {
+  /**
+   * Aborted when polling stops, or pauses for the hidden page, while this
+   * poll is under way, or when pollNow({ interrupt: true }) cuts it short.
+   */
+  signal: AbortSignal
+}
+
+export function usePolling(fn: (ctx: PollContext) => unknown, opts: PollingOptions) {
   const active = ref(false)
   const inFlight = ref(false)
   /** Polls that have failed in a row. */
@@ -37,6 +64,8 @@ export function usePolling(fn: () => unknown, opts: PollingOptions) {
 
   let timer: ReturnType<typeof setTimeout> | null = null
   let current: Promise<void> | null = null
+  /** The poll under way's, to cut it short. */
+  let cut: AbortController | null = null
   let again = false
 
   const hidden = () => typeof document !== 'undefined' && document.visibilityState === 'hidden'
@@ -46,13 +75,19 @@ export function usePolling(fn: () => unknown, opts: PollingOptions) {
     timer = null
   }
 
+  /** Cuts the poll under way short, if there is one. */
+  function abort() {
+    cut?.abort()
+  }
+
   /** The wait before the next poll, or null for none while hidden. */
   function nextDelay(): number | null {
     const base = hidden() ? (opts.hiddenIntervalMs ?? null) : opts.intervalMs
     if (base === null) return null
     if (!failures.value) return base
-    const max = Math.max(base, opts.maxIntervalMs ?? opts.intervalMs * 16)
-    return Math.min(base * 2 ** failures.value, max)
+    const step = Math.max(base, opts.failureIntervalMs ?? 0)
+    const max = Math.max(step, opts.maxIntervalMs ?? Math.max(opts.intervalMs, opts.failureIntervalMs ?? 0) * 16)
+    return Math.min(step * 2 ** failures.value, max)
   }
 
   function schedule() {
@@ -71,17 +106,25 @@ export function usePolling(fn: () => unknown, opts: PollingOptions) {
     }
     clear()
     inFlight.value = true
+    const ctrl = new AbortController()
+    cut = ctrl
     const p = (async () => {
       try {
-        await fn()
-        failures.value = 0
-        lastError.value = null
+        await fn({ signal: ctrl.signal })
+        if (!ctrl.signal.aborted) {
+          failures.value = 0
+          lastError.value = null
+        }
       } catch (e) {
-        failures.value++
-        lastError.value = e
+        // Cut short: nothing went wrong.
+        if (!ctrl.signal.aborted) {
+          failures.value++
+          lastError.value = e
+        }
       } finally {
         inFlight.value = false
         current = null
+        if (cut === ctrl) cut = null
       }
       if (again) {
         again = false
@@ -104,20 +147,32 @@ export function usePolling(fn: () => unknown, opts: PollingOptions) {
     active.value = false
     again = false
     clear()
+    abort()
   }
 
   /**
    * Polls now, whatever the timer says (after sending something, say), and
-   * resolves once that poll is done. While polling is stopped, it polls once.
+   * resolves once that poll is done. While one is under way, one more
+   * straight after it; with interrupt, the one under way is cut short first
+   * (a long poll, which could otherwise wait for its news for as long as it
+   * may). While polling is stopped, it polls once.
    */
-  function pollNow(): Promise<void> {
+  function pollNow(o: { interrupt?: boolean } = {}): Promise<void> {
+    if (o.interrupt && current) {
+      again = true
+      abort()
+      return current
+    }
     return run()
   }
 
   function onVisibility() {
     if (!active.value) return
-    if (hidden()) schedule()
-    else void run()
+    if (hidden()) {
+      schedule()
+      // Paused: nothing is left waiting for a page nobody sees.
+      if (opts.hiddenIntervalMs == null) abort()
+    } else void run()
   }
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility)
 
@@ -141,7 +196,7 @@ export function usePolling(fn: () => unknown, opts: PollingOptions) {
   return {
     /** Whether polling is on (it may be paused while the page is hidden). */
     active: readonly(active),
-    /** Whether a poll is under way. */
+    /** Whether a poll is under way (a long poll, waiting for news, included). */
     inFlight: readonly(inFlight),
     failures: readonly(failures),
     /** What the last poll threw, until one succeeds. */

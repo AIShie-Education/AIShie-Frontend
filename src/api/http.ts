@@ -199,11 +199,20 @@ interface RawResponse {
   headers: Headers
 }
 
-async function send(
-  method: string,
-  path: string,
-  init: { body?: unknown; headers?: Record<string, string>; signal?: AbortSignal } = {},
-): Promise<RawResponse> {
+interface SendInit {
+  body?: unknown
+  headers?: Record<string, string>
+  signal?: AbortSignal
+  /**
+   * Given up after this long, as a network failure (and so tried again). No
+   * call has a limit but one that waits for news (wait_s), which Core holds
+   * open while it waits: given one past the wait, a connection dropped on the
+   * way without a word does not hold it for as long as the browser would.
+   */
+  timeoutMs?: number
+}
+
+async function send(method: string, path: string, init: SendInit = {}): Promise<RawResponse> {
   // The browser's session cookie is the caller's only credential here.
   const headers: Record<string, string> = { Accept: 'application/json', ...init.headers }
   let body: BodyInit | undefined
@@ -211,31 +220,74 @@ async function send(
     headers['Content-Type'] = 'application/json'
     body = JSON.stringify(init.body)
   }
-  let res: Response
+  const limit = timeLimit(init.signal, init.timeoutMs)
   try {
-    res = await fetch(API_BASE + path, {
-      method,
-      headers,
-      body,
-      credentials: 'include',
-      signal: init.signal,
-    })
-  } catch (e) {
-    if ((e as Error)?.name === 'AbortError') throw e
-    throw new ApiError({ status: 0, code: 'network', message: (e as Error)?.message || 'network error' })
-  }
-  // What Core's clock read as it answered, for times on its clock (clock.ts).
-  noteCoreDate(res.headers?.get('Date'))
-  let parsed: any = null
-  const text = await res.text()
-  if (text) {
+    let res: Response
     try {
-      parsed = JSON.parse(text)
-    } catch {
-      parsed = null
+      res = await fetch(API_BASE + path, {
+        method,
+        headers,
+        body,
+        credentials: 'include',
+        signal: limit.signal,
+      })
+    } catch (e) {
+      if (limit.expired()) throw timedOut(init.timeoutMs!)
+      if ((e as Error)?.name === 'AbortError') throw e
+      throw new ApiError({ status: 0, code: 'network', message: (e as Error)?.message || 'network error' })
     }
+    // What Core's clock read as it answered, for times on its clock (clock.ts).
+    noteCoreDate(res.headers?.get('Date'))
+    let parsed: any = null
+    let text: string
+    try {
+      text = await res.text()
+    } catch (e) {
+      if (limit.expired()) throw timedOut(init.timeoutMs!)
+      throw e
+    }
+    if (text) {
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        parsed = null
+      }
+    }
+    return { status: res.status, body: parsed, headers: res.headers }
+  } finally {
+    limit.done()
   }
-  return { status: res.status, body: parsed, headers: res.headers }
+}
+
+/**
+ * The signal a call is sent with: the caller's, and with ms, one that aborts
+ * it after ms as well. expired() says whether that is what aborted it; done()
+ * lets go of the timer.
+ */
+function timeLimit(outer: AbortSignal | undefined, ms: number | undefined) {
+  if (!ms) return { signal: outer, expired: () => false, done: () => {} }
+  const ctrl = new AbortController()
+  let expired = false
+  const follow = () => ctrl.abort()
+  if (outer?.aborted) ctrl.abort()
+  else outer?.addEventListener('abort', follow, { once: true })
+  const timer = setTimeout(() => {
+    expired = true
+    ctrl.abort()
+  }, ms)
+  return {
+    signal: ctrl.signal,
+    expired: () => expired,
+    done: () => {
+      clearTimeout(timer)
+      outer?.removeEventListener('abort', follow)
+    },
+  }
+}
+
+/** A call given up after its time limit: a network failure, as one whose connection dropped. */
+function timedOut(ms: number): ApiError {
+  return new ApiError({ status: 0, code: 'network', message: `no answer in ${Math.round(ms / 1000)} s` })
 }
 
 function errorFrom(raw: RawResponse): ApiError {
@@ -279,12 +331,7 @@ function retryAfterMs(h: Headers): number {
 }
 
 /** Retries what can safely be retried: a read always, a write under its own key. */
-async function sendWithRetry(
-  method: string,
-  path: string,
-  init: Parameters<typeof send>[2],
-  attempts = 3,
-): Promise<RawResponse> {
+async function sendWithRetry(method: string, path: string, init: SendInit, attempts = 3): Promise<RawResponse> {
   let last: RawResponse | ApiError | undefined
   for (let i = 0; i < attempts; i++) {
     try {
@@ -341,14 +388,19 @@ export function queryString(args: Record<string, unknown>): string {
   return s ? `?${s}` : ''
 }
 
+export interface ReadOptions {
+  signal?: AbortSignal
+  /**
+   * For a read that waits for news (wait_s): give it up after this long, as
+   * a network failure, which is tried again. Other reads have no limit.
+   */
+  timeoutMs?: number
+}
+
 /** Calls a read tool and returns its result. */
-export async function read<N extends ReadTool>(
-  name: N,
-  args: ToolIn<N>,
-  opts: { signal?: AbortSignal } = {},
-): Promise<ToolOut<N>> {
+export async function read<N extends ReadTool>(name: N, args: ToolIn<N>, opts: ReadOptions = {}): Promise<ToolOut<N>> {
   const { path, rest } = buildRequest(name, args as unknown as Record<string, unknown>)
-  const raw = await sendWithRetry('GET', path + queryString(rest), { signal: opts.signal })
+  const raw = await sendWithRetry('GET', path + queryString(rest), { signal: opts.signal, timeoutMs: opts.timeoutMs })
   if (raw.status !== 200 || !raw.body || raw.body.status !== 'executed') throw errorFrom(raw)
   return raw.body.result as ToolOut<N>
 }
