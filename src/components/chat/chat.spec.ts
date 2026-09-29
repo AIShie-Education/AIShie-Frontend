@@ -24,9 +24,11 @@ import {
   offeredIn,
   pollDelayMs,
   POLL_MS,
+  refusesWaiting,
   retractedBy,
   roleIn,
   sameMessages,
+  sameStanding,
   setDraft,
   stateOf,
   visibleToLines,
@@ -415,6 +417,46 @@ describe('pollDelayMs', () => {
     expect(pollDelayMs('answered', 5)).toBe(10_000)
     expect(pollDelayMs('answered', 50)).toBe(30_000)
     expect(pollDelayMs('closed', 0)).toBeNull()
+  })
+})
+
+describe('refusesWaiting', () => {
+  it('knows the refusal of a Core from before waiting, which takes no argument it does not know', () => {
+    expect(
+      refusesWaiting({
+        status: 400,
+        code: 'invalid_argument',
+        message:
+          'arguments do not match the schema of conversation.messages: validating root: unexpected additional properties ["seen_state" "wait_s"]',
+      }),
+    ).toBe(true)
+    expect(refusesWaiting({ status: 400, code: 'invalid_argument', message: 'seen_state is one of …' })).toBe(true)
+  })
+  it('takes nothing else for it', () => {
+    expect(
+      refusesWaiting({ status: 400, code: 'invalid_argument', message: 'give after_seq or before_seq, not both' }),
+    ).toBe(false)
+    expect(refusesWaiting({ status: 0, code: 'network', message: 'wait_s' })).toBe(false)
+    expect(refusesWaiting(null)).toBe(false)
+  })
+})
+
+describe('sameStanding', () => {
+  const v = {
+    state: 'answered',
+    status: 'open',
+    pending_reply_action_id: null,
+    last_retracted_at: null,
+    closed_reason: null,
+  }
+  it('is the same with nothing Core compares moved, however it leaves out what is not there', () => {
+    expect(sameStanding(v, { state: 'answered', status: 'open' })).toBe(true)
+  })
+  it('moves with the state, the answer waiting for approval, a retraction, or the reason it was closed', () => {
+    expect(sameStanding(v, { ...v, state: 'awaiting_answer' })).toBe(false)
+    expect(sameStanding(v, { ...v, pending_reply_action_id: 'a2' })).toBe(false)
+    expect(sameStanding(v, { ...v, last_retracted_at: '2026-09-26T12:05:00Z' })).toBe(false)
+    expect(sameStanding(v, { ...v, status: 'closed', state: 'closed', closed_reason: 'Done' })).toBe(false)
   })
 })
 

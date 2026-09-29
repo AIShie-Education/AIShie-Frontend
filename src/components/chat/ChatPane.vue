@@ -74,7 +74,7 @@ const props = withDefaults(
     conversationId?: string | null
     /** The agent a new conversation is with (conversation.respondents). */
     respondent?: Respondent | null
-    /** On screen: it polls only then. */
+    /** On screen: it is kept fresh (its next messages waited for) only then. */
     active?: boolean
     /** The course, as it is named beside the agent (its code), where more than one course may be shown. */
     courseLabel?: string | null

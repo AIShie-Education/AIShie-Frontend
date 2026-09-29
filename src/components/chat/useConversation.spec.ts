@@ -4,7 +4,13 @@ import type { ConversationMessage, ConversationView } from '@/api/types'
 
 // A conversation as a Core would hold it, answering conversation.messages
 // and conversation.get the way Core does (tail, after_seq, before_seq), and
-// keeping what the opener has read (conversation.mark_read).
+// keeping what the opener has read (conversation.mark_read). A read of what
+// comes after after_seq with wait_s waits, as Core does since 2c1fe1b, while
+// there is nothing new (no message after it, the state seen_state, the
+// conversation standing as it did): until something is committed (commit(),
+// as Core's notification on commit wakes it) or its time is up. Or, as a test
+// says, Core answers it at once all the same (too many of the caller's reads
+// wait already), or refuses it (a Core from before waiting).
 let server: {
   messages: ConversationMessage[]
   view: ConversationView
@@ -13,34 +19,107 @@ let server: {
   readUpTo: number
   /** What conversation.mark_read throws, if anything. */
   markFails?: Error
+  /** How Core takes wait_s: waits for news, answers at once all the same, or refuses it. */
+  waits: 'wait' | 'at once' | 'refuse'
 }
-const calls: { tool: string; args: Record<string, unknown> }[] = []
+interface Call {
+  tool: string
+  args: Record<string, unknown>
+  opts?: { signal?: AbortSignal; timeoutMs?: number }
+  /** When it was made, by the page's clock. */
+  at: number
+}
+const calls: Call[] = []
+/** Reads waiting for news: each looks again when something is committed. */
+const waiting = new Set<() => void>()
+/** Something was committed in the conversation: whatever waits on it looks again. */
+function commit() {
+  for (const look of [...waiting]) look()
+}
+const standing = (v: ConversationView) =>
+  JSON.stringify([
+    v.state,
+    v.status,
+    v.pending_reply_action_id ?? null,
+    v.last_retracted_at ?? null,
+    v.closed_reason ?? null,
+  ])
+const aborted = () => new DOMException('The operation was aborted.', 'AbortError')
 
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
+  function page(args: Record<string, unknown>) {
+    const limit = (args.limit as number) ?? 50
+    const all = server.messages
+    let page: ConversationMessage[]
+    if (typeof args.after_seq === 'number') {
+      page = all.filter((m) => m.seq > (args.after_seq as number)).slice(0, limit)
+    } else {
+      const before = typeof args.before_seq === 'number' ? (args.before_seq as number) : Infinity
+      page = all.filter((m) => m.seq < before).slice(-limit)
+    }
+    return { messages: page.map((m) => ({ ...m })), conversation: { ...server.view }, more: page.length === limit }
+  }
+  /** Waits, as Core does, while there is nothing new for this read; rejects as fetch does when aborted. */
+  function waitForNews(args: Record<string, unknown>, signal?: AbortSignal) {
+    const first = standing(server.view)
+    const nothing = () =>
+      !server.messages.some((m) => m.seq > (args.after_seq as number)) &&
+      (args.seen_state == null || args.seen_state === server.view.state) &&
+      standing(server.view) === first
+    if (!nothing()) return Promise.resolve()
+    return new Promise<void>((resolve, reject) => {
+      const end = () => {
+        clearTimeout(timer)
+        waiting.delete(look)
+        signal?.removeEventListener('abort', abort)
+      }
+      const look = () => {
+        if (nothing()) return
+        end()
+        resolve()
+      }
+      const abort = () => {
+        end()
+        reject(aborted())
+      }
+      const timer = setTimeout(
+        () => {
+          end()
+          resolve()
+        },
+        (args.wait_s as number) * 1000,
+      )
+      waiting.add(look)
+      signal?.addEventListener('abort', abort)
+    })
+  }
   return {
     ...real,
-    read: vi.fn(async (tool: string, args: Record<string, unknown>) => {
-      calls.push({ tool, args })
-      if (server.fail) throw new real.ApiError({ status: 0, code: 'network', message: 'down', network: true } as never)
+    read: vi.fn(async (tool: string, args: Record<string, unknown>, opts?: Call['opts']) => {
+      calls.push({ tool, args, opts, at: Date.now() })
+      if (opts?.signal?.aborted) throw aborted()
+      if (server.fail) throw new real.ApiError({ status: 0, code: 'network', message: 'down' })
       if (tool === 'conversation.get') {
         const unread = server.messages.some((m) => m.seq > server.readUpTo && m.author_member_id === 'agent')
         return { ...server.view, unread, visible_to: ['participants'] }
       }
       if (tool !== 'conversation.messages') throw new Error(`no answer for ${tool}`)
-      const limit = (args.limit as number) ?? 50
-      const all = server.messages
-      let page: ConversationMessage[]
-      if (typeof args.after_seq === 'number') {
-        page = all.filter((m) => m.seq > (args.after_seq as number)).slice(0, limit)
-      } else {
-        const before = typeof args.before_seq === 'number' ? (args.before_seq as number) : Infinity
-        page = all.filter((m) => m.seq < before).slice(-limit)
+      if (args.wait_s !== undefined) {
+        if (server.waits === 'refuse') {
+          throw new real.ApiError({
+            status: 400,
+            code: 'invalid_argument',
+            message:
+              'arguments do not match the schema of conversation.messages: validating root: unexpected additional properties ["seen_state" "wait_s"]',
+          })
+        }
+        if (server.waits === 'wait') await waitForNews(args, opts?.signal)
       }
-      return { messages: page.map((m) => ({ ...m })), conversation: { ...server.view }, more: page.length === limit }
+      return page(args)
     }),
     write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
-      calls.push({ tool, args })
+      calls.push({ tool, args, at: Date.now() })
       if (tool !== 'conversation.mark_read') throw new Error(`no answer for ${tool}`)
       if (server.markFails) throw server.markFails
       const upTo = server.messages.find((m) => m.id === args.up_to_message_id)!.seq
@@ -57,8 +136,9 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
-const { ApiError } = await import('@/api/http')
+const { ApiError, read } = await import('@/api/http')
 const { useConversation } = await import('./useConversation')
+const { NO_WAIT_MS, WAIT_TIMEOUT_MS } = await import('./chat')
 
 function msg(seq: number, over: Partial<ConversationMessage> = {}): ConversationMessage {
   return {
@@ -91,7 +171,6 @@ function view(over: Partial<ConversationView> = {}): ConversationView {
 }
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => msg(from + i))
 
-let clock = 0
 function start(active = ref(true), reader = ref<string | null>(null)) {
   const scope = effectScope()
   const read: unknown[] = []
@@ -102,17 +181,25 @@ function start(active = ref(true), reader = ref<string | null>(null)) {
       active,
       reader,
       onRead: (out) => read.push(out),
-      now: () => clock,
+      now: () => Date.now(),
     }),
   )!
   return { c, active, reader, read, dispose: () => scope.stop() }
 }
-/** Moves the page's clock and the timers together. */
-async function advance(ms: number) {
-  clock += ms
-  await vi.advanceTimersByTimeAsync(ms)
-}
+/** Moves the timers, and the page's clock with them. */
+const advance = (ms: number) => vi.advanceTimersByTimeAsync(ms)
+/**
+ * Lets what is due at once happen: the fake timers run a timer of 0 set
+ * while they run others a millisecond later, as a browser does a few
+ * milliseconds later.
+ */
+const soon = () => vi.advanceTimersByTimeAsync(1)
 const messageCalls = () => calls.filter((c) => c.tool === 'conversation.messages')
+/** The reads that asked Core to wait for news. */
+const waits = () => messageCalls().filter((c) => c.args.wait_s !== undefined)
+/** The reads after the first that did not. */
+const plain = () => messageCalls().filter((c) => c.args.wait_s === undefined && c.args.after_seq !== undefined)
+const last = () => messageCalls().at(-1)!
 const marks = () => calls.filter((c) => c.tool === 'conversation.mark_read').map((c) => c.args)
 let visibility: DocumentVisibilityState = 'visible'
 function setVisibility(v: DocumentVisibilityState) {
@@ -122,9 +209,16 @@ function setVisibility(v: DocumentVisibilityState) {
 
 beforeEach(() => {
   vi.useFakeTimers()
-  clock = 1_000_000
+  vi.setSystemTime(1_000_000)
   calls.length = 0
-  server = { messages: range(1, 4), view: view({ state: 'awaiting_answer' }), fail: false, readUpTo: 4 }
+  waiting.clear()
+  server = {
+    messages: range(1, 4),
+    view: view({ state: 'awaiting_answer' }),
+    fail: false,
+    readUpTo: 4,
+    waits: 'wait',
+  }
   visibility = 'visible'
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility })
 })
@@ -145,34 +239,92 @@ describe('useConversation', () => {
     dispose()
   })
 
-  it('polls after the last seq held, every few seconds, and adds only what is new', async () => {
+  it('then waits for what comes after the last seq held, saying the state it holds, and gives the wait a limit', async () => {
     const { c, dispose } = start()
     await vi.advanceTimersByTimeAsync(0)
-    server.messages = range(1, 6)
-    server.view = view({ state: 'answered' })
-    await advance(3000)
-    const last = messageCalls().at(-1)!
-    expect(last.args).toMatchObject({ after_seq: 4 })
-    expect(c.messages.value.map((m) => m.seq)).toEqual([1, 2, 3, 4, 5, 6])
-    expect(c.view.value?.state).toBe('answered')
-    // The same page again adds nothing twice.
-    await advance(3000)
-    expect(messageCalls().at(-1)!.args).toMatchObject({ after_seq: 6 })
-    expect(c.messages.value).toHaveLength(6)
+    expect(messageCalls()).toHaveLength(2)
+    expect(last().args).toEqual({
+      course_id: 'k1',
+      conversation_id: 'c1',
+      limit: 100,
+      after_seq: 4,
+      wait_s: 25,
+      seen_state: 'awaiting_answer',
+    })
+    // A connection dropped on the way does not hold it for longer than Core would.
+    expect(last().opts?.timeoutMs).toBe(WAIT_TIMEOUT_MS)
+    expect(WAIT_TIMEOUT_MS).toBeGreaterThanOrEqual(30_000)
+    expect(last().opts?.signal?.aborted).toBe(false)
+    expect(c.polling.value).toBe(true)
+    // One at a time: nothing else is asked while it waits.
+    await advance(20_000)
+    expect(messageCalls()).toHaveLength(2)
     dispose()
   })
 
-  it('reads on at once when a poll brings a full page', async () => {
+  it('shows what is written as soon as Core answers, and waits again at once, from there', async () => {
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    await advance(10_000)
+    const t = Date.now()
+    server.messages = range(1, 6)
+    server.view = view({ state: 'answered' })
+    commit()
+    // No time passes: no timer between the answer and the next read.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(c.messages.value.map((m) => m.seq)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(c.view.value?.state).toBe('answered')
+    expect(waits().map((w) => [w.args.after_seq, w.args.seen_state, w.at])).toEqual([
+      [4, 'awaiting_answer', t - 10_000],
+      [6, 'answered', t],
+    ])
+    expect(plain()).toEqual([])
+    dispose()
+  })
+
+  it('waits again when a wait ends with nothing, which is not taken for Core not waiting', async () => {
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    await advance(25_000)
+    await soon()
+    await advance(25_000)
+    await soon()
+    expect(waits().map((w) => w.args.after_seq)).toEqual([4, 4, 4])
+    expect(plain()).toEqual([])
+    expect(c.failures.value).toBe(0)
+    dispose()
+  })
+
+  it('shows a new state that comes without a message (an answer waiting for approval) at once, and waits on it', async () => {
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    server.view = view({ state: 'reply_pending_approval', pending_reply_action_id: 'a9' })
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(c.view.value?.state).toBe('reply_pending_approval')
+    expect(waits().map((w) => w.args.seen_state)).toEqual(['awaiting_answer', 'reply_pending_approval'])
+    // Answered at once with no message, but with news: Core did wait.
+    expect(plain()).toEqual([])
+    dispose()
+  })
+
+  it('reads on at once, without waiting, when an answer brings a full page', async () => {
     const { c, dispose } = start()
     await vi.advanceTimersByTimeAsync(0)
     server.messages = range(1, 250)
-    await advance(3000)
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
     expect(c.messages.value.at(-1)!.seq).toBe(250)
     expect(
       messageCalls()
         .slice(1)
-        .map((x) => x.args.after_seq),
-    ).toEqual([4, 104, 204])
+        .map((x) => [x.args.after_seq, x.args.wait_s]),
+    ).toEqual([
+      [4, 25],
+      [104, undefined],
+      [204, undefined],
+      [250, 25],
+    ])
     dispose()
   })
 
@@ -183,7 +335,9 @@ describe('useConversation', () => {
     expect(c.messages.value[0]!.seq).toBe(71)
     expect(c.hasOlder.value).toBe(true)
     await c.loadOlder()
-    expect(messageCalls().at(-1)!.args).toMatchObject({ before_seq: 71, limit: 50 })
+    expect(last().args).toMatchObject({ before_seq: 71, limit: 50 })
+    // Never waiting: wait_s is for what comes after.
+    expect(last().args.wait_s).toBeUndefined()
     expect(c.messages.value[0]!.seq).toBe(21)
     expect(c.hasOlder.value).toBe(true)
     await c.loadOlder()
@@ -192,50 +346,180 @@ describe('useConversation', () => {
     dispose()
   })
 
-  it('stops polling once the conversation is closed', async () => {
+  it('stops once the conversation is closed', async () => {
     const { c, dispose } = start()
     await vi.advanceTimersByTimeAsync(0)
     server.view = view({ status: 'closed', state: 'closed', closed_reason: 'seat_removed' })
-    await advance(3000)
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
     expect(c.view.value?.status).toBe('closed')
     const n = messageCalls().length
-    await advance(60_000)
+    await advance(120_000)
     expect(messageCalls()).toHaveLength(n)
+    expect(waiting.size).toBe(0)
     dispose()
   })
 
-  it('polls only while on screen', async () => {
-    const active = ref(false)
-    const { dispose } = start(active)
-    await vi.advanceTimersByTimeAsync(0)
-    await advance(30_000)
+  it('never waits on one that is closed already', async () => {
+    server.view = view({ status: 'closed', state: 'closed' })
+    const { dispose } = start()
+    await advance(60_000)
     expect(messageCalls()).toHaveLength(1)
+    dispose()
+  })
+
+  it('waits only while on screen: the wait is cut short when it goes off, and it reads at once when back', async () => {
+    const { active, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    const first = waits()[0]!
+    active.value = false
+    await nextTick()
+    expect(first.opts?.signal?.aborted).toBe(true)
+    expect(waiting.size).toBe(0)
+    await advance(30_000)
+    expect(messageCalls()).toHaveLength(2)
     active.value = true
     await nextTick()
-    await advance(3000)
-    // Back on screen: what came after, and nothing read again while nothing was retracted.
+    await soon()
+    // Back on screen: what came meanwhile, read at once, then a wait from there.
+    expect(
+      messageCalls()
+        .slice(2)
+        .map((x) => [x.args.after_seq, x.args.wait_s]),
+    ).toEqual([
+      [4, undefined],
+      [4, 25],
+    ])
+    dispose()
+  })
+
+  it('reads nothing while it starts off screen', async () => {
+    const { dispose } = start(ref(false))
+    await advance(30_000)
+    expect(messageCalls()).toHaveLength(1)
+    dispose()
+  })
+
+  it('stops while the page is hidden, cutting the wait short, and reads at once when it is shown, then waits', async () => {
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    const first = waits()[0]!
+    setVisibility('hidden')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(first.opts?.signal?.aborted).toBe(true)
+    expect(waiting.size).toBe(0)
+    // Cut short is no failure.
+    expect(c.failures.value).toBe(0)
+    server.messages = range(1, 6)
+    await advance(60_000)
+    expect(messageCalls()).toHaveLength(2)
+    expect(c.messages.value).toHaveLength(4)
+    setVisibility('visible')
+    await soon()
+    expect(c.messages.value).toHaveLength(6)
+    expect(
+      messageCalls()
+        .slice(2)
+        .map((x) => [x.args.after_seq, x.args.wait_s]),
+    ).toEqual([
+      [4, undefined],
+      [6, 25],
+    ])
+    dispose()
+  })
+
+  it('cuts the wait short when it goes away', async () => {
+    const { dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    const first = waits()[0]!
+    dispose()
+    expect(first.opts?.signal?.aborted).toBe(true)
+    expect(waiting.size).toBe(0)
+    await advance(60_000)
+    expect(messageCalls()).toHaveLength(2)
+  })
+
+  it('reads at once, without waiting, when asked (after the caller wrote), cutting the wait short', async () => {
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    const first = waits()[0]!
+    // A question waiting for approval commits nothing Core would wake the wait for.
+    server.messages = range(1, 5)
+    await c.refresh()
+    expect(first.opts?.signal?.aborted).toBe(true)
+    expect(c.messages.value).toHaveLength(5)
+    expect(c.failures.value).toBe(0)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(
+      messageCalls()
+        .slice(2)
+        .map((x) => [x.args.after_seq, x.args.wait_s]),
+    ).toEqual([
+      [4, undefined],
+      [5, 25],
+    ])
+    dispose()
+  })
+
+  it('reads on the schedule for a while when Core answers a wait at once with nothing, then waits again', async () => {
+    server.waits = 'at once'
+    const { dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    const t0 = Date.now()
+    expect(waits()).toHaveLength(1)
+    // An answer is awaited: every three seconds, without waiting.
+    for (let i = 0; i < 19; i++) await advance(3000)
+    expect(waits()).toHaveLength(1)
+    expect(plain().map((p) => p.at - t0)).toEqual(Array.from({ length: 19 }, (_, i) => (i + 1) * 3000))
+    // After NO_WAIT_MS, it asks to wait again: first at once, then waiting.
+    server.waits = 'wait'
+    await advance(NO_WAIT_MS - 19 * 3000)
+    await soon()
+    expect(plain().at(-1)!.at - t0).toBe(NO_WAIT_MS)
+    expect(waits()).toHaveLength(2)
+    expect(last().args.wait_s).toBe(25)
+    expect(waiting.size).toBe(1)
+    dispose()
+  })
+
+  it('reads on the schedule, without a failure, where Core refuses to wait (a Core from before it)', async () => {
+    server.waits = 'refuse'
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    // Refused, and read at once without waiting.
     expect(
       messageCalls()
         .slice(1)
-        .map((x) => x.args.after_seq),
-    ).toEqual([4])
+        .map((x) => [x.args.after_seq, x.args.wait_s]),
+    ).toEqual([
+      [4, 25],
+      [4, undefined],
+    ])
+    expect(c.failures.value).toBe(0)
+    expect(c.error.value).toBeNull()
+    server.messages = range(1, 6)
+    server.view = view({ state: 'answered' })
+    await advance(3000)
+    expect(c.messages.value.map((m) => m.seq)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(last().args).toMatchObject({ after_seq: 4 })
+    expect(last().args.wait_s).toBeUndefined()
+    // The same page again adds nothing twice.
+    await advance(3000)
+    expect(last().args).toMatchObject({ after_seq: 6 })
+    expect(c.messages.value).toHaveLength(6)
     dispose()
   })
 
-  it('slows down while an answered conversation stays quiet, and speeds up after the caller writes', async () => {
+  it('on that schedule, slows down while an answered conversation stays quiet, and speeds up after the caller writes', async () => {
+    server.waits = 'refuse'
     server.view = view({ state: 'answered' })
     const { c, dispose } = start()
     await vi.advanceTimersByTimeAsync(0)
-    for (let i = 0; i < 5; i++) await advance(3000)
-    const afterFive = messageCalls().length
-    expect(afterFive).toBe(6)
-    // Five quiet polls: now every ten seconds.
-    await advance(3000)
-    await advance(3000)
-    expect(messageCalls()).toHaveLength(afterFive)
-    await advance(3000)
-    await advance(3000)
-    expect(messageCalls()).toHaveLength(afterFive + 1)
+    const t0 = Date.now()
+    await advance(40_000)
+    // Five quiet reads three seconds apart (the one at once included), then one each ten seconds or so
+    // (checked every three).
+    expect(plain().map((p) => p.at - t0)).toEqual([0, 3000, 6000, 9000, 12_000, 24_000, 36_000])
     // Something written: read now, whatever the schedule.
     server.messages = range(1, 5)
     await c.refresh()
@@ -254,20 +538,53 @@ describe('useConversation', () => {
     server.messages = server.messages.map((m) =>
       m.seq === 3 ? { ...m, body: null, retracted: { at: 'x', by_member_id: 'staff' } } : m,
     )
-    await advance(3000)
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
     expect(c.messages.value[2]!.retracted).toBeFalsy()
     const before = messageCalls().length
     server.view = view({ state: 'awaiting_answer', last_retracted_at: '2026-09-26T12:05:00Z' })
-    await advance(3000)
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
     expect(c.messages.value[2]!.retracted).toBeTruthy()
     expect(c.messages.value[2]!.body).toBeNull()
-    // The poll, then the held messages from the oldest, a page of 100 at a time.
+    // The held messages from the oldest, a page of 100 at a time; then a wait again, as Core did wait.
     const reads = messageCalls().slice(before)
-    expect(reads.map((r) => r.args.after_seq)).toEqual([150, 0, 100])
+    expect(reads.map((r) => [r.args.after_seq, r.args.wait_s])).toEqual([
+      [0, undefined],
+      [100, undefined],
+      [150, 25],
+    ])
     // Once read again, not again until it moves.
     const after = messageCalls().length
-    await advance(3000)
+    await advance(25_000)
+    await soon()
     expect(messageCalls().length - after).toBe(1)
+    dispose()
+  })
+
+  it('reads the messages held again on the next read when reading them again failed', async () => {
+    server.messages = range(1, 150)
+    const { c, dispose } = start()
+    await vi.advanceTimersByTimeAsync(0)
+    await c.loadOlder()
+    await c.loadOlder()
+    server.messages = server.messages.map((m) =>
+      m.seq === 3 ? { ...m, body: null, retracted: { at: 'x', by_member_id: 'staff' } } : m,
+    )
+    server.view = view({ state: 'awaiting_answer', last_retracted_at: '2026-09-26T12:05:00Z' })
+    // The wait answers; reading the held messages again fails.
+    vi.mocked(read).mockImplementationOnce(async (tool, args) => {
+      calls.push({ tool, args: args as Record<string, unknown>, at: Date.now() })
+      throw new ApiError({ status: 0, code: 'network', message: 'down' })
+    })
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(c.messages.value[2]!.retracted).toBeFalsy()
+    expect(c.failures.value).toBe(1)
+    // The next read, though the view it brings says nothing new, reads them again.
+    await advance(6000)
+    expect(c.messages.value[2]!.retracted).toBeTruthy()
+    expect(c.failures.value).toBe(0)
     dispose()
   })
 
@@ -282,7 +599,7 @@ describe('useConversation', () => {
     dispose()
   })
 
-  it('shows a first read that failed, and backs off polls that fail', async () => {
+  it('shows a first read that failed, and backs off reads that fail as ever, then waits again', async () => {
     server.fail = true
     const { c, dispose } = start()
     await vi.advanceTimersByTimeAsync(0)
@@ -291,16 +608,34 @@ describe('useConversation', () => {
     server.fail = false
     await c.load()
     expect(c.loaded.value).toBe(true)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(waits()).toHaveLength(1)
+    // The wait under way ends; the next fails, and so does each after it, twice as long apart.
     server.fail = true
-    await advance(3000)
+    await advance(25_000)
+    await soon()
     expect(c.failures.value).toBe(1)
-    const n = messageCalls().length
-    await advance(3000) // the wait doubled after one failure
-    expect(messageCalls()).toHaveLength(n)
-    await advance(3000)
-    expect(messageCalls()).toHaveLength(n + 1)
-    // What was shown stays.
+    const failedAt = [last().at]
+    for (const wait of [6000, 12_000, 24_000]) {
+      const n = messageCalls().length
+      await advance(wait - 1)
+      expect(messageCalls()).toHaveLength(n)
+      await advance(1)
+      expect(messageCalls()).toHaveLength(n + 1)
+      failedAt.push(last().at)
+    }
+    expect(c.failures.value).toBe(4)
+    // Up to 48 seconds apart at most.
+    await advance(48_000)
+    expect(c.failures.value).toBe(5)
+    // What was shown stays; once a read answers, the next waits.
     expect(c.messages.value).toHaveLength(4)
+    server.fail = false
+    await advance(48_000)
+    await soon()
+    expect(c.failures.value).toBe(0)
+    expect(last().args.wait_s).toBe(25)
+    expect(waiting.size).toBe(1)
     dispose()
   })
 })
@@ -315,23 +650,25 @@ describe('useConversation, marking what is read', () => {
     expect(marks()).toEqual([{ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm4' }])
     expect(read).toEqual([{ read_up_to_seq: 4, unread: false }])
     // Nothing new: not marked again.
-    await advance(3000)
+    await advance(25_000)
     expect(marks()).toHaveLength(1)
     dispose()
   })
 
-  it('marks nothing on opening when nothing is unread, and then each answer that comes while it is shown', async () => {
+  it('marks nothing on opening when nothing is unread, and then each answer as soon as it comes while it is shown', async () => {
     const { read, dispose } = start(ref(true), opener())
     await vi.advanceTimersByTimeAsync(0)
     expect(marks()).toEqual([])
     // The opener writes (5), and the agent answers (6).
     server.messages = range(1, 6)
-    await advance(3000)
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
     expect(marks()).toEqual([{ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm6' }])
     expect(read).toHaveLength(1)
     // What the opener writes themselves is never unread to them.
     server.messages = range(1, 7)
-    await advance(3000)
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
     expect(marks()).toHaveLength(1)
     dispose()
   })
@@ -341,7 +678,7 @@ describe('useConversation, marking what is read', () => {
     const reader = ref<string | null>(null)
     const { c, dispose } = start(ref(true), reader)
     await vi.advanceTimersByTimeAsync(0)
-    await advance(3000)
+    await advance(25_000)
     expect(marks()).toEqual([])
 
     setVisibility('hidden')
@@ -366,13 +703,14 @@ describe('useConversation, marking what is read', () => {
 
   it('tries again after a failure Core never answered, and never after a refusal', async () => {
     server.readUpTo = 1
-    server.markFails = new ApiError({ status: 0, code: 'network', message: 'down', network: true } as never)
+    server.markFails = new ApiError({ status: 0, code: 'network', message: 'down' })
     const { read, dispose } = start(ref(true), opener())
     await vi.advanceTimersByTimeAsync(0)
     expect(marks()).toHaveLength(1)
     expect(read).toEqual([])
     server.markFails = undefined
-    await advance(3000)
+    // After the next read, which answers when its wait is up.
+    await advance(25_000)
     expect(marks()).toHaveLength(2)
     expect(read).toEqual([{ read_up_to_seq: 4, unread: false }])
     dispose()
@@ -388,8 +726,9 @@ describe('useConversation, marking what is read', () => {
     const again = start(ref(true), opener())
     await vi.advanceTimersByTimeAsync(0)
     server.messages = range(1, 6)
-    await advance(3000)
-    await advance(3000)
+    commit()
+    await vi.advanceTimersByTimeAsync(0)
+    await advance(25_000)
     expect(marks()).toHaveLength(1)
     again.dispose()
   })
