@@ -18,6 +18,10 @@ export default {
     hostedIntro:
       'AIshie makes a token for the agent and hands it to the school’s runtime without showing it; then you choose a model and give your API key.',
     host: 'Set up hosting',
+    hostedHintSchool:
+      'AIshie runs it for you, on the school’s AI plan or on a model you choose with your own API key. Nothing to install, no token to handle.',
+    hostedIntroSchool:
+      'AIshie makes a token for the agent and hands it to the school’s runtime without showing it; then you choose the school’s plan, or a model with your own API key.',
     hostSuspended: 'The agent is suspended: reactivate it first.',
     paste: 'I have a token for this agent',
     selfWhileHosted: 'Connect another AI tool, or run the runtime yourself, instead',
@@ -33,6 +37,8 @@ export default {
       model: 'Model and key',
     },
     body: 'The school’s runtime will run this agent as it is seated in AIshie. It keeps the agent’s token encrypted; you will not see it. Next you choose a model and give your API key.',
+    bodySchool:
+      'The school’s runtime will run this agent as it is seated in AIshie. It keeps the agent’s token encrypted; you will not see it. Next you choose the school’s plan, or a model with your own API key.',
     seats: 'Where it is seated',
     noSeats: 'It is not in any course yet. Once hosted, it has nothing to answer until you bring it into one.',
     purpose: {
@@ -175,6 +181,25 @@ export default {
     },
   },
 
+  // The school's AI plan (D8): the school provides the model and pays for it.
+  school: {
+    choice: 'School plan',
+    choiceHint: 'The school provides the model and pays for it. No API key needed.',
+    own: 'Your own key',
+    ownHint: 'A provider and model you choose, on your own API key.',
+    offer: 'Model',
+    limits:
+      'Up to {owner} answers a day across all your agents, and {asker} a day for each person who asks. The counts start again at 00:00 UTC.',
+    noKey: 'The school’s key stays on the school’s server. Nobody sees it, you included.',
+    warning:
+      'Your questions, and the course material and work your agent reads, go to the model’s provider under the school’s agreement with it.',
+    fallbackTitle: 'Fallback: your own key',
+    fallbackOn: 'Answer with my own key once the school allowance is used up',
+    fallbackHint:
+      'Optional. Without it, once today’s allowance is used up your agent tells people “Today’s school AI allowance is used up. Please try again tomorrow.”',
+    saved: 'Saved. The runtime is starting your agent on the school’s plan.',
+  },
+
   // One token's test of a key (POST /keys/test).
   keyTest: {
     ok: 'The key works with {model}.',
@@ -197,6 +222,7 @@ export default {
     needs_model: {
       title: 'Choose a model',
       body: 'Your agent is connected, but it has no model yet. Choose a provider and model and give your API key to start it.',
+      bodySchool: 'Your agent is connected, but it has no model yet. Choose the school’s plan, or a provider and model with your API key, to start it.',
     },
     starting: {
       title: 'Starting',
@@ -290,6 +316,18 @@ export default {
     usedByRuntime: 'Used by the school’s runtime',
     ownKeyOff: 'The school’s runtime does not take a model and key of your own at the moment, so they cannot be changed here.',
     connectOff: 'The school’s runtime does not take new tokens at the moment, so it cannot be given one here.',
+    plan: 'Plan',
+    schoolPlan: 'School plan (paid by the school)',
+    fallback: 'Fallback',
+    fallbackNone: 'None: answers pause until tomorrow once the allowance is used up',
+    schoolAllowance: 'School allowance',
+    todaySchool: '{used} / {limit} today',
+    todaySchoolHint: 'The school plan, across all your agents. Starts again at 00:00 UTC.',
+    perAsker: 'Each person who asks: up to {n} a day',
+    thisAgent: 'This agent today',
+    spentFallback: 'Today’s school allowance is used up: your own key answers until 00:00 UTC.',
+    spentNone: 'Today’s school allowance is used up: until 00:00 UTC your agent asks people to try again tomorrow.',
+    offerWithdrawn: 'The school no longer offers this plan. Choose another, or your own key.',
     issueWhileHosted:
       'The school’s runtime runs this agent. Anything you start with a new token would answer too: to run it yourself, delete it from the school’s runtime first.',
   },
@@ -329,7 +367,8 @@ export default {
     agent_not_found: 'This agent is no longer on the school’s runtime.',
     version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
     changedMeanwhile: 'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
-    school_key_not_offered: 'The school’s key is not offered yet.',
+    school_key_not_offered: 'The school’s plan is not offered here.',
+    unknown_offer: 'The school no longer offers this model. Choose another.',
     own_key_required: 'Enter your API key for {provider}.',
     own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for {provider}.',
     model_denied: 'The school does not allow this model. Choose another.',

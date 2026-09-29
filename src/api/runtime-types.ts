@@ -129,6 +129,39 @@ export interface OwnModel {
   price_known: boolean
 }
 
+/**
+ * The offer of the school's plan a hosted agent is on (D8): the school
+ * provides the model and pays for it, on a key of its own that nobody sees.
+ */
+export interface SchoolModel {
+  /** The offer's id, as GET /models lists it. */
+  offer: string
+  /** What people are shown; the id when the school no longer offers it. */
+  label: string
+  /** "" when the school no longer offers it. */
+  model: string
+  provider: string
+  /** False when the school withdrew the offer: the agent then does not run. */
+  offered: boolean
+  /** The owner's own model and key stand behind it, for when the plan's quota is spent. */
+  fallback: boolean
+}
+
+/**
+ * The owner's use of the school's plan since 00:00 UTC, across all of their
+ * agents (scope "owner"), against the plan's quota per person; and the most
+ * one person asking may have of one agent in a course each day.
+ */
+export interface SchoolUse {
+  scope: 'owner'
+  used: number
+  limit: number
+  used_usd: string
+  /** Null when the quota is in answers alone. */
+  limit_usd: string | null
+  per_asker_limit: number
+}
+
 export interface HostedProblem {
   reason: ProblemReason
   /** English, already redacted by the runtime; for a "Details" disclosure. */
@@ -150,12 +183,14 @@ export interface HostedAgent {
   problem: HostedProblem | null
   paused: boolean
   token: TokenInfo
-  model: { own: OwnModel | null; school: null }
+  /** On the school's plan, own is the fallback behind it. */
+  model: { own: OwnModel | null; school: SchoolModel | null }
   own_key: null | { hint: string; provider: string | null }
   seats: Seat[]
   seats_as_of: string | null
   proposals_waiting: number
-  today: { since: string; answers: number; cost_usd: string }
+  /** school: the owner's use of the plan, on it; null (or absent, from an older runtime) otherwise. */
+  today: { since: string; answers: number; cost_usd: string; school?: SchoolUse | null }
   created_at: string
   updated_at: string
 }
@@ -165,15 +200,15 @@ export interface HostedAgent {
  * works out as it starts, not a constant: connect_by_token and own_key are
  * true where it was given a Core and a vault to seal with (in any
  * deployment, as the contract's §5.1 and A.2.1 say), and false otherwise;
- * school_key is false in v1. The page offers what each names only while it
- * is true.
+ * school_key is true where the operator offers models on the school's plan.
+ * The page offers what each names only while it is true.
  */
 export interface RuntimeFeatures {
   /** Agents may be connected by a token (inspect, POST /agents, PUT /token). */
   connect_by_token: boolean
   /** An owner may give a model and their own key (GET /models, keys/test, PATCH). */
   own_key: boolean
-  /** The school's key (D8); not offered in v1. */
+  /** The school's plan (D8): models the school provides and pays for (GET /models' school_key). */
   school_key: boolean
 }
 
@@ -216,10 +251,26 @@ export interface ProviderOffer {
   suggested_models: { model: string; priced: boolean }[]
 }
 
+/** One model of the school's plan: never its key. */
+export interface SchoolOffer {
+  /** What PATCH names (model.school.offer). */
+  id: string
+  label: string
+  provider: string
+  model: string
+  /** The runtime's price table knows it today. */
+  priced: boolean
+}
+
 /** GET /models. */
 export interface ModelsAnswer {
   own_key: { offered: boolean; providers: ProviderOffer[] }
-  school_key: { offered: boolean; offers: unknown[] }
+  school_key: {
+    offered: boolean
+    offers: SchoolOffer[]
+    /** The plan's quotas in answers a UTC day; absent from an older runtime. */
+    limits?: { per_owner_day: number; per_asker_day: number }
+  }
 }
 
 export type KeyTestResult = 'ok' | 'key_refused' | 'model_not_found' | 'key_accepted' | 'unreachable'
@@ -314,9 +365,12 @@ export interface ConnectAnswer extends HostedAgent {
   other_tokens: OtherTokens | null
 }
 
-/** PATCH /agents/{id}, merge-patch: an absent member is unchanged, null clears it. */
+/**
+ * PATCH /agents/{id}, merge-patch: an absent member is unchanged, null clears it.
+ * On the school's plan, model.own is optional: the fallback behind it.
+ */
 export interface AgentPatch {
-  model?: { own?: OwnModelChoice | null; school?: null }
+  model?: { own?: OwnModelChoice | null; school?: { offer: string } | null }
   own_key?: { value: string } | null
 }
 
@@ -383,10 +437,13 @@ export const RUNTIME_ERROR_REASONS = [
   'unknown_endpoint',
   'key_malformed',
   'school_key_not_offered',
+  'unknown_offer',
   'own_key_required',
   'own_key_provider_mismatch',
   'model_denied',
   'settings_rejected',
+  // Administrators' routes
+  'not_admin',
 ] as const
 
 export type RuntimeErrorReason = (typeof RUNTIME_ERROR_REASONS)[number]

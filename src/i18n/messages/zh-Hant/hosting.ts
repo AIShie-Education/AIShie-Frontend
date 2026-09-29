@@ -16,6 +16,8 @@ export default {
     runtimeHint: '適用於自行營運 AIshie Agent Runtime 的人。',
     hostedIntro: 'AIshie 會為代理建立一個權杖，並在不顯示的情況下交給學校的執行環境；然後由你選擇模型並提供 API 金鑰。',
     host: '設定代管',
+    hostedHintSchool: 'AIshie 會替你運行它，使用學校的 AI 方案，或你選擇的模型和你自己的 API 金鑰。無須安裝任何程式，也無須處理權杖。',
+    hostedIntroSchool: 'AIshie 會為代理建立一個權杖，並在不顯示的情況下交給學校的執行環境；然後由你選擇學校方案，或選擇模型並提供自己的 API 金鑰。',
     hostSuspended: '這個代理已停用：請先重新啟用它。',
     paste: '我已有這個代理的權杖',
     selfWhileHosted: '改用其他 AI 工具連接，或自己架 runtime',
@@ -31,6 +33,8 @@ export default {
       model: '模型與金鑰',
     },
     body: '學校的執行環境會按照這個代理在 AIshie 中的席位運行它。執行環境會加密保存代理的權杖，你不會看到它。下一步請選擇模型並提供你的 API 金鑰。',
+    bodySchool:
+      '學校的執行環境會按照這個代理在 AIshie 中的席位運行它。執行環境會加密保存代理的權杖，你不會看到它。下一步請選擇學校方案，或選擇模型並提供你的 API 金鑰。',
     seats: '它所在的課程',
     noSeats: '它還未加入任何課程。託管後，在你把它帶入課程之前，它沒有任何問題要回答。',
     purpose: {
@@ -168,6 +172,22 @@ export default {
     },
   },
 
+  // The school's AI plan (D8): the school provides the model and pays for it.
+  school: {
+    choice: '學校方案',
+    choiceHint: '由學校提供模型並支付費用，不必自備 API 金鑰。',
+    own: '你自己的金鑰',
+    ownHint: '自選供應商與模型，使用你自己的 API 金鑰。',
+    offer: '模型',
+    limits: '你所有的代理合計每天最多回答 {owner} 次，每位提問者每天最多 {asker} 次。每天 00:00 UTC 重新計算。',
+    noKey: '學校的金鑰只保存在學校的伺服器上，任何人（包括你）都看不到。',
+    warning: '你的提問，以及代理讀到的課程資料與作業，會依學校與模型供應商的協議送到該供應商。',
+    fallbackTitle: '備用：你自己的金鑰',
+    fallbackOn: '學校額度用完後，改用我自己的金鑰回答',
+    fallbackHint: '可選。不設定時，當天額度用完後，代理會告訴提問者「今天的學校 AI 額度已用完，請明天再試。」',
+    saved: '已儲存。執行環境正以學校方案啟動你的代理。',
+  },
+
   // One token's test of a key (POST /keys/test).
   keyTest: {
     ok: '這個金鑰可以使用 {model}。',
@@ -190,6 +210,7 @@ export default {
     needs_model: {
       title: '請選擇模型',
       body: '你的代理已連接，但還沒有模型。請選擇供應商和模型，並提供你的 API 金鑰來啟動它。',
+      bodySchool: '你的代理已連接，但還沒有模型。請選擇學校方案，或選擇供應商和模型並提供你的 API 金鑰來啟動它。',
     },
     starting: {
       title: '啟動中',
@@ -283,6 +304,18 @@ export default {
     usedByRuntime: '由學校的執行環境使用',
     ownKeyOff: '學校的執行環境暫時不接受你自己的模型與金鑰，所以無法在這裡更改。',
     connectOff: '學校的執行環境暫時不接受新的權杖，所以無法在這裡為它換新權杖。',
+    plan: '方案',
+    schoolPlan: '學校方案（由學校付費）',
+    fallback: '備用',
+    fallbackNone: '無：額度用完後暫停回答，明天再開始',
+    schoolAllowance: '學校額度',
+    todaySchool: '今日 {used} / {limit} 次',
+    todaySchoolHint: '學校方案，你所有的代理合計；每天 00:00 UTC 重新計算。',
+    perAsker: '每位提問者每天最多 {n} 次',
+    thisAgent: '這個代理今日',
+    spentFallback: '今天的學校額度已用完：在 00:00 UTC 之前改用你自己的金鑰回答。',
+    spentNone: '今天的學校額度已用完：在 00:00 UTC 之前，代理會請提問者明天再試。',
+    offerWithdrawn: '學校已不再提供這個方案。請選擇其他方案，或改用你自己的金鑰。',
     issueWhileHosted: '學校的執行環境正在運行這個代理。你用新權杖啟動的任何程式也會回答：如要自己運行，請先從學校的執行環境刪除它。',
   },
 
@@ -320,7 +353,8 @@ export default {
     agent_not_found: '這個代理已不在學校的執行環境上。',
     version_mismatch: '這個代理已在另一個分頁或視窗中被更改。請檢查最新的設定後再儲存一次。',
     changedMeanwhile: '這個代理剛在另一個分頁或視窗中被更改。這裡顯示的是它現在的狀態：請檢查後再試一次。',
-    school_key_not_offered: '學校的金鑰暫未提供。',
+    school_key_not_offered: '這裡沒有提供學校方案。',
+    unknown_offer: '學校已不再提供這個模型。請選擇其他模型。',
     own_key_required: '請輸入你在 {provider} 的 API 金鑰。',
     own_key_provider_mismatch: '你已儲存的金鑰屬於另一個供應商。請輸入 {provider} 的金鑰。',
     model_denied: '學校不允許使用這個模型。請選擇另一個。',

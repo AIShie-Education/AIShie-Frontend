@@ -6,7 +6,7 @@
 // No token or key is written in any file: the fakes make them at random as
 // a test runs, in the shapes Core and the providers use.
 import { vi } from 'vitest'
-import type { HostedAgent, OtherToken, OtherTokens, ProviderOffer, Seat } from '@/api/runtime-types'
+import type { HostedAgent, OtherToken, OtherTokens, ProviderOffer, SchoolOffer, Seat } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
 
 export const ACTOR = '0192f3c1-7d2e-7c3a-9b1f-2a4c6e8f0a1b'
@@ -173,6 +173,49 @@ export const OFFERS: ProviderOffer[] = [
     suggested_models: [],
   },
 ]
+
+/** The school's plan (D8), as GET /models offers it: labels and models, never a key. */
+export const SCHOOL_OFFERS: SchoolOffer[] = [
+  { id: 'standard', label: 'School AI (Claude Haiku)', provider: 'anthropic', model: 'claude-haiku-4-5', priced: true },
+  { id: 'deepseek', label: 'School AI', provider: 'deepseek', model: 'deepseek-chat', priced: false },
+]
+
+/** GET /models' answer with the school's plan offered beside the owner's own key. */
+export function modelsWithSchool(): unknown {
+  return {
+    own_key: { offered: true, providers: OFFERS },
+    school_key: { offered: true, offers: SCHOOL_OFFERS, limits: { per_owner_day: 100, per_asker_day: 20 } },
+  }
+}
+
+/**
+ * A hosted agent on the school's plan: the offer, the owner's use of the plan
+ * today, and, with fallback, their own model and key behind it.
+ */
+export function onSchoolPlan(fallback: boolean, over: Partial<HostedAgent> = {}): HostedAgent {
+  const base = hostedAgent()
+  return hostedAgent({
+    model: {
+      own: fallback ? base.model.own : null,
+      school: {
+        offer: 'standard',
+        label: 'School AI (Claude Haiku)',
+        model: 'claude-haiku-4-5',
+        provider: 'anthropic',
+        offered: true,
+        fallback,
+      },
+    },
+    own_key: fallback ? base.own_key : null,
+    today: {
+      since: '2026-09-28T00:00:00Z',
+      answers: 4,
+      cost_usd: '0.000000',
+      school: { scope: 'owner', used: 12, limit: 100, used_usd: '0.000000', limit_usd: null, per_asker_limit: 20 },
+    },
+    ...over,
+  })
+}
 
 export function credential(over: Partial<AgentCredential> = {}): AgentCredential {
   return {

@@ -6,7 +6,18 @@ import { createPinia, setActivePinia } from 'pinia'
 import { i18n, setLocale } from '@/i18n'
 import type { HostedAgent, KeyTestResult } from '@/api/runtime-types'
 import ModelKeyDialog from './ModelKeyDialog.vue'
-import { AGENT_ID, RUNTIME, Servers, hostedAgent, json, newKey, newToken, refusal } from './hostingFakes'
+import {
+  AGENT_ID,
+  RUNTIME,
+  Servers,
+  hostedAgent,
+  json,
+  modelsWithSchool,
+  newKey,
+  newToken,
+  onSchoolPlan,
+  refusal,
+} from './hostingFakes'
 
 vi.mock('element-plus', async (orig) => {
   const real = await orig<typeof import('element-plus')>()
@@ -335,7 +346,7 @@ describe('ModelKeyDialog', () => {
     [422, 'failed_precondition', 'model_denied', 'The school does not allow this model. Choose another.'],
     [422, 'failed_precondition', 'own_key_required', 'Enter your API key for OpenAI.'],
     [422, 'failed_precondition', 'own_key_provider_mismatch', 'Your saved key is for another provider. Enter a key for OpenAI.'],
-    [422, 'failed_precondition', 'school_key_not_offered', 'The school’s key is not offered yet.'],
+    [422, 'failed_precondition', 'school_key_not_offered', 'The school’s plan is not offered here.'],
     [400, 'invalid_argument', 'key_malformed', 'That does not look like an API key from OpenAI.'],
     [400, 'invalid_argument', 'unknown_field', 'The school’s runtime did not take this request: it has no field “/model/Own”.'],
   ] as const)('says a refusal to save in words: %s', async (status, code, reason, words) => {
@@ -408,5 +419,119 @@ describe('ModelKeyDialog', () => {
     const { w } = await open({ wizard: true })
     expect(w.find('.model-dialog__steps').exists()).toBe(true)
     expect(w.text()).toContain('Later')
+  })
+})
+
+describe('ModelKeyDialog: the school’s plan', () => {
+  type PlanVm = Vm & { plan: 'school' | 'own'; offerId: string; fallback: boolean }
+  const planVm = (vm: Vm) => vm as unknown as PlanVm
+
+  beforeEach(() => {
+    s.on('GET', RUNTIME.models, () => json(200, modelsWithSchool()))
+  })
+
+  it('offers the school’s plan first, with its offers and quotas, and saves it with no key', async () => {
+    const { w, vm } = await open({ schoolKey: true })
+    const plans = w.findAll('.model-form__plan')
+    expect(plans.map((p) => p.find('.model-form__plan-title').text())).toEqual(['School plan', 'Your own key'])
+    expect(planVm(vm).plan).toBe('school')
+    // Each offer's label, with the model's id beside it.
+    const offers = w.findAll('.model-form__offer')
+    expect(offers.map((o) => o.find('.model-form__offer-label').text())).toEqual(['School AI (Claude Haiku)', 'School AI'])
+    expect(offers.map((o) => o.find('.model-form__offer-model').text())).toEqual(['claude-haiku-4-5', 'deepseek-chat'])
+    expect(w.find('.model-form__limits').text()).toBe(
+      'Up to 100 answers a day across all your agents, and 20 a day for each person who asks. The counts start again at 00:00 UTC.',
+    )
+    // No key field, no provider, no key test.
+    expect(w.find('.model-form__key').exists()).toBe(false)
+    expect(w.find('.model-form__provider').exists()).toBe(false)
+    expect(w.find('.model-dialog__test-button').exists()).toBe(false)
+
+    planVm(vm).offerId = 'deepseek'
+    s.on('PATCH', RUNTIME.agent, () => json(200, onSchoolPlan(false, { version: 4, status: 'starting' })))
+    await click(w, '.model-dialog__save')
+    const [patch] = s.to('PATCH', RUNTIME.agent)
+    expect(patch.headers['If-Match']).toBe('"3"')
+    expect(JSON.parse(patch.body!)).toEqual({ model: { school: { offer: 'deepseek' } } })
+    expect(ElMessageBox.confirm).not.toHaveBeenCalled()
+    expect(w.emitted('saved')?.[0]?.[0]).toMatchObject({ version: 4 })
+  })
+
+  it('puts the owner’s own model and key behind the plan, when they ask for it', async () => {
+    const { w, vm } = await open({ schoolKey: true })
+    expect(w.find('.model-form__fallback-title').text()).toBe('Fallback: your own key')
+    planVm(vm).fallback = true
+    await flushPromises()
+    const key = await fill(vm)
+    expect(w.find('.model-form__key').exists()).toBe(true)
+    answerTest('ok')
+    await click(w, '.model-dialog__test-button')
+    s.on('PATCH', RUNTIME.agent, () => json(200, onSchoolPlan(true, { version: 4 })))
+    await click(w, '.model-dialog__save')
+    expect(JSON.parse(s.to('PATCH', RUNTIME.agent)[0].body!)).toEqual({
+      model: { school: { offer: 'standard' }, own: { provider: 'openai', adapter: 'openai_chat', model: 'gpt-4.1-mini' } },
+      own_key: { value: key },
+    })
+    expect(s.everything().split(key).length - 1).toBe(2) // the test, and the save: nowhere else
+  })
+
+  it('reads an agent on the plan as it is, and takes its fallback away when unticked', async () => {
+    agent = onSchoolPlan(true)
+    const { w, vm } = await open({ schoolKey: true })
+    expect(planVm(vm).plan).toBe('school')
+    expect(planVm(vm).offerId).toBe('standard')
+    expect(planVm(vm).fallback).toBe(true)
+    expect(vm.keyMode).toBe('keep')
+    planVm(vm).fallback = false
+    await flushPromises()
+    s.on('PATCH', RUNTIME.agent, () => json(200, onSchoolPlan(false, { version: 4 })))
+    await click(w, '.model-dialog__save')
+    expect(JSON.parse(s.to('PATCH', RUNTIME.agent)[0].body!)).toEqual({ model: { school: { offer: 'standard' }, own: null } })
+  })
+
+  it('takes an agent off the plan when the owner chooses their own key', async () => {
+    agent = onSchoolPlan(true)
+    const { w, vm } = await open({ schoolKey: true })
+    planVm(vm).plan = 'own'
+    await flushPromises()
+    expect(w.find('.model-form__offer').exists()).toBe(false)
+    s.on('PATCH', RUNTIME.agent, () => json(200, hostedAgent({ version: 4 })))
+    await click(w, '.model-dialog__save')
+    expect(JSON.parse(s.to('PATCH', RUNTIME.agent)[0].body!)).toEqual({
+      model: { own: { provider: 'openai', adapter: 'openai_chat', model: 'gpt-4.1-mini' }, school: null },
+    })
+  })
+
+  it('offers the plan alone where the runtime takes no key of the owner’s', async () => {
+    const { w, vm } = await open({ schoolKey: true, ownKey: false })
+    expect(w.find('.model-form__plans').exists()).toBe(false)
+    expect(w.find('.model-form__fallback').exists()).toBe(false)
+    expect(planVm(vm).plan).toBe('school')
+    expect(w.findAll('.model-form__offer')).toHaveLength(2)
+  })
+
+  it('says so at the offer when the school no longer has it', async () => {
+    const { w } = await open({ schoolKey: true })
+    s.on('PATCH', RUNTIME.agent, () =>
+      refusal(400, 'invalid_argument', 'unknown_offer', { field: '/model/school/offer' }),
+    )
+    await click(w, '.model-dialog__save')
+    expect(w.find('.model-form__school .el-form-item__error').text()).toBe('The school no longer offers this model. Choose another.')
+  })
+
+  it('reads in Traditional Chinese', async () => {
+    setLocale('zh-Hant')
+    const { w } = await open({ schoolKey: true })
+    expect(w.findAll('.model-form__plan-title').map((p) => p.text())).toEqual(['學校方案', '你自己的金鑰'])
+    expect(w.find('.model-form__limits').text()).toBe(
+      '你所有的代理合計每天最多回答 100 次，每位提問者每天最多 20 次。每天 00:00 UTC 重新計算。',
+    )
+  })
+
+  it('offers no plan where the runtime does not (features.school_key false)', async () => {
+    const { w, vm } = await open()
+    expect(w.find('.model-form__plans').exists()).toBe(false)
+    expect(planVm(vm).plan).toBe('own')
+    expect(w.find('.model-form__provider').exists()).toBe(true)
   })
 })

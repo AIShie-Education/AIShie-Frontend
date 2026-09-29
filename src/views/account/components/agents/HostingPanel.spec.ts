@@ -254,6 +254,17 @@ describe('HostingPanel: what the runtime offers', () => {
     expect(w.find('.hosted-card__pause').exists()).toBe(true)
   })
 
+  it('offers hosting on the school’s plan where the runtime takes no key of the owner’s', async () => {
+    offering({ connect_by_token: true, own_key: false, school_key: true })
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+    const w = await panel()
+    expect(w.find('.hosting-offer__host').exists()).toBe(true)
+    expect(w.find('.connect-choice--hosted .connect-choice__hint').text()).toBe(
+      'AIshie runs it for you, on the school’s AI plan or on a model you choose with your own API key. Nothing to install, no token to handle.',
+    )
+    expect(w.find('.hosting-offer__intro').text()).toContain('then you choose the school’s plan, or a model with your own API key')
+  })
+
   it('offers all of it when every feature is true', async () => {
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent()] }))
     const w = await panel()

@@ -18,6 +18,7 @@ import type {
   ReasoningEffort,
   RevokedToken,
   RevocationProblem,
+  SchoolUse,
   Seat,
   TokenInfo,
 } from '@/api/runtime-types'
@@ -87,6 +88,7 @@ const REASON_KEY: Record<string, string> = {
   agent_not_found: 'errors.agent_not_found',
   version_mismatch: 'errors.version_mismatch',
   school_key_not_offered: 'errors.school_key_not_offered',
+  unknown_offer: 'errors.unknown_offer',
   own_key_required: 'errors.own_key_required',
   own_key_provider_mismatch: 'errors.own_key_provider_mismatch',
   model_denied: 'errors.model_denied',
@@ -109,6 +111,7 @@ const NAMED_REASONS: ReadonlySet<string> = new Set(['unknown_field', 'unknown_pa
 
 /** Reasons whose words belong on one field of the model form (details.field names it). */
 export const FIELD_REASONS: ReadonlySet<string> = new Set([
+  'unknown_offer',
   'unknown_provider',
   'adapter_not_offered',
   'unknown_endpoint',
@@ -488,14 +491,25 @@ export function choiceKey(c: OwnModelChoice): string {
   return JSON.stringify(Object.keys(c).sort().map((k) => [k, c[k as keyof OwnModelChoice]]))
 }
 
-export type FormField = 'provider' | 'adapter' | 'endpoint' | 'resource' | 'region' | 'model' | 'maxOutputTokens' | 'reasoningEffort' | 'key'
+export type FormField =
+  | 'offer'
+  | 'provider'
+  | 'adapter'
+  | 'endpoint'
+  | 'resource'
+  | 'region'
+  | 'model'
+  | 'maxOutputTokens'
+  | 'reasoningEffort'
+  | 'key'
 
 /** The form field a JSON Pointer from the runtime names (details.field), or null. */
 export function fieldOfPointer(pointer: unknown): FormField | null {
-  // /provider or /model/own/provider, /key or /own_key/value: the last segment says which.
+  // /provider or /model/own/provider, /key or /own_key/value, /model/school/offer: the last segment says which.
   if (typeof pointer !== 'string') return null
   const leaf = pointer.split('/').pop()
   switch (leaf) {
+    case 'offer':
     case 'provider':
     case 'adapter':
     case 'endpoint':
@@ -575,4 +589,11 @@ export function isKeyShaped(key: string): boolean {
 export function keyProblem(key: string): string | null {
   if (isAishieToken(key)) return 'hosting.errors.key_is_aishie_token'
   return isKeyShaped(key) ? null : 'hosting.errors.key_malformed'
+}
+
+// --- The school's plan (D8) ------------------------------------------------------------
+
+/** Whether the owner's use of the school's plan has reached its quota for the day. */
+export function schoolSpent(use: SchoolUse | null | undefined): boolean {
+  return !!use && use.used >= use.limit
 }

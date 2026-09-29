@@ -3,8 +3,9 @@
 // what thinks and answers runs elsewhere, and an agent has one brain at a
 // time, so the card asks for one of three, in this order:
 //
-// 1. Host it on AIShie (hosting): the school's runtime runs it, on a model
-//    and key the owner chooses; no token or file is ever shown. Offered only
+// 1. Host it on AIShie (hosting): the school's runtime runs it, on the
+//    school's plan or a model and key the owner chooses; no token or file
+//    is ever shown. Offered only
 //    where the runtime's API is there; its content is the hosted slot.
 // 2. Connect another AI tool: any MCP client (Claude, ChatGPT, an agent SDK)
 //    with Core's MCP endpoint and one of the agent's tokens in a header.
@@ -34,6 +35,8 @@ const props = defineProps<{
   disabled?: boolean
   /** AIShie can host it: offer that first. */
   hosting?: boolean
+  /** Hosting may be on the school's plan (features.school_key). */
+  school?: boolean
 }>()
 const emit = defineEmits<{ issue: []; bring: [] }>()
 const { t } = useI18n()
@@ -60,7 +63,7 @@ watch(
           {{ t('hosting.choice.hosted') }}
           <el-tag type="success" size="small" disable-transitions>{{ t('hosting.choice.recommended') }}</el-tag>
         </span>
-        <span class="connect-choice__hint">{{ t('hosting.choice.hostedHint') }}</span>
+        <span class="connect-choice__hint">{{ t(school ? 'hosting.choice.hostedHintSchool' : 'hosting.choice.hostedHint') }}</span>
       </el-radio>
       <el-radio value="tool" border class="connect-choice connect-choice--tool">
         <span class="connect-choice__title">{{ t('hosting.choice.tool') }}</span>
