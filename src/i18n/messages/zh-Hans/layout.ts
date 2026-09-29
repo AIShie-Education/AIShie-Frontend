@@ -1,8 +1,25 @@
 export default {
+  // The side bar's views, as the activity bar on the window's left edge names them: the caller's courses,
+  // their agents (a person's), and administration (common.nav.admin).
   courses: '课程',
+  agents: '智能体',
   menu: '菜单',
   // The rail along the window's right edge, with a button for each side panel (the chat's).
   panels: '侧边面板',
+  // The side bar on the window's left edge: the activity bar, with a button for each view (on a phone, the
+  // menu's tabs), and the view shown beside it.
+  side: {
+    views: '侧边栏视图',
+    filter: '筛选课程',
+    showArchived: '显示已归档（{n}）',
+    noCourses: '你尚未加入任何课程。',
+    noMatch: '没有符合的课程。',
+    // Courses an administrator administers without a seat in them, which open on their administration page.
+    unseated: '你管理但尚未加入',
+    unseatedMore: '在管理页查看全部（{n}）',
+    noAgents: '你还没有任何智能体。',
+    failed: '无法加载。',
+  },
   // The tab's name on a page that does not exist (the router's catch-all).
   notFound: '找不到页面',
   // Labels Element Plus gives screen readers on tables (i18n/elementPlus.ts).

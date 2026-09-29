@@ -1,13 +1,14 @@
 <script setup lang="ts">
-// The frame around every signed-in page: the caller's courses and, for
-// administrators, the administration pages on the left; language, theme and
-// the account menu on top; and on the right, as in an editor, a rail along
-// the window's edge with a button for each side panel (the chat with the
-// courses' agents, for now), the panel docked between the page and the rail
-// while it is open. On a phone there is no rail: the chat's button floats at
-// the bottom right, and the panel is a sheet over the page. A department's
-// administrator is offered the courses and departments they administer;
-// people, terms and presets are a platform administrator's.
+// The frame around every signed-in page, laid out as an editor is. On the
+// left, an activity bar along the window's edge, with a button for each view
+// the caller is offered (their courses, their agents, administration), and
+// the side bar beside it showing the one chosen; on top, language, theme and
+// the account menu; and on the right, a rail along the window's edge with a
+// button for each side panel (the chat with the courses' agents, for now),
+// the panel docked between the page and the rail while it is open. On a
+// phone there is neither bar nor rail: the header's menu button opens the
+// views in a drawer, as tabs along its top, and the chat's button floats at
+// the bottom right, the panel a sheet over the page.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -15,10 +16,13 @@ import { useChatStore } from '@/stores/chat'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore, type Theme } from '@/stores/ui'
 import { LOCALES, type Locale } from '@/i18n'
-import AppWordmark from '@/components/AppWordmark.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import { shortcutLabel } from '@/components/chat/panel'
+import ActivityBar from '@/components/sidebar/ActivityBar.vue'
+import SideBar from '@/components/sidebar/SideBar.vue'
+import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
+import { useSideBarStore } from '@/stores/sidebar'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { titleKey } from '@/router/title'
 
@@ -32,26 +36,22 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const narrow = useMediaQuery('(max-width: 899px)')
+const narrow = useMediaQuery(`(max-width: ${SIDEBAR_DRAWER_MAX_WIDTH}px)`)
+// The phone's menu closes as a link in it is followed.
 const drawer = ref(false)
 watch(
   () => route.fullPath,
   () => (drawer.value = false),
 )
 
-const courses = computed(() =>
-  [...session.liveMemberships].sort((a, b) => `${a.code}${a.section}`.localeCompare(`${b.code}${b.section}`)),
+// The side bar shows the view of the page's own (a course's pages, the
+// agents', administration's), open or collapsed as it was.
+const side = useSideBarStore()
+watch(
+  () => route.path,
+  (path) => side.follow(path),
+  { immediate: true },
 )
-const activeCourseId = computed(() => (route.params.courseId as string | undefined) ?? null)
-
-const allAdminLinks = [
-  { name: 'admin-courses', icon: 'School', label: 'admin.nav.courses' },
-  { name: 'admin-actors', icon: 'User', label: 'admin.nav.actors', platform: true },
-  { name: 'admin-terms', icon: 'Calendar', label: 'admin.nav.terms', platform: true },
-  { name: 'admin-departments', icon: 'OfficeBuilding', label: 'admin.nav.departments' },
-  { name: 'admin-presets', icon: 'Key', label: 'admin.nav.presets', platform: true },
-]
-const adminLinks = computed(() => allAdminLinks.filter((l) => !l.platform || session.isAdmin))
 
 const themes: { value: Theme; label: string; icon: string }[] = [
   { value: 'auto', label: 'common.nav.themeAuto', icon: 'Monitor' },
@@ -107,61 +107,25 @@ const pageTitle = computed(() => {
 
 <template>
   <el-container class="app-shell">
-    <component
-      :is="narrow ? 'el-drawer' : 'el-aside'"
-      v-bind="
-        narrow
-          ? { modelValue: drawer, direction: 'ltr', size: '280px', withHeader: false, appendToBody: true, class: 'app-nav-drawer' }
-          : { width: '264px' }
-      "
-      class="app-aside"
-      @update:model-value="(v: boolean) => (drawer = v)"
+    <!-- On the left, as an editor's: the activity bar, and beside it the side bar with the view chosen. -->
+    <template v-if="!narrow">
+      <ActivityBar />
+      <SideBar v-if="side.open" />
+    </template>
+    <!-- On a phone, the views are the menu's, opened from the header; closed, it holds nothing that polls. -->
+    <el-drawer
+      v-else
+      v-model="drawer"
+      direction="ltr"
+      size="300px"
+      :with-header="false"
+      :title="t('layout.menu')"
+      append-to-body
+      destroy-on-close
+      class="app-nav-drawer"
     >
-      <div class="app-aside__inner">
-        <router-link :to="{ name: 'home' }" class="app-brand">
-          <AppWordmark class="app-brand__logo" />
-        </router-link>
-
-        <nav class="app-nav">
-          <router-link :to="{ name: 'home' }" class="app-nav__item" :class="{ 'is-active': route.name === 'home' }">
-            <el-icon><House /></el-icon>
-            <span>{{ t('common.nav.home') }}</span>
-          </router-link>
-
-          <div v-if="courses.length" class="app-nav__section">
-            <div class="app-nav__heading">{{ t('layout.courses') }}</div>
-            <router-link
-              v-for="m in courses"
-              :key="m.member_id"
-              :to="{ name: 'course-overview', params: { courseId: m.course_id } }"
-              class="app-nav__item app-nav__course"
-              :class="{ 'is-active': activeCourseId === m.course_id }"
-            >
-              <span class="app-nav__code">{{ m.code }}{{ m.section ? ` · ${m.section}` : '' }}</span>
-              <span class="app-nav__title">{{ m.title }}</span>
-              <span v-if="m.status === 'paused' || m.course_status !== 'active'" class="app-nav__flags">
-                <StatusTag v-if="m.status === 'paused'" vocab="memberStatus" :value="m.status" />
-                <StatusTag v-if="m.course_status !== 'active'" vocab="courseStatus" :value="m.course_status" />
-              </span>
-            </router-link>
-          </div>
-
-          <div v-if="session.canAdminister" class="app-nav__section">
-            <div class="app-nav__heading">{{ t('common.nav.admin') }}</div>
-            <router-link
-              v-for="l in adminLinks"
-              :key="l.name"
-              :to="{ name: l.name }"
-              class="app-nav__item"
-              :class="{ 'is-active': typeof route.name === 'string' && route.name.startsWith(l.name.replace(/s$/, '')) }"
-            >
-              <el-icon><component :is="l.icon" /></el-icon>
-              <span>{{ t(l.label) }}</span>
-            </router-link>
-          </div>
-        </nav>
-      </div>
-    </component>
+      <SideBar mode="drawer" @follow="drawer = false" />
+    </el-drawer>
 
     <el-container direction="vertical" class="app-main-wrap">
       <el-header class="app-header" height="56px">
@@ -178,7 +142,12 @@ const pageTitle = computed(() => {
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item v-for="l in LOCALES" :key="l.value" :command="l.value" :disabled="ui.locale === l.value">
+                <el-dropdown-item
+                  v-for="l in LOCALES"
+                  :key="l.value"
+                  :command="l.value"
+                  :disabled="ui.locale === l.value"
+                >
                   {{ l.label }}
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -191,7 +160,12 @@ const pageTitle = computed(() => {
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item v-for="th in themes" :key="th.value" :command="th.value" :disabled="ui.theme === th.value">
+                <el-dropdown-item
+                  v-for="th in themes"
+                  :key="th.value"
+                  :command="th.value"
+                  :disabled="ui.theme === th.value"
+                >
                   <el-icon><component :is="th.icon" /></el-icon>
                   {{ t(th.label) }}
                 </el-dropdown-item>
@@ -201,7 +175,9 @@ const pageTitle = computed(() => {
 
           <el-dropdown trigger="click" @command="onUserCommand">
             <button type="button" class="app-user">
-              <el-avatar :size="28" class="app-user__avatar">{{ session.me?.display_name?.slice(0, 1) ?? '?' }}</el-avatar>
+              <el-avatar :size="28" class="app-user__avatar">{{
+                session.me?.display_name?.slice(0, 1) ?? '?'
+              }}</el-avatar>
               <span class="app-user__name">{{ session.me?.display_name }}</span>
               <StatusTag v-if="session.me?.platform_role" vocab="platformRole" :value="session.me.platform_role" />
               <el-icon><ArrowDown /></el-icon>
@@ -294,86 +270,6 @@ const pageTitle = computed(() => {
   /* The phone's floating chat button: how big, and how far from the screen's edges. */
   --app-fab-size: 52px;
   --app-fab-inset: 16px;
-}
-.app-aside {
-  border-right: 1px solid var(--app-line);
-  background: var(--app-ground);
-}
-.app-aside__inner {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  position: sticky;
-  top: 0;
-  max-height: 100vh;
-  overflow-y: auto;
-}
-.app-brand {
-  display: flex;
-  align-items: center;
-  height: 56px;
-  padding: 0 22px;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-.app-brand__logo {
-  height: 26px;
-}
-.app-nav {
-  padding: 8px 12px 24px;
-}
-.app-nav__section {
-  margin-top: 18px;
-}
-.app-nav__heading {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--app-ink-3);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 0 10px 6px;
-}
-.app-nav__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--app-radius-control);
-  color: var(--el-text-color-regular);
-  text-decoration: none;
-  font-size: 14px;
-}
-.app-nav__item:hover {
-  background: var(--app-ground-2);
-  color: var(--app-ink);
-}
-.app-nav__item.is-active {
-  background: var(--app-indigo-tint);
-  color: var(--app-indigo);
-  font-weight: 500;
-}
-.app-nav__course {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-.app-nav__code {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-text-color-secondary);
-}
-.app-nav__course.is-active .app-nav__code {
-  color: var(--app-indigo);
-}
-.app-nav__title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-.app-nav__flags {
-  display: flex;
-  gap: 4px;
 }
 .app-main-wrap {
   min-width: 0;
