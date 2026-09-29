@@ -1,6 +1,8 @@
 export default {
   courses: 'Courses',
   menu: 'Menu',
+  // The rail along the window's right edge, with a button for each side panel (the chat's).
+  panels: 'Side panels',
   // The tab's name on a page that does not exist (the router's catch-all).
   notFound: 'Page not found',
   // Labels Element Plus gives screen readers on tables (i18n/elementPlus.ts).

@@ -162,6 +162,26 @@ describe('ChatPanel', () => {
     expect(w.find('#chat-panel').exists()).toBe(false)
   })
 
+  it('gives focus back to the button that opens it (the rail’s, or on a phone the floating one) when it closes', async () => {
+    const { w } = await setup()
+    // AppLayout's button, wherever it is.
+    const toggle = document.createElement('button')
+    toggle.id = 'chat-panel-toggle'
+    document.body.appendChild(toggle)
+    press('j', { ctrlKey: true })
+    await flushPromises()
+    expect(w.find('#chat-panel').element.contains(document.activeElement)).toBe(true)
+    await w.find('.chat-panel__close').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(toggle)
+    // And after Ctrl/⌘+J.
+    press('j', { ctrlKey: true })
+    await flushPromises()
+    press('j', { metaKey: true })
+    await flushPromises()
+    expect(document.activeElement).toBe(toggle)
+  })
+
   it('opens as this browser left it, open and as wide', async () => {
     localStorage.setItem('aishiteru.chatPanel', JSON.stringify({ open: true, width: 480 }))
     const { w } = await setup()
