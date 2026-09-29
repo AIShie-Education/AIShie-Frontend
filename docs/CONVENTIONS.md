@@ -222,10 +222,16 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `agent_answers_elsewhere`, which `errorMessage()` says in the same words.
 - The chat with agents is one panel beside every signed-in page (`src/components/chat/ChatPanel.vue`,
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
-  agent. `useChatStore()` (`@/stores/chat`) opens it on a conversation (`showConversation(courseId, id,
-  { open: true })`) or on a course (`showCourse`); a link to a conversation is still
-  `{ name: 'course-conversations', params: { courseId, conversationId } }`, the address the course's
-  conversations page once had, which opens the panel on it and leaves the page where it was. The chat
+  agent. Its button is on the rail along the window's right edge, as an editor's activity bar is,
+  where any other side panel's would go too (the header holds only the language, the theme and the
+  account); the panel opens between the page and the rail, and Ctrl/⌘+J opens and closes it. On a
+  phone there is no rail: the button floats at the bottom right, the page keeps room below its last
+  item for it, and it stays under everything Element Plus lays over the page (the layers are in
+  `styles/tokens.css`). `useChatStore()` (`@/stores/chat`) opens it on a conversation
+  (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a link to a
+  conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`, the
+  address the course's conversations page once had, which opens the panel on it and leaves the page
+  where it was. The chat
   reads the caller's seat in a conversation's course from their memberships (`useChatSeat`), never from
   the course store, since the page may show another course or none. It offers agents alone
   (`agentsOnly`: `conversation.respondents` lists people too), and nobody answers in it but agents.
