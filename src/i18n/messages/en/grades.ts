@@ -66,14 +66,14 @@ export default {
   final: {
     label: 'Final grades: count ungraded work as zero',
     help: 'Normally a total is a “grade so far”: work with no posted grade is left out and the rest re-weighted. With this ticked, every assignment and directly graded component that has no posted grade counts as zero in each affected student’s totals.',
-    warningTitle: 'This cannot be taken back',
+    warningTitle: 'Final until someone undoes it',
     warning1:
-      'Once a student’s totals are written this way they stay final: every later post or regrade keeps counting their ungraded work as zero, even without this ticked.',
+      'Once a student’s totals are written this way they stay final: every later post or regrade keeps counting their ungraded work as zero, even without this ticked, until someone with Post grades undoes it (Undo final grades, on the Grades page).',
     warning2: 'It decides the course total, so it needs your assignment scope to be the whole course.',
     warning3: 'Use it only when the term’s grading is over.',
     confirmTitle: 'Write final grades?',
     confirm:
-      'Ungraded work will count as zero in the totals of every student this touches, from now on. This cannot be undone.',
+      'Ungraded work will count as zero in the totals of every student this touches, from now on, until someone undoes it from the Grades page.',
     confirmButton: 'Yes, final',
   },
   enter: {
@@ -236,5 +236,119 @@ export default {
     legendIncomplete: '“Incomplete” means something beneath has no posted grade yet and was left out.',
     legendSnapshot:
       '“At posting” is the total written down when grades were posted; it does not change until the next post or regrade.',
+  },
+  // Changing what graded work is worth (existing_grades on assignment.update and component.update).
+  pointsChange: {
+    title: '{n} grade has been entered for it | {n} grades have been entered for it',
+    titleUnknown: 'Grades have been entered for it',
+    question: 'Its points change from {from} to {to}. What becomes of the grades already entered?',
+    rescale: {
+      label: 'Rescale them',
+      help: 'Each score is converted in proportion, in a new grade that replaces it; the old one stays in its history.',
+      example: 'For example, {score}/{from} becomes {becomes}/{to} ({before} either way).',
+    },
+    keep_scores: {
+      label: 'Keep the scores',
+      help: 'Each score stays as it was entered, and is now out of the new points.',
+      example: 'For example, {score}/{from} ({before}) becomes {becomes}/{to} ({after}).',
+    },
+    blocked: {
+      nothing_to_rescale: 'It was worth nothing, so there is nothing to rescale from: keep the scores instead.',
+      score_above_points:
+        '{n} score would be above {to}, what the work is now worth: rescale instead, or regrade it first. | {n} scores would be above {to}, what the work is now worth: rescale instead, or regrade them first.',
+    },
+    totals:
+      'Either way, the posted totals this changes are written again at once. It takes Enter grades and Post grades as well as Manage assignments, over every student, for the whole course.',
+    required: 'Say what becomes of the grades already entered.',
+    locked:
+      'Grades have been entered for it: changing its points changes them too, which takes Enter grades and Post grades as well, and your seat does not hold both. Ask someone who does.',
+    done: 'Saved: {r} grades rescaled, {s} totals written again.',
+    doneTotals: 'Saved: {s} totals written again.',
+    // Core's refusals, by the reason it names.
+    refusal: {
+      existing_grades_required:
+        'Grades have been entered for it since this form was opened: say what becomes of them, then save again.',
+      score_above_points:
+        'A score is above what the work is now worth, so the scores cannot be kept as they are: rescale them, or regrade that one first.',
+      nothing_to_rescale:
+        'The work was worth nothing, so there is nothing to rescale its grades from: keep the scores.',
+    },
+  },
+  // A person's number in place of a total worked out, and a comment on a total.
+  override: {
+    action: 'Override',
+    change: 'Change override',
+    clear: 'Take off override',
+    comment: 'Comment',
+    editComment: 'Edit comment',
+    actions: 'Total',
+    overridden: 'Overridden',
+    computed: 'Worked out: {value}',
+    counts: 'Counts as {value}',
+    by: 'By {name}',
+    why: 'Why: {reason}',
+    at: 'Overridden {time}',
+    commentLabel: 'Comment on this total',
+    title: 'Override: {what}',
+    intro:
+      'Put a score of your own in place of the total worked out. The total worked out stays beside it, and every total written for it later carries the override on; in everything rolled up above it, the override counts in its place, and those totals are written again now.',
+    score: 'Score, out of 100',
+    scoreHint: 'Worked out now: {value}.',
+    scoreInvalid: 'A number of 0 or more, out of 100',
+    reason: 'Reason',
+    reasonPlaceholder: 'e.g. Adjusted after the moderation meeting',
+    reasonHint:
+      'Kept with the override, and shown with who made it to those who grade. The student sees the override, but not who made it or why.',
+    reasonLong: 'At most 500 characters',
+    submit: 'Override',
+    done: 'Overridden: {n} totals above it written again.',
+    doneTop: 'Overridden.',
+    unchanged: 'The total already said this: nothing changed.',
+    clearTitle: 'Take off the override?',
+    clearBody:
+      'The total worked out, {value}, counts again, and what is rolled up above it is written again now. The override stays in the total’s history.',
+    clearConfirm: 'Take it off',
+    cleared: 'Override taken off: {n} totals above it written again.',
+    clearedTop: 'Override taken off.',
+    commentTitle: 'Comment: {what}',
+    commentIntro:
+      'What the student is told about this total, beside it. Totals written for it later carry it on. Leave it empty to take a comment away.',
+    commentSaved: 'Comment saved',
+    commentRemoved: 'Comment taken away',
+    approvalNote: 'Your seat needs approval for this, so it will wait for someone to approve it.',
+    noTotal: 'No total has been written here for this student yet: one is written when a grade beneath it is posted.',
+    gradedDirectly: 'Graded directly: regrade its grade instead.',
+    wholeCourse: 'A total spans every assignment: changing it takes a reach over the whole course.',
+    // Core's refusals, by the reason it names.
+    refusal: {
+      graded_directly: 'This component is graded directly, so it has no total to override: regrade its grade instead.',
+      no_total:
+        'No total has been written here for this student yet, so there is nothing to override or comment on: one is written when a grade beneath it is posted.',
+    },
+  },
+  // Taking back posting as final (grade.undo_ungraded_as_zero).
+  undoFinal: {
+    button: 'Undo final grades…',
+    one: 'Undo for this student',
+    title: 'Undo final grades',
+    intro:
+      'Posting as final counted ungraded work as zero in students’ totals, and every post and regrade since has kept doing so. Undoing it writes their totals again at once as a grade so far, leaving ungraded work out, and later posts and regrades leave it out too, until someone posts as final again. Grades themselves are not touched, and the final totals stay in the history.',
+    who: 'Whose',
+    all: 'Every student whose totals count ungraded work as zero',
+    oneStudent: 'One student',
+    pickStudent: 'Choose a student',
+    pickRequired: 'Choose a student',
+    confirmTitle: 'Undo final grades?',
+    confirmAll:
+      'The totals of every student whose totals count ungraded work as zero will be written again now as a grade so far.',
+    confirmOne: 'The totals of {name} will be written again now as a grade so far, leaving ungraded work out.',
+    confirmButton: 'Undo final grades',
+    done: '{n} student’s totals no longer count ungraded work as zero: {s} totals written again. | {n} students’ totals no longer count ungraded work as zero: {s} totals written again.',
+    wholeCourse:
+      'Undoing final grades reaches every student it is about, over the whole course: your seat’s reach is narrower.',
+    approvalNote: 'Your seat needs approval for this, so it will wait for someone to approve it.',
+    refusal: {
+      not_counted_as_zero: 'No totals count ungraded work as zero here: there is nothing to undo.',
+    },
   },
 }

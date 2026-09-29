@@ -11,6 +11,7 @@ import type { DocChoice } from './types'
 let writes: { tool: string; args: Record<string, unknown> }[] = []
 let answers: Record<string, unknown> = {}
 let rubrics: DocumentSummary[] = []
+let grades: Record<string, unknown>[] = []
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
@@ -18,6 +19,7 @@ vi.mock('@/api/http', async (orig) => {
     read: vi.fn(async (tool: string) => {
       if (tool === 'document.list') return { documents: rubrics }
       if (tool === 'component.tree') return { components: [] }
+      if (tool === 'grade.list') return { grades }
       throw new Error(`no answer for ${tool}`)
     }),
     write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
@@ -46,6 +48,7 @@ beforeEach(() => {
   setLocale('en')
   writes = []
   rubrics = []
+  grades = []
   answers = { 'document.create': executed({ document_id: 'doc-r', version_id: 'ver-r' }) }
   vi.mocked(ElMessage).mockClear()
   vi.mocked(ElNotification).mockClear()
@@ -57,11 +60,11 @@ afterEach(() => {
 
 type Vm = { form: { title: string; points: string; rubric: DocChoice } }
 
-async function mountDialog() {
+async function mountDialog(assignment?: Record<string, unknown>) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const wrapper = mount(AssignmentFormDialog, {
-    props: { courseId: COURSE, visible: true },
+    props: { courseId: COURSE, visible: true, assignment: assignment as never },
     attachTo: document.body,
     global: {
       plugins: [pinia, i18n, ElementPlus],
@@ -153,6 +156,78 @@ describe('AssignmentFormDialog rubric hints', () => {
     const text = wrapper.text()
     expect(text).toContain('This rubric has no published version yet, so grader agents cannot read it')
     expect(text).not.toContain('This document has no published version yet: students cannot read it.')
+    wrapper.unmount()
+  })
+})
+
+describe('AssignmentFormDialog, points changed after grading', () => {
+  const ESSAY = {
+    id: 'asg-e',
+    course_id: COURSE,
+    title: 'Essay',
+    points_possible: 100,
+    published_at: null,
+    created_at: '2026-09-01T00:00:00Z',
+  }
+  const grade = (id: string, score: number, state = 'posted') => ({
+    id,
+    assignment_id: 'asg-e',
+    submission_id: `sub-${id}`,
+    origin: 'entered',
+    state,
+    score,
+    student_member_id: `s-${id}`,
+    grader_member_id: 'me',
+    created_at: '2026-09-02T00:00:00Z',
+    created_by_action_id: 'a',
+  })
+  const save = (w: Awaited<ReturnType<typeof mountDialog>>) =>
+    w
+      .findAll('button')
+      .find((b) => b.text() === 'Save')!
+      .trigger('click')
+
+  it('asks what becomes of the grades, and sends the choice with the new points', async () => {
+    grades = [grade('g1', 85), grade('g2', 30, 'draft'), { ...grade('g0', 90, 'superseded'), superseded_by: 'g1' }]
+    answers['assignment.update'] = executed({ ok: true, rescaled: 2, snapshots: 3 })
+    const wrapper = await mountDialog(ESSAY)
+    const vm = wrapper.vm as unknown as Vm
+    vm.form.points = '50'
+    await flushPromises()
+    // The two standing grades, and an example from the highest.
+    expect(wrapper.text()).toContain('2 grades have been entered for it')
+    expect(wrapper.text()).toContain('For example, 85/100 becomes 42.5/50')
+    // Saving without a choice asks for one, and sends nothing.
+    await save(wrapper)
+    await flushPromises()
+    // A form's error shows after its short debounce.
+    await new Promise((r) => setTimeout(r, 150))
+    expect(wrapper.text()).toContain('Say what becomes of the grades already entered.')
+    expect(writes).toEqual([])
+
+    await wrapper.find('[data-choice="rescale"] input').setValue(true)
+    await save(wrapper)
+    await flushPromises()
+    expect(writes).toEqual([
+      {
+        tool: 'assignment.update',
+        args: { course_id: COURSE, assignment_id: 'asg-e', points_possible: '50', existing_grades: 'rescale' },
+      },
+    ])
+    expect(messaged()).toEqual(['Saved: 2 grades rescaled, 3 totals written again.'])
+    wrapper.unmount()
+  })
+
+  it('asks nothing when no grade has been entered', async () => {
+    answers['assignment.update'] = executed({ ok: true, rescaled: 0, snapshots: 0 })
+    const wrapper = await mountDialog(ESSAY)
+    const vm = wrapper.vm as unknown as Vm
+    vm.form.points = '50'
+    await flushPromises()
+    expect(wrapper.find('.existing-grades').exists()).toBe(false)
+    await save(wrapper)
+    await flushPromises()
+    expect(writes[0].args).toEqual({ course_id: COURSE, assignment_id: 'asg-e', points_possible: '50' })
     wrapper.unmount()
   })
 })

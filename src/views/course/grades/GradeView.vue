@@ -3,7 +3,11 @@
 // came from — the submission, the rubric version the grader was shown, the
 // action that made it (who proposed it, who approved it) — its feedback and
 // breakdown, and what replaced it. A live posted grade can be regraded
-// (grade.regrade), and a draft posted (grade.post).
+// (grade.regrade), and a draft posted (grade.post). A total written down at
+// posting shows a person's override beside the figure worked out, and its
+// comment; whoever may regrade over the whole course overrides it, takes an
+// override off and comments on it here. A student sees the override and the
+// comment, never who made the override or why: Core does not say.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -20,13 +24,16 @@ import MemberName from '@/components/MemberName.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import TotalMenu from './components/TotalMenu.vue'
 import BreakdownTable from './components/BreakdownTable.vue'
 import PostGradesDialog from './components/PostGradesDialog.vue'
 import ProposalNotice from './components/ProposalNotice.vue'
 import RegradeDialog from './components/RegradeDialog.vue'
 import ScoreText from './components/ScoreText.vue'
 import WorkingTable from './components/WorkingTable.vue'
+import { formatDateTime } from '@/utils/format'
 import {
+  formatPct,
   parseBreakdown,
   parseWorking,
   percentOf,
@@ -89,6 +96,25 @@ const canPostThis = computed(
   () =>
     !!g.value && !mine.value && g.value.state === 'draft' && g.value.origin === 'entered' && course.can('grade_post'),
 )
+
+// A total's override and comment: a regrade of it, over the whole course.
+const override = computed(() => (isComputed.value ? (g.value?.override ?? null) : null))
+const canTouchTotal = computed(
+  () =>
+    !!g.value &&
+    !mine.value &&
+    isComputed.value &&
+    g.value.state === 'posted' &&
+    !!g.value.component_id &&
+    course.membership?.assignment_scope !== 'listed' &&
+    course.canAll(['grade_submit', 'grade_post']),
+)
+const totalWhat = computed(() => what.value ?? t('grades.detail.rollup'))
+function onTotalChanged(id: string | null) {
+  if (id && id !== props.gradeId)
+    void router.push({ name: 'course-grade', params: { courseId: props.courseId, gradeId: id } })
+  else void state.reload()
+}
 
 const regradeVisible = ref(false)
 const postVisible = ref(false)
@@ -221,6 +247,17 @@ const backLink = computed(() => ({
               {{ t('enums.level.confirm_required') }}
             </el-tag>
           </el-button>
+          <TotalMenu
+            v-if="canTouchTotal && g.component_id"
+            :course-id="courseId"
+            :student-member-id="g.student_member_id"
+            :component-id="g.component_id"
+            :what="totalWhat"
+            :computed-percent="g.score"
+            :total="g"
+            size="default"
+            @changed="onTotalChanged"
+          />
           <el-button v-if="canRegrade" type="primary" :disabled="!course.writable" @click="regradeVisible = true">
             <el-icon><EditPen /></el-icon>
             <span>{{ t('grades.regrade.button') }}</span>
@@ -260,7 +297,24 @@ const backLink = computed(() => ({
         />
 
         <section class="app-card grade-view__score-card">
-          <div class="grade-view__score">
+          <div v-if="override" class="grade-view__override">
+            <div class="grade-view__score">
+              <ScoreText :score="override.score" :out-of="null" as-percent size="large" hide-percent />
+              <el-tag type="primary" effect="dark" disable-transitions>{{ t('grades.override.overridden') }}</el-tag>
+            </div>
+            <p class="grade-view__override-line">
+              {{ t('grades.override.computed', { value: formatPct(g.score) }) }}
+              <span class="grade-view__dot">·</span>
+              <span>{{ t('grades.override.at', { time: formatDateTime(override.at) }) }}</span>
+            </p>
+            <p v-if="override.by_member_id" class="grade-view__override-line">
+              {{ t('grades.override.by', { name: course.memberName(override.by_member_id) ?? '' }) }}
+            </p>
+            <p v-if="override.reason" class="grade-view__override-line">
+              {{ t('grades.override.why', { reason: override.reason }) }}
+            </p>
+          </div>
+          <div v-else class="grade-view__score">
             <ScoreText :score="g.score" :out-of="outOf" :as-percent="isComputed" size="large" hide-percent />
             <div v-if="!isComputed && outOf !== null" class="grade-view__pct">{{ percentOf(g.score, outOf) }}</div>
           </div>
@@ -400,6 +454,19 @@ const backLink = computed(() => ({
           </div>
         </section>
 
+        <section v-if="isComputed && (g.feedback || canTouchTotal)" class="app-card">
+          <h2 class="app-card__title">{{ t('grades.override.commentLabel') }}</h2>
+          <MarkdownView :source="g.feedback" :empty="t('grades.detail.noFeedback')" />
+          <div v-if="files.length" class="grade-view__files">
+            <h3 class="grade-view__files-title">{{ t('grades.form.feedbackFiles') }}</h3>
+            <ul>
+              <li v-for="f in files" :key="f.document_id">
+                <DocumentFileLink :course-id="courseId" :document-id="f.document_id" :title="f.title" />
+              </li>
+            </ul>
+          </div>
+        </section>
+
         <section v-if="breakdown" class="app-card">
           <h2 class="app-card__title">{{ t('grades.breakdown.title') }}</h2>
           <BreakdownTable :items="breakdown" :score="g.score" />
@@ -494,6 +561,15 @@ const backLink = computed(() => ({
   align-items: baseline;
   gap: 16px;
   flex-wrap: wrap;
+}
+.grade-view__override-line {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  word-break: break-word;
+}
+.grade-view__dot {
+  margin: 0 6px;
 }
 .grade-view__pct {
   font-size: 20px;

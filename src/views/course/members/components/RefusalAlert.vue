@@ -5,15 +5,24 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
-import { errorMessage } from '@/composables/useErrors'
+import { errorMessage, scopedReasonMessage } from '@/composables/useErrors'
 import { explainRefusal } from './seat'
 import { shortId } from '@/utils/format'
 
-const props = defineProps<{ error: ApiError | null }>()
+const props = withDefaults(
+  defineProps<{
+    error: ApiError | null
+    /** Where the words for Core's reasons are, asked before anything else (details.reason). */
+    reasons?: string[]
+  }>(),
+  { reasons: () => ['members.refusal.reason'] },
+)
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 
-const explained = computed(() => (props.error ? explainRefusal(props.error) : null))
+const explained = computed(() =>
+  props.error ? (scopedReasonMessage(props.error, { reasons: props.reasons }) ?? explainRefusal(props.error)) : null,
+)
 const title = computed(() => {
   if (!props.error) return ''
   return explained.value ?? errorMessage(props.error)

@@ -266,8 +266,11 @@ export function addGrades(f: GradeFacts, grades: GradeSummary[] | null | undefin
   }
 }
 
-/** component.update: a directly graded component's points no longer change. */
-export function pointsFrozen(n: SchemeNode, f: GradeFacts | null): boolean {
+/**
+ * component.update: a directly graded component has grades entered on it, so
+ * a change of its points says what becomes of them (existing_grades).
+ */
+export function gradedOn(n: SchemeNode, f: GradeFacts | null): boolean {
   return !!f && n.kind === 'direct' && f.liveEnteredOnComponent.has(n.id)
 }
 
@@ -281,8 +284,12 @@ export function directBlocked(n: SchemeNode, f: GradeFacts | null): boolean {
   return !!f && n.kind !== 'direct' && f.livePostedOnComponent.has(n.id)
 }
 
-/** component.move: a grade has been entered somewhere beneath it. */
-export function placementFrozen(n: SchemeNode, f: GradeFacts | null): boolean {
+/**
+ * component.move: a grade has been entered somewhere beneath it, so moving it
+ * writes again the posted totals it changes, and needs a reach over every
+ * student with one.
+ */
+export function gradedBeneath(n: SchemeNode, f: GradeFacts | null): boolean {
   if (!f) return false
   return subtree(n).some(
     (x) => f.liveEnteredOnComponent.has(x.id) || x.assignments.some((a) => f.liveEnteredOnAssignment.has(a.a.id)),

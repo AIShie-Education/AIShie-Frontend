@@ -113,7 +113,10 @@ function onProposed(info: { title: string; publish: boolean }) {
                 </span>
               </div>
               <div class="material-row__tags">
-                <el-tag v-if="d.status === 'archived'" type="info" size="small" disable-transitions>
+                <el-tag v-if="d.purged_at" type="danger" size="small" disable-transitions>
+                  {{ t('materials.purged') }}
+                </el-tag>
+                <el-tag v-else-if="d.status === 'archived'" type="info" size="small" disable-transitions>
                   {{ t('enums.documentStatus.archived') }}
                 </el-tag>
                 <!-- Only those who read drafts see anything that is not published. -->

@@ -43,7 +43,8 @@ export default {
     titlePlaceholder: 'e.g. HW3 — Recursion',
     points: 'Points possible',
     pointsInvalid: 'Enter a number, 0 or more',
-    pointsHint: 'Once any grade has been entered, the points and where it counts no longer change.',
+    pointsHint:
+      'Once grades have been entered, a change of points asks what becomes of them, and a change of either writes the totals it changes again.',
     due: 'Due',
     duePlaceholder: 'No due date',
     dueHint: 'Work handed in after the due date is marked late.',

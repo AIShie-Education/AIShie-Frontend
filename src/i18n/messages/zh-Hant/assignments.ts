@@ -43,7 +43,7 @@ export default {
     titlePlaceholder: '例如：HW3 — 遞迴',
     points: '滿分',
     pointsInvalid: '請輸入 0 或以上的數字',
-    pointsHint: '一旦有任何成績輸入，滿分及計分位置便不能再更改。',
+    pointsHint: '已有成績輸入後，更改滿分時會詢問這些成績應如何處理；更改滿分或計分位置都會重新記錄受影響的總分。',
     due: '截止時間',
     duePlaceholder: '不設截止時間',
     dueHint: '截止時間之後繳交的作業會被標示為遲交。',

@@ -2,22 +2,28 @@
 // Adds a component under a parent (component.create) or edits one
 // (component.update). Only what changed is sent on an edit. The rules Core
 // refuses by are shown here before the person tries, where the grades read so
-// far tell: points fixed once graded, a directly graded component that cannot
-// go back, a former parent that cannot become directly graded.
+// far tell: a directly graded component that cannot go back, a former parent
+// that cannot become directly graded. A change of the points of one graded
+// already says what becomes of its grades (existing_grades), explained in the
+// actual numbers.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import type { ToolIn } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
+import { useCourseStore } from '@/stores/course'
 import { isDecimal } from '@/utils/format'
+import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
+import { compareDecimals } from '@/views/course/grades/components/grading'
+import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
 import {
   childBlock,
   clearFrozen,
   directBlocked,
+  gradedOn,
   namedByCore,
   nodeName,
   pct,
-  pointsFrozen,
   shareWith,
   type GradeFacts,
   type Scheme,
@@ -40,6 +46,7 @@ const emit = defineEmits<{
   refused: []
 }>()
 const { t } = useI18n()
+const course = useCourseStore()
 /** A node's name as shown: the root still named by Core, in the reader's words. */
 const nameOf = (n: SchemeNode) => nodeName(n, t('scheme.rootName'))
 
@@ -127,7 +134,10 @@ watch(visible, (open) => {
       sortOrder: c.sort_order,
     })
   }
+  existing.value = ''
+  coreAsked.value = false
   formRef.value?.clearValidate()
+  void loadGraded()
 })
 
 watch(
@@ -147,15 +157,57 @@ const typeChoosable = computed(() => {
 const directCaution = computed(() => editing.value?.kind === 'unseen' && form.type === 'direct')
 const rolledBlocked = computed(() => !!editing.value && clearFrozen(editing.value, props.facts))
 const directBlockedNow = computed(() => !!editing.value && directBlocked(editing.value, props.facts))
-const pointsLocked = computed(
-  () => !!editing.value && wasDirect.value && form.type === 'direct' && pointsFrozen(editing.value, props.facts),
+// --- What becomes of grades already entered when the points change -------------
+/** The live entered scores on it, where the caller may read them; null while not known. */
+const graded = ref<string[] | null>(null)
+/** Core said grades have been entered (existing_grades_required) where the page could not see them. */
+const coreAsked = ref(false)
+const existing = ref<ExistingGrades | ''>('')
+let gradedFor = 0
+async function loadGraded() {
+  const n = ++gradedFor
+  graded.value = null
+  const node = editing.value
+  if (!node || !wasDirect.value || !course.can('grade_read')) return
+  try {
+    const scores = await enteredScores(props.courseId, { componentId: node.id })
+    if (n === gradedFor) graded.value = scores
+  } catch {
+    /* not readable: the page's facts, or Core when saving, say whether there are grades */
+  }
+}
+const oldPoints = computed(() => {
+  const p = editing.value?.c.points_possible
+  return p === null || p === undefined ? null : p
+})
+const pointsChanged = computed(
+  () =>
+    !!editing.value &&
+    wasDirect.value &&
+    form.type === 'direct' &&
+    oldPoints.value !== null &&
+    isDecimal(form.points) &&
+    compareDecimals(form.points.trim(), oldPoints.value) !== 0,
 )
-// Found frozen after the dialog opened (a refusal made the page read again):
-// show what the points are, not what was typed.
+const hasGrades = computed(
+  () => (graded.value?.length ?? 0) > 0 || coreAsked.value || (!!editing.value && gradedOn(editing.value, props.facts)),
+)
+/** Changing the points of graded work changes its grades too, which takes grading and posting as well. */
+const pointsLocked = computed(
+  () =>
+    !!editing.value &&
+    wasDirect.value &&
+    form.type === 'direct' &&
+    hasGrades.value &&
+    !course.canAll(['grade_submit', 'grade_post']),
+)
+const askExisting = computed(() => pointsChanged.value && hasGrades.value && !pointsLocked.value)
+/** Saving was pressed without saying what becomes of the grades. */
+const existingMissing = ref(false)
+watch([() => form.points, existing], () => (existingMissing.value = false))
+// Found locked after the dialog opened: show what the points are, not what was typed.
 watch(pointsLocked, (locked) => {
-  const c = editing.value?.c
-  if (locked && c && c.points_possible !== null && c.points_possible !== undefined)
-    form.points = String(c.points_possible)
+  if (locked && oldPoints.value !== null) form.points = String(oldPoints.value)
 })
 watch(rolledBlocked, (blocked) => {
   if (blocked && wasDirect.value) form.type = 'direct'
@@ -225,7 +277,9 @@ const rules = computed<FormRules>(() => ({
 
 async function submit() {
   const ok = await formRef.value?.validate().catch(() => false)
-  if (!ok) return
+  // What becomes of the grades is asked for before anything is sent.
+  existingMissing.value = askExisting.value && !existing.value
+  if (!ok || existingMissing.value) return
   const out = props.mode === 'create' ? await submitCreate() : await submitUpdate()
   if (out === 'unchanged') {
     ElMessage({ type: 'info', message: t('scheme.form.nothingChanged') })
@@ -234,6 +288,11 @@ async function submit() {
   }
   if (!out) {
     const err = props.mode === 'create' ? create.lastError.value : update.lastError.value
+    // Grades were entered that the page could not see: ask what becomes of them.
+    if (err?.details?.reason === 'existing_grades_required') {
+      coreAsked.value = true
+      void loadGraded()
+    }
     if (err && (err.code === 'failed_precondition' || err.code === 'conflict')) emit('refused')
     return
   }
@@ -285,11 +344,23 @@ async function submitUpdate(): Promise<'executed' | 'proposed' | 'unchanged' | n
   } else if (form.type === 'direct' && !pointsLocked.value) {
     if (!wasDirect.value || Number(form.points) !== Number(c.points_possible)) {
       args.points_possible = form.points.trim()
+      if (askExisting.value && existing.value) args.existing_grades = existing.value
       changed = true
     }
   }
   if (!changed) return 'unchanged'
-  const out = await update.run(args, { success: t('scheme.outcome.updated') })
+  const out = await update.run(args, { success: false, reasons: 'grades.pointsChange.refusal' })
+  if (out?.status === 'executed' && !out.replayed) {
+    const { rescaled, snapshots } = out.result
+    ElMessage({
+      type: 'success',
+      message: rescaled
+        ? t('scheme.outcome.updatedRescaled', { r: rescaled, n: snapshots })
+        : snapshots
+          ? t('scheme.outcome.updatedTotals', { n: snapshots })
+          : t('scheme.outcome.updated'),
+    })
+  }
   return out?.status ?? null
 }
 
@@ -381,8 +452,22 @@ const title = computed(() =>
       <el-form-item v-if="form.type === 'direct'" :label="t('scheme.form.points')" prop="points">
         <el-input v-model="form.points" inputmode="decimal" :disabled="pointsLocked" class="cd-short" />
         <div v-if="pointsLocked" class="app-form-hint cd-lock">
-          <el-icon><Lock /></el-icon>{{ t('scheme.form.pointsFrozen') }}
+          <el-icon><Lock /></el-icon>{{ t('grades.pointsChange.locked') }}
         </div>
+      </el-form-item>
+
+      <el-form-item
+        v-if="askExisting && oldPoints !== null"
+        :error="existingMissing ? t('grades.pointsChange.required') : ''"
+      >
+        <ExistingGradesChoice
+          v-model="existing"
+          :scores="graded"
+          :from="oldPoints"
+          :to="form.points.trim()"
+          :needs-approval="course.needsApprovalAll(['assignment_write', 'grade_submit', 'grade_post'])"
+          :disabled="pending"
+        />
       </el-form-item>
 
       <el-form-item v-if="showWeight" :label="t('scheme.form.weight')" prop="weight">
@@ -413,7 +498,7 @@ const title = computed(() =>
       </div>
 
       <el-alert
-        v-if="mode === 'edit'"
+        v-if="mode === 'edit' && !askExisting"
         type="info"
         :closable="false"
         :title="t('scheme.form.notRewritten')"

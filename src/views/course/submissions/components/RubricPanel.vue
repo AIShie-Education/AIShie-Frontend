@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
 import DocumentFileLink from '@/components/DocumentFileLink.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
+import Tombstone from '@/views/course/materials/components/Tombstone.vue'
 import type { RubricState } from './rubric'
 
 const props = defineProps<{ courseId: string; state?: RubricState; loading?: boolean; error?: ApiError | null }>()
@@ -15,7 +16,9 @@ const doc = computed(() =>
   props.state?.status === 'published' || props.state?.status === 'unpublished' ? props.state.doc : null,
 )
 const version = computed(() => doc.value?.version ?? null)
-const hasFile = computed(() => !!version.value && (!!version.value.download_url || !!version.value.content_type))
+const hasFile = computed(
+  () => !!version.value && !version.value.purged && (!!version.value.download_url || !!version.value.content_type),
+)
 
 const note = computed(() => {
   if (props.error) return t('submissions.rubric.unavailable')
@@ -49,7 +52,8 @@ const note = computed(() => {
     <p v-if="note" class="rubric-panel__note" :class="{ 'is-warning': state?.status === 'unpublished' || !!error }">
       {{ note }}
     </p>
-    <template v-if="version">
+    <Tombstone v-if="version?.purged" :purge="version.purged" of="version" />
+    <template v-else-if="version">
       <div class="rubric-panel__body">
         <MarkdownView
           v-if="version.body_md || !hasFile"

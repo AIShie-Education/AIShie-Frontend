@@ -10,8 +10,8 @@ import {
   childBlock,
   nodeName,
   pct,
-  placementFrozen,
-  pointsFrozen,
+  gradedBeneath,
+  gradedOn,
   type GradeFacts,
   type Scheme,
   type SchemeAssignment,
@@ -83,10 +83,11 @@ const TAGS: Record<string, 'primary' | 'success' | 'warning' | 'info'> = {
 }
 const kindOf = (n: SchemeNode) => (n.isRoot ? 'root' : n.kind)
 
-function frozenText(n: SchemeNode): string | null {
+/** What a change here does to grades already entered, where some are. */
+function gradedText(n: SchemeNode): string | null {
   const parts: string[] = []
-  if (!n.isRoot && placementFrozen(n, props.facts)) parts.push(t('scheme.tree.frozen.placement'))
-  if (pointsFrozen(n, props.facts)) parts.push(t('scheme.tree.frozen.points'))
+  if (!n.isRoot && gradedBeneath(n, props.facts)) parts.push(t('scheme.tree.graded.placement'))
+  if (gradedOn(n, props.facts)) parts.push(t('scheme.tree.graded.points'))
   return parts.length ? parts.join(' ') : null
 }
 
@@ -99,8 +100,7 @@ function addCautionText(n: SchemeNode): string | null {
   return n.kind === 'unseen' ? t('scheme.reasons.unseen', { name: nameOf(n) }) : null
 }
 function moveBlockText(n: SchemeNode): string | null {
-  if (n.isRoot) return t('scheme.reasons.root')
-  return placementFrozen(n, props.facts) ? t('scheme.tree.frozen.placement') : null
+  return n.isRoot ? t('scheme.reasons.root') : null
 }
 
 function onCommand(n: SchemeNode, cmd: string | number | object) {
@@ -185,8 +185,8 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
                 {{ t(`scheme.tree.kind.${kindOf(row.node)}`) }}
               </el-tag>
             </el-tooltip>
-            <el-tooltip v-if="frozenText(row.node)" :content="frozenText(row.node)!" placement="top">
-              <el-icon class="st-lock" :aria-label="frozenText(row.node)!"><Lock /></el-icon>
+            <el-tooltip v-if="gradedText(row.node)" :content="gradedText(row.node)!" placement="top">
+              <el-icon class="st-lock" :aria-label="gradedText(row.node)!"><Warning /></el-icon>
             </el-tooltip>
           </span>
         </div>

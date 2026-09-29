@@ -1,13 +1,26 @@
 <script setup lang="ts">
-// The course's own description (course.get, held by the course store).
+// The course's own description (course.get, held by the course store), and
+// for its instructors — whoever manages its members — changing its title and
+// description (course.update_details).
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useCourseStore } from '@/stores/course'
 import MarkdownView from '@/components/MarkdownView.vue'
 import TimeText from '@/components/TimeText.vue'
+import EditDetailsDialog from './EditDetailsDialog.vue'
 
 const course = useCourseStore()
 const { t } = useI18n()
+
+const canEdit = computed(() => course.can('member_manage'))
+const editing = ref(false)
+async function onEdited(status: 'executed' | 'proposed') {
+  if (status === 'executed' && course.courseId) await course.open(course.courseId, true)
+}
+// The way to the course's administration page, where its code, section,
+// term and department change: for whoever administers it.
+const administers = useAdministersCourse()
 
 const description = computed(() => course.course?.description?.trim() ?? '')
 // A long description is folded, so that what needs doing is not pushed down.
@@ -17,7 +30,16 @@ const expanded = ref(false)
 
 <template>
   <section class="app-card about">
-    <h2 class="app-card__title">{{ t('overview.about.title') }}</h2>
+    <h2 class="app-card__title">
+      <span>{{ t('overview.about.title') }}</span>
+      <el-tooltip v-if="canEdit" :content="t('common.archivedCourse')" :disabled="course.writable" placement="top">
+        <span>
+          <el-button size="small" :disabled="!course.writable" @click="editing = true">
+            <el-icon><Edit /></el-icon><span>{{ t('overview.details.edit') }}</span>
+          </el-button>
+        </span>
+      </el-tooltip>
+    </h2>
     <el-alert
       v-if="course.course?.status === 'draft'"
       type="info"
@@ -36,6 +58,13 @@ const expanded = ref(false)
       {{ t('overview.about.created') }}
       <TimeText :value="course.course.created_at" />
     </p>
+    <EditDetailsDialog
+      v-if="canEdit && course.course"
+      v-model="editing"
+      :course="course.course"
+      :administers="administers"
+      @done="onEdited"
+    />
   </section>
 </template>
 

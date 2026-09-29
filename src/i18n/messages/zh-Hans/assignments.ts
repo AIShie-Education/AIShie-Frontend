@@ -43,7 +43,7 @@ export default {
     titlePlaceholder: '例如：HW3 — 递归',
     points: '满分',
     pointsInvalid: '请输入 0 或以上的数字',
-    pointsHint: '一旦有任何成绩输入，满分及计分位置便不能再更改。',
+    pointsHint: '已有成绩输入后，更改满分时会询问这些成绩应如何处理；更改满分或计分位置都会重新记录受影响的总分。',
     due: '截止时间',
     duePlaceholder: '不设截止时间',
     dueHint: '截止时间之后提交的作业会被标记为迟交。',

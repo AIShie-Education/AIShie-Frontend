@@ -162,3 +162,75 @@ describe('EventItem, a decision by the owner of the agent that made it', () => {
     w.unmount()
   })
 })
+
+describe('EventItem, the flexible records', () => {
+  const ev = (type: string, subject_type: string, payload: Record<string, unknown>, over: Partial<CourseEvent> = {}) =>
+    ({
+      seq: 3,
+      type,
+      occurred_at: '2026-09-28T10:00:00Z',
+      subject_type,
+      subject_id: 'x1',
+      payload,
+      ...over,
+    }) as CourseEvent
+
+  it('says a roster role changed, from and to', async () => {
+    const w = mountItem(ev('member.role_changed', 'course_member', { from: 'student', to: 'ta' }))
+    await flushPromises()
+    expect(w.text()).toContain('Roster role changed')
+    expect(w.text()).toContain('Student → Teaching assistant')
+    w.unmount()
+  })
+
+  it('says what of the course changed', async () => {
+    const w = mountItem(ev('course.updated', 'course', { fields: ['title', 'description'] }))
+    await flushPromises()
+    expect(w.text()).toContain('Title changed')
+    expect(w.text()).toContain('Description changed')
+    w.unmount()
+  })
+
+  it('says a change of points after grading rescaled them, and how many', async () => {
+    const w = mountItem(
+      ev('assignment.updated', 'assignment', { points_changed: true, existing_grades: 'rescale', rescaled: 3 }),
+    )
+    await flushPromises()
+    expect(w.text()).toContain('Points changed')
+    expect(w.text()).toContain('Grades rescaled: 3')
+    w.unmount()
+  })
+
+  it('says a document was renamed, brought back or purged', async () => {
+    let w = mountItem(ev('document.updated', 'document', { kind: 'material', title_changed: true }))
+    await flushPromises()
+    expect(w.text()).toContain('Renamed')
+    w.unmount()
+    w = mountItem(ev('document.purged', 'document', { kind: 'material', versions: 2 }))
+    await flushPromises()
+    expect(w.text()).toContain('Document purged')
+    expect(w.text()).toContain('The whole document purged (2 versions)')
+    w.unmount()
+    w = mountItem(ev('document.purged', 'document', { kind: 'material', versions: 1, version_id: 'v1' }))
+    await flushPromises()
+    expect(w.text()).toContain('One version purged')
+    w.unmount()
+  })
+
+  it('names what became of a total, and final grades undone, in Chinese too', async () => {
+    const e = ev('grade.total_overridden', 'grade', { component_id: 'c1' }, { student_member_id: 's1' })
+    let w = mountItem(e)
+    await flushPromises()
+    expect(w.text()).toContain('Total overridden')
+    w.unmount()
+    setLocale('zh-Hant')
+    w = mountItem(ev('grade.total_override_cleared', 'grade', { component_id: 'c1' }, { student_member_id: 's1' }))
+    await flushPromises()
+    expect(w.text()).toContain('取消總分覆寫')
+    w.unmount()
+    w = mountItem(ev('grade.ungraded_as_zero_undone', 'gradebook', {}, { subject_id: 's1', student_member_id: 's1' }))
+    await flushPromises()
+    expect(w.text()).toContain('撤回最終成績')
+    w.unmount()
+  })
+})

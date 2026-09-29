@@ -6,7 +6,12 @@
 // version to anyone who cannot read drafts, the latest to those who can, or a
 // version named in ?version=. Readers of drafts also get the version history
 // (document.versions), and writers add versions, publish any of them (which
-// only moves the pointer) and archive the document.
+// only moves the pointer), rename it or move it in its list (document.update),
+// archive it and bring it back (document.unarchive). An administrator of the
+// course purges a version, or the whole document, uploaded by mistake
+// (document.purge), for material, instructions and rubrics only; what was
+// purged shows its tombstone — who purged it, when and why — instead of its
+// content or a download.
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
@@ -14,6 +19,7 @@ import { ElMessageBox } from 'element-plus'
 import { read, type UploadKind } from '@/api/http'
 import type { AssignmentSummary, DocumentVersion } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useCourseTab } from '@/composables/useCourseTab'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -25,7 +31,10 @@ import MemberName from '@/components/MemberName.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import DocumentDetailsDialog from './components/DocumentDetailsDialog.vue'
 import PendingAlert from './components/PendingAlert.vue'
+import PurgeDialog from './components/PurgeDialog.vue'
+import Tombstone from './components/Tombstone.vue'
 import VersionDialog from './components/VersionDialog.vue'
 import VersionHistory from './components/VersionHistory.vue'
 
@@ -181,7 +190,15 @@ const showAuthor = computed(
   () => !!shown.value && (course.can('member_read') || shown.value.author_member_id === course.myMemberId),
 )
 
-const hasFile = computed(() => !!shown.value && (!!shown.value.download_url || !!shown.value.content_type))
+// What was purged: the whole document, or the version on screen. Its text and
+// file are gone; what is left says who removed them, when and why.
+const docPurge = computed(() => doc.value?.purged ?? null)
+const versionPurge = computed(() => shown.value?.purged ?? null)
+const purged = computed(() => !!doc.value?.purged_at || !!docPurge.value)
+
+const hasFile = computed(
+  () => !!shown.value && !shown.value.purged && (!!shown.value.download_url || !!shown.value.content_type),
+)
 // "sha256:44c38a…" shown as "sha256 44c38a1b2c3d".
 const checksumShort = computed(() => {
   const c = shown.value?.checksum
@@ -192,6 +209,12 @@ const checksumShort = computed(() => {
 
 // Writing: material, instructions and rubrics are written with document_write.
 const canWrite = computed(() => courseLevel.value && course.can('document_write'))
+// Purging is an administrator's, of material, instructions and rubrics alone,
+// and works in an archived course too.
+const administers = useAdministersCourse()
+const canPurge = computed(() => courseLevel.value && administers.value && !purged.value)
+/** Bringing an archived document back is for whoever may archive it; a purged one stays archived. */
+const canUnarchive = computed(() => canWrite.value && doc.value?.status === 'archived' && !purged.value)
 const writeDisabled = computed(() => !course.writable || !active.value)
 const needsApproval = computed(() => course.needsApproval('document_write'))
 
@@ -252,7 +275,6 @@ async function archive() {
         t('materials.document.archive.body'),
         !!owner.value && t('materials.document.archive.usedBy', { assignment: owner.value.title }),
         needsApproval.value && t('materials.document.approvalNote'),
-        t('common.confirm.irreversible'),
       ]),
       t('materials.document.archive.title', { title: d.title }),
       {
@@ -274,6 +296,60 @@ async function archive() {
     pendingNote.value = t('materials.document.archive.pending')
     return
   }
+  pendingNote.value = null
+  reloadAll()
+}
+
+// --- What it is called, and where it is listed -------------------------------
+const detailsOpen = ref(false)
+function onDetails(status: 'executed' | 'proposed') {
+  if (status === 'proposed') {
+    pendingNote.value = t('materials.document.details.pending')
+    return
+  }
+  pendingNote.value = null
+  reloadAll()
+}
+
+// --- Bringing it back from the archive -----------------------------------------
+const unarchiver = useWrite('document.unarchive')
+async function unarchive() {
+  const d = doc.value
+  if (!d) return
+  try {
+    await ElMessageBox.confirm(
+      lines([t('materials.document.unarchive.body'), needsApproval.value && t('materials.document.approvalNote')]),
+      t('materials.document.unarchive.title', { title: d.title }),
+      {
+        type: 'info',
+        confirmButtonText: t('materials.document.actions.unarchive'),
+        cancelButtonText: t('common.actions.cancel'),
+      },
+    )
+  } catch {
+    return
+  }
+  const out = await unarchiver.run(
+    { course_id: props.courseId, document_id: d.id },
+    { success: t('materials.document.unarchive.done'), reasons: 'materials.refusal' },
+  )
+  if (!out) return
+  if (out.status === 'proposed') {
+    pendingNote.value = t('materials.document.unarchive.pending')
+    return
+  }
+  pendingNote.value = null
+  reloadAll()
+}
+
+// --- Purging ---------------------------------------------------------------------
+const purgeOpen = ref(false)
+const purgeVersion = ref<{ id: string; seq: number } | null>(null)
+function openPurge(v: { id: string; seq: number } | null) {
+  purgeVersion.value = v
+  purgeOpen.value = true
+}
+function onPurged() {
   pendingNote.value = null
   reloadAll()
 }
@@ -303,27 +379,57 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
           {{ t('materials.document.notPublished') }}
         </el-tag>
       </template>
-      <template v-if="doc && canWrite && active" #default>
-        <el-button type="primary" :disabled="writeDisabled" @click="editing = true">
-          <el-icon><EditPen /></el-icon>
-          <span>{{ t('materials.document.actions.newVersion') }}</span>
+      <template v-if="doc && (canWrite || canPurge)" #default>
+        <template v-if="canWrite && active">
+          <el-button type="primary" :disabled="writeDisabled" @click="editing = true">
+            <el-icon><EditPen /></el-icon>
+            <span>{{ t('materials.document.actions.newVersion') }}</span>
+          </el-button>
+          <el-button
+            v-if="shown && !shown.published && !shown.purged"
+            :disabled="writeDisabled"
+            :loading="publisher.pending.value"
+            @click="publishVersion(shown)"
+          >
+            <el-icon><Promotion /></el-icon>
+            <span>{{ t('materials.document.actions.publishThis') }}</span>
+          </el-button>
+        </template>
+        <el-button v-if="canWrite" :disabled="!course.writable" @click="detailsOpen = true">
+          <el-icon><Edit /></el-icon>
+          <span>{{ t('materials.document.actions.details') }}</span>
         </el-button>
         <el-button
-          v-if="shown && !shown.published"
+          v-if="canWrite && active"
+          type="danger"
+          plain
           :disabled="writeDisabled"
-          :loading="publisher.pending.value"
-          @click="publishVersion(shown)"
+          :loading="archiver.pending.value"
+          @click="archive"
         >
-          <el-icon><Promotion /></el-icon>
-          <span>{{ t('materials.document.actions.publishThis') }}</span>
-        </el-button>
-        <el-button type="danger" plain :disabled="writeDisabled" :loading="archiver.pending.value" @click="archive">
           <el-icon><FolderRemove /></el-icon>
           <span>{{ t('materials.document.actions.archive') }}</span>
         </el-button>
-        <el-tag v-if="needsApproval" type="warning" class="doc-view__approval" disable-transitions>
+        <el-button
+          v-if="canUnarchive"
+          type="primary"
+          plain
+          :disabled="!course.writable"
+          :loading="unarchiver.pending.value"
+          @click="unarchive"
+        >
+          <el-icon><RefreshLeft /></el-icon>
+          <span>{{ t('materials.document.actions.unarchive') }}</span>
+        </el-button>
+        <el-tag v-if="canWrite && needsApproval" type="warning" class="doc-view__approval" disable-transitions>
           {{ t('enums.level.confirm_required') }}
         </el-tag>
+        <el-tooltip v-if="canPurge" :content="t('materials.document.purge.adminOnly')" placement="bottom">
+          <el-button type="danger" @click="openPurge(null)">
+            <el-icon><Delete /></el-icon>
+            <span>{{ t('materials.document.actions.purge') }}</span>
+          </el-button>
+        </el-tooltip>
       </template>
     </PageHeader>
 
@@ -336,8 +442,9 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
       @retry="docState.reload"
     >
       <template v-if="doc">
+        <Tombstone v-if="docPurge" :purge="docPurge" of="document" class="doc-view__alert" />
         <el-alert
-          v-if="doc.status !== 'active' && courseLevel"
+          v-else-if="doc.status !== 'active' && courseLevel"
           type="info"
           :closable="false"
           show-icon
@@ -373,6 +480,9 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
                   <!-- An owned file has exactly one version, and nothing to publish. -->
                   <template v-if="courseLevel">
                     <span class="doc-content__seq">{{ t('materials.document.version', { seq: shown.seq }) }}</span>
+                    <el-tag v-if="shown.purged" type="danger" size="small" effect="dark" disable-transitions>
+                      {{ t('materials.document.tombstone.tag') }}
+                    </el-tag>
                     <el-tag v-if="shown.published" type="success" size="small" disable-transitions>
                       {{ t('materials.document.published') }}
                     </el-tag>
@@ -383,6 +493,16 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
                       {{ t('materials.document.latest') }}
                     </el-tag>
                   </template>
+                  <el-button
+                    v-if="canPurge && courseLevel && !shown.purged"
+                    link
+                    type="danger"
+                    size="small"
+                    class="doc-content__purge"
+                    @click="openPurge(shown)"
+                  >
+                    <el-icon><Delete /></el-icon><span>{{ t('materials.document.purge.version') }}</span>
+                  </el-button>
                   <span class="doc-content__by">
                     <template v-if="showAuthor">
                       <MemberName :id="shown.author_member_id" />
@@ -391,6 +511,8 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
                     <TimeText :value="shown.created_at" />
                   </span>
                 </div>
+
+                <Tombstone v-if="versionPurge && !docPurge" :purge="versionPurge" of="version" />
 
                 <div v-if="hasFile" class="doc-file">
                   <el-icon class="doc-file__icon"><Document /></el-icon>
@@ -413,7 +535,7 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
                   </div>
                 </div>
 
-                <div class="doc-content__body">
+                <div v-if="!versionPurge" class="doc-content__body">
                   <MarkdownView
                     :source="shown.body_md"
                     :empty="hasFile ? t('materials.document.noText') : t('common.labels.empty')"
@@ -445,7 +567,9 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
                 :latest-id="latest?.id ?? null"
                 :can-publish="canWrite && active"
                 :publish-disabled="writeDisabled || publisher.pending.value"
+                :can-purge="canPurge"
                 @publish="publishVersion"
+                @purge="openPurge"
                 @retry="versionsState.reload"
               />
             </section>
@@ -504,6 +628,22 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
       <el-button @click="showCurrent">{{ t('materials.document.showCurrent') }}</el-button>
     </div>
 
+    <DocumentDetailsDialog
+      v-if="doc && canWrite"
+      v-model="detailsOpen"
+      :course-id="courseId"
+      :doc="doc"
+      @done="onDetails"
+    />
+    <PurgeDialog
+      v-if="doc && canPurge"
+      v-model="purgeOpen"
+      :course-id="courseId"
+      :document-id="doc.id"
+      :title="doc.title"
+      :version="purgeVersion"
+      @done="onPurged"
+    />
     <VersionDialog
       v-if="doc && canWrite"
       v-model="editing"

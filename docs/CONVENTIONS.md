@@ -34,6 +34,12 @@ markdown-it + DOMPurify.
     Never assume a created id exists after a proposal; close the dialog, reload, and let the person
     see it in "My actions" (`course-my-actions`).
   - `null` — denied, failed, or never attempted; already shown to the person.
+
+  A page with words of its own for Core's refusals by reason (`details.reason`) keeps them in a tree
+  of its namespace and names it: `run(args, { reasons: 'grades.override.refusal' })`, and
+  `errorMessage(e, { reasons })` or `<RefusalAlert :reasons>` where it says them itself. Scopes are
+  asked first, so a reason two tools share (`not_a_person`) is said in the words of the page that
+  met it.
 - Use `write()` directly only outside components. Never call `fetch` yourself.
 - **Files**: bytes never go through a tool. `<FileUploader v-model="files" v-model:uploading="busy" :course-id :kind multiple />`
   uploads each picked file (`busy` is true while any is in flight: disable the submit button with it) (`document.upload_url` → PUT) and gives `UploadedFile[]`; hand each
@@ -133,7 +139,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   preset, a change to every seat of a role), send and let Core refuse: `errorMessage()` and
   `<RefusalAlert>` put its refusal in words ("{permission} can be at most {ceiling} here,
   because …", `ceilingRefusalText`).
-- `course.writable` is false in an archived course: disable every write control there.
+- `course.writable` is false in an archived course: disable every write control there. (Purging a
+  document, an administrator's, is the one write offered there too.)
+- What only an administrator of the course does from inside it (purging what was uploaded by
+  mistake) is offered by `useAdministersCourse()` (`@/composables/useAdministersCourse`): a platform
+  administrator, or one of the course's department or one above it.
 - Reads that are refused (403) are shown by `<AsyncState>` as "no permission", not as a failure.
 - Permission names and which tool needs which are in Core's `docs/schema.md` §2.2. A few borrow:
   the grading scheme is written with `assignment_write` and read with `grade_read`; reading the

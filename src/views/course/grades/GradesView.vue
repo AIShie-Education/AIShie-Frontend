@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Grades in the course (grade.list). Members who grade see drafts and
 // superseded grades too, post drafts (grade.post) and enter grades on
-// directly graded components (grade.submit); everyone else — a student —
+// directly graded components (grade.submit), and undo final grades
+// (grade.undo_ungraded_as_zero); everyone else — a student —
 // sees their own posted grades and nothing else. A seat that enters grades
 // without reading them (the built-in grader agent) is told where its work is.
 //
@@ -28,6 +29,7 @@ import EnterComponentGradeDialog from './components/EnterComponentGradeDialog.vu
 import PostGradesDialog from './components/PostGradesDialog.vue'
 import ProposalNotice from './components/ProposalNotice.vue'
 import ScoreText from './components/ScoreText.vue'
+import UndoFinalDialog from './components/UndoFinalDialog.vue'
 import { useGradeLookups, type PostRow } from './components/grading'
 
 const props = defineProps<{ courseId: string }>()
@@ -222,6 +224,17 @@ async function onPosted(out: WriteOutcome<ToolOut<'grade.post'>>) {
   await paged.reload()
 }
 
+// Undoing final grades: posting's own undo, gated as posting as final is
+// (grade_post over the whole course), offered where posting is.
+const undoVisible = ref(false)
+const canUndoFinal = computed(() => canPost.value && spansAssignments.value)
+async function onUndone(status: 'executed' | 'proposed') {
+  postResult.value = null
+  proposal.value =
+    status === 'proposed' ? { title: t('common.outcome.proposedTitle'), body: t('common.outcome.proposed') } : null
+  await paged.reload()
+}
+
 // ---------------------------------------------------------------------------
 // Entering a grade on a directly graded component
 // ---------------------------------------------------------------------------
@@ -403,6 +416,23 @@ const gradebookLink = computed(() =>
         <el-tag v-if="course.needsApproval('grade_post')" type="warning" effect="plain">
           {{ t('enums.level.confirm_required') }}
         </el-tag>
+        <el-tooltip
+          :content="!spansAssignments ? t('grades.undoFinal.wholeCourse') : t('common.archivedCourse')"
+          :disabled="canUndoFinal && course.writable"
+          placement="top"
+        >
+          <span>
+            <el-button
+              type="warning"
+              plain
+              :disabled="!canUndoFinal || !course.writable"
+              class="grades-view__undo"
+              @click="undoVisible = true"
+            >
+              <el-icon><RefreshLeft /></el-icon><span>{{ t('grades.undoFinal.button') }}</span>
+            </el-button>
+          </span>
+        </el-tooltip>
         <span class="app-form-hint grades-view__post-hint">
           {{
             !assignment
@@ -546,6 +576,7 @@ const gradebookLink = computed(() =>
       </AsyncState>
     </section>
 
+    <UndoFinalDialog v-if="canPost" v-model="undoVisible" :course-id="courseId" @done="onUndone" />
     <PostGradesDialog
       v-model="postVisible"
       :course-id="courseId"

@@ -65,9 +65,9 @@ export default {
     unpublished: 'Not published',
     unpublishedHelp: 'Not counted until it is published: Core leaves unpublished work out of every total.',
     ignored: 'Counts toward nothing: its component has sub-components.',
-    frozen: {
-      placement: 'Grades have been entered beneath it: its place in the scheme no longer changes.',
-      points: 'Grades have been entered on it: its points possible no longer change.',
+    graded: {
+      placement: 'Grades have been entered beneath it: moving it writes again, at once, the posted totals it changes.',
+      points: 'Grades have been entered on it: a change of its points asks what becomes of them.',
     },
     checking: 'Checking where grades have already been entered…',
     partial:
@@ -117,7 +117,6 @@ export default {
       'The course total is worked out from what is beneath it. It has no weight of its own and is never graded directly.',
     rolledGroup: 'It has sub-components, so it is rolled up from them.',
     rolledBucket: 'It holds assignments, so it is rolled up from them.',
-    pointsFrozen: 'Grades have been entered on it, so its points possible no longer change.',
     clearFrozen: 'Grades have been entered on it, so it stays graded directly.',
     directBlocked:
       'It carries totals that were posted while it was rolled up. Add a new component for what is graded directly.',
@@ -136,11 +135,16 @@ export default {
     submit: 'Move',
     sharePreview: 'With its weight of {weight}, it will be {share} of “{parent}”.',
     noTarget: 'There is nowhere else it can go.',
+    graded:
+      'Grades have been entered beneath it. Moving it writes again, at once, every posted total it changes, where it was and where it goes, with history; so it needs a reach over every student who has one, over the whole course.',
   },
   outcome: {
     created: 'Component added',
     updated: 'Component saved',
     moved: 'Component moved',
+    movedTotals: 'Component moved: {n} totals written again.',
+    updatedTotals: 'Component saved: {n} totals written again.',
+    updatedRescaled: 'Component saved: {r} grades rescaled, {n} totals written again.',
     proposed: 'Your change to the scheme waits for approval. It is not part of the scheme until someone approves it.',
     viewMine: 'See my actions',
   },
@@ -156,8 +160,8 @@ export default {
     drop: 'Drop lowest leaves out that many of the lowest percentages beneath a component — never all of them.',
     ungraded:
       'Work that has no grade yet is left out and the rest is scaled up to fill its place, giving a “grade so far”. Final grades can count ungraded work as zero instead.',
-    frozen:
-      'Once a grade has been entered — a draft as much as a posted one — for an assignment or a directly graded component, its points possible and its place in the scheme no longer change.',
+    graded:
+      'Once a grade has been entered — a draft as much as a posted one — for an assignment or a directly graded component, a change of its points possible says what becomes of the grades, rescaled or kept as they are; and moving it writes the posted totals it changes again, at once.',
     posted:
       'Changing a weight or drop lowest does not rewrite totals students have already been shown; they are brought up to date when grades beneath them are next posted or regraded.',
   },

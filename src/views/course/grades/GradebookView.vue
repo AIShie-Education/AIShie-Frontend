@@ -5,16 +5,21 @@
 // when grades were posted (computed grades, from grade.list) are shown beside
 // it: those are what the student was shown, and they do not drift.
 // Percentages are Core's own, to two places, as the written-down totals are.
+// A total a person overrode shows the override beside the figure worked out,
+// with its comment; whoever may regrade over the whole course overrides a
+// total, takes an override off and comments on one here, and undoes final
+// grades for the student.
 //
 // A student sees their own; staff pick a student, whose id goes in the path.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { read, type ToolOut } from '@/api/http'
 import type { Decimal, GradeSummary, GradebookLine } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useNarrow } from '@/composables/useMediaQuery'
+import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isUuid, shortId } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
@@ -23,6 +28,8 @@ import MemberName from '@/components/MemberName.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TimeText from '@/components/TimeText.vue'
+import MarkdownView from '@/components/MarkdownView.vue'
+import TotalMenu from './components/TotalMenu.vue'
 import {
   formatPct,
   formatScore,
@@ -185,6 +192,8 @@ interface Row {
   fraction: Decimal | null
   /** Out of 100, to two places: Core's for a component, worked out alike for an assignment. */
   percent: string | null
+  /** A person's override of the total, out of 100, which counts in its place above it. */
+  overridePercent: string | null
   complete: boolean
   /** The child's weight, or the assignment's points, as the parent weighs it. */
   weight: Decimal | null
@@ -234,6 +243,7 @@ const tree = computed<Row[]>(() => {
           name: course.assignmentTitle(it.id),
           fraction: it.fraction,
           percent: graded ? fractionPercent(it.fraction) : null,
+          overridePercent: null,
           complete: graded,
           weight: it.weight,
           share: sh,
@@ -252,6 +262,8 @@ const tree = computed<Row[]>(() => {
       name: isRoot ? t('grades.courseTotal') : line.name,
       fraction: line.fraction,
       percent: line.percent === null || line.percent === undefined ? null : formatPct(line.percent),
+      overridePercent:
+        line.override_percent === null || line.override_percent === undefined ? null : formatPct(line.override_percent),
       complete: line.complete,
       weight,
       share,
@@ -297,12 +309,76 @@ function openGrades(row: Row) {
   })
 }
 
+/** The gradebook's own line for a component row: the percentage worked out, as Core gives it. */
+function lineOf(row: Row): GradebookLine | undefined {
+  return row.kind === 'component' ? lines.value.find((l) => l.component_id === row.id) : undefined
+}
+
 function refresh() {
   void book.reload()
   void snapshots.reload()
 }
 
 const rootSnapshot = computed(() => (root.value ? snapshots.data.value?.get(root.value.component_id) : undefined))
+const rootRow = computed(() => tree.value[0])
+
+// ---------------------------------------------------------------------------
+// A person's say on a total: overrides and comments, and undoing final grades
+// ---------------------------------------------------------------------------
+
+/** A total spans every assignment: a seat listed to some reaches none (Core refuses it). */
+const spansAssignments = computed(() => course.membership?.assignment_scope !== 'listed')
+/** Overriding a total, or commenting on one, is a regrade: grade_submit and grade_post, over the whole course. */
+const grader = computed(
+  () => !mine.value && !isOwn.value && spansAssignments.value && course.canAll(['grade_submit', 'grade_post']),
+)
+/** The words for a total, as its menu and dialogs name it. */
+function totalName(row: Row): string {
+  return row.isRoot ? t('grades.courseTotal') : t('activity.subject.componentTotal', { name: row.name ?? '' })
+}
+/** Who made an override and why, where Core says (to those who grade). */
+function overrideDetail(g: GradeSummary | undefined): string {
+  const o = g?.override
+  if (!o) return ''
+  const parts: string[] = []
+  if (o.by_member_id) parts.push(t('grades.override.by', { name: course.memberName(o.by_member_id) ?? '' }))
+  if (o.reason) parts.push(t('grades.override.why', { reason: o.reason }))
+  return parts.join(' · ')
+}
+
+/** Undoing final grades (grade.undo_ungraded_as_zero) is posting's own undo: grade_post, over the whole course. */
+const canUndoFinal = computed(() => !mine.value && spansAssignments.value && course.can('grade_post'))
+const undoWrite = useWrite('grade.undo_ungraded_as_zero')
+async function undoFinal() {
+  const s = student.value
+  if (!s) return
+  try {
+    await ElMessageBox.confirm(
+      `${t('grades.undoFinal.confirmOne', { name: course.memberName(s) ?? t('grades.gradebook.studentShort', { id: shortId(s) }) })} ${t('grades.undoFinal.intro')}` +
+        (course.needsApproval('grade_post') ? ` ${t('grades.undoFinal.approvalNote')}` : ''),
+      t('grades.undoFinal.confirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('grades.undoFinal.confirmButton'),
+        cancelButtonText: t('common.actions.cancel'),
+      },
+    )
+  } catch {
+    return
+  }
+  const out = await undoWrite.run(
+    { course_id: props.courseId, student_member_id: s },
+    { success: false, reasons: 'grades.undoFinal.refusal' },
+  )
+  if (!out) return
+  if (out.status === 'executed' && !out.replayed) {
+    ElMessage({
+      type: 'success',
+      message: t('grades.undoFinal.done', { n: out.result.students, s: out.result.snapshots }, out.result.students),
+    })
+  }
+  refresh()
+}
 
 /** The student's totals were written as final: ungraded work counts as zero from then on. */
 const finalWritten = computed(
@@ -400,8 +476,11 @@ watch(
               {{ t('grades.courseTotal') }}
               <span v-if="!isOwn && !mine" class="gradebook__who"> · <MemberName :id="student" /></span>
             </div>
-            <div class="gradebook__total-value">
-              {{ formatPct(root.percent) }}
+            <div class="gradebook__total-value" :class="{ 'is-overridden': rootRow?.overridePercent }">
+              {{ rootRow?.overridePercent ?? formatPct(root.percent) }}
+            </div>
+            <div v-if="rootRow?.overridePercent" class="gradebook__computed">
+              {{ t('grades.override.computed', { value: formatPct(root.percent) }) }}
             </div>
             <div class="gradebook__total-tags">
               <el-tag v-if="root.fraction === null || root.fraction === undefined" type="info">
@@ -410,6 +489,28 @@ watch(
               <el-tag v-else-if="!root.complete" type="warning">{{ t('grades.gradebook.soFar') }}</el-tag>
               <el-tag v-else type="success">{{ t('grades.gradebook.complete') }}</el-tag>
               <el-tag v-if="shownWhatIf" type="danger" effect="plain">{{ t('grades.gradebook.whatIfTag') }}</el-tag>
+              <el-tooltip
+                v-if="rootRow?.overridePercent"
+                :content="overrideDetail(rootSnapshot)"
+                :disabled="!overrideDetail(rootSnapshot)"
+                placement="top"
+              >
+                <el-tag type="primary" effect="dark" class="gradebook__overridden" tabindex="0">
+                  {{ t('grades.override.overridden') }}
+                </el-tag>
+              </el-tooltip>
+            </div>
+            <div v-if="grader && rootRow" class="gradebook__total-actions">
+              <TotalMenu
+                :course-id="courseId"
+                :student-member-id="student"
+                :component-id="rootRow.id"
+                :what="totalName(rootRow)"
+                :computed-percent="root.percent"
+                :total="rootSnapshot ?? null"
+                size="default"
+                @changed="refresh"
+              />
             </div>
           </div>
           <div class="gradebook__total-side">
@@ -424,7 +525,36 @@ watch(
               :title="isOwn ? t('grades.gradebook.finalWrittenOwn') : t('grades.gradebook.finalWritten')"
               class="gradebook__final"
             >
-              <el-button size="small" @click="whatIf = true">{{ t('grades.gradebook.showFinal') }}</el-button>
+              <div class="gradebook__final-actions">
+                <el-button size="small" @click="whatIf = true">{{ t('grades.gradebook.showFinal') }}</el-button>
+                <el-tooltip
+                  v-if="canUndoFinal"
+                  :content="t('common.archivedCourse')"
+                  :disabled="course.writable"
+                  placement="top"
+                >
+                  <span>
+                    <el-button
+                      size="small"
+                      type="warning"
+                      plain
+                      :disabled="!course.writable"
+                      :loading="undoWrite.pending.value"
+                      @click="undoFinal"
+                    >
+                      <el-icon><RefreshLeft /></el-icon><span>{{ t('grades.undoFinal.one') }}</span>
+                    </el-button>
+                  </span>
+                </el-tooltip>
+                <el-tag
+                  v-if="canUndoFinal && course.needsApproval('grade_post')"
+                  size="small"
+                  type="warning"
+                  effect="plain"
+                >
+                  {{ t('enums.level.confirm_required') }}
+                </el-tag>
+              </div>
             </el-alert>
             <p v-if="rootSnapshot" class="gradebook__snapshot">
               {{ t('grades.gradebook.lastWritten') }}
@@ -434,13 +564,22 @@ watch(
                   params: { courseId, gradeId: rootSnapshot.id },
                 }"
               >
-                {{ formatPct(rootSnapshot.score) }}
+                {{ formatPct(rootSnapshot.override?.score ?? rootSnapshot.score) }}
               </router-link>
+              <span v-if="rootSnapshot.override" class="app-muted">{{
+                t('grades.override.computed', { value: formatPct(rootSnapshot.score) })
+              }}</span>
               <TimeText :value="rootSnapshot.posted_at" relative />
             </p>
             <p v-else-if="!snapshots.loading.value" class="app-form-hint gradebook__snapshot">
               {{ t('grades.gradebook.noSnapshot') }}
             </p>
+            <div v-if="rootSnapshot?.feedback" class="gradebook__comment">
+              <div class="gradebook__comment-label">
+                <el-icon><ChatLineSquare /></el-icon>{{ t('grades.override.commentLabel') }}
+              </div>
+              <MarkdownView :source="rootSnapshot.feedback" />
+            </div>
           </div>
         </section>
 
@@ -505,6 +644,17 @@ watch(
                     <el-tag v-if="row.dropLowest > 0" size="small" effect="plain">{{
                       t('grades.gradebook.dropLowest', { n: row.dropLowest })
                     }}</el-tag>
+                    <TotalMenu
+                      v-if="grader && row.kind === 'component' && !row.isRoot"
+                      :course-id="courseId"
+                      :student-member-id="student"
+                      :component-id="row.id"
+                      :what="totalName(row)"
+                      :computed-percent="lineOf(row)?.percent ?? null"
+                      :total="row.snapshot ?? null"
+                      :direct="!row.rolled"
+                      @changed="refresh"
+                    />
                     <router-link
                       v-if="row.snapshot"
                       :to="{
@@ -514,7 +664,7 @@ watch(
                       class="gradebook__num"
                     >
                       {{ t('grades.gradebook.snapshot') }}
-                      {{ formatPct(row.snapshot.score) }}
+                      {{ formatPct(row.snapshot.override?.score ?? row.snapshot.score) }}
                     </router-link>
                   </span>
                 </div>
@@ -522,10 +672,35 @@ watch(
             </el-table-column>
             <el-table-column :label="t('grades.gradebook.percent')" min-width="110" align="right">
               <template #default="{ row }">
-                <span v-if="row.percent !== null" class="gradebook__num gradebook__pct">
+                <template v-if="row.overridePercent !== null">
+                  <el-tooltip
+                    :content="overrideDetail(row.snapshot)"
+                    :disabled="!overrideDetail(row.snapshot)"
+                    placement="top"
+                  >
+                    <span class="gradebook__num gradebook__pct is-overridden" tabindex="0">
+                      {{ row.overridePercent }}
+                    </span>
+                  </el-tooltip>
+                  <div class="gradebook__computed">
+                    <el-tag size="small" type="primary" effect="plain" disable-transitions>
+                      {{ t('grades.override.overridden') }}
+                    </el-tag>
+                    {{ t('grades.override.computed', { value: row.percent ?? '—' }) }}
+                  </div>
+                </template>
+                <span v-else-if="row.percent !== null" class="gradebook__num gradebook__pct">
                   {{ row.percent }}
                 </span>
                 <span v-else class="app-muted">{{ t('grades.working.notGraded') }}</span>
+                <el-popover v-if="row.snapshot?.feedback && !row.isRoot" trigger="click" :width="320" placement="left">
+                  <template #reference>
+                    <el-button link type="primary" size="small" class="gradebook__comment-btn">
+                      <el-icon><ChatLineSquare /></el-icon><span>{{ t('grades.override.comment') }}</span>
+                    </el-button>
+                  </template>
+                  <MarkdownView :source="row.snapshot.feedback" />
+                </el-popover>
               </template>
             </el-table-column>
             <el-table-column v-if="!narrow" :label="t('grades.columns.score')" min-width="110" align="right">
@@ -578,6 +753,21 @@ watch(
                 </span>
               </template>
             </el-table-column>
+            <el-table-column v-if="grader && !narrow" :label="t('grades.override.actions')" min-width="130">
+              <template #default="{ row }">
+                <TotalMenu
+                  v-if="row.kind === 'component' && !row.isRoot"
+                  :course-id="courseId"
+                  :student-member-id="student"
+                  :component-id="row.id"
+                  :what="totalName(row)"
+                  :computed-percent="lineOf(row)?.percent ?? null"
+                  :total="row.snapshot ?? null"
+                  :direct="!row.rolled"
+                  @changed="refresh"
+                />
+              </template>
+            </el-table-column>
             <el-table-column v-if="!narrow" :label="t('grades.gradebook.snapshot')" min-width="130" align="right">
               <template #default="{ row }">
                 <router-link
@@ -589,7 +779,7 @@ watch(
                   class="gradebook__num"
                   :title="t('grades.gradebook.snapshotHint')"
                 >
-                  {{ formatPct(row.snapshot.score) }}
+                  {{ formatPct(row.snapshot.override?.score ?? row.snapshot.score) }}
                 </router-link>
               </template>
             </el-table-column>
@@ -661,6 +851,50 @@ watch(
   font-weight: 650;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
+}
+.gradebook__total-value.is-overridden,
+.gradebook__pct.is-overridden {
+  color: var(--el-color-primary);
+}
+.gradebook__computed {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.gradebook__total-actions {
+  margin-top: 10px;
+}
+.gradebook__final-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.gradebook__final-actions .el-button + .el-button {
+  margin-left: 0;
+}
+.gradebook__comment {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--el-color-primary-light-5);
+  background: var(--el-fill-color-lighter);
+  border-radius: var(--app-radius-item);
+}
+.gradebook__comment-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 4px;
+}
+.gradebook__comment-btn {
+  margin-left: 6px;
 }
 .gradebook__total-tags {
   display: flex;

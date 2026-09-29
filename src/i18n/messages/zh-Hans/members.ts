@@ -182,6 +182,36 @@ export default {
     nothing: '没有任何变更。',
     noManage: '你的席位不允许在此管理成员。',
     callerNotLive: '你自己的席位已暂停或到期，因此你在此的任何操作都不会被接受。',
+    // Core 以原因（details.reason）拒绝更改席位时的说明。
+    reason: {
+      delegate_seat: '这是以某人代表身份加入的智能体席位：角色永远是“助理”，不在名册上，不能更改。',
+      not_your_principal: '智能体不能管理其所代表之人的席位，也不能管理该人其他智能体的席位。',
+    },
+  },
+  role: {
+    change: '更改角色',
+    title: '更改 {name} 的名册角色',
+    current: '当前角色：',
+    newRole: '新角色',
+    isCurrent: '当前',
+    onlyRoleTitle: '这只会更改名册角色',
+    onlyRole:
+      '角色只决定谁列入成绩册、谁要提交作业，本身不授予任何权限：{name} 的权限及范围会保持不变。如要更改此席位可做的事或覆盖的对象，请另行修改。',
+    effect: {
+      leavesRoster:
+        '{name} 将离开名册：不再列为学生，截止后不会被标记为缺交，也不能再提交新作业。已提交的作业及已获得的所有成绩都会保留，已提交的作业仍可评分。',
+      joinsRoster: '{name} 将加入名册：列为学生、可提交作业并获评分，也可被列入其他席位的范围。',
+      nameOnly: '只有名册上的名称改变：{name} 无论如何都不在成绩册上。',
+    },
+    submit: '改为{role}',
+    submitNone: '请选择角色',
+    done: '{name} 现在是{role}',
+    unchanged: '{name} 本来就是{role}，没有任何改变。',
+    blocked: {
+      delegateSeat: '以某人代表身份加入的智能体，角色永远是“助理”，不在名册上。',
+      agent: '智能体的席位不在名册上，不能在此更改角色。',
+      notYourPrincipal: '这是你所代表之人的席位：智能体不能管理它。',
+    },
   },
   rescope: {
     title: '调整范围：{name}',

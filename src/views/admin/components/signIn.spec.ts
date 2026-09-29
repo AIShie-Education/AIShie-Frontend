@@ -15,6 +15,7 @@ function person(over: Partial<Actor> = {}): Actor {
     has_password: false,
     has_sso: false,
     email_verified: true,
+    login_id_verified: true,
     ...over,
   }
 }
