@@ -20,6 +20,8 @@ import {
   getDraft,
   groupedWith,
   GROUP_MS,
+  historyGroup,
+  historyMatches,
   isSendKey,
   lastSeq,
   mergeMessages,
@@ -559,5 +561,27 @@ describe('questionWithdrawn', () => {
       ),
     ).toBe(false)
     expect(questionWithdrawn([{ author_member_id: 'o', retracted: r }], null)).toBe(false)
+  })
+})
+
+describe('the history’s groups', () => {
+  // Wednesday 30 September 2026, 10:00 here; the week began on Monday the 28th.
+  const now = new Date(2026, 8, 30, 10).getTime()
+  const at = (d: number, h = 12) => new Date(2026, 8, d, h).toISOString()
+  it('says today, yesterday, this week (from Monday) or earlier, by this browser’s calendar', () => {
+    expect(historyGroup(at(30, 0), now)).toBe('today')
+    expect(historyGroup(at(30, 23), now)).toBe('today')
+    expect(historyGroup(at(29, 23), now)).toBe('yesterday')
+    expect(historyGroup(at(28, 1), now)).toBe('week')
+    expect(historyGroup(at(27, 23), now)).toBe('earlier')
+    expect(historyGroup('not a time', now)).toBe('earlier')
+  })
+  it('finds a conversation by its title or its agent', () => {
+    const c = { title: 'Loops in Python', respondent: { display_name: 'Course tutor' } }
+    expect(historyMatches(c, '')).toBe(true)
+    expect(historyMatches(c, 'python')).toBe(true)
+    expect(historyMatches(c, 'TUTOR')).toBe(true)
+    expect(historyMatches(c, 'maths')).toBe(false)
+    expect(historyMatches({ title: null, respondent: { display_name: 'X' } }, 'loops')).toBe(false)
   })
 })

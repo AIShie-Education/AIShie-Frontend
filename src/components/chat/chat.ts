@@ -470,6 +470,38 @@ export function byActivity<T extends Pick<ConversationView, 'last_message_at' | 
   return list.slice().sort((a, b) => activityAt(b) - activityAt(a) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0))
 }
 
+/** Where the history lists a conversation, by its last activity: today, yesterday, this week, or earlier. */
+export type HistoryGroup = 'today' | 'yesterday' | 'week' | 'earlier'
+export const HISTORY_GROUPS: readonly HistoryGroup[] = ['today', 'yesterday', 'week', 'earlier']
+
+/**
+ * The history's group for a time, by this browser's calendar: the same day
+ * as now, the day before, earlier this week (which begins on Monday), or
+ * before that. A time after now (a clock a little behind Core's) is today.
+ */
+export function historyGroup(at: string | number, now: number): HistoryGroup {
+  const t = typeof at === 'number' ? at : Date.parse(at)
+  if (!Number.isFinite(t)) return 'earlier'
+  const day = new Date(now)
+  day.setHours(0, 0, 0, 0)
+  const today = day.getTime()
+  if (t >= today) return 'today'
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (t >= yesterday.getTime()) return 'yesterday'
+  const monday = new Date(today)
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+  if (t >= monday.getTime()) return 'week'
+  return 'earlier'
+}
+
+/** Whether a conversation's title, or its agent's name, holds what is searched for (any case). */
+export function historyMatches(c: { title?: string | null; respondent: { display_name: string } }, query: string) {
+  const q = query.trim().toLocaleLowerCase()
+  if (!q) return true
+  return (c.title ?? '').toLocaleLowerCase().includes(q) || c.respondent.display_name.toLocaleLowerCase().includes(q)
+}
+
 // --- The composer ---------------------------------------------------------------------
 
 export interface SendKeyEvent {

@@ -27,6 +27,16 @@ export default {
     untitled: 'Untitled',
     unread: 'New answer',
     moreFailed: 'Could not load more of them. Try again.',
+    // Searching the history (title and agent), and its groups by last activity.
+    search: 'Search titles and agents',
+    noMatch: 'No conversation matches “{q}”.',
+    searchLoaded: 'Only the conversations loaded are searched: load more to search them too.',
+    groups: {
+      today: 'Today',
+      yesterday: 'Yesterday',
+      week: 'This week',
+      earlier: 'Earlier',
+    },
   },
   respondents: {
     empty: 'No agent here answers your questions yet.',

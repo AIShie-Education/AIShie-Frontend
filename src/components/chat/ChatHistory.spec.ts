@@ -127,6 +127,38 @@ enableAutoUnmount(afterEach)
 afterEach(() => vi.useRealTimers())
 
 describe('ChatHistory', () => {
+  it('groups the conversations by their last activity, and finds them by title or agent', async () => {
+    // Saturday 26 September 2026, noon here.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 26, 12, 0, 0))
+    mine = [
+      conv('c1', 'k1', 'Course tutor', new Date(2026, 8, 26, 9).toISOString(), { title: 'Loops' }),
+      conv('c2', 'k1', 'Lab helper', new Date(2026, 8, 25, 18).toISOString(), { title: 'Recursion' }),
+      conv('c3', 'k1', 'Course tutor', new Date(2026, 8, 22, 10).toISOString(), { title: 'Strings' }),
+      conv('c4', 'k1', 'Lab helper', new Date(2026, 8, 10, 10).toISOString(), { title: 'HW1 help' }),
+    ]
+    const { w } = setup()
+    await flushPromises()
+    const headings = () => w.findAll('.chat-history__heading').map((h) => h.text())
+    const titles = () => w.findAll('.hist-row__title').map((h) => h.text())
+    expect(headings()).toEqual(['Today', 'Yesterday', 'This week', 'Earlier'])
+    expect(titles()).toEqual(['Loops', 'Recursion', 'Strings', 'HW1 help'])
+    const search = w.get('.chat-history__search input')
+    expect(search.attributes('aria-label')).toBe('Search titles and agents')
+    await search.setValue('lab')
+    expect(titles()).toEqual(['Recursion', 'HW1 help'])
+    expect(headings()).toEqual(['Yesterday', 'Earlier'])
+    await search.setValue('STRI')
+    expect(titles()).toEqual(['Strings'])
+    await search.setValue('nothing like it')
+    expect(titles()).toEqual([])
+    expect(w.get('.chat-history__none').text()).toBe('No conversation matches “nothing like it”.')
+    setLocale('zh-Hant')
+    await search.setValue('')
+    await flushPromises()
+    expect(headings()).toEqual(['今天', '昨天', '本週', '更早'])
+  })
+
   it('lists the conversations with agents in the course asked in, each as course · agent, newest first', async () => {
     const { w } = setup()
     await flushPromises()

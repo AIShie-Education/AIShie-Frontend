@@ -6,7 +6,11 @@
 // stands, and whether the agent has written since the caller last read it
 // (unread, which Core keeps). A conversation from before, with a person, is
 // closed and not listed. Kept fresh while it is shown.
-import { computed, watch } from 'vue'
+//
+// Grouped by when each last moved: today, yesterday, this week, earlier; and
+// searched by title and agent, among those read so far (more pages are read
+// with Load more, as ever).
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { MyConversation } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
@@ -16,7 +20,8 @@ import TimeText from '@/components/TimeText.vue'
 import { usePolling } from '@/composables/usePolling'
 import { historyKey, useChatStore } from '@/stores/chat'
 import { useSessionStore } from '@/stores/session'
-import { stateOf } from './chat'
+import { HISTORY_GROUPS, historyGroup, historyMatches, stateOf, type HistoryGroup } from './chat'
+import { useNow } from '@/composables/useNow'
 import { courseLabel } from './seat'
 import { LIST_POLL_MS } from './useConversationList'
 
@@ -44,6 +49,19 @@ usePolling(() => (key.value ? chat.loadHistory(key.value, { quiet: true }) : und
   enabled: () => props.active && !!list.value?.loaded,
 })
 
+// --- Searching and grouping ---------------------------------------------------------
+const query = ref('')
+const now = useNow()
+const shown = computed(() => items.value.filter((c) => historyMatches(c, query.value)))
+const groups = computed(() => {
+  const by = new Map<HistoryGroup, MyConversation[]>()
+  for (const c of shown.value) {
+    const g = historyGroup(c.last_activity_at, now.value)
+    by.set(g, [...(by.get(g) ?? []), c])
+  }
+  return HISTORY_GROUPS.filter((g) => by.has(g)).map((g) => ({ key: g, items: by.get(g)! }))
+})
+
 function where(c: MyConversation): string {
   return courseLabel(c.course, session.liveMemberships)
 }
@@ -57,7 +75,19 @@ function more() {
 
 <template>
   <div class="chat-history">
-    <div class="chat-history__scope">
+    <div class="chat-history__tools">
+      <el-input
+        v-model="query"
+        size="small"
+        clearable
+        class="chat-history__search"
+        :placeholder="t('chat.history.search')"
+        :aria-label="t('chat.history.search')"
+      >
+        <template #prefix
+          ><el-icon aria-hidden="true"><Search /></el-icon
+        ></template>
+      </el-input>
       <el-radio-group v-model="chat.historyScope" size="small" :aria-label="t('chat.history.scope')">
         <el-radio-button value="course">{{ t('chat.history.thisCourse') }}</el-radio-button>
         <el-radio-button value="all">{{ t('chat.history.allCourses') }}</el-radio-button>
@@ -71,35 +101,42 @@ function more() {
       :empty-text="chat.historyScope === 'all' ? t('chat.history.emptyAll') : t('chat.history.empty')"
       @retry="retry"
     >
-      <ul class="chat-history__list" :aria-label="t('chat.history.title')">
-        <li v-for="c in items" :key="c.conversation_id">
-          <button
-            type="button"
-            class="hist-row"
-            :class="{
-              'is-unread': chat.unreadIds.has(c.conversation_id),
-              'is-selected': chat.conversation?.id === c.conversation_id,
-            }"
-            @click="emit('open', c.course.course_id, c.conversation_id)"
-          >
-            <span class="hist-row__line">
-              <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__dot" aria-hidden="true" />
-              <span class="hist-row__where"
-                ><span class="hist-row__course">{{ where(c) }}</span> ·
-                <span class="hist-row__agent">{{ c.respondent.display_name }}</span></span
-              >
-              <span class="hist-row__time"><TimeText :value="c.last_activity_at" relative /></span>
-            </span>
-            <span class="hist-row__line hist-row__sub">
-              <span class="hist-row__title">{{ c.title || t('chat.history.untitled') }}</span>
-              <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__unread">{{
-                t('chat.history.unread')
-              }}</span>
-              <StatusTag vocab="conversationState" :value="stateOf(c)" />
-            </span>
-          </button>
-        </li>
-      </ul>
+      <p v-if="query.trim() && !shown.length" class="chat-history__none" role="status">
+        {{ t('chat.history.noMatch', { q: query.trim() }) }}
+      </p>
+      <section v-for="g in groups" :key="g.key" class="chat-history__group" :aria-labelledby="`chat-history-${g.key}`">
+        <h3 :id="`chat-history-${g.key}`" class="chat-history__heading">{{ t(`chat.history.groups.${g.key}`) }}</h3>
+        <ul class="chat-history__list">
+          <li v-for="c in g.items" :key="c.conversation_id">
+            <button
+              type="button"
+              class="hist-row"
+              :class="{
+                'is-unread': chat.unreadIds.has(c.conversation_id),
+                'is-selected': chat.conversation?.id === c.conversation_id,
+              }"
+              @click="emit('open', c.course.course_id, c.conversation_id)"
+            >
+              <span class="hist-row__line">
+                <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__dot" aria-hidden="true" />
+                <span class="hist-row__where"
+                  ><span class="hist-row__course">{{ where(c) }}</span> ·
+                  <span class="hist-row__agent">{{ c.respondent.display_name }}</span></span
+                >
+                <span class="hist-row__time"><TimeText :value="c.last_activity_at" relative /></span>
+              </span>
+              <span class="hist-row__line hist-row__sub">
+                <span class="hist-row__title">{{ c.title || t('chat.history.untitled') }}</span>
+                <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__unread">{{
+                  t('chat.history.unread')
+                }}</span>
+                <StatusTag vocab="conversationState" :value="stateOf(c)" />
+              </span>
+            </button>
+          </li>
+        </ul>
+      </section>
+      <p v-if="query.trim() && list?.hasMore" class="chat-history__hint">{{ t('chat.history.searchLoaded') }}</p>
       <LoadMore :has-more="!!list?.hasMore" :loading="!!list?.loadingMore" @more="more" />
       <p v-if="list?.moreError" class="chat-history__hint" role="alert">{{ t('chat.history.moreFailed') }}</p>
     </AsyncState>
@@ -107,8 +144,38 @@ function more() {
 </template>
 
 <style scoped>
-.chat-history__scope {
-  margin-bottom: 10px;
+.chat-history__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.chat-history__search {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.chat-history__group + .chat-history__group {
+  margin-top: 10px;
+}
+.chat-history__heading {
+  position: sticky;
+  top: -12px;
+  z-index: 1;
+  margin: 0;
+  padding: 8px 12px 4px;
+  background: var(--el-bg-color);
+  font-family: var(--app-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--el-text-color-secondary);
+}
+.chat-history__none {
+  margin: 16px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 .chat-history__hint {
   margin: 0;

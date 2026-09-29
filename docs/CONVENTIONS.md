@@ -281,7 +281,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   conversation from before with a person is closed with that reason, shown as closed and left out
   of the history. The history is `me.conversations`: the caller's own in every course, newest
   activity first, a page at a time, or one course's (`course_id`), kept in the chat store
-  (`loadHistory`, `loadMoreHistory`). What the caller has read is Core's: a conversation on screen
+  (`loadHistory`, `loadMoreHistory`). It is grouped by when each conversation last moved (today,
+  yesterday, this week from Monday, earlier: `historyGroup`, by this browser's calendar), and a
+  search box keeps those whose title or agent holds what is typed (`historyMatches`), among the
+  pages read so far, saying so while more could be loaded. What the caller has read is Core's: a conversation on screen
   is marked read (`conversation.mark_read`, by `useConversation`'s `reader`) when it opens unread
   and as the agent writes, never by staff reading it, and the button's count is the `unread` of
   the first page of `me.conversations`, read again every 30 seconds while the page is shown. A

@@ -27,6 +27,16 @@ export default {
     untitled: '未命名',
     unread: '新回复',
     moreFailed: '无法加载更多对话，请再试一次。',
+    // Searching the history (title and agent), and its groups by last activity.
+    search: '搜索标题或智能体',
+    noMatch: '没有符合「{q}」的对话。',
+    searchLoaded: '只搜索已加载的对话：加载更多即可一并搜索。',
+    groups: {
+      today: '今天',
+      yesterday: '昨天',
+      week: '本周',
+      earlier: '更早',
+    },
   },
   respondents: {
     empty: '这里暂时没有可以回答你问题的智能体。',

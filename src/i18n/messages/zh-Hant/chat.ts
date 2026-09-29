@@ -27,6 +27,16 @@ export default {
     untitled: '未命名',
     unread: '新回覆',
     moreFailed: '無法載入更多對話，請再試一次。',
+    // Searching the history (title and agent), and its groups by last activity.
+    search: '搜尋標題或代理',
+    noMatch: '沒有符合「{q}」的對話。',
+    searchLoaded: '只搜尋已載入的對話：載入更多即可一併搜尋。',
+    groups: {
+      today: '今天',
+      yesterday: '昨天',
+      week: '本週',
+      earlier: '更早',
+    },
   },
   respondents: {
     empty: '這裡暫時沒有可以回答你問題的代理。',

@@ -8,7 +8,8 @@ import { call, coursePath, demo, inTraditionalChinese, photograph, signIn, type 
 // copied; while an answer is awaited a working line counts the seconds, and
 // the send button, with nothing written, stops the wait (the question is
 // withdrawn and comes back to the box); a slash opens the commands, an @ the
-// course's assignments and materials. Told in Traditional Chinese, at 1440 px, through Yuki and a
+// course's assignments and materials; the history is grouped by day and
+// searched. Told in Traditional Chinese, at 1440 px, through Yuki and a
 // course agent made for this run, whose runtime this test plays.
 
 const STAMP = Date.now().toString(36)
@@ -253,6 +254,24 @@ test.describe.serial('the chat, as an agent chat', () => {
     await composer.press('ArrowUp')
     await expect(composer).toHaveValue(`${TITLE}\n${QUESTION}`)
     await composer.fill('')
+  })
+
+  test('the history is grouped by day and searched by title or agent', async ({ page }) => {
+    const panel = await openChat(page)
+    await panel.getByRole('button', { name: '過往對話', exact: true }).click()
+    const history = panel.locator('.chat-history')
+    await expect(history.locator('.chat-history__heading').first()).toHaveText('今天')
+    const search = history.getByRole('textbox', { name: '搜尋標題或代理' })
+    await search.fill(STAMP)
+    await expect(history.locator('.hist-row')).toHaveCount(1)
+    await expect(history.locator('.hist-row__title')).toHaveText(TITLE)
+    await page.mouse.move(900, 200)
+    await photograph(page, 'history-search')
+    await search.fill(TUTOR.toUpperCase())
+    await expect(history.locator('.hist-row')).toHaveCount(1)
+    await search.fill(`nothing-${STAMP}`)
+    await expect(history.locator('.hist-row')).toHaveCount(0)
+    await expect(history.locator('.chat-history__none')).toContainText('沒有符合')
   })
 
   test('at a phone’s width, the conversation is a sheet that fits', async ({ page }) => {
