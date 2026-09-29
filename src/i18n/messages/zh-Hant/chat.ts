@@ -10,6 +10,7 @@ export default {
     newTip: '開始新對話',
     history: '過往對話',
     close: '關閉對話面板',
+    resize: '調整對話面板寬度',
     backToHistory: '返回過往對話',
     backToAgents: '返回代理列表',
     pickTitle: '向代理提問',

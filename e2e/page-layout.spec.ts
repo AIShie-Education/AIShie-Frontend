@@ -188,4 +188,60 @@ test.describe('pages beside both side bars', () => {
     await bothPanels(page, 1280, 800)
     expect(await stacked(main, side)).toBe(true)
   })
+
+  test('the overview reflows as the chat panel is dragged wider or narrower, and the panel leaves the page 420 px', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath())
+    await expect(page.locator('.overview .about')).toBeVisible()
+    const main = page.locator('.overview__main')
+    const side = page.locator('.overview__side')
+    const panel = page.locator('#chat-panel')
+    const edge = panel.getByRole('separator', { name: 'Resize the chat panel' })
+    /** Drags the panel's edge to make it this wide. */
+    async function dragTo(width: number) {
+      const at = await box(edge)
+      const now = (await box(panel)).width
+      const [x, y] = [at.x + at.width / 2, at.y + at.height / 2]
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      await page.mouse.move(x - (width - now), y, { steps: 10 })
+      await page.mouse.up()
+      await expect(edge).toHaveAttribute('aria-valuenow', String(width))
+    }
+
+    // 1280 px, the chat panel docked beside a collapsed side bar, 380 px wide.
+    await chatOnly(page, 1280, 800)
+    await expect(edge).toHaveAttribute('aria-valuenow', '380')
+    await page.mouse.move(0, 400)
+    await photograph(page, 'resize-overview-380')
+    expect(await stacked(main, side)).toBe(true)
+    // Narrower: the page has room for its two columns, and takes them.
+    await dragTo(320)
+    expect(await stacked(main, side)).toBe(false)
+    expect((await box(main)).width).toBeGreaterThanOrEqual(420)
+    await page.mouse.move(0, 400)
+    await photograph(page, 'resize-overview-320')
+    // Wider: one column again, the page narrower by as much.
+    const pageAt320 = (await box(page.locator('.app-main'))).width
+    await dragTo(560)
+    expect(await stacked(main, side)).toBe(true)
+    expect(Math.round((await box(page.locator('.app-main'))).width)).toBe(Math.round(pageAt320 - 240))
+    await page.mouse.move(0, 400)
+    await photograph(page, 'resize-overview-560')
+
+    // As wide as it may be with the side bar open: the page keeps 420 px.
+    await bothPanels(page, 1280, 800)
+    const at = await box(edge)
+    await page.mouse.move(at.x + at.width / 2, at.y + 100)
+    await page.mouse.down()
+    await page.mouse.move(0, at.y + 100, { steps: 10 })
+    await page.mouse.up()
+    expect(Math.round((await box(page.locator('.app-main'))).width)).toBe(420)
+    await expect(edge).toHaveAttribute('aria-valuemax', String(Math.round((await box(panel)).width)))
+    await edge.dblclick()
+    await expect(edge).toHaveAttribute('aria-valuenow', '380')
+  })
 })

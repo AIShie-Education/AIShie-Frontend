@@ -10,6 +10,7 @@ export default {
     newTip: 'New conversation',
     history: 'History',
     close: 'Close the chat',
+    resize: 'Resize the chat panel',
     backToHistory: 'Back to the history',
     backToAgents: 'Back to the agents',
     pickTitle: 'Ask an agent',

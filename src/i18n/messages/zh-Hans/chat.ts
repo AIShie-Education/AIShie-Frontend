@@ -10,6 +10,7 @@ export default {
     newTip: '开始新对话',
     history: '过往对话',
     close: '关闭对话面板',
+    resize: '调整对话面板宽度',
     backToHistory: '返回过往对话',
     backToAgents: '返回智能体列表',
     pickTitle: '向智能体提问',
