@@ -6,6 +6,7 @@ export default {
     terms: '学期',
     departments: '部门',
     presets: '权限预设',
+    runtime: 'AI 与文件',
   },
 
   courses: {

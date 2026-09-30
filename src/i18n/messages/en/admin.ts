@@ -6,6 +6,7 @@ export default {
     terms: 'Terms',
     departments: 'Departments',
     presets: 'Permission presets',
+    runtime: 'AI and documents',
   },
 
   courses: {

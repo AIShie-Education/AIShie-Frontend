@@ -26,6 +26,24 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+// Whether this server has the agent runtime, as useRuntime would find it: none, unless a test says so.
+const runtimeHere = vi.hoisted(() => ({ available: false, asked: 0 }))
+vi.mock('@/composables/useRuntime', async () => {
+  const { computed } = await import('vue')
+  return {
+    useRuntime: () => {
+      runtimeHere.asked++
+      return {
+        available: computed(() => runtimeHere.available),
+        info: computed(() => null),
+        error: computed(() => null),
+        checked: computed(() => true),
+        refresh: async () => runtimeHere.available,
+      }
+    },
+  }
+})
+
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { useSideBarStore } = await import('@/stores/sidebar')
@@ -107,6 +125,7 @@ async function mountAs(
       { path: '/admin/terms', name: 'admin-terms', component: View },
       { path: '/admin/departments', name: 'admin-departments', component: View },
       { path: '/admin/presets', name: 'admin-presets', component: View },
+      { path: '/admin/runtime', name: 'admin-runtime', component: View },
     ],
   })
   await router.push(opts.path ?? '/')
@@ -498,6 +517,38 @@ describe('the administration view', () => {
     const body = w.get('#side-bar')
     expect(links(body)).toEqual(['Courses', 'People & agents', 'Terms', 'Departments', 'Permission presets'])
     expect(body.findAll('.side-item.is-active').map((a) => a.text())).toEqual(['People & agents'])
+  })
+
+  it('offers a platform administrator the agent runtime’s settings where this server has one', async () => {
+    runtimeHere.available = true
+    try {
+      const { w } = await mountAs('platformAdmin', { path: '/admin/runtime' })
+      const body = w.get('#side-bar')
+      expect(links(body)).toEqual([
+        'Courses',
+        'People & agents',
+        'Terms',
+        'Departments',
+        'Permission presets',
+        'AI and documents',
+      ])
+      expect(body.findAll('.side-item.is-active').map((a) => a.text())).toEqual(['AI and documents'])
+      expect(body.find('a[href="/admin/runtime"]').attributes('aria-current')).toBe('page')
+    } finally {
+      runtimeHere.available = false
+    }
+  })
+
+  it('never asks whether there is a runtime for a department’s administrator, nor offers its settings', async () => {
+    runtimeHere.available = true
+    runtimeHere.asked = 0
+    try {
+      const { w } = await mountAs('deptAdmin', { path: '/admin/departments' })
+      expect(links(w.get('#side-bar'))).toEqual(['Courses', 'Departments'])
+      expect(runtimeHere.asked).toBe(0)
+    } finally {
+      runtimeHere.available = false
+    }
   })
 
   it('lists courses and departments alone for a department’s administrator', async () => {
