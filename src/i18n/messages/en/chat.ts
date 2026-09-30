@@ -232,10 +232,10 @@ export default {
   },
   // A question awaiting its answer, taken back to the composer: to edit it, or to stop waiting.
   edit: {
-    done: 'Your question was withdrawn and put back in the box: change it and send it again. {name} does not answer a withdrawn question, though an answer it had already begun may still arrive.',
+    done: 'Your question was withdrawn and put back in the box: change it and send it again. {name} does not answer a withdrawn question, and stops an answer it had begun.',
   },
   stop: {
-    done: 'Stopped: your question was withdrawn and put back in the box. {name} does not answer a withdrawn question, though an answer it had already begun may still arrive.',
+    done: 'Stopped: your question was withdrawn and put back in the box. {name} does not answer a withdrawn question, and stops an answer it had begun.',
   },
   retract: {
     title: 'Withdraw this message?',

@@ -340,7 +340,12 @@ describe('ChatPane', () => {
       server.messages = server.messages.map((m) =>
         m.id === 'm3' ? { ...m, body: null, retracted: { at: 'x', by_member_id: 'student', reason: null } } : m,
       )
-      server.view = view({ last_retracted_at: '2026-09-26T12:00:00Z' })
+      // As Core says since AIShie-Core #42: answered, its opener the last to write.
+      server.view = view({
+        state: 'answered',
+        last_author_member_id: 'student',
+        last_retracted_at: '2026-09-26T12:00:00Z',
+      })
       return executed({ ok: true })
     }
     await edits[0]!.trigger('click')
@@ -349,9 +354,9 @@ describe('ChatPane', () => {
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('line one\nline two')
     expect(w.find('.chat-msg.is-retracted').text()).toContain('You withdrew this message.')
     expect(document.body.querySelector('.el-message')?.textContent).toContain(
-      'Course tutor does not answer a withdrawn question',
+      'Course tutor does not answer a withdrawn question, and stops an answer it had begun.',
     )
-    // Core still says an answer is awaited; nothing is, and the line says why.
+    // Nothing is awaited, and the line says why.
     expect(w.find('.chat-pane__typing').exists()).toBe(false)
     expect(w.find('.chat-pane__notice').text()).toBe('You withdrew your question: Course tutor will not answer it.')
     expect(w.find('.chat-msg__edit').exists()).toBe(false)
