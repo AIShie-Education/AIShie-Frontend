@@ -1,6 +1,7 @@
-// Files dragged onto the page, or pasted into it.
+// Files dragged onto the page, or pasted into it, or chosen.
 //
-// A drop zone takes the files dropped on it. One place on the screen may also
+// A drop zone takes the files dropped on it (useDropTarget: FileDropZone's,
+// the chat panel's). One place on the screen may also
 // take files dropped anywhere on the page, or pasted where nothing else takes
 // them: the zone of an open dialog, or a page's list that makes something of
 // each file (usePageDrop). Where several ask, the one that asked last takes
@@ -10,6 +11,10 @@
 // Wherever nothing takes them, files dropped on the page are not opened by
 // the browser in the app's place, which would lose whatever was on it
 // (installDropGuard, from App.vue).
+//
+// Files are chosen from the computer through the browser's own dialog: a
+// drop zone's, or a button's that is not a zone (useFilePicker: the chat
+// composer's paperclip).
 import { onScopeDispose, readonly, ref, type Ref } from 'vue'
 
 /** Whether a drag carries files (not text or a link). */
@@ -163,3 +168,98 @@ export function usePageDrop(opts: PageDropOptions): { dragging: Readonly<Ref<boo
 
 /** Whether files are being dragged over the window at all. */
 export const draggingFiles: Readonly<Ref<boolean>> = readonly(dragging)
+
+export interface DropTargetOptions {
+  /** Whether it takes files now: while not, a drop on it is taken and nothing is done with it. */
+  enabled: () => boolean
+  onFiles: (files: File[], folders: number) => void
+}
+
+/**
+ * An element that takes files dropped on it: bind `handlers` to it
+ * (v-on="handlers"). `over` says files are being dragged over it, while it
+ * takes them. A drop on it is taken there (the page does not take it again),
+ * whether or not it takes files now.
+ */
+export function useDropTarget(opts: DropTargetOptions) {
+  const over = ref(false)
+  // dragenter and dragleave come for each element inside it too.
+  let depth = 0
+  function dragenter(e: DragEvent) {
+    if (!dragHasFiles(e)) return
+    e.preventDefault()
+    depth++
+    over.value = opts.enabled()
+  }
+  function dragover(e: DragEvent) {
+    if (!dragHasFiles(e)) return
+    e.preventDefault()
+    if (e.dataTransfer) e.dataTransfer.dropEffect = opts.enabled() ? 'copy' : 'none'
+  }
+  function dragleave(e: DragEvent) {
+    if (!dragHasFiles(e)) return
+    depth = Math.max(0, depth - 1)
+    if (!depth) over.value = false
+  }
+  function drop(e: DragEvent) {
+    if (!dragHasFiles(e)) return
+    // Taken here: the page does not take it again.
+    e.preventDefault()
+    depth = 0
+    over.value = false
+    if (!opts.enabled()) return
+    const { files, folders } = filesFrom(e.dataTransfer)
+    if (files.length || folders) opts.onFiles(files, folders)
+  }
+  return { over: readonly(over), handlers: { dragenter, dragover, dragleave, drop } }
+}
+
+/**
+ * The files a paste carries, when it is files alone: a paste that carries
+ * text too (a table or a paragraph copied from an office program, which puts
+ * a picture of it beside the text) is the text's, and pasted as text.
+ */
+export function pastedFiles(e: ClipboardEvent): { files: File[]; folders: number } {
+  const dt = e.clipboardData
+  if (!dt || dt.getData('text/plain')) return { files: [], folders: 0 }
+  return filesFrom(dt)
+}
+
+export interface FilePickerOptions {
+  multiple?: boolean
+  /** What the dialog offers (the input's accept). */
+  accept?: string
+  onFiles: (files: File[]) => void
+}
+
+/**
+ * Chooses files through the browser's own dialog, for a button that is not a
+ * drop zone: choose() opens it, and what is chosen goes to onFiles. Its
+ * input lives hidden at the end of the page while the component does.
+ */
+export function useFilePicker(opts: FilePickerOptions): { choose: () => void } {
+  let input: HTMLInputElement | null = null
+  function ensure(): HTMLInputElement {
+    if (input) return input
+    const el = document.createElement('input')
+    el.type = 'file'
+    el.multiple = !!opts.multiple
+    if (opts.accept) el.accept = opts.accept
+    el.tabIndex = -1
+    el.setAttribute('aria-hidden', 'true')
+    el.style.display = 'none'
+    el.addEventListener('change', () => {
+      const files = Array.from(el.files ?? [])
+      el.value = ''
+      if (files.length) opts.onFiles(files)
+    })
+    document.body.appendChild(el)
+    input = el
+    return el
+  }
+  onScopeDispose(() => {
+    input?.remove()
+    input = null
+  })
+  return { choose: () => ensure().click() }
+}

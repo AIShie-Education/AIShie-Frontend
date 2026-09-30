@@ -20,10 +20,10 @@ import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { knownUploadLimit, uploadLimit, type UploadedFile, type UploadKind } from '@/api/http'
-import { errorMessage } from '@/composables/useErrors'
-import { dragHasFiles, filesFrom, usePageDrop } from '@/composables/useFileDrop'
+import { filesFrom, useDropTarget, usePageDrop } from '@/composables/useFileDrop'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useUploadQueue, type UploadItem, type UploadQueue } from '@/composables/useUploadQueue'
+import { useUploadText } from '@/composables/useUploadText'
 import { formatBytes } from '@/utils/format'
 
 const model = defineModel<UploadedFile[]>({ default: () => [] })
@@ -141,33 +141,7 @@ function onPick(ev: Event) {
 }
 
 // Dragged over the zone itself.
-const over = ref(false)
-let depth = 0
-function onDragEnter(e: DragEvent) {
-  if (!dragHasFiles(e)) return
-  e.preventDefault()
-  depth++
-  over.value = !props.disabled
-}
-function onDragOver(e: DragEvent) {
-  if (!dragHasFiles(e)) return
-  e.preventDefault()
-  if (e.dataTransfer) e.dataTransfer.dropEffect = props.disabled ? 'none' : 'copy'
-}
-function onDragLeave(e: DragEvent) {
-  if (!dragHasFiles(e)) return
-  depth = Math.max(0, depth - 1)
-  if (!depth) over.value = false
-}
-function onDrop(e: DragEvent) {
-  if (!dragHasFiles(e)) return
-  // Taken here: the page does not take it again.
-  e.preventDefault()
-  depth = 0
-  over.value = false
-  const { files, folders } = filesFrom(e.dataTransfer)
-  addFiles(files, folders)
-}
+const { over, handlers: dropHandlers } = useDropTarget({ enabled: () => !props.disabled, onFiles: addFiles })
 function onPaste(e: ClipboardEvent) {
   const { files, folders } = filesFrom(e.clipboardData)
   if (!files.length) return
@@ -217,55 +191,8 @@ function removeRow(row: Row) {
   if (rows.value.length === 0) void nextTick(focus)
 }
 
-const percent = (item: UploadItem) => Math.floor(item.fraction * 100)
-
-function leftText(s: number): string {
-  if (s < 60) return t('common.upload.left.seconds', { n: Math.max(1, s) })
-  if (s < 3600) return t('common.upload.left.minutes', { n: Math.ceil(s / 60) })
-  return t('common.upload.left.hours', { h: Math.floor(s / 3600), m: Math.ceil((s % 3600) / 60) })
-}
-
-function failText(item: UploadItem): string {
-  if (item.tooLarge) {
-    const details = (item.error as { details?: { max_bytes?: number } } | null)?.details
-    const max = details?.max_bytes ?? maxBytes.value
-    return max
-      ? t('common.upload.tooLarge', { size: formatBytes(item.size), max: formatBytes(max) })
-      : t('common.upload.tooLargeUnknown', { size: formatBytes(item.size) })
-  }
-  return errorMessage(item.error)
-}
-
-/** What an item is doing, in words: its line under the name. */
-function statusText(item: UploadItem): string {
-  switch (item.status) {
-    case 'queued':
-      return t('common.upload.status.queued')
-    case 'uploading': {
-      if (item.retrying) {
-        return item.retrying.offline
-          ? t('common.upload.status.offline')
-          : t('common.upload.status.retrying', { attempt: item.attempt })
-      }
-      if (item.phase === 'preparing') return t('common.upload.status.preparing')
-      if (item.phase === 'finishing') return t('common.upload.status.finishing')
-      const parts = [
-        t('common.upload.percent', { n: percent(item) }),
-        t('common.upload.of', { loaded: formatBytes(item.loaded), total: formatBytes(item.size) }),
-      ]
-      if (item.bytesPerSecond !== null)
-        parts.push(t('common.upload.speed', { speed: formatBytes(item.bytesPerSecond) }))
-      if (item.secondsLeft !== null) parts.push(leftText(item.secondsLeft))
-      return parts.join(' · ')
-    }
-    case 'done':
-      return t('common.upload.status.done')
-    case 'cancelled':
-      return t('common.upload.status.cancelled')
-    case 'failed':
-      return failText(item)
-  }
-}
+// What an item is doing, in words: its line under the name.
+const { percent, statusText, failText } = useUploadText({ maxBytes })
 
 // --- Said to a screen reader -----------------------------------------------------
 const announcement = ref('')
@@ -368,11 +295,8 @@ defineExpose({ addFiles, choose, focus })
       :aria-disabled="disabled || undefined"
       @click="choose"
       @keydown="onKey"
-      @dragenter="onDragEnter"
-      @dragover="onDragOver"
-      @dragleave="onDragLeave"
-      @drop="onDrop"
       @paste="onPaste"
+      v-on="dropHandlers"
     >
       <el-icon class="file-drop__icon" aria-hidden="true"><UploadFilled /></el-icon>
       <div class="file-drop__text">

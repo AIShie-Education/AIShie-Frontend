@@ -229,6 +229,28 @@ export function createUploadQueue(opts: UploadQueueOptions) {
     pump()
   }
 
+  /**
+   * Marks an uploaded item failed after the fact: where it was to be
+   * attached, Core refused its upload (deleted as too large, never received,
+   * or no longer to be attached), with that refusal as its error. It can be
+   * tried again, from the start at a fresh URL, unless it is too large.
+   */
+  function fail(id: number, error: unknown) {
+    const item = find(id)
+    if (!item || item.status !== 'done') return
+    Object.assign(item, {
+      status: 'failed',
+      phase: null,
+      result: null,
+      loaded: 0,
+      fraction: 0,
+      retrying: null,
+      error,
+      tooLarge: isFileTooLarge(error),
+    })
+    opts.onFail?.(item)
+  }
+
   /** Takes an item off the list, stopping its upload if it is on its way. */
   function remove(id: number) {
     const i = items.findIndex((x) => x.id === id)
@@ -251,7 +273,7 @@ export function createUploadQueue(opts: UploadQueueOptions) {
   /** What is done, in the order it was added. */
   const done = computed(() => items.filter((i) => i.status === 'done'))
 
-  return { items, maxBytes, busy, done, add, cancel, retry, remove, clear, find }
+  return { items, maxBytes, busy, done, add, cancel, retry, fail, remove, clear, find }
 }
 
 export type UploadQueue = ReturnType<typeof createUploadQueue>

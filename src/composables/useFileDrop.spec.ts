@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, type EffectScope } from 'vue'
-import { filesFrom, installDropGuard, usePageDrop } from './useFileDrop'
+import { filesFrom, installDropGuard, pastedFiles, useDropTarget, useFilePicker, usePageDrop } from './useFileDrop'
 
 const file = (name: string) => new File(['x'], name, { type: 'text/plain' })
 
@@ -124,5 +124,96 @@ describe('filesFrom', () => {
     const f = file('a.pdf')
     expect(filesFrom({ files: [f] } as unknown as DataTransfer)).toEqual({ files: [f], folders: 0 })
     expect(filesFrom(null)).toEqual({ files: [], folders: 0 })
+  })
+})
+
+describe('a drop target', () => {
+  function target(enabled = () => true) {
+    const onFiles = vi.fn()
+    const scope = effectScope()
+    const t = scope.run(() => useDropTarget({ enabled, onFiles }))!
+    scopes.push(scope)
+    const el = document.createElement('div')
+    for (const [type, fn] of Object.entries(t.handlers)) el.addEventListener(type, fn as EventListener)
+    document.body.appendChild(el)
+    return { ...t, el, onFiles }
+  }
+
+  it('says files are over it while they are, counting what is inside it, and takes them dropped', () => {
+    const t = target()
+    const dt = transfer([file('notes.pdf')])
+    expect(fire('dragenter', dt, t.el).defaultPrevented).toBe(true)
+    expect(t.over.value).toBe(true)
+    // Into an element inside it, then out of that.
+    fire('dragenter', dt, t.el)
+    fire('dragleave', dt, t.el)
+    expect(t.over.value).toBe(true)
+    fire('dragover', dt, t.el)
+    expect(dt.dropEffect).toBe('copy')
+    const drop = fire('drop', dt, t.el)
+    expect(drop.defaultPrevented).toBe(true)
+    expect(t.over.value).toBe(false)
+    expect(t.onFiles).toHaveBeenCalledWith([expect.any(File)], 0)
+    t.el.remove()
+  })
+
+  it('takes a drop while it is off, and does nothing with it, so that the page does not take it', () => {
+    const t = target(() => false)
+    const dt = transfer([file('notes.pdf')])
+    fire('dragenter', dt, t.el)
+    expect(t.over.value).toBe(false)
+    fire('dragover', dt, t.el)
+    expect(dt.dropEffect).toBe('none')
+    expect(fire('drop', dt, t.el).defaultPrevented).toBe(true)
+    expect(t.onFiles).not.toHaveBeenCalled()
+    t.el.remove()
+  })
+
+  it('leaves alone a drag that carries no files', () => {
+    const t = target()
+    const dt = { types: ['text/plain'], files: [], items: [] } as unknown as DataTransfer
+    expect(fire('dragenter', dt, t.el).defaultPrevented).toBe(false)
+    expect(fire('drop', dt, t.el).defaultPrevented).toBe(false)
+    expect(t.onFiles).not.toHaveBeenCalled()
+    t.el.remove()
+  })
+})
+
+describe('pastedFiles', () => {
+  const paste = (files: File[], text = '') => {
+    const dt = { ...transfer(files), getData: (type: string) => (type === 'text/plain' ? text : '') }
+    const e = new Event('paste') as ClipboardEvent
+    Object.defineProperty(e, 'clipboardData', { value: dt })
+    return e
+  }
+  it('takes a paste of files alone, and leaves one that carries text to be pasted as text', () => {
+    expect(pastedFiles(paste([file('image.png')])).files).toHaveLength(1)
+    // A table copied from an office program: its text, and a picture of it.
+    expect(pastedFiles(paste([file('image.png')], 'a\tb\n1\t2')).files).toEqual([])
+    expect(pastedFiles(paste([]))).toEqual({ files: [], folders: 0 })
+  })
+})
+
+describe('a file picker', () => {
+  it('opens the browser’s dialog from a hidden input of its own, hands on what is chosen, and goes with its scope', () => {
+    const onFiles = vi.fn()
+    const scope = effectScope()
+    const picker = scope.run(() => useFilePicker({ multiple: true, onFiles }))!
+    expect(document.querySelector('input[type=file]')).toBeNull()
+    const clicked = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {})
+    picker.choose()
+    const input = document.querySelector<HTMLInputElement>('input[type=file]')!
+    expect(input.multiple).toBe(true)
+    expect(input.getAttribute('aria-hidden')).toBe('true')
+    expect(clicked).toHaveBeenCalledTimes(1)
+    const chosen = [file('a.pdf'), file('b.png')]
+    Object.defineProperty(input, 'files', { value: chosen, configurable: true })
+    input.dispatchEvent(new Event('change'))
+    expect(onFiles).toHaveBeenCalledWith(chosen)
+    picker.choose()
+    expect(document.querySelectorAll('input[type=file]')).toHaveLength(1)
+    scope.stop()
+    expect(document.querySelector('input[type=file]')).toBeNull()
+    clicked.mockRestore()
   })
 })
