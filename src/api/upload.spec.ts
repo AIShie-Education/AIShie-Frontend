@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
+  fetchBlob,
   forgetUploadLimits,
   isAbort,
   isFileTooLarge,
   knownUploadLimit,
+  knownUploadLimits,
   uploadFile,
   uploadLimit,
+  uploadLimits,
   type UploadProgress,
   type UploadRetry,
 } from './http'
@@ -61,7 +64,7 @@ let urlCalls: string[] = []
 let urlAnswers: Array<() => Response> = []
 let seq = 0
 
-function target(maxBytes = 50 << 20) {
+function target(maxBytes = 50 << 20, more: Record<string, unknown> = {}) {
   seq++
   return () =>
     new Response(
@@ -73,6 +76,7 @@ function target(maxBytes = 50 << 20) {
           headers: { 'Content-Type': 'application/pdf' },
           expires_at: '2026-09-30T00:15:00Z',
           max_bytes: maxBytes,
+          ...more,
         },
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -302,5 +306,64 @@ describe('uploadLimit', () => {
         ),
     )
     expect(await uploadLimit('c1', 'material')).toBeNull()
+  })
+})
+
+describe('a conversation’s files', () => {
+  it('are uploaded at conversation.upload_url, whose limits are learnt with the file’s largest size', async () => {
+    urlAnswers.push(target(8_000, { max_files: 4, max_conversation_bytes: 90_000 }))
+    const done = uploadFile('c1', 'conversation', file(1000))
+    const [xhr] = await puts(1)
+    expect(urlCalls[0]).toBe('/v1/courses/c1/conversations/upload-url?content_type=application%2Fpdf')
+    expect(xhr!.url).toBe('/v1/blobs/put-1')
+    xhr!.answer(200, '{}')
+    expect(await done).toEqual({
+      uploadToken: 'tok-1',
+      fileName: 'slides.pdf',
+      contentType: 'application/pdf',
+      size: 1000,
+    })
+    expect(knownUploadLimits('c1', 'conversation')).toEqual({
+      maxBytes: 8_000,
+      maxFiles: 4,
+      maxConversationBytes: 90_000,
+    })
+    // A document's limit is another's.
+    expect(knownUploadLimit('c1', 'material')).toBeNull()
+    // Larger than that, refused before anything is asked or sent.
+    await expect(uploadFile('c1', 'conversation', file(9_000))).rejects.toSatisfy(isFileTooLarge)
+    expect(urlCalls).toHaveLength(1)
+  })
+
+  it('are limited as Core says, asked once', async () => {
+    urlAnswers.push(target(8_000, { max_files: 4, max_conversation_bytes: 90_000 }))
+    const [a, b] = await Promise.all([uploadLimits('c1', 'conversation'), uploadLimit('c1', 'conversation')])
+    expect(a).toEqual({ maxBytes: 8_000, maxFiles: 4, maxConversationBytes: 90_000 })
+    expect(b).toBe(8_000)
+    expect(urlCalls).toEqual(['/v1/courses/c1/conversations/upload-url?content_type=application%2Foctet-stream'])
+  })
+})
+
+describe('fetchBlob', () => {
+  it('fetches a download URL as it is, with no credentials, Core’s own store through this origin', async () => {
+    const seen: { url: string; init: RequestInit }[] = []
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      seen.push({ url, init })
+      return new Response('png', { status: 200, headers: { 'Content-Type': 'image/png' } })
+    })
+    const blob = await fetchBlob('http://core.test/v1/blobs/get-1?sig=x')
+    expect(await blob.text()).toBe('png')
+    expect(seen[0]!.url).toBe('/v1/blobs/get-1?sig=x')
+    expect(seen[0]!.init.credentials).toBe('omit')
+    expect((seen[0]!.init.headers as Record<string, string> | undefined)?.Authorization).toBeUndefined()
+  })
+
+  it('says a refusal as a failure with its status', async () => {
+    vi.stubGlobal('fetch', async () => new Response('no', { status: 403 }))
+    await expect(fetchBlob('https://bucket.test/x')).rejects.toMatchObject({ status: 403 })
+    vi.stubGlobal('fetch', async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    await expect(fetchBlob('https://bucket.test/x')).rejects.toMatchObject({ status: 0, code: 'network' })
   })
 })

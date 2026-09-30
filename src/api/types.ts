@@ -204,6 +204,13 @@ export type ConversationRespondent = ConversationView['respondent']
 /** A message: ordered and paged by seq (after_seq / before_seq), never by id. */
 export type ConversationMessage = ListItem<'conversation.messages', 'messages'>
 export type MessageRetraction = NonNullable<ConversationMessage['retracted']>
+/**
+ * A file a message carries, in order (absent when it carries none, and once
+ * it is retracted): conversation.attachment gives a short-lived URL for it.
+ */
+export type MessageAttachment = NonNullable<ConversationMessage['attachments']>[number]
+/** A file a message carries, with where to download it for a while (conversation.attachment). */
+export type ConversationAttachment = ToolOut<'conversation.attachment'>
 export type ConversationMessagesPage = ToolOut<'conversation.messages'>
 /** Someone the caller may open a conversation with (conversation.respondents). */
 export type Respondent = ListItem<'conversation.respondents', 'respondents'>

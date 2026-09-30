@@ -797,7 +797,13 @@ export function blobUrl(url: string): string {
   }
 }
 
-export type UploadKind = 'material' | 'instructions' | 'rubric' | 'submission' | 'feedback'
+/** What a document's file is for (document.upload_url's kind). */
+export type DocumentUploadKind = 'material' | 'instructions' | 'rubric' | 'submission' | 'feedback'
+/**
+ * What an upload is for: a document's file of one of those kinds, or a file a
+ * message of a conversation carries (conversation, conversation.upload_url).
+ */
+export type UploadKind = DocumentUploadKind | 'conversation'
 
 export interface UploadedFile {
   uploadToken: string
@@ -890,39 +896,89 @@ function retryableUpload(e: unknown): e is ApiError {
   return e.status === 0 || e.status === 408 || e.status === 429 || e.status >= 500
 }
 
-// The largest file Core takes, by course and kind, from every upload URL it
-// has handed out (max_bytes): the same for a whole installation as a rule.
-const limits = new Map<string, number>()
-const limitsAsked = new Map<string, Promise<number | null>>()
-const limitKey = (courseId: string, kind: UploadKind) => `${courseId}\u0000${kind}`
+/**
+ * Where to upload a file, as Core hands it out: document.upload_url for a
+ * document's file, conversation.upload_url for a message's, whose answer says
+ * how many files a message carries and how much a conversation holds too.
+ */
+type UploadTarget = ToolOut<'document.upload_url'> &
+  Partial<Pick<ToolOut<'conversation.upload_url'>, 'max_files' | 'max_conversation_bytes'>>
 
-/** The largest file Core took the last time it was asked here, or null. */
-export function knownUploadLimit(courseId: string, kind: UploadKind): number | null {
-  return limits.get(limitKey(courseId, kind)) ?? null
+function askUploadUrl(
+  courseId: string,
+  kind: UploadKind,
+  contentType: string,
+  signal?: AbortSignal,
+): Promise<UploadTarget> {
+  if (kind === 'conversation')
+    return read('conversation.upload_url', { course_id: courseId, content_type: contentType }, { signal })
+  return read('document.upload_url', { course_id: courseId, kind, content_type: contentType }, { signal })
 }
 
 /**
- * The largest file Core takes for this course and kind, so that a file too
- * large is refused before it is sent: known from an upload URL handed out
- * before, or asked for once (document.upload_url, a read that records
- * nothing). Null when it cannot be learnt; the upload itself says so then.
+ * What Core takes, as its upload URLs say: the largest file (max_bytes), and
+ * for a conversation's files how many one message carries (max_files) and
+ * how much one conversation holds (max_conversation_bytes). Null where Core
+ * did not say.
  */
-export function uploadLimit(courseId: string, kind: UploadKind): Promise<number | null> {
+export interface UploadLimits {
+  maxBytes: number | null
+  maxFiles: number | null
+  maxConversationBytes: number | null
+}
+
+// What Core takes, by course and kind, from every upload URL it has handed
+// out: the same for a whole installation as a rule.
+const limits = new Map<string, UploadLimits>()
+const limitsAsked = new Map<string, Promise<UploadLimits | null>>()
+const limitKey = (courseId: string, kind: UploadKind) => `${courseId}\u0000${kind}`
+const positive = (n: number | null | undefined) => (typeof n === 'number' && n > 0 ? n : null)
+
+function learnLimits(courseId: string, kind: UploadKind, t: UploadTarget): UploadLimits {
+  const l: UploadLimits = {
+    maxBytes: positive(t.max_bytes),
+    maxFiles: positive(t.max_files),
+    maxConversationBytes: positive(t.max_conversation_bytes),
+  }
+  if (l.maxBytes || l.maxFiles || l.maxConversationBytes) limits.set(limitKey(courseId, kind), l)
+  return l
+}
+
+/** What Core took the last time it was asked here, or null. */
+export function knownUploadLimits(courseId: string, kind: UploadKind): UploadLimits | null {
+  return limits.get(limitKey(courseId, kind)) ?? null
+}
+
+/** The largest file Core took the last time it was asked here, or null. */
+export function knownUploadLimit(courseId: string, kind: UploadKind): number | null {
+  return knownUploadLimits(courseId, kind)?.maxBytes ?? null
+}
+
+/**
+ * What Core takes for this course and kind, so that a file too large, or one
+ * too many, is refused before it is sent: known from an upload URL handed out
+ * before, or asked for once (document.upload_url or conversation.upload_url,
+ * reads that record nothing). Null when it cannot be learnt; the upload
+ * itself says so then.
+ */
+export function uploadLimits(courseId: string, kind: UploadKind): Promise<UploadLimits | null> {
   const key = limitKey(courseId, kind)
   const known = limits.get(key)
   if (known !== undefined) return Promise.resolve(known)
   let asked = limitsAsked.get(key)
   if (!asked) {
-    asked = read('document.upload_url', { course_id: courseId, kind, content_type: 'application/octet-stream' })
-      .then((t) => {
-        if (t.max_bytes > 0) limits.set(key, t.max_bytes)
-        return t.max_bytes > 0 ? t.max_bytes : null
-      })
+    asked = askUploadUrl(courseId, kind, 'application/octet-stream')
+      .then((t) => learnLimits(courseId, kind, t))
       .catch(() => null)
       .finally(() => limitsAsked.delete(key))
     limitsAsked.set(key, asked)
   }
   return asked
+}
+
+/** The largest file Core takes for this course and kind (uploadLimits), or null when it cannot be learnt. */
+export function uploadLimit(courseId: string, kind: UploadKind): Promise<number | null> {
+  return uploadLimits(courseId, kind).then((l) => l?.maxBytes ?? null)
 }
 
 /** Forgets the limits learnt, for tests. */
@@ -1059,12 +1115,39 @@ function putFile(
 }
 
 /**
+ * The bytes a short-lived download URL Core handed out serves (such as
+ * conversation.attachment's download_url), as a Blob: for showing an image in
+ * the page as an object URL, which the page's policy for images (img-src
+ * 'self' data: blob:) allows where an object store's origin is not. It is
+ * fetched as it is, with no Authorization header and no cookie (the URL is
+ * the credential), Core's own store through this origin (blobUrl); an object
+ * store needs a CORS rule for GET from the app's origin, as downloads of
+ * documents do.
+ */
+export async function fetchBlob(url: string, opts: { signal?: AbortSignal } = {}): Promise<Blob> {
+  let res: Response
+  try {
+    res = await fetch(blobUrl(url), { signal: opts.signal, credentials: 'omit', cache: 'no-store' })
+  } catch (e) {
+    if (opts.signal?.aborted || isAbort(e)) throw abortError()
+    throw new ApiError({ status: 0, code: 'network', message: 'download failed: network error' })
+  }
+  if (!res.ok) {
+    throw new ApiError({ status: res.status, code: 'download_failed', message: `download failed: HTTP ${res.status}` })
+  }
+  return res.blob()
+}
+
+/**
  * Uploads a file for attaching, and returns the upload token that
  * document.create, document.add_version or grade.submit (feedback_files)
- * takes. Every upload in the app goes this way; components call it through
- * an upload queue (useUploadQueue) and FileDropZone.
+ * takes, or, for kind conversation, the attachments of conversation.open,
+ * .ask or .answer. Every upload in the app goes this way; components call it
+ * through an upload queue (useUploadQueue): FileDropZone's, or the chat
+ * composer's (components/chat/attachments.ts).
  *
- * It asks Core for a short-lived URL (document.upload_url) and PUTs the bytes
+ * It asks Core for a short-lived URL (document.upload_url, or
+ * conversation.upload_url for a conversation's file) and PUTs the bytes
  * there, reporting progress, speed and the time left (onProgress). A file
  * larger than Core takes is refused before anything is sent where the limit
  * is known (maxBytes, or an earlier upload URL's max_bytes), and before the
@@ -1076,8 +1159,8 @@ function putFile(
  *
  * What comes back, and what the caller hands it, stays the same should Core
  * one day hand out a URL for each part of a large file, or one of an object
- * store's that takes it straight: that is decided here, from what
- * document.upload_url answers.
+ * store's that takes it straight: that is decided here, from what the upload
+ * URL's read answers.
  */
 export async function uploadFile(
   courseId: string,
@@ -1110,12 +1193,8 @@ export async function uploadFile(
     }
     try {
       report('preparing', 0)
-      const target = await read(
-        'document.upload_url',
-        { course_id: courseId, kind, content_type: contentType },
-        { signal },
-      )
-      if (target.max_bytes > 0) limits.set(limitKey(courseId, kind), target.max_bytes)
+      const target = await askUploadUrl(courseId, kind, contentType, signal)
+      learnLimits(courseId, kind, target)
       if (target.max_bytes && file.size > target.max_bytes) throw tooLarge(file.size, target.max_bytes)
       report('sending', 0)
       await putFile(target, file, contentType, {

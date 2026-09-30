@@ -23,6 +23,12 @@
 // in that course or in all of them; a conversation is read and written in
 // the same pane as ever.
 //
+// Files dropped on the panel go to the conversation it shows, attached to
+// what the caller is writing (ChatPane takes those dropped on it, and those
+// dropped on the panel's bar come to it too); where it shows none to write
+// in, the panel takes them and does nothing with them, rather than the page
+// under it (materials, say) taking them.
+//
 // Mounted once, open or not: it reads the newest of the caller's
 // conversations again every UNREAD_POLL_MS while the page is shown, so that an
 // answer, wherever it came and whichever device read the others, is counted on
@@ -32,6 +38,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { Respondent } from '@/api/types'
+import { dragHasFiles, filesFrom } from '@/composables/useFileDrop'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePolling } from '@/composables/usePolling'
 import { useChatStore } from '@/stores/chat'
@@ -237,6 +244,24 @@ function startAgain(courseId: string, agent: Respondent) {
   chat.pickAgent(agent)
 }
 
+// --- Files dropped on the panel ---------------------------------------------------
+/** The conversation shown, which takes files dropped on it (and on the panel's bar). */
+const pane = ref<InstanceType<typeof ChatPane> | null>(null)
+const paneTakesFiles = () => !!pane.value?.canTakeFiles
+function onDragOver(e: DragEvent) {
+  // Over the pane, it has said already.
+  if (!dragHasFiles(e) || e.defaultPrevented) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = paneTakesFiles() ? 'copy' : 'none'
+}
+function onDrop(e: DragEvent) {
+  if (!dragHasFiles(e) || e.defaultPrevented) return
+  e.preventDefault()
+  if (!paneTakesFiles()) return
+  const { files, folders } = filesFrom(e.dataTransfer)
+  pane.value?.takeFiles(files, folders)
+}
+
 // --- Answers noticed with the panel closed ------------------------------------
 // Where the caller may ask somewhere, as the button that shows the count is offered.
 usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () => chat.courses.length > 0 })
@@ -254,6 +279,9 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
     :aria-modal="sheet ? 'true' : undefined"
     aria-labelledby="chat-panel-title"
     tabindex="-1"
+    @dragenter="onDragOver"
+    @dragover="onDragOver"
+    @drop="onDrop"
   >
     <div
       v-if="!sheet"
@@ -338,6 +366,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
       <ChatPane
         v-if="chat.screen === 'conversation' && chat.conversation"
         :key="`c:${chat.conversation.id}`"
+        ref="pane"
         class="chat-panel__pane"
         :course-id="chat.conversation.courseId"
         :conversation-id="chat.conversation.id"
@@ -367,6 +396,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
       <ChatPane
         v-else-if="chat.draft"
         :key="`to:${chat.draft.courseId}:${chat.draft.agent.member_id}`"
+        ref="pane"
         class="chat-panel__pane"
         :course-id="chat.draft.courseId"
         :respondent="chat.draft.agent"

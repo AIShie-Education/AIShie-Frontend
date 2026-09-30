@@ -18,9 +18,22 @@
 // title in. Their list is worked with the arrow keys, Enter or
 // Tab to choose and Escape to close, or with a tap; never while an input
 // method is composing.
+//
+// Files (attachments: the draft's, attachments.ts): the paperclip beside the
+// send button chooses them, and an image pasted in the box (a paste of files
+// alone) is taken too; the chat panel takes files dropped on it. Each is a
+// chip in the box, uploading at once. Nothing is sent while one is still on
+// its way, or failed until it is tried again or removed, which the line
+// under the chips says. Files need words to go with them: with files and an
+// empty box the placeholder asks what to do with them, and send asks for a
+// line, under the chips, rather than refusing.
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { draggingFiles, pastedFiles, useFilePicker } from '@/composables/useFileDrop'
 import { useMediaQuery } from '@/composables/useMediaQuery'
+import { formatBytes } from '@/utils/format'
+import { attachmentRefusalText, type ChatAttachments } from './attachments'
+import ChatAttachmentChips from './ChatAttachmentChips.vue'
 import { BODY_MAX, bodyProblem, charCount, isSendKey } from './chat'
 import { matchMentions, triggerAt, type ComposerTrigger, type Mention } from './mentions'
 
@@ -47,6 +60,10 @@ const props = defineProps<{
   commands?: ComposerCommand[]
   /** What an @ offers, read when it is first typed. */
   loadMentions?: (() => Promise<Mention[]>) | null
+  /** The files attached to the draft; without it, none are offered. */
+  attachments?: ChatAttachments | null
+  /** Who is asked, for what the box says once files are attached. */
+  name?: string
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string]; send: []; stop: []; command: [name: string] }>()
 const { t } = useI18n()
@@ -59,9 +76,97 @@ const textarea = () => input.value?.textarea ?? null
 const count = computed(() => charCount(props.modelValue))
 const problem = computed(() => bodyProblem(props.modelValue))
 const showCount = computed(() => count.value > BODY_MAX - 2000)
-const canSend = computed(() => !props.disabled && !props.pending && !problem.value)
-/** Nothing written while an answer is awaited: the button stops it. */
-const stopMode = computed(() => !!props.stoppable && problem.value === 'empty' && !props.pending)
+
+// --- Files -------------------------------------------------------------------------
+const fileCount = computed(() => props.attachments?.count.value ?? 0)
+const hasFiles = computed(() => fileCount.value > 0)
+/** A file still on its way, or one that failed: the message waits for it. */
+const fileBlock = computed(() => props.attachments?.block.value ?? null)
+/** Send was pressed with files and nothing written: a line is asked for. */
+const needText = ref(false)
+watch([() => props.modelValue, hasFiles], () => {
+  if (!hasFiles.value || problem.value !== 'empty') needText.value = false
+})
+const picker = useFilePicker({ multiple: true, onFiles: (files) => void props.attachments?.add(files) })
+const attachDisabled = computed(
+  () => !props.attachments || props.disabled || props.pending || props.attachments.full.value,
+)
+/** What Core takes is asked once the paperclip is pointed at, for its tooltip. */
+function learnLimits() {
+  void props.attachments?.ensureLimits()
+}
+const attachTip = computed(() => {
+  const a = props.attachments
+  if (!a) return ''
+  if (a.full.value) return t('chat.attach.full', { n: a.maxFiles.value })
+  const max = a.limits.value?.maxBytes
+  return max ? t('chat.attach.buttonTip', { n: a.maxFiles.value, size: formatBytes(max) }) : t('chat.attach.button')
+})
+function chooseFiles() {
+  if (attachDisabled.value) return
+  learnLimits()
+  picker.choose()
+}
+/** An image pasted in the box (a paste of files alone): attached, not written in. */
+function onPaste(e: ClipboardEvent) {
+  if (!props.attachments || props.disabled || props.pending) return
+  const { files, folders } = pastedFiles(e)
+  if (!files.length && !folders) return
+  e.preventDefault()
+  void props.attachments.add(files, folders)
+}
+/** Files are being dragged over the window, and would be taken: the box says where. */
+const dropReady = computed(() => draggingFiles.value && !!props.attachments && !props.disabled)
+
+/** The line under the chips: a line asked for, the files on their way or failed, or why some were not taken. */
+const fileLine = computed<{ tone: 'ask' | 'muted' | 'warning' | 'danger'; text: string } | null>(() => {
+  const a = props.attachments
+  if (!a) return null
+  const n = a.notice.value
+  if (needText.value)
+    return { tone: 'ask', text: t('chat.attach.needText', { name: props.name ?? '' }, fileCount.value) }
+  if (n?.kind === 'refused') {
+    const words = attachmentRefusalText(n.error) ?? ''
+    return { tone: 'danger', text: n.again ? `${words} ${t('chat.attach.again')}` : words }
+  }
+  if (fileBlock.value === 'uploading') return { tone: 'muted', text: t('chat.attach.waiting') }
+  if (fileBlock.value === 'failed') {
+    const failed = a.failed.value
+    const key = failed.every((i) => i.tooLarge) ? 'chat.attach.tooLarge' : 'chat.attach.failed'
+    return { tone: 'danger', text: t(key, failed.length) }
+  }
+  if (n?.kind === 'tooMany')
+    return { tone: 'warning', text: t('chat.attach.tooMany', { max: n.max, skipped: n.skipped }, n.skipped) }
+  if (n?.kind === 'folders') return { tone: 'warning', text: t('chat.attach.folders', n.n) }
+  return null
+})
+
+const canSend = computed(
+  () =>
+    !props.disabled &&
+    !props.pending &&
+    !fileBlock.value &&
+    (!problem.value || (problem.value === 'empty' && hasFiles.value)),
+)
+/** Nothing written, and nothing attached, while an answer is awaited: the button stops it. */
+const stopMode = computed(() => !!props.stoppable && problem.value === 'empty' && !props.pending && !hasFiles.value)
+/** What the box says: once files are attached and nothing is written, what to do with them. */
+const shownPlaceholder = computed(() =>
+  hasFiles.value && !props.modelValue
+    ? t('chat.attach.placeholder', { name: props.name ?? '' }, fileCount.value)
+    : props.placeholder,
+)
+
+/** Sends, or with files and nothing written asks for a line to go with them. */
+function trySend() {
+  if (!canSend.value) return
+  if (problem.value === 'empty') {
+    needText.value = true
+    input.value?.focus()
+    return
+  }
+  emit('send')
+}
 
 // --- The list a slash or an @ opens -----------------------------------------------
 const trigger = ref<ComposerTrigger | null>(null)
@@ -185,7 +290,7 @@ function onKeydown(e: Event | KeyboardEvent) {
   }
   if (!isSendKey(e, { composing: composing.value, enterSends: !touch.value })) return
   e.preventDefault()
-  if (canSend.value) emit('send')
+  trySend()
 }
 function onCompositionEnd() {
   // Safari ends the composition before the keydown of the Enter that ended
@@ -211,7 +316,7 @@ defineExpose({ focus: () => input.value?.focus() })
 </script>
 
 <template>
-  <div class="chat-composer" :class="{ 'is-disabled': disabled }">
+  <div class="chat-composer" :class="{ 'is-disabled': disabled, 'is-drop-ready': dropReady }" @paste="onPaste">
     <div
       v-if="listOpen"
       :id="listId"
@@ -253,6 +358,10 @@ defineExpose({ focus: () => input.value?.focus() })
         </template>
       </div>
     </div>
+    <ChatAttachmentChips v-if="attachments && attachments.count.value" :attachments="attachments" :disabled="pending" />
+    <p v-if="fileLine" class="chat-composer__file-line" :class="`is-${fileLine.tone}`" role="status">
+      {{ fileLine.text }}
+    </p>
     <el-input
       ref="input"
       class="chat-composer__input"
@@ -260,8 +369,8 @@ defineExpose({ focus: () => input.value?.focus() })
       :model-value="modelValue"
       :autosize="{ minRows: 2, maxRows: 10 }"
       resize="none"
-      :placeholder="placeholder"
-      :aria-label="placeholder ?? t('chat.composer.label')"
+      :placeholder="shownPlaceholder"
+      :aria-label="shownPlaceholder ?? t('chat.composer.label')"
       :aria-expanded="listOpen ? 'true' : 'false'"
       :aria-controls="listOpen ? listId : undefined"
       :aria-activedescendant="activeId"
@@ -275,10 +384,33 @@ defineExpose({ focus: () => input.value?.focus() })
       @compositionend="onCompositionEnd"
     />
     <div class="chat-composer__bar">
-      <span v-if="showCount" class="chat-composer__count" :class="{ 'is-over': problem === 'tooLong' }">
-        {{ t('chat.composer.count', { n: count, max: BODY_MAX }) }}
-      </span>
-      <span v-else-if="hint" class="chat-composer__hint" aria-hidden="true">{{ hint }}</span>
+      <div class="chat-composer__tools">
+        <el-tooltip
+          v-if="attachments"
+          :content="attachTip"
+          placement="top"
+          :show-after="400"
+          :disabled="touch"
+          :trigger-keys="[]"
+        >
+          <el-button
+            text
+            size="small"
+            class="chat-composer__attach"
+            :disabled="attachDisabled"
+            :aria-label="attachments.full.value ? attachTip : t('chat.attach.button')"
+            @click="chooseFiles"
+            @mouseenter="learnLimits"
+            @focus="learnLimits"
+          >
+            <el-icon aria-hidden="true"><Paperclip /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <span v-if="showCount" class="chat-composer__count" :class="{ 'is-over': problem === 'tooLong' }">
+          {{ t('chat.composer.count', { n: count, max: BODY_MAX }) }}
+        </span>
+        <span v-else-if="hint" class="chat-composer__hint" aria-hidden="true">{{ hint }}</span>
+      </div>
       <el-tooltip
         v-if="stopMode"
         :content="t('chat.composer.stopTip')"
@@ -313,7 +445,7 @@ defineExpose({ focus: () => input.value?.focus() })
           :disabled="!canSend"
           :aria-label="t('chat.composer.send')"
           :aria-keyshortcuts="touch ? undefined : 'Enter'"
-          @click="emit('send')"
+          @click="trySend"
         >
           <el-icon v-if="!pending" aria-hidden="true"><Top /></el-icon>
         </el-button>
@@ -342,6 +474,11 @@ defineExpose({ focus: () => input.value?.focus() })
 .chat-composer.is-disabled {
   background: var(--el-disabled-bg-color);
 }
+/* Files are being dragged over the window: the box is where they may go (dropped on the chat panel). */
+.chat-composer.is-drop-ready {
+  border-style: dashed;
+  border-color: var(--el-color-primary);
+}
 .chat-composer__input :deep(.el-textarea__inner) {
   display: block;
   padding: 9px 12px 2px;
@@ -361,6 +498,43 @@ defineExpose({ focus: () => input.value?.focus() })
   gap: 8px;
   min-height: 34px;
   padding: 0 6px 6px 12px;
+}
+/* Along the bar's left: the paperclip, then the hint or the count. */
+.chat-composer__tools {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chat-composer__attach.el-button {
+  width: 28px;
+  height: 28px;
+  margin-left: -6px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--app-ink-3);
+  font-size: 16px;
+}
+.chat-composer__attach.el-button:hover:not(.is-disabled) {
+  color: var(--app-ink);
+}
+/* Under the chips: a line asked for, the files on their way, or why some were not taken. */
+.chat-composer__file-line {
+  margin: 6px 12px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--el-text-color-secondary);
+  overflow-wrap: anywhere;
+}
+.chat-composer__file-line.is-ask {
+  color: var(--el-color-primary);
+}
+.chat-composer__file-line.is-warning {
+  color: var(--el-color-warning-dark-2, var(--el-color-warning));
+}
+.chat-composer__file-line.is-danger {
+  color: var(--el-color-danger);
 }
 .chat-composer__hint {
   margin-right: auto;

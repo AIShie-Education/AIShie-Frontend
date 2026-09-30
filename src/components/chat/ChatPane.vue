@@ -32,6 +32,15 @@
 // site: Core no longer offers it to be asked (conversation.respondents), and
 // refuses a question to it (agent_answers_elsewhere). A conversation with one
 // stays readable, and in place of the composer the opener is told why.
+//
+// A message may carry files (attachments.ts): the draft's are kept with it,
+// uploaded as they are added (the composer's paperclip, a paste, or a drop
+// on the pane, where they are shown to be going while dragged over it), and
+// sent with it (attachments: [{upload_token, filename}]); Core's refusal
+// because of them marks them and says why under the chips. A question taken
+// back to the composer brings its files back too, where they were sent from
+// this page (uploaded again: an upload is attached once); otherwise it says
+// to attach them again.
 import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -43,6 +52,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import { useNow } from '@/composables/useNow'
 import { useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
+import { useDropTarget } from '@/composables/useFileDrop'
 import type { ApiError } from '@/api/http'
 import {
   answersElsewhere,
@@ -76,6 +86,7 @@ import { courseMentions } from './mentions'
 import ChatMessage from './ChatMessage.vue'
 import ChatStatusLine from './ChatStatusLine.vue'
 import ChatDraft from './ChatDraft.vue'
+import { attachmentsFor, rememberSent, sentFilesOf } from './attachments'
 
 const props = withDefaults(
   defineProps<{
@@ -260,6 +271,8 @@ interface Held {
   actionId: string
   body: string
   at: number
+  /** The names of the files it carries. */
+  files: string[]
 }
 const held = ref<Held[]>([])
 const heldShown = computed(() =>
@@ -319,6 +332,8 @@ const draft = ref(getDraft(key))
 // Kept as it changes: a command (/history) may take the pane away in the same tick.
 watch(draft, (v) => setDraft(key, v), { flush: 'sync' })
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
+/** The files attached to the draft, kept with it as its text is. */
+const files = attachmentsFor(key, props.courseId)
 
 const openWrite = useWrite('conversation.open')
 const askWrite = useWrite('conversation.ask')
@@ -342,6 +357,11 @@ const readOnly = computed(() => {
 })
 /** In place of the composer, why its agent is asked nothing here. */
 const elsewhere = computed(() => (isDraft.value ? refusedElsewhere.value : status.value?.block === 'elsewhere'))
+/** The composer is there: the conversation is open (or starting), and the caller writes in it. */
+const showsComposer = computed(
+  () =>
+    status.value?.state !== 'closed' && !(isDraft.value && openProposed.value) && !readOnly.value && !elsewhere.value,
+)
 const placeholder = computed(() => t('chat.composer.askPlaceholder', { name: other.value?.name ?? '' }))
 const blockText = computed(() => (seat.value.writable ? '' : t('chat.blocked.archived')))
 
@@ -360,9 +380,13 @@ function noteElsewhere() {
   emit('changed')
 }
 
-/** Tells the person why a question was refused (closed meanwhile, in words of its own), then reads again. */
+/**
+ * Tells the person why a question was refused (because of its files, under
+ * the chips; closed meanwhile, in words of its own), then reads again.
+ */
 function refused(err: ApiError | null) {
   if (!err) return
+  if (files.refused(err)) return
   if (closedConflict(err)) ElMessage({ type: 'warning', message: t('chat.conflict.closed'), duration: 6000 })
   else notifyError(err)
   if (answersElsewhere(err)) noteElsewhere()
@@ -372,36 +396,55 @@ function refused(err: ApiError | null) {
   }
 }
 
+/**
+ * Sends the draft, with the files attached to it, once they are all up (the
+ * composer asks for words to go with files alone, and sends nothing then).
+ */
 async function send() {
-  if (writeBlocked.value || sending.value || bodyProblem(draft.value)) return
+  if (writeBlocked.value || sending.value || files.block.value || bodyProblem(draft.value)) return
   const body = cleanBody(draft.value)
+  const attachments = files.payload()
+  const withFiles = attachments.length ? { attachments } : {}
+  const sentFiles = files.files()
+  const heldFiles = attachments.map((a) => a.filename)
   if (isDraft.value) {
     const r = props.respondent
     if (!r) return
     const title = titleFrom(body)
     const out = await openWrite.run(
-      { course_id: props.courseId, respondent_member_id: r.member_id, body, ...(title ? { title } : {}) },
-      { success: false },
+      {
+        course_id: props.courseId,
+        respondent_member_id: r.member_id,
+        body,
+        ...withFiles,
+        ...(title ? { title } : {}),
+      },
+      { success: false, notify: false },
     )
     if (!out) {
-      // Said already, in the words every page has for such an agent.
-      if (answersElsewhere(openWrite.lastError.value)) noteElsewhere()
+      const err = openWrite.lastError.value
+      if (files.refused(err)) return
+      // In the words every page has for such an agent.
+      notifyError(err)
+      if (answersElsewhere(err)) noteElsewhere()
       return
     }
     draft.value = ''
+    files.clear()
     noteSent(body)
     emit('changed')
     if (out.status === 'proposed') {
       openProposed.value = true
       return
     }
+    rememberSent(out.result.message_id, sentFiles)
     afterWrite(out)
     emit('opened', out.result.conversation_id)
     return
   }
   if (!conv || !props.conversationId || role.value !== 'opener') return
   const out = await askWrite.run(
-    { course_id: props.courseId, conversation_id: props.conversationId, body },
+    { course_id: props.courseId, conversation_id: props.conversationId, body, ...withFiles },
     { success: false, notify: false },
   )
   if (!out) {
@@ -409,12 +452,27 @@ async function send() {
     return
   }
   draft.value = ''
+  files.clear()
   noteSent(body)
-  if (out.status === 'proposed') held.value = [...held.value, { actionId: out.actionId, body, at: Date.now() }]
+  if (out.status === 'proposed')
+    held.value = [...held.value, { actionId: out.actionId, body, at: Date.now(), files: heldFiles }]
+  else rememberSent(out.result.message_id, sentFiles)
   afterWrite(out)
   await conv.refresh()
   composer.value?.focus()
 }
+
+// --- Files dropped on the pane --------------------------------------------------------
+/** Files may be attached here now: the caller writes, and nothing stops them. */
+const canTakeFiles = computed(() => showsComposer.value && !writeBlocked.value && !sending.value)
+function takeFiles(list: File[], folders = 0) {
+  if (!canTakeFiles.value) return
+  void files.add(list, folders)
+  composer.value?.focus()
+}
+const drop = useDropTarget({ enabled: () => canTakeFiles.value, onFiles: takeFiles })
+const dropOver = computed(() => drop.over.value && canTakeFiles.value)
+defineExpose({ canTakeFiles, takeFiles })
 
 const reasonValidator = (v: string | null) =>
   charCount(v ?? '') <= REASON_MAX || t('chat.reasonTooLong', { max: REASON_MAX })
@@ -453,11 +511,16 @@ async function withdrawToComposer(m: ConversationMessage, why: 'edit' | 'stop') 
   withdrawing.value = null
   if (!out) return
   if (out.status === 'executed') {
+    const hadFiles = !!m.attachments?.length
+    const again = hadFiles ? sentFilesOf(m.id) : null
     conv.markRetracted(m.id, me.value, null)
     draft.value = cleanBody(draft.value) ? `${body}\n\n${draft.value}` : body
+    // Its files come back with it where they were sent from here, uploaded again.
+    if (again?.length) void files.add(again)
+    const said = t(why === 'stop' ? 'chat.stop.done' : 'chat.edit.done', { name: other.value?.name ?? '' })
     ElMessage({
       type: 'info',
-      message: t(why === 'stop' ? 'chat.stop.done' : 'chat.edit.done', { name: other.value?.name ?? '' }),
+      message: hadFiles ? `${said} ${t(again?.length ? 'chat.attach.readded' : 'chat.attach.reattach')}` : said,
       duration: 6000,
     })
     void nextTick(() => composer.value?.focus())
@@ -658,7 +721,11 @@ const closedLine = computed(() => {
 </script>
 
 <template>
-  <div class="chat-pane">
+  <div class="chat-pane" :class="{ 'is-drop-over': dropOver }" v-on="drop.handlers">
+    <div v-if="dropOver" class="chat-pane__drop" aria-hidden="true">
+      <el-icon><Paperclip /></el-icon>
+      <span>{{ t('chat.attach.dropHere') }}</span>
+    </div>
     <header class="chat-pane__head">
       <!-- One row: the agent, whether anything runs it, and a closed conversation's state; its title on hover. -->
       <div class="chat-pane__name-row" :title="view?.title || undefined">
@@ -738,6 +805,7 @@ const closedLine = computed(() => {
             <li v-for="(m, i) in messages" :key="m.id" :class="{ 'is-grouped': grouped(i) }">
               <ChatMessage
                 :message="m"
+                :course-id="courseId"
                 :author-name="authorName(m)"
                 :from-opener="fromOpener(m)"
                 :mine="m.author_member_id === me"
@@ -754,6 +822,10 @@ const closedLine = computed(() => {
             <li v-for="h in heldShown" :key="h.actionId" class="chat-pane__held">
               <div class="chat-pane__held-bubble">
                 <p class="chat-pane__held-text">{{ h.body }}</p>
+                <p v-if="h.files.length" class="chat-pane__held-files">
+                  <el-icon aria-hidden="true"><Paperclip /></el-icon>
+                  {{ t('chat.attach.held', { n: h.files.length, names: h.files.join(', ') }, h.files.length) }}
+                </p>
               </div>
               <div class="chat-pane__held-note">
                 <el-icon aria-hidden="true"><Clock /></el-icon>
@@ -845,6 +917,8 @@ const closedLine = computed(() => {
           :recall="recall"
           :commands="commands"
           :load-mentions="loadMentions"
+          :attachments="files"
+          :name="other?.name ?? ''"
           @send="send"
           @stop="stop"
           @command="onCommand"
@@ -856,10 +930,32 @@ const closedLine = computed(() => {
 
 <style scoped>
 .chat-pane {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+}
+/* Files dragged over the pane: where they go, over all of it. */
+.chat-pane__drop {
+  position: absolute;
+  inset: 6px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed var(--el-color-primary);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--el-bg-color) 86%, transparent);
+  color: var(--el-color-primary);
+  font-size: 14px;
+  font-weight: 500;
+  pointer-events: none;
+}
+.chat-pane__drop .el-icon {
+  font-size: 26px;
 }
 /* One compact row, as an editor's agent chat has it. */
 .chat-pane__head {
@@ -1047,6 +1143,14 @@ const closedLine = computed(() => {
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.6;
+}
+.chat-pane__held-files {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 .chat-pane__held-note {
   display: flex;

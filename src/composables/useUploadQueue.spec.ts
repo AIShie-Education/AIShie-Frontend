@@ -214,4 +214,41 @@ describe('the upload queue', () => {
     expect(p.calls[2]!.aborted).toBe(true)
     expect(b).toBeDefined()
   })
+  it('fails an uploaded item after the fact, as a refusal where it was attached says, to be tried again', async () => {
+    const p = played()
+    const failed: string[] = []
+    const q = queue(p, { onFail: (i) => failed.push(i.name) })
+    const [a, b] = q.add([file('a'), file('big', 500)])
+    await flush()
+    p.finish(p.calls[0]!)
+    p.finish(p.calls[1]!)
+    await flush()
+    expect(q.done.value).toHaveLength(2)
+
+    const gone = new ApiError({
+      status: 422,
+      code: 'failed_precondition',
+      message: 'not uploaded',
+      details: { reason: 'not_uploaded' },
+    })
+    q.fail(a!.id, gone)
+    expect(a!.status).toBe('failed')
+    expect(a!.result).toBeNull()
+    expect(a!.error).toBe(gone)
+    expect(a!.tooLarge).toBe(false)
+    q.retry(a!.id)
+    await flush()
+    expect(p.calls).toHaveLength(3)
+
+    // Too large (Core deleted it): not tried again.
+    q.fail(b!.id, new ApiError({ status: 422, code: FILE_TOO_LARGE, message: 'too large' }))
+    expect(b!.tooLarge).toBe(true)
+    q.retry(b!.id)
+    await flush()
+    expect(p.calls).toHaveLength(3)
+    expect(failed).toEqual(['a', 'big'])
+    // Only what is done can fail so.
+    q.fail(a!.id, gone)
+    expect(a!.status).toBe('uploading')
+  })
 })

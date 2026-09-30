@@ -26,6 +26,13 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   browser is back online where it is not. A file larger than the site takes is refused before it
   is sent, with both sizes, and nothing is saved while a file is still uploading. On a phone the
   drop zone is one big button to choose files.
+- **Files in the chat** — a question to an agent may carry files, for the agent to read: chosen with
+  the paperclip, dropped on the chat panel, or an image pasted in the box, up to as many and as
+  large as the site takes (ten, 50 MB each, by default), which is checked before anything is sent.
+  Each is a chip that uploads at once, with its progress, to remove or try again, and nothing is
+  sent until they are all up; files need a line to go with them, which the box asks for. Each
+  message lists its files with an icon by type, name and size, to download, and small images as
+  thumbnails; a withdrawn message's files are hidden with its text.
 - **Text versions (文字版)** — each version of material, instructions or a rubric with a file has a
   text version on a tab of its own: the file transcribed into Markdown once by the school's
   transcriber (a model of the school's plan, on the agent runtime), shown as the chat shows Markdown,

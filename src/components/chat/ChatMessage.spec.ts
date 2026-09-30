@@ -141,4 +141,45 @@ describe('ChatMessage', () => {
     expect(w.find('.chat-msg__copy').exists()).toBe(false)
     expect(w.find('.chat-msg__edit').exists()).toBe(false)
   })
+  it('lists the files a message carries: the person’s over their bubble, the agent’s under its words', () => {
+    const files = [
+      {
+        id: 'f1',
+        filename: 'essay.docx',
+        content_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        byte_size: 20_480,
+        created_at: 'x',
+      },
+      { id: 'f2', filename: 'data.csv', content_type: 'text/csv', byte_size: 300, created_at: 'x' },
+    ]
+    const p = person({ attachments: files }, { courseId: 'k1' })
+    const list = p.get('.msg-files')
+    expect(list.attributes('aria-label')).toBe('Attached files')
+    // Before the bubble, in order.
+    const children = [...p.get('article').element.children].map((c) => c.classList[0])
+    expect(children.indexOf('msg-files')).toBeLessThan(children.indexOf('chat-msg__body'))
+    expect(p.findAll('.msg-file__name').map((n) => n.text())).toEqual(['essay.docx', 'data.csv'])
+    expect(p.findAll('.msg-file__meta').map((n) => n.text())).toEqual(['Document · 20 KB', 'Spreadsheet · 300 B'])
+    expect(p.findAll('.msg-file__icon').map((i) => i.classes()[1])).toEqual(['is-word', 'is-sheet'])
+    expect(p.get('.msg-file__open').attributes('aria-label')).toBe('Download “essay.docx” (Document · 20 KB)')
+
+    const a = agent({ attachments: [files[1]!] }, { courseId: 'k1' })
+    const kids = [...a.get('article').element.children].map((c) => c.classList[0])
+    expect(kids.indexOf('msg-files')).toBeGreaterThan(kids.indexOf('chat-msg__body'))
+  })
+
+  it('shows no files of a withdrawn message, as it shows no text', () => {
+    const w = person(
+      {
+        body: null,
+        retracted: { at: 'x', by_member_id: 'me', reason: null },
+        attachments: [
+          { id: 'f1', filename: 'essay.pdf', content_type: 'application/pdf', byte_size: 10, created_at: 'x' },
+        ],
+      },
+      { courseId: 'k1' },
+    )
+    expect(w.find('.msg-files').exists()).toBe(false)
+    expect(w.text()).not.toContain('essay.pdf')
+  })
 })

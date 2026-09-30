@@ -9,6 +9,11 @@
 // answer; withdraw it) show under the message on hover or focus, and always
 // on a touch screen. A retracted message shows who withdrew it and why,
 // never its text (Core no longer sends it).
+//
+// The files a message carries (attachments) are listed with it, each to
+// download: the person's over their bubble, on the right, as they were sent
+// with it; the agent's under its words. A retracted message shows none, as it
+// shows no text (Core no longer sends them either).
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConversationMessage } from '@/api/types'
@@ -17,6 +22,7 @@ import TimeText from '@/components/TimeText.vue'
 import { copyText } from '@/utils/clipboard'
 import '@/styles/chat-prose.css'
 import { retractedBy } from './chat'
+import ChatMessageFiles from './ChatMessageFiles.vue'
 
 const props = defineProps<{
   message: ConversationMessage
@@ -33,6 +39,8 @@ const props = defineProps<{
   editing?: boolean
   /** Follows a message by the same author closely: its name is not said again. */
   grouped?: boolean
+  /** The conversation's course: its files are downloaded there. */
+  courseId?: string | null
 }>()
 const emit = defineEmits<{ retract: []; edit: [] }>()
 const { t } = useI18n()
@@ -48,6 +56,8 @@ const withdrawnText = computed(() => {
       return t('chat.message.retractedBy', { name: props.authorName })
   }
 })
+/** The files it carries, while it is not withdrawn. */
+const files = computed(() => (props.message.retracted || !props.courseId ? [] : (props.message.attachments ?? [])))
 /** The name over a run of messages: the agent's always; the person's only when it is not the caller's own. */
 const showAuthor = computed(() => !props.grouped && (!props.fromOpener || !props.mine))
 
@@ -78,6 +88,12 @@ async function copy() {
       <span v-if="!fromOpener" class="chat-msg__mark" aria-hidden="true" />
       <span class="chat-msg__author">{{ authorName }}</span>
     </header>
+    <ChatMessageFiles
+      v-if="files.length && fromOpener"
+      class="chat-msg__files is-before"
+      :course-id="courseId!"
+      :files="files"
+    />
     <div class="chat-msg__body">
       <template v-if="message.retracted">
         <div class="chat-msg__retracted">
@@ -91,6 +107,12 @@ async function copy() {
       <MarkdownView v-else-if="!fromOpener" :source="message.body" code-tools class="chat-msg__markdown chat-prose" />
       <p v-else class="chat-msg__text">{{ message.body }}</p>
     </div>
+    <ChatMessageFiles
+      v-if="files.length && !fromOpener"
+      class="chat-msg__files is-after"
+      :course-id="courseId!"
+      :files="files"
+    />
     <footer class="chat-msg__foot">
       <TimeText :value="message.created_at" class="chat-msg__time" />
       <template v-if="!message.retracted">
@@ -193,6 +215,16 @@ async function copy() {
 }
 .chat-msg.is-person.is-grouped .chat-msg__body {
   border-top-right-radius: 5px;
+}
+/* Its files: over the person's bubble, on the right; under the agent's words. */
+.chat-msg__files.is-before {
+  justify-content: flex-end;
+  max-width: min(88%, 620px);
+  margin-bottom: 4px;
+}
+.chat-msg__files.is-after {
+  margin-top: 8px;
+  padding: 0 2px;
 }
 .chat-msg.is-retracted .chat-msg__body {
   padding: 8px 12px;

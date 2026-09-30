@@ -386,12 +386,13 @@ export function useConversation(opts: UseConversationOptions) {
   }
 
   /** Marks a message retracted at once (the caller just retracted it); the next read confirms it. */
+  /** Shows a message withdrawn at once, without its text or its files, as Core sends it from now on. */
   function markRetracted(messageId: string, by: string | null, reason: string | null) {
-    messages.value = messages.value.map((m) =>
-      m.id === messageId && !m.retracted
-        ? { ...m, body: null, retracted: { at: new Date(now()).toISOString(), by_member_id: by, reason } }
-        : m,
-    )
+    messages.value = messages.value.map((m) => {
+      if (m.id !== messageId || m.retracted) return m
+      const { attachments: _files, ...rest } = m
+      return { ...rest, body: null, retracted: { at: new Date(now()).toISOString(), by_member_id: by, reason } }
+    })
   }
 
   void load()

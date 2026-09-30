@@ -43,25 +43,34 @@ markdown-it + DOMPurify.
 - Use `write()` directly only outside components. Never call `fetch` yourself.
 - **Files**: bytes never go through a tool. Every upload is one call, `uploadFile(courseId, kind,
   file, { onProgress, onRetry, signal, retries, maxBytes })` from `@/api/http`: it asks for an upload
-  URL (`document.upload_url`), PUTs the bytes there and returns an `UploadedFile`, reporting where it
+  URL (`document.upload_url`, or `conversation.upload_url` for kind `conversation`, a message's
+  file), PUTs the bytes there and returns an `UploadedFile`, reporting where it
   is (`preparing`, `sending`, `finishing`), the bytes sent, and the speed and time left over the last
   few seconds (`RateMeter`, `@/utils/transferRate`). A failure on the way (no answer, a gateway or
   server error, a rate limit, nothing moving for a minute) is tried again three times, after 1, 2 and
   4 s or once the browser is back online, each at a fresh URL (Core's own store takes a URL's file
-  once); a refusal is not. Aborting `signal` cancels it (`isAbort`). The largest file Core takes is
-  remembered from each upload URL (`max_bytes`) and asked once by `uploadLimit`, so that a larger
-  file is refused before anything is sent (`isFileTooLarge`, with `details.size` and
-  `details.max_bytes`), as a proxy's 413 is too. What callers hand it and get back stays the same
-  when Core hands out a URL per part or an object store's own: that is decided inside it.
+  once); a refusal is not. Aborting `signal` cancels it (`isAbort`). What Core takes is remembered
+  from each upload URL and asked once by `uploadLimits` (`maxBytes`, and for a conversation's files
+  `maxFiles` a message and `maxConversationBytes` a conversation; `uploadLimit` is the first alone),
+  so that a larger file is refused before anything is sent (`isFileTooLarge`, with `details.size`
+  and `details.max_bytes`), as a proxy's 413 is too. What callers hand it and get back stays the
+  same when Core hands out a URL per part or an object store's own: that is decided inside it. The
+  bytes of a short-lived download URL are fetched, where the page needs them (a thumbnail), by
+  `fetchBlob`, with no credentials, and shown from an object URL: `index.html`'s policy lets images
+  come from this origin, `data:` and `blob:` only, and an object store's URL is another origin.
 - Components never call it, nor have an `<input type="file">`, of their own: they take files with
-  `<FileDropZone v-model="files" v-model:uploading="busy" :course-id :kind multiple />`
+  `<FileDropZone v-model="files" v-model:uploading="busy" :course-id :kind multiple />`, or, in the
+  chat's composer, with its attachments (below)
   (`@/components/FileDropZone.vue`). It takes files dropped on it, chosen by clicking it or from the
   keyboard (it is one button: Enter or Space), or pasted, says the largest file taken, and on a phone
   is one big button to choose files. With `page-drop` it also takes files dropped anywhere on the
   page or dialog it is the one zone of, or pasted where no field takes them (`usePageDrop` from
   `@/composables/useFileDrop`, which a page's own list may use too: the last to ask, and turned on,
   takes them, and says while files are dragged that they would go there; `installDropGuard`, from
-  `App.vue`, keeps a file dropped where nothing takes it from being opened in the app's place). Each
+  `App.vue`, keeps a file dropped where nothing takes it from being opened in the app's place). The
+  same file takes files dropped on one element (`useDropTarget`, the zone's and the chat pane's),
+  a paste of files alone (`pastedFiles`: one that carries text is the text's), and files chosen
+  from a button that is not a zone (`useFilePicker`, the composer's paperclip). Each
   file goes through an upload queue (`useUploadQueue`: three at once, the rest waiting, each to
   cancel, retry or remove; a file over the limit fails at once and is not tried again) and is listed
   with its progress, speed and time left, what it is doing in words, and buttons named for the file;
@@ -405,7 +414,38 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   read it and how its answers arrive (nothing ends a conversation from the chat); the messages; and
   the composer (`ChatComposer.vue`), one bordered box whose send button, small and icon-only, sits
   inside it at the bottom right, with its keys in the button's tooltip and the count near Core's
-  limit beside it. The agent's messages (`ChatMessage.vue`) take the whole width with no bubble, as
+  limit beside it, and a paperclip at the bottom left. **Files in the chat** (Core's conversation
+  attachments, `attachments.ts`): a message may carry files, chosen with the paperclip, dropped on
+  the chat panel (the pane shows where they go while they are dragged over it, and the box is
+  outlined while they are dragged over the window; dropped on the panel's bar they go to the pane
+  too, and where it shows nothing to write in, nowhere, never to the page under it), or pasted in
+  the box (an image copied). Each is a chip in the box (`ChatAttachmentChips`: its icon by type,
+  name, size, a line along its bottom as it uploads, and buttons named for it to cancel, try again
+  or remove it) and uploads at once, through the draft's upload queue and `uploadFile` (kind
+  `conversation`); what is attached to a draft is kept with it for the page's life, as its text is
+  (`attachmentsFor`, by the draft's key). What Core takes (`uploadLimits`: `max_files` a message,
+  `max_bytes` a file) is known before anything is sent: files past the count are left out, saying
+  how many, and a file too large fails at once with both sizes. Nothing is sent while a file is on
+  its way ("Waiting for the files to upload…") or failed until it is tried again or removed. A
+  message needs words (`attachments_need_body`): with files and an empty box, the placeholder asks
+  what to do with them, and sending asks for a line under the chips, never an error. The message
+  goes with `attachments: [{ upload_token, filename }]`, in the order added, and the chips go with
+  it; Core's refusal because of them (`details.reason`, each worded in `chat.attach.refusal`,
+  `attachmentRefusalText`) marks the files it was about (one too large fails; uploads that can no
+  longer be attached as they are, `not_uploaded`, `upload_too_old`…, are uploaded again) and says
+  why under the chips, keeping the words. A question waiting for approval shows its files' names;
+  one taken back to the composer (edit, stop) brings its files back, uploaded again, where they
+  were sent from this page, and says to attach them again otherwise. In a message
+  (`ChatMessageFiles`), each file is a card with an icon by its type (`fileKind`), its name, what
+  it is and its size, the person's over their bubble and the agent's under its words; a click asks
+  for a fresh URL (`conversation.attachment`) and saves it under its name (`downloadAttachment`:
+  through this origin with the download attribute, an object store's in a tab of its own). A small
+  image (PNG, JPEG, GIF, WebP, AVIF or BMP, up to 8 MB) is shown as a thumbnail, fetched once the
+  message is on screen (`thumbnailOf`, kept by the file's id for the page's life, the latest 60)
+  and shown from an object URL. A withdrawn message shows no files, as it shows no text (Core
+  sends neither). The course feed says how many files a posted message carried
+  (`conversation.message_posted`'s `attachments`), and an action that writes a message how many
+  it names. The agent's messages (`ChatMessage.vue`) take the whole width with no bubble, as
   Markdown set for reading
   (`styles/chat-prose.css`), their code in a box with its language and a copy button
   (`<MarkdownView code-tools>`); the person's are a quiet bubble on the right; a run of messages by

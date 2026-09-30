@@ -1,0 +1,225 @@
+<script setup lang="ts">
+// The files a message carries, in order: each a card with an icon by its
+// type, its name, what it is and its size, which downloads it (a fresh
+// short-lived URL, conversation.attachment, asked for on the click). A small
+// image is shown as a thumbnail, fetched once the message is on screen and
+// shown from an object URL (attachments.ts): the page's policy for images
+// allows this origin, data: and blob: only, and a download URL may be an
+// object store's. Until it has come, or where it cannot, the icon stands.
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { MessageAttachment } from '@/api/types'
+import { notifyError } from '@/composables/useErrors'
+import { formatBytes } from '@/utils/format'
+import { downloadAttachment, FILE_ICON, fileKind, hasThumbnail, REFUSAL_SCOPE, thumbnailOf } from './attachments'
+
+const props = defineProps<{
+  courseId: string
+  files: MessageAttachment[]
+}>()
+const { t } = useI18n()
+
+const kindOf = (f: MessageAttachment) => fileKind(f.content_type, f.filename)
+const meta = (f: MessageAttachment) => `${t(`chat.attach.kind.${kindOf(f)}`)} · ${formatBytes(f.byte_size)}`
+
+// --- Thumbnails, once on screen ------------------------------------------------------
+const thumbs = reactive<Record<string, string>>({})
+const root = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+let gone = false
+function loadThumbnails() {
+  for (const f of props.files) {
+    if (!hasThumbnail(f) || thumbs[f.id]) continue
+    void thumbnailOf(props.courseId, f.id).then((url) => {
+      if (url && !gone) thumbs[f.id] = url
+    })
+  }
+}
+onMounted(() => {
+  if (!props.files.some(hasThumbnail)) return
+  if (typeof IntersectionObserver === 'undefined' || !root.value) return loadThumbnails()
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return
+      observer?.disconnect()
+      observer = null
+      loadThumbnails()
+    },
+    { rootMargin: '200px' },
+  )
+  observer.observe(root.value)
+})
+onBeforeUnmount(() => {
+  gone = true
+  observer?.disconnect()
+})
+/** An object URL that no longer loads (given up to make room): the icon again. */
+function thumbFailed(id: string) {
+  delete thumbs[id]
+}
+
+// --- Downloading ---------------------------------------------------------------------
+const busy = ref<string | null>(null)
+async function download(f: MessageAttachment) {
+  if (busy.value) return
+  busy.value = f.id
+  try {
+    await downloadAttachment(props.courseId, f.id)
+  } catch (e) {
+    notifyError(e, f.filename, { reasons: REFUSAL_SCOPE })
+  } finally {
+    busy.value = null
+  }
+}
+</script>
+
+<template>
+  <ul ref="root" class="msg-files" :aria-label="t('chat.attach.list')">
+    <li
+      v-for="f in files"
+      :key="f.id"
+      class="msg-file"
+      :class="{ 'has-thumb': !!thumbs[f.id] }"
+      :data-file="f.filename"
+    >
+      <button
+        type="button"
+        class="msg-file__open"
+        :aria-label="`${t('chat.attach.download', { name: f.filename })} (${meta(f)})`"
+        :title="`${t('chat.attach.downloadTip')}: ${f.filename}`"
+        :aria-busy="busy === f.id ? 'true' : undefined"
+        @click="download(f)"
+      >
+        <img
+          v-if="thumbs[f.id]"
+          class="msg-file__thumb"
+          :src="thumbs[f.id]"
+          alt=""
+          draggable="false"
+          @error="thumbFailed(f.id)"
+        />
+        <span class="msg-file__row">
+          <span v-if="!thumbs[f.id]" class="msg-file__icon" :class="`is-${kindOf(f)}`" aria-hidden="true">
+            <el-icon><component :is="FILE_ICON[kindOf(f)]" /></el-icon>
+          </span>
+          <span class="msg-file__text">
+            <span class="msg-file__name">{{ f.filename }}</span>
+            <span class="msg-file__meta">{{ meta(f) }}</span>
+          </span>
+          <el-icon class="msg-file__get" aria-hidden="true"
+            ><Loading v-if="busy === f.id" class="is-loading" /><Download v-else
+          /></el-icon>
+        </span>
+      </button>
+    </li>
+  </ul>
+</template>
+
+<style scoped>
+.msg-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
+.msg-file {
+  max-width: 100%;
+  min-width: 0;
+}
+.msg-file__open {
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--el-bg-color);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+.msg-file__open:hover {
+  border-color: var(--app-indigo-line);
+  background: var(--app-indigo-tint);
+}
+.msg-file__open:focus-visible {
+  outline-offset: 1px;
+}
+.msg-file__thumb {
+  display: block;
+  width: 100%;
+  height: 132px;
+  object-fit: cover;
+  background: var(--app-ground-2);
+  border-bottom: 1px solid var(--app-line-soft);
+}
+.msg-file__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+.msg-file__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--app-ground-2);
+  color: var(--app-ink-2);
+  font-size: 17px;
+}
+.msg-file__icon.is-pdf {
+  color: var(--el-color-danger);
+}
+.msg-file__icon.is-word,
+.msg-file__icon.is-text {
+  color: var(--el-color-primary);
+}
+.msg-file__icon.is-sheet {
+  color: var(--el-color-success);
+}
+.msg-file__icon.is-slides {
+  color: var(--el-color-warning);
+}
+.msg-file__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+.msg-file__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-ink);
+}
+.msg-file__meta {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.msg-file__get {
+  flex-shrink: 0;
+  color: var(--app-ink-3);
+}
+.msg-file__open:hover .msg-file__get {
+  color: var(--el-color-primary);
+}
+</style>
