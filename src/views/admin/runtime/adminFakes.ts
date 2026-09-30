@@ -3,7 +3,10 @@
 // fake servers (hostingFakes.ts), which stub fetch and see every request,
 // headers and bodies included. The plan, OCR's settings, today's use and
 // the money (prices, tenants' quotas, agents' budgets, costs) are kept as a
-// runtime keeps them, and answered as its contract has them.
+// runtime keeps them, and answered as its contract has them; so are the
+// transcriber's settings, credential and jobs, and Core's credentials of the
+// transcription service (issued at random as a test runs: no token is
+// written in any file).
 import type {
   AgentBudgets,
   CostGroup,
@@ -16,10 +19,12 @@ import type {
   SchoolPlan,
   SchoolPlanUsage,
   TenantQuota,
+  TranscriptionJob,
+  TranscriptionSettings,
 } from '@/api/runtime-types'
-import { INFO, Servers, executed, json, refusal } from '@/views/account/components/agents/hostingFakes'
+import { INFO, Servers, executed, json, newToken, refusal } from '@/views/account/components/agents/hostingFakes'
 
-export { Servers, json, refusal }
+export { Servers, executed, json, refusal }
 export { OFFERS, newKey, newToken } from '@/views/account/components/agents/hostingFakes'
 
 /** What the runtime says of itself, as useRuntime gives it. */
@@ -43,7 +48,13 @@ export const ADMIN = {
   tenant: /^\/runtime\/api\/v1\/admin\/tenants\/([^/]+)$/,
   budgets: /^\/runtime\/api\/v1\/admin\/agent-budgets$/,
   costs: /^\/runtime\/api\/v1\/admin\/costs$/,
+  credential: /^\/runtime\/api\/v1\/admin\/transcription\/credential$/,
+  jobs: /^\/runtime\/api\/v1\/admin\/transcription\/jobs$/,
   actor: /^\/v1\/actors\/([^/]+)$/,
+  // Core's credentials of the transcription service.
+  serviceCredentials: /^\/v1\/services\/document_text\/credentials$/,
+  serviceRevoke: /^\/v1\/services\/document_text\/credentials\/([^/]+)\/revoke$/,
+  document: /^\/v1\/courses\/([^/]+)\/documents\/([^/]+)$/,
 }
 
 /** runtime.yaml's offer: the operator's, read-only here. */
@@ -133,6 +144,96 @@ export function ocrSettings(over: Partial<OcrSettings> = {}): RuntimeSettings {
       ...over,
     },
   }
+}
+
+/** The transcriber as a site that has set it up has it: on, running, on the site's offer, with a credential. */
+export function transcriptionSettings(over: Partial<TranscriptionSettings> = {}): TranscriptionSettings {
+  return {
+    available: true,
+    unavailable_reason: null,
+    unavailable_detail: null,
+    enabled: true,
+    offer: 'fast',
+    offer_status: 'ok',
+    max_pages: 300,
+    per_day_pages: null,
+    concurrency: 2,
+    credential: {
+      status: 'ok',
+      hint: 'aissvc_held00000000…',
+      credential_id: 'cred-held',
+      set_at: AT,
+      set_by: ADMIN_ID,
+      last_ok_at: '2026-09-30T09:59:00Z',
+      last_error: null,
+    },
+    state: 'running',
+    blocked_reason: null,
+    today: { pages: 120, documents: 9, failed: 1, skipped: 2, cost_usd: '0.031200' },
+    updated_at: AT,
+    updated_by: ADMIN_ID,
+    ...over,
+  }
+}
+
+/** The transcriber off, as a runtime is before the site turns it on: no offer, no credential. */
+export function transcriptionOff(over: Partial<TranscriptionSettings> = {}): TranscriptionSettings {
+  return transcriptionSettings({
+    enabled: false,
+    offer: null,
+    offer_status: null,
+    credential: {
+      status: 'none',
+      hint: null,
+      credential_id: null,
+      set_at: null,
+      set_by: null,
+      last_ok_at: null,
+      last_error: null,
+    },
+    state: 'off',
+    today: { pages: 0, documents: 0, failed: 0, skipped: 0, cost_usd: '0.000000' },
+    updated_at: null,
+    updated_by: null,
+    ...over,
+  })
+}
+
+export const COURSE_ID = '0192f3c1-cccc-7c3a-9b1f-2a4c6e8f0a1b'
+export const DOC_ID = '0192f3c1-dddd-7c3a-9b1f-2a4c6e8f0a1b'
+
+export function transcriptionJob(over: Partial<TranscriptionJob> = {}): TranscriptionJob {
+  return {
+    id: 'job-1',
+    version_id: '0192f3c1-eeee-7c3a-9b1f-2a4c6e8f0a1b',
+    document_id: DOC_ID,
+    course_id: COURSE_ID,
+    status: 'done',
+    reason: null,
+    backfill: false,
+    content_type: 'application/pdf',
+    byte_size: 1_200_000,
+    pages: 12,
+    offer: 'fast',
+    model: 'gpt-4.1-mini',
+    cost_usd: '0.004100',
+    input_tokens: 3100,
+    output_tokens: 5200,
+    started_at: '2026-09-30T09:00:00Z',
+    finished_at: '2026-09-30T09:01:10Z',
+    ...over,
+  }
+}
+
+/** One of Core's credentials of the transcription service, as service.list_credentials lists it. */
+export interface FakeServiceCredential {
+  id: string
+  token_prefix: string
+  label: string
+  live: boolean
+  created_at: string
+  revoked_at: string | null
+  claims_held: number
 }
 
 export function planUsage(over: Partial<SchoolPlanUsage> = {}): SchoolPlanUsage {
@@ -282,6 +383,7 @@ export function costGroup(over: Partial<CostGroup> = {}): CostGroup {
 /** The report the fake answers: its rows by the group asked for, two pages by day. */
 export function costReport(q: URLSearchParams): CostReport {
   const group = (q.get('group') ?? 'day') as CostReport['group']
+  const transcription = { kind: 'transcription', calls: 4, unpriced_calls: 0, tokens: null, cost_usd: '0.100000' }
   const total = {
     cost_usd: '3.500000',
     lines: [
@@ -292,7 +394,7 @@ export function costReport(q: URLSearchParams): CostReport {
         tokens: { input: 400000, cache_read: 50000, cache_write: 1000, output: 90000 },
         cost_usd: '3.400000',
       },
-      { kind: 'transcription', calls: 4, unpriced_calls: 0, tokens: null, cost_usd: '0.100000' },
+      transcription,
     ],
   }
   let rows: CostGroup[] = []
@@ -313,6 +415,22 @@ export function costReport(q: URLSearchParams): CostReport {
         display_name: ADMIN_NAME,
       }),
       costGroup({ key: 't_ops', day: null, tenant_id: 't_ops' }),
+      // The transcriber's, the site's own.
+      costGroup({ key: 'site', day: null, cost_usd: '0.100000', lines: [transcription] }),
+    ]
+  } else if (group === 'agent') {
+    rows = [
+      costGroup({
+        key: 'agt_1',
+        day: null,
+        agent_id: 'agt_1',
+        agent_name: 'Study helper',
+        tenant_id: `ten_${ADMIN_ID}`,
+        owner_actor_id: ADMIN_ID,
+        display_name: ADMIN_NAME,
+      }),
+      // The transcriber's, under no agent.
+      costGroup({ key: 'transcription', day: null, cost_usd: '0.100000', lines: [transcription] }),
     ]
   } else if (group === 'model') {
     rows = [
@@ -348,6 +466,15 @@ export interface AdminState {
   prices: PriceTable
   tenants: TenantQuota[]
   budgets: AgentBudgets
+  jobs: TranscriptionJob[]
+  /** Core's side of the transcription service: its credentials, and the tokens issued and handed to the runtime. */
+  service: {
+    credentials: FakeServiceCredential[]
+    /** Every token Core issued, in order: for a test to look for it elsewhere. */
+    issued: string[]
+    /** The tokens the runtime was given. */
+    received: string[]
+  }
 }
 
 /**
@@ -370,13 +497,158 @@ export function withAdmin(s: Servers, state: AdminState): Servers {
   s.on('GET', ADMIN.settings, () => json(200, state.settings))
   s.on('PATCH', ADMIN.settings, (c) => {
     const p = body(c.body)
-    const o = state.settings.ocr
-    if (p.ocr?.enabled !== undefined) o.enabled = p.ocr.enabled
-    if (p.ocr && 'languages' in p.ocr) o.languages = p.ocr.languages ?? [...o.default_languages]
-    o.updated_at = '2026-09-30T09:00:00Z'
-    o.updated_by = ADMIN_ID
+    if (p.ocr) {
+      const o = state.settings.ocr
+      if (p.ocr.enabled !== undefined) o.enabled = p.ocr.enabled
+      if ('languages' in p.ocr) o.languages = p.ocr.languages ?? [...o.default_languages]
+      o.updated_at = '2026-09-30T09:00:00Z'
+      o.updated_by = ADMIN_ID
+    }
+    const tp = p.transcription
+    const tr = state.settings.transcription
+    if (tp && tr) {
+      // A new object, as an answer is: what a page holds of the one before stays as it was.
+      const next = { ...tr }
+      if (tp.enabled !== undefined) next.enabled = tp.enabled
+      if ('offer' in tp) {
+        next.offer = tp.offer
+        next.offer_status = tp.offer === null ? null : 'ok'
+      }
+      if ('max_pages' in tp) next.max_pages = tp.max_pages ?? 300
+      if ('per_day_pages' in tp) next.per_day_pages = tp.per_day_pages
+      if ('concurrency' in tp) next.concurrency = tp.concurrency ?? 2
+      next.state = !next.enabled
+        ? 'off'
+        : next.credential.status === 'none'
+          ? 'blocked'
+          : next.offer === null
+            ? 'blocked'
+            : 'running'
+      next.blocked_reason =
+        next.state !== 'blocked' ? null : next.credential.status === 'none' ? 'no_credential' : 'no_offer'
+      next.updated_at = '2026-09-30T09:00:00Z'
+      next.updated_by = ADMIN_ID
+      state.settings = { ...state.settings, transcription: next }
+    }
     return json(200, state.settings)
   })
+  // The transcriber's credential: a service token of Core's shape, kept by its hint.
+  s.on('PUT', ADMIN.credential, (c) => {
+    const b = body(c.body)
+    const tr = state.settings.transcription
+    if (!tr) return refusal(404, 'not_found', 'no_route')
+    if (typeof b.token !== 'string' || !/^aissvc_[a-z2-7]{12}_[A-Za-z0-9_-]{43}$/.test(b.token))
+      return refusal(400, 'invalid_argument', 'invalid_field', { field: '/token' })
+    state.service.received.push(b.token)
+    const prefix = b.token.slice('aissvc_'.length, 'aissvc_'.length + 12)
+    const live = state.service.credentials.find((x) => x.token_prefix === prefix)?.live
+    if (!live) return refusal(422, 'failed_precondition', 'credential_rejected', { status: 401 })
+    const next: TranscriptionSettings = {
+      ...tr,
+      credential: {
+        status: 'ok',
+        hint: `aissvc_${prefix}…`,
+        credential_id: b.credential_id ?? null,
+        set_at: '2026-09-30T10:00:00Z',
+        set_by: ADMIN_ID,
+        last_ok_at: '2026-09-30T10:00:00Z',
+        last_error: null,
+      },
+    }
+    if (next.enabled && next.offer) {
+      next.state = 'running'
+      next.blocked_reason = null
+    }
+    state.settings = { ...state.settings, transcription: next }
+    return json(200, next)
+  })
+  s.on('DELETE', ADMIN.credential, () => {
+    const tr = state.settings.transcription!
+    const next: TranscriptionSettings = {
+      ...tr,
+      credential: {
+        status: 'none',
+        hint: null,
+        credential_id: null,
+        set_at: null,
+        set_by: null,
+        last_ok_at: null,
+        last_error: null,
+      },
+      state: tr.enabled ? 'blocked' : 'off',
+      blocked_reason: tr.enabled ? 'no_credential' : null,
+    }
+    state.settings = { ...state.settings, transcription: next }
+    return json(200, next)
+  })
+  s.on('GET', ADMIN.jobs, (c) => {
+    const q = new URLSearchParams(c.url.split('?')[1] ?? '')
+    const status = q.get('status')
+    const all = state.jobs.filter((j) => !status || j.status === status)
+    const after = q.get('after')
+    const from = after ? all.findIndex((j) => j.id === after) + 1 : 0
+    const page = all.slice(from, from + 2)
+    return json(200, { jobs: page, next: from + 2 < all.length ? page[page.length - 1].id : null })
+  })
+  // Core's credentials of the transcription service, for platform administrators.
+  s.on('GET', ADMIN.serviceCredentials, () =>
+    executed({
+      scope: 'document_text',
+      service_actor_id: 'svc-actor',
+      credentials: [...state.service.credentials].reverse().map((x) => ({
+        id: x.id,
+        token_prefix: x.token_prefix,
+        label: x.label,
+        live: x.live,
+        created_at: x.created_at,
+        revoked_at: x.revoked_at,
+        claims_held: x.claims_held,
+      })),
+    }),
+  )
+  s.on('POST', ADMIN.serviceCredentials, (c) => {
+    const b = body(c.body)
+    const live = state.service.credentials.filter((x) => x.live)
+    if (!b.replace && live.length >= 5) return refusal(422, 'failed_precondition', 'too_many_credentials')
+    const revoked: string[] = []
+    if (b.replace)
+      for (const x of live) {
+        x.live = false
+        x.revoked_at = '2026-09-30T10:00:00Z'
+        revoked.push(x.id)
+      }
+    const { token, prefix } = newServiceToken()
+    const id = `cred-${prefix.slice(0, 6)}`
+    state.service.credentials.push({
+      id,
+      token_prefix: prefix,
+      label: b.label,
+      live: true,
+      created_at: '2026-09-30T10:00:00Z',
+      revoked_at: null,
+      claims_held: 0,
+    })
+    state.service.issued.push(token)
+    return executed({
+      service_actor_id: 'svc-actor',
+      credential_id: id,
+      token,
+      token_prefix: prefix,
+      ...(b.replace ? { revoked } : {}),
+    })
+  })
+  s.on('POST', ADMIN.serviceRevoke, (_, m) => {
+    const x = state.service.credentials.find((y) => y.id === decodeURIComponent(m[1]) && y.live)
+    if (!x) return refusal(404, 'not_found', 'not_found')
+    x.live = false
+    x.revoked_at = '2026-09-30T10:00:00Z'
+    return executed({ ok: true, claims_released: 0 })
+  })
+  s.on('GET', ADMIN.document, (_, m) =>
+    decodeURIComponent(m[2]) === DOC_ID
+      ? executed({ id: DOC_ID, course_id: COURSE_ID, kind: 'material', title: 'Week 3 slides' })
+      : json(404, { error: { code: 'not_found', message: 'no such document' } }),
+  )
   s.on('GET', ADMIN.plan, () => json(200, state.plan))
   s.on('GET', ADMIN.usage, () => json(200, state.usage))
   s.on('PUT', ADMIN.quotas, (c) => {
@@ -565,10 +837,33 @@ export function withAdmin(s: Servers, state: AdminState): Servers {
   return s
 }
 
-/** A fresh state: two offers (runtime.yaml's and the site's), OCR on in two languages, and today's use. */
+/** A fresh token of the transcription service's, in Core's shape, aissvc_<12>_<43>, with its public prefix. */
+export function newServiceToken(): { token: string; prefix: string } {
+  const t = newToken()
+  return { token: t.token.replace(/^ais_/, 'aissvc_'), prefix: t.prefix }
+}
+
+/** A credential of the service's in Core, live unless said. */
+export function serviceCredential(over: Partial<FakeServiceCredential> = {}): FakeServiceCredential {
+  return {
+    id: 'cred-held',
+    token_prefix: 'held00000000',
+    label: 'runtime lms.example.edu',
+    live: true,
+    created_at: AT,
+    revoked_at: null,
+    claims_held: 0,
+    ...over,
+  }
+}
+
+/**
+ * A fresh state: two offers (runtime.yaml's and the site's), OCR on in two
+ * languages, the transcriber on with a credential Core has, and today's use.
+ */
 export function adminState(over: Partial<AdminState> = {}): AdminState {
   return {
-    settings: ocrSettings(),
+    settings: { ...ocrSettings(), transcription: transcriptionSettings() },
     plan: schoolPlan(),
     usage: planUsage(),
     isAdmin: true,
@@ -599,6 +894,28 @@ export function adminState(over: Partial<AdminState> = {}): AdminState {
       }),
     ],
     budgets: agentBudgets(),
+    jobs: [
+      transcriptionJob(),
+      transcriptionJob({
+        id: 'job-2',
+        status: 'skipped',
+        reason: 'too_many_pages',
+        pages: 812,
+        cost_usd: null,
+        input_tokens: null,
+        output_tokens: null,
+      }),
+      transcriptionJob({
+        id: 'job-3',
+        status: 'failed',
+        reason: 'The model answered 500 three times',
+        document_id: '0192f3c1-ffff-7c3a-9b1f-2a4c6e8f0a1b',
+        pages: null,
+        cost_usd: '0.000200',
+        backfill: true,
+      }),
+    ],
+    service: { credentials: [serviceCredential()], issued: [], received: [] },
     ...over,
   }
 }

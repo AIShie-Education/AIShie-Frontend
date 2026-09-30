@@ -4,8 +4,10 @@
 // year), by day, person, agent, model or key, on the school's key, owners'
 // own, or both. The whole span's total heads it; a page of groups at a time
 // follows. Calls no price held are counted as nothing, and say so, with the
-// way to the prices. Costs come as lines by kind: model calls today, and
-// another kind (a document's transcription) as a line of its own.
+// way to the prices. Costs come as lines by kind: model calls, and a
+// document's transcription as a line of its own ("Document transcription"),
+// which by agent is under no agent (key transcription) and by person under
+// the site's own (key site), each named so.
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
@@ -61,6 +63,17 @@ const MODEL_CALLS = 'model_calls'
 const callsOf = (s: CostSum): CostLine | undefined => (s.lines ?? []).find((l) => l.kind === MODEL_CALLS)
 const otherLines = (s: CostSum) => (s.lines ?? []).filter((l) => l.kind !== MODEL_CALLS)
 const kindName = (k: string) => (te(`runtimeAdmin.costs.kinds.${k}`) ? t(`runtimeAdmin.costs.kinds.${k}`) : k)
+/**
+ * What the runtime spends of its own, not for an agent or a person: a
+ * document's transcription, under no agent (key transcription) by agent,
+ * and under the site (key site) by person. Its name, or '' for a row of
+ * someone's.
+ */
+function ownLine(row: CostGroup): string {
+  if (report.value?.group === 'agent' && !row.agent_id && row.key === 'transcription') return kindName('transcription')
+  if (report.value?.group === 'tenant' && !row.tenant_id && row.key === 'site') return t('runtimeAdmin.costs.site')
+  return ''
+}
 const n = (v: number | undefined) => formatNumber(v ?? 0, 0)
 const total = computed(() => report.value?.total ?? null)
 const totalCalls = computed(() => (total.value ? callsOf(total.value) : undefined))
@@ -162,6 +175,7 @@ function toPrices() {
                 <template v-if="report.group === 'day'">
                   <span class="cost-cell__day">{{ row.day ?? row.key }}</span>
                 </template>
+                <span v-else-if="ownLine(row)" class="cost-cell__own">{{ ownLine(row) }}</span>
                 <template v-else-if="report.group === 'tenant' || report.group === 'agent'">
                   <span v-if="report.group === 'agent'" class="cost-cell__agent">
                     {{ row.agent_name ?? '' }}

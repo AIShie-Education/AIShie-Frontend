@@ -182,6 +182,9 @@ export default {
     files_removed: '已删除的文件',
     sessions_ended: '已退出的会话',
     login_id: '学号／工号',
+    base_revision: '依据的修订',
+    discard_edit: '放弃教学人员的修改',
+    revision: '修订',
   },
   types: {
     action: {
@@ -232,6 +235,8 @@ export default {
       update: '文档改名或调整顺序',
       unarchive: '恢复已归档文档',
       purge: '清除文档',
+      text_update: '撰写版本的文字版',
+      text_retranscribe: '重新转写版本',
     },
     grade: {
       submit: '输入成绩',

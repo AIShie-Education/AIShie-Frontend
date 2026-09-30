@@ -141,6 +141,17 @@ export type AssignmentSummary = ListItem<'assignment.list', 'assignments'>
 export type DocumentFull = ToolOut<'document.get'>
 export type DocumentSummary = ListItem<'document.list', 'documents'>
 export type DocumentVersion = ListItem<'document.versions', 'versions'>
+/**
+ * A version's text version (文字版): its file transcribed into Markdown, or
+ * written by staff (document.get's version.text, document.versions',
+ * document.text). Its body is the whole text in document.get while it fits
+ * one part, the part asked for in document.text, and never in the list.
+ */
+export type TextVersion = ToolOut<'document.text'>['text']
+export type TextStatus = 'pending' | 'working' | 'done' | 'failed' | 'skipped'
+export const TEXT_STATUSES: readonly TextStatus[] = ['pending', 'working', 'done', 'failed', 'skipped']
+/** Whose a done text is: a transcription's, or staff's, which no transcription writes over. */
+export type TextSource = 'ai' | 'staff'
 export type Submission = ToolOut<'submission.get'>
 export type SubmissionSummary = ListItem<'submission.list', 'submissions'>
 export type Grade = ToolOut<'grade.get'>

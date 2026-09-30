@@ -13,6 +13,15 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   rubrics; students' drafts, files and hand-in; grading with rubric, per-criterion breakdown and
   feedback files; posting, regrading and the gradebook; the grading scheme; members with their
   permissions and scope; the course's activity feed.
+- **Text versions (文字版)** — each version of material, instructions or a rubric with a file has a
+  text version on a tab of its own: the file transcribed into Markdown once by the school's
+  transcriber (a model of the school's plan, on the agent runtime), shown as the chat shows Markdown,
+  formulas, code and tables, with a way to go to each page or slide, and said to be the AI's (and
+  which model's) or corrected by whom. Whoever reads the version reads it; whoever writes the
+  document corrects it (a staff text, which no transcription writes over; a text changed meanwhile
+  keeps the draft to save over the latest), writes one by hand, or sends it to be transcribed again,
+  a staff text discarded only once they confirm twice. Its place in the queue (queued, transcribing)
+  shows while the runtime says its transcriber is on; a text that failed or was skipped says why.
 - **Records that change after the fact** — whoever manages a course's members changes a seat's
   roster role (student, TA, instructor), which changes nothing it may do, and the course's title and
   description; its code, section, term and department stay its administrators'. A change of what
@@ -62,8 +71,12 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   the agents on it; the plan's daily quotas, in answers and dollars, and today's use of it.
   Pricing: the price table (the operator's price file, read-only, and the site's prices before it,
   from a day on), each person's daily quota on the school's key, hosted agents' daily budgets, and
-  what things cost, by day, person, agent, model or key. And the reading of scanned documents
-  (OCR): on or off, and in which of the server's languages. Where the server has no runtime, or
+  what things cost, by day, person, agent, model or key, a document's transcription as a line of its
+  own. Documents: the reading of scanned ones (OCR), on or off and in which of the server's
+  languages; and their transcription into text versions, on or off, with which model of the plan,
+  up to how many pages a document and a day, how many at once, what it is doing and did today, the
+  versions it took up and how each ended, and its credential with Core, issued and handed to the
+  runtime by one button (never shown) and revoked by another. Where the server has no runtime, or
   one from before these settings, the page says so.
 - **Account** — the ways into one's account (password, single sign-on, invitations and the browser
   sessions they began), each revocable, and the password; and the page an invitation link opens

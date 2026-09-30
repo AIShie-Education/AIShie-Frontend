@@ -1,5 +1,5 @@
 // 學校的代理執行環境，由其管理員設定（AI 與文件）：學校 AI 方案（模型、金鑰與
-// 每日額度）、今日用量，以及掃描文件的文字辨識（OCR）。
+// 每日額度）、今日用量、掃描文件的文字辨識（OCR），以及文件的文字版（轉寫）。
 export default {
   title: 'AI 與文件',
   subtitle: '學校的代理執行環境：由學校提供並付費的 AI 模型，以及如何讀取掃描文件。',
@@ -50,6 +50,10 @@ export default {
     bad_if_match: '執行環境沒有接受這項更改。請重新載入頁面後再試。',
     missing_field: '執行環境沒有接受這項更改：缺少「{field}」。請重新載入頁面後再試。',
     invalid_field: '執行環境沒有接受這項更改：「{field}」的值不被接受。請檢查後再試。',
+    transcription_unavailable:
+      '文件轉寫現在無法在這台伺服器上執行，所以不能開啟。它仍可關閉，設定亦會保留至可以執行時使用。',
+    offer_no_file_input: '這個模型既不能讀取 PDF 也不能讀取圖片，所以無法轉寫。請選擇方案中可讀取檔案的模型。',
+    credential_rejected: '執行環境測試時 Core 不接受這個憑證，所以執行環境沒有保存它。',
   },
 
   ocr: {
@@ -87,6 +91,124 @@ export default {
     special: {
       osd: '方向與文字系統',
       equ: '數學算式',
+    },
+  },
+
+  // 文件的文字版，由學校方案的模型轉寫（轉寫模組）。
+  transcription: {
+    title: '文件轉寫（文字版）',
+    intro:
+      '執行環境會用學校方案的一個模型、以學校的金鑰，把課程檔案（投影片、PDF、Word）的每個版本轉寫一次成 Markdown：所有模型都讀取這份文字版，讀者和教學人員也會在檔案旁看到它。',
+    state: {
+      off: '未啟用',
+      running: '運作中',
+      standby: '待命',
+      blocked: '受阻：{why}',
+    },
+    blocked: {
+      no_credential: '沒有憑證',
+      credential_rejected: 'Core 拒絕了它的憑證',
+      no_offer: '未選擇模型',
+      offer_unavailable: '所選模型無法使用',
+      quota_exhausted: '今日頁數已用完',
+      other: '見下文',
+    },
+    unavailable: {
+      operator_off:
+        '伺服器營運者已關閉文件轉寫（TRANSCRIBE=off），所以無論這裡如何設定都不會執行。你在這裡的設定會保留，待開啟後使用。',
+      core_too_old: '這個執行環境連接的 Core 尚未有轉寫佇列，所以無法執行。你在這裡的設定會保留，待 Core 支援後使用。',
+    },
+    enabled: '把文件轉寫成文字版',
+    enabledHint: '關閉時不會轉寫任何檔案，課程頁面也不會顯示排隊狀態。已寫好的文字版會保留，教學人員仍可自行撰寫。',
+    turnedOn: '文件轉寫已開啟。',
+    turnedOff: '文件轉寫已關閉。',
+    offer: '模型',
+    noOffer: '未選擇',
+    offerHint: '學校方案中可讀取 PDF 或圖片的模型。費用由學校支付，在費用中列為「文件轉寫」。',
+    offerStatus: {
+      ok: '可用',
+      not_found: '已不在方案中',
+      disabled: '已在方案中關閉',
+      no_file_input: '無法讀取檔案',
+      not_priced: '未定價',
+    },
+    maxPages: '每份文件最多頁數',
+    perDayPages: '每日頁數',
+    concurrency: '同時轉寫的文件數',
+    numbersHint:
+      '頁數超過上限的文件會被略過；當日頁數用完後（以 UTC 00:00 起計）領取的文件也會被略過，教學人員之後可以再送出。「每日頁數」留空即不限。',
+    saved: '已儲存文件轉寫設定。',
+    invalid: {
+      maxPages: '1 至 5000 之間的整數。',
+      perDayPages: '1 至 1,000,000 之間的整數，或留空即不限。',
+      concurrency: '1 至 8 之間的整數。',
+    },
+    neverChanged: '未在此更改：沿用伺服器營運者的設定。',
+    credential: {
+      title: '與 AIshie Core 的憑證',
+      status: {
+        none: '未設定',
+        ok: '已獲接受',
+        untested: '尚未測試',
+        rejected: '被拒',
+      },
+      lastSeen: 'Core 最後接受於',
+      givenBy: '由 {who} 於 {when} 交給執行環境',
+      given: '於 {when} 交給執行環境',
+      neverSeen: '尚未使用',
+      rejected: 'Core 拒絕了這個憑證：它已被撤銷或已過期。請發放一個新的。',
+      issue: '發放並交給 runtime',
+      replace: '更換',
+      withdraw: '撤銷',
+      hint: '「發放」會在 Core 為轉寫服務發放一個憑證，並直接交給執行環境，由它先行測試：憑證不會在這裡顯示，也不會保存在這個瀏覽器中。之後會撤銷轉寫服務的其他憑證。',
+      replaceAllTitle: '更換所有憑證？',
+      replaceAllBody:
+        '轉寫服務已有 {n} 個憑證，已達 Core 的上限。新的憑證會取代全部舊憑證：它們會立即失效，執行環境取得新憑證之前也無法運作。',
+      replaceAll: '全部更換',
+      handedOver: '執行環境已取得新的憑證。',
+      unrevoked: '有 {n} 個轉寫服務的其他憑證無法在 Core 撤銷，可能仍然有效。',
+      withdrawTitle: '撤銷文件轉寫的憑證？',
+      withdrawBody: '執行環境會刪除它，Core 亦會撤銷它：在發放新憑證之前不會轉寫任何檔案，進行中的工作也會停止。',
+      withdrawn: '已撤銷憑證。',
+      notRevoked: '執行環境已刪除它，但 Core 無法撤銷它：它可能仍然有效。請稍後在這裡再試。',
+      refused: {
+        rejected: '執行環境測試時 Core 不接受這個憑證，所以執行環境沒有保存它。剛發放的憑證已被撤銷。',
+        notService: 'Core 不認為這是轉寫服務的憑證，所以執行環境沒有保存它。剛發放的憑證已被撤銷。',
+      },
+    },
+    // Core 以原因拒絕服務憑證時的說明。
+    coreRefusal: {
+      too_many_credentials: '轉寫服務的憑證數目已達 Core 的上限。請撤銷一個，或全部更換。',
+      platform_role_required: '只有 AIshie 的平台管理員可以發放或撤銷文件轉寫的憑證。',
+    },
+    today: {
+      title: '今日（UTC）',
+      pages: '頁數',
+      of: '上限 {n}',
+      documents: '文件',
+      failed: '失敗',
+      skipped: '略過',
+      cost: '費用',
+    },
+    jobs: {
+      title: '轉寫紀錄',
+      filter: '狀態',
+      all: '全部',
+      status: {
+        working: '轉寫中',
+        done: '完成',
+        failed: '失敗',
+        skipped: '略過',
+        dropped: '已放棄',
+      },
+      empty: '尚未轉寫任何檔案。',
+      document: '文件',
+      pages: '頁數',
+      pagesN: '{n} 頁',
+      finished: '完成時間',
+      since: '開始於',
+      unpriced: '未定價',
+      backfill: '較早上傳',
     },
   },
 
@@ -390,6 +512,7 @@ export default {
       model_calls: '模型呼叫',
       transcription: '文件轉寫',
     },
+    site: '全站：文件轉寫',
     all: '全部',
     offers: '方案模型：{ids}',
     unpriced:

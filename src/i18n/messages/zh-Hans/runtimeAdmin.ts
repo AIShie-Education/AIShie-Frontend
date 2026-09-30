@@ -1,5 +1,5 @@
 // 学校的智能体运行环境，由其管理员设置（AI 与文件）：学校 AI 方案（模型、密钥与
-// 每日额度）、今日用量，以及扫描文件的文字识别（OCR）。
+// 每日额度）、今日用量、扫描文件的文字识别（OCR），以及文件的文字版（转写）。
 export default {
   title: 'AI 与文件',
   subtitle: '学校的智能体运行环境：由学校提供并付费的 AI 模型，以及如何读取扫描文件。',
@@ -50,6 +50,10 @@ export default {
     bad_if_match: '运行环境没有接受这项更改。请重新加载页面后再试。',
     missing_field: '运行环境没有接受这项更改：缺少“{field}”。请重新加载页面后再试。',
     invalid_field: '运行环境没有接受这项更改：“{field}”的值不被接受。请检查后再试。',
+    transcription_unavailable:
+      '文件转写现在无法在这台服务器上执行，所以不能开启。它仍可关闭，设置也会保留至可以执行时使用。',
+    offer_no_file_input: '这个模型既不能读取 PDF 也不能读取图片，所以无法转写。请选择方案中可读取文件的模型。',
+    credential_rejected: '运行环境测试时 Core 不接受这个凭证，所以运行环境没有保存它。',
   },
 
   ocr: {
@@ -87,6 +91,124 @@ export default {
     special: {
       osd: '方向与文字系统',
       equ: '数学公式',
+    },
+  },
+
+  // 文件的文字版，由学校方案的模型转写（转写模块）。
+  transcription: {
+    title: '文件转写（文字版）',
+    intro:
+      '运行环境会用学校方案的一个模型、以学校的密钥，把课程文件（幻灯片、PDF、Word）的每个版本转写一次成 Markdown：所有模型都读取这份文字版，读者和教学人员也会在文件旁看到它。',
+    state: {
+      off: '未启用',
+      running: '运行中',
+      standby: '待命',
+      blocked: '受阻：{why}',
+    },
+    blocked: {
+      no_credential: '没有凭证',
+      credential_rejected: 'Core 拒绝了它的凭证',
+      no_offer: '未选择模型',
+      offer_unavailable: '所选模型无法使用',
+      quota_exhausted: '今日页数已用完',
+      other: '见下文',
+    },
+    unavailable: {
+      operator_off:
+        '服务器运营者已关闭文件转写（TRANSCRIBE=off），所以无论这里如何设置都不会执行。你在这里的设置会保留，待开启后使用。',
+      core_too_old: '这个运行环境连接的 Core 尚未有转写队列，所以无法执行。你在这里的设置会保留，待 Core 支持后使用。',
+    },
+    enabled: '把文件转写成文字版',
+    enabledHint: '关闭时不会转写任何文件，课程页面也不会显示排队状态。已写好的文字版会保留，教学人员仍可自行撰写。',
+    turnedOn: '文件转写已开启。',
+    turnedOff: '文件转写已关闭。',
+    offer: '模型',
+    noOffer: '未选择',
+    offerHint: '学校方案中可读取 PDF 或图片的模型。费用由学校支付，在费用中列为“文件转写”。',
+    offerStatus: {
+      ok: '可用',
+      not_found: '已不在方案中',
+      disabled: '已在方案中关闭',
+      no_file_input: '无法读取文件',
+      not_priced: '未定价',
+    },
+    maxPages: '每份文件最多页数',
+    perDayPages: '每日页数',
+    concurrency: '同时转写的文件数',
+    numbersHint:
+      '页数超过上限的文件会被跳过；当日页数用完后（以 UTC 00:00 起计）领取的文件也会被跳过，教学人员之后可以再提交。“每日页数”留空即不限。',
+    saved: '已保存文件转写设置。',
+    invalid: {
+      maxPages: '1 至 5000 之间的整数。',
+      perDayPages: '1 至 1,000,000 之间的整数，或留空即不限。',
+      concurrency: '1 至 8 之间的整数。',
+    },
+    neverChanged: '未在此更改：沿用服务器运营者的设置。',
+    credential: {
+      title: '与 AIshie Core 的凭证',
+      status: {
+        none: '未设置',
+        ok: '已获接受',
+        untested: '尚未测试',
+        rejected: '被拒',
+      },
+      lastSeen: 'Core 最后接受于',
+      givenBy: '由 {who} 于 {when} 交给运行环境',
+      given: '于 {when} 交给运行环境',
+      neverSeen: '尚未使用',
+      rejected: 'Core 拒绝了这个凭证：它已被撤销或已过期。请签发一个新的。',
+      issue: '签发并交给 runtime',
+      replace: '更换',
+      withdraw: '撤销',
+      hint: '“签发”会在 Core 为转写服务签发一个凭证，并直接交给运行环境，由它先行测试：凭证不会在这里显示，也不会保存在这个浏览器中。之后会撤销转写服务的其他凭证。',
+      replaceAllTitle: '更换所有凭证？',
+      replaceAllBody:
+        '转写服务已有 {n} 个凭证，已达 Core 的上限。新的凭证会取代全部旧凭证：它们会立即失效，运行环境取得新凭证之前也无法运作。',
+      replaceAll: '全部更换',
+      handedOver: '运行环境已取得新的凭证。',
+      unrevoked: '有 {n} 个转写服务的其他凭证无法在 Core 撤销，可能仍然有效。',
+      withdrawTitle: '撤销文件转写的凭证？',
+      withdrawBody: '运行环境会删除它，Core 亦会撤销它：在签发新凭证之前不会转写任何文件，进行中的工作也会停止。',
+      withdrawn: '已撤销凭证。',
+      notRevoked: '运行环境已删除它，但 Core 无法撤销它：它可能仍然有效。请稍后在这里再试。',
+      refused: {
+        rejected: '运行环境测试时 Core 不接受这个凭证，所以运行环境没有保存它。刚签发的凭证已被撤销。',
+        notService: 'Core 不认为这是转写服务的凭证，所以运行环境没有保存它。刚签发的凭证已被撤销。',
+      },
+    },
+    // Core 以原因拒绝服务凭证时的说明。
+    coreRefusal: {
+      too_many_credentials: '转写服务的凭证数目已达 Core 的上限。请撤销一个，或全部更换。',
+      platform_role_required: '只有 AIshie 的平台管理员可以签发或撤销文件转写的凭证。',
+    },
+    today: {
+      title: '今日（UTC）',
+      pages: '页数',
+      of: '上限 {n}',
+      documents: '文件',
+      failed: '失败',
+      skipped: '跳过',
+      cost: '费用',
+    },
+    jobs: {
+      title: '转写记录',
+      filter: '状态',
+      all: '全部',
+      status: {
+        working: '转写中',
+        done: '完成',
+        failed: '失败',
+        skipped: '跳过',
+        dropped: '已放弃',
+      },
+      empty: '尚未转写任何文件。',
+      document: '文件',
+      pages: '页数',
+      pagesN: '{n} 页',
+      finished: '完成时间',
+      since: '开始于',
+      unpriced: '未定价',
+      backfill: '较早上传',
     },
   },
 
@@ -390,6 +512,7 @@ export default {
       model_calls: '模型调用',
       transcription: '文件转写',
     },
+    site: '全站：文件转写',
     all: '全部',
     offers: '方案模型：{ids}',
     unpriced:

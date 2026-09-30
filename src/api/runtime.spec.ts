@@ -25,7 +25,7 @@ const INFO_BODY = {
   commit: 'e6df9b4',
   audience: AUDIENCE,
   issuer: 'https://lms.example.edu',
-  features: { connect_by_token: true, own_key: true, school_key: false },
+  features: { connect_by_token: true, own_key: true, school_key: false, transcription: false },
 }
 const T0 = Date.parse('2026-09-28T08:00:00Z')
 
@@ -186,20 +186,41 @@ describe('runtimeStatus', () => {
     const s = await rt.runtimeStatus()
     expect(s.available).toBe(true)
     if (s.available) {
-      expect(s.info.features).toEqual({ connect_by_token: true, own_key: true, school_key: false })
+      expect(s.info.features).toEqual({
+        connect_by_token: true,
+        own_key: true,
+        school_key: false,
+        transcription: false,
+      })
       expect(s.info.issuer).toBe('')
     }
   })
 
   it('takes each feature as the boolean the runtime sent, false included', async () => {
-    infoAnswer = json(200, { ...INFO_BODY, features: { connect_by_token: false, own_key: false, school_key: true } })
+    infoAnswer = json(200, {
+      ...INFO_BODY,
+      features: { connect_by_token: false, own_key: false, school_key: true, transcription: true },
+    })
     const s = await rt.runtimeStatus()
-    expect(s.available && s.info.features).toEqual({ connect_by_token: false, own_key: false, school_key: true })
+    expect(s.available && s.info.features).toEqual({
+      connect_by_token: false,
+      own_key: false,
+      school_key: true,
+      transcription: true,
+    })
 
     // What is not a boolean is not taken for one: the v1 default stands.
-    infoAnswer = json(200, { ...INFO_BODY, features: { connect_by_token: 'false', own_key: 0, school_key: 'true' } })
+    infoAnswer = json(200, {
+      ...INFO_BODY,
+      features: { connect_by_token: 'false', own_key: 0, school_key: 'true', transcription: 'on' },
+    })
     const again = await rt.runtimeStatus({ refresh: true })
-    expect(again.available && again.info.features).toEqual({ connect_by_token: true, own_key: true, school_key: false })
+    expect(again.available && again.info.features).toEqual({
+      connect_by_token: true,
+      own_key: true,
+      school_key: false,
+      transcription: false,
+    })
   })
 
   it('runtimeInfo gives the info, or null to hide hosting', async () => {
@@ -556,6 +577,26 @@ describe('the assertion stays secret', () => {
     expect(all).not.toContain(token)
     expect(all).not.toContain('S'.repeat(43))
     expect(err.message).toBe('refused [token]')
+  })
+
+  it('nor a service’s token, the transcriber’s, should the runtime repeat one', async () => {
+    const token = 'aissvc_k7v2m4qhx3ab_' + 'Q'.repeat(43)
+    runtimeAnswers.push(
+      json(422, {
+        error: {
+          code: 'failed_precondition',
+          message: `Core refused ${token}`,
+          details: { reason: 'credential_rejected', status: 401, echo: [token] },
+        },
+      }),
+    )
+    const err = await failure(rt.runtimeAdmin.setTranscriptionCredential({ token }))
+    expect(err.reason).toBe('credential_rejected')
+    const all = [String(err), err.message, err.stack, JSON.stringify(err), JSON.stringify(err.details)].join('\n')
+    expect(all).not.toContain(token)
+    expect(all).not.toContain('Q'.repeat(43))
+    expect(err.message).toBe('Core refused [token]')
+    expect(err.details.status).toBe(401)
   })
 
   it('is kept in no storage', async () => {
@@ -1034,6 +1075,41 @@ describe('the administrators’ calls', () => {
       '/runtime/api/v1/admin/costs?since=2026-09-01&until=2026-09-30&group=model&key_source=school&after=x',
       undefined,
     ],
+    [
+      'updateSettings, the transcriber',
+      () => rt.runtimeAdmin.updateSettings({ transcription: { enabled: true, per_day_pages: null } }),
+      'PATCH',
+      '/runtime/api/v1/admin/settings',
+      { transcription: { enabled: true, per_day_pages: null } },
+    ],
+    [
+      'setTranscriptionCredential',
+      () => rt.runtimeAdmin.setTranscriptionCredential({ token: 'aissvc_x', credential_id: 'cred-1' }),
+      'PUT',
+      '/runtime/api/v1/admin/transcription/credential',
+      { token: 'aissvc_x', credential_id: 'cred-1' },
+    ],
+    [
+      'deleteTranscriptionCredential',
+      () => rt.runtimeAdmin.deleteTranscriptionCredential(),
+      'DELETE',
+      '/runtime/api/v1/admin/transcription/credential',
+      undefined,
+    ],
+    [
+      'transcriptionJobs',
+      () => rt.runtimeAdmin.transcriptionJobs(),
+      'GET',
+      '/runtime/api/v1/admin/transcription/jobs',
+      undefined,
+    ],
+    [
+      'transcriptionJobs, as asked',
+      () => rt.runtimeAdmin.transcriptionJobs({ status: 'failed', limit: 50, after: 'j-9' }),
+      'GET',
+      '/runtime/api/v1/admin/transcription/jobs?status=failed&limit=50&after=j-9',
+      undefined,
+    ],
   ] as const)('%s goes where the contract says', async (_, call, method, url, body) => {
     runtimeAnswers.push(json(200, OFFER, { ETag: '"2"' }))
     const out = await call()
@@ -1044,6 +1120,17 @@ describe('the administrators’ calls', () => {
     expect(c.body === undefined ? undefined : JSON.parse(c.body)).toEqual(body)
     expect(c.headers.Authorization).toMatch(/^Bearer eyJ/)
     expect(c.credentials).toBe('omit')
+  })
+
+  it('never sends the transcriber’s credential again by itself, and sends its deletion again', async () => {
+    runtimeAnswers.push(empty(502))
+    const err = await failure(rt.runtimeAdmin.setTranscriptionCredential({ token: 'aissvc_x' }))
+    expect(err.status).toBe(502)
+    expect(runtimeCalls()).toHaveLength(1)
+
+    runtimeAnswers.push(empty(502), json(200, {}))
+    await rt.runtimeAdmin.deleteTranscriptionCredential()
+    expect(runtimeCalls()).toHaveLength(3)
   })
 
   it('names a price’s version when changing it, and when deleting it if asked to', async () => {

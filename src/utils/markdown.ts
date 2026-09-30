@@ -95,6 +95,69 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
   return `<a href="${href}" target="_blank" rel="${LINK_REL}" class="md-image-link" title="${href}">${text}</a>`
 }
 
+// A text version's pages and slides (文字版: a file transcribed, one heading
+// a page), where the page asks for it (renderMarkdown's anchors option): each
+// second-level heading that is exactly a page's or a slide's, as the
+// transcriber writes them (## 第 3 頁, ## 投影片 3; 第 3 页, 幻灯片 3, Page 3
+// and Slide 3 as well), is given an id made of the prefix, its kind and its
+// number alone (text-page-3), never of what the heading says; a second
+// heading of the same page gets -2, and so on. pageHeadings lists them.
+const PAGE_HEADING =
+  /^(?:第\s*(\d{1,6})\s*[頁页]|(?:投影片|幻灯片|幻燈片)\s*(\d{1,6})|page\s+(\d{1,6})|slide\s+(\d{1,6}))$/i
+
+/** A page's or a slide's heading in a text version, and the id it is given. */
+export interface PageHeading {
+  kind: 'page' | 'slide'
+  n: number
+  id: string
+  /** The heading as written. */
+  text: string
+}
+
+/** The kind and number of a heading's text when it is a page's or a slide's, else null. */
+export function pageHeadingOf(text: string): { kind: 'page' | 'slide'; n: number } | null {
+  const m = PAGE_HEADING.exec(text.trim())
+  if (!m) return null
+  const page = m[1] ?? m[3]
+  return page !== undefined ? { kind: 'page', n: Number(page) } : { kind: 'slide', n: Number(m[2] ?? m[4]) }
+}
+
+interface AnchorEnv {
+  anchors?: string
+  pages?: PageHeading[]
+}
+
+md.core.ruler.push('page_anchors', (state) => {
+  const env = state.env as AnchorEnv | undefined
+  const prefix = env?.anchors
+  if (!prefix) return
+  const seen = new Map<string, number>()
+  const pages: PageHeading[] = []
+  const tokens = state.tokens
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const open = tokens[i]!
+    if (open.type !== 'heading_open' || open.tag !== 'h2') continue
+    const text = tokens[i + 1]!.content
+    const h = pageHeadingOf(text)
+    if (!h) continue
+    const base = `${prefix}${h.kind}-${h.n}`
+    const count = (seen.get(base) ?? 0) + 1
+    seen.set(base, count)
+    const id = count === 1 ? base : `${base}-${count}`
+    open.attrSet('id', id)
+    pages.push({ ...h, id, text: text.trim() })
+  }
+  env.pages = pages
+})
+
+/** The pages' and slides' headings of a text, with the ids renderMarkdown gives them under this prefix. */
+export function pageHeadings(src: string | null | undefined, prefix: string): PageHeading[] {
+  if (!src) return []
+  const env: AnchorEnv = { anchors: prefix }
+  md.parse(src, env as Record<string, unknown>)
+  return env.pages ?? []
+}
+
 // The sanitiser's defaults keep what KaTeX and highlight.js make (class and
 // style attributes, SVG, MathML) and let through, beyond them, only the link
 // and image attributes set above. MathML's <semantics> and <annotation> are
@@ -103,7 +166,13 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
 // be read out after the formula).
 const PURIFY = { ADD_ATTR: ['target', 'loading', 'referrerpolicy'], ADD_FORBID_CONTENTS: ['annotation'] }
 
-export function renderMarkdown(src: string | null | undefined, opts: { code?: CodeTools } = {}): string {
+export function renderMarkdown(
+  src: string | null | undefined,
+  opts: { code?: CodeTools; anchors?: string } = {},
+): string {
   if (!src) return ''
-  return DOMPurify.sanitize(md.render(src, opts.code ? { code: opts.code } : {}), PURIFY)
+  const env: AnchorEnv & { code?: CodeTools } = {}
+  if (opts.code) env.code = opts.code
+  if (opts.anchors) env.anchors = opts.anchors
+  return DOMPurify.sanitize(md.render(src, env as Record<string, unknown>), PURIFY)
 }

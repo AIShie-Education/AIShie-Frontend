@@ -83,7 +83,9 @@ describe('RuntimeAdminView', () => {
   it('opens the tab the address names, and names the tab chosen in it', async () => {
     const { w, router } = await page('/admin/runtime?tab=documents')
     expect(w.find('.ocr-card').exists()).toBe(true)
-    expect(s.to('GET', ADMIN.plan)).toHaveLength(0)
+    expect(w.find('.transcription-card').exists()).toBe(true)
+    expect(w.find('.offers-card').exists()).toBe(false)
+    expect(s.to('GET', ADMIN.usage)).toHaveLength(0)
     await w.findAll('.el-tabs__item')[2].trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.tab).toBe('usage')

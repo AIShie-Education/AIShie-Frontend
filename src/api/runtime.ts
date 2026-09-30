@@ -32,7 +32,8 @@
 // as the contract's §5.14 says; this client retries accordingly.
 //
 // The runtime's administrators have routes of their own (runtimeAdmin, at
-// the end): OCR, the school's plan's offers, quotas and use, and pricing.
+// the end): OCR, the school's plan's offers, quotas and use, pricing, and
+// the transcriber of documents' text versions.
 //
 // The route and field names the contract fixes are here and in
 // runtime-types.ts, and nowhere else in the app.
@@ -74,6 +75,10 @@ import type {
   TenantPut,
   TenantQuota,
   TokenRequest,
+  TranscriptionCredentialPut,
+  TranscriptionJobList,
+  TranscriptionJobQuery,
+  TranscriptionSettings,
 } from './runtime-types'
 
 export type { RuntimeInfo } from './runtime-types'
@@ -110,6 +115,8 @@ export const RUNTIME_ROUTES = {
   tenant: '/admin/tenants/{tenant_id}',
   agentBudgets: '/admin/agent-budgets',
   costs: '/admin/costs',
+  transcriptionCredential: '/admin/transcription/credential',
+  transcriptionJobs: '/admin/transcription/jobs',
 } as const
 
 /** Headers of the contract beyond plain HTTP's. */
@@ -144,6 +151,7 @@ function infoFrom(b: unknown): RuntimeInfo | null {
     connect_by_token: flag(f.connect_by_token, true),
     own_key: flag(f.own_key, true),
     school_key: flag(f.school_key, false),
+    transcription: flag(f.transcription, false),
   }
   return {
     api: 'aishie-runtime',
@@ -208,8 +216,11 @@ function clientError(reason: ClientErrorReason, status: number, message: string,
 
 /** A JSON Web Token's shape: what Core's assertions are. */
 const JWT = /eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/g
-/** An agent token's shape, secret part and all: never shown, even should an answer repeat one. */
-const AGENT_TOKEN = /\bais(?:inv)?_[a-z2-7]{12}_[A-Za-z0-9_-]+/g
+/**
+ * An agent token's shape, or a service's (aissvc_, the transcriber's), secret
+ * part and all: never shown, even should an answer repeat one.
+ */
+const AGENT_TOKEN = /\bais(?:inv|svc)?_[a-z2-7]{12}_[A-Za-z0-9_-]+/g
 
 /** s, with any assertion or agent token in it (the one held, or anything shaped like one) taken out. */
 function scrub(s: string): string {
@@ -698,11 +709,12 @@ const pricePath = (id: string) => runtimePath(RUNTIME_ROUTES.price, { id })
 const tenantPath = (id: string) => runtimePath(RUNTIME_ROUTES.tenant, { tenant_id: id })
 
 /**
- * The runtime's administrators' calls: OCR (admin/settings), the school's
- * plan (admin/school-plan: its offers, its quotas, today's use), and the
- * money (the price table, tenants' quotas, hosted agents' budgets, and what
- * things cost). Anyone else is refused 403 not_admin; a runtime from before
- * a route answers 404.
+ * The runtime's administrators' calls: OCR and the transcriber
+ * (admin/settings), the school's plan (admin/school-plan: its offers, its
+ * quotas, today's use), the money (the price table, tenants' quotas, hosted
+ * agents' budgets, and what things cost), and the transcriber's credential
+ * and jobs. Anyone else is refused 403 not_admin; a runtime from before a
+ * route answers 404.
  *
  * Retried as the runtime answers them: reads, and the PUTs and DELETEs of
  * quotas and budgets, which come to the same however often they are sent.
@@ -752,4 +764,23 @@ export const runtimeAdmin = {
     runtimeRequest<AgentBudgets>('PUT', RUNTIME_ROUTES.agentBudgets, { body: budgets, retry: true }),
   resetAgentBudgets: () => runtimeRequest<AgentBudgets>('DELETE', RUNTIME_ROUTES.agentBudgets, { retry: true }),
   costs: (query: CostQuery = {}) => runtimeRequest<CostReport>('GET', RUNTIME_ROUTES.costs, { query: { ...query } }),
+  /**
+   * Gives the transcriber Core's service token, which the runtime tries
+   * against Core first (unless skip_test) and keeps in place of the one
+   * before; the settings after. Never sent again by itself: whether a
+   * request that met no answer went through is asked (settings), not
+   * assumed, since the token must then be revoked in Core if it did not.
+   */
+  setTranscriptionCredential: (put: TranscriptionCredentialPut) =>
+    runtimeRequest<TranscriptionSettings>('PUT', RUNTIME_ROUTES.transcriptionCredential, {
+      body: put,
+      retry: false,
+    }),
+  /** Forgets it: the transcriber stops claiming. The settings after. */
+  deleteTranscriptionCredential: () =>
+    runtimeRequest<TranscriptionSettings>('DELETE', RUNTIME_ROUTES.transcriptionCredential, {
+      retry: true,
+    }),
+  transcriptionJobs: (query: TranscriptionJobQuery = {}) =>
+    runtimeRequest<TranscriptionJobList>('GET', RUNTIME_ROUTES.transcriptionJobs, { query: { ...query } }),
 }

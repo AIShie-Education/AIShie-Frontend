@@ -187,6 +187,9 @@ export default {
     files_removed: 'Files deleted',
     sessions_ended: 'Sessions signed out',
     login_id: 'Student/staff number',
+    base_revision: 'Made from revision',
+    discard_edit: 'Discard staff’s changes',
+    revision: 'Revision',
   },
   types: {
     action: {
@@ -237,6 +240,8 @@ export default {
       update: 'Rename or reorder a document',
       unarchive: 'Bring back a document',
       purge: 'Purge a document',
+      text_update: 'Write a version’s text version',
+      text_retranscribe: 'Transcribe a version again',
     },
     grade: {
       submit: 'Enter a grade',

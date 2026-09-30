@@ -12,6 +12,13 @@
 // (document.purge), for material, instructions and rubrics only; what was
 // purged shows its tombstone — who purged it, when and why — instead of its
 // content or a download.
+//
+// A version with a file of material, instructions or a rubric has a text
+// version (文字版) as well, on a tab of its own beside its content (?tab=text):
+// its file transcribed into Markdown by the school's transcriber, or written
+// by staff (TextVersionPane). Whether the transcriber is on is the runtime's
+// to say (info.features.transcription): without a runtime that says so, a
+// text waiting for it is shown as none.
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
@@ -21,6 +28,7 @@ import type { AssignmentSummary, DocumentVersion } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useCourseTab } from '@/composables/useCourseTab'
+import { useRuntime } from '@/composables/useRuntime'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatBytes } from '@/utils/format'
@@ -34,9 +42,11 @@ import TimeText from '@/components/TimeText.vue'
 import DocumentDetailsDialog from './components/DocumentDetailsDialog.vue'
 import PendingAlert from './components/PendingAlert.vue'
 import PurgeDialog from './components/PurgeDialog.vue'
+import TextVersionPane from './components/TextVersionPane.vue'
 import Tombstone from './components/Tombstone.vue'
 import VersionDialog from './components/VersionDialog.vue'
 import VersionHistory from './components/VersionHistory.vue'
+import { textOfVersion, textTabShown } from './components/textVersion'
 
 const props = defineProps<{ courseId: string; documentId: string }>()
 const { t } = useI18n()
@@ -367,6 +377,31 @@ function onVersionProposed(publish: boolean) {
 }
 
 const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') as UploadKind)
+
+// --- The text version ------------------------------------------------------------
+const rt = useRuntime()
+const transcriptionOn = computed(() => !!rt.info.value?.features.transcription)
+const shownText = computed(() => textOfVersion(shown.value))
+const textTab = computed(
+  () =>
+    !!shown.value &&
+    textTabShown({
+      text: shownText.value,
+      courseLevel: courseLevel.value,
+      purged: !!versionPurge.value || !!docPurge.value,
+      hasFile: hasFile.value,
+      canWrite: canWrite.value,
+      transcriptionOn: transcriptionOn.value,
+    }),
+)
+/** The tab shown in the version's card, remembered in the address (?tab=text). */
+const contentTab = computed({
+  get: () => (route.query.tab === 'text' && textTab.value ? 'text' : 'content'),
+  set: (v: string) => void router.replace({ query: { ...route.query, tab: v === 'text' ? 'text' : undefined } }),
+})
+function onTextProposed(message: string) {
+  pendingNote.value = message
+}
 </script>
 
 <template>
@@ -514,7 +549,31 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
 
                 <Tombstone v-if="versionPurge && !docPurge" :purge="versionPurge" of="version" />
 
-                <div v-if="hasFile" class="doc-file">
+                <el-tabs v-if="textTab" v-model="contentTab" class="doc-content__tabs">
+                  <el-tab-pane :label="t('materials.document.text.tabs.content')" name="content" />
+                  <el-tab-pane :label="t('materials.document.text.tabs.text')" name="text" />
+                </el-tabs>
+
+                <!-- Kept while the other tab is shown, with a draft being written in it. -->
+                <TextVersionPane
+                  v-if="textTab"
+                  v-show="contentTab === 'text'"
+                  :course-id="courseId"
+                  :document-id="doc.id"
+                  :version-id="shown.id"
+                  :seq="shown.seq"
+                  :initial="shownText"
+                  :has-file="hasFile"
+                  :active="contentTab === 'text'"
+                  :can-write="canWrite"
+                  :write-disabled="writeDisabled"
+                  :needs-approval="needsApproval"
+                  :transcription-on="transcriptionOn"
+                  @changed="reloadAll"
+                  @proposed="onTextProposed"
+                />
+
+                <div v-if="hasFile && contentTab !== 'text'" class="doc-file">
                   <el-icon class="doc-file__icon"><Document /></el-icon>
                   <div class="doc-file__text">
                     <DocumentFileLink
@@ -535,7 +594,7 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
                   </div>
                 </div>
 
-                <div v-if="!versionPurge" class="doc-content__body">
+                <div v-if="!versionPurge && contentTab !== 'text'" class="doc-content__body">
                   <MarkdownView
                     :source="shown.body_md"
                     :empty="hasFile ? t('materials.document.noText') : t('common.labels.empty')"
@@ -716,6 +775,9 @@ const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') 
 }
 .doc-content__body {
   overflow-wrap: anywhere;
+}
+.doc-content__tabs :deep(.el-tabs__header) {
+  margin-bottom: 16px;
 }
 .doc-file {
   display: flex;

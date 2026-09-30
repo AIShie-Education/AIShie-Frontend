@@ -140,6 +140,9 @@ const GENERIC = [
   'price_not_found',
   'price_exists',
   'price_read_only',
+  'transcription_unavailable',
+  'offer_no_file_input',
+  'credential_rejected',
 ]
 
 describe('the words for each error reason', () => {

@@ -366,7 +366,7 @@ describe('what things cost', () => {
     expect(w.find('.costs-card__cost').text()).toBe('$3.50')
     expect(w.find('.costs-card__calls').text()).toBe('300')
     expect(w.find('.costs-card__tokens').text()).toBe('400,000 in · 90,000 out')
-    expect(w.find('.costs-card__other').text()).toBe('Transcription: 4 calls, $0.10')
+    expect(w.find('.costs-card__other').text()).toBe('Document transcription: 4 calls, $0.10')
     expect(w.find('.costs-card__unpriced').text()).toContain(
       '7 calls had no price when they were made, and are counted as $0.',
     )
@@ -397,6 +397,25 @@ describe('what things cost', () => {
     expect(w.find('.cost-cell__meta').text()).toContain('School’s key')
     expect(w.find('.cost-cell__meta').text()).toContain('offers: fast')
     expect(w.find('.cost-cell__unpriced').text()).toBe('12 unpriced')
+  })
+
+  it('names the transcriber’s costs, under no agent and no person, as document transcription', async () => {
+    const w = await panel()
+    const vm = w.findComponent({ name: 'CostsCard' }).vm as unknown as { group: string }
+    vm.group = 'agent'
+    await flushPromises()
+    expect(w.findAll('.cost-cell__agent').map((c) => c.text())).toEqual(['Study helper'])
+    expect(w.find('.cost-cell__own').text()).toBe('Document transcription')
+    expect(w.find('[data-key="transcription"]').find('code').exists()).toBe(false)
+    vm.group = 'tenant'
+    await flushPromises()
+    expect(w.find('.cost-cell__own').text()).toBe('The site’s own: document transcription')
+    setLocale('zh-Hant')
+    await flushPromises()
+    expect(w.find('.cost-cell__own').text()).toBe('全站：文件轉寫')
+    vm.group = 'agent'
+    await flushPromises()
+    expect(w.find('.cost-cell__own').text()).toBe('文件轉寫')
   })
 
   it('asks for at most a year', async () => {

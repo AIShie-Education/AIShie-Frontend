@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import { demo, showSideView, signIn, signInAsRoot, toast } from './support'
+import { call, demo, photograph, root, showSideView, signIn, signInAsRoot, toast } from './support'
 
 // The agent runtime's settings, AI and documents (/admin/runtime), for
 // platform administrators. The Core these tests run against has no runtime
@@ -7,7 +7,9 @@ import { demo, showSideView, signIn, signInAsRoot, toast } from './support'
 // there is none. With a runtime, played in the browser from its contract
 // (its admin routes, and the assertion Core would make for it), root adds a
 // model to the school's plan, turns it off, adds a price, and sets OCR's
-// languages.
+// languages; and sets up the transcriber of documents' text versions,
+// giving it a credential the real Core issues, which the played runtime
+// receives and the page never shows, and revoking it again.
 
 const STAMP = Date.now().toString(36)
 
@@ -71,6 +73,63 @@ function playRuntime(page: Page) {
     updated_at: null,
     updated_by: null,
   }
+  const noCredential = {
+    status: 'none',
+    hint: null,
+    credential_id: null,
+    set_at: null,
+    set_by: null,
+    last_ok_at: null,
+    last_error: null,
+  }
+  const transcription: any = {
+    available: true,
+    unavailable_reason: null,
+    unavailable_detail: null,
+    enabled: false,
+    offer: null,
+    offer_status: null,
+    max_pages: 300,
+    per_day_pages: null,
+    concurrency: 2,
+    credential: { ...noCredential },
+    state: 'off',
+    blocked_reason: null,
+    today: { pages: 0, documents: 0, failed: 0, skipped: 0, cost_usd: '0.000000' },
+    updated_at: null,
+    updated_by: null,
+  }
+  /** Its state and why it is blocked, as the runtime works them out. */
+  const settleTranscription = () => {
+    const blocked = !transcription.offer
+      ? 'no_offer'
+      : transcription.credential.status === 'none'
+        ? 'no_credential'
+        : null
+    transcription.state = !transcription.enabled ? 'off' : blocked ? 'blocked' : 'running'
+    transcription.blocked_reason = transcription.enabled ? blocked : null
+  }
+  const jobs = [
+    {
+      id: 'job-e2e-1',
+      version_id: '0192f3c1-0000-7000-8000-000000000001',
+      document_id: '0192f3c1-0000-7000-8000-000000000002',
+      course_id: '0192f3c1-0000-7000-8000-000000000003',
+      status: 'skipped',
+      reason: 'too_many_pages',
+      backfill: false,
+      content_type: 'application/pdf',
+      byte_size: 9_000_000,
+      pages: 812,
+      offer: 'standard',
+      model: 'gpt-4.1-mini',
+      cost_usd: null,
+      input_tokens: null,
+      output_tokens: null,
+      started_at: new Date().toISOString(),
+      finished_at: new Date().toISOString(),
+    },
+  ]
   const plan = () => ({
     offers,
     quotas: { per_owner_day: 100, per_asker_day: 20, per_day: null },
@@ -156,12 +215,45 @@ function playRuntime(page: Page) {
       return answer(route, 201, row)
     }
     if (path === '/admin/settings') {
-      if (method === 'PATCH') {
+      if (method === 'PATCH' && body.ocr) {
         if (body.ocr.enabled !== undefined) ocr.enabled = body.ocr.enabled
         if ('languages' in body.ocr) ocr.languages = body.ocr.languages ?? [...ocr.default_languages]
       }
-      return answer(route, 200, { ocr })
+      if (method === 'PATCH' && body.transcription) {
+        Object.assign(transcription, body.transcription)
+        if ('offer' in body.transcription) transcription.offer_status = body.transcription.offer ? 'ok' : null
+        settleTranscription()
+      }
+      return answer(route, 200, { ocr, transcription })
     }
+    if (path === '/admin/transcription/credential' && method === 'PUT') {
+      // The runtime would try it against Core first: a service token of Core's shape is taken here.
+      if (!/^aissvc_[a-z2-7]{12}_[A-Za-z0-9_-]{43}$/.test(body.token))
+        return answer(route, 400, {
+          error: {
+            code: 'invalid_argument',
+            message: 'not a token',
+            details: { reason: 'invalid_field', field: '/token' },
+          },
+        })
+      transcription.credential = {
+        status: 'ok',
+        hint: `${body.token.slice(0, 'aissvc_'.length + 12)}…`,
+        credential_id: body.credential_id ?? null,
+        set_at: new Date().toISOString(),
+        set_by: null,
+        last_ok_at: new Date().toISOString(),
+        last_error: null,
+      }
+      settleTranscription()
+      return answer(route, 200, transcription)
+    }
+    if (path === '/admin/transcription/credential' && method === 'DELETE') {
+      transcription.credential = { ...noCredential }
+      settleTranscription()
+      return answer(route, 200, transcription)
+    }
+    if (path === '/admin/transcription/jobs') return answer(route, 200, { jobs, next: null })
     if (path === '/admin/school-plan/offers' && method === 'POST') {
       const o = {
         ...offers[0],
@@ -297,5 +389,78 @@ test.describe('with an agent runtime', () => {
     expect(runtime.sent.filter((x) => x.path === '/admin/settings' && x.method === 'PATCH').map((x) => x.body)).toEqual(
       [{ ocr: { languages: ['chi_tra', 'eng', 'jpn'] } }, { ocr: { languages: null } }],
     )
+  })
+})
+
+/** The transcription service's live credentials in Core, as root lists them. */
+async function liveServiceCredentials(): Promise<{ id: string; token_prefix: string }[]> {
+  const out = await call(root().token, 'GET', '/v1/services/document_text/credentials')
+  expect(out.body.status, JSON.stringify(out.body.error)).toBe('executed')
+  return (out.body.result.credentials ?? []).filter((c: { live: boolean }) => c.live)
+}
+
+test.describe('the transcriber, with an agent runtime', () => {
+  test('root turns it on, chooses its model, gives it a credential Core issues, and revokes it', async ({ page }) => {
+    const runtime = playRuntime(page)
+    await runtime.install()
+    await signInAsRoot(page)
+    await page.goto('/admin/runtime?tab=documents')
+    const card = page.locator('.transcription-card')
+    await expect(card.getByRole('heading', { name: /Transcribing documents \(text versions\)/ })).toBeVisible()
+    await expect(card.locator('.transcription-card__state')).toHaveText('Off')
+
+    // On at once, with the switch: blocked until it has a model and a credential.
+    await card.locator('.transcription-card__enabled').click()
+    await expect(toast(page, 'Transcription is on.')).toBeVisible()
+    await expect(card.locator('.transcription-card__state')).toHaveText('Blocked: no model chosen')
+
+    // Its model, from the plan, and fewer pages a document.
+    await card.locator('.transcription-card__offer-select').click()
+    await page
+      .locator('.el-select-dropdown:visible .el-select-dropdown__item')
+      .filter({ hasText: 'School AI (standard)' })
+      .click()
+    await card.locator('.transcription-card__max-pages input').fill('200')
+    await card.getByRole('button', { name: 'Save' }).click()
+    await expect(toast(page, 'Transcription settings saved.')).toBeVisible()
+    await expect(card.locator('.transcription-card__state')).toHaveText('Blocked: no credential')
+    const patches = runtime.sent.filter((x) => x.method === 'PATCH' && x.path === '/admin/settings').map((x) => x.body)
+    expect(patches).toEqual([
+      { transcription: { enabled: true } },
+      { transcription: { offer: 'standard', max_pages: 200 } },
+    ])
+
+    // One button: Core issues the service a credential, and the runtime is given it.
+    await card.getByRole('button', { name: 'Issue and give to the runtime' }).click()
+    await expect(toast(page, 'The runtime has a new credential.')).toBeVisible()
+    await expect(card.locator('.transcription-card__state')).toHaveText('Running')
+    await expect(card.locator('.transcription-card__credential-status')).toHaveText('Accepted')
+    const put = runtime.sent.filter((x) => x.method === 'PUT' && x.path === '/admin/transcription/credential')
+    // Nothing that holds the token is ever printed, a failure's message included.
+    expect(put.length).toBe(1)
+    const token: string = put[0].body.token
+    expect(/^aissvc_[a-z2-7]{12}_/.test(token)).toBe(true)
+    // Only the runtime's is live in Core, and the token was sent once, to the runtime, and shown nowhere.
+    const live = await liveServiceCredentials()
+    expect(live.map((c) => c.id)).toEqual([put[0].body.credential_id])
+    expect(token.startsWith(`aissvc_${live[0].token_prefix}`)).toBe(true)
+    expect(runtime.sent.filter((x) => JSON.stringify(x).includes(token)).length).toBe(1)
+    expect((await page.content()).includes(token)).toBe(false)
+    await expect(card.locator('.transcription-card__hint')).toHaveText(`aissvc_${live[0].token_prefix}…`)
+
+    // What it did.
+    const job = card.locator('[data-job="job-e2e-1"]')
+    await expect(job.locator('.job-cell__status')).toHaveText('Skipped')
+    await expect(job.locator('.job-cell__reason')).toHaveText('More pages than the limit')
+    await photograph(page, 'transcription-card')
+
+    // Revoked: the runtime forgets it, and Core revokes it.
+    await card.getByRole('button', { name: 'Revoke' }).click()
+    const box = page.getByRole('dialog', { name: 'Revoke the transcription credential?' })
+    await box.getByRole('button', { name: 'Revoke' }).click()
+    await expect(toast(page, 'The credential is revoked.')).toBeVisible()
+    await expect(card.locator('.transcription-card__credential-status')).toHaveText('None')
+    expect(runtime.sent.filter((x) => x.method === 'DELETE')).toHaveLength(1)
+    expect(await liveServiceCredentials()).toEqual([])
   })
 })

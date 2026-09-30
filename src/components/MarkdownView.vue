@@ -11,10 +11,18 @@ const props = defineProps<{
   empty?: string
   /** Fenced code in a box with its language and a button that copies it (the chat's). */
   codeTools?: boolean
+  /**
+   * A text version's pages and slides get ids, this prefix and their number
+   * (text-page-3), to be gone to (pageHeadings in utils/markdown lists them).
+   */
+  anchors?: string
 }>()
 const { t } = useI18n()
 const html = computed(() =>
-  renderMarkdown(props.source, props.codeTools ? { code: { copy: t('common.actions.copy') } } : {}),
+  renderMarkdown(props.source, {
+    ...(props.codeTools ? { code: { copy: t('common.actions.copy') } } : {}),
+    ...(props.anchors ? { anchors: props.anchors } : {}),
+  }),
 )
 
 /** How long a copy button says it copied. */

@@ -113,11 +113,37 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   cent at least (`usdShown`) and typed as decimals (`usdProblem`), empty for no limit. A refusal
   that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
   models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
-  agents' lines. Costs are shown by `lines` kind, so that a kind to come (a document's
-  transcription) shows as its own. What comes next (a document's transcription beside OCR) is
-  another tab, or another card in its tab.
+  agents' lines. Costs are shown by `lines` kind: a document's transcription is a line of its own
+  (「文件轉寫」), and the runtime's own row by agent (no agent, key `transcription`) and by person
+  (no tenant, key `site`) is named so. The Documents tab is OCR's card and the transcriber's
+  (`TranscriptionCard`, `transcription.ts`): its switch saves at once, its form sends a merge-patch
+  of what changed (`patchFrom`), and its credential with Core is one button,
+  `handOverServiceCredential`: the service's live credentials listed (`service.list_credentials`),
+  one issued without `replace` (with five live, only after asking, then with `replace`), put to the
+  runtime (`PUT admin/transcription/credential`, never sent again by itself), the others revoked once
+  it is taken; a refusal revokes the one just issued, and no answer asks the runtime's settings
+  whether it has it before revoking it. Its token lives in one local variable, as an agent's does
+  for hosting (`hostingFlow.ts`), and the runtime client takes a service's token (`aissvc_…`) out of
+  any error as it does an agent's. "Revoke" is `withdrawServiceCredential`: the runtime forgets it,
+  then Core revokes it (by the id it was given, or the live one its hint's prefix names). What comes
+  next is another tab, or another card in its tab.
 - The runtime's route and field names live in `src/api/runtime.ts` (`RUNTIME_ROUTES`) and
   `src/api/runtime-types.ts`, and nowhere else.
+- **A document version's text version (文字版)** is Core's (`version.text` in `document.get` and
+  `document.versions`, `document.text`, `document.text_update`, `document.text_retranscribe`), and
+  whether anything transcribes is the runtime's: `info.features.transcription`, false without a
+  runtime. The document page shows it on a tab of its own (`TextVersionPane`,
+  `materials/components/textVersion.ts`) for whoever reads the version, and for whoever writes the
+  document (`document_write`, as for a new version) on every version with a file. Its place in the
+  queue (pending, working) shows only while the transcriber is on, and what only it would do
+  (transcribing again, or for the first time) is offered only then; a text that is done shows
+  whatever the runtime says, and staff may write one by hand either way. A long text is read part by
+  part at one `revision`, starting again when it moves on (`readWholeText`); an edit names the
+  revision it was made from (`base_revision`), and `text_changed` keeps the draft to be saved over
+  the latest once it is loaded. Retranscribing a staff text asks twice and sends `discard_edit`.
+  Why one failed or was skipped is worded by `enums.textReason` where the code is known, and shown
+  as written otherwise. `<MarkdownView :anchors>` gives its pages' and slides' headings
+  (`## 第 N 頁`, `## 投影片 N`) ids of their number alone (`pageHeadings` lists them).
 
 ## Permissions in the UI
 

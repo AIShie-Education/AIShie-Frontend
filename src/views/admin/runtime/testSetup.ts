@@ -18,6 +18,7 @@ export async function mountGlobal(path = '/admin/runtime') {
       { path: '/', name: 'home', component: View },
       { path: '/admin/runtime', name: 'admin-runtime', component: View },
       { path: '/admin/actors/:actorId', name: 'admin-actor', component: View },
+      { path: '/courses/:courseId/documents/:documentId', name: 'course-document', component: View },
     ],
   })
   await router.push(path)

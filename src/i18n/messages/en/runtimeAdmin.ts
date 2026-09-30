@@ -1,6 +1,7 @@
 // The school's agent runtime, as its administrators set it (AI and
 // documents): the school's AI plan (its models, their keys and the daily
-// quotas), today's use of it, and reading scanned documents (OCR). The
+// quotas), today's use of it, reading scanned documents (OCR), and writing
+// documents' text versions (the transcriber). The
 // runtime's refusals are worded by reason; the hosting pages' words
 // (hosting.…) are shared where the two say the same.
 export default {
@@ -60,6 +61,12 @@ export default {
     bad_if_match: 'The runtime did not take this change as sent. Reload the page and try again.',
     missing_field: 'The runtime did not take this: “{field}” is missing. Reload the page and try again.',
     invalid_field: 'The runtime did not take this: “{field}” is not accepted. Check it and try again.',
+    transcription_unavailable:
+      'Transcription cannot run on this server now, so it cannot be turned on. It can still be turned off, and set for when it can run.',
+    offer_no_file_input:
+      'This model reads neither PDFs nor images, so it cannot transcribe. Choose a model of the plan that reads files.',
+    credential_rejected:
+      'Core did not accept the credential when the runtime tried it, so the runtime did not keep it.',
   },
 
   // Reading scanned files and images (OCR).
@@ -101,6 +108,133 @@ export default {
     special: {
       osd: 'Orientation and script',
       equ: 'Equations',
+    },
+  },
+
+  // Documents' text versions (文字版), written by a model of the school's plan (the transcriber).
+  transcription: {
+    title: 'Transcribing documents (text versions)',
+    intro:
+      'The runtime transcribes each version of the courses’ files (slides, PDFs, Word) into Markdown once, with a model of the school’s plan, on the school’s key: a text version every model reads, and that readers and staff see beside the file.',
+    state: {
+      off: 'Off',
+      running: 'Running',
+      standby: 'Standing by',
+      blocked: 'Blocked: {why}',
+    },
+    blocked: {
+      no_credential: 'no credential',
+      credential_rejected: 'Core refused its credential',
+      no_offer: 'no model chosen',
+      offer_unavailable: 'its model is not available',
+      quota_exhausted: 'today’s pages are used up',
+      other: 'see below',
+    },
+    unavailable: {
+      operator_off:
+        'The server’s operator has turned transcription off (TRANSCRIBE=off), so it never runs, whatever is set here. What you set is kept for when it is turned on.',
+      core_too_old:
+        'The Core this runtime talks to has no transcription queue yet, so it cannot run. What you set is kept for when it has one.',
+    },
+    enabled: 'Transcribe documents into text versions',
+    enabledHint:
+      'Off: nothing is transcribed, and course pages do not show what waits to be. Text versions already written stay, and staff can still write them by hand.',
+    turnedOn: 'Transcription is on.',
+    turnedOff: 'Transcription is off.',
+    offer: 'Model',
+    noOffer: 'None chosen',
+    offerHint:
+      'A model of the school’s plan that reads PDFs or images. Its costs are the school’s, as the transcription line.',
+    offerStatus: {
+      ok: 'Ready',
+      not_found: 'No longer on the plan',
+      disabled: 'Turned off on the plan',
+      no_file_input: 'Cannot read files',
+      not_priced: 'No price',
+    },
+    maxPages: 'Pages a document at most',
+    perDayPages: 'Pages a day',
+    concurrency: 'Documents at once',
+    numbersHint:
+      'A document with more pages is skipped, and so is what is claimed once the day’s pages are used up (00:00 UTC); staff can send it again later. Leave “Pages a day” empty for no limit.',
+    saved: 'Transcription settings saved.',
+    invalid: {
+      maxPages: 'A whole number from 1 to 5000.',
+      perDayPages: 'A whole number from 1 to 1,000,000, or empty for no limit.',
+      concurrency: 'A whole number from 1 to 8.',
+    },
+    neverChanged: 'Not changed here: as the server’s operator set it.',
+    credential: {
+      title: 'Credential with AIshie Core',
+      status: {
+        none: 'None',
+        ok: 'Accepted',
+        untested: 'Not tried yet',
+        rejected: 'Refused',
+      },
+      lastSeen: 'Last accepted by Core',
+      givenBy: 'Given to the runtime by {who}, {when}',
+      given: 'Given to the runtime {when}',
+      neverSeen: 'Not used yet',
+      rejected: 'Core refused this credential: it was revoked or has expired. Issue a new one.',
+      issue: 'Issue and give to the runtime',
+      replace: 'Replace',
+      withdraw: 'Revoke',
+      hint: 'Issuing makes a credential of the transcription service in Core and gives it straight to the runtime, which tries it first: it is never shown here, nor kept in this browser. The service’s other credentials are then revoked.',
+      replaceAllTitle: 'Replace every credential?',
+      replaceAllBody:
+        'The transcription service already has {n} credentials, as many as Core allows. The new one replaces them all: each stops working at once, the runtime’s too until it takes the new one.',
+      replaceAll: 'Replace them all',
+      handedOver: 'The runtime has a new credential.',
+      unrevoked:
+        'One of the service’s other credentials could not be revoked in Core, and may still work. | {n} of the service’s other credentials could not be revoked in Core, and may still work.',
+      withdrawTitle: 'Revoke the transcription credential?',
+      withdrawBody:
+        'The runtime forgets it and Core revokes it: nothing is transcribed until a new one is issued. Work under way stops.',
+      withdrawn: 'The credential is revoked.',
+      notRevoked:
+        'The runtime has forgotten it, but Core could not revoke it: it may still work. Try again from here later.',
+      refused: {
+        rejected:
+          'Core did not accept the credential when the runtime tried it, so the runtime did not keep it. The credential just issued was revoked.',
+        notService:
+          'Core did not take the credential as the transcription service’s, so the runtime did not keep it. The credential just issued was revoked.',
+      },
+    },
+    // Core's refusals of the service's credentials, by reason.
+    coreRefusal: {
+      too_many_credentials:
+        'The transcription service holds as many credentials as Core allows. Revoke one, or replace them all.',
+      platform_role_required: 'Only AIshie’s platform administrators issue or revoke the transcription credential.',
+    },
+    today: {
+      title: 'Today (UTC)',
+      pages: 'Pages',
+      of: 'of {n}',
+      documents: 'Documents',
+      failed: 'Failed',
+      skipped: 'Skipped',
+      cost: 'Cost',
+    },
+    jobs: {
+      title: 'What it transcribed',
+      filter: 'Status',
+      all: 'All',
+      status: {
+        working: 'Transcribing',
+        done: 'Done',
+        failed: 'Failed',
+        skipped: 'Skipped',
+        dropped: 'Dropped',
+      },
+      empty: 'Nothing transcribed yet.',
+      document: 'Document',
+      pages: 'Pages',
+      pagesN: 'One page | {n} pages',
+      finished: 'Finished',
+      since: 'since',
+      unpriced: 'No price',
+      backfill: 'Earlier upload',
     },
   },
 
@@ -419,8 +553,9 @@ export default {
     otherLine: '{kind}: {calls} calls, ${usd}',
     kinds: {
       model_calls: 'Model calls',
-      transcription: 'Transcription',
+      transcription: 'Document transcription',
     },
+    site: 'The site’s own: document transcription',
     all: 'Everything',
     offers: 'offers: {ids}',
     unpriced:
