@@ -107,7 +107,7 @@ export default {
     count: '{n} / {max} 字',
   },
   // Files a message carries: attached in the composer (the paperclip, dropped on the chat panel, or pasted),
-  // each uploaded at once, as a chip.
+  // each uploaded at once, as a chip; and in the messages, each with its icon, name, size and a download.
   attach: {
     button: '添加附件',
     buttonTip: '添加附件：最多 {n} 个，每个最大 {size}',
@@ -125,7 +125,23 @@ export default {
     again: '正在重新上传：完成后再发送一次即可。',
     reattach: '它的文件已随之撤回：如要发送，请重新添加。',
     readded: '它的文件也已放回输入框，正在重新上传。',
+    // In a message.
+    list: '附件',
+    download: '下载“{name}”',
+    downloadTip: '下载',
     held: '附 {n} 个文件：{names}',
+    kind: {
+      image: '图片',
+      pdf: 'PDF',
+      word: '文档',
+      sheet: '表格',
+      slides: '演示文稿',
+      text: '文本',
+      archive: '压缩包',
+      audio: '音频',
+      video: '视频',
+      other: '文件',
+    },
     // Core's refusals because of a message's files, or of a file (details.reason).
     refusal: {
       too_many_attachments: '每条消息最多附 {max_files} 个文件：请移除一些再发送。',
@@ -140,6 +156,7 @@ export default {
       file_too_large: '有文件超过消息可附的大小（{max}）：请移除它，或改附较小的文件。',
       conversation_attachments_full: '这个对话的文件已达上限（共 {max_total}）：如要发送更多，请开始新对话。',
       no_file_storage: '本站没有设置存放文件的地方，所以无法发送文件：请联系网站管理员。',
+      retracted: '这个文件已随消息撤回。',
       not_a_member: '你已不在这门课程，所以无法在此发送文件。',
       membership_not_active: '你在这门课程的席位已暂停或结束，所以无法在此发送文件。',
       permission_denied: '你在这门课程的席位不能在对话中发送文件。',

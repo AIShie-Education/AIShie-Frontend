@@ -1056,10 +1056,12 @@ describe('ChatComposer', () => {
     rememberSent('m3', [pdf('notes.pdf')])
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
+    expect(w.findAll('.chat-msg').at(-1)!.find('.msg-file').text()).toContain('notes.pdf')
     writeAnswer = () => executed({ ok: true })
     await w.find('.chat-msg__edit').trigger('click')
     await settle()
-    // Withdrawn: its text and its file back in the box.
+    // Withdrawn: shown without its text or its file; both back in the box.
+    expect(w.find('.chat-msg.is-retracted .msg-file').exists()).toBe(false)
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('Look at this')
     expect(w.findAll('.chat-chip').map((c) => c.find('.chat-chip__name').text())).toEqual(['notes.pdf'])
     expect(document.body.querySelector('.el-message')?.textContent).toContain(

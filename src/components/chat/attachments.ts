@@ -1,5 +1,5 @@
 // Files a message carries (Core's conversation attachments): in the composer,
-// on their way before the message is sent.
+// on their way before the message is sent, and in the messages, to download.
 //
 // In the composer, each file taken (the paperclip, dropped on the chat panel,
 // or pasted) is uploaded at once, through the upload queue and uploadFile
@@ -13,8 +13,16 @@
 // (details.reason) marks the files it was about and says why in the reader's
 // words. What is attached to a draft is kept with it, by the draft's key, for
 // the page's life, as its text is (chat.ts, Drafts).
+//
+// In a message, each file has an icon by its type, its name, its size and a
+// download: a fresh short-lived URL (conversation.attachment) asked for on
+// the click. A small image is shown as a thumbnail too, fetched once it is on
+// screen and shown from an object URL: the page's policy for images
+// (index.html, img-src 'self' data: blob:) would refuse an object store's
+// origin, which is where download URLs point with S3.
 import { computed, ref, shallowRef, type ComputedRef, type Ref } from 'vue'
-import { ApiError, FILE_TOO_LARGE, uploadLimits, type UploadLimits } from '@/api/http'
+import { ApiError, blobUrl, FILE_TOO_LARGE, fetchBlob, read, uploadLimits, type UploadLimits } from '@/api/http'
+import type { MessageAttachment } from '@/api/types'
 import { createUploadQueue, type UploadFn, type UploadItem, type UploadQueue } from '@/composables/useUploadQueue'
 import { i18n } from '@/i18n'
 import { formatBytes } from '@/utils/format'
@@ -326,7 +334,7 @@ export function sentFilesOf(messageId: string): File[] | null {
   return sentFiles.get(messageId) ?? null
 }
 
-// --- What a file is ------------------------------------------------------------------------
+// --- In a message ------------------------------------------------------------------------
 
 /** What a file is, by its type (as its uploader declared it) or, failing that, its name: for its icon and its word. */
 export type FileKind = 'image' | 'pdf' | 'word' | 'sheet' | 'slides' | 'text' | 'archive' | 'audio' | 'video' | 'other'
@@ -397,4 +405,80 @@ export const FILE_ICON: Record<FileKind, string> = {
   audio: 'Headset',
   video: 'VideoCamera',
   other: 'Paperclip',
+}
+
+/** Images a browser shows, to be shown as a thumbnail. */
+const THUMBNAIL_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif', 'image/bmp'])
+/** The largest image fetched for a thumbnail: a larger one is shown by its icon. */
+export const THUMBNAIL_MAX_BYTES = 8 << 20
+
+/** Whether a file is shown as a thumbnail: an image of a kind browsers show, small enough to fetch whole. */
+export function hasThumbnail(a: Pick<MessageAttachment, 'content_type' | 'byte_size'>): boolean {
+  const ct = a.content_type.split(';')[0]!.trim().toLowerCase()
+  return THUMBNAIL_TYPES.has(ct) && a.byte_size > 0 && a.byte_size <= THUMBNAIL_MAX_BYTES
+}
+
+// Thumbnails fetched, by file (its id): object URLs of the images, kept for
+// the page's life, the latest few; one given up to make room is revoked.
+const thumbnails = new Map<string, Promise<string | null>>()
+const THUMBNAILS_KEPT = 60
+
+/**
+ * A thumbnail of an image a message carries, as an object URL: its bytes
+ * fetched from a fresh download URL (conversation.attachment), once. Null
+ * where it cannot be had (the message withdrawn meanwhile, a store that
+ * refuses this origin); the file is shown by its icon then.
+ */
+export function thumbnailOf(courseId: string, attachmentId: string): Promise<string | null> {
+  const kept = thumbnails.get(attachmentId)
+  if (kept) {
+    // The latest used is the last given up.
+    thumbnails.delete(attachmentId)
+    thumbnails.set(attachmentId, kept)
+    return kept
+  }
+  const made = read('conversation.attachment', { course_id: courseId, attachment_id: attachmentId })
+    .then((a) => fetchBlob(a.download_url))
+    .then((blob) => URL.createObjectURL(blob))
+    .catch(() => {
+      thumbnails.delete(attachmentId)
+      return null
+    })
+  thumbnails.set(attachmentId, made)
+  while (thumbnails.size > THUMBNAILS_KEPT) {
+    const [oldest, url] = thumbnails.entries().next().value!
+    thumbnails.delete(oldest)
+    void url.then((u) => u && URL.revokeObjectURL(u))
+  }
+  return made
+}
+
+/** Forgets the thumbnails fetched (tests). */
+export function forgetThumbnails() {
+  for (const url of thumbnails.values()) void url.then((u) => u && URL.revokeObjectURL(u))
+  thumbnails.clear()
+}
+
+/**
+ * Downloads a file a message carries: a fresh short-lived URL
+ * (conversation.attachment), then the browser goes to it and saves it under
+ * the file's name, which the store's answer gives it (Content-Disposition).
+ * Core's own store is reached through this origin, where the download
+ * attribute names it too and no tab is left open; an object store's URL
+ * opens in a new tab, which saves it and closes.
+ */
+export async function downloadAttachment(courseId: string, attachmentId: string): Promise<void> {
+  const a = await read('conversation.attachment', { course_id: courseId, attachment_id: attachmentId })
+  const link = document.createElement('a')
+  link.href = blobUrl(a.download_url)
+  if (new URL(link.href, window.location.href).origin === window.location.origin) {
+    link.download = a.filename
+  } else {
+    link.rel = 'noopener'
+    link.target = '_blank'
+  }
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
 }

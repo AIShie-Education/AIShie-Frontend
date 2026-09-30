@@ -11,6 +11,7 @@ const {
   DEFAULT_MAX_FILES,
   fileKind,
   forgetAttachments,
+  hasThumbnail,
   rememberSent,
   sentFilesOf,
   attachmentsFor,
@@ -250,6 +251,7 @@ describe('the files attached to a message', () => {
     expect(refused('no_file_storage', 422)).toBe(
       'This site has nowhere to keep files, so none can be sent: ask its administrator.',
     )
+    expect(refused('retracted', 404)).toBe('This file was withdrawn with its message.')
   })
 
   it('are kept with their draft for the page’s life, by its key', () => {
@@ -285,5 +287,13 @@ describe('what a file is', () => {
     expect(fileKind('application/octet-stream', 'essay.DOCX')).toBe('word')
     expect(fileKind('application/octet-stream', 'data.bin')).toBe('other')
     expect(fileKind('', 'notes')).toBe('other')
+  })
+
+  it('is shown as a thumbnail when it is an image a browser shows, small enough to fetch', () => {
+    expect(hasThumbnail({ content_type: 'image/png', byte_size: 1_000 })).toBe(true)
+    expect(hasThumbnail({ content_type: 'image/jpeg', byte_size: 20 << 20 })).toBe(false)
+    expect(hasThumbnail({ content_type: 'image/svg+xml', byte_size: 1_000 })).toBe(false)
+    expect(hasThumbnail({ content_type: 'image/heic', byte_size: 1_000 })).toBe(false)
+    expect(hasThumbnail({ content_type: 'application/pdf', byte_size: 1_000 })).toBe(false)
   })
 })

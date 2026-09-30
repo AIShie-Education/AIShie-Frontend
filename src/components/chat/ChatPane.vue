@@ -805,6 +805,7 @@ const closedLine = computed(() => {
             <li v-for="(m, i) in messages" :key="m.id" :class="{ 'is-grouped': grouped(i) }">
               <ChatMessage
                 :message="m"
+                :course-id="courseId"
                 :author-name="authorName(m)"
                 :from-opener="fromOpener(m)"
                 :mine="m.author_member_id === me"

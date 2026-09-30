@@ -107,7 +107,7 @@ export default {
     count: '{n} / {max} characters',
   },
   // Files a message carries: attached in the composer (the paperclip, dropped on the chat panel, or pasted),
-  // each uploaded at once, as a chip.
+  // each uploaded at once, as a chip; and in the messages, each with its icon, name, size and a download.
   attach: {
     button: 'Attach files',
     buttonTip: 'Attach files: up to {n}, {size} each',
@@ -131,7 +131,23 @@ export default {
     again: 'They are being uploaded again: send once more when they are.',
     reattach: 'Its files were withdrawn with it: attach them again to send them.',
     readded: 'Its files are back in the box, uploading again.',
+    // In a message.
+    list: 'Attached files',
+    download: 'Download “{name}”',
+    downloadTip: 'Download',
     held: 'With {n} file: {names} | With {n} files: {names}',
+    kind: {
+      image: 'Image',
+      pdf: 'PDF',
+      word: 'Document',
+      sheet: 'Spreadsheet',
+      slides: 'Slides',
+      text: 'Text',
+      archive: 'Archive',
+      audio: 'Audio',
+      video: 'Video',
+      other: 'File',
+    },
     // Core's refusals because of a message's files, or of a file (details.reason).
     refusal: {
       too_many_attachments: 'A message carries at most {max_files} files: remove some, and send again.',
@@ -148,6 +164,7 @@ export default {
       conversation_attachments_full:
         'This conversation holds as many files as it can ({max_total} in all): start a new conversation to send more.',
       no_file_storage: 'This site has nowhere to keep files, so none can be sent: ask its administrator.',
+      retracted: 'This file was withdrawn with its message.',
       not_a_member: 'You no longer have a seat in this course, so no files can be sent in it.',
       membership_not_active: 'Your seat in this course is paused or has ended, so no files can be sent in it.',
       permission_denied: 'Your seat in this course may not send files in the chat.',

@@ -107,7 +107,7 @@ export default {
     count: '{n} / {max} 字',
   },
   // Files a message carries: attached in the composer (the paperclip, dropped on the chat panel, or pasted),
-  // each uploaded at once, as a chip.
+  // each uploaded at once, as a chip; and in the messages, each with its icon, name, size and a download.
   attach: {
     button: '附加檔案',
     buttonTip: '附加檔案：最多 {n} 個，每個最大 {size}',
@@ -125,7 +125,23 @@ export default {
     again: '正在重新上傳：完成後再傳送一次即可。',
     reattach: '它的檔案已隨之撤回：如要傳送，請重新附加。',
     readded: '它的檔案也已放回輸入框，正在重新上傳。',
+    // In a message.
+    list: '附件',
+    download: '下載「{name}」',
+    downloadTip: '下載',
     held: '附 {n} 個檔案：{names}',
+    kind: {
+      image: '圖片',
+      pdf: 'PDF',
+      word: '文件',
+      sheet: '試算表',
+      slides: '簡報',
+      text: '文字',
+      archive: '壓縮檔',
+      audio: '音訊',
+      video: '影片',
+      other: '檔案',
+    },
     // Core's refusals because of a message's files, or of a file (details.reason).
     refusal: {
       too_many_attachments: '每則訊息最多附 {max_files} 個檔案：請移除一些再傳送。',
@@ -140,6 +156,7 @@ export default {
       file_too_large: '有檔案超過訊息可附的大小（{max}）：請移除它，或改附較小的檔案。',
       conversation_attachments_full: '這個對話的檔案已達上限（共 {max_total}）：如要傳送更多，請開始新對話。',
       no_file_storage: '本網站沒有設定存放檔案的地方，所以無法傳送檔案：請聯絡網站管理員。',
+      retracted: '這個檔案已隨訊息撤回。',
       not_a_member: '你已不在這個課程，所以無法在此傳送檔案。',
       membership_not_active: '你在這個課程的席位已暫停或結束，所以無法在此傳送檔案。',
       permission_denied: '你在這個課程的席位不能在對話中傳送檔案。',
