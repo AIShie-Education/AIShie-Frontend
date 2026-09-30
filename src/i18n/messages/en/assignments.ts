@@ -60,7 +60,7 @@ export default {
     doc: {
       none: 'None',
       existing: 'Choose existing',
-      new: 'Write new',
+      new: 'Upload or write new',
       choose: 'Choose a document',
       chooseRequired: 'Choose a document',
       unpublishedTag: 'not published',
@@ -77,7 +77,18 @@ export default {
       cannotRemove: 'It can be replaced by another document, but not removed.',
       newTitle: 'Document title',
       newBody: 'Write it here (Markdown)',
-      newFile: 'Attach a file (optional)',
+      dropLabel: {
+        instructions: 'The instructions’ file: drop it here, or press Enter to choose it',
+        rubric: 'The rubric’s file: drop it here, or press Enter to choose it',
+      },
+      writeInstead: 'Write text instead',
+      editText: 'Edit the text',
+      textChars: 'With text ({chars} characters).',
+      withFile: 'With the file “{name}” ({size}).',
+      fileUploading: 'The file is still uploading.',
+      noFile: 'No file.',
+      seeFile: 'See the file',
+      uploadInstead: 'Upload a file',
       publishNow: {
         instructions: 'Publish it now, so students can read it once the assignment is published',
         rubric: 'Publish it now',

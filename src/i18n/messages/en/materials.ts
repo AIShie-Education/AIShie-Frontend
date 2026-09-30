@@ -198,6 +198,7 @@ export default {
     },
     approvalNote:
       'Writing material needs approval here: this becomes a proposal and takes effect only once someone approves it.',
+    dropHere: 'Drop to add a new version with this file',
     addVersion: {
       title: 'New version of “{title}”',
       introFrom:
@@ -206,9 +207,22 @@ export default {
         'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published. The document has no version yet.',
       body: 'Text',
       file: 'File',
-      fileHint: 'Optional. A version holds text, a file, or both.',
       fileNotCarried:
         'Version {seq} has a file ({type}, {size}). A new version does not carry it over: upload it again to keep it. Saving without a file leaves it out of the new version.',
+      dropLabel: 'The new version’s file: drop it here, or press Enter to choose it',
+      textNone: 'Text: none.',
+      textKept: 'Text: version {seq}’s, as it is ({chars} characters).',
+      textWritten: 'Text: as written here ({chars} characters).',
+      editText: 'Edit the text',
+      writeInstead: 'Write text instead',
+      leaveTextOut: 'Leave the text out',
+      putTextBack: 'Keep version {seq}’s text',
+      withFile: 'With the file “{name}” ({size}).',
+      fileUploading: 'The file is still uploading.',
+      noFile: 'No file.',
+      seeFile: 'See the file',
+      uploadInstead: 'Upload a file',
+      waitForFile: 'Waiting for the file to upload…',
       publish: 'Publish this version at once',
       publishHint: 'Otherwise it stays a draft until someone publishes it.',
       unreleased: 'Its assignment is not published yet: news of this goes only to those who can see unpublished work.',

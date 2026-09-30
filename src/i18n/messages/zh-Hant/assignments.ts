@@ -57,7 +57,7 @@ export default {
     doc: {
       none: '不設',
       existing: '選擇現有',
-      new: '撰寫新的',
+      new: '上傳或撰寫',
       choose: '選擇文件',
       chooseRequired: '請選擇文件',
       unpublishedTag: '未發佈',
@@ -73,7 +73,18 @@ export default {
       cannotRemove: '可以換成另一份文件，但不能移除。',
       newTitle: '文件標題',
       newBody: '在此撰寫（支援 Markdown）',
-      newFile: '附加檔案（選填）',
+      dropLabel: {
+        instructions: '作業說明的檔案：拖放到這裡，或按 Enter 選擇',
+        rubric: '評分準則的檔案：拖放到這裡，或按 Enter 選擇',
+      },
+      writeInstead: '改為撰寫文字',
+      editText: '編輯內文',
+      textChars: '附內文（{chars} 個字元）。',
+      withFile: '附檔案「{name}」（{size}）。',
+      fileUploading: '檔案仍在上傳。',
+      noFile: '沒有檔案。',
+      seeFile: '查看檔案',
+      uploadInstead: '上傳檔案',
       publishNow: {
         instructions: '立即發佈，讓學生在作業發佈後可以閱讀',
         rubric: '立即發佈',

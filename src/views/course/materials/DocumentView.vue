@@ -19,15 +19,19 @@
 // by staff (TextVersionPane). Whether the transcriber is on is the runtime's
 // to say (info.features.transcription): without a runtime that says so, a
 // text waiting for it is shown as none.
+//
+// A new version opens on a drop zone for its file. Whoever may add one can
+// also drop a file anywhere on the page, which opens it with that file.
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { read, type UploadKind } from '@/api/http'
 import type { AssignmentSummary, DocumentVersion } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useCourseTab } from '@/composables/useCourseTab'
+import { usePageDrop } from '@/composables/useFileDrop'
 import { useRuntime } from '@/composables/useRuntime'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -231,6 +235,36 @@ const needsApproval = computed(() => course.needsApproval('document_write'))
 const pendingNote = ref<string | null>(null)
 const editing = ref(false)
 
+// A new version, opened by its button or by a file dropped on the page.
+const droppedFiles = ref<File[]>([])
+function openVersion(files: File[] = []) {
+  droppedFiles.value = files
+  editing.value = true
+}
+const pageDrop = usePageDrop({
+  // Not while another dialog of the page is open over it.
+  enabled: () =>
+    canWrite.value &&
+    active.value &&
+    !writeDisabled.value &&
+    !purged.value &&
+    !editing.value &&
+    !detailsOpen.value &&
+    !purgeOpen.value,
+  onFiles: (files) => {
+    if (!files.length) return
+    if (files.length > 1) {
+      ElMessage({
+        type: 'warning',
+        message: t('common.upload.onlyOne', { name: files[0]!.name }),
+        showClose: true,
+        duration: 6000,
+      })
+    }
+    openVersion(files.slice(0, 1))
+  },
+})
+
 function lines(parts: (string | false | null | undefined)[]) {
   return h(
     'div',
@@ -416,7 +450,7 @@ function onTextProposed(message: string) {
       </template>
       <template v-if="doc && (canWrite || canPurge)" #default>
         <template v-if="canWrite && active">
-          <el-button type="primary" :disabled="writeDisabled" @click="editing = true">
+          <el-button type="primary" :disabled="writeDisabled" @click="openVersion()">
             <el-icon><EditPen /></el-icon>
             <span>{{ t('materials.document.actions.newVersion') }}</span>
           </el-button>
@@ -510,6 +544,11 @@ function onTextProposed(message: string) {
         <div class="doc-layout app-columns">
           <main class="doc-layout__main app-column">
             <section class="app-card doc-content">
+              <!-- Where a file dragged over the page will go. -->
+              <div v-if="pageDrop.dragging.value" class="doc-content__drop" aria-hidden="true">
+                <el-icon class="doc-content__drop-icon"><UploadFilled /></el-icon>
+                <span>{{ t('materials.document.dropHere') }}</span>
+              </div>
               <template v-if="shown">
                 <div class="doc-content__meta">
                   <!-- An owned file has exactly one version, and nothing to publish. -->
@@ -605,7 +644,7 @@ function onTextProposed(message: string) {
                 v-else
                 :description="showVersions ? t('materials.document.emptyDoc') : t('materials.document.noVersion')"
               >
-                <el-button v-if="canWrite && active" type="primary" :disabled="writeDisabled" @click="editing = true">
+                <el-button v-if="canWrite && active" type="primary" :disabled="writeDisabled" @click="openVersion()">
                   {{ t('materials.document.addFirst') }}
                 </el-button>
               </el-empty>
@@ -711,6 +750,7 @@ function onTextProposed(message: string) {
       :kind="uploadKind"
       :doc-title="doc.title"
       :unreleased="unreleased"
+      :files="droppedFiles"
       @saved="onVersionSaved"
       @proposed="onVersionProposed"
     />
@@ -749,6 +789,32 @@ function onTextProposed(message: string) {
   .doc-layout {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+.doc-content {
+  position: relative;
+}
+/* A file dragged over the page: the version's card is where it goes. */
+.doc-content__drop {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed var(--el-color-primary);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--app-indigo-tint) 88%, transparent);
+  color: var(--el-color-primary);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+  padding: 16px;
+  pointer-events: none;
+}
+.doc-content__drop-icon {
+  font-size: 32px;
 }
 .doc-content__meta {
   display: flex;
