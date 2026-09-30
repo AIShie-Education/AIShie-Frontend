@@ -3,11 +3,15 @@
 // Core decides what is listed: members who cannot read drafts get only what
 // has a published version, and archived material only to those who read
 // drafts and ask for it.
+//
+// Whoever writes material may drop files anywhere on the page: the dialog for
+// new material opens with them, one material for each.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { DocumentSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
+import { usePageDrop } from '@/composables/useFileDrop'
 import { useCourseStore } from '@/stores/course'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -49,12 +53,30 @@ const nextOrder = computed(() =>
 const creating = ref(false)
 const pendingNote = ref<string | null>(null)
 
+// Files dropped on the page: new material, one for each.
+const dropped = ref<File[]>([])
+const takesFiles = computed(() => canWrite.value && course.writable)
+function openCreate(files: File[] = []) {
+  dropped.value = files
+  creating.value = true
+}
+const pageDrop = usePageDrop({
+  enabled: () => takesFiles.value && !creating.value,
+  onFiles: (files) => {
+    if (files.length) openCreate(files)
+  },
+})
+
 function onCreated() {
   pendingNote.value = null
   void list.reload()
 }
-function onProposed(info: { title: string; publish: boolean }) {
-  const lines = [t('materials.pending.create', { title: info.title })]
+function onProposed(info: { titles: string[]; publish: boolean }) {
+  const lines = [
+    info.titles.length === 1
+      ? t('materials.pending.create', { title: info.titles[0] })
+      : t('materials.pending.createMany', { n: info.titles.length }),
+  ]
   if (info.publish) lines.push(t('materials.pending.createPublish'))
   pendingNote.value = lines.join(' ')
   void list.reload()
@@ -62,14 +84,14 @@ function onProposed(info: { title: string; publish: boolean }) {
 </script>
 
 <template>
-  <div class="materials">
+  <div class="materials" :class="{ 'is-drop-target': pageDrop.dragging.value }">
     <PageHeader
       :title="t('materials.title')"
       :subtitle="readsDrafts ? t('materials.hintDrafts') : t('materials.hintReader')"
     >
       <el-checkbox v-if="readsDrafts" v-model="includeArchived" :label="t('materials.includeArchived')" border />
       <div v-if="canWrite" class="materials__create">
-        <el-button type="primary" :disabled="!course.writable" @click="creating = true">
+        <el-button type="primary" :disabled="!course.writable" @click="openCreate()">
           <el-icon><Plus /></el-icon>
           <span>{{ t('materials.newMaterial') }}</span>
         </el-button>
@@ -82,6 +104,11 @@ function onProposed(info: { title: string; publish: boolean }) {
     <PendingAlert v-if="pendingNote" :course-id="courseId" :message="pendingNote" @close="pendingNote = null" />
 
     <section class="app-card materials__card">
+      <!-- Where files dragged over the page will go. -->
+      <div v-if="pageDrop.dragging.value" class="materials__drop" aria-hidden="true">
+        <el-icon class="materials__drop-icon"><UploadFilled /></el-icon>
+        <span>{{ t('materials.dropHere') }}</span>
+      </div>
       <AsyncState
         :loading="list.loading.value && !list.items.value.length"
         :error="list.error.value"
@@ -90,10 +117,11 @@ function onProposed(info: { title: string; publish: boolean }) {
         @retry="list.reload"
       >
         <template #empty>
-          <el-button v-if="canWrite && course.writable" type="primary" plain @click="creating = true">
+          <el-button v-if="takesFiles" type="primary" plain @click="openCreate()">
             <el-icon><Plus /></el-icon>
             <span>{{ t('materials.newMaterial') }}</span>
           </el-button>
+          <p v-if="takesFiles" class="materials__drop-hint">{{ t('materials.dropHint') }}</p>
         </template>
         <ul class="material-list">
           <li v-for="d in sorted" :key="d.id">
@@ -137,6 +165,7 @@ function onProposed(info: { title: string; publish: boolean }) {
           </li>
         </ul>
         <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
+        <p v-if="takesFiles" class="materials__drop-hint">{{ t('materials.dropHint') }}</p>
       </AsyncState>
     </section>
 
@@ -145,6 +174,7 @@ function onProposed(info: { title: string; publish: boolean }) {
       v-model="creating"
       :course-id="courseId"
       :suggested-order="nextOrder"
+      :files="dropped"
       @created="onCreated"
       @proposed="onProposed"
     />
@@ -159,6 +189,43 @@ function onProposed(info: { title: string; publish: boolean }) {
 }
 .materials__card {
   padding: 8px;
+  position: relative;
+}
+/* Files dragged over the page: the list is where they go. */
+.materials__drop {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 160px;
+  border: 2px dashed var(--el-color-primary);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--app-indigo-tint) 88%, transparent);
+  color: var(--el-color-primary);
+  font-size: 15px;
+  font-weight: 500;
+  pointer-events: none;
+}
+.materials__drop-icon {
+  font-size: 32px;
+}
+.is-drop-target .materials__card {
+  min-height: 176px;
+}
+.materials__drop-hint {
+  margin: 8px 12px 4px;
+  font-size: 12px;
+  color: var(--app-ink-3);
+}
+/* Nothing is dragged on a phone. */
+@media (max-width: 640px), (hover: none) and (pointer: coarse) {
+  .materials__drop-hint {
+    display: none;
+  }
 }
 .material-list {
   list-style: none;

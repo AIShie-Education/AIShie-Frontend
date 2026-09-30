@@ -137,3 +137,13 @@ export function downloadName(name: string | null | undefined, contentType?: stri
   if (ext && !/\.[A-Za-z][A-Za-z0-9]{0,7}$/.test(n)) n = `${n}.${ext}`
   return n
 }
+
+/**
+ * A title for what a file becomes: its name without its extension ("Week 3 —
+ * Loops.pdf" → "Week 3 — Loops"), which a download puts back from the file's
+ * type (downloadName). A name that is only an extension stays as it is.
+ */
+export function titleFromFileName(name: string): string {
+  const n = name.trim()
+  return n.replace(/\.[A-Za-z][A-Za-z0-9]{0,7}$/, '').trim() || n
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { downloadName } from './format'
+import { downloadName, titleFromFileName } from './format'
 
 describe('downloadName', () => {
   it('keeps a name that has an extension', () => {
@@ -17,5 +17,16 @@ describe('downloadName', () => {
   it('replaces what a file system does not take, and never gives an empty name', () => {
     expect(downloadName('a/b: c?', 'text/plain')).toBe('a_b_ c_.txt')
     expect(downloadName('', undefined)).toBe('download')
+  })
+})
+
+describe('titleFromFileName', () => {
+  it('leaves out the extension, which a download puts back', () => {
+    expect(titleFromFileName('Week 3 — Loops.pdf')).toBe('Week 3 — Loops')
+    expect(titleFromFileName('slides.v2.pptx')).toBe('slides.v2')
+    expect(titleFromFileName('Syllabus v2.1')).toBe('Syllabus v2.1')
+    expect(titleFromFileName('README')).toBe('README')
+    expect(titleFromFileName('.pdf')).toBe('.pdf')
+    expect(titleFromFileName('  第三週 講義.docx ')).toBe('第三週 講義')
   })
 })
