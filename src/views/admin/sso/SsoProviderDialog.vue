@@ -618,7 +618,7 @@ const title = computed(() =>
 }
 /* The sign-in page's button, as it will show there: not one to press here. */
 .sso-preview__button {
-  flex: 1;
+  flex: 1 1 220px;
   min-width: 0;
   max-width: 364px;
   pointer-events: none;
