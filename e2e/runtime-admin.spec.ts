@@ -6,7 +6,8 @@ import { demo, showSideView, signIn, signInAsRoot, toast } from './support'
 // beside it: there the side bar does not offer the page, and the page says
 // there is none. With a runtime, played in the browser from its contract
 // (its admin routes, and the assertion Core would make for it), root adds a
-// model to the school's plan, turns it off, and sets OCR's languages.
+// model to the school's plan, turns it off, adds a price, and sets OCR's
+// languages.
 
 const STAMP = Date.now().toString(36)
 
@@ -78,6 +79,31 @@ function playRuntime(page: Page) {
     quotas_updated_at: null,
     quotas_updated_by: null,
   })
+  const prices: any = {
+    version: '2026-09-27',
+    file_version: '2026-09-27',
+    site_version: null,
+    site_changed_at: null,
+    rows: [
+      {
+        id: '0',
+        source: 'file',
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        glob: false,
+        from: '2026-01-01',
+        usd_per_mtok: { input: '0.4', cache_read: '0.1', cache_write: '0.4', output: '1.6' },
+        version: '2026-09-27/0',
+        overridden: false,
+        row_version: null,
+        created_at: null,
+        created_by: null,
+        updated_at: null,
+        updated_by: null,
+      },
+    ],
+    unpriced_offers: [],
+  }
   const providers = [
     {
       provider: 'openai',
@@ -111,6 +137,24 @@ function playRuntime(page: Page) {
     if (path === '/models')
       return answer(route, 200, { own_key: { offered: true, providers }, school_key: { offered: true, offers: [] } })
     if (path === '/admin/school-plan') return answer(route, 200, plan())
+    if (path === '/admin/prices' && method === 'GET') return answer(route, 200, prices)
+    if (path === '/admin/prices' && method === 'POST') {
+      const row = {
+        ...prices.rows[0],
+        ...body,
+        source: 'site',
+        glob: false,
+        usd_per_mtok: {
+          ...body.usd_per_mtok,
+          cache_read: body.usd_per_mtok.input,
+          cache_write: body.usd_per_mtok.input,
+        },
+        version: `site-e2e/${body.id}`,
+        row_version: 1,
+      }
+      prices.rows.unshift(row)
+      return answer(route, 201, row)
+    }
     if (path === '/admin/settings') {
       if (method === 'PATCH') {
         if (body.ocr.enabled !== undefined) ocr.enabled = body.ocr.enabled
@@ -158,7 +202,9 @@ function playRuntime(page: Page) {
 }
 
 test.describe('with an agent runtime', () => {
-  test('root adds a model to the school’s plan, turns it off, and sets OCR’s languages', async ({ page }) => {
+  test('root adds a model to the school’s plan, turns it off, prices a model, and sets OCR’s languages', async ({
+    page,
+  }) => {
     const runtime = playRuntime(page)
     await runtime.install()
     await signInAsRoot(page)
@@ -208,6 +254,32 @@ test.describe('with an agent runtime', () => {
     const off = runtime.sent.find((x) => x.method === 'PATCH' && x.path.startsWith('/admin/school-plan/offers/'))!
     expect(off.body).toEqual({ enabled: false })
     expect(off.ifMatch).toBe('"1"')
+
+    // A price of the site's, from today, its ID made from the model and the day.
+    await page.getByRole('tab', { name: 'Pricing' }).click()
+    await expect(page).toHaveURL(/tab=pricing/)
+    const priceCard = page.locator('.prices-card')
+    await expect(priceCard.getByText('Server’s price file', { exact: true })).toBeVisible()
+    await priceCard.getByRole('button', { name: 'Add a price' }).click()
+    const priceDialog = page.getByRole('dialog', { name: 'Add a price' })
+    await priceDialog.locator('.price-form__provider').click()
+    await page.locator('.el-select-dropdown:visible .el-select-dropdown__item').filter({ hasText: 'OpenAI' }).click()
+    await priceDialog.getByLabel('Model', { exact: true }).fill('gpt-4.1-nano')
+    await priceDialog.getByLabel('Input', { exact: true }).fill('0.1')
+    await priceDialog.getByLabel('Output', { exact: true }).fill('0.4')
+    const today = new Date().toISOString().slice(0, 10)
+    await expect(priceDialog.getByLabel('ID', { exact: true })).toHaveValue(`gpt-4.1-nano-${today}`)
+    await priceDialog.getByRole('button', { name: 'Add', exact: true }).click()
+    await expect(toast(page, `The price of gpt-4.1-nano from ${today} is saved.`)).toBeVisible()
+    const priced = runtime.sent.find((x) => x.method === 'POST' && x.path === '/admin/prices')!
+    expect(priced.body).toEqual({
+      id: `gpt-4.1-nano-${today}`,
+      provider: 'openai',
+      model: 'gpt-4.1-nano',
+      from: today,
+      usd_per_mtok: { input: '0.1', output: '0.4' },
+    })
+    await expect(priceCard.locator(`[data-price="site:gpt-4.1-nano-${today}"]`)).toBeVisible()
 
     // OCR reads Japanese too, then the server's languages again.
     await page.getByRole('tab', { name: 'Documents' }).click()
