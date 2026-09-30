@@ -36,6 +36,15 @@ vi.mock('@/api/http', async (orig) => {
       writes.push({ tool, args })
       return writeAnswer(tool)
     }),
+    // A conversation's files, uploaded at once (conversation.upload_url, then a PUT); Core takes 5 000 bytes a file.
+    uploadFile: vi.fn(async (_course: string, _kind: string, file: File) => ({
+      uploadToken: `tok-${file.name}`,
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+    })),
+    uploadLimits: vi.fn(async () => ({ maxBytes: 5_000, maxFiles: 10, maxConversationBytes: 50_000 })),
+    uploadLimit: vi.fn(async () => 5_000),
   }
 })
 
@@ -45,6 +54,7 @@ const { useSessionStore } = await import('@/stores/session')
 const { default: ChatPane } = await import('./ChatPane.vue')
 const { default: ChatComposer } = await import('./ChatComposer.vue')
 const { forgetSent } = await import('./chat')
+const { forgetAttachments, rememberSent } = await import('./attachments')
 
 const Passthrough = (name: string) =>
   defineComponent({
@@ -210,6 +220,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-09-26T12:00:00Z'))
   writes.length = 0
   forgetSent()
+  forgetAttachments()
   server = {
     messages: [
       msg(1, 'student'),
@@ -224,6 +235,21 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 enableAutoUnmount(afterEach)
+
+const pdf = (name: string, type = 'application/pdf', size = 120) => new File([new Uint8Array(size)], name, { type })
+/** A DataTransfer as the browser hands one to a drop (jsdom has none). */
+function transfer(files: File[]) {
+  return {
+    types: ['Files'],
+    files,
+    items: files.map((f) => ({ kind: 'file', getAsFile: () => f, webkitGetAsEntry: () => ({ isDirectory: false }) })),
+    dropEffect: 'none',
+  } as unknown as DataTransfer
+}
+/** Until files added are up (their uploads are answered at once here). */
+async function settle() {
+  for (let i = 0; i < 6; i++) await flushPromises()
+}
 
 async function type(wrapper: ReturnType<typeof mount>, text: string) {
   const ta = wrapper.find('textarea')
@@ -876,5 +902,189 @@ describe('ChatComposer', () => {
     await w.setProps({ pending: false, disabled: true })
     expect(w.find('.chat-composer').classes()).toContain('is-disabled')
     expect(w.find('textarea').attributes('disabled')).toBeDefined()
+  })
+  // --- Files ------------------------------------------------------------------------
+
+  it('sends a question with the files dropped on it, by their tokens and names in order, and empties the chips', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global, attachTo: document.body })
+    await flushPromises()
+    // While dragged over it, it says where they go.
+    const dt = transfer([pdf('notes.pdf'), pdf('plot.png', 'image/png')])
+    await w.trigger('dragenter', { dataTransfer: dt })
+    expect(w.find('.chat-pane__drop').text()).toBe('Drop to attach to your message')
+    await w.trigger('drop', { dataTransfer: dt })
+    await settle()
+    expect(w.find('.chat-pane__drop').exists()).toBe(false)
+    expect(w.findAll('.chat-chip.is-done').map((c) => c.find('.chat-chip__name').text())).toEqual([
+      'notes.pdf',
+      'plot.png',
+    ])
+    const ta = await type(w, 'Are these right?')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(writes).toEqual([
+      {
+        tool: 'conversation.ask',
+        args: {
+          course_id: 'k1',
+          conversation_id: 'c1',
+          body: 'Are these right?',
+          attachments: [
+            { upload_token: 'tok-notes.pdf', filename: 'notes.pdf' },
+            { upload_token: 'tok-plot.png', filename: 'plot.png' },
+          ],
+        },
+      },
+    ])
+    expect(w.findAll('.chat-chip')).toHaveLength(0)
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('')
+  })
+
+  it('opens a new conversation with its first message’s files', async () => {
+    seat('student')
+    writeAnswer = () => executed({ conversation_id: 'c2', message_id: 'm1' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    ;(w.vm as unknown as { takeFiles: (f: File[]) => void }).takeFiles([pdf('essay.pdf')])
+    await settle()
+    const ta = await type(w, 'Is my essay on topic?')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(writes[0]).toEqual({
+      tool: 'conversation.open',
+      args: {
+        course_id: 'k1',
+        respondent_member_id: 'tutor',
+        body: 'Is my essay on topic?',
+        attachments: [{ upload_token: 'tok-essay.pdf', filename: 'essay.pdf' }],
+        title: 'Is my essay on topic?',
+      },
+    })
+    expect(w.emitted('opened')?.[0]).toEqual(['c2'])
+  })
+
+  it('sends nothing with files and no words, and asks for a line to go with them', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    ;(w.vm as unknown as { takeFiles: (f: File[]) => void }).takeFiles([pdf('notes.pdf')])
+    await settle()
+    expect(w.find('textarea').attributes('placeholder')).toBe('What would you like Course tutor to do with this file?')
+    await w.find('textarea').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(writes).toEqual([])
+    expect(w.find('.chat-composer__file-line').text()).toContain('Add a line to go with the file')
+  })
+
+  it('says a refusal because of its files under the chips, and keeps the words and the files to send again', async () => {
+    seat('student')
+    writeAnswer = () => {
+      throw new ApiError({
+        status: 422,
+        code: 'failed_precondition',
+        message: 'the file is 4000 bytes; a message carries files of at most 3000',
+        details: { reason: 'file_too_large', byte_size: 4000, max_bytes: 3000 },
+        actionId: 'a5',
+        actionStatus: 'failed',
+      })
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    ;(w.vm as unknown as { takeFiles: (f: File[]) => void }).takeFiles([
+      pdf('small.pdf'),
+      pdf('big.pdf', 'application/pdf', 4000),
+    ])
+    await settle()
+    const ta = await type(w, 'Here they are')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(w.find('.chat-composer__file-line').text()).toBe(
+      'A file is larger than a message may carry (2.9 KB): remove it, or attach a smaller one.',
+    )
+    expect(w.findAll('.chat-chip').map((c) => c.classes().find((k) => k.startsWith('is-')))).toEqual([
+      'is-done',
+      'is-failed',
+    ])
+    expect(w.find('.chat-chips__error').text()).toBe(
+      '“big.pdf” was not uploaded: Too large to upload: it is 3.9 KB, and a file can be at most 2.9 KB.',
+    )
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('Here they are')
+    // Said there, not in a box of its own.
+    expect(document.body.querySelector('.el-notification')).toBeNull()
+  })
+
+  it('keeps the names of the files of a question that waits for approval', async () => {
+    seat('student')
+    writeAnswer = () => ({ status: 'proposed', actionId: 'a9', reviewState: 'none', replayed: false })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    ;(w.vm as unknown as { takeFiles: (f: File[]) => void }).takeFiles([pdf('notes.pdf')])
+    await settle()
+    const ta = await type(w, 'Is this allowed?')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(w.find('.chat-pane__held-files').text()).toBe('With 1 file: notes.pdf')
+    expect(w.findAll('.chat-chip')).toHaveLength(0)
+  })
+
+  it('takes no files where the caller only reads', async () => {
+    seat('staff', { action_decide: 'autonomous' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', oversee: true }, global })
+    await flushPromises()
+    const dt = transfer([pdf('notes.pdf')])
+    await w.trigger('dragenter', { dataTransfer: dt })
+    expect(w.find('.chat-pane__drop').exists()).toBe(false)
+    await w.trigger('drop', { dataTransfer: dt })
+    await settle()
+    expect(w.findAll('.chat-chip')).toHaveLength(0)
+    expect((w.vm as unknown as { canTakeFiles: boolean }).canTakeFiles).toBe(false)
+  })
+
+  it('brings a question’s files back with it to the composer, uploaded again, where they were sent from here', async () => {
+    seat('student')
+    server.messages = [
+      msg(1, 'student'),
+      msg(2, 'tutor', { body: 'answer' }),
+      msg(3, 'student', {
+        body: 'Look at this',
+        attachments: [
+          { id: 'f1', filename: 'notes.pdf', content_type: 'application/pdf', byte_size: 120, created_at: 'x' },
+        ],
+      }),
+    ]
+    rememberSent('m3', [pdf('notes.pdf')])
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    writeAnswer = () => executed({ ok: true })
+    await w.find('.chat-msg__edit').trigger('click')
+    await settle()
+    // Withdrawn: its text and its file back in the box.
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('Look at this')
+    expect(w.findAll('.chat-chip').map((c) => c.find('.chat-chip__name').text())).toEqual(['notes.pdf'])
+    expect(document.body.querySelector('.el-message')?.textContent).toContain(
+      'Its files are back in the box, uploading again.',
+    )
+  })
+
+  it('says to attach a question’s files again where they were not sent from here', async () => {
+    seat('student')
+    server.messages = [
+      msg(3, 'student', {
+        body: 'Look at this',
+        attachments: [
+          { id: 'f1', filename: 'notes.pdf', content_type: 'application/pdf', byte_size: 120, created_at: 'x' },
+        ],
+      }),
+    ]
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    writeAnswer = () => executed({ ok: true })
+    await w.find('.chat-msg__edit').trigger('click')
+    await settle()
+    expect(w.findAll('.chat-chip')).toHaveLength(0)
+    expect(document.body.querySelector('.el-message')?.textContent).toContain(
+      'Its files were withdrawn with it: attach them again to send them.',
+    )
   })
 })

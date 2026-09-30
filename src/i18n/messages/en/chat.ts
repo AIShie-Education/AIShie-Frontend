@@ -106,6 +106,54 @@ export default {
     hintMentions: "{'@'} to cite an assignment or material",
     count: '{n} / {max} characters',
   },
+  // Files a message carries: attached in the composer (the paperclip, dropped on the chat panel, or pasted),
+  // each uploaded at once, as a chip.
+  attach: {
+    button: 'Attach files',
+    buttonTip: 'Attach files: up to {n}, {size} each',
+    full: 'A message carries at most {n} files',
+    chips: 'Files to send',
+    dropHere: 'Drop to attach to your message',
+    // The empty box, once files are attached: it invites the question; and sending them with no words asks for one.
+    placeholder:
+      'What would you like {name} to do with this file? | What would you like {name} to do with these files?',
+    needText:
+      'Add a line to go with the file, so {name} knows what you want: a question, or what to look at. | Add a line to go with the files, so {name} knows what you want: a question, or what to look at.',
+    waiting: 'Waiting for the files to upload…',
+    failed:
+      'A file did not upload: try it again, or remove it, to send. | Some files did not upload: try them again, or remove them, to send.',
+    tooLarge:
+      'A file is too large to send: remove it to send the rest. | Some files are too large to send: remove them to send the rest.',
+    tooMany:
+      'A message carries at most {max} files: one was left out. | A message carries at most {max} files: {skipped} were left out.',
+    folders:
+      'A folder cannot be attached: attach the files in it instead. | Folders cannot be attached: attach the files in them instead.',
+    again: 'They are being uploaded again: send once more when they are.',
+    reattach: 'Its files were withdrawn with it: attach them again to send them.',
+    readded: 'Its files are back in the box, uploading again.',
+    held: 'With {n} file: {names} | With {n} files: {names}',
+    // Core's refusals because of a message's files, or of a file (details.reason).
+    refusal: {
+      too_many_attachments: 'A message carries at most {max_files} files: remove some, and send again.',
+      bad_filename:
+        'A file’s name cannot be sent as it is: it is too long, or holds a character a name may not. Rename the file, and attach it again.',
+      duplicate_attachment: 'The same file is attached twice: remove one, and send again.',
+      attachments_need_body: 'Files go with a message: write a line to go with them.',
+      bad_upload_token: 'An upload was not recognised.',
+      not_your_upload: 'An upload was not yours to attach.',
+      already_attached: 'The files were sent with a message already.',
+      not_uploaded: 'A file had not finished uploading.',
+      upload_too_old: 'The files were uploaded too long ago to wait for approval.',
+      file_too_large: 'A file is larger than a message may carry ({max}): remove it, or attach a smaller one.',
+      conversation_attachments_full:
+        'This conversation holds as many files as it can ({max_total} in all): start a new conversation to send more.',
+      no_file_storage: 'This site has nowhere to keep files, so none can be sent: ask its administrator.',
+      not_a_member: 'You no longer have a seat in this course, so no files can be sent in it.',
+      membership_not_active: 'Your seat in this course is paused or has ended, so no files can be sent in it.',
+      permission_denied: 'Your seat in this course may not send files in the chat.',
+      course_archived: 'This course is archived: nothing more can be sent in it.',
+    },
+  },
   // What a slash at the start of the box offers.
   commands: {
     new: 'New conversation',

@@ -1143,7 +1143,8 @@ export async function fetchBlob(url: string, opts: { signal?: AbortSignal } = {}
  * document.create, document.add_version or grade.submit (feedback_files)
  * takes, or, for kind conversation, the attachments of conversation.open,
  * .ask or .answer. Every upload in the app goes this way; components call it
- * through an upload queue (useUploadQueue) and FileDropZone.
+ * through an upload queue (useUploadQueue): FileDropZone's, or the chat
+ * composer's (components/chat/attachments.ts).
  *
  * It asks Core for a short-lived URL (document.upload_url, or
  * conversation.upload_url for a conversation's file) and PUTs the bytes
