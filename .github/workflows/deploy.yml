@@ -108,6 +108,11 @@ jobs:
           else
             want=${WANT:-$GITHUB_REF}
             [[ $want =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || { echo "::error::not a branch, tag or commit: $want"; exit 1; }
+            # A pull request's head is anyone's code, from a fork: it is
+            # reviewed and merged, never built here for a server.
+            case $want in
+              refs/pull/* | pull/*) echo "::error::a pull request's code is not deployed: give a branch, tag or commit of this repository"; exit 1 ;;
+            esac
             if [[ $want =~ ^[0-9a-f]{7,40}$ ]]; then
               # A commit, whole or its first characters, as the server's
               # list names a release. checkout takes a commit only whole, so
@@ -139,11 +144,12 @@ jobs:
           name: ${{ inputs.artifact }}
           path: dist
 
+      # No npm cache: what a build of any ref installs is not written where
+      # main's builds would restore it from.
       - if: steps.what.outputs.source == 'build'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: npm
       - if: steps.what.outputs.source == 'build'
         name: Build
         run: |
@@ -277,11 +283,16 @@ jobs:
           TARGET: ${{ vars[format('DEPLOY_WEB_TARGET_{0}', inputs.environment == 'production' && 'PRODUCTION' || 'STAGING')] }}
           KNOWN_HOSTS: ${{ vars[format('DEPLOY_WEB_KNOWN_HOSTS_{0}', inputs.environment == 'production' && 'PRODUCTION' || 'STAGING')] }}
           SITE: ${{ vars[format('DEPLOY_WEB_URL_{0}', inputs.environment == 'production' && 'PRODUCTION' || 'STAGING')] }}
-          SSH_KEY: ${{ secrets[format('DEPLOY_WEB_SSH_KEY_{0}', inputs.environment == 'production' && 'PRODUCTION' || 'STAGING')] }}
+          # Each key by its own name: a secret indexed by a name made at
+          # run time has every secret of the repository handed to the
+          # runner. Only the environment's has a value.
+          SSH_KEY_STAGING: ${{ inputs.environment != 'production' && secrets.DEPLOY_WEB_SSH_KEY_STAGING || '' }}
+          SSH_KEY_PRODUCTION: ${{ inputs.environment == 'production' && secrets.DEPLOY_WEB_SSH_KEY_PRODUCTION || '' }}
           ID: ${{ needs.plan.outputs.id }}
           COMMIT: ${{ needs.plan.outputs.commit }}
           TARBALL: ${{ needs.plan.outputs.tarball }}
         run: |
+          SSH_KEY=$SSH_KEY_PRODUCTION$SSH_KEY_STAGING
           if [ -z "$TARGET" ]; then
             # Half a configuration would otherwise pass as none, green.
             if [ -n "$SSH_KEY$KNOWN_HOSTS$SITE" ]; then
@@ -331,9 +342,14 @@ jobs:
         env:
           TARGET: ${{ vars[format('DEPLOY_WEB_TARGET_{0}', inputs.environment == 'production' && 'PRODUCTION' || 'STAGING')] }}
           KNOWN_HOSTS: ${{ vars[format('DEPLOY_WEB_KNOWN_HOSTS_{0}', inputs.environment == 'production' && 'PRODUCTION' || 'STAGING')] }}
-          SSH_KEY: ${{ secrets[format('DEPLOY_WEB_SSH_KEY_{0}', inputs.environment == 'production' && 'PRODUCTION' || 'STAGING')] }}
+          # Each key by its own name: a secret indexed by a name made at
+          # run time has every secret of the repository handed to the
+          # runner. Only the environment's has a value.
+          SSH_KEY_STAGING: ${{ inputs.environment != 'production' && secrets.DEPLOY_WEB_SSH_KEY_STAGING || '' }}
+          SSH_KEY_PRODUCTION: ${{ inputs.environment == 'production' && secrets.DEPLOY_WEB_SSH_KEY_PRODUCTION || '' }}
           ID: ${{ needs.plan.outputs.id }}
         run: |
+          SSH_KEY=$SSH_KEY_PRODUCTION$SSH_KEY_STAGING
           # The key and host key live in a directory of their own, named on
           # the command line: ssh reads ~/.ssh from the passwd entry, not
           # from $HOME, and no ssh configuration of the runner's applies.
