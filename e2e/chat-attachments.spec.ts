@@ -242,7 +242,7 @@ test.describe.serial('files in the chat', () => {
 
     // She downloads it: saved under its name, as it was sent.
     const download = page.waitForEvent('download')
-    await file.getByRole('button', { name: new RegExp(`^Download “${PDF.name.replace(/[.]/g, '\\.')}”`) }).click()
+    await file.getByRole('button', { name: `Download “${PDF.name}”` }).click()
     const saved = await download
     expect(saved.suggestedFilename()).toBe(PDF.name)
     expect((await readFile((await saved.path())!)).equals(PDF.buffer)).toBe(true)
