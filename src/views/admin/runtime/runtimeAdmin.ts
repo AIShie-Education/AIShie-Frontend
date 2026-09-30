@@ -101,6 +101,9 @@ const ADMIN_REASONS: ReadonlySet<string> = new Set([
   'model_not_priced',
   'price_not_found',
   'price_read_only',
+  'transcription_unavailable',
+  'offer_no_file_input',
+  'credential_rejected',
 ])
 
 /** The words for a refusal of one of this page's calls, in the reader's language. */
