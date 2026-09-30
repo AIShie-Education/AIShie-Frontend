@@ -55,6 +55,13 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   owns it, which is fixed then and never changed, and correcting their name, email and number;
   invitation links, with which a person chooses their password (their first, or a new one when it is
   forgotten); single sign-on identities; and API tokens for agents, which only agents are given.
+- **The agent runtime's settings** (its administrators, under *AI and documents*) — the school's AI
+  plan: the models the school provides and pays for, the operator's (runtime.yaml) shown read-only
+  and the site's added, edited, turned off and deleted, each with the school's key, which is tried
+  with the provider before it is kept and never shown again, and each saying first what becomes of
+  the agents on it; the plan's daily quotas, and today's use of it. And the reading of scanned
+  documents (OCR): on or off, and in which of the server's languages. Where the server has no
+  runtime, or one from before these settings, the page says so.
 - **Account** — the ways into one's account (password, single sign-on, invitations and the browser
   sessions they began), each revocable, and the password; and the page an invitation link opens
   (`/welcome`), where the person chooses a password and is signed in. The link carries its token
