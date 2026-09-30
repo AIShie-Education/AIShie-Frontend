@@ -4,6 +4,7 @@ import {
   acceptsLoginId,
   ApiError,
   authMethods,
+  ssoButtons,
   blobUrl,
   isPasswordChangeRequired,
   login,
@@ -370,6 +371,60 @@ describe('authMethods', () => {
       responses.push(json(200, body))
       await expect(authMethods(), JSON.stringify(body)).resolves.toEqual(fallback)
     }
+  })
+})
+
+describe('authMethods with several identity providers', () => {
+  const OPERATOR = { id: 'polyu-adfs', label: 'PolyU NetID', start: '/v1/auth/sso/start/polyu-adfs' }
+  const SITE = { id: 'hainanu-cas', label: '海大統一認證', start: '/v1/auth/sso/start/hainanu-cas' }
+
+  it('takes every provider offered, in Core’s order, beside the first as sso', async () => {
+    responses.push(
+      json(200, { password: true, sso: { label: 'PolyU NetID', start: OPERATOR.start }, sso_providers: [OPERATOR, SITE] }),
+    )
+    const m = await authMethods()
+    expect(m).toEqual({
+      password: true,
+      sso: { label: 'PolyU NetID', start: OPERATOR.start },
+      ssoProviders: [OPERATOR, SITE],
+    })
+    expect(ssoButtons(m)).toEqual([OPERATOR, SITE])
+  })
+
+  it('takes no name as the app’s own words, and leaves out an entry that would send the browser elsewhere', async () => {
+    responses.push(
+      json(200, {
+        password: true,
+        sso: { label: null, start: '/v1/auth/sso/start/lib' },
+        sso_providers: [
+          { id: 'lib', label: null, start: '/v1/auth/sso/start/lib' },
+          { id: 'evil', label: 'X', start: 'https://elsewhere.example/start' },
+          { id: 'evil2', label: 'X', start: '//elsewhere.example/start' },
+          { id: 'q', label: 'X', start: '/v1/auth/sso/start/q?next=/' },
+          { label: 'no id', start: '/v1/auth/sso/start/x' },
+          { id: 'odd', label: 7, start: '/v1/auth/sso/start/odd' },
+          'not one',
+        ],
+      }),
+    )
+    const m = await authMethods()
+    expect(m.ssoProviders).toEqual([{ id: 'lib', label: null, start: '/v1/auth/sso/start/lib' }])
+  })
+
+  it('offers none where Core offers none now', async () => {
+    responses.push(json(200, { password: true, sso: null, sso_providers: [] }))
+    const m = await authMethods()
+    expect(m).toEqual({ password: true, sso: null, ssoProviders: [] })
+    expect(ssoButtons(m)).toEqual([])
+  })
+
+  it('offers the one sso of a Core from before several providers, as it always did', async () => {
+    responses.push(json(200, { password: true, sso: { label: 'PolyU NetID', start: '/v1/auth/sso/start' } }))
+    const m = await authMethods()
+    expect(m.ssoProviders).toBeUndefined()
+    expect(ssoButtons(m)).toEqual([{ label: 'PolyU NetID', start: '/v1/auth/sso/start' }])
+    expect(ssoButtons({ sso: null })).toEqual([])
+    expect(ssoButtons(null)).toEqual([])
   })
 })
 

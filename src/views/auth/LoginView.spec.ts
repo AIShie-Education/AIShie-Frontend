@@ -171,6 +171,72 @@ describe('single sign-on on the sign-in page', () => {
   })
 })
 
+describe('several identity providers on the sign-in page', () => {
+  const PROVIDERS = [
+    { id: 'polyu-adfs', label: 'PolyU NetID', start: '/v1/auth/sso/start/polyu-adfs' },
+    { id: 'hainanu-cas', label: '海大統一認證', start: '/v1/auth/sso/start/hainanu-cas' },
+    { id: 'lib', label: null, start: '/v1/auth/sso/start/lib' },
+  ]
+  const buttons = (w: Awaited<ReturnType<typeof mountAt>>) => w.findAll('button.login__sso')
+
+  it('shows a button for each, in Core’s order, named as Core names it or in the page’s own words', async () => {
+    vi.mocked(authMethods).mockResolvedValue({
+      password: true,
+      sso: { label: 'PolyU NetID', start: PROVIDERS[0].start },
+      ssoProviders: PROVIDERS,
+    })
+    const w = await mountAt('/login', 'en')
+    expect(buttons(w).map((b) => b.text())).toEqual([
+      'Sign in with PolyU NetID',
+      'Sign in with 海大統一認證',
+      'Sign in with single sign-on',
+    ])
+    // One "or" between the password and them all; the password form as it was.
+    expect(w.findAll('.el-divider')).toHaveLength(1)
+    expect(w.findAll('.login__card input').map((i) => i.attributes('name'))).toEqual(['login', 'password'])
+    expect(w.find('button[type="submit"]').text()).toBe('Sign in')
+    w.unmount()
+  })
+
+  it('starts at the provider chosen, coming back to where it was going', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: null, ssoProviders: PROVIDERS })
+    vi.mocked(ssoStartUrl).mockReturnValueOnce('#hainanu-started')
+    const w = await mountAt('/login?next=/courses/c1', 'en')
+    await buttons(w)[1].trigger('click')
+    expect(ssoStartUrl).toHaveBeenCalledWith('/courses/c1', '/v1/auth/sso/start/hainanu-cas')
+    expect(window.location.hash).toBe('#hainanu-started')
+    w.unmount()
+  })
+
+  it('shows none when Core offers none now, whatever an older field says', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: null, ssoProviders: [] })
+    const w = await mountAt('/login', 'en')
+    expect(buttons(w)).toHaveLength(0)
+    expect(w.find('.el-divider').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('keeps the one button of a Core from before several providers', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: 'PolyU NetID', start: '/v1/auth/sso/start' } })
+    vi.mocked(ssoStartUrl).mockReturnValueOnce('#one-started')
+    const w = await mountAt('/login', 'en')
+    expect(buttons(w).map((b) => b.text())).toEqual(['Sign in with PolyU NetID'])
+    await buttons(w)[0].trigger('click')
+    expect(ssoStartUrl).toHaveBeenCalledWith('/', '/v1/auth/sso/start')
+    w.unmount()
+  })
+
+  it('names them in Chinese too', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: null, ssoProviders: PROVIDERS })
+    const zh = await mountAt('/login', 'zh-Hant')
+    expect(buttons(zh).map((b) => b.text())).toEqual(['以 PolyU NetID 登入', '以 海大統一認證 登入', '以 單一登入 登入'])
+    zh.unmount()
+    const hans = await mountAt('/login', 'zh-Hans')
+    expect(buttons(hans).at(-1)!.text()).toBe('以 单点登录 登录')
+    hans.unmount()
+  })
+})
+
 describe('the sign-in name, as Core takes it', () => {
   const label = (w: Awaited<ReturnType<typeof mountAt>>) => w.find('.el-form-item__label').text()
 
