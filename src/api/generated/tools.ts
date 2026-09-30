@@ -2341,6 +2341,129 @@ export interface DepartmentUpdateOut {
   parent_id?: null | string
 }
 
+/** document_text.complete (write): For the transcription service alone: write back what became of a version you have claimed, while the claim holds: done, with its text (Markdown, at most 2 MiB), its page count and the model's name; or failed or skipped, with why. Refused, and nothing written, once staff have written the text (edited_by_staff), or once the claim no longer holds (lease_lost): it lapsed and was claimed again, or the version was sent back to the queue. Done tells the version's readers the text is there. Recorded as an action, but for the text, which is kept only as the text version; retry it with the same idempotency key. */
+export interface DocumentTextCompleteIn {
+  /**
+   * for done: the whole text, Markdown, at most 2 MiB
+   */
+  body?: null | string
+  /**
+   * the claim's, from document_text.queue
+   */
+  lease_id: string
+  /**
+   * for done: the model that transcribed it, as staff are to be shown it, 1 to 200 characters
+   */
+  model?: null | string
+  /**
+   * for done: how many pages or slides the file has, 1 to 100000
+   */
+  pages?: null | number
+  /**
+   * for failed and skipped: why, 1 to 500 characters, as staff are to be shown it
+   */
+  reason?: null | string
+  /**
+   * done, with the text; failed, when it could not be transcribed; skipped, when it was not to be
+   */
+  status: string
+  version_id: string
+}
+export interface DocumentTextCompleteOut {
+  revision: number
+  status: string
+  version_id: string
+}
+
+/** document_text.file (read): For the transcription service alone: another short-lived URL for the file of a version you have claimed, while the claim holds. Any other version's file is not yours to read (lease_lost). */
+export interface DocumentTextFileIn {
+  /**
+   * the claim's, from document_text.queue
+   */
+  lease_id: string
+  version_id: string
+}
+export interface DocumentTextFileOut {
+  byte_size: number
+  checksum?: null | string
+  content_type: string
+  download_expires_at: string
+  /**
+   * a short-lived URL for the file
+   */
+  download_url: string
+  lease_expires_at: string
+  version_id: string
+}
+
+/** document_text.queue (ephemeral): For the transcription service alone: claim document versions waiting to be transcribed, across the site: those added most lately waiting longest first, then those queued when text versions came in, the newest first. Each claim holds its version for you alone until lease_expires_at, and comes with a short-lived URL for its file; write the text back with document_text.complete before then, or hold it longer with document_text.renew. A claim that lapses may be claimed again, by you or another; a version claimed 5 times and not finished is failed (attempts_exhausted). Nothing in an archived course, or of an archived document, is claimed. With wait_s, a call that finds nothing waits up to that many seconds for a version to be queued, and claims it as soon as it is. Recorded nowhere; the claims are the record. */
+export interface DocumentTextQueueIn {
+  /**
+   * how long each claim holds, 60 to 3600 seconds; 600 if omitted. document_text.renew holds it longer
+   */
+  lease_s?: number
+  /**
+   * how many versions to claim at most, 1 to 10; 1 if omitted
+   */
+  max?: number
+  /**
+   * seconds to wait, 0 to 25, when there is nothing new: the call answers as soon as there is, or when the time is up, with whatever there is then; 0, the default, answers at once
+   */
+  wait_s?: number
+}
+export interface DocumentTextQueueOut {
+  /**
+   * what was claimed, uploads before what was queued when text versions came in; empty when nothing waits
+   */
+  claimed:
+    | null
+    | {
+        /**
+         * how many times it has been claimed since it was queued, this one included; a version claimed 5 times and not finished is failed (attempts_exhausted)
+         */
+        attempt: number
+        /**
+         * queued when text versions came in, rather than as its file was added
+         */
+        backfill: boolean
+        byte_size: number
+        checksum?: null | string
+        content_type: string
+        course_id: string
+        document_id: string
+        download_expires_at: string
+        /**
+         * a short-lived URL for the file; document_text.file gives another while the claim holds
+         */
+        download_url: string
+        /**
+         * when the claim lapses, and the version may be claimed again, unless it is renewed
+         */
+        lease_expires_at: string
+        /**
+         * the claim's: give it to document_text.file, .renew and .complete
+         */
+        lease_id: string
+        version_id: string
+      }[]
+}
+
+/** document_text.renew (ephemeral): For the transcription service alone: hold a claim longer, lease_s from now, while the transcription goes on. Refused once the claim no longer holds (lease_lost), or once staff have written the text (edited_by_staff): stop the work then. Recorded nowhere. */
+export interface DocumentTextRenewIn {
+  /**
+   * the claim's, from document_text.queue
+   */
+  lease_id: string
+  /**
+   * how long the claim holds from now, 60 to 3600 seconds; 600 if omitted
+   */
+  lease_s?: number
+  version_id: string
+}
+export interface DocumentTextRenewOut {
+  lease_expires_at: string
+}
+
 /** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then. */
 export interface DocumentAddVersionIn {
   /**
@@ -2481,6 +2604,54 @@ export interface DocumentGetOut {
       reason: string
     }
     seq: number
+    /**
+     * the version's text version: its file transcribed into Markdown, for a version with a file of material, instructions or a rubric; absent for any other
+     */
+    text?: null | {
+      /**
+       * the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text
+       */
+      body?: null | string
+      /**
+       * how long the text is, in bytes; 0 while there is none
+       */
+      bytes: number
+      edited_at?: null | string
+      /**
+       * who wrote or last edited it, for staff's
+       */
+      edited_by_member_id?: null | string
+      edited_by_name?: null | string
+      /**
+       * the model that transcribed it, as the site names it
+       */
+      model?: null | string
+      /**
+       * how many pages or slides the transcription found in the file
+       */
+      pages?: null | number
+      /**
+       * when it was transcribed
+       */
+      produced_at?: null | string
+      /**
+       * why it failed or was skipped
+       */
+      reason?: null | string
+      /**
+       * counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision
+       */
+      revision: number
+      /**
+       * whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over
+       */
+      source?: null | string
+      /**
+       * pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why
+       */
+      status: string
+      updated_at: string
+    }
   }
 }
 
@@ -2560,6 +2731,139 @@ export interface DocumentPurgeOut {
    */
   files_removed: number
   purged_versions: number
+}
+
+/** document.text (read): Read a document version's text version: its file (slides, a PDF, a Word file) transcribed into Markdown, pictures and diagrams described in brackets, each page or slide under a heading of its own; or written by staff. Read it before the file: it is the same for every model. For whoever may read the version, as document.get: students read the published one. A long text is read in parts of at most 65536 bytes, whole pages where they fit, from part 1 to parts; read them all at one revision. Until the text is done, it says where it stands (pending, working, failed or skipped, with reason) and has no body. */
+export interface DocumentTextIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  document_id: string
+  /**
+   * which part of the text, from 1; 1 if omitted
+   */
+  part?: number
+  /**
+   * a specific version; otherwise the one document.get gives: the published one, or the latest for members who can read drafts
+   */
+  version_id?: null | string
+}
+export interface DocumentTextOut {
+  document_id: string
+  /**
+   * which part this is, while there is a text
+   */
+  part?: number
+  /**
+   * how many parts the text is read in; 0 while there is none
+   */
+  parts: number
+  published: boolean
+  seq: number
+  /**
+   * where the text version stands; its body is the part's
+   */
+  text: {
+    /**
+     * the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text
+     */
+    body?: null | string
+    /**
+     * how long the text is, in bytes; 0 while there is none
+     */
+    bytes: number
+    edited_at?: null | string
+    /**
+     * who wrote or last edited it, for staff's
+     */
+    edited_by_member_id?: null | string
+    edited_by_name?: null | string
+    /**
+     * the model that transcribed it, as the site names it
+     */
+    model?: null | string
+    /**
+     * how many pages or slides the transcription found in the file
+     */
+    pages?: null | number
+    /**
+     * when it was transcribed
+     */
+    produced_at?: null | string
+    /**
+     * why it failed or was skipped
+     */
+    reason?: null | string
+    /**
+     * counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision
+     */
+    revision: number
+    /**
+     * whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over
+     */
+    source?: null | string
+    /**
+     * pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why
+     */
+    status: string
+    updated_at: string
+  }
+  version_id: string
+}
+
+/** document.text_retranscribe (write): Send a document version's text version to be transcribed again, or for the first time for a version added before there were text versions: it is pending again, ahead of anything queued when text versions came in, and what it said is gone until the new transcription is done; one under way is refused when it finishes. A text staff wrote or corrected is discarded only with discard_edit true (staff_edit). For whoever may write the document. base_revision refuses it if the text has changed since (text_changed). A text already waiting its turn changes nothing (changed: false). */
+export interface DocumentTextRetranscribeIn {
+  /**
+   * the revision of the text the request was made from: if the text has changed since, it is refused (text_changed)
+   */
+  base_revision?: null | number
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * true to discard staff's text: required when the text is staff's (staff_edit)
+   */
+  discard_edit?: boolean
+  document_id: string
+  version_id: string
+}
+export interface DocumentTextRetranscribeOut {
+  /**
+   * false when the text already was so: nothing was done
+   */
+  changed: boolean
+  revision: number
+  status: string
+  version_id: string
+}
+
+/** document.text_update (write): Write a document version's text version, in place of what there was: correct a transcription, or write one by hand. The text is staff's from then on: no transcription writes over it, and one under way is refused when it finishes. For whoever may write the document, as a new version is written; the text, at most 2 MiB of Markdown, is recorded with the action, for whoever decides or reviews it. base_revision refuses the edit if the text has changed since (text_changed). Giving the text it already is changes nothing (changed: false). */
+export interface DocumentTextUpdateIn {
+  /**
+   * the revision of the text the edit was made from, as the views give it: if the text has changed since, the edit is refused (text_changed) rather than put over the change
+   */
+  base_revision?: null | number
+  /**
+   * the whole text, Markdown, at most 2 MiB; it takes the place of what there was
+   */
+  body: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  document_id: string
+  version_id: string
+}
+export interface DocumentTextUpdateOut {
+  /**
+   * false when the text already was so: nothing was done
+   */
+  changed: boolean
+  revision: number
+  status: string
+  version_id: string
 }
 
 /** document.unarchive (write): Bring back an archived document: it is in lists again, can be edited, and its published version is read again by whoever may read that kind of document. For whoever may archive it: feedback on a posted grade takes grade_post as well, and a submitted file comes back only while its submission is a draft. A purged document stays archived. */
@@ -2652,6 +2956,54 @@ export interface DocumentVersionsOut {
          */
         purged_at?: null | string
         seq: number
+        /**
+         * its text version, without the text: document.text reads it
+         */
+        text?: null | {
+          /**
+           * the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text
+           */
+          body?: null | string
+          /**
+           * how long the text is, in bytes; 0 while there is none
+           */
+          bytes: number
+          edited_at?: null | string
+          /**
+           * who wrote or last edited it, for staff's
+           */
+          edited_by_member_id?: null | string
+          edited_by_name?: null | string
+          /**
+           * the model that transcribed it, as the site names it
+           */
+          model?: null | string
+          /**
+           * how many pages or slides the transcription found in the file
+           */
+          pages?: null | number
+          /**
+           * when it was transcribed
+           */
+          produced_at?: null | string
+          /**
+           * why it failed or was skipped
+           */
+          reason?: null | string
+          /**
+           * counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision
+           */
+          revision: number
+          /**
+           * whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over
+           */
+          source?: null | string
+          /**
+           * pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why
+           */
+          status: string
+          updated_at: string
+        }
       }[]
 }
 
@@ -4226,6 +4578,101 @@ export interface PresetUpdateOut {
   ok: boolean
 }
 
+/** service.issue_credential (write): Issue a credential for a site service: document_text, the runtime's transcriber, which takes the versions waiting to be transcribed and writes their text (document_text.queue, .complete). The service calls its own tools with it, over REST, and nothing else: no other tool, and not the agents' MCP door. The service is made the first time; it is seated in no course and signs in nowhere. The credential is returned once and only its hash is kept. replace revokes the service's other credentials at once, and puts back in the queue what they had claimed; without it a service holds at most 5 (too_many_credentials). For platform administrators. */
+export interface ServiceIssueCredentialIn {
+  /**
+   * 1 to 3650; omit for a credential that does not expire
+   */
+  expires_in_days?: null | number
+  /**
+   * what this credential is for, so it can be recognised later: the runtime it is given to
+   */
+  label: string
+  /**
+   * revoke the service's other credentials in the same call, and put back in the queue what they had claimed
+   */
+  replace?: boolean
+  /**
+   * the service: document_text, the runtime's transcriber, which writes documents' text versions
+   */
+  scope: string
+}
+export interface ServiceIssueCredentialOut {
+  credential_id: string
+  expires_at?: null | string
+  /**
+   * the credentials replaced, with replace
+   */
+  revoked?: null | string[]
+  /**
+   * the service, as its actions name it
+   */
+  service_actor_id: string
+  /**
+   * shown once; it is not stored, and a replay of this call comes back without it
+   */
+  token?: string
+  token_prefix: string
+}
+
+/** service.list_credentials (read): A site service's credentials, newest first, revoked ones included, with their label, prefix, issuer, expiry, last use, whether they are live, and how many text versions each has claimed and not finished. Secrets are never shown. For platform administrators. */
+export interface ServiceListCredentialsIn {
+  /**
+   * the service: document_text, the runtime's transcriber, which writes documents' text versions
+   */
+  scope: string
+}
+export interface ServiceListCredentialsOut {
+  credentials:
+    | null
+    | {
+        /**
+         * how many text versions it has claimed and not finished, now
+         */
+        claims_held: number
+        created_at: string
+        expires_at?: null | string
+        id: string
+        issued_by_actor_id?: null | string
+        issued_by_name?: null | string
+        label?: null | string
+        /**
+         * when the service last called with it, to the minute
+         */
+        last_used_at?: null | string
+        /**
+         * neither revoked nor expired: the service can call with it now
+         */
+        live: boolean
+        revoked_at?: null | string
+        /**
+         * the public part of the credential, enough to tell which one it is
+         */
+        token_prefix?: null | string
+      }[]
+  scope: string
+  /**
+   * absent until a credential is first issued for the service
+   */
+  service_actor_id?: null | string
+}
+
+/** service.revoke_credential (write): Revoke a site service's credential: it stops working at once, a call of the service's waiting on it included, and what it had claimed goes back in the queue for another. For platform administrators. */
+export interface ServiceRevokeCredentialIn {
+  credential_id: string
+  /**
+   * the service: document_text, the runtime's transcriber, which writes documents' text versions
+   */
+  scope: string
+}
+export interface ServiceRevokeCredentialOut {
+  /**
+   * how many text versions it had claimed, now back in the queue
+   */
+  claims_released: number
+  ok: boolean
+}
+
 /** submission.create (write): Start a draft submission to a published assignment. A draft can be edited freely; nothing is handed in until submission.submit. Once an attempt has been submitted it never changes, and submitting again means creating a new attempt here. */
 export interface SubmissionCreateIn {
   assignment_id: string
@@ -4547,6 +4994,10 @@ export interface ToolMap {
   'department.move': { in: DepartmentMoveIn; out: DepartmentMoveOut; kind: 'write' }
   'department.remove_admin': { in: DepartmentRemoveAdminIn; out: DepartmentRemoveAdminOut; kind: 'write' }
   'department.update': { in: DepartmentUpdateIn; out: DepartmentUpdateOut; kind: 'write' }
+  'document_text.complete': { in: DocumentTextCompleteIn; out: DocumentTextCompleteOut; kind: 'write' }
+  'document_text.file': { in: DocumentTextFileIn; out: DocumentTextFileOut; kind: 'read' }
+  'document_text.queue': { in: DocumentTextQueueIn; out: DocumentTextQueueOut; kind: 'ephemeral' }
+  'document_text.renew': { in: DocumentTextRenewIn; out: DocumentTextRenewOut; kind: 'ephemeral' }
   'document.add_version': { in: DocumentAddVersionIn; out: DocumentAddVersionOut; kind: 'write' }
   'document.archive': { in: DocumentArchiveIn; out: DocumentArchiveOut; kind: 'write' }
   'document.create': { in: DocumentCreateIn; out: DocumentCreateOut; kind: 'write' }
@@ -4554,6 +5005,9 @@ export interface ToolMap {
   'document.list': { in: DocumentListIn; out: DocumentListOut; kind: 'read' }
   'document.publish': { in: DocumentPublishIn; out: DocumentPublishOut; kind: 'write' }
   'document.purge': { in: DocumentPurgeIn; out: DocumentPurgeOut; kind: 'write' }
+  'document.text': { in: DocumentTextIn; out: DocumentTextOut; kind: 'read' }
+  'document.text_retranscribe': { in: DocumentTextRetranscribeIn; out: DocumentTextRetranscribeOut; kind: 'write' }
+  'document.text_update': { in: DocumentTextUpdateIn; out: DocumentTextUpdateOut; kind: 'write' }
   'document.unarchive': { in: DocumentUnarchiveIn; out: DocumentUnarchiveOut; kind: 'write' }
   'document.update': { in: DocumentUpdateIn; out: DocumentUpdateOut; kind: 'write' }
   'document.upload_url': { in: DocumentUploadUrlIn; out: DocumentUploadUrlOut; kind: 'read' }
@@ -4596,6 +5050,9 @@ export interface ToolMap {
   'preset.create': { in: PresetCreateIn; out: PresetCreateOut; kind: 'write' }
   'preset.list': { in: PresetListIn; out: PresetListOut; kind: 'read' }
   'preset.update': { in: PresetUpdateIn; out: PresetUpdateOut; kind: 'write' }
+  'service.issue_credential': { in: ServiceIssueCredentialIn; out: ServiceIssueCredentialOut; kind: 'write' }
+  'service.list_credentials': { in: ServiceListCredentialsIn; out: ServiceListCredentialsOut; kind: 'read' }
+  'service.revoke_credential': { in: ServiceRevokeCredentialIn; out: ServiceRevokeCredentialOut; kind: 'write' }
   'submission.create': { in: SubmissionCreateIn; out: SubmissionCreateOut; kind: 'write' }
   'submission.get': { in: SubmissionGetIn; out: SubmissionGetOut; kind: 'read' }
   'submission.list': { in: SubmissionListIn; out: SubmissionListOut; kind: 'read' }
@@ -4695,6 +5152,10 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'department.move': { method: 'POST', path: '/v1/departments/{dept_id}/move', kind: 'write' },
   'department.remove_admin': { method: 'POST', path: '/v1/departments/{dept_id}/admins/{actor_id}/remove', kind: 'write' },
   'department.update': { method: 'POST', path: '/v1/departments/{dept_id}', kind: 'write' },
+  'document_text.complete': { method: 'POST', path: '/v1/services/document_text/versions/{version_id}/complete', kind: 'write' },
+  'document_text.file': { method: 'GET', path: '/v1/services/document_text/versions/{version_id}/file', kind: 'read' },
+  'document_text.queue': { method: 'POST', path: '/v1/services/document_text/queue', kind: 'ephemeral' },
+  'document_text.renew': { method: 'POST', path: '/v1/services/document_text/versions/{version_id}/renew', kind: 'ephemeral' },
   'document.add_version': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/versions', kind: 'write' },
   'document.archive': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/archive', kind: 'write' },
   'document.create': { method: 'POST', path: '/v1/courses/{course_id}/documents', kind: 'write' },
@@ -4702,6 +5163,9 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'document.list': { method: 'GET', path: '/v1/courses/{course_id}/documents', kind: 'read' },
   'document.publish': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/publish', kind: 'write' },
   'document.purge': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/purge', kind: 'write' },
+  'document.text': { method: 'GET', path: '/v1/courses/{course_id}/documents/{document_id}/text', kind: 'read' },
+  'document.text_retranscribe': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/versions/{version_id}/text/retranscribe', kind: 'write' },
+  'document.text_update': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/versions/{version_id}/text', kind: 'write' },
   'document.unarchive': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/unarchive', kind: 'write' },
   'document.update': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}', kind: 'write' },
   'document.upload_url': { method: 'GET', path: '/v1/courses/{course_id}/upload-url', kind: 'read' },
@@ -4744,6 +5208,9 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'preset.create': { method: 'POST', path: '/v1/presets', kind: 'write' },
   'preset.list': { method: 'GET', path: '/v1/presets', kind: 'read' },
   'preset.update': { method: 'POST', path: '/v1/presets/{preset_id}', kind: 'write' },
+  'service.issue_credential': { method: 'POST', path: '/v1/services/{scope}/credentials', kind: 'write' },
+  'service.list_credentials': { method: 'GET', path: '/v1/services/{scope}/credentials', kind: 'read' },
+  'service.revoke_credential': { method: 'POST', path: '/v1/services/{scope}/credentials/{credential_id}/revoke', kind: 'write' },
   'submission.create': { method: 'POST', path: '/v1/courses/{course_id}/submissions', kind: 'write' },
   'submission.get': { method: 'GET', path: '/v1/courses/{course_id}/submissions/{submission_id}', kind: 'read' },
   'submission.list': { method: 'GET', path: '/v1/courses/{course_id}/submissions', kind: 'read' },
