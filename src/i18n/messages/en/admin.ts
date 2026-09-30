@@ -6,6 +6,7 @@ export default {
     terms: 'Terms',
     departments: 'Departments',
     presets: 'Permission presets',
+    sso: 'Sign-in',
     runtime: 'AI and documents',
   },
 

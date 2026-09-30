@@ -125,6 +125,7 @@ async function mountAs(
       { path: '/admin/terms', name: 'admin-terms', component: View },
       { path: '/admin/departments', name: 'admin-departments', component: View },
       { path: '/admin/presets', name: 'admin-presets', component: View },
+      { path: '/admin/sign-in', name: 'admin-sso', component: View },
       { path: '/admin/runtime', name: 'admin-runtime', component: View },
     ],
   })
@@ -515,7 +516,7 @@ describe('the administration view', () => {
   it('lists every administration page for a platform administrator, the one open standing out', async () => {
     const { w } = await mountAs('platformAdmin', { path: '/admin/actors/p1' })
     const body = w.get('#side-bar')
-    expect(links(body)).toEqual(['Courses', 'People & agents', 'Terms', 'Departments', 'Permission presets'])
+    expect(links(body)).toEqual(['Courses', 'People & agents', 'Terms', 'Departments', 'Permission presets', 'Sign-in'])
     expect(body.findAll('.side-item.is-active').map((a) => a.text())).toEqual(['People & agents'])
   })
 
@@ -530,6 +531,7 @@ describe('the administration view', () => {
         'Terms',
         'Departments',
         'Permission presets',
+        'Sign-in',
         'AI and documents',
       ])
       expect(body.findAll('.side-item.is-active').map((a) => a.text())).toEqual(['AI and documents'])

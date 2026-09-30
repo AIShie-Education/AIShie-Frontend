@@ -6,6 +6,7 @@ export default {
     terms: '學期',
     departments: '部門',
     presets: '權限預設',
+    sso: '登入方式',
     runtime: 'AI 與文件',
   },
 
