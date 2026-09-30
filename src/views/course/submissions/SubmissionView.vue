@@ -8,7 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { ActionSummary, GradeSummary, SubmissionSummary } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
-import DocumentFileLink from '@/components/DocumentFileLink.vue'
+import DocumentFiles from '@/components/DocumentFiles.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -294,7 +294,7 @@ function onGraded() {
             <h3 class="submission-view__subhead">{{ t('submissions.detail.files') }}</h3>
             <ul v-if="files.length" class="submission-view__files">
               <li v-for="f in files" :key="f.document_id">
-                <DocumentFileLink :course-id="courseId" :document-id="f.document_id" :title="f.title" />
+                <DocumentFiles :course-id="courseId" :document-id="f.document_id" :title="f.title" />
               </li>
             </ul>
             <p v-else class="app-muted submission-view__none">{{ t('submissions.detail.noFiles') }}</p>
@@ -414,13 +414,9 @@ function onGraded() {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
-.submission-view__files :deep(.el-button span) {
-  white-space: normal;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
+
 .submission-view__none {
   margin: 0;
   font-size: 13px;
