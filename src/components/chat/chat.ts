@@ -127,9 +127,10 @@ export function groupedWith(
 
 /**
  * Whether the question awaiting an answer was withdrawn: the opener wrote
- * last, and retracted it. Core still says the conversation awaits an answer
- * (its opener wrote last), but no agent answers a retracted question: the
- * inbox leaves it out, and a runtime treats it as moved on.
+ * last, and retracted it. Nothing waits for an answer then: Core leaves it
+ * out of the agent's inbox and refuses an answer to it, and a runtime stops
+ * the answer it was writing. Core says the conversation is answered (since
+ * AIShie-Core #42; before it, that an answer is still awaited).
  */
 export function questionWithdrawn(
   messages: readonly Pick<ConversationMessage, 'author_member_id' | 'retracted'>[],
@@ -310,7 +311,10 @@ export function chatStatus(
   }
   if (opts.offered === false) return { ...base, notice: { kind: 'elsewhere' }, block: 'elsewhere' }
   if (state === 'reply_pending_approval') return { ...base, notice: { kind: 'pendingApproval' }, block: null }
-  if (state === 'awaiting_answer' && opts.withdrawn) return { ...base, notice: { kind: 'withdrawn' }, block: null }
+  if (opts.withdrawn && (state === 'awaiting_answer' || view.last_author_member_id === view.opener.member_id)) {
+    // Answered by the respondent since (the messages not yet read again), it is as ever.
+    return { ...base, notice: { kind: 'withdrawn' }, block: null }
+  }
   if (state === 'awaiting_answer') {
     return {
       ...base,

@@ -230,10 +230,10 @@ export default {
   },
   // A question awaiting its answer, taken back to the composer: to edit it, or to stop waiting.
   edit: {
-    done: '問題已撤回並放回輸入框，修改後再送出即可。{name} 不會回答已撤回的問題；若它已開始作答，答案仍可能送達。',
+    done: '問題已撤回並放回輸入框，修改後再送出即可。{name} 不會回答已撤回的問題，已開始寫的回答也會停下。',
   },
   stop: {
-    done: '已停止：問題已撤回並放回輸入框。{name} 不會回答已撤回的問題；若它已開始作答，答案仍可能送達。',
+    done: '已停止：問題已撤回並放回輸入框。{name} 不會回答已撤回的問題，已開始寫的回答也會停下。',
   },
   retract: {
     title: '要撤回這則訊息嗎？',
