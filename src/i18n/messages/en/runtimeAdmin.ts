@@ -553,8 +553,9 @@ export default {
     otherLine: '{kind}: {calls} calls, ${usd}',
     kinds: {
       model_calls: 'Model calls',
-      transcription: 'Transcription',
+      transcription: 'Document transcription',
     },
+    site: 'The site’s own: document transcription',
     all: 'Everything',
     offers: 'offers: {ids}',
     unpriced:

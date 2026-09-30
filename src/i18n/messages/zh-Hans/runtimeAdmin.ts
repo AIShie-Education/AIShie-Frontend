@@ -512,6 +512,7 @@ export default {
       model_calls: '模型调用',
       transcription: '文件转写',
     },
+    site: '全站：文件转写',
     all: '全部',
     offers: '方案模型：{ids}',
     unpriced:
