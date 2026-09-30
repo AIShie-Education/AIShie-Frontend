@@ -471,7 +471,7 @@ async function submit() {
 .grade-panel__hint {
   margin: -4px 0 12px;
 }
-/* The card's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+/* The card's own width decides its columns, not the window's: the side bar takes from it. */
 .grade-panel {
   container-type: inline-size;
 }

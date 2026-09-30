@@ -775,7 +775,7 @@ function onTextProposed(message: string) {
   justify-content: center;
   margin-top: 8px;
 }
-/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+/* The page's own width decides its columns, not the window's: the side bar takes from it. */
 .doc-view {
   container-type: inline-size;
 }

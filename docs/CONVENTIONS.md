@@ -307,8 +307,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Views are responsive down to phone width, and work in light and dark (use Element Plus CSS
   variables, never hard-coded colours). `useNarrow()` / `useMediaQuery()` from
   `@/composables/useMediaQuery` switch a wide table to cards on a phone.
-- A page's two columns follow the page's own width, not the window's, since the side bar and the
-  chat panel take from it: the view's root is an inline-size container (`container-type:
+- A page's two columns follow the page's own width, not the window's, since the side bar takes from it
+  (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
   left less than about 420 px (the overview at 800 px of page, an assignment at 740). A dialog's
   breakpoints, and a phone's (640 px and narrower), stay `@media` queries on the window. Columns of
@@ -359,27 +359,40 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   this page loaded; another one is a small notice, 「已有新版本」, with Reload and Later. It never reloads
   by itself: someone may be writing. It is off in development, and says nothing against the one build a
   preview serves.
-- The chat with agents is one panel beside every signed-in page (`src/components/chat/ChatPanel.vue`,
+- The chat with agents is one window over every signed-in page (`src/components/chat/ChatPanel.vue`,
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
-  agent. Its button is on the rail along the window's right edge, as an editor's activity bar is,
-  where any other side panel's would go too (the header holds only the page's title); the panel opens between the page and the rail, and Ctrl/⌘+J opens and closes it. It is
-  380 px wide (`PANEL_DEFAULT`) until its left edge is dragged, or moved with the arrow keys (a
-  separator), from 320 px up to half the window, and never so wide that the page is left less than
-  420 px (`panelMax`); a double click on the edge goes back to 380. The page reflows as it is
-  dragged, its container queries following; the width is set once a frame, nothing on the page is
-  selected meanwhile, and it is kept (with whether it is open, in this browser) once the edge is
-  let go. In a window narrower than 1200 px (`PANEL_DOCKED_MIN_WIDTH`), where docking it would
-  leave the page too little beside the activity bar and the side bar, it floats over the page
-  instead, against the rail and under the header, with a shadow cast to the left (`--app-z-panel`,
-  `--app-shadow-side`), and the page keeps its width; its edge drags there too, up to 70 % of the
-  window. The side bar on the left stays 260 px. On a phone there is no rail: the button floats at
-  the bottom right, the page keeps room below its last item for it, it stays under everything
-  Element Plus lays over the page (the layers are in `styles/tokens.css`), and the sheet has no
-  edge to drag. `useChatStore()` (`@/stores/chat`) opens it on a conversation
-  (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a link to a
-  conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`, the
-  address the course's conversations page once had, which opens the panel on it and leaves the page
-  where it was. The chat
+  agent. Nothing runs along the window's right edge: the header and the page reach it. The chat's
+  entry is a round button floating at the bottom right of every page (`.app-chat-fab`, on a desktop as
+  on a phone), 16 px from the screen's edges and above a phone's safe area, with the count of answers
+  not read and, from 900 px up, a tooltip saying its shortcut; the header holds only the page's title,
+  and the activity bar only the side bar's views. The page keeps room below its last item for the
+  button (`.has-chat-fab`: its size and twice its inset), so that a list's last item, its pages or a
+  button are never under it; a page that pins something to the bottom of the screen keeps it clear of
+  the button too. The button opens the chat in its corner, and is gone while the chat is open; Ctrl/⌘+J
+  opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
+  width, which stays as it is, and usable, behind it (a dialog, not a modal one: `role="dialog"`,
+  `aria-modal="false"`, named by its title bar). It is 400 × 600 px (`WINDOW_WIDTH`, `WINDOW_HEIGHT`),
+  16 px from the viewport's bottom right corner, and clear of the header where the viewport is too
+  short for 600. Its title bar holds its name, Minimize and Close, moves it, and a double click on it
+  puts it back in its corner; its left edge, its top and its top left corner resize it, from 320 × 360
+  up to the viewport's left and top, its right and bottom edges staying (the edges are separators the
+  arrow keys, Home and End move too). It is placed from the viewport's bottom right corner (`WindowBox`
+  in `components/chat/panel.ts`: its size, and how far its right and bottom edges are from the
+  viewport's), so that it keeps its distance from that corner as the viewport changes, and is always
+  wholly within the viewport (`clampBox`, `moveBox`, `resizeBox`); where the viewport no longer holds
+  it, it goes back to its corner (`fitsIn`). A drag is set once a frame, nothing on the page is
+  selected meanwhile, and where it was left and how big is kept (with whether it is open, in this
+  browser, `aishie.chatPanel`) once it is let go. It lies over the page and under whatever Element Plus
+  lays over it, with a shadow all round (`--app-z-panel`, `--app-shadow-window`; the layers are in
+  `styles/tokens.css`). Minimized (its button, Escape from within it, or Ctrl/⌘+J), it opens again on
+  what it showed; closed, on a new conversation in the course it asks in (the chat store's `close`);
+  either way focus goes back to the round button. On a phone (up to 899 px) it is a sheet over the whole
+  screen, a modal dialog with no edge to drag, closed with its one button or Escape, keeping what it
+  showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
+  on a conversation (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a
+  link to a conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`,
+  the address the course's conversations page once had, which opens the window on it and leaves the
+  page where it was. The chat
   reads the caller's seat in a conversation's course from their memberships (`useChatSeat`), never from
   the course store, since the page may show another course or none. Conversations are with agents
   alone: `conversation.respondents` lists nobody else, Core refuses a person as a respondent or an

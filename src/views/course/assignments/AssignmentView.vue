@@ -519,7 +519,7 @@ function refresh() {
 .assignment-view__approval {
   align-self: center;
 }
-/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+/* The page's own width decides its columns, not the window's: the side bar takes from it. */
 .assignment-view {
   container-type: inline-size;
 }
