@@ -54,7 +54,7 @@ async function upload(file: File, key: number) {
     if (entry) entry.progress = Math.round(f * 100)
   }
   try {
-    const done = await uploadFile(props.courseId, props.kind, file, setProgress)
+    const done = await uploadFile(props.courseId, props.kind, file, { onProgress: (p) => setProgress(p.fraction) })
     inFlight.value = inFlight.value.filter((x) => x.key !== key)
     model.value = props.multiple ? [...model.value, done] : [done]
   } catch (e) {
