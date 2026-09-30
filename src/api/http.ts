@@ -932,16 +932,14 @@ function retryableUpload(e: unknown): e is ApiError {
 
 /**
  * Where to upload a file, as Core hands it out: document.upload_url for a
- * document's file, conversation.upload_url for a message's, whose answer says
- * how many files a message carries and how much a conversation holds too
- * (a Core whose versions hold several files says how many a version holds,
- * max_files, and how much, max_version_bytes, which nothing here reads yet).
+ * document's file, whose answer says how many files a version holds and how
+ * much they come to together, and conversation.upload_url for a message's,
+ * whose answer says how many files a message carries and how much a
+ * conversation holds.
  */
-type UploadTarget = Pick<
-  ToolOut<'document.upload_url'>,
-  'upload_url' | 'upload_token' | 'headers' | 'expires_at' | 'max_bytes'
-> &
-  Partial<Pick<ToolOut<'conversation.upload_url'>, 'max_files' | 'max_conversation_bytes'>>
+type UploadTarget = Omit<ToolOut<'document.upload_url'>, 'max_files' | 'max_version_bytes'> &
+  Partial<Pick<ToolOut<'document.upload_url'>, 'max_files' | 'max_version_bytes'>> &
+  Partial<Pick<ToolOut<'conversation.upload_url'>, 'max_conversation_bytes'>>
 
 function askUploadUrl(
   courseId: string,
