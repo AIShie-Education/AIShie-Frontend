@@ -5,8 +5,10 @@ import ElementPlus, { ElMessageBox } from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
 import type { TextVersion } from '@/api/types'
 
-/** Core's text version of the version, as document.text reads it; a test changes it. */
+/** Core's text version of the file, as document.text reads it; a test changes it. */
 let server: { text: TextVersion | null; parts: string[] }
+/** What document.text was asked, each time. */
+const reads: Record<string, unknown>[] = []
 const writes: { tool: string; args: Record<string, unknown> }[] = []
 let writeAnswer: (tool: string, args: Record<string, unknown>) => unknown
 
@@ -14,8 +16,9 @@ vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
     ...real,
-    read: vi.fn(async (tool: string, args: { part?: number }) => {
+    read: vi.fn(async (tool: string, args: { part?: number; file_id?: string }) => {
       if (tool !== 'document.text') throw new Error(`no answer for ${tool}`)
+      reads.push({ ...args })
       if (!server.text)
         throw new real.ApiError({ status: 404, code: 'not_found', message: 'none', details: { reason: 'no_text' } })
       const done = server.text.status === 'done'
@@ -25,6 +28,9 @@ vi.mock('@/api/http', async (orig) => {
         version_id: 'v-2',
         seq: 2,
         published: true,
+        file_id: args.file_id ?? 'f-1',
+        position: 1,
+        filename: 'slides.pdf',
         parts: done ? server.parts.length : 0,
         ...(done ? { part: n } : {}),
         text: { ...server.text, body: done ? server.parts[n - 1] : undefined },
@@ -87,6 +93,7 @@ beforeEach(() => {
   setLocale('en')
   server = { text: text(), parts: [TWO_PAGES] }
   writes.length = 0
+  reads.length = 0
   writeAnswer = (tool) =>
     executed({
       version_id: 'v-2',
@@ -111,6 +118,9 @@ async function pane(props: Record<string, unknown> = {}) {
       documentId: 'd-1',
       versionId: 'v-2',
       seq: 2,
+      fileId: 'f-1',
+      fileName: 'slides.pdf',
+      position: 1,
       initial: server.text,
       hasFile: true,
       active: true,
@@ -163,13 +173,13 @@ describe('TextVersionPane, reading', () => {
     server.text = text({ status: 'working', source: null, bytes: 0, model: null, pages: null })
     let w = await pane()
     expect(w.find('.text-pane__status').text()).toBe('Transcribing')
-    expect(w.find('.text-pane__queued-text').text()).toContain('AI is writing this version’s file out as text')
+    expect(w.find('.text-pane__queued-text').text()).toContain('AI is writing this file out as text')
     w.unmount()
 
     w = await pane({ transcriptionOn: false })
     expect(w.find('.text-pane__status').exists()).toBe(false)
     expect(w.find('.text-pane__queued').exists()).toBe(false)
-    expect(w.find('.text-pane__none').text()).toContain('This version has no text version.')
+    expect(w.find('.text-pane__none').text()).toContain('This file has no text version.')
   })
 
   it('says why one failed or was skipped, in the reader’s words', async () => {
@@ -187,7 +197,7 @@ describe('TextVersionPane, reading', () => {
     server.text = text({ status: 'pending', source: null, bytes: 0 })
     const w = await pane()
     expect(w.find('.text-pane__status').text()).toBe('排隊中')
-    expect(w.find('.text-pane__queued-text').text()).toBe('排隊中：這個版本的檔案正等候 AI 轉寫成文字版。')
+    expect(w.find('.text-pane__queued-text').text()).toBe('排隊中：這個檔案正等候 AI 轉寫成文字版。')
   })
 })
 
@@ -209,6 +219,7 @@ describe('TextVersionPane, writing', () => {
           course_id: 'c-1',
           document_id: 'd-1',
           version_id: 'v-2',
+          file_id: 'f-1',
           body: '## 第 1 頁\n\nCorrected',
           base_revision: 3,
         },
@@ -254,7 +265,7 @@ describe('TextVersionPane, writing', () => {
     await button(w, 'save').trigger('click')
     await flushPromises()
     expect(w.emitted('proposed')?.[0]).toEqual([
-      'Your text version of version 2 was sent for approval. The text version stays as it is until someone approves it.',
+      'Your text version of “slides.pdf” (version 2) was sent for approval. The text version stays as it is until someone approves it.',
     ])
     expect(w.emitted('changed')).toBeUndefined()
   })
@@ -280,7 +291,13 @@ describe('TextVersionPane, writing', () => {
     await edit(w, 'By hand')
     await button(w, 'save').trigger('click')
     await flushPromises()
-    expect(writes[0].args).toEqual({ course_id: 'c-1', document_id: 'd-1', version_id: 'v-2', body: 'By hand' })
+    expect(writes[0].args).toEqual({
+      course_id: 'c-1',
+      document_id: 'd-1',
+      version_id: 'v-2',
+      file_id: 'f-1',
+      body: 'By hand',
+    })
   })
 })
 
@@ -293,7 +310,7 @@ describe('TextVersionPane, transcribing again', () => {
     expect(writes).toEqual([
       {
         tool: 'document.text_retranscribe',
-        args: { course_id: 'c-1', document_id: 'd-1', version_id: 'v-2', base_revision: 3 },
+        args: { course_id: 'c-1', document_id: 'd-1', version_id: 'v-2', file_id: 'f-1', base_revision: 3 },
       },
     ])
   })
@@ -314,7 +331,14 @@ describe('TextVersionPane, transcribing again', () => {
     expect(writes).toEqual([
       {
         tool: 'document.text_retranscribe',
-        args: { course_id: 'c-1', document_id: 'd-1', version_id: 'v-2', base_revision: 3, discard_edit: true },
+        args: {
+          course_id: 'c-1',
+          document_id: 'd-1',
+          version_id: 'v-2',
+          file_id: 'f-1',
+          base_revision: 3,
+          discard_edit: true,
+        },
       },
     ])
   })
@@ -327,7 +351,7 @@ describe('TextVersionPane, transcribing again', () => {
     await button(w, 'transcribe').trigger('click')
     await flushPromises()
     expect(confirm).not.toHaveBeenCalled()
-    expect(writes[0].args).toEqual({ course_id: 'c-1', document_id: 'd-1', version_id: 'v-2' })
+    expect(writes[0].args).toEqual({ course_id: 'c-1', document_id: 'd-1', version_id: 'v-2', file_id: 'f-1' })
     expect(w.find('.text-pane__status').text()).toBe('Queued')
   })
 
@@ -335,5 +359,50 @@ describe('TextVersionPane, transcribing again', () => {
     const w = await staff({ transcriptionOn: false })
     expect(button(w, 'edit').exists()).toBe(true)
     expect(button(w, 'retranscribe').exists()).toBe(false)
+  })
+})
+
+describe('TextVersionPane, one file of several', () => {
+  it('reads the text version of its own file, in every part', async () => {
+    server.parts = ['## 第 1 頁\n\nA\n', '## 第 2 頁\n\nB\n']
+    const w = await pane({ fileId: 'f-2', fileName: 'handout.docx', position: 2 })
+    expect(reads.map((r) => [r.file_id, r.part])).toEqual([
+      ['f-2', 1],
+      ['f-2', 2],
+    ])
+    expect(w.find('.text-pane').attributes('data-file')).toBe('handout.docx')
+    // Its pages' anchors are its own: another file's pane is on the page too.
+    expect(w.find('h2#text-f2-page-1').exists()).toBe(true)
+    expect(w.find('h2#text-page-1').exists()).toBe(false)
+  })
+
+  it('reads another file afresh when it is given one, and names it when it writes', async () => {
+    const w = await pane({ canWrite: true })
+    reads.length = 0
+    await w.setProps({ fileId: 'f-3', fileName: 'loops.py', position: 3 })
+    await flushPromises()
+    expect(reads.map((r) => r.file_id)).toEqual(['f-3'])
+    await button(w, 'retranscribe').trigger('click')
+    await flushPromises()
+    expect(confirm.mock.calls[0]![1]).toBe('Transcribe “loops.py” again?')
+    expect(writes[0]!.args).toMatchObject({ version_id: 'v-2', file_id: 'f-3' })
+  })
+
+  it('says Core’s refusal to guess which file, in words', async () => {
+    writeAnswer = () =>
+      new ApiError({
+        status: 400,
+        code: 'invalid_argument',
+        message: 'file_id is required',
+        details: { reason: 'file_id_required', files: 3 },
+      })
+    const { ElMessage } = await import('element-plus')
+    const w = await staff()
+    await button(w, 'retranscribe').trigger('click')
+    await flushPromises()
+    const said = vi.mocked(ElMessage).mock.calls.map((c) => (c[0] as { message: string }).message)
+    expect(said.some((m) => m.includes('This version holds 3 files: name the file whose text version this is'))).toBe(
+      true,
+    )
   })
 })

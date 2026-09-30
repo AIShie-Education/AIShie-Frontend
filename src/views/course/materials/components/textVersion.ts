@@ -1,6 +1,7 @@
-// A document version's text version (文字版): its file transcribed into
-// Markdown by the school's transcriber (the agent runtime's, when it is on),
-// or written by staff. Core keeps it and says where it stands (pending,
+// A text version (文字版) of a file of a document's version: the file
+// transcribed into Markdown by the school's transcriber (the agent runtime's,
+// when it is on), or written by staff. Each file of a version has its own
+// (AIShie-Core #49), named by its file_id in every call. Core keeps it and says where it stands (pending,
 // working, done, failed, skipped); readers of the version read it, and those
 // who may write the document edit it, or send it to be transcribed again.
 //
@@ -11,7 +12,7 @@
 // working) only while the runtime says it is on (info.features.transcription);
 // a text that is done is shown whatever the runtime says.
 import { ApiError, read } from '@/api/http'
-import type { DocumentFull, TextStatus, TextVersion } from '@/api/types'
+import type { TextStatus, TextVersion } from '@/api/types'
 import { TEXT_STATUSES } from '@/api/types'
 
 type T = (key: string, params?: Record<string, unknown>) => string
@@ -20,11 +21,12 @@ type Te = (key: string) => boolean
 /** How many times reading a text's parts starts again when it changes meanwhile, before giving up. */
 export const TEXT_READ_RESTARTS = 3
 
-/** Where a version stands, as document.text and document.get give it. */
+/** Which text version: a file of a version (its first where no file is named), as document.text takes it. */
 export interface TextRef {
   course_id: string
   document_id: string
   version_id: string
+  file_id?: string
 }
 
 /** A text version read whole: as it stood at one revision, its whole body ('' while it is not done). */
@@ -84,10 +86,6 @@ export async function readWholeText(
   })
 }
 
-/** A version's text version as document.get gives it, or null where it has none (no text key). */
-export function textOfVersion(v: DocumentFull['version'] | null | undefined): TextVersion | null {
-  return (v as { text?: TextVersion | null } | null | undefined)?.text ?? null
-}
 
 /** Core's status, as one of those this app knows; anything else is taken for pending. */
 export function textStatus(t: Pick<TextVersion, 'status'> | null | undefined): TextStatus | null {

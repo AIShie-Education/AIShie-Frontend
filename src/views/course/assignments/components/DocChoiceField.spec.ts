@@ -85,6 +85,22 @@ describe('a new instructions document', () => {
     expect(choice(w)).toMatchObject({ body: 'Hand in by Friday.', files: [{ uploadToken: 'tok-HW2 brief.pdf' }] })
   })
 
+  it('holds several files, numbered in the order listed, as one version holds them', async () => {
+    const w = field()
+    await flushPromises()
+    expect(w.find('.file-drop__zone').text()).toContain('Up to 20 files')
+    const files = ['brief.pdf', 'data.csv', 'starter.py'].map((n) => new File(['x'], n, { type: 'text/plain' }))
+    const drop = new Event('drop', { bubbles: true, cancelable: true })
+    Object.defineProperty(drop, 'dataTransfer', { value: { types: ['Files'], files, items: [] } })
+    w.find('.file-drop__zone').element.dispatchEvent(drop)
+    await flushPromises()
+    expect(choice(w).files.map((x) => x.fileName)).toEqual(['brief.pdf', 'data.csv', 'starter.py'])
+    await w.find('[aria-label="Move “starter.py” up"]').trigger('click')
+    await flushPromises()
+    expect(choice(w).files.map((x) => x.fileName)).toEqual(['brief.pdf', 'starter.py', 'data.csv'])
+    expect(w.findAll('.file-drop__n').map((n) => n.text())).toEqual(['1', '2', '3'])
+  })
+
   it('shows its text open where it has some', () => {
     const w = field({ body: 'Written already.' })
     expect((w.find('.doc-text__editor').element as HTMLElement).style.display).not.toBe('none')

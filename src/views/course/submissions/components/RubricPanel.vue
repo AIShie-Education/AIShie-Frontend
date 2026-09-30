@@ -4,8 +4,9 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
-import DocumentFileLink from '@/components/DocumentFileLink.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
+import VersionFileList from '@/components/VersionFileList.vue'
+import { versionFilesOf } from '@/utils/documentFiles'
 import Tombstone from '@/views/course/materials/components/Tombstone.vue'
 import type { RubricState } from './rubric'
 
@@ -16,9 +17,9 @@ const doc = computed(() =>
   props.state?.status === 'published' || props.state?.status === 'unpublished' ? props.state.doc : null,
 )
 const version = computed(() => doc.value?.version ?? null)
-const hasFile = computed(
-  () => !!version.value && !version.value.purged && (!!version.value.download_url || !!version.value.content_type),
-)
+/** The rubric's files, in order. */
+const files = computed(() => versionFilesOf(version.value, doc.value?.title ?? ''))
+const hasFile = computed(() => files.value.length > 0)
 
 const note = computed(() => {
   if (props.error) return t('submissions.rubric.unavailable')
@@ -61,12 +62,13 @@ const note = computed(() => {
           :empty="t('submissions.rubric.emptyBody')"
         />
       </div>
-      <DocumentFileLink
+      <VersionFileList
         v-if="hasFile && doc"
         :course-id="courseId"
         :document-id="doc.id"
         :version-id="version.id"
-        :title="t('submissions.rubric.file')"
+        :files="files"
+        :aria-label="t('submissions.rubric.file')"
       />
     </template>
   </div>

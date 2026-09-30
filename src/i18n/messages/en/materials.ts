@@ -12,8 +12,8 @@ export default {
   unpublished: 'Not published',
   purged: 'Purged',
   pendingLink: 'See my actions',
-  dropHint: 'Drop files anywhere on this page to add each one as new material.',
-  dropHere: 'Drop to add each file as new material',
+  dropHint: 'Drop files anywhere on this page to make new material of them.',
+  dropHere: 'Drop to make new material of these files',
   pending: {
     create: '“{title}” was sent for approval. It will appear here once someone approves it.',
     createPublish: 'Publishing is not part of that proposal: once it is approved, open the material and publish it.',
@@ -34,21 +34,14 @@ export default {
     dropLabel: 'Files for new material: drop them here, or press Enter to choose them',
     writeInstead: 'Write text instead',
     uploadInstead: 'Upload files instead',
-    titleOf: 'Title for “{name}”',
-    sortOrderMany: 'Each file becomes material of its own, numbered on from this one in the order listed.',
+    titleFromFile: 'Named after the first file until you change it.',
+    filesHint: 'The files all go into this one material, in the order listed: move them up or down, or take one off.',
     publishNeedsFile: 'Upload a file first: there is nothing to publish yet.',
     waitForUploads: 'Waiting for one upload to finish… | Waiting for {n} uploads to finish…',
-    noFiles: 'Drop or choose a file, or write text instead.',
-    untitled: 'Give each file a title.',
+    noFiles: 'Drop or choose files, or write text instead.',
+    untitled: 'Give the material a title.',
     leftOut:
       'One file was not uploaded: it is left out unless it is tried again. | {n} files were not uploaded: they are left out unless they are tried again.',
-    submitMany: 'Create {n} materials',
-    doneMany: 'Material created | {n} materials created',
-    donePublishedMany: 'Material created and published | {n} materials created and published',
-    textSingleOnly:
-      'A text note goes with a single file: with several, each becomes material of its own, without text.',
-    textLeftOut:
-      'The text written goes with a single file: with several, it is left out. Take the others off the list to keep it.',
     approvalNote:
       'Writing material needs approval here: this is sent as a proposal, and nothing is created until someone approves it.',
     submit: 'Create',
@@ -68,9 +61,7 @@ export default {
     status: 'Status',
     sortOrder: 'Sort order',
     file: 'File',
-    downloadFile: 'Download the file',
-    checksum: 'Checksum',
-    noText: 'This version has no text; its content is the file.',
+    noText: 'This version has no text; its content is the file. | This version has no text; its content is its files.',
     noVersion: 'There is no version of this document that you can read.',
     emptyDoc: 'This document has no content yet.',
     addFirst: 'Add the first version',
@@ -127,6 +118,7 @@ export default {
       hint: 'Versions are never changed. Publishing chooses which one is read, and can go back to an earlier one; only an administrator purges one uploaded by mistake, which leaves a tombstone.',
       empty: 'No versions yet.',
       text: 'Text',
+      more: '+{n} more',
       showing: 'Showing',
       view: 'View',
       publish: 'Publish',
@@ -202,28 +194,29 @@ export default {
     },
     approvalNote:
       'Writing material needs approval here: this becomes a proposal and takes effect only once someone approves it.',
-    dropHere: 'Drop to add a new version with this file',
+    dropHere: 'Drop to add a new version with these files',
     addVersion: {
       title: 'New version of “{title}”',
       introFrom:
         'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published. Starts from the text of version {seq}, the latest.',
       introEmpty:
         'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published. The document has no version yet.',
-      file: 'File',
+      file: 'Files',
       fileNotCarried:
-        'Version {seq} has a file ({type}, {size}). A new version does not carry it over: upload it again to keep it. Saving without a file leaves it out of the new version.',
-      dropLabel: 'The new version’s file: drop it here, or press Enter to choose it',
+        'Version {seq} has a file: {names}. A new version does not carry it over: upload it again to keep it. Saving without it leaves it out of the new version. | Version {seq} has {n} files: {names}. A new version does not carry them over: upload again those to keep. Saving without them leaves them out of the new version.',
+      filesHint: 'The new version holds these files, in the order listed.',
+      dropLabel: 'The new version’s files: drop them here, or press Enter to choose them',
       textKept: 'Text: version {seq}’s, as it is ({chars} characters).',
       textWritten: 'Text: as written here ({chars} characters).',
       leaveTextOut: 'Leave the text out',
       putTextBack: 'Keep version {seq}’s text',
-      waitForFile: 'Waiting for the file to upload…',
+      waitForFile: 'Waiting for the files to upload…',
       publish: 'Publish this version at once',
       publishHint: 'Otherwise it stays a draft until someone publishes it.',
       unreleased: 'Its assignment is not published yet: news of this goes only to those who can see unpublished work.',
-      needsContent: 'Give the version text or a file.',
+      needsContent: 'Give the version text or files.',
       unchanged: 'Nothing has changed from version {seq}.',
-      dropsFile: 'The same text as version {seq}, without its file.',
+      dropsFile: 'The same text as version {seq}, without its file. | The same text as version {seq}, without its files.',
       submit: 'Save version',
       done: 'New version saved',
       donePublished: 'New version saved and published',
@@ -244,6 +237,7 @@ export default {
       },
       pages: 'One page | {n} pages',
       jumpTo: 'Go to a page',
+      pickFile: 'Whose text version to show',
       reading: 'Reading part {read} of {parts}…',
       actions: {
         refresh: 'Read it again',
@@ -253,8 +247,8 @@ export default {
         transcribe: 'Transcribe',
       },
       queued: {
-        pending: 'Queued: this version’s file is waiting to be transcribed into text by AI.',
-        working: 'Transcribing: AI is writing this version’s file out as text.',
+        pending: 'Queued: this file is waiting to be transcribed into text by AI.',
+        working: 'Transcribing: AI is writing this file out as text.',
         after: 'The text version shows here once it is done.',
       },
       failed: 'Transcription failed: {reason}',
@@ -262,10 +256,10 @@ export default {
       skipped: 'Not transcribed: {reason}',
       skippedNoReason: 'Not transcribed.',
       none: {
-        reader: 'This version has no text version.',
-        staff: 'This version has no text version yet. You can write one yourself.',
+        reader: 'This file has no text version.',
+        staff: 'This file has no text version yet. You can write one yourself.',
         staffOld:
-          'This version was added before there were text versions, and has none. Transcribe it, or write one yourself.',
+          'This file was added before there were text versions, and has none. Transcribe it, or write one yourself.',
         staffOff:
           'Transcription is not turned on for this site, so nothing is transcribed now. You can write the text version yourself.',
         staffFailed: 'Transcribe it again, or write the text version yourself.',
@@ -277,7 +271,7 @@ export default {
         unchanged: 'Nothing changed.',
         empty: 'Write the text first.',
         pending:
-          'Your text version of version {seq} was sent for approval. The text version stays as it is until someone approves it.',
+          'Your text version of “{name}” (version {seq}) was sent for approval. The text version stays as it is until someone approves it.',
         changed:
           'The text version changed while you were editing it (it is at revision {revision} now). Your draft is kept here.',
         changedNoRevision: 'The text version changed while you were editing it. Your draft is kept here.',
@@ -291,7 +285,7 @@ export default {
         keep: 'Keep editing',
       },
       again: {
-        title: 'Transcribe version {seq} again?',
+        title: 'Transcribe “{name}” again?',
         body: 'Its text version is cleared and queued to be transcribed by AI again: the version has no text version until that is done.',
         staffTitle: 'Discard the changes?',
         staffBody:
@@ -301,7 +295,7 @@ export default {
         done: 'Queued to be transcribed',
         already: 'It is waiting to be transcribed already.',
         pending:
-          'Transcribing version {seq} again was sent for approval. The text version stays as it is until someone approves it.',
+          'Transcribing “{name}” (version {seq}) again was sent for approval. The text version stays as it is until someone approves it.',
       },
     },
   },
@@ -315,7 +309,8 @@ export default {
     staff_edit:
       'Staff have written this text version since: transcribing it again discards their changes, which has to be confirmed.',
     text_too_long: 'The text is too long: a text version holds at most 2 MiB of Markdown.',
-    no_text: 'This version has no file to transcribe, so it has no text version.',
+    no_text: 'There is no text version of this file: it has none, and none can be made of it.',
+    file_id_required: 'This version holds {files} files: name the file whose text version this is, and try again.',
     document_archived: 'The document is archived: bring it back first.',
     course_archived: 'The course is archived: nothing in it changes.',
   },

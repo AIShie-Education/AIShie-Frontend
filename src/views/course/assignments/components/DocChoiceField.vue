@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // Choosing the instructions or rubric document of an assignment: none, an
 // existing document of that kind, or a new one made here (created, and
-// published if asked, when the form is saved). A new one is a file first: its
-// drop zone comes first, and its text is the second part, a note in Markdown
-// under it (DocumentTextField). It may hold both, or either.
+// published if asked, when the form is saved). A new one is files first: its
+// drop zone comes first, holding as many files as a version holds, in the
+// order listed (to move up or down), and its text is the second part, a note
+// in Markdown under it (DocumentTextField). It may hold both, or either.
 import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DocumentSummary } from '@/api/types'
@@ -15,7 +16,7 @@ import FileDropZone from '@/components/FileDropZone.vue'
 import type { DocChoice } from './types'
 
 const model = defineModel<DocChoice>({ required: true })
-/** True while the new document's file is still uploading. */
+/** True while the new document's files are still uploading. */
 const uploading = defineModel<boolean>('uploading', { default: false })
 const props = defineProps<{
   courseId: string
@@ -59,7 +60,7 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
 
 // A new document's text: open where there is some already.
 const textOpen = ref(model.value.body.trim() !== '')
-/** A file dropped on a new document with no title yet names it. */
+/** The first file dropped on a new document with no title yet names it. */
 function onUploaded(f: UploadedFile) {
   if (!(latest ?? model.value).title.trim()) set({ title: titleFromFileName(f.fileName) })
 }
@@ -135,6 +136,9 @@ function onUploaded(f: UploadedFile) {
         :model-value="model.files"
         :course-id="courseId"
         :kind="kind"
+        multiple
+        version
+        reorder
         :disabled="disabled"
         :label="t(`assignments.form.doc.dropLabel.${kind}`)"
         @update:model-value="(v: UploadedFile[]) => set({ files: v })"

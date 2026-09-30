@@ -73,8 +73,8 @@ export default {
       cannotRemove: '可以換成另一份文件，但不能移除。',
       newTitle: '文件標題',
       dropLabel: {
-        instructions: '作業說明的檔案：拖放到這裡，或按 Enter 選擇',
-        rubric: '評分準則的檔案：拖放到這裡，或按 Enter 選擇',
+        instructions: '作業說明的檔案（可多個）：拖放到這裡，或按 Enter 選擇',
+        rubric: '評分準則的檔案（可多個）：拖放到這裡，或按 Enter 選擇',
       },
       publishNow: {
         instructions: '立即發佈，讓學生在作業發佈後可以閱讀',
@@ -146,7 +146,7 @@ export default {
     draftVersionNone: '你正在閱讀第 {seq} 版。目前沒有任何已發佈的版本，學生無法閱讀這份說明。',
     noText: '作業說明沒有文字內容。',
     noVersion: '這份作業說明暫時沒有可閱讀的內容。',
-    attachedFile: '附件：',
+    attachedFiles: '附件：',
     details: '詳情',
     points: '滿分',
     due: '截止',

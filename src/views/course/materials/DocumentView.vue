@@ -13,19 +13,26 @@
 // purged shows its tombstone — who purged it, when and why — instead of its
 // content or a download.
 //
-// A version with a file of material, instructions or a rubric has a text
-// version (文字版) as well, on a tab of its own beside its content (?tab=text):
-// its file transcribed into Markdown by the school's transcriber, or written
-// by staff (TextVersionPane). Whether the transcriber is on is the runtime's
-// to say (info.features.transcription): without a runtime that says so, a
-// text waiting for it is shown as none.
+// A version is text, files, or both (AIShie-Core #49): its files are listed
+// in order under its number, each with an icon by its type, its name and
+// size, to download under its name (VersionFileList).
 //
-// A new version opens on a drop zone for its file. Whoever may add one can
-// also drop a file anywhere on the page, which opens it with that file.
+// Each file of material, instructions or a rubric has a text version
+// (文字版) as well, on a tab of its own beside the version's content
+// (?tab=text, and ?file= for a file other than the first): the file
+// transcribed into Markdown by the school's transcriber, or written by staff
+// (TextVersionPane, one for each file, so that a draft of one is kept while
+// another is read). A version of several files picks the file there, each
+// saying where its text version stands. Whether the transcriber is on is the
+// runtime's to say (info.features.transcription): without a runtime that
+// says so, a text waiting for it is shown as none.
+//
+// A new version opens on a drop zone for its files. Whoever may add one can
+// also drop files anywhere on the page, which opens it with them.
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { read, type UploadKind } from '@/api/http'
 import type { AssignmentSummary, DocumentVersion } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
@@ -35,9 +42,8 @@ import { usePageDrop } from '@/composables/useFileDrop'
 import { useRuntime } from '@/composables/useRuntime'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
-import { formatBytes } from '@/utils/format'
+import { versionFilesOf } from '@/utils/documentFiles'
 import AsyncState from '@/components/AsyncState.vue'
-import DocumentFileLink from '@/components/DocumentFileLink.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -50,7 +56,10 @@ import TextVersionPane from './components/TextVersionPane.vue'
 import Tombstone from './components/Tombstone.vue'
 import VersionDialog from './components/VersionDialog.vue'
 import VersionHistory from './components/VersionHistory.vue'
-import { textOfVersion, textTabShown } from './components/textVersion'
+import VersionFileList from '@/components/VersionFileList.vue'
+import type { DocumentFile } from '@/api/types'
+import TextFilePicker from './components/TextFilePicker.vue'
+import { textTabShown } from './components/textVersion'
 
 const props = defineProps<{ courseId: string; documentId: string }>()
 const { t } = useI18n()
@@ -210,16 +219,9 @@ const docPurge = computed(() => doc.value?.purged ?? null)
 const versionPurge = computed(() => shown.value?.purged ?? null)
 const purged = computed(() => !!doc.value?.purged_at || !!docPurge.value)
 
-const hasFile = computed(
-  () => !!shown.value && !shown.value.purged && (!!shown.value.download_url || !!shown.value.content_type),
-)
-// "sha256:44c38a…" shown as "sha256 44c38a1b2c3d".
-const checksumShort = computed(() => {
-  const c = shown.value?.checksum
-  if (!c) return null
-  const i = c.indexOf(':')
-  return i > 0 ? `${c.slice(0, i)} ${c.slice(i + 1, i + 13)}` : c.slice(0, 12)
-})
+/** The version's files, in order; none once it is purged. */
+const files = computed(() => (versionPurge.value || docPurge.value ? [] : versionFilesOf(shown.value, doc.value?.title)))
+const hasFile = computed(() => files.value.length > 0)
 
 // Writing: material, instructions and rubrics are written with document_write.
 const canWrite = computed(() => courseLevel.value && course.can('document_write'))
@@ -251,17 +253,8 @@ const pageDrop = usePageDrop({
     !editing.value &&
     !detailsOpen.value &&
     !purgeOpen.value,
-  onFiles: (files) => {
-    if (!files.length) return
-    if (files.length > 1) {
-      ElMessage({
-        type: 'warning',
-        message: t('common.upload.onlyOne', { name: files[0]!.name }),
-        showClose: true,
-        duration: 6000,
-      })
-    }
-    openVersion(files.slice(0, 1))
+  onFiles: (dropped) => {
+    if (dropped.length) openVersion(dropped)
   },
 })
 
@@ -412,27 +405,40 @@ function onVersionProposed(publish: boolean) {
 
 const uploadKind = computed(() => (courseLevel.value ? kind.value : 'material') as UploadKind)
 
-// --- The text version ------------------------------------------------------------
+// --- The text versions, one for each file ------------------------------------------
 const rt = useRuntime()
 const transcriptionOn = computed(() => !!rt.info.value?.features.transcription)
-const shownText = computed(() => textOfVersion(shown.value))
+/** The tab is there where any file's text version is worth it (textTabShown). */
 const textTab = computed(
   () =>
     !!shown.value &&
-    textTabShown({
-      text: shownText.value,
-      courseLevel: courseLevel.value,
-      purged: !!versionPurge.value || !!docPurge.value,
-      hasFile: hasFile.value,
-      canWrite: canWrite.value,
-      transcriptionOn: transcriptionOn.value,
-    }),
+    files.value.some((f) =>
+      textTabShown({
+        text: f.text ?? null,
+        courseLevel: courseLevel.value,
+        purged: !!versionPurge.value || !!docPurge.value,
+        hasFile: true,
+        canWrite: canWrite.value,
+        transcriptionOn: transcriptionOn.value,
+      }),
+    ),
 )
 /** The tab shown in the version's card, remembered in the address (?tab=text). */
 const contentTab = computed({
   get: () => (route.query.tab === 'text' && textTab.value ? 'text' : 'content'),
   set: (v: string) => void router.replace({ query: { ...route.query, tab: v === 'text' ? 'text' : undefined } }),
 })
+/** The file whose text version is shown: ?file=, or the first. */
+const textFile = computed<DocumentFile | null>(() => {
+  const want = route.query.file
+  return files.value.find((f) => f.id && f.id === want) ?? files.value[0] ?? null
+})
+/** Shows a file's text version, remembering it in the address (none for the first). */
+function showText(f: DocumentFile) {
+  const first = files.value[0]?.id === f.id
+  void router.replace({ query: { ...route.query, tab: 'text', file: first ? undefined : f.id || undefined } })
+}
+
 function onTextProposed(message: string) {
   pendingNote.value = message
 }
@@ -593,50 +599,56 @@ function onTextProposed(message: string) {
                   <el-tab-pane :label="t('materials.document.text.tabs.text')" name="text" />
                 </el-tabs>
 
-                <!-- Kept while the other tab is shown, with a draft being written in it. -->
-                <TextVersionPane
-                  v-if="textTab"
-                  v-show="contentTab === 'text'"
+                <template v-if="textTab">
+                  <!-- Which file's text version: one of several, each saying where its text stands. -->
+                  <TextFilePicker
+                    v-show="contentTab === 'text'"
+                    :files="files"
+                    :selected="textFile"
+                    :transcription-on="transcriptionOn"
+                    @pick="showText"
+                  />
+                  <!-- One for each file, kept while another is shown, with a draft being written in it. -->
+                  <TextVersionPane
+                    v-for="f in files"
+                    v-show="contentTab === 'text' && f === textFile"
+                    :key="`${shown.id}/${f.id || f.position}`"
+                    :course-id="courseId"
+                    :document-id="doc.id"
+                    :version-id="shown.id"
+                    :seq="shown.seq"
+                    :file-id="f.id"
+                    :file-name="f.filename"
+                    :position="f.position"
+                    :initial="f.text ?? null"
+                    :has-file="true"
+                    :active="contentTab === 'text' && f === textFile"
+                    :can-write="canWrite"
+                    :write-disabled="writeDisabled"
+                    :needs-approval="needsApproval"
+                    :transcription-on="transcriptionOn"
+                    @changed="reloadAll"
+                    @proposed="onTextProposed"
+                  />
+                </template>
+
+                <VersionFileList
+                  v-if="hasFile && contentTab !== 'text'"
+                  class="doc-content__files"
                   :course-id="courseId"
                   :document-id="doc.id"
                   :version-id="shown.id"
-                  :seq="shown.seq"
-                  :initial="shownText"
-                  :has-file="hasFile"
-                  :active="contentTab === 'text'"
-                  :can-write="canWrite"
-                  :write-disabled="writeDisabled"
-                  :needs-approval="needsApproval"
+                  :files="files"
+                  :text-status="textTab"
                   :transcription-on="transcriptionOn"
-                  @changed="reloadAll"
-                  @proposed="onTextProposed"
+                  :open-text="textTab"
+                  @text="showText"
                 />
-
-                <div v-if="hasFile && contentTab !== 'text'" class="doc-file">
-                  <el-icon class="doc-file__icon"><Document /></el-icon>
-                  <div class="doc-file__text">
-                    <DocumentFileLink
-                      :course-id="courseId"
-                      :document-id="doc.id"
-                      :version-id="shown.id"
-                      :title="t('materials.document.downloadFile')"
-                    />
-                    <span class="doc-file__meta">
-                      {{ shown.content_type ?? '—' }} · {{ formatBytes(shown.byte_size) }}
-                      <template v-if="checksumShort">
-                        ·
-                        <span class="doc-file__sum" :title="shown.checksum ?? undefined">
-                          {{ t('materials.document.checksum') }} {{ checksumShort }}
-                        </span>
-                      </template>
-                    </span>
-                  </div>
-                </div>
 
                 <div v-if="!versionPurge && contentTab !== 'text'" class="doc-content__body">
                   <MarkdownView
                     :source="shown.body_md"
-                    :empty="hasFile ? t('materials.document.noText') : t('common.labels.empty')"
+                    :empty="hasFile ? t('materials.document.noText', files.length) : t('common.labels.empty')"
                   />
                 </div>
               </template>
@@ -845,36 +857,8 @@ function onTextProposed(message: string) {
 .doc-content__tabs :deep(.el-tabs__header) {
   margin-bottom: 16px;
 }
-.doc-file {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
+.doc-content__files {
   margin-bottom: 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
-}
-.doc-file__icon {
-  font-size: 22px;
-  color: var(--el-color-primary);
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-.doc-file__text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  min-width: 0;
-}
-.doc-file__meta {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  overflow-wrap: anywhere;
-}
-.doc-file__sum {
-  font-family: var(--app-font-mono);
 }
 .doc-side__hint {
   margin: 0 0 12px;

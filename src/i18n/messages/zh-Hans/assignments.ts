@@ -73,8 +73,8 @@ export default {
       cannotRemove: '可以换成另一份文档，但不能移除。',
       newTitle: '文档标题',
       dropLabel: {
-        instructions: '作业说明的文件：拖放到这里，或按 Enter 选择',
-        rubric: '评分标准的文件：拖放到这里，或按 Enter 选择',
+        instructions: '作业说明的文件（可多个）：拖放到这里，或按 Enter 选择',
+        rubric: '评分标准的文件（可多个）：拖放到这里，或按 Enter 选择',
       },
       publishNow: {
         instructions: '立即发布，让学生在作业发布后可以阅读',
@@ -146,7 +146,7 @@ export default {
     draftVersionNone: '你正在阅读第 {seq} 版。目前没有任何已发布的版本，学生无法阅读这份说明。',
     noText: '作业说明没有文字内容。',
     noVersion: '这份作业说明暂时没有可阅读的内容。',
-    attachedFile: '附件：',
+    attachedFiles: '附件：',
     details: '详情',
     points: '满分',
     due: '截止',
