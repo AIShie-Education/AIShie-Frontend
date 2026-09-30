@@ -13,7 +13,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isDecimal } from '@/utils/format'
-import FileUploader from '@/components/FileUploader.vue'
+import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import BreakdownEditor, { type BreakdownRow } from '@/views/course/submissions/components/BreakdownEditor.vue'
 import RubricPanel from '@/views/course/submissions/components/RubricPanel.vue'
@@ -106,8 +106,11 @@ function useTotal(total: string) {
   void formRef.value?.validateField('score').catch(() => undefined)
 }
 
+/** A feedback file is still uploading: saving now would go without it. */
+const uploadingFiles = ref(false)
+
 async function submit() {
-  if (!formRef.value) return
+  if (!formRef.value || uploadingFiles.value) return
   breakdownChecked.value = true
   const ok = await formRef.value.validate().catch(() => false)
   if (!ok || !breakdownValid(form.breakdown)) return
@@ -181,7 +184,16 @@ async function submit() {
       </el-form-item>
 
       <el-form-item :label="t('grades.form.feedbackFiles')">
-        <FileUploader v-model="form.files" :course-id="courseId" kind="feedback" multiple :disabled="pending" />
+        <FileDropZone
+          v-model="form.files"
+          v-model:uploading="uploadingFiles"
+          :course-id="courseId"
+          kind="feedback"
+          multiple
+          page-drop
+          compact
+          :disabled="pending"
+        />
         <p class="app-form-hint grades-hint">
           {{ hadFiles ? t('grades.regrade.filesStay') : t('grades.form.feedbackFilesHelp') }}
         </p>
@@ -197,8 +209,14 @@ async function submit() {
     </el-form>
 
     <template #footer>
+      <span v-if="uploadingFiles" class="regrade__why">{{ t('common.upload.waitToSave') }}</span>
       <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
-      <el-button type="primary" :loading="pending" :disabled="!course.writable || rubric.loading.value" @click="submit">
+      <el-button
+        type="primary"
+        :loading="pending"
+        :disabled="!course.writable || rubric.loading.value || uploadingFiles"
+        @click="submit"
+      >
         {{ needsApproval ? t('grades.regrade.submitProposal') : t('grades.regrade.submit') }}
       </el-button>
     </template>
@@ -206,6 +224,11 @@ async function submit() {
 </template>
 
 <style scoped>
+.regrade__why {
+  margin-right: 12px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
 .regrade__current {
   display: flex;
   align-items: baseline;

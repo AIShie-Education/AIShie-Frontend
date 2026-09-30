@@ -186,6 +186,7 @@ export default {
     tooLarge: '文件太大，无法上传：它有 {size}，每个文件最大 {max}。',
     tooLargeUnknown: '文件太大，无法在此上传：它有 {size}。',
     folders: '文件夹无法上传：请改为拖放里面的文件。',
+    waitToSave: '正在等待文件上传完成…',
     onlyOne: '这里只放一个文件：已采用“{name}”。',
     actions: {
       cancel: '取消',

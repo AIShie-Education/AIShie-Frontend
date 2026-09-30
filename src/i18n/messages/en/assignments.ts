@@ -209,6 +209,7 @@ export default {
     placeholder: 'Write your answer here. Markdown is supported.',
     files: 'Files',
     noFiles: 'No files attached.',
+    dropLabel: 'Files for your work: drop them here or anywhere on the page, or press Enter to choose them',
     attachHint: 'Each file is attached to your draft as soon as it has uploaded.',
     retryAttach: 'Attach again',
     fileAttached: '“{name}” attached.',

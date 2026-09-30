@@ -189,6 +189,7 @@ export default {
     tooLargeUnknown: 'Too large to upload here: it is {size}.',
     folders:
       'A folder cannot be uploaded: drop the files in it instead. | Folders cannot be uploaded: drop the files in them instead.',
+    waitToSave: 'Waiting for the files to upload…',
     onlyOne: 'Only one file goes here: “{name}” was taken.',
     actions: {
       cancel: 'Cancel',

@@ -186,6 +186,7 @@ export default {
     tooLarge: '檔案太大，無法上傳：它有 {size}，每個檔案最大 {max}。',
     tooLargeUnknown: '檔案太大，無法在此上傳：它有 {size}。',
     folders: '資料夾無法上傳：請改為拖放裡面的檔案。',
+    waitToSave: '正在等候檔案上傳完成…',
     onlyOne: '這裡只放一個檔案：已採用「{name}」。',
     actions: {
       cancel: '取消',

@@ -196,6 +196,7 @@ export default {
     placeholder: '在此输入你的答案，支持 Markdown。',
     files: '文件',
     noFiles: '没有附加文件。',
+    dropLabel: '你的作业文件：拖放到这里或页面任何地方，或按 Enter 选择',
     attachHint: '每个文件上传完成后会立即附加到你的草稿。',
     retryAttach: '重新附加',
     fileAttached: '已附加“{name}”。',
