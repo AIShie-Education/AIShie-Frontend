@@ -208,6 +208,11 @@ export default {
       removed: '“{name}” removed.',
     },
   },
+  // The text that goes with a document's file (DocumentTextField).
+  docText: {
+    add: 'Add a text note (optional)',
+    chars: 'Text note ({chars} characters)',
+  },
   copyId: 'Copy ID',
   notSignedIn: 'Not signed in',
   archivedCourse: 'This course is archived: it can be read, but nothing in it can be changed.',
