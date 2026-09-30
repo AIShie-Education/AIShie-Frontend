@@ -9,7 +9,8 @@ export default {
     intro:
       'An agent has one brain at a time: AIshie hosts it, or an AI tool or runtime of yours runs it. Not two at once, or both would answer every question.',
     hosted: 'Host it on AIshie',
-    hostedHint: 'AIshie runs it for you, on a model you choose with your own API key. Nothing to install, no token to handle.',
+    hostedHint:
+      'AIshie runs it for you, on a model you choose with your own API key. Nothing to install, no token to handle.',
     recommended: 'Recommended',
     tool: 'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
     toolHint: 'Your own AI tool answers as this agent, over MCP, with one of its tokens.',
@@ -103,7 +104,8 @@ export default {
     body: 'Another of its tokens was used in the last few minutes: a runtime of your own, or another MCP client, is running it. If the school’s runtime runs it too, both answer every question. Revoke those tokens to stop it, or go on if you will stop it yourself.',
     revokeResume: 'Revoke them and resume',
     anywayResume: 'Resume anyway',
-    revokeFailed: 'Not every one of those tokens could be revoked, so nothing more was done. Try again, or revoke them in the Tokens list below.',
+    revokeFailed:
+      'Not every one of those tokens could be revoked, so nothing more was done. Try again, or revoke them in the Tokens list below.',
     sameTokenTitle: 'This token is in use',
     sameToken:
       'If a runtime of your own uses this token, stop it first: both would answer every question. It was last used',
@@ -222,7 +224,8 @@ export default {
     needs_model: {
       title: 'Choose a model',
       body: 'Your agent is connected, but it has no model yet. Choose a provider and model and give your API key to start it.',
-      bodySchool: 'Your agent is connected, but it has no model yet. Choose the school’s plan, or a provider and model with your API key, to start it.',
+      bodySchool:
+        'Your agent is connected, but it has no model yet. Choose the school’s plan, or a provider and model with your API key, to start it.',
     },
     starting: {
       title: 'Starting',
@@ -314,7 +317,8 @@ export default {
     replaceToken: 'Replace token',
     delete: 'Delete from the school’s runtime',
     usedByRuntime: 'Used by the school’s runtime',
-    ownKeyOff: 'The school’s runtime does not take a model and key of your own at the moment, so they cannot be changed here.',
+    ownKeyOff:
+      'The school’s runtime does not take a model and key of your own at the moment, so they cannot be changed here.',
     connectOff: 'The school’s runtime does not take new tokens at the moment, so it cannot be given one here.',
     plan: 'Plan',
     schoolPlan: 'School plan (paid by the school)',
@@ -366,21 +370,24 @@ export default {
     operator_agent: 'The school’s operator already runs this agent.',
     agent_not_found: 'This agent is no longer on the school’s runtime.',
     version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
-    changedMeanwhile: 'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
+    changedMeanwhile:
+      'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
     school_key_not_offered: 'The school’s plan is not offered here.',
     unknown_offer: 'The school no longer offers this model. Choose another.',
     own_key_required: 'Enter your API key for {provider}.',
     own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for {provider}.',
     model_denied: 'The school does not allow this model. Choose another.',
     settings_rejected: 'The runtime cannot run these settings.',
-    key_malformed: 'That does not look like an API key from {provider}. Paste the key exactly as {provider} gave it, with no spaces.',
+    key_malformed:
+      'That does not look like an API key from {provider}. Paste the key exactly as {provider} gave it, with no spaces.',
     key_is_aishie_token:
       'That is an AIshie token (yours or an agent’s), not an API key from {provider}. An AIshie token is never sent to a provider: paste the key {provider} gave you.',
     unknown_provider: 'Choose one of the providers offered.',
     adapter_not_offered: 'Choose one of the API styles offered.',
     unknown_endpoint: 'Choose one of the endpoints offered.',
     invalid_field: 'This value is not accepted here.',
-    unknown_field: 'The school’s runtime did not take this request: it has no field “{field}”. Reload the page and try again.',
+    unknown_field:
+      'The school’s runtime did not take this request: it has no field “{field}”. Reload the page and try again.',
     unknown_parameter:
       'The school’s runtime did not take this request: it takes no “{field}” in the address. Reload the page and try again.',
   },

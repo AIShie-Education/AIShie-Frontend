@@ -59,7 +59,14 @@ const props = withDefaults(
     /** The runtime offers the school's plan (features.school_key). */
     canChooseSchool?: boolean
   }>(),
-  { credentials: null, standing: 'active', offers: null, canConnect: true, canChooseModel: true, canChooseSchool: false },
+  {
+    credentials: null,
+    standing: 'active',
+    offers: null,
+    canConnect: true,
+    canChooseModel: true,
+    canChooseSchool: false,
+  },
 )
 const emit = defineEmits<{
   update: [agent: HostedAgent]
@@ -94,7 +101,9 @@ const statusBody = computed(() => {
   if (status.value === 'needs_model' && props.canChooseSchool) return t('hosting.status.needs_model.bodySchool')
   return t(`hosting.status.${status.value}.body`)
 })
-const ownLine = computed(() => (own.value ? `${providerLabel(props.offers, own.value.provider)} · ${own.value.model}` : ''))
+const ownLine = computed(() =>
+  own.value ? `${providerLabel(props.offers, own.value.provider)} · ${own.value.model}` : '',
+)
 const modelLine = computed(() => (school.value ? school.value.label : ownLine.value))
 /** The model's id beside the plan's label, unless the label says it already. */
 const schoolModel = computed(() => {
@@ -274,17 +283,24 @@ defineExpose({ onCommand })
         <dt>{{ t('hosting.card.fallback') }}</dt>
         <dd class="hosted-card__fallback">
           <template v-if="school.fallback && own">
-            {{ ownLine }}<template v-if="agent.own_key">, <code>{{ agent.own_key.hint }}</code></template>
+            {{ ownLine
+            }}<template v-if="agent.own_key"
+              >, <code>{{ agent.own_key.hint }}</code></template
+            >
           </template>
           <span v-else class="app-muted">{{ t('hosting.card.fallbackNone') }}</span>
         </dd>
       </template>
       <template v-else-if="agent.own_key">
         <dt>{{ t('hosting.card.key') }}</dt>
-        <dd><code>{{ agent.own_key.hint }}</code></dd>
+        <dd>
+          <code>{{ agent.own_key.hint }}</code>
+        </dd>
       </template>
       <dt>{{ t('hosting.card.token') }}</dt>
-      <dd><code>{{ agent.token.hint }}</code></dd>
+      <dd>
+        <code>{{ agent.token.hint }}</code>
+      </dd>
       <template v-if="school && schoolUse">
         <dt>{{ t('hosting.card.schoolAllowance') }}</dt>
         <dd class="hosted-card__today hosted-card__school-use">
@@ -292,10 +308,14 @@ defineExpose({ onCommand })
             {{ t('hosting.card.todaySchool', { used: schoolUse.used, limit: schoolUse.limit }) }}
           </span>
           <span class="app-muted hosted-card__school-hint">{{ t('hosting.card.todaySchoolHint') }}</span>
-          <span class="app-muted hosted-card__per-asker">{{ t('hosting.card.perAsker', { n: schoolUse.per_asker_limit }) }}</span>
+          <span class="app-muted hosted-card__per-asker">{{
+            t('hosting.card.perAsker', { n: schoolUse.per_asker_limit })
+          }}</span>
         </dd>
         <dt>{{ t('hosting.card.thisAgent') }}</dt>
-        <dd class="hosted-card__agent-today">{{ t('hosting.card.answers', { n: agent.today.answers }, agent.today.answers) }}</dd>
+        <dd class="hosted-card__agent-today">
+          {{ t('hosting.card.answers', { n: agent.today.answers }, agent.today.answers) }}
+        </dd>
       </template>
       <template v-else>
         <dt>{{ t('hosting.card.today') }}</dt>
@@ -328,7 +348,9 @@ defineExpose({ onCommand })
     <h3 class="hosted-card__h">{{ t('hosting.card.seats') }}</h3>
     <ul v-if="seats.length" class="hosted-card__seats">
       <li v-for="s in seats" :key="s.course_id" class="hosted-card__seat">
-        <span class="hosted-card__course">{{ courseLabel(s) }} <span class="app-muted">{{ s.course_title }}</span></span>
+        <span class="hosted-card__course"
+          >{{ courseLabel(s) }} <span class="app-muted">{{ s.course_title }}</span></span
+        >
         <span v-for="(line, i) in seatSentences(s, t)" :key="i" class="hosted-card__line">{{ line }}</span>
       </li>
     </ul>
@@ -385,7 +407,13 @@ defineExpose({ onCommand })
 
     <details class="hosted-card__self">
       <summary>{{ t('hosting.choice.selfWhileHosted') }}</summary>
-      <el-alert type="info" :closable="false" show-icon :title="t('hosting.choice.selfWhileHostedNote')" class="hosted-card__self-note" />
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        :title="t('hosting.choice.selfWhileHostedNote')"
+        class="hosted-card__self-note"
+      />
       <h4 class="hosted-card__self-h">{{ t('hosting.choice.tool') }}</h4>
       <ConnectToolSteps />
       <h4 class="hosted-card__self-h">{{ t('hosting.choice.runtime') }}</h4>

@@ -145,7 +145,13 @@ export function runtimePath(route: string, params: Record<string, string | numbe
 export class RuntimeError extends ApiError {
   readonly reason: string
 
-  constructor(opts: { status: number; code: string; message: string; reason: string; details?: Record<string, unknown> }) {
+  constructor(opts: {
+    status: number
+    code: string
+    message: string
+    reason: string
+    details?: Record<string, unknown>
+  }) {
     super(opts)
     this.name = 'RuntimeError'
     this.reason = opts.reason
@@ -279,8 +285,7 @@ async function sendWithRetry(retry: boolean, ...args: Parameters<typeof send>): 
  */
 function runtimeError(raw: RawResponse): RuntimeError {
   const e = (raw.body as { error?: unknown } | undefined)?.error as
-    | { code?: unknown; message?: unknown; details?: unknown }
-    | undefined
+    { code?: unknown; message?: unknown; details?: unknown } | undefined
   const enveloped = !!e && typeof e === 'object'
   const code = typeof e?.code === 'string' && e.code ? e.code : raw.status >= 500 ? 'internal' : 'unknown'
   const message = typeof e?.message === 'string' && e.message ? scrub(e.message) : `HTTP ${raw.status}`
@@ -393,10 +398,12 @@ let generation = 0
  */
 function mintRefusal(e: unknown, audience: string): unknown {
   if (!(e instanceof ApiError) || e instanceof RuntimeError) return e
-  if (e.status === 403) return new RuntimeError({ status: 403, code: e.code, message: e.message, reason: 'account_refused' })
+  if (e.status === 403)
+    return new RuntimeError({ status: 403, code: e.code, message: e.message, reason: 'account_refused' })
   if (e.status === 404 || e.status === 400) {
     // A deploy mismatch (the runtime's audience is not in Core's list) is worth a line for whoever looks.
-    if (e.status === 400) console.warn(`Core makes no assertions for the agent runtime's audience ${audience}; hosting is hidden.`)
+    if (e.status === 400)
+      console.warn(`Core makes no assertions for the agent runtime's audience ${audience}; hosting is hidden.`)
     const absent = new RuntimeError({ status: e.status, code: e.code, message: e.message, reason: 'runtime_absent' })
     markAbsent(absent)
     return absent

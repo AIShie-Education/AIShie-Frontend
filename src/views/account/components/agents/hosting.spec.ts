@@ -89,7 +89,8 @@ const EN: Record<string, string> = {
   own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for OpenAI.',
   model_denied: 'The school does not allow this model. Choose another.',
   settings_rejected: 'The runtime cannot run these settings.',
-  key_malformed: 'That does not look like an API key from OpenAI. Paste the key exactly as OpenAI gave it, with no spaces.',
+  key_malformed:
+    'That does not look like an API key from OpenAI. Paste the key exactly as OpenAI gave it, with no spaces.',
   unknown_provider: 'Choose one of the providers offered.',
   adapter_not_offered: 'Choose one of the API styles offered.',
   unknown_endpoint: 'Choose one of the endpoints offered.',
@@ -177,7 +178,9 @@ describe('the words for each error reason', () => {
   })
 
   it('says how long to wait, rounded up, and ten seconds when the runtime did not say', () => {
-    expect(hostingErrorText(err('rate_limited', { retry_after_seconds: 2.2 }), t)).toBe('Too many tries. Wait 3 seconds.')
+    expect(hostingErrorText(err('rate_limited', { retry_after_seconds: 2.2 }), t)).toBe(
+      'Too many tries. Wait 3 seconds.',
+    )
     expect(hostingErrorText(err('rate_limited'), t)).toBe('Too many tries. Wait 10 seconds.')
   })
 
@@ -336,13 +339,24 @@ describe('tokens', () => {
     expect(o.in_use).toBe(true)
     expect(o.window_seconds).toBe(900)
     expect(o.tokens.map((x) => x.prefix)).toEqual(['usedrecently', 'usedhoursago', 'neverusednew', 'neverusedold'])
-    expect(o.tokens[0]).toMatchObject({ label: 'my laptop', recent: true, last_used_at: ago(3 * 60_000), expires_at: null })
+    expect(o.tokens[0]).toMatchObject({
+      label: 'my laptop',
+      recent: true,
+      last_used_at: ago(3 * 60_000),
+      expires_at: null,
+    })
     expect(o.tokens[1].recent).toBe(false)
     // A label of spaces is none.
     expect(o.tokens[3].label).toBeNull()
     // Just past the window, nothing is in use.
     expect(otherTokensFrom([credential({ last_used_at: ago(RECENT_USE_MS + 1000) })], null, NOW)!.in_use).toBe(false)
-    expect(otherTokensFrom(Array.from({ length: 25 }, () => credential()), null, NOW)!.tokens).toHaveLength(20)
+    expect(
+      otherTokensFrom(
+        Array.from({ length: 25 }, () => credential()),
+        null,
+        NOW,
+      )!.tokens,
+    ).toHaveLength(20)
     // No list to go by: nothing can be said.
     expect(otherTokensFrom(null, null, NOW)).toBeNull()
     expect(otherTokensFrom([], null, NOW)).toEqual({ in_use: false, window_seconds: 900, tokens: [] })
@@ -390,11 +404,24 @@ describe('tokens', () => {
 describe('the model form', () => {
   it('sends only what applies to the provider’s endpoint', () => {
     const openai = OFFERS[0]
-    const form = { ...emptyModelForm(), provider: 'openai', adapter: 'openai_responses', model: ' gpt-5 ', region: 'x', resource: 'y', endpoint: 'z' }
+    const form = {
+      ...emptyModelForm(),
+      provider: 'openai',
+      adapter: 'openai_responses',
+      model: ' gpt-5 ',
+      region: 'x',
+      resource: 'y',
+      endpoint: 'z',
+    }
     expect(choiceFrom(form, openai)).toEqual({ provider: 'openai', adapter: 'openai_responses', model: 'gpt-5' })
 
     const azure = OFFERS[1]
-    expect(choiceFrom({ ...form, provider: 'azure', resource: 'my-res', maxOutputTokens: 1024, reasoningEffort: 'low' }, azure)).toEqual({
+    expect(
+      choiceFrom(
+        { ...form, provider: 'azure', resource: 'my-res', maxOutputTokens: 1024, reasoningEffort: 'low' },
+        azure,
+      ),
+    ).toEqual({
       provider: 'azure',
       adapter: 'openai_responses',
       model: 'gpt-5',
@@ -402,8 +429,12 @@ describe('the model form', () => {
       max_output_tokens: 1024,
       reasoning_effort: 'low',
     })
-    expect(choiceFrom({ ...form, provider: 'bedrock', region: 'eu-west-1' }, OFFERS[2])).toMatchObject({ region: 'eu-west-1' })
-    expect(choiceFrom({ ...form, provider: 'moonshot', endpoint: 'china' }, OFFERS[3])).toMatchObject({ endpoint: 'china' })
+    expect(choiceFrom({ ...form, provider: 'bedrock', region: 'eu-west-1' }, OFFERS[2])).toMatchObject({
+      region: 'eu-west-1',
+    })
+    expect(choiceFrom({ ...form, provider: 'moonshot', endpoint: 'china' }, OFFERS[3])).toMatchObject({
+      endpoint: 'china',
+    })
   })
 
   it('comes back from the model an agent has', () => {
@@ -421,7 +452,13 @@ describe('the model form', () => {
       },
       OFFERS,
     )
-    expect(f).toMatchObject({ provider: 'bedrock', adapter: 'bedrock_converse', region: 'eu-west-1', maxOutputTokens: 4000, reasoningEffort: 'high' })
+    expect(f).toMatchObject({
+      provider: 'bedrock',
+      adapter: 'bedrock_converse',
+      region: 'eu-west-1',
+      maxOutputTokens: 4000,
+      reasoningEffort: 'high',
+    })
     expect(formFromModel(null, OFFERS)).toEqual(emptyModelForm())
   })
 
@@ -434,7 +471,9 @@ describe('the model form', () => {
     expect(formProblems({ ...form, provider: 'bedrock', model: 'm', region: 'moon-1' }, OFFERS[2])).toEqual({
       region: 'hosting.model.invalid.region',
     })
-    expect(formProblems({ ...emptyModelForm(), provider: 'openai', model: 'm', maxOutputTokens: 100 }, OFFERS[0])).toEqual({
+    expect(
+      formProblems({ ...emptyModelForm(), provider: 'openai', model: 'm', maxOutputTokens: 100 }, OFFERS[0]),
+    ).toEqual({
       maxOutputTokens: 'hosting.model.invalid.maxOutputTokens',
     })
     expect(formProblems(emptyModelForm(), undefined)).toEqual({ provider: 'hosting.model.invalid.required' })
@@ -444,7 +483,12 @@ describe('the model form', () => {
     const glm = OFFERS.find((o) => o.provider === 'glm')!
     const form = defaultsFor({ ...emptyModelForm(), model: 'glm-4.6' }, glm)
     expect(form.endpoint).toBe('global')
-    expect(choiceFrom(form, glm)).toEqual({ provider: 'glm', adapter: 'openai_chat', model: 'glm-4.6', endpoint: 'global' })
+    expect(choiceFrom(form, glm)).toEqual({
+      provider: 'glm',
+      adapter: 'openai_chat',
+      model: 'glm-4.6',
+      endpoint: 'global',
+    })
     // A saved endpoint the runtime no longer offers is shown as it is, and must be chosen again: never switched silently.
     const saved = formFromModel(
       {
@@ -514,7 +558,14 @@ describe('the model form', () => {
 
 describe('the school’s plan', () => {
   it('is spent once the owner’s answers today reach its quota', () => {
-    const use = { scope: 'owner' as const, used: 99, limit: 100, used_usd: '0.000000', limit_usd: null, per_asker_limit: 20 }
+    const use = {
+      scope: 'owner' as const,
+      used: 99,
+      limit: 100,
+      used_usd: '0.000000',
+      limit_usd: null,
+      per_asker_limit: 20,
+    }
     expect(schoolSpent(use)).toBe(false)
     expect(schoolSpent({ ...use, used: 100 })).toBe(true)
     expect(schoolSpent(null)).toBe(false)

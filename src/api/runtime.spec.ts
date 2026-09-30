@@ -435,7 +435,9 @@ describe('a 401 from the runtime', () => {
   })
 
   it('gets a new assertion and the call again even for a call that is never retried otherwise', async () => {
-    runtimeAnswers.push(json(401, { error: { code: 'unauthenticated', message: 'expired', details: { reason: 'assertion_expired' } } }))
+    runtimeAnswers.push(
+      json(401, { error: { code: 'unauthenticated', message: 'expired', details: { reason: 'assertion_expired' } } }),
+    )
     runtimeAnswers.push(json(200, { result: 'ok', http_status: 200, provider_code: null, latency_ms: 80 }))
     const out = await rt.runtime.testKey({ provider: 'openai', model: 'gpt-4.1-mini', key: 'sk-test-0000000000' })
     expect(out.data.result).toBe('ok')
@@ -725,13 +727,7 @@ describe('the contract’s calls', () => {
     ],
     ['pause', () => rt.runtime.pause('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/pause', undefined],
     ['resume', () => rt.runtime.resume('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/resume', undefined],
-    [
-      'remove',
-      () => rt.runtime.remove('agt_1'),
-      'DELETE',
-      '/runtime/api/v1/agents/agt_1?revoke_token=true',
-      undefined,
-    ],
+    ['remove', () => rt.runtime.remove('agt_1'), 'DELETE', '/runtime/api/v1/agents/agt_1?revoke_token=true', undefined],
     [
       'remove, keeping the token',
       () => rt.runtime.remove('agt_1', false),
@@ -826,7 +822,9 @@ describe('the contract’s calls', () => {
   })
 
   it('replaces a token with the token alone, never naming the agent in the body', async () => {
-    runtimeAnswers.push(json(200, { agent: AGENT, previous_token: { hint: 'h', prefix: 'p', revocation: 'revoked', problem: null } }))
+    runtimeAnswers.push(
+      json(200, { agent: AGENT, previous_token: { hint: 'h', prefix: 'p', revocation: 'revoked', problem: null } }),
+    )
     await rt.runtime.replaceToken('agt_1', 't')
     const [c] = runtimeCalls()
     expect(JSON.parse(c.body!)).toEqual({ token: 't' })
@@ -839,20 +837,27 @@ describe('the contract’s calls', () => {
     ['pause', () => rt.runtime.pause('agt_1')],
     ['resume', () => rt.runtime.resume('agt_1')],
     ['replaceToken', () => rt.runtime.replaceToken('agt_1', 't')],
-  ] as const)('%s names no version, and a 412 all the same is a version mismatch with the version now', async (_, call) => {
-    runtimeAnswers.push(
-      json(412, {
-        error: { code: 'version_mismatch', message: 'changed since', details: { reason: 'version_mismatch', current_version: 9 } },
-      }),
-    )
-    const err = await failure(call())
-    expect(runtimeCalls()[0].headers['If-Match']).toBeUndefined()
-    expect(rt.isVersionMismatch(err)).toBe(true)
-    expect(err.reason).toBe('version_mismatch')
-    expect(err.details.current_version).toBe(9)
-    // A refusal, not a failure to answer: never sent again by itself.
-    expect(runtimeCalls()).toHaveLength(1)
-  })
+  ] as const)(
+    '%s names no version, and a 412 all the same is a version mismatch with the version now',
+    async (_, call) => {
+      runtimeAnswers.push(
+        json(412, {
+          error: {
+            code: 'version_mismatch',
+            message: 'changed since',
+            details: { reason: 'version_mismatch', current_version: 9 },
+          },
+        }),
+      )
+      const err = await failure(call())
+      expect(runtimeCalls()[0].headers['If-Match']).toBeUndefined()
+      expect(rt.isVersionMismatch(err)).toBe(true)
+      expect(err.reason).toBe('version_mismatch')
+      expect(err.details.current_version).toBe(9)
+      // A refusal, not a failure to answer: never sent again by itself.
+      expect(runtimeCalls()).toHaveLength(1)
+    },
+  )
 
   it.each([
     ['update', () => rt.runtime.update('agt_1', 3, { own_key: null })],
