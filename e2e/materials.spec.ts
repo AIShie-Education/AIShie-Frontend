@@ -28,9 +28,11 @@ test.describe.serial('course material', () => {
 
     await page.getByRole('button', { name: 'New material' }).click()
     const dialog = page.getByRole('dialog', { name: 'New material' })
-    // Files come first; writing text is the second choice.
+    // Files come first, a text note folded under them; material that is text
+    // alone is the second choice.
     await expect(dialog.getByRole('button', { name: /^Files for new material/ })).toBeVisible()
-    await expect(dialog.getByPlaceholder('Markdown')).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: 'Add a text note (optional)' })).toBeVisible()
+    await expect(dialog.getByPlaceholder('Markdown')).toBeHidden()
     await dialog.getByRole('button', { name: 'Write text instead' }).click()
     await dialog.getByPlaceholder('e.g. Week 3 — Loops').fill(TITLE)
     await dialog.getByPlaceholder('Markdown').fill(BODY)

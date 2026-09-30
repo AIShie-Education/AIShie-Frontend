@@ -14,11 +14,13 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   feedback files; posting, regrading and the gradebook; the grading scheme; members with their
   permissions and scope; the course's activity feed.
 - **Uploading files** — a document is made from a file first: new material, a new version, and new
-  instructions or a rubric open on a drop zone, and writing text is the second choice ("Write text
-  instead"). Files are dropped on the zone, or anywhere on the page or dialog it is the one zone of,
-  chosen, or pasted, several at once: files dropped on the materials list become material, one
-  each, titled from their names (to change before creating), and a file dropped on a document's
-  page becomes its new version. Students drop their work on their draft, and graders feedback
+  instructions or a rubric open on a drop zone, and under it an optional text note in Markdown
+  (「加入文字說明（選填）」), which goes in the same version as the file; material that is text
+  alone is written by "Write text instead". Files are dropped on the zone, or anywhere on the page
+  or dialog it is the one zone of, chosen, or pasted, several at once: files dropped on the
+  materials list become material, one each, titled from their names (to change before creating),
+  without text where there are several, and a file dropped on a document's page becomes its new
+  version, with the latest version's text unless it is left out. Students drop their work on their draft, and graders feedback
   files on a grade. Three upload at a time, each listed with its progress, speed and time left, to
   cancel, try again or take off; one whose connection drops is tried again by itself, once the
   browser is back online where it is not. A file larger than the site takes is refused before it
@@ -321,3 +323,7 @@ docs/deploying.md         the image and its tags; setting a server up, deploying
 ## License
 
 AIshie Frontend is copyright 2026 XIE Hanming, and source-available under the [Elastic License 2.0](LICENSE) (ELv2), governed by the laws of Hong Kong. You may use, copy, change and redistribute it on the terms in LICENSE, which include that you may not offer it to others as a hosted or managed service.
+
+For clarity: an educational institution that runs its own installation for its own staff and students is not providing the software to third parties as a hosted or managed service.
+
+（補充說明：教育機構自行架設、供其教職員及學生使用，不視為向第三方提供託管服務。）

@@ -2,13 +2,15 @@ import { expect, test, type Page } from '@playwright/test'
 import { call, courseTab, coursePath, demo, dropFiles, photograph, signIn, toast, type FileSpec } from './support'
 
 // Uploading, with the real Core: files dropped on the materials page become
-// material, one each; a new version is a file dropped in its dialog, or on
+// material, one each; one file and a text note become one material with
+// both; a new version is a file dropped in its dialog, with its text, or on
 // the document's page; a student hands in files dropped on their draft; a
 // file over Core's limit is refused before it is sent; and an upload that
 // breaks off on the way is tried again by itself.
 const tag = Date.now().toString(36)
 const LECTURE = `Week 4 — Recursion (e2e ${tag})`
 const EXERCISES = `Week 4 — Exercises (e2e ${tag})`
+const GUIDE = `Week 4 — Reading guide (e2e ${tag})`
 
 const pdf = (name: string, text: string): FileSpec => ({
   name,
@@ -50,6 +52,9 @@ test.describe.serial('uploading', () => {
     await expect(second).toHaveValue(`week4-exercises-${tag}`)
     await second.fill(EXERCISES)
     await expect(dialog).toContainText('Each file becomes material of its own')
+    // A text note goes with one file: with two, there is none to write.
+    await expect(dialog.getByRole('button', { name: 'Add a text note (optional)' })).toHaveCount(0)
+    await expect(dialog).toContainText('A text note goes with a single file')
     await photograph(page, 'upload-materials-dialog')
 
     await dialog.getByRole('button', { name: 'Create 2 materials' }).click()
@@ -69,6 +74,42 @@ test.describe.serial('uploading', () => {
     await expect(page.getByText('This version has no text; its content is the file.')).toBeVisible()
   })
 
+  test('a file and a text note under it become one material holding both', async ({ page }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath('materials'))
+    await page.getByRole('button', { name: 'New material' }).click()
+    const dialog = page.getByRole('dialog', { name: 'New material' })
+    await dropFiles(dialog.getByRole('button', { name: /^Files for new material/ }), [
+      pdf('reading-guide.pdf', 'week 4 reading guide'),
+    ])
+    await expect(dialog.locator('.file-drop__item')).toContainText('Uploaded')
+    await dialog.getByRole('textbox', { name: 'Title for “reading-guide.pdf”' }).fill(GUIDE)
+    // The text is second: folded under the file until it is wanted.
+    const note = dialog.getByRole('button', { name: 'Add a text note (optional)' })
+    await expect(note).toHaveAttribute('aria-expanded', 'false')
+    await expect(dialog.getByPlaceholder('Markdown')).toBeHidden()
+    await note.click()
+    await dialog.getByPlaceholder('Markdown').fill('## Before the lecture\n\nRead **section 2** of the guide first.')
+    await expect(dialog.getByRole('button', { name: 'Text note (61 characters)' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    await photograph(page, 'upload-file-and-text')
+    await dialog.getByRole('button', { name: 'Create', exact: true }).click()
+    await expect(toast(page, 'Material created')).toBeVisible()
+    await expect(dialog).toBeHidden()
+
+    await page.locator('.material-row').filter({ hasText: GUIDE }).click()
+    await expect(page.locator('.page-header')).toContainText(GUIDE)
+    // One version, with the file and the text.
+    await expect(page.locator('.doc-content__meta')).toContainText('Version 1')
+    await expect(page.locator('.doc-file')).toContainText('application/pdf')
+    await expect(page.locator('.doc-file')).toContainText('Download the file')
+    await expect(page.locator('.doc-content').getByRole('heading', { name: 'Before the lecture' })).toBeVisible()
+    await expect(page.locator('.doc-content strong')).toHaveText('section 2')
+  })
+
   test('a new version opens on its drop zone, and takes a file dropped in it, or on the document’s page', async ({
     page,
   }) => {
@@ -82,15 +123,14 @@ test.describe.serial('uploading', () => {
     const dialog = page.getByRole('dialog', { name: `New version of “${LECTURE}”` })
     const zone = dialog.getByRole('button', { name: /^The new version’s file/ })
     await expect(zone).toBeVisible()
-    await expect(dialog.getByPlaceholder('Markdown')).toHaveCount(0)
+    await expect(dialog.getByPlaceholder('Markdown')).toBeHidden()
     await expect(dialog).toContainText('Version 1 has a file')
     await dropFiles(zone, [pdf('recursion-v2.pdf', 'recursion slides, second edition')])
     await expect(dialog.locator('.file-drop__item')).toContainText('Uploaded')
-    await expect(dialog).toContainText('Text: none.')
-    // Text as well, the second choice.
-    await dialog.getByRole('button', { name: 'Write text instead' }).click()
+    // Text as well, under the file, in the same version.
+    await dialog.getByRole('button', { name: 'Add a text note (optional)' }).click()
     await dialog.getByPlaceholder('Markdown').fill('Read chapter 4 before the lecture.')
-    await expect(dialog).toContainText('With the file “recursion-v2.pdf”')
+    await expect(dialog).toContainText('Text: as written here (34 characters).')
     await photograph(page, 'upload-new-version-text')
     await dialog.getByRole('button', { name: 'Save version' }).click()
     await expect(toast(page, 'New version saved')).toBeVisible()
@@ -107,7 +147,7 @@ test.describe.serial('uploading', () => {
     // The latest version's text comes with it unless it is left out.
     await expect(again).toContainText('Text: version 2’s, as it is')
     await again.getByRole('button', { name: 'Leave the text out' }).click()
-    await expect(again).toContainText('Text: none.')
+    await expect(again.getByRole('button', { name: 'Add a text note (optional)' })).toBeVisible()
     await again.getByRole('button', { name: 'Save version' }).click()
     await expect(again).toBeHidden()
     await expect(page.locator('.doc-content__meta')).toContainText('Version 3')

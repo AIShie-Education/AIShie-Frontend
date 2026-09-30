@@ -205,6 +205,11 @@ export default {
       removed: '已移除“{name}”。',
     },
   },
+  // 与文档文件一同附上的文字（DocumentTextField）。
+  docText: {
+    add: '添加文字说明（选填）',
+    chars: '文字说明（{chars} 个字符）',
+  },
   copyId: '复制 ID',
   notSignedIn: '尚未登录',
   archivedCourse: '此课程已归档：可以查看，但无法再作任何更改。',

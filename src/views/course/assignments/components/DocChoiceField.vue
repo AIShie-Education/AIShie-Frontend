@@ -2,16 +2,16 @@
 // Choosing the instructions or rubric document of an assignment: none, an
 // existing document of that kind, or a new one made here (created, and
 // published if asked, when the form is saved). A new one is a file first: its
-// drop zone comes first, and writing its text is the second choice ("Write
-// text instead"). It may hold both.
-import { computed, ref, watch } from 'vue'
+// drop zone comes first, and its text is the second part, a note in Markdown
+// under it (DocumentTextField). It may hold both, or either.
+import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DocumentSummary } from '@/api/types'
 import type { UploadedFile } from '@/api/http'
 import { useCourseStore } from '@/stores/course'
-import { formatBytes, formatNumber, titleFromFileName } from '@/utils/format'
+import { titleFromFileName } from '@/utils/format'
+import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
-import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import type { DocChoice } from './types'
 
 const model = defineModel<DocChoice>({ required: true })
@@ -41,28 +41,27 @@ const props = defineProps<{
 const { t } = useI18n()
 const course = useCourseStore()
 
+// The choice as last set here: the caller's v-model comes back as a prop only
+// once the page has been drawn again, and a file uploaded sets its files and
+// then its title before that.
+let latest: DocChoice | null = null
 function set(patch: Partial<DocChoice>) {
-  if (patch.mode === 'new' && !model.value.title.trim() && props.defaultTitle)
+  const current = latest ?? model.value
+  if (patch.mode === 'new' && !current.title.trim() && props.defaultTitle)
     patch = { ...patch, title: props.defaultTitle }
-  model.value = { ...model.value, ...patch }
+  latest = { ...current, ...patch }
+  model.value = latest
+  void nextTick(() => (latest = null))
 }
 
 const kindLabel = computed(() => t(`enums.documentKind.${props.kind}`))
 const selected = computed(() => props.options.find((d) => d.id === model.value.id))
 
-// A new document: its file, or (the second choice) its text being written.
-const writing = ref(false)
-watch(
-  () => model.value.mode,
-  (m) => {
-    if (m !== 'new') writing.value = false
-  },
-)
-const file = computed(() => model.value.files[0] ?? null)
-const hasText = computed(() => model.value.body.trim() !== '')
+// A new document's text: open where there is some already.
+const textOpen = ref(model.value.body.trim() !== '')
 /** A file dropped on a new document with no title yet names it. */
 function onUploaded(f: UploadedFile) {
-  if (!model.value.title.trim()) set({ title: titleFromFileName(f.fileName) })
+  if (!(latest ?? model.value).title.trim()) set({ title: titleFromFileName(f.fileName) })
 }
 </script>
 
@@ -130,51 +129,24 @@ function onUploaded(f: UploadedFile) {
         maxlength="300"
         @update:model-value="(v: string) => set({ title: v })"
       />
-      <!-- The file first. Kept while text is written, so that what is uploading goes on. -->
-      <div v-show="!writing" class="doc-choice__file">
-        <FileDropZone
-          v-model:uploading="uploading"
-          :model-value="model.files"
-          :course-id="courseId"
-          :kind="kind"
-          :disabled="disabled"
-          :label="t(`assignments.form.doc.dropLabel.${kind}`)"
-          @update:model-value="(v: UploadedFile[]) => set({ files: v })"
-          @uploaded="onUploaded"
-        />
-        <div class="doc-choice__line">
-          <template v-if="hasText">
-            <span>{{ t('assignments.form.doc.textChars', { chars: formatNumber(model.body.length, 0) }) }}</span>
-            <el-button link type="primary" :disabled="disabled" @click="writing = true">
-              {{ t('assignments.form.doc.editText') }}
-            </el-button>
-          </template>
-          <el-button v-else link type="primary" :disabled="disabled" @click="writing = true">
-            <el-icon><EditPen /></el-icon>
-            <span>{{ t('assignments.form.doc.writeInstead') }}</span>
-          </el-button>
-        </div>
-      </div>
-      <template v-if="writing">
-        <MarkdownEditor
-          :model-value="model.body"
-          :rows="6"
-          :disabled="disabled"
-          :placeholder="t('assignments.form.doc.newBody')"
-          @update:model-value="(v: string) => set({ body: v })"
-        />
-        <div class="doc-choice__line">
-          <el-icon aria-hidden="true"><Paperclip /></el-icon>
-          <span v-if="file">
-            {{ t('assignments.form.doc.withFile', { name: file.fileName, size: formatBytes(file.size) }) }}
-          </span>
-          <span v-else-if="uploading">{{ t('assignments.form.doc.fileUploading') }}</span>
-          <span v-else>{{ t('assignments.form.doc.noFile') }}</span>
-          <el-button link type="primary" :disabled="disabled" @click="writing = false">
-            {{ file || uploading ? t('assignments.form.doc.seeFile') : t('assignments.form.doc.uploadInstead') }}
-          </el-button>
-        </div>
-      </template>
+      <!-- The file first, and the text under it. -->
+      <FileDropZone
+        v-model:uploading="uploading"
+        :model-value="model.files"
+        :course-id="courseId"
+        :kind="kind"
+        :disabled="disabled"
+        :label="t(`assignments.form.doc.dropLabel.${kind}`)"
+        @update:model-value="(v: UploadedFile[]) => set({ files: v })"
+        @uploaded="onUploaded"
+      />
+      <DocumentTextField
+        v-model:open="textOpen"
+        :model-value="model.body"
+        :rows="6"
+        :disabled="disabled"
+        @update:model-value="(v: string) => set({ body: v })"
+      />
       <el-checkbox
         :model-value="model.publish || requirePublished"
         :disabled="disabled || requirePublished"
@@ -228,20 +200,6 @@ function onUploaded(f: UploadedFile) {
 .doc-choice__option-title {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.doc-choice__file {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.doc-choice__line {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--el-text-color-regular);
 }
 .doc-choice__new :deep(.el-checkbox) {
   white-space: normal;

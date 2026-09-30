@@ -75,12 +75,19 @@ markdown-it + DOMPurify.
   (`useUploadQueue`) and passes it as `:queue`, with an `#item="{ item }"` slot beside each file;
   `v-model` is not kept then.
 - Where a document is made (new material, a new version, new instructions or a rubric), the file
-  comes first: the drop zone is what opens, and writing text is the second choice, a link ("Write
-  text instead"; back, "Upload files instead"), with a line saying what becomes of the text or the
-  file the other way. New material makes one document for each file, titled from its name without
-  the extension (`titleFromFileName`), editable before Create, numbered on from the sort order in
-  the order listed, each with its own `useWrite` (and so its own idempotency key), and what was
-  created comes off the list. Files dropped on the materials list open New material with them; a
+  comes first and its text second, in the same version: the drop zone is what opens, and under it
+  `<DocumentTextField v-model="body" v-model:open :summary>` (`@/components`), one line that opens
+  on a Markdown editor ("Add a text note (optional)", 「加入文字說明（選填）」, or what the text is once
+  there is one), with the caller's actions on that line (`#actions`: a new version's "Leave the text
+  out" and "Keep version N's text"). A new version starts from the latest version's text, folded
+  away unless that version is text alone. Material that is text alone is written by "Write text
+  instead" (back, "Upload files instead"), offered while no file is listed; a file dropped then
+  takes its title and text. New material makes one document for each file, titled from its name
+  without the extension (`titleFromFileName`), editable before Create, numbered on from the sort
+  order in the order listed, each with its own `useWrite` (and so its own idempotency key), and
+  what was created comes off the list; the text goes with a single file, and with several the
+  editor gives way to a line saying so (`documentsToCreate` decides, and is where several files
+  become one document once a version holds several). Files dropped on the materials list open New material with them; a
   file dropped on a document's page opens its new version. A submission's files are attached with
   `document.create` (`kind: 'submission'`, `submission_id`, `upload_token`) as each is up, while it
   is a draft; `submission.submit` then takes the list of their document ids as a guard. To
