@@ -241,13 +241,24 @@ describe('chatStatus', () => {
     expect(s.notice).toEqual({ kind: 'waiting', availability: 'online', approval: false })
   })
 
-  it('awaits nothing once the opener withdrew the question, though Core still says an answer is awaited', () => {
-    const s = chatStatus(view({ state: 'awaiting_answer' }), 'opener', { ...at, withdrawn: true })
+  it('awaits nothing once the opener withdrew the question, and says so', () => {
+    // Core says it is answered, its opener having written last (since AIShie-Core #42).
+    const s = chatStatus(view({ state: 'answered', last_author_member_id: 'opener' }), 'opener', {
+      ...at,
+      withdrawn: true,
+    })
     expect(s.typing).toBe(false)
     expect(s.block).toBeNull()
     expect(s.notice).toEqual({ kind: 'withdrawn' })
-    // Answered since (an answer already begun): as ever.
-    expect(chatStatus(view({ state: 'answered' }), 'opener', { ...at, withdrawn: true }).notice).toBeNull()
+    // A Core from before says an answer is still awaited: the same.
+    const before = chatStatus(view({ state: 'awaiting_answer', last_author_member_id: 'opener' }), 'opener', {
+      ...at,
+      withdrawn: true,
+    })
+    expect({ ...before, state: s.state }).toEqual(s)
+    // Answered by the agent since (an answer already begun, the messages not read again): as ever.
+    const since = view({ state: 'answered', last_author_member_id: 'agent' })
+    expect(chatStatus(since, 'opener', { ...at, withdrawn: true }).notice).toBeNull()
   })
 
   it('warns the opener when nothing runs the agent, and when answers need approval', () => {

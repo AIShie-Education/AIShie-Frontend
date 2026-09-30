@@ -154,7 +154,7 @@ const offered = computed<boolean | null>(() => {
   return offeredIn(offers.items.value, v.respondent.member_id)
 })
 
-/** The question awaiting its answer was taken back: nothing is awaited, though Core still says so. */
+/** The question awaiting its answer was taken back: nothing is awaited. */
 const withdrawn = computed(() => questionWithdrawn(messages.value, view.value?.opener.member_id))
 const status = computed(() =>
   view.value
@@ -454,9 +454,9 @@ async function close() {
 /**
  * Takes the question waiting for its answer back to the composer: it is
  * withdrawn (conversation.retract, as its author), which no agent answers
- * (Core's inbox leaves it out, and a runtime treats it as moved on), and
- * its words are put back where they can be changed and sent again. An agent
- * that had begun its answer may still post it. To stop the wait, or to edit.
+ * (Core leaves it out of the inbox and refuses an answer to it, and a
+ * runtime stops the answer it was writing), and its words are put back
+ * where they can be changed and sent again. To stop the wait, or to edit.
  */
 const withdrawing = ref<string | null>(null)
 async function withdrawToComposer(m: ConversationMessage, why: 'edit' | 'stop') {
