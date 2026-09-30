@@ -20,7 +20,7 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const kindOf = (f: MessageAttachment) => fileKind(f.content_type, f.filename)
-const meta = (f: MessageAttachment) => `${t(`chat.attach.kind.${kindOf(f)}`)} · ${formatBytes(f.byte_size)}`
+const meta = (f: MessageAttachment) => `${t(`common.fileKind.${kindOf(f)}`)} · ${formatBytes(f.byte_size)}`
 
 // --- Thumbnails, once on screen ------------------------------------------------------
 const thumbs = reactive<Record<string, string>>({})

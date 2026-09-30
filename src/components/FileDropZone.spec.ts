@@ -14,13 +14,17 @@ interface Call {
 }
 const calls: Call[] = []
 let limit: number | null = 1_000_000
+let maxFiles: number | null = null
+let maxVersionBytes: number | null = null
 
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
     ...real,
-    knownUploadLimit: () => null,
-    uploadLimit: vi.fn(async () => limit),
+    knownUploadLimits: () => null,
+    uploadLimits: vi.fn(async () =>
+      limit ? { maxBytes: limit, maxFiles: maxFiles, maxConversationBytes: null, maxVersionBytes: maxVersionBytes } : null,
+    ),
     uploadFile: vi.fn(
       (_c: string, _k: string, file: File, opts: UploadOptions) =>
         new Promise<UploadedFile>((resolve, reject) => {
@@ -44,6 +48,8 @@ let phone = false
 beforeEach(() => {
   calls.length = 0
   limit = 1_000_000
+  maxFiles = null
+  maxVersionBytes = null
   phone = false
   vi.stubGlobal('matchMedia', (media: string) => ({
     matches: media.includes('max-width: 640px') ? phone : false,
@@ -176,6 +182,56 @@ describe('FileDropZone', () => {
     // No trying again: only taking it off.
     expect(big.find('[aria-label="Upload “big.pdf” again"]').exists()).toBe(false)
     expect(big.find('[aria-label="Remove “big.pdf”"]').exists()).toBe(true)
+  })
+
+  it('holds one version’s files to what a version holds, and says so, before any is sent', async () => {
+    limit = 1_000
+    maxFiles = 2
+    maxVersionBytes = 500
+    const w = await zone({ multiple: true, version: true, kind: 'material' })
+    expect(w.find('.file-drop__zone').text()).toContain('Up to 2 files, 1,000 B each, 500 B in all')
+    await drop(w.find('.file-drop__zone').element, [
+      file('a.pdf', 300),
+      file('b.docx', 300),
+      file('c.txt', 100),
+      file('d.txt', 100),
+    ])
+    // a fits; b would make 600 B of 500; c fits (2 files); d is a third.
+    expect(calls.map((c) => c.file.name)).toEqual(['a.pdf', 'c.txt'])
+    expect(w.find('[data-file="b.docx"]').text()).toContain(
+      'Not uploaded: with it, the files would come to more than a version holds in all (500 B).',
+    )
+    expect(w.find('[data-file="d.txt"]').text()).toContain('Not uploaded: a version holds at most 2 files.')
+    // Room is made by taking one off: the one left out can be tried again then.
+    for (const c of calls) c.resolve(done(c))
+    await flushPromises()
+    await w.find('[aria-label="Remove “c.txt”"]').trigger('click')
+    await w.find('[aria-label="Upload “d.txt” again"]').trigger('click')
+    await flushPromises()
+    expect(calls.map((c) => c.file.name)).toEqual(['a.pdf', 'c.txt', 'd.txt'])
+  })
+
+  it('numbers the files and moves them up or down, and v-model follows the order listed', async () => {
+    const w = await zone({ multiple: true, reorder: true })
+    await drop(w.find('.file-drop__zone').element, [file('a.txt'), file('b.txt'), file('c.txt')])
+    for (const c of calls) c.resolve(done(c))
+    await flushPromises()
+    const names = () => w.findAll('.file-drop__item').map((li) => li.attributes('data-file'))
+    expect(w.find('.file-drop__list').element.tagName).toBe('OL')
+    expect(w.findAll('.file-drop__n').map((n) => n.text())).toEqual(['1', '2', '3'])
+    // The first cannot go up, nor the last down.
+    expect(w.find('[aria-label="Move “a.txt” up"]').attributes('disabled')).toBeDefined()
+    expect(w.find('[aria-label="Move “c.txt” down"]').attributes('disabled')).toBeDefined()
+
+    await w.find('[aria-label="Move “c.txt” up"]').trigger('click')
+    await flushPromises()
+    expect(names()).toEqual(['a.txt', 'c.txt', 'b.txt'])
+    expect((w.props('modelValue') as UploadedFile[]).map((f) => f.fileName)).toEqual(['a.txt', 'c.txt', 'b.txt'])
+    expect(w.find('[role=status]').text()).toContain('“c.txt” is file 2 of 3 now.')
+    await w.find('[aria-label="Move “a.txt” down"]').trigger('click')
+    await flushPromises()
+    expect(names()).toEqual(['c.txt', 'a.txt', 'b.txt'])
+    expect((w.props('modelValue') as UploadedFile[]).map((f) => f.fileName)).toEqual(['c.txt', 'a.txt', 'b.txt'])
   })
 
   it('cancels an upload, and tries a failed one again', async () => {

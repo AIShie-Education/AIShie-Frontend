@@ -252,3 +252,72 @@ describe('the upload queue', () => {
     expect(a!.status).toBe('uploading')
   })
 })
+
+describe('one version’s files', () => {
+  const versionLimits = (maxFiles: number, maxVersionBytes: number) => async () => ({
+    maxBytes: 1_000,
+    maxFiles,
+    maxConversationBytes: null,
+    maxVersionBytes,
+  })
+
+  it('lets files in, in the order listed, while a version has room, and fails the rest before sending them', async () => {
+    const p = played()
+    const q = queue(p, { version: true, concurrency: 5, limit: versionLimits(3, 250) })
+    q.add([file('a', 100), file('b', 200), file('c', 100), file('d', 10), file('e', 10)])
+    await flush()
+    // b would make 300 B of 250; a, c and d fill the three places; e is a fourth.
+    expect(p.calls.map((c) => c.file.name)).toEqual(['a', 'c', 'd'])
+    expect(q.items.map((i) => [i.name, i.status, i.overLimit])).toEqual([
+      ['a', 'uploading', null],
+      ['b', 'failed', 'bytes'],
+      ['c', 'uploading', null],
+      ['d', 'uploading', null],
+      ['e', 'failed', 'files'],
+    ])
+    expect(q.maxFiles.value).toBe(3)
+    expect(q.maxVersionBytes.value).toBe(250)
+
+    // Taken off, one makes room for another, tried again.
+    q.remove(q.items[2]!.id)
+    q.retry(q.items.find((i) => i.name === 'e')!.id)
+    await flush()
+    expect(p.calls.map((c) => c.file.name)).toEqual(['a', 'c', 'd', 'e'])
+    expect(q.items.find((i) => i.name === 'e')!.status).toBe('uploading')
+  })
+
+  it('does not hold files that are not one version’s', async () => {
+    const p = played()
+    const q = queue(p, { concurrency: 5, limit: versionLimits(1, 10) })
+    q.add([file('a', 100), file('b', 100)])
+    await flush()
+    expect(p.calls.map((c) => c.file.name)).toEqual(['a', 'b'])
+    expect(q.excess.value).toBeNull()
+  })
+
+  it('moves a file to another place in the list', async () => {
+    const p = played()
+    const q = queue(p, { version: true, limit: versionLimits(10, 10_000) })
+    q.add([file('a'), file('b'), file('c')])
+    q.move(q.items[2]!.id, 0)
+    expect(q.items.map((i) => i.name)).toEqual(['c', 'a', 'b'])
+    q.move(q.items[0]!.id, 99)
+    expect(q.items.map((i) => i.name)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('says what is too much once a refusal teaches a smaller limit', async () => {
+    const p = played()
+    const q = queue(p, { version: true, concurrency: 5, limit: versionLimits(10, 10_000) })
+    q.add([file('a', 100), file('b', 100), file('c', 100)])
+    await flush()
+    for (const c of p.calls) p.finish(c)
+    await flush()
+    expect(q.excess.value).toBeNull()
+    q.learn({ maxFiles: 2 })
+    expect(q.excess.value).toEqual({ files: 1, bytes: 300 })
+    q.learn({ maxFiles: 5, maxVersionBytes: 250 })
+    expect(q.excess.value).toEqual({ files: 0, bytes: 300 })
+    q.remove(q.items[0]!.id)
+    expect(q.excess.value).toBeNull()
+  })
+})

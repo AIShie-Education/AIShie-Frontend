@@ -140,18 +140,6 @@ export default {
     download: 'Download “{name}”',
     downloadTip: 'Download',
     held: 'With {n} file: {names} | With {n} files: {names}',
-    kind: {
-      image: 'Image',
-      pdf: 'PDF',
-      word: 'Document',
-      sheet: 'Spreadsheet',
-      slides: 'Slides',
-      text: 'Text',
-      archive: 'Archive',
-      audio: 'Audio',
-      video: 'Video',
-      other: 'File',
-    },
     // Core's refusals because of a message's files, or of a file (details.reason).
     refusal: {
       too_many_attachments: 'A message carries at most {max_files} files: remove some, and send again.',

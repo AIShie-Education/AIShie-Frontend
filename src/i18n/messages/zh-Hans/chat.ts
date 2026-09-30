@@ -134,18 +134,6 @@ export default {
     download: '下载“{name}”',
     downloadTip: '下载',
     held: '附 {n} 个文件：{names}',
-    kind: {
-      image: '图片',
-      pdf: 'PDF',
-      word: '文档',
-      sheet: '表格',
-      slides: '演示文稿',
-      text: '文本',
-      archive: '压缩包',
-      audio: '音频',
-      video: '视频',
-      other: '文件',
-    },
     // Core's refusals because of a message's files, or of a file (details.reason).
     refusal: {
       too_many_attachments: '每条消息最多附 {max_files} 个文件：请移除一些再发送。',

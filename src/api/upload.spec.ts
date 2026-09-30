@@ -118,7 +118,8 @@ describe('uploadFile', () => {
     urlAnswers.push(target())
     const done = uploadFile('c1', 'material', file(1000))
     const [xhr] = await puts(1)
-    expect(urlCalls[0]).toBe('/v1/courses/c1/upload-url?kind=material&content_type=application%2Fpdf')
+    // A document's file is named where its URL is asked for.
+    expect(urlCalls[0]).toBe('/v1/courses/c1/upload-url?kind=material&content_type=application%2Fpdf&filename=slides.pdf')
     expect(xhr!.method).toBe('PUT')
     expect(xhr!.url).toBe('/v1/blobs/put-1')
     expect(xhr!.headers['Content-Type']).toBe('application/pdf')
@@ -309,6 +310,24 @@ describe('uploadLimit', () => {
   })
 })
 
+describe('a document version’s files', () => {
+  it('are named at their upload URL as Core takes a name, and what a version holds is learnt', async () => {
+    urlAnswers.push(target(8_000, { max_files: 20, max_version_bytes: 200_000 }))
+    // A name Core would refuse: a character that turns the text round, and a slash.
+    const done = uploadFile('c1', 'material', file(1000, 'notes\u202e/fdp.exe'))
+    const [xhr] = await puts(1)
+    expect(new URL(urlCalls[0]!, 'http://x').searchParams.get('filename')).toBe('notes fdp.exe')
+    xhr!.answer(200, '{}')
+    expect((await done).fileName).toBe('notes fdp.exe')
+    expect(knownUploadLimits('c1', 'material')).toEqual({
+      maxBytes: 8_000,
+      maxFiles: 20,
+      maxConversationBytes: null,
+      maxVersionBytes: 200_000,
+    })
+  })
+})
+
 describe('a conversation’s files', () => {
   it('are uploaded at conversation.upload_url, whose limits are learnt with the file’s largest size', async () => {
     urlAnswers.push(target(8_000, { max_files: 4, max_conversation_bytes: 90_000 }))
@@ -327,6 +346,7 @@ describe('a conversation’s files', () => {
       maxBytes: 8_000,
       maxFiles: 4,
       maxConversationBytes: 90_000,
+      maxVersionBytes: null,
     })
     // A document's limit is another's.
     expect(knownUploadLimit('c1', 'material')).toBeNull()
@@ -338,7 +358,7 @@ describe('a conversation’s files', () => {
   it('are limited as Core says, asked once', async () => {
     urlAnswers.push(target(8_000, { max_files: 4, max_conversation_bytes: 90_000 }))
     const [a, b] = await Promise.all([uploadLimits('c1', 'conversation'), uploadLimit('c1', 'conversation')])
-    expect(a).toEqual({ maxBytes: 8_000, maxFiles: 4, maxConversationBytes: 90_000 })
+    expect(a).toEqual({ maxBytes: 8_000, maxFiles: 4, maxConversationBytes: 90_000, maxVersionBytes: null })
     expect(b).toBe(8_000)
     expect(urlCalls).toEqual(['/v1/courses/c1/conversations/upload-url?content_type=application%2Foctet-stream'])
   })

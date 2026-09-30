@@ -2,7 +2,7 @@ import { h } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
 import { ApiError } from '@/api/http'
 import { ceilingRefusalText } from '@/utils/ceilings'
-import { shortId } from '@/utils/format'
+import { formatBytes, shortId } from '@/utils/format'
 import { i18n } from '@/i18n'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
@@ -40,6 +40,21 @@ export interface ReasonScopes {
   reasons?: string | readonly string[]
 }
 
+const BYTES = /(^|_)bytes$|^byte_size$|^size$/
+
+/**
+ * A refusal's details, for the placeholders of its words: each as Core gave
+ * it, and each size in bytes (max_bytes, byte_size, …) as it is read as well,
+ * under its name and _shown (max_bytes_shown: "50 MB").
+ */
+export function detailsForWords(details: Record<string, unknown> | undefined): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...details }
+  for (const [k, v] of Object.entries(details ?? {})) {
+    if (BYTES.test(k) && typeof v === 'number' && Number.isFinite(v)) out[`${k}_shown`] = formatBytes(v)
+  }
+  return out
+}
+
 /** The words the scopes given have for the refusal's reason, and nothing else; null when none has them. */
 export function scopedReasonMessage(e: unknown, opts: ReasonScopes): string | null {
   if (!(e instanceof ApiError)) return null
@@ -48,7 +63,7 @@ export function scopedReasonMessage(e: unknown, opts: ReasonScopes): string | nu
   const scopes = typeof opts.reasons === 'string' ? [opts.reasons] : (opts.reasons ?? [])
   for (const scope of scopes) {
     const key = `${scope}.${reason}`
-    if (has(key)) return t(key, { ...e.details })
+    if (has(key)) return t(key, detailsForWords(e.details))
   }
   return null
 }

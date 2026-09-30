@@ -166,6 +166,7 @@ export default {
     phoneOne: 'Choose a file',
     limit: 'Up to {size}',
     limitEach: 'Up to {size} each',
+    limitVersion: 'One file, up to {size} | Up to {files} files, {size} each, {total} in all',
     list: 'Files being uploaded',
     progressOf: 'Upload of “{name}”',
     percent: '{n} %',
@@ -187,6 +188,17 @@ export default {
     },
     tooLarge: 'Too large to upload: it is {size}, and a file can be at most {max}.',
     tooLargeUnknown: 'Too large to upload here: it is {size}.',
+    // A version's files: one there was no room for is not sent.
+    overFiles:
+      'Not uploaded: a version holds one file. Take the other off the list to put this one in. | Not uploaded: a version holds at most {max} files. Take another off the list to put this one in.',
+    overFilesUnknown: 'Not uploaded: a version holds no more files. Take another off the list to put this one in.',
+    overBytes:
+      'Not uploaded: with it, the files would come to more than a version holds in all ({max}). Take another off the list to put this one in.',
+    overBytesUnknown:
+      'Not uploaded: with it, the files would come to more than a version holds. Take another off the list to put this one in.',
+    excessFiles: 'A version holds at most {max} files: take {n} off the list.',
+    excessBytes: 'These files come to {total}, and a version holds at most {max} in all: take some off the list.',
+    uploadingAgain: 'The files are being uploaded again: save once they are up.',
     folders:
       'A folder cannot be uploaded: drop the files in it instead. | Folders cannot be uploaded: drop the files in them instead.',
     waitToSave: 'Waiting for the files to upload…',
@@ -198,6 +210,10 @@ export default {
       cancelFile: 'Cancel uploading “{name}”',
       retryFile: 'Upload “{name}” again',
       removeFile: 'Remove “{name}”',
+      moveUp: 'Move up',
+      moveDown: 'Move down',
+      moveUpFile: 'Move “{name}” up',
+      moveDownFile: 'Move “{name}” down',
     },
     announce: {
       added: 'One file added. | {n} files added.',
@@ -206,7 +222,52 @@ export default {
       failed: '“{name}” was not uploaded: {reason}',
       cancelled: 'Uploading “{name}” was cancelled.',
       removed: '“{name}” removed.',
+      moved: '“{name}” is file {n} of {total} now.',
     },
+    // Core's refusals of a version's files, or of their uploads (details.reason).
+    refusal: {
+      too_many_files: 'A version holds at most {max_files} files: take some off the list, and save again.',
+      version_too_large:
+        'The files come to {byte_size_shown}, and a version holds at most {max_version_bytes_shown} in all: take some off the list, and save again.',
+      file_too_large:
+        'A file is larger than a version may hold ({max_bytes_shown}): take it off the list, or put in a smaller one.',
+      bad_filename:
+        'A file’s name cannot be used as it is: it is too long, or holds a character a name may not. Rename the file, and put it in again.',
+      duplicate_file: 'The same upload is named twice: take one off the list, and save again.',
+      filename_required: 'A file has no name: put it in again.',
+      files_and_upload_token: 'The files were sent in two ways at once: reload the page, and put them in again.',
+      bad_upload_token: 'An upload was not recognised.',
+      not_your_upload: 'An upload was not yours to attach here.',
+      already_attached: 'A file was attached already, to another version.',
+      not_uploaded: 'A file had not finished uploading.',
+      upload_too_old: 'The files were uploaded too long ago (more than 48 hours) to wait for approval.',
+      no_file_storage: 'This site has nowhere to keep files, so none can be attached: ask its administrator.',
+    },
+  },
+  // What a file is, by its type or its name: a document's files, and a message's.
+  fileKind: {
+    image: 'Image',
+    pdf: 'PDF',
+    word: 'Document',
+    sheet: 'Spreadsheet',
+    slides: 'Slides',
+    text: 'Text',
+    archive: 'Archive',
+    audio: 'Audio',
+    video: 'Video',
+    other: 'File',
+  },
+  // A document version's files, as they are listed to be downloaded.
+  files: {
+    list: 'Files',
+    count: 'One file | {n} files',
+    download: 'Download “{name}”',
+    downloadTip: 'Download',
+    text: 'Text version',
+    textOf: 'Text version of “{name}”',
+    textOnly: 'Text only',
+    downloadText: 'Download the text',
+    loading: 'Loading the files…',
   },
   // The text that goes with a document's file (DocumentTextField).
   docText: {

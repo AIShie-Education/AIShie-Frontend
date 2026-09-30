@@ -10,8 +10,13 @@ vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
     ...real,
-    knownUploadLimit: () => null,
-    uploadLimit: vi.fn(async () => 1_000_000),
+    knownUploadLimits: () => null,
+    uploadLimits: vi.fn(async () => ({
+      maxBytes: 1_000_000,
+      maxFiles: 20,
+      maxConversationBytes: null,
+      maxVersionBytes: 200_000_000,
+    })),
     uploadFile: vi.fn(async (_c: string, _k: string, file: File, _o: UploadOptions): Promise<UploadedFile> => ({
       uploadToken: `tok-${file.name}`,
       fileName: file.name,
