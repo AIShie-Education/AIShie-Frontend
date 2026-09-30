@@ -4,17 +4,20 @@
 // one waiting for approval, closed), and the composer. The caller asks
 // (conversation.open for the first message, then conversation.ask) and the
 // agent answers, through whatever runs it; course staff overseeing it only
-// read, and may withdraw a message. Its opener may close it. Only agents are
-// asked: a conversation from before in which a person was asked is closed
-// (conversations_are_with_agents), and stays readable.
+// read, and may withdraw a message. Nobody ends it here: a new question is a
+// new conversation, or more in this one. Only agents are asked: a
+// conversation from before in which a person was asked is closed
+// (conversations_are_with_agents), as one is whose participant's seat was
+// removed, or which was closed before closing was taken out of the chat; it
+// stays readable.
 //
 // While the caller reads it as one of the two taking part, what is shown is
 // marked read in Core (useConversation's reader), so that it is not counted
 // as unread on any device; staff reading it mark nothing.
 //
 // Laid out as an editor's agent chat is: one compact row on top, the agent
-// and whether anything runs it, with a ⋯ menu for who can read it, how its
-// answers arrive and closing it; the messages; and the composer, one box.
+// and whether anything runs it, with a ⋯ menu for who can read it and how
+// its answers arrive; the messages; and the composer, one box.
 // Whatever stops the caller writing (a paused or departed agent, one that
 // takes no conversations here, a closed conversation, a question or a
 // conversation waiting for approval) is one muted line above it, as is an
@@ -319,7 +322,6 @@ const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
 
 const openWrite = useWrite('conversation.open')
 const askWrite = useWrite('conversation.ask')
-const closeWrite = useWrite('conversation.close')
 const retractWrite = useWrite('conversation.retract')
 const sending = computed(() => openWrite.pending.value || askWrite.pending.value)
 /** The new conversation is waiting for someone's approval (nothing to show until then). */
@@ -435,22 +437,6 @@ async function askReason(message: string, title: string, confirm: string): Promi
   }
 }
 
-const canClose = computed(
-  () => !!conv && seat.value.writable && status.value?.state !== 'closed' && role.value === 'opener',
-)
-async function close() {
-  if (!conv || !props.conversationId) return
-  const reason = await askReason(t('chat.close.bodyOpener'), t('chat.close.title'), t('chat.close.confirm'))
-  if (reason === false) return
-  const out = await closeWrite.run(
-    { course_id: props.courseId, conversation_id: props.conversationId, ...(reason ? { reason } : {}) },
-    { success: t('chat.close.done') },
-  )
-  if (!out) return
-  await conv.refresh()
-  emit('changed')
-}
-
 /**
  * Takes the question waiting for its answer back to the composer: it is
  * withdrawn (conversation.retract, as its author), which no agent answers
@@ -548,12 +534,10 @@ function startAgain() {
 const commands = computed<ComposerCommand[]>(() => [
   { name: 'new', label: t('chat.commands.new') },
   { name: 'history', label: t('chat.commands.history') },
-  ...(canClose.value ? [{ name: 'close', label: t('chat.commands.close') }] : []),
 ])
 function onCommand(name: string) {
   if (name === 'new') emit('new')
   else if (name === 'history') emit('history')
-  else if (name === 'close') void close()
 }
 /** What ↑ brings back: the last message sent from this page, else the caller's last one here. */
 const recall = computed(() => {
@@ -577,13 +561,12 @@ function suggest(text: string) {
   void nextTick(() => composer.value?.focus())
 }
 
-// --- The ⋯ menu: who can read it, how its answers arrive, closing it --------------------
+// --- The ⋯ menu: who can read it, how its answers arrive ---------------------------------
 
 /** Who can read it, opened from the menu. */
 const readersOpen = ref(false)
 function onMenu(command: string) {
   if (command === 'readers') readersOpen.value = true
-  else if (command === 'close') void close()
 }
 
 // --- What the line above the composer says -------------------------------------------
@@ -701,11 +684,10 @@ const closedLine = computed(() => {
             text
             size="small"
             class="chat-pane__more"
-            :loading="closeWrite.pending.value"
             :aria-label="t('chat.menu.label')"
             :title="t('chat.menu.label')"
           >
-            <el-icon v-if="!closeWrite.pending.value" aria-hidden="true"><MoreFilled /></el-icon>
+            <el-icon aria-hidden="true"><MoreFilled /></el-icon>
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
@@ -714,9 +696,6 @@ const closedLine = computed(() => {
               </el-dropdown-item>
               <el-dropdown-item v-if="answerLevel" disabled class="chat-pane__menu-level">
                 <el-icon aria-hidden="true"><Stamp /></el-icon>{{ t(`enums.answerLevel.${answerLevel}`) }}
-              </el-dropdown-item>
-              <el-dropdown-item v-if="canClose" command="close" divided class="chat-pane__menu-close">
-                <el-icon aria-hidden="true"><CircleClose /></el-icon>{{ t('chat.close.confirm') }}
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>

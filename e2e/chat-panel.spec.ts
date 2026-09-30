@@ -602,6 +602,7 @@ test.describe.serial('the chat panel', () => {
       }
       await route.fulfill({ response: res, json: body })
     })
+    const tutorToken = w.tutorToken
     for (const lang of ['en', 'zh-Hant'] as const) {
       const w = words[lang]
       if (lang === 'zh-Hant') await inTraditionalChinese(page)
@@ -645,18 +646,29 @@ test.describe.serial('the chat panel', () => {
       await page.mouse.move(0, 400)
       await photograph(page, `chat-waiting-${lang}`)
 
-      // The ⋯ menu: who can read it, and closing it.
+      // The ⋯ menu: who can read it; nothing ends the conversation from here.
       await head.getByRole('button', { name: w.options }).click()
       const menu = page.locator('.chat-pane__menu:visible')
       await expect(menu.getByRole('menuitem', { name: w.readers })).toBeVisible()
-      await expect(menu.getByRole('menuitem', { name: w.close })).toBeVisible()
+      await expect(menu.getByRole('menuitem', { name: w.close })).toHaveCount(0)
       await photograph(page, `chat-menu-${lang}`)
-      await menu.getByRole('menuitem', { name: w.close }).click()
-      const ask = page.locator('.el-message-box')
-      await ask.locator('textarea').fill('Done, thanks')
-      await ask.getByRole('button', { name: w.close }).click()
+      await page.keyboard.press('Escape')
 
-      // Closed: one line, why, and the state beside the name.
+      // Closed all the same by the agent (as a conversation from before may be, or one whose seat
+      // was removed): one line, why, and the state beside the name.
+      const c = d.course.id
+      let id: string | undefined
+      await expect
+        .poll(async () => {
+          const inbox = await call(tutorToken, 'GET', `/v1/courses/${c}/conversations/inbox`)
+          id = (inbox.body.result?.conversations ?? []).find((x: { title?: string | null }) => x.title === first)?.id
+          return id ?? null
+        })
+        .not.toBeNull()
+      done(
+        await call(tutorToken, 'POST', `/v1/courses/${c}/conversations/${id}/close`, { reason: 'Done, thanks' }),
+        'conversation.close',
+      )
       await expect(panel.locator('.chat-pane__closed-text')).toHaveText(w.closed)
       await expect(head.locator('.el-tag')).toHaveText(w.tag)
       await expect(box).toHaveCount(0)

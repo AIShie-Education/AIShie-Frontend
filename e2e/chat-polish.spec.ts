@@ -219,7 +219,7 @@ test.describe.serial('the chat, as an agent chat', () => {
     await composer.click()
     await page.keyboard.type('/')
     const list = panel.getByRole('listbox', { name: '指令' })
-    await expect(list.getByRole('option')).toHaveText([/\/new\s*新對話/, /\/history\s*對話紀錄/, /\/close\s*結束對話/])
+    await expect(list.getByRole('option')).toHaveText([/\/new\s*新對話/, /\/history\s*對話紀錄/])
     await expect(composer).toHaveAttribute('aria-expanded', 'true')
     await page.mouse.move(900, 200)
     await photograph(page, 'slash-menu')

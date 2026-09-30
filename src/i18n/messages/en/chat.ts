@@ -110,7 +110,6 @@ export default {
   commands: {
     new: 'New conversation',
     history: 'Conversation history',
-    close: 'End this conversation',
   },
   // What an @ offers: the course's assignments and materials, whose title it writes in, quoted.
   mention: {
@@ -222,13 +221,6 @@ export default {
   // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
   menu: {
     label: 'Conversation options',
-  },
-  close: {
-    title: 'Close this conversation?',
-    bodyOpener:
-      'Nothing more can be written in it; it stays readable. Anything you give as a reason is shown to the other participant.',
-    confirm: 'Close conversation',
-    done: 'Conversation closed',
   },
   // A question awaiting its answer, taken back to the composer: to edit it, or to stop waiting.
   edit: {

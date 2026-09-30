@@ -110,7 +110,6 @@ export default {
   commands: {
     new: '新對話',
     history: '對話紀錄',
-    close: '結束對話',
   },
   // What an @ offers: the course's assignments and materials, whose title it writes in, quoted.
   mention: {
@@ -221,12 +220,6 @@ export default {
   // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
   menu: {
     label: '對話選項',
-  },
-  close: {
-    title: '要結束這段對話嗎？',
-    bodyOpener: '結束後無法再發言，但內容仍可閱讀。你填寫的原因會顯示給對方。',
-    confirm: '結束對話',
-    done: '對話已結束',
   },
   // A question awaiting its answer, taken back to the composer: to edit it, or to stop waiting.
   edit: {
