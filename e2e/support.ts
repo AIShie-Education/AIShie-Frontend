@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 export interface DemoActor {
   actor_id: string
@@ -293,4 +293,30 @@ export async function inTraditionalChinese(page: Page) {
       localStorage.setItem('aishie.locale', 'zh-Hant')
     } catch {}
   })
+}
+
+/** A file as a test hands it to the page: its name, its type and its bytes. */
+export interface FileSpec {
+  name: string
+  mimeType: string
+  buffer: Buffer
+}
+
+/**
+ * Drops files on an element as a person drags them there from their
+ * computer: dragenter, dragover and drop, each carrying a DataTransfer that
+ * holds them. Dropped on the page rather than on a drop zone, they go to
+ * whatever takes files there.
+ */
+export async function dropFiles(target: Locator, files: FileSpec[]) {
+  const dataTransfer = await target.page().evaluateHandle(
+    (fs) => {
+      const dt = new DataTransfer()
+      for (const f of fs) dt.items.add(new File([new Uint8Array(f.bytes)], f.name, { type: f.mimeType }))
+      return dt
+    },
+    files.map((f) => ({ name: f.name, mimeType: f.mimeType, bytes: [...f.buffer] })),
+  )
+  for (const type of ['dragenter', 'dragover', 'drop']) await target.dispatchEvent(type, { dataTransfer })
+  await dataTransfer.dispose()
 }

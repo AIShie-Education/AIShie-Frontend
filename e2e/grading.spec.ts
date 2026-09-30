@@ -60,15 +60,15 @@ test.describe.serial('grading a submission', () => {
       .fill('The formula is wrong: use 9/5.')
 
     // A feedback file: uploaded, and listed once.
-    const uploader = panel.locator('.file-uploader')
+    const uploader = panel.locator('.file-drop')
     await uploader.locator('input[type=file]').setInputFiles({
       name: 'ken-feedback.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('Line 2: 2 * c + 30 should be c * 9 / 5 + 32.\n'),
     })
-    await expect(uploader.locator('li').filter({ hasText: 'ken-feedback.txt' })).toHaveCount(1)
-    await expect(uploader.locator('li')).toHaveCount(1)
-    await expect(uploader.locator('.is-loading')).toHaveCount(0)
+    await expect(uploader.locator('.file-drop__item').filter({ hasText: 'ken-feedback.txt' })).toHaveCount(1)
+    await expect(uploader.locator('.file-drop__item')).toHaveCount(1)
+    await expect(uploader.locator('.file-drop__item')).toContainText('Uploaded')
 
     await panel.getByRole('button', { name: 'Save draft grade' }).click()
     await expect(toast(page, 'Draft grade saved')).toBeVisible()

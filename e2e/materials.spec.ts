@@ -28,6 +28,10 @@ test.describe.serial('course material', () => {
 
     await page.getByRole('button', { name: 'New material' }).click()
     const dialog = page.getByRole('dialog', { name: 'New material' })
+    // Files come first; writing text is the second choice.
+    await expect(dialog.getByRole('button', { name: /^Files for new material/ })).toBeVisible()
+    await expect(dialog.getByPlaceholder('Markdown')).toHaveCount(0)
+    await dialog.getByRole('button', { name: 'Write text instead' }).click()
     await dialog.getByPlaceholder('e.g. Week 3 — Loops').fill(TITLE)
     await dialog.getByPlaceholder('Markdown').fill(BODY)
     // The preview renders it.
@@ -84,24 +88,29 @@ test.describe.serial('course material', () => {
     await expect(page.getByText('Draft — not yet published.')).toHaveCount(0)
   })
 
-  test('a file picked for new material is listed once, and can be taken off again', async ({ page }) => {
+  test('a file chosen for new material is listed, titled from its name, and can be taken off again', async ({
+    page,
+  }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('materials'))
     await page.getByRole('button', { name: 'New material' }).click()
     const dialog = page.getByRole('dialog', { name: 'New material' })
-    const uploader = dialog.locator('.file-uploader')
-    await uploader.locator('input[type=file]').setInputFiles({
+    const zone = dialog.locator('.file-drop')
+    await zone.locator('input[type=file]').setInputFiles({
       name: 'slides.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('Week 3 slides\n'),
     })
-    await expect(uploader.locator('li')).toHaveCount(1)
-    await expect(uploader.locator('li')).toContainText('slides.txt')
-    // One file only: the button to pick another is off until it is taken off.
-    await expect(uploader.getByRole('button', { name: 'Upload' })).toBeDisabled()
-    await uploader.getByRole('button', { name: 'Remove' }).click()
-    await expect(uploader.locator('li')).toHaveCount(0)
-    await expect(uploader.getByRole('button', { name: 'Upload' })).toBeEnabled()
+    const row = zone.locator('.file-drop__item')
+    await expect(row).toHaveCount(1)
+    await expect(row).toContainText('slides.txt')
+    await expect(row).toContainText('Uploaded')
+    await expect(row.getByRole('textbox', { name: 'Title for “slides.txt”' })).toHaveValue('slides')
+    await expect(dialog.getByRole('button', { name: 'Create', exact: true })).toBeEnabled()
+    await row.getByRole('button', { name: 'Remove “slides.txt”' }).click()
+    await expect(row).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: 'Create', exact: true })).toBeDisabled()
+    await expect(dialog).toContainText('Drop or choose a file, or write text instead.')
   })
 })

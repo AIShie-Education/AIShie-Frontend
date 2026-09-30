@@ -9,7 +9,7 @@ import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus
 import { read, type UploadedFile } from '@/api/http'
 import type { ActionSummary, Assignment, GradeSummary, Submission } from '@/api/types'
 import DocumentFileLink from '@/components/DocumentFileLink.vue'
-import FileUploader from '@/components/FileUploader.vue'
+import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
@@ -176,8 +176,11 @@ function startFromDraft() {
   formRef.value?.clearValidate()
 }
 
-// Remounting the uploader on a reset also clears any row it left behind.
+// Remounting the uploader on a reset also clears any row it left behind,
+// and stops what was still uploading.
 const uploaderKey = ref(0)
+/** A feedback file is still uploading: saving now would go without it. */
+const uploadingFiles = ref(false)
 
 function reset() {
   Object.assign(form, blank())
@@ -189,6 +192,7 @@ function reset() {
 }
 
 async function submit() {
+  if (uploadingFiles.value) return
   breakdownChecked.value = true
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid || !breakdownValid()) return
@@ -393,7 +397,15 @@ async function submit() {
 
           <el-form-item :label="t('submissions.grade.files')">
             <div class="grade-panel__block">
-              <FileUploader :key="uploaderKey" v-model="form.files" :course-id="courseId" kind="feedback" multiple />
+              <FileDropZone
+                :key="uploaderKey"
+                v-model="form.files"
+                v-model:uploading="uploadingFiles"
+                :course-id="courseId"
+                kind="feedback"
+                multiple
+                compact
+              />
               <div v-if="draftFilesHint" class="grade-panel__draft-files" role="note">
                 <p class="grade-panel__draft-files-text">{{ draftFilesHint }}</p>
                 <ul v-if="draftFileList.length" class="grade-panel__draft-files-list">
@@ -407,10 +419,16 @@ async function submit() {
           </el-form-item>
 
           <div class="grade-panel__actions">
-            <el-button type="primary" native-type="submit" :loading="pending" :disabled="rubric.loading.value">
+            <el-button
+              type="primary"
+              native-type="submit"
+              :loading="pending"
+              :disabled="rubric.loading.value || uploadingFiles"
+            >
               {{ needsApproval ? t('submissions.grade.propose') : t('submissions.grade.submit') }}
             </el-button>
             <el-button :disabled="pending" @click="reset">{{ t('submissions.grade.reset') }}</el-button>
+            <span v-if="uploadingFiles" class="grade-panel__why">{{ t('common.upload.waitToSave') }}</span>
           </div>
         </el-form>
 
@@ -428,6 +446,11 @@ async function submit() {
 </template>
 
 <style scoped>
+.grade-panel__why {
+  align-self: center;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
 .grade-panel__alert {
   margin-bottom: 12px;
 }

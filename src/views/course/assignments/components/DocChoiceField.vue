@@ -1,13 +1,16 @@
 <script setup lang="ts">
 // Choosing the instructions or rubric document of an assignment: none, an
-// existing document of that kind, or a new one written here (created, and
-// published if asked, when the form is saved).
-import { computed } from 'vue'
+// existing document of that kind, or a new one made here (created, and
+// published if asked, when the form is saved). A new one is a file first: its
+// drop zone comes first, and writing its text is the second choice ("Write
+// text instead"). It may hold both.
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DocumentSummary } from '@/api/types'
 import type { UploadedFile } from '@/api/http'
 import { useCourseStore } from '@/stores/course'
-import FileUploader from '@/components/FileUploader.vue'
+import { formatBytes, formatNumber, titleFromFileName } from '@/utils/format'
+import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import type { DocChoice } from './types'
 
@@ -46,6 +49,21 @@ function set(patch: Partial<DocChoice>) {
 
 const kindLabel = computed(() => t(`enums.documentKind.${props.kind}`))
 const selected = computed(() => props.options.find((d) => d.id === model.value.id))
+
+// A new document: its file, or (the second choice) its text being written.
+const writing = ref(false)
+watch(
+  () => model.value.mode,
+  (m) => {
+    if (m !== 'new') writing.value = false
+  },
+)
+const file = computed(() => model.value.files[0] ?? null)
+const hasText = computed(() => model.value.body.trim() !== '')
+/** A file dropped on a new document with no title yet names it. */
+function onUploaded(f: UploadedFile) {
+  if (!model.value.title.trim()) set({ title: titleFromFileName(f.fileName) })
+}
 </script>
 
 <template>
@@ -112,24 +130,51 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
         maxlength="300"
         @update:model-value="(v: string) => set({ title: v })"
       />
-      <MarkdownEditor
-        :model-value="model.body"
-        :rows="6"
-        :disabled="disabled"
-        :placeholder="t('assignments.form.doc.newBody')"
-        @update:model-value="(v: string) => set({ body: v })"
-      />
-      <div class="doc-choice__file">
-        <span class="app-muted">{{ t('assignments.form.doc.newFile') }}</span>
-        <FileUploader
+      <!-- The file first. Kept while text is written, so that what is uploading goes on. -->
+      <div v-show="!writing" class="doc-choice__file">
+        <FileDropZone
           v-model:uploading="uploading"
           :model-value="model.files"
           :course-id="courseId"
           :kind="kind"
           :disabled="disabled"
+          :label="t(`assignments.form.doc.dropLabel.${kind}`)"
           @update:model-value="(v: UploadedFile[]) => set({ files: v })"
+          @uploaded="onUploaded"
         />
+        <div class="doc-choice__line">
+          <template v-if="hasText">
+            <span>{{ t('assignments.form.doc.textChars', { chars: formatNumber(model.body.length, 0) }) }}</span>
+            <el-button link type="primary" :disabled="disabled" @click="writing = true">
+              {{ t('assignments.form.doc.editText') }}
+            </el-button>
+          </template>
+          <el-button v-else link type="primary" :disabled="disabled" @click="writing = true">
+            <el-icon><EditPen /></el-icon>
+            <span>{{ t('assignments.form.doc.writeInstead') }}</span>
+          </el-button>
+        </div>
       </div>
+      <template v-if="writing">
+        <MarkdownEditor
+          :model-value="model.body"
+          :rows="6"
+          :disabled="disabled"
+          :placeholder="t('assignments.form.doc.newBody')"
+          @update:model-value="(v: string) => set({ body: v })"
+        />
+        <div class="doc-choice__line">
+          <el-icon aria-hidden="true"><Paperclip /></el-icon>
+          <span v-if="file">
+            {{ t('assignments.form.doc.withFile', { name: file.fileName, size: formatBytes(file.size) }) }}
+          </span>
+          <span v-else-if="uploading">{{ t('assignments.form.doc.fileUploading') }}</span>
+          <span v-else>{{ t('assignments.form.doc.noFile') }}</span>
+          <el-button link type="primary" :disabled="disabled" @click="writing = false">
+            {{ file || uploading ? t('assignments.form.doc.seeFile') : t('assignments.form.doc.uploadInstead') }}
+          </el-button>
+        </div>
+      </template>
       <el-checkbox
         :model-value="model.publish || requirePublished"
         :disabled="disabled || requirePublished"
@@ -188,7 +233,15 @@ const selected = computed(() => props.options.find((d) => d.id === model.value.i
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+.doc-choice__line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   font-size: 13px;
+  line-height: 1.5;
+  color: var(--el-text-color-regular);
 }
 .doc-choice__new :deep(.el-checkbox) {
   white-space: normal;

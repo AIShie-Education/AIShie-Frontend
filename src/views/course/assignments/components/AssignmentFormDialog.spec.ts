@@ -68,7 +68,7 @@ async function mountDialog(assignment?: Record<string, unknown>) {
     attachTo: document.body,
     global: {
       plugins: [pinia, i18n, ElementPlus],
-      stubs: { MarkdownEditor: true, FileUploader: true },
+      stubs: { MarkdownEditor: true, FileDropZone: true },
     },
   })
   await flushPromises()

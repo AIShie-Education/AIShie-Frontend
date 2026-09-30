@@ -12,7 +12,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isDecimal } from '@/utils/format'
-import FileUploader from '@/components/FileUploader.vue'
+import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -144,8 +144,11 @@ function useTotal(total: string) {
   void formRef.value?.validateField('score').catch(() => undefined)
 }
 
+/** A feedback file is still uploading: saving now would go without it. */
+const uploadingFiles = ref(false)
+
 async function submit() {
-  if (!formRef.value || blocked.value) return
+  if (!formRef.value || blocked.value || uploadingFiles.value) return
   breakdownChecked.value = showBreakdown.value
   const ok = await formRef.value.validate().catch(() => false)
   const rows = showBreakdown.value ? form.breakdown : []
@@ -252,7 +255,16 @@ async function submit() {
         </el-form-item>
 
         <el-form-item :label="t('grades.form.feedbackFiles')">
-          <FileUploader v-model="form.files" :course-id="courseId" kind="feedback" multiple :disabled="pending" />
+          <FileDropZone
+            v-model="form.files"
+            v-model:uploading="uploadingFiles"
+            :course-id="courseId"
+            kind="feedback"
+            multiple
+            page-drop
+            compact
+            :disabled="pending"
+          />
           <p class="app-form-hint grades-hint">{{ t('grades.form.feedbackFilesHelp') }}</p>
         </el-form-item>
 
@@ -279,11 +291,12 @@ async function submit() {
     </el-form>
 
     <template #footer>
+      <span v-if="uploadingFiles" class="enter-grade__why">{{ t('common.upload.waitToSave') }}</span>
       <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
       <el-button
         type="primary"
         :loading="pending"
-        :disabled="!course.writable || !components.length || !!componentsError || blocked"
+        :disabled="!course.writable || !components.length || !!componentsError || blocked || uploadingFiles"
         @click="submit"
       >
         {{ needsApproval ? t('grades.enter.submitProposal') : t('grades.enter.submit') }}
@@ -293,6 +306,11 @@ async function submit() {
 </template>
 
 <style scoped>
+.enter-grade__why {
+  margin-right: 12px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
 .enter-dialog__intro {
   margin: 0 0 12px;
 }

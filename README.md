@@ -13,6 +13,17 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   rubrics; students' drafts, files and hand-in; grading with rubric, per-criterion breakdown and
   feedback files; posting, regrading and the gradebook; the grading scheme; members with their
   permissions and scope; the course's activity feed.
+- **Uploading files** — a document is made from a file first: new material, a new version, and new
+  instructions or a rubric open on a drop zone, and writing text is the second choice ("Write text
+  instead"). Files are dropped on the zone, or anywhere on the page or dialog it is the one zone of,
+  chosen, or pasted, several at once: files dropped on the materials list become material, one
+  each, titled from their names (to change before creating), and a file dropped on a document's
+  page becomes its new version. Students drop their work on their draft, and graders feedback
+  files on a grade. Three upload at a time, each listed with its progress, speed and time left, to
+  cancel, try again or take off; one whose connection drops is tried again by itself, once the
+  browser is back online where it is not. A file larger than the site takes is refused before it
+  is sent, with both sizes, and nothing is saved while a file is still uploading. On a phone the
+  drop zone is one big button to choose files.
 - **Text versions (文字版)** — each version of material, instructions or a rubric with a file has a
   text version on a tab of its own: the file transcribed into Markdown once by the school's
   transcriber (a model of the school's plan, on the agent runtime), shown as the chat shows Markdown,
@@ -294,10 +305,12 @@ scripts/                  type generator, i18n check, demo data, screenshot help
 .github/                  CI, Publish, Deploy and Release workflows, the pinned Core (core-image), Dependabot
 Dockerfile, Caddyfile     the image: the build, served by Caddy on :8080 (docs/deploying.md)
 deploy/                   the SSH deploy's server side: setup-web.sh and aishie-web-deploy (docs/deploying.md)
-src/api/                  the client: http.ts (read, write, upload), generated types, named shapes
+src/api/                  the client: http.ts (read, write, uploadFile), generated types, named shapes
 src/stores/               session (who is signed in), course (the open course and the caller's seat)
-src/composables/          useAsync / usePaged, useWrite (idempotent writes and their outcomes), errors
-src/components/           shared pieces: status tags, Markdown, file upload/download, permission editor…
+src/composables/          useAsync / usePaged, useWrite (idempotent writes and their outcomes), errors,
+                          useUploadQueue and useFileDrop (files on their way, and dropped or pasted on the page)
+src/components/           shared pieces: status tags, Markdown, the drop zone (FileDropZone), file download,
+                          permission editor…
 src/layouts/              the app frame, and the course frame with its sections
 src/views/                one directory per area
 src/i18n/messages/        one file per namespace and language

@@ -13,6 +13,7 @@
 // the way (network, 5xx, 429) is retried here with the key it was first sent
 // with, and can never act twice.
 
+import { RateMeter } from '../utils/transferRate'
 import { noteCoreDate } from './clock'
 import { TOOL_ROUTES, type ToolMap, type ToolName } from './generated/tools'
 
@@ -806,49 +807,333 @@ export interface UploadedFile {
 }
 
 /**
- * Uploads a file for attaching: asks Core for a short-lived URL, PUTs the
- * bytes there, and returns the upload token that document.create,
- * document.add_version or grade.submit (feedback_files) takes.
+ * Where an upload is: asking Core where to put the file (preparing), sending
+ * its bytes (sending), and waiting for the store to say it has them all
+ * (finishing).
+ */
+export type UploadPhase = 'preparing' | 'sending' | 'finishing'
+
+/**
+ * How far an upload has come. loaded and total are bytes of the file;
+ * bytesPerSecond and secondsLeft are over the last few seconds of this
+ * attempt, and null until there is enough to go on. attempt counts from 1.
+ */
+export interface UploadProgress {
+  phase: UploadPhase
+  loaded: number
+  total: number
+  fraction: number
+  bytesPerSecond: number | null
+  secondsLeft: number | null
+  attempt: number
+}
+
+/**
+ * An upload that failed on the way and is about to be tried again, as
+ * `attempt`, after delayMs; or, offline, once the browser is online again.
+ */
+export interface UploadRetry {
+  attempt: number
+  delayMs: number
+  offline: boolean
+  error: ApiError
+}
+
+export interface UploadOptions {
+  onProgress?: (p: UploadProgress) => void
+  onRetry?: (r: UploadRetry) => void
+  /** Aborting it cancels the upload: uploadFile rejects with an AbortError (isAbort). */
+  signal?: AbortSignal
+  /** How many times a failure on the way (the network, a gateway, a stall) is tried again by itself. */
+  retries?: number
+  /** The largest file Core takes, when known already: a larger one is refused before anything is sent. */
+  maxBytes?: number | null
+}
+
+/** Times an upload that failed on the way is tried again before it is given up. */
+export const UPLOAD_RETRIES = 3
+/** An upload that has sent nothing, or heard nothing back, for this long is given up as a network failure. */
+export const UPLOAD_STALL_MS = 60_000
+/** How long to wait before the first retry; each one after waits twice as long. */
+export const UPLOAD_RETRY_MS = 1_000
+/** The code of the error a file larger than Core takes is refused with, before or after it is sent. */
+export const FILE_TOO_LARGE = 'file_too_large'
+
+/** Whether this is a file refused for its size: details.size and details.max_bytes say by how much. */
+export function isFileTooLarge(e: unknown): e is ApiError {
+  return e instanceof ApiError && e.code === FILE_TOO_LARGE
+}
+
+/** Whether this is a cancelled call or upload, rather than a failure. */
+export function isAbort(e: unknown): boolean {
+  return (e as Error)?.name === 'AbortError'
+}
+
+function abortError(): Error {
+  return typeof DOMException === 'function'
+    ? new DOMException('The upload was cancelled', 'AbortError')
+    : Object.assign(new Error('The upload was cancelled'), { name: 'AbortError' })
+}
+
+function tooLarge(size: number, max: number | null): ApiError {
+  return new ApiError({
+    status: 413,
+    code: FILE_TOO_LARGE,
+    message: max ? `the file is ${size} bytes; the limit is ${max}` : `the file is ${size} bytes, more than is taken`,
+    details: max ? { size, max_bytes: max } : { size },
+  })
+}
+
+/** Worth trying again: nothing arrived, or a gateway, the server or a rate limit stood in the way. */
+function retryableUpload(e: unknown): e is ApiError {
+  if (!(e instanceof ApiError) || e.code === FILE_TOO_LARGE) return false
+  return e.status === 0 || e.status === 408 || e.status === 429 || e.status >= 500
+}
+
+// The largest file Core takes, by course and kind, from every upload URL it
+// has handed out (max_bytes): the same for a whole installation as a rule.
+const limits = new Map<string, number>()
+const limitsAsked = new Map<string, Promise<number | null>>()
+const limitKey = (courseId: string, kind: UploadKind) => `${courseId}\u0000${kind}`
+
+/** The largest file Core took the last time it was asked here, or null. */
+export function knownUploadLimit(courseId: string, kind: UploadKind): number | null {
+  return limits.get(limitKey(courseId, kind)) ?? null
+}
+
+/**
+ * The largest file Core takes for this course and kind, so that a file too
+ * large is refused before it is sent: known from an upload URL handed out
+ * before, or asked for once (document.upload_url, a read that records
+ * nothing). Null when it cannot be learnt; the upload itself says so then.
+ */
+export function uploadLimit(courseId: string, kind: UploadKind): Promise<number | null> {
+  const key = limitKey(courseId, kind)
+  const known = limits.get(key)
+  if (known !== undefined) return Promise.resolve(known)
+  let asked = limitsAsked.get(key)
+  if (!asked) {
+    asked = read('document.upload_url', { course_id: courseId, kind, content_type: 'application/octet-stream' })
+      .then((t) => {
+        if (t.max_bytes > 0) limits.set(key, t.max_bytes)
+        return t.max_bytes > 0 ? t.max_bytes : null
+      })
+      .catch(() => null)
+      .finally(() => limitsAsked.delete(key))
+    limitsAsked.set(key, asked)
+  }
+  return asked
+}
+
+/** Forgets the limits learnt, for tests. */
+export function forgetUploadLimits(): void {
+  limits.clear()
+  limitsAsked.clear()
+}
+
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(abortError())
+    const done = () => {
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
+    }
+    const onAbort = () => {
+      done()
+      reject(abortError())
+    }
+    const timer = setTimeout(() => {
+      done()
+      resolve()
+    }, ms)
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+/** Until the browser says it is online again, or `ms` at most, since it is not always right. */
+function waitOnline(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(abortError())
+    const done = () => {
+      clearTimeout(timer)
+      window.removeEventListener('online', onOnline)
+      signal?.removeEventListener('abort', onAbort)
+    }
+    const onOnline = () => {
+      done()
+      resolve()
+    }
+    const onAbort = () => {
+      done()
+      reject(abortError())
+    }
+    const timer = setTimeout(onOnline, ms)
+    window.addEventListener('online', onOnline)
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+const isOffline = () => typeof navigator !== 'undefined' && navigator.onLine === false
+
+/**
+ * PUTs the file to where Core said, reporting the bytes sent (and, with
+ * `all`, that every byte has gone and the answer is awaited). It is given up
+ * as a network failure when nothing has moved for stallMs.
+ */
+function putFile(
+  target: { upload_url: string; headers?: Record<string, string | undefined> },
+  file: File,
+  contentType: string,
+  opts: {
+    signal?: AbortSignal
+    stallMs: number
+    maxBytes: number | null
+    onSent: (loaded: number, all: boolean) => void
+  },
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (opts.signal?.aborted) return reject(abortError())
+    const xhr = new XMLHttpRequest()
+    let stall: ReturnType<typeof setTimeout> | undefined
+    let settled = false
+    const settle = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(stall)
+      opts.signal?.removeEventListener('abort', onAbort)
+      fn()
+    }
+    const onAbort = () =>
+      settle(() => {
+        xhr.abort()
+        reject(abortError())
+      })
+    const arm = () => {
+      clearTimeout(stall)
+      stall = setTimeout(
+        () =>
+          settle(() => {
+            xhr.abort()
+            const s = Math.round(opts.stallMs / 1000)
+            reject(new ApiError({ status: 0, code: 'network', message: `upload stalled: nothing moved for ${s} s` }))
+          }),
+        opts.stallMs,
+      )
+    }
+    opts.signal?.addEventListener('abort', onAbort, { once: true })
+    xhr.open('PUT', blobUrl(target.upload_url))
+    const headers = target.headers ?? {}
+    for (const [k, v] of Object.entries(headers)) if (v !== undefined) xhr.setRequestHeader(k, v)
+    if (!Object.keys(headers).some((h) => h.toLowerCase() === 'content-type')) {
+      xhr.setRequestHeader('Content-Type', contentType)
+    }
+    xhr.upload.onprogress = (ev) => {
+      arm()
+      opts.onSent(Math.min(ev.loaded, file.size), false)
+    }
+    xhr.upload.onload = () => {
+      arm()
+      opts.onSent(file.size, true)
+    }
+    xhr.onload = () =>
+      settle(() => {
+        if (xhr.status >= 200 && xhr.status < 300) return resolve()
+        if (xhr.status === 413) return reject(tooLarge(file.size, opts.maxBytes))
+        let code = 'upload_failed'
+        let msg = `upload failed: HTTP ${xhr.status}`
+        try {
+          const err = JSON.parse(xhr.responseText)?.error
+          if (typeof err?.message === 'string') msg = err.message
+          if (typeof err?.code === 'string') code = err.code
+        } catch {
+          /* not JSON: an object store's own error page */
+        }
+        reject(new ApiError({ status: xhr.status, code, message: msg }))
+      })
+    xhr.onerror = () =>
+      settle(() => reject(new ApiError({ status: 0, code: 'network', message: 'upload failed: network error' })))
+    xhr.ontimeout = xhr.onerror
+    arm()
+    xhr.send(file)
+  })
+}
+
+/**
+ * Uploads a file for attaching, and returns the upload token that
+ * document.create, document.add_version or grade.submit (feedback_files)
+ * takes. Every upload in the app goes this way; components call it through
+ * an upload queue (useUploadQueue) and FileDropZone.
+ *
+ * It asks Core for a short-lived URL (document.upload_url) and PUTs the bytes
+ * there, reporting progress, speed and the time left (onProgress). A file
+ * larger than Core takes is refused before anything is sent where the limit
+ * is known (maxBytes, or an earlier upload URL's max_bytes), and before the
+ * PUT otherwise, with an error isFileTooLarge says is one. A failure on the
+ * way (no answer, a gateway, the server, a rate limit, a transfer that
+ * stalls) is tried again, `retries` times, after one second, then two, then
+ * four, or once the browser is back online, each time at a fresh URL, since
+ * Core's own store takes a URL's file once. Aborting `signal` cancels it.
+ *
+ * What comes back, and what the caller hands it, stays the same should Core
+ * one day hand out a URL for each part of a large file, or one of an object
+ * store's that takes it straight: that is decided here, from what
+ * document.upload_url answers.
  */
 export async function uploadFile(
   courseId: string,
   kind: UploadKind,
   file: File,
-  onProgress?: (fraction: number) => void,
+  opts: UploadOptions = {},
 ): Promise<UploadedFile> {
   const contentType = file.type || 'application/octet-stream'
-  const target = await read('document.upload_url', { course_id: courseId, kind, content_type: contentType })
-  if (target.max_bytes && file.size > target.max_bytes) {
-    throw new ApiError({
-      status: 400,
-      code: 'invalid_argument',
-      message: `file is larger than ${target.max_bytes} bytes`,
-      details: { max_bytes: target.max_bytes },
-    })
+  const retries = opts.retries ?? UPLOAD_RETRIES
+  const { signal } = opts
+  const known = opts.maxBytes ?? knownUploadLimit(courseId, kind)
+  if (known && file.size > known) throw tooLarge(file.size, known)
+  const meter = new RateMeter()
+  for (let attempt = 1; ; attempt++) {
+    if (signal?.aborted) throw abortError()
+    meter.reset()
+    const report = (phase: UploadPhase, loaded: number) => {
+      if (!opts.onProgress) return
+      if (phase === 'sending') meter.add(Date.now(), loaded)
+      const sending = phase === 'sending'
+      opts.onProgress({
+        phase,
+        loaded,
+        total: file.size,
+        fraction: file.size ? loaded / file.size : phase === 'finishing' ? 1 : 0,
+        bytesPerSecond: sending ? meter.rate() : null,
+        secondsLeft: sending ? meter.secondsLeft(file.size) : null,
+        attempt,
+      })
+    }
+    try {
+      report('preparing', 0)
+      const target = await read(
+        'document.upload_url',
+        { course_id: courseId, kind, content_type: contentType },
+        { signal },
+      )
+      if (target.max_bytes > 0) limits.set(limitKey(courseId, kind), target.max_bytes)
+      if (target.max_bytes && file.size > target.max_bytes) throw tooLarge(file.size, target.max_bytes)
+      report('sending', 0)
+      await putFile(target, file, contentType, {
+        signal,
+        stallMs: UPLOAD_STALL_MS,
+        maxBytes: target.max_bytes || null,
+        onSent: (loaded, all) => report(all ? 'finishing' : 'sending', loaded),
+      })
+      report('finishing', file.size)
+      return { uploadToken: target.upload_token, fileName: file.name, contentType, size: file.size }
+    } catch (e) {
+      if (signal?.aborted || isAbort(e)) throw abortError()
+      if (!retryableUpload(e) || attempt > retries) throw e
+      const offline = isOffline()
+      const delayMs = UPLOAD_RETRY_MS * 2 ** (attempt - 1)
+      opts.onRetry?.({ attempt: attempt + 1, delayMs, offline, error: e })
+      if (offline) await waitOnline(30_000, signal)
+      else await wait(delayMs, signal)
+    }
   }
-  await new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open('PUT', blobUrl(target.upload_url))
-    for (const [k, v] of Object.entries(target.headers ?? {})) if (v !== undefined) xhr.setRequestHeader(k, v)
-    if (!Object.keys(target.headers ?? {}).some((h) => h.toLowerCase() === 'content-type')) {
-      xhr.setRequestHeader('Content-Type', contentType)
-    }
-    xhr.upload.onprogress = (ev) => {
-      if (ev.lengthComputable && onProgress) onProgress(ev.loaded / ev.total)
-    }
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) return resolve()
-      let msg = `upload failed: HTTP ${xhr.status}`
-      try {
-        msg = JSON.parse(xhr.responseText)?.error?.message ?? msg
-      } catch {
-        /* not JSON: an object store's own error page */
-      }
-      reject(new ApiError({ status: xhr.status, code: 'upload_failed', message: msg }))
-    }
-    xhr.onerror = () => reject(new ApiError({ status: 0, code: 'network', message: 'upload failed: network error' }))
-    xhr.send(file)
-  })
-  onProgress?.(1)
-  return { uploadToken: target.upload_token, fileName: file.name, contentType, size: file.size }
 }

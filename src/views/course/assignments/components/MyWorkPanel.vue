@@ -14,6 +14,9 @@
 // A change or a hand-in that waits for approval is found again in the
 // student's own actions (action.list_mine), so that it is not asked for twice
 // and the page keeps saying so, also after a reload.
+//
+// Files are dropped on the draft's drop zone, or anywhere on the page while
+// a draft is open, chosen or pasted; each is attached as soon as it is up.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
@@ -27,7 +30,7 @@ import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFileLink from '@/components/DocumentFileLink.vue'
-import FileUploader from '@/components/FileUploader.vue'
+import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -463,13 +466,15 @@ defineExpose({ reload })
             </li>
           </ul>
           <p v-else class="app-muted my-work__nofiles">{{ t('assignments.work.noFiles') }}</p>
-          <FileUploader
+          <FileDropZone
             v-model="uploads"
             v-model:uploading="uploadingFiles"
             :course-id="courseId"
             kind="submission"
             multiple
+            page-drop
             :disabled="!canWrite || attaching"
+            :label="t('assignments.work.dropLabel')"
           />
           <div class="app-form-hint">
             {{ t('assignments.work.attachHint') }}

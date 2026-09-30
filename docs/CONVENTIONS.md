@@ -41,14 +41,52 @@ markdown-it + DOMPurify.
   asked first, so a reason two tools share (`not_a_person`) is said in the words of the page that
   met it.
 - Use `write()` directly only outside components. Never call `fetch` yourself.
-- **Files**: bytes never go through a tool. `<FileUploader v-model="files" v-model:uploading="busy" :course-id :kind multiple />`
-  uploads each picked file (`busy` is true while any is in flight: disable the submit button with it) (`document.upload_url` → PUT) and gives `UploadedFile[]`; hand each
-  `uploadToken` to the tool that attaches it (`document.create`/`add_version` `upload_token`,
-  `grade.submit` `feedback_files`, …). A submission's files are attached with `document.create`
-  (`kind: 'submission'`, `submission_id`, `upload_token`) while it is a draft; `submission.submit` then
-  takes the list of their document ids as a guard. To download, use
-  `<DocumentFileLink :course-id :document-id :title />`, which fetches a fresh short-lived URL on click
-  and saves the file under the document's title (or `file-name`), with its type's extension.
+- **Files**: bytes never go through a tool. Every upload is one call, `uploadFile(courseId, kind,
+  file, { onProgress, onRetry, signal, retries, maxBytes })` from `@/api/http`: it asks for an upload
+  URL (`document.upload_url`), PUTs the bytes there and returns an `UploadedFile`, reporting where it
+  is (`preparing`, `sending`, `finishing`), the bytes sent, and the speed and time left over the last
+  few seconds (`RateMeter`, `@/utils/transferRate`). A failure on the way (no answer, a gateway or
+  server error, a rate limit, nothing moving for a minute) is tried again three times, after 1, 2 and
+  4 s or once the browser is back online, each at a fresh URL (Core's own store takes a URL's file
+  once); a refusal is not. Aborting `signal` cancels it (`isAbort`). The largest file Core takes is
+  remembered from each upload URL (`max_bytes`) and asked once by `uploadLimit`, so that a larger
+  file is refused before anything is sent (`isFileTooLarge`, with `details.size` and
+  `details.max_bytes`), as a proxy's 413 is too. What callers hand it and get back stays the same
+  when Core hands out a URL per part or an object store's own: that is decided inside it.
+- Components never call it, nor have an `<input type="file">`, of their own: they take files with
+  `<FileDropZone v-model="files" v-model:uploading="busy" :course-id :kind multiple />`
+  (`@/components/FileDropZone.vue`). It takes files dropped on it, chosen by clicking it or from the
+  keyboard (it is one button: Enter or Space), or pasted, says the largest file taken, and on a phone
+  is one big button to choose files. With `page-drop` it also takes files dropped anywhere on the
+  page or dialog it is the one zone of, or pasted where no field takes them (`usePageDrop` from
+  `@/composables/useFileDrop`, which a page's own list may use too: the last to ask, and turned on,
+  takes them, and says while files are dragged that they would go there; `installDropGuard`, from
+  `App.vue`, keeps a file dropped where nothing takes it from being opened in the app's place). Each
+  file goes through an upload queue (`useUploadQueue`: three at once, the rest waiting, each to
+  cancel, retry or remove; a file over the limit fails at once and is not tried again) and is listed
+  with its progress, speed and time left, what it is doing in words, and buttons named for the file;
+  a screen reader hears what was added, each quarter sent, and what was uploaded, failed or was
+  cancelled. `busy` is true while any is still to upload: disable the submit button with it and say
+  why ("Waiting for the files to upload…"). Without `multiple`, a new file takes the place of the one
+  there. `files` is `UploadedFile[]`: hand each `uploadToken` to the tool that attaches it
+  (`document.create`/`add_version` `upload_token`, `grade.submit` `feedback_files`, …); taking one
+  off the list takes it out of `files`, and one the caller takes out (once attached) leaves the list.
+  A caller that gives each file something of its own (material's title) makes the queue itself
+  (`useUploadQueue`) and passes it as `:queue`, with an `#item="{ item }"` slot beside each file;
+  `v-model` is not kept then.
+- Where a document is made (new material, a new version, new instructions or a rubric), the file
+  comes first: the drop zone is what opens, and writing text is the second choice, a link ("Write
+  text instead"; back, "Upload files instead"), with a line saying what becomes of the text or the
+  file the other way. New material makes one document for each file, titled from its name without
+  the extension (`titleFromFileName`), editable before Create, numbered on from the sort order in
+  the order listed, each with its own `useWrite` (and so its own idempotency key), and what was
+  created comes off the list. Files dropped on the materials list open New material with them; a
+  file dropped on a document's page opens its new version. A submission's files are attached with
+  `document.create` (`kind: 'submission'`, `submission_id`, `upload_token`) as each is up, while it
+  is a draft; `submission.submit` then takes the list of their document ids as a guard. To
+  download, use `<DocumentFileLink :course-id :document-id :title />`, which fetches a fresh
+  short-lived URL on click and saves the file under the document's title (or `file-name`), with its
+  type's extension.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
   page. `usePaged(after => read(...).then(o => ({ items: o.assignments, next: o.next })))` and
   `<LoadMore :has-more :loading @more="loadMore" />`.
