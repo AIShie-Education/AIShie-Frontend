@@ -47,7 +47,7 @@ test.describe.serial('a student hands in work', () => {
     await expect(toast(page, `“${FILE}” attached.`)).toBeVisible()
     await expect(work.locator('.my-work__files')).toContainText(FILE)
     // Once attached it is no longer listed as an upload waiting to be attached.
-    await expect(work.locator('.file-uploader__list')).toHaveCount(0)
+    await expect(work.locator('.file-drop__list')).toHaveCount(0)
     // What was being typed survives the draft being read again.
     await expect(text).toHaveValue(ANSWER)
     await expect(work).toContainText('Unsaved changes')
