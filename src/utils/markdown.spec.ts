@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderMarkdown } from './markdown'
+import { pageHeadingOf, pageHeadings, renderMarkdown } from './markdown'
 
 describe('renderMarkdown', () => {
   it('shows an image from another host as a link to it, not the image', () => {
@@ -242,5 +242,69 @@ describe('code tools', () => {
     expect(box.querySelector('img, b')).toBeNull()
     expect(box.querySelector('.md-code__lang')?.textContent).toBe('"><img')
     expect(box.querySelector('.md-code__copy')?.textContent).toBe('<b>複製</b>')
+  })
+})
+
+describe('page anchors', () => {
+  const TEXT = [
+    '## 第 1 頁',
+    '',
+    'Intro',
+    '',
+    '## 投影片 2',
+    '',
+    '```md',
+    '## 第 9 頁',
+    '```',
+    '',
+    '### 第 3 頁',
+    '',
+    '## Page 4',
+    '',
+    '## 第 1 頁',
+    '',
+    '## 第 5 頁 of notes',
+  ].join('\n')
+
+  it('gives the pages’ and slides’ headings ids of their kind and number, when asked', () => {
+    const box = document.createElement('div')
+    box.innerHTML = renderMarkdown(TEXT, { anchors: 'text-' })
+    expect([...box.querySelectorAll('[id]')].map((e) => [e.tagName, e.id, e.textContent])).toEqual([
+      ['H2', 'text-page-1', '第 1 頁'],
+      ['H2', 'text-slide-2', '投影片 2'],
+      ['H2', 'text-page-4', 'Page 4'],
+      ['H2', 'text-page-1-2', '第 1 頁'],
+    ])
+    // Nothing of the kind unless asked.
+    expect(renderMarkdown(TEXT)).not.toContain(' id=')
+  })
+
+  it('lists them with the same ids, and none in code or at another level', () => {
+    expect(pageHeadings(TEXT, 'text-')).toEqual([
+      { kind: 'page', n: 1, id: 'text-page-1', text: '第 1 頁' },
+      { kind: 'slide', n: 2, id: 'text-slide-2', text: '投影片 2' },
+      { kind: 'page', n: 4, id: 'text-page-4', text: 'Page 4' },
+      { kind: 'page', n: 1, id: 'text-page-1-2', text: '第 1 頁' },
+    ])
+    expect(pageHeadings('', 'text-')).toEqual([])
+  })
+
+  it('knows a heading of a page or a slide in the forms written, and nothing else', () => {
+    expect(pageHeadingOf('第 12 頁')).toEqual({ kind: 'page', n: 12 })
+    expect(pageHeadingOf('第3页')).toEqual({ kind: 'page', n: 3 })
+    expect(pageHeadingOf('投影片 7')).toEqual({ kind: 'slide', n: 7 })
+    expect(pageHeadingOf('幻灯片 7')).toEqual({ kind: 'slide', n: 7 })
+    expect(pageHeadingOf('Slide 2')).toEqual({ kind: 'slide', n: 2 })
+    expect(pageHeadingOf('page 2')).toEqual({ kind: 'page', n: 2 })
+    expect(pageHeadingOf('第 1 頁：導論')).toBeNull()
+    expect(pageHeadingOf('Pages 2')).toBeNull()
+  })
+
+  it('makes the id of the number alone, whatever else the text says', () => {
+    const html = renderMarkdown('## 第 1 頁\n\n## <img src=x onerror=alert(1)>', { anchors: '"><b>' })
+    const box = document.createElement('div')
+    box.innerHTML = html
+    expect(box.querySelector('img, b')).toBeNull()
+    expect(box.querySelector('h2')?.id).toBe('"><b>page-1')
   })
 })

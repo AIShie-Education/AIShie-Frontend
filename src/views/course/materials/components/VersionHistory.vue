@@ -4,6 +4,7 @@
 // way to look at or publish any of them; for an administrator, to purge one.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import type { ApiError } from '@/api/http'
 import type { DocumentVersion } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
@@ -29,15 +30,18 @@ const props = defineProps<{
 const emit = defineEmits<{ publish: [version: DocumentVersion]; purge: [version: DocumentVersion]; retry: [] }>()
 const { t } = useI18n()
 const course = useCourseStore()
+const route = useRoute()
 
 const ordered = computed(() => [...props.versions].sort((a, b) => b.seq - a.seq))
 
 function linkTo(v: DocumentVersion) {
   const params = { courseId: props.courseId, documentId: props.documentId }
+  // The tab shown (the text version's) stays shown for the other version.
+  const tab = typeof route.query.tab === 'string' ? route.query.tab : undefined
   // The latest is what the page shows by default: link to it without naming it.
   return v.id === props.latestId
-    ? { name: 'course-document', params }
-    : { name: 'course-document', params, query: { version: v.id } }
+    ? { name: 'course-document', params, query: tab ? { tab } : {} }
+    : { name: 'course-document', params, query: { version: v.id, ...(tab ? { tab } : {}) } }
 }
 </script>
 

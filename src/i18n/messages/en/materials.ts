@@ -207,6 +207,80 @@ export default {
       pending: 'The new version was sent for approval. It will be added once someone approves it.',
       pendingPublish: 'The new version was sent for approval. Once approved, it is added and published.',
     },
+    // A version's text version (文字版): its file transcribed into Markdown, or written by staff.
+    text: {
+      tabs: {
+        content: 'Content',
+        text: 'Text version',
+      },
+      source: {
+        ai: 'AI transcription ({model})',
+        aiNoModel: 'AI transcription',
+        staff: 'Edited by {name} ({time})',
+        staffUnknown: 'staff',
+      },
+      pages: 'One page | {n} pages',
+      jumpTo: 'Go to a page',
+      reading: 'Reading part {read} of {parts}…',
+      actions: {
+        refresh: 'Read it again',
+        edit: 'Edit',
+        write: 'Write the text version',
+        retranscribe: 'Transcribe again',
+        transcribe: 'Transcribe',
+      },
+      queued: {
+        pending: 'Queued: this version’s file is waiting to be transcribed into text by AI.',
+        working: 'Transcribing: AI is writing this version’s file out as text.',
+        after: 'The text version shows here once it is done.',
+      },
+      failed: 'Transcription failed: {reason}',
+      failedNoReason: 'Transcription failed.',
+      skipped: 'Not transcribed: {reason}',
+      skippedNoReason: 'Not transcribed.',
+      none: {
+        reader: 'This version has no text version.',
+        staff: 'This version has no text version yet. You can write one yourself.',
+        staffOld:
+          'This version was added before there were text versions, and has none. Transcribe it, or write one yourself.',
+        staffOff:
+          'Transcription is not turned on for this site, so nothing is transcribed now. You can write the text version yourself.',
+        staffFailed: 'Transcribe it again, or write the text version yourself.',
+      },
+      editor: {
+        hint: 'Markdown, as it is shown to readers and given to the course’s agents. A heading for each page (## 第 1 頁) keeps the pages easy to find. What you save replaces the text version, and no later transcription writes over it.',
+        save: 'Save the text version',
+        done: 'Text version saved',
+        unchanged: 'Nothing changed.',
+        empty: 'Write the text first.',
+        pending:
+          'Your text version of version {seq} was sent for approval. The text version stays as it is until someone approves it.',
+        changed:
+          'The text version changed while you were editing it (it is at revision {revision} now). Your draft is kept here.',
+        changedNoRevision: 'The text version changed while you were editing it. Your draft is kept here.',
+        reload: 'Load the latest',
+        reloaded:
+          'The latest text version is loaded. Your draft is unchanged: saving it replaces the latest with your draft.',
+        latest: 'See the latest text version',
+        discardTitle: 'Discard your changes?',
+        discardBody: 'What you wrote here is not saved.',
+        discard: 'Discard',
+        keep: 'Keep editing',
+      },
+      again: {
+        title: 'Transcribe version {seq} again?',
+        body: 'Its text version is cleared and queued to be transcribed by AI again: the version has no text version until that is done.',
+        staffTitle: 'Discard the changes?',
+        staffBody:
+          'This text version was written or corrected by {name}. Transcribing it again discards those changes, and they cannot be brought back.',
+        someone: 'staff',
+        discard: 'Discard the changes',
+        done: 'Queued to be transcribed',
+        already: 'It is waiting to be transcribed already.',
+        pending:
+          'Transcribing version {seq} again was sent for approval. The text version stays as it is until someone approves it.',
+      },
+    },
   },
   // Core's refusals of changes to documents, by the reason it names.
   refusal: {
@@ -214,5 +288,12 @@ export default {
     owned_file:
       'A submitted or feedback file belongs to its submission or grade, is archived with it, and is never purged.',
     already_purged: 'This has been purged already.',
+    text_changed: 'The text version has changed since you read it: it has been read again.',
+    staff_edit:
+      'Staff have written this text version since: transcribing it again discards their changes, which has to be confirmed.',
+    text_too_long: 'The text is too long: a text version holds at most 2 MiB of Markdown.',
+    no_text: 'This version has no file to transcribe, so it has no text version.',
+    document_archived: 'The document is archived: bring it back first.',
+    course_archived: 'The course is archived: nothing in it changes.',
   },
 }

@@ -182,6 +182,9 @@ export default {
     files_removed: '已刪除的檔案',
     sessions_ended: '已登出的工作階段',
     login_id: '學號／工號',
+    base_revision: '依據的修訂',
+    discard_edit: '捨棄教學人員的修改',
+    revision: '修訂',
   },
   types: {
     action: {
@@ -232,6 +235,8 @@ export default {
       update: '文件改名或調整次序',
       unarchive: '恢復已封存文件',
       purge: '清除文件',
+      text_update: '撰寫版本的文字版',
+      text_retranscribe: '重新轉寫版本',
     },
     grade: {
       submit: '輸入成績',
