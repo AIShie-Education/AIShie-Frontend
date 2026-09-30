@@ -1,7 +1,8 @@
 // The objects of the AIshie Agent Runtime's API v1 (M2), written by hand from
-// its contract (m2.api.spec.md §4 and §5). Generating them (gen:runtime-api)
-// is a follow-up once the runtime publishes a schema. Answers may gain
-// members within v1; what is not named here is ignored.
+// its contract (m2.api.spec.md §4 and §5), and those of its administrators'
+// routes (OCR and the school's plan, at the end). Generating them
+// (gen:runtime-api) is a follow-up once the runtime publishes a schema.
+// Answers may gain members within v1; what is not named here is ignored.
 
 /** What a hosted agent is doing, as the runtime works it out (§6.2). */
 export type HostedStatus = 'needs_model' | 'starting' | 'running' | 'paused' | 'needs_token' | 'error' | 'stopped'
@@ -444,6 +445,13 @@ export const RUNTIME_ERROR_REASONS = [
   'settings_rejected',
   // Administrators' routes
   'not_admin',
+  'ocr_unavailable',
+  'offer_not_found',
+  'offer_exists',
+  'offer_read_only',
+  'offer_not_priced',
+  'key_required',
+  'key_test_failed',
 ] as const
 
 export type RuntimeErrorReason = (typeof RUNTIME_ERROR_REASONS)[number]
@@ -462,3 +470,200 @@ export const CLIENT_ERROR_REASONS = [
 ] as const
 
 export type ClientErrorReason = (typeof CLIENT_ERROR_REASONS)[number]
+
+// ---------------------------------------------------------------------------
+// The administrators' routes (admin/…): the runtime's administrators alone,
+// Core's root and admins (narrowed by the runtime's ADMIN_ACTOR_IDS), as
+// GET /me's is_admin says; anyone else is refused 403 not_admin.
+// ---------------------------------------------------------------------------
+
+/** Why OCR cannot run here whatever the site says: the operator's OCR=off, or its programs or languages missing. */
+export type OcrUnavailableReason = 'operator_off' | 'not_installed'
+
+export const OCR_UNAVAILABLE_REASONS: readonly OcrUnavailableReason[] = ['operator_off', 'not_installed']
+
+/** Reading scanned files and images (OCR), as the site sets it within what the operator allows. */
+export interface OcrSettings {
+  /** The operator's environment lets OCR run on this runtime. */
+  available: boolean
+  /** Why not, when available is false; null otherwise. */
+  unavailable_reason: OcrUnavailableReason | null
+  /** What is missing, in English for administrators; null when nothing is. */
+  unavailable_detail: string | null
+  /** The site's switch (true by default). OCR runs when available and enabled. */
+  enabled: boolean
+  /** The languages OCR reads in, in tesseract's order: the site's choice, or default_languages. */
+  languages: string[]
+  /** The operator's languages (OCR_LANGUAGES). */
+  default_languages: string[]
+  /** The languages installed here, which languages is chosen from; [] when not available. */
+  available_languages: string[]
+  /** The site's setting's last write; both null when it was never set. */
+  updated_at: string | null
+  /** A Core actor id. */
+  updated_by: string | null
+}
+
+/** GET and PATCH admin/settings. */
+export interface RuntimeSettings {
+  ocr: OcrSettings
+}
+
+/** PATCH admin/settings, merge-patch: a member left out is unchanged. */
+export interface RuntimeSettingsPatch {
+  ocr?: {
+    /** Never null. */
+    enabled?: boolean
+    /** 1 to 8 of available_languages, no repeats; null goes back to default_languages. */
+    languages?: string[] | null
+  }
+}
+
+/**
+ * How an offer of the school's plan stands: offered to owners, turned off,
+ * shadowed by a runtime.yaml offer of the same id, or its model no longer
+ * allowed by runtime.yaml's model lists (the last two, site offers only).
+ */
+export type OfferStatus = 'offered' | 'disabled' | 'id_taken' | 'model_not_allowed'
+
+export const OFFER_STATUSES: readonly OfferStatus[] = ['offered', 'disabled', 'id_taken', 'model_not_allowed']
+
+/** The operator's (runtime.yaml, read-only here), or the site's (made here). */
+export type OfferSource = 'config' | 'site'
+
+/** Whether a site offer's key passed a trial of its model when it was given. */
+export type OfferKeyStatus = 'tested' | 'untested'
+
+/** One model of the school's plan, as its administrators see it: never its key. */
+export interface PlanOffer {
+  /** Letters, digits, _ and -, at most 64: what owners' agents name (model.school.offer). */
+  id: string
+  source: OfferSource
+  /** One line, at most 80 characters: what owners are shown. */
+  label: string
+  provider: string
+  adapter: string
+  model: string
+  /** As OwnModel has them; null where the provider takes none. */
+  endpoint: string | null
+  resource: string | null
+  region: string | null
+  /** The endpoint called; null for the adapter's own default. Read-only. */
+  base_url: string | null
+  /** Null: the runtime's default. */
+  max_output_tokens: number | null
+  reasoning_effort: ReasoningEffort | null
+  /** The administrators' switch; always true for runtime.yaml's. */
+  enabled: boolean
+  /** Always offered for runtime.yaml's. */
+  status: OfferStatus
+  /** The runtime's price table prices this model today. */
+  priced: boolean
+  /** Hosted agents whose settings name this offer (on it now, or held or falling back while it is withdrawn). */
+  agents: number
+  // The site's offers only; null for runtime.yaml's:
+  /** What may be shown of the school's key, such as "sk-…3f9a". */
+  key_hint: string | null
+  key_status: OfferKeyStatus | null
+  /** Moves on with every write; the ETag is "<version>". */
+  version: number | null
+  created_at: string | null
+  created_by: string | null
+  updated_at: string | null
+  updated_by: string | null
+}
+
+/** Quotas in answers per UTC day. */
+export interface PlanQuotas {
+  /** Per owner, across all of their agents. */
+  per_owner_day: number
+  /** Per asker, per agent and course. */
+  per_asker_day: number
+  /** Across the whole school's key; null for no ceiling. */
+  per_day: number | null
+}
+
+/** GET admin/school-plan, and the answer of the quotas' PUT and DELETE. */
+export interface SchoolPlan {
+  /** runtime.yaml's offers first (their order), then the site's by id. */
+  offers: PlanOffer[]
+  /** In force now. */
+  quotas: PlanQuotas
+  /** runtime.yaml's (or the built-in ones): what DELETE quotas goes back to. */
+  quota_defaults: PlanQuotas
+  /** The site has set the quotas, in place of quota_defaults. */
+  quotas_set: boolean
+  quotas_updated_at: string | null
+  quotas_updated_by: string | null
+}
+
+/** POST admin/school-plan/offers: the model as OwnModelChoice has it, and the school's key for it. */
+export interface OfferCreate extends OwnModelChoice {
+  id: string
+  label: string
+  /** Default true. */
+  enabled?: boolean
+  /** Write-only: never answered, logged or audited (only its hint). */
+  key: string
+  /** Keep the key without trying it (key_status untested). */
+  skip_key_test?: boolean
+}
+
+/** PATCH admin/school-plan/offers/{id}, merge-patch: a member left out is unchanged, null goes back to the default. */
+export interface OfferPatch {
+  label?: string
+  enabled?: boolean
+  /** Another provider needs a key and a model too. */
+  provider?: string
+  adapter?: string | null
+  model?: string
+  endpoint?: string | null
+  resource?: string | null
+  region?: string | null
+  max_output_tokens?: number | null
+  reasoning_effort?: ReasoningEffort | null
+  /** A new key: tried (unless skip_key_test), and the old one destroyed. */
+  key?: string
+  skip_key_test?: boolean
+}
+
+/** DELETE admin/school-plan/offers/{id}. */
+export interface OfferDeleted {
+  deleted: { id: string }
+  /** Hosted agents that were on it: on their owners' own models now, or held (offer_withdrawn). */
+  agents: number
+}
+
+/** PUT admin/school-plan/quotas: all three, whole numbers from 1 to 1,000,000 (per_day null for no ceiling). */
+export type QuotasPut = PlanQuotas
+
+/** What failed when a key was tried before it was kept (key_test_failed's details.result). */
+export type KeyTrialFailure = 'key_refused' | 'model_not_found' | 'unreachable'
+
+export const KEY_TRIAL_FAILURES: readonly KeyTrialFailure[] = ['key_refused', 'model_not_found', 'unreachable']
+
+/** Billable answers and model calls on the school's key, and their cost in dollars (six places). */
+export interface PlanUse {
+  answers: number
+  model_calls: number
+  cost_usd: string
+}
+
+/**
+ * One tenant's use of the school's plan today: a hosted agent's owner's,
+ * with their actor id and the name the runtime last saw, or a tenant of the
+ * operator's own agents, with neither.
+ */
+export interface OwnerPlanUse extends PlanUse {
+  tenant_id: string
+  owner_actor_id: string | null
+  display_name: string | null
+}
+
+/** GET admin/school-plan/usage: today's use of the school's key since 00:00 UTC, and the quotas in force. */
+export interface SchoolPlanUsage {
+  since: string
+  limits: PlanQuotas
+  total: PlanUse
+  owners: OwnerPlanUse[]
+}

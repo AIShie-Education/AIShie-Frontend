@@ -884,6 +884,151 @@ describe('the contract’s calls', () => {
   })
 })
 
+describe('the administrators’ calls', () => {
+  const OFFER = { id: 'fast', source: 'site', version: 2 }
+  const CREATE = {
+    id: 'fast',
+    label: 'Fast',
+    provider: 'openai',
+    model: 'gpt-4.1-mini',
+    key: 'sk-0000000000',
+  }
+
+  it.each([
+    ['settings', () => rt.runtimeAdmin.settings(), 'GET', '/runtime/api/v1/admin/settings', undefined],
+    [
+      'updateSettings',
+      () => rt.runtimeAdmin.updateSettings({ ocr: { languages: null } }),
+      'PATCH',
+      '/runtime/api/v1/admin/settings',
+      { ocr: { languages: null } },
+    ],
+    ['plan', () => rt.runtimeAdmin.plan(), 'GET', '/runtime/api/v1/admin/school-plan', undefined],
+    ['offer', () => rt.runtimeAdmin.offer('fast'), 'GET', '/runtime/api/v1/admin/school-plan/offers/fast', undefined],
+    [
+      'createOffer',
+      () => rt.runtimeAdmin.createOffer(CREATE),
+      'POST',
+      '/runtime/api/v1/admin/school-plan/offers',
+      CREATE,
+    ],
+    [
+      'updateOffer',
+      () => rt.runtimeAdmin.updateOffer('fast', 2, { enabled: false }),
+      'PATCH',
+      '/runtime/api/v1/admin/school-plan/offers/fast',
+      { enabled: false },
+    ],
+    [
+      'deleteOffer',
+      () => rt.runtimeAdmin.deleteOffer('fast', 2),
+      'DELETE',
+      '/runtime/api/v1/admin/school-plan/offers/fast',
+      undefined,
+    ],
+    [
+      'setQuotas',
+      () => rt.runtimeAdmin.setQuotas({ per_owner_day: 100, per_asker_day: 20, per_day: null }),
+      'PUT',
+      '/runtime/api/v1/admin/school-plan/quotas',
+      { per_owner_day: 100, per_asker_day: 20, per_day: null },
+    ],
+    [
+      'resetQuotas',
+      () => rt.runtimeAdmin.resetQuotas(),
+      'DELETE',
+      '/runtime/api/v1/admin/school-plan/quotas',
+      undefined,
+    ],
+    ['usage', () => rt.runtimeAdmin.usage(), 'GET', '/runtime/api/v1/admin/school-plan/usage', undefined],
+  ] as const)('%s goes where the contract says', async (_, call, method, url, body) => {
+    runtimeAnswers.push(json(200, OFFER, { ETag: '"2"' }))
+    const out = await call()
+    expect(out).toMatchObject({ status: 200, data: OFFER, etag: '"2"' })
+    const [c] = runtimeCalls()
+    expect(c.method).toBe(method)
+    expect(c.url).toBe(url)
+    expect(c.body === undefined ? undefined : JSON.parse(c.body)).toEqual(body)
+    expect(c.headers.Authorization).toMatch(/^Bearer eyJ/)
+    expect(c.credentials).toBe('omit')
+  })
+
+  it('names an offer’s version when changing it, and when deleting it if asked to', async () => {
+    runtimeAnswers.push(json(200, OFFER), json(200, { deleted: { id: 'fast' }, agents: 0 }), json(200, {}))
+    await rt.runtimeAdmin.updateOffer('fast', 2, { label: 'Quick' })
+    await rt.runtimeAdmin.deleteOffer('fast', '"3"')
+    await rt.runtimeAdmin.deleteOffer('a b')
+    const [patch, del, bare] = runtimeCalls()
+    expect(patch.headers['If-Match']).toBe('"2"')
+    expect(del.headers['If-Match']).toBe('"3"')
+    expect(bare.headers['If-Match']).toBeUndefined()
+    // An id is one path segment, whatever it holds.
+    expect(bare.url).toBe('/runtime/api/v1/admin/school-plan/offers/a%20b')
+  })
+
+  it.each([
+    ['plan', () => rt.runtimeAdmin.plan()],
+    ['settings', () => rt.runtimeAdmin.settings()],
+    ['usage', () => rt.runtimeAdmin.usage()],
+    ['setQuotas', () => rt.runtimeAdmin.setQuotas({ per_owner_day: 1, per_asker_day: 1, per_day: 1 })],
+    ['resetQuotas', () => rt.runtimeAdmin.resetQuotas()],
+  ] as const)('%s is sent again after a 503 or no answer, as the same request', async (_, call) => {
+    runtimeAnswers.push(empty(503), () => Promise.reject(new TypeError('Failed to fetch')), json(200, {}))
+    await call()
+    const sent = runtimeCalls()
+    expect(sent).toHaveLength(3)
+    expect(new Set(sent.map((c) => `${c.method} ${c.url} ${c.body}`)).size).toBe(1)
+  })
+
+  it.each([
+    ['updateSettings', () => rt.runtimeAdmin.updateSettings({ ocr: { enabled: false } })],
+    ['createOffer', () => rt.runtimeAdmin.createOffer(CREATE)],
+    ['updateOffer', () => rt.runtimeAdmin.updateOffer('fast', 2, { enabled: true })],
+    ['deleteOffer', () => rt.runtimeAdmin.deleteOffer('fast', 2)],
+  ] as const)('%s is never sent again by itself', async (_, call) => {
+    runtimeAnswers.push(empty(503), json(200, {}))
+    const err = await failure(call())
+    expect(err.status).toBe(503)
+    expect(runtimeCalls()).toHaveLength(1)
+    runtimeAnswers.length = 0
+  })
+
+  it('refusals carry the runtime’s reason and details: a key that failed its trial says how', async () => {
+    runtimeAnswers.push(
+      json(422, {
+        error: {
+          code: 'failed_precondition',
+          message: 'the key failed its trial',
+          details: {
+            reason: 'key_test_failed',
+            field: '/key',
+            result: 'key_refused',
+            http_status: 401,
+            provider_code: 'invalid_api_key',
+          },
+        },
+      }),
+    )
+    const err = await failure(rt.runtimeAdmin.createOffer(CREATE))
+    expect(err.reason).toBe('key_test_failed')
+    expect(err.details).toMatchObject({
+      field: '/key',
+      result: 'key_refused',
+      http_status: 401,
+      provider_code: 'invalid_api_key',
+    })
+  })
+
+  it('from a runtime without the route, is a 404 with no reason of the contract’s', async () => {
+    runtimeAnswers.push(
+      json(404, { error: { code: 'not_found', message: 'no route', details: { reason: 'no_route' } } }),
+    )
+    const err = await failure(rt.runtimeAdmin.settings())
+    expect(err.status).toBe(404)
+    expect(err.reason).toBe('no_route')
+  })
+})
+
 describe('If-Match and ETag', () => {
   it('gives the version a read was at, and sends it with the change', async () => {
     runtimeAnswers.push(json(200, { id: 'agt_1', version: 3 }, { ETag: '"3"' }))

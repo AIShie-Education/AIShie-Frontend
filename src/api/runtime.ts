@@ -31,6 +31,9 @@
 // (the same token, the same value), or never sent again (PATCH, key tests),
 // as the contract's §5.14 says; this client retries accordingly.
 //
+// The runtime's administrators have routes of their own (runtimeAdmin, at
+// the end): OCR, and the school's plan's offers, quotas and use.
+//
 // The route and field names the contract fixes are here and in
 // runtime-types.ts, and nowhere else in the app.
 
@@ -45,11 +48,20 @@ import type {
   KeyTestAnswer,
   KeyTestRequest,
   ModelsAnswer,
+  OfferCreate,
+  OfferDeleted,
+  OfferPatch,
+  PlanOffer,
+  QuotasPut,
   ReplaceTokenAnswer,
   ReplaceTokenRequest,
   RuntimeFeatures,
   RuntimeInfo,
   RuntimeMe,
+  RuntimeSettings,
+  RuntimeSettingsPatch,
+  SchoolPlan,
+  SchoolPlanUsage,
   TokenRequest,
 } from './runtime-types'
 
@@ -74,6 +86,13 @@ export const RUNTIME_ROUTES = {
   agentToken: '/agents/{id}/token',
   agentPause: '/agents/{id}/pause',
   agentResume: '/agents/{id}/resume',
+  // The runtime's administrators' (runtimeAdmin below).
+  adminSettings: '/admin/settings',
+  schoolPlan: '/admin/school-plan',
+  planOffers: '/admin/school-plan/offers',
+  planOffer: '/admin/school-plan/offers/{id}',
+  planQuotas: '/admin/school-plan/quotas',
+  planUsage: '/admin/school-plan/usage',
 } as const
 
 /** Headers of the contract beyond plain HTTP's. */
@@ -655,4 +674,39 @@ export const runtime = {
       query: { revoke_token: revokeToken ? 'true' : 'false' },
       retry: true,
     }),
+}
+
+const offerPath = (id: string) => runtimePath(RUNTIME_ROUTES.planOffer, { id })
+
+/**
+ * The runtime's administrators' calls: OCR (admin/settings) and the school's
+ * plan (admin/school-plan: its offers, its quotas, today's use). Anyone else
+ * is refused 403 not_admin; a runtime from before a route answers 404.
+ *
+ * Retried as the runtime answers them: reads, and the quotas' PUT and
+ * DELETE, which come to the same however often they are sent. Never a
+ * PATCH, nor an offer made or deleted: making one tries its key with the
+ * provider, rate limited, and one sent again after a lost answer would be
+ * refused as taken (409) or gone (404). A change to an offer names the
+ * version it was read at (If-Match), and so may a deletion; either may
+ * answer 412 when it has moved on (isVersionMismatch).
+ */
+export const runtimeAdmin = {
+  settings: () => runtimeRequest<RuntimeSettings>('GET', RUNTIME_ROUTES.adminSettings),
+  updateSettings: (patch: RuntimeSettingsPatch) =>
+    runtimeRequest<RuntimeSettings>('PATCH', RUNTIME_ROUTES.adminSettings, { body: patch, retry: false }),
+  plan: () => runtimeRequest<SchoolPlan>('GET', RUNTIME_ROUTES.schoolPlan),
+  offer: (id: string) => runtimeRequest<PlanOffer>('GET', offerPath(id)),
+  /** 201 with the offer; its key tried first unless skip_key_test. The key is in the body alone. */
+  createOffer: (offer: OfferCreate) =>
+    runtimeRequest<PlanOffer>('POST', RUNTIME_ROUTES.planOffers, { body: offer, retry: false }),
+  updateOffer: (id: string, version: string | number, patch: OfferPatch) =>
+    runtimeRequest<PlanOffer>('PATCH', offerPath(id), { body: patch, ifMatch: version, retry: false }),
+  deleteOffer: (id: string, version?: string | number) =>
+    runtimeRequest<OfferDeleted>('DELETE', offerPath(id), { ifMatch: version ?? undefined, retry: false }),
+  setQuotas: (quotas: QuotasPut) =>
+    runtimeRequest<SchoolPlan>('PUT', RUNTIME_ROUTES.planQuotas, { body: quotas, retry: true }),
+  /** runtime.yaml's quotas again. */
+  resetQuotas: () => runtimeRequest<SchoolPlan>('DELETE', RUNTIME_ROUTES.planQuotas, { retry: true }),
+  usage: () => runtimeRequest<SchoolPlanUsage>('GET', RUNTIME_ROUTES.planUsage),
 }

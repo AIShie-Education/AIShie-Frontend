@@ -127,8 +127,15 @@ const GENERIC = [
   'method_not_allowed',
   'no_route',
   'internal',
-  // An administrators' route, which this page never calls.
+  // The administrators' routes, which this page never calls (their page words them: runtimeAdmin.errors).
   'not_admin',
+  'ocr_unavailable',
+  'offer_not_found',
+  'offer_exists',
+  'offer_read_only',
+  'offer_not_priced',
+  'key_required',
+  'key_test_failed',
 ]
 
 describe('the words for each error reason', () => {
