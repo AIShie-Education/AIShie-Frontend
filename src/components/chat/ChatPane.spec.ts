@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import ElementPlus, { ElMessageBox } from 'element-plus'
+import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
 import { defineComponent, h, inject, provide } from 'vue'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
@@ -399,21 +399,19 @@ describe('ChatPane', () => {
     expect(writes).toHaveLength(0)
   })
 
-  it('takes the composer’s /new and /history to the panel, and /close to closing it', async () => {
+  it('takes the composer’s /new and /history to the panel, and offers no way to end the conversation', async () => {
     seat('student')
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const composer = w.findComponent(ChatComposer)
-    expect((composer.props('commands') as { name: string }[]).map((c) => c.name)).toEqual(['new', 'history', 'close'])
+    expect((composer.props('commands') as { name: string }[]).map((c) => c.name)).toEqual(['new', 'history'])
     composer.vm.$emit('command', 'new')
     composer.vm.$emit('command', 'history')
     expect(w.emitted('new')).toHaveLength(1)
     expect(w.emitted('history')).toHaveLength(1)
-    const prompt = vi.spyOn(ElMessageBox, 'prompt').mockRejectedValue('cancel')
     composer.vm.$emit('command', 'close')
     await flushPromises()
-    expect(prompt).toHaveBeenCalledTimes(1)
-    prompt.mockRestore()
+    expect(writes).toHaveLength(0)
     // ↑ brings back what the caller wrote last here; once they send from this page, that.
     expect(composer.props('recall')).toBe('line one\nline two')
     await w.find('textarea').setValue('Sent just now')
@@ -422,7 +420,7 @@ describe('ChatPane', () => {
     expect(composer.props('recall')).toBe('Sent just now')
   })
 
-  it('offers no /close to one who may not close it', async () => {
+  it('offers /new and /history in a conversation closed before, too', async () => {
     seat('student')
     server.view = view({ status: 'closed', state: 'answered' })
     const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
@@ -656,7 +654,8 @@ describe('ChatPane', () => {
     expect(row.find('.status-tag, .el-tag').exists()).toBe(false)
     expect(w.find('.chat-pane__head').text()).not.toContain('Who can read this conversation')
     expect(w.find('.chat-pane__more').attributes('aria-label')).toBe('Conversation options')
-    expect(menu(w)).toEqual(['Who can read this', 'Each answer waits for approval', 'Close conversation'])
+    // Nothing ends it: a new question is a new conversation, or more in this one.
+    expect(menu(w)).toEqual(['Who can read this', 'Each answer waits for approval'])
     expect(w.find('.chat-pane__head [role="menuitem"][disabled]').text()).toBe('Each answer waits for approval')
 
     // Who can read it, in a box of its own.
@@ -665,15 +664,6 @@ describe('ChatPane', () => {
     const readers = document.body.querySelector('.chat-pane__readers')!
     expect(readers.textContent).toContain('Who can read this conversation')
     expect(readers.textContent).toContain('The two taking part')
-
-    // Closing it asks for a reason first, then closes it.
-    const prompt = vi.spyOn(ElMessageBox, 'prompt').mockResolvedValue({ value: '', action: 'confirm' } as never)
-    writeAnswer = () => executed({})
-    await w.findAll('.chat-pane__head [role="menuitem"]')[2]!.trigger('click')
-    await flushPromises()
-    expect(prompt).toHaveBeenCalledOnce()
-    expect(writes).toEqual([{ tool: 'conversation.close', args: { course_id: 'k1', conversation_id: 'c1' } }])
-    prompt.mockRestore()
   })
 
   it('says an answer is awaited in one quiet line, not that the agent thinks when nothing runs it', async () => {
@@ -712,8 +702,8 @@ describe('ChatPane, with an agent operated from outside', () => {
     expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(NOTE)
     // Nothing here will answer: nobody is shown at work.
     expect(w.find('.chat-pane__typing').exists()).toBe(false)
-    // It may still be closed.
-    expect(menu(w)).toContain('Close conversation')
+    // Nor is it ended from here.
+    expect(menu(w)).toEqual(['Who can read this'])
   })
 
   it('tells its owner, too, how that would change', async () => {

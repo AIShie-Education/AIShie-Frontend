@@ -309,10 +309,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
   (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent, whether
   anything runs it (`PresenceText`) and, only once it is closed, its state, and a ⋯ menu for who can
-  read it, how its answers arrive and closing it; the messages; and the composer (`ChatComposer.vue`),
-  one bordered box whose send button, small and icon-only, sits inside it at the bottom right, with
-  its keys in the button's tooltip and the count near Core's limit beside it. The agent's messages
-  (`ChatMessage.vue`) take the whole width with no bubble, as Markdown set for reading
+  read it and how its answers arrive (nothing ends a conversation from the chat); the messages; and
+  the composer (`ChatComposer.vue`), one bordered box whose send button, small and icon-only, sits
+  inside it at the bottom right, with its keys in the button's tooltip and the count near Core's
+  limit beside it. The agent's messages (`ChatMessage.vue`) take the whole width with no bubble, as
+  Markdown set for reading
   (`styles/chat-prose.css`), their code in a box with its language and a copy button
   (`<MarkdownView code-tools>`); the person's are a quiet bubble on the right; a run of messages by
   one author is named once (`groupedWith`), and each message's time and actions (copy it as written;
@@ -326,7 +327,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   nothing answers it, though an answer already begun may still be posted; Core still says
   `awaiting_answer`, which the pane reads as nothing awaited (`questionWithdrawn`). In the box, ↑
   when it is empty brings back the last message sent, Escape leaves it, a slash at the start opens
-  the commands (`/new`, `/history`, `/close` where the caller may close it), and an @ at the start
+  the commands (`/new`, `/history`), and an @ at the start
   of a word the course's assignments and materials (`mentions.ts`: `assignment.list` and
   `document.list`, the reads the Assignments and Materials pages make), whose title it writes in,
   quoted, for the agent to find; their list works from the keyboard and never takes the Enter an

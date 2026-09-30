@@ -13,9 +13,9 @@
 //
 // As in an agent chat's box: ↑ in an empty box brings back the last message
 // sent (recall); Escape leaves the box; a slash at the start opens the
-// commands (commands: /new, /history, /close where it may), and an @ at the
-// start of a word the course's assignments and materials (loadMentions), to
-// write one's title in. Their list is worked with the arrow keys, Enter or
+// commands (commands: /new and /history), and an @ at the start of a word
+// the course's assignments and materials (loadMentions), to write one's
+// title in. Their list is worked with the arrow keys, Enter or
 // Tab to choose and Escape to close, or with a tap; never while an input
 // method is composing.
 import { computed, nextTick, ref, watch } from 'vue'
