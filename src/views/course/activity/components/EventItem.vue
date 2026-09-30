@@ -314,6 +314,21 @@ const facts = computed<Fact[]>(() => {
     const attempt = payloadNumber(e, 'attempt')
     if (attempt !== undefined) out.push({ kind: 'text', text: t('activity.fact.attempt', { n: attempt }) })
   }
+  // A message that carries files: how many, and their names on hover (never a key or a URL).
+  if (type === 'conversation.message_posted') {
+    const files = payloadField(e, 'attachments')
+    if (Array.isArray(files) && files.length) {
+      const names = files
+        .map((f) => (f && typeof f === 'object' ? (f as { filename?: unknown }).filename : undefined))
+        .filter((n): n is string => typeof n === 'string' && !!n)
+      out.push({
+        kind: 'text',
+        text: t('activity.fact.files', { n: files.length }, files.length),
+        tone: 'info',
+        tip: names.length ? names.join(', ') : undefined,
+      })
+    }
+  }
   if (type === 'grade.regraded') {
     // The grade it replaces is superseded now, and a superseded grade is
     // for those who grade (grade_submit or grade_post) to read.

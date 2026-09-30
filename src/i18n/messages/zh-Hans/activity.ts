@@ -72,6 +72,7 @@ export default {
       other:
         '发生这件事时，没有已发布的作业使用这份文档，因此只通知了可查看未发布作业的成员，这条记录也只有他们看得到。',
     },
+    files: '附 {n} 个文件',
     attempt: '第 {n} 次提交',
     replaces: '取代成绩',
     replacesEarlier: '取代先前的成绩',

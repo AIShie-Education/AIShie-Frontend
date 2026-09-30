@@ -252,3 +252,36 @@ describe('EventItem, a student’s password reset', () => {
     w.unmount()
   })
 })
+
+describe('EventItem, a message posted in a conversation', () => {
+  const posted = (payload: Record<string, unknown>): CourseEvent => ({
+    seq: 9,
+    type: 'conversation.message_posted',
+    occurred_at: '2026-09-30T10:00:00Z',
+    subject_type: 'conversation',
+    subject_id: 'c1',
+    payload: { conversation_id: 'c1', message_id: 'm1', author_member_id: 's1', ...payload },
+  })
+
+  it('says how many files it carries, and names them on hover', async () => {
+    const w = mountItem(
+      posted({
+        attachments: [
+          { id: 'f1', filename: 'notes.pdf', content_type: 'application/pdf', byte_size: 100 },
+          { id: 'f2', filename: 'plot.png', content_type: 'image/png', byte_size: 200 },
+        ],
+      }),
+    )
+    await flushPromises()
+    expect(w.text()).toContain('With 2 files')
+    expect(tips(w)).toEqual(['notes.pdf, plot.png'])
+    w.unmount()
+  })
+
+  it('says nothing of files when it carries none', async () => {
+    const w = mountItem(posted({}))
+    await flushPromises()
+    expect(w.text()).not.toContain('file')
+    w.unmount()
+  })
+})

@@ -72,6 +72,7 @@ export default {
       other:
         '發生這件事時，沒有已發佈的作業使用這份文件，因此只通知了可查看未發佈作業的成員，這筆紀錄也只有他們看得到。',
     },
+    files: '附 {n} 個檔案',
     attempt: '第 {n} 次提交',
     replaces: '取代成績',
     replacesEarlier: '取代先前的成績',

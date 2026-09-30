@@ -77,6 +77,14 @@ const conversation = useLookup(() =>
   conversationId.value && props.depth < 1 ? specs.conversation(props.courseId, conversationId.value) : null,
 )
 const conversationTitle = computed(() => conversation.value?.value?.title ?? undefined)
+/** The names of the files a message the action writes carries (attachments: upload tokens and names). */
+const messageFiles = computed<string[]>(() => {
+  const list = group.value === 'conversation' ? p.value.attachments : undefined
+  if (!Array.isArray(list)) return []
+  return list
+    .map((f) => (f && typeof f === 'object' ? (f as { filename?: unknown }).filename : undefined))
+    .filter((n): n is string => typeof n === 'string' && !!n)
+})
 const needsComponents = computed(
   () => tt.value === 'grade_component' || !!str(p.value.component_id) || group.value === 'component',
 )
@@ -306,6 +314,10 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       <span v-if="quote && excerpt(p.body)" class="action-target__quote">“{{ excerpt(p.body) }}”</span>
       <span v-else-if="quote && type === 'conversation.close' && str(p.reason)" class="action-target__quote">
         “{{ excerpt(p.reason) }}”
+      </span>
+      <!-- The files a question or an answer carries: how many, their names on hover (never their upload tokens). -->
+      <span v-if="messageFiles.length" class="action-target__muted" :title="messageFiles.join(', ')">
+        {{ t('actions.summary.files', { n: messageFiles.length }, messageFiles.length) }}
       </span>
     </template>
 
