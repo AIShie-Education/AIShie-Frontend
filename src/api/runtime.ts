@@ -32,16 +32,20 @@
 // as the contract's §5.14 says; this client retries accordingly.
 //
 // The runtime's administrators have routes of their own (runtimeAdmin, at
-// the end): OCR, and the school's plan's offers, quotas and use.
+// the end): OCR, the school's plan's offers, quotas and use, and pricing.
 //
 // The route and field names the contract fixes are here and in
 // runtime-types.ts, and nowhere else in the app.
 
 import { ApiError, queryString, requestAssertion } from './http'
 import type {
+  AgentBudgets,
+  AgentBudgetsPut,
   AgentPatch,
   ClientErrorReason,
   ConnectAnswer,
+  CostQuery,
+  CostReport,
   DeleteAnswer,
   HostedAgent,
   InspectAnswer,
@@ -52,6 +56,10 @@ import type {
   OfferDeleted,
   OfferPatch,
   PlanOffer,
+  PriceCreate,
+  PricePatch,
+  PriceRow,
+  PriceTable,
   QuotasPut,
   ReplaceTokenAnswer,
   ReplaceTokenRequest,
@@ -62,6 +70,9 @@ import type {
   RuntimeSettingsPatch,
   SchoolPlan,
   SchoolPlanUsage,
+  TenantList,
+  TenantPut,
+  TenantQuota,
   TokenRequest,
 } from './runtime-types'
 
@@ -93,6 +104,12 @@ export const RUNTIME_ROUTES = {
   planOffer: '/admin/school-plan/offers/{id}',
   planQuotas: '/admin/school-plan/quotas',
   planUsage: '/admin/school-plan/usage',
+  prices: '/admin/prices',
+  price: '/admin/prices/{id}',
+  tenants: '/admin/tenants',
+  tenant: '/admin/tenants/{tenant_id}',
+  agentBudgets: '/admin/agent-budgets',
+  costs: '/admin/costs',
 } as const
 
 /** Headers of the contract beyond plain HTTP's. */
@@ -677,19 +694,24 @@ export const runtime = {
 }
 
 const offerPath = (id: string) => runtimePath(RUNTIME_ROUTES.planOffer, { id })
+const pricePath = (id: string) => runtimePath(RUNTIME_ROUTES.price, { id })
+const tenantPath = (id: string) => runtimePath(RUNTIME_ROUTES.tenant, { tenant_id: id })
 
 /**
- * The runtime's administrators' calls: OCR (admin/settings) and the school's
- * plan (admin/school-plan: its offers, its quotas, today's use). Anyone else
- * is refused 403 not_admin; a runtime from before a route answers 404.
+ * The runtime's administrators' calls: OCR (admin/settings), the school's
+ * plan (admin/school-plan: its offers, its quotas, today's use), and the
+ * money (the price table, tenants' quotas, hosted agents' budgets, and what
+ * things cost). Anyone else is refused 403 not_admin; a runtime from before
+ * a route answers 404.
  *
- * Retried as the runtime answers them: reads, and the quotas' PUT and
- * DELETE, which come to the same however often they are sent. Never a
- * PATCH, nor an offer made or deleted: making one tries its key with the
- * provider, rate limited, and one sent again after a lost answer would be
- * refused as taken (409) or gone (404). A change to an offer names the
- * version it was read at (If-Match), and so may a deletion; either may
- * answer 412 when it has moved on (isVersionMismatch).
+ * Retried as the runtime answers them: reads, and the PUTs and DELETEs of
+ * quotas and budgets, which come to the same however often they are sent.
+ * Never a PATCH, nor an offer or a price made or deleted: making an offer
+ * tries its key with the provider, rate limited, and one sent again after a
+ * lost answer would be refused as taken (409) or gone (404). A change to an
+ * offer or a price names the version it was read at (If-Match), and so may
+ * a deletion; either may answer 412 when it has moved on
+ * (isVersionMismatch).
  */
 export const runtimeAdmin = {
   settings: () => runtimeRequest<RuntimeSettings>('GET', RUNTIME_ROUTES.adminSettings),
@@ -709,4 +731,25 @@ export const runtimeAdmin = {
   /** runtime.yaml's quotas again. */
   resetQuotas: () => runtimeRequest<SchoolPlan>('DELETE', RUNTIME_ROUTES.planQuotas, { retry: true }),
   usage: () => runtimeRequest<SchoolPlanUsage>('GET', RUNTIME_ROUTES.planUsage),
+  prices: () => runtimeRequest<PriceTable>('GET', RUNTIME_ROUTES.prices),
+  price: (id: string) => runtimeRequest<PriceRow>('GET', pricePath(id)),
+  createPrice: (row: PriceCreate) =>
+    runtimeRequest<PriceRow>('POST', RUNTIME_ROUTES.prices, { body: row, retry: false }),
+  updatePrice: (id: string, version: string | number, patch: PricePatch) =>
+    runtimeRequest<PriceRow>('PATCH', pricePath(id), { body: patch, ifMatch: version, retry: false }),
+  /** The table as it is after. */
+  deletePrice: (id: string, version?: string | number) =>
+    runtimeRequest<PriceTable>('DELETE', pricePath(id), { ifMatch: version ?? undefined, retry: false }),
+  tenants: (page: { after?: string; limit?: number } = {}) =>
+    runtimeRequest<TenantList>('GET', RUNTIME_ROUTES.tenants, { query: page }),
+  tenant: (id: string) => runtimeRequest<TenantQuota>('GET', tenantPath(id)),
+  setTenant: (id: string, quota: TenantPut) =>
+    runtimeRequest<TenantQuota>('PUT', tenantPath(id), { body: quota, retry: true }),
+  /** runtime.yaml's quota again, or none. */
+  resetTenant: (id: string) => runtimeRequest<TenantQuota>('DELETE', tenantPath(id), { retry: true }),
+  agentBudgets: () => runtimeRequest<AgentBudgets>('GET', RUNTIME_ROUTES.agentBudgets),
+  setAgentBudgets: (budgets: AgentBudgetsPut) =>
+    runtimeRequest<AgentBudgets>('PUT', RUNTIME_ROUTES.agentBudgets, { body: budgets, retry: true }),
+  resetAgentBudgets: () => runtimeRequest<AgentBudgets>('DELETE', RUNTIME_ROUTES.agentBudgets, { retry: true }),
+  costs: (query: CostQuery = {}) => runtimeRequest<CostReport>('GET', RUNTIME_ROUTES.costs, { query: { ...query } }),
 }

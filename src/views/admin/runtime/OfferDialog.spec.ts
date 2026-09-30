@@ -237,9 +237,9 @@ describe('adding a model to the plan', () => {
       422,
       'failed_precondition',
       'offer_not_priced',
-      { field: '/model' },
+      { field: '/model', offers: ['gpt5'] },
       '.offer-form__model',
-      'the runtime’s price table has no price for this model',
+      'A quota in dollars needs a price today for every model',
     ],
     [400, 'invalid_argument', 'unknown_endpoint', { field: '/endpoint' }, '.offer-form__adapter', null],
     [
@@ -266,6 +266,24 @@ describe('adding a model to the plan', () => {
     if (words) expect(fieldError(w, cls)).toContain(words)
     // A field the form does not show for this provider: said above it.
     else expect(w.find('.offer-dialog__error').text()).toContain('Choose one of the endpoints offered.')
+  })
+
+  it('offers to add a price for the model when a quota in dollars needs one', async () => {
+    const { w, vm } = await open()
+    await fillNew(vm)
+    s.once('POST', ADMIN.offers, () =>
+      refusal(422, 'failed_precondition', 'offer_not_priced', { field: '/model', offers: ['gpt5'] }),
+    )
+    await save(w)
+    expect(fieldError(w, '.offer-form__model')).toContain('A quota in dollars needs a price today')
+    const notice = w.find('.offer-dialog__unpriced')
+    expect(notice.text()).toContain('A quota in dollars needs a price for this model first:')
+    expect(notice.find('.unpriced__label').text()).toBe('School AI (GPT-5)')
+    expect(notice.find('.unpriced__model').text()).toBe('openai · gpt-5')
+    await notice.find('.unpriced__add').trigger('click')
+    await flushPromises()
+    const price = document.body.querySelector('.price-dialog') as HTMLElement
+    expect((price.querySelector('.price-form__model input') as HTMLInputElement).value).toBe('gpt-5')
   })
 
   it('says a rate limit above the form, and never sends it again by itself', async () => {

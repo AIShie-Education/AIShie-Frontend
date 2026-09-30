@@ -14,6 +14,7 @@ import {
   schoolPlan,
   siteOffer,
   withAdmin,
+  withDollars,
   type AdminState,
 } from './adminFakes'
 import { mountGlobal, settle } from './testSetup'
@@ -285,8 +286,10 @@ describe('the daily quotas', () => {
     expect((inputOf(w, 'per_owner_day').element as HTMLInputElement).value).toBe('150')
     expect((inputOf(w, 'per_asker_day').element as HTMLInputElement).value).toBe('20')
     expect((inputOf(w, 'per_day').element as HTMLInputElement).value).toBe('5000')
-    expect(w.find('.quotas-card__per_owner_day .quotas-card__hint').text()).toContain('Server default: 100')
-    expect(w.find('.quotas-card__per_day .quotas-card__hint').text()).toContain('Server default: no ceiling')
+    expect(w.find('.quotas-card__per_owner_day .quotas-card__default').text()).toBe('Server default: 100')
+    expect(w.find('.quotas-card__per_day .quotas-card__default').text()).toBe('Server default: no ceiling')
+    // A runtime from before quotas in dollars: none to set.
+    expect(w.find('.quotas-card__usd').exists()).toBe(false)
     expect(w.find('.quotas-card__source').text()).toMatch(
       /^Set here, in place of the server’s defaults.\s*Changed by Ada Admin, /,
     )
@@ -305,6 +308,17 @@ describe('the daily quotas', () => {
     expect(JSON.parse(put.body!)).toEqual({ per_owner_day: 200, per_asker_day: 20, per_day: null })
     expect(lastMessage()?.message).toBe('The quotas are saved. Every agent keeps them from its next answer.')
     expect(w.find('.quotas-card__save').attributes('disabled')).toBeDefined()
+  })
+
+  it('says what the server’s defaults are in dollars too, before going back to them', async () => {
+    state.plan = withDollars(state.plan)
+    const w = await panel()
+    vi.mocked(ElMessageBox.confirm).mockResolvedValueOnce('confirm' as never)
+    await w.find('.quotas-card__reset').trigger('click')
+    await flushPromises()
+    expect(vi.mocked(ElMessageBox.confirm).mock.calls[0][0]).toBe(
+      'The quotas go back to runtime.yaml’s. Per owner: 100. Per person asking: 20. For the whole school: No ceiling. In dollars, per owner: No ceiling. Per person asking: $0.50. For the whole school: No ceiling.',
+    )
   })
 
   it('keeps quotas being changed when the plan is read again', async () => {
@@ -339,6 +353,110 @@ describe('the daily quotas', () => {
     expect(w.find('.quotas-card__per_owner_day').text()).toContain('A whole number from 1 to 1,000,000.')
   })
 
+  it('sets quotas in dollars beside those in answers, where the runtime has them', async () => {
+    state.plan = withDollars(state.plan)
+    const w = await panel()
+    const usd = (k: string) => w.find(`.quotas-card__${k} .quotas-card__usd input`)
+    expect((usd('per_owner_day').element as HTMLInputElement).value).toBe('2.5')
+    expect((usd('per_asker_day').element as HTMLInputElement).value).toBe('')
+    expect((usd('per_day').element as HTMLInputElement).value).toBe('100')
+    expect(w.find('.quotas-card__per_asker_day .quotas-card__usd .quotas-card__default').text()).toBe(
+      'Server default: $0.50',
+    )
+    expect(w.find('.quotas-card__per_owner_day .quotas-card__usd input').attributes('aria-label')).toBe(
+      'Per owner: dollars a day',
+    )
+    expect(w.text()).toContain('every model of the plan needs a price for it')
+    await usd('per_asker_day').setValue('0.25')
+    await usd('per_day').setValue('')
+    await flushPromises()
+    await w.find('.quotas-card__save').trigger('click')
+    await flushPromises()
+    expect(JSON.parse(s.to('PUT', ADMIN.quotas)[0].body!)).toEqual({
+      per_owner_day: 150,
+      per_asker_day: 20,
+      per_day: 5000,
+      per_owner_day_usd: '2.5',
+      per_asker_day_usd: '0.25',
+      per_day_usd: null,
+    })
+    expect((usd('per_asker_day').element as HTMLInputElement).value).toBe('0.25')
+  })
+
+  it('refuses an amount of dollars that is not one, on its field', async () => {
+    state.plan = withDollars(state.plan)
+    const w = await panel()
+    await w.find('.quotas-card__per_owner_day .quotas-card__usd input').setValue('0')
+    await flushPromises()
+    await w.find('.quotas-card__save').trigger('click')
+    await settle()
+    expect(w.find('.quotas-card__per_owner_day .quotas-card__usd').text()).toContain('An amount of dollars above 0')
+    expect(s.to('PUT', ADMIN.quotas)).toHaveLength(0)
+  })
+
+  it('lists the models a quota in dollars needs a price for, each with “Add a price”, to try again after', async () => {
+    state.plan = withDollars(state.plan)
+    const w = await panel()
+    s.once('PUT', ADMIN.quotas, () =>
+      refusal(422, 'failed_precondition', 'offer_not_priced', {
+        field: '/per_owner_day_usd',
+        offers: ['standard', 'kimi'],
+      }),
+    )
+    await w.find('.quotas-card__per_owner_day .quotas-card__usd input').setValue('3')
+    await flushPromises()
+    await w.find('.quotas-card__save').trigger('click')
+    await settle()
+    const notice = w.find('.quotas-card__unpriced')
+    expect(notice.text()).toContain(
+      'A quota in dollars needs a price for every model of the plan, and these have none today:',
+    )
+    expect(notice.findAll('.unpriced__label').map((x) => x.text())).toEqual(['School AI (standard)', 'Kimi'])
+    await notice.find('[data-offer="kimi"] .unpriced__add').trigger('click')
+    await flushPromises()
+    const dialog = document.body.querySelector('.price-dialog') as HTMLElement
+    const value = (sel: string) => (dialog.querySelector(`${sel} input`) as HTMLInputElement).value
+    expect(value('.price-form__model')).toBe('kimi-k2')
+    for (const [sel, v] of [
+      ['.price-form__input', '0.6'],
+      ['.price-form__output', '2.5'],
+    ]) {
+      const i = dialog.querySelector(`${sel} input`) as HTMLInputElement
+      i.value = v
+      i.dispatchEvent(new Event('input'))
+    }
+    await flushPromises()
+    ;(dialog.querySelector('.price-dialog__save') as HTMLElement).click()
+    await settle()
+    expect(JSON.parse(s.to('POST', ADMIN.prices)[0].body!)).toMatchObject({ provider: 'moonshot', model: 'kimi-k2' })
+    expect(w.find('[data-offer="kimi"] .unpriced__done').text()).toBe('Priced: try again.')
+    await w.find('.quotas-card__save').trigger('click')
+    await flushPromises()
+    expect(s.to('PUT', ADMIN.quotas)).toHaveLength(2)
+    expect(w.find('.quotas-card__unpriced').exists()).toBe(false)
+  })
+
+  it('lists the agents a quota in dollars would leave without a price, with the way to the prices', async () => {
+    state.plan = withDollars(state.plan)
+    const w = await panel()
+    s.once('PUT', ADMIN.quotas, () =>
+      refusal(422, 'failed_precondition', 'model_not_priced', {
+        field: '/per_day_usd',
+        problems: [
+          'agent "agt_1": it has a quota in dollars, and the price table has no price for openai gpt-4.1-nano',
+        ],
+      }),
+    )
+    await w.find('.quotas-card__per_day .quotas-card__usd input').setValue('50')
+    await flushPromises()
+    await w.find('.quotas-card__save').trigger('click')
+    await settle()
+    const alert = w.find('.quotas-card__error')
+    expect(alert.text()).toContain('A quota in dollars would hold agents whose models have no price.')
+    expect(alert.find('.quotas-card__problems').text()).toContain('agent "agt_1"')
+    expect(alert.find('.quotas-card__to-prices').attributes('href')).toBe('/admin/runtime?tab=pricing')
+  })
+
   it('goes back to the server’s defaults, saying first what they are', async () => {
     const w = await panel()
     vi.mocked(ElMessageBox.confirm).mockResolvedValueOnce('confirm' as never)
@@ -349,6 +467,7 @@ describe('the daily quotas', () => {
     )
     expect(s.to('DELETE', ADMIN.quotas)).toHaveLength(1)
     expect((inputOf(w, 'per_owner_day').element as HTMLInputElement).value).toBe('100')
+    expect(w.find('.quotas-card__usd').exists()).toBe(false)
     expect(w.find('.quotas-card__source').text()).toBe(
       'The server’s defaults (runtime.yaml), as its operator set them.',
     )

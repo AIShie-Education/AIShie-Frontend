@@ -136,6 +136,10 @@ const GENERIC = [
   'offer_not_priced',
   'key_required',
   'key_test_failed',
+  'model_not_priced',
+  'price_not_found',
+  'price_exists',
+  'price_read_only',
 ]
 
 describe('the words for each error reason', () => {

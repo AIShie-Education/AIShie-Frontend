@@ -13,6 +13,7 @@ import { useNarrow } from '@/composables/useMediaQuery'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
+import { usdShown } from './runtimeAdmin'
 
 const { t } = useI18n()
 const narrow = useNarrow()
@@ -22,6 +23,13 @@ const data = computed(() => usage.data.value ?? null)
 /** The busiest first. */
 const owners = computed(() => [...(data.value?.owners ?? [])].sort((a, b) => b.answers - a.answers))
 const spent = (o: OwnerPlanUse) => !!data.value && !!o.owner_actor_id && o.answers >= data.value.limits.per_owner_day
+/** The quotas in dollars in force, where the runtime has any. */
+const usdLimits = computed(() => {
+  const l = data.value?.limits
+  if (!l || (l.per_owner_day_usd == null && l.per_asker_day_usd == null && l.per_day_usd == null)) return null
+  const shown = (v: string | null | undefined) => (v == null ? t('runtimeAdmin.money.noLimit') : `$${usdShown(v)}`)
+  return { owner: shown(l.per_owner_day_usd), asker: shown(l.per_asker_day_usd), day: shown(l.per_day_usd) }
+})
 const schoolSpent = computed(() => {
   const d = data.value
   return !!d && d.limits.per_day !== null && d.total.answers >= d.limits.per_day
@@ -72,10 +80,14 @@ const schoolSpent = computed(() => {
           <div class="usage-card__total">
             <dt>{{ t('runtimeAdmin.usage.cost') }}</dt>
             <dd class="usage-card__cost">${{ data.total.cost_usd }}</dd>
+            <dd v-if="data.limits.per_day_usd != null" class="usage-card__of usage-card__of-usd">
+              {{ t('runtimeAdmin.usage.ofDay', { n: `$${usdShown(data.limits.per_day_usd)}` }) }}
+            </dd>
           </div>
         </dl>
         <p class="app-form-hint usage-card__limits">
           {{ t('runtimeAdmin.usage.limits', { owner: data.limits.per_owner_day, asker: data.limits.per_asker_day }) }}
+          <template v-if="usdLimits">{{ t('runtimeAdmin.usage.limitsUsd', usdLimits) }}</template>
         </p>
 
         <el-empty v-if="!owners.length" :description="t('runtimeAdmin.usage.empty')" class="usage-card__empty" />

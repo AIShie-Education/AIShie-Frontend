@@ -8,6 +8,22 @@ import { defaultsFor, emptyModelForm } from '@/views/account/components/agents/h
 import {
   OFFER_STATUS_TAG,
   adminErrorText,
+  costRange,
+  emptyPriceForm,
+  priceCreateFrom,
+  priceFieldOf,
+  priceFormOf,
+  priceIdFor,
+  pricePatchFrom,
+  priceProblems,
+  quotaFieldsProblems,
+  quotaInputOf,
+  sameUsd,
+  unpricedIds,
+  unpricedItems,
+  usdField,
+  usdProblem,
+  usdShown,
   formFromOffer,
   isNotAdmin,
   isNotOffered,
@@ -24,7 +40,7 @@ import {
   retestsKey,
   sameLanguages,
 } from './runtimeAdmin'
-import { newToken, siteOffer } from './adminFakes'
+import { configOffer, newToken, priceRow, siteOffer } from './adminFakes'
 
 const g = i18n.global as unknown as {
   t: (key: string, params: Record<string, unknown>) => string
@@ -76,8 +92,17 @@ describe('the words for the administrators’ refusals', () => {
     offer_not_found: [{}, 'This model is no longer on the plan: someone deleted it meanwhile.'],
     offer_read_only: [{}, 'The server’s operator set this model in runtime.yaml, so it cannot be changed here.'],
     offer_not_priced: [
-      { field: '/model' },
-      'The plan has a quota in dollars, and the runtime’s price table has no price for this model, so it cannot be offered. Choose a priced model, or ask the operator.',
+      { field: '/model', offers: ['fast'] },
+      'A quota in dollars needs a price today for every model of the school’s plan, and this would leave one without. Add a price for it, then try again.',
+    ],
+    model_not_priced: [
+      { problems: ['agent "agt_1": no price for openai gpt-4.1-nano'] },
+      'A quota in dollars would hold agents whose models have no price. Add prices for them, or keep the quota in answers only.',
+    ],
+    price_not_found: [{}, 'This price is no longer in the table: someone deleted it meanwhile.'],
+    price_read_only: [
+      {},
+      'The server’s price file sets this price, so it cannot be changed here. Add one of the site’s for the same model and day to stand before it.',
     ],
     key_required: [{ field: '/key' }, 'Another provider needs its own key: enter the school’s key for OpenAI.'],
     model_denied: [
@@ -396,5 +421,165 @@ describe('a quota', () => {
     expect(quotaProblem(null, true)).toBe('hosting.model.invalid.required')
     for (const bad of [0, -1, 1.5, 1_000_001])
       expect(quotaProblem(bad, true), String(bad)).toBe('runtimeAdmin.quotas.invalid')
+  })
+})
+
+describe('dollars', () => {
+  it('are shown to the cent at least, and to the places that matter', () => {
+    expect(usdShown('2.500000')).toBe('2.50')
+    expect(usdShown('0.000125')).toBe('0.000125')
+    expect(usdShown('15.000000')).toBe('15.00')
+    expect(usdShown('3')).toBe('3.00')
+    expect(usdShown(null)).toBe('')
+  })
+
+  it('are held by a field without trailing zeros, and none as empty', () => {
+    expect(usdField('2.500000')).toBe('2.5')
+    expect(usdField('100.000000')).toBe('100')
+    expect(usdField(null)).toBe('')
+    expect(sameUsd('2.5', '2.500000')).toBe(true)
+    expect(sameUsd('', null)).toBe(true)
+    expect(sameUsd(undefined, null)).toBe(true)
+    expect(sameUsd('2', null)).toBe(false)
+  })
+
+  it('for a quota are above 0, at most 1,000,000, with six places at most; empty is none', () => {
+    for (const ok of ['', ' ', '0.5', '2', '1000000', '0.000001']) expect(usdProblem(ok), ok).toBeNull()
+    for (const bad of ['0', '-1', '1e3', '0.0000001', '1000000.01', 'abc', '1,5'])
+      expect(usdProblem(bad), bad).toBe('runtimeAdmin.money.invalidUsd')
+  })
+
+  it('make a daily quota’s fields, with one at least where asked', () => {
+    expect(quotaInputOf({ answers: 5, usd: ' 2.5 ' })).toEqual({ answers: 5, usd: '2.5' })
+    expect(quotaInputOf({ answers: null, usd: '' })).toEqual({ answers: null, usd: null })
+    expect(quotaFieldsProblems({ answers: null, usd: '' })).toEqual({})
+    expect(quotaFieldsProblems({ answers: null, usd: '' }, { oneAtLeast: true })).toEqual({
+      answers: 'runtimeAdmin.tenants.oneAtLeast',
+    })
+    expect(quotaFieldsProblems({ answers: 0, usd: '-2' })).toEqual({
+      answers: 'runtimeAdmin.quotas.invalid',
+      usd: 'runtimeAdmin.money.invalidUsd',
+    })
+  })
+})
+
+describe('a price’s form', () => {
+  it('suggests an ID from the model and the day, as the ledger names rows', () => {
+    expect(priceIdFor('gpt-4.1-mini', '2026-09-30')).toBe('gpt-4.1-mini-2026-09-30')
+    expect(priceIdFor('claude-*', '2026-01-01')).toBe('claude-x-2026-01-01')
+    expect(priceIdFor('org/model name', '2026-01-01')).toBe('org-model-name-2026-01-01')
+    expect(priceIdFor('x'.repeat(80), '2026-01-01')).toHaveLength(64)
+  })
+
+  it('shows cache prices equal to input’s as “same as input”', () => {
+    expect(priceFormOf(priceRow())).toMatchObject({ input: '0.4', output: '1.6', cacheRead: '0.1', cacheWrite: '' })
+  })
+
+  it('finds what is wrong with it, field by field', () => {
+    const f = {
+      ...emptyPriceForm('2026-09-30'),
+      id: 'mini',
+      provider: 'openai',
+      model: 'gpt-4.1-mini',
+      input: '0.4',
+      output: '1.6',
+    }
+    expect(priceProblems(f, { creating: true, takenIds: [] })).toEqual({})
+    expect(priceProblems({ ...f, id: '-x' }, { creating: true, takenIds: [] }).id).toBe(
+      'runtimeAdmin.prices.invalid.id',
+    )
+    expect(priceProblems(f, { creating: true, takenIds: ['mini'] }).id).toBe('runtimeAdmin.prices.invalid.idTaken')
+    expect(priceProblems(f, { creating: false, takenIds: ['mini'] }).id).toBeUndefined()
+    expect(priceProblems({ ...f, provider: 'OpenAI' }, { creating: true, takenIds: [] }).provider).toBe(
+      'runtimeAdmin.prices.invalid.provider',
+    )
+    expect(priceProblems({ ...f, model: 'a b' }, { creating: true, takenIds: [] }).model).toBe(
+      'runtimeAdmin.prices.invalid.model',
+    )
+    expect(priceProblems({ ...f, from: '1999-12-31' }, { creating: true, takenIds: [] }).from).toBe(
+      'runtimeAdmin.prices.invalid.from',
+    )
+    expect(priceProblems({ ...f, output: '' }, { creating: true, takenIds: [] }).output).toBe(
+      'hosting.model.invalid.required',
+    )
+    expect(priceProblems({ ...f, input: '-1', cacheRead: '0.0000001' }, { creating: true, takenIds: [] })).toEqual({
+      input: 'runtimeAdmin.prices.invalid.price',
+      cacheRead: 'runtimeAdmin.prices.invalid.price',
+    })
+    // A price of 0 is a price.
+    expect(priceProblems({ ...f, input: '0' }, { creating: true, takenIds: [] })).toEqual({})
+  })
+
+  it('makes a new row, sending cache prices only where they differ from input’s', () => {
+    const f = {
+      ...emptyPriceForm('2026-09-30'),
+      id: ' mini ',
+      provider: 'openai',
+      model: 'gpt-4.1-mini',
+      input: '0.4',
+      output: '1.6',
+    }
+    expect(priceCreateFrom(f)).toEqual({
+      id: 'mini',
+      provider: 'openai',
+      model: 'gpt-4.1-mini',
+      from: '2026-09-30',
+      usd_per_mtok: { input: '0.4', output: '1.6' },
+    })
+    expect(priceCreateFrom({ ...f, cacheRead: '0.1' }).usd_per_mtok).toEqual({
+      input: '0.4',
+      output: '1.6',
+      cache_read: '0.1',
+    })
+  })
+
+  it('sends only what changed, whatever places it is written with', () => {
+    const r = priceRow()
+    const f = priceFormOf(r)
+    expect(pricePatchFrom(r, f)).toEqual({})
+    expect(pricePatchFrom(r, { ...f, output: '1.60' })).toEqual({})
+    expect(pricePatchFrom(r, { ...f, from: '2026-10-01', output: '2' })).toEqual({
+      from: '2026-10-01',
+      usd_per_mtok: { output: '2' },
+    })
+    // Input changed: a cache write shown as "same as input" moves with it.
+    expect(pricePatchFrom(r, { ...f, input: '0.5' })).toEqual({ usd_per_mtok: { input: '0.5', cache_write: '0.5' } })
+    // A cache read emptied is input's again.
+    expect(pricePatchFrom(r, { ...f, cacheRead: '' })).toEqual({ usd_per_mtok: { cache_read: '0.4' } })
+  })
+
+  it('names its fields from the runtime’s pointers', () => {
+    expect(priceFieldOf('/from')).toBe('from')
+    expect(priceFieldOf('/usd_per_mtok/cache_write')).toBe('cacheWrite')
+    expect(priceFieldOf('/nope')).toBeNull()
+  })
+})
+
+describe('models without a price', () => {
+  it('are the offers a refusal names, as the plan has them, and one not in it yet as given', () => {
+    const e = err('offer_not_priced', { field: '/per_day_usd', offers: ['standard', 'new', 'gone', 7] }, 422)
+    expect(unpricedIds(e)).toEqual(['standard', 'new', 'gone'])
+    expect(unpricedIds(err('model_not_priced', {}, 422))).toEqual([])
+    const offers = [configOffer(), siteOffer({ id: 'standard', status: 'id_taken', label: 'Shadowed' })]
+    expect(unpricedItems(unpricedIds(e), offers, [{ id: 'new', provider: 'openai', model: 'gpt-5' }])).toEqual([
+      { id: 'standard', label: 'School AI (standard)', provider: 'openai', model: 'gpt-4.1-mini' },
+      { id: 'new', provider: 'openai', model: 'gpt-5' },
+    ])
+  })
+
+  it('have words for a price taken, by ID or by model and day', () => {
+    expect(adminErrorText(err('price_exists', { field: '/id', id: 'mini' }, 409), t)).toBe(
+      'The table already has a price with this ID. Choose another.',
+    )
+    expect(adminErrorText(err('price_exists', { field: '/from', id: 'mini' }, 409), t)).toBe(
+      'The table already has a price for this provider and model from this day (mini). Edit that one instead.',
+    )
+  })
+})
+
+describe('a cost report’s span', () => {
+  it('is the runtime’s own by default: the thirty days to today', () => {
+    expect(costRange('2026-09-30')).toEqual(['2026-09-01', '2026-09-30'])
+    expect(costRange('2026-03-01')).toEqual(['2026-01-31', '2026-03-01'])
   })
 })

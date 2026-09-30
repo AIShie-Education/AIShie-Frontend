@@ -1,8 +1,10 @@
 <script setup lang="ts">
 // AI and documents: the school's agent runtime, as its administrators set it
 // (the runtime's admin routes). The school's AI plan (the models the school
-// provides and pays for, their keys, and the daily quotas), today's use of
-// it, and the reading of scanned documents (OCR).
+// provides and pays for, their keys, and the daily quotas), pricing and
+// quotas (the price table, tenants' quotas, hosted agents' budgets, and what
+// things cost), today's use of the plan, and the reading of scanned
+// documents (OCR).
 //
 // Platform administrators open it (router/modules/admin.ts), and the side bar
 // offers it to them where there is a runtime. The runtime's own
@@ -13,9 +15,8 @@
 // tabs work.
 //
 // Each tab is a part the runtime answers for apart, loaded when first shown,
-// and remembered in the address (?tab=): what comes next (pricing, a
-// document's transcription beside OCR) is one more entry, or one more card
-// in its tab.
+// and remembered in the address (?tab=): what comes next (a document's
+// transcription beside OCR) is one more entry, or one more card in its tab.
 import { computed, watch, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -24,6 +25,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useRuntime } from '@/composables/useRuntime'
 import PageHeader from '@/components/PageHeader.vue'
 import OcrCard from './runtime/OcrCard.vue'
+import PricingPanel from './runtime/PricingPanel.vue'
 import RuntimeAsync from './runtime/RuntimeAsync.vue'
 import SchoolPlanPanel from './runtime/SchoolPlanPanel.vue'
 import UsageCard from './runtime/UsageCard.vue'
@@ -35,6 +37,7 @@ const router = useRouter()
 
 const TABS: { name: string; label: string; component: Component }[] = [
   { name: 'plan', label: 'runtimeAdmin.tabs.plan', component: SchoolPlanPanel },
+  { name: 'pricing', label: 'runtimeAdmin.tabs.pricing', component: PricingPanel },
   { name: 'usage', label: 'runtimeAdmin.tabs.usage', component: UsageCard },
   { name: 'documents', label: 'runtimeAdmin.tabs.documents', component: OcrCard },
 ]

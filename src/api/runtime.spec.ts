@@ -941,6 +941,99 @@ describe('the administrators’ calls', () => {
       undefined,
     ],
     ['usage', () => rt.runtimeAdmin.usage(), 'GET', '/runtime/api/v1/admin/school-plan/usage', undefined],
+    ['prices', () => rt.runtimeAdmin.prices(), 'GET', '/runtime/api/v1/admin/prices', undefined],
+    ['price', () => rt.runtimeAdmin.price('haiku 4.5'), 'GET', '/runtime/api/v1/admin/prices/haiku%204.5', undefined],
+    [
+      'createPrice',
+      () =>
+        rt.runtimeAdmin.createPrice({
+          id: 'mini',
+          provider: 'openai',
+          model: 'gpt-4.1-mini',
+          from: '2026-09-30',
+          usd_per_mtok: { input: '0.4', output: '1.6' },
+        }),
+      'POST',
+      '/runtime/api/v1/admin/prices',
+      {
+        id: 'mini',
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        from: '2026-09-30',
+        usd_per_mtok: { input: '0.4', output: '1.6' },
+      },
+    ],
+    [
+      'updatePrice',
+      () => rt.runtimeAdmin.updatePrice('mini', 2, { usd_per_mtok: { output: '2' } }),
+      'PATCH',
+      '/runtime/api/v1/admin/prices/mini',
+      { usd_per_mtok: { output: '2' } },
+    ],
+    [
+      'deletePrice',
+      () => rt.runtimeAdmin.deletePrice('mini', 2),
+      'DELETE',
+      '/runtime/api/v1/admin/prices/mini',
+      undefined,
+    ],
+    ['tenants', () => rt.runtimeAdmin.tenants(), 'GET', '/runtime/api/v1/admin/tenants', undefined],
+    [
+      'tenants, a page on',
+      () => rt.runtimeAdmin.tenants({ after: 't_ops', limit: 50 }),
+      'GET',
+      '/runtime/api/v1/admin/tenants?after=t_ops&limit=50',
+      undefined,
+    ],
+    ['tenant', () => rt.runtimeAdmin.tenant('ten_x'), 'GET', '/runtime/api/v1/admin/tenants/ten_x', undefined],
+    [
+      'setTenant',
+      () => rt.runtimeAdmin.setTenant('ten_x', { per_day: { answers: 100, usd: '2.5' } }),
+      'PUT',
+      '/runtime/api/v1/admin/tenants/ten_x',
+      { per_day: { answers: 100, usd: '2.5' } },
+    ],
+    [
+      'resetTenant',
+      () => rt.runtimeAdmin.resetTenant('ten_x'),
+      'DELETE',
+      '/runtime/api/v1/admin/tenants/ten_x',
+      undefined,
+    ],
+    ['agentBudgets', () => rt.runtimeAdmin.agentBudgets(), 'GET', '/runtime/api/v1/admin/agent-budgets', undefined],
+    [
+      'setAgentBudgets',
+      () =>
+        rt.runtimeAdmin.setAgentBudgets({
+          per_agent_day: { answers: 500, usd: null },
+          per_asker_day: { answers: null, usd: '1' },
+        }),
+      'PUT',
+      '/runtime/api/v1/admin/agent-budgets',
+      { per_agent_day: { answers: 500, usd: null }, per_asker_day: { answers: null, usd: '1' } },
+    ],
+    [
+      'resetAgentBudgets',
+      () => rt.runtimeAdmin.resetAgentBudgets(),
+      'DELETE',
+      '/runtime/api/v1/admin/agent-budgets',
+      undefined,
+    ],
+    ['costs', () => rt.runtimeAdmin.costs(), 'GET', '/runtime/api/v1/admin/costs', undefined],
+    [
+      'costs, as asked',
+      () =>
+        rt.runtimeAdmin.costs({
+          since: '2026-09-01',
+          until: '2026-09-30',
+          group: 'model',
+          key_source: 'school',
+          after: 'x',
+        }),
+      'GET',
+      '/runtime/api/v1/admin/costs?since=2026-09-01&until=2026-09-30&group=model&key_source=school&after=x',
+      undefined,
+    ],
   ] as const)('%s goes where the contract says', async (_, call, method, url, body) => {
     runtimeAnswers.push(json(200, OFFER, { ETag: '"2"' }))
     const out = await call()
@@ -951,6 +1044,17 @@ describe('the administrators’ calls', () => {
     expect(c.body === undefined ? undefined : JSON.parse(c.body)).toEqual(body)
     expect(c.headers.Authorization).toMatch(/^Bearer eyJ/)
     expect(c.credentials).toBe('omit')
+  })
+
+  it('names a price’s version when changing it, and when deleting it if asked to', async () => {
+    runtimeAnswers.push(json(200, {}), json(200, {}), json(200, {}))
+    await rt.runtimeAdmin.updatePrice('mini', 3, { from: '2026-10-01' })
+    await rt.runtimeAdmin.deletePrice('mini', '"4"')
+    await rt.runtimeAdmin.deletePrice('mini')
+    const [patch, del, bare] = runtimeCalls()
+    expect(patch.headers['If-Match']).toBe('"3"')
+    expect(del.headers['If-Match']).toBe('"4"')
+    expect(bare.headers['If-Match']).toBeUndefined()
   })
 
   it('names an offer’s version when changing it, and when deleting it if asked to', async () => {
@@ -972,6 +1076,19 @@ describe('the administrators’ calls', () => {
     ['usage', () => rt.runtimeAdmin.usage()],
     ['setQuotas', () => rt.runtimeAdmin.setQuotas({ per_owner_day: 1, per_asker_day: 1, per_day: 1 })],
     ['resetQuotas', () => rt.runtimeAdmin.resetQuotas()],
+    ['prices', () => rt.runtimeAdmin.prices()],
+    ['setTenant', () => rt.runtimeAdmin.setTenant('t', { per_day: { answers: 1, usd: null } })],
+    ['resetTenant', () => rt.runtimeAdmin.resetTenant('t')],
+    [
+      'setAgentBudgets',
+      () =>
+        rt.runtimeAdmin.setAgentBudgets({
+          per_agent_day: { answers: 1, usd: null },
+          per_asker_day: { answers: 1, usd: null },
+        }),
+    ],
+    ['resetAgentBudgets', () => rt.runtimeAdmin.resetAgentBudgets()],
+    ['costs', () => rt.runtimeAdmin.costs({ group: 'day' })],
   ] as const)('%s is sent again after a 503 or no answer, as the same request', async (_, call) => {
     runtimeAnswers.push(empty(503), () => Promise.reject(new TypeError('Failed to fetch')), json(200, {}))
     await call()
@@ -985,6 +1102,19 @@ describe('the administrators’ calls', () => {
     ['createOffer', () => rt.runtimeAdmin.createOffer(CREATE)],
     ['updateOffer', () => rt.runtimeAdmin.updateOffer('fast', 2, { enabled: true })],
     ['deleteOffer', () => rt.runtimeAdmin.deleteOffer('fast', 2)],
+    [
+      'createPrice',
+      () =>
+        rt.runtimeAdmin.createPrice({
+          id: 'x',
+          provider: 'openai',
+          model: 'm',
+          from: '2026-09-30',
+          usd_per_mtok: { input: 1, output: 1 },
+        }),
+    ],
+    ['updatePrice', () => rt.runtimeAdmin.updatePrice('x', 1, { from: '2026-10-01' })],
+    ['deletePrice', () => rt.runtimeAdmin.deletePrice('x', 1)],
   ] as const)('%s is never sent again by itself', async (_, call) => {
     runtimeAnswers.push(empty(503), json(200, {}))
     const err = await failure(call())

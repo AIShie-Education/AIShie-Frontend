@@ -8,12 +8,17 @@
 import { ApiError, read } from '@/api/http'
 import { isRuntimeError, isVersionMismatch } from '@/api/runtime'
 import type {
+  DailyQuota,
+  DailyQuotaInput,
   KeyTrialFailure,
   OfferCreate,
   OfferPatch,
   OfferStatus,
   PlanOffer,
   PlanQuotas,
+  PriceCreate,
+  PricePatch,
+  PriceRow,
   ProviderOffer,
 } from '@/api/runtime-types'
 import { KEY_TRIAL_FAILURES } from '@/api/runtime-types'
@@ -93,6 +98,9 @@ const ADMIN_REASONS: ReadonlySet<string> = new Set([
   'model_denied',
   'version_mismatch',
   'bad_if_match',
+  'model_not_priced',
+  'price_not_found',
+  'price_read_only',
 ])
 
 /** The words for a refusal of one of this page's calls, in the reader's language. */
@@ -102,6 +110,11 @@ export function adminErrorText(e: unknown, t: T, opts: { provider?: string; mode
   if (e.reason === 'offer_exists') {
     const source = e.details?.source === 'config' ? 'config' : 'site'
     return t(`runtimeAdmin.errors.offer_exists.${source}`)
+  }
+  if (e.reason === 'price_exists') {
+    return t(`runtimeAdmin.errors.price_exists.${e.details?.field === '/from' ? 'from' : 'id'}`, {
+      id: typeof e.details?.id === 'string' ? e.details.id : '',
+    })
   }
   if (e.reason === 'key_test_failed') {
     const trial = keyTrialOf(e)
@@ -362,5 +375,278 @@ export function quotaProblem(v: number | null | undefined, required: boolean): s
 }
 
 export function sameQuotas(a: PlanQuotas, b: PlanQuotas): boolean {
-  return a.per_owner_day === b.per_owner_day && a.per_asker_day === b.per_asker_day && a.per_day === b.per_day
+  return (
+    a.per_owner_day === b.per_owner_day &&
+    a.per_asker_day === b.per_asker_day &&
+    a.per_day === b.per_day &&
+    sameUsd(a.per_owner_day_usd, b.per_owner_day_usd) &&
+    sameUsd(a.per_asker_day_usd, b.per_asker_day_usd) &&
+    sameUsd(a.per_day_usd, b.per_day_usd)
+  )
+}
+
+// --- Dollars -----------------------------------------------------------------------------
+
+/** A decimal of at most six places, with no sign or exponent: what the forms take. */
+const DECIMAL = /^[0-9]{1,7}(\.[0-9]{1,6})?$/
+
+/** Dollars as a person reads them: the runtime's six places, trimmed to what is needed, and at least cents. */
+export function usdShown(v: string | null | undefined): string {
+  if (v === null || v === undefined || v === '') return ''
+  const [whole, frac = ''] = v.split('.')
+  const kept = frac.replace(/0+$/, '')
+  return `${whole}.${kept.length >= 2 ? kept : kept.padEnd(2, '0')}`
+}
+
+/** Dollars as a form field holds them: no trailing zeros ("2.500000" → "2.5"); '' for none. */
+export function usdField(v: string | null | undefined): string {
+  if (v === null || v === undefined || v === '') return ''
+  return v.includes('.') ? v.replace(/0+$/, '').replace(/\.$/, '') : v
+}
+
+/** Whether two amounts are the same, whatever places they are written with; none is none. */
+export function sameUsd(a: string | null | undefined, b: string | null | undefined): boolean {
+  const x = a === undefined || a === null || a === '' ? null : Number(a)
+  const y = b === undefined || b === null || b === '' ? null : Number(b)
+  return x === y
+}
+
+/**
+ * What is wrong with an amount of dollars typed for a quota, as a message
+ * key, or null: empty is none; else more than 0, at most 1,000,000, six
+ * places at most, no exponent.
+ */
+export function usdProblem(v: string): string | null {
+  const s = v.trim()
+  if (!s) return null
+  if (!DECIMAL.test(s) || Number(s) <= 0 || Number(s) > QUOTA_MAX) return 'runtimeAdmin.money.invalidUsd'
+  return null
+}
+
+/** What is wrong with a price per million tokens typed, as a message key, or null: 0 or more, six places at most. */
+export function priceProblem(v: string, required: boolean): string | null {
+  const s = v.trim()
+  if (!s) return required ? 'hosting.model.invalid.required' : null
+  return DECIMAL.test(s) ? null : 'runtimeAdmin.prices.invalid.price'
+}
+
+/** An amount typed, as it is sent: the decimal string, or null for none. */
+export function usdSent(v: string): string | null {
+  return v.trim() || null
+}
+
+/** A daily quota as its two fields hold it. */
+export interface QuotaFields {
+  answers: number | null
+  usd: string
+}
+
+export function quotaFieldsOf(q: DailyQuota | null | undefined): QuotaFields {
+  return { answers: q?.answers ?? null, usd: usdField(q?.usd) }
+}
+
+export function quotaInputOf(f: QuotaFields): DailyQuotaInput {
+  return { answers: f.answers ?? null, usd: usdSent(f.usd) }
+}
+
+/** What is wrong with a daily quota's two fields, by field; empty when nothing. */
+export function quotaFieldsProblems(
+  f: QuotaFields,
+  opts: { oneAtLeast?: boolean } = {},
+): { answers?: string; usd?: string } {
+  const out: { answers?: string; usd?: string } = {}
+  const a = quotaProblem(f.answers, false)
+  if (a) out.answers = a
+  const u = usdProblem(f.usd)
+  if (u) out.usd = u
+  if (opts.oneAtLeast && f.answers === null && !f.usd.trim() && !a && !u)
+    out.answers = 'runtimeAdmin.tenants.oneAtLeast'
+  return out
+}
+
+// --- The price table ---------------------------------------------------------------------
+
+export const PRICE_ID_SHAPE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
+export const PRICE_PROVIDER_SHAPE = /^[a-z0-9_]{1,64}$/
+export const PRICE_MODEL_SHAPE = /^[^\s]{1,200}$/
+const DAY = /^(20[0-9]{2}|2100)-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/
+
+/** Today, UTC, as YYYY-MM-DD: the day a price takes effect from by default. */
+export function utcToday(now = new Date()): string {
+  return now.toISOString().slice(0, 10)
+}
+
+/** An id for a new row, from its model and day, as the ledger names rows: "gpt-4.1-mini-2026-09-30". */
+export function priceIdFor(model: string, from: string): string {
+  const base = `${model.replace(/\*/g, 'x')}-${from}`
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[^A-Za-z0-9]+/, '')
+  return base.slice(0, 64).replace(/[-.]+$/, '')
+}
+
+/** What the price dialog holds. */
+export interface PriceForm {
+  id: string
+  provider: string
+  model: string
+  from: string
+  input: string
+  output: string
+  cacheRead: string
+  cacheWrite: string
+}
+
+export function emptyPriceForm(today = utcToday()): PriceForm {
+  return { id: '', provider: '', model: '', from: today, input: '', output: '', cacheRead: '', cacheWrite: '' }
+}
+
+/** A row as the dialog holds it; cache prices the same as input show as empty ("same as input"). */
+export function priceFormOf(r: PriceRow): PriceForm {
+  const p = r.usd_per_mtok
+  const same = (x: string) => (Number(x) === Number(p.input) ? '' : x)
+  return {
+    id: r.id,
+    provider: r.provider,
+    model: r.model,
+    from: r.from,
+    input: p.input,
+    output: p.output,
+    cacheRead: same(p.cache_read),
+    cacheWrite: same(p.cache_write),
+  }
+}
+
+export type PriceField = keyof PriceForm
+
+/** What is wrong with the price dialog as it stands, by field, as message keys; empty when nothing. */
+export function priceProblems(
+  f: PriceForm,
+  opts: { creating: boolean; takenIds: readonly string[] },
+): Partial<Record<PriceField, string>> {
+  const out: Partial<Record<PriceField, string>> = {}
+  if (opts.creating) {
+    const id = f.id.trim()
+    if (!id) out.id = 'hosting.model.invalid.required'
+    else if (!PRICE_ID_SHAPE.test(id)) out.id = 'runtimeAdmin.prices.invalid.id'
+    else if (opts.takenIds.includes(id)) out.id = 'runtimeAdmin.prices.invalid.idTaken'
+  }
+  const provider = f.provider.trim()
+  if (!provider) out.provider = 'hosting.model.invalid.required'
+  else if (!PRICE_PROVIDER_SHAPE.test(provider)) out.provider = 'runtimeAdmin.prices.invalid.provider'
+  const model = f.model.trim()
+  if (!model) out.model = 'hosting.model.invalid.required'
+  else if (!PRICE_MODEL_SHAPE.test(model)) out.model = 'runtimeAdmin.prices.invalid.model'
+  if (!DAY.test(f.from)) out.from = f.from ? 'runtimeAdmin.prices.invalid.from' : 'hosting.model.invalid.required'
+  for (const [k, required] of [
+    ['input', true],
+    ['output', true],
+    ['cacheRead', false],
+    ['cacheWrite', false],
+  ] as const) {
+    const p = priceProblem(f[k], required)
+    if (p) out[k] = p
+  }
+  return out
+}
+
+/** A new row, as POST admin/prices takes it: the cache prices only where they differ from input. */
+export function priceCreateFrom(f: PriceForm): PriceCreate {
+  const usd: PriceCreate['usd_per_mtok'] = { input: f.input.trim(), output: f.output.trim() }
+  if (f.cacheRead.trim()) usd.cache_read = f.cacheRead.trim()
+  if (f.cacheWrite.trim()) usd.cache_write = f.cacheWrite.trim()
+  return { id: f.id.trim(), provider: f.provider.trim(), model: f.model.trim(), from: f.from, usd_per_mtok: usd }
+}
+
+/**
+ * The change to a row, as a merge-patch: only what differs from the row as
+ * read. A cache price emptied is the input's again, sent as that.
+ */
+export function pricePatchFrom(r: PriceRow, f: PriceForm): PricePatch {
+  const p: PricePatch = {}
+  if (f.provider.trim() !== r.provider) p.provider = f.provider.trim()
+  if (f.model.trim() !== r.model) p.model = f.model.trim()
+  if (f.from !== r.from) p.from = f.from
+  const input = f.input.trim()
+  const usd: NonNullable<PricePatch['usd_per_mtok']> = {}
+  const was = r.usd_per_mtok
+  if (Number(input) !== Number(was.input)) usd.input = input
+  if (Number(f.output.trim()) !== Number(was.output)) usd.output = f.output.trim()
+  const cacheRead = f.cacheRead.trim() || input
+  const cacheWrite = f.cacheWrite.trim() || input
+  if (Number(cacheRead) !== Number(was.cache_read)) usd.cache_read = cacheRead
+  if (Number(cacheWrite) !== Number(was.cache_write)) usd.cache_write = cacheWrite
+  if (Object.keys(usd).length) p.usd_per_mtok = usd
+  return p
+}
+
+/** The field of the price dialog a JSON Pointer names. */
+export function priceFieldOf(pointer: unknown): PriceField | null {
+  switch (pointer) {
+    case '/id':
+      return 'id'
+    case '/provider':
+      return 'provider'
+    case '/model':
+      return 'model'
+    case '/from':
+      return 'from'
+    case '/usd_per_mtok/input':
+      return 'input'
+    case '/usd_per_mtok/output':
+      return 'output'
+    case '/usd_per_mtok/cache_read':
+      return 'cacheRead'
+    case '/usd_per_mtok/cache_write':
+      return 'cacheWrite'
+  }
+  return null
+}
+
+// --- Costs ---------------------------------------------------------------------------------
+
+/** The longest span a cost report takes, in days. */
+export const COST_SPAN_DAYS = 366
+
+/** The runtime's own default span: the thirty days to until, inclusive. */
+export function costRange(until: string): [string, string] {
+  const d = new Date(`${until}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 29)
+  return [d.toISOString().slice(0, 10), until]
+}
+
+/** A model of the plan without a price, as a notice lists it. */
+export interface UnpricedItem {
+  /** The offer's id. */
+  id: string
+  /** Its name, where it is known. */
+  label?: string
+  provider: string
+  model: string
+}
+
+/**
+ * The offers a refusal names (offer_not_priced's details.offers) as the
+ * notice lists them: by the plan's offers, and by extra for one not in it
+ * yet (the one being added); one not found is left out.
+ */
+export function unpricedItems(
+  ids: readonly string[],
+  offers: readonly PlanOffer[],
+  extra: UnpricedItem[] = [],
+): UnpricedItem[] {
+  const out: UnpricedItem[] = []
+  for (const id of ids) {
+    const o = offers.find((x) => x.id === id && x.status !== 'id_taken') ?? offers.find((x) => x.id === id)
+    const item = o ? { id, label: o.label, provider: o.provider, model: o.model } : extra.find((x) => x.id === id)
+    if (item && !out.some((x) => x.id === id)) out.push(item)
+  }
+  return out
+}
+
+/** The offers a refusal says have no price (offer_not_priced's details.offers), or []. */
+export function unpricedIds(e: unknown): string[] {
+  if (!isRuntimeError(e) || e.reason !== 'offer_not_priced') return []
+  const o = e.details?.offers
+  return Array.isArray(o) ? o.filter((x): x is string => typeof x === 'string') : []
 }

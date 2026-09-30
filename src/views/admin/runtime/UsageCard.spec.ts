@@ -73,6 +73,24 @@ describe('UsageCard', () => {
     expect(w.find('.usage-owner__unknown').text()).toContain('Someone the runtime has not seen yet')
   })
 
+  it('says the quotas in dollars in force, where there are any', async () => {
+    state.usage = planUsage({
+      limits: {
+        per_owner_day: 150,
+        per_asker_day: 20,
+        per_day: 5000,
+        per_owner_day_usd: '2.500000',
+        per_asker_day_usd: null,
+        per_day_usd: '100.000000',
+      },
+    })
+    const w = await card()
+    expect(w.find('.usage-card__limits').text()).toBe(
+      'Up to 150 a day per owner, and 20 per person asking. In dollars: $2.50 per owner, No limit per person asking, and $100.00 for the whole school.',
+    )
+    expect(w.find('.usage-card__of-usd').text()).toBe('of $100.00 a day')
+  })
+
   it('says so when nobody has used the plan today', async () => {
     state.usage = planUsage({ owners: [], total: { answers: 0, model_calls: 0, cost_usd: '0.000000' } })
     const w = await card()

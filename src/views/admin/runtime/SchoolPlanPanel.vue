@@ -55,7 +55,7 @@ function onPlan(p: SchoolPlan) {
         @changed="plan.reload"
         @reload-providers="loadProviders"
       />
-      <QuotasCard :plan="plan.data.value" @update="onPlan" />
+      <QuotasCard :plan="plan.data.value" :providers="providers" @update="onPlan" />
     </template>
   </div>
 </template>

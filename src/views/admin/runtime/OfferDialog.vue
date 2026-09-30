@@ -45,7 +45,9 @@ import {
   type KeyTrial,
   type OfferField,
   type OfferMeta,
+  type UnpricedItem,
 } from './runtimeAdmin'
+import UnpricedNotice from './UnpricedNotice.vue'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -84,6 +86,8 @@ const error = shallowRef<unknown>(null)
 const trial = shallowRef<KeyTrial | null>(null)
 const fieldErrors = reactive<Partial<Record<OfferField, string>>>({})
 const notice = ref('')
+/** The model offered has no price, and a quota in dollars needs one: a price may be added from here. */
+const unpriced = shallowRef<UnpricedItem[]>([])
 
 const provider = computed(() => offerFor(providers.value, form.provider))
 const providerName = computed(() => provider.value?.label ?? form.provider)
@@ -96,6 +100,7 @@ function resetMessages() {
   error.value = null
   trial.value = null
   notice.value = ''
+  unpriced.value = []
   for (const k of Object.keys(fieldErrors) as OfferField[]) delete fieldErrors[k]
 }
 
@@ -243,6 +248,16 @@ function showError(e: unknown, sent: string) {
   if (failed) {
     trial.value = failed
     return
+  }
+  if (isRuntimeError(e) && e.reason === 'offer_not_priced') {
+    unpriced.value = [
+      {
+        id: base.value?.id ?? meta.id.trim(),
+        label: meta.label.trim(),
+        provider: form.provider,
+        model: form.model.trim(),
+      },
+    ]
   }
   if (isRuntimeError(e) && FIELD_REASONS.has(e.reason)) {
     const f =
@@ -590,6 +605,13 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
         </template>
       </el-form>
 
+      <UnpricedNotice
+        v-if="unpriced.length"
+        :items="unpriced"
+        :title="t('runtimeAdmin.offer.unpricedTitle')"
+        :providers="providers"
+        class="offer-dialog__alert offer-dialog__unpriced"
+      />
       <el-alert
         v-if="trial"
         type="error"

@@ -455,6 +455,11 @@ export const RUNTIME_ERROR_REASONS = [
   'offer_not_priced',
   'key_required',
   'key_test_failed',
+  // Pricing
+  'model_not_priced',
+  'price_not_found',
+  'price_exists',
+  'price_read_only',
 ] as const
 
 export type RuntimeErrorReason = (typeof RUNTIME_ERROR_REASONS)[number]
@@ -576,7 +581,16 @@ export interface PlanOffer {
   updated_by: string | null
 }
 
-/** Quotas in answers per UTC day. */
+/** Dollars as the runtime writes them: a decimal string of six places, "2.500000". */
+export type USD = string
+
+/** Dollars as they are sent: a decimal string ("2.5") or a number; more than 0, at most 1,000,000, six places at most. */
+export type USDInput = string | number
+
+/**
+ * Quotas per UTC day, in answers and in dollars. The dollar members are
+ * absent from a runtime from before the site set them (null: none).
+ */
 export interface PlanQuotas {
   /** Per owner, across all of their agents. */
   per_owner_day: number
@@ -584,6 +598,9 @@ export interface PlanQuotas {
   per_asker_day: number
   /** Across the whole school's key; null for no ceiling. */
   per_day: number | null
+  per_owner_day_usd?: USD | null
+  per_asker_day_usd?: USD | null
+  per_day_usd?: USD | null
 }
 
 /** GET admin/school-plan, and the answer of the quotas' PUT and DELETE. */
@@ -637,8 +654,19 @@ export interface OfferDeleted {
   agents: number
 }
 
-/** PUT admin/school-plan/quotas: all three, whole numbers from 1 to 1,000,000 (per_day null for no ceiling). */
-export type QuotasPut = PlanQuotas
+/**
+ * PUT admin/school-plan/quotas: the three in answers, whole numbers from 1
+ * to 1,000,000 (per_day null for no ceiling); those in dollars each
+ * optional, null for none, and left out kept as they are in force.
+ */
+export interface QuotasPut {
+  per_owner_day: number
+  per_asker_day: number
+  per_day: number | null
+  per_owner_day_usd?: USDInput | null
+  per_asker_day_usd?: USDInput | null
+  per_day_usd?: USDInput | null
+}
 
 /** What failed when a key was tried before it was kept (key_test_failed's details.result). */
 export type KeyTrialFailure = 'key_refused' | 'model_not_found' | 'unreachable'
@@ -669,4 +697,205 @@ export interface SchoolPlanUsage {
   limits: PlanQuotas
   total: PlanUse
   owners: OwnerPlanUse[]
+}
+
+// ---------------------------------------------------------------------------
+// Pricing: the price table, tenants' quotas, agents' budgets, and costs
+// ---------------------------------------------------------------------------
+
+/** A price in dollars per million tokens as it is sent: a decimal string or number, 0 or more, six places at most. */
+export type USDPerMTokInput = string | number
+
+/** A quota a UTC day, in answers and dollars, each null for none. */
+export interface DailyQuota {
+  answers: number | null
+  usd: USD | null
+}
+
+/** A quota as it is sent: both members, each null for none. */
+export interface DailyQuotaInput {
+  answers: number | null
+  usd: USDInput | null
+}
+
+/** The operator's price file (read-only here), or the site's. */
+export type PriceSource = 'site' | 'file'
+
+/** One row of the price table: a provider's model (or a glob of models) from a day on, in dollars per million tokens. */
+export interface PriceRow {
+  /** What names the row in the ledger's versions; a file's row without one is its index. */
+  id: string
+  source: PriceSource
+  /** As the ledger names providers (openai, anthropic, …; openai_compatible for an endpoint of the operator's). */
+  provider: string
+  /** Exactly, or a glob where * is any text (glob). */
+  model: string
+  glob: boolean
+  /** YYYY-MM-DD (UTC): the day the price starts. */
+  from: string
+  /** Exact, with no more places than needed ("0.4", "15"). */
+  usd_per_mtok: { input: string; cache_read: string; cache_write: string; output: string }
+  /** What a cost priced by it is recorded under, "site-20260930T101500Z/haiku-4-5". */
+  version: string
+  /** A file's row a site's row of the same provider, model and from stands before. */
+  overridden: boolean
+  // A site's row only; null for the file's:
+  /** The ETag is "<row_version>". */
+  row_version: number | null
+  created_at: string | null
+  created_by: string | null
+  updated_at: string | null
+  updated_by: string | null
+}
+
+/** An offer of the plan no row prices today: a quota in dollars cannot hold it. */
+export interface UnpricedOffer {
+  id: string
+  source: OfferSource
+  provider: string
+  model: string
+  enabled: boolean
+}
+
+/** GET admin/prices, and DELETE admin/prices/{id}'s answer. */
+export interface PriceTable {
+  /** The table in force: "<file>+<site>", either alone, or null with none at all. */
+  version: string | null
+  file_version: string | null
+  site_version: string | null
+  site_changed_at: string | null
+  /** The site's rows first (by id), then the file's (in its order). */
+  rows: PriceRow[]
+  unpriced_offers: UnpricedOffer[]
+}
+
+/** POST admin/prices. The id never changes: it names the row in the ledger. */
+export interface PriceCreate {
+  id: string
+  provider: string
+  model: string
+  from: string
+  usd_per_mtok: {
+    input: USDPerMTokInput
+    output: USDPerMTokInput
+    /** Default: input. */
+    cache_read?: USDPerMTokInput
+    cache_write?: USDPerMTokInput
+  }
+}
+
+/** PATCH admin/prices/{id}, merge-patch: a price left out is kept as stored. */
+export interface PricePatch {
+  provider?: string
+  model?: string
+  from?: string
+  usd_per_mtok?: Partial<PriceCreate['usd_per_mtok']>
+}
+
+/** runtime.yaml's (the operator's), the site's, or none of its own. */
+export type TenantSource = 'site' | 'config' | 'none'
+
+/** A tenant's quota on the school's key a UTC day, across all its agents. */
+export interface TenantQuota {
+  tenant_id: string
+  /** Where the tenant is a person's (ten_<actor id>), and their name as the runtime last saw it. */
+  owner_actor_id: string | null
+  display_name: string | null
+  source: TenantSource
+  /** In force. */
+  per_day: DailyQuota
+  /** runtime.yaml's, which DELETE goes back to; null where it has none. */
+  config_per_day: DailyQuota | null
+  agents: number
+  updated_at: string | null
+  updated_by: string | null
+}
+
+/** GET admin/tenants: a page, by tenant id. */
+export interface TenantList {
+  tenants: TenantQuota[]
+  /** The next page's after; null after the last. */
+  next: string | null
+}
+
+/** PUT admin/tenants/{tenant_id}: not both null. */
+export interface TenantPut {
+  per_day: DailyQuotaInput
+}
+
+/** Hosted agents' daily budgets by default, per agent and per asker, on whichever key they answer. */
+export interface AgentBudgets {
+  per_agent_day: DailyQuota
+  per_asker_day: DailyQuota
+  /** runtime.yaml's. */
+  defaults: { per_agent_day: DailyQuota; per_asker_day: DailyQuota }
+  /** The site sets them. */
+  set: boolean
+  updated_at: string | null
+  updated_by: string | null
+}
+
+export interface AgentBudgetsPut {
+  per_agent_day: DailyQuotaInput
+  per_asker_day: DailyQuotaInput
+}
+
+export type CostGroupBy = 'day' | 'tenant' | 'agent' | 'model' | 'key_source' | 'total'
+
+export const COST_GROUPS: readonly CostGroupBy[] = ['day', 'tenant', 'agent', 'model', 'key_source', 'total']
+
+/** The school's key (the plan's offers), or owners' own keys. */
+export type KeySource = 'school' | 'own'
+
+/** One kind of cost: model calls today; another kind (transcription) comes as a line of its own. */
+export interface CostLine {
+  kind: string
+  calls: number
+  /** Calls no price held when they were recorded, counted as 0. */
+  unpriced_calls: number
+  tokens: { input: number; cache_read: number; cache_write: number; output: number } | null
+  cost_usd: USD
+}
+
+export interface CostSum {
+  cost_usd: USD
+  lines: CostLine[]
+}
+
+/** One group of the report: a day, a tenant, an agent, a model, a key source, or the whole. */
+export interface CostGroup extends CostSum {
+  key: string
+  day: string | null
+  tenant_id: string | null
+  owner_actor_id: string | null
+  display_name: string | null
+  agent_id: string | null
+  agent_name: string | null
+  key_source: KeySource | null
+  provider: string | null
+  model: string | null
+  /** group=model on the school's key: the plan's offers of this model now. */
+  offers: string[] | null
+}
+
+/** GET admin/costs: what the ledger recorded, in dollars, as it was priced then. */
+export interface CostReport {
+  since: string
+  until: string
+  group: CostGroupBy
+  key_source: KeySource | null
+  /** The whole span, every page. */
+  total: CostSum
+  rows: CostGroup[]
+  next: string | null
+}
+
+/** GET admin/costs' parameters, each optional. */
+export interface CostQuery {
+  since?: string
+  until?: string
+  group?: CostGroupBy
+  key_source?: KeySource
+  limit?: number
+  after?: string
 }
