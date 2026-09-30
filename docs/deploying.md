@@ -103,10 +103,12 @@ not built in, but asked for when the page loads, or set when the container
 starts:
 
 - **Single sign-on** is Core's to say. The sign-in page asks
-  `GET /v1/auth/methods` as it loads, and shows the single sign-on button once
-  Core answers that it has an identity provider (its `OIDC_ISSUER`), named as
-  Core's `OIDC_DISPLAY_NAME` names it, or *single sign-on* when that is not
-  set. The rest of the page does not wait for the answer. A Core from before
+  `GET /v1/auth/methods` as it loads, and shows a single sign-on button for
+  each identity provider Core offers: the operator's (its `OIDC_ISSUER`),
+  named as Core's `OIDC_DISPLAY_NAME` names it, or *single sign-on* when that
+  is not set, and those root and the platform's administrators set up on
+  *登入方式* (which needs Core's `SECRETS_KEY`). The rest of the page does not
+  wait for the answer. A Core from before
   that route answers 404, and then the build's own settings are taken, as
   they are when Core cannot be asked: in the image `VITE_SSO_ENABLED` is
   unset, so there is no button.

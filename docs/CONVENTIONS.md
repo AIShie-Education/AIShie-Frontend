@@ -41,6 +41,22 @@ markdown-it + DOMPurify.
   asked first, so a reason two tools share (`not_a_person`) is said in the words of the page that
   met it.
 - Use `write()` directly only outside components. Never call `fetch` yourself.
+- **Single sign-on's identity providers** are set up on *登入方式* (`/admin/sign-in`,
+  `SsoAdminView.vue`, and its parts in `src/views/admin/sso/`), for platform administrators, through
+  the `sso` tools by way of `ssoAdmin.ts` (`listProviders`, `testProvider`, `createProvider`,
+  `updateProvider`; the form's `formProblems`, `createArgs`, `updateArgs`, `testArgs`). The operator's
+  provider (`source: 'operator'`) is read-only and first, the site's follow by `position` (`ordered`);
+  one whose id the operator's has (`id_taken`) takes no write (`isEditable`). Every write sends the
+  version read, in its body (Core takes it as `If-Match` too); `version_mismatch` reads the list, or
+  the provider, again and says so, the dialog keeping what the administrator changed over what it
+  reads. Refusals are worded by reason under `ssoAdmin.refusal` (`ssoErrorText`), and Core's refusal
+  of a field (`details.field`, `fieldOf`) on that field. A client secret is write-only: it lives in its
+  password field's ref alone, goes only in the body of the write that gives it (an edit sends it only
+  when it is replaced, never its hint), and is cleared once saved, when the kept one is chosen again
+  and whenever the dialog closes. Its write goes through `write()` under `writeKey()`, which keeps the
+  key only until Core answers or the form changes, and not through `useWrite`, which keeps the
+  arguments it sent to compare with. The sign-in page shows a button for each of
+  `ssoButtons(authMethods())`: Core's `sso_providers`, or the one `sso` of a Core from before them.
 - **Files**: bytes never go through a tool. Every upload is one call, `uploadFile(courseId, kind,
   file, { onProgress, onRetry, signal, retries, maxBytes })` from `@/api/http`: it asks for an upload
   URL (`document.upload_url`, or `conversation.upload_url` for kind `conversation`, a message's

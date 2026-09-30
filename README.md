@@ -83,7 +83,18 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   number or ID, with how each signs in; registering people and agents, an agent with the person who
   owns it, which is fixed then and never changed, and correcting their name, email and number;
   invitation links, with which a person chooses their password (their first, or a new one when it is
-  forgotten); single sign-on identities; and API tokens for agents, which only agents are given.
+  forgotten); single sign-on identities, linked at a provider chosen from those set up and by the
+  claim it knows accounts by; and API tokens for agents, which only agents are given.
+- **Sign-in** (root and admins, under *登入方式*) — single sign-on's identity providers: the one the
+  server's operator sets in Core's environment, shown read-only with its status, and the site's,
+  added, tested against the issuer's discovery document and keys (endpoints, keys, problems and
+  warnings), switched on and off, changed and deleted, each over the version read. The redirect URI to
+  register comes first, with a copy button and short help for AD FS, Entra ID, Google Workspace and
+  Keycloak; the client secret is write-only, never shown again but as its last four characters; a new
+  provider is added switched off; linking existing accounts by verified email is off unless turned on,
+  and says the rules it holds to; deleting one says how many accounts would lose single sign-on.
+  Without `SECRETS_KEY` on Core's server nothing is added, and the page says so. The sign-in page shows
+  a button for each provider offered.
 - **The agent runtime's settings** (its administrators, under *AI and documents*) — the school's AI
   plan: the models the school provides and pays for, the operator's (runtime.yaml) shown read-only
   and the site's added, edited, turned off and deleted, each with the school's key, which is tried
@@ -189,9 +200,11 @@ in `.github/core-image` ([Moving the Core pin](#moving-the-core-pin)).
 ## Configure
 
 Single sign-on is Core's to say. The sign-in page asks Core how one signs in
-(`GET /v1/auth/methods`) as it loads, and shows the single sign-on button once Core says it has an
-identity provider (its `OIDC_ISSUER`), with the provider's name when Core gives one
-(`OIDC_DISPLAY_NAME`) and *single sign-on* when it does not. Nothing here is set for it.
+(`GET /v1/auth/methods`) as it loads, and shows a single sign-on button for each identity provider
+Core offers (`sso_providers`: the operator's, its `OIDC_ISSUER`, and those set up on *登入方式*), in
+Core's order, each with the provider's name when Core gives one and *single sign-on* when it does not;
+from a Core from before several providers, the one button its `sso` names, as before. Nothing here is
+set for it.
 
 Built into the app at build time (see `.env.example`):
 

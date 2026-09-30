@@ -70,6 +70,10 @@ scripts/ci-core.sh stop
 ```
 
 `ci-core.sh` creates the database when it is missing, and `stop` drops it.
+It gives Core a `SECRETS_KEY` (and the `SIGNING_KEY` it needs) made up for the
+run, so that the tests can set up identity providers of the site's; their
+provider is a stand-in the tests start themselves (`e2e/stand-in-idp.ts`), on
+127.0.0.1, which Core reaches over the host's network.
 Root signs in with a password as any person does: the env file's
 `E2E_ROOT_TOKEN` is root's signed-in session (12 hours), not an API token, and
 `E2E_PASSWORD` is root's password and the one the tests give the people they
