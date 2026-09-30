@@ -1152,7 +1152,7 @@ export interface ComponentUpdateOut {
   snapshots: number
 }
 
-/** conversation.answer (write): Answer, as an agent, in a conversation addressed to you (conversation.inbox lists those waiting), replying to the opener's latest message, whose id you give as in_reply_to_message_id. A person answers none, and is refused (conversations_are_with_agents). It is refused as a conflict, with a reason: moved_on if the opener has written again since (read the new message and answer that), already_answered if that message has its answer, answer_pending if an answer of yours to it waits for approval, closed if the conversation is. Your level of conversation_answer decides whether an answer is posted at once, posted and reviewed after, or waits for a person's approval; one that waits is checked again when approved, and refused then if the conversation has moved on. An answer that failed or was rejected may be written again, under a new idempotency key. */
+/** conversation.answer (write): Answer, as an agent, in a conversation addressed to you (conversation.inbox lists those waiting), replying to the opener's latest message, whose id you give as in_reply_to_message_id. A person answers none, and is refused (conversations_are_with_agents). It is refused as a conflict, with a reason: moved_on if the opener has written again since (read the new message and answer that), or has withdrawn (retracted) their latest message, when nothing waits for an answer and no message is named; already_answered if that message has its answer, answer_pending if an answer of yours to it waits for approval, closed if the conversation is. Your level of conversation_answer decides whether an answer is posted at once, posted and reviewed after, or waits for a person's approval; one that waits is checked again when approved, and refused then if the conversation has moved on. An answer that failed or was rejected may be written again, under a new idempotency key. */
 export interface ConversationAnswerIn {
   /**
    * at most 20000 characters
@@ -1204,7 +1204,7 @@ export interface ConversationCloseOut {
   ok: boolean
 }
 
-/** conversation.draft (ephemeral): For an agent runtime, never for a model: say what you are doing towards an answer in a conversation addressed to you, and the answer's text so far, for whoever reads the conversation to watch it come. Each write replaces the draft whole: steps (thinking, reading_document, ... each running or done) and text, both the whole list and the whole text so far; either left out keeps the attempt's. A write whose attempt and version are not newer than the draft kept is passed over (stored false). done ends the attempt, given up or finished. Posting or proposing the answer, or closing the conversation, clears it; one not written for 120 seconds is gone. Only the respondent writes, while the conversation waits for its answer (not_the_respondent, conversation_not_awaiting). It is recorded nowhere: no action, no idempotency key, never proposed; at most 10 writes a second per conversation (rate_limited), and a write carried out does not count against your rate limit. The text is shown to the opener only while your answers are posted without approval; otherwise to those who would approve them. */
+/** conversation.draft (ephemeral): For an agent runtime, never for a model: say what you are doing towards an answer in a conversation addressed to you, and the answer's text so far, for whoever reads the conversation to watch it come. Each write replaces the draft whole: steps (thinking, reading_document, ... each running or done) and text, both the whole list and the whole text so far; either left out keeps the attempt's. A write whose attempt and version are not newer than the draft kept is passed over (stored false). done ends the attempt, given up or finished. Posting or proposing the answer, the opener withdrawing the question (retracting it), or closing the conversation, clears it; one not written for 120 seconds is gone. Only the respondent writes, while the conversation waits for its answer (not_the_respondent, conversation_not_awaiting). It is recorded nowhere: no action, no idempotency key, never proposed; at most 10 writes a second per conversation (rate_limited), and a write carried out does not count against your rate limit. The text is shown to the opener only while your answers are posted without approval; otherwise to those who would approve them. */
 export interface ConversationDraftIn {
   /**
    * your id for this attempt at the answer, 1 to 64 characters; a new attempt replaces the draft of another
@@ -1360,7 +1360,7 @@ export interface ConversationGetOut {
     seat_status: string
   }
   /**
-   * awaiting_answer: the opener wrote last; reply_pending_approval: an answer waits for a person's approval; answered: the respondent wrote last, or nothing has been asked yet; closed
+   * awaiting_answer: the opener wrote last; reply_pending_approval: an answer waits for a person's approval; answered: the respondent wrote last, or nothing has been asked yet, or the opener withdrew (retracted) what they asked last; closed
    */
   state: string
   /**
@@ -1458,7 +1458,7 @@ export interface ConversationInboxOut {
           seat_status: string
         }
         /**
-         * awaiting_answer: the opener wrote last; reply_pending_approval: an answer waits for a person's approval; answered: the respondent wrote last, or nothing has been asked yet; closed
+         * awaiting_answer: the opener wrote last; reply_pending_approval: an answer waits for a person's approval; answered: the respondent wrote last, or nothing has been asked yet, or the opener withdrew (retracted) what they asked last; closed
          */
         state: string
         /**
@@ -1562,7 +1562,7 @@ export interface ConversationListOut {
           seat_status: string
         }
         /**
-         * awaiting_answer: the opener wrote last; reply_pending_approval: an answer waits for a person's approval; answered: the respondent wrote last, or nothing has been asked yet; closed
+         * awaiting_answer: the opener wrote last; reply_pending_approval: an answer waits for a person's approval; answered: the respondent wrote last, or nothing has been asked yet, or the opener withdrew (retracted) what they asked last; closed
          */
         state: string
         /**
@@ -1697,7 +1697,7 @@ export interface ConversationMessagesOut {
       seat_status: string
     }
     /**
-     * awaiting_answer: the opener wrote last; reply_pending_approval: an answer waits for a person's approval; answered: the respondent wrote last, or nothing has been asked yet; closed
+     * awaiting_answer: the opener wrote last; reply_pending_approval: an answer waits for a person's approval; answered: the respondent wrote last, or nothing has been asked yet, or the opener withdrew (retracted) what they asked last; closed
      */
     state: string
     /**
@@ -1846,7 +1846,7 @@ export interface ConversationRespondentsOut {
       }[]
 }
 
-/** conversation.retract (write): Withdraw a message: its author may, and so may course staff who decide actions for the conversation's opener. The read tools show it as retracted, by whom and why, without its text. The record of the action that wrote it is kept, text and all, for those who decide actions in the course. */
+/** conversation.retract (write): Withdraw a message: its author may, and so may course staff who decide actions for the conversation's opener. The read tools show it as retracted, by whom and why, without its text. The record of the action that wrote it is kept, text and all, for those who decide actions in the course. Withdrawing the opener's latest message withdraws the question: it is not answered, the conversation waits for no answer (state answered), an answer to it under way or waiting for approval is refused (moved_on), and the answer being written (draft) is gone. */
 export interface ConversationRetractIn {
   /**
    * the course this call is about
