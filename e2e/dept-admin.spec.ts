@@ -81,7 +81,7 @@ test.describe.serial('a department administrator', () => {
     const nav = await adminNav(page)
     await expect(nav.getByRole('link', { name: 'Courses' })).toBeVisible()
     await expect(nav.getByRole('link', { name: 'Departments' })).toBeVisible()
-    for (const name of ['People & agents', 'Terms', 'Permission presets']) {
+    for (const name of ['People & agents', 'Terms', 'Permission presets', 'Sign-in']) {
       await expect(nav.getByRole('link', { name })).toHaveCount(0)
     }
 
