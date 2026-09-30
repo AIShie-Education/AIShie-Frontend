@@ -31,25 +31,48 @@
 // (the same token, the same value), or never sent again (PATCH, key tests),
 // as the contract's §5.14 says; this client retries accordingly.
 //
+// The runtime's administrators have routes of their own (runtimeAdmin, at
+// the end): OCR, the school's plan's offers, quotas and use, and pricing.
+//
 // The route and field names the contract fixes are here and in
 // runtime-types.ts, and nowhere else in the app.
 
 import { ApiError, queryString, requestAssertion } from './http'
 import type {
+  AgentBudgets,
+  AgentBudgetsPut,
   AgentPatch,
   ClientErrorReason,
   ConnectAnswer,
+  CostQuery,
+  CostReport,
   DeleteAnswer,
   HostedAgent,
   InspectAnswer,
   KeyTestAnswer,
   KeyTestRequest,
   ModelsAnswer,
+  OfferCreate,
+  OfferDeleted,
+  OfferPatch,
+  PlanOffer,
+  PriceCreate,
+  PricePatch,
+  PriceRow,
+  PriceTable,
+  QuotasPut,
   ReplaceTokenAnswer,
   ReplaceTokenRequest,
   RuntimeFeatures,
   RuntimeInfo,
   RuntimeMe,
+  RuntimeSettings,
+  RuntimeSettingsPatch,
+  SchoolPlan,
+  SchoolPlanUsage,
+  TenantList,
+  TenantPut,
+  TenantQuota,
   TokenRequest,
 } from './runtime-types'
 
@@ -74,6 +97,19 @@ export const RUNTIME_ROUTES = {
   agentToken: '/agents/{id}/token',
   agentPause: '/agents/{id}/pause',
   agentResume: '/agents/{id}/resume',
+  // The runtime's administrators' (runtimeAdmin below).
+  adminSettings: '/admin/settings',
+  schoolPlan: '/admin/school-plan',
+  planOffers: '/admin/school-plan/offers',
+  planOffer: '/admin/school-plan/offers/{id}',
+  planQuotas: '/admin/school-plan/quotas',
+  planUsage: '/admin/school-plan/usage',
+  prices: '/admin/prices',
+  price: '/admin/prices/{id}',
+  tenants: '/admin/tenants',
+  tenant: '/admin/tenants/{tenant_id}',
+  agentBudgets: '/admin/agent-budgets',
+  costs: '/admin/costs',
 } as const
 
 /** Headers of the contract beyond plain HTTP's. */
@@ -145,7 +181,13 @@ export function runtimePath(route: string, params: Record<string, string | numbe
 export class RuntimeError extends ApiError {
   readonly reason: string
 
-  constructor(opts: { status: number; code: string; message: string; reason: string; details?: Record<string, unknown> }) {
+  constructor(opts: {
+    status: number
+    code: string
+    message: string
+    reason: string
+    details?: Record<string, unknown>
+  }) {
     super(opts)
     this.name = 'RuntimeError'
     this.reason = opts.reason
@@ -279,8 +321,7 @@ async function sendWithRetry(retry: boolean, ...args: Parameters<typeof send>): 
  */
 function runtimeError(raw: RawResponse): RuntimeError {
   const e = (raw.body as { error?: unknown } | undefined)?.error as
-    | { code?: unknown; message?: unknown; details?: unknown }
-    | undefined
+    { code?: unknown; message?: unknown; details?: unknown } | undefined
   const enveloped = !!e && typeof e === 'object'
   const code = typeof e?.code === 'string' && e.code ? e.code : raw.status >= 500 ? 'internal' : 'unknown'
   const message = typeof e?.message === 'string' && e.message ? scrub(e.message) : `HTTP ${raw.status}`
@@ -393,10 +434,12 @@ let generation = 0
  */
 function mintRefusal(e: unknown, audience: string): unknown {
   if (!(e instanceof ApiError) || e instanceof RuntimeError) return e
-  if (e.status === 403) return new RuntimeError({ status: 403, code: e.code, message: e.message, reason: 'account_refused' })
+  if (e.status === 403)
+    return new RuntimeError({ status: 403, code: e.code, message: e.message, reason: 'account_refused' })
   if (e.status === 404 || e.status === 400) {
     // A deploy mismatch (the runtime's audience is not in Core's list) is worth a line for whoever looks.
-    if (e.status === 400) console.warn(`Core makes no assertions for the agent runtime's audience ${audience}; hosting is hidden.`)
+    if (e.status === 400)
+      console.warn(`Core makes no assertions for the agent runtime's audience ${audience}; hosting is hidden.`)
     const absent = new RuntimeError({ status: e.status, code: e.code, message: e.message, reason: 'runtime_absent' })
     markAbsent(absent)
     return absent
@@ -648,4 +691,65 @@ export const runtime = {
       query: { revoke_token: revokeToken ? 'true' : 'false' },
       retry: true,
     }),
+}
+
+const offerPath = (id: string) => runtimePath(RUNTIME_ROUTES.planOffer, { id })
+const pricePath = (id: string) => runtimePath(RUNTIME_ROUTES.price, { id })
+const tenantPath = (id: string) => runtimePath(RUNTIME_ROUTES.tenant, { tenant_id: id })
+
+/**
+ * The runtime's administrators' calls: OCR (admin/settings), the school's
+ * plan (admin/school-plan: its offers, its quotas, today's use), and the
+ * money (the price table, tenants' quotas, hosted agents' budgets, and what
+ * things cost). Anyone else is refused 403 not_admin; a runtime from before
+ * a route answers 404.
+ *
+ * Retried as the runtime answers them: reads, and the PUTs and DELETEs of
+ * quotas and budgets, which come to the same however often they are sent.
+ * Never a PATCH, nor an offer or a price made or deleted: making an offer
+ * tries its key with the provider, rate limited, and one sent again after a
+ * lost answer would be refused as taken (409) or gone (404). A change to an
+ * offer or a price names the version it was read at (If-Match), and so may
+ * a deletion; either may answer 412 when it has moved on
+ * (isVersionMismatch).
+ */
+export const runtimeAdmin = {
+  settings: () => runtimeRequest<RuntimeSettings>('GET', RUNTIME_ROUTES.adminSettings),
+  updateSettings: (patch: RuntimeSettingsPatch) =>
+    runtimeRequest<RuntimeSettings>('PATCH', RUNTIME_ROUTES.adminSettings, { body: patch, retry: false }),
+  plan: () => runtimeRequest<SchoolPlan>('GET', RUNTIME_ROUTES.schoolPlan),
+  offer: (id: string) => runtimeRequest<PlanOffer>('GET', offerPath(id)),
+  /** 201 with the offer; its key tried first unless skip_key_test. The key is in the body alone. */
+  createOffer: (offer: OfferCreate) =>
+    runtimeRequest<PlanOffer>('POST', RUNTIME_ROUTES.planOffers, { body: offer, retry: false }),
+  updateOffer: (id: string, version: string | number, patch: OfferPatch) =>
+    runtimeRequest<PlanOffer>('PATCH', offerPath(id), { body: patch, ifMatch: version, retry: false }),
+  deleteOffer: (id: string, version?: string | number) =>
+    runtimeRequest<OfferDeleted>('DELETE', offerPath(id), { ifMatch: version ?? undefined, retry: false }),
+  setQuotas: (quotas: QuotasPut) =>
+    runtimeRequest<SchoolPlan>('PUT', RUNTIME_ROUTES.planQuotas, { body: quotas, retry: true }),
+  /** runtime.yaml's quotas again. */
+  resetQuotas: () => runtimeRequest<SchoolPlan>('DELETE', RUNTIME_ROUTES.planQuotas, { retry: true }),
+  usage: () => runtimeRequest<SchoolPlanUsage>('GET', RUNTIME_ROUTES.planUsage),
+  prices: () => runtimeRequest<PriceTable>('GET', RUNTIME_ROUTES.prices),
+  price: (id: string) => runtimeRequest<PriceRow>('GET', pricePath(id)),
+  createPrice: (row: PriceCreate) =>
+    runtimeRequest<PriceRow>('POST', RUNTIME_ROUTES.prices, { body: row, retry: false }),
+  updatePrice: (id: string, version: string | number, patch: PricePatch) =>
+    runtimeRequest<PriceRow>('PATCH', pricePath(id), { body: patch, ifMatch: version, retry: false }),
+  /** The table as it is after. */
+  deletePrice: (id: string, version?: string | number) =>
+    runtimeRequest<PriceTable>('DELETE', pricePath(id), { ifMatch: version ?? undefined, retry: false }),
+  tenants: (page: { after?: string; limit?: number } = {}) =>
+    runtimeRequest<TenantList>('GET', RUNTIME_ROUTES.tenants, { query: page }),
+  tenant: (id: string) => runtimeRequest<TenantQuota>('GET', tenantPath(id)),
+  setTenant: (id: string, quota: TenantPut) =>
+    runtimeRequest<TenantQuota>('PUT', tenantPath(id), { body: quota, retry: true }),
+  /** runtime.yaml's quota again, or none. */
+  resetTenant: (id: string) => runtimeRequest<TenantQuota>('DELETE', tenantPath(id), { retry: true }),
+  agentBudgets: () => runtimeRequest<AgentBudgets>('GET', RUNTIME_ROUTES.agentBudgets),
+  setAgentBudgets: (budgets: AgentBudgetsPut) =>
+    runtimeRequest<AgentBudgets>('PUT', RUNTIME_ROUTES.agentBudgets, { body: budgets, retry: true }),
+  resetAgentBudgets: () => runtimeRequest<AgentBudgets>('DELETE', RUNTIME_ROUTES.agentBudgets, { retry: true }),
+  costs: (query: CostQuery = {}) => runtimeRequest<CostReport>('GET', RUNTIME_ROUTES.costs, { query: { ...query } }),
 }

@@ -435,7 +435,9 @@ describe('a 401 from the runtime', () => {
   })
 
   it('gets a new assertion and the call again even for a call that is never retried otherwise', async () => {
-    runtimeAnswers.push(json(401, { error: { code: 'unauthenticated', message: 'expired', details: { reason: 'assertion_expired' } } }))
+    runtimeAnswers.push(
+      json(401, { error: { code: 'unauthenticated', message: 'expired', details: { reason: 'assertion_expired' } } }),
+    )
     runtimeAnswers.push(json(200, { result: 'ok', http_status: 200, provider_code: null, latency_ms: 80 }))
     const out = await rt.runtime.testKey({ provider: 'openai', model: 'gpt-4.1-mini', key: 'sk-test-0000000000' })
     expect(out.data.result).toBe('ok')
@@ -725,13 +727,7 @@ describe('the contract’s calls', () => {
     ],
     ['pause', () => rt.runtime.pause('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/pause', undefined],
     ['resume', () => rt.runtime.resume('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/resume', undefined],
-    [
-      'remove',
-      () => rt.runtime.remove('agt_1'),
-      'DELETE',
-      '/runtime/api/v1/agents/agt_1?revoke_token=true',
-      undefined,
-    ],
+    ['remove', () => rt.runtime.remove('agt_1'), 'DELETE', '/runtime/api/v1/agents/agt_1?revoke_token=true', undefined],
     [
       'remove, keeping the token',
       () => rt.runtime.remove('agt_1', false),
@@ -826,7 +822,9 @@ describe('the contract’s calls', () => {
   })
 
   it('replaces a token with the token alone, never naming the agent in the body', async () => {
-    runtimeAnswers.push(json(200, { agent: AGENT, previous_token: { hint: 'h', prefix: 'p', revocation: 'revoked', problem: null } }))
+    runtimeAnswers.push(
+      json(200, { agent: AGENT, previous_token: { hint: 'h', prefix: 'p', revocation: 'revoked', problem: null } }),
+    )
     await rt.runtime.replaceToken('agt_1', 't')
     const [c] = runtimeCalls()
     expect(JSON.parse(c.body!)).toEqual({ token: 't' })
@@ -839,20 +837,27 @@ describe('the contract’s calls', () => {
     ['pause', () => rt.runtime.pause('agt_1')],
     ['resume', () => rt.runtime.resume('agt_1')],
     ['replaceToken', () => rt.runtime.replaceToken('agt_1', 't')],
-  ] as const)('%s names no version, and a 412 all the same is a version mismatch with the version now', async (_, call) => {
-    runtimeAnswers.push(
-      json(412, {
-        error: { code: 'version_mismatch', message: 'changed since', details: { reason: 'version_mismatch', current_version: 9 } },
-      }),
-    )
-    const err = await failure(call())
-    expect(runtimeCalls()[0].headers['If-Match']).toBeUndefined()
-    expect(rt.isVersionMismatch(err)).toBe(true)
-    expect(err.reason).toBe('version_mismatch')
-    expect(err.details.current_version).toBe(9)
-    // A refusal, not a failure to answer: never sent again by itself.
-    expect(runtimeCalls()).toHaveLength(1)
-  })
+  ] as const)(
+    '%s names no version, and a 412 all the same is a version mismatch with the version now',
+    async (_, call) => {
+      runtimeAnswers.push(
+        json(412, {
+          error: {
+            code: 'version_mismatch',
+            message: 'changed since',
+            details: { reason: 'version_mismatch', current_version: 9 },
+          },
+        }),
+      )
+      const err = await failure(call())
+      expect(runtimeCalls()[0].headers['If-Match']).toBeUndefined()
+      expect(rt.isVersionMismatch(err)).toBe(true)
+      expect(err.reason).toBe('version_mismatch')
+      expect(err.details.current_version).toBe(9)
+      // A refusal, not a failure to answer: never sent again by itself.
+      expect(runtimeCalls()).toHaveLength(1)
+    },
+  )
 
   it.each([
     ['update', () => rt.runtime.update('agt_1', 3, { own_key: null })],
@@ -876,6 +881,281 @@ describe('the contract’s calls', () => {
     runtimeAnswers.push(json(200, {}))
     await rt.runtimeApi.get('/agents', { query: { limit: 20, after: undefined, state: ['running', 'paused'] } })
     expect(runtimeCalls()[0].url).toBe('/runtime/api/v1/agents?limit=20&state=running&state=paused')
+  })
+})
+
+describe('the administrators’ calls', () => {
+  const OFFER = { id: 'fast', source: 'site', version: 2 }
+  const CREATE = {
+    id: 'fast',
+    label: 'Fast',
+    provider: 'openai',
+    model: 'gpt-4.1-mini',
+    key: 'sk-0000000000',
+  }
+
+  it.each([
+    ['settings', () => rt.runtimeAdmin.settings(), 'GET', '/runtime/api/v1/admin/settings', undefined],
+    [
+      'updateSettings',
+      () => rt.runtimeAdmin.updateSettings({ ocr: { languages: null } }),
+      'PATCH',
+      '/runtime/api/v1/admin/settings',
+      { ocr: { languages: null } },
+    ],
+    ['plan', () => rt.runtimeAdmin.plan(), 'GET', '/runtime/api/v1/admin/school-plan', undefined],
+    ['offer', () => rt.runtimeAdmin.offer('fast'), 'GET', '/runtime/api/v1/admin/school-plan/offers/fast', undefined],
+    [
+      'createOffer',
+      () => rt.runtimeAdmin.createOffer(CREATE),
+      'POST',
+      '/runtime/api/v1/admin/school-plan/offers',
+      CREATE,
+    ],
+    [
+      'updateOffer',
+      () => rt.runtimeAdmin.updateOffer('fast', 2, { enabled: false }),
+      'PATCH',
+      '/runtime/api/v1/admin/school-plan/offers/fast',
+      { enabled: false },
+    ],
+    [
+      'deleteOffer',
+      () => rt.runtimeAdmin.deleteOffer('fast', 2),
+      'DELETE',
+      '/runtime/api/v1/admin/school-plan/offers/fast',
+      undefined,
+    ],
+    [
+      'setQuotas',
+      () => rt.runtimeAdmin.setQuotas({ per_owner_day: 100, per_asker_day: 20, per_day: null }),
+      'PUT',
+      '/runtime/api/v1/admin/school-plan/quotas',
+      { per_owner_day: 100, per_asker_day: 20, per_day: null },
+    ],
+    [
+      'resetQuotas',
+      () => rt.runtimeAdmin.resetQuotas(),
+      'DELETE',
+      '/runtime/api/v1/admin/school-plan/quotas',
+      undefined,
+    ],
+    ['usage', () => rt.runtimeAdmin.usage(), 'GET', '/runtime/api/v1/admin/school-plan/usage', undefined],
+    ['prices', () => rt.runtimeAdmin.prices(), 'GET', '/runtime/api/v1/admin/prices', undefined],
+    ['price', () => rt.runtimeAdmin.price('haiku 4.5'), 'GET', '/runtime/api/v1/admin/prices/haiku%204.5', undefined],
+    [
+      'createPrice',
+      () =>
+        rt.runtimeAdmin.createPrice({
+          id: 'mini',
+          provider: 'openai',
+          model: 'gpt-4.1-mini',
+          from: '2026-09-30',
+          usd_per_mtok: { input: '0.4', output: '1.6' },
+        }),
+      'POST',
+      '/runtime/api/v1/admin/prices',
+      {
+        id: 'mini',
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        from: '2026-09-30',
+        usd_per_mtok: { input: '0.4', output: '1.6' },
+      },
+    ],
+    [
+      'updatePrice',
+      () => rt.runtimeAdmin.updatePrice('mini', 2, { usd_per_mtok: { output: '2' } }),
+      'PATCH',
+      '/runtime/api/v1/admin/prices/mini',
+      { usd_per_mtok: { output: '2' } },
+    ],
+    [
+      'deletePrice',
+      () => rt.runtimeAdmin.deletePrice('mini', 2),
+      'DELETE',
+      '/runtime/api/v1/admin/prices/mini',
+      undefined,
+    ],
+    ['tenants', () => rt.runtimeAdmin.tenants(), 'GET', '/runtime/api/v1/admin/tenants', undefined],
+    [
+      'tenants, a page on',
+      () => rt.runtimeAdmin.tenants({ after: 't_ops', limit: 50 }),
+      'GET',
+      '/runtime/api/v1/admin/tenants?after=t_ops&limit=50',
+      undefined,
+    ],
+    ['tenant', () => rt.runtimeAdmin.tenant('ten_x'), 'GET', '/runtime/api/v1/admin/tenants/ten_x', undefined],
+    [
+      'setTenant',
+      () => rt.runtimeAdmin.setTenant('ten_x', { per_day: { answers: 100, usd: '2.5' } }),
+      'PUT',
+      '/runtime/api/v1/admin/tenants/ten_x',
+      { per_day: { answers: 100, usd: '2.5' } },
+    ],
+    [
+      'resetTenant',
+      () => rt.runtimeAdmin.resetTenant('ten_x'),
+      'DELETE',
+      '/runtime/api/v1/admin/tenants/ten_x',
+      undefined,
+    ],
+    ['agentBudgets', () => rt.runtimeAdmin.agentBudgets(), 'GET', '/runtime/api/v1/admin/agent-budgets', undefined],
+    [
+      'setAgentBudgets',
+      () =>
+        rt.runtimeAdmin.setAgentBudgets({
+          per_agent_day: { answers: 500, usd: null },
+          per_asker_day: { answers: null, usd: '1' },
+        }),
+      'PUT',
+      '/runtime/api/v1/admin/agent-budgets',
+      { per_agent_day: { answers: 500, usd: null }, per_asker_day: { answers: null, usd: '1' } },
+    ],
+    [
+      'resetAgentBudgets',
+      () => rt.runtimeAdmin.resetAgentBudgets(),
+      'DELETE',
+      '/runtime/api/v1/admin/agent-budgets',
+      undefined,
+    ],
+    ['costs', () => rt.runtimeAdmin.costs(), 'GET', '/runtime/api/v1/admin/costs', undefined],
+    [
+      'costs, as asked',
+      () =>
+        rt.runtimeAdmin.costs({
+          since: '2026-09-01',
+          until: '2026-09-30',
+          group: 'model',
+          key_source: 'school',
+          after: 'x',
+        }),
+      'GET',
+      '/runtime/api/v1/admin/costs?since=2026-09-01&until=2026-09-30&group=model&key_source=school&after=x',
+      undefined,
+    ],
+  ] as const)('%s goes where the contract says', async (_, call, method, url, body) => {
+    runtimeAnswers.push(json(200, OFFER, { ETag: '"2"' }))
+    const out = await call()
+    expect(out).toMatchObject({ status: 200, data: OFFER, etag: '"2"' })
+    const [c] = runtimeCalls()
+    expect(c.method).toBe(method)
+    expect(c.url).toBe(url)
+    expect(c.body === undefined ? undefined : JSON.parse(c.body)).toEqual(body)
+    expect(c.headers.Authorization).toMatch(/^Bearer eyJ/)
+    expect(c.credentials).toBe('omit')
+  })
+
+  it('names a price’s version when changing it, and when deleting it if asked to', async () => {
+    runtimeAnswers.push(json(200, {}), json(200, {}), json(200, {}))
+    await rt.runtimeAdmin.updatePrice('mini', 3, { from: '2026-10-01' })
+    await rt.runtimeAdmin.deletePrice('mini', '"4"')
+    await rt.runtimeAdmin.deletePrice('mini')
+    const [patch, del, bare] = runtimeCalls()
+    expect(patch.headers['If-Match']).toBe('"3"')
+    expect(del.headers['If-Match']).toBe('"4"')
+    expect(bare.headers['If-Match']).toBeUndefined()
+  })
+
+  it('names an offer’s version when changing it, and when deleting it if asked to', async () => {
+    runtimeAnswers.push(json(200, OFFER), json(200, { deleted: { id: 'fast' }, agents: 0 }), json(200, {}))
+    await rt.runtimeAdmin.updateOffer('fast', 2, { label: 'Quick' })
+    await rt.runtimeAdmin.deleteOffer('fast', '"3"')
+    await rt.runtimeAdmin.deleteOffer('a b')
+    const [patch, del, bare] = runtimeCalls()
+    expect(patch.headers['If-Match']).toBe('"2"')
+    expect(del.headers['If-Match']).toBe('"3"')
+    expect(bare.headers['If-Match']).toBeUndefined()
+    // An id is one path segment, whatever it holds.
+    expect(bare.url).toBe('/runtime/api/v1/admin/school-plan/offers/a%20b')
+  })
+
+  it.each([
+    ['plan', () => rt.runtimeAdmin.plan()],
+    ['settings', () => rt.runtimeAdmin.settings()],
+    ['usage', () => rt.runtimeAdmin.usage()],
+    ['setQuotas', () => rt.runtimeAdmin.setQuotas({ per_owner_day: 1, per_asker_day: 1, per_day: 1 })],
+    ['resetQuotas', () => rt.runtimeAdmin.resetQuotas()],
+    ['prices', () => rt.runtimeAdmin.prices()],
+    ['setTenant', () => rt.runtimeAdmin.setTenant('t', { per_day: { answers: 1, usd: null } })],
+    ['resetTenant', () => rt.runtimeAdmin.resetTenant('t')],
+    [
+      'setAgentBudgets',
+      () =>
+        rt.runtimeAdmin.setAgentBudgets({
+          per_agent_day: { answers: 1, usd: null },
+          per_asker_day: { answers: 1, usd: null },
+        }),
+    ],
+    ['resetAgentBudgets', () => rt.runtimeAdmin.resetAgentBudgets()],
+    ['costs', () => rt.runtimeAdmin.costs({ group: 'day' })],
+  ] as const)('%s is sent again after a 503 or no answer, as the same request', async (_, call) => {
+    runtimeAnswers.push(empty(503), () => Promise.reject(new TypeError('Failed to fetch')), json(200, {}))
+    await call()
+    const sent = runtimeCalls()
+    expect(sent).toHaveLength(3)
+    expect(new Set(sent.map((c) => `${c.method} ${c.url} ${c.body}`)).size).toBe(1)
+  })
+
+  it.each([
+    ['updateSettings', () => rt.runtimeAdmin.updateSettings({ ocr: { enabled: false } })],
+    ['createOffer', () => rt.runtimeAdmin.createOffer(CREATE)],
+    ['updateOffer', () => rt.runtimeAdmin.updateOffer('fast', 2, { enabled: true })],
+    ['deleteOffer', () => rt.runtimeAdmin.deleteOffer('fast', 2)],
+    [
+      'createPrice',
+      () =>
+        rt.runtimeAdmin.createPrice({
+          id: 'x',
+          provider: 'openai',
+          model: 'm',
+          from: '2026-09-30',
+          usd_per_mtok: { input: 1, output: 1 },
+        }),
+    ],
+    ['updatePrice', () => rt.runtimeAdmin.updatePrice('x', 1, { from: '2026-10-01' })],
+    ['deletePrice', () => rt.runtimeAdmin.deletePrice('x', 1)],
+  ] as const)('%s is never sent again by itself', async (_, call) => {
+    runtimeAnswers.push(empty(503), json(200, {}))
+    const err = await failure(call())
+    expect(err.status).toBe(503)
+    expect(runtimeCalls()).toHaveLength(1)
+    runtimeAnswers.length = 0
+  })
+
+  it('refusals carry the runtime’s reason and details: a key that failed its trial says how', async () => {
+    runtimeAnswers.push(
+      json(422, {
+        error: {
+          code: 'failed_precondition',
+          message: 'the key failed its trial',
+          details: {
+            reason: 'key_test_failed',
+            field: '/key',
+            result: 'key_refused',
+            http_status: 401,
+            provider_code: 'invalid_api_key',
+          },
+        },
+      }),
+    )
+    const err = await failure(rt.runtimeAdmin.createOffer(CREATE))
+    expect(err.reason).toBe('key_test_failed')
+    expect(err.details).toMatchObject({
+      field: '/key',
+      result: 'key_refused',
+      http_status: 401,
+      provider_code: 'invalid_api_key',
+    })
+  })
+
+  it('from a runtime without the route, is a 404 with no reason of the contract’s', async () => {
+    runtimeAnswers.push(
+      json(404, { error: { code: 'not_found', message: 'no route', details: { reason: 'no_route' } } }),
+    )
+    const err = await failure(rt.runtimeAdmin.settings())
+    expect(err.status).toBe(404)
+    expect(err.reason).toBe('no_route')
   })
 })
 

@@ -35,12 +35,13 @@ describe('who opens which administration page', () => {
     }
   })
 
-  it('people, terms and presets: platform administrators alone', () => {
+  it('people, terms, presets and the agent runtime’s settings: platform administrators alone', () => {
     for (const [name, params] of [
       ['admin-actors', {}],
       ['admin-actor', { actorId: ID }],
       ['admin-terms', {}],
       ['admin-presets', {}],
+      ['admin-runtime', {}],
     ] as const) {
       expect(opens(name, params), name).toEqual({ platform: true, department: false, student: false })
     }

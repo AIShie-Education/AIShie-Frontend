@@ -54,7 +54,15 @@ afterEach(() => {
 
 async function card(agent: HostedAgent, props: Record<string, unknown> = {}) {
   const w = mount(HostedAgentCard, {
-    props: { agent, actorId: ACTOR, name: 'Study helper', credentials: [], standing: 'active', offers: OFFERS, ...props },
+    props: {
+      agent,
+      actorId: ACTOR,
+      name: 'Study helper',
+      credentials: [],
+      standing: 'active',
+      offers: OFFERS,
+      ...props,
+    },
     global,
     attachTo: document.body,
   })
@@ -105,18 +113,26 @@ describe('HostedAgentCard: what it says', () => {
     core_too_old: 'This AIshie server cannot say who owns an agent. Tell your administrator.',
     agent_suspended: 'The agent is suspended in AIshie. Reactivate it and it starts again by itself.',
     failing: 'It could not start and will try again shortly: model: unknown.',
+    offer_withdrawn:
+      'The school no longer offers the model it was on, and no model of yours stands behind it, so it does not run. Choose another of the school’s models, or a model of your own.',
   }
 
-  it.each(Object.entries(PROBLEMS))('error, %s: “Not running”, the problem’s sentence and its details', async (reason, sentence) => {
-    const w = await card(
-      hostedAgent({ status: 'error', problem: { reason: reason as ProblemReason, detail: 'model: unknown', since: '2026-09-28T08:00:00Z' } }),
-    )
-    expect(tag(w)).toBe('Not running')
-    expect(body(w)).toBe(sentence)
-    const details = w.find('.hosted-card__problem')
-    expect(details.find('summary').text()).toBe('Details')
-    expect(details.find('.hosted-card__detail').text()).toBe('model: unknown')
-  })
+  it.each(Object.entries(PROBLEMS))(
+    'error, %s: “Not running”, the problem’s sentence and its details',
+    async (reason, sentence) => {
+      const w = await card(
+        hostedAgent({
+          status: 'error',
+          problem: { reason: reason as ProblemReason, detail: 'model: unknown', since: '2026-09-28T08:00:00Z' },
+        }),
+      )
+      expect(tag(w)).toBe('Not running')
+      expect(body(w)).toBe(sentence)
+      const details = w.find('.hosted-card__problem')
+      expect(details.find('summary').text()).toBe('Details')
+      expect(details.find('.hosted-card__detail').text()).toBe('model: unknown')
+    },
+  )
 
   it('says it in Traditional Chinese too', async () => {
     setLocale('zh-Hant')
@@ -129,7 +145,17 @@ describe('HostedAgentCard: what it says', () => {
   it('shows the model, the key and token by their hints, today’s answers and cost, and the seats in sentences', async () => {
     const w = await card(
       hostedAgent({
-        seats: [seat(), seat({ course_id: 'c-2', course_code: 'MA201', section: '', kind: 'course_tutor', reads_work: false, answer_level: 'confirm_required' })],
+        seats: [
+          seat(),
+          seat({
+            course_id: 'c-2',
+            course_code: 'MA201',
+            section: '',
+            kind: 'course_tutor',
+            reads_work: false,
+            answer_level: 'confirm_required',
+          }),
+        ],
         proposals_waiting: 2,
       }),
     )
@@ -138,7 +164,9 @@ describe('HostedAgentCard: what it says', () => {
     expect(w.text()).toContain('ais_runtimetoken…')
     expect(w.find('.hosted-card__today').text()).toBe('4 answers, $0.004213')
     expect(w.text()).toContain('2 answers wait for approval.')
-    expect(w.text()).toContain('Your delegate in CS101 · A: reads the course material and students’ work; answers only you.')
+    expect(w.text()).toContain(
+      'Your delegate in CS101 · A: reads the course material and students’ work; answers only you.',
+    )
     expect(w.text()).toContain('Tutor of MA201: answers every student; reads the course material.')
     expect(w.text()).toContain('Its answers wait for approval.')
   })
@@ -155,7 +183,9 @@ describe('HostedAgentCard: what it says', () => {
     const self = w.find('details.hosted-card__self')
     expect(self.attributes('open')).toBeUndefined()
     expect(self.find('summary').text()).toBe('Connect another AI tool, or run the runtime yourself, instead')
-    expect(self.text()).toContain('These apply only after you stop hosting: delete the agent from AIshie’s hosting first')
+    expect(self.text()).toContain(
+      'These apply only after you stop hosting: delete the agent from AIshie’s hosting first',
+    )
     expect(self.findAll('.hosted-card__self-h').map((h) => h.text())).toEqual([
       'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
       'Run the AIshie runtime yourself (advanced)',
@@ -282,22 +312,25 @@ describe('HostedAgentCard: what the owner can do', () => {
     expect(items).toEqual(['Replace token', 'Delete from the school’s runtime'])
   })
 
-  it.each(['pause', 'resume'] as const)('reads the agent again when %s finds it changed meanwhile (412), and says so', async (what) => {
-    const paused = what === 'resume'
-    s.on('POST', what === 'pause' ? RUNTIME.pause : RUNTIME.resume, () =>
-      refusal(412, 'version_mismatch', 'version_mismatch', { current_version: 7 }),
-    )
-    s.on('GET', RUNTIME.agent, () => json(200, hostedAgent({ version: 7, status: 'needs_token' })))
-    const w = await card(hostedAgent({ paused, status: paused ? 'paused' : 'running' }))
-    await w.find(`.hosted-card__${what}`).trigger('click')
-    await flushPromises()
-    expect(s.to('POST', what === 'pause' ? RUNTIME.pause : RUNTIME.resume)[0].headers['If-Match']).toBeUndefined()
-    expect(s.to('GET', RUNTIME.agent)).toHaveLength(1)
-    expect(w.emitted('update')![0][0]).toMatchObject({ version: 7, status: 'needs_token' })
-    expect(w.find('.hosted-card__alert').text()).toBe(
-      'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
-    )
-  })
+  it.each(['pause', 'resume'] as const)(
+    'reads the agent again when %s finds it changed meanwhile (412), and says so',
+    async (what) => {
+      const paused = what === 'resume'
+      s.on('POST', what === 'pause' ? RUNTIME.pause : RUNTIME.resume, () =>
+        refusal(412, 'version_mismatch', 'version_mismatch', { current_version: 7 }),
+      )
+      s.on('GET', RUNTIME.agent, () => json(200, hostedAgent({ version: 7, status: 'needs_token' })))
+      const w = await card(hostedAgent({ paused, status: paused ? 'paused' : 'running' }))
+      await w.find(`.hosted-card__${what}`).trigger('click')
+      await flushPromises()
+      expect(s.to('POST', what === 'pause' ? RUNTIME.pause : RUNTIME.resume)[0].headers['If-Match']).toBeUndefined()
+      expect(s.to('GET', RUNTIME.agent)).toHaveLength(1)
+      expect(w.emitted('update')![0][0]).toMatchObject({ version: 7, status: 'needs_token' })
+      expect(w.find('.hosted-card__alert').text()).toBe(
+        'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
+      )
+    },
+  )
 
   it('takes a hosting deleted elsewhere for gone', async () => {
     s.on('POST', RUNTIME.pause, () => refusal(404, 'not_found', 'agent_not_found'))
@@ -305,7 +338,9 @@ describe('HostedAgentCard: what the owner can do', () => {
     await w.find('.hosted-card__pause').trigger('click')
     await flushPromises()
     expect(w.emitted('deleted')).toBeTruthy()
-    expect(vi.mocked(ElMessage).mock.calls[0][0]).toMatchObject({ message: 'This agent is no longer on the school’s runtime.' })
+    expect(vi.mocked(ElMessage).mock.calls[0][0]).toMatchObject({
+      message: 'This agent is no longer on the school’s runtime.',
+    })
   })
 })
 
@@ -385,19 +420,25 @@ describe('HostedAgentCard: deleting', () => {
     expect(w.find('.delete-hosting__revoke').exists()).toBe(false)
   })
 
-  it.each(['revoked', 'already_invalid'])('succeeds when the runtime answers %s, asking nothing more', async (revocation) => {
-    s.on('DELETE', RUNTIME.agent, () => answer(revocation))
-    const w = await deleteDialog(hostedAgent(), { credentials: [ownCred()] })
-    await submit(w)
-    const sent = s.to('DELETE', RUNTIME.agent)[0]
-    expect(sent.url).toMatch(/\?revoke_token=true$/)
-    // No version named, as §9.1's remove(id, revoke) sends it.
-    expect(sent.headers['If-Match']).toBeUndefined()
-    expect(s.to('GET', CORE.credentials)).toHaveLength(0)
-    expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({ type: 'success', message: 'Study helper is no longer on the school’s runtime' })
-    expect(w.emitted('deleted')).toBeTruthy()
-    expect(w.emitted('unrevoked')).toBeUndefined()
-  })
+  it.each(['revoked', 'already_invalid'])(
+    'succeeds when the runtime answers %s, asking nothing more',
+    async (revocation) => {
+      s.on('DELETE', RUNTIME.agent, () => answer(revocation))
+      const w = await deleteDialog(hostedAgent(), { credentials: [ownCred()] })
+      await submit(w)
+      const sent = s.to('DELETE', RUNTIME.agent)[0]
+      expect(sent.url).toMatch(/\?revoke_token=true$/)
+      // No version named, as §9.1's remove(id, revoke) sends it.
+      expect(sent.headers['If-Match']).toBeUndefined()
+      expect(s.to('GET', CORE.credentials)).toHaveLength(0)
+      expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({
+        type: 'success',
+        message: 'Study helper is no longer on the school’s runtime',
+      })
+      expect(w.emitted('deleted')).toBeTruthy()
+      expect(w.emitted('unrevoked')).toBeUndefined()
+    },
+  )
 
   it.each(['agent_suspended', 'core_unavailable', 'core_refused'])(
     'tells the owner its token may still work when the runtime could not revoke it (%s), revoking nothing by itself',
@@ -464,7 +505,9 @@ describe('HostedAgentCard: deleting', () => {
     const w = await deleteDialog(hostedAgent(), { credentials: [ownCred()] })
     await submit(w)
     expect(w.emitted('deleted')).toBeTruthy()
-    expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({ message: 'This agent is no longer on the school’s runtime.' })
+    expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({
+      message: 'This agent is no longer on the school’s runtime.',
+    })
   })
 
   it('shows the runtime’s refusal and keeps the hosting', async () => {
@@ -483,9 +526,13 @@ describe('HostedAgentCard: on the school’s plan', () => {
     const w = await card(onSchoolPlan(false), { canChooseSchool: true })
     expect(w.find('.hosted-card__model').text()).toBe('School AI (Claude Haiku) claude-haiku-4-5')
     expect(w.find('.hosted-card__plan').text()).toBe('School plan (paid by the school)')
-    expect(w.find('.hosted-card__fallback').text()).toBe('None: answers pause until tomorrow once the allowance is used up')
+    expect(w.find('.hosted-card__fallback').text()).toBe(
+      'None: answers pause until tomorrow once the allowance is used up',
+    )
     expect(w.find('.hosted-card__school-count').text()).toBe('12 / 100 today')
-    expect(w.find('.hosted-card__school-hint').text()).toBe('The school plan, across all your agents. Starts again at 00:00 UTC.')
+    expect(w.find('.hosted-card__school-hint').text()).toBe(
+      'The school plan, across all your agents. Starts again at 00:00 UTC.',
+    )
     expect(w.find('.hosted-card__per-asker').text()).toBe('Each person who asks: up to 20 a day')
     expect(w.find('.hosted-card__agent-today').text()).toBe('4 answers')
     expect(w.text()).not.toContain('cost unknown')
@@ -513,7 +560,9 @@ describe('HostedAgentCard: on the school’s plan', () => {
     )
     w.unmount()
     w = await card(spent(true))
-    expect(w.find('.hosted-card__spent').text()).toBe('Today’s school allowance is used up: your own key answers until 00:00 UTC.')
+    expect(w.find('.hosted-card__spent').text()).toBe(
+      'Today’s school allowance is used up: your own key answers until 00:00 UTC.',
+    )
   })
 
   it('says so when the school no longer offers the plan', async () => {
@@ -521,7 +570,46 @@ describe('HostedAgentCard: on the school’s plan', () => {
     a.model.school = { ...a.model.school!, offered: false, label: 'standard', model: '' }
     const w = await card(a)
     expect(w.find('.hosted-card__model').text()).toBe('standard')
-    expect(w.find('.hosted-card__withdrawn').text()).toBe('The school no longer offers this plan. Choose another, or your own key.')
+    expect(w.find('.hosted-card__withdrawn').text()).toBe(
+      'The school no longer offers this plan. Choose another, or your own key.',
+    )
+  })
+
+  it('says why it does not run when the offer was withdrawn with nothing of the owner’s behind it, once', async () => {
+    const a = onSchoolPlan(false, {
+      status: 'error',
+      problem: {
+        reason: 'offer_withdrawn',
+        detail: 'not run: agent.model.offer "standard": the school no longer offers it',
+        since: '2026-09-28T09:00:00Z',
+      },
+    })
+    a.model.school = { ...a.model.school!, offered: false, label: 'standard', model: '' }
+    let w = await card(a)
+    expect(tag(w)).toBe('Not running')
+    expect(body(w)).toBe(
+      'The school no longer offers the model it was on, and no model of yours stands behind it, so it does not run. Choose another of the school’s models, or a model of your own.',
+    )
+    expect(w.find('.hosted-card__detail').text()).toContain('the school no longer offers it')
+    // The status says it: no second notice.
+    expect(w.find('.hosted-card__withdrawn').exists()).toBe(false)
+    w.unmount()
+
+    setLocale('zh-Hant')
+    w = await card(a)
+    expect(body(w)).toBe(
+      '學校已不再提供它所用的模型，而你也沒有設定自己的模型作為備用，所以它沒有運行。請改選學校的其他模型，或使用你自己的模型。',
+    )
+  })
+
+  it('says its own model answers when the offer was withdrawn with the owner’s model behind it', async () => {
+    const a = onSchoolPlan(true)
+    a.model.school = { ...a.model.school!, offered: false }
+    const w = await card(a)
+    expect(tag(w)).toBe('Running')
+    expect(w.find('.hosted-card__withdrawn').text()).toBe(
+      'The school no longer offers this plan: your agent answers with your own model and key until you choose another.',
+    )
   })
 
   it('reads 「今日 12 / 100 次」 in Traditional Chinese', async () => {

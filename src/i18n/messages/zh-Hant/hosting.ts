@@ -6,7 +6,8 @@ export default {
   // Where the agent runs: one brain at a time.
   choice: {
     title: '這個代理如何運行',
-    intro: '代理同一時間只能有一個「大腦」：由 AIshie 代管，或由你的 AI 工具或執行環境運行。不能同時兩者，否則每個問題都會有兩個回答。',
+    intro:
+      '代理同一時間只能有一個「大腦」：由 AIshie 代管，或由你的 AI 工具或執行環境運行。不能同時兩者，否則每個問題都會有兩個回答。',
     hosted: '交給 AIshie 代管',
     hostedHint: 'AIshie 會替你運行它，使用你選擇的模型和你自己的 API 金鑰。無須安裝任何程式，也無須處理權杖。',
     recommended: '推薦',
@@ -16,8 +17,10 @@ export default {
     runtimeHint: '適用於自行營運 AIshie Agent Runtime 的人。',
     hostedIntro: 'AIshie 會為代理建立一個權杖，並在不顯示的情況下交給學校的執行環境；然後由你選擇模型並提供 API 金鑰。',
     host: '設定代管',
-    hostedHintSchool: 'AIshie 會替你運行它，使用學校的 AI 方案，或你選擇的模型和你自己的 API 金鑰。無須安裝任何程式，也無須處理權杖。',
-    hostedIntroSchool: 'AIshie 會為代理建立一個權杖，並在不顯示的情況下交給學校的執行環境；然後由你選擇學校方案，或選擇模型並提供自己的 API 金鑰。',
+    hostedHintSchool:
+      'AIshie 會替你運行它，使用學校的 AI 方案，或你選擇的模型和你自己的 API 金鑰。無須安裝任何程式，也無須處理權杖。',
+    hostedIntroSchool:
+      'AIshie 會為代理建立一個權杖，並在不顯示的情況下交給學校的執行環境；然後由你選擇學校方案，或選擇模型並提供自己的 API 金鑰。',
     hostSuspended: '這個代理已停用：請先重新啟用它。',
     paste: '我已有這個代理的權杖',
     selfWhileHosted: '改用其他 AI 工具連接，或自己架 runtime',
@@ -44,10 +47,12 @@ export default {
     submit: '連接',
     done: '{name} 已在學校的執行環境上',
     replaceTitle: '為學校執行環境上的 {name} 換新權杖',
-    replaceBody: '系統會建立一個標籤為「AIshie runtime」的新權杖並交給執行環境，執行環境隨後會撤銷原有的權杖。兩個權杖你都不會看到。',
+    replaceBody:
+      '系統會建立一個標籤為「AIshie runtime」的新權杖並交給執行環境，執行環境隨後會撤銷原有的權杖。兩個權杖你都不會看到。',
     replaceSubmit: '更換權杖',
     reconnectTitle: '重新連接 {name}',
-    reconnectBody: 'AIshie 拒絕了執行環境原有的權杖。系統會建立一個標籤為「AIshie runtime」的新權杖並交給執行環境；你不會看到它。',
+    reconnectBody:
+      'AIshie 拒絕了執行環境原有的權杖。系統會建立一個標籤為「AIshie runtime」的新權杖並交給執行環境；你不會看到它。',
     reconnectSubmit: '重新連接',
     replaced: '執行環境已取得 {name} 的新權杖',
   },
@@ -105,7 +110,8 @@ export default {
   // "I have a token for this agent".
   paste: {
     title: '用你已有的權杖託管 {name}',
-    intro: '貼上這個代理的其中一個權杖。執行環境會加密保存它，之後不會再顯示。本頁永遠不會撤銷你貼上的權杖：由你決定還有甚麼在使用它。',
+    intro:
+      '貼上這個代理的其中一個權杖。執行環境會加密保存它，之後不會再顯示。本頁永遠不會撤銷你貼上的權杖：由你決定還有甚麼在使用它。',
     token: '代理權杖',
     placeholder: 'ais_…',
     check: '檢查',
@@ -251,6 +257,8 @@ export default {
     core_too_old: '這個 AIshie 伺服器無法說明代理屬於誰。請通知你的管理員。',
     agent_suspended: '這個代理在 AIshie 中已停用。重新啟用後，它會自行再次啟動。',
     failing: '它未能啟動，稍後會再試：{detail}。',
+    offer_withdrawn:
+      '學校已不再提供它所用的模型，而你也沒有設定自己的模型作為備用，所以它沒有運行。請改選學校的其他模型，或使用你自己的模型。',
   },
 
   // A seat, in sentences from the runtime's facts.
@@ -316,7 +324,9 @@ export default {
     spentFallback: '今天的學校額度已用完：在 00:00 UTC 之前改用你自己的金鑰回答。',
     spentNone: '今天的學校額度已用完：在 00:00 UTC 之前，代理會請提問者明天再試。',
     offerWithdrawn: '學校已不再提供這個方案。請選擇其他方案，或改用你自己的金鑰。',
-    issueWhileHosted: '學校的執行環境正在運行這個代理。你用新權杖啟動的任何程式也會回答：如要自己運行，請先從學校的執行環境刪除它。',
+    offerWithdrawnFallback: '學校已不再提供這個方案：在你改選之前，代理會以你自己的模型和金鑰回答。',
+    issueWhileHosted:
+      '學校的執行環境正在運行這個代理。你用新權杖啟動的任何程式也會回答：如要自己運行，請先從學校的執行環境刪除它。',
   },
 
   // Deleting it from the runtime.

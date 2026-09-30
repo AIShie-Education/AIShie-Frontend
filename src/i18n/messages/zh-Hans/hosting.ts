@@ -6,7 +6,8 @@ export default {
   // Where the agent runs: one brain at a time.
   choice: {
     title: '这个智能体如何运行',
-    intro: '智能体同一时间只能有一个“大脑”：由 AIshie 托管，或由你的 AI 工具或运行环境运行。不能两者同时运行，否则每个问题都会有两个回答。',
+    intro:
+      '智能体同一时间只能有一个“大脑”：由 AIshie 托管，或由你的 AI 工具或运行环境运行。不能两者同时运行，否则每个问题都会有两个回答。',
     hosted: '交给 AIshie 托管',
     hostedHint: 'AIshie 会替你运行它，使用你选择的模型和你自己的 API 密钥。无须安装任何程序，也无须处理令牌。',
     recommended: '推荐',
@@ -14,10 +15,13 @@ export default {
     toolHint: '由你自己的 AI 工具通过 MCP、以智能体的其中一个令牌担任这个智能体。',
     runtime: '自行部署运行环境（高级）',
     runtimeHint: '适用于自行运维 AIshie Agent Runtime 的人。',
-    hostedIntro: 'AIshie 会为智能体创建一个令牌，并在不显示的情况下交给学校的运行环境；然后由你选择模型并提供 API 密钥。',
+    hostedIntro:
+      'AIshie 会为智能体创建一个令牌，并在不显示的情况下交给学校的运行环境；然后由你选择模型并提供 API 密钥。',
     host: '设置托管',
-    hostedHintSchool: 'AIshie 会替你运行它，使用学校的 AI 方案，或你选择的模型和你自己的 API 密钥。无须安装任何程序，也无须处理令牌。',
-    hostedIntroSchool: 'AIshie 会为智能体创建一个令牌，并在不显示的情况下交给学校的运行环境；然后由你选择学校方案，或选择模型并提供自己的 API 密钥。',
+    hostedHintSchool:
+      'AIshie 会替你运行它，使用学校的 AI 方案，或你选择的模型和你自己的 API 密钥。无须安装任何程序，也无须处理令牌。',
+    hostedIntroSchool:
+      'AIshie 会为智能体创建一个令牌，并在不显示的情况下交给学校的运行环境；然后由你选择学校方案，或选择模型并提供自己的 API 密钥。',
     hostSuspended: '这个智能体已停用：请先重新启用它。',
     paste: '我已有这个智能体的令牌',
     selfWhileHosted: '改用其他 AI 工具连接，或自行部署运行环境',
@@ -44,10 +48,12 @@ export default {
     submit: '连接',
     done: '{name} 已托管到学校的运行环境',
     replaceTitle: '为学校运行环境上的 {name} 更换令牌',
-    replaceBody: '系统会创建一个标签为“AIshie runtime”的新令牌并交给运行环境，运行环境随后会撤销原有的令牌。两个令牌你都不会看到。',
+    replaceBody:
+      '系统会创建一个标签为“AIshie runtime”的新令牌并交给运行环境，运行环境随后会撤销原有的令牌。两个令牌你都不会看到。',
     replaceSubmit: '更换令牌',
     reconnectTitle: '重新连接 {name}',
-    reconnectBody: 'AIshie 拒绝了运行环境原有的令牌。系统会创建一个标签为“AIshie runtime”的新令牌并交给运行环境；你不会看到它。',
+    reconnectBody:
+      'AIshie 拒绝了运行环境原有的令牌。系统会创建一个标签为“AIshie runtime”的新令牌并交给运行环境；你不会看到它。',
     reconnectSubmit: '重新连接',
     replaced: '运行环境已获得 {name} 的新令牌',
   },
@@ -105,7 +111,8 @@ export default {
   // "I have a token for this agent".
   paste: {
     title: '用你已有的令牌托管 {name}',
-    intro: '粘贴这个智能体的其中一个令牌。运行环境会加密保存它，之后不会再显示。本页永远不会撤销你粘贴的令牌：由你决定还有什么在使用它。',
+    intro:
+      '粘贴这个智能体的其中一个令牌。运行环境会加密保存它，之后不会再显示。本页永远不会撤销你粘贴的令牌：由你决定还有什么在使用它。',
     token: '智能体令牌',
     placeholder: 'ais_…',
     check: '检查',
@@ -251,6 +258,8 @@ export default {
     core_too_old: '这个 AIshie 服务器无法说明智能体属于谁。请通知你的管理员。',
     agent_suspended: '这个智能体在 AIshie 中已停用。重新启用后，它会自行再次启动。',
     failing: '它未能启动，稍后会再试：{detail}。',
+    offer_withdrawn:
+      '学校已不再提供它所用的模型，而你也没有设置自己的模型作为备用，所以它没有运行。请改选学校的其他模型，或使用你自己的模型。',
   },
 
   // A seat, in sentences from the runtime's facts.
@@ -316,7 +325,9 @@ export default {
     spentFallback: '今天的学校额度已用完：在 00:00 UTC 之前改用你自己的密钥回答。',
     spentNone: '今天的学校额度已用完：在 00:00 UTC 之前，智能体会请提问者明天再试。',
     offerWithdrawn: '学校已不再提供这个方案。请选择其他方案，或改用你自己的密钥。',
-    issueWhileHosted: '学校的运行环境正在运行这个智能体。你用新令牌启动的任何程序也会回答：如要自己运行，请先从学校的运行环境删除它。',
+    offerWithdrawnFallback: '学校已不再提供这个方案：在你改选之前，智能体会以你自己的模型和密钥回答。',
+    issueWhileHosted:
+      '学校的运行环境正在运行这个智能体。你用新令牌启动的任何程序也会回答：如要自己运行，请先从学校的运行环境删除它。',
   },
 
   // Deleting it from the runtime.

@@ -2,8 +2,8 @@ import type { RouteRecordRaw } from 'vue-router'
 
 // Administration: outside any course. Courses and departments are for
 // platform administrators and for the administrators of a department, who see
-// only what is beneath their appointments; people, terms and presets are for
-// platform administrators alone.
+// only what is beneath their appointments; people, terms, presets and the
+// agent runtime's settings are for platform administrators alone.
 const routes: RouteRecordRaw[] = [
   {
     path: 'admin',
@@ -53,6 +53,13 @@ const routes: RouteRecordRaw[] = [
         name: 'admin-presets',
         component: () => import('@/views/admin/PresetsView.vue'),
         meta: { title: 'adminSetup.presets.title', admin: true },
+      },
+      {
+        // The school's agent runtime: its AI plan and OCR. Its own administrators are among these.
+        path: 'runtime',
+        name: 'admin-runtime',
+        component: () => import('@/views/admin/RuntimeAdminView.vue'),
+        meta: { title: 'runtimeAdmin.title', admin: true },
       },
     ],
   },

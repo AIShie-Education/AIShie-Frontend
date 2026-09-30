@@ -94,6 +94,28 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   handles it.
 - Never keep an agent token or a model key in reactive state, storage, a log or an error: a token
   the page issues for the runtime lives in one local variable until the runtime has it.
+- The runtime's administrators (Core's root and admins, as many of them as its operator names: `GET
+  /me`'s `is_admin`) set it on *AI and documents* (`/admin/runtime`, `RuntimeAdminView.vue`, and its
+  parts in `src/views/admin/runtime/`), through `runtimeAdmin` (`@/api/runtime`): the school's plan
+  (its offers, each with the school's key, write-only, and its daily quotas in answers and dollars),
+  pricing (the price table beside the operator's price file, tenants' daily quotas, hosted agents'
+  daily budgets, and what things cost), today's use of the plan, and OCR. The side bar offers the page to platform administrators where there is a runtime; the page
+  says so where there is none, and offers to try again where it cannot be reached. Each tab is a
+  part the runtime answers for apart, in `<RuntimeAsync>`: a runtime from before a part's routes
+  answers 404, said quietly as not offered yet (`isNotOffered`), and a refusal because the caller is
+  not one of its administrators (`not_admin`) says who may. Refusals are worded by
+  `adminErrorText` (`runtimeAdmin.errors`, then the hosting pages' words). An offer's form is the
+  own-model form's pieces (`hosting.ts`: `ModelForm`, `choiceFrom`, `formProblems`, `keyProblem`),
+  and an edit sends only what changed from the offer as read (`offerPatchFrom`), at its version: a
+  412 reads it again and keeps what the administrator changed over it. A key's trial that failed
+  (`key_test_failed`) says what the provider answered (`keyTrialOf`). Who changed a setting is
+  named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
+  cent at least (`usdShown`) and typed as decimals (`usdProblem`), empty for no limit. A refusal
+  that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
+  models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
+  agents' lines. Costs are shown by `lines` kind, so that a kind to come (a document's
+  transcription) shows as its own. What comes next (a document's transcription beside OCR) is
+  another tab, or another card in its tab.
 - The runtime's route and field names live in `src/api/runtime.ts` (`RUNTIME_ROUTES`) and
   `src/api/runtime-types.ts`, and nowhere else.
 
