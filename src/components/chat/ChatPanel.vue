@@ -21,16 +21,16 @@
 // it closes it too.
 //
 // Under its title bar (on a phone, on top), the course asked in (one of the
-// caller's courses where they may ask:
-// the page's own on a course page, else the last one used), a new
-// conversation, and the history. A new conversation starts with one of that
+// caller's courses where they may ask: the page's own on a course page, else
+// the last one used), a new conversation, and the history. A new conversation starts with one of that
 // course's agents; the history lists the caller's conversations with agents
 // in that course or in all of them; a conversation is read and written in
 // the same pane as ever.
 //
 // Files dropped on the panel go to the conversation it shows, attached to
 // what the caller is writing (ChatPane takes those dropped on it, and those
-// dropped on the panel's bar come to it too); where it shows none to write
+// dropped on the window's title bar or the panel's bar come to it too),
+// wherever the window has been moved; where it shows none to write
 // in, the panel takes them and does nothing with them, rather than the page
 // under it (materials, say) taking them.
 //

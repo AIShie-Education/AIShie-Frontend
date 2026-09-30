@@ -80,6 +80,15 @@ vi.mock('@/api/http', async (orig) => {
         result: { read_up_to_seq: 2, unread: false },
       }
     }),
+    // A conversation's files, uploaded at once; Core takes 5 000 bytes a file.
+    uploadFile: vi.fn(async (_course: string, _kind: string, file: File) => ({
+      uploadToken: `tok-${file.name}`,
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+    })),
+    uploadLimits: vi.fn(async () => ({ maxBytes: 5_000, maxFiles: 10, maxConversationBytes: 50_000 })),
+    uploadLimit: vi.fn(async () => 5_000),
   }
 })
 
@@ -454,6 +463,44 @@ describe('ChatPanel', () => {
     chat.setOpen(true)
     await flushPromises()
     expect(placed(w)).toEqual({ width: 400, height: 600, right: 16, bottom: 16 })
+  })
+
+  it('takes files dropped anywhere on the window, its title bar too, for the conversation it shows, and never lets the page have them', async () => {
+    const { w, chat } = await setup()
+    const dt = (files: File[]) =>
+      ({
+        types: ['Files'],
+        files,
+        items: files.map((f) => ({
+          kind: 'file',
+          getAsFile: () => f,
+          webkitGetAsEntry: () => ({ isDirectory: false }),
+        })),
+        dropEffect: 'none',
+      }) as unknown as DataTransfer
+    const drop = async (target: { element: Element }, files: File[]) => {
+      const e = new Event('drop', { bubbles: true, cancelable: true }) as DragEvent
+      Object.defineProperty(e, 'dataTransfer', { value: dt(files) })
+      target.element.dispatchEvent(e)
+      for (let i = 0; i < 6; i++) await flushPromises()
+      return e
+    }
+    const pdf = (name: string) => new File([new Uint8Array(120)], name, { type: 'application/pdf' })
+    // Choosing an agent: nothing to write in, so nothing is taken, and the page under it gets nothing either.
+    chat.setOpen(true)
+    await flushPromises()
+    const none = await drop(w.get('.chat-panel__titlebar'), [pdf('early.pdf')])
+    expect(none.defaultPrevented).toBe(true)
+    expect(w.find('.chat-chip').exists()).toBe(false)
+
+    chat.showConversation('k1', 'c1', { open: true })
+    await flushPromises()
+    expect(w.find('.chat-composer textarea').exists()).toBe(true)
+    // On its title bar, as on the conversation itself: chips in the box.
+    const onBar = await drop(w.get('.chat-panel__titlebar'), [pdf('notes.pdf')])
+    expect(onBar.defaultPrevented).toBe(true)
+    await drop(w.get('.chat-pane'), [pdf('plot.pdf')])
+    expect(w.findAll('.chat-chip .chat-chip__name').map((c) => c.text())).toEqual(['notes.pdf', 'plot.pdf'])
   })
 
   it('goes back to its corner when the viewport no longer holds it', async () => {

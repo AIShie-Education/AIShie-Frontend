@@ -386,7 +386,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   lays over it, with a shadow all round (`--app-z-panel`, `--app-shadow-window`; the layers are in
   `styles/tokens.css`). Minimized (its button, Escape from within it, or Ctrl/⌘+J), it opens again on
   what it showed; closed, on a new conversation in the course it asks in (the chat store's `close`);
-  either way focus goes back to the round button. On a phone (up to 899 px) it is a sheet over the whole
+  either way focus goes back to the round button. Files dropped anywhere on the window, its title bar
+  too, go to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
   screen, a modal dialog with no edge to drag, closed with its one button or Escape, keeping what it
   showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
   on a conversation (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a

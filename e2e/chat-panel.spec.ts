@@ -7,6 +7,7 @@ import {
   courseTab,
   coursePath,
   demo,
+  dropFiles,
   expectNothingAtRightEdge,
   inTraditionalChinese,
   minimizeChat,
@@ -426,6 +427,19 @@ test.describe.serial('the chat panel', () => {
     await drag(page, 'title', -200, -30)
     const moved = await expectWindow(page, pageWidth)
     expect(moved).toMatchObject({ right: 216, bottom: 46, width: 492, height: before.height })
+    // Files dropped on the window, where it now is, are attached to what she is writing: on its title bar as on
+    // the conversation. (They are only chips until sent: taken off again here.)
+    const note = (name: string) => ({ name, mimeType: 'text/plain', buffer: Buffer.from(`${name}\n`) })
+    await dropFiles(panel.locator('.chat-panel__titlebar'), [note('on-the-title.txt')])
+    await dropFiles(panel.locator('.chat-pane__messages'), [note('on-the-messages.txt')])
+    const chips = panel.locator('.chat-chip')
+    await expect(chips.locator('.chat-chip__name')).toHaveText(['on-the-title.txt', 'on-the-messages.txt'])
+    await expect(panel.locator('.chat-chip.is-done')).toHaveCount(2)
+    await expect(panel.getByRole('button', { name: 'Attach files', exact: true })).toBeVisible()
+    for (const name of ['on-the-title.txt', 'on-the-messages.txt']) {
+      await panel.getByRole('button', { name: `Remove “${name}”` }).click()
+    }
+    await expect(chips).toHaveCount(0)
     await page.reload()
     await expect(panelOf(page)).toBeVisible()
     expect(await expectWindow(page, pageWidth)).toEqual(moved)
@@ -885,6 +899,12 @@ test.describe.serial('the chat panel', () => {
       await panel.getByRole('button', { name: 'History', exact: true }).click()
       await panel.locator('.hist-row').filter({ hasText: TITLE }).click()
       await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
+      // Its paperclip is there, within the screen.
+      const clip = panel.getByRole('button', { name: 'Attach files', exact: true })
+      await expect(clip).toBeVisible()
+      const clipAt = (await clip.boundingBox())!
+      expect(clipAt.x).toBeGreaterThanOrEqual(0)
+      expect(clipAt.y + clipAt.height).toBeLessThanOrEqual(844)
       // On a touch screen Enter is a new line, and the button, inside the box, sends; no hint under it.
       await expect(panel.locator('.chat-composer__hint')).toHaveCount(0)
       await expect(panel.locator('.chat-composer').getByRole('button', { name: 'Send' })).toBeVisible()
