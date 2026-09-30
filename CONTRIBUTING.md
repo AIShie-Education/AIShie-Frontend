@@ -35,7 +35,7 @@ A green push to `main` is then published
 ([`publish.yml`](.github/workflows/publish.yml)): its image is built, tested
 the same way, and pushed to `ghcr.io/aishie-education/aishie-frontend` as
 `:sha-<commit>`, and `:edge` while the commit is still `main`'s tip. It is
-also deployed to staging over SSH, as before.
+also deployed to edge, the test site, over SSH, as before.
 
 On a laptop, the same, with Node from `.nvmrc`:
 
@@ -93,13 +93,13 @@ tag. It changes by hand, with the catalogue it brings, in one pull request:
 4. Write the new line into `.github/core-image`, run the end-to-end tests, and
    push it all together.
 
-Staging's Core should be at that version or later before the front end that
+Edge's Core should be at that version or later before the front end that
 needs it is deployed there.
 
 ## Releasing
 
 A push to `main` goes out by itself once CI passes: its image to GHCR as
-`:sha-<commit>` and `:edge`, and its build to staging. A release is made by a
+`:sha-<commit>` and `:edge`, and its build to edge. A release is made by a
 tag, from `main`:
 
 ```
@@ -111,19 +111,19 @@ git push origin v0.1.0
 [`release.yml`](.github/workflows/release.yml) checks that the tag is on
 `main`, runs all of CI again on the tagged commit, and publishes the build it
 checked: first its image, tested, as `ghcr.io/aishie-education/aishie-frontend:0.1.0`
-and `:0.1` (and `:latest`, when it is the highest stable release), for
+and `:0.1` (and `:latest` and `:stable`, when it is the highest stable release), for
 `linux/amd64` and `linux/arm64`; then the release page, with
 `aishie-web-v0.1.0.tar.gz` and its `.sha256`. The notes list what is new
 since the release before (for a stable release, since the last stable one),
 name the image, and say which Core the build was checked against: deploy it
 beside that version of Core or a later one. A tag with a hyphen
 (`v0.1.0-rc.1`) is a pre-release: its image is `:0.1.0-rc.1` alone, and it is
-deployed to staging.
+deployed to edge.
 
-A stable release goes to production when somebody runs **Deploy** for it:
+A stable release goes to stable when somebody runs **Deploy** for it:
 Actions → Deploy → Run workflow, use the workflow from the release's tag, and
-give the environment `production`. Deploy ships that release's own tarball
-and says what it is before it goes on. For production it takes nothing else:
+give the environment `stable`. Deploy ships that release's own tarball
+and says what it is before it goes on. For stable it takes nothing else:
 run from a branch or a pre-release's tag, it stops before it deploys. To roll
 back, run it from the newest release's tag with the older tag as the ref, or
 `activate` the older release on the server, which keeps the last few
@@ -139,13 +139,16 @@ Before the first push to `main` after the CI/CD workflows land, in GitHub:
   The image is private, and without this the end-to-end job cannot pull it and
   says so. An owner of the organization, or an admin of the package, does it
   once.
-- **Environments** (repository Settings → Environments): `staging` and
-  `production`, created before the first deploy (a run that names one that
-  does not exist creates it). On GitHub Free a private repository's
-  environments take no rules, neither reviewers nor branch and tag limits:
-  they record the deployments, and Deploy's own checks keep production to
-  stable releases. On a plan that has the rules, let `staging` take branch
-  `main` and tags `v*`, and `production` tags `v*` only.
+- **Environments** (repository Settings → Environments): `edge` and
+  `stable`, created before the first deploy (a run that names one that
+  does not exist creates it, with no rules). On GitHub Free a private
+  repository's environments take no rules, neither reviewers nor branch and
+  tag limits: they record the deployments, and Deploy's own checks keep the
+  environment `stable` to stable releases. On a plan that has the rules, let
+  `edge` take branch `main` and tags `v*`, and `stable` tags `v*` only. A
+  repository set up when they were called `staging` and `production` needs
+  `edge` and `stable` made as well, with the same rules
+  ([README.md](README.md#renaming-the-settings)).
 - **Packages** (organization Settings → Packages): Package Creation must
   allow Private, and Default Package Settings should keep "Inherit access
   from source repository". The first publish then creates
@@ -161,9 +164,9 @@ Before the first push to `main` after the CI/CD workflows land, in GitHub:
 - **Variables and secrets**, when they apply: `ATTESTATIONS` = `true` where
   artifact attestations are available (a public repository, or GitHub
   Enterprise Cloud), for a release's image. For each environment with a
-  server: the repository variables `DEPLOY_WEB_TARGET_STAGING` and
-  `DEPLOY_WEB_KNOWN_HOSTS_STAGING`, and the repository secret
-  `DEPLOY_WEB_SSH_KEY_STAGING` (`_PRODUCTION` for production), which
+  server: the repository variables `DEPLOY_WEB_TARGET_EDGE` and
+  `DEPLOY_WEB_KNOWN_HOSTS_EDGE`, and the repository secret
+  `DEPLOY_WEB_SSH_KEY_EDGE` (`_STABLE` for stable), which
   `deploy/setup-web.sh` prints ([docs/deploying.md](docs/deploying.md)).
 - **Minutes and storage**: on GitHub Free a private repository has 2,000
   Actions minutes a month, shared with Core's. A run of CI takes about ten,

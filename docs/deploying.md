@@ -51,8 +51,8 @@ repository, and a server pulls it with a token that can read it.
 | `:sha-<commit>` | A push to `main` whose checks passed (checks and build, scripts, end to end) and whose image passed its test; `<commit>` is the commit's first 7 hex digits. It never moves. |
 | `:edge` | The newest of those: moved to each one that is still `main`'s tip when it is published, so it never goes backwards. |
 | `:X.Y.Z` and `:X.Y` | A release, tag `vX.Y.Z`; `:X.Y` moves to each release of that line. |
-| `:latest` | The highest stable release. A release on an older line leaves it alone. |
-| `:X.Y.Z-rc.N` | A pre-release, tag `vX.Y.Z-rc.N`: that tag only, neither `:X.Y` nor `:latest`. |
+| `:latest` and `:stable` | The highest stable release. A release on an older line leaves them alone. |
+| `:X.Y.Z-rc.N` | A pre-release, tag `vX.Y.Z-rc.N`: that tag only, neither `:X.Y` nor `:latest` nor `:stable`. |
 
 Every image carries the labels `org.opencontainers.image.source`
 (`https://github.com/AIShie-Education/AIShie-Frontend`),
@@ -226,13 +226,13 @@ A build is made once, and what is deployed is what was checked:
 1. On every push to `main`, CI checks the commit, builds it, runs the
    end-to-end tests on those very files (against the Core pinned in
    `.github/core-image`), and hands them to the Deploy workflow for
-   `staging`.
+   `edge`, the test site.
 2. A version tag runs all of CI again on the tagged commit and publishes that
    build on the release page, as `aishie-web-vX.Y.Z.tar.gz`
    ([CONTRIBUTING.md](../CONTRIBUTING.md#releasing)). A pre-release
-   (`v1.2.3-rc.1`) is then deployed to `staging` too.
-3. `production` gets a release's tarball, and only when somebody runs Deploy
-   for it by hand, from the release's tag.
+   (`v1.2.3-rc.1`) is then deployed to `edge` too.
+3. `stable`, the schools' sites, gets a release's tarball, and only when
+   somebody runs Deploy for it by hand, from the release's tag.
 
 The Deploy workflow packs the build, connects to the server with SSH as the
 user `webdeploy`, whose key can do nothing but run `aishie-web-deploy`, and
@@ -254,7 +254,7 @@ The server runs Core already. As root:
    scp -r deploy you@test.aishie.app:web-deploy
    ssh you@test.aishie.app
    sudo -i
-   sh ~you/web-deploy/setup-web.sh test.aishie.app staging
+   sh ~you/web-deploy/setup-web.sh test.aishie.app edge
    ```
 
    It creates the user `webdeploy`, with no password, and
@@ -279,7 +279,7 @@ The server runs Core already. As root:
    `/root/aishie-web-deploy-key` from the server.
 
 3. Deploy: push to `main`, or run Deploy by hand (Actions → Deploy → Run
-   workflow, from `main`, environment `staging`). Until then
+   workflow, from `main`, environment `edge`). Until then
    `https://test.aishie.app/` shows the placeholder, and Core answers under
    `/v1`, `/mcp` and `/healthz` as before. While the site block is still to
    be put in by hand (step 1), the site is Core alone: a deploy then puts the
@@ -295,23 +295,25 @@ repository's Settings → Secrets and variables → Actions:
 
 | Kind | Name | Value |
 | --- | --- | --- |
-| Variable | `DEPLOY_WEB_TARGET_STAGING` | `webdeploy@test.aishie.app` |
-| Variable | `DEPLOY_WEB_KNOWN_HOSTS_STAGING` | the server's host key line, as printed |
-| Secret | `DEPLOY_WEB_SSH_KEY_STAGING` | the whole of `/root/aishie-web-deploy-key` |
-| Variable (optional) | `DEPLOY_WEB_URL_STAGING` | the site's origin, when it is not `https://` + the target's host |
+| Variable | `DEPLOY_WEB_TARGET_EDGE` | `webdeploy@test.aishie.app` |
+| Variable | `DEPLOY_WEB_KNOWN_HOSTS_EDGE` | the server's host key line, as printed |
+| Secret | `DEPLOY_WEB_SSH_KEY_EDGE` | the whole of `/root/aishie-web-deploy-key` |
+| Variable (optional) | `DEPLOY_WEB_URL_EDGE` | the site's origin, when it is not `https://` + the target's host |
 
-For production, the names end in `_PRODUCTION`. They are the repository's,
+For stable, the names end in `_STABLE`. They are the repository's,
 not the environment's: a private repository on GitHub Free has no environment
 variables or secrets. SSH on a port other than 22 is
 `ssh://webdeploy@host:2222` in the target and `[host]:2222 ssh-ed25519 …` in
-the host key line.
+the host key line. Settings added before edge and stable had those names end
+in `_STAGING` and `_PRODUCTION`: they are read, with a warning, until a later
+release ([README.md](../README.md#renaming-the-settings)).
 
 The host key line is the same one Core's repository has in
-`DEPLOY_KNOWN_HOSTS_STAGING`: it is the server's. The key is not the same: the
+`DEPLOY_KNOWN_HOSTS_EDGE`: it is the server's. The key is not the same: the
 front end has a user and a key of its own, which can change the site's files
 and nothing else, and Core's key cannot touch them.
 
-Until `DEPLOY_WEB_TARGET_STAGING` is set, a deploy says which build is ready
+Until `DEPLOY_WEB_TARGET_EDGE` is set, a deploy says which build is ready
 and passes. A secret or host key set without the target fails the run, so
 that half a configuration is not taken for none.
 
@@ -344,7 +346,7 @@ Run these as root on the server.
   ```
 
   From GitHub instead: run Deploy from the newest release's tag, with
-  environment `production` and ref `v1.2.2`; for staging, from `main` with
+  environment `stable` and ref `v1.2.2`; for edge, from `main` with
   the release ID `list` shows (a commit's first seven characters, or a tag)
   as the ref. That builds the commit again, where `activate` serves the
   files kept.
@@ -432,4 +434,4 @@ Run these as root on the server.
 - **A re-run of an older push to `main` fails.** Once `main` has moved on,
   re-running the deploy of an older push would put an older build over a
   newer one, and is refused; the first run of such a push skips its deploy.
-  To deploy staging again, run Deploy from `main`.
+  To deploy edge again, run Deploy from `main`.

@@ -4,9 +4,11 @@
 # origin. Run as root with this directory copied to the server
 # (docs/deploying.md):
 #
-#   sh deploy/setup-web.sh test.aishie.app staging
+#   sh deploy/setup-web.sh test.aishie.app edge
 #
-# The environment, staging or production, names the GitHub settings it prints.
+# The environment, edge or stable, names the GitHub settings it prints. Its
+# old names, staging and production, are taken for them until a later
+# release.
 #
 # It makes an SSH user, webdeploy, that can do one thing: run
 # aishie-web-deploy, which it installs, on /srv/aishie-web, which
@@ -33,11 +35,20 @@ umask 022
 
 HOST=${1:-}
 ENVIRONMENT=${2:-}
-usage() { echo "usage: setup-web.sh HOSTNAME staging|production, e.g. test.aishie.app staging" >&2; exit 2; }
+usage() { echo "usage: setup-web.sh HOSTNAME edge|stable, e.g. test.aishie.app edge" >&2; exit 2; }
 case $HOST in '' | *[!A-Za-z0-9.-]* | .* | -*) usage ;; esac
 # It names the GitHub settings this server needs; guessing would name the
 # other environment's.
-case $ENVIRONMENT in staging | production) ;; *) usage ;; esac
+case $ENVIRONMENT in
+  edge | stable) ;;
+  # Compatibility: the names edge and stable had before, until a later release.
+  staging | production)
+    old=$ENVIRONMENT
+    if [ "$old" = staging ]; then ENVIRONMENT=edge; else ENVIRONMENT=stable; fi
+    echo "notice: $old is called $ENVIRONMENT now: setting this server up for $ENVIRONMENT (README.md, Renaming the settings)" >&2
+    ;;
+  *) usage ;;
+esac
 [ "$(id -u)" = 0 ] || { echo "run this as root (sudo -i)" >&2; exit 1; }
 here=$(cd "$(dirname "$0")" && pwd)
 ROOT=/srv/aishie-web
