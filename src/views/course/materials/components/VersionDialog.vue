@@ -4,10 +4,11 @@
 //
 // A file comes first: the dialog opens on a drop zone for the new version's
 // file (dropped anywhere on it, or on the document's page, which opens it
-// with the file). The text of the latest version comes with it unless it is
-// left out, and "Write text instead" (or "Edit the text") is the second
-// choice, where the text is written starting from the latest version's. A
-// version holds text, a file, or both.
+// with the file). The text is the second part, under it (DocumentTextField):
+// the latest version's text comes with the file unless it is left out, and
+// opens to be edited, or written where there is none. A version holds text,
+// a file, or both; the text is shown open where the latest version is text
+// alone.
 //
 // A file is not carried over from one version to the next — a version holds
 // what it is given — so a file to keep is uploaded again, and saving without
@@ -22,8 +23,8 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatBytes, formatNumber } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
+import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
-import MarkdownEditor from '@/components/MarkdownEditor.vue'
 
 type Version = NonNullable<DocumentFull['version']>
 
@@ -45,9 +46,9 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const course = useCourseStore()
 
-type Mode = 'upload' | 'text'
-const mode = ref<Mode>('upload')
 const form = reactive({ body: '', publish: false })
+/** Whether the text is open to be edited. */
+const textOpen = ref(false)
 const base = ref<Version | null>(null)
 const baseLoading = ref(false)
 const baseError = ref<ApiError | null>(null)
@@ -66,6 +67,9 @@ async function loadBase() {
     const d = await read('document.get', { course_id: props.courseId, document_id: props.documentId })
     base.value = d.version ?? null
     form.body = d.version?.body_md ?? ''
+    // A document that is text alone is edited as text: its editor is open.
+    const v = d.version
+    textOpen.value = !!v?.body_md?.trim() && !v.download_url && !v.content_type
   } catch (e) {
     baseError.value = toApiError(e)
   } finally {
@@ -78,7 +82,7 @@ watch(
   (v) => {
     queue.clear()
     if (!v) return
-    mode.value = 'upload'
+    textOpen.value = false
     form.body = ''
     form.publish = false
     base.value = null
@@ -107,10 +111,9 @@ const canSave = computed(
     !unchanged.value,
 )
 
-/** What becomes of the text, said under the file. */
+/** What becomes of the text, said under the file while there is some. */
 const textLine = computed(() => {
   const chars = formatNumber(form.body.length, 0)
-  if (!hasText.value) return t('materials.document.addVersion.textNone')
   if (base.value && sameText.value) return t('materials.document.addVersion.textKept', { seq: base.value.seq, chars })
   return t('materials.document.addVersion.textWritten', { chars })
 })
@@ -176,8 +179,8 @@ async function submit() {
         "
       />
       <el-form label-position="top" @submit.prevent="submit">
-        <!-- The file first. Kept while text is written, so that a file dropped then comes here. -->
-        <el-form-item v-show="mode === 'upload'" :label="t('materials.document.addVersion.file')">
+        <!-- The file first, and the text under it. -->
+        <el-form-item :label="t('materials.document.addVersion.file')">
           <div class="version-dialog__stack">
             <FileDropZone
               :queue="queue"
@@ -186,48 +189,26 @@ async function submit() {
               page-drop
               :disabled="!course.writable || addVersion.pending.value"
               :label="t('materials.document.addVersion.dropLabel')"
-              @added="mode = 'upload'"
             />
-            <div class="version-dialog__text-line">
-              <el-icon aria-hidden="true"><Document /></el-icon>
-              <span>{{ textLine }}</span>
-              <el-button link type="primary" @click="mode = 'text'">
-                {{
-                  hasText
-                    ? t('materials.document.addVersion.editText')
-                    : t('materials.document.addVersion.writeInstead')
-                }}
-              </el-button>
-              <el-button v-if="hasText" link type="danger" @click="form.body = ''">
-                {{ t('materials.document.addVersion.leaveTextOut') }}
-              </el-button>
-              <el-button v-else-if="baseText.trim() && base" link type="primary" @click="form.body = baseText">
-                {{ t('materials.document.addVersion.putTextBack', { seq: base.seq }) }}
-              </el-button>
-            </div>
+            <DocumentTextField
+              v-model="form.body"
+              v-model:open="textOpen"
+              :summary="textLine"
+              :rows="12"
+              :disabled="addVersion.pending.value"
+              class="version-dialog__text"
+            >
+              <template #actions>
+                <el-button v-if="hasText" link type="danger" @click="form.body = ''">
+                  {{ t('materials.document.addVersion.leaveTextOut') }}
+                </el-button>
+                <el-button v-else-if="baseText.trim() && base" link type="primary" @click="form.body = baseText">
+                  {{ t('materials.document.addVersion.putTextBack', { seq: base.seq }) }}
+                </el-button>
+              </template>
+            </DocumentTextField>
           </div>
         </el-form-item>
-
-        <template v-if="mode === 'text'">
-          <el-form-item :label="t('materials.document.addVersion.body')">
-            <MarkdownEditor v-model="form.body" :rows="14" />
-          </el-form-item>
-          <div class="version-dialog__text-line version-dialog__file-line">
-            <el-icon aria-hidden="true"><Paperclip /></el-icon>
-            <span v-if="file">
-              {{ t('materials.document.addVersion.withFile', { name: file.fileName, size: formatBytes(file.size) }) }}
-            </span>
-            <span v-else-if="uploading">{{ t('materials.document.addVersion.fileUploading') }}</span>
-            <span v-else>{{ t('materials.document.addVersion.noFile') }}</span>
-            <el-button link type="primary" @click="mode = 'upload'">
-              {{
-                file || uploading
-                  ? t('materials.document.addVersion.seeFile')
-                  : t('materials.document.addVersion.uploadInstead')
-              }}
-            </el-button>
-          </div>
-        </template>
 
         <el-form-item>
           <div class="version-dialog__stack">
@@ -279,21 +260,8 @@ async function submit() {
   align-items: flex-start;
   width: 100%;
 }
-.version-dialog__text-line {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 10px;
+.version-dialog__text {
   margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--el-text-color-regular);
-}
-.version-dialog__text-line .el-button + .el-button {
-  margin-left: 0;
-}
-.version-dialog__file-line {
-  margin: -6px 0 18px;
 }
 .version-dialog__footer {
   display: flex;

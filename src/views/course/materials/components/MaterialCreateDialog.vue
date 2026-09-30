@@ -4,8 +4,12 @@
 // it) becomes material of its own, document.create (kind material) with the
 // file as its first version, titled from the file's name until its title is
 // changed, and listed in the order the files are, numbered on from the sort
-// order given. Writing text is the second choice ("Write text instead"): one
-// document, with a title and Markdown.
+// order given. Text is the second part: a note in Markdown under the drop
+// zone (DocumentTextField), which goes with the file when there is one file,
+// in the same version. With several, each is material of its own, without
+// text (documentsToCreate: once a version holds several files, they become
+// one material with the text). Material with no file at all is written by
+// "Write text instead": a title and Markdown.
 //
 // Material starts unpublished; publishing is a second call (document.publish)
 // for each, and when a creation became a proposal there is nothing to publish
@@ -19,6 +23,7 @@ import { useUploadQueue, type UploadItem } from '@/composables/useUploadQueue'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { titleFromFileName } from '@/utils/format'
+import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 
@@ -57,12 +62,40 @@ watch(
   },
 )
 const ready = computed(() => queue.items.filter((i) => i.status === 'done' && i.result))
-const leftOut = computed(() => queue.items.filter((i) => i.status === 'failed' || i.status === 'cancelled').length)
+/** The files that are to become material: uploaded, or on their way. */
+const kept = computed(() => queue.items.filter((i) => i.status !== 'failed' && i.status !== 'cancelled'))
+const leftOut = computed(() => queue.items.length - kept.value.length)
 const untitled = computed(() => ready.value.some((i) => !(titles[i.id] ?? '').trim()))
 
-function onAdded() {
-  // Files dropped while writing text: they are what is wanted after all.
+// --- The text: with one file, in its version ---------------------------------
+const textOpen = ref(false)
+/** One file, or none yet: the text goes with it. */
+const oneFile = computed(() => kept.value.length <= 1)
+
+function onAdded(items: UploadItem[]) {
+  // Files dropped while writing text: the text and its title go with the
+  // file, where there is one.
+  if (mode.value === 'text') {
+    const title = form.title.trim()
+    if (title && items.length === 1 && kept.value.length === 1) titles[items[0]!.id] = title
+    if (hasText.value) textOpen.value = true
+  }
   mode.value = 'upload'
+}
+
+/**
+ * What Create makes of the files uploaded: one material each, in the order
+ * listed, and the text with the file when there is one file. When a version
+ * holds several files, several become one material that holds them all,
+ * with the text, here.
+ */
+function documentsToCreate(): { item: UploadItem; title: string; body?: string }[] {
+  const withText = oneFile.value && ready.value.length === 1 && hasText.value
+  return ready.value.map((item) => ({
+    item,
+    title: (titles[item.id] ?? '').trim(),
+    body: withText ? form.body : undefined,
+  }))
 }
 
 function reset() {
@@ -71,6 +104,7 @@ function reset() {
   form.sortOrder = props.suggestedOrder
   form.body = ''
   form.publish = false
+  textOpen.value = false
   queue.clear()
   for (const k of Object.keys(titles)) delete titles[Number(k)]
   if (props.files?.length) queue.add(props.files)
@@ -175,15 +209,14 @@ async function submitText() {
 async function submitFiles() {
   if (blocked.value) return
   const wantsPublish = form.publish
-  const items: UploadItem[] = [...ready.value]
+  const docs = documentsToCreate()
   const start = form.sortOrder
   const created: { id: string; versionId?: string }[] = []
   const proposed: string[] = []
   let completed = true
   submitting.value = true
   try {
-    for (const [i, item] of items.entries()) {
-      const title = (titles[item.id] ?? '').trim()
+    for (const [i, { item, title, body }] of docs.entries()) {
       const out = await writerOf(item.id).create.run(
         {
           course_id: props.courseId,
@@ -191,6 +224,7 @@ async function submitFiles() {
           title,
           sort_order: start + i,
           upload_token: item.result!.uploadToken,
+          body_md: body,
         },
         { success: false },
       )
@@ -281,7 +315,20 @@ function submit() {
             </el-input>
           </template>
         </FileDropZone>
-        <div class="create-dialog__switch">
+        <!-- The text, second: with one file, in its version. -->
+        <DocumentTextField
+          v-if="oneFile && mode === 'upload'"
+          v-model="form.body"
+          v-model:open="textOpen"
+          :rows="8"
+          :disabled="pending"
+          class="create-dialog__text"
+        />
+        <p v-else-if="!oneFile" class="app-form-hint create-dialog__text-note">
+          {{ hasText ? t('materials.create.textLeftOut') : t('materials.create.textSingleOnly') }}
+        </p>
+        <!-- No file at all: material that is text alone. -->
+        <div v-if="!kept.length" class="create-dialog__switch">
           <el-button link type="primary" @click="mode = 'text'">
             <el-icon><EditPen /></el-icon>
             <span>{{ t('materials.create.writeInstead') }}</span>
@@ -383,6 +430,12 @@ function submit() {
 }
 .create-dialog__switch {
   margin-top: 8px;
+}
+.create-dialog__text {
+  margin-top: 10px;
+}
+.create-dialog__text-note {
+  margin: 8px 0 0;
 }
 .create-dialog__left-out {
   margin: 4px 0 0;

@@ -45,6 +45,10 @@ export default {
     submitMany: 'Create {n} materials',
     doneMany: 'Material created | {n} materials created',
     donePublishedMany: 'Material created and published | {n} materials created and published',
+    textSingleOnly:
+      'A text note goes with a single file: with several, each becomes material of its own, without text.',
+    textLeftOut:
+      'The text written goes with a single file: with several, it is left out. Take the others off the list to keep it.',
     approvalNote:
       'Writing material needs approval here: this is sent as a proposal, and nothing is created until someone approves it.',
     submit: 'Create',
@@ -205,23 +209,14 @@ export default {
         'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published. Starts from the text of version {seq}, the latest.',
       introEmpty:
         'Saving adds a new version; earlier versions stay exactly as they are. What is read does not change until a version is published. The document has no version yet.',
-      body: 'Text',
       file: 'File',
       fileNotCarried:
         'Version {seq} has a file ({type}, {size}). A new version does not carry it over: upload it again to keep it. Saving without a file leaves it out of the new version.',
       dropLabel: 'The new version’s file: drop it here, or press Enter to choose it',
-      textNone: 'Text: none.',
       textKept: 'Text: version {seq}’s, as it is ({chars} characters).',
       textWritten: 'Text: as written here ({chars} characters).',
-      editText: 'Edit the text',
-      writeInstead: 'Write text instead',
       leaveTextOut: 'Leave the text out',
       putTextBack: 'Keep version {seq}’s text',
-      withFile: 'With the file “{name}” ({size}).',
-      fileUploading: 'The file is still uploading.',
-      noFile: 'No file.',
-      seeFile: 'See the file',
-      uploadInstead: 'Upload a file',
       waitForFile: 'Waiting for the file to upload…',
       publish: 'Publish this version at once',
       publishHint: 'Otherwise it stays a draft until someone publishes it.',
