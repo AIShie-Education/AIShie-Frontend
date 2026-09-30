@@ -140,6 +140,9 @@ function kindOf(k: string, v: unknown): string {
   if (k === 'breakdown' && Array.isArray(v)) return 'breakdown'
   if (k === 'perms' && isObject(v)) return 'perms'
   if (k === 'feedback_files' && Array.isArray(v)) return 'feedbackFiles'
+  // A version's files, as a proposal keeps them: by name, never their upload tokens.
+  if (k === 'files' && Array.isArray(v) && v.every((f) => isObject(f) && ('upload_token' in f || 'filename' in f)))
+    return 'versionFiles'
   if (k === 'listed_students' && Array.isArray(v)) return 'memberList'
   if (k === 'listed_assignments' && Array.isArray(v)) return 'assignmentList'
   if (DECIMALS.has(k) && (typeof v === 'number' || typeof v === 'string')) return 'decimal'
@@ -193,8 +196,8 @@ function perms(v: unknown): [string, string][] {
 function strings(v: unknown): string[] {
   return Array.isArray(v) ? v.map(String) : []
 }
-function files(v: unknown): { title?: string }[] {
-  return Array.isArray(v) ? (v as { title?: string }[]) : []
+function files(v: unknown): { title?: string; filename?: string }[] {
+  return Array.isArray(v) ? (v as { title?: string; filename?: string }[]) : []
 }
 function json(v: unknown) {
   try {
@@ -249,8 +252,14 @@ function json(v: unknown) {
         <ul v-else-if="kindOf(k, obj[k]) === 'feedbackFiles'" class="fields-view__list">
           <li v-for="(f, i) in files(obj[k])" :key="i">
             <el-icon><Paperclip /></el-icon> {{ f.title }}
+            <span v-if="f.filename && f.filename !== f.title" class="fields-view__muted">({{ f.filename }})</span>
           </li>
         </ul>
+        <ol v-else-if="kindOf(k, obj[k]) === 'versionFiles'" class="fields-view__list fields-view__files">
+          <li v-for="(f, i) in files(obj[k])" :key="i">
+            <el-icon><Paperclip /></el-icon> {{ f.filename || t('common.fileKind.other') }}
+          </li>
+        </ol>
         <span v-else-if="kindOf(k, obj[k]) === 'typeList'" class="fields-view__inline">
           <span v-for="x in strings(obj[k])" :key="x">{{ typeLabel(x) }}</span>
         </span>

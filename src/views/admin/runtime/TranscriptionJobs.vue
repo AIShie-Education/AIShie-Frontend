@@ -1,12 +1,13 @@
 <script setup lang="ts">
 // What the transcriber did (GET admin/transcription/jobs, kept 90 days by
 // the runtime), newest first, a page at a time, of one status or all: each
-// version it took up, how that ended (done, failed, skipped, dropped because
-// staff wrote the text or the claim was lost, or still working), why in the
-// reader's words, its pages and cost. The runtime reads no titles: a
-// document's is asked of Core where the administrator may read it
-// (document.get, once per document on the page), and it links to the
-// version's text version either way.
+// file of a version it took up, how that ended (done, failed, skipped,
+// dropped because staff wrote the text or the claim was lost, or still
+// working), why in the reader's words, its pages and cost. The runtime reads
+// no titles and no file names: a document's title and its version's files'
+// names are asked of Core where the administrator may read them
+// (document.get of the version, once per version on the page), and it links
+// to the file's text version either way.
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
@@ -64,30 +65,47 @@ watch(status, () => {
   void load()
 })
 
-// --- Documents' titles --------------------------------------------------------------------
-/** Titles asked of Core, once per document for the page's life; null where it cannot be read. */
-const titleCache = new Map<string, Promise<string | null>>()
-const titles = reactive(new Map<string, string | null>())
-const docKey = (j: TranscriptionJob) => `${j.course_id}/${j.document_id}`
+// --- Documents' titles, and their files' names ---------------------------------------------
+interface Named {
+  title: string | null
+  /** The version's files' names, by id. */
+  files: Map<string, string>
+}
+/** What was asked of Core, once per version for the page's life; null where it cannot be read. */
+const titleCache = new Map<string, Promise<Named | null>>()
+const titles = reactive(new Map<string, Named | null>())
+const docKey = (j: TranscriptionJob) => `${j.course_id}/${j.document_id}/${j.version_id}`
 
 async function resolveTitles(page: TranscriptionJob[]) {
   for (const j of page) {
     const key = docKey(j)
     if (titleCache.has(key)) continue
-    const p = read('document.get', { course_id: j.course_id, document_id: j.document_id }).then(
-      (d) => d.title || null,
+    const p = read('document.get', {
+      course_id: j.course_id,
+      document_id: j.document_id,
+      version_id: j.version_id,
+    }).then(
+      (d) => ({ title: d.title || null, files: new Map((d.version?.files ?? []).map((f) => [f.id, f.filename])) }),
       () => null,
     )
     titleCache.set(key, p)
-    void p.then((title) => titles.set(key, title))
+    void p.then((named) => titles.set(key, named))
   }
+}
+/** The job's document's title, where it could be read. */
+const titleOf = (j: TranscriptionJob) => titles.get(docKey(j))?.title ?? null
+/** The job's file, by its name where it could be read, by its place otherwise; null for a job of no file. */
+function fileOf(j: TranscriptionJob): string | null {
+  const name = j.file_id ? titles.get(docKey(j))?.files.get(j.file_id) : undefined
+  if (name) return name
+  return j.position ? t('runtimeAdmin.transcription.jobs.file', { n: j.position }) : null
 }
 
 function linkTo(j: TranscriptionJob) {
   return {
     name: 'course-document',
     params: { courseId: j.course_id, documentId: j.document_id },
-    query: { version: j.version_id, tab: 'text' },
+    query: { version: j.version_id, tab: 'text', ...(j.file_id ? { file: j.file_id } : {}) },
   }
 }
 
@@ -152,8 +170,9 @@ const empty = computed(() => loaded.value && !jobs.value.length)
                   }}
                 </el-tag>
                 <router-link :to="linkTo(row)" class="job-cell__doc">
-                  {{ titles.get(docKey(row)) || shortId(row.document_id) }}
+                  {{ titleOf(row) || shortId(row.document_id) }}
                 </router-link>
+                <span v-if="fileOf(row)" class="job-cell__file">{{ fileOf(row) }}</span>
                 <el-tag v-if="row.backfill" size="small" type="info" effect="plain" disable-transitions>
                   {{ t('runtimeAdmin.transcription.jobs.backfill') }}
                 </el-tag>
@@ -232,6 +251,11 @@ const empty = computed(() => loaded.value && !jobs.value.length)
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+}
+.job-cell__file {
+  font-size: 12px;
+  color: var(--app-ink-2);
+  overflow-wrap: anywhere;
 }
 .job-cell__reason {
   font-size: 13px;

@@ -222,6 +222,10 @@ describe('TranscriptionCard', () => {
       `/courses/${COURSE_ID}/documents/${DOC_ID}?version=0192f3c1-eeee-7c3a-9b1f-2a4c6e8f0a1b&tab=text`,
     )
     expect(rows[1].find('.job-cell__reason').text()).toBe('More pages than the limit')
+    // A job is a file's: named as its version names it, and linked to its text version.
+    expect(rows[0].find('.job-cell__file').exists()).toBe(false)
+    expect(rows[1].find('.job-cell__file').text()).toBe('week3-handout.pdf')
+    expect(rows[1].find('.job-cell__doc').attributes('href')).toContain('&tab=text&file=file-2')
     expect(w.findAll('.job-cell__cost').map((c) => c.text())).toEqual(['$0.0041', 'No price'])
 
     await w.find('.load-more button').trigger('click')
@@ -230,6 +234,8 @@ describe('TranscriptionCard', () => {
     expect(more).toHaveLength(3)
     // Core does not give this one's title: its id.
     expect(more[2].find('.job-cell__doc').text()).toBe(shortId('0192f3c1-ffff-7c3a-9b1f-2a4c6e8f0a1b'))
+    // Nor its files' names: its place in the version.
+    expect(more[2].find('.job-cell__file').text()).toBe('File 3')
     expect(more[2].find('.job-cell__reason').text()).toBe('The model answered 500 three times')
     expect(more[2].text()).toContain('Earlier upload')
 

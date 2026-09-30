@@ -77,9 +77,14 @@ const conversation = useLookup(() =>
   conversationId.value && props.depth < 1 ? specs.conversation(props.courseId, conversationId.value) : null,
 )
 const conversationTitle = computed(() => conversation.value?.value?.title ?? undefined)
-/** The names of the files a message the action writes carries (attachments: upload tokens and names). */
+/**
+ * The names of the files the action writes: those a message carries
+ * (attachments), or a document version's (files), each an upload token and
+ * a name.
+ */
 const messageFiles = computed<string[]>(() => {
-  const list = group.value === 'conversation' ? p.value.attachments : undefined
+  const list =
+    group.value === 'conversation' ? p.value.attachments : group.value === 'document' ? p.value.files : undefined
   if (!Array.isArray(list)) return []
   return list
     .map((f) => (f && typeof f === 'object' ? (f as { filename?: unknown }).filename : undefined))
@@ -278,6 +283,10 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
         :version-id="str(p.version_id)!"
         :check="action.status === 'proposed'"
       />
+      <!-- The files a version holds: how many, their names on hover (never their upload tokens). -->
+      <span v-if="messageFiles.length" class="action-target__muted" :title="messageFiles.join(', ')">
+        {{ t('actions.summary.files', { n: messageFiles.length }, messageFiles.length) }}
+      </span>
     </template>
 
     <!-- Assignments -->

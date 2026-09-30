@@ -283,6 +283,13 @@ const facts = computed<Fact[]>(() => {
     }
     const seq = payloadNumber(e, 'seq')
     if (seq !== undefined) out.push({ kind: 'text', text: t('activity.fact.version', { n: seq }) })
+    // A new version: how many files it holds (none: it is text alone).
+    if (type.startsWith('document.version_added')) {
+      const n = payloadNumber(e, 'files')
+      if (n !== undefined) {
+        out.push({ kind: 'text', text: n ? t('activity.fact.versionFiles', { n }, n) : t('activity.fact.textOnly') })
+      }
+    }
     // Filed under its unreleased name because no published assignment used
     // the document then. It keeps that name, so only members who see
     // unpublished assignments are shown this entry. Who reads the document

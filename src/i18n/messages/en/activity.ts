@@ -73,6 +73,8 @@ export default {
         'When this happened, no published assignment used this document, so only members who can see unpublished assignments were told of it, and this entry stays theirs alone.',
     },
     files: 'With {n} file | With {n} files',
+    versionFiles: 'One file | {n} files',
+    textOnly: 'Text only',
     attempt: 'Attempt {n}',
     replaces: 'Replaces grade',
     replacesEarlier: 'Replaces an earlier grade',

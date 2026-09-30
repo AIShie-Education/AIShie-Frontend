@@ -1049,10 +1049,20 @@ export const TRANSCRIPTION_JOB_STATUSES: readonly TranscriptionJobStatus[] = [
 /** The statuses GET admin/transcription/jobs may be asked for. */
 export type TranscriptionJobFilter = 'done' | 'failed' | 'skipped' | 'working'
 
-/** One version the transcriber took up, as it records it (kept 90 days). No title: the runtime reads none. */
+/**
+ * One file of a version the transcriber took up, as it records it (kept 90
+ * days). No title and no file name: the runtime reads none.
+ */
 export interface TranscriptionJob {
   id: string
   version_id: string
+  /**
+   * The file of the version the job was of, and its place in it (a version
+   * holds several since AIShie-Core #49); null, or absent, from a runtime or
+   * a Core from before.
+   */
+  file_id?: string | null
+  position?: number | null
   document_id: string
   course_id: string
   status: TranscriptionJobStatus

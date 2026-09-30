@@ -646,7 +646,20 @@ export function withAdmin(s: Servers, state: AdminState): Servers {
   })
   s.on('GET', ADMIN.document, (_, m) =>
     decodeURIComponent(m[2]) === DOC_ID
-      ? executed({ id: DOC_ID, course_id: COURSE_ID, kind: 'material', title: 'Week 3 slides' })
+      ? executed({
+          id: DOC_ID,
+          course_id: COURSE_ID,
+          kind: 'material',
+          title: 'Week 3 slides',
+          version: {
+            id: '0192f3c1-eeee-7c3a-9b1f-2a4c6e8f0a1b',
+            seq: 1,
+            files: [
+              { id: 'file-1', position: 1, filename: 'week3-slides.pdf', content_type: 'application/pdf', byte_size: 9 },
+              { id: 'file-2', position: 2, filename: 'week3-handout.pdf', content_type: 'application/pdf', byte_size: 9 },
+            ],
+          },
+        })
       : json(404, { error: { code: 'not_found', message: 'no such document' } }),
   )
   s.on('GET', ADMIN.plan, () => json(200, state.plan))
@@ -898,6 +911,9 @@ export function adminState(over: Partial<AdminState> = {}): AdminState {
       transcriptionJob(),
       transcriptionJob({
         id: 'job-2',
+        // The second file of the version.
+        file_id: 'file-2',
+        position: 2,
         status: 'skipped',
         reason: 'too_many_pages',
         pages: 812,
@@ -910,6 +926,8 @@ export function adminState(over: Partial<AdminState> = {}): AdminState {
         status: 'failed',
         reason: 'The model answered 500 three times',
         document_id: '0192f3c1-ffff-7c3a-9b1f-2a4c6e8f0a1b',
+        file_id: 'file-9',
+        position: 3,
         pages: null,
         cost_usd: '0.000200',
         backfill: true,

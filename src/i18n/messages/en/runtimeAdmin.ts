@@ -218,6 +218,7 @@ export default {
     },
     jobs: {
       title: 'What it transcribed',
+      file: 'File {n}',
       filter: 'Status',
       all: 'All',
       status: {

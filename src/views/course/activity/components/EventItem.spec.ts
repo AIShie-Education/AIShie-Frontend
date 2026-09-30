@@ -285,3 +285,38 @@ describe('EventItem, a message posted in a conversation', () => {
     w.unmount()
   })
 })
+
+describe('EventItem, a new version of a document', () => {
+  const added = (payload: Record<string, unknown>): CourseEvent => ({
+    seq: 11,
+    type: 'document.version_added',
+    occurred_at: '2026-09-30T10:00:00Z',
+    subject_type: 'document',
+    subject_id: 'doc-1',
+    payload: { kind: 'material', seq: 2, ...payload },
+  })
+
+  it('says how many files the version holds', async () => {
+    const w = mountItem(added({ files: 3 }))
+    await flushPromises()
+    expect(w.text()).toContain('Version 2')
+    expect(w.text()).toContain('3 files')
+    w.unmount()
+    const one = mountItem(added({ files: 1 }))
+    await flushPromises()
+    expect(one.text()).toContain('One file')
+    one.unmount()
+  })
+
+  it('says a version of no file is text alone, and nothing where Core said nothing', async () => {
+    const w = mountItem(added({ files: 0 }))
+    await flushPromises()
+    expect(w.text()).toContain('Text only')
+    w.unmount()
+    const old = mountItem(added({}))
+    await flushPromises()
+    expect(old.text()).not.toContain('file')
+    expect(old.text()).not.toContain('Text only')
+    old.unmount()
+  })
+})
