@@ -10,7 +10,11 @@ export default {
     newTip: '开始新对话',
     history: '过往对话',
     close: '关闭对话面板',
-    resize: '调整对话面板宽度',
+    // The window's title bar: minimized, it opens again on what it showed; closed, on a new conversation.
+    minimize: '最小化对话窗口',
+    // Its left edge and its top, which resize it.
+    width: '对话窗口宽度',
+    height: '对话窗口高度',
     backToHistory: '返回过往对话',
     backToAgents: '返回智能体列表',
     pickTitle: '向智能体提问',

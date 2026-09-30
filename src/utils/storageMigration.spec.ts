@@ -81,7 +81,8 @@ describe('moving what earlier versions kept in this browser', () => {
     migrateStorage()
     expect(initialLocale()).toBe('zh-Hant')
     expect(loadSideFrame()).toEqual({ open: false, view: 'admin' })
-    expect(loadPanelFrame()).toEqual({ open: true, width: 480 })
+    // Open, as it was; the width it kept was the docked panel's, which the chat's window lets go.
+    expect(loadPanelFrame()).toEqual({ open: true, box: null })
     expect(loadLastCourse('ada')).toBe('k1')
     // What the chat kept before Core kept what was read: its course is still taken once.
     expect(loadLastCourse('bo')).toBe('k2')

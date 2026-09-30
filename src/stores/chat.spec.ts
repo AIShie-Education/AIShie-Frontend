@@ -166,6 +166,26 @@ describe('the chat store', () => {
     expect(chat.screen).toBe('new')
   })
 
+  it('opens again on what it showed once minimized, and on a new conversation in its course once closed', () => {
+    const chat = signIn()
+    chat.showConversation('k2', 'c9', { open: true })
+    chat.setOpen(false)
+    chat.setOpen(true)
+    expect(chat.screen).toBe('conversation')
+    expect(chat.conversation).toEqual({ courseId: 'k2', id: 'c9' })
+    chat.pickAgent({ member_id: 'tutor', display_name: 'Course tutor', kind: 'agent' } as never)
+    chat.close()
+    expect(chat.open).toBe(false)
+    expect(chat.screen).toBe('new')
+    expect(chat.conversation).toBeNull()
+    expect(chat.draft).toBeNull()
+    // Still asking in the course it was in; and back from the history, a new conversation.
+    expect(chat.courseId).toBe('k2')
+    chat.toggleHistory()
+    chat.toggleHistory()
+    expect(chat.screen).toBe('new')
+  })
+
   it('keeps the agent chosen for a new conversation with its course', () => {
     const chat = signIn()
     const agent = { member_id: 'tutor', display_name: 'Course tutor', kind: 'agent' } as never
