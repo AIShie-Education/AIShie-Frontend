@@ -30,6 +30,8 @@ export type ProblemReason =
   | 'core_too_old'
   | 'agent_suspended'
   | 'failing'
+  /** On an offer of the school's plan that is gone, with no model of the owner's behind it. */
+  | 'offer_withdrawn'
 
 export const PROBLEM_REASONS: readonly ProblemReason[] = [
   'token_refused',
@@ -43,6 +45,7 @@ export const PROBLEM_REASONS: readonly ProblemReason[] = [
   'core_too_old',
   'agent_suspended',
   'failing',
+  'offer_withdrawn',
 ]
 
 /**

@@ -111,6 +111,17 @@ const schoolModel = computed(() => {
   return s && s.model && !s.label.includes(s.model) ? s.model : ''
 })
 const spent = computed(() => schoolSpent(schoolUse.value))
+/**
+ * The school withdrew the offer (turned off, deleted, or no longer allowed):
+ * said beside the facts, as its own model goes on answering where one stands
+ * behind it; where none does, the status's problem (offer_withdrawn) says it.
+ */
+const withdrawn = computed<'fallback' | 'none' | null>(() => {
+  const s = school.value
+  if (!s || s.offered) return null
+  if (s.fallback && own.value) return 'fallback'
+  return problem.value?.reason === 'offer_withdrawn' ? null : 'none'
+})
 const seats = computed(() => props.agent.seats ?? [])
 const cost = computed(() =>
   own.value && !own.value.price_known ? t('hosting.card.costUnknown') : `$${props.agent.today.cost_usd}`,
@@ -334,11 +345,11 @@ defineExpose({ onCommand })
       class="hosted-card__alert hosted-card__spent"
     />
     <el-alert
-      v-if="school && !school.offered"
+      v-if="withdrawn"
       type="warning"
       :closable="false"
       show-icon
-      :title="t('hosting.card.offerWithdrawn')"
+      :title="t(withdrawn === 'fallback' ? 'hosting.card.offerWithdrawnFallback' : 'hosting.card.offerWithdrawn')"
       class="hosted-card__alert hosted-card__withdrawn"
     />
     <p v-if="agent.proposals_waiting > 0" class="hosted-card__proposals">

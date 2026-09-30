@@ -257,6 +257,8 @@ export default {
     core_too_old: '這個 AIshie 伺服器無法說明代理屬於誰。請通知你的管理員。',
     agent_suspended: '這個代理在 AIshie 中已停用。重新啟用後，它會自行再次啟動。',
     failing: '它未能啟動，稍後會再試：{detail}。',
+    offer_withdrawn:
+      '學校已不再提供它所用的模型，而你也沒有設定自己的模型作為備用，所以它沒有運行。請改選學校的其他模型，或使用你自己的模型。',
   },
 
   // A seat, in sentences from the runtime's facts.
@@ -322,6 +324,7 @@ export default {
     spentFallback: '今天的學校額度已用完：在 00:00 UTC 之前改用你自己的金鑰回答。',
     spentNone: '今天的學校額度已用完：在 00:00 UTC 之前，代理會請提問者明天再試。',
     offerWithdrawn: '學校已不再提供這個方案。請選擇其他方案，或改用你自己的金鑰。',
+    offerWithdrawnFallback: '學校已不再提供這個方案：在你改選之前，代理會以你自己的模型和金鑰回答。',
     issueWhileHosted:
       '學校的執行環境正在運行這個代理。你用新權杖啟動的任何程式也會回答：如要自己運行，請先從學校的執行環境刪除它。',
   },

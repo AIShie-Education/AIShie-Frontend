@@ -113,6 +113,8 @@ describe('HostedAgentCard: what it says', () => {
     core_too_old: 'This AIshie server cannot say who owns an agent. Tell your administrator.',
     agent_suspended: 'The agent is suspended in AIshie. Reactivate it and it starts again by itself.',
     failing: 'It could not start and will try again shortly: model: unknown.',
+    offer_withdrawn:
+      'The school no longer offers the model it was on, and no model of yours stands behind it, so it does not run. Choose another of the school’s models, or a model of your own.',
   }
 
   it.each(Object.entries(PROBLEMS))(
@@ -570,6 +572,43 @@ describe('HostedAgentCard: on the school’s plan', () => {
     expect(w.find('.hosted-card__model').text()).toBe('standard')
     expect(w.find('.hosted-card__withdrawn').text()).toBe(
       'The school no longer offers this plan. Choose another, or your own key.',
+    )
+  })
+
+  it('says why it does not run when the offer was withdrawn with nothing of the owner’s behind it, once', async () => {
+    const a = onSchoolPlan(false, {
+      status: 'error',
+      problem: {
+        reason: 'offer_withdrawn',
+        detail: 'not run: agent.model.offer "standard": the school no longer offers it',
+        since: '2026-09-28T09:00:00Z',
+      },
+    })
+    a.model.school = { ...a.model.school!, offered: false, label: 'standard', model: '' }
+    let w = await card(a)
+    expect(tag(w)).toBe('Not running')
+    expect(body(w)).toBe(
+      'The school no longer offers the model it was on, and no model of yours stands behind it, so it does not run. Choose another of the school’s models, or a model of your own.',
+    )
+    expect(w.find('.hosted-card__detail').text()).toContain('the school no longer offers it')
+    // The status says it: no second notice.
+    expect(w.find('.hosted-card__withdrawn').exists()).toBe(false)
+    w.unmount()
+
+    setLocale('zh-Hant')
+    w = await card(a)
+    expect(body(w)).toBe(
+      '學校已不再提供它所用的模型，而你也沒有設定自己的模型作為備用，所以它沒有運行。請改選學校的其他模型，或使用你自己的模型。',
+    )
+  })
+
+  it('says its own model answers when the offer was withdrawn with the owner’s model behind it', async () => {
+    const a = onSchoolPlan(true)
+    a.model.school = { ...a.model.school!, offered: false }
+    const w = await card(a)
+    expect(tag(w)).toBe('Running')
+    expect(w.find('.hosted-card__withdrawn').text()).toBe(
+      'The school no longer offers this plan: your agent answers with your own model and key until you choose another.',
     )
   })
 

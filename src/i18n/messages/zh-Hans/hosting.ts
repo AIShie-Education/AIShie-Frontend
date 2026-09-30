@@ -258,6 +258,8 @@ export default {
     core_too_old: '这个 AIshie 服务器无法说明智能体属于谁。请通知你的管理员。',
     agent_suspended: '这个智能体在 AIshie 中已停用。重新启用后，它会自行再次启动。',
     failing: '它未能启动，稍后会再试：{detail}。',
+    offer_withdrawn:
+      '学校已不再提供它所用的模型，而你也没有设置自己的模型作为备用，所以它没有运行。请改选学校的其他模型，或使用你自己的模型。',
   },
 
   // A seat, in sentences from the runtime's facts.
@@ -323,6 +325,7 @@ export default {
     spentFallback: '今天的学校额度已用完：在 00:00 UTC 之前改用你自己的密钥回答。',
     spentNone: '今天的学校额度已用完：在 00:00 UTC 之前，智能体会请提问者明天再试。',
     offerWithdrawn: '学校已不再提供这个方案。请选择其他方案，或改用你自己的密钥。',
+    offerWithdrawnFallback: '学校已不再提供这个方案：在你改选之前，智能体会以你自己的模型和密钥回答。',
     issueWhileHosted:
       '学校的运行环境正在运行这个智能体。你用新令牌启动的任何程序也会回答：如要自己运行，请先从学校的运行环境删除它。',
   },

@@ -266,6 +266,8 @@ export default {
     core_too_old: 'This AIshie server cannot say who owns an agent. Tell your administrator.',
     agent_suspended: 'The agent is suspended in AIshie. Reactivate it and it starts again by itself.',
     failing: 'It could not start and will try again shortly: {detail}.',
+    offer_withdrawn:
+      'The school no longer offers the model it was on, and no model of yours stands behind it, so it does not run. Choose another of the school’s models, or a model of your own.',
   },
 
   // A seat, in sentences from the runtime's facts.
@@ -332,6 +334,8 @@ export default {
     spentFallback: 'Today’s school allowance is used up: your own key answers until 00:00 UTC.',
     spentNone: 'Today’s school allowance is used up: until 00:00 UTC your agent asks people to try again tomorrow.',
     offerWithdrawn: 'The school no longer offers this plan. Choose another, or your own key.',
+    offerWithdrawnFallback:
+      'The school no longer offers this plan: your agent answers with your own model and key until you choose another.',
     issueWhileHosted:
       'The school’s runtime runs this agent. Anything you start with a new token would answer too: to run it yourself, delete it from the school’s runtime first.',
   },
