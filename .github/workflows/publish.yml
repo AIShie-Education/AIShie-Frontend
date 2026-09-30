@@ -8,7 +8,7 @@ name: Publish
 # against the build those checks passed, and only then pushes it as
 # :sha-<commit>. If that commit is still main's tip, it moves :edge to it; a
 # run that main has moved past publishes its image and stops there, so :edge
-# never goes backwards. Staging's SSH deploy (deploy.yml) is ci.yml's, as
+# never goes backwards. Edge's SSH deploy (deploy.yml) is ci.yml's, as
 # before, until the stack takes its place.
 
 on:

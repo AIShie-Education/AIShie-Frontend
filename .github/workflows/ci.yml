@@ -3,7 +3,7 @@ name: CI
 # Runs on every pull request and on main. On a pull request it only checks. A
 # push to main whose checks all pass is published and deployed: publish.yml
 # tests its image and pushes it to GHCR, for the compose stack, and deploy.yml
-# deploys the very build the checks passed to staging. Releases come from
+# deploys the very build the checks passed to edge. Releases come from
 # release.yml, on version tags, which runs these same checks by calling this
 # workflow.
 #
@@ -267,18 +267,18 @@ jobs:
       packages: write
     uses: ./.github/workflows/publish.yml
 
-  # A green push to main: the build its checks passed, deployed to staging.
+  # A green push to main: the build its checks passed, deployed to edge.
   # Pull requests, the weekly run and a release's run of these checks deploy
   # nothing. audit does not hold it back: a new advisory is for a person to
   # weigh, and it still shows red here.
-  deploy-staging:
+  deploy-edge:
     needs: [check, scripts, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
     uses: ./.github/workflows/deploy.yml
     with:
-      environment: staging
+      environment: edge
       artifact: web-${{ github.sha }}
     # A called workflow sees no secret its caller does not pass: see deploy.yml.
     secrets: inherit

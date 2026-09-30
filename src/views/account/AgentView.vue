@@ -309,7 +309,7 @@ function onBrought() {
 .agent-view__alert {
   margin-bottom: 12px;
 }
-/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+/* The page's own width decides its columns, not the window's: the side bar takes from it. */
 .agent-view {
   container-type: inline-size;
 }

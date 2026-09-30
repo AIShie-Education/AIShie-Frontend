@@ -17,7 +17,7 @@ export const VIEW_META: Record<SideView, { icon: string; label: string }> = {
   admin: { icon: 'Setting', label: 'common.nav.admin' },
 }
 
-/** The side bar's width, in pixels: fixed, as the rail's and the activity bar's are. */
+/** The side bar's width, in pixels: fixed, as the activity bar's is. */
 export const SIDEBAR_WIDTH = 260
 /** At this width and below there is no activity bar: the header's menu button opens the views in a drawer. */
 export const SIDEBAR_DRAWER_MAX_WIDTH = 899

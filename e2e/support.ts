@@ -102,21 +102,86 @@ export function courseTab(page: Page, name: string | RegExp) {
 }
 
 /**
- * The rail along the window's right edge, under the header, as an editor's
- * activity bar: a button for each side panel (the chat's). A phone has none.
+ * The chat's round button, floating at the bottom right of every page (on a
+ * phone too) while the chat is closed or minimized, named with how many
+ * answers are unread ("Chat with agents: 1 unread").
  */
-export function rail(page: Page) {
-  return page.getByRole('toolbar', { name: 'Side panels' })
-}
-
-/** The chat's button, on the rail. */
 export function chatButton(page: Page) {
-  return rail(page).getByRole('button', { name: /^Chat with agents/ })
+  return page.locator('.app-chat-fab').getByRole('button', { name: /^Chat with agents/ })
 }
 
-/** On a phone, the chat's button, floating at the bottom right while the chat's sheet is closed. */
-export function floatingChatButton(page: Page) {
-  return page.locator('.app-chat-fab').getByRole('button', { name: /^Chat with agents/ })
+/** The count of unread answers on the chat's button. */
+export function chatBadge(page: Page) {
+  return page.locator('.app-chat-fab .el-badge__content')
+}
+
+/** The chat: a window floating over the page (on a phone, a sheet over the whole screen). */
+export function chatWindow(page: Page) {
+  return page.locator('#chat-panel')
+}
+
+/** Opens the chat from its button, unless it is open already. */
+export async function openChat(page: Page) {
+  const panel = chatWindow(page)
+  if (!(await panel.isVisible())) await chatButton(page).click()
+  await expect(panel).toBeVisible()
+  return panel
+}
+
+/** Minimizes the chat's window from its title bar (in the language shown): it opens again on what it showed. */
+export async function minimizeChat(page: Page) {
+  await chatWindow(page).locator('.chat-panel__minimize').click()
+  await expect(chatWindow(page)).toHaveCount(0)
+}
+
+/**
+ * Nothing sits along the window's right edge while the chat is closed: no
+ * rail (the "Side panels" toolbar that once ran there), nothing fixed or
+ * sticky there but the header, and down the edge, under the header, only the
+ * page's own ground; and the header runs from beside the side bar (on a
+ * phone, from the left) to the window's right edge.
+ */
+export async function expectNothingAtRightEdge(page: Page, what: string) {
+  await expect(page.getByRole('toolbar', { name: 'Side panels' }), what).toHaveCount(0)
+  await expect(page.locator('.app-rail'), what).toHaveCount(0)
+  const found = await page.evaluate(() => {
+    const win = { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }
+    const header = document.querySelector('.app-header')!.getBoundingClientRect()
+    const column = document.querySelector('.app-main-wrap')!.getBoundingClientRect()
+    // What is fixed or sticky and reaches the right edge, bar the header. (The chat's button keeps 16 px from it.)
+    const pinned: string[] = []
+    for (const el of document.body.querySelectorAll<HTMLElement>('*')) {
+      const cs = getComputedStyle(el)
+      if (cs.position !== 'fixed' && cs.position !== 'sticky') continue
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue
+      const r = el.getBoundingClientRect()
+      if (!r.width || !r.height || r.right < win.width - 1) continue
+      if (el.closest('.app-header')) continue
+      pinned.push(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`)
+    }
+    // Down the right edge, under the header: the page, or its ground.
+    const alien: string[] = []
+    for (let y = header.bottom + 4; y < win.height; y += 40) {
+      const el = document.elementFromPoint(win.width - 3, y)
+      if (!el) continue
+      if (el.closest('.app-main') || ['app-body', 'app-main-wrap', 'app-shell'].some((c) => el.classList.contains(c)))
+        continue
+      if (el === document.body || el === document.documentElement) continue
+      alien.push(`${Math.round(y)}: ${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`)
+    }
+    return {
+      win,
+      header: { left: header.left, right: header.right },
+      column: { left: column.left, right: column.right },
+      pinned,
+      alien,
+    }
+  })
+  expect(found.pinned, `${what}: fixed or sticky at the right edge`).toEqual([])
+  expect(found.alien, `${what}: down the right edge`).toEqual([])
+  expect(Math.round(found.header.right), `${what}: the header's right end`).toBe(found.win.width)
+  expect(Math.round(found.column.right), `${what}: the page's column's right end`).toBe(found.win.width)
+  expect(Math.round(found.header.left), `${what}: the header's left end`).toBe(Math.round(found.column.left))
 }
 
 /**

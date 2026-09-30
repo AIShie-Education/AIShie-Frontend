@@ -2,9 +2,9 @@ import type { NavigationGuardWithThis, RouteRecordRaw } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
 
 /**
- * An old link to a course's conversations: the chat panel opens on the
+ * An old link to a course's conversations: the chat opens on the
  * conversation named, or on the course. From a page of the app the
- * navigation goes no further (the page stays, the panel beside it); coming
+ * navigation goes no further (the page stays, the chat's window over it); coming
  * from outside it (a bookmark, a new tab, signing in first), the course's
  * overview is shown.
  */

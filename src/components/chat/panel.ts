@@ -1,69 +1,124 @@
-// The chat panel's frame, apart from what it shows: how wide it may be and
-// where it docks, what this browser remembers of it (open or not, its width,
-// and for each caller the course they last asked in), and the key that opens
-// and closes it.
+// The chat's frame, apart from what it shows: the window it floats in over
+// the page, where it sits and how big it is, what this browser remembers of
+// it (open or not, where and how big, and for each caller the course they
+// last asked in), and the key that opens and closes it.
+//
+// The window is placed from the viewport's bottom right corner, as the chat's
+// button is: how far its right and bottom edges are from the viewport's, and
+// its size. Moved, it keeps that distance as the viewport changes; resized,
+// its top and left edges move and its right and bottom ones stay.
 
-/** Its width until someone drags its edge, in pixels, and what a double click on the edge goes back to. */
-export const PANEL_DEFAULT = 380
-/** The narrowest it may be. */
-export const PANEL_MIN = 320
-/** Docked, the widest it may be is this share of the window… */
-export const PANEL_MAX_SHARE = 0.5
-/** …and never so wide that the page beside it is left less than this. */
-export const PAGE_MIN = 420
-/** Floating over the page, the widest it may be is this share of the window. */
-export const PANEL_FLOAT_MAX_SHARE = 0.7
-/** How far one press of an arrow key moves its edge; with Shift, four times as far. */
+/** Its size until someone resizes it, in pixels, and what a double click on its title bar goes back to. */
+export const WINDOW_WIDTH = 400
+export const WINDOW_HEIGHT = 600
+/** The smallest it may be made. */
+export const WINDOW_MIN_WIDTH = 320
+export const WINDOW_MIN_HEIGHT = 360
+/** How far it keeps from the viewport's edges in its corner, as the chat's button does. */
+export const WINDOW_INSET = 16
+/** The page's header, which the window in its corner leaves clear where the viewport is tall enough. */
+export const HEADER_HEIGHT = 56
+/** How far one press of an arrow key moves one of its edges; with Shift, four times as far. */
 export const PANEL_STEP = 16
-/**
- * The narrowest window the panel is docked in, taking its width from the
- * page. Below it (but above a phone's), the page would be left too little,
- * beside the activity bar, the side bar and the rail: the panel floats over
- * the page instead.
- */
-export const PANEL_DOCKED_MIN_WIDTH = 1200
-/** At this width and below, the panel is a sheet over the whole screen instead. */
+/** At this width and below, the chat is a sheet over the whole screen instead of a window. */
 export const PANEL_SHEET_MAX_WIDTH = 899
 
-/**
- * The widest the panel may be in a window this wide. Docked, half the window,
- * and less where the page would be left less than PAGE_MIN: room is the
- * width shared by the page and the panel (the page's row, less the rail),
- * when it is known. Floating, PANEL_FLOAT_MAX_SHARE of the window. Never
- * narrower than the narrowest.
- */
-export function panelMax(viewport: number, opts: { room?: number | null; floating?: boolean } = {}): number {
-  const cap = opts.floating
-    ? Math.floor(viewport * PANEL_FLOAT_MAX_SHARE)
-    : Math.min(Math.floor(viewport * PANEL_MAX_SHARE), opts.room == null ? Infinity : opts.room - PAGE_MIN)
-  return Math.max(PANEL_MIN, cap)
+/** The viewport's width and height, less any scroll bar. */
+export interface Viewport {
+  width: number
+  height: number
 }
 
-/** A width within the bounds, up to max, in whole pixels; anything not a number is the default. */
-export function clampWidth(width: number, max: number): number {
-  const w = Number.isFinite(width) ? Math.round(width) : PANEL_DEFAULT
-  return Math.min(Math.max(PANEL_MIN, max), Math.max(PANEL_MIN, w))
+/** The window: its size, and how far its right and bottom edges are from the viewport's. */
+export interface WindowBox {
+  width: number
+  height: number
+  right: number
+  bottom: number
 }
 
+const bound = (v: number, lo: number, hi: number) => Math.round(Math.min(Math.max(v, lo), hi))
+
 /**
- * The width a key press on the panel's edge asks for, or null for a key that
- * does nothing there. The edge is the panel's left one: the arrow towards
- * the page (left) widens it, the other narrows it; Home and End go to the
- * narrowest and the widest.
+ * A window within the viewport: its size from the smallest it may be up to
+ * the viewport's (where the viewport is smaller than that, the viewport's),
+ * then its place, so that it lies wholly on screen.
  */
-export function widthForKey(key: string, width: number, max: number, opts: { shift?: boolean } = {}): number | null {
-  const step = PANEL_STEP * (opts.shift ? 4 : 1)
-  switch (key) {
-    case 'ArrowLeft':
-      return clampWidth(width + step, max)
-    case 'ArrowRight':
-      return clampWidth(width - step, max)
-    case 'Home':
-      return PANEL_MIN
-    case 'End':
-      return clampWidth(max, max)
+export function clampBox(box: WindowBox, vp: Viewport): WindowBox {
+  const width = bound(box.width, WINDOW_MIN_WIDTH, vp.width)
+  const height = bound(box.height, WINDOW_MIN_HEIGHT, vp.height)
+  return {
+    width,
+    height,
+    right: bound(box.right, 0, Math.max(0, vp.width - width)),
+    bottom: bound(box.bottom, 0, Math.max(0, vp.height - height)),
   }
-  return null
+}
+
+/** In its corner at the bottom right, at its size until resized, or as much of it as fits below the header. */
+export function defaultBox(vp: Viewport): WindowBox {
+  return clampBox(
+    {
+      width: Math.min(WINDOW_WIDTH, vp.width - 2 * WINDOW_INSET),
+      height: Math.min(WINDOW_HEIGHT, vp.height - HEADER_HEIGHT - 2 * WINDOW_INSET),
+      right: WINDOW_INSET,
+      bottom: WINDOW_INSET,
+    },
+    vp,
+  )
+}
+
+/** Whether a window lies wholly within the viewport. */
+export function fitsIn(box: WindowBox, vp: Viewport): boolean {
+  return box.right >= 0 && box.bottom >= 0 && box.right + box.width <= vp.width && box.bottom + box.height <= vp.height
+}
+
+/** The window moved by its title bar from where it was, the pointer having moved dx to the right and dy down: within the viewport. */
+export function moveBox(from: WindowBox, dx: number, dy: number, vp: Viewport): WindowBox {
+  return clampBox({ ...from, right: from.right - dx, bottom: from.bottom - dy }, vp)
+}
+
+/**
+ * The window resized from its top left, its left edge moved dx to the right
+ * and its top dy down (either may be 0): its right and bottom edges stay, and
+ * it is never smaller than the smallest nor reaches past the viewport's
+ * left or top.
+ */
+export function resizeBox(from: WindowBox, dx: number, dy: number, vp: Viewport): WindowBox {
+  return {
+    ...from,
+    width: bound(from.width - dx, WINDOW_MIN_WIDTH, vp.width - from.right),
+    height: bound(from.height - dy, WINDOW_MIN_HEIGHT, vp.height - from.bottom),
+  }
+}
+
+/** The widest and tallest the window may be made from its top left, where it is: up to the viewport's left and top. */
+export function largestBox(box: WindowBox, vp: Viewport): { width: number; height: number } {
+  return { width: vp.width - box.right, height: vp.height - box.bottom }
+}
+
+/**
+ * The window a key press on one of its edges asks for, or null for a key
+ * that does nothing there. On its left edge the arrow away from it (left)
+ * widens it and the other narrows it; on its top edge, up makes it taller
+ * and down shorter. Home and End go to the smallest and the largest.
+ */
+export function boxForKey(
+  edge: 'left' | 'top',
+  key: string,
+  box: WindowBox,
+  vp: Viewport,
+  opts: { shift?: boolean } = {},
+): WindowBox | null {
+  const step = PANEL_STEP * (opts.shift ? 4 : 1)
+  const far = vp.width + vp.height
+  const moves: Record<string, number> =
+    edge === 'left'
+      ? { ArrowLeft: -step, ArrowRight: step, Home: box.width - WINDOW_MIN_WIDTH, End: -far }
+      : { ArrowUp: -step, ArrowDown: step, Home: box.height - WINDOW_MIN_HEIGHT, End: -far }
+  const by = moves[key]
+  if (by === undefined) return null
+  return edge === 'left' ? resizeBox(box, by, 0, vp) : resizeBox(box, 0, by, vp)
 }
 /** How often the newest of the caller's conversations are read again for what is unread, open or not. */
 export const UNREAD_POLL_MS = 30_000
@@ -72,29 +127,44 @@ const STORAGE_KEY = 'aishie.chatPanel'
 
 export interface PanelFrame {
   open: boolean
-  width: number
+  /** Where the window was left and how big, or null for its corner at its size until resized. */
+  box: WindowBox | null
 }
 
-/** What this browser remembers of the panel, or closed at its default width. */
+function isBox(v: unknown): v is WindowBox {
+  if (!v || typeof v !== 'object') return false
+  const b = v as Record<string, unknown>
+  return ['width', 'height', 'right', 'bottom'].every((k) => typeof b[k] === 'number' && Number.isFinite(b[k]))
+}
+
+const rounded = (b: WindowBox): WindowBox => ({
+  width: Math.round(b.width),
+  height: Math.round(b.height),
+  right: Math.round(b.right),
+  bottom: Math.round(b.bottom),
+})
+
+/**
+ * What this browser remembers of the chat, or closed in its corner. The
+ * width an earlier version kept for the panel docked beside the page is not
+ * the window's, and is let go.
+ */
 export function loadFrame(): PanelFrame {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const v = JSON.parse(raw) as Partial<PanelFrame> | null
-      return {
-        open: v?.open === true,
-        width: typeof v?.width === 'number' && Number.isFinite(v.width) ? Math.round(v.width) : PANEL_DEFAULT,
-      }
+      return { open: v?.open === true, box: isBox(v?.box) ? rounded(v.box) : null }
     }
   } catch {
     /* no storage, or something unreadable in it: as new */
   }
-  return { open: false, width: PANEL_DEFAULT }
+  return { open: false, box: null }
 }
 
 export function saveFrame(f: PanelFrame) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ open: f.open, width: Math.round(f.width) }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ open: f.open, box: f.box ? rounded(f.box) : null }))
   } catch {
     /* no storage: it lasts for this page only */
   }

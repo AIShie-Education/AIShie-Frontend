@@ -10,7 +10,11 @@ export default {
     newTip: 'New conversation',
     history: 'History',
     close: 'Close the chat',
-    resize: 'Resize the chat panel',
+    // The window's title bar: minimized, it opens again on what it showed; closed, on a new conversation.
+    minimize: 'Minimize the chat',
+    // Its left edge and its top, which resize it.
+    width: 'Width of the chat window',
+    height: 'Height of the chat window',
     backToHistory: 'Back to the history',
     backToAgents: 'Back to the agents',
     pickTitle: 'Ask an agent',

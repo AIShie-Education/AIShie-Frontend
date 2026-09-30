@@ -47,7 +47,7 @@ function siteChatCard(page: Page) {
   return page.locator('.site-chat')
 }
 
-/** The chat panel, opened from its button on the rail on the course's overview: it asks in the course. */
+/** The chat, opened from its round button on the course's overview: it asks in the course. */
 async function openChat(page: Page) {
   await page.goto(coursePath())
   await chatButton(page).click()

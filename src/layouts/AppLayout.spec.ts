@@ -109,47 +109,60 @@ function answered(i: number) {
   }
 }
 
-describe('AppLayout’s rail', () => {
-  it('runs along the right edge, a toolbar of the side panels', async () => {
+describe('the frame', () => {
+  it('has no rail along the right edge: the page, and the header above it, run to the window’s edge', async () => {
     const { w } = await mountAs('autonomous')
-    const rail = w.get('.app-body > .app-rail')
-    expect(rail.attributes('role')).toBe('toolbar')
-    expect(rail.attributes('aria-label')).toBe('Side panels')
-    expect(rail.attributes('aria-orientation')).toBe('vertical')
-    // The page first, then the rail: nothing after it.
-    expect(w.find('.app-body > .app-main + .app-rail').exists()).toBe(true)
-    expect(rail.element.nextElementSibling).toBeNull()
+    expect(w.find('.app-rail').exists()).toBe(false)
+    expect(w.find('[role="toolbar"][aria-label="Side panels"]').exists()).toBe(false)
+    // The page alone in its row; under the header, nothing but it and what floats over it.
+    expect(w.get('.app-body').element.children).toHaveLength(1)
+    expect([...w.get('.app-main-wrap').element.children].map((el) => el.classList[0])).toEqual([
+      'el-header',
+      'app-body',
+      'el-badge',
+    ])
+    expect(w.get('.app-main-wrap > .el-badge').classes()).toContain('app-chat-fab')
+    // The activity bar has only its views: the chat is not one of them.
+    expect(w.get('.activity-bar').find('[aria-controls="chat-panel"]').exists()).toBe(false)
   })
+})
 
-  it('holds the chat’s button, which opens and closes the panel between the page and the rail, and says its shortcut', async () => {
+describe('the chat’s button', () => {
+  it('floats at the bottom right, and opens the chat in a window over the page, where it is gone until the chat is closed', async () => {
     const { w, chat } = await mountAs('autonomous')
-    const button = w.get('.app-rail #chat-panel-toggle')
+    const button = w.get('.app-chat-fab #chat-panel-toggle')
     expect(button.element.tagName).toBe('BUTTON')
     expect(button.attributes('aria-label')).toBe('Chat with agents')
+    expect(button.attributes('aria-haspopup')).toBe('dialog')
     expect(button.attributes('aria-expanded')).toBe('false')
     expect(button.attributes('aria-controls')).toBe('chat-panel')
     expect(button.attributes('aria-keyshortcuts')).toBe('Control+J Meta+J')
-    expect(button.classes()).not.toContain('is-active')
-    const tips = w.findAllComponents({ name: 'ElTooltip' }).map((c) => c.props('content') as string | undefined)
-    expect(tips).toContainEqual(expect.stringMatching(/^Chat with agents \((Ctrl\+J|⌘J)\)$/))
+    // Outside the page, which it floats over.
+    expect(w.get('.app-main').find('#chat-panel-toggle').exists()).toBe(false)
 
     await button.trigger('click')
     await flushPromises()
     expect(chat.open).toBe(true)
-    expect(button.attributes('aria-expanded')).toBe('true')
-    expect(button.classes()).toContain('is-active')
-    // Docked between the page and the rail, in the same row; the rail stays.
-    expect(w.find('.app-body > .app-main + #chat-panel + .app-rail').exists()).toBe(true)
+    const panel = w.get('#chat-panel')
+    expect(panel.classes()).toContain('is-window')
+    expect(panel.attributes('aria-modal')).toBe('false')
+    expect(panel.element.contains(document.activeElement)).toBe(true)
+    expect(w.find('.app-chat-fab').exists()).toBe(false)
+    // Over the page, not in its row: the page is as it was.
+    expect(w.get('.app-body').element.children).toHaveLength(1)
 
-    await button.trigger('click')
+    await w.get('.chat-panel__minimize').trigger('click')
     await flushPromises()
     expect(w.find('#chat-panel').exists()).toBe(false)
-    expect(w.find('.app-body > .app-main + .app-rail').exists()).toBe(true)
-    expect(button.attributes('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(w.get('.app-chat-fab #chat-panel-toggle').element)
   })
 
-  it('leaves Enter and Space to the chat’s button, which its tooltip would otherwise take', async () => {
+  it('says its shortcut in its tooltip, and leaves Enter and Space to the button, which the tooltip would otherwise take', async () => {
     const { w } = await mountAs('autonomous')
+    const tip = w.findAllComponents({ name: 'ElTooltip' }).find((c) => /^Chat with agents/.test(c.props('content')))
+    expect(tip?.props('content')).toMatch(/^Chat with agents \((Ctrl\+J|⌘J)\)$/)
+    expect(tip?.props('triggerKeys')).toEqual([])
+    expect(tip?.props('disabled')).toBe(false)
     for (const [key, code] of [
       ['Enter', 'Enter'],
       [' ', 'Space'],
@@ -160,45 +173,35 @@ describe('AppLayout’s rail', () => {
     }
   })
 
-  it('moves between its buttons with the arrow keys, Home and End', async () => {
-    const { w } = await mountAs('autonomous')
-    const button = w.get<HTMLButtonElement>('#chat-panel-toggle')
-    button.element.focus()
-    for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End']) {
-      const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
-      button.element.dispatchEvent(e)
-      expect(e.defaultPrevented, key).toBe(true)
-      // One button, for now: it keeps focus.
-      expect(document.activeElement).toBe(button.element)
-    }
-    const other = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true })
-    button.element.dispatchEvent(other)
-    expect(other.defaultPrevented).toBe(false)
-  })
-
-  it('is where focus comes back to when the panel closes', async () => {
+  it('is where focus comes back to when the chat is closed', async () => {
     const { w } = await mountAs('autonomous')
     await w.get('#chat-panel-toggle').trigger('click')
     await flushPromises()
     await w.get('.chat-panel__close').trigger('click')
     await flushPromises()
-    expect(document.activeElement).toBe(w.get('.app-rail #chat-panel-toggle').element)
+    expect(document.activeElement).toBe(w.get('.app-chat-fab #chat-panel-toggle').element)
   })
 
-  it('counts the answers not read yet on the chat’s button, as Core says', async () => {
+  it('counts the answers not read yet, as Core says', async () => {
     const { w, chat } = await mountAs('autonomous')
-    expect(w.find('.app-rail__badge .el-badge__content').exists()).toBe(false)
+    expect(w.find('.app-chat-fab .el-badge__content').exists()).toBe(false)
     unread = 1
     await chat.pollUnread()
     await flushPromises()
-    expect(w.get('.app-rail__badge .el-badge__content').text()).toBe('1')
+    expect(w.get('.app-chat-fab .el-badge__content').text()).toBe('1')
     expect(w.get('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')
   })
 
-  it('stays, without the chat’s button, where the caller may ask in no course', async () => {
+  it('leaves room below the page’s last item for it', async () => {
+    const { w } = await mountAs('autonomous')
+    expect(w.get('.app-main').classes()).toContain('has-chat-fab')
+  })
+
+  it('is not offered, nor room kept for it, where the caller may ask in no course', async () => {
     const { w } = await mountAs('denied')
-    expect(w.find('.app-rail').exists()).toBe(true)
+    expect(w.find('.app-chat-fab').exists()).toBe(false)
     expect(w.find('#chat-panel-toggle').exists()).toBe(false)
+    expect(w.get('.app-main').classes()).not.toContain('has-chat-fab')
   })
 })
 
@@ -213,13 +216,15 @@ describe('the header', () => {
 })
 
 describe('on a phone', () => {
-  it('has no rail, and a floating chat button, which opens the sheet and is gone while it is open', async () => {
+  it('has the same floating button, with no tooltip, which opens the sheet and is gone while it is open', async () => {
     const { w, chat } = await mountAs('autonomous', { phone: true })
     expect(w.find('.app-rail').exists()).toBe(false)
     expect(w.get('.app-header').find('[aria-controls="chat-panel"]').exists()).toBe(false)
     const fab = w.get('.app-chat-fab #chat-panel-toggle')
     expect(fab.attributes('aria-label')).toBe('Chat with agents')
     expect(fab.attributes('aria-haspopup')).toBe('dialog')
+    const tip = w.findAllComponents({ name: 'ElTooltip' }).find((c) => /^Chat with agents/.test(c.props('content')))
+    expect(tip?.props('disabled')).toBe(true)
     // The page leaves room below its last item for it.
     expect(w.get('.app-main').classes()).toContain('has-chat-fab')
 

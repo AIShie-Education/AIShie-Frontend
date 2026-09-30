@@ -22,7 +22,7 @@ const TUTOR = `CS101 tutor ${STAMP}`
 let agentId = ''
 let agentToken = ''
 
-/** The chat panel, opened from its button on the rail: on a course page, it asks in that course. */
+/** The chat, opened from its round button: on a course page, it asks in that course. */
 async function openChat(page: Page) {
   await chatButton(page).click()
   const panel = page.locator('#chat-panel')

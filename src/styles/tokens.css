@@ -60,17 +60,16 @@
   --app-radius-pill: 999px;
   --app-shadow-raised: 0 24px 48px -24px rgb(27 29 36 / 18%);
   --app-shadow-pop: 0 12px 32px -8px rgb(27 29 36 / 16%), 0 2px 6px rgb(27 29 36 / 6%);
-  /* Cast to the left, by a panel floating over the page from the right. */
-  --app-shadow-side: -16px 0 32px -12px rgb(27 29 36 / 18%), -2px 0 6px rgb(27 29 36 / 6%);
+  /* Cast all round, by a window floating over the page (the chat's). */
+  --app-shadow-window: 0 24px 56px -12px rgb(27 29 36 / 26%), 0 4px 12px rgb(27 29 36 / 8%);
 
   /* Layers, lowest first. Element Plus lays its overlays over the page from
      2000 up, one above another as each opens: a drawer (the phone's side
      menu) and its dimmed layer, a dialog, a message box, a dropdown, a
      tooltip. What the app floats itself stays under 2000, so that all of them
-     cover it: the header, the chat's floating button on a phone, the chat's
-     panel where the window is too narrow to dock it, floating over the page,
-     and the chat's sheet, which a confirmation or a list opened from it still
-     covers. */
+     cover it: the header, the chat's round button at the bottom right, the
+     chat's window, floating over the page, and the chat's sheet, which a
+     confirmation or a list opened from it still covers. */
   --app-z-header: 10;
   --app-z-fab: 20;
   --app-z-panel: 30;
@@ -154,5 +153,5 @@ html.dark {
 
   --app-shadow-raised: 0 24px 48px -24px rgb(0 0 0 / 60%);
   --app-shadow-pop: 0 12px 32px -8px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
-  --app-shadow-side: -16px 0 32px -12px rgb(0 0 0 / 60%), -2px 0 6px rgb(0 0 0 / 30%);
+  --app-shadow-window: 0 24px 56px -12px rgb(0 0 0 / 70%), 0 4px 12px rgb(0 0 0 / 40%);
 }

@@ -140,6 +140,7 @@ test.describe('the activity bar and the side bar', () => {
       'Terms',
       'Departments',
       'Permission presets',
+      'Sign-in',
     ])
     await bar.getByRole('link', { name: 'People & agents' }).click()
     await expect(admin).toHaveURL(/\/admin\/actors$/)

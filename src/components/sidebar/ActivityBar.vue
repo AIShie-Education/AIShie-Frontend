@@ -91,7 +91,7 @@ function onKey(e: KeyboardEvent) {
 
 <style scoped>
 /* Along the window's left edge, as tall as the window: a step off the ground,
-   with a hairline between it and what is beside it, as the rail on the right. */
+   with a hairline between it and what is beside it. */
 .activity-bar {
   position: sticky;
   top: 0;

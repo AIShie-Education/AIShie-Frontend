@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, reactive, ref, shallowRef, watch } from 
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
-import { acceptsLoginId, ApiError, authMethods, health, ssoStartUrl, type SsoMethod } from '@/api/http'
+import { acceptsLoginId, ApiError, authMethods, health, ssoButtons, ssoStartUrl, type SsoMethod } from '@/api/http'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
@@ -33,10 +33,11 @@ const byLoginId = ref(false)
 const version = ref<string | null>(null)
 const serverDown = ref(false)
 
-// Single sign-on as Core offers it (authMethods): the button appears once
-// Core has said, and nothing else on the page waits for that.
-const ssoMethod = shallowRef<SsoMethod | null>(null)
-const ssoLabel = computed(() => ssoMethod.value?.label || t('auth.ssoDefault'))
+// Single sign-on as Core offers it (authMethods): a button for each identity
+// provider offered, in Core's order (or the one a Core from before several
+// offers), once Core has said; nothing else on the page waits for that.
+const ssoMethods = shallowRef<SsoMethod[]>([])
+const ssoLabel = (m: SsoMethod) => m.label || t('auth.ssoDefault')
 
 const next = computed(() => {
   const n = route.query.next
@@ -76,7 +77,7 @@ watch(
 
 onMounted(async () => {
   void authMethods().then((m) => {
-    ssoMethod.value = m.sso
+    ssoMethods.value = ssoButtons(m)
     byLoginId.value = acceptsLoginId(m)
   })
   try {
@@ -137,11 +138,10 @@ async function signIn() {
   }
 }
 
-function sso() {
-  if (!ssoMethod.value) return
+function sso(m: SsoMethod) {
   // The full address of the page to come back to (with the app's base path);
   // ssoStartUrl makes it absolute when Core is on another origin.
-  window.location.href = ssoStartUrl(router.resolve(next.value).href, ssoMethod.value.start)
+  window.location.href = ssoStartUrl(router.resolve(next.value).href, m.start)
 }
 </script>
 
@@ -198,9 +198,19 @@ function sso() {
         </el-button>
       </el-form>
 
-      <template v-if="ssoMethod">
+      <template v-if="ssoMethods.length">
         <el-divider>{{ t('auth.or') }}</el-divider>
-        <el-button size="large" class="login__submit login__sso" @click="sso">{{ t('auth.sso', { provider: ssoLabel }) }}</el-button>
+        <div class="login__sso-list">
+          <el-button
+            v-for="m in ssoMethods"
+            :key="m.start"
+            size="large"
+            class="login__submit login__sso"
+            @click="sso(m)"
+          >
+            {{ t('auth.sso', { provider: ssoLabel(m) }) }}
+          </el-button>
+        </div>
       </template>
 
       <p v-if="version" class="login__version">{{ t('auth.serverVersion', { version }) }}</p>
@@ -261,6 +271,20 @@ function sso() {
 }
 .login__submit {
   width: 100%;
+}
+.login__sso-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.login__sso-list .el-button + .el-button {
+  margin-left: 0;
+}
+/* A long name keeps to the card's width. */
+.login__sso :deep(span) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .login__version {
   margin: 20px 0 0;

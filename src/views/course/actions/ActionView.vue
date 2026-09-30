@@ -550,7 +550,7 @@ const errorTitle = computed(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
-/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+/* The page's own width decides its columns, not the window's: the side bar takes from it. */
 .action-view {
   container-type: inline-size;
 }

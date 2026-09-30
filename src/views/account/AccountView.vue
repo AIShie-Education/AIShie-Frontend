@@ -99,7 +99,7 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
 </template>
 
 <style scoped>
-/* The page's own width decides its columns, not the window's: the side bar and the chat panel take from it. */
+/* The page's own width decides its columns, not the window's: the side bar takes from it. */
 .account-view {
   container-type: inline-size;
 }

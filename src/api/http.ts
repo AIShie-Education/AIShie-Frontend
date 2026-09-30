@@ -647,18 +647,23 @@ export function ssoStartUrl(returnTo: string, start: string = SSO_START_PATH): s
 
 /**
  * Single sign-on as Core offers it: the name of the identity provider as the
- * button shows it (Core's OIDC_DISPLAY_NAME), or null for the app's own
- * words; and the path on Core where signing in starts.
+ * button shows it (its display name, or Core's OIDC_DISPLAY_NAME), or null
+ * for the app's own words; and the path on Core where signing in starts.
  */
 export interface SsoMethod {
   label: string | null
   start: string
 }
 
+/** One identity provider offered on the sign-in page: its id, and its button's name and start. */
+export interface SsoProviderMethod extends SsoMethod {
+  id: string
+}
+
 /**
  * How one signs in to this Core (GET /v1/auth/methods): with a password
- * (always, so far), and with single sign-on when Core has an identity
- * provider (its OIDC_ISSUER); sso is null when it has none.
+ * (always, so far), and with single sign-on when Core offers an identity
+ * provider; sso is null when it offers none.
  */
 export interface AuthMethods {
   password: boolean
@@ -668,11 +673,26 @@ export interface AuthMethods {
    * 'email'. Absent from a Core from before login IDs, which takes an email.
    */
   passwordAccepts?: string[]
+  /** The first provider offered (the only one a Core from before several had): what an older page showed. */
   sso: SsoMethod | null
+  /**
+   * Every provider offered now, in the order of their buttons: the operator's
+   * first, then the site's. Absent from a Core from before the site's
+   * providers, which offers sso alone.
+   */
+  ssoProviders?: SsoProviderMethod[]
 }
 
 /** A path on Core, with no query: nothing that would send the browser to another site. */
 const corePath = /^\/(?![/\\])[^?#]*$/
+
+/** One of sso_providers, or null for an entry that is not one (and is left out). */
+function ssoProviderFrom(p: any): SsoProviderMethod | null {
+  if (!p || typeof p !== 'object' || typeof p.id !== 'string' || !p.id) return null
+  if (typeof p.start !== 'string' || !corePath.test(p.start)) return null
+  if (p.label !== null && p.label !== undefined && typeof p.label !== 'string') return null
+  return { id: p.id, label: p.label || null, start: p.start }
+}
 
 function authMethodsFrom(b: any): AuthMethods | null {
   if (!b || typeof b !== 'object' || typeof b.password !== 'boolean' || !('sso' in b)) return null
@@ -682,11 +702,25 @@ function authMethodsFrom(b: any): AuthMethods | null {
   const base: Omit<AuthMethods, 'sso'> = accepts
     ? { password: b.password, passwordAccepts: accepts }
     : { password: b.password }
+  if (Array.isArray(b.sso_providers)) {
+    base.ssoProviders = b.sso_providers.map(ssoProviderFrom).filter((p: SsoProviderMethod | null) => !!p)
+  }
   const s = b.sso
   if (s === null) return { ...base, sso: null }
   if (!s || typeof s !== 'object' || typeof s.start !== 'string' || !corePath.test(s.start)) return null
   if (s.label !== null && typeof s.label !== 'string') return null
   return { ...base, sso: { label: s.label || null, start: s.start } }
+}
+
+/**
+ * The single sign-on buttons to show, in order: one for each provider Core
+ * offers, or, from a Core from before several (no sso_providers), the one it
+ * offers as sso, as the page always showed it.
+ */
+export function ssoButtons(m: Pick<AuthMethods, 'sso' | 'ssoProviders'> | null | undefined): SsoMethod[] {
+  if (!m) return []
+  if (m.ssoProviders) return m.ssoProviders
+  return m.sso ? [m.sso] : []
 }
 
 /** Whether password sign-in takes a login ID, a student or staff number, as well as an email. */

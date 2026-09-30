@@ -83,7 +83,18 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   number or ID, with how each signs in; registering people and agents, an agent with the person who
   owns it, which is fixed then and never changed, and correcting their name, email and number;
   invitation links, with which a person chooses their password (their first, or a new one when it is
-  forgotten); single sign-on identities; and API tokens for agents, which only agents are given.
+  forgotten); single sign-on identities, linked at a provider chosen from those set up and by the
+  claim it knows accounts by; and API tokens for agents, which only agents are given.
+- **Sign-in** (root and admins, under *登入方式*) — single sign-on's identity providers: the one the
+  server's operator sets in Core's environment, shown read-only with its status, and the site's,
+  added, tested against the issuer's discovery document and keys (endpoints, keys, problems and
+  warnings), switched on and off, changed and deleted, each over the version read. The redirect URI to
+  register comes first, with a copy button and short help for AD FS, Entra ID, Google Workspace and
+  Keycloak; the client secret is write-only, never shown again but as its last four characters; a new
+  provider is added switched off; linking existing accounts by verified email is off unless turned on,
+  and says the rules it holds to; deleting one says how many accounts would lose single sign-on.
+  Without `SECRETS_KEY` on Core's server nothing is added, and the page says so. The sign-in page shows
+  a button for each provider offered.
 - **The agent runtime's settings** (its administrators, under *AI and documents*) — the school's AI
   plan: the models the school provides and pays for, the operator's (runtime.yaml) shown read-only
   and the site's added, edited, turned off and deleted, each with the school's key, which is tried
@@ -189,9 +200,11 @@ in `.github/core-image` ([Moving the Core pin](#moving-the-core-pin)).
 ## Configure
 
 Single sign-on is Core's to say. The sign-in page asks Core how one signs in
-(`GET /v1/auth/methods`) as it loads, and shows the single sign-on button once Core says it has an
-identity provider (its `OIDC_ISSUER`), with the provider's name when Core gives one
-(`OIDC_DISPLAY_NAME`) and *single sign-on* when it does not. Nothing here is set for it.
+(`GET /v1/auth/methods`) as it loads, and shows a single sign-on button for each identity provider
+Core offers (`sso_providers`: the operator's, its `OIDC_ISSUER`, and those set up on *登入方式*), in
+Core's order, each with the provider's name when Core gives one and *single sign-on* when it does not;
+from a Core from before several providers, the one button its `sso` names, as before. Nothing here is
+set for it.
 
 Built into the app at build time (see `.env.example`):
 
@@ -282,13 +295,14 @@ set Core's `COOKIE_SAMESITE=none`.
   against the Core pinned in `.github/core-image`. A pull request's image is built and tested too
   (`scripts/test-image.sh`).
 - **A green push to `main`** has its image tested and pushed to GHCR as `:sha-<commit>`, and `:edge`
-  while it is `main`'s tip, by [Publish](.github/workflows/publish.yml); and it is deployed to staging
+  while it is `main`'s tip, by [Publish](.github/workflows/publish.yml); and it is deployed to edge
   (test.aishie.app) over SSH by [Deploy](.github/workflows/deploy.yml), with the build CI checked:
   nothing is built again.
 - **A version tag** (`v1.2.3`) runs CI again, publishes its image as `:1.2.3` and `:1.2` (and
-  `:latest`), and that build on the release page; a pre-release (`v1.2.3-rc.1`) also goes to staging.
-  **Production** is deployed by hand: Actions → Deploy → Run workflow, from the release's tag,
-  environment `production` ([CONTRIBUTING.md](CONTRIBUTING.md#releasing)).
+  `:latest` and `:stable`, when it is the highest stable release), and that build on the release
+  page; a pre-release (`v1.2.3-rc.1`) also goes to edge. **Stable**, schools' sites, is deployed by
+  hand: Actions → Deploy → Run workflow, from the release's tag, environment `stable`
+  ([CONTRIBUTING.md](CONTRIBUTING.md#releasing)).
 - **Rolling back** is immediate on the server, which keeps the last few releases:
   `sudo -u webdeploy aishie-web-deploy list`, then `… activate <release>`; or run Deploy from the
   newest release's tag with the older tag as the ref ([docs/deploying.md](docs/deploying.md#day-to-day)).
@@ -296,6 +310,47 @@ set Core's `COOKIE_SAMESITE=none`.
 A server needs `deploy/setup-web.sh` once, and the repository needs its deploy settings and read access
 to Core's image once ([CONTRIBUTING.md](CONTRIBUTING.md#one-time-settings)). Until the settings are
 there, a deploy says which build is ready and does nothing.
+
+### Renaming the settings
+
+The environments were called `staging` and `production`, and are `edge` and `stable` now. Deploy
+reads each of its settings by the new name first and, until a later release that removes this, by
+the old one, with a warning in the run that names the setting to add; so deploys go on, and
+test.aishie.app keeps getting each green push, while the settings are renamed. In this
+repository's settings, before merging the rename if you can:
+
+1. **Environments** (Settings → Environments → New environment): make `edge` with the rules
+   `staging` has, and `stable` with the rules `production` has: its required reviewers, and
+   Deployment branches and tags (`edge`: branch `main` and tags `v*`; `stable`: tags `v*` only).
+   **Give `stable` production's protection before its first deploy.** GitHub neither renames
+   environments nor carries their rules over: the first run that names `stable` creates it with no
+   protection at all, and then nothing but Deploy's own check that it runs from a stable release's
+   tag stands between write access to this repository and the schools' sites.
+2. **Variables and secrets** (Settings → Secrets and variables → Actions): add each one that is set
+   under its new name, with the same value, then delete the old one.
+
+   | Kind | Old name | New name |
+   | --- | --- | --- |
+   | Variable | `DEPLOY_WEB_TARGET_STAGING` | `DEPLOY_WEB_TARGET_EDGE` |
+   | Variable | `DEPLOY_WEB_KNOWN_HOSTS_STAGING` | `DEPLOY_WEB_KNOWN_HOSTS_EDGE` |
+   | Variable | `DEPLOY_WEB_URL_STAGING` | `DEPLOY_WEB_URL_EDGE` |
+   | Secret | `DEPLOY_WEB_SSH_KEY_STAGING` | `DEPLOY_WEB_SSH_KEY_EDGE` |
+   | Variable | `DEPLOY_WEB_TARGET_PRODUCTION` | `DEPLOY_WEB_TARGET_STABLE` |
+   | Variable | `DEPLOY_WEB_KNOWN_HOSTS_PRODUCTION` | `DEPLOY_WEB_KNOWN_HOSTS_STABLE` |
+   | Variable | `DEPLOY_WEB_URL_PRODUCTION` | `DEPLOY_WEB_URL_STABLE` |
+   | Secret | `DEPLOY_WEB_SSH_KEY_PRODUCTION` | `DEPLOY_WEB_SSH_KEY_STABLE` |
+
+   A variable's value can be copied from its page. A secret's cannot be read back: paste the key
+   from wherever a copy is kept or, with none, give the server a new key
+   ([docs/deploying.md](docs/deploying.md#connecting-the-deploy-workflow), to replace the key),
+   which `setup-web.sh` prints under the new name.
+3. Once a deploy to each environment runs without a warning, the environments `staging` and
+   `production` can be deleted, with the deployments they recorded.
+
+The Deploy form offers `edge` and `stable` alone, as GitHub takes nothing but a choice's options
+there; a workflow that calls Deploy with `staging` or `production` has them taken as `edge` and
+`stable`, with a warning. Servers need nothing: `deploy/setup-web.sh` takes `edge` or `stable`, or
+their old names until the same later release, only to name the settings it prints.
 
 ### Moving the Core pin
 

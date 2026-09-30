@@ -1,5 +1,6 @@
-// The chat panel beside every signed-in page: whether it is open and how wide
-// (this browser's, for everyone who uses it), and what it shows: the course
+// The chat, a window over every signed-in page: whether it is open, and where
+// it was left and how big (this browser's, for everyone who uses it), and
+// what it shows: the course
 // the caller asks in, a new conversation with one of its agents, the
 // caller's conversations across their courses, or one of them. Every
 // conversation in it is in a course and with an agent.
@@ -18,7 +19,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { ApiError, read, type ToolIn, type ToolOut } from '@/api/http'
 import type { MyConversation, Respondent } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
-import { loadFrame, loadLastCourse, saveFrame, saveLastCourse } from '@/components/chat/panel'
+import { loadFrame, loadLastCourse, saveFrame, saveLastCourse, type WindowBox } from '@/components/chat/panel'
 import { askableCourses } from '@/components/chat/seat'
 import { useSessionStore } from './session'
 
@@ -73,17 +74,16 @@ function emptyHistory(): HistoryList {
 export const useChatStore = defineStore('chat', () => {
   const session = useSessionStore()
 
-  // --- The frame: open, and how wide (this browser's) ----------------------------
+  // --- The frame: open, and where and how big (this browser's) --------------------
   const frame = loadFrame()
   const open = ref(frame.open)
-  const width = ref(frame.width)
-  watch([open, width], () => saveFrame({ open: open.value, width: width.value }))
+  /** Where the window was left and how big, or null for its corner at its size until resized. */
+  const box = ref<WindowBox | null>(frame.box)
+  watch([open, box], () => saveFrame({ open: open.value, box: box.value }))
 
+  /** Opens the chat, or minimizes it: it opens again on what it showed. */
   function setOpen(v: boolean) {
     open.value = v
-  }
-  function toggle() {
-    open.value = !open.value
   }
 
   // --- The caller -----------------------------------------------------------------
@@ -182,6 +182,18 @@ export const useChatStore = defineStore('chat', () => {
 
   function showHistory() {
     screen.value = 'history'
+  }
+
+  /**
+   * Closes the chat, leaving what it showed: it opens again on a new
+   * conversation in the course it asks in. (Minimized, setOpen(false), it
+   * opens again on what it showed.)
+   */
+  function close() {
+    open.value = false
+    conversation.value = null
+    draft.value = null
+    screen.value = 'new'
   }
   /** The history, or back from it to the conversation shown before (or a new one). */
   function toggleHistory() {
@@ -355,9 +367,9 @@ export const useChatStore = defineStore('chat', () => {
 
   return {
     open,
-    width,
+    box,
     setOpen,
-    toggle,
+    close,
     courses,
     courseIds,
     courseId,

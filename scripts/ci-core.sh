@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Starts an AIshie Core for the end-to-end tests, and stops it again. It is
 # a throwaway: a database of its own, a root actor whose password is made up
-# for the run, files in a temporary directory, and the limits that would slow
-# the tests down turned off. Never point it at a database people use.
+# for the run, as are the keys it seals identity providers' secrets with
+# (SECRETS_KEY, and SIGNING_KEY beside it), files in a temporary directory,
+# and the limits that would slow the tests down turned off. Never point it at
+# a database people use.
 #
 # CI runs the image pinned in .github/core-image, in Docker. Without Docker,
 # give it a binary of Core instead:
@@ -156,6 +158,15 @@ start() {
     die "bootstrap failed; a database that was bootstrapped before cannot be used again: $(tail -n 3 "$DIR/core.log")"
   echo "(scripts/ci-core.sh keeps no API token for root, and threw away any printed here: root signs in with its password)" >> "$DIR/core.log"
 
+  # The identity providers the tests set up keep their client secrets sealed
+  # under SECRETS_KEY, which Core takes only with SIGNING_KEY. Both are made
+  # up for the run, as root's password is, and reach Core in its
+  # environment, on no command line; a Core from before them ignores them.
+  SIGNING_KEY=$(openssl rand -hex 32)
+  SECRETS_KEY=$(openssl rand -base64 32)
+  if in_actions; then echo "::add-mask::$SIGNING_KEY" && echo "::add-mask::$SECRETS_KEY"; fi
+  export SIGNING_KEY SECRETS_KEY
+
   # Tests sign in dozens of times a minute from one address, and a proposal
   # the tests make should not wait a minute to be swept.
   local -a settings=(
@@ -180,7 +191,7 @@ start() {
     # One left by a run of this script that was killed.
     docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
     docker run -d --name "$CONTAINER" --network host --user "$(id -u):$(id -g)" \
-      -v "$DIR/blobs:$DIR/blobs" -e DATABASE_URL "${flags[@]}" "$IMAGE" serve >/dev/null
+      -v "$DIR/blobs:$DIR/blobs" -e DATABASE_URL -e SIGNING_KEY -e SECRETS_KEY "${flags[@]}" "$IMAGE" serve >/dev/null
     echo "$CONTAINER" > "$DIR/container"
   fi
 
