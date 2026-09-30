@@ -4837,6 +4837,582 @@ export interface ServiceRevokeCredentialOut {
   ok: boolean
 }
 
+/** sso.create (write): Set up an identity provider (OpenID Connect) a person may sign in through. Register the redirect URI sso.list gives with the provider first, and test its issuer (sso.test). The client secret is sealed with the server's secrets key before it is kept, never recorded, and never shown again but as its hint; without a secrets key nothing is added (secrets_key_missing). It is created switched off unless enabled is true. An id the operator's provider or another has is refused (id_taken). Accounts sign in through it once linked at it (actor.link_sso, with its id), or by the email it vouches for with link_by_email. Root and platform administrators only. */
+export interface SsoCreateIn {
+  /**
+   * the domains an email may be linked from, such as polyu.edu.hk; required with link_by_email
+   */
+  allowed_email_domains?: null | string[]
+  /**
+   * the client id the provider gave this site
+   */
+  client_id: string
+  /**
+   * the client secret the provider gave this site: sealed before it is kept, never recorded and never shown again but as its hint
+   */
+  client_secret: string
+  /**
+   * the name on the sign-in button, such as PolyU NetID: 1 to 64 printable characters
+   */
+  display_name: string
+  /**
+   * the claim holding the person's email, for link_by_email; default none, or email with link_by_email
+   */
+  email_claim?: null | string
+  /**
+   * offer it on the sign-in page at once; default false, so that it can be tested (sso.test) and switched on (sso.set_enabled)
+   */
+  enabled?: boolean
+  /**
+   * the provider's id: 1 to 64 lower-case letters, digits and hyphens, such as hainanu-cas; what actor.link_sso names, and what it is known by for good
+   */
+  id: string
+  /**
+   * the provider's issuer, exactly as its discovery document writes it: an https URL (http only for this machine), such as https://adfs.example.edu/adfs
+   */
+  issuer: string
+  /**
+   * link someone the provider vouches for, whose identity is linked to nobody, to the active person whose email here is the one the provider vouches for (email_verified), in allowed_email_domains; never an account with a platform role. Default false: only accounts already linked (actor.link_sso) sign in
+   */
+  link_by_email?: boolean
+  /**
+   * its place on the sign-in page, 0 to 10000, lowest first; default after every other
+   */
+  position?: null | number
+  /**
+   * what a sign-in asks for, openid among them; default openid profile email
+   */
+  scopes?: null | string[]
+  /**
+   * the claim an account is known by, as actor.link_sso's subject; default sub (ADFS: upn)
+   */
+  subject_claim?: string
+}
+export interface SsoCreateOut {
+  allowed_email_domains: null | string[]
+  client_id: string
+  /**
+   * what may be shown of the client secret: an ellipsis and its last four characters, or the ellipsis alone for a secret shorter than 20 characters
+   */
+  client_secret_hint: string
+  /**
+   * the id of the secrets key that sealed it (SECRETS_KEY); null for the operator's, which is not sealed
+   */
+  client_secret_key_id: null | string
+  created_at: null | string
+  created_by: null | {
+    actor_id: string
+    display_name: string
+  }
+  /**
+   * the name on the sign-in button; null for the operator's when OIDC_DISPLAY_NAME is not set, and the front end then uses words of its own
+   */
+  display_name: null | string
+  /**
+   * the claim holding the person's email, or null for none
+   */
+  email_claim: null | string
+  enabled: boolean
+  /**
+   * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+   */
+  id: string
+  issuer: string
+  /**
+   * whether someone the provider vouches for, whose identity is linked to nobody, is linked at sign-in to the account whose email the provider vouches for, within allowed_email_domains; otherwise only accounts already linked sign in
+   */
+  link_by_email: boolean
+  /**
+   * the accounts that sign in through it: identities linked at it and not unlinked
+   */
+  linked_accounts: number
+  /**
+   * its place on the sign-in page, lowest first; the operator's is always first
+   */
+  position: number
+  /**
+   * true for the operator's provider, which only the operator changes
+   */
+  read_only: boolean
+  /**
+   * what to register with the provider as the redirect URI: this server's public URL and /v1/auth/sso/callback, the same for every provider
+   */
+  redirect_uri: string
+  scopes: null | string[]
+  /**
+   * site: set up by the site's administrators; operator: set by the server's operator in its environment (OIDC_*), read-only here
+   */
+  source: string
+  /**
+   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+   */
+  status: string
+  /**
+   * the claim an account is known by, as actor.link_sso's subject
+   */
+  subject_claim: string
+  updated_at: null | string
+  updated_by: null | {
+    actor_id: string
+    display_name: string
+  }
+  /**
+   * moves on with every change; give it to sso.update, sso.set_enabled and sso.delete (or in If-Match) to change only what you read. Null for the operator's
+   */
+  version: null | number
+}
+
+/** sso.delete (write): Remove a site's identity provider. While accounts are linked at it, it is refused (provider_in_use), saying how many (details.linked_accounts) would no longer sign in through it; with force it is removed and they are unlinked (revoked, kept for the record: linking the same identity to the same account again brings it back, and to another account never). Switching it off (sso.set_enabled) keeps everyone linked. The operator's provider is refused (set_by_operator). Root and platform administrators only. */
+export interface SsoDeleteIn {
+  /**
+   * delete it although accounts are linked at it, unlinking them: they no longer sign in through it, and sign in otherwise, or not at all. Without it, a provider accounts are linked at is refused (provider_in_use, with linked_accounts)
+   */
+  force?: boolean
+  provider_id: string
+  /**
+   * the version you read; the deletion is then made only over it (version_mismatch). Over REST the If-Match header may carry it
+   */
+  version?: null | number
+}
+export interface SsoDeleteOut {
+  deleted: boolean
+  id: string
+  /**
+   * the accounts whose identity at it was unlinked: with force, as many as were linked; otherwise 0
+   */
+  unlinked_accounts: number
+}
+
+/** sso.get (read): Read one identity provider, the operator's or the site's: its settings, status, version and who last changed it, and the redirect URI to register with it. Never its client secret: a hint of it. Root and platform administrators only. */
+export interface SsoGetIn {
+  /**
+   * the provider's id, such as polyu-adfs
+   */
+  provider_id: string
+}
+export interface SsoGetOut {
+  allowed_email_domains: null | string[]
+  client_id: string
+  /**
+   * what may be shown of the client secret: an ellipsis and its last four characters, or the ellipsis alone for a secret shorter than 20 characters
+   */
+  client_secret_hint: string
+  /**
+   * the id of the secrets key that sealed it (SECRETS_KEY); null for the operator's, which is not sealed
+   */
+  client_secret_key_id: null | string
+  created_at: null | string
+  created_by: null | {
+    actor_id: string
+    display_name: string
+  }
+  /**
+   * the name on the sign-in button; null for the operator's when OIDC_DISPLAY_NAME is not set, and the front end then uses words of its own
+   */
+  display_name: null | string
+  /**
+   * the claim holding the person's email, or null for none
+   */
+  email_claim: null | string
+  enabled: boolean
+  /**
+   * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+   */
+  id: string
+  issuer: string
+  /**
+   * whether someone the provider vouches for, whose identity is linked to nobody, is linked at sign-in to the account whose email the provider vouches for, within allowed_email_domains; otherwise only accounts already linked sign in
+   */
+  link_by_email: boolean
+  /**
+   * the accounts that sign in through it: identities linked at it and not unlinked
+   */
+  linked_accounts: number
+  /**
+   * its place on the sign-in page, lowest first; the operator's is always first
+   */
+  position: number
+  /**
+   * true for the operator's provider, which only the operator changes
+   */
+  read_only: boolean
+  /**
+   * what to register with the provider as the redirect URI: this server's public URL and /v1/auth/sso/callback, the same for every provider
+   */
+  redirect_uri: string
+  scopes: null | string[]
+  /**
+   * site: set up by the site's administrators; operator: set by the server's operator in its environment (OIDC_*), read-only here
+   */
+  source: string
+  /**
+   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+   */
+  status: string
+  /**
+   * the claim an account is known by, as actor.link_sso's subject
+   */
+  subject_claim: string
+  updated_at: null | string
+  updated_by: null | {
+    actor_id: string
+    display_name: string
+  }
+  /**
+   * moves on with every change; give it to sso.update, sso.set_enabled and sso.delete (or in If-Match) to change only what you read. Null for the operator's
+   */
+  version: null | number
+}
+
+/** sso.list (read): List the identity providers a person may sign in through (single sign-on): the one the server's operator sets in its environment, read-only, and those the site's administrators set up, each with its status, how many accounts are linked at it, and the redirect URI to register with it. Never a client secret: a hint of it. Root and platform administrators only. */
+export interface SsoListIn {}
+export interface SsoListOut {
+  /**
+   * whether a provider may be added here: false when the server has no secrets key (SECRETS_KEY) to seal its client secret with
+   */
+  can_add: boolean
+  /**
+   * secrets_key_missing when can_add is false; null otherwise
+   */
+  cannot_add_reason: null | string
+  /**
+   * the operator's first, if there is one, then the site's by position
+   */
+  providers:
+    | null
+    | {
+        allowed_email_domains: null | string[]
+        client_id: string
+        /**
+         * what may be shown of the client secret: an ellipsis and its last four characters, or the ellipsis alone for a secret shorter than 20 characters
+         */
+        client_secret_hint: string
+        /**
+         * the id of the secrets key that sealed it (SECRETS_KEY); null for the operator's, which is not sealed
+         */
+        client_secret_key_id: null | string
+        created_at: null | string
+        created_by: null | {
+          actor_id: string
+          display_name: string
+        }
+        /**
+         * the name on the sign-in button; null for the operator's when OIDC_DISPLAY_NAME is not set, and the front end then uses words of its own
+         */
+        display_name: null | string
+        /**
+         * the claim holding the person's email, or null for none
+         */
+        email_claim: null | string
+        enabled: boolean
+        /**
+         * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+         */
+        id: string
+        issuer: string
+        /**
+         * whether someone the provider vouches for, whose identity is linked to nobody, is linked at sign-in to the account whose email the provider vouches for, within allowed_email_domains; otherwise only accounts already linked sign in
+         */
+        link_by_email: boolean
+        /**
+         * the accounts that sign in through it: identities linked at it and not unlinked
+         */
+        linked_accounts: number
+        /**
+         * its place on the sign-in page, lowest first; the operator's is always first
+         */
+        position: number
+        /**
+         * true for the operator's provider, which only the operator changes
+         */
+        read_only: boolean
+        /**
+         * what to register with the provider as the redirect URI: this server's public URL and /v1/auth/sso/callback, the same for every provider
+         */
+        redirect_uri: string
+        scopes: null | string[]
+        /**
+         * site: set up by the site's administrators; operator: set by the server's operator in its environment (OIDC_*), read-only here
+         */
+        source: string
+        /**
+         * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+         */
+        status: string
+        /**
+         * the claim an account is known by, as actor.link_sso's subject
+         */
+        subject_claim: string
+        updated_at: null | string
+        updated_by: null | {
+          actor_id: string
+          display_name: string
+        }
+        /**
+         * moves on with every change; give it to sso.update, sso.set_enabled and sso.delete (or in If-Match) to change only what you read. Null for the operator's
+         */
+        version: null | number
+      }[]
+  /**
+   * what to register with every provider as its redirect URI
+   */
+  redirect_uri: string
+  /**
+   * the id of the key that seals client secrets now; a provider whose client_secret_key_id differs was sealed by an older key
+   */
+  secrets_key_id: null | string
+}
+
+/** sso.set_enabled (write): Switch a site's identity provider on or off. Off, it is not offered on the sign-in page, a sign-in through it is refused, even one already under way, and nobody is unlinked: switched on again, everyone linked signs in as before. One whose client secret does not open with this server's keys is not switched on (secret_unavailable): give the secret again (sso.update). Already so, nothing changes. The operator's provider is refused (set_by_operator). Root and platform administrators only. */
+export interface SsoSetEnabledIn {
+  /**
+   * true offers it on the sign-in page and lets a sign-in through it; false stops both, at once, and unlinks nobody
+   */
+  enabled: boolean
+  provider_id: string
+  /**
+   * the version you read; the change is then made only over it (version_mismatch). Over REST the If-Match header may carry it
+   */
+  version?: null | number
+}
+export interface SsoSetEnabledOut {
+  allowed_email_domains: null | string[]
+  client_id: string
+  /**
+   * what may be shown of the client secret: an ellipsis and its last four characters, or the ellipsis alone for a secret shorter than 20 characters
+   */
+  client_secret_hint: string
+  /**
+   * the id of the secrets key that sealed it (SECRETS_KEY); null for the operator's, which is not sealed
+   */
+  client_secret_key_id: null | string
+  created_at: null | string
+  created_by: null | {
+    actor_id: string
+    display_name: string
+  }
+  /**
+   * the name on the sign-in button; null for the operator's when OIDC_DISPLAY_NAME is not set, and the front end then uses words of its own
+   */
+  display_name: null | string
+  /**
+   * the claim holding the person's email, or null for none
+   */
+  email_claim: null | string
+  enabled: boolean
+  /**
+   * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+   */
+  id: string
+  issuer: string
+  /**
+   * whether someone the provider vouches for, whose identity is linked to nobody, is linked at sign-in to the account whose email the provider vouches for, within allowed_email_domains; otherwise only accounts already linked sign in
+   */
+  link_by_email: boolean
+  /**
+   * the accounts that sign in through it: identities linked at it and not unlinked
+   */
+  linked_accounts: number
+  /**
+   * its place on the sign-in page, lowest first; the operator's is always first
+   */
+  position: number
+  /**
+   * true for the operator's provider, which only the operator changes
+   */
+  read_only: boolean
+  /**
+   * what to register with the provider as the redirect URI: this server's public URL and /v1/auth/sso/callback, the same for every provider
+   */
+  redirect_uri: string
+  scopes: null | string[]
+  /**
+   * site: set up by the site's administrators; operator: set by the server's operator in its environment (OIDC_*), read-only here
+   */
+  source: string
+  /**
+   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+   */
+  status: string
+  /**
+   * the claim an account is known by, as actor.link_sso's subject
+   */
+  subject_claim: string
+  updated_at: null | string
+  updated_by: null | {
+    actor_id: string
+    display_name: string
+  }
+  /**
+   * moves on with every change; give it to sso.update, sso.set_enabled and sso.delete (or in If-Match) to change only what you read. Null for the operator's
+   */
+  version: null | number
+}
+
+/** sso.test (read): Test an identity provider's issuer without signing anyone in: read its discovery document (<issuer>/.well-known/openid-configuration) and its key set, check them as a sign-in would use them, and say what was found — its endpoints, its signing keys, the scopes and claims it supports — with problems (what stops a sign-in: ok is false) and warnings (what may). Give provider_id for a provider set up, or issuer for one to be. It sends no secret, follows no redirect and changes nothing. Root and platform administrators only. */
+export interface SsoTestIn {
+  /**
+   * with issuer: the claim an email would be read from
+   */
+  email_claim?: null | string
+  /**
+   * an issuer to test before setting it up; give this or provider_id
+   */
+  issuer?: null | string
+  /**
+   * a provider already set up, the operator's or the site's, switched on or not: its issuer, scopes and claims are tested
+   */
+  provider_id?: null | string
+  /**
+   * with issuer: the scopes a sign-in would ask for; default openid profile email
+   */
+  scopes?: null | string[]
+  /**
+   * with issuer: the claim an account would be known by; default sub
+   */
+  subject_claim?: null | string
+}
+export interface SsoTestOut {
+  authorization_endpoint: null | string
+  claims_supported: null | string[]
+  code_challenge_methods: null | string[]
+  discovery_url: string
+  end_session_endpoint: null | string
+  grant_types_supported: null | string[]
+  issuer: string
+  jwks_uri: null | string
+  ok: boolean
+  problems: null | string[]
+  requested_claims_not_advertised: null | string[]
+  requested_scopes_unsupported: null | string[]
+  response_types_supported: null | string[]
+  scopes_supported: null | string[]
+  signing_algorithms: null | string[]
+  signing_keys:
+    | null
+    | {
+        alg: null | string
+        kid: null | string
+        kty: string
+        use: null | string
+      }[]
+  subject_types_supported: null | string[]
+  token_endpoint: null | string
+  token_endpoint_auth_methods: null | string[]
+  userinfo_endpoint: null | string
+  warnings: null | string[]
+}
+
+/** sso.update (write): Change a site's identity provider, over the version you read (version, or If-Match): what you give is changed, and what you leave out is kept, the client secret included, which is replaced only when you give a new one. A change since you read it is refused (version_mismatch, with current_version). Its id never changes. The operator's provider is refused (set_by_operator). It takes effect at the next sign-in, on every instance. Root and platform administrators only. */
+export interface SsoUpdateIn {
+  /**
+   * left out, kept; empty, none
+   */
+  allowed_email_domains?: null | string[]
+  client_id?: null | string
+  /**
+   * a new client secret, sealed as sso.create seals one; left out, the secret is kept as it is
+   */
+  client_secret?: null | string
+  display_name?: null | string
+  /**
+   * an empty string for none
+   */
+  email_claim?: null | string
+  /**
+   * the identities linked at the provider stay linked: whoever the new issuer vouches for under the same subject signs in as them
+   */
+  issuer?: null | string
+  link_by_email?: null | boolean
+  position?: null | number
+  /**
+   * the provider's id; it never changes
+   */
+  provider_id: string
+  /**
+   * left out, kept; empty, the default openid profile email
+   */
+  scopes?: null | string[]
+  subject_claim?: null | string
+  /**
+   * the version you read (sso.get, sso.list): the change is made only over it, and is refused (version_mismatch) if the provider changed since. Over REST the If-Match header may carry it instead
+   */
+  version: number
+}
+export interface SsoUpdateOut {
+  allowed_email_domains: null | string[]
+  client_id: string
+  /**
+   * what may be shown of the client secret: an ellipsis and its last four characters, or the ellipsis alone for a secret shorter than 20 characters
+   */
+  client_secret_hint: string
+  /**
+   * the id of the secrets key that sealed it (SECRETS_KEY); null for the operator's, which is not sealed
+   */
+  client_secret_key_id: null | string
+  created_at: null | string
+  created_by: null | {
+    actor_id: string
+    display_name: string
+  }
+  /**
+   * the name on the sign-in button; null for the operator's when OIDC_DISPLAY_NAME is not set, and the front end then uses words of its own
+   */
+  display_name: null | string
+  /**
+   * the claim holding the person's email, or null for none
+   */
+  email_claim: null | string
+  enabled: boolean
+  /**
+   * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+   */
+  id: string
+  issuer: string
+  /**
+   * whether someone the provider vouches for, whose identity is linked to nobody, is linked at sign-in to the account whose email the provider vouches for, within allowed_email_domains; otherwise only accounts already linked sign in
+   */
+  link_by_email: boolean
+  /**
+   * the accounts that sign in through it: identities linked at it and not unlinked
+   */
+  linked_accounts: number
+  /**
+   * its place on the sign-in page, lowest first; the operator's is always first
+   */
+  position: number
+  /**
+   * true for the operator's provider, which only the operator changes
+   */
+  read_only: boolean
+  /**
+   * what to register with the provider as the redirect URI: this server's public URL and /v1/auth/sso/callback, the same for every provider
+   */
+  redirect_uri: string
+  scopes: null | string[]
+  /**
+   * site: set up by the site's administrators; operator: set by the server's operator in its environment (OIDC_*), read-only here
+   */
+  source: string
+  /**
+   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+   */
+  status: string
+  /**
+   * the claim an account is known by, as actor.link_sso's subject
+   */
+  subject_claim: string
+  updated_at: null | string
+  updated_by: null | {
+    actor_id: string
+    display_name: string
+  }
+  /**
+   * moves on with every change; give it to sso.update, sso.set_enabled and sso.delete (or in If-Match) to change only what you read. Null for the operator's
+   */
+  version: null | number
+}
+
 /** submission.create (write): Start a draft submission to a published assignment. A draft can be edited freely; nothing is handed in until submission.submit. Once an attempt has been submitted it never changes, and submitting again means creating a new attempt here. */
 export interface SubmissionCreateIn {
   assignment_id: string
@@ -5219,6 +5795,13 @@ export interface ToolMap {
   'service.issue_credential': { in: ServiceIssueCredentialIn; out: ServiceIssueCredentialOut; kind: 'write' }
   'service.list_credentials': { in: ServiceListCredentialsIn; out: ServiceListCredentialsOut; kind: 'read' }
   'service.revoke_credential': { in: ServiceRevokeCredentialIn; out: ServiceRevokeCredentialOut; kind: 'write' }
+  'sso.create': { in: SsoCreateIn; out: SsoCreateOut; kind: 'write' }
+  'sso.delete': { in: SsoDeleteIn; out: SsoDeleteOut; kind: 'write' }
+  'sso.get': { in: SsoGetIn; out: SsoGetOut; kind: 'read' }
+  'sso.list': { in: SsoListIn; out: SsoListOut; kind: 'read' }
+  'sso.set_enabled': { in: SsoSetEnabledIn; out: SsoSetEnabledOut; kind: 'write' }
+  'sso.test': { in: SsoTestIn; out: SsoTestOut; kind: 'read' }
+  'sso.update': { in: SsoUpdateIn; out: SsoUpdateOut; kind: 'write' }
   'submission.create': { in: SubmissionCreateIn; out: SubmissionCreateOut; kind: 'write' }
   'submission.get': { in: SubmissionGetIn; out: SubmissionGetOut; kind: 'read' }
   'submission.list': { in: SubmissionListIn; out: SubmissionListOut; kind: 'read' }
@@ -5379,6 +5962,13 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'service.issue_credential': { method: 'POST', path: '/v1/services/{scope}/credentials', kind: 'write' },
   'service.list_credentials': { method: 'GET', path: '/v1/services/{scope}/credentials', kind: 'read' },
   'service.revoke_credential': { method: 'POST', path: '/v1/services/{scope}/credentials/{credential_id}/revoke', kind: 'write' },
+  'sso.create': { method: 'POST', path: '/v1/sso/providers', kind: 'write' },
+  'sso.delete': { method: 'POST', path: '/v1/sso/providers/{provider_id}/delete', kind: 'write' },
+  'sso.get': { method: 'GET', path: '/v1/sso/providers/{provider_id}', kind: 'read' },
+  'sso.list': { method: 'GET', path: '/v1/sso/providers', kind: 'read' },
+  'sso.set_enabled': { method: 'POST', path: '/v1/sso/providers/{provider_id}/enabled', kind: 'write' },
+  'sso.test': { method: 'GET', path: '/v1/sso/test', kind: 'read' },
+  'sso.update': { method: 'POST', path: '/v1/sso/providers/{provider_id}', kind: 'write' },
   'submission.create': { method: 'POST', path: '/v1/courses/{course_id}/submissions', kind: 'write' },
   'submission.get': { method: 'GET', path: '/v1/courses/{course_id}/submissions/{submission_id}', kind: 'read' },
   'submission.list': { method: 'GET', path: '/v1/courses/{course_id}/submissions', kind: 'read' },
