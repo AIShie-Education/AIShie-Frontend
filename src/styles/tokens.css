@@ -67,8 +67,8 @@
      2000 up, one above another as each opens: a drawer (the phone's side
      menu) and its dimmed layer, a dialog, a message box, a dropdown, a
      tooltip. What the app floats itself stays under 2000, so that all of them
-     cover it: the header, the chat's floating button on a phone, the chat's
-     window, floating over the page, and the chat's sheet, which a
+     cover it: the header, the chat's round button at the bottom right, the
+     chat's window, floating over the page, and the chat's sheet, which a
      confirmation or a list opened from it still covers. */
   --app-z-header: 10;
   --app-z-fab: 20;

@@ -85,9 +85,6 @@ export const useChatStore = defineStore('chat', () => {
   function setOpen(v: boolean) {
     open.value = v
   }
-  function toggle() {
-    open.value = !open.value
-  }
 
   // --- The caller -----------------------------------------------------------------
   let actorId: string | null = null
@@ -372,7 +369,6 @@ export const useChatStore = defineStore('chat', () => {
     open,
     box,
     setOpen,
-    toggle,
     close,
     courses,
     courseIds,

@@ -16,8 +16,6 @@ export default {
     reload: '重新載入',
     later: '稍後',
   },
-  // The rail along the window's right edge, with a button for each side panel (the chat's).
-  panels: '側邊面板',
   // The side bar on the window's left edge: the activity bar, with a button for each view (on a phone, the
   // menu's tabs), and the view shown beside it.
   side: {
