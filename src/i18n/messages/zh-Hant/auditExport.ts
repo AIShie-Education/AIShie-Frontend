@@ -123,6 +123,7 @@ export default {
 
   summary: {
     site: '整個網站',
+    scoped: '{kind}：{label}',
     participant: '參與者：{who}',
     conversations: '對話',
     messages: '訊息',

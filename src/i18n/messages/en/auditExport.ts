@@ -138,6 +138,7 @@ export default {
 
   summary: {
     site: 'The whole site',
+    scoped: '{kind}: {label}',
     participant: 'Participant: {who}',
     conversations: 'Conversations',
     messages: 'Messages',

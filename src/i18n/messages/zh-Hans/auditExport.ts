@@ -123,6 +123,7 @@ export default {
 
   summary: {
     site: '整个网站',
+    scoped: '{kind}：{label}',
     participant: '参与者：{who}',
     conversations: '对话',
     messages: '消息',

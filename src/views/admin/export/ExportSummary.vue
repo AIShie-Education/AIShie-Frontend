@@ -17,7 +17,7 @@ const scopeWords = computed(() => {
   const r = props.record
   if (r.scope === 'site') return t('auditExport.summary.site')
   const kind = t(`auditExport.scope.${r.scope === 'department' ? 'department' : 'course'}`)
-  return r.scope_label ? `${kind}: ${r.scope_label}` : kind
+  return r.scope_label ? t('auditExport.summary.scoped', { kind, label: r.scope_label }) : kind
 })
 const span = computed(() => spanWords(props.record.from, props.record.before))
 </script>
