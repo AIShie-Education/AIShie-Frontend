@@ -179,7 +179,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      packages: read # Core's image, which is private
     services:
       postgres:
         image: postgres:17
@@ -204,13 +203,8 @@ jobs:
         with:
           name: web-${{ github.sha }}
           path: dist
-      # The package is private: this works once an organization owner has let
-      # this repository read it (CONTRIBUTING.md, One-time settings), and
-      # scripts/ci-core.sh says so when the pull is refused.
-      - name: Log in to GHCR
-        env:
-          TOKEN: ${{ github.token }}
-        run: printf '%s\n' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      # Core's image is public, pulled with no login: scripts/ci-core.sh says
+      # what to do if the pull is refused.
       - id: core
         name: Start Core (.github/core-image)
         run: scripts/ci-core.sh start

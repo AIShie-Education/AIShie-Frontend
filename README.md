@@ -306,7 +306,8 @@ with the `Cookie` header removed, and everything else to the static files, falli
 `index.html` for the app's own routes.
 
 The front end is deployed as an image, in the docker compose stack that runs the whole system
-([AIShie-Deploy](https://github.com/AIShie-Education/AIShie-Deploy)), which pulls it from GHCR:
+([AIShie-Deploy](https://github.com/AIShie-Education/AIShie-Deploy)), whose server pulls it from
+GHCR, with no login, as the package is public, and keeps itself up to date:
 `ghcr.io/aishie-education/aishie-frontend`, for amd64 and arm64. It is the production build, served
 by Caddy on port 8080 over plain HTTP, as a user that is not root, by the rules below; the stack's
 Caddy terminates TLS in front of it and sends Core its routes. Its tags:
@@ -323,10 +324,11 @@ that frames it from another site also needs Core's `COOKIE_SAMESITE=none`
 ([Frames](docs/deploying.md#frames)). What the image does, exactly, and how to build and test it
 here: [docs/deploying.md](docs/deploying.md#the-image).
 
-Until the stack runs, the older way still works: on a server set up with Core's
-`deploy/setup-server.sh`, `deploy/setup-web.sh` serves the files with Caddy, and the Deploy workflow
-keeps them up to date over SSH ([docs/deploying.md](docs/deploying.md#over-ssh)). It is retired once
-the stack runs. The site block it writes, whose rules the image's `Caddyfile` has too:
+The older way is still here: on a server set up with Core's `deploy/setup-server.sh`,
+`deploy/setup-web.sh` serves the files with Caddy, and the Deploy workflow keeps them up to date over
+SSH once this repository has the server's settings ([docs/deploying.md](docs/deploying.md#over-ssh));
+until then a deploy says which build is ready and does nothing. The site block it writes, whose
+rules the image's `Caddyfile` has too:
 
 ```caddyfile
 lms.example.edu {
@@ -367,62 +369,24 @@ set Core's `COOKIE_SAMESITE=none`.
   against the Core pinned in `.github/core-image`. A pull request's image is built and tested too
   (`scripts/test-image.sh`).
 - **A green push to `main`** has its image tested and pushed to GHCR as `:sha-<commit>`, and `:edge`
-  while it is `main`'s tip, by [Publish](.github/workflows/publish.yml); and it is deployed to edge
-  (test.aishie.app) over SSH by [Deploy](.github/workflows/deploy.yml), with the build CI checked:
-  nothing is built again.
+  while it is `main`'s tip, by [Publish](.github/workflows/publish.yml), which edge servers
+  (test.aishie.app) pull within five minutes. [Deploy](.github/workflows/deploy.yml) hands the build
+  CI checked to a server of the older way, over SSH, once this repository has its settings: nothing
+  is built again.
 - **A version tag** (`v1.2.3`) runs CI again, publishes its image as `:1.2.3` and `:1.2` (and
   `:latest` and `:stable`, when it is the highest stable release), and that build on the release
-  page; a pre-release (`v1.2.3-rc.1`) also goes to edge. **Stable**, schools' sites, is deployed by
-  hand: Actions → Deploy → Run workflow, from the release's tag, environment `stable`
+  page. **Stable**, schools' sites, takes a release when its operator names it in the server's
+  settings (AIShie-Deploy's README, Upgrading stable); a server of the older way, when somebody runs
+  Deploy by hand from the release's tag, environment `stable`
   ([CONTRIBUTING.md](CONTRIBUTING.md#releasing)).
-- **Rolling back** is immediate on the server, which keeps the last few releases:
+- **Rolling back**, on the stack, is pinning the image before (AIShie-Deploy's README, Rolling back).
+  Over SSH it is immediate on the server, which keeps the last few releases:
   `sudo -u webdeploy aishie-web-deploy list`, then `… activate <release>`; or run Deploy from the
   newest release's tag with the older tag as the ref ([docs/deploying.md](docs/deploying.md#day-to-day)).
 
-A server needs `deploy/setup-web.sh` once, and the repository needs its deploy settings and read access
-to Core's image once ([CONTRIBUTING.md](CONTRIBUTING.md#one-time-settings)). Until the settings are
-there, a deploy says which build is ready and does nothing.
-
-### Renaming the settings
-
-The environments were called `staging` and `production`, and are `edge` and `stable` now. Deploy
-reads each of its settings by the new name first and, until a later release that removes this, by
-the old one, with a warning in the run that names the setting to add; so deploys go on, and
-test.aishie.app keeps getting each green push, while the settings are renamed. In this
-repository's settings, before merging the rename if you can:
-
-1. **Environments** (Settings → Environments → New environment): make `edge` with the rules
-   `staging` has, and `stable` with the rules `production` has: its required reviewers, and
-   Deployment branches and tags (`edge`: branch `main` and tags `v*`; `stable`: tags `v*` only).
-   **Give `stable` production's protection before its first deploy.** GitHub neither renames
-   environments nor carries their rules over: the first run that names `stable` creates it with no
-   protection at all, and then nothing but Deploy's own check that it runs from a stable release's
-   tag stands between write access to this repository and the schools' sites.
-2. **Variables and secrets** (Settings → Secrets and variables → Actions): add each one that is set
-   under its new name, with the same value, then delete the old one.
-
-   | Kind | Old name | New name |
-   | --- | --- | --- |
-   | Variable | `DEPLOY_WEB_TARGET_STAGING` | `DEPLOY_WEB_TARGET_EDGE` |
-   | Variable | `DEPLOY_WEB_KNOWN_HOSTS_STAGING` | `DEPLOY_WEB_KNOWN_HOSTS_EDGE` |
-   | Variable | `DEPLOY_WEB_URL_STAGING` | `DEPLOY_WEB_URL_EDGE` |
-   | Secret | `DEPLOY_WEB_SSH_KEY_STAGING` | `DEPLOY_WEB_SSH_KEY_EDGE` |
-   | Variable | `DEPLOY_WEB_TARGET_PRODUCTION` | `DEPLOY_WEB_TARGET_STABLE` |
-   | Variable | `DEPLOY_WEB_KNOWN_HOSTS_PRODUCTION` | `DEPLOY_WEB_KNOWN_HOSTS_STABLE` |
-   | Variable | `DEPLOY_WEB_URL_PRODUCTION` | `DEPLOY_WEB_URL_STABLE` |
-   | Secret | `DEPLOY_WEB_SSH_KEY_PRODUCTION` | `DEPLOY_WEB_SSH_KEY_STABLE` |
-
-   A variable's value can be copied from its page. A secret's cannot be read back: paste the key
-   from wherever a copy is kept or, with none, give the server a new key
-   ([docs/deploying.md](docs/deploying.md#connecting-the-deploy-workflow), to replace the key),
-   which `setup-web.sh` prints under the new name.
-3. Once a deploy to each environment runs without a warning, the environments `staging` and
-   `production` can be deleted, with the deployments they recorded.
-
-The Deploy form offers `edge` and `stable` alone, as GitHub takes nothing but a choice's options
-there; a workflow that calls Deploy with `staging` or `production` has them taken as `edge` and
-`stable`, with a warning. Servers need nothing: `deploy/setup-web.sh` takes `edge` or `stable`, or
-their old names until the same later release, only to name the settings it prints.
+This repository and its image are public, and so is Core's: anyone pulls them, and the end-to-end
+tests pull Core's, with no login. The older way needs `deploy/setup-web.sh` on a server once, and the
+repository its deploy settings ([CONTRIBUTING.md](CONTRIBUTING.md#one-time-settings)).
 
 ### Moving the Core pin
 

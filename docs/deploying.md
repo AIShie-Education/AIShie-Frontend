@@ -13,10 +13,9 @@ GHCR, and its Caddy terminates TLS in front of them. That is how the front end
 is deployed: as [its image](#the-image), which every green push to `main` and
 every release publishes.
 
-Until the stack runs, the front end is also deployed the way it was before, and
-that still works: over SSH, as files, to the server Core runs on
-([Over SSH](#over-ssh), and the sections after it). It is retired once the
-stack runs.
+The older way is still here: over SSH, as files, to a server of Core's own
+([Over SSH](#over-ssh), and the sections after it), which the Deploy workflow
+keeps up to date once this repository has the server's settings.
 
 ## The agent runtime's API
 
@@ -41,8 +40,8 @@ block has no route for the path, shows no hosting.
 `ghcr.io/aishie-education/aishie-frontend`, for `linux/amd64` and
 `linux/arm64`: the production build (`npm run build`) served by Caddy, as the
 [`Dockerfile`](../Dockerfile) and [`Caddyfile`](../Caddyfile) make it. The
-package is private, as Core's is: the first publish creates it, linked to this
-repository, and a server pulls it with a token that can read it.
+package is public, as Core's is: the first publish creates it, linked to this
+repository, and a server pulls it with no login.
 
 ### Tags
 
@@ -210,8 +209,8 @@ The server Core runs on, one per environment, set up with Core's
 ([Core's docs/deploying.md](https://github.com/AIShie-Education/AIShie-Core/blob/main/docs/deploying.md)),
 serves the files itself. Caddy, which already serves HTTPS there, sends
 `/v1/*`, `/mcp`, `/mcp/*` and `/healthz` to Core on `127.0.0.1:8080`, and
-everything else to the files in `/srv/aishie-web/current`. This is retired
-once the compose stack runs; until then it works as it did.
+everything else to the files in `/srv/aishie-web/current`. It is the older
+way, and works as it did once this repository has the server's settings.
 
 The scripts in [`deploy/`](../deploy) do the work:
 
@@ -302,13 +301,13 @@ repository's Settings → Secrets and variables → Actions:
 | Secret | `DEPLOY_WEB_SSH_KEY_EDGE` | the whole of `/root/aishie-web-deploy-key` |
 | Variable (optional) | `DEPLOY_WEB_URL_EDGE` | the site's origin, when it is not `https://` + the target's host |
 
-For stable, the names end in `_STABLE`. They are the repository's,
-not the environment's: a private repository on GitHub Free has no environment
-variables or secrets. SSH on a port other than 22 is
+For stable, the names end in `_STABLE`. They are the repository's, not the
+environment's, as the workflow was written when the repository was private and
+GitHub Free gave it no environment variables or secrets. SSH on a port other than 22 is
 `ssh://webdeploy@host:2222` in the target and `[host]:2222 ssh-ed25519 …` in
 the host key line. Settings added before edge and stable had those names end
 in `_STAGING` and `_PRODUCTION`: they are read, with a warning, until a later
-release ([README.md](../README.md#renaming-the-settings)).
+release ([below](#settings-from-before-the-rename)).
 
 The host key line is the same one Core's repository has in
 `DEPLOY_KNOWN_HOSTS_EDGE`: it is the server's. The key is not the same: the
@@ -322,11 +321,53 @@ that half a configuration is not taken for none.
 The key can only run `aishie-web-deploy`, but that puts any build it is
 given on the site, which is Core's origin: whoever can deploy can run
 JavaScript as every person who signs in. Anyone with write access to this
-repository can run a workflow that reads the secret. On GitHub Free nothing
-narrows that down to a branch or to people. When someone loses write access,
+repository can run a workflow that reads the secret. The secret is the
+repository's, not an environment's, so no environment's rule narrows that down
+to a branch or to people. When someone loses write access,
 replace the key: on the server, delete `~webdeploy/.ssh/authorized_keys` and
 any `/root/aishie-web-deploy-key*` left, run `setup-web.sh` again as in
 step 1, and put the new key it prints into the secret.
+
+### Settings from before the rename
+
+The environments were called `staging` and `production`, and are `edge` and `stable` now. Deploy
+reads each of its settings by the new name first and, until a later release that removes this, by
+the old one, with a warning in the run that names the setting to add; so deploys go on, and
+test.aishie.app keeps getting each green push, while the settings are renamed. In this
+repository's settings, before merging the rename if you can:
+
+1. **Environments** (Settings → Environments → New environment): make `edge` with the rules
+   `staging` has, and `stable` with the rules `production` has: its required reviewers, and
+   Deployment branches and tags (`edge`: branch `main` and tags `v*`; `stable`: tags `v*` only).
+   **Give `stable` production's protection before its first deploy.** GitHub neither renames
+   environments nor carries their rules over: the first run that names `stable` creates it with no
+   protection at all, and then nothing but Deploy's own check that it runs from a stable release's
+   tag stands between write access to this repository and the schools' sites.
+2. **Variables and secrets** (Settings → Secrets and variables → Actions): add each one that is set
+   under its new name, with the same value, then delete the old one.
+
+   | Kind | Old name | New name |
+   | --- | --- | --- |
+   | Variable | `DEPLOY_WEB_TARGET_STAGING` | `DEPLOY_WEB_TARGET_EDGE` |
+   | Variable | `DEPLOY_WEB_KNOWN_HOSTS_STAGING` | `DEPLOY_WEB_KNOWN_HOSTS_EDGE` |
+   | Variable | `DEPLOY_WEB_URL_STAGING` | `DEPLOY_WEB_URL_EDGE` |
+   | Secret | `DEPLOY_WEB_SSH_KEY_STAGING` | `DEPLOY_WEB_SSH_KEY_EDGE` |
+   | Variable | `DEPLOY_WEB_TARGET_PRODUCTION` | `DEPLOY_WEB_TARGET_STABLE` |
+   | Variable | `DEPLOY_WEB_KNOWN_HOSTS_PRODUCTION` | `DEPLOY_WEB_KNOWN_HOSTS_STABLE` |
+   | Variable | `DEPLOY_WEB_URL_PRODUCTION` | `DEPLOY_WEB_URL_STABLE` |
+   | Secret | `DEPLOY_WEB_SSH_KEY_PRODUCTION` | `DEPLOY_WEB_SSH_KEY_STABLE` |
+
+   A variable's value can be copied from its page. A secret's cannot be read back: paste the key
+   from wherever a copy is kept or, with none, give the server a new key
+   ([above](#connecting-the-deploy-workflow), to replace the key),
+   which `setup-web.sh` prints under the new name.
+3. Once a deploy to each environment runs without a warning, the environments `staging` and
+   `production` can be deleted, with the deployments they recorded.
+
+The Deploy form offers `edge` and `stable` alone, as GitHub takes nothing but a choice's options
+there; a workflow that calls Deploy with `staging` or `production` has them taken as `edge` and
+`stable`, with a warning. Servers need nothing: `deploy/setup-web.sh` takes `edge` or `stable`, or
+their old names until the same later release, only to name the settings it prints.
 
 ## Day to day
 
@@ -393,12 +434,12 @@ Run these as root on the server.
   layers are not those of the image the job tested, which the builder's cache
   should have made them: `:edge` was not moved, and a release was not
   published. Run the job again.
-- **The e2e job cannot pull Core's image.** Core's image is private, and this
-  repository's workflows can read it only once an owner of the organization
-  grants it: the package's settings
+- **The e2e job cannot pull Core's image.** It is pulled with no login, so the
+  package must be public: an owner of the organization makes it so in the
+  package's settings
   (github.com/orgs/AIShie-Education/packages/container/aishie-core/settings)
-  → Manage Actions access → Add Repository → `AIShie-Frontend`, role
-  Read. It is done once.
+  → Danger Zone → Change visibility → Public. If the error is not `denied`,
+  `unauthorized` or `not found`, GHCR may be having trouble: run the job again.
 - **"refused the build".** The archive held something other than plain files
   and directories, a name with a character other than letters, digits and
   `. _ ~ @ + - /`, a path outside itself, no `index.html` at the top, or more
