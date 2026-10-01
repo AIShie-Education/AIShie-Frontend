@@ -42,6 +42,7 @@ beforeEach(() => {
 })
 enableAutoUnmount(afterEach)
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   setLocale('en')
@@ -245,13 +246,16 @@ describe('adding a provider', () => {
   })
 
   it('retries after no answer under the same key, and takes a new one once anything changes', async () => {
+    // The clock is moved past the waits before the write is sent again
+    // (half a second, then a second), not waited for.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     await open()
     await fillNew(newSecret())
     core.once('POST', SSO.list, () => Promise.reject(new TypeError('Failed to fetch')))
     core.once('POST', SSO.list, () => Promise.reject(new TypeError('Failed to fetch')))
     core.once('POST', SSO.list, () => Promise.reject(new TypeError('Failed to fetch')))
     await click('.sso-dialog__save')
-    await new Promise((r) => setTimeout(r, 1700))
+    await vi.advanceTimersByTimeAsync(500 + 1_000)
     await settle()
     const first = core.to('POST', SSO.list).map((c) => c.headers['Idempotency-Key'])
     expect(first).toHaveLength(3)
@@ -391,6 +395,7 @@ describe('changing a provider', () => {
 
 describe('the secret', () => {
   it('is in its field alone while editing, and gone from the page once the dialog closes', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     const secret = newSecret()
     const w = await open()
     await fillNew(secret)
@@ -400,7 +405,7 @@ describe('the secret', () => {
     // Cancel.
     ;(dialog().querySelector('.el-dialog__footer .el-button') as HTMLElement).click()
     await settle()
-    await new Promise((r) => setTimeout(r, 400))
+    await vi.advanceTimersByTimeAsync(400)
     await settle()
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([false])
     expect(inPage(secret)).toBe(false)

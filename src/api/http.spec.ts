@@ -33,7 +33,9 @@ function json(status: number, body: unknown, headers: Record<string, string> = {
 beforeEach(() => {
   calls = []
   responses = []
-  vi.useFakeTimers({ shouldAdvanceTime: true })
+  // The clock moves only when a test moves it: a wait before a call is sent
+  // again takes no time, and a busy machine cannot stretch one past a limit.
+  vi.useFakeTimers()
   vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
     calls.push({
       url,
@@ -81,8 +83,11 @@ describe('read', () => {
   it('retries a read that met a gateway error', async () => {
     responses.push(json(502, {}))
     responses.push(json(200, { status: 'executed', result: { id: 'me' } }))
-    const out = await read('me.get', {})
-    expect(out).toEqual({ id: 'me' })
+    const p = read('me.get', {})
+    await vi.advanceTimersByTimeAsync(499)
+    expect(calls).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(await p).toEqual({ id: 'me' })
     expect(calls).toHaveLength(2)
   })
 })
@@ -201,7 +206,9 @@ describe('write', () => {
     responses.push(
       json(200, { status: 'executed', action_id: 'a5', result: { ok: true } }, { 'Idempotency-Replayed': 'true' }),
     )
-    const out = await write('course.activate', { course_id: 'c1' })
+    const p = write('course.activate', { course_id: 'c1' })
+    await vi.advanceTimersByTimeAsync(500)
+    const out = await p
     expect(calls).toHaveLength(2)
     expect(calls[0].headers['Idempotency-Key']).toBe(calls[1].headers['Idempotency-Key'])
     expect(out.replayed).toBe(true)
@@ -211,7 +218,9 @@ describe('write', () => {
     responses.push(json(429, { error: { code: 'rate_limited', message: 'slow down' } }, { 'Retry-After': '1' }))
     responses.push(json(200, { status: 'executed', action_id: 'a6', result: { ok: true } }))
     const p = write('course.activate', { course_id: 'c1' })
-    await vi.advanceTimersByTimeAsync(1100)
+    await vi.advanceTimersByTimeAsync(999)
+    expect(calls).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1)
     const out = await p
     expect(out.status).toBe('executed')
     expect(calls).toHaveLength(2)

@@ -52,18 +52,23 @@ beforeEach(async () => {
 
 enableAutoUnmount(afterEach)
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   document.body.innerHTML = ''
 })
 
-async function panel(props: Record<string, unknown> = {}) {
+function mountPanel(props: Record<string, unknown> = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
-  const w = mount(HostingPanel, {
+  return mount(HostingPanel, {
     props: { agent: AGENT, standing: 'active', ...props },
     global: { plugins: [pinia, i18n, ElementPlus, router], components: icons },
     attachTo: document.body,
   })
+}
+
+async function panel(props: Record<string, unknown> = {}) {
+  const w = mountPanel(props)
   await flushPromises()
   await vi.waitFor(() => expect(w.find('.hosting-panel__checking').exists()).toBe(false))
   await flushPromises()
@@ -156,22 +161,22 @@ describe('HostingPanel: the runtime is here', () => {
   })
 
   it('says the runtime is not available now, with a retry', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    try {
-      s.on('GET', RUNTIME.agents, () =>
-        json(503, { error: { code: 'unavailable', message: 'db', details: { reason: 'store_unavailable' } } }),
-      )
-      const w = await panel()
-      await vi.waitFor(
-        () => expect(w.text()).toContain('The school’s runtime is not available right now. Try again in a minute.'),
-        { timeout: 5000 },
-      )
-      s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
-      await w.find('.hosting-offer__error button').trigger('click')
-      await vi.waitFor(() => expect(w.find('.hosting-offer__host').exists()).toBe(true))
-    } finally {
-      vi.useRealTimers()
-    }
+    // The clock is moved past the waits before the read is sent again (half
+    // a second, then a second), not waited for.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    s.on('GET', RUNTIME.agents, () =>
+      json(503, { error: { code: 'unavailable', message: 'db', details: { reason: 'store_unavailable' } } }),
+    )
+    const w = mountPanel()
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(500 + 1_000)
+    await flushPromises()
+    expect(s.to('GET', RUNTIME.agents)).toHaveLength(3)
+    expect(w.text()).toContain('The school’s runtime is not available right now. Try again in a minute.')
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+    await w.find('.hosting-offer__error button').trigger('click')
+    await flushPromises()
+    expect(w.find('.hosting-offer__host').exists()).toBe(true)
   })
 
   it('hosts the agent by its id: the first step, then the model and key, with the card behind it', async () => {

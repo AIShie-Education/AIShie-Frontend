@@ -30,6 +30,7 @@ beforeEach(() => {
 
 enableAutoUnmount(afterEach)
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   document.body.innerHTML = ''
@@ -138,13 +139,15 @@ describe('HostOnRuntimeDialog: an agent of its page', () => {
   })
 
   it('says the runtime is not set up to host agents', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     s.on('POST', RUNTIME.inspect, () => refusal(503, 'unavailable', 'runtime_misconfigured'))
     const w = await open()
-    // A 503 is asked again twice before it is the answer.
-    await vi.waitFor(
-      () => expect(w.text()).toContain('The school’s runtime is not set up to host agents. Tell your administrator.'),
-      { timeout: 5000 },
-    )
+    // A 503 is asked again twice, half a second and then a second apart,
+    // before it is the answer.
+    await vi.advanceTimersByTimeAsync(500 + 1_000)
+    await flushPromises()
+    expect(s.to('POST', RUNTIME.inspect)).toHaveLength(3)
+    expect(w.text()).toContain('The school’s runtime is not set up to host agents. Tell your administrator.')
   })
 
   it('says so in Traditional and Simplified Chinese', async () => {
