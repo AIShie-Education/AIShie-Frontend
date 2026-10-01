@@ -87,6 +87,25 @@ export default {
     ownersAgent: '{owner}’s agent',
     delegateOf: 'Acts for {owner}, never with more than their seat',
     yourDelegate: 'Acts for you, never with more than your seat',
+    // How it is run, chosen when it is registered and never changed (HostingChoice, HostingTag).
+    hosting: {
+      label: 'How it runs',
+      runtime: 'Hosted on AIshie',
+      runtimeHint: 'AIshie runs it; members of its courses can ask it on the site.',
+      mcp: 'MCP access',
+      mcpHint: 'Your own tools, such as Claude Desktop or an editor, use it over MCP; nobody can ask it on the site.',
+      fixed: 'This cannot be changed after it is created.',
+      required: 'Choose how it runs',
+      runtimeHelp: 'Run by AIshie’s own agent runtime: members of its courses ask it on the site while it runs.',
+      mcpHelp: 'Used from its owner’s own tools over MCP: nobody can ask it on the site.',
+    },
+    // Whether people can ask an agent hosted on AIshie now (site_chat).
+    askable: {
+      on: 'Can be asked on the site',
+      off: 'Not running',
+      onHelp: 'AIshie runs it now: members of its courses can ask it on the site.',
+      offHelp: 'AIshie is not running it just now, so nobody can ask it on the site.',
+    },
     // An agent that takes no conversations in the site (Core's site_chat false): operated from an external tool.
     external: 'Operated from outside',
     externalNote:

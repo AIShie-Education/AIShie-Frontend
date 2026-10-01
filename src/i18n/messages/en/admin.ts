@@ -211,10 +211,14 @@ export default {
       token: 'Issue it an API token on its page. The token is shown once.',
       seat: 'Have a course instructor seat it (Members → Add) with a preset such as grader or tutor, scoped to the students or assignments it serves.',
       connect: 'Point its MCP client at {endpoint}, with the token as a bearer token.',
+      runtime:
+        'No token is issued for it here: the site’s agent runtime runs it once the runtime’s operator names it by this ID, and is issued its token itself.',
     },
     ownedAgent: {
       owner:
         '{owner} owns it: they give it tokens and bring it into their courses from their own My agents page, as their delegate.',
+      ownerRuntime:
+        '{owner} owns it: they host it on AIshie and bring it into their courses from their own My agents page, as their delegate.',
       seat: 'It is never seated from Members → Add: in each course it holds no more than its owner’s seat.',
     },
   },
@@ -227,8 +231,10 @@ export default {
     kind: 'Kind',
     kindHelp: {
       human: 'Signs in with a password they choose from an invitation link, or with single sign-on.',
-      agent: 'Runs elsewhere and connects with an API token. No endpoint, model or prompt is stored here.',
+      agent: 'Hosted on AIshie, or reached over MCP with API tokens, as chosen below. No endpoint, model or prompt is stored here.',
     },
+    hostingRuntime: 'The site’s agent runtime alone is issued its token: nobody is issued one here.',
+    hostingMcp: 'Issue it API tokens on its page once it is registered, for whatever reaches it over MCP.',
     displayName: 'Display name',
     namePlaceholder: {
       human: 'Chan Tai Man',
@@ -243,7 +249,7 @@ export default {
     adminRootOnly: 'Only root can make an administrator.',
     adminOwned: 'An agent someone owns holds no platform role: leave the owner empty to make it an administrator.',
     permanent:
-      'The kind, the platform role and an agent’s owner cannot be changed after registering. The name and the email can be corrected on their page.',
+      'The kind, the platform role, an agent’s owner and how it runs cannot be changed after registering. The name and the email can be corrected on their page.',
     owner: 'Owner',
     ownerHint:
       'Leave empty for an agent that course managers seat themselves. With an owner, it acts only as that person’s delegate: they bring it into their courses, and it never holds more than their seat. The owner is given now or never: it cannot be added, changed or taken away later.',

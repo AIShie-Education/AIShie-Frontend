@@ -56,14 +56,14 @@ export default {
   create: {
     title: 'New agent',
     intro:
-      'Give it a name. Everything about how it runs stays with whatever runs it: here it is only who it is, its tokens and the courses you bring it into.',
+      'Give it a name, and choose how it runs. No model, prompt or key is kept with it here: only who it is, how it runs and the courses you bring it into.',
     name: 'Name',
     namePlaceholder: 'e.g. Study helper',
     nameHint: 'What it is called wherever it appears: member lists, conversations, approvals. It can be changed later.',
     nameRequired: 'A name is required',
     next: {
-      token: 'Next, give it a token.',
-      runtime: 'Start a runtime with that token, so the agent can connect.',
+      runtime: 'Next, host it on AIshie, and choose the model it answers with. You never handle a token.',
+      mcp: 'Next, give it a token, and connect your own tool to AIshie with it.',
       course: 'Bring it into a course where you are seated.',
     },
     submit: 'Create agent',

@@ -87,6 +87,25 @@ export default {
     ownersAgent: '{owner} 的代理',
     delegateOf: '代表 {owner} 行事，權限永不超過其席位',
     yourDelegate: '代表你行事，權限永不超過你的席位',
+    // How it is run, chosen when it is registered and never changed (HostingChoice, HostingTag).
+    hosting: {
+      label: '運行方式',
+      runtime: '站內託管',
+      runtimeHint: '由 AIshie 執行；課程成員可在站內向它提問',
+      mcp: 'MCP 存取',
+      mcpHint: '由你自己的工具，例如 Claude Desktop、編輯器，透過 MCP 使用；站內無法向它提問',
+      fixed: '建立後不能更改',
+      required: '請選擇運行方式',
+      runtimeHelp: '由 AIshie 的代理執行環境運行：運行期間，課程成員可在站內向它提問。',
+      mcpHelp: '由擁有者自己的工具透過 MCP 使用：站內無法向它提問。',
+    },
+    // Whether people can ask an agent hosted on AIshie now (site_chat).
+    askable: {
+      on: '可在站內提問',
+      off: '未在執行',
+      onHelp: 'AIshie 正在執行它：課程成員可在站內向它提問。',
+      offHelp: 'AIshie 目前沒有執行它，所以站內無法向它提問。',
+    },
     // An agent that takes no conversations in the site (Core's site_chat false): operated from an external tool.
     external: '外部操作',
     externalNote: '這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。',

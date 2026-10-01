@@ -593,6 +593,8 @@ function startAgain() {
     is_my_delegate: r.is_delegate_of_opener,
     // Someone else's agent answers the opener only if it answers the course.
     answers_course: r.kind === 'agent' && !r.is_delegate_of_opener,
+    // Only an agent the site's runtime runs is asked here.
+    hosting: 'runtime',
     owner_name: r.owner_name,
     last_seen_at: r.last_seen_at,
     answer_level: r.answer_level,

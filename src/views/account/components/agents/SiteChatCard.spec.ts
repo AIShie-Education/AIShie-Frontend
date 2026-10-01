@@ -38,6 +38,7 @@ function agent(over: Partial<AgentFull> = {}): AgentFull {
     actor_id: 'agent-1',
     display_name: 'Study helper',
     created_at: '2026-09-01T00:00:00Z',
+    hosting: 'runtime',
     requests: [],
     seats: [],
     site_chat: false,

@@ -3,7 +3,7 @@
 import { computed, watch, type ComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError, read } from '@/api/http'
-import type { ListItem } from '@/api/types'
+import type { AgentHosting, ListItem } from '@/api/types'
 import { isUuid, uuidPredecessor } from '@/utils/format'
 
 // Kept here for the pages that import it from the administration's helpers.
@@ -69,6 +69,8 @@ export interface RegisteredActor {
   /** A person's student or staff number, which they sign in with as with an email. */
   login_id?: string | null
   platform_role: string | null
+  /** An agent's hosting, chosen as it was registered. */
+  hosting?: AgentHosting | null
 }
 
 /** An email address as the forms take one; Core has the last word. */

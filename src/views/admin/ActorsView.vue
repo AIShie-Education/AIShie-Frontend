@@ -202,8 +202,21 @@ async function openById() {
         </li>
       </ol>
       <ol v-else-if="justOwner" class="actors__steps">
-        <li>{{ t('admin.registered.ownedAgent.owner', { owner: justOwner.display_name }) }}</li>
+        <li>
+          {{
+            t(
+              justRegistered.hosting === 'runtime'
+                ? 'admin.registered.ownedAgent.ownerRuntime'
+                : 'admin.registered.ownedAgent.owner',
+              { owner: justOwner.display_name },
+            )
+          }}
+        </li>
         <li>{{ t('admin.registered.ownedAgent.seat') }}</li>
+      </ol>
+      <ol v-else-if="justRegistered.hosting === 'runtime'" class="actors__steps">
+        <li>{{ t('admin.registered.agent.runtime') }}</li>
+        <li>{{ t('admin.registered.agent.seat') }}</li>
       </ol>
       <ol v-else class="actors__steps">
         <li>{{ t('admin.registered.agent.token') }}</li>

@@ -170,6 +170,7 @@ const tutorOffered: Respondent = {
   role: 'assistant',
   is_my_delegate: false,
   answers_course: true,
+  hosting: 'runtime',
   answer_level: 'autonomous',
   last_seen_at: '2026-09-26T11:59:30Z',
 }
@@ -683,6 +684,7 @@ describe('ChatPane', () => {
       role: 'assistant',
       is_my_delegate: false,
       answers_course: true,
+      hosting: 'runtime',
       answer_level: 'autonomous',
       last_seen_at: null,
     }

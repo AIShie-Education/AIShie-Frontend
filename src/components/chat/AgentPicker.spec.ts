@@ -50,6 +50,7 @@ const tutor: Respondent = {
   role: 'assistant',
   is_my_delegate: false,
   answers_course: true,
+  hosting: 'runtime',
   answer_level: 'autonomous',
   last_seen_at: '2026-09-26T11:59:30Z',
 }
@@ -59,6 +60,7 @@ function helper(siteChat: boolean): { summary: AgentSummary; full: AgentFull } {
     actor_id: 'helper',
     display_name: 'My helper',
     created_at: '2026-09-01T00:00:00Z',
+    hosting: 'runtime',
     site_chat: siteChat,
     status: 'active',
     suspended_by_me: false,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { delegateArgsFor, presetForPurpose, seatPurpose } from './agents'
+import { delegateArgsFor, hostingOf, presetForPurpose, seatPurpose } from './agents'
 
 describe('seatPurpose', () => {
   it('reads what the seat records first', () => {
@@ -24,5 +24,19 @@ describe('seatPurpose', () => {
     expect(delegateArgsFor('course')).toEqual({ preset: 'course_tutor', answers_course: true })
     expect(delegateArgsFor('personal')).toEqual({ preset: 'delegate', answers_course: false })
     expect(seatPurpose(delegateArgsFor('course'))).toBe('course')
+  })
+})
+
+describe('hostingOf', () => {
+  it('reads the two ways an agent is hosted', () => {
+    expect(hostingOf('runtime')).toBe('runtime')
+    expect(hostingOf('mcp')).toBe('mcp')
+  })
+  it('says nothing of a seat without one, or of a word it does not know', () => {
+    expect(hostingOf(undefined)).toBeNull()
+    expect(hostingOf(null)).toBeNull()
+    expect(hostingOf('')).toBeNull()
+    expect(hostingOf('external')).toBeNull()
+    expect(hostingOf(1)).toBeNull()
   })
 })
