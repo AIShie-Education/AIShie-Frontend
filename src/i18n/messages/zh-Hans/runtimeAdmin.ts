@@ -333,7 +333,8 @@ export default {
     perAsker: '每位提问者',
     perAskerHint: '每位提问者在一门课程中向一个智能体提问。',
     perDay: '全校',
-    perDayHint: '所有人使用学校密钥的总和。留空表示不设上限。',
+    perDayHint:
+      '学校密钥上的所有用量，不论是谁的智能体回答：方案上的智能体、运维方使用学校密钥的智能体，以及（以美元计）文件转写。任何人自己的密钥上的用量都不计算在内。留空表示不设上限。',
     noCeiling: '不设上限',
     default: '服务器默认：{n}',
     defaultNone: '服务器默认：不设上限',
@@ -361,6 +362,7 @@ export default {
     noCeiling: '全校不设上限',
     limits: '每位拥有者每天最多 {owner} 次，每位提问者最多 {asker} 次。',
     limitsUsd: '以美元计：每位拥有者 {owner}，每位提问者 {asker}，全校 {day}。',
+    noTranscription: '这里的费用不含文件转写，但全校的美元上限也把转写计算在内。',
     owner: '拥有者',
     operator: '运维方的智能体',
     unknownOwner: '运行环境尚未见过的用户',

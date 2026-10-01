@@ -333,7 +333,8 @@ export default {
     perAsker: '每位提問者',
     perAskerHint: '每位提問者在一個課程中向一個代理提問。',
     perDay: '全校',
-    perDayHint: '所有人使用學校金鑰的總和。留空表示不設上限。',
+    perDayHint:
+      '學校金鑰上的所有用量，不論是誰的代理回答：方案上的代理、營運者使用學校金鑰的代理，以及（以美元計）文件轉寫。任何人自己的金鑰上的用量都不計算在內。留空表示不設上限。',
     noCeiling: '不設上限',
     default: '伺服器預設：{n}',
     defaultNone: '伺服器預設：不設上限',
@@ -361,6 +362,7 @@ export default {
     noCeiling: '全校不設上限',
     limits: '每位擁有者每天最多 {owner} 次，每位提問者最多 {asker} 次。',
     limitsUsd: '以美元計：每位擁有者 {owner}，每位提問者 {asker}，全校 {day}。',
+    noTranscription: '這裡的費用不含文件轉寫，但全校的美元上限也把轉寫計算在內。',
     owner: '擁有者',
     operator: '營運者的代理',
     unknownOwner: '執行環境尚未見過的使用者',

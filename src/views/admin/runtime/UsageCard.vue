@@ -3,7 +3,10 @@
 // 00:00 UTC: answers, model calls and their cost on the school's keys, in
 // all and per owner, against the quotas in force. Counts and costs only,
 // never what anyone wrote. The runtime has answered this before it had the
-// plan's other routes, so it is there on an older one too.
+// plan's other routes, so it is there on an older one too. Its cost is the
+// answers' model calls alone (the runtime's kind 'model_calls'), while the
+// whole school's ceiling in dollars counts the transcription of documents
+// too, so the card says so beside that ceiling.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { runtimeAdmin } from '@/api/runtime'
@@ -89,7 +92,12 @@ const schoolSpent = computed(() => {
         </dl>
         <p class="app-form-hint usage-card__limits">
           {{ t('runtimeAdmin.usage.limits', { owner: data.limits.per_owner_day, asker: data.limits.per_asker_day }) }}
-          <template v-if="usdLimits">{{ t('runtimeAdmin.usage.limitsUsd', usdLimits) }}</template>
+          <template v-if="usdLimits">
+            {{ t('runtimeAdmin.usage.limitsUsd', usdLimits) }}
+            <span v-if="data.limits.per_day_usd != null" class="usage-card__no-transcription">{{
+              t('runtimeAdmin.usage.noTranscription')
+            }}</span>
+          </template>
         </p>
 
         <el-empty v-if="!owners.length" :description="t('runtimeAdmin.usage.empty')" class="usage-card__empty" />

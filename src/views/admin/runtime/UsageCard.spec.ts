@@ -87,7 +87,7 @@ describe('UsageCard', () => {
     })
     const w = await card()
     expect(w.find('.usage-card__limits').text()).toBe(
-      'Up to 150 a day per owner, and 20 per person asking. In dollars: $2.50 per owner, No limit per person asking, and $100.00 for the whole school.',
+      'Up to 150 a day per owner, and 20 per person asking. In dollars: $2.50 per owner, No limit per person asking, and $100.00 for the whole school. This cost leaves out the transcription of documents, which the whole school’s ceiling in dollars counts too.',
     )
     expect(w.find('.usage-card__of-usd').text()).toBe('of $100.00 a day')
   })

@@ -366,7 +366,8 @@ export default {
     perAsker: 'Per person asking',
     perAskerHint: 'For each person who asks one agent, in one course.',
     perDay: 'For the whole school',
-    perDayHint: 'Across everyone, on the school’s keys. Empty for no ceiling.',
+    perDayHint:
+      'Everything on the school’s key, whoever’s agent answers: agents on the plan, the operator’s agents on the school’s key, and, in dollars, the transcription of documents. Nothing on anyone’s own key counts. Empty for no ceiling.',
     noCeiling: 'No ceiling',
     default: 'Server default: {n}',
     defaultNone: 'Server default: no ceiling',
@@ -397,6 +398,8 @@ export default {
     noCeiling: 'no ceiling for the school',
     limits: 'Up to {owner} a day per owner, and {asker} per person asking.',
     limitsUsd: 'In dollars: {owner} per owner, {asker} per person asking, and {day} for the whole school.',
+    noTranscription:
+      'This cost leaves out the transcription of documents, which the whole school’s ceiling in dollars counts too.',
     owner: 'Owner',
     operator: 'The operator’s agents',
     unknownOwner: 'Someone the runtime has not seen yet',
