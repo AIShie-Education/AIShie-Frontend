@@ -260,6 +260,48 @@ async function expectClearOfChatButton(page: Page, paths: string[]) {
   expect(scrolled, 'pages longer than the screen, scrolled to their end').toBeGreaterThan(0)
 }
 
+/**
+ * On one signed-in page, the chat is closed with nothing at the right edge
+ * and no button in the header; it opens from its round button, 16 px from the
+ * corner, over the page, which keeps its width; and minimized, the button is
+ * back, with focus.
+ */
+async function opensFromItsButton(page: Page, path: string, what: string) {
+  await page.goto(path)
+  await expect(page.locator('.app-main').first()).toBeVisible()
+  // Closed: no rail, nothing at the right edge, the header across the whole width, and no chat button in it.
+  await expectNothingAtRightEdge(page, what)
+  await expect(page.locator('.app-header [aria-controls="chat-panel"]'), what).toHaveCount(0)
+  const button = chatButton(page)
+  await expect(button, what).toBeVisible()
+  const at = (await button.boundingBox())!
+  const win = await inner(page)
+  expect([Math.round(win.width - at.x - at.width), Math.round(win.height - at.y - at.height)], what).toEqual([16, 16])
+  const pageWidth = (await box_(page.locator('.app-main'))).width
+  await button.click()
+  await expect(panelOf(page), what).toBeVisible()
+  // In the button's corner, over the page, which keeps its width; the button is gone while it is open.
+  await expectInCorner(page)
+  await expectWindow(page, pageWidth)
+  await expect(chatButton(page), what).toHaveCount(0)
+  await expect(panelOf(page).getByRole('heading', { name: 'Chat', exact: true })).toBeVisible()
+  if (path === '/') {
+    await page.mouse.move(0, 400)
+    await photograph(page, 'chat-window-open')
+    await page.locator('html').evaluate((h) => h.classList.add('dark'))
+    await photograph(page, 'chat-window-open-dark')
+    await page.locator('html').evaluate((h) => h.classList.remove('dark'))
+  }
+  await minimizeChat(page)
+  await expect(button, what).toBeVisible()
+  await expect(button, what).toBeFocused()
+  await expectNothingAtRightEdge(page, `${what}, minimized`)
+  if (path === '/') {
+    await page.mouse.move(0, 400)
+    await photograph(page, 'chat-window-closed')
+  }
+}
+
 test.describe.serial('the chat panel', () => {
   test.beforeAll(async () => {
     const d = demo()
@@ -282,66 +324,50 @@ test.describe.serial('the chat panel', () => {
     await readEverythingBefore()
   })
 
-  test('is opened from its round button on every signed-in page, over the page, and never from the header', async ({
-    page,
-    browser,
-  }) => {
-    const d = demo()
-    await signIn(page, d.actors.instructor)
-    const pages = [
-      ['/', 'home'],
-      [coursePath(), 'the course overview'],
-      [coursePath('materials'), 'materials'],
-      [coursePath('assignments'), 'assignments'],
-      [coursePath(`assignments/${d.course.assignments.hw1}`), 'an assignment'],
-      [coursePath('submissions'), 'submissions'],
-      [coursePath('grades'), 'grades'],
-      [coursePath('members'), 'members'],
-      [coursePath('approvals'), 'approvals'],
-      [coursePath('activity'), 'activity'],
-      [coursePath('agents'), 'the course’s agents'],
-      ['/account', 'the account'],
-      ['/account/agents', 'my agents'],
-    ] as const
-    for (const [path, what] of pages) {
-      await page.goto(path)
-      await expect(page.locator('.app-main').first()).toBeVisible()
-      // Closed: no rail, nothing at the right edge, the header across the whole width, and no chat button in it.
-      await expectNothingAtRightEdge(page, what)
-      await expect(page.locator('.app-header [aria-controls="chat-panel"]'), what).toHaveCount(0)
-      const button = chatButton(page)
-      await expect(button, what).toBeVisible()
-      const at = (await button.boundingBox())!
-      const win = await inner(page)
-      expect([Math.round(win.width - at.x - at.width), Math.round(win.height - at.y - at.height)], what).toEqual([
-        16, 16,
-      ])
-      const pageWidth = (await box_(page.locator('.app-main'))).width
-      await button.click()
-      await expect(panelOf(page), what).toBeVisible()
-      // In the button's corner, over the page, which keeps its width; the button is gone while it is open.
-      await expectInCorner(page)
-      await expectWindow(page, pageWidth)
-      await expect(chatButton(page), what).toHaveCount(0)
-      await expect(panelOf(page).getByRole('heading', { name: 'Chat', exact: true })).toBeVisible()
-      if (path === '/') {
-        await page.mouse.move(0, 400)
-        await photograph(page, 'chat-window-open')
-        await page.locator('html').evaluate((h) => h.classList.add('dark'))
-        await photograph(page, 'chat-window-open-dark')
-        await page.locator('html').evaluate((h) => h.classList.remove('dark'))
-      }
-      await minimizeChat(page)
-      await expect(button, what).toBeVisible()
-      await expect(button, what).toBeFocused()
-      await expectNothingAtRightEdge(page, `${what}, minimized`)
-      if (path === '/') {
-        await page.mouse.move(0, 400)
-        await photograph(page, 'chat-window-closed')
-      }
-    }
+  // The walk over every signed-in page is a few tests, each of a few pages:
+  // one test of them all held thirteen pages' time, and on a busy machine,
+  // every page slower alike, ran out of its 60 s.
+  for (const [part, pages] of [
+    [
+      'the home page and the course’s overview, materials and assignments',
+      [
+        [() => '/', 'home'],
+        [() => coursePath(), 'the course overview'],
+        [() => coursePath('materials'), 'materials'],
+        [() => coursePath('assignments'), 'assignments'],
+      ],
+    ],
+    [
+      'an assignment and the course’s submissions, grades and members',
+      [
+        [() => coursePath(`assignments/${demo().course.assignments.hw1}`), 'an assignment'],
+        [() => coursePath('submissions'), 'submissions'],
+        [() => coursePath('grades'), 'grades'],
+        [() => coursePath('members'), 'members'],
+      ],
+    ],
+    [
+      'the course’s approvals, activity and agents, and the account’s pages',
+      [
+        [() => coursePath('approvals'), 'approvals'],
+        [() => coursePath('activity'), 'activity'],
+        [() => coursePath('agents'), 'the course’s agents'],
+        [() => '/account', 'the account'],
+        [() => '/account/agents', 'my agents'],
+      ],
+    ],
+  ] as const) {
+    test(`is opened from its round button on ${part}, over the page, and never from the header`, async ({ page }) => {
+      await signIn(page, demo().actors.instructor)
+      for (const [path, what] of pages) await opensFromItsButton(page, path(), what)
+    })
+  }
 
-    // From the keyboard: its button is reached with Tab, says its shortcut, and has focus again once the chat closes.
+  test('is reached from the keyboard, says its shortcut, and gives its button focus again once it closes', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    // Its button is reached with Tab, says its shortcut, and has focus again once the chat closes.
     await page.goto(coursePath())
     await expect(page.locator('.course-head')).toBeVisible()
     const button = chatButton(page)
@@ -370,20 +396,19 @@ test.describe.serial('the chat panel', () => {
     await expect(
       page.locator('.el-popper:visible').filter({ hasText: /^Chat with agents \((Ctrl\+J|⌘J)\)$/ }),
     ).toBeVisible()
+  })
 
-    // The administration pages have no rail either, for root.
-    const admin = await browser.newPage()
-    await signInAsRoot(admin)
+  test('leaves nothing at the right edge of the administration pages either, for root', async ({ page }) => {
+    await signInAsRoot(page)
     for (const [path, what] of [
       ['/admin/courses', 'the courses’ administration'],
       ['/admin/actors', 'people'],
       ['/admin/departments', 'departments'],
     ] as const) {
-      await admin.goto(path)
-      await expect(admin.locator('.page-header').first()).toBeVisible()
-      await expectNothingAtRightEdge(admin, what)
+      await page.goto(path)
+      await expect(page.locator('.page-header').first()).toBeVisible()
+      await expectNothingAtRightEdge(page, what)
     }
-    await admin.close()
   })
 
   test('opens over the page, and stays open, on the same conversation, from page to page', async ({ page }) => {
