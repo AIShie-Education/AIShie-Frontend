@@ -46,9 +46,11 @@ export default {
     more: 'More',
     removeAgent:
       'Its conversations are closed, and its owner can bring it in again later, as a fresh start with a new seat.',
-    externalHelp:
-      'It is operated from an external tool (such as Claude through MCP), so nobody can ask it on the site, students included. Once AIshie’s runtime hosts it, it takes conversations there by itself.',
-    externalCourse: 'Students cannot ask it on the site: it is operated from an external tool.',
+    // A course agent nobody can ask on the site, and why: MCP access, or not running now.
+    notAskable: {
+      mcp: 'Students cannot ask it on the site: it has MCP access, and is used from its owner’s own tools.',
+      notRunning: 'Students cannot ask it on the site until AIshie runs it again: its owner hosts it from My agents.',
+    },
   },
   replies: {
     label: 'Replies',
@@ -132,6 +134,9 @@ export default {
     name: 'Name',
     namePlaceholder: 'e.g. COMP1010 tutor',
     nameHelp: 'Students see this name when they ask it a question.',
+    hostingHelp:
+      'Students ask a course agent on the site only when it is hosted on AIshie: one with MCP access is used from your own tools, and nobody can ask it here.',
+    mcpPicked: 'Students cannot ask {name} on the site: it has MCP access, and is used from your own tools.',
     preview: 'What it will hold',
     previewHelp: 'As Core would seat it now: the Course agent preset, cut down to what your own seat holds.',
     can: 'Permissions',
@@ -141,8 +146,9 @@ export default {
     needsApproval: 'Bringing in an agent needs approval here: it is seated once someone approves your request.',
     reviewedAfter: 'It is seated at once, and the addition is reviewed after.',
     createdNote: '{name} has been created and belongs to you.',
-    connectLink: 'Connect it from My agents',
-    connect: 'An agent does nothing until a program runs it: issue it a token under My agents.',
+    connectLink: 'Set it up from My agents',
+    connect:
+      'An agent does nothing until it runs: under My agents, host it on AIshie and choose its model, or, with MCP access, give your tool a token.',
     submit: 'Add course agent',
     submitProposal: 'Request to add',
     success: '{name} is now a course agent',

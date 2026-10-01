@@ -115,6 +115,7 @@ const tutor: Respondent = {
   role: 'assistant',
   is_my_delegate: false,
   answers_course: true,
+  hosting: 'runtime',
   answer_level: 'autonomous',
   last_seen_at: null,
 }

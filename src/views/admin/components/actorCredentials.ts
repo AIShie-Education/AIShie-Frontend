@@ -87,14 +87,17 @@ export type TokenIssuer =
   | { by: 'self' }
   /** An administrator issued it (actor.issue_token). */
   | { by: 'other'; id: string; name: string | null }
+  /** A runtime agent's one token, issued to the site's agent runtime (issued_to agent_runtime). */
+  | { by: 'runtime' }
   /** Not recorded: a token from before Core kept the issuer, or not a token. */
   | null
 
-/** Who issued a token, told apart from the actor who holds it. */
+/** Who issued a token, told apart from the actor who holds it, and the site's agent runtime's. */
 export function tokenIssuer(
-  c: Pick<ActorCredential, 'kind' | 'issued_by_actor_id' | 'issued_by_name'>,
+  c: Pick<ActorCredential, 'kind' | 'issued_by_actor_id' | 'issued_by_name' | 'issued_to'>,
   holderId: string,
 ): TokenIssuer {
+  if (c.kind === 'api_token' && c.issued_to === 'agent_runtime') return { by: 'runtime' }
   if (c.kind !== 'api_token' || !c.issued_by_actor_id) return null
   if (c.issued_by_actor_id.toLowerCase() === holderId.toLowerCase()) return { by: 'self' }
   return { by: 'other', id: c.issued_by_actor_id, name: c.issued_by_name?.trim() || null }

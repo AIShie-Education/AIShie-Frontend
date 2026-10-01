@@ -1,35 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
-import ElementPlus, { ElMessage, ElMessageBox } from 'element-plus'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
+import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
-import { createPinia, setActivePinia } from 'pinia'
 import type { AgentFull } from '@/api/types'
-
-const writes: { tool: string; args: Record<string, unknown> }[] = []
-
-vi.mock('@/api/http', async (orig) => {
-  const real = await orig<typeof import('@/api/http')>()
-  return {
-    ...real,
-    write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
-      writes.push({ tool, args })
-      return { status: 'executed', actionId: 'a1', reviewState: 'none', result: { ok: true }, replayed: false }
-    }),
-  }
-})
-vi.mock('element-plus', async (orig) => {
-  const real = await orig<typeof import('element-plus')>()
-  return {
-    ...real,
-    ElMessage: vi.fn(),
-    ElNotification: vi.fn(),
-    ElMessageBox: Object.assign(vi.fn(), { confirm: vi.fn() }),
-  }
-})
-
-const { i18n, setLocale } = await import('@/i18n')
-const { default: SiteChatCard } = await import('./SiteChatCard.vue')
-const { siteChatState } = await import('./agents')
+import { i18n, setLocale } from '@/i18n'
+import SiteChatCard from './SiteChatCard.vue'
 
 const global = { plugins: [i18n, ElementPlus], components: icons }
 
@@ -38,6 +13,7 @@ function agent(over: Partial<AgentFull> = {}): AgentFull {
     actor_id: 'agent-1',
     display_name: 'Study helper',
     created_at: '2026-09-01T00:00:00Z',
+    hosting: 'runtime',
     requests: [],
     seats: [],
     site_chat: false,
@@ -47,78 +23,51 @@ function agent(over: Partial<AgentFull> = {}): AgentFull {
   }
 }
 
-beforeEach(() => {
-  setActivePinia(createPinia())
-  setLocale('en')
-  writes.length = 0
-  vi.mocked(ElMessage).mockClear()
-  vi.mocked(ElMessageBox.confirm).mockReset()
-})
+beforeEach(() => setLocale('en'))
 enableAutoUnmount(afterEach)
 
-describe('siteChatState', () => {
-  it('tells an agent that takes conversations here from one operated from outside', () => {
-    expect(siteChatState({ site_chat: true, status: 'active' })).toBe('on')
-    expect(siteChatState({ site_chat: false, status: 'active' })).toBe('external')
-    // AIshie's runtime hosts it: it says so again when it next starts it.
-    expect(siteChatState({ site_chat: false, status: 'active' }, { hosted: true })).toBe('hostedOff')
-    expect(siteChatState({ site_chat: false, status: 'suspended' }, { hosted: true })).toBe('suspended')
-    expect(siteChatState({ site_chat: true, status: 'active' }, { hosted: true })).toBe('on')
-  })
-})
+const card = (over: Partial<AgentFull> = {}) => mount(SiteChatCard, { props: { agent: agent(over) }, global })
 
 describe('SiteChatCard', () => {
-  it('tells the owner of an agent operated from outside why nobody may ask it here, and how that would change', () => {
-    const w = mount(SiteChatCard, { props: { agent: agent() }, global })
-    expect(w.find('.el-tag').text()).toBe('Operated from outside')
+  it('says people can ask an agent AIshie runs now, and what stops that; it switches nothing', () => {
+    const w = card({ site_chat: true })
+    expect(w.find('.app-card__title').text()).toBe('Questions on the site')
+    expect(w.find('.el-tag').text()).toBe('Can be asked on the site')
     expect(w.findAll('.site-chat__text').map((p) => p.text())).toEqual([
-      'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.',
-      'When AIshie’s runtime hosts it, it takes conversations on the site by itself.',
+      'People in its courses can ask it on the site: AIshie’s runtime runs it now.',
+      'To stop people asking it, pause its hosting, or suspend it.',
     ])
-    // Only what runs it switches them on: the owner is never offered to.
     expect(w.find('button').exists()).toBe(false)
   })
 
-  it('says so in Traditional Chinese', () => {
+  it('says nobody can ask one hosted on AIshie that the runtime does not run now', () => {
+    const w = card()
+    expect(w.find('.el-tag').text()).toBe('Not running')
+    expect(w.find('.site-chat__text').text()).toContain('AIshie’s runtime is not running it')
+    expect(w.find('button').exists()).toBe(false)
+  })
+
+  it('says nobody asks a suspended agent', () => {
+    expect(card({ status: 'suspended' }).find('.site-chat__text').text()).toBe(
+      'Nobody can ask it on the site while it is suspended.',
+    )
+  })
+
+  it('says one with MCP access is never asked on the site, and what is', () => {
+    const w = card({ hosting: 'mcp' })
+    expect(w.find('.el-tag').text()).toBe('MCP access')
+    expect(w.find('.site-chat__text').text()).toBe(
+      'Nobody can ask it on the site: it has MCP access, and is used from your own tools. An agent people ask here is one created as hosted on AIshie.',
+    )
+  })
+
+  it('says so in Traditional and Simplified Chinese', () => {
     setLocale('zh-Hant')
-    const w = mount(SiteChatCard, { props: { agent: agent() }, global })
-    expect(w.find('.app-card__title').text()).toBe('站內對話')
-    expect(w.find('.el-tag').text()).toBe('外部操作')
-    expect(w.findAll('.site-chat__text').map((p) => p.text())).toEqual([
-      '這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。',
-      '交由 AIshie 的執行環境代管時，它會自行在站內接受對話。',
-    ])
-  })
-
-  it('says of a hosted agent switched off that the runtime switches them on again, and offers nothing', () => {
-    const w = mount(SiteChatCard, { props: { agent: agent(), hosted: true }, global })
-    expect(w.find('.el-tag').text()).toBe('Not taking conversations on the site')
-    expect(w.text()).toContain('AIshie’s runtime hosts it, and takes conversations on the site again')
-    expect(w.text()).not.toContain('external tool')
-    expect(w.find('button').exists()).toBe(false)
-  })
-
-  it('switches them off once the owner has confirmed, saying what turns them on again', async () => {
-    vi.mocked(ElMessageBox.confirm).mockResolvedValue('confirm' as never)
-    const w = mount(SiteChatCard, { props: { agent: agent({ site_chat: true }) }, global })
-    expect(w.find('.el-tag').text()).toBe('Takes conversations on the site')
-    await w.find('button').trigger('click')
-    await flushPromises()
-    const [body, title] = vi.mocked(ElMessageBox.confirm).mock.calls[0]!
-    expect(title).toBe('Switch off conversations with Study helper on the site?')
-    const said = JSON.stringify(body)
-    expect(said).toContain('the next time it starts the agent')
-    expect(said).toContain('ending its hosting on AIshie, ends them too')
-    expect(writes).toEqual([{ tool: 'agent.update', args: { actor_id: 'agent-1', site_chat: false } }])
-    expect(w.emitted('changed')).toHaveLength(1)
-  })
-
-  it('does nothing when the owner thinks better of it', async () => {
-    vi.mocked(ElMessageBox.confirm).mockRejectedValue('cancel')
-    const w = mount(SiteChatCard, { props: { agent: agent({ site_chat: true }) }, global })
-    await w.find('button').trigger('click')
-    await flushPromises()
-    expect(writes).toEqual([])
-    expect(w.emitted('changed')).toBeUndefined()
+    expect(card({ site_chat: true }).find('.el-tag').text()).toBe('可在站內提問')
+    expect(card().find('.el-tag').text()).toBe('未在執行')
+    expect(card({ hosting: 'mcp' }).find('.site-chat__text').text()).toContain('站內無法向它提問')
+    setLocale('zh-Hans')
+    expect(card({ site_chat: true }).find('.el-tag').text()).toBe('可在站内提问')
+    expect(card().find('.el-tag').text()).toBe('未在运行')
   })
 })

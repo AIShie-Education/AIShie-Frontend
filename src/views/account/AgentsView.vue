@@ -1,9 +1,13 @@
 <script setup lang="ts">
-// My agents: the agents the caller owns (agent.list), with whether each is
-// connected (last_seen_at), where it is seated and what waits for approval,
-// and registering a new one (agent.create) — not offered when Core says only
-// an administrator registers agents here, and held back at the limit, with
-// the reason said. Each opens on its own page
+// My agents: the agents the caller owns (agent.list), with how each runs
+// (hosted on AIshie, and whether it can be asked on the site now, or MCP
+// access), whether each is connected (last_seen_at), where it is seated and
+// what waits for approval, and registering a new one (agent.create, asking
+// how it runs) — not offered when Core says only an administrator registers
+// agents here, and held back at the limit, with the reason said. Where the
+// school's runtime hosts agents by their id, one of the caller's agents
+// hosted on AIshie is hosted from here too (HostOnRuntimeDialog, picking
+// it), and its page opens on choosing its model. Each opens on its own page
 // (account-agent). Only a person owns agents: an agent signed in here is told
 // so, and offered nothing.
 import { computed, ref } from 'vue'
@@ -12,13 +16,17 @@ import { useRouter } from 'vue-router'
 import { read } from '@/api/http'
 import type { AgentSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { useRuntime } from '@/composables/useRuntime'
 import { useSessionStore } from '@/stores/session'
+import { hostingOf } from '@/utils/agents'
 import AsyncState from '@/components/AsyncState.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import TimeText from '@/components/TimeText.vue'
 import AboutAgentsCard from './components/agents/AboutAgentsCard.vue'
 import CreateAgentDialog from './components/agents/CreateAgentDialog.vue'
+import HostOnRuntimeDialog from './components/agents/HostOnRuntimeDialog.vue'
 import { agentStanding, countedAgents, createBlock, knownAgentLimit, noteAgentList } from './components/agents/agents'
 
 const { t } = useI18n()
@@ -56,11 +64,29 @@ function open(a: AgentSummary) {
 }
 
 const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByAdmin: 'danger' } as const
+
+// --- Hosting one of them on AIshie ----------------------------------------------------
+const rt = useRuntime()
+/** The school's runtime hosts agents by their id, with a model to give them, and the caller has one to host. */
+const canHost = computed(() => {
+  const f = rt.info.value?.features
+  if (!isHuman.value || !f?.host_by_id || !(f.own_key || f.school_key)) return false
+  return agents.value.some((a) => hostingOf(a.hosting) === 'runtime' && a.status === 'active')
+})
+const hosting = ref(false)
+function onHosted(_: unknown, actorId: string) {
+  void list.reload()
+  void router.push({ name: 'account-agent', params: { actorId }, query: { host: 'model' } })
+}
 </script>
 
 <template>
   <div class="agents-view">
     <PageHeader :title="t('agents.title')" :subtitle="t('agents.subtitle')" :back="{ name: 'account' }">
+      <el-button v-if="canHost" class="agents-view__host" @click="hosting = true">
+        <el-icon><Monitor /></el-icon>
+        <span>{{ t('hosting.host.open') }}</span>
+      </el-button>
       <el-tooltip
         v-if="isHuman && blocked !== 'noSelfService'"
         :disabled="!blocked"
@@ -135,6 +161,8 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
                 >
                   {{ t(`agents.standing.${agentStanding(a)}`) }}
                 </el-tag>
+                <HostingTag v-if="agentStanding(a) === 'active'" :hosting="a.hosting" :site-chat="a.site_chat" />
+                <HostingTag v-else :hosting="a.hosting" />
                 <el-tag v-if="a.pending_requests" type="warning" effect="plain" size="small" disable-transitions>
                   {{ t('agents.list.requests', { n: a.pending_requests }, a.pending_requests) }}
                 </el-tag>
@@ -157,6 +185,12 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
     <AboutAgentsCard v-if="isHuman && agents.length" class="agents-view__about-after" />
 
     <CreateAgentDialog v-model="creating" :counted="counted" @created="onCreated" />
+    <HostOnRuntimeDialog
+      v-if="canHost"
+      v-model="hosting"
+      :school="!!rt.info.value?.features.school_key"
+      @hosted="onHosted"
+    />
   </div>
 </template>
 

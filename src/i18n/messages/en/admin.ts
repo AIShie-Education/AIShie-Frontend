@@ -211,10 +211,14 @@ export default {
       token: 'Issue it an API token on its page. The token is shown once.',
       seat: 'Have a course instructor seat it (Members → Add) with a preset such as grader or tutor, scoped to the students or assignments it serves.',
       connect: 'Point its MCP client at {endpoint}, with the token as a bearer token.',
+      runtime:
+        'No token is issued for it here: the site’s agent runtime runs it once the runtime’s operator names it by this ID, and is issued its token itself.',
     },
     ownedAgent: {
       owner:
         '{owner} owns it: they give it tokens and bring it into their courses from their own My agents page, as their delegate.',
+      ownerRuntime:
+        '{owner} owns it: they host it on AIshie and bring it into their courses from their own My agents page, as their delegate.',
       seat: 'It is never seated from Members → Add: in each course it holds no more than its owner’s seat.',
     },
   },
@@ -227,8 +231,10 @@ export default {
     kind: 'Kind',
     kindHelp: {
       human: 'Signs in with a password they choose from an invitation link, or with single sign-on.',
-      agent: 'Runs elsewhere and connects with an API token. No endpoint, model or prompt is stored here.',
+      agent: 'Hosted on AIshie, or reached over MCP with API tokens, as chosen below. No endpoint, model or prompt is stored here.',
     },
+    hostingRuntime: 'The site’s agent runtime alone is issued its token: nobody is issued one here.',
+    hostingMcp: 'Issue it API tokens on its page once it is registered, for whatever reaches it over MCP.',
     displayName: 'Display name',
     namePlaceholder: {
       human: 'Chan Tai Man',
@@ -243,7 +249,7 @@ export default {
     adminRootOnly: 'Only root can make an administrator.',
     adminOwned: 'An agent someone owns holds no platform role: leave the owner empty to make it an administrator.',
     permanent:
-      'The kind, the platform role and an agent’s owner cannot be changed after registering. The name and the email can be corrected on their page.',
+      'The kind, the platform role, an agent’s owner and how it runs cannot be changed after registering. The name and the email can be corrected on their page.',
     owner: 'Owner',
     ownerHint:
       'Leave empty for an agent that course managers seat themselves. With an owner, it acts only as that person’s delegate: they bring it into their courses, and it never holds more than their seat. The owner is given now or never: it cannot be added, changed or taken away later.',
@@ -302,6 +308,11 @@ export default {
     ownerUnnamed: 'someone',
     ownerFixed: 'Given when it was registered, and never changed: nobody gives an agent another owner.',
     noOwnerFixed: 'Registered without one, so it stays nobody’s: an owner is given only when an agent is registered.',
+    hostingFixed: {
+      runtime:
+        'Chosen when it was registered, and never changed: the site’s agent runtime alone is issued its token, and nobody is issued one here.',
+      mcp: 'Chosen when it was registered, and never changed: its tokens are issued here, for whatever reaches it over MCP.',
+    },
     ownedAgents: 'Agents they own',
     ownedAll: 'See all',
     ownedHint:
@@ -343,6 +354,8 @@ export default {
     daysInvalid: 'From 1 to 3650 days',
     submit: 'Issue token',
     suspendedNote: 'They are suspended: a token issued now is refused until they are reactivated.',
+    runtimeAgent:
+      'None is issued here: this agent is hosted on AIshie, and the site’s agent runtime alone is issued its one token, by the agent’s ID, when it hosts it. Revoking that token below stops people asking it on the site until the runtime is issued another.',
     revealTitle: 'Copy the token now',
     once: 'This is the only time the token is shown. Core keeps only its hash: if it is lost, issue a new one.',
     replayed:
@@ -389,6 +402,7 @@ export default {
     },
     unlabelled: 'No label',
     selfIssued: 'Self-issued',
+    issuedToRuntime: 'The site’s agent runtime',
     issuerUnknown: 'Not recorded',
     neverUsed: 'Never used',
     revokedAt: 'Revoked',

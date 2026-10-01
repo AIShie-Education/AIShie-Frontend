@@ -73,7 +73,7 @@ describe('RuntimeAdminView', () => {
     const { w } = await page()
     expect(w.find('.page-header__title').text()).toBe('AI and documents')
     expect(s.to('GET', ADMIN.me)).toHaveLength(1)
-    expect(tabs(w)).toEqual(['School AI plan', 'Pricing', 'Usage today', 'Documents'])
+    expect(tabs(w)).toEqual(['School AI plan', 'Pricing', 'Usage today', 'Documents', 'Agent hosting'])
     expect(w.find('.offers-card').exists()).toBe(true)
     // The other tabs are read only once shown.
     expect(s.to('GET', ADMIN.usage)).toHaveLength(0)
@@ -159,6 +159,6 @@ describe('RuntimeAdminView', () => {
     setLocale('zh-Hant')
     const { w } = await page()
     expect(w.find('.page-header__title').text()).toBe('AI 與文件')
-    expect(tabs(w)).toEqual(['學校 AI 方案', '計價與額度', '今日用量', '文件'])
+    expect(tabs(w)).toEqual(['學校 AI 方案', '計價與額度', '今日用量', '文件', '代理託管'])
   })
 })

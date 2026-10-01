@@ -4,6 +4,7 @@ import type { AgentCredential, Membership } from '@/api/types'
 import {
   agentStanding,
   assignmentReach,
+  claudeDesktopConfig,
   countedAgents,
   courseChoices,
   grantedPerms,
@@ -13,9 +14,8 @@ import {
   noteAgentList,
   limitFromError,
   noteAgentLimit,
-  runtimeAgentFile,
-  runtimeAgentId,
   setupProgress,
+  siteChatState,
   studentReach,
   toPermLevels,
 } from './agents'
@@ -216,52 +216,35 @@ describe('setupProgress', () => {
   })
 })
 
-describe('runtimeAgentFile', () => {
-  const ACTOR = '0192f3c1-7d2e-7c3a-9b1f-2a4c6e8f0a1b'
-
-  it('is the agent file the AIshie runtime reads, with the token in the secret it names', () => {
-    const f = runtimeAgentFile({ coreUrl: 'https://lms.example.edu', name: 'Study helper', actorId: ACTOR })
-    expect(f.yaml).toBe(
-      [
-        'agent:',
-        '  id: study-helper',
-        '  display_name: "Study helper"',
-        '  core:',
-        '    base_url: https://lms.example.edu',
-        '    token_ref: secret://agents/study-helper/core_token',
-        '  model:',
-        '    adapter: openai_chat',
-        '    base_url: https://api.deepseek.com',
-        '    model: deepseek-chat',
-        '    key_ref: secret://agents/study-helper/model_key',
-        '',
-      ].join('\n'),
-    )
-    expect(f.id).toBe('study-helper')
-    expect(f.tokenFile).toBe('agents/study-helper/core_token')
-    // The runtime's own rule (secrets.EnvName): upper case, '_' for all but letters and digits.
-    expect(f.tokenVar).toBe('AISHIE_SECRET_AGENTS_STUDY_HELPER_CORE_TOKEN')
-    // Neither the variables the runtime does not read, nor Core's MCP path: it finds /mcp itself.
-    expect(f.yaml).not.toMatch(/CORE_MCP_URL|AISHIE_TOKEN|\/mcp/)
+describe('siteChatState', () => {
+  it('says whether people can ask an agent hosted on AIshie now, as Core says', () => {
+    expect(siteChatState({ hosting: 'runtime', site_chat: true, status: 'active' })).toBe('on')
+    expect(siteChatState({ hosting: 'runtime', site_chat: false, status: 'active' })).toBe('off')
+    expect(siteChatState({ hosting: 'runtime', site_chat: false, status: 'suspended' })).toBe('suspended')
   })
-
-  it('writes any name so that YAML reads it back as it is', () => {
-    const f = runtimeAgentFile({ coreUrl: 'https://lms.example.edu', name: 'Tutor: "A" #1', actorId: ACTOR })
-    expect(f.yaml).toContain('  display_name: "Tutor: \\"A\\" #1"\n')
-    expect(runtimeAgentFile({ coreUrl: 'x', name: '學習助手', actorId: ACTOR }).yaml).toContain(
-      '  display_name: "學習助手"\n',
-    )
+  it('says an agent with MCP access is never asked on the site, whatever else is said', () => {
+    expect(siteChatState({ hosting: 'mcp', site_chat: false, status: 'active' })).toBe('mcp')
+    expect(siteChatState({ hosting: 'mcp', site_chat: false, status: 'suspended' })).toBe('mcp')
   })
+})
 
-  it('gives an id the runtime takes, from the name or else the actor', () => {
-    expect(runtimeAgentId('Café Bot', ACTOR)).toBe('cafe-bot')
-    expect(runtimeAgentId('  --My   agent!!  ', ACTOR)).toBe('my-agent')
-    expect(runtimeAgentId('學習助手', ACTOR)).toBe('agent-6e8f0a1b')
-    expect(runtimeAgentId('', '')).toBe('agent')
-    const long = runtimeAgentId('a'.repeat(47) + ' b c', ACTOR)
-    expect(long).toBe('a'.repeat(47))
-    for (const name of ['Study helper', '學習助手', 'x'.repeat(200), '!!!', 'Ünïcödé Tutor']) {
-      expect(runtimeAgentId(name, ACTOR)).toMatch(/^[A-Za-z0-9_-]{1,64}$/)
+describe('claudeDesktopConfig', () => {
+  it('is Claude Desktop’s configuration: Core’s MCP endpoint through mcp-remote, the token in an environment variable', () => {
+    const json = claudeDesktopConfig('https://lms.example.edu/mcp', '<token>')
+    expect(JSON.parse(json)).toEqual({
+      mcpServers: {
+        aishie: {
+          command: 'npx',
+          args: ['-y', 'mcp-remote', 'https://lms.example.edu/mcp', '--header', 'Authorization:${AISHIE_AUTH}'],
+          env: { AISHIE_AUTH: 'Bearer <token>' },
+        },
+      },
+    })
+    // No argument holds a space, or the token.
+    const args = JSON.parse(json).mcpServers.aishie.args as string[]
+    for (const a of args) {
+      expect(a).not.toContain(' ')
+      expect(a).not.toContain('<token>')
     }
   })
 })

@@ -6,6 +6,7 @@ import {
   call,
   coursePath,
   demo,
+  hostOnRuntime,
   inTraditionalChinese,
   photograph,
   signIn,
@@ -452,13 +453,12 @@ test.describe.serial('the file viewer', () => {
     const I = d.actors.instructor.token
     const Y = d.actors.yuki.token
     const C = `/v1/courses/${d.course.id}`
-    // A course agent of this run's, which takes conversations in the site.
+    // A course agent of this run's, hosted on AIshie, which people ask in the site; the test plays the runtime.
     const name = `Viewer tutor ${tag}`
-    const agent = (await done(I, '/v1/me/agents', { display_name: name })).actor_id as string
+    const agent = (await done(I, '/v1/me/agents', { display_name: name, hosting: 'runtime' })).actor_id as string
     try {
       await done(I, `${C}/delegates`, { actor_id: agent, preset: 'course_tutor', answers_course: true })
-      const token = (await done(I, `/v1/me/agents/${agent}/tokens`, { label: `viewer ${tag}` })).token as string
-      await done(token, '/v1/me/site-chat', { on: true })
+      await hostOnRuntime(agent)
       const respondents = await call(Y, 'GET', `${C}/conversations/respondents`)
       const tutor = (respondents.body.result.respondents as { member_id: string; display_name: string }[]).find(
         (r) => r.display_name === name,

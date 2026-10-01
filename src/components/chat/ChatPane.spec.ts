@@ -170,22 +170,25 @@ const tutorOffered: Respondent = {
   role: 'assistant',
   is_my_delegate: false,
   answers_course: true,
+  hosting: 'runtime',
   answer_level: 'autonomous',
   last_seen_at: '2026-09-26T11:59:30Z',
 }
 
-/** Core's refusal of a question to an agent that takes no conversations in the site. */
-const answersElsewhere = () =>
+/** Core's refusal of a question to an agent nobody asks in the site now: one with MCP access, or not running. */
+const notAskable = (reason: 'mcp_agent' | 'agent_not_hosted' = 'agent_not_hosted') =>
   new ApiError({
     status: 422,
     code: 'failed_precondition',
-    message: 'that agent takes no conversations in the site: it is operated from an external tool, and acts there',
-    details: { reason: 'agent_answers_elsewhere' },
+    message: 'that agent is not asked in the site now',
+    details: { reason },
     actionId: 'a7',
     actionStatus: 'failed',
   })
-const NOTE =
-  'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.'
+/** What is said of an agent nobody asks here now, when nothing says why. */
+const NOTE = 'This agent can’t be asked here just now.'
+const NOT_RUNNING = 'This agent isn’t running right now, so it can’t be asked here.'
+const MCP = 'This agent is used from its owner’s own tools, and can’t be asked here.'
 
 /** The caller's seat in course k1, as me.memberships gives it: the chat reads it from there, on any page. */
 function seat(memberId: string, perms: Record<string, string> = {}) {
@@ -683,6 +686,7 @@ describe('ChatPane', () => {
       role: 'assistant',
       is_my_delegate: false,
       answers_course: true,
+      hosting: 'runtime',
       answer_level: 'autonomous',
       last_seen_at: null,
     }
@@ -761,7 +765,7 @@ describe('ChatPane', () => {
   })
 })
 
-describe('ChatPane, with an agent operated from outside', () => {
+describe('ChatPane, with an agent nobody asks in the site now', () => {
   it('puts why in place of the composer, and keeps what was written readable', async () => {
     seat('student')
     server.respondents = []
@@ -777,7 +781,7 @@ describe('ChatPane, with an agent operated from outside', () => {
     expect(menu(w)).toEqual(['Who can read this', 'Download as PDF'])
   })
 
-  it('tells its owner, too, how that would change', async () => {
+  it('tells its owner, too, where to find why', async () => {
     seat('student')
     server.view = view({
       respondent: { ...view().respondent, display_name: 'My helper', is_delegate_of_opener: true },
@@ -786,10 +790,8 @@ describe('ChatPane, with an agent operated from outside', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const note = w.find('.chat-pane__notice.is-elsewhere')
-    expect(note.text()).toContain(`${NOTE} When`)
-    expect(note.find('.chat-pane__notice-sub').text()).toBe(
-      'When AIshie’s runtime hosts it, it takes conversations on the site by itself.',
-    )
+    expect(note.text()).toContain(`${NOTE} Its page`)
+    expect(note.find('.chat-pane__notice-sub').text()).toBe('Its page, under My agents, says why.')
   })
 
   it('in Traditional and Simplified Chinese too', async () => {
@@ -798,14 +800,10 @@ describe('ChatPane, with an agent operated from outside', () => {
     setLocale('zh-Hant')
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(
-      '這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。',
-    )
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe('目前無法在這裡向這個代理提問。')
     setLocale('zh-Hans')
     await flushPromises()
-    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(
-      '这个智能体是从外部工具操作的（例如 Claude 通过 MCP），不在站内对话。',
-    )
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe('目前无法在这里向这个智能体提问。')
   })
 
   it('keeps the composer while the agent is offered', async () => {
@@ -816,38 +814,59 @@ describe('ChatPane, with an agent operated from outside', () => {
     expect(w.find('.chat-pane__notice.is-elsewhere').exists()).toBe(false)
   })
 
-  it('says why a question was refused as asked of such an agent, and puts that in place of the composer', async () => {
+  it('says why a question was refused as asked of an agent not running now, and puts that in place of the composer', async () => {
     seat('student')
     writeAnswer = () => {
-      // Switched off since the conversation was read: Core leaves it out now.
+      // Its hosting ended since the conversation was read: Core leaves it out now.
       server.respondents = []
-      throw answersElsewhere()
+      throw notAskable('agent_not_hosted')
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__presence').text()).toBe('Online')
+    const ta = await type(w, 'One more question')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(writes.map((x) => x.tool)).toEqual(['conversation.ask'])
+    expect(document.querySelector('.el-notification')?.textContent).toContain(NOT_RUNNING)
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(NOT_RUNNING)
+    // Nor is it said to be online: it was seen moments ago, but nobody can ask it here now.
+    expect(w.find('.chat-pane__presence').exists()).toBe(false)
+    expect(w.emitted('changed')).toBeTruthy()
+  })
+
+  it('says a question to an agent with MCP access is never asked here', async () => {
+    seat('student')
+    writeAnswer = () => {
+      server.respondents = []
+      throw notAskable('mcp_agent')
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const ta = await type(w, 'One more question')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(writes.map((x) => x.tool)).toEqual(['conversation.ask'])
-    expect(document.querySelector('.el-notification')?.textContent).toContain(NOTE)
-    expect(w.find('textarea').exists()).toBe(false)
-    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(NOTE)
-    expect(w.emitted('changed')).toBeTruthy()
+    expect(document.querySelector('.el-notification')?.textContent).toContain(MCP)
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(MCP)
+    setLocale('zh-Hant')
+    await flushPromises()
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe('這個代理由擁有者自己的工具使用，無法在這裡向它提問。')
   })
 
-  it('says so when a new conversation is refused because the agent answers elsewhere now', async () => {
+  it('says so when a new conversation is refused because the agent is not running now', async () => {
     seat('student')
     writeAnswer = () => {
-      throw answersElsewhere()
+      throw notAskable('agent_not_hosted')
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
     await flushPromises()
     const ta = await type(w, 'What is due Friday?')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(document.querySelector('.el-notification')?.textContent).toContain(NOTE)
+    expect(document.querySelector('.el-notification')?.textContent).toContain(NOT_RUNNING)
     expect(w.find('textarea').exists()).toBe(false)
-    expect(w.find('.chat-pane__notice').text()).toBe(NOTE)
+    expect(w.find('.chat-pane__notice').text()).toBe(NOT_RUNNING)
     expect(w.emitted('opened')).toBeUndefined()
     expect(w.emitted('changed')).toBeTruthy()
   })
@@ -875,7 +894,7 @@ describe('ChatPane, with an agent operated from outside', () => {
     await flushPromises()
     expect(w.find('.chat-pane__closed').text()).toContain('A participant left the course')
     expect(w.find('.chat-pane__closed-elsewhere').exists()).toBe(false)
-    expect(w.text()).not.toContain('external tool')
+    expect(w.text()).not.toContain('can’t be asked here')
     expect(w.find('.chat-pane__closed button').exists()).toBe(false)
   })
 })

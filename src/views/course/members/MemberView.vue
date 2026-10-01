@@ -17,6 +17,7 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -380,6 +381,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
       <template #tags>
         <template v-if="m">
           <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" size="default" />
+          <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" :site-chat="m.site_chat" size="default" />
           <StatusTag vocab="role" :value="m.role" size="default" />
           <StatusTag vocab="memberStatus" :value="m.status" size="default" />
           <el-tag v-if="expired" type="info">{{ t('members.expired') }}</el-tag>
@@ -517,6 +519,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                 <span>{{ m.display_name }}</span>
                 <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" />
                 <StatusTag v-else vocab="actorKind" :value="m.kind" />
+                <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" />
               </span>
             </el-descriptions-item>
             <el-descriptions-item v-if="m.kind === 'human'" :label="t('members.loginId')">

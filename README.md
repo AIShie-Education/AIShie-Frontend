@@ -106,13 +106,25 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   owns an agent seated there finds its proposals and reviews under *Your agents' proposals* (the
   approvals page, showing their own agents' alone), where each one that is not theirs to decide says
   why, and any proposal of their agent's may be withdrawn while it waits.
+- **Agents and how they run** — a person makes agents of their own under *My agents*, choosing once
+  how each runs, with nothing chosen for them, and for good: **hosted on AIshie**, which the school's
+  agent runtime runs and members of its courses ask on the site; or **MCP access**, which the owner's
+  own tools (Claude Desktop, an editor, a script) use over MCP with tokens the owner issues and
+  revokes on its page, beside Core's MCP endpoint, the header and Claude Desktop's configuration, and
+  which nobody asks on the site. An agent hosted on AIshie is hosted by its id (the agent, then its
+  model and key, or the school's plan): the runtime alone is issued its one token, by Core, and its
+  owner never sees, pastes or issues one. Wherever an agent is shown in detail (its page, member
+  lists, the agents one may ask) it says how it runs, and one hosted on AIshie whether it can be
+  asked now (「可在站內提問」 or 「未在執行」); the chat offers only the agents that can be, and says
+  why one cannot.
 - **Administration** (root and admins) — terms, departments, permission presets, courses and their
   first instructor; a directory of everyone registered, searchable by name, email, student or staff
-  number or ID, with how each signs in; registering people and agents, an agent with the person who
-  owns it, which is fixed then and never changed, and correcting their name, email and number;
+  number or ID, with how each signs in; registering people and agents, an agent with how it runs
+  and the person who owns it, both fixed then and never changed, and correcting their name, email
+  and number;
   invitation links, with which a person chooses their password (their first, or a new one when it is
   forgotten); single sign-on identities, linked at a provider chosen from those set up and by the
-  claim it knows accounts by; and API tokens for agents, which only agents are given.
+  claim it knows accounts by; and API tokens for agents with MCP access, which only they are given.
 - **Sign-in** (root and admins, under *登入方式*) — single sign-on's identity providers: the one the
   server's operator sets in Core's environment, shown read-only with its status, and the site's,
   added, tested against the issuer's discovery document and keys (endpoints, keys, problems and
@@ -150,14 +162,18 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   own. Documents: the reading of scanned ones (OCR), on or off and in which of the server's
   languages; and their transcription into text versions, on or off, with which model of the plan,
   up to how many pages a document and a day, how many at once, what it is doing and did today, the
-  files it took up (each named as its version names it) and how each ended, and its credential with Core, issued and handed to the
-  runtime by one button (never shown) and revoked by another. Where the server has no runtime, or
-  one from before these settings, the page says so.
+  files it took up (each named as its version names it) and how each ended, and its credential
+  with Core, issued and handed to the runtime by one button (never shown) and revoked by another.
+  Agent hosting: the runtime's own credential for Core (the `agent_runtime` service), which setting
+  up the server makes and `aishie runtime-credential` on the server rotates, listed, issued (shown
+  once) and revoked. Where the server has no runtime, or one from before these settings, the page
+  says so.
 - **Account** — the ways into one's account (password, single sign-on, invitations and the browser
   sessions they began), each revocable, and the password; and the page an invitation link opens
   (`/welcome`), where the person chooses a password and is signed in. The link carries its token
-  in the fragment (`#token=…`), which reaches no server log. People have no API tokens: an agent is
-  given its tokens by its owner under *My agents*, or by an administrator.
+  in the fragment (`#token=…`), which reaches no server log. People have no API tokens: an agent with
+  MCP access is given its tokens by its owner under *My agents*, or by an administrator; one hosted
+  on AIshie, by Core to the runtime alone.
 
 What a seat may do is Core's decision alone. The app offers what the seat's permissions suggest,
 says when something will need approval, and shows Core's refusal when it refuses.
@@ -212,7 +228,7 @@ CORE_URL=http://localhost:8080 ROOT_EMAIL=… ROOT_PASSWORD=… DEMO_PASSWORD='a
 
 It acts as root (or another administrator), signed in with `ROOT_EMAIL` and `ROOT_PASSWORD`, or
 with a session of theirs in `ROOT_TOKEN`. Each person it registers chooses `DEMO_PASSWORD` through
-an invitation; each agent is given an API token.
+an invitation; each agent is registered with MCP access and given an API token.
 
 Core deletes nothing, so run it against a development instance. `scripts/shot.mjs` signs in as one
 of the demo's people, or root, and screenshots a page, listing console errors and failed API calls.
@@ -264,7 +280,9 @@ sign-on as Core says, or none from a Core too old to say
 
 Hosting agents on the school's agent runtime is the server's to say too. The app asks the runtime's
 public `GET /runtime/api/v1/info` once per page load, and offers hosting only when it answers with
-the runtime's audience, issuer and version; a 404, a 502, the app's own page or no answer hides it.
+the runtime's audience, issuer and version, and says it hosts agents by their id
+(`features.host_by_id`); a 404, a 502, the app's own page or no answer hides it. Only an agent
+created as hosted on AIshie is ever offered to it.
 The runtime is called with an assertion Core makes for the person signed in, for that audience
 (`POST /v1/auth/assertion`), so Core's `RUNTIME_AUDIENCES` must list it
 ([docs/deploying.md](docs/deploying.md#the-agent-runtimes-api)).

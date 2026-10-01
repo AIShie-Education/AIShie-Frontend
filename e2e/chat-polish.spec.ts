@@ -1,6 +1,15 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
-import { call, coursePath, demo, inTraditionalChinese, photograph, signIn, type CoreReply } from './support'
+import {
+  call,
+  coursePath,
+  demo,
+  hostOnRuntime,
+  inTraditionalChinese,
+  photograph,
+  signIn,
+  type CoreReply,
+} from './support'
 
 // The chat as an agent chat is worked: a new conversation offers a few ways
 // to begin; the agent's answer is set across the width as Markdown, its code
@@ -92,7 +101,10 @@ test.describe.serial('the chat, as an agent chat', () => {
   test.beforeAll(async () => {
     const d = demo()
     const I = d.actors.instructor.token
-    const tutor = done(await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR }), 'agent.create').actor_id
+    const tutor = done(
+      await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR, hosting: 'runtime' }),
+      'agent.create',
+    ).actor_id
     w.tutorId = tutor
     done(
       await call(I, 'POST', `/v1/courses/${d.course.id}/delegates`, {
@@ -102,11 +114,8 @@ test.describe.serial('the chat, as an agent chat', () => {
       }),
       'member.add_delegate',
     )
-    w.tutorToken = done(
-      await call(I, 'POST', `/v1/me/agents/${tutor}/tokens`, { label: `polish runtime ${STAMP}` }),
-      'agent.issue_token',
-    ).token
-    done(await call(w.tutorToken, 'POST', '/v1/me/site-chat', { on: true }), 'me.site_chat')
+    // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
+    w.tutorToken = await hostOnRuntime(tutor)
   })
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.

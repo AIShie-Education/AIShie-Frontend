@@ -1,56 +1,40 @@
 <script setup lang="ts">
 // Deleting an agent from the school's runtime (DELETE /agents/{id}; the
 // contract's §9.4). The runtime stops it, forgets its settings and key, and
-// revokes its token in Core (D7). When the runtime could not revoke the
-// token (the agent suspended, Core out of reach or refusing), or the agent
-// turned out to be gone already, the token may still work: the page is told
-// (unrevoked), and offers the owner to revoke it themselves. A token the
-// page did not make (a pasted one) may be kept, for whatever else uses it.
-// Deleting is also how an owner goes from hosted to running the agent
-// themselves: one brain at a time.
+// always revokes its token in Core (runtime-hosting-api.md): nobody can ask
+// it on the site until it is hosted again. The answer says what became of
+// the token; when the runtime could not revoke it, the owner is told that
+// people may still be offered to ask it, and that suspending the agent stops
+// that. Gone already (another tab deleted it), it is deleted all the same.
 //
-// DELETE names no version (§9.1): the runtime deletes the row holding
-// whichever token it revoked, and reads it again when a new token was put
-// in meanwhile. After three such races it answers 412 and keeps the agent
-// (A.3.3): the dialog reads it again, shows it as it is now, and the owner
-// deletes again if they still mean to.
+// DELETE names no version (§9.1). Should the runtime answer 412 all the
+// same, the dialog reads the agent again, shows it as it is now, and the
+// owner deletes again if they still mean to.
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
 import { ApiError } from '@/api/http'
 import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
-import type { HostedAgent, RevokedToken } from '@/api/runtime-types'
-import type { AgentCredential } from '@/api/types'
-import { credentialByPrefix, hostingErrorText, isRuntimeTokenLabel, unrevoked, type UnrevokedToken } from './hosting'
+import type { HostedAgent } from '@/api/runtime-types'
+import { hostingErrorText, revocationNotice } from './hosting'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
-  actorId: string
   name: string
   agent: HostedAgent
-  credentials?: AgentCredential[] | null
 }>()
 const emit = defineEmits<{
   deleted: []
   /** The agent as it is now, read again after it changed meanwhile (412). */
   changed: [agent: HostedAgent]
-  /** Its token may still work: the owner is offered to revoke it (§9.4). */
-  unrevoked: [token: UnrevokedToken]
 }>()
 const { t } = useI18n()
 
 const pending = ref(false)
 const error = shallowRef<unknown>(null)
-const revoke = ref(true)
-
-/** The token is one this page made for the runtime: it is revoked, no question asked. */
-const ownToken = computed(() => isRuntimeTokenLabel(credentialByPrefix(props.credentials, props.agent.token.prefix)?.label))
-const label = computed(() => credentialByPrefix(props.credentials, props.agent.token.prefix)?.label?.trim() || '')
 
 watch(open, (v) => {
-  if (!v) return
-  revoke.value = true
-  error.value = null
+  if (v) error.value = null
 })
 
 const errorText = computed(() => {
@@ -76,27 +60,20 @@ async function submit() {
   if (pending.value) return
   pending.value = true
   error.value = null
-  // Read before deleting: after it, the runtime knows nothing of it.
-  const token = props.agent.token
-  const revokeToken = ownToken.value || revoke.value
   try {
-    let left: RevokedToken
+    let notice: string | null = null
     try {
-      left = (await runtime.remove(props.agent.id, revokeToken)).data.token
+      notice = revocationNotice((await runtime.remove(props.agent.id)).data.revocation, 'delete', t)
     } catch (e) {
-      // Gone already (an earlier try went through, or another tab deleted
-      // it): deleted, and whether its token was revoked cannot be told.
+      // Gone already (an earlier try went through, or another tab deleted it): deleted.
       if (!(isRuntimeError(e) && e.reason === 'agent_not_found')) throw e
-      left = { ...token, revocation: revokeToken ? 'failed' : 'not_attempted', problem: null }
     }
-    if (left.revocation === 'not_attempted') {
-      ElNotification({ type: 'info', title: t('hosting.delete.done', { name: props.name }), message: t('hosting.delete.notAttempted'), duration: 10_000 })
+    if (notice) {
+      ElNotification({ type: 'warning', title: t('hosting.delete.done', { name: props.name }), message: notice, duration: 0 })
     } else {
       ElMessage({ type: 'success', message: t('hosting.delete.done', { name: props.name }) })
     }
     open.value = false
-    const u = unrevoked(left)
-    if (u) emit('unrevoked', u)
     emit('deleted')
   } catch (e) {
     error.value = e
@@ -120,12 +97,6 @@ async function submit() {
     <p v-if="agent.proposals_waiting > 0" class="delete-hosting__body delete-hosting__proposals">
       {{ t('hosting.delete.proposals', { n: agent.proposals_waiting }, agent.proposals_waiting) }}
     </p>
-    <div v-if="!ownToken" class="delete-hosting__revoke">
-      <el-checkbox v-model="revoke">{{ t('hosting.delete.alsoRevoke') }}</el-checkbox>
-      <div class="app-form-hint">
-        {{ label ? t('hosting.delete.alsoRevokeHint', { label }) : t('hosting.delete.alsoRevokeHintUnlabelled') }}
-      </div>
-    </div>
     <el-alert v-if="error" type="error" :closable="false" show-icon :title="errorText" class="delete-hosting__alert">
       <details v-if="errorDetail">
         <summary>{{ t('hosting.errors.details') }}</summary>
@@ -146,9 +117,6 @@ async function submit() {
   margin: 0 0 12px;
   line-height: 1.6;
   color: var(--el-text-color-regular);
-}
-.delete-hosting__revoke {
-  margin-bottom: 8px;
 }
 .delete-hosting__alert {
   margin-top: 12px;

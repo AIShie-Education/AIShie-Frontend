@@ -19,6 +19,7 @@ import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './components/ActorSummary.vue'
@@ -202,8 +203,21 @@ async function openById() {
         </li>
       </ol>
       <ol v-else-if="justOwner" class="actors__steps">
-        <li>{{ t('admin.registered.ownedAgent.owner', { owner: justOwner.display_name }) }}</li>
+        <li>
+          {{
+            t(
+              justRegistered.hosting === 'runtime'
+                ? 'admin.registered.ownedAgent.ownerRuntime'
+                : 'admin.registered.ownedAgent.owner',
+              { owner: justOwner.display_name },
+            )
+          }}
+        </li>
         <li>{{ t('admin.registered.ownedAgent.seat') }}</li>
+      </ol>
+      <ol v-else-if="justRegistered.hosting === 'runtime'" class="actors__steps">
+        <li>{{ t('admin.registered.agent.runtime') }}</li>
+        <li>{{ t('admin.registered.agent.seat') }}</li>
       </ol>
       <ol v-else class="actors__steps">
         <li>{{ t('admin.registered.agent.token') }}</li>
@@ -325,6 +339,7 @@ async function openById() {
               <template #meta>
                 <span class="actors__card-meta">
                   <SignInTags v-if="a.kind === 'human'" :actor="a" />
+                  <HostingTag v-if="a.kind === 'agent'" :hosting="a.hosting" />
                   <span v-if="a.owner_actor_id">
                     {{ t('admin.actors.ownerIs', { owner: a.owner_name ?? t('admin.actor.ownerUnnamed') }) }}
                   </span>
@@ -360,8 +375,13 @@ async function openById() {
               </div>
             </template>
           </el-table-column>
-          <el-table-column :label="t('admin.actors.col.kind')" width="100">
-            <template #default="{ row }"><StatusTag vocab="actorKind" :value="row.kind" /></template>
+          <el-table-column :label="t('admin.actors.col.kind')" :width="kind === 'human' ? 100 : 150">
+            <template #default="{ row }">
+              <div class="actors__kind">
+                <StatusTag vocab="actorKind" :value="row.kind" />
+                <HostingTag v-if="row.kind === 'agent'" :hosting="row.hosting" />
+              </div>
+            </template>
           </el-table-column>
           <el-table-column v-if="kind !== 'human'" :label="t('admin.actors.col.owner')" min-width="150">
             <template #default="{ row }">
@@ -415,6 +435,12 @@ async function openById() {
 </template>
 
 <style scoped>
+.actors__kind {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
 .actors__new {
   border-color: var(--el-color-success-light-5);
 }

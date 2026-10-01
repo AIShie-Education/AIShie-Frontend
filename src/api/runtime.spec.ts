@@ -25,7 +25,7 @@ const INFO_BODY = {
   commit: 'e6df9b4',
   audience: AUDIENCE,
   issuer: 'https://lms.example.edu',
-  features: { connect_by_token: true, own_key: true, school_key: false, transcription: false },
+  features: { host_by_id: true, own_key: true, school_key: false, transcription: false },
 }
 const T0 = Date.parse('2026-09-28T08:00:00Z')
 
@@ -181,13 +181,13 @@ describe('runtimeStatus', () => {
     expect((await rt.runtimeStatus()).available).toBe(false)
   })
 
-  it('takes what it does not know of the features to be the v1 defaults', async () => {
+  it('takes what it does not know of the features to be the v1 defaults, and no hosting by id', async () => {
     infoAnswer = json(200, { api: 'aishie-runtime', api_version: 1, audience: AUDIENCE })
     const s = await rt.runtimeStatus()
     expect(s.available).toBe(true)
     if (s.available) {
       expect(s.info.features).toEqual({
-        connect_by_token: true,
+        host_by_id: false,
         own_key: true,
         school_key: false,
         transcription: false,
@@ -196,14 +196,21 @@ describe('runtimeStatus', () => {
     }
   })
 
+  it('takes a runtime from before hosting by id, which took pasted tokens, to host nothing by id', async () => {
+    infoAnswer = json(200, { ...INFO_BODY, features: { connect_by_token: true, own_key: true, school_key: false } })
+    const s = await rt.runtimeStatus()
+    expect(s.available && s.info.features.host_by_id).toBe(false)
+    expect(s.available && Object.keys(s.info.features)).not.toContain('connect_by_token')
+  })
+
   it('takes each feature as the boolean the runtime sent, false included', async () => {
     infoAnswer = json(200, {
       ...INFO_BODY,
-      features: { connect_by_token: false, own_key: false, school_key: true, transcription: true },
+      features: { host_by_id: true, own_key: false, school_key: true, transcription: true },
     })
     const s = await rt.runtimeStatus()
     expect(s.available && s.info.features).toEqual({
-      connect_by_token: false,
+      host_by_id: true,
       own_key: false,
       school_key: true,
       transcription: true,
@@ -212,11 +219,11 @@ describe('runtimeStatus', () => {
     // What is not a boolean is not taken for one: the v1 default stands.
     infoAnswer = json(200, {
       ...INFO_BODY,
-      features: { connect_by_token: 'false', own_key: 0, school_key: 'true', transcription: 'on' },
+      features: { host_by_id: 'true', own_key: 0, school_key: 'true', transcription: 'on' },
     })
     const again = await rt.runtimeStatus({ refresh: true })
     expect(again.available && again.info.features).toEqual({
-      connect_by_token: true,
+      host_by_id: false,
       own_key: true,
       school_key: false,
       transcription: false,
@@ -567,12 +574,12 @@ describe('the assertion stays secret', () => {
         error: {
           code: 'failed_precondition',
           message: `refused ${token}`,
-          details: { reason: 'token_refused', echo: token },
+          details: { reason: 'agent_suspended', echo: token },
         },
       }),
     )
-    const err = await failure(rt.runtime.inspect({ token }))
-    expect(err.reason).toBe('token_refused')
+    const err = await failure(rt.runtime.inspect('0192f3c1-7d2e-7c3a-9b1f-2a4c6e8f0a1b'))
+    expect(err.reason).toBe('agent_suspended')
     const all = [String(err), err.message, err.stack, JSON.stringify(err), JSON.stringify(err.details)].join('\n')
     expect(all).not.toContain(token)
     expect(all).not.toContain('S'.repeat(43))
@@ -731,20 +738,8 @@ describe('the contract’s calls', () => {
     ['models', () => rt.runtime.models(), 'GET', '/runtime/api/v1/models', undefined],
     ['list', () => rt.runtime.list(), 'GET', '/runtime/api/v1/agents', undefined],
     ['get', () => rt.runtime.get('agt_1'), 'GET', '/runtime/api/v1/agents/agt_1', undefined],
-    [
-      'inspect',
-      () => rt.runtime.inspect({ token: 't', core_actor_id: 'a' }),
-      'POST',
-      '/runtime/api/v1/agents/inspect',
-      { token: 't', core_actor_id: 'a' },
-    ],
-    [
-      'connect',
-      () => rt.runtime.connect({ token: 't', core_actor_id: 'a' }),
-      'POST',
-      '/runtime/api/v1/agents',
-      { token: 't', core_actor_id: 'a' },
-    ],
+    ['inspect', () => rt.runtime.inspect('a-1'), 'POST', '/runtime/api/v1/agents/inspect', { agent_id: 'a-1' }],
+    ['host', () => rt.runtime.host('a-1'), 'POST', '/runtime/api/v1/agents', { agent_id: 'a-1' }],
     [
       'testKey',
       () => rt.runtime.testKey({ provider: 'openai', model: 'm', key: 'k' }),
@@ -759,23 +754,11 @@ describe('the contract’s calls', () => {
       '/runtime/api/v1/agents/agt_1',
       { model: { own: null } },
     ],
-    [
-      'replaceToken',
-      () => rt.runtime.replaceToken('agt_1', 't'),
-      'PUT',
-      '/runtime/api/v1/agents/agt_1/token',
-      { token: 't' },
-    ],
+    ['renewToken', () => rt.runtime.renewToken('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/token', undefined],
     ['pause', () => rt.runtime.pause('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/pause', undefined],
     ['resume', () => rt.runtime.resume('agt_1'), 'POST', '/runtime/api/v1/agents/agt_1/resume', undefined],
-    ['remove', () => rt.runtime.remove('agt_1'), 'DELETE', '/runtime/api/v1/agents/agt_1?revoke_token=true', undefined],
-    [
-      'remove, keeping the token',
-      () => rt.runtime.remove('agt_1', false),
-      'DELETE',
-      '/runtime/api/v1/agents/agt_1?revoke_token=false',
-      undefined,
-    ],
+    // No query any more: deleting always revokes the agent's token.
+    ['remove', () => rt.runtime.remove('agt_1'), 'DELETE', '/runtime/api/v1/agents/agt_1', undefined],
   ] as const)('%s goes where the contract says', async (_, call, method, url, body) => {
     runtimeAnswers.push(json(200, AGENT, { ETag: '"3"' }))
     const out = await call()
@@ -809,15 +792,15 @@ describe('the contract’s calls', () => {
     // Never sent again by itself.
     expect(runtimeCalls()).toHaveLength(2)
 
-    runtimeAnswers.push(json(200, { agent: AGENT, previous_token: {} }))
-    await rt.runtime.replaceToken('agt_1', 't', 4)
+    runtimeAnswers.push(json(200, AGENT))
+    await rt.runtime.renewToken('agt_1', 4)
     expect(runtimeCalls()[2].headers['If-Match']).toBe('"4"')
   })
 
   it.each([
-    ['connect', () => rt.runtime.connect({ token: 't' })],
-    ['inspect', () => rt.runtime.inspect({ token: 't' })],
-    ['replaceToken', () => rt.runtime.replaceToken('agt_1', 't')],
+    ['host', () => rt.runtime.host('a-1')],
+    ['inspect', () => rt.runtime.inspect('a-1')],
+    ['renewToken', () => rt.runtime.renewToken('agt_1')],
     ['pause', () => rt.runtime.pause('agt_1')],
     ['resume', () => rt.runtime.resume('agt_1')],
     ['remove', () => rt.runtime.remove('agt_1')],
@@ -835,41 +818,42 @@ describe('the contract’s calls', () => {
     expect(new Set(sent.map((c) => `${c.method} ${c.url} ${c.body}`)).size).toBe(1)
   })
 
-  it('connect answers the agent with its other live tokens beside it, and inspect names them too', async () => {
-    const other_tokens = {
-      in_use: true,
-      window_seconds: 900,
-      tokens: [
-        {
-          prefix: 'k7v2m4qhx3ab',
-          label: 'laptop',
-          created_at: '2026-09-01T00:00:00Z',
-          last_used_at: '2026-09-28T07:57:00Z',
-          expires_at: null,
-          recent: true,
-        },
-      ],
+  it('hosts an agent by its id alone, and sends no token anywhere', async () => {
+    runtimeAnswers.push(json(201, { ...AGENT, status: 'needs_model' }, { ETag: '"1"', Location: '/x' }))
+    const hosted = await rt.runtime.host('a-1')
+    expect(hosted.status).toBe(201)
+    expect(hosted.data.id).toBe('agt_1')
+    // Asked again, the runtime replays the row it made.
+    runtimeAnswers.push(json(200, AGENT, { 'Idempotency-Replayed': 'true' }))
+    expect((await rt.runtime.host('a-1')).replayed).toBe(true)
+    for (const c of runtimeCalls()) {
+      expect(Object.keys(JSON.parse(c.body!))).toEqual(['agent_id'])
+      expect(c.body).not.toMatch(/token/)
     }
-    runtimeAnswers.push(json(201, { ...AGENT, other_tokens }, { ETag: '"1"' }))
-    const connected = await rt.runtime.connect({ token: 't', core_actor_id: 'a' })
-    expect(connected.status).toBe(201)
-    expect(connected.data.id).toBe('agt_1')
-    expect(connected.data.other_tokens).toEqual(other_tokens)
-
-    // Core would not list them: nothing is known, and nothing failed.
-    runtimeAnswers.push(json(200, { core_actor_id: 'a', other_tokens: null }))
-    const inspected = await rt.runtime.inspect({ token: 't' })
-    expect(inspected.data.other_tokens).toBeNull()
   })
 
-  it('replaces a token with the token alone, never naming the agent in the body', async () => {
+  it('pausing answers the agent with what became of its token, and deleting names what was deleted', async () => {
+    runtimeAnswers.push(json(200, { ...AGENT, paused: true, revocation: { outcome: 'revoked', problem: null } }))
+    const paused = await rt.runtime.pause('agt_1')
+    expect(paused.data.revocation).toEqual({ outcome: 'revoked', problem: null })
     runtimeAnswers.push(
-      json(200, { agent: AGENT, previous_token: { hint: 'h', prefix: 'p', revocation: 'revoked', problem: null } }),
+      json(200, {
+        deleted: { id: 'agt_1', core_actor_id: 'a-1' },
+        revocation: { outcome: 'failed', problem: 'core_unavailable' },
+      }),
     )
-    await rt.runtime.replaceToken('agt_1', 't')
+    const deleted = await rt.runtime.remove('agt_1')
+    expect(deleted.data).toEqual({
+      deleted: { id: 'agt_1', core_actor_id: 'a-1' },
+      revocation: { outcome: 'failed', problem: 'core_unavailable' },
+    })
+  })
+
+  it('asks for a new token with no body', async () => {
+    runtimeAnswers.push(json(200, AGENT))
+    await rt.runtime.renewToken('agt_1')
     const [c] = runtimeCalls()
-    expect(JSON.parse(c.body!)).toEqual({ token: 't' })
-    expect(Object.keys(JSON.parse(c.body!))).toEqual(['token'])
+    expect(c.body).toBeUndefined()
     expect(c.headers['If-Match']).toBeUndefined()
   })
 
@@ -877,7 +861,7 @@ describe('the contract’s calls', () => {
     ['remove', () => rt.runtime.remove('agt_1')],
     ['pause', () => rt.runtime.pause('agt_1')],
     ['resume', () => rt.runtime.resume('agt_1')],
-    ['replaceToken', () => rt.runtime.replaceToken('agt_1', 't')],
+    ['renewToken', () => rt.runtime.renewToken('agt_1')],
   ] as const)(
     '%s names no version, and a 412 all the same is a version mismatch with the version now',
     async (_, call) => {
@@ -903,7 +887,7 @@ describe('the contract’s calls', () => {
   it.each([
     ['update', () => rt.runtime.update('agt_1', 3, { own_key: null })],
     ['testKey', () => rt.runtime.testKey({ provider: 'openai', model: 'm', key: 'sk-0000000000' })],
-    ['replaceToken at a version', () => rt.runtime.replaceToken('agt_1', 't', 3)],
+    ['renewToken at a version', () => rt.runtime.renewToken('agt_1', 3)],
   ] as const)('%s is never sent again by itself', async (_, call) => {
     runtimeAnswers.push(empty(503), json(200, AGENT))
     const err = await failure(call())

@@ -71,7 +71,10 @@ async function student(key: string, name: string): Promise<Owner> {
     preset: 'student',
   })
   expect(seat.body.status, JSON.stringify(seat.body)).toBe('executed')
-  const agent = await call(token, 'POST', '/v1/me/agents', { display_name: key === 'nora' ? NORA_AGENT : OMAR_AGENT })
+  const agent = await call(token, 'POST', '/v1/me/agents', {
+    display_name: key === 'nora' ? NORA_AGENT : OMAR_AGENT,
+    hosting: 'mcp',
+  })
   const agentId = agent.body.result.actor_id as string
   const agentTok = await call(token, 'POST', `/v1/me/agents/${agentId}/tokens`, { label: `e2e ${STAMP}` })
   return {

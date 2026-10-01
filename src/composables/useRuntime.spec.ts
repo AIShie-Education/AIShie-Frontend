@@ -12,7 +12,7 @@ const INFO_BODY = {
   commit: 'e6df9b4',
   audience: 'https://lms.example.edu/runtime',
   issuer: 'https://lms.example.edu',
-  features: { connect_by_token: true, own_key: true, school_key: false, transcription: false },
+  features: { host_by_id: true, own_key: true, school_key: false, transcription: false },
 }
 let answers: Array<() => Response | Promise<Response>> = []
 let asked = 0

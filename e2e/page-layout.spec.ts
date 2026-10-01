@@ -146,8 +146,12 @@ test.describe('pages beside the side bar, under the chat’s window', () => {
     const I = d.actors.instructor.token
     const mine = await call(I, 'GET', '/v1/me/agents')
     let agent = (mine.body.result?.agents ?? [])[0]?.actor_id as string | undefined
-    agent ??= (await call(I, 'POST', '/v1/me/agents', { display_name: `Layout agent ${Date.now().toString(36)}` })).body
-      .result.actor_id
+    agent ??= (
+      await call(I, 'POST', '/v1/me/agents', {
+        display_name: `Layout agent ${Date.now().toString(36)}`,
+        hosting: 'runtime',
+      })
+    ).body.result.actor_id
     await signIn(page, d.actors.instructor)
     await page.goto(`/account/agents/${agent}`)
     const left = page.locator('.agent-view__grid > .hosting-panel')

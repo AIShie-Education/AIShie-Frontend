@@ -1,16 +1,15 @@
 // The lists the chat shows beside a conversation, each kept fresh by asking
 // again: conversations in one course as one of the caller's parts (those they
-// started, or those they oversee, of every agent or of one), the agents they
-// may ask, and their own agents that take no conversations in the site. A
+// started, or those they oversee, of every agent or of one), and the agents
+// they may ask (only those the site's agent runtime runs now). A
 // refresh replaces what is shown only once it has all of it, so a list never
 // empties or flickers while it is read again. (The caller's own conversations
 // across their courses, the chat's history, are the chat store's.)
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import { ApiError, read } from '@/api/http'
-import type { AgentSummary, ConversationRole, ConversationView, Respondent } from '@/api/types'
+import type { ConversationRole, ConversationView, Respondent } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { usePolling } from '@/composables/usePolling'
-import { seatPurpose, type SeatPurpose } from '@/utils/agents'
 import { agentPurpose, byActivity } from './chat'
 
 /** Conversations per page (Core's most is 200). */
@@ -187,70 +186,6 @@ function startWhenEnabled(load: () => unknown, enabled: Enabled | undefined): ()
     { immediate: true },
   )
   return () => started
-}
-
-/**
- * One of the caller's own agents seated here as their delegate that takes no
- * conversations in the site: it is operated from an external tool, and
- * conversation.respondents leaves it out.
- */
-export interface AgentElsewhere {
-  actorId: string
-  memberId: string
-  displayName: string
-  purpose: SeatPurpose | null
-}
-
-/**
- * The caller's own agents seated in a course as their delegates, live, that
- * take no conversations in the site: agent.list says which take none
- * (site_chat), and agent.get where each is seated. Only a person owns agents:
- * for anyone else, or when agent.list is refused, there are none.
- */
-export async function ownAgentsElsewhere(
-  courseId: string,
-  myMemberId: string | null | undefined,
-  now = Date.now(),
-): Promise<AgentElsewhere[]> {
-  let agents: AgentSummary[]
-  try {
-    agents = (await read('agent.list', {})).agents ?? []
-  } catch (e) {
-    if (e instanceof ApiError && (e.isForbidden || e.isNotFound)) return []
-    throw e
-  }
-  const candidates = agents.filter((a) => !a.site_chat && a.status === 'active' && a.live_seats > 0)
-  // One that cannot be read now (gone meanwhile, say) is left out, not the rest with it.
-  const full = await Promise.all(
-    candidates.map((a) => read('agent.get', { actor_id: a.actor_id }).catch(() => null)),
-  )
-  const out: AgentElsewhere[] = []
-  for (const a of full) {
-    if (!a || a.site_chat || a.status !== 'active') continue
-    for (const s of a.seats ?? []) {
-      if (s.course_id !== courseId || s.status !== 'active') continue
-      if (s.expires_at && Date.parse(s.expires_at) <= now) continue
-      if (myMemberId && s.principal_member_id && s.principal_member_id !== myMemberId) continue
-      out.push({ actorId: a.actor_id, memberId: s.member_id, displayName: a.display_name, purpose: seatPurpose(s) })
-    }
-  }
-  return out.sort((a, b) => a.displayName.localeCompare(b.displayName))
-}
-
-/** ownAgentsElsewhere, kept fresh as whom the caller may ask is. */
-export function useAgentsElsewhere(opts: {
-  courseId: string
-  myMemberId: MaybeRefOrGetter<string | null | undefined>
-  enabled?: Enabled
-}) {
-  const list = useQuietList<AgentElsewhere>(() => ownAgentsElsewhere(opts.courseId, toValue(opts.myMemberId)))
-  const polling = usePolling(list.refresh, {
-    intervalMs: RESPONDENTS_POLL_MS,
-    immediate: false,
-    enabled: () => on(opts.enabled) && list.loaded.value,
-  })
-  const started = startWhenEnabled(list.load, opts.enabled)
-  return { ...list, reload: list.load, refresh: () => (started() ? polling.pollNow() : Promise.resolve()) }
 }
 
 /** The course's agents first, then the caller's own, each by name. */

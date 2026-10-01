@@ -1,8 +1,10 @@
 // What the "My agents" pages work out from what Core says of a person's
-// agents: whether an agent is theirs to reactivate, how many count against
-// the limit, which of their courses they may bring one into, what a seat
-// reaches, and how far along connecting a runtime is. For display only:
-// Core decides what is allowed, and its refusals are shown as they come.
+// agents: whether an agent is theirs to reactivate, whether people can ask it
+// on the site, how many count against the limit, which of their courses they
+// may bring one into, what a seat reaches, and, for an agent with MCP
+// access, how far along connecting one's own tool is, with Claude Desktop's
+// configuration. For display only: Core decides what is allowed, and its
+// refusals are shown as they come.
 import { ref } from 'vue'
 import { isApiError } from '@/api/http'
 import {
@@ -16,6 +18,7 @@ import {
   type Perm,
   type PermLevels,
 } from '@/api/types'
+import { hostingOf } from '@/utils/agents'
 import { credentialState } from '../credentials'
 
 // --- Standing -------------------------------------------------------------------
@@ -33,22 +36,21 @@ export function agentStanding(a: Pick<AgentSummary, 'status' | 'suspended_by_me'
 }
 
 /**
- * Whether an agent takes conversations in the site, as its page tells its
- * owner: on (whatever runs it said it answers there, me.site_chat); off while
- * it is suspended; off for now while AIshie's runtime hosts it, which says so
- * again whenever it starts it (the owner switched it off, or it has not
- * started it yet); and otherwise operated from an external tool (Claude
- * through MCP, say), which never says so.
+ * Whether people can ask an agent on the site, as its page tells its owner
+ * (agent.get's site_chat, which Core works out): on, AIshie's runtime runs
+ * it now; off, it is hosted on AIshie but the runtime does not run it now
+ * (not hosted yet, paused, or its token revoked); suspended, it is asked
+ * nothing while it is; mcp, it has MCP access, used from its owner's own
+ * tools, and is never asked on the site. Nobody switches it on or off by
+ * hand: hosting, pausing and suspending it do.
  */
-export type SiteChatState = 'on' | 'suspended' | 'hostedOff' | 'external'
+export type SiteChatState = 'on' | 'off' | 'suspended' | 'mcp'
 
-export function siteChatState(
-  a: Pick<AgentSummary, 'site_chat' | 'status'>,
-  opts: { hosted?: boolean } = {},
-): SiteChatState {
+export function siteChatState(a: Pick<AgentSummary, 'site_chat' | 'status' | 'hosting'>): SiteChatState {
+  if (hostingOf(a.hosting) === 'mcp') return 'mcp'
   if (a.site_chat) return 'on'
   if (a.status === 'suspended') return 'suspended'
-  return opts.hosted ? 'hostedOff' : 'external'
+  return 'off'
 }
 
 /** How many agents count against the per-person limit: those not suspended. */
@@ -211,14 +213,14 @@ export function grantedPerms(
   return PERMS.filter((p) => levels[p] && levels[p] !== 'denied').map((p) => ({ perm: p, level: levels[p]! }))
 }
 
-// --- Connecting a runtime -----------------------------------------------------------
+// --- Connecting one's own tool (an agent with MCP access) ----------------------------
 
 export type StepState = 'done' | 'waiting' | 'todo'
 
 export interface SetupProgress {
   /** A token that still works has been issued. */
   token: StepState
-  /** Something has used one of its tokens: a runtime has connected. */
+  /** Something has used one of its tokens: a tool of the owner's has connected. */
   connected: StepState
   /** It is seated in a course (waiting: a request to seat it is pending). */
   course: StepState
@@ -247,69 +249,21 @@ export function setupProgress(input: {
 }
 
 /**
- * What the AIshie Agent Runtime is given to run an agent its owner runs
- * themselves: an agent file, YAML in the runtime's agents directory, whose
- * core section says where Core is (its base URL: the runtime finds /mcp
- * there) and which secret holds the agent's token. The token is never in the
- * file, and the runtime refuses one written there: it is kept in the secret
- * the file names, the file tokenFile under the runtime's secrets directory,
- * or failing that the variable tokenVar. The model is the runtime's own
- * example of a student's agent (examples/agents/delegate.yaml there), on a
- * key of the owner's, for them to change.
+ * Claude Desktop's claude_desktop_config.json for an agent with MCP access:
+ * one MCP server, Core's endpoint reached through mcp-remote (which Claude
+ * Desktop runs with npx), with the bearer token in an environment variable
+ * that the header names (mcp-remote fills it in), so that no argument holds
+ * a space, or the token.
  */
-export interface RuntimeAgentFile {
-  /** The agent's id in the runtime's configuration. */
-  id: string
-  yaml: string
-  /** Where the token is kept, under the runtime's secrets directory. */
-  tokenFile: string
-  /** Where the runtime looks for the token when there is no such file. */
-  tokenVar: string
-}
-
-/**
- * An id the runtime takes (letters, digits, '-', at most 64) for the agent:
- * its name, in plain letters, or failing that (a name with none) the end of
- * its actor id, which is the random part of it.
- */
-export function runtimeAgentId(name: string, actorId: string): string {
-  const slug = name
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .slice(0, 48)
-    .replace(/^-+|-+$/g, '')
-  if (slug) return slug
-  const tail = actorId
-    .replace(/[^A-Za-z0-9]/g, '')
-    .slice(-8)
-    .toLowerCase()
-  return tail ? `agent-${tail}` : 'agent'
-}
-
-/** The variable a secret:// path falls back to: AISHIE_SECRET_ and the path, upper case, '_' for the rest. */
-function secretVar(path: string): string {
-  return 'AISHIE_SECRET_' + path.toUpperCase().replace(/[^A-Z0-9]/g, '_')
-}
-
-export function runtimeAgentFile(input: { coreUrl: string; name: string; actorId: string }): RuntimeAgentFile {
-  const id = runtimeAgentId(input.name, input.actorId)
-  const tokenFile = `agents/${id}/core_token`
-  const yaml = [
-    'agent:',
-    `  id: ${id}`,
-    // A JSON string is a YAML double-quoted one: any name is taken as it is.
-    `  display_name: ${JSON.stringify(input.name)}`,
-    '  core:',
-    `    base_url: ${input.coreUrl}`,
-    `    token_ref: secret://${tokenFile}`,
-    '  model:',
-    '    adapter: openai_chat',
-    '    base_url: https://api.deepseek.com',
-    '    model: deepseek-chat',
-    `    key_ref: secret://agents/${id}/model_key`,
-    '',
-  ].join('\n')
-  return { id, yaml, tokenFile, tokenVar: secretVar(tokenFile) }
+export function claudeDesktopConfig(endpoint: string, token: string): string {
+  const config = {
+    mcpServers: {
+      aishie: {
+        command: 'npx',
+        args: ['-y', 'mcp-remote', endpoint, '--header', 'Authorization:${AISHIE_AUTH}'],
+        env: { AISHIE_AUTH: `Bearer ${token}` },
+      },
+    },
+  }
+  return JSON.stringify(config, null, 2)
 }

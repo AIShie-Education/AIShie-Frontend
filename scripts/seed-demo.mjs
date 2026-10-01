@@ -20,7 +20,9 @@
 // Every person it registers gets an email under @demo.test tagged with this
 // run, so the script can run again, and chooses DEMO_PASSWORD through an
 // invitation, as a person does; the session that signs them in is what the
-// script acts as them with. Each agent is given an API token. --out writes
+// script acts as them with. Each agent is registered with MCP access (hosting
+// mcp: tools of its own reach it, as this script does) and given an API
+// token; an agent hosted on AIshie holds none but the runtime's. --out writes
 // what was made (ids, emails, the agents' API tokens and the people's
 // sessions, which last 12 hours) as JSON.
 
@@ -130,8 +132,8 @@ const people = {
   ken: { display_name: 'Ken Wong', kind: 'human' },
   mei: { display_name: 'Mei Chan', kind: 'human' },
   observer: { display_name: 'Olivia Observer', kind: 'human' },
-  grader: { display_name: 'grader-v2', kind: 'agent' },
-  tutor: { display_name: 'tutor-yuki', kind: 'agent' },
+  grader: { display_name: 'grader-v2', kind: 'agent', hosting: 'mcp' },
+  tutor: { display_name: 'tutor-yuki', kind: 'agent', hosting: 'mcp' },
 }
 for (const [key, p] of Object.entries(people)) {
   const email = p.kind === 'human' ? `${key}+${tag}@demo.test` : undefined

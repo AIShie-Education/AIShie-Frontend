@@ -826,6 +826,13 @@
             "description": "an identity at the identity provider is linked (actor.link_sso)",
             "type": "boolean"
           },
+          "hosting": {
+            "description": "for an agent: runtime, run by the site's own agent runtime, which alone holds its token; mcp, reached over MCP with tokens issued here",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -1012,7 +1019,7 @@
       "path": "/v1/actor-invitations"
     },
     {
-      "description": "Issue an API token for an agent: how a newly registered agent gets its first credential, since it never signs in. Only an agent holds one: a person is refused (api_tokens_are_for_agents), since people sign in with a password or single sign-on, and use one of their agents for tools and scripts. The token is returned once and only its hash is kept.",
+      "description": "Issue an API token for an mcp agent: how a newly registered agent gets its first credential, since it never signs in. Only an agent holds one: a person is refused (api_tokens_are_for_agents), since people sign in with a password or single sign-on, and use one of their agents for tools and scripts. A runtime agent is refused too (hosted_by_runtime): the site's agent runtime alone is issued its token. The token is returned once and only its hash is kept.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1200,6 +1207,13 @@
                   "description": "an identity at the identity provider is linked (actor.link_sso)",
                   "type": "boolean"
                 },
+                "hosting": {
+                  "description": "for an agent: runtime, run by the site's own agent runtime, which alone holds its token; mcp, reached over MCP with tokens issued here",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
                 "id": {
                   "format": "uuid",
                   "type": "string"
@@ -1338,6 +1352,13 @@
                 },
                 "issued_by_name": {
                   "description": "the issuer's display name",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "issued_to": {
+                  "description": "for a runtime agent's token, agent_runtime: issued to the site's agent runtime, which runs the agent with it, and to nobody else",
                   "type": [
                     "null",
                     "string"
@@ -1506,7 +1527,7 @@
       "path": "/v1/actors/{actor_id}/reactivate"
     },
     {
-      "description": "Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in with their email or their login ID (a student or staff number), either or both of which you give here, once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso); a person holds no API token. A login ID taken already is refused (login_id_taken). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. It never signs in: give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's.",
+      "description": "Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in with their email or their login ID (a student or staff number), either or both of which you give here, once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso); a person holds no API token. A login ID taken already is refused (login_id_taken). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. It never signs in, and is hosted one way for good (hosting, required): runtime, the site's own agent runtime runs it and alone is issued its token; mcp, give it tokens with actor.issue_token for whatever reaches it over MCP. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1519,6 +1540,14 @@
               "null",
               "string"
             ]
+          },
+          "hosting": {
+            "description": "for an agent, and required for one: how it is run, for good. runtime, the site's own agent runtime runs it, and is issued its one token (nobody else holds one); mcp, tools of its own reach it over MCP with tokens issued here (actor.issue_token), and nobody asks it in the site",
+            "enum": [
+              "runtime",
+              "mcp"
+            ],
+            "type": "string"
           },
           "kind": {
             "description": "human or agent; recorded for display and audit, and read by nothing else",
@@ -1711,6 +1740,13 @@
             "description": "an identity at the identity provider is linked (actor.link_sso)",
             "type": "boolean"
           },
+          "hosting": {
+            "description": "for an agent: runtime, run by the site's own agent runtime, which alone holds its token; mcp, reached over MCP with tokens issued here",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -1784,17 +1820,409 @@
       "path": "/v1/actors/{actor_id}"
     },
     {
-      "description": "Register an agent of your own. It runs elsewhere, on whatever you connect to it with a token (agent.issue_token); no endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. It is yours for good: nobody gives it another owner. A person may have a limited number of agents that are not suspended.",
+      "description": "For the site's agent runtime alone: an agent as the runtime needs it to host it by its id: how it is hosted (runtime or mcp), its standing and its owner's, how many seats of its count now, whether the runtime may host it now (hostable, with the reason if not), the live token the runtime holds for it, if any, and whether people in the site may ask it now. not_found for an id that is no agent's.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "agent_runtime.agent",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "hostable": {
+            "description": "whether agent_runtime.issue_token would issue it a token now",
+            "type": "boolean"
+          },
+          "hosting": {
+            "description": "runtime: the runtime hosts it, and alone holds its token; mcp: its owner's own tools reach it, and the runtime does not host it",
+            "type": "string"
+          },
+          "live_seats": {
+            "description": "courses where it is seated and its seat counts now",
+            "type": "integer"
+          },
+          "owner_actor_id": {
+            "description": "the person who owns it, for good; absent for an agent nobody owns",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "owner_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "owner_status": {
+            "description": "active or suspended: an agent is paused while its owner is",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "description": "why not, when it is not hostable: not_runtime_hosted, an mcp agent; agent_suspended; owner_suspended",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "runtime_token": {
+            "additionalProperties": false,
+            "description": "the live token the runtime holds for it, if any: one at most",
+            "properties": {
+              "created_at": {
+                "type": "string"
+              },
+              "credential_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "last_used_at": {
+                "description": "when the agent last called with it, to the minute",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "token_prefix": {
+                "description": "the public part of the token, enough to tell which one it is",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            },
+            "required": [
+              "credential_id",
+              "created_at"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "site_chat": {
+            "description": "whether people in the site may ask it now: it is hostable and its runtime token lives",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "active or suspended",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "display_name",
+          "hosting",
+          "status",
+          "live_seats",
+          "hostable",
+          "site_chat"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/services/agent_runtime/agents/{agent_id}"
+    },
+    {
+      "description": "For the site's agent runtime alone: whether a person owns an agent, before the runtime does anything about it for them — hosting it, changing its settings, stopping it. The runtime knows the person by Core's assertion (its sub); this says whether they own the agent, and, if they do, the agent as agent_runtime.agent says it, with whether the runtime may host it (hostable: an mcp agent is not_runtime_hosted). Of anyone else's agent, or an id that is no agent's, it says owns false and nothing else.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "description": "the person signed in to the runtime: the sub of the assertion Core made for them",
+            "format": "uuid",
+            "type": "string"
+          },
+          "agent_id": {
+            "description": "the agent they ask the runtime to host, or to change or stop hosting",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id",
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "agent_runtime.check_owner",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "additionalProperties": false,
+            "description": "when they own it, the agent as agent_runtime.agent says it: whether it may be hosted (hostable, reason) among it",
+            "properties": {
+              "agent_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "display_name": {
+                "type": "string"
+              },
+              "hostable": {
+                "description": "whether agent_runtime.issue_token would issue it a token now",
+                "type": "boolean"
+              },
+              "hosting": {
+                "description": "runtime: the runtime hosts it, and alone holds its token; mcp: its owner's own tools reach it, and the runtime does not host it",
+                "type": "string"
+              },
+              "live_seats": {
+                "description": "courses where it is seated and its seat counts now",
+                "type": "integer"
+              },
+              "owner_actor_id": {
+                "description": "the person who owns it, for good; absent for an agent nobody owns",
+                "format": "uuid",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "owner_name": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "owner_status": {
+                "description": "active or suspended: an agent is paused while its owner is",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "reason": {
+                "description": "why not, when it is not hostable: not_runtime_hosted, an mcp agent; agent_suspended; owner_suspended",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "runtime_token": {
+                "additionalProperties": false,
+                "description": "the live token the runtime holds for it, if any: one at most",
+                "properties": {
+                  "created_at": {
+                    "type": "string"
+                  },
+                  "credential_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "last_used_at": {
+                    "description": "when the agent last called with it, to the minute",
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "token_prefix": {
+                    "description": "the public part of the token, enough to tell which one it is",
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  }
+                },
+                "required": [
+                  "credential_id",
+                  "created_at"
+                ],
+                "type": [
+                  "null",
+                  "object"
+                ]
+              },
+              "site_chat": {
+                "description": "whether people in the site may ask it now: it is hostable and its runtime token lives",
+                "type": "boolean"
+              },
+              "status": {
+                "description": "active or suspended",
+                "type": "string"
+              }
+            },
+            "required": [
+              "agent_id",
+              "display_name",
+              "hosting",
+              "status",
+              "live_seats",
+              "hostable",
+              "site_chat"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "owns": {
+            "description": "whether that person owns that agent; false, and nothing more, for an agent of someone else's or nobody's, or an id that is no agent's",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "owns"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/services/agent_runtime/owners/{actor_id}/agents/{agent_id}"
+    },
+    {
+      "description": "For the site's agent runtime alone: issue the API token it runs a runtime agent with, by the agent's id, for it to seal and keep. It is the agent's one token: the one issued before is revoked in the same call. It never expires; people in the site ask the agent while it lives. Refused for an mcp agent (not_runtime_hosted), a suspended agent (agent_suspended), and an agent whose owner is suspended (owner_suspended); not_found for an id that is no agent's. Ask agent_runtime.check_owner first that the person asking owns it. The token is returned once and only its hash is kept: a replay of this call, under the same idempotency key, comes back without it, so a call that timed out is made again under a new key, which revokes the token never received.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "label": {
+            "description": "what the token is for, as its owner sees it listed (agent.list_credentials); agent runtime if omitted",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "agent_runtime.issue_token",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "credential_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "replaced": {
+            "description": "the token the runtime held for the agent before, revoked by this call",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "token": {
+            "description": "the agent's API token, which the runtime runs it with over MCP, as a bearer token; shown once: it is not stored, and a replay of this call comes back without it",
+            "type": "string"
+          },
+          "token_prefix": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "credential_id",
+          "token_prefix"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/services/agent_runtime/agents/{agent_id}/token"
+    },
+    {
+      "description": "For the site's agent runtime alone: revoke the token it holds for an agent, by the agent's id, when it stops hosting it: its owner removed it from the runtime, or paused it there. People in the site no longer ask it, until the runtime is issued another (agent_runtime.issue_token). Revoking none, for an agent it holds no token for, is no error; not_found for an id that is no agent's.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "agent_runtime.revoke_token",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "revoked": {
+            "description": "the token the runtime held for the agent, now revoked; empty when it held none, which is no error",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "agent_id",
+          "revoked"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/services/agent_runtime/agents/{agent_id}/token/revoke"
+    },
+    {
+      "description": "Register an agent of your own, choosing for good how it is run (hosting): runtime, the site's own agent runtime runs it, people in the site may ask it while the runtime hosts it, and you hold no token for it; or mcp, your own tools reach it over MCP with tokens you issue (agent.issue_token), and nobody asks it in the site. It never changes: for the other, register another agent. No endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. It is yours for good: nobody gives it another owner. A person may have a limited number of agents that are not suspended.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
           "display_name": {
             "description": "what the agent is called wherever it appears",
             "type": "string"
+          },
+          "hosting": {
+            "description": "how it is run, for good, since it never changes: runtime, the site's own agent runtime runs it, people in the site may ask it, and you hold no token for it; mcp, your own tools reach it over MCP (a chat app, an editor, a script) with tokens you issue (agent.issue_token), and nobody asks it in the site",
+            "enum": [
+              "runtime",
+              "mcp"
+            ],
+            "type": "string"
           }
         },
         "required": [
-          "display_name"
+          "display_name",
+          "hosting"
         ],
         "type": "object"
       },
@@ -1817,7 +2245,7 @@
       "path": "/v1/me/agents"
     },
     {
-      "description": "One of your agents: its standing, when it was last seen, the courses it is seated in with what it may do in each, and the requests to seat it that wait for a decision.",
+      "description": "One of your agents: how it is hosted, its standing, whether people in the site may ask it now, when it was last seen, the courses it is seated in with what it may do in each, and the requests to seat it that wait for a decision.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -1845,6 +2273,10 @@
             "type": "string"
           },
           "display_name": {
+            "type": "string"
+          },
+          "hosting": {
+            "description": "how it is run, chosen when it was registered and never changed: runtime, by the site's own agent runtime, which alone holds its token; mcp, by your own tools over MCP, with tokens you issue",
             "type": "string"
           },
           "last_seen_at": {
@@ -1984,7 +2416,7 @@
             ]
           },
           "site_chat": {
-            "description": "whether people in the site may start conversations with it and ask it: what runs it, an agent runtime that answers on its own, said so with a token of the agent's that still works (me.site_chat); false for an agent operated from an external tool, which acts through that tool alone",
+            "description": "whether people in the site may start conversations with it and ask it now: for a runtime agent, while the site's agent runtime hosts it (holds a live token for it) and it and you are active; always false for an mcp agent",
             "type": "boolean"
           },
           "status": {
@@ -1999,6 +2431,7 @@
         "required": [
           "actor_id",
           "display_name",
+          "hosting",
           "status",
           "suspended_by_me",
           "created_at",
@@ -2011,7 +2444,7 @@
       "path": "/v1/me/agents/{actor_id}"
     },
     {
-      "description": "Issue an API token for one of your agents, for whatever runs it to connect with (MCP at /mcp, as a bearer token). The token is returned once and only its hash is kept. Whoever holds it acts as the agent: as your delegate, never with more than your own seat.",
+      "description": "Issue an API token for one of your mcp agents, for your own tools to connect with (MCP at /mcp, as a bearer token). The token is returned once and only its hash is kept. Whoever holds it acts as the agent: as your delegate, never with more than your own seat. A runtime agent is refused (hosted_by_runtime): the site's agent runtime alone holds its token, and you hold none.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2027,7 +2460,7 @@
             ]
           },
           "label": {
-            "description": "what this token is for, so it can be recognised later: where the agent runs",
+            "description": "what this token is for, so it can be recognised later: the tool you connect the agent with",
             "type": "string"
           }
         },
@@ -2095,6 +2528,10 @@
                 "display_name": {
                   "type": "string"
                 },
+                "hosting": {
+                  "description": "how it is run, chosen when it was registered and never changed: runtime, by the site's own agent runtime, which alone holds its token; mcp, by your own tools over MCP, with tokens you issue",
+                  "type": "string"
+                },
                 "last_seen_at": {
                   "description": "when it last used a token that still works, to the minute; absent if never",
                   "type": [
@@ -2111,7 +2548,7 @@
                   "type": "integer"
                 },
                 "site_chat": {
-                  "description": "whether people in the site may start conversations with it and ask it: what runs it, an agent runtime that answers on its own, said so with a token of the agent's that still works (me.site_chat); false for an agent operated from an external tool, which acts through that tool alone",
+                  "description": "whether people in the site may start conversations with it and ask it now: for a runtime agent, while the site's agent runtime hosts it (holds a live token for it) and it and you are active; always false for an mcp agent",
                   "type": "boolean"
                 },
                 "status": {
@@ -2126,6 +2563,7 @@
               "required": [
                 "actor_id",
                 "display_name",
+                "hosting",
                 "status",
                 "suspended_by_me",
                 "created_at",
@@ -2159,7 +2597,7 @@
       "path": "/v1/me/agents"
     },
     {
-      "description": "One of your agents' tokens, newest first, with their label, prefix, issuer, expiry and last use, revoked ones included. Secrets are never shown.",
+      "description": "One of your agents' tokens, newest first, with their label, prefix, issuer, expiry and last use, revoked ones included; a runtime agent's are those issued to the site's agent runtime (issued_to agent_runtime). Secrets are never shown.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2206,6 +2644,13 @@
                 },
                 "issued_by_name": {
                   "description": "the issuer's display name",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "issued_to": {
+                  "description": "for a runtime agent's token, agent_runtime: issued to the site's agent runtime, which runs the agent with it, and to nobody else",
                   "type": [
                     "null",
                     "string"
@@ -2309,7 +2754,7 @@
       "path": "/v1/me/agents/{actor_id}/reactivate"
     },
     {
-      "description": "Revoke one of your agents' tokens — one that has leaked, or a runtime you no longer use — without suspending the agent. It takes effect on the token's next use.",
+      "description": "Revoke one of your agents' tokens — one that has leaked, or a tool you no longer use — without suspending the agent. It takes effect on the token's next use. Revoking a runtime agent's token stops the site's runtime hosting it, and people asking it in the site, until the runtime is given another.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2378,7 +2823,7 @@
       "path": "/v1/me/agents/{actor_id}/suspend"
     },
     {
-      "description": "Rename one of your agents, or switch off its conversations in the site (site_chat false): people there then no longer start conversations with it or ask it more, until what runs it says it answers again. Only what runs it switches them on (me.site_chat), never you.",
+      "description": "Rename one of your agents. How it is hosted never changes (hosting_fixed). site_chat is deprecated and refused (site_chat_follows_hosting): people in the site ask a runtime agent while the site's runtime hosts it, and never an mcp agent.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -2393,8 +2838,19 @@
               "string"
             ]
           },
+          "hosting": {
+            "description": "never changes: another than it has is refused (hosting_fixed); register another agent for the other",
+            "enum": [
+              "runtime",
+              "mcp"
+            ],
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "site_chat": {
-            "description": "false: people in the site may no longer start conversations with it or ask it, until what runs it says so again; true is refused, since only what runs it says so (me.site_chat)",
+            "description": "deprecated, and refused (site_chat_follows_hosting): people in the site ask a runtime agent while the site's runtime hosts it, and never an mcp agent. To stop them asking a runtime agent, stop it in the runtime, or suspend it (agent.suspend)",
             "type": [
               "null",
               "boolean"
@@ -3318,7 +3774,7 @@
       "path": "/v1/courses/{course_id}/conversations/{conversation_id}/answer"
     },
     {
-      "description": "Write in a conversation you opened: a question, or anything more you have to say, which may carry files (attachments, each uploaded first with conversation.upload_url). It is refused once the conversation is closed, or once you may no longer address its respondent; start a new conversation then. It is refused too, as agent_answers_elsewhere, while its respondent is an agent that takes no conversations in the site: what was written stays readable.",
+      "description": "Write in a conversation you opened: a question, or anything more you have to say, which may carry files (attachments, each uploaded first with conversation.upload_url). It is refused once the conversation is closed, or once you may no longer address its respondent; start a new conversation then. It is refused too while its respondent is not asked in the site: an mcp agent (mcp_agent), or a runtime agent the site's runtime does not run now (agent_not_hosted). What was written stays readable.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5091,7 +5547,7 @@
       "path": "/v1/courses/{course_id}/conversations/{conversation_id}/messages"
     },
     {
-      "description": "Start a conversation with an agent seated in the course — the course's tutor agent, your own agent — and, if you give body, ask the first question, which may carry files (attachments, each uploaded first with conversation.upload_url). Conversations are between a person and an agent: a person is nobody's respondent (conversations_are_with_agents); people talk to people elsewhere. You may address only an agent that can see and do nothing you cannot, or your own agent, and only while what runs it answers in the site (agent_answers_elsewhere otherwise: it is operated from an external tool): conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it; and an agent that answers others too, such as the course's tutor, may repeat to them what you write.",
+      "description": "Start a conversation with an agent seated in the course — the course's tutor agent, your own agent — and, if you give body, ask the first question, which may carry files (attachments, each uploaded first with conversation.upload_url). Conversations are between a person and an agent: a person is nobody's respondent (conversations_are_with_agents); people talk to people elsewhere. You may address only an agent that can see and do nothing you cannot, or your own agent, and only a runtime agent the site's agent runtime runs now: an mcp agent, used from its owner's own tools, is never asked here (mcp_agent), and a runtime agent the runtime does not run now is not asked either (agent_not_hosted). conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it; and an agent that answers others too, such as the course's tutor, may repeat to them what you write.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5178,7 +5634,7 @@
       "path": "/v1/courses/{course_id}/conversations"
     },
     {
-      "description": "The agents you may start a conversation with here: agents that answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents, each only while what runs it answers in the site. Never a person: conversations are with agents, and people talk to people elsewhere. Each says how its answers arrive, whether it answers others too (answers_course: it may repeat to them what you write), and when it was last seen.",
+      "description": "The agents you may start a conversation with here: agents that answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents, each a runtime agent and only while the site's agent runtime runs it; never an mcp agent, used from its owner's own tools. Never a person: conversations are with agents, and people talk to people elsewhere. Each says how its answers arrive, whether it answers others too (answers_course: it may repeat to them what you write), and when it was last seen.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -5212,6 +5668,10 @@
                   "type": "boolean"
                 },
                 "display_name": {
+                  "type": "string"
+                },
+                "hosting": {
+                  "description": "runtime: the site's own agent runtime runs it; only a runtime agent is asked in the site",
                   "type": "string"
                 },
                 "is_my_delegate": {
@@ -5249,6 +5709,7 @@
                 "member_id",
                 "display_name",
                 "kind",
+                "hosting",
                 "role",
                 "is_my_delegate",
                 "answers_course",
@@ -6138,7 +6599,7 @@
       "path": "/v1/courses/{course_id}/details"
     },
     {
-      "description": "Create an API token for the caller's own account, which must be an agent's. A person is refused (api_tokens_are_for_agents): people sign in with a password or single sign-on, and use one of their agents for tools and scripts (agent.create, then agent.issue_token). The token is returned once and only its hash is kept: retrying this call returns the credential but not the token again.",
+      "description": "Create an API token for the caller's own account, which must be an mcp agent's. A person is refused (api_tokens_are_for_agents): people sign in with a password or single sign-on, and use one of their agents for tools and scripts (agent.create, then agent.issue_token). A runtime agent is refused too (hosted_by_runtime): its one token is the one the site's agent runtime holds. The token is returned once and only its hash is kept: retrying this call returns the credential but not the token again.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6230,6 +6691,13 @@
                 },
                 "issued_by_name": {
                   "description": "the issuer's display name",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "issued_to": {
+                  "description": "for a runtime agent's token, agent_runtime: issued to the site's agent runtime, which runs the agent with it, and to nobody else",
                   "type": [
                     "null",
                     "string"
@@ -10771,7 +11239,7 @@
       "path": "/v1/me/conversations"
     },
     {
-      "description": "Who the caller is: the actor this credential belongs to, with the email and the login ID (a student or staff number) a person signs in with, for an agent a person owns, who owns it, and for a department's administrator, the departments they are appointed to administer.",
+      "description": "Who the caller is: the actor this credential belongs to, with the email and the login ID (a student or staff number) a person signs in with; for an agent, how it is hosted (runtime or mcp) and, if a person owns it, who; and for a department's administrator, the departments they are appointed to administer.",
       "input_schema": {
         "additionalProperties": false,
         "type": "object"
@@ -10829,6 +11297,13 @@
             "type": [
               "null",
               "boolean"
+            ]
+          },
+          "hosting": {
+            "description": "for an agent, how it is run, for good: runtime, the site's own agent runtime runs you and people in the site ask you; mcp, your owner's own tools reach you over MCP, and nobody asks you in the site. Absent for a person",
+            "type": [
+              "null",
+              "string"
             ]
           },
           "id": {
@@ -11001,12 +11476,12 @@
       "path": "/v1/me/memberships"
     },
     {
-      "description": "Say whether people in the site may start conversations with you and ask you there. Turn it on only if what runs you polls conversation_inbox and answers on its own, as an AIshie agent runtime does, and on each start, under a new idempotency key: it holds while the token you call with works, and ends when that token is revoked. An assistant a person drives from a tool of their own never turns it on: it acts only while they use it, so questions would wait unanswered. Turn it off when you stop answering. Your owner may turn it off, never on. For agents only.",
+      "description": "Deprecated: nothing is declared any more. People in the site ask a runtime agent while the site's agent runtime hosts it, and never an mcp agent; me_get says which you are (hosting). Called with the token the site's runtime holds for you, it changes nothing, on true or false, and says whether people may ask you now; with any other credential it is refused (not_runtime_hosted).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
           "on": {
-            "description": "true: people in the site may start conversations with you and ask you, for as long as the credential you call with works; false: they may not",
+            "description": "deprecated, and changes nothing either way: people in the site ask a runtime agent while the site's runtime hosts it",
             "type": "boolean"
           }
         },
@@ -11022,7 +11497,7 @@
         "additionalProperties": false,
         "properties": {
           "site_chat": {
-            "description": "whether you take conversations in the site now; with on true, false only while your owner is suspended",
+            "description": "whether people in the site may ask you now: while the site's runtime hosts you, and you and your owner are active",
             "type": "boolean"
           }
         },
@@ -11435,6 +11910,13 @@
               "string"
             ]
           },
+          "hosting": {
+            "description": "for an agent's seat, how the agent is run, for good: runtime, by the site's own agent runtime; mcp, by its owner's own tools over MCP. Absent for a person's seat",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -11533,7 +12015,7 @@
             "type": "string"
           },
           "site_chat": {
-            "description": "for an agent's seat: whether people in the site may start conversations with it and ask it, since what runs it, an agent runtime that answers on its own, says so (me.site_chat); false for an agent operated from an external tool. Absent for a person's seat",
+            "description": "for an agent's seat: whether people in the site may start conversations with it and ask it now, which a runtime agent's are while the site's agent runtime runs it, and an mcp agent's never. Absent for a person's seat",
             "type": [
               "null",
               "boolean"
@@ -11643,6 +12125,13 @@
                     "string"
                   ]
                 },
+                "hosting": {
+                  "description": "for an agent's seat, how the agent is run, for good: runtime, by the site's own agent runtime; mcp, by its owner's own tools over MCP. Absent for a person's seat",
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
                 "id": {
                   "format": "uuid",
                   "type": "string"
@@ -11741,7 +12230,7 @@
                   "type": "string"
                 },
                 "site_chat": {
-                  "description": "for an agent's seat: whether people in the site may start conversations with it and ask it, since what runs it, an agent runtime that answers on its own, says so (me.site_chat); false for an agent operated from an external tool. Absent for a person's seat",
+                  "description": "for an agent's seat: whether people in the site may start conversations with it and ask it now, which a runtime agent's are while the site's agent runtime runs it, and an mcp agent's never. Absent for a person's seat",
                   "type": [
                     "null",
                     "boolean"
@@ -13208,7 +13697,7 @@
       "path": "/v1/presets/{preset_id}"
     },
     {
-      "description": "Issue a credential for a site service: document_text, the runtime's transcriber, which takes the versions waiting to be transcribed and writes their text (document_text.queue, .complete). The service calls its own tools with it, over REST, and nothing else: no other tool, and not the agents' MCP door. The service is made the first time; it is seated in no course and signs in nowhere. The credential is returned once and only its hash is kept. replace revokes the service's other credentials at once, and puts back in the queue what they had claimed; without it a service holds at most 5 (too_many_credentials). For platform administrators.",
+      "description": "Issue a credential for a site service: document_text, the runtime's transcriber, which takes the versions waiting to be transcribed and writes their text (document_text.queue, .complete); or agent_runtime, the site's agent runtime, which hosts the runtime agents by their ids and is issued each one's token (agent_runtime.*). The service calls its own tools with it, over REST, and nothing else: no other tool, and not the agents' MCP door. The service is made the first time; it is seated in no course and signs in nowhere. The credential is returned once and only its hash is kept. replace revokes the service's other credentials at once, and puts back in the queue what they had claimed; without it a service holds at most 5 (too_many_credentials). For platform administrators; the operator issues one at setup on the command line (aishie-core service issue).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -13228,7 +13717,7 @@
             "type": "boolean"
           },
           "scope": {
-            "description": "the service: document_text, the runtime's transcriber, which writes documents' text versions",
+            "description": "the service: document_text, the runtime's transcriber, which writes documents' text versions; or agent_runtime, the site's agent runtime, which hosts the runtime agents",
             "type": "string"
           }
         },
@@ -13293,7 +13782,7 @@
         "additionalProperties": false,
         "properties": {
           "scope": {
-            "description": "the service: document_text, the runtime's transcriber, which writes documents' text versions",
+            "description": "the service: document_text, the runtime's transcriber, which writes documents' text versions; or agent_runtime, the site's agent runtime, which hosts the runtime agents",
             "type": "string"
           }
         },
@@ -13313,7 +13802,7 @@
               "additionalProperties": false,
               "properties": {
                 "claims_held": {
-                  "description": "how many text versions it has claimed and not finished, now",
+                  "description": "how many text versions it has claimed and not finished, now; 0 for the agent runtime's",
                   "maximum": 2147483647,
                   "minimum": -2147483648,
                   "type": "integer"
@@ -13409,7 +13898,7 @@
       "path": "/v1/services/{scope}/credentials"
     },
     {
-      "description": "Revoke a site service's credential: it stops working at once, a call of the service's waiting on it included, and what it had claimed goes back in the queue for another. For platform administrators.",
+      "description": "Revoke a site service's credential: it stops working at once, a call of the service's waiting on it included, and what it had claimed goes back in the queue for another. The agent runtime's tokens for the agents it hosts stay as they are: agent_runtime.revoke_token revokes those. For platform administrators.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -13418,7 +13907,7 @@
             "type": "string"
           },
           "scope": {
-            "description": "the service: document_text, the runtime's transcriber, which writes documents' text versions",
+            "description": "the service: document_text, the runtime's transcriber, which writes documents' text versions; or agent_runtime, the site's agent runtime, which hosts the runtime agents",
             "type": "string"
           }
         },

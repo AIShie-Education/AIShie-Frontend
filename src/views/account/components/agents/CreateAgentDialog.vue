@@ -1,26 +1,33 @@
 <script setup lang="ts">
-// agent.create: registering an agent of one's own. Only its name is asked
-// for: nothing about where or how it runs is kept here. agent.list has said
+// agent.create: registering an agent of one's own. Its name is asked for,
+// and how it runs (hosting), chosen here for good and with nothing chosen
+// for the person: hosted on AIshie (runtime) or used from their own tools
+// over MCP (mcp). No model, prompt or key is kept here. agent.list has said
 // how many one may have and whether one may register them oneself; where
 // either stands in the way, the dialog says so and does not offer to create.
-// A refusal at the limit tells the limit too (noteAgentLimit).
+// A refusal at the limit tells the limit too (noteAgentLimit). What comes
+// next is said by the choice: hosting it, or a token for one's tool.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
+import type { AgentHosting } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
+import HostingChoice from '@/components/HostingChoice.vue'
 import { createBlock, knownAgentLimit, noteAgentLimit } from './agents'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ counted: number }>()
-const emit = defineEmits<{ created: [actorId: string, name: string] }>()
+const emit = defineEmits<{ created: [actorId: string, name: string, hosting: AgentHosting] }>()
 const { t } = useI18n()
 
 const formRef = ref<FormInstance>()
-const form = reactive({ name: '' })
+const form = reactive({ name: '', hosting: '' as AgentHosting | '' })
 const { run, pending, lastError } = useWrite('agent.create')
 
 watch(open, (v) => {
-  if (v) form.name = ''
+  if (!v) return
+  form.name = ''
+  form.hosting = ''
 })
 
 const blocked = computed(() => createBlock(props.counted))
@@ -32,20 +39,28 @@ const rules = computed<FormRules>(() => ({
       trigger: 'blur',
     },
   ],
+  hosting: [
+    {
+      validator: (_r, v: string, cb) => (v ? cb() : cb(new Error(t('common.agent.hosting.required')))),
+      trigger: 'change',
+    },
+  ],
 }))
 
 async function submit() {
   if (pending.value || blocked.value) return
   if (!(await formRef.value?.validate().catch(() => false))) return
   const name = form.name.trim()
-  const out = await run({ display_name: name }, { success: t('agents.create.done', { name }) })
+  const hosting = form.hosting
+  if (!hosting) return
+  const out = await run({ display_name: name, hosting }, { success: t('agents.create.done', { name }) })
   if (!out) {
     noteAgentLimit(lastError.value)
     return
   }
   open.value = false
   // A tool on one's own account is never proposed; were it, there would be no id to open.
-  if (out.status === 'executed') emit('created', out.result.actor_id, name)
+  if (out.status === 'executed') emit('created', out.result.actor_id, name, hosting)
 }
 </script>
 
@@ -81,10 +96,12 @@ async function submit() {
         />
         <div class="app-form-hint">{{ t('agents.create.nameHint') }}</div>
       </el-form-item>
+      <el-form-item :label="t('common.agent.hosting.label')" prop="hosting">
+        <HostingChoice v-model="form.hosting" />
+      </el-form-item>
     </el-form>
-    <ol class="create-agent__next">
-      <li>{{ t('agents.create.next.token') }}</li>
-      <li>{{ t('agents.create.next.runtime') }}</li>
+    <ol v-if="form.hosting" class="create-agent__next">
+      <li>{{ t(`agents.create.next.${form.hosting}`) }}</li>
       <li>{{ t('agents.create.next.course') }}</li>
     </ol>
     <template #footer>

@@ -189,7 +189,7 @@ function playRuntime(page: Page) {
         commit: STAMP,
         audience: 'https://e2e.test/runtime',
         issuer: 'https://e2e.test',
-        features: { connect_by_token: true, own_key: true, school_key: true },
+        features: { host_by_id: true, own_key: true, school_key: true },
       })
     if (path === '/me')
       return answer(route, 200, { actor_id: 'root', display_name: 'root', is_admin: true, hosted_agents: 0 })
@@ -462,5 +462,62 @@ test.describe('the transcriber, with an agent runtime', () => {
     await expect(card.locator('.transcription-card__credential-status')).toHaveText('None')
     expect(runtime.sent.filter((x) => x.method === 'DELETE')).toHaveLength(1)
     expect(await liveServiceCredentials()).toEqual([])
+  })
+})
+
+/** The agent runtime's credentials in Core, as root lists them. */
+async function agentRuntimeCredentials(): Promise<{ id: string; label: string; live: boolean }[]> {
+  const out = await call(root().token, 'GET', '/v1/services/agent_runtime/credentials')
+  expect(out.body.status, JSON.stringify(out.body.error)).toBe('executed')
+  return out.body.result.credentials ?? []
+}
+
+test.describe('the agent runtime’s own credential, with an agent runtime', () => {
+  test('root sees it, issues one shown once, and revokes it, with the real Core', async ({ page }) => {
+    const LABEL = `e2e hosting ${STAMP}`
+    const runtime = playRuntime(page)
+    await runtime.install()
+    await signInAsRoot(page)
+    await page.goto('/admin/runtime')
+    await page.getByRole('tab', { name: 'Agent hosting' }).click()
+    await expect(page).toHaveURL(/tab=hosting/)
+    const card = page.locator('.agent-runtime-card')
+    await expect(card.getByRole('heading', { name: 'The agent runtime’s credential for AIshie' })).toBeVisible()
+    // Setup makes it, and the server's command rotates it.
+    await expect(card.locator('.agent-runtime-card__setup')).toContainText('aishie runtime-credential')
+
+    // Issued here, without revoking the others: the runs' own runtime credential (support's) goes on working.
+    await card.getByRole('button', { name: 'Issue a credential' }).click()
+    await expect(page.getByRole('dialog', { name: 'Issue a credential for the agent runtime' })).toBeVisible()
+    // The same dialog, its title saying what to do once it is issued.
+    const dialog = page.locator('.agent-runtime-issue')
+    await dialog.locator('.agent-runtime-issue__label input').fill(LABEL)
+    await dialog.getByRole('button', { name: 'Issue', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Copy the credential now' })).toBeVisible()
+    await expect(dialog.getByText('This is the only time it is shown')).toBeVisible()
+    await expect(dialog).toContainText('/etc/aishie/runtime/secrets/core/agent_runtime')
+    // The credential is on the page once, in the dialog; it is never printed here.
+    const shown = (await dialog.locator('.agent-runtime-issue__token .copy-block__text').textContent()) ?? ''
+    expect(/^aissvc_[a-z2-7]{12}_/.test(shown)).toBe(true)
+    const made = (await agentRuntimeCredentials()).find((c) => c.label === LABEL)!
+    expect(made.live).toBe(true)
+    await dialog.getByRole('button', { name: 'I have copied it' }).click()
+    await expect(dialog).toBeHidden()
+    expect((await page.content()).includes(shown)).toBe(false)
+    // The runtime is given nothing by the page: that is the server's to do.
+    expect(runtime.sent.filter((x) => JSON.stringify(x).includes(shown)).length).toBe(0)
+
+    // Listed, by its label, with who issued it; then revoked.
+    const item = card.locator(`[data-credential="${made.id}"]`)
+    await expect(item).toContainText(LABEL)
+    await expect(item).toContainText('Live')
+    await photograph(page, 'agent-runtime-card')
+    await item.getByRole('button', { name: 'Revoke' }).click()
+    const box = page.getByRole('dialog', { name: 'Revoke this credential?' })
+    await expect(box).toContainText('The tokens of the agents it hosts are not revoked.')
+    await box.getByRole('button', { name: 'Revoke' }).click()
+    await expect(toast(page, 'The credential is revoked.')).toBeVisible()
+    await expect(item).toHaveCount(0)
+    expect((await agentRuntimeCredentials()).find((c) => c.id === made.id)?.live).toBe(false)
   })
 })

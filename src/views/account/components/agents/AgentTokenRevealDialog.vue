@@ -1,13 +1,10 @@
 <script setup lang="ts">
-// Shows an agent's new token once, ready to connect with: the token; Core's
-// MCP endpoint and the header that carries the token, for another AI tool
-// (Claude, ChatGPT, an agent SDK); and, for someone who runs an AIshie
-// runtime themselves, the agent file it reads, folded away (it names the
-// secret the token is kept in, never the token). Core keeps only its hash,
-// and a replay
-// of the call that made it comes back without it: then all there is to do is
-// say so and offer to revoke it. The same pattern as the account's own
-// TokenRevealDialog.
+// Shows the new token of an agent with MCP access once, ready to connect
+// with: the token, and Core's MCP endpoint, the header that carries it and
+// Claude Desktop's configuration with it, for one's own tool. Core keeps
+// only its hash, and a replay of the call that made it comes back without
+// it: then all there is to do is say so and offer to revoke it. The same
+// pattern as the account's own TokenRevealDialog.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -16,10 +13,9 @@ import TimeText from '@/components/TimeText.vue'
 import { maskedToken } from '../credentials'
 import ConnectToolSteps from './ConnectToolSteps.vue'
 import CopyBlock from './CopyBlock.vue'
-import OwnRuntimeSteps from './OwnRuntimeSteps.vue'
 
 const open = defineModel<boolean>({ default: false })
-const props = defineProps<{ issued: AgentToken | null; name: string; actorId: string }>()
+const props = defineProps<{ issued: AgentToken | null; name: string }>()
 // closed: the dialog has gone, and the parent can forget the token.
 const emit = defineEmits<{ revoke: [credentialId: string]; closed: [] }>()
 const { t } = useI18n()
@@ -71,10 +67,8 @@ function revoke() {
     <template v-if="issued && token">
       <el-alert type="warning" :closable="false" show-icon :title="t('agents.reveal.warning')" />
       <CopyBlock :text="token" :label="t('agents.reveal.token')" inline class="reveal__block" @copied="copied = true" />
-      <h3 class="reveal__h">{{ t('hosting.choice.tool') }}</h3>
+      <h3 class="reveal__h">{{ t('agents.reveal.connect') }}</h3>
       <ConnectToolSteps :token="token" @copied="copied = true" />
-      <h3 class="reveal__h">{{ t('hosting.choice.runtime') }}</h3>
-      <OwnRuntimeSteps :name="name" :actor-id="actorId" class="reveal__runtime" />
       <dl class="reveal__meta">
         <dt>{{ t('agents.reveal.listedAs') }}</dt>
         <dd>

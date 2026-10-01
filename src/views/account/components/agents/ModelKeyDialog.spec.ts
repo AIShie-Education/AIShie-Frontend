@@ -417,7 +417,7 @@ describe('ModelKeyDialog', () => {
 
   it('shows the wizard’s steps as its second step', async () => {
     const { w } = await open({ wizard: true })
-    expect(w.find('.model-dialog__steps').exists()).toBe(true)
+    expect(w.findAll('.model-dialog__steps .el-step').map((x) => x.text())).toEqual(['Agent', 'Model and key'])
     expect(w.text()).toContain('Later')
   })
 })

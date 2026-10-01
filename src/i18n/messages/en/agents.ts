@@ -15,11 +15,11 @@ export default {
     title: 'How agents work',
     here: {
       title: 'Registered here',
-      body: 'An agent is an identity in AIshie: a name, its tokens and the courses it is in. No model, prompt or key is kept here.',
+      body: 'An agent is an identity in AIshie: a name, how it runs and the courses it is in. No model, prompt or key is kept with it.',
     },
     runtime: {
-      title: 'Runs elsewhere',
-      body: 'What thinks and answers is a runtime: a program on your computer or a service you use. It connects with one of the agent’s tokens, and asks AIshie for work.',
+      title: 'One of two ways, for good',
+      body: 'Hosted on AIshie: AIshie runs it with a model you choose, and people in its courses ask it on the site. Or MCP access: your own tools use it with its tokens. You choose when you create it.',
     },
     delegate: {
       title: 'Acts only for you',
@@ -39,7 +39,7 @@ export default {
     count: 'None active | One active | {n} active',
     countOf: '{n} of {limit} active',
     suspendedDoNotCount: 'Suspended agents do not count towards how many you may have.',
-    empty: 'You have no agents yet. Create one, give it a token, and connect a runtime to it.',
+    empty: 'You have no agents yet. Create one: hosted on AIshie, or used from your own tools over MCP.',
     emptyNoSelfService: 'You have no agents. Here an administrator registers them: ask yours for one.',
     seats: 'Not in any course | In one course | In {n} courses',
     requests: 'One request waiting | {n} requests waiting',
@@ -56,14 +56,14 @@ export default {
   create: {
     title: 'New agent',
     intro:
-      'Give it a name. Everything about how it runs stays with whatever runs it: here it is only who it is, its tokens and the courses you bring it into.',
+      'Give it a name, and choose how it runs. No model, prompt or key is kept with it here: only who it is, how it runs and the courses you bring it into.',
     name: 'Name',
     namePlaceholder: 'e.g. Study helper',
     nameHint: 'What it is called wherever it appears: member lists, conversations, approvals. It can be changed later.',
     nameRequired: 'A name is required',
     next: {
-      token: 'Next, give it a token.',
-      runtime: 'Start a runtime with that token, so the agent can connect.',
+      runtime: 'Next, host it on AIshie, and choose the model it answers with. You never handle a token.',
+      mcp: 'Next, give it a token, and connect your own tool to AIshie with it.',
       course: 'Bring it into a course where you are seated.',
     },
     submit: 'Create agent',
@@ -76,35 +76,27 @@ export default {
     done: 'Renamed',
   },
 
-  // Whether it takes conversations on the site (agent.get's site_chat), and switching them off (agent.update).
+  // Whether people can ask it on the site (agent.get's site_chat), as its hosting decides.
   siteChat: {
-    title: 'Conversations on the site',
-    on: 'Takes conversations on the site',
-    off: 'Not taking conversations on the site',
-    onBody:
-      'People in its courses can start conversations with it on the site and ask it questions: whatever runs it has said that it answers them.',
-    hostedOff: 'AIshie’s runtime hosts it, and takes conversations on the site again the next time it starts it.',
-    suspended: 'It takes no conversations on the site while it is suspended.',
-    switchOff: 'Switch off',
-    confirmTitle: 'Switch off conversations with {name} on the site?',
-    confirmBody:
-      'People in its courses will no longer be able to start conversations with it on the site, or ask it anything more. What was written stays readable, and it can still answer what it was asked already.',
-    confirmReturns:
-      'Whatever runs it, such as AIshie’s runtime, switches them on again the next time it starts the agent. Revoking the token it runs with, or ending its hosting on AIshie, ends them too.',
-    confirm: 'Switch off',
-    done: '{name} no longer takes conversations on the site',
+    title: 'Questions on the site',
+    on: 'People in its courses can ask it on the site: AIshie’s runtime runs it now.',
+    off: 'Nobody can ask it on the site just now: AIshie’s runtime is not running it. Host it, or resume it, on this page.',
+    suspended: 'Nobody can ask it on the site while it is suspended.',
+    mcp: 'Nobody can ask it on the site: it has MCP access, and is used from your own tools. An agent people ask here is one created as hosted on AIshie.',
+    stop: 'To stop people asking it, pause its hosting, or suspend it.',
   },
 
   detail: {
     title: 'Agent',
-    subtitle: 'Its runtime, its tokens and the courses it works in',
+    subtitle: 'How it runs, and the courses it works in',
     notFound: 'You have no agent with this ID.',
     about: 'About',
     presence: 'Connection',
     created: 'Created',
     id: 'Actor ID',
-    delegateNote:
-      'Whoever holds one of its tokens acts as this agent, and so as your delegate: never with more than your own seat in each course.',
+    delegateNote: 'In each course it acts as your delegate: never with more than your own seat.',
+    tokenNote: 'Whoever holds one of its tokens acts as this agent, and so as your delegate.',
+    hostingFixed: 'Chosen when it was created, and never changed.',
     rename: 'Rename',
     suspend: 'Suspend',
     reactivate: 'Reactivate',
@@ -120,29 +112,35 @@ export default {
     adminOnly: 'An administrator suspended it, and only an administrator can lift that.',
   },
 
-  // How it runs, when run by another AI tool or an AIshie runtime of one's own (ConnectRuntimeCard).
+  // Connecting one's own tool to an agent with MCP access (McpAccessCard, ConnectToolSteps).
   connect: {
-    tokenTodo: 'It has no token yet: the tool connects with one.',
+    tokenTodo: 'It has no token yet: your tool connects with one.',
     tokenDone: 'It has a token that works.',
     waiting: 'None of its tokens has been used yet.',
-    waitingWatching: 'Waiting for it to connect… this page checks every few seconds.',
+    waitingWatching: 'Waiting for your tool to connect… this page checks every few seconds.',
     toolIntro:
-      'Claude, ChatGPT, an agent SDK or any other MCP client can be this agent: give it this address, and one of the agent’s tokens in this header.',
+      'Claude Desktop, an editor, an agent SDK or any other MCP client can be this agent: give it this address, and one of the agent’s tokens in this header.',
     endpoint: 'MCP endpoint (streamable HTTP)',
     header: 'Header',
     headerHint:
       'Put one of the agent’s tokens in place of {placeholder}. Keep it secret: whoever has it acts as this agent.',
-    claudeHint:
-      'In Claude: add a custom connector with this URL, choose “No sign-in”, and add a header named authorization with the value Bearer {placeholder}.',
-    runtimeIntro:
-      'For someone who operates an AIshie Agent Runtime: put this agent file in the runtime’s agents directory, and the token in the secret it names.',
-    agentFile: 'Agent file for the AIshie Agent Runtime (YAML)',
-    agentFileHint:
-      'Keep the token in the file {file} of the runtime’s secrets directory, or in the variable {variable}: never in the agent file, where the runtime refuses it.',
-    modelExample: 'The model block is only an example: change it to your own provider, model and key.',
+    claudeDesktop: 'Example: Claude Desktop',
+    claudeDesktopFile: 'claude_desktop_config.json',
+    claudeDesktopHint:
+      'Add this to Claude Desktop’s configuration (Settings → Developer → Edit Config), put one of the agent’s tokens in place of {placeholder}, and restart Claude Desktop. It runs mcp-remote with npx, so Node.js must be installed.',
+    claudeDesktopHintToken:
+      'Add this to Claude Desktop’s configuration (Settings → Developer → Edit Config), and restart Claude Desktop. It holds the token: keep the file to yourself. It runs mcp-remote with npx, so Node.js must be installed.',
     courseTodo: 'It can do nothing until it is in a course: bring it into one where you are seated.',
     courseWaiting: 'A request to seat it waits for an instructor’s approval.',
     courseDone: 'In one course. | In {n} courses.',
+  },
+
+  // How an agent with MCP access runs, on its page (McpAccessCard).
+  mcp: {
+    title: 'How it runs',
+    notOnSite: 'People cannot ask this agent on the site',
+    notOnSiteBody:
+      'It has MCP access: your own tools (Claude Desktop, an editor, a script) use it over MCP with one of its tokens, and act as it in its courses, as your delegate.',
   },
 
   copy: {
@@ -154,7 +152,7 @@ export default {
     title: 'Tokens',
     new: 'New token',
     intro:
-      'What its runtimes connect with. Revoking one stops that runtime from its next call; the agent and its other tokens carry on.',
+      'What your tools connect with. Revoking one stops whatever uses it from its next call; the agent and its other tokens carry on.',
     showInactive: 'Show revoked and expired ({n})',
     empty: 'No tokens yet.',
     unlabelled: 'No label',
@@ -173,7 +171,7 @@ export default {
     },
     revoke: 'Revoke',
     revokeTitle: 'Revoke this token?',
-    revokeBody: 'A runtime using {token} is refused from its next call as {name}.',
+    revokeBody: 'Whatever uses {token} is refused from its next call as {name}.',
     revokeKeeps: 'The agent keeps its seats and its other tokens. A revoked token never works again.',
     revoked: 'Token revoked',
   },
@@ -181,11 +179,11 @@ export default {
   issue: {
     title: 'New token for {name}',
     intro:
-      'For one runtime of {name}. Whoever holds it acts as this agent, as your delegate: never with more than your own seat.',
+      'For one tool of yours that uses {name} over MCP. Whoever holds it acts as this agent, as your delegate: never with more than your own seat.',
     suspended: 'The agent is suspended: the token is refused until the agent is reactivated.',
     label: 'Label',
-    labelPlaceholder: 'e.g. runtime on my laptop',
-    labelHint: 'Where it runs, so that you can tell it apart later.',
+    labelPlaceholder: 'e.g. Claude Desktop on my laptop',
+    labelHint: 'Where it is used, so that you can tell it apart later.',
     labelRequired: 'A label is required',
     expiry: 'Expires',
     after: 'After a number of days',
@@ -193,7 +191,7 @@ export default {
     days: 'days',
     daysInvalid: 'Enter a whole number of days from 1 to 3650',
     noExpiryWarn:
-      'A token that never expires works until it is revoked. Prefer an expiry for a runtime you do not watch.',
+      'A token that never expires works until it is revoked. Prefer an expiry for a tool you do not watch.',
     submit: 'Create token',
   },
 
@@ -202,6 +200,7 @@ export default {
     warning: 'Copy it now. It is not stored anywhere, and it will not be shown again.',
     token: 'Token',
     listedAs: 'In the list it appears as',
+    connect: 'Connect your tool',
     done: 'I have copied it',
     closeUncopiedTitle: 'Close without copying?',
     closeUncopied: 'The token will not be shown again. If you lose it, revoke it and make a new one.',

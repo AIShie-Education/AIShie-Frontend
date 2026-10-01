@@ -1,16 +1,22 @@
 <script setup lang="ts">
 // One of the caller's agents (agent.get): its name (agent.update), its
 // standing (agent.suspend, agent.reactivate: an administrator's suspension is
-// theirs to lift), whether it takes conversations in the site, and switching
-// them off (SiteChatCard), how it runs (HostingPanel: hosted by AIshie where the
-// school's runtime is there, another AI tool, or an AIshie runtime of the
-// owner's, one at a time), connecting a runtime to it with a token
-// (agent.issue_token, agent.list_credentials, agent.revoke_credential), the
-// courses it is seated in (agent.withdraw) and the requests to seat it that
-// wait (action.withdraw), and bringing it into a course (member.add_delegate).
-// While it has a token but has never used one, the page looks again every
-// few seconds, so that the checklist turns green once the runtime connects.
-import { computed, ref, useTemplateRef } from 'vue'
+// theirs to lift), how it runs, chosen when it was created and never changed
+// (hosting), whether people can ask it on the site now (SiteChatCard, which
+// switches nothing), the courses it is seated in (agent.withdraw) and the
+// requests to seat it that wait (action.withdraw), and bringing it into a
+// course (member.add_delegate).
+//
+// Hosted on AIshie (runtime): the site's agent runtime runs it, and alone is
+// issued its token (HostingPanel: hosting it by its id, its model and key);
+// the page shows no token, lists none and offers none. With MCP access
+// (mcp): its owner's own tools use it (McpAccessCard: the token, Core's MCP
+// endpoint and Claude Desktop's configuration), with tokens issued, listed
+// and revoked here (agent.issue_token, agent.list_credentials,
+// agent.revoke_credential); while it has a token but has never used one, the
+// page looks again every few seconds, so that the checklist turns green once
+// the tool connects.
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
@@ -18,9 +24,11 @@ import type { AgentToken } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { usePolling } from '@/composables/usePolling'
 import { useWrite } from '@/composables/useWrite'
+import { hostingOf } from '@/utils/agents'
 import { isUuid } from '@/utils/format'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PresenceText from '@/components/PresenceText.vue'
@@ -31,6 +39,7 @@ import AgentTokenRevealDialog from './components/agents/AgentTokenRevealDialog.v
 import AgentTokensCard from './components/agents/AgentTokensCard.vue'
 import BringIntoCourseDialog from './components/agents/BringIntoCourseDialog.vue'
 import HostingPanel from './components/agents/HostingPanel.vue'
+import McpAccessCard from './components/agents/McpAccessCard.vue'
 import RenameAgentDialog from './components/agents/RenameAgentDialog.vue'
 import SiteChatCard from './components/agents/SiteChatCard.vue'
 import { agentStanding, noteAgentLimit, setupProgress } from './components/agents/agents'
@@ -49,13 +58,20 @@ const state = useAsync(
   { watch: [id], keepData: true },
 )
 const agent = computed(() => (state.data.value?.actor_id === id.value ? state.data.value : undefined))
+/** Hosted on AIshie: the site's runtime alone holds its token, and the page shows none. */
+const hostedOnAIshie = computed(() => hostingOf(agent.value?.hosting) === 'runtime')
+/** With MCP access (or a hosting this page does not know, as before hosting was chosen): tokens of its owner's. */
+const withTokens = computed(() => !!agent.value && !hostedOnAIshie.value)
 const creds = useAsync(
   () =>
-    isUuid(id.value)
+    withTokens.value
       ? read('agent.list_credentials', { actor_id: id.value }).then((o) => o.credentials ?? [])
       : Promise.resolve([]),
-  { watch: [id], keepData: true },
+  { immediate: false, keepData: true },
 )
+watch([id, withTokens], () => void (withTokens.value ? creds.reload() : (creds.data.value = undefined)), {
+  immediate: true,
+})
 
 const standing = computed(() => (agent.value ? agentStanding(agent.value) : 'active'))
 const suspended = computed(() => standing.value !== 'active')
@@ -70,13 +86,15 @@ const progress = computed(() =>
 
 function reloadAll() {
   void state.reload()
-  void creds.reload()
+  if (withTokens.value) void creds.reload()
 }
 
 // --- Waiting for the first connection -------------------------------------------------
-// Only what agent.get says changes when a runtime connects; it is read quietly
+// Only what agent.get says changes when a tool connects; it is read quietly
 // (no loading state), and a failure slows the next look down.
-const watching = computed(() => !!agent.value && !suspended.value && progress.value.connected === 'waiting')
+const watching = computed(
+  () => withTokens.value && !suspended.value && progress.value.connected === 'waiting',
+)
 usePolling(
   async () => {
     const a = await read('agent.get', { actor_id: id.value })
@@ -127,10 +145,8 @@ async function reactivate() {
   await state.reload()
 }
 
-// --- Tokens ----------------------------------------------------------------------------
+// --- Tokens (an agent with MCP access) --------------------------------------------------
 const issueOpen = ref(false)
-/** The prefix of the token the school's runtime holds, while it hosts the agent. */
-const hostedPrefix = ref<string | null>(null)
 const revealOpen = ref(false)
 const issued = ref<AgentToken | null>(null)
 const tokensCard = useTemplateRef<InstanceType<typeof AgentTokensCard>>('tokensCard')
@@ -165,6 +181,7 @@ function onBrought() {
       <template #tags>
         <template v-if="agent">
           <AgentBadge mine size="default" />
+          <HostingTag :hosting="agent.hosting" size="default" />
           <el-tag v-if="suspended" :type="standing === 'suspendedByMe' ? 'warning' : 'danger'" disable-transitions>
             {{ t(`agents.standing.${standing}`) }}
           </el-tag>
@@ -231,20 +248,31 @@ function onBrought() {
 
         <div class="agent-view__grid app-columns">
           <HostingPanel
+            v-if="hostedOnAIshie"
             :agent="agent"
-            :credentials="creds.data.value"
-            :progress="progress"
-            :watching="watching"
             :standing="standing"
-            @issue="issueOpen = true"
             @bring="bringOpen = true"
-            @creds-changed="creds.reload"
-            @hosted="hostedPrefix = $event"
+            @changed="state.reload"
           />
+          <div v-else class="hosting-panel app-column">
+            <McpAccessCard
+              :progress="progress"
+              :last-seen-at="agent.last_seen_at"
+              :seats="(agent.seats ?? []).length"
+              :watching="watching"
+              :disabled="suspended"
+              @issue="issueOpen = true"
+              @bring="bringOpen = true"
+            />
+          </div>
           <div class="agent-view__side app-column">
             <section class="app-card">
               <h2 class="app-card__title">{{ t('agents.detail.about') }}</h2>
               <el-descriptions :column="1" border size="small" class="agent-view__desc">
+                <el-descriptions-item :label="t('common.agent.hosting.label')">
+                  <HostingTag :hosting="agent.hosting" />
+                  <div class="app-form-hint agent-view__fixed">{{ t('agents.detail.hostingFixed') }}</div>
+                </el-descriptions-item>
                 <el-descriptions-item :label="t('agents.detail.presence')">
                   <PresenceText :value="agent.last_seen_at" />
                 </el-descriptions-item>
@@ -256,21 +284,22 @@ function onBrought() {
                 </el-descriptions-item>
               </el-descriptions>
               <p class="app-form-hint agent-view__note">{{ t('agents.detail.delegateNote') }}</p>
+              <p v-if="withTokens" class="app-form-hint agent-view__note">{{ t('agents.detail.tokenNote') }}</p>
             </section>
-            <SiteChatCard :agent="agent" :hosted="!!hostedPrefix" @changed="state.reload" />
+            <SiteChatCard :agent="agent" />
           </div>
         </div>
 
         <AgentSeatsCard :agent="agent" class="agent-view__section" @changed="state.reload" />
 
         <AgentTokensCard
+          v-if="withTokens"
           ref="tokensCard"
           :actor-id="agent.actor_id"
           :name="agent.display_name"
           :credentials="creds.data.value"
           :loading="creds.loading.value"
           :error="creds.error.value"
-          :hosted-prefix="hostedPrefix"
           class="agent-view__section"
           @changed="reloadAll"
           @retry="creds.reload"
@@ -283,22 +312,22 @@ function onBrought() {
           :name="agent.display_name"
           @saved="onRenamed"
         />
-        <AgentIssueTokenDialog
-          v-model="issueOpen"
-          :actor-id="agent.actor_id"
-          :name="agent.display_name"
-          :suspended="suspended"
-          :hosted="!!hostedPrefix"
-          @issued="onIssued"
-        />
-        <AgentTokenRevealDialog
-          v-model="revealOpen"
-          :issued="issued"
-          :name="agent.display_name"
-          :actor-id="agent.actor_id"
-          @revoke="revokeIssued"
-          @closed="forgetSecret"
-        />
+        <template v-if="withTokens">
+          <AgentIssueTokenDialog
+            v-model="issueOpen"
+            :actor-id="agent.actor_id"
+            :name="agent.display_name"
+            :suspended="suspended"
+            @issued="onIssued"
+          />
+          <AgentTokenRevealDialog
+            v-model="revealOpen"
+            :issued="issued"
+            :name="agent.display_name"
+            @revoke="revokeIssued"
+            @closed="forgetSecret"
+          />
+        </template>
         <BringIntoCourseDialog v-model="bringOpen" :agent="agent" @done="onBrought" />
       </template>
     </AsyncState>
@@ -323,6 +352,9 @@ function onBrought() {
 }
 .agent-view__note {
   margin: 12px 0 0;
+}
+.agent-view__fixed {
+  margin-top: 2px;
 }
 .agent-view__section {
   margin-top: 16px;

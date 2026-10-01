@@ -146,6 +146,19 @@ describe('tokenIssuer', () => {
     expect(tokenIssuer(cred({ issued_by_actor_id: null }), AGENT)).toBeNull()
     expect(tokenIssuer(cred({ kind: 'session', issued_by_actor_id: ROOT }), AGENT)).toBeNull()
   })
+
+  it('says a runtime agent’s token was issued to the site’s agent runtime, whoever is recorded as its issuer', async () => {
+    const { tokenIssuer } = await page()
+    const service = '0192f3c1-5e5e-7c3a-9b1f-2a4c6e8f0a1b'
+    expect(tokenIssuer(cred({ issued_to: 'agent_runtime', issued_by_actor_id: service }), AGENT)).toEqual({
+      by: 'runtime',
+    })
+    expect(tokenIssuer(cred({ issued_to: null, issued_by_actor_id: service, issued_by_name: 'agent runtime' }), AGENT)).toEqual({
+      by: 'other',
+      id: service,
+      name: 'agent runtime',
+    })
+  })
 })
 
 describe('isTemporaryPassword', () => {

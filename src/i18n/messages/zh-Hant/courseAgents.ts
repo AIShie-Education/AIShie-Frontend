@@ -42,9 +42,11 @@ export default {
     presenceUnknownHelp: '代理最後連線的時間只向其擁有者，以及可以向它提問的人顯示。',
     more: '更多',
     removeAgent: '它的對話會隨之結束。擁有者日後可再次帶入它，屆時會以新席位重新開始。',
-    externalHelp:
-      '它是從外部工具操作的（例如 Claude 透過 MCP），所以沒有人能在站內向它提問，學生亦然。交由 AIshie 的執行環境代管後，它會自行在站內接受對話。',
-    externalCourse: '學生不能在站內向它提問：它是從外部工具操作的。',
+    // A course agent nobody can ask on the site, and why: MCP access, or not running now.
+    notAskable: {
+      mcp: '學生不能在站內向它提問：它是 MCP 存取，由擁有者自己的工具使用。',
+      notRunning: '在 AIshie 再次執行它之前，學生不能在站內向它提問：擁有者可在「我的代理」為它設定託管。',
+    },
   },
   replies: {
     label: '回覆',
@@ -123,6 +125,8 @@ export default {
     name: '名稱',
     namePlaceholder: '例如：COMP1010 課程助教',
     nameHelp: '學生向它提問時會看到這個名稱。',
+    hostingHelp: '只有站內託管的課程代理，學生才能在站內向它提問；MCP 存取的代理由你自己的工具使用，站內無法向它提問。',
+    mcpPicked: '學生無法在站內向 {name} 提問：它是 MCP 存取，由你自己的工具使用。',
     preview: '它將擁有的權限',
     previewHelp: '按 Core 現時的安排：「課程代理」預設，並限制在你自己席位的權限之內。',
     can: '權限',
@@ -132,8 +136,8 @@ export default {
     needsApproval: '在本課程帶入代理需要批准：有人批准你的請求後，它才會加入。',
     reviewedAfter: '它會即時加入，事後再覆核。',
     createdNote: '已建立 {name}，它屬於你。',
-    connectLink: '前往「我的代理」連接它',
-    connect: '代理要有程式運行才會運作：請在「我的代理」為它發出權杖。',
+    connectLink: '前往「我的代理」設定它',
+    connect: '代理要運行起來才會運作：請在「我的代理」交給 AIshie 託管並選擇模型；若是 MCP 存取，則為你的工具發出權杖。',
     submit: '新增課程代理',
     submitProposal: '提出請求',
     success: '{name} 已成為課程代理',

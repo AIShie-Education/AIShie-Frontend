@@ -6,15 +6,19 @@
 // be given an owner, a person whose delegate alone it will be, only here: the
 // owner is fixed when it is registered, and nobody changes it or takes it away
 // afterwards; an agent registered without one stays nobody's. An agent with
-// an owner holds no platform role, so the two are not offered together.
+// an owner holds no platform role, so the two are not offered together. How
+// an agent runs (hosting) is asked too, with nothing chosen for the
+// administrator, and is kept for good: hosted on AIshie, whose runtime alone
+// is issued its token, or reached over MCP with tokens issued on its page.
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { Actor } from '@/api/types'
+import type { Actor, AgentHosting } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { formatDate } from '@/utils/format'
 import { loginIdProblem, MAX_LOGIN_ID } from '@/utils/loginId'
+import HostingChoice from '@/components/HostingChoice.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { hasActorList } from './actorSearch'
@@ -36,6 +40,7 @@ const form = reactive({
   login_id: '',
   admin: false,
   owner: '',
+  hosting: '' as AgentHosting | '',
 })
 /** The person chosen to own the agent, for what the page says next. */
 const owner = ref<Actor | null>(null)
@@ -60,6 +65,7 @@ watch(
     form.login_id = ''
     form.admin = false
     form.owner = ''
+    form.hosting = ''
     owner.value = null
     sameName.value = []
     sameNameUnchecked.value = null
@@ -121,6 +127,13 @@ const rules = computed<FormRules>(() => ({
       trigger: 'blur',
     },
   ],
+  hosting: [
+    {
+      validator: (_r: unknown, v: string, cb: (e?: Error) => void) =>
+        form.kind !== 'agent' || v ? cb() : cb(new Error(t('common.agent.hosting.required'))),
+      trigger: 'change',
+    },
+  ],
   login_id: [
     {
       validator: (_r: unknown, v: string, cb: (e?: Error) => void) => {
@@ -139,6 +152,8 @@ async function submit() {
   const login_id = form.kind === 'human' && form.login_id.trim() ? form.login_id.trim() : null
   const platform_role = form.admin && session.isRoot ? 'admin' : null
   const ownerId = form.kind === 'agent' && form.owner ? form.owner : null
+  const hosting = form.kind === 'agent' && form.hosting ? form.hosting : null
+  if (form.kind === 'agent' && !hosting) return
   const ownerPick: OwnerPick | null =
     ownerId && owner.value?.id === ownerId ? { id: ownerId, display_name: owner.value.display_name } : null
   const out = await run(
@@ -149,6 +164,7 @@ async function submit() {
       login_id: login_id ?? undefined,
       platform_role: platform_role ?? undefined,
       owner_actor_id: ownerId ?? undefined,
+      hosting: hosting ?? undefined,
     },
     { success: t('admin.register.done', { name: display_name }), reasons: 'admin.loginId.refusal' },
   )
@@ -158,7 +174,7 @@ async function submit() {
   if (out.status === 'executed') {
     emit(
       'registered',
-      { id: out.result.actor_id, kind: form.kind, display_name, email, login_id, platform_role },
+      { id: out.result.actor_id, kind: form.kind, display_name, email, login_id, platform_role, hosting },
       ownerId ? (ownerPick ?? { id: ownerId, display_name: '' }) : null,
     )
   }
@@ -232,6 +248,12 @@ async function submit() {
           spellcheck="false"
         />
         <div class="app-form-hint register__block">{{ t('admin.loginId.registerHint') }}</div>
+      </el-form-item>
+      <el-form-item v-if="form.kind === 'agent'" :label="t('common.agent.hosting.label')" prop="hosting">
+        <HostingChoice v-model="form.hosting" />
+        <div v-if="form.hosting" class="app-form-hint register__block">
+          {{ t(form.hosting === 'runtime' ? 'admin.register.hostingRuntime' : 'admin.register.hostingMcp') }}
+        </div>
       </el-form-item>
       <el-form-item v-if="form.kind === 'agent'">
         <template #label>

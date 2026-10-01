@@ -52,6 +52,8 @@ vi.mock('element-plus', async (orig) => {
 const ROOT = '01a0d79f-0000-70da-a7cc-00000000000a'
 const PERSON = '01a0d79f-0000-70da-a7cc-00000000000b'
 const AGENT = '01a0d79f-0000-70da-a7cc-00000000000c'
+const HOSTED = '01a0d79f-0000-70da-a7cc-00000000000d'
+const SERVICE = '01a0d79f-0000-70da-a7cc-00000000000e'
 const base = {
   status: 'active',
   created_at: '2026-09-01T00:00:00Z',
@@ -83,6 +85,16 @@ const actors: Record<string, Actor> = {
     display_name: 'grader-v2',
     email: null,
     has_password: false,
+    hosting: 'mcp',
+  } as unknown as Actor,
+  [HOSTED]: {
+    ...base,
+    id: HOSTED,
+    kind: 'agent',
+    display_name: 'lab-tutor',
+    email: null,
+    has_password: false,
+    hosting: 'runtime',
   } as unknown as Actor,
 }
 
@@ -159,11 +171,25 @@ const headings = (w: Awaited<ReturnType<typeof open>>) => w.findAll('h2, h3').ma
 const buttons = (w: Awaited<ReturnType<typeof open>>) => w.findAll('button').map((b) => b.text())
 
 describe('an actor’s page', () => {
-  it('offers an agent an API token', async () => {
+  it('offers an agent with MCP access an API token, and says how it runs', async () => {
     const w = await open(AGENT)
     expect(headings(w)).toContain('API token')
     expect(buttons(w)).toContain('Issue token')
     expect(headings(w)).toContain('Tokens and sign-ins')
+    expect(w.find('.page-header .hosting-tag').text()).toBe('MCP access')
+    expect(w.text()).toContain('its tokens are issued here, for whatever reaches it over MCP')
+  })
+
+  it('offers an agent hosted on AIshie no token, and lists the runtime’s as issued to it', async () => {
+    credentials = [apiToken({ issued_to: 'agent_runtime', issued_by_actor_id: SERVICE, issued_by_name: 'agent runtime', label: 'agent runtime' })]
+    const w = await open(HOSTED)
+    expect(w.find('.page-header .hosting-tag').text()).toBe('Hosted on AIshie')
+    expect(buttons(w)).not.toContain('Issue token')
+    expect(w.find('.token__runtime').text()).toContain('the site’s agent runtime alone is issued its one token')
+    const token = w.find('.creds-token')
+    expect(token.text()).toContain('The site’s agent runtime')
+    // It can still be revoked here, which stops people asking the agent until the runtime is issued another.
+    expect(token.find('button').text()).toBe('Revoke')
   })
 
   it('offers a person none, in any language, and still lists how they sign in', async () => {

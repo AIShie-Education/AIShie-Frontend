@@ -159,7 +159,7 @@ test('an agent, which has no email, is seated by its pasted ID and starts from t
   page,
 }, testInfo) => {
   const agent = `lookup-agent-${stamp}-${testInfo.retry}`
-  const agentId = await register({ kind: 'agent', display_name: agent })
+  const agentId = await register({ kind: 'agent', display_name: agent, hosting: 'mcp' })
 
   const { idField, who, preset, submit, listed } = await openAddMember(page)
   await expect(preset).toContainText('Student')

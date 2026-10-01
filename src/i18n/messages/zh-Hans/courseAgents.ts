@@ -42,9 +42,11 @@ export default {
     presenceUnknownHelp: '智能体最后连接的时间只向其拥有者，以及可以向它提问的人显示。',
     more: '更多',
     removeAgent: '它的对话会随之结束。拥有者以后可再次带入它，届时会以新席位重新开始。',
-    externalHelp:
-      '它是从外部工具操作的（例如 Claude 通过 MCP），所以没有人能在站内向它提问，学生也一样。交由 AIshie 的运行环境托管后，它会自行在站内接受对话。',
-    externalCourse: '学生不能在站内向它提问：它是从外部工具操作的。',
+    // A course agent nobody can ask on the site, and why: MCP access, or not running now.
+    notAskable: {
+      mcp: '学生不能在站内向它提问：它是 MCP 访问，由所有者自己的工具使用。',
+      notRunning: '在 AIshie 再次运行它之前，学生不能在站内向它提问：所有者可在“我的智能体”为它设置托管。',
+    },
   },
   replies: {
     label: '回复',
@@ -123,6 +125,8 @@ export default {
     name: '名称',
     namePlaceholder: '例如：COMP1010 课程助教',
     nameHelp: '学生向它提问时会看到这个名称。',
+    hostingHelp: '只有站内托管的课程智能体，学生才能在站内向它提问；MCP 访问的智能体由你自己的工具使用，站内无法向它提问。',
+    mcpPicked: '学生无法在站内向 {name} 提问：它是 MCP 访问，由你自己的工具使用。',
     preview: '它将拥有的权限',
     previewHelp: '按 Core 当前的安排：“课程智能体”预设，并限制在你自己席位的权限之内。',
     can: '权限',
@@ -132,8 +136,8 @@ export default {
     needsApproval: '在本课程带入智能体需要批准：有人批准你的请求后，它才会加入。',
     reviewedAfter: '它会立即加入，事后再审核。',
     createdNote: '已创建 {name}，它属于你。',
-    connectLink: '前往“我的智能体”连接它',
-    connect: '智能体要有程序运行才会运作：请在“我的智能体”为它签发令牌。',
+    connectLink: '前往“我的智能体”设置它',
+    connect: '智能体要运行起来才会运作：请在“我的智能体”交给 AIshie 托管并选择模型；若是 MCP 访问，则为你的工具签发令牌。',
     submit: '添加课程智能体',
     submitProposal: '提出请求',
     success: '{name} 已成为课程智能体',

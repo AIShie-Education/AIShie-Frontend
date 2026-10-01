@@ -172,6 +172,16 @@ export type ActionSummary = ListItem<'action.list_proposed', 'actions'>
 export type CourseEvent = ListItem<'event.list', 'events'>
 
 // Agents a person owns (agent.*), and their seats as delegates
+/**
+ * How an agent is run, chosen when it is registered and never changed
+ * (agent.create, actor.register; hosting_fixed after): runtime, by the
+ * site's own agent runtime, which alone is issued its token, and people in
+ * its courses ask it in the site while it runs; mcp, by its owner's own
+ * tools over MCP, with tokens the owner issues, and nobody asks it in the
+ * site.
+ */
+export type AgentHosting = 'runtime' | 'mcp'
+export const AGENT_HOSTINGS: readonly AgentHosting[] = ['runtime', 'mcp']
 export type AgentSummary = ListItem<'agent.list', 'agents'>
 export type AgentFull = ToolOut<'agent.get'>
 /** One of an agent's seats: a delegate seat, whose principal is its owner's seat there. */

@@ -87,10 +87,32 @@ export default {
     ownersAgent: '{owner} 的代理',
     delegateOf: '代表 {owner} 行事，權限永不超過其席位',
     yourDelegate: '代表你行事，權限永不超過你的席位',
-    // An agent that takes no conversations in the site (Core's site_chat false): operated from an external tool.
-    external: '外部操作',
-    externalNote: '這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。',
-    hostedTakesChat: '交由 AIshie 的執行環境代管時，它會自行在站內接受對話。',
+    // How it is run, chosen when it is registered and never changed (HostingChoice, HostingTag).
+    hosting: {
+      label: '運行方式',
+      runtime: '站內託管',
+      runtimeHint: '由 AIshie 執行；課程成員可在站內向它提問',
+      mcp: 'MCP 存取',
+      mcpHint: '由你自己的工具，例如 Claude Desktop、編輯器，透過 MCP 使用；站內無法向它提問',
+      fixed: '建立後不能更改',
+      required: '請選擇運行方式',
+      runtimeHelp: '由 AIshie 的代理執行環境運行：運行期間，課程成員可在站內向它提問。',
+      mcpHelp: '由擁有者自己的工具透過 MCP 使用：站內無法向它提問。',
+    },
+    // Whether people can ask an agent hosted on AIshie now (site_chat).
+    askable: {
+      on: '可在站內提問',
+      off: '未在執行',
+      onHelp: 'AIshie 正在執行它：課程成員可在站內向它提問。',
+      offHelp: 'AIshie 目前沒有執行它，所以站內無法向它提問。',
+    },
+    // Why an agent cannot be asked on the site now (conversation.open and .ask's refusals).
+    notAskable: {
+      mcp_agent: '這個代理由擁有者自己的工具使用，無法在這裡向它提問。',
+      agent_not_hosted: '這個代理目前未在執行，所以無法在這裡向它提問。',
+      unknown: '目前無法在這裡向這個代理提問。',
+      yours: '你可在「我的代理」中它的頁面了解原因。',
+    },
   },
   outcome: {
     executed: '已完成',
@@ -124,6 +146,9 @@ export default {
     conversationsAreWithAgents:
       '這裡的對話只與代理進行：真人不會在對話中被提問，也不回答任何對話。人與人之間請在其他地方交流。',
     notAParticipant: '只有參與對話的雙方才會將對話標示為已讀；以課程教職員身分閱讀，不會在對話中留下閱讀進度。',
+    hostedByRuntime: '這個代理是站內託管：只有本站的代理執行環境持有它的權杖，不會為任何其他人發出權杖。',
+    hostingFixed: '代理的運行方式在建立時選定，此後不會更改：如要另一種方式，請建立另一個代理。',
+    siteChatFollowsHosting: '能否在站內向代理提問取決於它的運行方式：如要讓人無法再向它提問，請暫停它的託管，或停用它。',
   },
   // 席位的上限（perm_ceilings）：無論由誰授予，該席位最多可擁有的權限等級。
   ceiling: {

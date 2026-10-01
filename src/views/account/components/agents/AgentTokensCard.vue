@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// One agent's tokens (agent.list_credentials) and revoking one
-// (agent.revoke_credential). Issuing is the page's (the "Connect a runtime"
-// card asks for it too): this card asks for it with `issue`. The token the
-// school's runtime holds, while it hosts the agent, is marked as such.
+// The tokens of an agent with MCP access (agent.list_credentials), and
+// revoking one (agent.revoke_credential). Issuing is the page's (its MCP
+// access card asks for it too): this card asks for it with `issue`. An agent
+// hosted on AIshie has no such card: its one token is the runtime's.
 import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -20,8 +20,6 @@ const props = defineProps<{
   credentials: AgentCredential[] | undefined
   loading: boolean
   error: ApiError | null
-  /** The prefix of the token the school's runtime holds, while it hosts the agent. */
-  hostedPrefix?: string | null
 }>()
 const emit = defineEmits<{ changed: []; retry: []; issue: [] }>()
 const { t } = useI18n()
@@ -115,15 +113,6 @@ defineExpose({ revokeById })
               <span class="token__label">{{ c.label?.trim() || t('agents.tokens.unlabelled') }}</span>
               <el-tag v-if="state !== 'active'" :type="STATE_TAG[state]" size="small" disable-transitions>
                 {{ t(`agents.tokens.state.${state}`) }}
-              </el-tag>
-              <el-tag
-                v-if="state === 'active' && hostedPrefix && c.token_prefix === hostedPrefix"
-                type="primary"
-                size="small"
-                disable-transitions
-                class="token__hosted"
-              >
-                {{ t('hosting.card.usedByRuntime') }}
               </el-tag>
             </div>
             <div class="token__meta">

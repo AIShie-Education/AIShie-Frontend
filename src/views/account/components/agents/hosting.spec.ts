@@ -12,13 +12,9 @@ import {
   RUNTIME_ERROR_REASONS,
 } from '@/api/runtime-types'
 import {
-  AGENT_TOKEN_SHAPE,
-  RECENT_USE_MS,
   choiceFrom,
   choiceKey,
-  connectedParts,
   courseLabel,
-  credentialByPrefix,
   defaultsFor,
   emptyModelForm,
   fieldOfPointer,
@@ -28,22 +24,15 @@ import {
   hostingErrorText,
   isAishieToken,
   isDefinitive,
-  isRuntimeTokenLabel,
   isKeyShaped,
   keyProblem,
-  otherRecentTokens,
-  otherTokensFrom,
-  ownerFallbackCredential,
   pollInterval,
   problemsOf,
+  revocationNotice,
   schoolSpent,
   seatSentences,
-  tokenHint,
-  unrevoked,
-  usedRecently,
-  withoutTokens,
 } from './hosting'
-import { OFFERS, credential, hostedAgent, newToken, otherToken, otherTokens, seat } from './hostingFakes'
+import { OFFERS, newToken, seat } from './hostingFakes'
 
 // The message functions, as plainly typed as the helpers take them.
 const g = i18n.global as unknown as {
@@ -71,15 +60,12 @@ const EN: Record<string, string> = {
   store_unavailable: 'The school’s runtime is not available right now. Try again in a minute.',
   core_unavailable: 'The runtime could not reach AIshie. Try again in a minute.',
   rate_limited: 'Too many tries. Wait 12 seconds.',
-  token_malformed: 'That is not an AIshie agent token (it should begin with ais_).',
-  token_refused: 'AIshie refused this token: it was revoked or has expired.',
-  token_not_agent: 'This token is a person’s, not an agent’s. The runtime only takes an agent’s own token.',
+  runtime_misconfigured: 'The school’s runtime is not set up to host agents. Tell your administrator.',
+  mcp_agent: 'This agent has MCP access: it is used from your own tools, and is never hosted here.',
   agent_suspended: 'This agent is suspended in AIshie. Reactivate it first.',
-  token_other_agent: 'This token belongs to another agent.',
-  agent_unowned: 'Nobody owns this agent in AIshie, so it cannot be connected here. Ask an administrator.',
-  not_owner: 'This agent belongs to someone else. Only its owner can connect it.',
+  owner_suspended: 'Its owner is suspended in AIshie, so it cannot be hosted. Ask an administrator.',
+  owner_changed: 'AIshie no longer counts this agent as yours: delete it here.',
   core_too_old: 'This AIshie server is too old for hosting. Tell your administrator.',
-  already_hosted: 'This agent is already on the school’s runtime.',
   operator_agent: 'The school’s operator already runs this agent.',
   agent_not_found: 'This agent is no longer on the school’s runtime.',
   version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
@@ -211,9 +197,16 @@ describe('the words for each error reason', () => {
     expect(problemsOf(new Error('x'))).toEqual([])
   })
 
+  it('word agent_not_found as said of hosting one of one’s agents, when asked to', () => {
+    const e = err('agent_not_found', {}, 404)
+    expect(hostingErrorText(e, t)).toBe('This agent is no longer on the school’s runtime.')
+    expect(hostingErrorText(e, t, { notYours: true })).toBe('AIshie does not count this as one of your agents.')
+    expect(hostingErrorText(err('mcp_agent', {}, 422), t, { notYours: true })).toBe(EN.mcp_agent)
+  })
+
   it('tell a refusal from what cannot be known', () => {
-    expect(isDefinitive(err('token_refused', {}, 422))).toBe(true)
-    expect(isDefinitive(err('already_hosted', {}, 409))).toBe(true)
+    expect(isDefinitive(err('mcp_agent', {}, 422))).toBe(true)
+    expect(isDefinitive(err('operator_agent', {}, 409))).toBe(true)
     expect(isDefinitive(err('assertion_invalid', {}, 401))).toBe(false)
     // Changed meanwhile: a request sent again after a lost answer is told so too.
     expect(isDefinitive(err('version_mismatch', { current_version: 4 }, 412))).toBe(false)
@@ -297,121 +290,40 @@ describe('seat sentences', () => {
   })
 })
 
-describe('tokens', () => {
-  const NOW = Date.parse('2026-09-28T09:00:00Z')
-  const ago = (ms: number) => new Date(NOW - ms).toISOString()
-
-  it('find the one the owner revokes when the runtime could not: a live API token with that prefix', () => {
-    const creds = [
-      credential({ token_prefix: 'aaaaaaaaaaaa', revoked_at: ago(1000) }),
-      credential({ token_prefix: 'aaaaaaaaaaaa', kind: 'session' }),
-      credential({ id: 'live', token_prefix: 'aaaaaaaaaaaa' }),
-      credential({ token_prefix: 'bbbbbbbbbbbb' }),
-    ]
-    expect(ownerFallbackCredential(creds, 'aaaaaaaaaaaa')?.id).toBe('live')
-    expect(ownerFallbackCredential(creds, 'cccccccccccc')).toBeUndefined()
-    expect(ownerFallbackCredential(creds, '')).toBeUndefined()
-    expect(ownerFallbackCredential(null, 'aaaaaaaaaaaa')).toBeUndefined()
-    expect(credentialByPrefix(creds, 'aaaaaaaaaaaa')?.revoked_at).toBeTruthy()
-  })
-
-  it('know the runtime’s own by its label, as spelt now and as earlier versions spelt it', () => {
-    expect(isRuntimeTokenLabel('AIshie runtime')).toBe(true)
-    expect(isRuntimeTokenLabel('AIShie runtime')).toBe(true)
-    for (const other of ['aishie runtime', 'AIshie runtime ', 'laptop', '', null, undefined]) {
-      expect(isRuntimeTokenLabel(other), String(other)).toBe(false)
+describe('what became of its token', () => {
+  it('says nothing when it was revoked, or there was none', () => {
+    for (const when of ['pause', 'delete'] as const) {
+      expect(revocationNotice({ outcome: 'revoked', problem: null }, when, t)).toBeNull()
+      expect(revocationNotice({ outcome: 'none', problem: null }, when, t)).toBeNull()
+      expect(revocationNotice(null, when, t)).toBeNull()
     }
   })
 
-  it('take another live token used in the runtime’s window (15 minutes) for something else running the agent', () => {
-    const creds = [
-      credential({ id: 'recent', last_used_at: ago(RECENT_USE_MS - 1000) }),
-      credential({ id: 'old', last_used_at: ago(RECENT_USE_MS + 1000) }),
-      credential({ id: 'never', last_used_at: null }),
-      credential({ id: 'revoked', last_used_at: ago(1000), revoked_at: ago(500) }),
-      credential({ id: 'expired', last_used_at: ago(1000), expires_at: ago(10) }),
-      credential({ id: 'session', kind: 'session', last_used_at: ago(1000) }),
-      credential({ id: 'runtime', token_prefix: 'runtimetoken', last_used_at: ago(1000) }),
-      credential({ id: 'ahead', last_used_at: new Date(NOW + 60_000).toISOString() }),
-    ]
-    expect(otherRecentTokens(creds, 'runtimetoken', NOW).map((c) => c.id)).toEqual(['recent', 'ahead'])
-    expect(otherRecentTokens(creds, null, NOW).map((c) => c.id)).toEqual(['recent', 'runtime', 'ahead'])
-    expect(usedRecently({ last_used_at: 'not a date' }, NOW)).toBe(false)
+  it('says a failure, and what to do, after pausing and after deleting', () => {
+    const r = { outcome: 'failed', problem: 'core_unavailable' } as const
+    expect(revocationNotice(r, 'pause', t)).toBe(
+      'Its token could not be revoked in AIshie (AIshie could not be reached), so people may still be offered to ask it on the site. Pause it again to try once more.',
+    )
+    expect(revocationNotice(r, 'delete', t)).toBe(
+      'Its token could not be revoked in AIshie (AIshie could not be reached), so people may still be offered to ask it on the site. Suspend the agent to stop that.',
+    )
+    expect(revocationNotice({ outcome: 'not_attempted', problem: 'operator_agent' }, 'delete', t)).toBe(
+      'Its token was not revoked (the school’s operator runs this agent).',
+    )
   })
 
-  it('are listed as the runtime lists the agent’s other tokens, from Core’s list, before a token is issued', () => {
-    const creds = [
-      credential({ token_prefix: 'neverusedold', last_used_at: null, created_at: '2026-09-01T00:00:00Z', label: '  ' }),
-      credential({ token_prefix: 'usedhoursago', last_used_at: ago(3 * 3600_000), label: 'old laptop' }),
-      credential({ token_prefix: 'neverusednew', last_used_at: null, created_at: '2026-09-20T00:00:00Z' }),
-      credential({ token_prefix: 'usedrecently', last_used_at: ago(3 * 60_000), label: 'my laptop' }),
-      credential({ token_prefix: 'revokedtoken', last_used_at: ago(1000), revoked_at: ago(500) }),
-      credential({ token_prefix: 'sessiontoken', kind: 'session', last_used_at: ago(1000) }),
-      credential({ token_prefix: 'runtimetoken', last_used_at: ago(1000) }),
-    ]
-    const o = otherTokensFrom(creds, 'runtimetoken', NOW)!
-    expect(o.in_use).toBe(true)
-    expect(o.window_seconds).toBe(900)
-    expect(o.tokens.map((x) => x.prefix)).toEqual(['usedrecently', 'usedhoursago', 'neverusednew', 'neverusedold'])
-    expect(o.tokens[0]).toMatchObject({
-      label: 'my laptop',
-      recent: true,
-      last_used_at: ago(3 * 60_000),
-      expires_at: null,
-    })
-    expect(o.tokens[1].recent).toBe(false)
-    // A label of spaces is none.
-    expect(o.tokens[3].label).toBeNull()
-    // Just past the window, nothing is in use.
-    expect(otherTokensFrom([credential({ last_used_at: ago(RECENT_USE_MS + 1000) })], null, NOW)!.in_use).toBe(false)
-    expect(
-      otherTokensFrom(
-        Array.from({ length: 25 }, () => credential()),
-        null,
-        NOW,
-      )!.tokens,
-    ).toHaveLength(20)
-    // No list to go by: nothing can be said.
-    expect(otherTokensFrom(null, null, NOW)).toBeNull()
-    expect(otherTokensFrom([], null, NOW)).toEqual({ in_use: false, window_seconds: 900, tokens: [] })
-  })
-
-  it('leave out what was revoked here, and stop warning once none left is in use', () => {
-    const recent = otherToken({ prefix: 'recentrecent', recent: true })
-    const quiet = otherToken({ prefix: 'quietquietqu' })
-    const o = otherTokens([recent, quiet])
-    expect(o.in_use).toBe(true)
-    expect(withoutTokens(o, ['recentrecent'])).toEqual({ in_use: false, window_seconds: 900, tokens: [quiet] })
-    expect(withoutTokens(o, [])).toBe(o)
-    expect(withoutTokens(null, ['x'])).toBeNull()
-    expect(withoutTokens(undefined, ['x'])).toBeUndefined()
-    expect(tokenHint('k7v2m4qhx3ab')).toBe('ais_k7v2m4qhx3ab…')
-  })
-
-  it('part connect’s answer into the agent and its other tokens, which it may not carry', () => {
-    const others = otherTokens([otherToken({ recent: true })])
-    const agent = hostedAgent()
-    expect(connectedParts({ ...agent, other_tokens: others })).toEqual({ agent, others })
-    expect(connectedParts({ ...agent, other_tokens: null })).toEqual({ agent, others: null })
-    expect(connectedParts(agent)).toEqual({ agent, others: undefined })
-    expect('other_tokens' in connectedParts({ ...agent, other_tokens: others }).agent).toBe(false)
-  })
-
-  it('leave the owner a token to revoke only when the runtime’s revocation failed, whatever the problem', () => {
-    const info = { hint: 'ais_oldruntimetk…', prefix: 'oldruntimetk' }
-    for (const revocation of REVOCATIONS) {
-      for (const problem of [...REVOCATION_PROBLEMS, null]) {
-        const left = unrevoked({ ...info, revocation, problem })
-        if (revocation === 'failed') expect(left, `${revocation} ${problem}`).toEqual({ ...info, problem })
-        else expect(left, `${revocation} ${problem}`).toBeNull()
+  it('has words for every outcome and problem, in every language', () => {
+    for (const l of ['en', 'zh-Hant', 'zh-Hans'] as const) {
+      setLocale(l)
+      for (const outcome of REVOCATIONS) {
+        for (const problem of [...REVOCATION_PROBLEMS, null]) {
+          const words = revocationNotice({ outcome, problem }, 'pause', t)
+          if (outcome === 'revoked' || outcome === 'none') expect(words).toBeNull()
+          else expect(words, `${l} ${outcome} ${problem}`).not.toMatch(/hosting\./)
+        }
       }
+      for (const p of [...REVOCATION_PROBLEMS, 'unknown']) expect(te(`hosting.revocation.why.${p}`), p).toBe(true)
     }
-  })
-
-  it('know an agent token by its shape', () => {
-    expect(AGENT_TOKEN_SHAPE.test(newToken().token)).toBe(true)
-    expect(AGENT_TOKEN_SHAPE.test('ais_short_x')).toBe(false)
-    expect(AGENT_TOKEN_SHAPE.test('sk-' + 'a'.repeat(40))).toBe(false)
   })
 })
 

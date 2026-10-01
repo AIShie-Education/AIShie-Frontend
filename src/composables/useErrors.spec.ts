@@ -125,19 +125,33 @@ describe('errorMessage, by the reason Core gives', () => {
     expect(errorMessage(refusal('forbidden', { reason: 'invite_not_allowed', why: 'seated_elsewhere' }))).toMatch(/以外的课程有席位/)
   })
 
-  it('says of a question to an agent operated from outside what every page says of such an agent', () => {
-    const e = refusal(
-      'failed_precondition',
-      { reason: 'agent_answers_elsewhere' },
-      { status: 422, actionId: 'a1', actionStatus: 'failed' },
+  it('says of a question to an agent nobody asks in the site now why, in the words every page has', () => {
+    const refused = (reason: string) =>
+      refusal('failed_precondition', { reason }, { status: 422, actionId: 'a1', actionStatus: 'failed' })
+    expect(errorMessage(refused('mcp_agent'))).toBe(
+      'This agent is used from its owner’s own tools, and can’t be asked here.',
     )
-    expect(errorMessage(e)).toBe(
-      'This agent is operated from an external tool (such as Claude through MCP); it does not take conversations on the site.',
+    expect(errorMessage(refused('agent_not_hosted'))).toBe(
+      'This agent isn’t running right now, so it can’t be asked here.',
     )
     setLocale('zh-Hant')
-    expect(errorMessage(e)).toBe('這個代理是從外部工具操作的（例如 Claude 透過 MCP），不在站內對話。')
+    expect(errorMessage(refused('mcp_agent'))).toBe('這個代理由擁有者自己的工具使用，無法在這裡向它提問。')
+    expect(errorMessage(refused('agent_not_hosted'))).toBe('這個代理目前未在執行，所以無法在這裡向它提問。')
     setLocale('zh-Hans')
-    expect(errorMessage(e)).toBe('这个智能体是从外部工具操作的（例如 Claude 通过 MCP），不在站内对话。')
+    expect(errorMessage(refused('mcp_agent'))).toBe('这个智能体由所有者自己的工具使用，无法在这里向它提问。')
+    expect(errorMessage(refused('agent_not_hosted'))).toBe('这个智能体目前未在运行，所以无法在这里向它提问。')
+  })
+
+  it('says why an agent’s hosting refuses what was asked of it', () => {
+    expect(errorMessage(refusal('forbidden', { reason: 'hosted_by_runtime' }, { status: 403 }))).toBe(
+      'This agent is hosted on AIshie: the site’s agent runtime alone holds its token, and none is issued to anyone else.',
+    )
+    expect(errorMessage(refusal('failed_precondition', { reason: 'hosting_fixed' }, { status: 422 }))).toBe(
+      'How an agent runs is chosen when it is created, and never changed: create another agent for the other way.',
+    )
+    expect(errorMessage(refusal('invalid_argument', { reason: 'site_chat_follows_hosting' }, { status: 400 }))).toMatch(
+      /follows how it runs/,
+    )
   })
 
   it('never takes a reason for one of an object’s own properties', () => {

@@ -265,6 +265,10 @@ export interface ActorGetOut {
    * an identity at the identity provider is linked (actor.link_sso)
    */
   has_sso: boolean
+  /**
+   * for an agent: runtime, run by the site's own agent runtime, which alone holds its token; mcp, reached over MCP with tokens issued here
+   */
+  hosting?: null | string
   id: string
   /**
    * when the invitation not yet taken up expires, which may have passed; absent when there is none
@@ -338,7 +342,7 @@ export interface ActorInviteNewOut {
   token?: string
 }
 
-/** actor.issue_token (write): Issue an API token for an agent: how a newly registered agent gets its first credential, since it never signs in. Only an agent holds one: a person is refused (api_tokens_are_for_agents), since people sign in with a password or single sign-on, and use one of their agents for tools and scripts. The token is returned once and only its hash is kept. */
+/** actor.issue_token (write): Issue an API token for an mcp agent: how a newly registered agent gets its first credential, since it never signs in. Only an agent holds one: a person is refused (api_tokens_are_for_agents), since people sign in with a password or single sign-on, and use one of their agents for tools and scripts. A runtime agent is refused too (hosted_by_runtime): the site's agent runtime alone is issued its token. The token is returned once and only its hash is kept. */
 export interface ActorIssueTokenIn {
   actor_id: string
   expires_in_days?: null | number
@@ -414,6 +418,10 @@ export interface ActorListOut {
          * an identity at the identity provider is linked (actor.link_sso)
          */
         has_sso: boolean
+        /**
+         * for an agent: runtime, run by the site's own agent runtime, which alone holds its token; mcp, reached over MCP with tokens issued here
+         */
+        hosting?: null | string
         id: string
         /**
          * when the invitation not yet taken up expires, which may have passed; absent when there is none
@@ -462,6 +470,10 @@ export interface ActorListCredentialsOut {
          * the issuer's display name
          */
         issued_by_name?: null | string
+        /**
+         * for a runtime agent's token, agent_runtime: issued to the site's agent runtime, which runs the agent with it, and to nobody else
+         */
+        issued_to?: null | string
         kind: string
         label?: null | string
         last_used_at?: null | string
@@ -523,13 +535,17 @@ export interface ActorReactivateOut {
   ok: boolean
 }
 
-/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in with their email or their login ID (a student or staff number), either or both of which you give here, once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso); a person holds no API token. A login ID taken already is refused (login_id_taken). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. It never signs in: give it a token with actor.issue_token. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's. */
+/** actor.register (write): Register a person or an agent. An actor can do nothing until it is seated in a course. A person signs in with their email or their login ID (a student or staff number), either or both of which you give here, once they have a password, which they choose through actor.invite, or through single sign-on (actor.link_sso); a person holds no API token. A login ID taken already is refused (login_id_taken). An agent is registered here and runs elsewhere: no endpoint, model or prompt is stored. It never signs in, and is hosted one way for good (hosting, required): runtime, the site's own agent runtime runs it and alone is issued its token; mcp, give it tokens with actor.issue_token for whatever reaches it over MCP. An agent may be given an owner, a person: it then acts only as that person's delegate, seated by them (member.add_delegate), never with more than their own seat. The owner is given here or never: nobody changes it or takes it away afterwards, and an agent registered without one stays nobody's. */
 export interface ActorRegisterIn {
   display_name: string
   /**
    * what a person signs in with, with a password; they need this or a login_id
    */
   email?: null | string
+  /**
+   * for an agent, and required for one: how it is run, for good. runtime, the site's own agent runtime runs it, and is issued its one token (nobody else holds one); mcp, tools of its own reach it over MCP with tokens issued here (actor.issue_token), and nobody asks it in the site
+   */
+  hosting?: 'runtime' | 'mcp'
   /**
    * human or agent; recorded for display and audit, and read by nothing else
    */
@@ -595,6 +611,10 @@ export interface ActorUpdateOut {
    * an identity at the identity provider is linked (actor.link_sso)
    */
   has_sso: boolean
+  /**
+   * for an agent: runtime, run by the site's own agent runtime, which alone holds its token; mcp, reached over MCP with tokens issued here
+   */
+  hosting?: null | string
   id: string
   /**
    * when the invitation not yet taken up expires, which may have passed; absent when there is none
@@ -622,18 +642,186 @@ export interface ActorUpdateOut {
   suspended_by_actor_id?: null | string
 }
 
-/** agent.create (write): Register an agent of your own. It runs elsewhere, on whatever you connect to it with a token (agent.issue_token); no endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. It is yours for good: nobody gives it another owner. A person may have a limited number of agents that are not suspended. */
+/** agent_runtime.agent (read): For the site's agent runtime alone: an agent as the runtime needs it to host it by its id: how it is hosted (runtime or mcp), its standing and its owner's, how many seats of its count now, whether the runtime may host it now (hostable, with the reason if not), the live token the runtime holds for it, if any, and whether people in the site may ask it now. not_found for an id that is no agent's. */
+export interface AgentRuntimeAgentIn {
+  agent_id: string
+}
+export interface AgentRuntimeAgentOut {
+  agent_id: string
+  display_name: string
+  /**
+   * whether agent_runtime.issue_token would issue it a token now
+   */
+  hostable: boolean
+  /**
+   * runtime: the runtime hosts it, and alone holds its token; mcp: its owner's own tools reach it, and the runtime does not host it
+   */
+  hosting: string
+  /**
+   * courses where it is seated and its seat counts now
+   */
+  live_seats: number
+  /**
+   * the person who owns it, for good; absent for an agent nobody owns
+   */
+  owner_actor_id?: null | string
+  owner_name?: null | string
+  /**
+   * active or suspended: an agent is paused while its owner is
+   */
+  owner_status?: null | string
+  /**
+   * why not, when it is not hostable: not_runtime_hosted, an mcp agent; agent_suspended; owner_suspended
+   */
+  reason?: null | string
+  /**
+   * the live token the runtime holds for it, if any: one at most
+   */
+  runtime_token?: null | {
+    created_at: string
+    credential_id: string
+    /**
+     * when the agent last called with it, to the minute
+     */
+    last_used_at?: null | string
+    /**
+     * the public part of the token, enough to tell which one it is
+     */
+    token_prefix?: null | string
+  }
+  /**
+   * whether people in the site may ask it now: it is hostable and its runtime token lives
+   */
+  site_chat: boolean
+  /**
+   * active or suspended
+   */
+  status: string
+}
+
+/** agent_runtime.check_owner (read): For the site's agent runtime alone: whether a person owns an agent, before the runtime does anything about it for them — hosting it, changing its settings, stopping it. The runtime knows the person by Core's assertion (its sub); this says whether they own the agent, and, if they do, the agent as agent_runtime.agent says it, with whether the runtime may host it (hostable: an mcp agent is not_runtime_hosted). Of anyone else's agent, or an id that is no agent's, it says owns false and nothing else. */
+export interface AgentRuntimeCheckOwnerIn {
+  /**
+   * the person signed in to the runtime: the sub of the assertion Core made for them
+   */
+  actor_id: string
+  /**
+   * the agent they ask the runtime to host, or to change or stop hosting
+   */
+  agent_id: string
+}
+export interface AgentRuntimeCheckOwnerOut {
+  /**
+   * when they own it, the agent as agent_runtime.agent says it: whether it may be hosted (hostable, reason) among it
+   */
+  agent?: null | {
+    agent_id: string
+    display_name: string
+    /**
+     * whether agent_runtime.issue_token would issue it a token now
+     */
+    hostable: boolean
+    /**
+     * runtime: the runtime hosts it, and alone holds its token; mcp: its owner's own tools reach it, and the runtime does not host it
+     */
+    hosting: string
+    /**
+     * courses where it is seated and its seat counts now
+     */
+    live_seats: number
+    /**
+     * the person who owns it, for good; absent for an agent nobody owns
+     */
+    owner_actor_id?: null | string
+    owner_name?: null | string
+    /**
+     * active or suspended: an agent is paused while its owner is
+     */
+    owner_status?: null | string
+    /**
+     * why not, when it is not hostable: not_runtime_hosted, an mcp agent; agent_suspended; owner_suspended
+     */
+    reason?: null | string
+    /**
+     * the live token the runtime holds for it, if any: one at most
+     */
+    runtime_token?: null | {
+      created_at: string
+      credential_id: string
+      /**
+       * when the agent last called with it, to the minute
+       */
+      last_used_at?: null | string
+      /**
+       * the public part of the token, enough to tell which one it is
+       */
+      token_prefix?: null | string
+    }
+    /**
+     * whether people in the site may ask it now: it is hostable and its runtime token lives
+     */
+    site_chat: boolean
+    /**
+     * active or suspended
+     */
+    status: string
+  }
+  /**
+   * whether that person owns that agent; false, and nothing more, for an agent of someone else's or nobody's, or an id that is no agent's
+   */
+  owns: boolean
+}
+
+/** agent_runtime.issue_token (write): For the site's agent runtime alone: issue the API token it runs a runtime agent with, by the agent's id, for it to seal and keep. It is the agent's one token: the one issued before is revoked in the same call. It never expires; people in the site ask the agent while it lives. Refused for an mcp agent (not_runtime_hosted), a suspended agent (agent_suspended), and an agent whose owner is suspended (owner_suspended); not_found for an id that is no agent's. Ask agent_runtime.check_owner first that the person asking owns it. The token is returned once and only its hash is kept: a replay of this call, under the same idempotency key, comes back without it, so a call that timed out is made again under a new key, which revokes the token never received. */
+export interface AgentRuntimeIssueTokenIn {
+  agent_id: string
+  /**
+   * what the token is for, as its owner sees it listed (agent.list_credentials); agent runtime if omitted
+   */
+  label?: null | string
+}
+export interface AgentRuntimeIssueTokenOut {
+  agent_id: string
+  credential_id: string
+  /**
+   * the token the runtime held for the agent before, revoked by this call
+   */
+  replaced?: null | string[]
+  /**
+   * the agent's API token, which the runtime runs it with over MCP, as a bearer token; shown once: it is not stored, and a replay of this call comes back without it
+   */
+  token?: string
+  token_prefix: string
+}
+
+/** agent_runtime.revoke_token (write): For the site's agent runtime alone: revoke the token it holds for an agent, by the agent's id, when it stops hosting it: its owner removed it from the runtime, or paused it there. People in the site no longer ask it, until the runtime is issued another (agent_runtime.issue_token). Revoking none, for an agent it holds no token for, is no error; not_found for an id that is no agent's. */
+export interface AgentRuntimeRevokeTokenIn {
+  agent_id: string
+}
+export interface AgentRuntimeRevokeTokenOut {
+  agent_id: string
+  /**
+   * the token the runtime held for the agent, now revoked; empty when it held none, which is no error
+   */
+  revoked: null | string[]
+}
+
+/** agent.create (write): Register an agent of your own, choosing for good how it is run (hosting): runtime, the site's own agent runtime runs it, people in the site may ask it while the runtime hosts it, and you hold no token for it; or mcp, your own tools reach it over MCP with tokens you issue (agent.issue_token), and nobody asks it in the site. It never changes: for the other, register another agent. No endpoint, model or prompt is stored here. It can do nothing until you bring it into a course where you are seated (member.add_delegate), and there it acts only as your delegate, never with more than your own seat. It is yours for good: nobody gives it another owner. A person may have a limited number of agents that are not suspended. */
 export interface AgentCreateIn {
   /**
    * what the agent is called wherever it appears
    */
   display_name: string
+  /**
+   * how it is run, for good, since it never changes: runtime, the site's own agent runtime runs it, people in the site may ask it, and you hold no token for it; mcp, your own tools reach it over MCP (a chat app, an editor, a script) with tokens you issue (agent.issue_token), and nobody asks it in the site
+   */
+  hosting: 'runtime' | 'mcp'
 }
 export interface AgentCreateOut {
   actor_id: string
 }
 
-/** agent.get (read): One of your agents: its standing, when it was last seen, the courses it is seated in with what it may do in each, and the requests to seat it that wait for a decision. */
+/** agent.get (read): One of your agents: how it is hosted, its standing, whether people in the site may ask it now, when it was last seen, the courses it is seated in with what it may do in each, and the requests to seat it that wait for a decision. */
 export interface AgentGetIn {
   actor_id: string
 }
@@ -641,6 +829,10 @@ export interface AgentGetOut {
   actor_id: string
   created_at: string
   display_name: string
+  /**
+   * how it is run, chosen when it was registered and never changed: runtime, by the site's own agent runtime, which alone holds its token; mcp, by your own tools over MCP, with tokens you issue
+   */
+  hosting: string
   /**
    * when it last used a token that still works, to the minute; absent if never
    */
@@ -697,7 +889,7 @@ export interface AgentGetOut {
         title: string
       }[]
   /**
-   * whether people in the site may start conversations with it and ask it: what runs it, an agent runtime that answers on its own, said so with a token of the agent's that still works (me.site_chat); false for an agent operated from an external tool, which acts through that tool alone
+   * whether people in the site may start conversations with it and ask it now: for a runtime agent, while the site's agent runtime hosts it (holds a live token for it) and it and you are active; always false for an mcp agent
    */
   site_chat: boolean
   /**
@@ -710,7 +902,7 @@ export interface AgentGetOut {
   suspended_by_me: boolean
 }
 
-/** agent.issue_token (write): Issue an API token for one of your agents, for whatever runs it to connect with (MCP at /mcp, as a bearer token). The token is returned once and only its hash is kept. Whoever holds it acts as the agent: as your delegate, never with more than your own seat. */
+/** agent.issue_token (write): Issue an API token for one of your mcp agents, for your own tools to connect with (MCP at /mcp, as a bearer token). The token is returned once and only its hash is kept. Whoever holds it acts as the agent: as your delegate, never with more than your own seat. A runtime agent is refused (hosted_by_runtime): the site's agent runtime alone holds its token, and you hold none. */
 export interface AgentIssueTokenIn {
   actor_id: string
   /**
@@ -718,7 +910,7 @@ export interface AgentIssueTokenIn {
    */
   expires_in_days?: null | number
   /**
-   * what this token is for, so it can be recognised later: where the agent runs
+   * what this token is for, so it can be recognised later: the tool you connect the agent with
    */
   label: string
 }
@@ -742,6 +934,10 @@ export interface AgentListOut {
         created_at: string
         display_name: string
         /**
+         * how it is run, chosen when it was registered and never changed: runtime, by the site's own agent runtime, which alone holds its token; mcp, by your own tools over MCP, with tokens you issue
+         */
+        hosting: string
+        /**
          * when it last used a token that still works, to the minute; absent if never
          */
         last_seen_at?: null | string
@@ -754,7 +950,7 @@ export interface AgentListOut {
          */
         pending_requests: number
         /**
-         * whether people in the site may start conversations with it and ask it: what runs it, an agent runtime that answers on its own, said so with a token of the agent's that still works (me.site_chat); false for an agent operated from an external tool, which acts through that tool alone
+         * whether people in the site may start conversations with it and ask it now: for a runtime agent, while the site's agent runtime hosts it (holds a live token for it) and it and you are active; always false for an mcp agent
          */
         site_chat: boolean
         /**
@@ -776,7 +972,7 @@ export interface AgentListOut {
   self_service: boolean
 }
 
-/** agent.list_credentials (read): One of your agents' tokens, newest first, with their label, prefix, issuer, expiry and last use, revoked ones included. Secrets are never shown. */
+/** agent.list_credentials (read): One of your agents' tokens, newest first, with their label, prefix, issuer, expiry and last use, revoked ones included; a runtime agent's are those issued to the site's agent runtime (issued_to agent_runtime). Secrets are never shown. */
 export interface AgentListCredentialsIn {
   actor_id: string
 }
@@ -795,6 +991,10 @@ export interface AgentListCredentialsOut {
          * the issuer's display name
          */
         issued_by_name?: null | string
+        /**
+         * for a runtime agent's token, agent_runtime: issued to the site's agent runtime, which runs the agent with it, and to nobody else
+         */
+        issued_to?: null | string
         kind: string
         label?: null | string
         last_used_at?: null | string
@@ -820,7 +1020,7 @@ export interface AgentReactivateOut {
   ok: boolean
 }
 
-/** agent.revoke_credential (write): Revoke one of your agents' tokens — one that has leaked, or a runtime you no longer use — without suspending the agent. It takes effect on the token's next use. */
+/** agent.revoke_credential (write): Revoke one of your agents' tokens — one that has leaked, or a tool you no longer use — without suspending the agent. It takes effect on the token's next use. Revoking a runtime agent's token stops the site's runtime hosting it, and people asking it in the site, until the runtime is given another. */
 export interface AgentRevokeCredentialIn {
   actor_id: string
   credential_id: string
@@ -837,7 +1037,7 @@ export interface AgentSuspendOut {
   ok: boolean
 }
 
-/** agent.update (write): Rename one of your agents, or switch off its conversations in the site (site_chat false): people there then no longer start conversations with it or ask it more, until what runs it says it answers again. Only what runs it switches them on (me.site_chat), never you. */
+/** agent.update (write): Rename one of your agents. How it is hosted never changes (hosting_fixed). site_chat is deprecated and refused (site_chat_follows_hosting): people in the site ask a runtime agent while the site's runtime hosts it, and never an mcp agent. */
 export interface AgentUpdateIn {
   actor_id: string
   /**
@@ -845,7 +1045,11 @@ export interface AgentUpdateIn {
    */
   display_name?: null | string
   /**
-   * false: people in the site may no longer start conversations with it or ask it, until what runs it says so again; true is refused, since only what runs it says so (me.site_chat)
+   * never changes: another than it has is refused (hosting_fixed); register another agent for the other
+   */
+  hosting?: null | ('runtime' | 'mcp')
+  /**
+   * deprecated, and refused (site_chat_follows_hosting): people in the site ask a runtime agent while the site's runtime hosts it, and never an mcp agent. To stop them asking a runtime agent, stop it in the runtime, or suspend it (agent.suspend)
    */
   site_chat?: null | boolean
 }
@@ -1187,7 +1391,7 @@ export interface ConversationAnswerOut {
   message_id: string
 }
 
-/** conversation.ask (write): Write in a conversation you opened: a question, or anything more you have to say, which may carry files (attachments, each uploaded first with conversation.upload_url). It is refused once the conversation is closed, or once you may no longer address its respondent; start a new conversation then. It is refused too, as agent_answers_elsewhere, while its respondent is an agent that takes no conversations in the site: what was written stays readable. */
+/** conversation.ask (write): Write in a conversation you opened: a question, or anything more you have to say, which may carry files (attachments, each uploaded first with conversation.upload_url). It is refused once the conversation is closed, or once you may no longer address its respondent; start a new conversation then. It is refused too while its respondent is not asked in the site: an mcp agent (mcp_agent), or a runtime agent the site's runtime does not run now (agent_not_hosted). What was written stays readable. */
 export interface ConversationAskIn {
   /**
    * files the message carries, in the order they are shown, each uploaded first with conversation.upload_url
@@ -2014,7 +2218,7 @@ export interface ConversationMessagesOut {
   more: boolean
 }
 
-/** conversation.open (write): Start a conversation with an agent seated in the course — the course's tutor agent, your own agent — and, if you give body, ask the first question, which may carry files (attachments, each uploaded first with conversation.upload_url). Conversations are between a person and an agent: a person is nobody's respondent (conversations_are_with_agents); people talk to people elsewhere. You may address only an agent that can see and do nothing you cannot, or your own agent, and only while what runs it answers in the site (agent_answers_elsewhere otherwise: it is operated from an external tool): conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it; and an agent that answers others too, such as the course's tutor, may repeat to them what you write. */
+/** conversation.open (write): Start a conversation with an agent seated in the course — the course's tutor agent, your own agent — and, if you give body, ask the first question, which may carry files (attachments, each uploaded first with conversation.upload_url). Conversations are between a person and an agent: a person is nobody's respondent (conversations_are_with_agents); people talk to people elsewhere. You may address only an agent that can see and do nothing you cannot, or your own agent, and only a runtime agent the site's agent runtime runs now: an mcp agent, used from its owner's own tools, is never asked here (mcp_agent), and a runtime agent the runtime does not run now is not asked either (agent_not_hosted). conversation.respondents lists them. Keep asking with conversation.ask; answers come back as messages (conversation.messages). Both of you, and course staff who decide actions for you, can read it; and an agent that answers others too, such as the course's tutor, may repeat to them what you write. */
 export interface ConversationOpenIn {
   /**
    * files the first question carries, in the order they are shown, each uploaded first with conversation.upload_url; only with body
@@ -2056,7 +2260,7 @@ export interface ConversationOpenOut {
   message_id?: null | string
 }
 
-/** conversation.respondents (read): The agents you may start a conversation with here: agents that answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents, each only while what runs it answers in the site. Never a person: conversations are with agents, and people talk to people elsewhere. Each says how its answers arrive, whether it answers others too (answers_course: it may repeat to them what you write), and when it was last seen. */
+/** conversation.respondents (read): The agents you may start a conversation with here: agents that answer questions and can see and do nothing you cannot — the course's tutor agent, say — and your own agents, each a runtime agent and only while the site's agent runtime runs it; never an mcp agent, used from its owner's own tools. Never a person: conversations are with agents, and people talk to people elsewhere. Each says how its answers arrive, whether it answers others too (answers_course: it may repeat to them what you write), and when it was last seen. */
 export interface ConversationRespondentsIn {
   /**
    * the course this call is about
@@ -2076,6 +2280,10 @@ export interface ConversationRespondentsOut {
          */
         answers_course: boolean
         display_name: string
+        /**
+         * runtime: the site's own agent runtime runs it; only a runtime agent is asked in the site
+         */
+        hosting: string
         /**
          * your own agent, seated as your delegate
          */
@@ -2409,7 +2617,7 @@ export interface CourseUpdateDetailsOut {
   changed: boolean
 }
 
-/** credential.issue_token (write): Create an API token for the caller's own account, which must be an agent's. A person is refused (api_tokens_are_for_agents): people sign in with a password or single sign-on, and use one of their agents for tools and scripts (agent.create, then agent.issue_token). The token is returned once and only its hash is kept: retrying this call returns the credential but not the token again. */
+/** credential.issue_token (write): Create an API token for the caller's own account, which must be an mcp agent's. A person is refused (api_tokens_are_for_agents): people sign in with a password or single sign-on, and use one of their agents for tools and scripts (agent.create, then agent.issue_token). A runtime agent is refused too (hosted_by_runtime): its one token is the one the site's agent runtime holds. The token is returned once and only its hash is kept: retrying this call returns the credential but not the token again. */
 export interface CredentialIssueTokenIn {
   /**
    * omit for a token that does not expire
@@ -2447,6 +2655,10 @@ export interface CredentialListOut {
          * the issuer's display name
          */
         issued_by_name?: null | string
+        /**
+         * for a runtime agent's token, agent_runtime: issued to the site's agent runtime, which runs the agent with it, and to nobody else
+         */
+        issued_to?: null | string
         kind: string
         label?: null | string
         last_used_at?: null | string
@@ -4291,7 +4503,7 @@ export interface MeConversationsOut {
   next?: null | string
 }
 
-/** me.get (read): Who the caller is: the actor this credential belongs to, with the email and the login ID (a student or staff number) a person signs in with, for an agent a person owns, who owns it, and for a department's administrator, the departments they are appointed to administer. */
+/** me.get (read): Who the caller is: the actor this credential belongs to, with the email and the login ID (a student or staff number) a person signs in with; for an agent, how it is hosted (runtime or mcp) and, if a person owns it, who; and for a department's administrator, the departments they are appointed to administer. */
 export interface MeGetIn {}
 export interface MeGetOut {
   /**
@@ -4311,6 +4523,10 @@ export interface MeGetOut {
    * with an email: false when you gave it registering through a join link, and nobody has checked it since; Core sends no email
    */
   email_verified?: null | boolean
+  /**
+   * for an agent, how it is run, for good: runtime, the site's own agent runtime runs you and people in the site ask you; mcp, your owner's own tools reach you over MCP, and nobody asks you in the site. Absent for a person
+   */
+  hosting?: null | string
   id: string
   /**
    * human, agent or system; for display only
@@ -4381,16 +4597,16 @@ export interface MeMembershipsOut {
       }[]
 }
 
-/** me.site_chat (write): Say whether people in the site may start conversations with you and ask you there. Turn it on only if what runs you polls conversation_inbox and answers on its own, as an AIshie agent runtime does, and on each start, under a new idempotency key: it holds while the token you call with works, and ends when that token is revoked. An assistant a person drives from a tool of their own never turns it on: it acts only while they use it, so questions would wait unanswered. Turn it off when you stop answering. Your owner may turn it off, never on. For agents only. */
+/** me.site_chat (write): Deprecated: nothing is declared any more. People in the site ask a runtime agent while the site's agent runtime hosts it, and never an mcp agent; me_get says which you are (hosting). Called with the token the site's runtime holds for you, it changes nothing, on true or false, and says whether people may ask you now; with any other credential it is refused (not_runtime_hosted). */
 export interface MeSiteChatIn {
   /**
-   * true: people in the site may start conversations with you and ask you, for as long as the credential you call with works; false: they may not
+   * deprecated, and changes nothing either way: people in the site ask a runtime agent while the site's runtime hosts it
    */
   on: boolean
 }
 export interface MeSiteChatOut {
   /**
-   * whether you take conversations in the site now; with on true, false only while your owner is suspended
+   * whether people in the site may ask you now: while the site's runtime hosts you, and you and your owner are active
    */
   site_chat: boolean
 }
@@ -4563,6 +4779,10 @@ export interface MemberGetOut {
   created_at: string
   display_name: string
   expires_at?: null | string
+  /**
+   * for an agent's seat, how the agent is run, for good: runtime, by the site's own agent runtime; mcp, by its owner's own tools over MCP. Absent for a person's seat
+   */
+  hosting?: null | string
   id: string
   /**
    * for a seat a person took through a join link, the link (course.join_link_list)
@@ -4611,7 +4831,7 @@ export interface MemberGetOut {
    */
   role: string
   /**
-   * for an agent's seat: whether people in the site may start conversations with it and ask it, since what runs it, an agent runtime that answers on its own, says so (me.site_chat); false for an agent operated from an external tool. Absent for a person's seat
+   * for an agent's seat: whether people in the site may start conversations with it and ask it now, which a runtime agent's are while the site's agent runtime runs it, and an mcp agent's never. Absent for a person's seat
    */
   site_chat?: null | boolean
   status: string
@@ -4655,6 +4875,10 @@ export interface MemberListOut {
         created_at: string
         display_name: string
         expires_at?: null | string
+        /**
+         * for an agent's seat, how the agent is run, for good: runtime, by the site's own agent runtime; mcp, by its owner's own tools over MCP. Absent for a person's seat
+         */
+        hosting?: null | string
         id: string
         /**
          * for a seat a person took through a join link, the link (course.join_link_list)
@@ -4703,7 +4927,7 @@ export interface MemberListOut {
          */
         role: string
         /**
-         * for an agent's seat: whether people in the site may start conversations with it and ask it, since what runs it, an agent runtime that answers on its own, says so (me.site_chat); false for an agent operated from an external tool. Absent for a person's seat
+         * for an agent's seat: whether people in the site may start conversations with it and ask it now, which a runtime agent's are while the site's agent runtime runs it, and an mcp agent's never. Absent for a person's seat
          */
         site_chat?: null | boolean
         status: string
@@ -5257,7 +5481,7 @@ export interface PresetUpdateOut {
   ok: boolean
 }
 
-/** service.issue_credential (write): Issue a credential for a site service: document_text, the runtime's transcriber, which takes the versions waiting to be transcribed and writes their text (document_text.queue, .complete). The service calls its own tools with it, over REST, and nothing else: no other tool, and not the agents' MCP door. The service is made the first time; it is seated in no course and signs in nowhere. The credential is returned once and only its hash is kept. replace revokes the service's other credentials at once, and puts back in the queue what they had claimed; without it a service holds at most 5 (too_many_credentials). For platform administrators. */
+/** service.issue_credential (write): Issue a credential for a site service: document_text, the runtime's transcriber, which takes the versions waiting to be transcribed and writes their text (document_text.queue, .complete); or agent_runtime, the site's agent runtime, which hosts the runtime agents by their ids and is issued each one's token (agent_runtime.*). The service calls its own tools with it, over REST, and nothing else: no other tool, and not the agents' MCP door. The service is made the first time; it is seated in no course and signs in nowhere. The credential is returned once and only its hash is kept. replace revokes the service's other credentials at once, and puts back in the queue what they had claimed; without it a service holds at most 5 (too_many_credentials). For platform administrators; the operator issues one at setup on the command line (aishie-core service issue). */
 export interface ServiceIssueCredentialIn {
   /**
    * 1 to 3650; omit for a credential that does not expire
@@ -5272,7 +5496,7 @@ export interface ServiceIssueCredentialIn {
    */
   replace?: boolean
   /**
-   * the service: document_text, the runtime's transcriber, which writes documents' text versions
+   * the service: document_text, the runtime's transcriber, which writes documents' text versions; or agent_runtime, the site's agent runtime, which hosts the runtime agents
    */
   scope: string
 }
@@ -5297,7 +5521,7 @@ export interface ServiceIssueCredentialOut {
 /** service.list_credentials (read): A site service's credentials, newest first, revoked ones included, with their label, prefix, issuer, expiry, last use, whether they are live, and how many text versions each has claimed and not finished. Secrets are never shown. For platform administrators. */
 export interface ServiceListCredentialsIn {
   /**
-   * the service: document_text, the runtime's transcriber, which writes documents' text versions
+   * the service: document_text, the runtime's transcriber, which writes documents' text versions; or agent_runtime, the site's agent runtime, which hosts the runtime agents
    */
   scope: string
 }
@@ -5306,7 +5530,7 @@ export interface ServiceListCredentialsOut {
     | null
     | {
         /**
-         * how many text versions it has claimed and not finished, now
+         * how many text versions it has claimed and not finished, now; 0 for the agent runtime's
          */
         claims_held: number
         created_at: string
@@ -5336,11 +5560,11 @@ export interface ServiceListCredentialsOut {
   service_actor_id?: null | string
 }
 
-/** service.revoke_credential (write): Revoke a site service's credential: it stops working at once, a call of the service's waiting on it included, and what it had claimed goes back in the queue for another. For platform administrators. */
+/** service.revoke_credential (write): Revoke a site service's credential: it stops working at once, a call of the service's waiting on it included, and what it had claimed goes back in the queue for another. The agent runtime's tokens for the agents it hosts stay as they are: agent_runtime.revoke_token revokes those. For platform administrators. */
 export interface ServiceRevokeCredentialIn {
   credential_id: string
   /**
-   * the service: document_text, the runtime's transcriber, which writes documents' text versions
+   * the service: document_text, the runtime's transcriber, which writes documents' text versions; or agent_runtime, the site's agent runtime, which hosts the runtime agents
    */
   scope: string
 }
@@ -6193,6 +6417,10 @@ export interface ToolMap {
   'actor.revoke_credential': { in: ActorRevokeCredentialIn; out: ActorRevokeCredentialOut; kind: 'write' }
   'actor.suspend': { in: ActorSuspendIn; out: ActorSuspendOut; kind: 'write' }
   'actor.update': { in: ActorUpdateIn; out: ActorUpdateOut; kind: 'write' }
+  'agent_runtime.agent': { in: AgentRuntimeAgentIn; out: AgentRuntimeAgentOut; kind: 'read' }
+  'agent_runtime.check_owner': { in: AgentRuntimeCheckOwnerIn; out: AgentRuntimeCheckOwnerOut; kind: 'read' }
+  'agent_runtime.issue_token': { in: AgentRuntimeIssueTokenIn; out: AgentRuntimeIssueTokenOut; kind: 'write' }
+  'agent_runtime.revoke_token': { in: AgentRuntimeRevokeTokenIn; out: AgentRuntimeRevokeTokenOut; kind: 'write' }
   'agent.create': { in: AgentCreateIn; out: AgentCreateOut; kind: 'write' }
   'agent.get': { in: AgentGetIn; out: AgentGetOut; kind: 'read' }
   'agent.issue_token': { in: AgentIssueTokenIn; out: AgentIssueTokenOut; kind: 'write' }
@@ -6363,6 +6591,10 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'actor.revoke_credential': { method: 'POST', path: '/v1/actors/{actor_id}/credentials/{credential_id}/revoke', kind: 'write' },
   'actor.suspend': { method: 'POST', path: '/v1/actors/{actor_id}/suspend', kind: 'write' },
   'actor.update': { method: 'POST', path: '/v1/actors/{actor_id}', kind: 'write' },
+  'agent_runtime.agent': { method: 'GET', path: '/v1/services/agent_runtime/agents/{agent_id}', kind: 'read' },
+  'agent_runtime.check_owner': { method: 'GET', path: '/v1/services/agent_runtime/owners/{actor_id}/agents/{agent_id}', kind: 'read' },
+  'agent_runtime.issue_token': { method: 'POST', path: '/v1/services/agent_runtime/agents/{agent_id}/token', kind: 'write' },
+  'agent_runtime.revoke_token': { method: 'POST', path: '/v1/services/agent_runtime/agents/{agent_id}/token/revoke', kind: 'write' },
   'agent.create': { method: 'POST', path: '/v1/me/agents', kind: 'write' },
   'agent.get': { method: 'GET', path: '/v1/me/agents/{actor_id}', kind: 'read' },
   'agent.issue_token': { method: 'POST', path: '/v1/me/agents/{actor_id}/tokens', kind: 'write' },

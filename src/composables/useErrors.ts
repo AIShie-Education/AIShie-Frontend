@@ -13,11 +13,17 @@ const has = (key: string): boolean => (i18n.global as unknown as { te: (k: strin
 
 /**
  * Refusals whose words are shared words of the app's, said wherever the
- * refusal is met: a question to an agent that takes no conversations in the
- * site is told what every page says of such an agent.
+ * refusal is met: a question to an agent nobody asks in the site now (one
+ * with MCP access, or one the site's runtime does not run) is told what
+ * every page says of such an agent; and an agent's hosting, which is chosen
+ * once, decides who holds its token and who asks it.
  */
 const SHARED_REASONS = new Map<string, string>([
-  ['agent_answers_elsewhere', 'common.agent.externalNote'],
+  ['mcp_agent', 'common.agent.notAskable.mcp_agent'],
+  ['agent_not_hosted', 'common.agent.notAskable.agent_not_hosted'],
+  ['hosted_by_runtime', 'common.errors.hostedByRuntime'],
+  ['hosting_fixed', 'common.errors.hostingFixed'],
+  ['site_chat_follows_hosting', 'common.errors.siteChatFollowsHosting'],
   // A person asked, or answering, in a conversation: conversations are with
   // agents. (Refusing a person conversation_answer names the permission and
   // the ceiling too, and is said as a ceiling is: ceilingRefusalText.)

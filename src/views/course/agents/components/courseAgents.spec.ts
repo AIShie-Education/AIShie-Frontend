@@ -19,7 +19,7 @@ import {
   levelOf,
   loadAllMembers,
   minLevel,
-  operatedFromOutside,
+  notAskable,
   policyOf,
   POLICY_LEVEL,
   presenceFor,
@@ -224,14 +224,20 @@ describe('student agent policy', () => {
   })
 })
 
-describe('operatedFromOutside', () => {
-  it('marks an agent’s seat that takes no conversations in the site, and nothing else', () => {
-    expect(operatedFromOutside({ kind: 'agent', site_chat: false })).toBe(true)
-    expect(operatedFromOutside({ kind: 'agent', site_chat: true })).toBe(false)
-    // An older Core says nothing of it; a person is asked in the site as themselves.
-    expect(operatedFromOutside({ kind: 'agent' })).toBe(false)
-    expect(operatedFromOutside({ kind: 'agent', site_chat: null })).toBe(false)
-    expect(operatedFromOutside({ kind: 'human' })).toBe(false)
+describe('notAskable', () => {
+  it('says an agent with MCP access is never asked on the site, whatever else is said of it', () => {
+    expect(notAskable({ kind: 'agent', hosting: 'mcp', site_chat: false })).toBe('mcp')
+    expect(notAskable({ kind: 'agent', hosting: 'mcp' })).toBe('mcp')
+  })
+  it('says an agent hosted on AIshie is not asked while the site’s runtime does not run it', () => {
+    expect(notAskable({ kind: 'agent', hosting: 'runtime', site_chat: false })).toBe('notRunning')
+    expect(notAskable({ kind: 'agent', hosting: 'runtime', site_chat: true })).toBeNull()
+  })
+  it('says nothing where Core says nothing, or of a person', () => {
+    expect(notAskable({ kind: 'agent', hosting: 'runtime' })).toBeNull()
+    expect(notAskable({ kind: 'agent', hosting: null, site_chat: false })).toBeNull()
+    expect(notAskable({ kind: 'agent' })).toBeNull()
+    expect(notAskable({ kind: 'human' })).toBeNull()
   })
 })
 

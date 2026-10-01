@@ -13,6 +13,7 @@ export default {
     pricing: 'Pricing',
     usage: 'Usage today',
     documents: 'Documents',
+    hosting: 'Agent hosting',
   },
   changedBy: 'Changed by {who}, {when}',
 
@@ -564,5 +565,55 @@ export default {
     unpricedShort: '{n} unpriced',
     toPrices: 'Go to the prices',
     empty: 'Nothing was recorded in these days.',
+  },
+
+  // The agent runtime's own credential for AIshie Core: the site service agent_runtime (AgentRuntimeCard).
+  agentRuntime: {
+    title: 'The agent runtime’s credential for AIshie',
+    intro:
+      'AIshie’s agent runtime calls AIshie with a credential of its own (aissvc_…, its service agent_runtime): with it, and nothing else, it checks who owns an agent and is issued, and revokes, the one token of each agent it hosts. Without a live one it hosts no agent.',
+    setup:
+      'Setting up the server makes it and gives it to the runtime. To rotate it, run {command} on the server: it issues a new one, revokes the others, and restarts the runtime with it.',
+    none: 'There is no live credential, so the runtime hosts no agent. Run {command} on the server.',
+    showInactive: 'Show revoked and expired ({n})',
+    state: {
+      live: 'Live',
+      revoked: 'Revoked',
+      expired: 'Expired',
+    },
+    issuedBy: 'Issued by',
+    bySetup: 'The server, at setup',
+    created: 'Issued',
+    lastUsed: 'Last used',
+    neverUsed: 'Never used',
+    expires: 'Expires',
+    revokedAt: 'Revoked',
+    revoke: 'Revoke',
+    revokeTitle: 'Revoke this credential?',
+    revokeBody:
+      'If the runtime uses it, it hosts no agent until it is given another: run {command} on the server. The tokens of the agents it hosts are not revoked.',
+    revoked: 'The credential is revoked.',
+    issue: 'Issue a credential',
+    issueTitle: 'Issue a credential for the agent runtime',
+    issueBody:
+      'One issued here is shown once and given to the runtime by nobody: put it in the runtime’s secret core/agent_runtime on the server, and restart the runtime. {command} on the server does all of that, and is the usual way.',
+    label: 'Label',
+    labelHint: 'What it is for, so it can be recognised later.',
+    replace: 'Revoke its other credentials',
+    replaceHint:
+      'They stop working at once, the runtime’s too until it is given this one. The agents’ tokens are not revoked.',
+    submit: 'Issue',
+    issuedTitle: 'Copy the credential now',
+    once: 'This is the only time it is shown: AIshie keeps only its hash.',
+    replayed: 'This repeated an earlier request, so the credential is not shown again. If it was not copied, revoke it and issue another.',
+    credential: 'Credential',
+    where:
+      'Put it in the runtime’s secret core/agent_runtime on the server (/etc/aishie/runtime/secrets/core/agent_runtime), readable by the runtime alone, and restart the runtime.',
+    done: 'I have copied it',
+    // Core's refusals of the service's credentials, by reason.
+    coreRefusal: {
+      too_many_credentials:
+        'The agent runtime holds as many credentials as AIshie allows. Revoke one, or revoke the others as you issue this one.',
+    },
   },
 }

@@ -1,17 +1,19 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, chatButton, courseTab, coursePath, demo, signIn, toast } from './support'
+import { call, chatButton, courseTab, coursePath, demo, hostOnRuntime, signIn, toast } from './support'
 
-// Agents a person owns, told through the app: a student makes an agent and a
-// token for it, and asks to bring it into the course, where bringing in an
-// agent needs an instructor's approval (the student preset's agent_delegate is
-// confirm_required); the instructor approves it; what runs the agent says,
-// with its token, that it answers in the site (me.site_chat), as a runtime
-// does when it starts it; the student asks it a question from the chat
-// panel; the agent answers through Core's REST API with its own token, as a
-// runtime would; and the answer appears in the panel by polling. Then an
-// instructor adds a course agent, which answers the course, its runtime says
-// it answers in the site, and a student finds it among those they may ask.
-// (An agent nothing runs here is asked nothing here: site-chat.spec.ts.)
+// Agents a person owns, told through the app: a student makes an agent hosted
+// on AIshie (for good: she is given no token for it), and asks to bring it
+// into the course, where bringing in an agent needs an instructor's approval
+// (the student preset's agent_delegate is confirm_required); the instructor
+// approves it; AIshie's runtime hosts it, issued its one token by Core (the
+// runs have no runtime: the test plays it, through Core's API for the
+// runtime); the student asks it a question from the chat panel; the agent
+// answers through Core's REST API with that token, as the runtime would; and
+// the answer appears in the panel by polling. Then an instructor adds a
+// course agent hosted on AIshie, which answers the course; once the runtime
+// hosts it, a student finds it among those they may ask. (An agent the
+// runtime does not run, and one with MCP access, are asked nothing here:
+// site-chat.spec.ts, hosting.spec.ts.)
 
 const STAMP = Date.now().toString(36)
 const AGENT = `Mei's helper ${STAMP}`
@@ -32,7 +34,7 @@ async function openChat(page: Page) {
 }
 
 test.describe.serial('an agent of one’s own, and a course agent', () => {
-  test('a student creates an agent and gives it a token on My agents', async ({ page }) => {
+  test('a student creates an agent hosted on AIshie on My agents, and is given no token for it', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.mei)
     await page.goto('/account/agents')
@@ -44,28 +46,18 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await page.locator('.page-header').getByRole('button', { name: 'New agent' }).click()
     const create = page.getByRole('dialog', { name: 'New agent' })
     await create.getByLabel('Name').fill(AGENT)
+    await create.locator('.hosting-choice__option--runtime').click()
     await create.getByRole('button', { name: 'Create agent' }).click()
     await expect(toast(page, `${AGENT} is created`)).toBeVisible()
     await expect(page).toHaveURL(/\/account\/agents\/[0-9a-f-]{36}$/)
     agentId = page.url().split('/').pop()!
 
-    await page.getByRole('button', { name: 'New token' }).first().click()
-    const issue = page.getByRole('dialog', { name: `New token for ${AGENT}` })
-    await issue.getByLabel('Label').fill(`e2e runtime ${STAMP}`)
-    await issue.getByRole('button', { name: 'Create token' }).click()
-    const reveal = page.getByRole('dialog', { name: `The new token for ${AGENT}` })
-    await expect(reveal).toBeVisible()
-    agentToken = (await reveal.locator('.copy-block__text').first().innerText()).trim()
-    expect(agentToken).toMatch(/^ais_/)
-    await reveal.getByRole('button', { name: 'I have copied it' }).click()
-    // Nothing was copied through the page: it asks before the token is gone for good.
-    await page.getByRole('button', { name: 'Close anyway' }).click()
-    await expect(reveal).toBeHidden()
-
-    // The token works: the agent is who it says it is, and its owner's.
-    const me = await call(agentToken, 'GET', '/v1/me')
-    expect(me.status, JSON.stringify(me.body)).toBe(200)
-    expect(me.body.result.id).toBe(agentId)
+    // Hosted on AIshie, for good, as Core holds it: the page offers no token.
+    await expect(page.locator('.page-header')).toContainText('Hosted on AIshie')
+    await expect(page.getByRole('button', { name: 'New token' })).toHaveCount(0)
+    await expect(page.locator('.tokens-card')).toHaveCount(0)
+    const got = await call(d.actors.mei.token, 'GET', `/v1/me/agents/${agentId}`)
+    expect(got.body.result.hosting).toBe('runtime')
   })
 
   test('the student brings it into the course, which sends a request', async ({ page }) => {
@@ -117,11 +109,16 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
 
   test('the student asks their agent; it answers through the API; the panel shows it', async ({ page }) => {
     const d = demo()
-    // What runs the agent starts, and says with its token that it answers in the site: until it
-    // has, nobody there is offered to ask it.
-    const declared = await call(agentToken, 'POST', '/v1/me/site-chat', { on: true })
-    expect(declared.body.status, JSON.stringify(declared.body)).toBe('executed')
-    expect(declared.body.result.site_chat).toBe(true)
+    // Until AIshie's runtime hosts it, nobody is offered to ask it. The runtime is issued its one
+    // token, and answers as the agent with it.
+    const respondents = async () =>
+      (
+        (await call(d.actors.mei.token, 'GET', `/v1/courses/${d.course.id}/conversations/respondents`)).body.result
+          ?.respondents ?? []
+      ).map((x: { display_name: string }) => x.display_name)
+    expect(await respondents()).not.toContain(AGENT)
+    agentToken = await hostOnRuntime(agentId)
+    expect(await respondents()).toContain(AGENT)
 
     await signIn(page, d.actors.mei)
     await page.goto(coursePath())
@@ -185,6 +182,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await expect(dialog).toBeVisible()
     await dialog.getByRole('radio', { name: 'A new agent' }).check({ force: true })
     await dialog.locator('#add-agent-name').fill(TUTOR)
+    await dialog.locator('.hosting-choice__option--runtime').click()
     await dialog.getByRole('button', { name: /^(Add course agent|Request to add)$/ }).click()
     await expect(toast(instructor, `${TUTOR} is now a course agent`)).toBeVisible()
     await expect(dialog).toBeHidden()
@@ -196,17 +194,11 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     expect(seat.answers_course).toBe(true)
     await instructor.close()
 
-    // Nothing runs it yet, so no student is offered to ask it. Its runtime starts, with a token
-    // its owner gave it, and says it answers in the site.
+    // Nothing runs it yet, so no student is offered to ask it. AIshie's runtime hosts it.
     const before = await call(d.actors.mei.token, 'GET', `/v1/courses/${d.course.id}/conversations/respondents`)
     const names = (before.body.result.respondents ?? []).map((x: { display_name: string }) => x.display_name)
     expect(names).not.toContain(TUTOR)
-    const token = await call(d.actors.instructor.token, 'POST', `/v1/me/agents/${seat.actor_id}/tokens`, {
-      label: `e2e runtime ${STAMP}`,
-    })
-    expect(token.body.status, JSON.stringify(token.body)).toBe('executed')
-    const declared = await call(token.body.result.token, 'POST', '/v1/me/site-chat', { on: true })
-    expect(declared.body.result?.site_chat, JSON.stringify(declared.body)).toBe(true)
+    await hostOnRuntime(seat.actor_id)
 
     const page = await browser.newPage()
     await signIn(page, d.actors.mei)

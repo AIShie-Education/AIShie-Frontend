@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { ConversationMessage, ConversationView } from '@/api/types'
 import {
-  AGENT_ANSWERS_ELSEWHERE,
+  NOT_ASKABLE_REASONS,
   agentPurpose,
-  answersElsewhere,
+  notAskableReason,
   availabilityOf,
   BODY_MAX,
   bodyProblem,
@@ -530,12 +530,15 @@ describe('agents only', () => {
 })
 
 describe('site chat', () => {
-  it('knows Core’s refusal of a question to an agent operated from outside, whatever its code', () => {
-    expect(AGENT_ANSWERS_ELSEWHERE).toBe('agent_answers_elsewhere')
-    expect(answersElsewhere({ details: { reason: 'agent_answers_elsewhere' } })).toBe(true)
-    expect(answersElsewhere({ details: { reason: 'not_addressable' } })).toBe(false)
-    expect(answersElsewhere({ details: null })).toBe(false)
-    expect(answersElsewhere(null)).toBe(false)
+  it('knows Core’s refusals of a question to an agent nobody asks in the site now, by their reasons', () => {
+    expect(NOT_ASKABLE_REASONS).toEqual(['mcp_agent', 'agent_not_hosted'])
+    expect(notAskableReason({ details: { reason: 'mcp_agent' } })).toBe('mcp_agent')
+    expect(notAskableReason({ details: { reason: 'agent_not_hosted' } })).toBe('agent_not_hosted')
+    // The reason of the declaration of before is not one any more.
+    expect(notAskableReason({ details: { reason: 'agent_answers_elsewhere' } })).toBeNull()
+    expect(notAskableReason({ details: { reason: 'not_addressable' } })).toBeNull()
+    expect(notAskableReason({ details: null })).toBeNull()
+    expect(notAskableReason(null)).toBeNull()
   })
 
   it('knows a question refused because the conversation was closed meanwhile', () => {

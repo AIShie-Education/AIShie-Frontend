@@ -1,11 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope } from 'vue'
 import { ref } from 'vue'
-import type { AgentFull, AgentSummary, ConversationView, Respondent } from '@/api/types'
+import type { ConversationView, Respondent } from '@/api/types'
 
 let conversations: ConversationView[] = []
-let agents: () => Promise<{ agents: AgentSummary[] }>
-let agentsById: Record<string, AgentFull> = {}
 let respondents: Respondent[] = []
 const calls: { tool: string; args: Record<string, unknown> }[] = []
 
@@ -25,12 +23,6 @@ vi.mock('@/api/http', async (orig) => {
         return { conversations: page, next: page.length === limit ? page.at(-1)!.id : undefined }
       }
       if (tool === 'conversation.respondents') return { respondents }
-      if (tool === 'agent.list') return agents()
-      if (tool === 'agent.get') {
-        const a = agentsById[args.actor_id as string]
-        if (!a) throw new (await import('@/api/http')).ApiError({ status: 404, code: 'not_found', message: 'gone' })
-        return a
-      }
       throw new Error(`no answer for ${tool}`)
     }),
   }
@@ -39,13 +31,11 @@ vi.mock('@/api/http', async (orig) => {
 const {
   useConversationList,
   useRespondents,
-  ownAgentsElsewhere,
   sortRespondents,
   LIST_PAGE,
   LIST_POLL_MS,
   RESPONDENTS_POLL_MS,
 } = await import('./useConversationList')
-const { ApiError } = await import('@/api/http')
 
 function conv(n: number, lastAt: string | null = null, respondent = 'r'): ConversationView {
   return {
@@ -185,99 +175,3 @@ describe('useRespondents', () => {
   })
 })
 
-describe('ownAgentsElsewhere', () => {
-  const summary = (id: string, over: Partial<AgentSummary> = {}): AgentSummary => ({
-    actor_id: id,
-    display_name: `Agent ${id}`,
-    created_at: '2026-09-01T00:00:00Z',
-    live_seats: 1,
-    pending_requests: 0,
-    site_chat: false,
-    status: 'active',
-    suspended_by_me: false,
-    ...over,
-  })
-  const seat = (course: string, member: string, over: Record<string, unknown> = {}) => ({
-    answers_course: false,
-    assignment_scope: 'all',
-    code: 'CS101',
-    course_id: course,
-    course_status: 'active',
-    member_id: member,
-    perms: {},
-    principal_member_id: 'me',
-    section: '',
-    status: 'active',
-    student_scope: 'listed',
-    title: 'Programming',
-    ...over,
-  })
-  const full = (id: string, seats: ReturnType<typeof seat>[], over: Partial<AgentFull> = {}): AgentFull => ({
-    actor_id: id,
-    display_name: `Agent ${id}`,
-    created_at: '2026-09-01T00:00:00Z',
-    requests: [],
-    seats,
-    site_chat: false,
-    status: 'active',
-    suspended_by_me: false,
-    ...over,
-  })
-
-  beforeEach(() => {
-    agentsById = {}
-  })
-
-  it('lists the caller’s agents seated here that take no conversations in the site, with what each is for', async () => {
-    agents = async () => ({
-      agents: [
-        summary('b'),
-        summary('a'),
-        summary('hosted', { site_chat: true }),
-        summary('unseated', { live_seats: 0 }),
-        summary('suspended', { status: 'suspended' }),
-      ],
-    })
-    agentsById = {
-      a: full('a', [seat('k', 'ma', { answers_course: true }), seat('other', 'mo')]),
-      b: full('b', [seat('k', 'mb')]),
-    }
-    const out = await ownAgentsElsewhere('k', 'me')
-    expect(out).toEqual([
-      { actorId: 'a', memberId: 'ma', displayName: 'Agent a', purpose: 'course' },
-      { actorId: 'b', memberId: 'mb', displayName: 'Agent b', purpose: 'personal' },
-    ])
-    // Only those that might be: never one that takes them, has no seat, or is suspended.
-    expect(calls.filter((c) => c.tool === 'agent.get').map((c) => c.args.actor_id)).toEqual(['b', 'a'])
-  })
-
-  it('leaves out a seat that does not count here, or is someone else’s delegate', async () => {
-    const NOW = Date.parse('2026-09-26T12:00:00Z')
-    agents = async () => ({ agents: [summary('a')] })
-    agentsById = {
-      a: full('a', [
-        seat('k', 'paused', { status: 'paused' }),
-        seat('k', 'ended', { expires_at: '2026-09-26T11:00:00Z' }),
-        seat('k', 'theirs', { principal_member_id: 'someone' }),
-        seat('k', 'live', { expires_at: '2026-10-01T00:00:00Z' }),
-      ]),
-    }
-    const out = await ownAgentsElsewhere('k', 'me', NOW)
-    expect(out.map((a) => a.memberId)).toEqual(['live'])
-  })
-
-  it('says of an agent read again as taking them that it does, and skips one that cannot be read', async () => {
-    agents = async () => ({ agents: [summary('a'), summary('gone')] })
-    agentsById = { a: full('a', [seat('k', 'ma')], { site_chat: true }) }
-    expect(await ownAgentsElsewhere('k', 'me')).toEqual([])
-  })
-
-  it('has none for a caller who owns no agents, or may not list them', async () => {
-    agents = async () => {
-      throw new ApiError({ status: 403, code: 'forbidden', message: 'people own agents' })
-    }
-    expect(await ownAgentsElsewhere('k', 'me')).toEqual([])
-    agents = async () => ({ agents: null as unknown as AgentSummary[] })
-    expect(await ownAgentsElsewhere('k', 'me')).toEqual([])
-  })
-})

@@ -1,8 +1,14 @@
 // The objects of the AIshie Agent Runtime's API v1 (M2), written by hand from
-// its contract (m2.api.spec.md §4 and §5), and those of its administrators'
+// its contract (m2.api.spec.md §4 and §5, and runtime-hosting-api.md, by
+// which it hosts an agent by its id), and those of its administrators'
 // routes (OCR and the school's plan, at the end). Generating them
 // (gen:runtime-api) is a follow-up once the runtime publishes a schema.
 // Answers may gain members within v1; what is not named here is ignored.
+//
+// Every agent is hosted one way in Core, for good: runtime, which the
+// runtime hosts by the agent's id and alone is issued a token for, or mcp,
+// its owner's own tools', which the runtime never hosts. Nobody gives the
+// runtime a token, and it never shows one.
 
 /** What a hosted agent is doing, as the runtime works it out (§6.2). */
 export type HostedStatus = 'needs_model' | 'starting' | 'running' | 'paused' | 'needs_token' | 'error' | 'stopped'
@@ -17,7 +23,12 @@ export const HOSTED_STATUSES: readonly HostedStatus[] = [
   'stopped',
 ]
 
-/** Why a hosted agent needs a token or does not run (problem.reason). */
+/**
+ * Why a hosted agent needs a token or does not run (problem.reason).
+ * token_refused (with needs_token): the token the runtime held was revoked
+ * in Core, by its owner or an administrator; a new one is issued on asking
+ * (POST …/token).
+ */
 export type ProblemReason =
   | 'token_refused'
   | 'settings_rejected'
@@ -25,10 +36,15 @@ export type ProblemReason =
   | 'operator_agent'
   | 'actor_in_use'
   | 'token_other_agent'
-  | 'token_not_agent'
   | 'owner_changed'
   | 'core_too_old'
   | 'agent_suspended'
+  /** Its owner is suspended in Core: it is not hosted until they are reactivated. */
+  | 'owner_suspended'
+  /** Core hosts it mcp: its owner's own tools', which the runtime cannot host. */
+  | 'mcp_agent'
+  /** Core has no agent of its id. */
+  | 'agent_not_found'
   | 'failing'
   /** On an offer of the school's plan that is gone, with no model of the owner's behind it. */
   | 'offer_withdrawn'
@@ -40,39 +56,41 @@ export const PROBLEM_REASONS: readonly ProblemReason[] = [
   'operator_agent',
   'actor_in_use',
   'token_other_agent',
-  'token_not_agent',
   'owner_changed',
   'core_too_old',
   'agent_suspended',
+  'owner_suspended',
+  'mcp_agent',
+  'agent_not_found',
   'failing',
   'offer_withdrawn',
 ]
 
 /**
- * What became of an agent token the runtime was asked to revoke in Core
- * (§7.3): revoked, or already not working (nothing to do); failed, when the
- * token may still work and its owner is offered to revoke it (§9.4); or
- * not attempted (kept on purpose, or a replay of the same token).
+ * What became of the agent's token in Core when its hosting ended here
+ * (pausing it, or deleting it): revoked; none, Core held none; failed, it
+ * may still work; or not attempted (the operator's configuration runs the
+ * agent, and keeps its own).
  */
-export type Revocation = 'revoked' | 'already_invalid' | 'failed' | 'not_attempted'
+export type Revocation = 'revoked' | 'none' | 'failed' | 'not_attempted'
 
-export const REVOCATIONS: readonly Revocation[] = ['revoked', 'already_invalid', 'failed', 'not_attempted']
+export const REVOCATIONS: readonly Revocation[] = ['revoked', 'none', 'failed', 'not_attempted']
 
-/**
- * Why a revocation failed: the agent is suspended in Core, Core could not be
- * reached, or Core refused the token the runtime asked with (core_refused:
- * after two replacements at once, the newer one revoked it first; A.3.5).
- */
-export type RevocationProblem = 'agent_suspended' | 'core_unavailable' | 'core_refused'
+/** Why a revocation failed, or was not attempted. */
+export type RevocationProblem = 'core_unavailable' | 'runtime_misconfigured' | 'core_too_old' | 'operator_agent'
 
-export const REVOCATION_PROBLEMS: readonly RevocationProblem[] = ['agent_suspended', 'core_unavailable', 'core_refused']
+export const REVOCATION_PROBLEMS: readonly RevocationProblem[] = [
+  'core_unavailable',
+  'runtime_misconfigured',
+  'core_too_old',
+  'operator_agent',
+]
 
-/** An agent token as the runtime shows it: never more than its public part. */
-export interface TokenInfo {
-  /** Such as "ais_k7v2m4qhx3ab…". */
-  hint: string
-  /** The 12-character public prefix, Core's credential token_prefix. */
-  prefix: string
+/** What pausing or deleting did to the token Core held for the agent. */
+export interface RevocationResult {
+  outcome: Revocation
+  /** Null unless failed or not attempted. */
+  problem: RevocationProblem | null
 }
 
 /** One of a hosted agent's seats, as structured facts (the UI words them). */
@@ -186,7 +204,6 @@ export interface HostedAgent {
   /** Non-null exactly for needs_token and error. */
   problem: HostedProblem | null
   paused: boolean
-  token: TokenInfo
   /** On the school's plan, own is the fallback behind it. */
   model: { own: OwnModel | null; school: SchoolModel | null }
   own_key: null | { hint: string; provider: string | null }
@@ -201,15 +218,19 @@ export interface HostedAgent {
 
 /**
  * What the runtime offers, by GET /info. Each is a boolean the runtime
- * works out as it starts, not a constant: connect_by_token and own_key are
- * true where it was given a Core and a vault to seal with (in any
- * deployment, as the contract's §5.1 and A.2.1 say), and false otherwise;
- * school_key is true where the operator offers models on the school's plan.
- * The page offers what each names only while it is true.
+ * works out as it starts, not a constant: host_by_id is true where it has a
+ * Core, its own credential there and a vault to seal with, own_key where it
+ * was given a Core and a vault, and false otherwise; school_key is true
+ * where the operator offers models on the school's plan. The page offers
+ * what each names only while it is true.
  */
 export interface RuntimeFeatures {
-  /** Agents may be connected by a token (inspect, POST /agents, PUT /token). */
-  connect_by_token: boolean
+  /**
+   * An owner's agent may be hosted by its id (inspect, POST /agents, POST
+   * …/token). False from a runtime from before it, which took pasted
+   * tokens, and from one without its own credential in Core.
+   */
+  host_by_id: boolean
   /** An owner may give a model and their own key (GET /models, keys/test, PATCH). */
   own_key: boolean
   /** The school's plan (D8): models the school provides and pays for (GET /models' school_key). */
@@ -305,75 +326,38 @@ export interface KeyTestAnswer {
   latency_ms: number
 }
 
-/** POST /agents/inspect and POST /agents. */
-export interface TokenRequest {
-  token: string
-  /** The agent the caller means. */
-  core_actor_id?: string
+/** POST /agents/inspect and POST /agents: the agent's id in Core, and nothing else. */
+export interface AgentRequest {
+  agent_id: string
 }
 
-/**
- * PUT /agents/{id}/token: the token alone. The agent is the one hosted
- * there, so a core_actor_id member is refused (400 unknown_field,
- * /core_actor_id; the contract's A.2.3).
- */
-export interface ReplaceTokenRequest {
-  token: string
-}
+/** Why the runtime will not host an agent of the caller's (inspect's reason, and POST /agents' refusals). */
+export type HostRefusalReason = 'mcp_agent' | 'agent_suspended' | 'owner_suspended' | 'operator_agent'
 
-/**
- * One of the agent's other live API tokens in Core (the contract's A.1):
- * never the token being inspected or connected, nor the one the runtime
- * holds for it. Nothing of it is secret: it is what Core shows the owner.
- */
-export interface OtherToken {
-  /** Core's token_prefix, 12 characters; shown as `ais_${prefix}…`. */
-  prefix: string
-  /** The label it was issued with, if any. */
-  label: string | null
-  created_at: string
-  /** Null: never used. */
-  last_used_at: string | null
-  /** Null: it does not expire. */
-  expires_at: string | null
-  /** Last used within window_seconds of when the runtime asked Core. */
-  recent: boolean
-}
+export const HOST_REFUSAL_REASONS: readonly HostRefusalReason[] = [
+  'mcp_agent',
+  'agent_suspended',
+  'owner_suspended',
+  'operator_agent',
+]
 
-/**
- * The one-brain warning (A.1): an agent has one brain at a time, and a
- * token of its used lately means something may run it somewhere else now.
- * The runtime only says so; connecting is not refused, and it never
- * revokes a token it was not given.
- */
-export interface OtherTokens {
-  /** Some token below is recent: warn. */
-  in_use: boolean
-  /** How recent "recent" is, in seconds (900). */
-  window_seconds: number
-  /** At most 20: the most recently used first, never-used ones last (newest first). */
-  tokens: OtherToken[]
-}
-
-/** POST /agents/inspect: what a token is. */
+/** POST /agents/inspect: one of the caller's agents as Core hosts it, before it is hosted here. Nothing is written. */
 export interface InspectAnswer {
   core_actor_id: string
   display_name: string
   owner_actor_id: string
-  token: TokenInfo
-  seats: Seat[]
-  hosted: null | { agent_id: string | null; by_you: boolean; same_token: boolean }
-  /** The agent's other live tokens; null when Core would not list them (nothing is known, and nothing failed). */
-  other_tokens: OtherTokens | null
-}
-
-/**
- * POST /agents, 201 and its 200 replay: the agent, and its other live
- * tokens beside its members (A.1). Only these two answers carry
- * other_tokens; GET, PATCH, PUT /token, pause and resume do not.
- */
-export interface ConnectAnswer extends HostedAgent {
-  other_tokens: OtherTokens | null
+  /** How Core hosts it, for good: runtime, or mcp (never hosted here). */
+  hosting: string
+  /** POST /agents would host it now. */
+  hostable: boolean
+  /** Why not, when hostable is false. */
+  reason: HostRefusalReason | null
+  /** Its live seats in Core. */
+  live_seats: number
+  /** People may ask it in the site now: Core holds a live token of the runtime's for it. */
+  site_chat: boolean
+  /** Hosted here already: id only when the row is the caller's. */
+  hosted: null | { id: string | null; by_you: boolean }
 }
 
 /**
@@ -385,22 +369,15 @@ export interface AgentPatch {
   own_key?: { value: string } | null
 }
 
-/** The token a replacement or a deletion left behind, and whether Core revoked it. */
-export interface RevokedToken extends TokenInfo {
-  revocation: Revocation
-  problem: RevocationProblem | null
+/** POST /agents/{id}/pause: the agent paused, and what became of the token Core held for it. */
+export interface PauseAnswer extends HostedAgent {
+  revocation: RevocationResult
 }
 
-/** PUT /agents/{id}/token. */
-export interface ReplaceTokenAnswer {
-  agent: HostedAgent
-  previous_token: RevokedToken
-}
-
-/** DELETE /agents/{id}. */
+/** DELETE /agents/{id}: the hosting gone, and what became of the agent's token in Core. */
 export interface DeleteAnswer {
   deleted: { id: string; core_actor_id: string }
-  token: RevokedToken
+  revocation: RevocationResult
 }
 
 /** The closed list of details.reason the runtime answers errors with (§2.3). */
@@ -430,18 +407,15 @@ export const RUNTIME_ERROR_REASONS = [
   'agent_not_found',
   'version_required',
   'version_mismatch',
-  // Tokens
-  'token_malformed',
-  'token_refused',
-  'token_not_agent',
-  'agent_suspended',
-  'token_other_agent',
-  'core_too_old',
-  'agent_unowned',
-  'not_owner',
-  'already_hosted',
+  // Hosting an agent by its id, as Core says it may be
   'operator_agent',
   'core_unavailable',
+  'core_too_old',
+  'runtime_misconfigured',
+  'mcp_agent',
+  'agent_suspended',
+  'owner_suspended',
+  'owner_changed',
   // Models and keys
   'unknown_provider',
   'adapter_not_offered',

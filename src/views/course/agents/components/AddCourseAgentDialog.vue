@@ -1,19 +1,22 @@
 <script setup lang="ts">
 // Adding a course agent: one of the caller's own agents (agent.list), or one
-// made here (agent.create), brought in as the caller's delegate with the
-// course_tutor preset, answering the course (member.add_delegate with
-// answers_course, said outright). What it would hold is shown
-// first, as Core works it out (member.delegate_defaults): the preset clipped
-// to the caller's own seat.
+// made here (agent.create, asking how it runs, for good: students ask it on
+// the site only when it is hosted on AIshie), brought in as the caller's
+// delegate with the course_tutor preset, answering the course
+// (member.add_delegate with answers_course, said outright). One with MCP
+// access may be brought in too, and the dialog says that nobody can ask it
+// on the site. What it would hold is shown first, as Core works it out
+// (member.delegate_defaults): the preset clipped to the caller's own seat.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
-import { PERMS, type AgentSummary, type DelegateDefaults, type Perm } from '@/api/types'
+import { PERMS, type AgentHosting, type AgentSummary, type DelegateDefaults, type Perm } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { announce, useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
-import { delegateArgsFor } from '@/utils/agents'
+import { delegateArgsFor, hostingOf } from '@/utils/agents'
+import HostingChoice from '@/components/HostingChoice.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -39,6 +42,8 @@ const SEAT = delegateArgsFor('course')
 const mode = ref<'existing' | 'create'>('existing')
 const agentId = ref('')
 const newName = ref('')
+/** How the agent made here runs: chosen by the caller, never for them. */
+const newHosting = ref<AgentHosting | ''>('')
 /** An agent made here whose seating has not gone through yet: tried again, it is not made twice. */
 const created = ref<{ id: string; name: string } | null>(null)
 
@@ -69,6 +74,7 @@ watch(open, (v) => {
   mode.value = 'existing'
   agentId.value = ''
   newName.value = ''
+  newHosting.value = ''
   created.value = null
   createWrite.lastError.value = null
   addWrite.lastError.value = null
@@ -119,8 +125,17 @@ const chosenName = computed(() =>
 )
 const ready = computed(() =>
   mode.value === 'create'
-    ? !createBlocked.value && !!newName.value.trim() && newName.value.trim().length <= 200
+    ? !createBlocked.value &&
+      !!newName.value.trim() &&
+      newName.value.trim().length <= 200 &&
+      !!newHosting.value
     : !!agentId.value,
+)
+/** The agent chosen, or being made, has MCP access: nobody can ask it on the site. */
+const chosenMcp = computed(() =>
+  mode.value === 'create'
+    ? newHosting.value === 'mcp'
+    : hostingOf(choices.value.find((a) => a.actor_id === agentId.value)?.hosting) === 'mcp',
 )
 
 async function submit() {
@@ -128,9 +143,11 @@ async function submit() {
   let actorId = agentId.value
   if (mode.value === 'create') {
     const name = newName.value.trim()
+    const hosting = newHosting.value
     if (created.value && created.value.name === name) actorId = created.value.id
     else {
-      const out = await createWrite.run({ display_name: name }, { notify: false })
+      if (!hosting) return
+      const out = await createWrite.run({ display_name: name, hosting }, { notify: false })
       if (!out || out.status !== 'executed') return
       created.value = { id: out.result.actor_id, name }
       actorId = out.result.actor_id
@@ -230,7 +247,19 @@ async function submit() {
         />
         <div class="app-form-hint">{{ t('courseAgents.addDialog.nameHelp') }}</div>
       </el-form-item>
+      <el-form-item v-if="mode === 'create'" :label="t('common.agent.hosting.label')">
+        <HostingChoice v-model="newHosting" />
+        <div class="app-form-hint add-agent__stack">{{ t('courseAgents.addDialog.hostingHelp') }}</div>
+      </el-form-item>
     </el-form>
+    <el-alert
+      v-if="chosenMcp && chosenName"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="add-agent__alert add-agent__mcp"
+      :title="t('courseAgents.addDialog.mcpPicked', { name: chosenName })"
+    />
 
     <h4 class="add-agent__section">{{ t('courseAgents.addDialog.preview') }}</h4>
     <p class="app-form-hint add-agent__section-hint">{{ t('courseAgents.addDialog.previewHelp') }}</p>

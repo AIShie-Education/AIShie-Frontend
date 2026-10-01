@@ -1,125 +1,59 @@
-// Hosting an agent on the school's runtime (M2): the choice of where an agent
-// runs, connecting it, its model and key, its hosted card, and the runtime's
+// Hosting an agent on the school's runtime (M2): offering it to a runtime
+// agent not hosted yet, hosting it by its id, its model and key, its hosted
+// card, what became of its token when its hosting ended, and the runtime's
 // errors by reason. The words for statuses, problems and errors are the
-// contract's (m2.api.spec.md §6.1 and §9.5).
+// contract's (m2.api.spec.md §6.1 and §9.5, and runtime-hosting-api.md).
 export default {
-  // Where the agent runs: one brain at a time.
-  choice: {
-    title: '這個代理如何運行',
-    intro:
-      '代理同一時間只能有一個「大腦」：由 AIshie 代管，或由你的 AI 工具或執行環境運行。不能同時兩者，否則每個問題都會有兩個回答。',
-    hosted: '交給 AIshie 代管',
-    hostedHint: 'AIshie 會替你運行它，使用你選擇的模型和你自己的 API 金鑰。無須安裝任何程式，也無須處理權杖。',
-    recommended: '推薦',
-    tool: '用其他 AI 工具連接（Claude、ChatGPT、代理 SDK…）',
-    toolHint: '由你自己的 AI 工具透過 MCP、以代理的其中一個權杖擔任這個代理。',
-    runtime: '自己架 runtime（進階）',
-    runtimeHint: '適用於自行營運 AIshie Agent Runtime 的人。',
-    hostedIntro: 'AIshie 會為代理建立一個權杖，並在不顯示的情況下交給學校的執行環境；然後由你選擇模型並提供 API 金鑰。',
-    host: '設定代管',
-    hostedHintSchool:
-      'AIshie 會替你運行它，使用學校的 AI 方案，或你選擇的模型和你自己的 API 金鑰。無須安裝任何程式，也無須處理權杖。',
-    hostedIntroSchool:
-      'AIshie 會為代理建立一個權杖，並在不顯示的情況下交給學校的執行環境；然後由你選擇學校方案，或選擇模型並提供自己的 API 金鑰。',
+  // A runtime agent not hosted yet, on its page: hosting it.
+  offer: {
+    title: '站內託管',
+    notHosted: '尚未託管',
+    body: '你為它選好回答時所用的模型後，AIshie 的執行環境就會運行這個代理；之後課程成員就可在站內向它提問。你完全不用處理權杖。',
+    bodySchool:
+      '你為它選好學校方案，或選擇模型並提供自己的 API 金鑰後，AIshie 的執行環境就會運行這個代理；之後課程成員就可在站內向它提問。你完全不用處理權杖。',
+    host: '設定託管',
     hostSuspended: '這個代理已停用：請先重新啟用它。',
-    paste: '我已有這個代理的權杖',
-    selfWhileHosted: '改用其他 AI 工具連接，或自己架 runtime',
-    selfWhileHostedNote:
-      '這些只適用於停止代管之後：請先從 AIshie 代管中刪除這個代理（更多 ▸ 刪除），這樣會撤銷執行環境所用的權杖。兩者同時運行時，每個問題都會有兩個回答。',
+    absent: '這個伺服器上沒有可用的 AIshie 代理執行環境，所以這個代理暫時無法在這裡運行。請通知你的管理員。',
+    notById: '學校的執行環境目前無法託管代理：它尚未設定好。請通知你的管理員。',
+    noModel: '學校的執行環境目前沒有可選的模型，所以暫時無法託管代理。',
   },
 
-  // The wizard's first step, and giving a hosted agent a new token.
-  connect: {
-    title: '在學校的執行環境託管 {name}',
+  // Hosting one of one's agents by its id: the wizard's first step, before "Model and key".
+  host: {
+    open: '把代理交給 AIshie 託管',
+    title: '把代理交給 AIshie 託管',
+    titleNamed: '把 {name} 交給 AIshie 託管',
     steps: {
-      confirm: '確認',
+      agent: '代理',
       model: '模型與金鑰',
     },
-    body: '學校的執行環境會按照這個代理在 AIshie 中的席位運行它。執行環境會加密保存代理的權杖，你不會看到它。下一步請選擇模型並提供你的 API 金鑰。',
+    body: '學校的執行環境會按照這個代理在 AIshie 中的席位運行它，課程成員可在站內向它提問。執行環境會自行取得代理的權杖：你不會看到任何權杖。下一步請選擇模型並提供你的 API 金鑰。',
     bodySchool:
-      '學校的執行環境會按照這個代理在 AIshie 中的席位運行它。執行環境會加密保存代理的權杖，你不會看到它。下一步請選擇學校方案，或選擇模型並提供你的 API 金鑰。',
-    seats: '它所在的課程',
-    noSeats: '它還未加入任何課程。託管後，在你把它帶入課程之前，它沒有任何問題要回答。',
-    purpose: {
-      personal: '只回答你',
-      course: '回答所有學生',
-    },
-    submit: '連接',
-    done: '{name} 已在學校的執行環境上',
-    replaceTitle: '為學校執行環境上的 {name} 換新權杖',
-    replaceBody:
-      '系統會建立一個標籤為「AIshie runtime」的新權杖並交給執行環境，執行環境隨後會撤銷原有的權杖。兩個權杖你都不會看到。',
-    replaceSubmit: '更換權杖',
-    reconnectTitle: '重新連接 {name}',
-    reconnectBody:
-      'AIshie 拒絕了執行環境原有的權杖。系統會建立一個標籤為「AIshie runtime」的新權杖並交給執行環境；你不會看到它。',
-    reconnectSubmit: '重新連接',
-    replaced: '執行環境已取得 {name} 的新權杖',
-  },
-
-  // A token the runtime could not revoke, after replacing or deleting (§9.4).
-  unrevoked: {
-    title: '這個代理的一個權杖可能仍然有效',
-    body: '學校的執行環境未能在 AIshie 中撤銷權杖 {token}（{why}），所以持有它的程式仍可能以你的代理身分行事。請以代理擁有者的身分在這裡撤銷它。',
-    why: {
-      agent_suspended: '這個代理在 AIshie 中已停用',
-      core_unavailable: '它無法連接 AIshie',
-      core_refused: 'AIshie 拒絕了它的請求',
-      unknown: '它無法確定是否已撤銷',
-    },
-    revoke: '在 AIshie 中撤銷',
-    later: '暫時不要',
-    revoked: '已撤銷 {token}。',
-    gone: '{token} 已經失效：沒有需要撤銷的。',
-    held: '執行環境現正使用 {token}，所以沒有撤銷它。',
-    failed: '在這裡也未能撤銷它。請在下方「權杖」清單中撤銷它。',
-  },
-
-  // The agent's other tokens, as the runtime lists them on inspect and connect
-  // (A.1), or as the page works them out from Core's list before it issues one.
-  otherTokens: {
-    inUseTitle: '這個代理似乎正在其他地方運行',
-    inUse:
-      '它的權杖 {token} 最近一次使用是 {ago}。代理同一時間只能有一個「大腦」。請停止另一個執行環境，或在 AIshie 中撤銷那個權杖，讓只有這個執行環境以你的代理身分回答。',
-    unusedTitle: '這個代理還有其他權杖',
-    unused: '它們仍然有效，但最近沒有使用。如果你沒有程式需要它們，可以撤銷。',
-    unknown: '無法檢查這個代理是否有其他副本。',
-    unlabelled: '沒有標籤',
-    recent: '使用中',
-    lastUsed: '上次使用',
-    neverUsed: '從未使用',
-    revoke: '撤銷',
-    revoked: '已撤銷 {token}：現在沒有程式能再用它以你的代理身分行事。',
-    gone: '{token} 已經失效：沒有需要撤銷的。',
-    revokeFailed: '未能撤銷它。請再試一次，或在下方「權杖」清單中撤銷它。',
-    anyway: '仍然連接',
-    anywayReplace: '仍然繼續',
-  },
-
-  // The one-brain rule, when resuming a hosted agent, and for a pasted token used lately.
-  oneBrain: {
-    title: '有其他程式正在運行這個代理',
-    body: '它的另一個權杖在過去數分鐘內曾被使用：你自己的執行環境或其他 MCP 用戶端正在運行它。如果學校的執行環境也運行它，每個問題都會有兩個回答。請撤銷那些權杖以停止它，或者你會自行停止它的話，可以繼續。',
-    revokeResume: '撤銷它們並恢復',
-    anywayResume: '仍然恢復',
-    revokeFailed: '部分權杖未能撤銷，所以沒有進行下一步。請再試一次，或在下方「權杖」清單中撤銷它們。',
-    sameTokenTitle: '這個權杖正在使用中',
-    sameToken: '如果你自己的執行環境正在使用這個權杖，請先停止它，否則每個問題都會有兩個回答。它上次使用於',
-  },
-
-  // "I have a token for this agent".
-  paste: {
-    title: '用你已有的權杖託管 {name}',
-    intro:
-      '貼上這個代理的其中一個權杖。執行環境會加密保存它，之後不會再顯示。本頁永遠不會撤銷你貼上的權杖：由你決定還有甚麼在使用它。',
-    token: '代理權杖',
-    placeholder: 'ais_…',
-    check: '檢查',
+      '學校的執行環境會按照這個代理在 AIshie 中的席位運行它，課程成員可在站內向它提問。執行環境會自行取得代理的權杖：你不會看到任何權杖。下一步請選擇學校方案，或選擇模型並提供你自己的 API 金鑰。',
     agent: '代理',
-    seats: '它所在的課程',
-    alreadyConnected: '已經連接。',
-    takesOver: '連接後會取代前任擁有者留下的副本。',
-    submit: '連接',
+    agentPlaceholder: '選擇你的其中一個代理',
+    none: '你沒有等待託管的代理。只有建立時選擇「站內託管」的代理才能託管：MCP 存取的代理由你自己的工具使用。',
+    checking: '正向 AIshie 查詢…',
+    seats: '它還未加入任何課程：託管後，在你把它帶入課程之前，它沒有任何問題要回答。 | 它在 1 個課程中。 | 它在 {n} 個課程中。',
+    already: '它已經由 AIshie 託管。',
+    openIt: '前往它的頁面',
+    takesOver: '其他人先前留下的託管會被取代。',
+    submit: '託管',
+    done: '{name} 已由 AIshie 託管',
+  },
+
+  // What became of its token in AIshie when its hosting ended (pausing, deleting).
+  revocation: {
+    failedPause: '未能在 AIshie 中撤銷它的權杖（{why}），所以站內可能仍會讓人向它提問。請再暫停一次重試。',
+    failedDelete: '未能在 AIshie 中撤銷它的權杖（{why}），所以站內可能仍會讓人向它提問。如要阻止，請停用這個代理。',
+    not_attempted: '沒有撤銷它的權杖（{why}）。',
+    why: {
+      core_unavailable: '無法連接 AIshie',
+      runtime_misconfigured: '學校的執行環境尚未設定好',
+      core_too_old: '這個 AIshie 伺服器版本太舊',
+      operator_agent: '學校的營運者正在運行這個代理',
+      unknown: '原因未明',
+    },
   },
 
   // The model and the owner's own key (F3).
@@ -215,8 +149,8 @@ export default {
   status: {
     needs_model: {
       title: '請選擇模型',
-      body: '你的代理已連接，但還沒有模型。請選擇供應商和模型，並提供你的 API 金鑰來啟動它。',
-      bodySchool: '你的代理已連接，但還沒有模型。請選擇學校方案，或選擇供應商和模型並提供你的 API 金鑰來啟動它。',
+      body: '你的代理已交給 AIshie 託管，但還沒有模型。請選擇供應商和模型，並提供你的 API 金鑰來啟動它。',
+      bodySchool: '你的代理已交給 AIshie 託管，但還沒有模型。請選擇學校方案，或選擇供應商和模型並提供你的 API 金鑰來啟動它。',
     },
     starting: {
       title: '啟動中',
@@ -228,11 +162,11 @@ export default {
     },
     paused: {
       title: '已暫停',
-      body: '你的代理不會回答任何人，也不會發出任何呼叫，因此會顯示為離線。恢復後它會再次啟動。（這不是「停用」：代理在 AIshie 中仍然是啟用的。）',
+      body: '你的代理不會回答任何人，也不會發出任何呼叫，站內也無法向它提問：它的權杖已在 AIshie 中撤銷。恢復後它會以新的權杖再次啟動。（這不是「停用」：代理在 AIshie 中仍然是啟用的。）',
     },
     needs_token: {
       title: '需要新權杖',
-      body: 'AIshie 拒絕了你代理的權杖：它已被撤銷或已過期。請重新連接，讓執行環境取得新的權杖。',
+      body: '執行環境為你的代理持有的權杖已在 AIshie 中被撤銷（由你或管理員撤銷）。請重新連接，讓執行環境取得新的權杖；你不會看到它。',
     },
     error: {
       title: '沒有運行',
@@ -246,16 +180,18 @@ export default {
 
   // Why it needs a token or does not run (problem.reason).
   problem: {
-    token_refused: 'AIshie 拒絕了代理的權杖。',
+    token_refused: 'AIshie 已撤銷執行環境為它持有的權杖。',
     settings_rejected: '它的設定在這裡無法使用：{detail}。請更改模型或金鑰。',
     runtime_misconfigured: '學校的執行環境尚未設定為可運行託管代理。請通知你的管理員。',
     operator_agent: '學校的營運者已經在運行這個代理，所以這個副本不會運行。',
     actor_in_use: '這裡已有另一個代理使用了這個代理的身分。',
-    token_other_agent: '它的權杖屬於另一個代理。請重新連接。',
-    token_not_agent: '它的權杖屬於一個人，而不是這個代理。請重新連接。',
+    token_other_agent: '執行環境持有的權杖屬於另一個代理。請重新連接。',
     owner_changed: 'AIshie 並不視這個代理為你所有，所以執行環境停止了它。請在這裡刪除它。',
     core_too_old: '這個 AIshie 伺服器無法說明代理屬於誰。請通知你的管理員。',
     agent_suspended: '這個代理在 AIshie 中已停用。重新啟用後，它會自行再次啟動。',
+    owner_suspended: '它的擁有者在 AIshie 中已被停用。擁有者重新啟用後，它會自行再次啟動。',
+    mcp_agent: 'AIshie 表示這個代理是 MCP 存取：它由擁有者自己的工具使用，所以執行環境無法託管它。請在這裡刪除它。',
+    agent_not_found: 'AIshie 已沒有這個代理。請在這裡刪除它。',
     failing: '它未能啟動，稍後會再試：{detail}。',
     offer_withdrawn:
       '學校已不再提供它所用的模型，而你也沒有設定自己的模型作為備用，所以它沒有運行。請改選學校的其他模型，或使用你自己的模型。',
@@ -284,13 +220,12 @@ export default {
 
   // The hosted card.
   card: {
-    title: '由 AIshie 代管',
+    title: '站內託管',
     details: '詳細資料',
     since: '開始於',
     model: '模型',
     noModel: '尚未選擇',
     key: '金鑰',
-    token: '權杖',
     today: '今日',
     answers: '沒有回答 | 1 個回答 | {n} 個回答',
     costUnknown: '費用不明',
@@ -307,11 +242,10 @@ export default {
     paused: '已在學校的執行環境上暫停',
     resumed: '已在學校的執行環境上恢復',
     more: '更多',
-    replaceToken: '更換權杖',
     delete: '從學校的執行環境刪除',
-    usedByRuntime: '由學校的執行環境使用',
+    renewed: '執行環境正為 {name} 取得新的權杖。',
     ownKeyOff: '學校的執行環境暫時不接受你自己的模型與金鑰，所以無法在這裡更改。',
-    connectOff: '學校的執行環境暫時不接受新的權杖，所以無法在這裡為它換新權杖。',
+    renewOff: '學校的執行環境目前無法按 ID 託管代理，所以無法在這裡重新連接它。',
     plan: '方案',
     schoolPlan: '學校方案（由學校付費）',
     fallback: '備用',
@@ -325,21 +259,15 @@ export default {
     spentNone: '今天的學校額度已用完：在 00:00 UTC 之前，代理會請提問者明天再試。',
     offerWithdrawn: '學校已不再提供這個方案。請選擇其他方案，或改用你自己的金鑰。',
     offerWithdrawnFallback: '學校已不再提供這個方案：在你改選之前，代理會以你自己的模型和金鑰回答。',
-    issueWhileHosted:
-      '學校的執行環境正在運行這個代理。你用新權杖啟動的任何程式也會回答：如要自己運行，請先從學校的執行環境刪除它。',
   },
 
   // Deleting it from the runtime.
   delete: {
     title: '從學校的執行環境刪除 {name}？',
-    body: '執行環境會停止這個代理，刪除它的設定和你的金鑰，並撤銷它的權杖「AIshie runtime」。代理會保留在 AIshie 中；你之後可以再次託管它。',
+    body: '執行環境會停止這個代理，刪除它的設定和你的金鑰，並在 AIshie 中撤銷它的權杖：在你再次託管它之前，站內無法向它提問。代理會保留在 AIshie 中。',
     proposals: '1 個仍在等待批准的回答會保留在 AIshie 中。 | {n} 個仍在等待批准的回答會保留在 AIshie 中。',
-    alsoRevoke: '同時撤銷它的權杖',
-    alsoRevokeHint: '它的權杖（「{label}」）並非由本頁建立。只有在其他程式仍在使用它時才保留。',
-    alsoRevokeHintUnlabelled: '它的權杖並非由本頁建立。只有在其他程式仍在使用它時才保留。',
     submit: '刪除',
     done: '{name} 已不在學校的執行環境上',
-    notAttempted: '它的權杖仍然有效；如沒有其他程式使用，請在下方撤銷它。',
   },
 
   // The runtime's errors, by reason (§9.5).
@@ -350,17 +278,15 @@ export default {
     network: '無法連接學校的執行環境。請檢查網絡連線後再試。',
     core_unavailable: '執行環境無法連接 AIshie。請一分鐘後再試。',
     rate_limited: '嘗試次數太多。請等候 {seconds} 秒。',
-    token_malformed: '這不是 AIshie 的代理權杖（它應以 ais_ 開頭）。',
-    token_refused: 'AIshie 拒絕了這個權杖：它已被撤銷或已過期。',
-    token_not_agent: '這個權杖屬於一個人，而不是代理。執行環境只接受代理自己的權杖。',
+    runtime_misconfigured: '學校的執行環境尚未設定為可託管代理。請通知你的管理員。',
+    mcp_agent: '這個代理是 MCP 存取：它由你自己的工具使用，永遠不會在這裡託管。',
     agent_suspended: '這個代理在 AIshie 中已停用。請先重新啟用它。',
-    token_other_agent: '這個權杖屬於另一個代理。',
-    agent_unowned: '這個代理在 AIshie 中沒有擁有者，所以無法在這裡連接。請聯絡管理員。',
-    not_owner: '這個代理屬於其他人。只有它的擁有者才能連接它。',
+    owner_suspended: '它的擁有者在 AIshie 中已被停用，所以無法託管它。請聯絡管理員。',
+    owner_changed: 'AIshie 已不再視這個代理為你所有：請在這裡刪除它。',
     core_too_old: '這個 AIshie 伺服器版本太舊，無法託管。請通知你的管理員。',
-    already_hosted: '這個代理已經在學校的執行環境上。',
     operator_agent: '學校的營運者已經在運行這個代理。',
     agent_not_found: '這個代理已不在學校的執行環境上。',
+    agent_not_yours: 'AIshie 並不視這個代理為你所有。',
     version_mismatch: '這個代理已在另一個分頁或視窗中被更改。請檢查最新的設定後再儲存一次。',
     changedMeanwhile: '這個代理剛在另一個分頁或視窗中被更改。這裡顯示的是它現在的狀態：請檢查後再試一次。',
     school_key_not_offered: '這裡沒有提供學校方案。',

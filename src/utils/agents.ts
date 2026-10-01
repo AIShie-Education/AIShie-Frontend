@@ -1,6 +1,15 @@
 // What the views say about agents and the seats they hold as someone's
 // delegate. Only for display: who may do what is Core's to decide.
-import type { DelegatePreset } from '@/api/types'
+import { AGENT_HOSTINGS, type AgentHosting, type DelegatePreset } from '@/api/types'
+
+/**
+ * An agent's hosting as Core says it (agent.get, member.list, the
+ * respondents…), or null where it says none this app knows: a person's
+ * seat, or a Core from before agents were hosted one way.
+ */
+export function hostingOf(v: unknown): AgentHosting | null {
+  return typeof v === 'string' && (AGENT_HOSTINGS as readonly string[]).includes(v) ? (v as AgentHosting) : null
+}
 
 /**
  * What an agent's delegate seat is for: a course agent, which students may

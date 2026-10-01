@@ -351,11 +351,9 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
     class="model-dialog"
   >
     <el-steps v-if="wizard" :active="1" finish-status="success" simple class="model-dialog__steps">
-      <el-step :title="t('hosting.connect.steps.confirm')" />
-      <el-step :title="t('hosting.connect.steps.model')" />
+      <el-step :title="t('hosting.host.steps.agent')" />
+      <el-step :title="t('hosting.host.steps.model')" />
     </el-steps>
-    <!-- What the page has to say before a model starts the agent (the one-brain warning, after connecting). -->
-    <slot name="notice" />
 
     <div v-if="loading" v-loading="true" class="model-dialog__loading" />
     <el-alert

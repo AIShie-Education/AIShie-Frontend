@@ -9,6 +9,7 @@ import {
   demo,
   dropFiles,
   expectNothingAtRightEdge,
+  hostOnRuntime,
   inTraditionalChinese,
   minimizeChat,
   photograph,
@@ -26,7 +27,7 @@ import {
 // the viewport, and this browser keeps where it was left; minimized, it opens
 // again on what it showed. On a phone it is a sheet over the whole screen,
 // opened from the same button. Told through a course
-// agent made for this run, which its runtime says answers in the site, and
+// agent made for this run, hosted on AIshie (the test plays the runtime), and
 // Yuki, a student, who asks it. The window stays open, on what it shows, while
 // she moves between pages, and where and as big as she left it; an answer that
 // comes while it is closed is counted on its button. What she has read is
@@ -263,8 +264,11 @@ test.describe.serial('the chat panel', () => {
   test.beforeAll(async () => {
     const d = demo()
     const I = d.actors.instructor.token
-    // The instructor's course agent, seated to answer the course, and what runs it, which answers in the site.
-    const tutor = done(await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR }), 'agent.create').actor_id
+    // The instructor's course agent, hosted on AIshie and seated to answer the course; the test plays the runtime.
+    const tutor = done(
+      await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR, hosting: 'runtime' }),
+      'agent.create',
+    ).actor_id
     done(
       await call(I, 'POST', `/v1/courses/${d.course.id}/delegates`, {
         actor_id: tutor,
@@ -273,11 +277,8 @@ test.describe.serial('the chat panel', () => {
       }),
       'member.add_delegate',
     )
-    w.tutorToken = done(
-      await call(I, 'POST', `/v1/me/agents/${tutor}/tokens`, { label: `panel runtime ${STAMP}` }),
-      'agent.issue_token',
-    ).token
-    done(await call(w.tutorToken, 'POST', '/v1/me/site-chat', { on: true }), 'me.site_chat')
+    // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
+    w.tutorToken = await hostOnRuntime(tutor)
     await readEverythingBefore()
   })
 

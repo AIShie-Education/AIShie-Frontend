@@ -15,11 +15,11 @@ export default {
     title: '代理如何運作',
     here: {
       title: '在這裡登記',
-      body: '代理是 AIshie 中的一個身分：一個名稱、它的權杖，以及它所在的課程。這裡不會保存任何模型、提示詞或金鑰。',
+      body: '代理是 AIshie 中的一個身分：一個名稱、它的運行方式，以及它所在的課程。這裡不會保存任何模型、提示詞或金鑰。',
     },
     runtime: {
-      title: '在別處運行',
-      body: '負責思考與回答的是「執行環境」：在你電腦上的程式，或你使用的服務。它以代理的權杖連線，向 AIshie 領取工作。',
+      title: '兩種運行方式，一經選定不變',
+      body: '站內託管：AIshie 以你選擇的模型運行它，課程成員可在站內向它提問。或 MCP 存取：由你自己的工具以它的權杖使用它。建立時選定。',
     },
     delegate: {
       title: '只代表你行事',
@@ -39,7 +39,7 @@ export default {
     count: '沒有啟用中的代理 | 1 個啟用中 | {n} 個啟用中',
     countOf: '{n} / {limit} 個啟用中',
     suspendedDoNotCount: '已停用的代理不計入你可擁有的數量。',
-    empty: '你還沒有任何代理。建立一個、發給它權杖，再把執行環境連上去。',
+    empty: '你還沒有任何代理。建立一個：站內託管，或由你自己的工具透過 MCP 存取。',
     emptyNoSelfService: '你還沒有任何代理。在這裡，代理由管理員登記：請向你的管理員申請。',
     seats: '未加入任何課程 | 已加入 1 個課程 | 已加入 {n} 個課程',
     requests: '1 項申請待批 | {n} 項申請待批',
@@ -54,14 +54,14 @@ export default {
 
   create: {
     title: '新增代理',
-    intro: '替它取個名稱。它如何運行，全由運行它的程式負責；這裡只記錄它是誰、它的權杖，以及你帶它加入的課程。',
+    intro: '替它取個名稱，並選擇它的運行方式。這裡不會保存任何模型、提示詞或金鑰：只記錄它是誰、如何運行，以及你帶它加入的課程。',
     name: '名稱',
     namePlaceholder: '例如：溫習小幫手',
     nameHint: '它在各處顯示的名稱：成員名單、對話、審批等。之後可以更改。',
     nameRequired: '請輸入名稱',
     next: {
-      token: '下一步：發給它一個權杖。',
-      runtime: '用該權杖啟動執行環境，讓代理連線。',
+      runtime: '下一步：交給 AIshie 託管，並選擇它回答時所用的模型。你完全不用處理權杖。',
+      mcp: '下一步：發給它一個權杖，再用它把你自己的工具連上 AIshie。',
       course: '把它帶入你有席位的課程。',
     },
     submit: '建立代理',
@@ -74,34 +74,27 @@ export default {
     done: '已重新命名',
   },
 
-  // Whether it takes conversations on the site (agent.get's site_chat), and switching them off (agent.update).
+  // Whether people can ask it on the site (agent.get's site_chat), as its hosting decides.
   siteChat: {
-    title: '站內對話',
-    on: '在站內接受對話',
-    off: '不在站內接受對話',
-    onBody: '它所在課程中的人可以在站內與它開始對話、向它提問：運行它的程式已表明會回答這些問題。',
-    hostedOff: '它由 AIshie 的執行環境代管；執行環境下次啟動它時，它會再次在站內接受對話。',
-    suspended: '它停用期間不會在站內接受對話。',
-    switchOff: '關閉',
-    confirmTitle: '關閉 {name} 的站內對話？',
-    confirmBody:
-      '它所在課程中的人將不能再在站內與它開始對話，也不能再向它提問。已寫下的內容仍可閱讀，它亦仍可回答之前收到的問題。',
-    confirmReturns:
-      '運行它的程式（例如 AIshie 的執行環境）下次啟動這個代理時，會再次開啟站內對話。撤銷它運行時所用的權杖，或結束 AIshie 的代管，也會令站內對話結束。',
-    confirm: '關閉',
-    done: '{name} 已不再在站內接受對話',
+    title: '站內提問',
+    on: '課程成員可在站內向它提問：AIshie 的執行環境正在運行它。',
+    off: '目前站內無法向它提問：AIshie 的執行環境沒有在運行它。請在本頁為它設定託管，或恢復運行。',
+    suspended: '它停用期間，站內無法向它提問。',
+    mcp: '站內無法向它提問：它是 MCP 存取，由你自己的工具使用。可在站內提問的代理，須在建立時選擇「站內託管」。',
+    stop: '如要讓人無法再向它提問，請暫停它的託管，或停用它。',
   },
 
   detail: {
     title: '代理',
-    subtitle: '它的執行環境、權杖，以及它工作的課程',
+    subtitle: '它的運行方式，以及它工作的課程',
     notFound: '你沒有這個 ID 的代理。',
     about: '基本資料',
     presence: '連線狀態',
     created: '建立於',
     id: '身分 ID',
-    delegateNote:
-      '持有它任何一個權杖的人，都會以這個代理的身分行事，也就是以你的代表身分行事：在每個課程中，權限都不會超過你自己的席位。',
+    delegateNote: '在每個課程中，它都以你的代表身分行事：權限都不會超過你自己的席位。',
+    tokenNote: '持有它任何一個權杖的人，都會以這個代理的身分行事，也就是以你的代表身分行事。',
+    hostingFixed: '在建立時選定，此後不會更改。',
     rename: '重新命名',
     suspend: '停用',
     reactivate: '重新啟用',
@@ -116,25 +109,34 @@ export default {
     adminOnly: '這個代理由管理員停用，只有管理員才能解除。',
   },
 
-  // How it runs, when run by another AI tool or an AIshie runtime of one's own (ConnectRuntimeCard).
+  // Connecting one's own tool to an agent with MCP access (McpAccessCard, ConnectToolSteps).
   connect: {
-    tokenTodo: '它還沒有權杖：工具需要用權杖連接。',
+    tokenTodo: '它還沒有權杖：你的工具需要用權杖連接。',
     tokenDone: '它已有一個有效的權杖。',
     waiting: '它的權杖尚未被使用過。',
-    waitingWatching: '正在等待它連線…本頁每隔數秒會自動檢查一次。',
-    toolIntro: 'Claude、ChatGPT、代理 SDK 或任何其他 MCP 用戶端都可以充當這個代理：把這個地址交給它，並在這個標頭中放入代理的其中一個權杖。',
+    waitingWatching: '正在等待你的工具連線…本頁每隔數秒會自動檢查一次。',
+    toolIntro:
+      'Claude Desktop、編輯器、代理 SDK 或任何其他 MCP 用戶端都可以充當這個代理：把這個地址交給它，並在這個標頭中放入代理的其中一個權杖。',
     endpoint: 'MCP 端點（Streamable HTTP）',
     header: '標頭',
     headerHint: '把 {placeholder} 換成代理的其中一個權杖。請妥善保密：任何持有它的人都能以這個代理的身分行事。',
-    claudeHint: '在 Claude 中：用這個網址新增自訂連接器，選擇「No sign-in」，並新增名為 authorization 的標頭，值為 Bearer {placeholder}。',
-    runtimeIntro: '適用於自行營運 AIshie Agent Runtime 的人：把這個代理檔案放進執行環境的 agents 目錄，並把權杖放在檔案所指定的秘密中。',
-    agentFile: 'AIshie Agent Runtime 的代理檔案（YAML）',
-    agentFileHint:
-      '把權杖存放在執行環境秘密目錄中的 {file} 檔案，或環境變數 {variable}；切勿寫進代理檔案，執行環境會拒絕寫在那裡的權杖。',
-    modelExample: 'model 區塊只是示例：請改成你自己的供應商、模型和金鑰。',
+    claudeDesktop: '示例：Claude Desktop',
+    claudeDesktopFile: 'claude_desktop_config.json',
+    claudeDesktopHint:
+      '把這段加入 Claude Desktop 的設定（Settings → Developer → Edit Config），把 {placeholder} 換成代理的其中一個權杖，然後重新啟動 Claude Desktop。它會以 npx 執行 mcp-remote，所以需要安裝 Node.js。',
+    claudeDesktopHintToken:
+      '把這段加入 Claude Desktop 的設定（Settings → Developer → Edit Config），然後重新啟動 Claude Desktop。設定檔中含有權杖：請勿外洩。它會以 npx 執行 mcp-remote，所以需要安裝 Node.js。',
     courseTodo: '在加入課程之前，它甚麼都做不了：請把它帶入你有席位的課程。',
     courseWaiting: '安排它加入課程的申請正等待講師批准。',
     courseDone: '已加入 1 個課程。 | 已加入 {n} 個課程。',
+  },
+
+  // How an agent with MCP access runs, on its page (McpAccessCard).
+  mcp: {
+    title: '運行方式',
+    notOnSite: '站內無法向這個代理提問',
+    notOnSiteBody:
+      '它是 MCP 存取：由你自己的工具（Claude Desktop、編輯器、程式）以它的其中一個權杖透過 MCP 使用，並以你的代表身分在它的課程中行事。',
   },
 
   copy: {
@@ -146,7 +148,7 @@ export default {
     title: '權杖',
     new: '建立權杖',
     intro:
-      '執行環境用來連線的憑證。撤銷其中一個，使用它的執行環境從下一次呼叫起便會被拒絕；代理本身及其他權杖不受影響。',
+      '你的工具用來連線的憑證。撤銷其中一個，使用它的程式從下一次呼叫起便會被拒絕；代理本身及其他權杖不受影響。',
     showInactive: '顯示已撤銷及已過期的權杖（{n}）',
     empty: '還沒有任何權杖。',
     unlabelled: '未加標籤',
@@ -165,7 +167,7 @@ export default {
     },
     revoke: '撤銷',
     revokeTitle: '撤銷這個權杖？',
-    revokeBody: '使用 {token} 的執行環境，從下一次以 {name} 身分呼叫起便會被拒絕。',
+    revokeBody: '使用 {token} 的程式，從下一次以 {name} 身分呼叫起便會被拒絕。',
     revokeKeeps: '代理會保留它的席位及其他權杖。已撤銷的權杖永遠無法再使用。',
     revoked: '已撤銷權杖',
   },
@@ -173,18 +175,18 @@ export default {
   issue: {
     title: '為 {name} 建立權杖',
     intro:
-      '供 {name} 的一個執行環境使用。持有它的人會以這個代理的身分，也就是以你的代表身分行事：權限永遠不會超過你自己的席位。',
+      '供你透過 MCP 使用 {name} 的一個工具使用。持有它的人會以這個代理的身分，也就是以你的代表身分行事：權限永遠不會超過你自己的席位。',
     suspended: '這個代理已停用：在重新啟用之前，這個權杖會被拒絕。',
     label: '標籤',
-    labelPlaceholder: '例如：我手提電腦上的執行環境',
-    labelHint: '註明它在哪裡運行，方便日後辨認。',
+    labelPlaceholder: '例如：我手提電腦上的 Claude Desktop',
+    labelHint: '註明它在哪裡使用，方便日後辨認。',
     labelRequired: '請輸入標籤',
     expiry: '到期',
     after: '在若干天後',
     never: '永不',
     days: '天',
     daysInvalid: '請輸入 1 至 3650 之間的整數天數',
-    noExpiryWarn: '永不到期的權杖會一直有效，直至被撤銷。無人看管的執行環境，最好設定到期日。',
+    noExpiryWarn: '永不到期的權杖會一直有效，直至被撤銷。無人看管的工具，最好設定到期日。',
     submit: '建立權杖',
   },
 
@@ -193,6 +195,7 @@ export default {
     warning: '請立即複製。權杖不會儲存在任何地方，之後亦不會再顯示。',
     token: '權杖',
     listedAs: '在清單中顯示為',
+    connect: '連接你的工具',
     done: '我已複製',
     closeUncopiedTitle: '不複製就關閉？',
     closeUncopied: '這個權杖不會再顯示。如果遺失了，請撤銷它並建立新的。',
