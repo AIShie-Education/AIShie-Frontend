@@ -405,6 +405,8 @@ function refresh() {
                         :document-id="instructionsDoc.id"
                         :version-id="instructionsDoc.version.id"
                         :files="instructionFiles"
+                        :doc-title="instructionsDoc.title"
+                        :date="instructionsDoc.version.created_at"
                       />
                     </div>
                   </template>

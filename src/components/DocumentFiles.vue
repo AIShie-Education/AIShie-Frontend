@@ -100,6 +100,8 @@ export function forgetDocumentFiles() {
       :document-id="documentId"
       :version-id="version?.id"
       :files="files"
+      :doc-title="doc?.title || title"
+      :date="version?.created_at"
     />
     <el-button v-else-if="version?.body_md" link type="primary" class="doc-files__text" @click="downloadText">
       <el-icon><Download /></el-icon>

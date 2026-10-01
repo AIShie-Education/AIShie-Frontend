@@ -68,6 +68,8 @@ const note = computed(() => {
         :document-id="doc.id"
         :version-id="version.id"
         :files="files"
+        :doc-title="doc.title"
+        :date="version.created_at"
         :aria-label="t('submissions.rubric.file')"
       />
     </template>

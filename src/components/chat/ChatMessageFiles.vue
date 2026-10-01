@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // The files a message carries, in order: each a card with an icon by its
-// type, its name, what it is and its size, which downloads it (a fresh
-// short-lived URL, conversation.attachment, asked for on the click). A small
+// type, its name, what it is and its size, which opens it in the file viewer
+// (預覽, components/preview), stepping through the message's files, with a
+// button on it that downloads it (a fresh short-lived URL,
+// conversation.attachment, asked for on the click). A small
 // image is shown as a thumbnail, fetched once the message is on screen and
 // shown from an object URL (attachments.ts): the page's policy for images
 // allows this origin, data: and blob: only, and a download URL may be an
@@ -10,6 +12,7 @@ import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { MessageAttachment } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
+import { attachmentPreviewFiles, openPreview } from '@/components/preview/viewer'
 import { formatBytes } from '@/utils/format'
 import { downloadAttachment, FILE_ICON, fileKind, hasThumbnail, REFUSAL_SCOPE, thumbnailOf } from './attachments'
 
@@ -58,7 +61,15 @@ function thumbFailed(id: string) {
   delete thumbs[id]
 }
 
-// --- Downloading ---------------------------------------------------------------------
+// --- Previewing, downloading -----------------------------------------------------------
+function preview(f: MessageAttachment) {
+  openPreview({
+    files: attachmentPreviewFiles(props.courseId, props.files),
+    index: props.files.indexOf(f),
+    courseId: props.courseId,
+  })
+}
+
 const busy = ref<string | null>(null)
 async function download(f: MessageAttachment) {
   if (busy.value) return
@@ -85,10 +96,9 @@ async function download(f: MessageAttachment) {
       <button
         type="button"
         class="msg-file__open"
-        :aria-label="`${t('chat.attach.download', { name: f.filename })} (${meta(f)})`"
-        :title="`${t('chat.attach.downloadTip')}: ${f.filename}`"
-        :aria-busy="busy === f.id ? 'true' : undefined"
-        @click="download(f)"
+        :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)})`"
+        :title="`${t('preview.openTip')}: ${f.filename}`"
+        @click="preview(f)"
       >
         <img
           v-if="thumbs[f.id]"
@@ -106,10 +116,17 @@ async function download(f: MessageAttachment) {
             <span class="msg-file__name">{{ f.filename }}</span>
             <span class="msg-file__meta">{{ meta(f) }}</span>
           </span>
-          <el-icon class="msg-file__get" aria-hidden="true"
-            ><Loading v-if="busy === f.id" class="is-loading" /><Download v-else
-          /></el-icon>
         </span>
+      </button>
+      <button
+        type="button"
+        class="msg-file__get"
+        :aria-label="t('chat.attach.download', { name: f.filename })"
+        :title="`${t('chat.attach.downloadTip')}: ${f.filename}`"
+        :aria-busy="busy === f.id ? 'true' : undefined"
+        @click="download(f)"
+      >
+        <el-icon aria-hidden="true"><Loading v-if="busy === f.id" class="is-loading" /><Download v-else /></el-icon>
       </button>
     </li>
   </ul>
@@ -127,6 +144,7 @@ async function download(f: MessageAttachment) {
   min-width: 0;
 }
 .msg-file {
+  position: relative;
   max-width: 100%;
   min-width: 0;
 }
@@ -168,7 +186,8 @@ async function download(f: MessageAttachment) {
   align-items: center;
   gap: 10px;
   min-width: 0;
-  padding: 8px 10px;
+  /* Room on the right for the download over it. */
+  padding: 8px 44px 8px 10px;
 }
 .msg-file__icon {
   flex-shrink: 0;
@@ -215,11 +234,25 @@ async function download(f: MessageAttachment) {
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
 }
+/* The download, on the card at its bottom right. */
 .msg-file__get {
-  flex-shrink: 0;
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   color: var(--app-ink-3);
+  font-size: 15px;
+  cursor: pointer;
 }
-.msg-file__open:hover .msg-file__get {
+.msg-file__get:hover {
+  background: var(--app-indigo-tint);
   color: var(--el-color-primary);
 }
 </style>

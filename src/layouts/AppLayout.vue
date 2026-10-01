@@ -11,8 +11,10 @@
 // a drawer, as tabs along its top, with the account at its bottom, and the
 // chat opens from the same button as a sheet over the page. A newer build
 // deployed while the tab is open is said in a small notice
-// (NewVersionNotice), which reloads only when asked.
-import { computed, ref, watch } from 'vue'
+// (NewVersionNotice), which reloads only when asked. A file opened from any
+// list of files is shown in the file viewer (FileViewer), over the page,
+// whose code is fetched the first time a file is opened.
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
@@ -20,6 +22,7 @@ import ChatPanel from '@/components/chat/ChatPanel.vue'
 import { shortcutLabel } from '@/components/chat/panel'
 import AccountMenu from '@/components/sidebar/AccountMenu.vue'
 import NewVersionNotice from '@/components/NewVersionNotice.vue'
+import { previewState } from '@/components/preview/viewer'
 import ActivityBar from '@/components/sidebar/ActivityBar.vue'
 import SideBar from '@/components/sidebar/SideBar.vue'
 import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
@@ -61,6 +64,10 @@ function openChat() {
   chat.setOpen(true)
   void chatPanel.value?.focusPanel()
 }
+
+// The file viewer, loaded the first time a file is opened, and kept from then on.
+const FileViewer = defineAsyncComponent(() => import('@/components/preview/FileViewer.vue'))
+const preview = previewState()
 
 // The browser's tab is named by the router (router/title.ts); this is the header's.
 const pageTitle = computed(() => {
@@ -139,6 +146,7 @@ const pageTitle = computed(() => {
     </el-container>
     <!-- A newer build deployed since this tab loaded: said, never reloaded without asking. -->
     <NewVersionNotice />
+    <FileViewer v-if="preview.opened" />
   </el-container>
 </template>
 

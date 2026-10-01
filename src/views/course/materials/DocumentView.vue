@@ -29,6 +29,8 @@
 //
 // A new version opens on a drop zone for its files. Whoever may add one can
 // also drop files anywhere on the page, which opens it with them.
+//
+// A file opens in the file viewer (預覽), among the version's others.
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
@@ -639,6 +641,8 @@ function onTextProposed(message: string) {
                   :document-id="doc.id"
                   :version-id="shown.id"
                   :files="files"
+                  :doc-title="doc.title"
+                  :date="shown.created_at"
                   :text-status="textTab"
                   :transcription-on="transcriptionOn"
                   :open-text="textTab"

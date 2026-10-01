@@ -1,14 +1,17 @@
 <script setup lang="ts">
 // A document version's files, in order: each with an icon by its type, its
-// name, what it is and its size, and a download under its name from a fresh
-// short-lived URL (document.file, asked for on the click, since one handed
-// out with the version may have expired). Where the version's text versions
-// are shown (textStatus), each file says where its text version stands, and
-// may open it (the text event).
+// name, what it is and its size. A click opens it in the file viewer (預覽,
+// components/preview), which steps through the version's files; the button
+// beside it downloads it under its name from a fresh short-lived URL
+// (document.file, asked for on the click, since one handed out with the
+// version may have expired). Where the version's text versions are shown
+// (textStatus), each file says where its text version stands, and may open
+// it (the text event).
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DocumentFile } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
+import { documentPreviewFiles, openPreview } from '@/components/preview/viewer'
 import { downloadDocumentFile, FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { FILE_ICON, fileKind } from '@/utils/files'
 import { formatBytes } from '@/utils/format'
@@ -26,6 +29,10 @@ const props = defineProps<{
   transcriptionOn?: boolean
   /** Offer each file's text version (the text event). */
   openText?: boolean
+  /** The document's title, which the viewer says the files are of. */
+  docTitle?: string
+  /** When the version was made, for "Download as PDF" from the viewer. */
+  date?: string | null
 }>()
 const emit = defineEmits<{ text: [file: DocumentFile] }>()
 const { t } = useI18n()
@@ -49,6 +56,16 @@ function textChip(f: DocumentFile) {
   return { type: TEXT_STATUS_TAG[status], label: t(`enums.textStatus.${status}`) }
 }
 
+/** Opens the viewer on a file, among the version's others. */
+function preview(f: DocumentFile) {
+  openPreview({
+    files: documentPreviewFiles(props.courseId, props.documentId, props.versionId, props.files, props.date),
+    index: props.files.indexOf(f),
+    title: props.docTitle,
+    courseId: props.courseId,
+  })
+}
+
 const busy = ref<string | null>(null)
 async function download(f: DocumentFile) {
   const key = f.id || f.filename
@@ -70,10 +87,9 @@ async function download(f: DocumentFile) {
       <button
         type="button"
         class="version-file__open"
-        :aria-label="`${t('common.files.download', { name: f.filename })} (${meta(f)})`"
-        :title="`${t('common.files.downloadTip')}: ${f.filename}${checksum(f) ? ` · ${checksum(f)}` : ''}`"
-        :aria-busy="busy === (f.id || f.filename) ? 'true' : undefined"
-        @click="download(f)"
+        :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)})`"
+        :title="`${t('preview.openTip')}: ${f.filename}${checksum(f) ? ` · ${checksum(f)}` : ''}`"
+        @click="preview(f)"
       >
         <span class="version-file__icon" :class="`is-${kindOf(f)}`" aria-hidden="true">
           <el-icon><component :is="FILE_ICON[kindOf(f)]" /></el-icon>
@@ -82,7 +98,17 @@ async function download(f: DocumentFile) {
           <span class="version-file__name">{{ f.filename }}</span>
           <span class="version-file__meta">{{ meta(f) }}</span>
         </span>
-        <el-icon class="version-file__get" aria-hidden="true"
+        <el-icon class="version-file__view" aria-hidden="true"><View /></el-icon>
+      </button>
+      <button
+        type="button"
+        class="version-file__get"
+        :aria-label="t('common.files.download', { name: f.filename })"
+        :title="`${t('common.files.downloadTip')}: ${f.filename}`"
+        :aria-busy="busy === (f.id || f.filename) ? 'true' : undefined"
+        @click="download(f)"
+      >
+        <el-icon aria-hidden="true"
           ><Loading v-if="busy === (f.id || f.filename)" class="is-loading" /><Download v-else
         /></el-icon>
       </button>
@@ -190,14 +216,36 @@ async function download(f: DocumentFile) {
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
 }
-.version-file__get {
+.version-file__view {
   flex-shrink: 0;
   color: var(--app-ink-3);
 }
-.version-file__open:hover .version-file__get {
+.version-file__open:hover .version-file__view {
+  color: var(--el-color-primary);
+}
+/* The download, beside the file: last on the line, after where its text version stands. */
+.version-file__get {
+  order: 3;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 2px;
+  border: 0;
+  border-radius: calc(var(--app-radius-item) - 2px);
+  background: none;
+  color: var(--app-ink-3);
+  font-size: 16px;
+  cursor: pointer;
+}
+.version-file__get:hover {
+  background: var(--app-indigo-tint);
   color: var(--el-color-primary);
 }
 .version-file__side {
+  order: 2;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -205,7 +253,20 @@ async function download(f: DocumentFile) {
 }
 @media (min-width: 641px) {
   .version-file__side {
-    padding: 0 10px 0 0;
+    padding: 0;
+  }
+}
+/* A phone: the download stays beside the file, and where its text version stands goes under it. */
+@media (max-width: 640px) {
+  .version-file__open {
+    flex-basis: 0;
+  }
+  .version-file__get {
+    order: 2;
+  }
+  .version-file__side {
+    order: 3;
+    flex-basis: 100%;
   }
 }
 </style>

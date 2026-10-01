@@ -30,6 +30,7 @@ vi.mock('element-plus', async (orig) => {
 
 const { i18n, setLocale } = await import('@/i18n')
 const { default: VersionFileList } = await import('./VersionFileList.vue')
+const { closePreview, previewState } = await import('./preview/viewer')
 
 beforeEach(() => {
   asked.length = 0
@@ -76,8 +77,9 @@ describe('VersionFileList', () => {
     ])
     expect(rows[0]!.find('.version-file__meta').text()).toBe('PDF · 2 MB')
     expect(rows[1]!.find('.version-file__meta').text()).toBe('Document · 29.3 KB')
-    expect(rows[2]!.find('button').attributes('aria-label')).toBe('Download “loops.py” (Text · 120 B)')
-    expect(rows[2]!.find('button').attributes('title')).toContain('sha256 44c38a1b2c3d')
+    expect(rows[2]!.find('.version-file__open').attributes('aria-label')).toBe('Preview “loops.py” (Text · 120 B)')
+    expect(rows[2]!.find('.version-file__open').attributes('title')).toContain('sha256 44c38a1b2c3d')
+    expect(rows[2]!.find('.version-file__get').attributes('aria-label')).toBe('Download “loops.py”')
     // Nothing of text versions unless asked.
     expect(w.find('.version-file__status').exists()).toBe(false)
   })
@@ -88,10 +90,29 @@ describe('VersionFileList', () => {
       clicked.push({ href: this.getAttribute('href') ?? '', download: this.download })
     })
     const w = list()
-    await w.findAll('.version-file__open')[1]!.trigger('click')
+    await w.findAll('.version-file__get')[1]!.trigger('click')
     await flushPromises()
     expect(asked).toEqual([{ tool: 'document.file', course_id: 'c-1', document_id: 'd-1', file_id: 'f-2' }])
     expect(clicked).toEqual([{ href: '/v1/blobs/get-f-2?sig=x', download: 'f-2-name' }])
+  })
+
+  it('opens a file in the viewer, among the version’s others, which asks for a fresh URL only as it shows one', async () => {
+    const w = list({ docTitle: 'Week 3 — Loops', date: '2026-09-30T08:00:00Z' })
+    await w.findAll('.version-file__open')[2]!.trigger('click')
+    const state = previewState()
+    expect(state.open).toBe(true)
+    expect(state.index).toBe(2)
+    expect(state.title).toBe('Week 3 — Loops')
+    expect(state.courseId).toBe('c-1')
+    expect(state.files.map((f) => f.filename)).toEqual(['week3-slides.pdf', 'handout.docx', 'loops.py'])
+    expect(state.files[0]!.date).toBe('2026-09-30T08:00:00Z')
+    // A file of material has a text version to read; nothing is asked for until the viewer shows one.
+    expect(state.files[1]!.readText).toBeTypeOf('function')
+    expect(state.files[2]!.readText).toBeUndefined()
+    expect(asked).toEqual([])
+    expect(await state.files[2]!.url()).toBe(`${window.location.origin}/v1/blobs/get-f-3?sig=x`)
+    expect(asked).toEqual([{ tool: 'document.file', course_id: 'c-1', document_id: 'd-1', file_id: 'f-3' }])
+    closePreview()
   })
 
   it('says where each file’s text version stands, and opens it, where the tab is shown', async () => {
