@@ -57,6 +57,31 @@ markdown-it + DOMPurify.
   key only until Core answers or the form changes, and not through `useWrite`, which keeps the
   arguments it sent to compare with. The sign-in page shows a button for each of
   `ssoButtons(authMethods())`: Core's `sso_providers`, or the one `sso` of a Core from before them.
+- **Exporting conversations for audit** is *匯出對話* (`/admin/conversation-exports`, `admin-export`,
+  `ExportView.vue`, and its parts in `src/views/admin/export/`), for platform administrators and
+  department administrators alike (meta `admin: 'departments'`, the side bar's last entry), through
+  `conversation.export` and `conversation.export_file` by way of `conversationExport.ts`. What is
+  offered is `scopeChoices` (a course, a department, and the whole site for a platform
+  administrator alone) and `departmentChoices` (the departments administered, from the appointments
+  down); a course is chosen from `course.list`'s pages, searched here and said with its term, a
+  participant from the directory (`actor.list`) or, for a department administrator, by a whole email
+  or number (`actor.lookup_by_email`) or a pasted ID. Days are `YYYY-MM-DD` on the browser's calendar,
+  sent by `exportArgs` as RFC 3339 with that day's own offset: `from` midnight as the first day
+  starts, `before` (exclusive) midnight as the day after the last starts, which `spanWords` says as
+  "up to and including". The export goes under `keyFor`'s idempotency key, kept with the form in
+  `sessionStorage` (`aishie.conversationExportPending.<actor id>`) until Core answers (`settleKey`:
+  no answer, a gateway, the server or a rate limit keep it), so that a retry, or a reload, sends the
+  same key and Core gives what it made rather than export twice; its answer then has no links.
+  `startExport` keeps the run (`lastRun`) outside the view, so that it goes on while another page is
+  shown. Links to the files live in memory alone: one is taken for gone 30 s before its `expires_at`
+  on Core's clock (`linkLive`), `liveLink` asks for a new one, and `saveFile` goes to it, never
+  fetching the file into the page (the download attribute through this origin, a tab of its own for
+  an object store's). Each export is remembered without its links in `localStorage`
+  (`aishie.conversationExports.<actor id>`, `rememberExport`, `rememberedExports`), in memory where
+  storage is refused or full, until its `expires_at`. Refusals are worded by reason under
+  `auditExport.refusal` (`exportErrorText`; `export_too_large` with its counts and limits,
+  `tooLargeOf`), and a conversation's `visible_to` ends with `audit_export`, which the chat says
+  (`visibleToLines`).
 - **Files**: bytes never go through a tool. Every upload is one call, `uploadFile(courseId, kind,
   file, { onProgress, onRetry, signal, retries, maxBytes })` from `@/api/http`: it asks for an upload
   URL (`document.upload_url`, or `conversation.upload_url` for kind `conversation`, a message's

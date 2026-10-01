@@ -95,6 +95,22 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   and says the rules it holds to; deleting one says how many accounts would lose single sign-on.
   Without `SECRETS_KEY` on Core's server nothing is added, and the page says so. The sign-in page shows
   a button for each provider offered.
+- **Exporting conversations for audit** (root, admins and a department's administrators, under
+  *匯出對話*) — the conversations of a course, of a department and those beneath it, or (root and
+  admins alone) of the whole site; of one participant if chosen, the person who asked or the agent
+  that answered; over a span of days on the reader's calendar, up to and including the last. An
+  export is two files: JSON Lines, the conversations, each with its messages (withdrawn ones with
+  their text, marked) and the answers and questions proposed and never posted; and CSV, a message to
+  a row, with a byte order mark so that a spreadsheet reads Chinese. A department's administrator is
+  offered only the courses and departments beneath their appointments, and finds a person by their
+  whole email or number. An export can take minutes and goes on while the page is left; one that got
+  no answer is sent again under the same idempotency key, after a reload too, so that it is never
+  made twice. The page shows what it holds, says that the files hold personal data, that each link
+  works for about 15 minutes and when the files are deleted, and downloads each file from its link
+  or a new one; Core's refusals (too large, with how much and the limits; a course or department not
+  theirs) are said in the reader's words. This browser remembers each administrator's exports,
+  without their links, until their files are deleted, to download again. Every export is recorded
+  in Core, and a conversation's note of who can read it says that administrators may export it.
 - **The agent runtime's settings** (its administrators, under *AI and documents*) — the school's AI
   plan: the models the school provides and pays for, the operator's (runtime.yaml) shown read-only
   and the site's added, edited, turned off and deleted, each with the school's key, which is tried
