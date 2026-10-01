@@ -236,6 +236,11 @@ beforeEach(() => {
   mine = []
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
 })
+// vi.waitFor gives up after a second of the clock; what it waits for here
+// is a render, whose CPU a busy machine stretches past that. It waits for as
+// long as the test may, nearly (vite.config.ts).
+const rendered = { timeout: 20_000 }
+
 enableAutoUnmount(afterEach)
 afterEach(() => {
   document.body.innerHTML = ''
@@ -724,7 +729,7 @@ describe('ChatPanel', () => {
     const { chat } = await setup()
     const live = () => waitingReads.filter((r) => !r.signal.aborted)
     chat.showConversation('k1', 'c1', { open: true })
-    await vi.waitFor(() => expect(waitingReads).toHaveLength(1))
+    await vi.waitFor(() => expect(waitingReads).toHaveLength(1), rendered)
     expect(waitingReads[0]!.args).toMatchObject({
       conversation_id: 'c1',
       after_seq: 2,
@@ -734,7 +739,7 @@ describe('ChatPanel', () => {
 
     // Another conversation: the first's wait is cut short, and the other's is waited on.
     chat.showConversation('k1', 'c2')
-    await vi.waitFor(() => expect(waitingReads).toHaveLength(2))
+    await vi.waitFor(() => expect(waitingReads).toHaveLength(2), rendered)
     expect(waitingReads[0]!.signal.aborted).toBe(true)
     expect(waitingReads[1]!.args).toMatchObject({ conversation_id: 'c2' })
     expect(live()).toHaveLength(1)
@@ -744,14 +749,14 @@ describe('ChatPanel', () => {
     await flushPromises()
     expect(live()).toHaveLength(0)
     chat.showConversation('k1', 'c2')
-    await vi.waitFor(() => expect(waitingReads).toHaveLength(3))
+    await vi.waitFor(() => expect(waitingReads).toHaveLength(3), rendered)
 
     // The panel closed: cut short; open again on it: waited on again.
     chat.setOpen(false)
     await flushPromises()
     expect(live()).toHaveLength(0)
     chat.setOpen(true)
-    await vi.waitFor(() => expect(waitingReads).toHaveLength(4))
+    await vi.waitFor(() => expect(waitingReads).toHaveLength(4), rendered)
     expect(live()).toHaveLength(1)
 
     // The caller signs out: cut short, and nothing more is read.

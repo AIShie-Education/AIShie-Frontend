@@ -50,6 +50,11 @@ beforeEach(async () => {
   await router.push(`/account/agents/${ACTOR}`)
 })
 
+// vi.waitFor gives up after a second of the clock; what it waits for here
+// is a render, whose CPU a busy machine stretches past that. It waits for as
+// long as the test may, nearly (vite.config.ts).
+const rendered = { timeout: 20_000 }
+
 enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.useRealTimers()
@@ -70,7 +75,7 @@ function mountPanel(props: Record<string, unknown> = {}) {
 async function panel(props: Record<string, unknown> = {}) {
   const w = mountPanel(props)
   await flushPromises()
-  await vi.waitFor(() => expect(w.find('.hosting-panel__checking').exists()).toBe(false))
+  await vi.waitFor(() => expect(w.find('.hosting-panel__checking').exists()).toBe(false), rendered)
   await flushPromises()
   return w
 }
@@ -115,13 +120,13 @@ describe('HostingPanel: no runtime here', () => {
     expect(w.find('.hosting-offer').exists()).toBe(false)
     release(new Response(null, { status: 502 }))
     await flushPromises()
-    await vi.waitFor(() => expectAbsent(w))
+    await vi.waitFor(() => expectAbsent(w), rendered)
   })
 
   it('says so, with no error, when Core makes no assertions for the runtime', async () => {
     s.on('POST', /^\/v1\/auth\/assertion$/, () => json(404, { error: { code: 'not_found', message: 'none' } }))
     const w = await panel()
-    await vi.waitFor(() => expectAbsent(w))
+    await vi.waitFor(() => expectAbsent(w), rendered)
     expect(s.to('GET', RUNTIME.agents)).toHaveLength(0)
   })
 })
@@ -189,7 +194,7 @@ describe('HostingPanel: the runtime is here', () => {
     await w.find('.hosting-offer__host').trigger('click')
     await flushPromises()
     ;(document.body.querySelector('.host-dialog__submit') as HTMLElement).click()
-    await vi.waitFor(() => expect(w.find('.hosted-card').exists()).toBe(true))
+    await vi.waitFor(() => expect(w.find('.hosted-card').exists()).toBe(true), rendered)
     await flushPromises()
     expect(w.find('.hosted-card__tag').text()).toBe('Choose a model')
     expect(document.body.querySelector('.model-dialog__steps')?.textContent).toContain('Model and key')
@@ -216,7 +221,7 @@ describe('HostingPanel: the runtime is here', () => {
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [needsModel] }))
     await router.push(`/account/agents/${ACTOR}?host=model`)
     await panel()
-    await vi.waitFor(() => expect(document.body.querySelector('.model-dialog__steps')).not.toBeNull())
+    await vi.waitFor(() => expect(document.body.querySelector('.model-dialog__steps')).not.toBeNull(), rendered)
     expect(router.currentRoute.value.query.host).toBeUndefined()
   })
 })
