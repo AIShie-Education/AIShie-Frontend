@@ -163,9 +163,10 @@ markdown-it + DOMPurify.
   text version. The version's own `download_url`, `content_type`, `byte_size`, `checksum`, `text`
   and `has_file` are its first file's, deprecated, and read only where `files` is absent (a Core
   from before #49), as one file named after the document. List them with
-  `<VersionFileList :course-id :document-id :version-id :files />` (`@/components`): an icon by
-  type (`fileKind` and `FILE_ICON`, `@/utils/files`, shared with the chat), the name and size, and
-  a download under the name from a fresh short-lived URL asked for on the click
+  `<VersionFileList :course-id :document-id :version-id :files :doc-title :date />` (`@/components`):
+  an icon by type (`fileKind` and `FILE_ICON`, `@/utils/files`, shared with the chat), the name and
+  size, which opens the file viewer (below) on it among the version's others, and beside it a
+  download under the name from a fresh short-lived URL asked for on the click
   (`downloadDocumentFile`, `document.file`), never a URL read with the version, which may have
   expired; `text-status` and `open-text` add each file's text version. Where only a document's id
   and title are known (a submission's documents, a grade's feedback files), use
@@ -175,6 +176,41 @@ markdown-it + DOMPurify.
   `file_id` (Core refuses to guess among several, `file_id_required`), and the document page has a
   `TextVersionPane` for each file, picked with `TextFilePicker` and kept in the address
   (`?tab=text&file=`).
+- **Previewing a file (預覽).** Every list of files opens the file viewer, never a page of its own and
+  never the file's URL: `openPreview({ files, index, title, courseId })` from
+  `@/components/preview/viewer`, with `documentPreviewFiles(courseId, documentId, versionId, files,
+  date)` for a version's files and `attachmentPreviewFiles(courseId, attachments)` for a message's
+  (each file knows how to have a fresh URL, `document.file` or `conversation.attachment`, how to
+  download itself, and, for material, instructions or a rubric, how to read its text version). The
+  viewer (`FileViewer`, mounted once by `AppLayout`) is a large dialog, the whole screen on a phone,
+  with the previous and the next file (buttons, and the left and right arrow keys where nothing in
+  it takes them), the download under the file's name, and its close button; Escape closes it and the
+  focus goes back to the row. What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
+  the name's extension first, then the declared type): a PDF in the page with pdf.js (`PdfView`,
+  loaded only when one is opened, the legacy build, its worker, character maps, WebAssembly decoders
+  and two standard fonts all files of the build under `/assets/`: `pdfjs.ts`), pages one under the
+  other drawn as they come near the screen, page by page, zoom and fit to width, the text selectable;
+  an image as an `<img>` (an SVG too, never inline), zoomed or fitted; Markdown by `MarkdownView`,
+  code highlighted as fenced code, plain text as it is, CSV as a table of its first thousand rows
+  (`parseCsv`), text read as UTF-8 or the legacy encoding of the reader's script (`decodeText`);
+  audio and video in the browser's players; an Office file as its text version where Core has one
+  done (a staff text too), and otherwise a note and its download, as anything else. Bytes are fetched
+  whole with `fetchBlob` from the fresh URL, up to a size by kind (`PREVIEW_MAX_BYTES`: 2 MB of
+  text, 40 MB of an image, 100 MB of a PDF or a recording; past it, a note and the download), and
+  shown from object URLs revoked as soon as another file is shown or the viewer closes
+  (`ObjectUrls`). The page's policy needs nothing more for this (`index.html`).
+- **Download as PDF (下載為 PDF).** A text that is read as a document (a version's text note, a
+  file's text version, a text or Markdown file in the viewer, a submitted text, a conversation) is
+  offered as a PDF through the browser's own print window, which sets it in the fonts the page
+  already has, Chinese among them: `<PrintButton :source />` (`@/components`), or
+  `usePrintLayout().print(source)` from a menu, where `source` gives the title, the lines under it
+  (the course, `courseLine(courseId)`, and the date, `dateLine(at)`) and the body as Markdown, plain
+  text or HTML made of sanitised parts. `printDocument` (`@/utils/printLayout`) lays it out with the
+  app's style sheets and print rules (margins, the page's number at its foot where the browser draws
+  margin boxes) in a hidden frame of this origin, waits for its fonts and images, and calls its
+  `print()`; its title is the PDF's name. The button says what it does, 「下載為 PDF」, with
+  「在列印視窗選擇『另存為 PDF』」 in its tooltip, to a screen reader, and as the window opens. No PDF
+  is made in the page.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
   page. `usePaged(after => read(...).then(o => ({ items: o.assignments, next: o.next })))` and
   `<LoadMore :has-more :loading @more="loadMore" />`.
@@ -499,7 +535,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
   (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent, whether
   anything runs it (`PresenceText`) and, only once it is closed, its state, and a ⋯ menu for who can
-  read it and how its answers arrive (nothing ends a conversation from the chat); the messages; and
+  read it, how its answers arrive, and to download it as a PDF, every message read back to the first
+  (nothing ends a conversation from the chat); the messages; and
   the composer (`ChatComposer.vue`), one bordered box whose send button, small and icon-only, sits
   inside it at the bottom right, with its keys in the button's tooltip and the count near Core's
   limit beside it, and a paperclip at the bottom left. **Files in the chat** (Core's conversation
@@ -525,9 +562,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   one taken back to the composer (edit, stop) brings its files back, uploaded again, where they
   were sent from this page, and says to attach them again otherwise. In a message
   (`ChatMessageFiles`), each file is a card with an icon by its type (`fileKind`), its name, what
-  it is and its size, the person's over their bubble and the agent's under its words; a click asks
-  for a fresh URL (`conversation.attachment`) and saves it under its name (`downloadAttachment`:
-  through this origin with the download attribute, an object store's in a tab of its own). A small
+  it is and its size, the person's over their bubble and the agent's under its words; a click opens
+  it in the file viewer (`attachmentPreviewFiles`), among the message's others, and the button on
+  the card asks for a fresh URL (`conversation.attachment`) and saves it under its name
+  (`downloadAttachment`: through this origin with the download attribute, an object store's in a tab
+  of its own). A small
   image (PNG, JPEG, GIF, WebP, AVIF or BMP, up to 8 MB) is shown as a thumbnail, fetched once the
   message is on screen (`thumbnailOf`, kept by the file's id for the page's life, the latest 60)
   and shown from an object URL. A withdrawn message shows no files, as it shows no text (Core
