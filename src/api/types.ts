@@ -142,6 +142,15 @@ export type DocumentFull = ToolOut<'document.get'>
 export type DocumentSummary = ListItem<'document.list', 'documents'>
 export type DocumentVersion = ListItem<'document.versions', 'versions'>
 /**
+ * A file of a document's version, in order (position, from 1), named: its
+ * id (document.file gives it again with a fresh URL; document.text reads its
+ * text version), type, size and text version. document.get gives each a
+ * short-lived download_url; document.versions none, and no text body.
+ */
+export type DocumentFile = NonNullable<NonNullable<DocumentFull['version']>['files']>[number]
+/** One file of a document, with a fresh URL to download it under its name (document.file). */
+export type DocumentFileFull = ToolOut<'document.file'>
+/**
  * A version's text version (文字版): its file transcribed into Markdown, or
  * written by staff (document.get's version.text, document.versions',
  * document.text). Its body is the whole text in document.get while it fits

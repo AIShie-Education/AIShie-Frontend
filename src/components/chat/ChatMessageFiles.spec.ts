@@ -27,6 +27,7 @@ const { ApiError } = await import('@/api/http')
 const { i18n, setLocale } = await import('@/i18n')
 const { default: ChatMessageFiles } = await import('./ChatMessageFiles.vue')
 const { forgetThumbnails } = await import('./attachments')
+const { closePreview, previewState } = await import('@/components/preview/viewer')
 
 const global = { plugins: [i18n, ElementPlus], components: icons }
 
@@ -75,7 +76,9 @@ describe('ChatMessageFiles', () => {
     })
     const w = mount(ChatMessageFiles, { props: { courseId: 'k1', files: [file()] }, global })
     expect(reads).toEqual([])
-    await w.get('.msg-file__open').trigger('click')
+    const get = w.get('.msg-file__get')
+    expect(get.attributes('aria-label')).toBe('Download “notes.pdf”')
+    await get.trigger('click')
     await flushPromises()
     expect(reads).toEqual([{ tool: 'conversation.attachment', args: { course_id: 'k1', attachment_id: 'f1' } }])
     // Core's own store, through this origin: the download attribute names it, and no tab is opened.
@@ -94,7 +97,7 @@ describe('ChatMessageFiles', () => {
       clicks.push({ href: this.href, target: this.target, rel: this.rel })
     })
     const w = mount(ChatMessageFiles, { props: { courseId: 'k1', files: [file()] }, global })
-    await w.get('.msg-file__open').trigger('click')
+    await w.get('.msg-file__get').trigger('click')
     await flushPromises()
     expect(clicks).toEqual([
       { href: 'https://bucket.example/att/f1?X-Amz-Signature=s', target: '_blank', rel: 'noopener' },
@@ -107,9 +110,31 @@ describe('ChatMessageFiles', () => {
       throw new ApiError({ status: 404, code: 'not_found', message: 'retracted', details: { reason: 'retracted' } })
     }
     const w = mount(ChatMessageFiles, { props: { courseId: 'k1', files: [file()] }, global })
-    await w.get('.msg-file__open').trigger('click')
+    await w.get('.msg-file__get').trigger('click')
     await flushPromises()
     expect(document.body.textContent).toContain('This file was withdrawn with its message.')
+  })
+
+  it('opens a file in the viewer, among the message’s others, fetched from a fresh URL only once it is shown', async () => {
+    const files = [file(), file({ id: 'f2', filename: 'data.csv', content_type: 'text/csv', byte_size: 12 })]
+    const w = mount(ChatMessageFiles, { props: { courseId: 'k1', files }, global })
+    const open = w.findAll('.msg-file__open')
+    expect(open[1]!.attributes('aria-label')).toBe('Preview “data.csv” (Spreadsheet · 12 B)')
+    await open[1]!.trigger('click')
+    await flushPromises()
+    const state = previewState()
+    expect(state.open).toBe(true)
+    expect(state.index).toBe(1)
+    expect(state.courseId).toBe('k1')
+    expect(state.files.map((f) => [f.filename, f.contentType, f.byteSize])).toEqual([
+      ['notes.pdf', 'application/pdf', 1_536],
+      ['data.csv', 'text/csv', 12],
+    ])
+    // Nothing is asked for until the viewer asks for it; then a fresh URL, each time.
+    expect(reads).toEqual([])
+    expect(await state.files[1]!.url()).toBe('http://core.test/v1/blobs/get-f2')
+    expect(reads).toEqual([{ tool: 'conversation.attachment', args: { course_id: 'k1', attachment_id: 'f2' } }])
+    closePreview()
   })
 
   it('shows a small image as a thumbnail, from an object URL of its bytes, and a large one by its icon', async () => {

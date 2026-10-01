@@ -13,6 +13,7 @@
 // the way (network, 5xx, 429) is retried here with the key it was first sent
 // with, and can never act twice.
 
+import { safeFileName } from '../utils/files'
 import { RateMeter } from '../utils/transferRate'
 import { noteCoreDate } from './clock'
 import { TOOL_ROUTES, type ToolMap, type ToolName } from './generated/tools'
@@ -841,6 +842,11 @@ export type UploadKind = DocumentUploadKind | 'conversation'
 
 export interface UploadedFile {
   uploadToken: string
+  /**
+   * The file's name: for a document's file, the name it was given at
+   * document.upload_url, as Core takes it (safeFileName of the file's own),
+   * which is what it is to be called where it is attached (files[].filename).
+   */
   fileName: string
   contentType: string
   size: number
@@ -932,38 +938,44 @@ function retryableUpload(e: unknown): e is ApiError {
 
 /**
  * Where to upload a file, as Core hands it out: document.upload_url for a
- * document's file, conversation.upload_url for a message's, whose answer says
- * how many files a message carries and how much a conversation holds too
- * (a Core whose versions hold several files says how many a version holds,
- * max_files, and how much, max_version_bytes, which nothing here reads yet).
+ * document's file, whose answer says how many files a version holds and how
+ * much they come to together, and conversation.upload_url for a message's,
+ * whose answer says how many files a message carries and how much a
+ * conversation holds.
  */
-type UploadTarget = Pick<
-  ToolOut<'document.upload_url'>,
-  'upload_url' | 'upload_token' | 'headers' | 'expires_at' | 'max_bytes'
-> &
-  Partial<Pick<ToolOut<'conversation.upload_url'>, 'max_files' | 'max_conversation_bytes'>>
+type UploadTarget = Omit<ToolOut<'document.upload_url'>, 'max_files' | 'max_version_bytes'> &
+  Partial<Pick<ToolOut<'document.upload_url'>, 'max_files' | 'max_version_bytes'>> &
+  Partial<Pick<ToolOut<'conversation.upload_url'>, 'max_conversation_bytes'>>
 
 function askUploadUrl(
   courseId: string,
   kind: UploadKind,
   contentType: string,
   signal?: AbortSignal,
+  filename?: string,
 ): Promise<UploadTarget> {
   if (kind === 'conversation')
     return read('conversation.upload_url', { course_id: courseId, content_type: contentType }, { signal })
-  return read('document.upload_url', { course_id: courseId, kind, content_type: contentType }, { signal })
+  return read(
+    'document.upload_url',
+    { course_id: courseId, kind, content_type: contentType, ...(filename ? { filename } : {}) },
+    { signal },
+  )
 }
 
 /**
- * What Core takes, as its upload URLs say: the largest file (max_bytes), and
- * for a conversation's files how many one message carries (max_files) and
- * how much one conversation holds (max_conversation_bytes). Null where Core
- * did not say.
+ * What Core takes, as its upload URLs say: the largest file (max_bytes); for
+ * a document's files how many one version holds (max_files) and how much
+ * they come to together (max_version_bytes); and for a conversation's files
+ * how many one message carries (max_files) and how much one conversation
+ * holds (max_conversation_bytes). Null where Core did not say.
  */
 export interface UploadLimits {
   maxBytes: number | null
   maxFiles: number | null
   maxConversationBytes: number | null
+  /** A document's: the most one version's files come to, all together. */
+  maxVersionBytes?: number | null
 }
 
 // What Core takes, by course and kind, from every upload URL it has handed
@@ -978,8 +990,9 @@ function learnLimits(courseId: string, kind: UploadKind, t: UploadTarget): Uploa
     maxBytes: positive(t.max_bytes),
     maxFiles: positive(t.max_files),
     maxConversationBytes: positive(t.max_conversation_bytes),
+    maxVersionBytes: positive(t.max_version_bytes),
   }
-  if (l.maxBytes || l.maxFiles || l.maxConversationBytes) limits.set(limitKey(courseId, kind), l)
+  if (l.maxBytes || l.maxFiles || l.maxConversationBytes || l.maxVersionBytes) limits.set(limitKey(courseId, kind), l)
   return l
 }
 
@@ -1179,9 +1192,11 @@ export async function fetchBlob(url: string, opts: { signal?: AbortSignal } = {}
 
 /**
  * Uploads a file for attaching, and returns the upload token that
- * document.create, document.add_version or grade.submit (feedback_files)
- * takes, or, for kind conversation, the attachments of conversation.open,
- * .ask or .answer. Every upload in the app goes this way; components call it
+ * document.create and document.add_version (files, with the file's name) or
+ * grade.submit (feedback_files) take, or, for kind conversation, the
+ * attachments of conversation.open, .ask or .answer. A document's file is
+ * named at its upload URL (document.upload_url's filename: safeFileName of
+ * its own name), and that name comes back as fileName. Every upload in the app goes this way; components call it
  * through an upload queue (useUploadQueue): FileDropZone's, or the chat
  * composer's (components/chat/attachments.ts).
  *
@@ -1208,6 +1223,9 @@ export async function uploadFile(
   opts: UploadOptions = {},
 ): Promise<UploadedFile> {
   const contentType = file.type || 'application/octet-stream'
+  // A document's file is named when its URL is asked for, as Core takes a
+  // name; a message's is named where it is attached.
+  const filename = kind === 'conversation' ? undefined : safeFileName(file.name)
   const retries = opts.retries ?? UPLOAD_RETRIES
   const { signal } = opts
   const known = opts.maxBytes ?? knownUploadLimit(courseId, kind)
@@ -1232,7 +1250,7 @@ export async function uploadFile(
     }
     try {
       report('preparing', 0)
-      const target = await askUploadUrl(courseId, kind, contentType, signal)
+      const target = await askUploadUrl(courseId, kind, contentType, signal, filename)
       learnLimits(courseId, kind, target)
       if (target.max_bytes && file.size > target.max_bytes) throw tooLarge(file.size, target.max_bytes)
       report('sending', 0)
@@ -1243,7 +1261,7 @@ export async function uploadFile(
         onSent: (loaded, all) => report(all ? 'finishing' : 'sending', loaded),
       })
       report('finishing', file.size)
-      return { uploadToken: target.upload_token, fileName: file.name, contentType, size: file.size }
+      return { uploadToken: target.upload_token, fileName: filename ?? file.name, contentType, size: file.size }
     } catch (e) {
       if (signal?.aborted || isAbort(e)) throw abortError()
       if (!retryableUpload(e) || attempt > retries) throw e

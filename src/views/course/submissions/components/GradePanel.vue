@@ -8,7 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
 import { read, type UploadedFile } from '@/api/http'
 import type { ActionSummary, Assignment, GradeSummary, Submission } from '@/api/types'
-import DocumentFileLink from '@/components/DocumentFileLink.vue'
+import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import { useAsync } from '@/composables/useAsync'
@@ -236,7 +236,7 @@ async function submit() {
           }))
         : undefined,
       feedback_files: form.files.length
-        ? form.files.map((f) => ({ title: f.fileName, upload_token: f.uploadToken }))
+        ? form.files.map((f) => ({ title: f.fileName, upload_token: f.uploadToken, filename: f.fileName }))
         : undefined,
       ...rubricArgs(rubric.data.value),
     },
@@ -410,7 +410,7 @@ async function submit() {
                 <p class="grade-panel__draft-files-text">{{ draftFilesHint }}</p>
                 <ul v-if="draftFileList.length" class="grade-panel__draft-files-list">
                   <li v-for="f in draftFileList" :key="f.document_id">
-                    <DocumentFileLink :course-id="courseId" :document-id="f.document_id" :title="f.title" />
+                    <DocumentFiles :course-id="courseId" :document-id="f.document_id" :title="f.title" />
                   </li>
                 </ul>
               </div>

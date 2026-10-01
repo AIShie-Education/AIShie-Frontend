@@ -1,10 +1,17 @@
 <script setup lang="ts">
-// A version's text version (文字版), on its own tab of the document page: its
+// The text version (文字版) of one file of a version, on its own tab of the
+// document page (one for each file: a version of several has several): the
 // file transcribed into Markdown by the school's transcriber, or written by
 // staff, shown as the chat shows Markdown (formulas, code, tables), with its
 // pages' headings to go to. It is read afresh whenever the tab is shown, and
 // by its refresh button; a long one part by part (readWholeText), and while
 // one waits for the transcriber that is on, every 15 seconds.
+//
+// Every read and write names the file (file_id): Core refuses to guess which
+// of several files is meant (file_id_required).
+//
+// A text that is done may be downloaded as a PDF (下載為 PDF): laid out for
+// paper and handed to the browser's print window (PrintButton).
 //
 // Whoever may write the document (document_write, as for a new version)
 // edits it (document.text_update, from the revision read: one that changed
@@ -28,6 +35,8 @@ import AsyncState from '@/components/AsyncState.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import TimeText from '@/components/TimeText.vue'
+import PrintButton from '@/components/PrintButton.vue'
+import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
 import type { ApiError } from '@/api/http'
 import {
   TEXT_STATUS_TAG,
@@ -47,9 +56,15 @@ const props = defineProps<{
   documentId: string
   versionId: string
   seq: number
-  /** The text version as document.get gave it with the version; null for none. */
+  /** The file whose text version this is ('' for the one file of a Core from before several files to a version). */
+  fileId: string
+  /** The file's name. */
+  fileName: string
+  /** The file's place in the version, from 1. */
+  position?: number
+  /** The text version as document.get gave it with the file; null for none. */
   initial: TextVersion | null
-  /** The version has a file, which can be transcribed. */
+  /** There is a file, which can be transcribed. */
   hasFile: boolean
   /** The tab is shown: read it afresh. */
   active: boolean
@@ -61,6 +76,8 @@ const props = defineProps<{
   needsApproval: boolean
   /** The runtime's transcriber is on (info.features.transcription). */
   transcriptionOn: boolean
+  /** The document's title, said above the text when it is downloaded as a PDF. */
+  docTitle?: string
 }>()
 const emit = defineEmits<{
   /** The text changed here: the page may read the version again. */
@@ -70,8 +87,14 @@ const emit = defineEmits<{
 }>()
 const { t, te, n } = useI18n()
 
-/** The prefix of the ids the pages' headings are given (text-page-3). */
-const ANCHORS = 'text-'
+/**
+ * The prefix of the ids the pages' headings are given: text-page-3 for the
+ * first file's, text-f2-page-3 for the second's, since each file has a pane
+ * of its own on the page.
+ */
+const ANCHORS = (props.position ?? 1) > 1 ? `text-f${props.position}-` : 'text-'
+/** Names the file in every call about its text version; none for a Core that has no files' ids. */
+const fileArg = () => (props.fileId ? { file_id: props.fileId } : {})
 /** How often a text waiting for the transcriber is read again, while the tab is shown. */
 const QUEUED_POLL_MS = 15_000
 
@@ -110,7 +133,7 @@ async function load() {
   progress.value = null
   try {
     const whole = await readWholeText(
-      { course_id: props.courseId, document_id: props.documentId, version_id: props.versionId },
+      { course_id: props.courseId, document_id: props.documentId, version_id: props.versionId, ...fileArg() },
       {
         onProgress: (read, parts) => {
           if (mine === generation && parts > 1) progress.value = { read, parts }
@@ -134,9 +157,9 @@ async function load() {
   }
 }
 
-// Another version: what was read of the one before is not this one's.
+// Another version or file: what was read of the one before is not this one's.
 watch(
-  () => props.versionId,
+  () => [props.versionId, props.fileId],
   () => {
     generation++
     loaded.value = null
@@ -158,6 +181,22 @@ usePolling(() => load(), {
   immediate: false,
   enabled: () => props.active && !editing.value && shown.value === 'queued',
 })
+
+// --- Downloaded as a PDF ------------------------------------------------------------------
+function printSource(): PrintRequest {
+  const c = current.value
+  const when = dateLine(c?.edited_at ?? c?.produced_at ?? c?.updated_at)
+  return {
+    title: t('preview.print.textVersionOf', { name: props.fileName }),
+    lines: [
+      props.docTitle,
+      courseLine(props.courseId),
+      `${t('materials.document.version', { seq: props.seq })} · ${when}`,
+    ],
+    body: { markdown: body.value },
+    footer: t('preview.print.textVersionNote'),
+  }
+}
 
 // --- Where it came from ----------------------------------------------------------------
 const source = computed(() => (status.value === 'done' ? (current.value?.source ?? 'ai') : null))
@@ -209,6 +248,7 @@ async function save() {
       course_id: props.courseId,
       document_id: props.documentId,
       version_id: props.versionId,
+      ...fileArg(),
       body: draft.value,
       ...(baseRevision.value !== null ? { base_revision: baseRevision.value } : {}),
     },
@@ -227,7 +267,7 @@ async function save() {
   if (out.status === 'proposed') {
     announce(out)
     editing.value = false
-    emit('proposed', t('materials.document.text.editor.pending', { seq: props.seq }))
+    emit('proposed', t('materials.document.text.editor.pending', { seq: props.seq, name: props.fileName }))
     return
   }
   announce(out, {
@@ -270,7 +310,7 @@ async function retranscribe() {
     try {
       await ElMessageBox.confirm(
         lines([t('materials.document.text.again.body'), props.needsApproval && t('materials.document.approvalNote')]),
-        t('materials.document.text.again.title', { seq: props.seq }),
+        t('materials.document.text.again.title', { seq: props.seq, name: props.fileName }),
         {
           type: 'info',
           confirmButtonText: t('materials.document.text.actions.retranscribe'),
@@ -300,6 +340,7 @@ async function retranscribe() {
       course_id: props.courseId,
       document_id: props.documentId,
       version_id: props.versionId,
+      ...fileArg(),
       ...(c ? { base_revision: c.revision } : {}),
       ...(staff ? { discard_edit: true } : {}),
     },
@@ -315,7 +356,7 @@ async function retranscribe() {
   }
   if (out.status === 'proposed') {
     announce(out)
-    emit('proposed', t('materials.document.text.again.pending', { seq: props.seq }))
+    emit('proposed', t('materials.document.text.again.pending', { seq: props.seq, name: props.fileName }))
     return
   }
   announce(out, {
@@ -339,7 +380,7 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
 </script>
 
 <template>
-  <div class="text-pane" :data-status="status ?? 'none'">
+  <div class="text-pane" :data-status="status ?? 'none'" :data-file="fileName">
     <div class="text-pane__bar">
       <div class="text-pane__state">
         <el-tag
@@ -389,6 +430,11 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
         >
           <el-option v-for="p in pages" :key="p.id" :value="p.id" :label="p.text" />
         </el-select>
+        <PrintButton
+          v-if="shown === 'text' && !editing && body.trim()"
+          :source="printSource"
+          class="text-pane__print"
+        />
         <el-tooltip :content="t('materials.document.text.actions.refresh')" placement="top">
           <el-button
             size="small"

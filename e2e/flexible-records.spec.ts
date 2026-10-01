@@ -473,7 +473,7 @@ test.describe.serial('records that change after the fact', () => {
     const stone = page.locator('.tombstone--document')
     await expect(stone).toContainText('This document was purged')
     await expect(stone).toContainText('Why: 整份講義誤傳')
-    await expect(page.getByText('Download the file')).toHaveCount(0)
+    await expect(page.locator('.version-file')).toHaveCount(0)
     await expect(header.getByRole('button', { name: 'Bring back' })).toHaveCount(0)
     await photograph(page, 'tombstone-en')
     await page.goto(`/courses/${courseId}/materials`)

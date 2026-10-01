@@ -12,8 +12,13 @@ vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
     ...real,
-    knownUploadLimit: () => null,
-    uploadLimit: vi.fn(async () => 1_000_000),
+    knownUploadLimits: () => null,
+    uploadLimits: vi.fn(async () => ({
+      maxBytes: 1_000_000,
+      maxFiles: 20,
+      maxConversationBytes: null,
+      maxVersionBytes: 200_000_000,
+    })),
     uploadFile: vi.fn(async (_c: string, _k: string, file: File, _o: UploadOptions): Promise<UploadedFile> => ({
       uploadToken: `tok-${file.name}`,
       fileName: file.name,
@@ -46,7 +51,15 @@ const { default: VersionDialog } = await import('./VersionDialog.vue')
 
 beforeEach(() => {
   writes.length = 0
-  latest = { id: 'v-1', seq: 1, body_md: 'Install Python.', content_type: 'application/pdf', byte_size: 10 }
+  latest = {
+    id: 'v-1',
+    seq: 1,
+    body_md: 'Install Python.',
+    files: [
+      { id: 'f-1', position: 1, filename: 'week1.pdf', content_type: 'application/pdf', byte_size: 10 },
+      { id: 'f-2', position: 2, filename: 'setup.docx', content_type: 'application/msword', byte_size: 2_048 },
+    ],
+  }
   vi.stubGlobal('matchMedia', (media: string) => ({
     matches: false,
     media,
@@ -79,9 +92,13 @@ const buttonNamed = (name: string) =>
 const editorShown = () => $('.doc-text__editor')!.style.display !== 'none'
 
 describe('New version', () => {
-  it('holds the file dropped and, under it, the latest version’s text, as one version', async () => {
-    await dialog([new File(['%PDF'], 'week1-v2.pdf', { type: 'application/pdf' })])
-    // The file is first; the text is folded under it, kept from version 1.
+  it('holds the files dropped, in order, and under them the latest version’s text, as one version', async () => {
+    await dialog([
+      new File(['%PDF'], 'week1-v2.pdf', { type: 'application/pdf' }),
+      new File(['print(1)'], 'hello.py', { type: 'text/x-python' }),
+    ])
+    expect(document.body.textContent).toContain('The new version holds these files, in the order listed.')
+    // The files are first; the text is folded under them, kept from version 1.
     expect(editorShown()).toBe(false)
     expect($('.doc-text__toggle')!.textContent).toContain('Text: version 1’s, as it is (15 characters).')
     $('.doc-text__toggle')!.click()
@@ -100,7 +117,10 @@ describe('New version', () => {
           course_id: 'c-1',
           document_id: 'd-1',
           body_md: 'Install Python 3.13.',
-          upload_token: 'tok-week1-v2.pdf',
+          files: [
+            { upload_token: 'tok-week1-v2.pdf', filename: 'week1-v2.pdf' },
+            { upload_token: 'tok-hello.py', filename: 'hello.py' },
+          ],
         },
       },
     ])
@@ -118,8 +138,23 @@ describe('New version', () => {
     buttonNamed('Save version')!.click()
     await flushPromises()
     expect(writes.map((x) => x.args)).toEqual([
-      { course_id: 'c-1', document_id: 'd-1', body_md: undefined, upload_token: 'tok-week1-v2.pdf' },
+      {
+        course_id: 'c-1',
+        document_id: 'd-1',
+        body_md: undefined,
+        files: [{ upload_token: 'tok-week1-v2.pdf', filename: 'week1-v2.pdf' }],
+      },
     ])
+  })
+
+  it('names the latest version’s files, which it does not carry over, and says saving without them drops them', async () => {
+    await dialog()
+    const note = document.body.querySelector('.version-dialog__alert')!.textContent
+    expect(note).toContain('Version 1 has 2 files: week1.pdf (10 B), setup.docx (2 KB).')
+    expect(note).toContain('A new version does not carry them over')
+    expect(document.body.querySelector('.version-dialog__why')!.textContent).toContain(
+      'The same text as version 1, without its files.',
+    )
   })
 
   it('opens on its text where the latest version is text alone, under the drop zone', async () => {

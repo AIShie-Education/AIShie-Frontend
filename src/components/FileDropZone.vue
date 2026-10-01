@@ -16,10 +16,16 @@
 // A caller that needs each file's item from the moment it is added (to give
 // each its own title, say) makes the queue itself and passes it as `queue`,
 // with an #item slot for what goes beside each file; v-model is not kept then.
+//
+// The files of one version of a document (`version`, or a queue made with
+// version) are held to what a version holds: the zone says how many files
+// and how much in all, and a file there is no room for fails before it is
+// sent, saying why. With `reorder` the list is numbered and each file moved
+// up or down: a version's files are in the order listed, and so is v-model.
 import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { knownUploadLimit, uploadLimit, type UploadedFile, type UploadKind } from '@/api/http'
+import { knownUploadLimits, uploadLimits, type UploadedFile, type UploadKind, type UploadLimits } from '@/api/http'
 import { filesFrom, useDropTarget, usePageDrop } from '@/composables/useFileDrop'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useUploadQueue, type UploadItem, type UploadQueue } from '@/composables/useUploadQueue'
@@ -43,6 +49,10 @@ const props = defineProps<{
   label?: string
   /** A queue of the caller's own, whose items it reads; v-model is not kept then. */
   queue?: UploadQueue
+  /** The files are one version's of a document: at most as many, and as much in all, as a version holds. */
+  version?: boolean
+  /** The list is numbered, and each file can be moved up or down: the files are in the order listed. */
+  reorder?: boolean
 }>()
 const emit = defineEmits<{
   /** Files were added to the queue: dropped, chosen or pasted. */
@@ -68,12 +78,20 @@ const queue: UploadQueue =
   useUploadQueue({
     courseId: () => props.courseId,
     kind: () => props.kind,
+    version: props.version,
     onDone: (item) => {
       if (!item.result) return
-      setFiles(props.multiple ? [...currentFiles(), item.result] : [item.result])
+      setFiles(props.multiple ? inQueueOrder([...currentFiles(), item.result]) : [item.result])
       emit('uploaded', item.result)
     },
   })
+
+/** Files in the order the list has them: those it does not hold (there before) first. */
+function inQueueOrder(files: UploadedFile[]): UploadedFile[] {
+  const at = new Map(queue.items.map((i, n) => [i.result?.uploadToken, n]))
+  const place = (f: UploadedFile) => at.get(f.uploadToken) ?? -1
+  return [...files].sort((a, b) => place(a) - place(b))
+}
 
 watch(
   () => queue.busy.value,
@@ -93,13 +111,21 @@ watch(
   },
 )
 
-// --- The largest file Core takes, said before anything is dropped ------------
-const learnt = ref<number | null>(knownUploadLimit(props.courseId, props.kind))
+// --- What Core takes, said before anything is dropped ---------------------------
+const learnt = ref<UploadLimits | null>(knownUploadLimits(props.courseId, props.kind))
 onMounted(() => {
   if (props.disabled || learnt.value) return
-  void uploadLimit(props.courseId, props.kind).then((max) => (learnt.value = max))
+  void uploadLimits(props.courseId, props.kind).then((l) => (learnt.value = l))
 })
-const maxBytes = computed(() => queue.maxBytes.value ?? learnt.value)
+const maxBytes = computed(() => queue.maxBytes.value ?? learnt.value?.maxBytes ?? null)
+/** One version's files: how many, and how much in all, a version holds. */
+const isVersion = computed(() => props.version || queue.version)
+const maxFiles = computed(() =>
+  isVersion.value ? (queue.maxFiles.value ?? learnt.value?.maxFiles ?? null) : null,
+)
+const maxVersionBytes = computed(() =>
+  isVersion.value ? (queue.maxVersionBytes.value ?? learnt.value?.maxVersionBytes ?? null) : null,
+)
 
 // --- Adding files ----------------------------------------------------------------
 const input = ref<HTMLInputElement | null>(null)
@@ -191,8 +217,25 @@ function removeRow(row: Row) {
   if (rows.value.length === 0) void nextTick(focus)
 }
 
+// --- Their order ----------------------------------------------------------------------
+/** Moves a file up (-1) or down (1) the list, and says where it is now. */
+function moveRow(row: Row, by: -1 | 1) {
+  if (!row.item) return
+  const from = queue.items.indexOf(row.item)
+  queue.move(row.item.id, from + by)
+  if (ownQueue) setFiles(inQueueOrder(currentFiles()))
+  const at = queue.items.indexOf(row.item)
+  announce(t('common.upload.announce.moved', { name: row.name, n: at + 1, total: queue.items.length }))
+  // The button pressed may be gone from where it was: the keyboard stays on the file.
+  void nextTick(() => {
+    const li = document.getElementById(`${id}-row-${row.item!.id}`)
+    const button = li?.querySelector<HTMLButtonElement>(by < 0 ? '.file-drop__up' : '.file-drop__down')
+    ;(button && !button.disabled ? button : li?.querySelector<HTMLButtonElement>('button'))?.focus()
+  })
+}
+
 // What an item is doing, in words: its line under the name.
-const { percent, statusText, failText } = useUploadText({ maxBytes })
+const { percent, statusText, failText } = useUploadText({ maxBytes, maxFiles, maxVersionBytes })
 
 // --- Said to a screen reader -----------------------------------------------------
 const announcement = ref('')
@@ -234,11 +277,18 @@ watch(
 const zoneLabel = computed(
   () => props.label || (props.multiple ? t('common.upload.zoneMany') : t('common.upload.zoneOne')),
 )
-const limitText = computed(() =>
-  maxBytes.value
+const limitText = computed(() => {
+  if (props.multiple && maxBytes.value && maxFiles.value && maxVersionBytes.value) {
+    return t(
+      'common.upload.limitVersion',
+      { files: maxFiles.value, size: formatBytes(maxBytes.value), total: formatBytes(maxVersionBytes.value) },
+      maxFiles.value,
+    )
+  }
+  return maxBytes.value
     ? t(props.multiple ? 'common.upload.limitEach' : 'common.upload.limit', { size: formatBytes(maxBytes.value) })
-    : '',
-)
+    : ''
+})
 
 function focus() {
   ;(phone.value ? phoneButton.value?.$el : zone.value)?.focus()
@@ -322,14 +372,22 @@ defineExpose({ addFiles, choose, focus })
       </div>
     </div>
 
-    <ul v-if="rows.length" class="file-drop__list" :aria-label="t('common.upload.list')">
+    <component
+      :is="reorder ? 'ol' : 'ul'"
+      v-if="rows.length"
+      class="file-drop__list"
+      :class="{ 'is-ordered': reorder }"
+      :aria-label="t('common.upload.list')"
+    >
       <li
-        v-for="row in rows"
+        v-for="(row, n) in rows"
+        :id="row.item ? `${id}-row-${row.item.id}` : undefined"
         :key="row.key"
         class="file-drop__item"
         :class="`is-${row.item?.status ?? 'done'}`"
         :data-file="row.name"
       >
+        <span v-if="reorder" class="file-drop__n" aria-hidden="true">{{ n + 1 }}</span>
         <span class="file-drop__state" aria-hidden="true">
           <el-icon v-if="!row.item || row.item.status === 'done'" class="is-ok"><CircleCheck /></el-icon>
           <el-icon v-else-if="row.item.status === 'uploading'" class="is-loading"><Loading /></el-icon>
@@ -357,6 +415,28 @@ defineExpose({ addFiles, choose, focus })
           <slot name="item" :item="row.item" />
         </div>
         <div class="file-drop__actions">
+          <template v-if="reorder && row.item && rows.length > 1">
+            <el-button
+              link
+              class="file-drop__up"
+              :disabled="disabled || n === 0"
+              :aria-label="t('common.upload.actions.moveUpFile', { name: row.name })"
+              :title="t('common.upload.actions.moveUp')"
+              @click="moveRow(row, -1)"
+            >
+              <el-icon aria-hidden="true"><Top /></el-icon>
+            </el-button>
+            <el-button
+              link
+              class="file-drop__down"
+              :disabled="disabled || n === rows.length - 1"
+              :aria-label="t('common.upload.actions.moveDownFile', { name: row.name })"
+              :title="t('common.upload.actions.moveDown')"
+              @click="moveRow(row, 1)"
+            >
+              <el-icon aria-hidden="true"><Bottom /></el-icon>
+            </el-button>
+          </template>
           <el-button
             v-if="row.item && (row.item.status === 'queued' || row.item.status === 'uploading')"
             link
@@ -391,7 +471,7 @@ defineExpose({ addFiles, choose, focus })
           </template>
         </div>
       </li>
-    </ul>
+    </component>
 
     <div class="file-drop__announce" role="status" aria-live="polite">{{ announcement }}</div>
   </div>
@@ -509,6 +589,17 @@ defineExpose({ addFiles, choose, focus })
 }
 .file-drop__item.is-failed {
   border-color: var(--el-color-danger-light-5);
+}
+/* A version's files, numbered in the order they go in. */
+.file-drop__n {
+  flex-shrink: 0;
+  min-width: 1.4em;
+  line-height: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-ink-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .file-drop__state {
   flex-shrink: 0;

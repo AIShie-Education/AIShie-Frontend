@@ -17,7 +17,7 @@ import type { Grade, GradeSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import AsyncState from '@/components/AsyncState.vue'
-import DocumentFileLink from '@/components/DocumentFileLink.vue'
+import DocumentFiles from '@/components/DocumentFiles.vue'
 import IdText from '@/components/IdText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -448,7 +448,7 @@ const backLink = computed(() => ({
             <h3 class="grade-view__files-title">{{ t('grades.form.feedbackFiles') }}</h3>
             <ul>
               <li v-for="f in files" :key="f.document_id">
-                <DocumentFileLink :course-id="courseId" :document-id="f.document_id" :title="f.title" />
+                <DocumentFiles :course-id="courseId" :document-id="f.document_id" :title="f.title" />
               </li>
             </ul>
           </div>
@@ -461,7 +461,7 @@ const backLink = computed(() => ({
             <h3 class="grade-view__files-title">{{ t('grades.form.feedbackFiles') }}</h3>
             <ul>
               <li v-for="f in files" :key="f.document_id">
-                <DocumentFileLink :course-id="courseId" :document-id="f.document_id" :title="f.title" />
+                <DocumentFiles :course-id="courseId" :document-id="f.document_id" :title="f.title" />
               </li>
             </ul>
           </div>
@@ -635,6 +635,9 @@ const backLink = computed(() => ({
   margin: 0;
   padding: 0;
   list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .grade-view__working-hint {
   margin: 0 0 12px;

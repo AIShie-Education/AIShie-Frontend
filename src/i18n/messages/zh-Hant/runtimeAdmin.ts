@@ -192,6 +192,7 @@ export default {
     },
     jobs: {
       title: '轉寫紀錄',
+      file: '第 {n} 個檔案',
       filter: '狀態',
       all: '全部',
       status: {

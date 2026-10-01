@@ -12,6 +12,10 @@ import { formatBytes } from '@/utils/format'
 export interface UploadTextOptions extends ReasonScopes {
   /** The largest file Core takes, where known, for a file refused as too large without saying. */
   maxBytes?: MaybeRefOrGetter<number | null | undefined>
+  /** One version's files: how many a version holds, for a file there was no room for. */
+  maxFiles?: MaybeRefOrGetter<number | null | undefined>
+  /** One version's files: how much they may come to together, for a file there was no room for. */
+  maxVersionBytes?: MaybeRefOrGetter<number | null | undefined>
 }
 
 export function useUploadText(opts: UploadTextOptions = {}) {
@@ -25,8 +29,20 @@ export function useUploadText(opts: UploadTextOptions = {}) {
     return t('common.upload.left.hours', { h: Math.floor(s / 3600), m: Math.ceil((s % 3600) / 60) })
   }
 
-  /** Why an item failed: too large, with both sizes where they are known, or the refusal's words. */
+  /**
+   * Why an item failed: too large, with both sizes where they are known; no
+   * room for it among a version's files, by their count or their size; or
+   * the refusal's words.
+   */
   function failText(item: UploadItem): string {
+    if (item.overLimit === 'files') {
+      const max = toValue(opts.maxFiles)
+      return max ? t('common.upload.overFiles', { max }, max) : t('common.upload.overFilesUnknown')
+    }
+    if (item.overLimit === 'bytes') {
+      const max = toValue(opts.maxVersionBytes)
+      return max ? t('common.upload.overBytes', { max: formatBytes(max) }) : t('common.upload.overBytesUnknown')
+    }
     if (item.tooLarge) {
       const details = (item.error as { details?: { max_bytes?: number } } | null)?.details
       const max = details?.max_bytes ?? toValue(opts.maxBytes)

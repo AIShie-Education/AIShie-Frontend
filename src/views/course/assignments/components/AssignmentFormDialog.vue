@@ -14,6 +14,7 @@ import type { Assignment, DocumentSummary } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import { FILE_REFUSAL_SCOPE, uploadedPayload } from '@/utils/documentFiles'
 import { isDecimal } from '@/utils/format'
 import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
 import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
@@ -237,9 +238,10 @@ async function resolveDoc(kind: DocKind): Promise<{ ok: boolean; id?: string; cr
       kind,
       title,
       body_md: c.body.trim() ? c.body : undefined,
-      upload_token: c.files[0]?.uploadToken,
+      // Its files, in the order listed, each named.
+      ...(c.files.length ? { files: uploadedPayload(c.files) } : {}),
     },
-    { success: false },
+    { success: false, reasons: [FILE_REFUSAL_SCOPE, 'materials.refusal'] },
   )
   if (!out) return { ok: false }
   if (out.status === 'proposed') {

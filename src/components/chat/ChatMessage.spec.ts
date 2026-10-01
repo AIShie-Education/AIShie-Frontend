@@ -161,7 +161,8 @@ describe('ChatMessage', () => {
     expect(p.findAll('.msg-file__name').map((n) => n.text())).toEqual(['essay.docx', 'data.csv'])
     expect(p.findAll('.msg-file__meta').map((n) => n.text())).toEqual(['Document · 20 KB', 'Spreadsheet · 300 B'])
     expect(p.findAll('.msg-file__icon').map((i) => i.classes()[1])).toEqual(['is-word', 'is-sheet'])
-    expect(p.get('.msg-file__open').attributes('aria-label')).toBe('Download “essay.docx” (Document · 20 KB)')
+    expect(p.get('.msg-file__open').attributes('aria-label')).toBe('Preview “essay.docx” (Document · 20 KB)')
+    expect(p.get('.msg-file__get').attributes('aria-label')).toBe('Download “essay.docx”')
 
     const a = agent({ attachments: [files[1]!] }, { courseId: 'k1' })
     const kids = [...a.get('article').element.children].map((c) => c.classList[0])

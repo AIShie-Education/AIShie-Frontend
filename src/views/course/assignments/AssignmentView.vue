@@ -16,8 +16,9 @@ import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
+import { versionFilesOf } from '@/utils/documentFiles'
 import AsyncState from '@/components/AsyncState.vue'
-import DocumentFileLink from '@/components/DocumentFileLink.vue'
+import VersionFileList from '@/components/VersionFileList.vue'
 import Tombstone from '@/views/course/materials/components/Tombstone.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -53,6 +54,10 @@ const instructions = useAsync<DocumentFull | null>(
   { watch: [() => assignment.value?.instructions_document_id] },
 )
 const instructionsDoc = computed(() => instructions.data.value ?? null)
+/** The instructions' files, in order. */
+const instructionFiles = computed(() =>
+  versionFilesOf(instructionsDoc.value?.version, instructionsDoc.value?.title ?? ''),
+)
 /** Instructions exist but students have nothing of them to read. */
 const instructionsUnpublished = computed(() => !!instructionsDoc.value && !instructionsDoc.value.published_version_id)
 
@@ -388,16 +393,20 @@ function refresh() {
                   />
                   <template v-else-if="instructionsDoc.version">
                     <MarkdownView v-if="instructionsDoc.version.body_md" :source="instructionsDoc.version.body_md" />
-                    <p v-else-if="!instructionsDoc.version.download_url" class="app-muted assignment-view__none">
+                    <p v-else-if="!instructionFiles.length" class="app-muted assignment-view__none">
                       {{ t('assignments.detail.noText') }}
                     </p>
-                    <div v-if="instructionsDoc.version.download_url" class="assignment-view__file">
-                      <span class="app-muted">{{ t('assignments.detail.attachedFile') }}</span>
-                      <DocumentFileLink
+                    <div v-if="instructionFiles.length" class="assignment-view__file">
+                      <span class="app-muted">{{
+                        t('assignments.detail.attachedFiles', instructionFiles.length)
+                      }}</span>
+                      <VersionFileList
                         :course-id="courseId"
                         :document-id="instructionsDoc.id"
                         :version-id="instructionsDoc.version.id"
-                        :title="instructionsDoc.title"
+                        :files="instructionFiles"
+                        :doc-title="instructionsDoc.title"
+                        :date="instructionsDoc.version.created_at"
                       />
                     </div>
                   </template>
@@ -543,9 +552,9 @@ function refresh() {
 }
 .assignment-view__file {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
-  flex-wrap: wrap;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);

@@ -6,15 +6,23 @@
 // list. No more than `concurrency` upload at once: the rest wait, so that
 // the first files are done first rather than all of them late. A file larger
 // than Core takes fails at once, before it is sent, as far as Core's limit is
-// known (uploadLimit, asked once when the first file is added).
+// known (uploadLimits, asked once when the first file is added).
+//
+// The files of one version of a document (`version`) are held to what a
+// version holds as well: at most max_files of them, max_version_bytes all
+// together. Each file is let in, in the order listed, while there is room
+// for it, and one there is no room for fails before it is sent (overLimit),
+// saying why; it can be tried again once another is taken off. The list can
+// be put in another order (move): a version's files are in the order listed.
 import { computed, markRaw, onScopeDispose, reactive, ref, toValue, type MaybeRefOrGetter } from 'vue'
 import {
   isAbort,
   isFileTooLarge,
   uploadFile,
-  uploadLimit,
+  uploadLimits,
   type UploadedFile,
   type UploadKind,
+  type UploadLimits,
   type UploadOptions,
   type UploadPhase,
 } from '@/api/http'
@@ -42,12 +50,21 @@ export interface UploadItem {
   error: unknown
   /** Larger than Core takes: trying again will not help. */
   tooLarge: boolean
+  /**
+   * One version's files (the queue's `version`): there was no room for it,
+   * by the count (files) or the size of them all (bytes). It can be tried
+   * again once another is taken off.
+   */
+  overLimit: 'files' | 'bytes' | null
+  /** Let in: counted against what a version holds, where the queue is one version's. */
+  admitted: boolean
   /** The upload, once done: its token is what attaches it. */
   result: UploadedFile | null
 }
 
 export type UploadFn = (courseId: string, kind: UploadKind, file: File, opts: UploadOptions) => Promise<UploadedFile>
-export type LimitFn = (courseId: string, kind: UploadKind) => Promise<number | null>
+/** What Core takes: its limits, or the largest file alone (a number), or null where it cannot be learnt. */
+export type LimitFn = (courseId: string, kind: UploadKind) => Promise<number | UploadLimits | null>
 
 export interface UploadQueueOptions {
   courseId: MaybeRefOrGetter<string>
@@ -56,8 +73,14 @@ export interface UploadQueueOptions {
   concurrency?: number
   /** What uploads a file: uploadFile, but for tests. */
   upload?: UploadFn
-  /** What says the largest file Core takes: uploadLimit, but for tests. */
+  /** What says what Core takes: uploadLimits, but for tests. */
   limit?: LimitFn
+  /**
+   * The files are one version's of a document: no more of them than a
+   * version holds (max_files), and no more than it holds all together
+   * (max_version_bytes).
+   */
+  version?: boolean
   onStart?: (item: UploadItem) => void
   onDone?: (item: UploadItem) => void
   onFail?: (item: UploadItem) => void
@@ -71,11 +94,15 @@ let nextId = 0
 export function createUploadQueue(opts: UploadQueueOptions) {
   const concurrency = Math.max(1, opts.concurrency ?? UPLOAD_CONCURRENCY)
   const upload = opts.upload ?? uploadFile
-  const limit = opts.limit ?? uploadLimit
+  const limit = opts.limit ?? uploadLimits
   const items = reactive<UploadItem[]>([])
   const controllers = new Map<number, AbortController>()
   /** The largest file Core takes, once known; null while unknown, or where it cannot be learnt. */
   const maxBytes = ref<number | null>(null)
+  /** For one version's files: how many a version holds, once known. */
+  const maxFiles = ref<number | null>(null)
+  /** For one version's files: how much they may come to together, once known. */
+  const maxVersionBytes = ref<number | null>(null)
   // Whose limit is known (course and kind), and whose is being asked for.
   let limitFor: string | null = null
   let limitAsking: string | null = null
@@ -84,15 +111,56 @@ export function createUploadQueue(opts: UploadQueueOptions) {
   const target = () => ({ courseId: toValue(opts.courseId), kind: toValue(opts.kind) })
   const running = () => items.filter((i) => i.status === 'uploading').length
 
-  function checkSize(item: UploadItem): boolean {
+  /** Counted against what a version holds: let in, and not failed or cancelled. */
+  const holds = (i: UploadItem) =>
+    i.admitted && (i.status === 'queued' || i.status === 'uploading' || i.status === 'done')
+
+  function refuse(item: UploadItem, why: { tooLarge?: boolean; overLimit?: 'files' | 'bytes' }) {
+    item.status = 'failed'
+    item.tooLarge = !!why.tooLarge
+    item.overLimit = why.overLimit ?? null
+    item.admitted = false
+    item.error = null
+    opts.onFail?.(item)
+  }
+
+  /**
+   * Lets a file in, where what Core takes has room for it: no larger than a
+   * file may be, and, for one version's files, no more files than a version
+   * holds, and no more than it holds together, with those let in before it.
+   * One there is no room for fails, saying why, before it is sent.
+   */
+  function admit(item: UploadItem): boolean {
     if (maxBytes.value && item.size > maxBytes.value) {
-      item.status = 'failed'
-      item.tooLarge = true
-      item.error = null
-      opts.onFail?.(item)
+      refuse(item, { tooLarge: true })
       return false
     }
+    if (opts.version) {
+      const others = items.filter((i) => i !== item && holds(i))
+      if (maxFiles.value && others.length >= maxFiles.value) {
+        refuse(item, { overLimit: 'files' })
+        return false
+      }
+      const bytes = others.reduce((sum, i) => sum + i.size, 0)
+      if (maxVersionBytes.value && bytes + item.size > maxVersionBytes.value) {
+        refuse(item, { overLimit: 'bytes' })
+        return false
+      }
+    }
+    item.admitted = true
     return true
+  }
+
+  /** Takes what Core takes, from what it answered, or from a refusal that named a limit. */
+  function learn(l: number | Partial<UploadLimits> | null) {
+    if (typeof l === 'number') {
+      maxBytes.value = l > 0 ? l : null
+      return
+    }
+    if (!l) return
+    if (l.maxBytes) maxBytes.value = l.maxBytes
+    if (l.maxFiles) maxFiles.value = l.maxFiles
+    if (l.maxVersionBytes) maxVersionBytes.value = l.maxVersionBytes
   }
 
   /** Asks for the limit, once for each course and kind, and holds the queue until it is known. */
@@ -104,12 +172,14 @@ export function createUploadQueue(opts: UploadQueueOptions) {
     limitAsking = key
     void limit(courseId, kind)
       .catch(() => null)
-      .then((max) => {
+      .then((l) => {
         if (limitAsking !== key) return
         limitAsking = null
         limitFor = key
-        maxBytes.value = max
-        for (const item of items) if (item.status === 'queued') checkSize(item)
+        maxBytes.value = null
+        maxFiles.value = null
+        maxVersionBytes.value = null
+        learn(l)
         pump()
       })
     return false
@@ -117,9 +187,11 @@ export function createUploadQueue(opts: UploadQueueOptions) {
 
   function pump() {
     if (!learnLimit()) return
+    // Every file waiting is let in, or not, in the order listed, before any starts.
+    for (const item of items) if (item.status === 'queued' && !item.admitted) admit(item)
     for (const item of items) {
       if (running() >= concurrency) return
-      if (item.status === 'queued' && checkSize(item)) void run(item)
+      if (item.status === 'queued' && item.admitted) void run(item)
     }
   }
 
@@ -198,6 +270,8 @@ export function createUploadQueue(opts: UploadQueueOptions) {
         retrying: null,
         error: null,
         tooLarge: false,
+        overLimit: null,
+        admitted: false,
         result: null,
       })
       // What is read back is the reactive item, which the list shows.
@@ -221,12 +295,34 @@ export function createUploadQueue(opts: UploadQueueOptions) {
     pump()
   }
 
-  /** Puts a failed or cancelled upload back in the queue, from the start. A file too large stays failed. */
+  /**
+   * Puts a failed or cancelled upload back in the queue, from the start: let
+   * in again where there is room for it now. A file too large stays failed.
+   */
   function retry(id: number) {
     const item = find(id)
     if (!item || (item.status !== 'failed' && item.status !== 'cancelled') || item.tooLarge) return
-    Object.assign(item, { status: 'queued', error: null, loaded: 0, fraction: 0, attempt: 0, retrying: null })
+    Object.assign(item, {
+      status: 'queued',
+      error: null,
+      loaded: 0,
+      fraction: 0,
+      attempt: 0,
+      retrying: null,
+      overLimit: null,
+      admitted: false,
+    })
     pump()
+  }
+
+  /** Moves an item to another place in the list (0 is the first): a version's files are in the order listed. */
+  function move(id: number, to: number) {
+    const from = items.findIndex((x) => x.id === id)
+    if (from < 0) return
+    const place = Math.max(0, Math.min(items.length - 1, to))
+    if (place === from) return
+    const [item] = items.splice(from, 1)
+    items.splice(place, 0, item!)
   }
 
   /**
@@ -247,6 +343,8 @@ export function createUploadQueue(opts: UploadQueueOptions) {
       retrying: null,
       error,
       tooLarge: isFileTooLarge(error),
+      overLimit: null,
+      admitted: false,
     })
     opts.onFail?.(item)
   }
@@ -270,10 +368,42 @@ export function createUploadQueue(opts: UploadQueueOptions) {
 
   /** Whether anything is still to upload or uploading. */
   const busy = computed(() => items.some((i) => i.status === 'queued' || i.status === 'uploading'))
-  /** What is done, in the order it was added. */
+  /** What is done, in the order listed. */
   const done = computed(() => items.filter((i) => i.status === 'done'))
 
-  return { items, maxBytes, busy, done, add, cancel, retry, fail, remove, clear, find }
+  /**
+   * One version's files that are more than a version holds, by what was
+   * learnt after they were let in (a refusal that named a smaller limit):
+   * how many too many, and how much they come to; null while they fit.
+   */
+  const excess = computed<{ files: number; bytes: number } | null>(() => {
+    if (!opts.version) return null
+    const held = items.filter(holds)
+    const files = maxFiles.value ? Math.max(0, held.length - maxFiles.value) : 0
+    const total = held.reduce((sum, i) => sum + i.size, 0)
+    const over = !!maxVersionBytes.value && total > maxVersionBytes.value
+    return files || over ? { files, bytes: total } : null
+  })
+
+  return {
+    items,
+    maxBytes,
+    maxFiles,
+    maxVersionBytes,
+    version: !!opts.version,
+    busy,
+    done,
+    excess,
+    add,
+    cancel,
+    retry,
+    fail,
+    remove,
+    move,
+    learn,
+    clear,
+    find,
+  }
 }
 
 export type UploadQueue = ReturnType<typeof createUploadQueue>

@@ -77,8 +77,8 @@ export default {
       cannotRemove: 'It can be replaced by another document, but not removed.',
       newTitle: 'Document title',
       dropLabel: {
-        instructions: 'The instructions’ file: drop it here, or press Enter to choose it',
-        rubric: 'The rubric’s file: drop it here, or press Enter to choose it',
+        instructions: 'The instructions’ files: drop them here, or press Enter to choose them',
+        rubric: 'The rubric’s files: drop them here, or press Enter to choose them',
       },
       publishNow: {
         instructions: 'Publish it now, so students can read it once the assignment is published',
@@ -158,7 +158,7 @@ export default {
       'You are reading version {seq}. No version is published yet, so students cannot read these instructions.',
     noText: 'The instructions have no text.',
     noVersion: 'There is nothing to read in these instructions yet.',
-    attachedFile: 'Attached file:',
+    attachedFiles: 'Attached file: | Attached files:',
     details: 'Details',
     points: 'Points',
     due: 'Due',

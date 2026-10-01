@@ -1,0 +1,83 @@
+// 文件预览（components/preview）与“下载为 PDF”（PrintButton）。
+export default {
+  open: '预览“{name}”',
+  openTip: '预览',
+  files: '文件',
+  previous: '上一个文件',
+  next: '下一个文件',
+  position: '第 {n} 个，共 {total} 个',
+  close: '关闭预览',
+  download: '下载',
+  downloadFile: '下载“{name}”',
+  loading: '正在加载“{name}”…',
+  failed: '无法加载文件',
+  tooLarge: {
+    title: '文件太大，无法预览',
+    text: '这里只预览 {max} 以内的文件。请下载后打开。',
+  },
+  none: {
+    title: '这类文件无法预览',
+    text: '请下载后，用能打开它的程序打开。',
+  },
+  notText: {
+    title: '这个文件没有可显示的文字',
+    text: '它的文件名看似文本文件，内容却不是。请下载后打开。',
+  },
+  cannotShow: {
+    title: '无法在这里显示这个文件',
+    text: '文件可能已损坏，或是这个浏览器不支持的格式。请下载后打开。',
+    media: '这个浏览器无法播放它。请下载后播放。',
+  },
+  password: {
+    title: '这个 PDF 设有密码保护',
+    text: '请下载后，用密码打开。',
+  },
+  office: {
+    title: '暂时无法预览',
+    none: '目前尚不支持预览 Word、PowerPoint 和 Excel 文件。请下载后打开。',
+    waiting: '这个文件的文字版仍在制作中，完成后会在这里显示。在此之前，请下载后打开。',
+    noText: '这个文件没有可显示的文字版。请下载后打开。',
+    textVersion: '这是文件的文字版：从文件读出的文字，不含原有的版面、图片和格式。如要查看原文件，请下载。',
+  },
+  text: {
+    empty: '这个文件是空的。',
+  },
+  csv: {
+    table: '“{name}”的内容',
+    rowsCut: '只显示前 {n} 行。如要查看全部，请下载文件。',
+    columnsCut: '只显示前 {n} 列。',
+  },
+  pdf: {
+    toolbar: '页面与缩放',
+    prevPage: '上一页',
+    nextPage: '下一页',
+    pageInput: '页码',
+    of: '/ {total} 页',
+    pages: '{name}，第 {page} 页，共 {total} 页',
+  },
+  image: {
+    toolbar: '缩放',
+    stage: '图片“{name}”',
+  },
+  zoom: {
+    in: '放大',
+    out: '缩小',
+    actual: '缩放 {n} %：以实际大小显示',
+    actualTip: '实际大小',
+    fitWidth: '适合宽度',
+    fit: '适合窗口',
+  },
+  print: {
+    button: '下载为 PDF',
+    hint: '在打印窗口选择“另存为 PDF”',
+    opening: '正在打开打印窗口：请在其中选择“另存为 PDF”以保存文件。',
+    failed: '无法打开打印版面',
+    textVersionOf: '{name}（文字版）',
+    textVersionNote: '文字版是从文件读出的文字，不包括原文件的版面、图片和格式。',
+    conversationWith: '与 {name} 的对话',
+    messages: '{n} 条消息',
+    withdrawn: '已撤回',
+    files: '文件：{names}',
+    partial: '最早的消息未能读取，因此没有包括在内。',
+  },
+}

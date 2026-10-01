@@ -1,13 +1,15 @@
 <script setup lang="ts">
 // Every version of a document (document.versions), newest first: which one is
-// published, which is the latest, which is on screen, which was purged, and a
-// way to look at or publish any of them; for an administrator, to purge one.
+// published, which is the latest, which is on screen, which was purged, how
+// many files it holds and their names (or that it is text alone), and a way
+// to look at or publish any of them; for an administrator, to purge one.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { ApiError } from '@/api/http'
 import type { DocumentVersion } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
+import { versionFilesOf } from '@/utils/documentFiles'
 import { formatBytes } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -33,6 +35,11 @@ const course = useCourseStore()
 const route = useRoute()
 
 const ordered = computed(() => [...props.versions].sort((a, b) => b.seq - a.seq))
+
+/** The most files named under a version; the rest are counted. */
+const NAMED = 3
+const filesOf = (v: DocumentVersion) => versionFilesOf(v)
+const totalOf = (v: DocumentVersion) => filesOf(v).reduce((sum, f) => sum + f.byte_size, 0)
 
 function linkTo(v: DocumentVersion) {
   const params = { courseId: props.courseId, documentId: props.documentId }
@@ -80,18 +87,30 @@ function linkTo(v: DocumentVersion) {
           <span>{{ t('materials.document.tombstone.gone') }}</span>
           <TimeText :value="v.purged_at" relative />
         </div>
-        <div v-else class="version-item__meta">
-          <template v-if="v.has_file">
-            <el-icon><Paperclip /></el-icon>
-            <span class="version-item__file">{{ v.content_type ?? t('materials.document.file') }}</span>
-            <span class="version-item__dot">·</span>
-            <span>{{ formatBytes(v.byte_size) }}</span>
-          </template>
-          <template v-else>
-            <el-icon><Document /></el-icon>
-            <span>{{ t('materials.document.versions.text') }}</span>
-          </template>
-        </div>
+        <template v-else>
+          <div class="version-item__meta">
+            <template v-if="filesOf(v).length">
+              <el-icon><Paperclip /></el-icon>
+              <span class="version-item__count">{{
+                t('common.files.count', { n: filesOf(v).length }, filesOf(v).length)
+              }}</span>
+              <span class="version-item__dot">·</span>
+              <span>{{ formatBytes(totalOf(v)) }}</span>
+            </template>
+            <template v-else>
+              <el-icon><Document /></el-icon>
+              <span>{{ t('common.files.textOnly') }}</span>
+            </template>
+          </div>
+          <ul v-if="filesOf(v).length" class="version-item__files">
+            <li v-for="f in filesOf(v).slice(0, NAMED)" :key="f.id || f.position" class="version-item__file" :title="f.filename">
+              {{ f.filename }}
+            </li>
+            <li v-if="filesOf(v).length > NAMED" class="version-item__more">
+              {{ t('materials.document.versions.more', { n: filesOf(v).length - NAMED }) }}
+            </li>
+          </ul>
+        </template>
         <div class="version-item__actions">
           <span v-if="v.id === shownId" class="version-item__showing">
             <el-icon><View /></el-icon>{{ t('materials.document.versions.showing') }}
@@ -163,11 +182,24 @@ function linkTo(v: DocumentVersion) {
   color: var(--el-text-color-secondary);
   min-width: 0;
 }
+.version-item__files {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--app-ink-2);
+  min-width: 0;
+}
 .version-item__file {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 180px;
+}
+.version-item__more {
+  color: var(--el-text-color-secondary);
 }
 .version-item__dot {
   color: var(--el-text-color-placeholder);

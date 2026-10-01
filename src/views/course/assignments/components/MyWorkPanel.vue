@@ -27,9 +27,10 @@ import { useAsync } from '@/composables/useAsync'
 import { notifyError } from '@/composables/useErrors'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { formatDecimal } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
-import DocumentFileLink from '@/components/DocumentFileLink.vue'
+import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -247,9 +248,10 @@ async function attachAll() {
           kind: 'submission',
           submission_id: d.id,
           title: f.fileName,
-          upload_token: f.uploadToken,
+          // A submitted document of one file, named as it was uploaded.
+          files: [{ upload_token: f.uploadToken, filename: f.fileName }],
         },
-        { success: t('assignments.work.fileAttached', { name: f.fileName }) },
+        { success: t('assignments.work.fileAttached', { name: f.fileName }), reasons: FILE_REFUSAL_SCOPE },
       )
       if (!out) break
       uploads.value = uploads.value.filter((x) => x.uploadToken !== f.uploadToken)
@@ -453,7 +455,7 @@ defineExpose({ reload })
           <div class="my-work__label my-work__label--files">{{ t('assignments.work.files') }}</div>
           <ul v-if="files.length" class="my-work__files">
             <li v-for="f in files" :key="f.document_id">
-              <DocumentFileLink :course-id="courseId" :document-id="f.document_id" :title="f.title" />
+              <DocumentFiles :course-id="courseId" :document-id="f.document_id" :title="f.title" />
               <el-button
                 link
                 type="danger"
@@ -629,15 +631,15 @@ defineExpose({ reload })
 }
 .my-work__files li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
   min-width: 0;
 }
-.my-work__files li :deep(.el-button span) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 60vw;
+.my-work__files li + li {
+  margin-top: 6px;
+}
+.my-work__files li > .doc-files {
+  flex: 1;
 }
 .my-work__nofiles {
   margin: 0 0 8px;

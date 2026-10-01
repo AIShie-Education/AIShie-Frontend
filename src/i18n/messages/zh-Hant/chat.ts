@@ -134,18 +134,6 @@ export default {
     download: '下載「{name}」',
     downloadTip: '下載',
     held: '附 {n} 個檔案：{names}',
-    kind: {
-      image: '圖片',
-      pdf: 'PDF',
-      word: '文件',
-      sheet: '試算表',
-      slides: '簡報',
-      text: '文字',
-      archive: '壓縮檔',
-      audio: '音訊',
-      video: '影片',
-      other: '檔案',
-    },
     // Core's refusals because of a message's files, or of a file (details.reason).
     refusal: {
       too_many_attachments: '每則訊息最多附 {max_files} 個檔案：請移除一些再傳送。',

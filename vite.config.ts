@@ -84,6 +84,12 @@ export default defineConfig(({ mode }) => {
             // the chunk loaded only for a page in that script, Traditional's
             // (fonts-zh-hant) or Simplified's (fonts-zh-hans), src/styles/fonts.ts.
             if (id.includes('node_modules/@fontsource/')) return undefined
+            // pdf.js goes where it is imported, with the PDF view of the file viewer
+            // (components/preview/PdfView.vue), which is loaded only when a PDF is opened: in the
+            // vendor chunk, every page would load it. Not a chunk of its own either: a named chunk
+            // takes in what its modules import, and pdf.js's import() brings in the preload helper
+            // every page uses.
+            if (id.includes('node_modules/pdfjs-dist/')) return undefined
             if (id.includes('node_modules')) return 'vendor'
           },
         },

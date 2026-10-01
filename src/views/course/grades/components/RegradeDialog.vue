@@ -124,7 +124,7 @@ async function submit() {
       allow_extra: (aboveMax.value && form.allowExtra) || undefined,
       feedback: form.feedback.trim() || undefined,
       feedback_files: form.files.length
-        ? form.files.map((f) => ({ title: f.fileName, upload_token: f.uploadToken }))
+        ? form.files.map((f) => ({ title: f.fileName, upload_token: f.uploadToken, filename: f.fileName }))
         : undefined,
       breakdown: breakdownForApi(form.breakdown),
       treat_ungraded_as_zero: form.final || undefined,

@@ -12,7 +12,11 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#22407A" />
     <!-- Images load from this origin only: Markdown written by students and agents must not
-         call out to other hosts (utils/markdown.ts turns such images into links; this is the backstop). -->
+         call out to other hosts (utils/markdown.ts turns such images into links; this is the backstop).
+         The file viewer (components/preview) needs nothing more: it shows a picture from a blob: URL of
+         its bytes, which this allows; pdf.js's worker is a file of this origin (/assets/), and a
+         recording plays from a blob: URL, which no directive here restricts, as there is no
+         default-src. A policy that adds a default-src must add worker-src 'self' and media-src blob:. -->
     <meta http-equiv="Content-Security-Policy" content="img-src 'self' data: blob:" />
     <title>AIshie</title>
     <meta name="application-name" content="AIshie" />

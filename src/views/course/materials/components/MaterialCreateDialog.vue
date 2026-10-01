@@ -1,28 +1,33 @@
 <script setup lang="ts">
-// Creating material. Files come first: it opens on a drop zone, and each file
-// dropped (or chosen, or pasted, or dropped on the materials list, which opens
-// it) becomes material of its own, document.create (kind material) with the
-// file as its first version, titled from the file's name until its title is
-// changed, and listed in the order the files are, numbered on from the sort
-// order given. Text is the second part: a note in Markdown under the drop
-// zone (DocumentTextField), which goes with the file when there is one file,
-// in the same version. With several, each is material of its own, without
-// text (documentsToCreate: once a version holds several files, they become
-// one material with the text). Material with no file at all is written by
-// "Write text instead": a title and Markdown.
+// Creating material. Files come first: it opens on a drop zone, and the
+// files dropped (or chosen, or pasted, or dropped on the materials list,
+// which opens it) all go into one material, document.create (kind material)
+// with them as its first version, in the order listed, which can be changed
+// (moved up or down) or have a file taken off before it is created. Its
+// title is the first file's name until it is changed. Text is the second
+// part: a note in Markdown under the drop zone (DocumentTextField), in the
+// same version. Material with no file at all is written by "Write text
+// instead": a title and Markdown.
 //
-// Material starts unpublished; publishing is a second call (document.publish)
-// for each, and when a creation became a proposal there is nothing to publish
-// yet. Each file keeps its own idempotency key until Core has answered for
-// it, and what was created is taken off the list, so that pressing Create
-// again after a failure creates only what is left.
+// What a version holds is known before anything is sent (the upload URL's
+// max_files, max_version_bytes and max_bytes): a file there is no room for
+// is not uploaded, and says why (the upload queue, `version`). The files go
+// as files: [{upload_token, filename}], in order. What Core refuses because
+// of them is said in the reader's words, and marks the files it was about:
+// uploads that can no longer be attached are uploaded again, to create once
+// they are up.
+//
+// Material starts unpublished; publishing is a second call
+// (document.publish), and when the creation became a proposal there is
+// nothing to publish yet.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useUploadQueue, type UploadItem } from '@/composables/useUploadQueue'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
-import { titleFromFileName } from '@/utils/format'
+import { FILE_REFUSAL_SCOPE, filesPayload, versionFilesRefused } from '@/utils/documentFiles'
+import { formatBytes, titleFromFileName } from '@/utils/format'
 import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
@@ -50,63 +55,52 @@ const form = reactive({
   body: '',
   publish: false,
 })
+/** The title was written here: it no longer follows the first file's name. */
+const titleTouched = ref(false)
 
-// --- Files: one material each --------------------------------------------------
-const queue = useUploadQueue({ courseId: () => props.courseId, kind: 'material' })
-/** Each file's title, by its item. */
-const titles = reactive<Record<number, string>>({})
-watch(
-  () => queue.items.map((i) => i.id),
-  () => {
-    for (const item of queue.items) if (titles[item.id] === undefined) titles[item.id] = titleFromFileName(item.name)
-  },
-)
+// --- The files: one material holds them all, in order ---------------------------------
+const queue = useUploadQueue({ courseId: () => props.courseId, kind: 'material', version: true })
 const ready = computed(() => queue.items.filter((i) => i.status === 'done' && i.result))
-/** The files that are to become material: uploaded, or on their way. */
+/** The files that are to go in: uploaded, or on their way. */
 const kept = computed(() => queue.items.filter((i) => i.status !== 'failed' && i.status !== 'cancelled'))
 const leftOut = computed(() => queue.items.length - kept.value.length)
-const untitled = computed(() => ready.value.some((i) => !(titles[i.id] ?? '').trim()))
+/** Refused because of its files, and uploading them again: said until they are up. */
+const againNote = ref(false)
 
-// --- The text: with one file, in its version ---------------------------------
+// The title is the first file's name until it is written here.
+watch(
+  () => kept.value[0]?.name,
+  (name) => {
+    if (!titleTouched.value) form.title = name ? titleFromFileName(name) : ''
+  },
+)
+function onTitle(v: string) {
+  form.title = v
+  titleTouched.value = true
+}
+
+// --- The text: in the same version ------------------------------------------------------
 const textOpen = ref(false)
-/** One file, or none yet: the text goes with it. */
-const oneFile = computed(() => kept.value.length <= 1)
 
-function onAdded(items: UploadItem[]) {
-  // Files dropped while writing text: the text and its title go with the
-  // file, where there is one.
+function onAdded(_items: UploadItem[]) {
+  // Files dropped while writing text: the title and text written go with them.
   if (mode.value === 'text') {
-    const title = form.title.trim()
-    if (title && items.length === 1 && kept.value.length === 1) titles[items[0]!.id] = title
+    if (form.title.trim()) titleTouched.value = true
     if (hasText.value) textOpen.value = true
   }
   mode.value = 'upload'
 }
 
-/**
- * What Create makes of the files uploaded: one material each, in the order
- * listed, and the text with the file when there is one file. When a version
- * holds several files, several become one material that holds them all,
- * with the text, here.
- */
-function documentsToCreate(): { item: UploadItem; title: string; body?: string }[] {
-  const withText = oneFile.value && ready.value.length === 1 && hasText.value
-  return ready.value.map((item) => ({
-    item,
-    title: (titles[item.id] ?? '').trim(),
-    body: withText ? form.body : undefined,
-  }))
-}
-
 function reset() {
   mode.value = 'upload'
   form.title = ''
+  titleTouched.value = false
   form.sortOrder = props.suggestedOrder
   form.body = ''
   form.publish = false
   textOpen.value = false
+  againNote.value = false
   queue.clear()
-  for (const k of Object.keys(titles)) delete titles[Number(k)]
   if (props.files?.length) queue.add(props.files)
 }
 watch(
@@ -117,6 +111,12 @@ watch(
     else queue.clear()
   },
   { immediate: true },
+)
+watch(
+  () => queue.busy.value,
+  (busy) => {
+    if (!busy) againNote.value = false
+  },
 )
 
 const hasText = computed(() => form.body.trim() !== '')
@@ -129,6 +129,17 @@ const rules = computed<FormRules>(() => ({
   title: [{ required: true, whitespace: true, message: t('common.errors.required'), trigger: 'blur' }],
 }))
 
+/** More than a version holds, by what a refusal taught after the files were let in. */
+const excessText = computed(() => {
+  const x = queue.excess.value
+  if (!x) return null
+  if (x.files && queue.maxFiles.value) return t('common.upload.excessFiles', { max: queue.maxFiles.value, n: x.files })
+  return t('common.upload.excessBytes', {
+    total: formatBytes(x.bytes),
+    max: formatBytes(queue.maxVersionBytes.value ?? 0),
+  })
+})
+
 /** Why Create cannot be pressed now, or null. */
 const blocked = computed<string | null>(() => {
   if (mode.value === 'text') return null
@@ -137,57 +148,43 @@ const blocked = computed<string | null>(() => {
     return t('materials.create.waitForUploads', { n }, n)
   }
   if (!ready.value.length) return t('materials.create.noFiles')
-  if (untitled.value) return t('materials.create.untitled')
+  if (excessText.value) return excessText.value
+  if (!form.title.trim()) return t('materials.create.untitled')
   return null
 })
-const submitLabel = computed(() =>
-  mode.value === 'upload' && ready.value.length > 1
-    ? t('materials.create.submitMany', { n: ready.value.length })
-    : t('materials.create.submit'),
-)
 
-// Each file's own writes, and so its own idempotency key while it is retried.
-const writers = new Map<number, { create: ReturnType<typeof useWrite<'document.create'>> }>()
-const writerOf = (id: number) => {
-  let w = writers.get(id)
-  if (!w) writers.set(id, (w = { create: useWrite('document.create') }))
-  return w
-}
-const textCreate = useWrite('document.create')
+const creator = useWrite('document.create')
 const publisher = useWrite('document.publish')
-const submitting = ref(false)
-const pending = computed(() => submitting.value || textCreate.pending.value || publisher.pending.value)
+const pending = computed(() => creator.pending.value || publisher.pending.value)
 
-async function publishEach(created: { id: string; versionId?: string }[]): Promise<boolean> {
-  let all = true
-  for (const c of created) {
-    if (!c.versionId) continue
-    const p = await publisher.run(
-      { course_id: props.courseId, document_id: c.id, version_id: c.versionId },
-      { success: false },
-    )
-    if (!p) all = false
-  }
-  return all
-}
-
-async function submitText() {
-  const ok = await formRef.value?.validate().catch(() => false)
+async function submit() {
+  if (mode.value === 'upload' && blocked.value) return
+  const ok = mode.value === 'upload' || (await formRef.value?.validate().catch(() => false))
   if (!ok) return
   const title = form.title.trim()
-  const wantsPublish = form.publish && hasText.value
-  const out = await textCreate.run(
+  const files = mode.value === 'upload' ? filesPayload(queue) : []
+  const wantsPublish = form.publish && canPublish.value
+  const out = await creator.run(
     {
       course_id: props.courseId,
       kind: 'material',
       title,
       sort_order: form.sortOrder,
+      ...(files.length ? { files } : {}),
       body_md: hasText.value ? form.body : undefined,
     },
     // When it is to be published as well, the publish call says how it went.
-    { success: wantsPublish ? false : t('materials.create.done') },
+    {
+      success: wantsPublish ? false : t('materials.create.done'),
+      reasons: [FILE_REFUSAL_SCOPE, 'materials.refusal'],
+    },
   )
-  if (!out) return
+  if (!out) {
+    // Refused because of its files: the files it was about say so, and
+    // uploads that can no longer be attached are uploaded again.
+    againNote.value = !!versionFilesRefused(queue, creator.lastError.value)?.again
+    return
+  }
   if (out.status === 'proposed') {
     // Nothing exists yet, so there is nothing to publish either.
     visible.value = false
@@ -204,70 +201,6 @@ async function submitText() {
   }
   visible.value = false
   emit('created', [documentId])
-}
-
-async function submitFiles() {
-  if (blocked.value) return
-  const wantsPublish = form.publish
-  const docs = documentsToCreate()
-  const start = form.sortOrder
-  const created: { id: string; versionId?: string }[] = []
-  const proposed: string[] = []
-  let completed = true
-  submitting.value = true
-  try {
-    for (const [i, { item, title, body }] of docs.entries()) {
-      const out = await writerOf(item.id).create.run(
-        {
-          course_id: props.courseId,
-          kind: 'material',
-          title,
-          sort_order: start + i,
-          upload_token: item.result!.uploadToken,
-          body_md: body,
-        },
-        { success: false },
-      )
-      // Refused or failed: said already. What was created is off the list,
-      // and what is left is created by pressing Create again, numbered on.
-      if (!out) {
-        form.sortOrder = start + i
-        completed = false
-        break
-      }
-      writers.delete(item.id)
-      queue.remove(item.id)
-      if (out.status === 'proposed') proposed.push(title)
-      else created.push({ id: out.result.document_id, versionId: out.result.version_id ?? undefined })
-    }
-  } finally {
-    submitting.value = false
-  }
-  const published = wantsPublish && created.length ? await publishEach(created) : true
-  if (created.length) {
-    const n = created.length
-    ElMessage({
-      type: 'success',
-      message:
-        wantsPublish && published
-          ? t('materials.create.donePublishedMany', { n }, n)
-          : t('materials.create.doneMany', { n }, n),
-    })
-    if (!published)
-      ElMessage({ type: 'warning', message: t('materials.create.notPublished'), duration: 6000, showClose: true })
-  }
-  if (proposed.length) emit('proposed', { titles: proposed, publish: wantsPublish })
-  if (created.length)
-    emit(
-      'created',
-      created.map((c) => c.id),
-    )
-  // Every file there was went (those that did not upload were said to be left out).
-  if (completed) visible.value = false
-}
-
-function submit() {
-  return mode.value === 'text' ? submitText() : submitFiles()
 }
 </script>
 
@@ -295,38 +228,48 @@ function submit() {
           :course-id="courseId"
           kind="material"
           multiple
+          reorder
           page-drop
           :disabled="!course.writable || pending"
           :label="t('materials.create.dropLabel')"
           @added="onAdded"
-        >
-          <template #item="{ item }">
-            <el-input
-              v-if="item && item.status !== 'failed' && item.status !== 'cancelled'"
-              v-model="titles[item.id]"
-              size="small"
-              maxlength="300"
-              class="create-dialog__file-title"
-              :placeholder="t('materials.create.namePlaceholder')"
-              :aria-label="t('materials.create.titleOf', { name: item.name })"
-              :disabled="pending"
-            >
-              <template #prepend>{{ t('materials.create.name') }}</template>
-            </el-input>
-          </template>
-        </FileDropZone>
-        <!-- The text, second: with one file, in its version. -->
+        />
+        <p v-if="kept.length > 1" class="app-form-hint create-dialog__files-hint">
+          {{ t('materials.create.filesHint') }}
+        </p>
+        <p v-if="leftOut" class="app-form-hint create-dialog__left-out">
+          {{ t('materials.create.leftOut', { n: leftOut }, leftOut) }}
+        </p>
+        <el-alert
+          v-if="againNote"
+          type="info"
+          :closable="false"
+          show-icon
+          class="create-dialog__again"
+          :title="t('common.upload.uploadingAgain')"
+        />
+        <!-- The material's title, once there is a file: the first file's name until it is written. -->
+        <div v-if="kept.length && mode === 'upload'" class="create-dialog__title-upload">
+          <label class="create-dialog__label" for="create-dialog-title">{{ t('materials.create.name') }}</label>
+          <el-input
+            id="create-dialog-title"
+            :model-value="form.title"
+            maxlength="300"
+            :placeholder="t('materials.create.namePlaceholder')"
+            :disabled="pending"
+            @update:model-value="onTitle"
+          />
+          <div v-if="!titleTouched" class="app-form-hint">{{ t('materials.create.titleFromFile') }}</div>
+        </div>
+        <!-- The text, second: in the same version. -->
         <DocumentTextField
-          v-if="oneFile && mode === 'upload'"
+          v-if="mode === 'upload'"
           v-model="form.body"
           v-model:open="textOpen"
           :rows="8"
           :disabled="pending"
           class="create-dialog__text"
         />
-        <p v-else-if="!oneFile" class="app-form-hint create-dialog__text-note">
-          {{ hasText ? t('materials.create.textLeftOut') : t('materials.create.textSingleOnly') }}
-        </p>
         <!-- No file at all: material that is text alone. -->
         <div v-if="!kept.length" class="create-dialog__switch">
           <el-button link type="primary" @click="mode = 'text'">
@@ -334,9 +277,6 @@ function submit() {
             <span>{{ t('materials.create.writeInstead') }}</span>
           </el-button>
         </div>
-        <p v-if="leftOut" class="app-form-hint create-dialog__left-out">
-          {{ t('materials.create.leftOut', { n: leftOut }, leftOut) }}
-        </p>
       </div>
 
       <template v-if="mode === 'text'">
@@ -378,9 +318,7 @@ function submit() {
             :max="100000"
             controls-position="right"
           />
-          <div class="app-form-hint">
-            {{ ready.length > 1 ? t('materials.create.sortOrderMany') : t('materials.create.sortOrderHint') }}
-          </div>
+          <div class="app-form-hint">{{ t('materials.create.sortOrderHint') }}</div>
         </div>
       </el-form-item>
 
@@ -413,7 +351,7 @@ function submit() {
         <span class="create-dialog__buttons">
           <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
           <el-button type="primary" :loading="pending" :disabled="!course.writable || !!blocked" @click="submit">
-            {{ submitLabel }}
+            {{ t('materials.create.submit') }}
           </el-button>
         </span>
       </div>
@@ -432,16 +370,24 @@ function submit() {
   margin-top: 8px;
 }
 .create-dialog__text {
-  margin-top: 10px;
+  margin-top: 12px;
 }
-.create-dialog__text-note {
-  margin: 8px 0 0;
-}
+.create-dialog__files-hint,
 .create-dialog__left-out {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
 }
-.create-dialog__file-title {
-  margin-top: 2px;
+.create-dialog__again {
+  margin-top: 8px;
+}
+.create-dialog__title-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+}
+.create-dialog__label {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
 }
 .create-dialog__row {
   display: flex;

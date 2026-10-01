@@ -48,6 +48,13 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+// The print window, as "Download as PDF" opens it: what it was asked to lay out.
+const printed: Record<string, any>[] = []
+vi.mock('@/utils/printLayout', async (orig) => {
+  const real = await orig<typeof import('@/utils/printLayout')>()
+  return { ...real, printDocument: vi.fn(async (src: Record<string, any>) => void printed.push(src)) }
+})
+
 const { ApiError } = await import('@/api/http')
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
@@ -219,6 +226,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
   vi.setSystemTime(new Date('2026-09-26T12:00:00Z'))
   writes.length = 0
+  printed.length = 0
   forgetSent()
   forgetAttachments()
   server = {
@@ -457,6 +465,43 @@ describe('ChatPane', () => {
     ])
   })
 
+  it('downloads the conversation as a PDF: each message under who wrote it and when, through the print window', async () => {
+    seat('student')
+    server.messages = [
+      msg(1, 'student', {
+        body: 'What is <b>recursion</b>?',
+        attachments: [
+          { id: 'f1', filename: 'notes.pdf', content_type: 'application/pdf', byte_size: 9, created_at: 'x' },
+        ],
+      }),
+      msg(2, 'tutor', { body: '**A function** that calls itself.' }),
+      msg(3, 'student', { body: '', retracted: { at: '2026-09-26T11:59:30Z', by_member_id: 'student' } }),
+    ]
+    server.view = view({ title: 'Recursion' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const item = w.findAll('.chat-pane__head [role="menuitem"]').find((b) => b.text() === 'Download as PDF')!
+    await item.trigger('click')
+    await flushPromises()
+    expect(printed).toHaveLength(1)
+    const src = printed[0]!
+    expect(src.title).toBe('Recursion')
+    expect(src.lang).toBe('en')
+    expect(src.lines.filter(Boolean)).toEqual([
+      'Conversation with Course tutor',
+      'CS101 · Programming',
+      expect.stringMatching(/2026.*· 3 messages$/),
+    ])
+    const html = src.body.html as string
+    // Who wrote each, in order; the person's words as they are, escaped; the agent's as Markdown.
+    const who = [...html.matchAll(/print-entry__who">([^<]*)</g)].map((m) => m[1])
+    expect(who).toEqual(['You ', 'Course tutor ', 'You '])
+    expect(html).toContain('What is &lt;b&gt;recursion&lt;/b&gt;?')
+    expect(html).toContain('<strong>A function</strong> that calls itself.')
+    expect(html).toContain('Files: notes.pdf')
+    expect(html).toContain('<em>Withdrawn</em>')
+  })
+
   it('lets the one asked only read it: people no longer answer in the chat', async () => {
     seat('tutor', { conversation_answer: 'autonomous' })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
@@ -464,7 +509,7 @@ describe('ChatPane', () => {
     expect(w.findAll('.chat-msg')).toHaveLength(3)
     expect(w.find('textarea').exists()).toBe(false)
     expect(w.find('.chat-pane__notice').text()).toContain('Agents answer questions in the chat now')
-    expect(menu(w)).toEqual(['Who can read this'])
+    expect(menu(w)).toEqual(['Who can read this', 'Download as PDF'])
   })
 
   it('keeps a conversation from before with a person readable, closed, saying that conversations are with agents', async () => {
@@ -490,7 +535,7 @@ describe('ChatPane', () => {
       'It was with a person, and conversations are with agents now',
     )
     // Nothing more to do in it: not closed again, and no new conversation with a person.
-    expect(menu(w)).toEqual(['Who can read this'])
+    expect(menu(w)).toEqual(['Who can read this', 'Download as PDF'])
     expect(w.find('.chat-pane__closed button').exists()).toBe(false)
     // Its state, closed, is said beside the name, and nobody is said to be online.
     expect(w.find('.chat-pane__name-row').text()).toContain('Closed')
@@ -584,7 +629,7 @@ describe('ChatPane', () => {
     expect(w.find('textarea').exists()).toBe(false)
     expect(w.find('.chat-pane__notice').text()).toContain('You are reading this as course staff.')
     expect(w.findAll('.chat-msg__retract').map((b) => b.text())).toEqual(['Withdraw', 'Withdraw', 'Withdraw'])
-    expect(menu(w)).toEqual(['Who can read this'])
+    expect(menu(w)).toEqual(['Who can read this', 'Download as PDF'])
   })
 
   it('names the course beside the agent, where it is given', async () => {
@@ -681,7 +726,7 @@ describe('ChatPane', () => {
     expect(w.find('.chat-pane__head').text()).not.toContain('Who can read this conversation')
     expect(w.find('.chat-pane__more').attributes('aria-label')).toBe('Conversation options')
     // Nothing ends it: a new question is a new conversation, or more in this one.
-    expect(menu(w)).toEqual(['Who can read this', 'Each answer waits for approval'])
+    expect(menu(w)).toEqual(['Who can read this', 'Download as PDF', 'Each answer waits for approval'])
     expect(w.find('.chat-pane__head [role="menuitem"][disabled]').text()).toBe('Each answer waits for approval')
 
     // Who can read it, in a box of its own.
@@ -729,7 +774,7 @@ describe('ChatPane, with an agent operated from outside', () => {
     // Nothing here will answer: nobody is shown at work.
     expect(w.find('.chat-pane__typing').exists()).toBe(false)
     // Nor is it ended from here.
-    expect(menu(w)).toEqual(['Who can read this'])
+    expect(menu(w)).toEqual(['Who can read this', 'Download as PDF'])
   })
 
   it('tells its owner, too, how that would change', async () => {

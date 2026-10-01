@@ -85,13 +85,17 @@ markdown-it + DOMPurify.
 - **Files**: bytes never go through a tool. Every upload is one call, `uploadFile(courseId, kind,
   file, { onProgress, onRetry, signal, retries, maxBytes })` from `@/api/http`: it asks for an upload
   URL (`document.upload_url`, or `conversation.upload_url` for kind `conversation`, a message's
-  file), PUTs the bytes there and returns an `UploadedFile`, reporting where it
+  file), PUTs the bytes there and returns an `UploadedFile`. A document's file is named at its URL
+  (`filename`: `safeFileName` from `@/utils/files`, the file's own name made one Core takes, as Core
+  makes one of a title: no control or bidi characters, no slashes, 255 characters at most, the
+  extension kept), and that name comes back as `fileName`. It reports where it
   is (`preparing`, `sending`, `finishing`), the bytes sent, and the speed and time left over the last
   few seconds (`RateMeter`, `@/utils/transferRate`). A failure on the way (no answer, a gateway or
   server error, a rate limit, nothing moving for a minute) is tried again three times, after 1, 2 and
   4 s or once the browser is back online, each at a fresh URL (Core's own store takes a URL's file
   once); a refusal is not. Aborting `signal` cancels it (`isAbort`). What Core takes is remembered
-  from each upload URL and asked once by `uploadLimits` (`maxBytes`, and for a conversation's files
+  from each upload URL and asked once by `uploadLimits` (`maxBytes`; for a document's files
+  `maxFiles` a version and `maxVersionBytes` a version's all together; for a conversation's files
   `maxFiles` a message and `maxConversationBytes` a conversation; `uploadLimit` is the first alone),
   so that a larger file is refused before anything is sent (`isFileTooLarge`, with `details.size`
   and `details.max_bytes`), as a proxy's 413 is too. What callers hand it and get back stays the
@@ -113,37 +117,100 @@ markdown-it + DOMPurify.
   a paste of files alone (`pastedFiles`: one that carries text is the text's), and files chosen
   from a button that is not a zone (`useFilePicker`, the composer's paperclip). Each
   file goes through an upload queue (`useUploadQueue`: three at once, the rest waiting, each to
-  cancel, retry or remove; a file over the limit fails at once and is not tried again) and is listed
+  cancel, retry or remove; a file over the limit fails at once and is not tried again; a queue made
+  with `version`, one version's files, lets each file in, in the order listed, while a version has
+  room for it, and fails one there is no room for before it is sent, `overLimit` saying why, to try
+  again once another is taken off; `move` puts a file elsewhere, `learn` takes a smaller limit a
+  refusal named, and `excess` says what is too much then) and is listed
   with its progress, speed and time left, what it is doing in words, and buttons named for the file;
   a screen reader hears what was added, each quarter sent, and what was uploaded, failed or was
   cancelled. `busy` is true while any is still to upload: disable the submit button with it and say
   why ("Waiting for the files to upload…"). Without `multiple`, a new file takes the place of the one
-  there. `files` is `UploadedFile[]`: hand each `uploadToken` to the tool that attaches it
-  (`document.create`/`add_version` `upload_token`, `grade.submit` `feedback_files`, …); taking one
-  off the list takes it out of `files`, and one the caller takes out (once attached) leaves the list.
-  A caller that gives each file something of its own (material's title) makes the queue itself
-  (`useUploadQueue`) and passes it as `:queue`, with an `#item="{ item }"` slot beside each file;
-  `v-model` is not kept then.
-- Where a document is made (new material, a new version, new instructions or a rubric), the file
-  comes first and its text second, in the same version: the drop zone is what opens, and under it
+  there. With `version` the files are one version's (the zone says "Up to 20 files, 50 MB each, 200
+  MB in all"), and with `reorder` the list is an ordered one, numbered, each file moved up or down
+  by buttons named for it, `files` following the order. `files` is `UploadedFile[]`: hand each to
+  the tool that attaches it by its `uploadToken` and `fileName` (`document.create`/`add_version`
+  `files: [{upload_token, filename}]`, in order, by `uploadedPayload` or, from a queue,
+  `filesPayload` (`@/utils/documentFiles`); `grade.submit` `feedback_files` with `filename`; never
+  the deprecated `upload_token` alone); taking one off the list takes it out of `files`, and one the
+  caller takes out (once attached) leaves the list. A caller that reads each file's item (to say
+  what is left out, to mark the files a refusal was about) makes the queue itself
+  (`useUploadQueue`) and passes it as `:queue`, with an `#item="{ item }"` slot beside each file if
+  it puts anything there; `v-model` is not kept then.
+- Where a document is made (new material, a new version, new instructions or a rubric), the files
+  come first and its text second, in the same version: the drop zone is what opens, and under it
   `<DocumentTextField v-model="body" v-model:open :summary>` (`@/components`), one line that opens
   on a Markdown editor ("Add a text note (optional)", 「加入文字說明（選填）」, or what the text is once
   there is one), with the caller's actions on that line (`#actions`: a new version's "Leave the text
   out" and "Keep version N's text"). A new version starts from the latest version's text, folded
   away unless that version is text alone. Material that is text alone is written by "Write text
-  instead" (back, "Upload files instead"), offered while no file is listed; a file dropped then
-  takes its title and text. New material makes one document for each file, titled from its name
-  without the extension (`titleFromFileName`), editable before Create, numbered on from the sort
-  order in the order listed, each with its own `useWrite` (and so its own idempotency key), and
-  what was created comes off the list; the text goes with a single file, and with several the
-  editor gives way to a line saying so (`documentsToCreate` decides, and is where several files
-  become one document once a version holds several). Files dropped on the materials list open New material with them; a
-  file dropped on a document's page opens its new version. A submission's files are attached with
-  `document.create` (`kind: 'submission'`, `submission_id`, `upload_token`) as each is up, while it
-  is a draft; `submission.submit` then takes the list of their document ids as a guard. To
-  download, use `<DocumentFileLink :course-id :document-id :title />`, which fetches a fresh
-  short-lived URL on click and saves the file under the document's title (or `file-name`), with its
-  type's extension.
+  instead" (back, "Upload files instead"), offered while no file is listed; files dropped then
+  take its title and text. A version holds several files (一份文件含多個檔案, AIShie-Core #49):
+  new material makes one document of every file listed, in their order, titled from the first
+  file's name without the extension (`titleFromFileName`) until the title is written; a new version
+  takes every file dropped in it or on the document's page, and names the latest version's files it
+  does not carry over. Their queue is made with `version`, and the zone with `multiple reorder`.
+  What Core refuses because of the files (`too_many_files`, `version_too_large`, `file_too_large`,
+  `bad_filename`, an upload it no longer takes, …) has words in `common.upload.refusal`
+  (`FILE_REFUSAL_SCOPE`, sizes shown by `detailsForWords` as `{max_bytes_shown}`), and
+  `versionFilesRefused(queue, error)` marks the files it was about: a file too large fails, uploads
+  Core no longer takes are uploaded again at fresh URLs (say so: "The files are being uploaded
+  again"), and a limit it names is learnt. A submission's files are attached with
+  `document.create` (`kind: 'submission'`, `submission_id`, `files` of one) as each is up, while it
+  is a draft; `submission.submit` then takes the list of their document ids as a guard.
+- **A version's files** are read from `version.files` alone, by `versionFilesOf(version, title)`
+  (`@/utils/documentFiles`): in order, each with its `id`, `position`, `filename`, type, size and
+  text version. The version's own `download_url`, `content_type`, `byte_size`, `checksum`, `text`
+  and `has_file` are its first file's, deprecated, and read only where `files` is absent (a Core
+  from before #49), as one file named after the document. List them with
+  `<VersionFileList :course-id :document-id :version-id :files :doc-title :date />` (`@/components`):
+  an icon by type (`fileKind` and `FILE_ICON`, `@/utils/files`, shared with the chat), the name and
+  size, which opens the file viewer (below) on it among the version's others, and beside it a
+  download under the name from a fresh short-lived URL asked for on the click
+  (`downloadDocumentFile`, `document.file`), never a URL read with the version, which may have
+  expired; `text-status` and `open-text` add each file's text version. Where only a document's id
+  and title are known (a submission's documents, a grade's feedback files), use
+  `<DocumentFiles :course-id :document-id :title />`, which reads its one version once for the page
+  and lists its files, the title heading several. Each file of material, instructions or a rubric
+  has its own text version: every `document.text`, `text_update` and `text_retranscribe` names its
+  `file_id` (Core refuses to guess among several, `file_id_required`), and the document page has a
+  `TextVersionPane` for each file, picked with `TextFilePicker` and kept in the address
+  (`?tab=text&file=`).
+- **Previewing a file (預覽).** Every list of files opens the file viewer, never a page of its own and
+  never the file's URL: `openPreview({ files, index, title, courseId })` from
+  `@/components/preview/viewer`, with `documentPreviewFiles(courseId, documentId, versionId, files,
+  date)` for a version's files and `attachmentPreviewFiles(courseId, attachments)` for a message's
+  (each file knows how to have a fresh URL, `document.file` or `conversation.attachment`, how to
+  download itself, and, for material, instructions or a rubric, how to read its text version). The
+  viewer (`FileViewer`, mounted once by `AppLayout`) is a large dialog, the whole screen on a phone,
+  with the previous and the next file (buttons, and the left and right arrow keys where nothing in
+  it takes them), the download under the file's name, and its close button; Escape closes it and the
+  focus goes back to the row. What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
+  the name's extension first, then the declared type): a PDF in the page with pdf.js (`PdfView`,
+  loaded only when one is opened, the legacy build, its worker, character maps, WebAssembly decoders
+  and two standard fonts all files of the build under `/assets/`: `pdfjs.ts`), pages one under the
+  other drawn as they come near the screen, page by page, zoom and fit to width, the text selectable;
+  an image as an `<img>` (an SVG too, never inline), zoomed or fitted; Markdown by `MarkdownView`,
+  code highlighted as fenced code, plain text as it is, CSV as a table of its first thousand rows
+  (`parseCsv`), text read as UTF-8 or the legacy encoding of the reader's script (`decodeText`);
+  audio and video in the browser's players; an Office file as its text version where Core has one
+  done (a staff text too), and otherwise a note and its download, as anything else. Bytes are fetched
+  whole with `fetchBlob` from the fresh URL, up to a size by kind (`PREVIEW_MAX_BYTES`: 2 MB of
+  text, 40 MB of an image, 100 MB of a PDF or a recording; past it, a note and the download), and
+  shown from object URLs revoked as soon as another file is shown or the viewer closes
+  (`ObjectUrls`). The page's policy needs nothing more for this (`index.html`).
+- **Download as PDF (下載為 PDF).** A text that is read as a document (a version's text note, a
+  file's text version, a text or Markdown file in the viewer, a submitted text, a conversation) is
+  offered as a PDF through the browser's own print window, which sets it in the fonts the page
+  already has, Chinese among them: `<PrintButton :source />` (`@/components`), or
+  `usePrintLayout().print(source)` from a menu, where `source` gives the title, the lines under it
+  (the course, `courseLine(courseId)`, and the date, `dateLine(at)`) and the body as Markdown, plain
+  text or HTML made of sanitised parts. `printDocument` (`@/utils/printLayout`) lays it out with the
+  app's style sheets and print rules (margins, the page's number at its foot where the browser draws
+  margin boxes) in a hidden frame of this origin, waits for its fonts and images, and calls its
+  `print()`; its title is the PDF's name. The button says what it does, 「下載為 PDF」, with
+  「在列印視窗選擇『另存為 PDF』」 in its tooltip, to a screen reader, and as the window opens. No PDF
+  is made in the page.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
   page. `usePaged(after => read(...).then(o => ({ items: o.assignments, next: o.next })))` and
   `<LoadMore :has-more :loading @more="loadMore" />`.
@@ -224,10 +291,11 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   next is another tab, or another card in its tab.
 - The runtime's route and field names live in `src/api/runtime.ts` (`RUNTIME_ROUTES`) and
   `src/api/runtime-types.ts`, and nowhere else.
-- **A document version's text version (文字版)** is Core's (`version.text` in `document.get` and
-  `document.versions`, `document.text`, `document.text_update`, `document.text_retranscribe`), and
-  whether anything transcribes is the runtime's: `info.features.transcription`, false without a
-  runtime. The document page shows it on a tab of its own (`TextVersionPane`,
+- **A file's text version (文字版)** is Core's, one for each file of a version (`files[i].text` in
+  `document.get` and `document.versions`, `document.text`, `document.text_update`,
+  `document.text_retranscribe`, each naming its `file_id`), and whether anything transcribes is the
+  runtime's: `info.features.transcription`, false without a runtime. The document page shows it on
+  a tab of its own (`TextVersionPane` for each file, `TextFilePicker` to pick one of several,
   `materials/components/textVersion.ts`) for whoever reads the version, and for whoever writes the
   document (`document_write`, as for a new version) on every version with a file. Its place in the
   queue (pending, working) shows only while the transcriber is on, and what only it would do
@@ -238,7 +306,8 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   the latest once it is loaded. Retranscribing a staff text asks twice and sends `discard_edit`.
   Why one failed or was skipped is worded by `enums.textReason` where the code is known, and shown
   as written otherwise. `<MarkdownView :anchors>` gives its pages' and slides' headings
-  (`## 第 N 頁`, `## 投影片 N`) ids of their number alone (`pageHeadings` lists them).
+  (`## 第 N 頁`, `## 投影片 N`) ids of their number alone (`pageHeadings` lists them), with the
+  file's place before them from the second file on (`text-f2-page-3`).
 
 ## Permissions in the UI
 
@@ -360,8 +429,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
-  `<PermEditor :changed :warn>` marks rows; `<DocumentFileLink>` takes its link text in the default
-  slot; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
+  `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
+  `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
 - Agents: `<AgentBadge :kind :owner-name :mine />` beside an actor's or member's name ("Agent",
   "Your agent", "Yuki's agent"; nothing for a person); `<PresenceText :value="last_seen_at" />` for
   whether an agent is connected (never / online within two minutes / last seen). `seatPurpose()`
@@ -466,7 +535,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
   (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent, whether
   anything runs it (`PresenceText`) and, only once it is closed, its state, and a ⋯ menu for who can
-  read it and how its answers arrive (nothing ends a conversation from the chat); the messages; and
+  read it, how its answers arrive, and to download it as a PDF, every message read back to the first
+  (nothing ends a conversation from the chat); the messages; and
   the composer (`ChatComposer.vue`), one bordered box whose send button, small and icon-only, sits
   inside it at the bottom right, with its keys in the button's tooltip and the count near Core's
   limit beside it, and a paperclip at the bottom left. **Files in the chat** (Core's conversation
@@ -492,9 +562,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   one taken back to the composer (edit, stop) brings its files back, uploaded again, where they
   were sent from this page, and says to attach them again otherwise. In a message
   (`ChatMessageFiles`), each file is a card with an icon by its type (`fileKind`), its name, what
-  it is and its size, the person's over their bubble and the agent's under its words; a click asks
-  for a fresh URL (`conversation.attachment`) and saves it under its name (`downloadAttachment`:
-  through this origin with the download attribute, an object store's in a tab of its own). A small
+  it is and its size, the person's over their bubble and the agent's under its words; a click opens
+  it in the file viewer (`attachmentPreviewFiles`), among the message's others, and the button on
+  the card asks for a fresh URL (`conversation.attachment`) and saves it under its name
+  (`downloadAttachment`: through this origin with the download attribute, an object store's in a tab
+  of its own). A small
   image (PNG, JPEG, GIF, WebP, AVIF or BMP, up to 8 MB) is shown as a thumbnail, fetched once the
   message is on screen (`thumbnailOf`, kept by the file's id for the page's life, the latest 60)
   and shown from an object URL. A withdrawn message shows no files, as it shows no text (Core
