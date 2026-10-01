@@ -9,7 +9,10 @@
  * Differences smaller than this are the header's own rounding (it is whole
  * seconds) and the time the answer took to arrive, not a clock that is off:
  * they are taken as none, so that a countdown does not jump a second back
- * and forth from one answer to the next.
+ * and forth from one answer to the next. So is an answer that differs by
+ * less than this from what is known already, when the clocks do differ: a
+ * computer ten minutes off is still ten minutes off, and a link's last
+ * second, once shown run out, does not come back with the next answer.
  */
 export const CORE_SKEW_FLOOR_MS = 2000
 
@@ -25,6 +28,7 @@ export function noteCoreDate(date: string | null | undefined, receivedAt = Date.
   const at = Date.parse(date)
   if (!Number.isFinite(at)) return
   const d = at + 500 - receivedAt
+  if (Math.abs(d - offsetMs) < CORE_SKEW_FLOOR_MS) return
   offsetMs = Math.abs(d) < CORE_SKEW_FLOOR_MS ? 0 : d
 }
 
