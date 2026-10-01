@@ -45,7 +45,7 @@ case $ENVIRONMENT in
   staging | production)
     old=$ENVIRONMENT
     if [ "$old" = staging ]; then ENVIRONMENT=edge; else ENVIRONMENT=stable; fi
-    echo "notice: $old is called $ENVIRONMENT now: setting this server up for $ENVIRONMENT (README.md, Renaming the settings)" >&2
+    echo "notice: $old is called $ENVIRONMENT now: setting this server up for $ENVIRONMENT (docs/deploying.md, Settings from before the rename)" >&2
     ;;
   *) usage ;;
 esac
