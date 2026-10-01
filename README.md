@@ -13,19 +13,28 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   rubrics; students' drafts, files and hand-in; grading with rubric, per-criterion breakdown and
   feedback files; posting, regrading and the gradebook; the grading scheme; members with their
   permissions and scope; the course's activity feed.
-- **Uploading files** — a document is made from a file first: new material, a new version, and new
-  instructions or a rubric open on a drop zone, and under it an optional text note in Markdown
-  (「加入文字說明（選填）」), which goes in the same version as the file; material that is text
-  alone is written by "Write text instead". Files are dropped on the zone, or anywhere on the page
-  or dialog it is the one zone of, chosen, or pasted, several at once: files dropped on the
-  materials list become material, one each, titled from their names (to change before creating),
-  without text where there are several, and a file dropped on a document's page becomes its new
-  version, with the latest version's text unless it is left out. Students drop their work on their draft, and graders feedback
+- **Uploading files** — a document is made from files first (一份文件含多個檔案): new material,
+  a new version, and new instructions or a rubric open on a drop zone, and under it an optional
+  text note in Markdown (「加入文字說明（選填）」), which goes in the same version as the files;
+  material that is text alone is written by "Write text instead". Files are dropped on the zone,
+  or anywhere on the page or dialog it is the one zone of, chosen, or pasted, several at once, and
+  all go into one version, numbered in the order listed, which can be changed (each moved up or
+  down) or a file taken off before saving: files dropped on the materials list become one
+  material, titled from the first file's name until the title is written, and files dropped on a
+  document's page become its new version, with the latest version's text unless it is left out.
+  Students drop their work on their draft, each file attached as it is up, and graders feedback
   files on a grade. Three upload at a time, each listed with its progress, speed and time left, to
   cancel, try again or take off; one whose connection drops is tried again by itself, once the
-  browser is back online where it is not. A file larger than the site takes is refused before it
-  is sent, with both sizes, and nothing is saved while a file is still uploading. On a phone the
-  drop zone is one big button to choose files.
+  browser is back online where it is not. What a version holds (twenty files, 50 MB each, 200 MB in
+  all, by default) is said on the zone and checked before anything is sent: a file larger than the
+  site takes, or one there is no room for, is not uploaded, and says why, with the sizes; what Core
+  still refuses because of the files is said in words, and an upload it no longer takes is uploaded
+  again. Nothing is saved while a file is still uploading. On a phone the drop zone is one big
+  button to choose files.
+- **A version's files** — each version lists its files in order, with an icon by type, name and
+  size, each downloaded under its name from a fresh short-lived URL; the version history counts and
+  names each version's files. A submitted document or a feedback file that holds several files
+  shows them all wherever it is listed (the submission, the grade, a student's draft, grading).
 - **Files in the chat** — a question to an agent may carry files, for the agent to read: chosen with
   the paperclip, dropped on the chat panel, or an image pasted in the box, up to as many and as
   large as the site takes (ten, 50 MB each, by default), which is checked before anything is sent.
@@ -33,8 +42,9 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   sent until they are all up; files need a line to go with them, which the box asks for. Each
   message lists its files with an icon by type, name and size, to download, and small images as
   thumbnails; a withdrawn message's files are hidden with its text.
-- **Text versions (文字版)** — each version of material, instructions or a rubric with a file has a
-  text version on a tab of its own: the file transcribed into Markdown once by the school's
+- **Text versions (文字版)** — each file of a version of material, instructions or a rubric has a
+  text version, read on a tab of its own (a version of several files picks the file there, each
+  saying where its text stands): the file transcribed into Markdown once by the school's
   transcriber (a model of the school's plan, on the agent runtime), shown as the chat shows Markdown,
   formulas, code and tables, with a way to go to each page or slide, and said to be the AI's (and
   which model's) or corrected by whom. Whoever reads the version reads it; whoever writes the
@@ -122,7 +132,7 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   own. Documents: the reading of scanned ones (OCR), on or off and in which of the server's
   languages; and their transcription into text versions, on or off, with which model of the plan,
   up to how many pages a document and a day, how many at once, what it is doing and did today, the
-  versions it took up and how each ended, and its credential with Core, issued and handed to the
+  files it took up (each named as its version names it) and how each ended, and its credential with Core, issued and handed to the
   runtime by one button (never shown) and revoked by another. Where the server has no runtime, or
   one from before these settings, the page says so.
 - **Account** — the ways into one's account (password, single sign-on, invitations and the browser
@@ -389,8 +399,9 @@ src/api/                  the client: http.ts (read, write, uploadFile), generat
 src/stores/               session (who is signed in), course (the open course and the caller's seat)
 src/composables/          useAsync / usePaged, useWrite (idempotent writes and their outcomes), errors,
                           useUploadQueue and useFileDrop (files on their way, and dropped or pasted on the page)
-src/components/           shared pieces: status tags, Markdown, the drop zone (FileDropZone), file download,
-                          permission editor…
+src/components/           shared pieces: status tags, Markdown, the drop zone (FileDropZone), a version's
+                          files (VersionFileList, DocumentFiles), permission editor…
+src/utils/                formatting, files' kinds and names (files.ts), a version's files (documentFiles.ts)…
 src/layouts/              the app frame, and the course frame with its sections
 src/views/                one directory per area
 src/i18n/messages/        one file per namespace and language

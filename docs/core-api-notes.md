@@ -52,9 +52,10 @@ end; the "works around it" notes say what the front end does meanwhile.
     `confirm_required`, a `member.add` / `update_perms` / `rescope` / `resume` beyond the granter's
     own seat is queued; `withinGranter` runs only at execution, so it fails when someone approves
     it. Checking at proposal time too would keep such proposals out of the queue.
-13. **Downloads have no file name.** No name is stored for an uploaded file, and downloads are
-    served `Content-Disposition: attachment` without `filename`, so `syllabus.txt` arrives named
-    after its storage key.
+13. **Downloads had no file name** (resolved in AIShie-Core #49). No name was stored for an
+    uploaded file, and downloads were served `Content-Disposition: attachment` without `filename`.
+    Each file of a version is named now (`files[].filename`, or the name given at
+    `document.upload_url`), and downloads under it; the front end names every file it uploads.
 
 ## What a client cannot find out, or only expensively
 
