@@ -7,6 +7,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { i18n, setLocale, type Locale } from '@/i18n'
 import { write } from '@/api/http'
 import type { Actor } from '@/api/types'
+import { fakeContainerWidths } from '@/composables/containerWidthFakes'
 import { useSessionStore } from '@/stores/session'
 import ActorView from './ActorView.vue'
 
@@ -126,14 +127,17 @@ beforeEach(() => {
   setLocale('en')
   credentials = []
   vi.mocked(write).mockClear()
-  // A narrow screen: a card per token, not a table.
+  // A wide window (for whatever still asks it)…
   vi.stubGlobal('matchMedia', (media: string) => ({
-    matches: true,
+    matches: false,
     media,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
   }))
+  // …and a page the side bar leaves narrow: the facts in one column, and a card per token, not a table.
+  sizes = fakeContainerWidths({ '.creds__title': 600, '.app-card__title': 500 })
 })
+let sizes: ReturnType<typeof fakeContainerWidths>
 enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -246,5 +250,34 @@ describe('an actor’s page', () => {
     expect(headings(w)).toContain('API tokens')
     expect(w.find('.creds-token').text()).toContain('Revoked')
     expect(w.find('.creds__agents-only').exists()).toBe(false)
+  })
+
+  it('lays itself out by its own cards’ widths, not the window’s', async () => {
+    credentials = [apiToken()]
+    const w = await open(AGENT)
+    // 500 px of card: the facts in one column, the ID short; 600 px for the tokens: a card each.
+    const cellsInRow = () => w.findAll('.actor__desc tbody tr')[0]!.findAll('th, td').length
+    expect(cellsInRow()).toBe(2)
+    expect(w.find('.actor__desc .id-text').text()).not.toContain(AGENT)
+    expect(w.find('.creds-token').exists()).toBe(true)
+    expect(w.find('.creds__table').exists()).toBe(false)
+
+    // Room for two columns of facts, an email and the whole ID beside their labels: from 760 px.
+    await sizes.resize('.app-card__title', 760)
+    await flushPromises()
+    expect(cellsInRow()).toBe(4)
+    expect(w.find('.actor__desc').text()).toContain(AGENT)
+    await sizes.resize('.app-card__title', 759)
+    await flushPromises()
+    expect(cellsInRow()).toBe(2)
+
+    // A table of tokens where its columns fit, 1000 px; a card each again below.
+    await sizes.resize('.creds__title', 1000)
+    await flushPromises()
+    expect(w.find('.creds__table').exists()).toBe(true)
+    expect(w.find('.creds-token').exists()).toBe(false)
+    await sizes.resize('.creds__title', 999)
+    await flushPromises()
+    expect(w.find('.creds-token').exists()).toBe(true)
   })
 })

@@ -6,13 +6,13 @@
 //
 // A Core from before actor.list cannot list anyone. The page then says so,
 // and offers what there was before the directory: opening an actor by ID.
-import { computed, onScopeDispose, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { isApiError, MCP_ENDPOINT, read } from '@/api/http'
 import { useAsync, usePaged } from '@/composables/useAsync'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { errorMessage } from '@/composables/useErrors'
-import { useNarrow } from '@/composables/useMediaQuery'
 import { useSessionStore } from '@/stores/session'
 import { formatDate, isUuid } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
@@ -33,7 +33,11 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
-const narrow = useNarrow(767)
+// A card per actor where the page is narrower than 720 px (its list's toolbar
+// 669 px or less), by its own width, not the window's: the side bar takes from
+// it. Wider, the table, which scrolls sideways where its columns do not all fit.
+const toolbar = useTemplateRef<HTMLElement>('toolbar')
+const narrow = useContainerNarrow(toolbar, 669)
 
 const PAGE = 50
 const KINDS = ['human', 'agent'] as const
@@ -170,7 +174,7 @@ async function openById() {
 </script>
 
 <template>
-  <div>
+  <div class="actors">
     <PageHeader :title="t('admin.actors.title')" :subtitle="t('admin.actors.subtitle')">
       <el-button type="primary" @click="registering = true">
         <el-icon><Plus /></el-icon>
@@ -275,7 +279,7 @@ async function openById() {
     </template>
 
     <section v-else class="app-card">
-      <div class="app-toolbar">
+      <div ref="toolbar" class="app-toolbar">
         <el-input
           v-model="searchText"
           :placeholder="t('admin.actors.searchPlaceholder')"
@@ -435,6 +439,10 @@ async function openById() {
 </template>
 
 <style scoped>
+/* The page's own width decides how the list is laid out, not the window's. */
+.actors {
+  container-type: inline-size;
+}
 .actors__kind {
   display: flex;
   flex-direction: column;
@@ -583,7 +591,8 @@ async function openById() {
 .actors__card:last-child {
   border-bottom: none;
 }
-@media (max-width: 767px) {
+/* Where the list is a card per actor (narrow, above). */
+@container (max-width: 719px) {
   .actors__search {
     max-width: none;
     flex-basis: 100%;

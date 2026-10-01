@@ -7,6 +7,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { i18n, setLocale } from '@/i18n'
 import { ApiError } from '@/api/http'
 import type { DepartmentNode } from '@/api/types'
+import { fakeContainerWidths } from '@/composables/containerWidthFakes'
 import { forgetDepartmentTree } from '@/composables/useDepartmentTree'
 import { useSessionStore } from '@/stores/session'
 import DepartmentsView from '../DepartmentsView.vue'
@@ -115,10 +116,10 @@ afterEach(() => {
 })
 
 describe('DepartmentsView', () => {
-  async function mountView(platform: boolean) {
+  async function mountView(platform: boolean, departments = tree(platform)) {
     const { pinia, router } = plugins()
     signIn(platform)
-    answers['department.list_tree'] = async () => tree(platform)
+    answers['department.list_tree'] = async () => departments
     const wrapper = mount(DepartmentsView, { attachTo: document.body, global: { plugins: [pinia, router, i18n, ElementPlus], components: icons } })
     await flushPromises()
     return wrapper
@@ -149,6 +150,43 @@ describe('DepartmentsView', () => {
     expect(text).toContain('New top-level department')
     expect(text).not.toContain('You administer this')
     expect(w.findAll('th').map((th) => th.text())).toContain('Presets')
+    w.unmount()
+  })
+
+  it('closes its columns up where its card has no room for them all, whatever the window, presets under the name', async () => {
+    // The window is wide (matchMedia says nothing matches); the card is what decides, measured by its toolbar. A platform
+    // administrator's tree wants 946 px, the presets with it. One department is enough to show it, and lays out quickly.
+    const sizes = fakeContainerWidths({ '.app-toolbar': 946 })
+    answers['preset.list'] = async () => ({ presets: [{ id: 'p1', dept_id: 'U' }] })
+    const university = node('U', 'University', null, 1, { administers: true, manages: true, course_count: 1, admin_count: 0 })
+    const w = await mountView(true, { max_depth: 8, departments: [university] })
+    const heads = () => w.findAll('th').map((th) => th.text())
+    expect(heads()).toContain('Presets')
+    expect(heads()).toContain('ID')
+    expect(w.find('.dept-name__presets').exists()).toBe(false)
+    await sizes.resize('.app-toolbar', 945)
+    await flushPromises()
+    expect(heads()).not.toContain('Presets')
+    expect(heads()).not.toContain('ID')
+    expect(heads()).toContain('Courses')
+    // Where the presets are is still a click away, with how many there are.
+    const presets = w.find('.dept-name__presets')
+    expect(presets.text()).toBe('Presets: built-ins + 1 own')
+    expect(presets.attributes('href')).toBe('/admin/presets?dept=U')
+    w.unmount()
+  })
+
+  it('closes a department administrator’s up where its card has no room for them, with no presets among them', async () => {
+    // Theirs want 746 px. The department they administer alone is enough to show it.
+    const sizes = fakeContainerWidths({ '.app-toolbar': 746 })
+    const engineering = node('F', 'Engineering', 'U', 2, { administers: true, appointed: true, course_count: 1, admin_count: 1 })
+    const w = await mountView(false, { max_depth: 8, departments: [engineering] })
+    const heads = () => w.findAll('th').map((th) => th.text())
+    expect(heads()).toContain('ID')
+    await sizes.resize('.app-toolbar', 745)
+    await flushPromises()
+    expect(heads()).not.toContain('ID')
+    expect(heads()).toContain('Courses')
     w.unmount()
   })
 

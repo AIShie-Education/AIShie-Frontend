@@ -19,7 +19,7 @@ import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
 import type { Actor } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AgentBadge from '@/components/AgentBadge.vue'
@@ -44,7 +44,12 @@ import { editBlocker } from './components/signIn'
 const props = defineProps<{ actorId: string }>()
 const { t } = useI18n()
 const session = useSessionStore()
-const narrow = useNarrow()
+// The registration's facts in two columns while its card has room for both,
+// an email and the whole ID beside their labels (760 px), whatever the window:
+// the side bar takes from it. With less, one column, and the ID short. The
+// card is measured by its title, as wide as what it holds.
+const registration = useTemplateRef<HTMLElement>('registration')
+const narrow = useContainerNarrow(registration, 759)
 /** The actor's id as Core writes it, whatever the address says. */
 const id = useCanonicalId(() => props.actorId, 'actorId')
 
@@ -178,7 +183,7 @@ async function reactivate() {
 </script>
 
 <template>
-  <div>
+  <div class="actor">
     <PageHeader
       :title="actor?.display_name ?? t('admin.actor.title')"
       :subtitle="actor?.email ?? undefined"
@@ -281,7 +286,7 @@ async function reactivate() {
         />
 
         <section class="app-card">
-          <h2 class="app-card__title">{{ t('admin.actor.registration') }}</h2>
+          <h2 ref="registration" class="app-card__title">{{ t('admin.actor.registration') }}</h2>
           <el-descriptions :column="narrow ? 1 : 2" border class="actor__desc">
             <el-descriptions-item :label="t('admin.actor.name')">
               <strong class="actor__name">{{ actor.display_name }}</strong>
@@ -399,7 +404,7 @@ async function reactivate() {
           </p>
         </section>
 
-        <div class="actor__grid">
+        <div class="actor__grid app-columns">
           <!-- A person signs in by an invitation or single sign-on; an agent by a token, and only an agent is
                issued one. An agent (or the system) has no identity at the identity provider: no single
                sign-on card. -->
@@ -470,9 +475,13 @@ async function reactivate() {
 .actor__owned-item {
   word-break: break-word;
 }
+/* The page's own width decides its columns, not the window's: the side bar takes from it. */
+.actor {
+  container-type: inline-size;
+}
 .actor__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
   margin-top: 16px;
 }
@@ -482,10 +491,10 @@ async function reactivate() {
 .actor__grid > .actor__wide {
   grid-column: 1 / -1;
 }
-@media (min-width: 1100px) {
+/* Two cards side by side while each keeps 420 px or more. */
+@container (max-width: 855px) {
   .actor__grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

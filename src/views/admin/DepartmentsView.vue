@@ -9,10 +9,11 @@
 // administrators; one they manage (an appointment of theirs is above it) they
 // rename, move and staff. Nobody reshapes or staffs their own appointment's
 // department: whoever is above it does.
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DepartmentNode } from '@/api/types'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
@@ -26,7 +27,15 @@ import MoveDepartmentDialog from './departments/MoveDepartmentDialog.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
-const narrow = useNarrow()
+// Every column of the tree wants 746 px in its card, and 946 with a platform
+// administrator's presets, whatever the window (the side bar takes from the
+// page): with less, the IDs are left out, the presets go under the name, and
+// the rest close up. The card is measured by its toolbar, as wide as the tree.
+// On a phone the columns close up further, as they always have, so that a
+// row's courses stay in sight beside its menu.
+const toolbar = useTemplateRef<HTMLElement>('toolbar')
+const narrow = useContainerNarrow(toolbar, () => (session.isAdmin ? 945 : 745))
+const phone = useNarrow()
 const departments = useDepartmentTree({ immediate: false })
 // Read afresh on coming here: someone else may have changed the tree.
 onMounted(() => void departments.reload())
@@ -110,7 +119,7 @@ watch(
     </PageHeader>
 
     <section class="app-card">
-      <div class="app-toolbar">
+      <div ref="toolbar" class="app-toolbar">
         <el-input v-model="filter" :placeholder="t('adminSetup.departments.filter')" clearable class="setup-filter">
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
@@ -139,6 +148,20 @@ watch(
                 </el-tag>
               </span>
               <span v-if="above(row)" class="dept-name__above">{{ t('deptAdmin.tree.inPath', { path: above(row) }) }}</span>
+              <router-link
+                v-if="session.isAdmin && narrow"
+                :to="{ name: 'admin-presets', query: { dept: row.id } }"
+                class="dept-link dept-name__presets"
+              >
+                <el-icon><Key /></el-icon>
+                <span>
+                  {{
+                    presetCounts.has(row.id)
+                      ? t('adminSetup.departments.presetsN', presetCounts.get(row.id) ?? 0)
+                      : t('adminSetup.departments.presets')
+                  }}
+                </span>
+              </router-link>
             </template>
           </el-table-column>
           <el-table-column :label="t('deptAdmin.tree.courses')" :width="narrow ? 80 : 100" align="right">
@@ -153,7 +176,7 @@ watch(
               </router-link>
             </template>
           </el-table-column>
-          <el-table-column :label="t('deptAdmin.tree.admins')" :width="narrow ? 110 : 150" align="right">
+          <el-table-column :label="t('deptAdmin.tree.admins')" :width="phone ? 110 : narrow ? 130 : 150" align="right">
             <template #default="{ row }">
               <el-button
                 v-if="row.admin_count != null"
@@ -185,7 +208,7 @@ watch(
           <el-table-column v-if="!narrow" :label="t('common.labels.id')" min-width="120">
             <template #default="{ row }"><IdText :id="row.id" /></template>
           </el-table-column>
-          <el-table-column :label="narrow ? '' : t('common.labels.actions')" :width="narrow ? 56 : 96" align="center" fixed="right">
+          <el-table-column :label="narrow ? '' : t('common.labels.actions')" :width="phone ? 56 : narrow ? 64 : 96" align="center" fixed="right">
             <template #default="{ row }">
               <el-dropdown v-if="actionsFor(row).length" trigger="click" @command="(a: Action) => onAction(row, a)">
                 <el-button text circle :aria-label="t('deptAdmin.tree.more', { name: row.name })" class="dept-more">
@@ -262,6 +285,12 @@ watch(
   gap: 4px;
   text-decoration: none;
   font-size: 14px;
+}
+.dept-name__presets {
+  display: flex;
+  width: fit-content;
+  margin-top: 2px;
+  font-size: 12px;
 }
 .dept-link:hover {
   text-decoration: underline;
