@@ -193,12 +193,39 @@ markdown-it + DOMPurify.
   an image as an `<img>` (an SVG too, never inline), zoomed or fitted; Markdown by `MarkdownView`,
   code highlighted as fenced code, plain text as it is, CSV as a table of its first thousand rows
   (`parseCsv`), text read as UTF-8 or the legacy encoding of the reader's script (`decodeText`);
-  audio and video in the browser's players; an Office file as its text version where Core has one
-  done (a staff text too), and otherwise a note and its download, as anything else. Bytes are fetched
+  audio and video in the browser's players; an Office file as its PDF rendition (below), or, where
+  Core keeps none, as its text version where Core has one done (a staff text too), and otherwise a
+  note and its download, as anything else. Bytes are fetched
   whole with `fetchBlob` from the fresh URL, up to a size by kind (`PREVIEW_MAX_BYTES`: 2 MB of
   text, 40 MB of an image, 100 MB of a PDF or a recording; past it, a note and the download), and
   shown from object URLs revoked as soon as another file is shown or the viewer closes
   (`ObjectUrls`). The page's policy needs nothing more for this (`index.html`).
+- **An Office file's PDF (its rendition, 統一轉 PDF).** Core converts every Office, OpenDocument and
+  RTF file it decides to (by name and type: AIShie-Core#53, migration 0026) to PDF once, through the
+  site's runtime, for every kind of document and every message's files; such a file carries
+  `rendition: { state, page_count?, byte_size?, reason?, download_url?, download_expires_at? }`
+  wherever it is read (`document.get`, `document.file`, `conversation.attachment` with the URL once
+  done; `document.versions` and `conversation.messages` without it), and any other file none. A file
+  listed with a `rendition` is previewed through it alone (`@/utils/rendition`; the preview files
+  carry the listed one, `readRendition`, which reads it afresh from `document.file` or
+  `conversation.attachment` as it is shown, and, where the caller may, `retryRendition`): `done`, the
+  PDF fetched from the fresh URL into `PdfView`, with 「下載 PDF」 (`savePdf`, under `pdfNameOf`: the
+  file's name with `.pdf`) beside the file's own download and its page count in the head;
+  `queued`/`claimed`, 「正在轉換為 PDF…」 with a spinner, said to a screen reader, asked again after
+  `renditionPollDelay(n)` (2 s doubling to 30 s) while the viewer shows that file, and never once it
+  shows another or closes (nothing is pushed); `failed`/`skipped`, why, in words for the
+  rendition's `reason` (`preview.rendition.reason.<reason>`: `password_protected`, `unsupported`,
+  `too_large`, `conversion_failed`, `timeout`, `attempts_exhausted`, else `other`), with the file's
+  download, and 「再試一次」 where the caller may send it back: `document.rendition_retry` for whoever
+  holds the document's kind's write permission (`retryPermOf`: `document_write` for material,
+  instructions and a rubric, `submission_write` for a submission, `grade_submit` for feedback; pass
+  `retry-renditions` to `VersionFileList`, which `DocumentFiles` works out itself), and
+  `conversation.rendition_retry` for whoever may withdraw the message (`retry-renditions` on
+  `ChatMessageFiles`). A retry that waits for approval says so; `rendition_done` and `no_rendition`
+  are answered by reading it again; other refusals are said in `preview.rendition.refusal`. A file
+  listed with no `rendition` (a Core from before renditions, or one Core converts not) is shown as
+  before. A listed file whose PDF is done has a small PDF tag; one waiting is not marked, since the
+  list is not read again.
 - **Download as PDF (下載為 PDF).** A text that is read as a document (a version's text note, a
   file's text version, a text or Markdown file in the viewer, a submitted text, a conversation) is
   offered as a PDF through the browser's own print window, which sets it in the fonts the page
