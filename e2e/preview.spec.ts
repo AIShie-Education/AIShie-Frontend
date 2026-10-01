@@ -16,12 +16,14 @@ import {
 
 // The file viewer (預覽) and "Download as PDF" (下載為 PDF), with the real
 // Core: material of six files (a PDF of two pages, a picture, a Markdown
-// note, a text file, and two Word files, one with a text version written by
-// staff and one with none) opens file by file in the viewer from the
-// document's page: the PDF drawn by pdf.js, page 1 then page 2, its text
-// selectable; the picture from an object URL; the Markdown rendered and the
-// text as it is; a Word file as its text version, or, with none, a note and
-// its download. "Download as PDF" lays out the Markdown file, and the
+// note, a text file, a Word file, and a Pages file with a text version
+// written by staff) opens file by file in the viewer from the document's
+// page: the PDF drawn by pdf.js, page 1 then page 2, its text selectable;
+// the picture from an object URL; the Markdown rendered and the text as it
+// is; the Word file, which the server converts to PDF, as being converted
+// (nothing converts it here: renditions.spec.ts plays the runtime), with its
+// download; and the Pages file, which Core converts not, as its text
+// version. "Download as PDF" lays out the Markdown file, and the
 // version's text note, for the print window (window.print is stubbed, in
 // every frame, and what it was asked to print is read back). A file a chat
 // message carries opens in the viewer too. On a phone the viewer is the
@@ -113,9 +115,10 @@ const HANDOUT: FileSpec = {
   mimeType: DOCX,
   buffer: Buffer.from('PK\u0003\u0004 handout'),
 }
+// Apple's Pages: an Office file to the viewer, but not one Core converts to PDF.
 const READING: FileSpec = {
-  name: `trees-reading-${tag}.docx`,
-  mimeType: DOCX,
+  name: `trees-reading-${tag}.pages`,
+  mimeType: 'application/vnd.apple.pages',
   buffer: Buffer.from('PK\u0003\u0004 reading'),
 }
 const READING_TEXT = `## 第 1 頁\n\n# Reading on trees\n\nA tree has a root, and each node below it one parent (${tag}).\n`
@@ -343,18 +346,16 @@ test.describe.serial('the file viewer', () => {
     await watch.expectNoneRefused()
   })
 
-  test('a Word file is shown as its text version where it has one, and with none, a note and its download', async ({
+  test('a Word file is said to be converting to PDF, with its download; one Core converts not is shown as its text version', async ({
     page,
   }) => {
     const watch = await watchPage(page)
     await signIn(page, demo().actors.instructor)
     await page.goto(coursePath(`documents/${documentId}`))
     let dialog = await openFile(page, HANDOUT)
-    await expect(dialog.locator('.file-viewer__note-title')).toHaveText('No preview available yet')
-    await expect(dialog.locator('.file-viewer__note-text')).toHaveText(
-      'A preview of Word, PowerPoint and Excel files is not available yet. Download it to open it.',
-    )
-    await photograph(page, 'preview-docx-none')
+    await expect(dialog.locator('.file-viewer__note-title')).toHaveText('Converting to PDF…')
+    await expect(dialog.locator('.file-viewer__note-text')).toContainText('The server is making a PDF of this file')
+    await photograph(page, 'preview-docx-converting')
     const download = page.waitForEvent('download')
     await dialog.locator('.file-viewer__note-download').click()
     const saved = await download
