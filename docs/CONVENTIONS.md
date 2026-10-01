@@ -676,6 +676,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
+- Examples in placeholders and hints name no real school: ids such as `school-adfs` or
+  `university-sso`, emails such as `name@example.edu`, domains such as `example.edu`. Tests and
+  their fixtures use the same, so that none is copied into the page from them.
 - Core's error messages are English and are shown as they are, after a translated lead
   (`errorMessage()` does this).
 - Some vocabularies are keyed by Core's own dotted names (`enums.event`: `grade.posted`, …).
