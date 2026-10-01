@@ -2,7 +2,8 @@
 // An actor's ways in (actor.list_credentials), and revoking one of them
 // (actor.revoke_credential) without suspending the actor: a token that has
 // leaked, a browser left signed in. API tokens come first, with who issued
-// each; sessions, a password, single sign-on and an invitation follow,
+// each (an agent hosted on AIshie holds one alone, issued to the site's
+// agent runtime, and said so); sessions, a password, single sign-on and an invitation follow,
 // compactly. Only agents are given API tokens: a person's list shows the
 // tokens only when they still hold one (made before), saying it is to be
 // revoked. Listing and revoking are held to the rule for issuing
@@ -270,6 +271,9 @@ defineExpose({ reload: () => list.reload() })
                 <span>
                   <span class="creds__k">{{ t('admin.credentials.col.issuedBy') }}</span>
                   <span v-if="issuer?.by === 'self'">{{ t('admin.credentials.selfIssued') }}</span>
+                  <span v-else-if="issuer?.by === 'runtime'" class="creds__runtime">{{
+                    t('admin.credentials.issuedToRuntime')
+                  }}</span>
                   <template v-else-if="issuer?.by === 'other'">
                     <router-link :to="{ name: 'admin-actor', params: { actorId: issuer.id } }" class="creds__issuer">
                       <template v-if="issuer.name">{{ issuer.name }}</template>
@@ -330,6 +334,9 @@ defineExpose({ reload: () => list.reload() })
           <el-table-column :label="t('admin.credentials.col.issuedBy')" min-width="130">
             <template #default="{ row }">
               <span v-if="row.issuer?.by === 'self'">{{ t('admin.credentials.selfIssued') }}</span>
+              <span v-else-if="row.issuer?.by === 'runtime'" class="creds__runtime">{{
+                t('admin.credentials.issuedToRuntime')
+              }}</span>
               <template v-else-if="row.issuer?.by === 'other'">
                 <router-link :to="{ name: 'admin-actor', params: { actorId: row.issuer.id } }" class="creds__issuer">
                   <template v-if="row.issuer.name">{{ row.issuer.name }}</template>

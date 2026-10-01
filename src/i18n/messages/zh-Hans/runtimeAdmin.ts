@@ -8,6 +8,7 @@ export default {
     pricing: '计价与额度',
     usage: '今日用量',
     documents: '文件',
+    hosting: '智能体托管',
   },
   changedBy: '由 {who} 于 {when} 更改',
 
@@ -521,5 +522,50 @@ export default {
     unpricedShort: '{n} 次未定价',
     toPrices: '前往价目表',
     empty: '这段日期没有任何记录。',
+  },
+
+  // The agent runtime's own credential for AIshie Core: the site service agent_runtime (AgentRuntimeCard).
+  agentRuntime: {
+    title: '智能体运行环境在 AIshie 的凭证',
+    intro:
+      'AIshie 的智能体运行环境以自己的凭证（aissvc_…，即它的服务 agent_runtime）调用 AIshie：只有凭它，才能核查智能体的所有者，并获取及撤销它所托管的每个智能体唯一的令牌。没有有效的凭证，它就不会托管任何智能体。',
+    setup: '设置服务器时会创建它并交给运行环境。如要更换，请在服务器上运行 {command}：它会签发新的凭证、撤销其他凭证，并以新凭证重新启动运行环境。',
+    none: '目前没有有效的凭证，所以运行环境不会托管任何智能体。请在服务器上运行 {command}。',
+    showInactive: '显示已撤销及已过期的凭证（{n}）',
+    state: {
+      live: '有效',
+      revoked: '已撤销',
+      expired: '已过期',
+    },
+    issuedBy: '签发者',
+    bySetup: '服务器（设置时）',
+    created: '签发于',
+    lastUsed: '最后使用',
+    neverUsed: '从未使用',
+    expires: '到期',
+    revokedAt: '撤销于',
+    revoke: '撤销',
+    revokeTitle: '撤销这个凭证？',
+    revokeBody: '如果运行环境正在使用它，在获得另一个凭证之前，它不会托管任何智能体：请在服务器上运行 {command}。它所托管的智能体的令牌不会被撤销。',
+    revoked: '已撤销凭证。',
+    issue: '签发凭证',
+    issueTitle: '为智能体运行环境签发凭证',
+    issueBody:
+      '在这里签发的凭证只会显示一次，也不会自动交给运行环境：请自行把它放进服务器上运行环境的 secret core/agent_runtime，然后重新启动运行环境。在服务器上运行 {command} 会完成以上全部步骤，一般应以此方式更换。',
+    label: '标签',
+    labelHint: '注明它的用途，方便以后辨认。',
+    replace: '撤销它的其他凭证',
+    replaceHint: '它们会立即失效，运行环境所用的那个也一样，直到它获得这个新凭证。智能体的令牌不会被撤销。',
+    submit: '签发',
+    issuedTitle: '请立即复制凭证',
+    once: '凭证只会在此显示一次：AIshie 只保存其哈希值。',
+    replayed: '这是较早请求的重复，所以不会再显示凭证。如果当时没有复制，请撤销它并签发新的。',
+    credential: '凭证',
+    where: '把它放进服务器上运行环境的 secret core/agent_runtime（/etc/aishie/runtime/secrets/core/agent_runtime），只让运行环境可读，然后重新启动运行环境。',
+    done: '我已复制',
+    // Core's refusals of the service's credentials, by reason.
+    coreRefusal: {
+      too_many_credentials: '智能体运行环境持有的凭证已达 AIshie 允许的上限。请先撤销一个，或在签发新凭证时撤销其他凭证。',
+    },
   },
 }

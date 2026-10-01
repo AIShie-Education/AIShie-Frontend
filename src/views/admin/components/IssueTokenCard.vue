@@ -1,8 +1,10 @@
 <script setup lang="ts">
-// actor.issue_token: an API token for an agent, shown once. Only agents are
-// given one: a person signs in with a password, single sign-on or an
-// invitation. Says `issued` when Core has made one, for the list of its
-// tokens to show it.
+// actor.issue_token: an API token for an agent with MCP access, shown once.
+// Only agents are given one: a person signs in with a password, single
+// sign-on or an invitation. An agent hosted on AIshie is given none here
+// (Core refuses it, hosted_by_runtime): the card says that the site's agent
+// runtime alone is issued its one token. Says `issued` when Core has made
+// one, for the list of its tokens to show it.
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -77,8 +79,16 @@ function forget() {
 <template>
   <section class="app-card">
     <h2 class="app-card__title">{{ t('admin.token.title') }}</h2>
-    <p class="app-muted token__intro">{{ t('admin.token.intro') }}</p>
-    <el-alert v-if="blockedReason" type="info" :closable="false" show-icon :title="blockedReason" />
+    <p v-if="actor.hosting !== 'runtime'" class="app-muted token__intro">{{ t('admin.token.intro') }}</p>
+    <el-alert
+      v-if="actor.hosting === 'runtime'"
+      type="info"
+      :closable="false"
+      show-icon
+      :title="t('admin.token.runtimeAgent')"
+      class="token__runtime"
+    />
+    <el-alert v-else-if="blockedReason" type="info" :closable="false" show-icon :title="blockedReason" />
     <el-form v-else ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <el-alert
         v-if="actor.status !== 'active'"

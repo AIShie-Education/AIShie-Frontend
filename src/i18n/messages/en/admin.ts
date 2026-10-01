@@ -354,6 +354,8 @@ export default {
     daysInvalid: 'From 1 to 3650 days',
     submit: 'Issue token',
     suspendedNote: 'They are suspended: a token issued now is refused until they are reactivated.',
+    runtimeAgent:
+      'None is issued here: this agent is hosted on AIshie, and the site’s agent runtime alone is issued its one token, by the agent’s ID, when it hosts it. Revoking that token below stops people asking it on the site until the runtime is issued another.',
     revealTitle: 'Copy the token now',
     once: 'This is the only time the token is shown. Core keeps only its hash: if it is lost, issue a new one.',
     replayed:
@@ -400,6 +402,7 @@ export default {
     },
     unlabelled: 'No label',
     selfIssued: 'Self-issued',
+    issuedToRuntime: 'The site’s agent runtime',
     issuerUnknown: 'Not recorded',
     neverUsed: 'Never used',
     revokedAt: 'Revoked',

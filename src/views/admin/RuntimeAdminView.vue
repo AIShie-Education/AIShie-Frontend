@@ -3,9 +3,10 @@
 // (the runtime's admin routes). The school's AI plan (the models the school
 // provides and pays for, their keys, and the daily quotas), pricing and
 // quotas (the price table, tenants' quotas, hosted agents' budgets, and what
-// things cost), today's use of the plan, and documents: the reading of
-// scanned ones (OCR), and their text versions, written by a model of the
-// plan (the transcriber).
+// things cost), today's use of the plan, documents: the reading of scanned
+// ones (OCR), and their text versions, written by a model of the plan (the
+// transcriber), and agent hosting: the runtime's own credential for Core,
+// the site service agent_runtime, by which it hosts agents by their ids.
 //
 // Platform administrators open it (router/modules/admin.ts), and the side bar
 // offers it to them where there is a runtime. The runtime's own
@@ -25,6 +26,7 @@ import { runtime } from '@/api/runtime'
 import { useAsync } from '@/composables/useAsync'
 import { useRuntime } from '@/composables/useRuntime'
 import PageHeader from '@/components/PageHeader.vue'
+import AgentRuntimeCard from './runtime/AgentRuntimeCard.vue'
 import DocumentsPanel from './runtime/DocumentsPanel.vue'
 import PricingPanel from './runtime/PricingPanel.vue'
 import RuntimeAsync from './runtime/RuntimeAsync.vue'
@@ -41,6 +43,7 @@ const TABS: { name: string; label: string; component: Component }[] = [
   { name: 'pricing', label: 'runtimeAdmin.tabs.pricing', component: PricingPanel },
   { name: 'usage', label: 'runtimeAdmin.tabs.usage', component: UsageCard },
   { name: 'documents', label: 'runtimeAdmin.tabs.documents', component: DocumentsPanel },
+  { name: 'hosting', label: 'runtimeAdmin.tabs.hosting', component: AgentRuntimeCard },
 ]
 const tab = computed({
   get: () => {

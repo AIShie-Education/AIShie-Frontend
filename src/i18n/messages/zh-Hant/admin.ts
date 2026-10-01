@@ -337,6 +337,8 @@ export default {
     daysInvalid: '請輸入 1 至 3650 天',
     submit: '發出權杖',
     suspendedNote: '對方已被停用：現在發出的權杖在重新啟用之前都會被拒絕。',
+    runtimeAgent:
+      '這裡不會發出權杖：這個代理是站內託管，只有本站的代理執行環境在託管它時，會按代理的 ID 取得它唯一的權杖。在下方撤銷那個權杖，在執行環境取得新權杖之前，站內便無法向它提問。',
     revealTitle: '請立即複製權杖',
     once: '權杖只會在此顯示一次。Core 只保存其雜湊值；如遺失，請重新發出。',
     replayed: '這是重複的請求，因此不會再次顯示權杖。如尚未複製，請重新發出。',
@@ -382,6 +384,7 @@ export default {
     },
     unlabelled: '沒有標籤',
     selfIssued: '自行發出',
+    issuedToRuntime: '本站的代理執行環境',
     issuerUnknown: '未有記錄',
     neverUsed: '從未使用',
     revokedAt: '撤銷於',

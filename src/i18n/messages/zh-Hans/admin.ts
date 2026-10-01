@@ -336,6 +336,8 @@ export default {
     daysInvalid: '请输入 1 至 3650 天',
     submit: '签发令牌',
     suspendedNote: '对方已被停用：现在签发的令牌在重新启用之前都会被拒绝。',
+    runtimeAgent:
+      '这里不会签发令牌：这个智能体是站内托管，只有本站的智能体运行环境在托管它时，会按智能体的 ID 获取它唯一的令牌。在下方撤销那个令牌，在运行环境获得新令牌之前，站内便无法向它提问。',
     revealTitle: '请立即复制令牌',
     once: '令牌只会在此显示一次。Core 只保存其哈希值；如遗失，请重新签发。',
     replayed: '这是重复的请求，因此不会再次显示令牌。如尚未复制，请重新签发。',
@@ -381,6 +383,7 @@ export default {
     },
     unlabelled: '没有标签',
     selfIssued: '自行签发',
+    issuedToRuntime: '本站的智能体运行环境',
     issuerUnknown: '没有记录',
     neverUsed: '从未使用',
     revokedAt: '撤销于',

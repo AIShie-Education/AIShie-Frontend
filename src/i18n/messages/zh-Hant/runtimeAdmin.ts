@@ -8,6 +8,7 @@ export default {
     pricing: '計價與額度',
     usage: '今日用量',
     documents: '文件',
+    hosting: '代理託管',
   },
   changedBy: '由 {who} 於 {when} 更改',
 
@@ -521,5 +522,50 @@ export default {
     unpricedShort: '{n} 次未定價',
     toPrices: '前往價目表',
     empty: '這段日子沒有任何記錄。',
+  },
+
+  // The agent runtime's own credential for AIshie Core: the site service agent_runtime (AgentRuntimeCard).
+  agentRuntime: {
+    title: '代理執行環境在 AIshie 的憑證',
+    intro:
+      'AIshie 的代理執行環境以自己的憑證（aissvc_…，即它的服務 agent_runtime）呼叫 AIshie：只有憑它，才能查核代理的擁有者，並取得及撤銷它所託管的每個代理唯一的權杖。沒有有效的憑證，它便不會託管任何代理。',
+    setup: '設定伺服器時會建立它並交給執行環境。如要更換，請在伺服器上執行 {command}：它會發出新的憑證、撤銷其他憑證，並以新憑證重新啟動執行環境。',
+    none: '目前沒有有效的憑證，所以執行環境不會託管任何代理。請在伺服器上執行 {command}。',
+    showInactive: '顯示已撤銷及已過期的憑證（{n}）',
+    state: {
+      live: '有效',
+      revoked: '已撤銷',
+      expired: '已過期',
+    },
+    issuedBy: '發出者',
+    bySetup: '伺服器（設定時）',
+    created: '發出於',
+    lastUsed: '最後使用',
+    neverUsed: '從未使用',
+    expires: '到期',
+    revokedAt: '撤銷於',
+    revoke: '撤銷',
+    revokeTitle: '撤銷這個憑證？',
+    revokeBody: '如果執行環境正在使用它，在取得另一個憑證之前，它不會託管任何代理：請在伺服器上執行 {command}。它所託管的代理的權杖不會被撤銷。',
+    revoked: '已撤銷憑證。',
+    issue: '發出憑證',
+    issueTitle: '為代理執行環境發出憑證',
+    issueBody:
+      '在這裡發出的憑證只會顯示一次，也不會自動交給執行環境：請自行把它放進伺服器上執行環境的秘密 core/agent_runtime，然後重新啟動執行環境。在伺服器上執行 {command} 會完成以上全部步驟，一般應以此方式更換。',
+    label: '標籤',
+    labelHint: '註明它的用途，方便日後辨認。',
+    replace: '撤銷它的其他憑證',
+    replaceHint: '它們會立即失效，執行環境所用的那個亦然，直至它取得這個新憑證。代理的權杖不會被撤銷。',
+    submit: '發出',
+    issuedTitle: '請立即複製憑證',
+    once: '憑證只會在此顯示一次：AIshie 只保存其雜湊值。',
+    replayed: '這是較早請求的重複，所以不會再顯示憑證。如果當時沒有複製，請撤銷它並發出新的。',
+    credential: '憑證',
+    where: '把它放進伺服器上執行環境的秘密 core/agent_runtime（/etc/aishie/runtime/secrets/core/agent_runtime），只讓執行環境可讀，然後重新啟動執行環境。',
+    done: '我已複製',
+    // Core's refusals of the service's credentials, by reason.
+    coreRefusal: {
+      too_many_credentials: '代理執行環境持有的憑證已達 AIshie 容許的上限。請先撤銷一個，或在發出新憑證時撤銷其他憑證。',
+    },
   },
 }
