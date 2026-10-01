@@ -64,13 +64,13 @@ async function mountList(links: JoinLink[], canRevoke = true) {
 
 describe('JoinLinkList', () => {
   it('shows a working link with the time it has left, who joined of how many, whom it lets in and who created it', async () => {
-    const w = await mountList([link({ allowed_email_domains: ['hainanu.edu.cn'] })])
+    const w = await mountList([link({ allowed_email_domains: ['campus.example.edu'] })])
     const row = w.get('.join-link')
     expect(row.text()).toContain('Working')
     expect(row.text()).toContain('Shown above')
     expect(row.get('.join-link__clock').text()).toBe('08:00')
     expect(row.text()).toContain('3 of 30 joined')
-    expect(row.text()).toContain('@hainanu.edu.cn')
+    expect(row.text()).toContain('@campus.example.edu')
     expect(row.text()).toContain('Ada Instructor')
     expect(row.text()).not.toContain('aisjoin_')
     const who = row.findAll('a').find((a) => a.text() === 'See who')!

@@ -42,7 +42,7 @@ describe('qrFileName', () => {
 
 describe('normalizeDomain', () => {
   it('keeps a domain as a link keeps it', () => {
-    expect(normalizeDomain(' @HainanU.edu.cn ')).toBe('hainanu.edu.cn')
+    expect(normalizeDomain(' @Campus.Example.EDU ')).toBe('campus.example.edu')
     expect(normalizeDomain('example.org.')).toBe('example.org')
     expect(normalizeDomain('mail-1.example.co')).toBe('mail-1.example.co')
   })
@@ -62,11 +62,11 @@ describe('emailDomainAllowed', () => {
     expect(emailDomainAllowed('a@gmail.com', [])).toBe(true)
   })
   it('lets in an email at one of the domains, in any case', () => {
-    expect(emailDomainAllowed('Stu@HainanU.edu.cn', ['hainanu.edu.cn'])).toBe(true)
-    expect(emailDomainAllowed('a@gmail.com', ['hainanu.edu.cn'])).toBe(false)
-    expect(emailDomainAllowed('a@evilhainanu.edu.cn', ['hainanu.edu.cn'])).toBe(false)
-    expect(emailDomainAllowed('', ['hainanu.edu.cn'])).toBe(false)
-    expect(emailDomainAllowed(null, ['hainanu.edu.cn'])).toBe(false)
+    expect(emailDomainAllowed('Stu@Campus.Example.EDU', ['campus.example.edu'])).toBe(true)
+    expect(emailDomainAllowed('a@gmail.com', ['campus.example.edu'])).toBe(false)
+    expect(emailDomainAllowed('a@evilcampus.example.edu', ['campus.example.edu'])).toBe(false)
+    expect(emailDomainAllowed('', ['campus.example.edu'])).toBe(false)
+    expect(emailDomainAllowed(null, ['campus.example.edu'])).toBe(false)
   })
   it('reads the domain after the last @', () => {
     expect(emailDomain('"a@b"@example.org')).toBe('example.org')

@@ -46,10 +46,10 @@ describe('joinRefusal', () => {
       status: 422,
       code: 'failed_precondition',
       message: 'x',
-      details: { reason: 'email_domain_not_allowed', allowed_email_domains: ['hainanu.edu.cn', 'example.edu'] },
+      details: { reason: 'email_domain_not_allowed', allowed_email_domains: ['campus.example.edu', 'example.edu'] },
     })
     expect(joinRefusal(e)).toBe(
-      'This invite link is only for emails at @hainanu.edu.cn, @example.edu, and this one is not at any of them.',
+      'This invite link is only for emails at @campus.example.edu, @example.edu, and this one is not at any of them.',
     )
   })
   it('says the members page’s own refusals in words of their own', () => {
@@ -88,13 +88,13 @@ describe('what the registration form says before Core is asked', () => {
     expect(emailProblem('mei', [])).toEqual({ key: 'join.page.badEmail' })
     expect(emailProblem('mei@localhost', [])).toEqual({ key: 'join.page.badEmail' })
     expect(emailProblem(' mei@example.edu ', [])).toBeNull()
-    expect(emailProblem('Mei@HainanU.edu.cn', ['hainanu.edu.cn'])).toBeNull()
-    expect(emailProblem('ken@gmail.com', ['hainanu.edu.cn', 'example.edu'])).toEqual({
+    expect(emailProblem('Mei@Campus.Example.EDU', ['campus.example.edu'])).toBeNull()
+    expect(emailProblem('ken@gmail.com', ['campus.example.edu', 'example.edu'])).toEqual({
       key: 'join.page.emailWrongDomain',
-      args: { domains: '@hainanu.edu.cn, @example.edu' },
+      args: { domains: '@campus.example.edu, @example.edu' },
     })
     // A subdomain is another domain, as Core holds it.
-    expect(emailProblem('ken@mail.hainanu.edu.cn', ['hainanu.edu.cn'])?.key).toBe('join.page.emailWrongDomain')
+    expect(emailProblem('ken@mail.campus.example.edu', ['campus.example.edu'])?.key).toBe('join.page.emailWrongDomain')
   })
 
   it('takes no email at all where it is optional, but holds one given to the same rules', () => {

@@ -249,12 +249,12 @@ test.describe.serial('invite links', () => {
   })
 
   test('a link kept to a school’s domain takes no registration from another', async ({ browser }) => {
-    const link = await createLink({ allowed_email_domains: ['hainanu.edu.cn'] })
+    const link = await createLink({ allowed_email_domains: ['campus.example.edu'] })
     const { context, page } = await stranger(browser)
     await page.goto(`/join/${link.token}`)
-    await expect(page.getByText('Only people with an email at @hainanu.edu.cn can join through this link.')).toBeVisible()
+    await expect(page.getByText('Only people with an email at @campus.example.edu can join through this link.')).toBeVisible()
     await page.getByRole('button', { name: 'Create an account' }).click()
-    await expect(page.getByText('Use your email at @hainanu.edu.cn.')).toBeVisible()
+    await expect(page.getByText('Use your email at @campus.example.edu.')).toBeVisible()
     await page.fill('input[name=name]', `Gil Gmail ${STAMP}`)
     await page.fill('input[name=email]', `gil+${STAMP}@gmail.com`)
     await page.fill('input[name=password]', PASSWORD)
@@ -264,7 +264,7 @@ test.describe.serial('invite links', () => {
       if (r.url().includes('/register')) asked.push(r.url())
     })
     await page.getByRole('button', { name: 'Create account and join' }).click()
-    await expect(page.getByText('This link is only for emails at @hainanu.edu.cn')).toBeVisible()
+    await expect(page.getByText('This link is only for emails at @campus.example.edu')).toBeVisible()
     await expect(page).toHaveURL(new RegExp(`/join/${link.token}$`))
     expect(asked).toEqual([])
     await context.close()
@@ -339,11 +339,11 @@ test.describe.serial('invite links', () => {
     // Kept to a school's domain, typed as people type it.
     await dialog.locator('.join-form__domain-select').click()
     const domains = dialog.locator('.join-form__domain-select input')
-    await domains.pressSequentially('@HainanU.edu.cn', { delay: 20 })
+    await domains.pressSequentially('@Campus.Example.EDU', { delay: 20 })
     await domains.press('Enter')
-    await expect(dialog.locator('.join-form__domain-select')).toContainText('hainanu.edu.cn')
+    await expect(dialog.locator('.join-form__domain-select')).toContainText('campus.example.edu')
     await dialog.getByRole('button', { name: 'Create link' }).click()
-    await expect(dialog.locator('.join-reveal__facts')).toContainText('@hainanu.edu.cn')
+    await expect(dialog.locator('.join-reveal__facts')).toContainText('@campus.example.edu')
     const url = await dialog.locator('.join-reveal__url input').inputValue()
     // Counted on this page's own clock, it would have ended ten minutes ago.
     await expect(dialog.locator('.join-reveal__clock')).toHaveText(/^00:0[1-8]$/)
@@ -353,7 +353,7 @@ test.describe.serial('invite links', () => {
     await expect(dialog.locator('.join-reveal__url input')).not.toHaveValue(url)
     // Counted on this page's own clock, it would end now.
     await expect(dialog.locator('.join-reveal__clock')).toHaveText(/^(10:00|09:5\d)$/)
-    await expect(dialog.locator('.join-reveal__facts')).toContainText('@hainanu.edu.cn')
+    await expect(dialog.locator('.join-reveal__facts')).toContainText('@campus.example.edu')
   })
 
   test('on a phone, in Traditional Chinese, the join page fits, and a new student joins through it', async ({

@@ -108,10 +108,10 @@ describe('the join page', () => {
   })
 
   it('offers someone signed out to sign in and come back, or to create an account', async () => {
-    preview = async () => ({ ...open, allowed_email_domains: ['hainanu.edu.cn'] })
+    preview = async () => ({ ...open, allowed_email_domains: ['campus.example.edu'] })
     const { w } = await mountJoin()
     expect(w.text()).toContain('You will join as a student')
-    expect(w.text()).toContain('Only people with an email at @hainanu.edu.cn can join')
+    expect(w.text()).toContain('Only people with an email at @campus.example.edu can join')
     const signIn = w.findAll('a').find((a) => a.text().includes('Sign in to join'))!
     // Signing in comes back here to join.
     expect(signIn.attributes('href')).toBe(`/login?next=/join/${TOKEN}?then=join`)
@@ -119,7 +119,7 @@ describe('the join page', () => {
     await create.trigger('click')
     await flushPromises()
     expect(w.find('input[name="email"]').exists()).toBe(true)
-    expect(w.text()).toContain('Use your email at @hainanu.edu.cn')
+    expect(w.text()).toContain('Use your email at @campus.example.edu')
     w.unmount()
   })
 
@@ -155,12 +155,12 @@ describe('the join page', () => {
   })
 
   it('gives the registration form the link’s domains, which its email is held to (see join.spec.ts)', async () => {
-    preview = async () => ({ ...open, allowed_email_domains: ['hainanu.edu.cn'] })
+    preview = async () => ({ ...open, allowed_email_domains: ['campus.example.edu'] })
     const { w } = await mountJoin()
     await w.findAll('button').find((b) => b.text() === 'Create an account')!.trigger('click')
     await flushPromises()
-    expect(w.findComponent({ name: 'JoinRegisterForm' }).props('domains')).toEqual(['hainanu.edu.cn'])
-    expect(w.text()).toContain('Use your email at @hainanu.edu.cn.')
+    expect(w.findComponent({ name: 'JoinRegisterForm' }).props('domains')).toEqual(['campus.example.edu'])
+    expect(w.text()).toContain('Use your email at @campus.example.edu.')
     w.unmount()
   })
 
@@ -234,7 +234,7 @@ describe('the join page', () => {
   })
 
   it('keeps asking for an email where the link asks for one, as before student numbers', async () => {
-    preview = async () => ({ ...open, email_required: true, allowed_email_domains: ['hainanu.edu.cn'] })
+    preview = async () => ({ ...open, email_required: true, allowed_email_domains: ['campus.example.edu'] })
     const { w } = await mountJoin()
     await w.findAll('button').find((b) => b.text() === 'Create an account')!.trigger('click')
     await flushPromises()
@@ -275,9 +275,9 @@ describe('the join page', () => {
   })
 
   it('tells someone signed in with an email at another domain that the link is not for them', async () => {
-    preview = async () => ({ ...open, allowed_email_domains: ['hainanu.edu.cn'] })
+    preview = async () => ({ ...open, allowed_email_domains: ['campus.example.edu'] })
     const { w } = await mountJoin({ me: { email: 'yuki@gmail.com' } })
-    expect(w.text()).toContain('You are signed in with yuki@gmail.com, but this link is only for emails at @hainanu.edu.cn')
+    expect(w.text()).toContain('You are signed in with yuki@gmail.com, but this link is only for emails at @campus.example.edu')
     expect(w.findAll('button').some((b) => b.text() === 'Join course')).toBe(false)
     expect(w.text()).toContain('Sign in as someone else')
     w.unmount()

@@ -5,7 +5,7 @@ describe('sessionOrigin', () => {
   it('reads how a session was begun from the label Core gives it', () => {
     expect(sessionOrigin('password login')).toEqual({ via: 'password' })
     expect(sessionOrigin('invitation accepted')).toEqual({ via: 'invite' })
-    expect(sessionOrigin('sso: polyu-adfs')).toEqual({ via: 'sso', provider: 'polyu-adfs' })
+    expect(sessionOrigin('sso: school-adfs')).toEqual({ via: 'sso', provider: 'school-adfs' })
     expect(sessionOrigin('something else')).toBeNull()
     expect(sessionOrigin(null)).toBeNull()
   })

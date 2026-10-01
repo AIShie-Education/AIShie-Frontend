@@ -98,16 +98,16 @@ describe('JoinLinksDialog', () => {
     const w = await mountDialog()
     expect(read).toHaveBeenCalledWith('course.join_link_list', { course_id: COURSE, limit: 100, after: undefined })
     expect(document.body.textContent).toContain('No invite links yet.')
-    write.mockResolvedValue(made({ max_uses: 30, allowed_email_domains: ['hainanu.edu.cn'] }))
-    read.mockResolvedValue({ links: [listed({ max_uses: 30, allowed_email_domains: ['hainanu.edu.cn'] })] })
+    write.mockResolvedValue(made({ max_uses: 30, allowed_email_domains: ['campus.example.edu'] }))
+    read.mockResolvedValue({ links: [listed({ max_uses: 30, allowed_email_domains: ['campus.example.edu'] })] })
     const form = w.findComponent({ name: 'JoinLinkForm' })
-    form.vm.$emit('update:modelValue', { maxUses: 30, domains: ['hainanu.edu.cn'] })
+    form.vm.$emit('update:modelValue', { maxUses: 30, domains: ['campus.example.edu'] })
     await flushPromises()
     form.vm.$emit('submit')
     await flushPromises()
     expect(write).toHaveBeenCalledWith(
       'course.join_link_create',
-      { course_id: COURSE, max_uses: 30, allowed_email_domains: ['hainanu.edu.cn'] },
+      { course_id: COURSE, max_uses: 30, allowed_email_domains: ['campus.example.edu'] },
       expect.objectContaining({ idempotencyKey: expect.any(String) }),
     )
     const url = document.body.querySelector<HTMLInputElement>('.join-reveal__url input')!

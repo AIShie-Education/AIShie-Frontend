@@ -315,8 +315,8 @@ describe('authMethods', () => {
 
   it("takes single sign-on with Core's name for the provider, and where it starts", async () => {
     built('false')
-    responses.push(json(200, { password: true, sso: { label: 'PolyU NetID', start: START } }))
-    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'PolyU NetID', start: START } })
+    responses.push(json(200, { password: true, sso: { label: 'School NetID', start: START } }))
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'School NetID', start: START } })
   })
 
   it('takes single sign-on with no name as the app’s own words, not the build’s', async () => {
@@ -326,11 +326,11 @@ describe('authMethods', () => {
   })
 
   it('takes a Core from before the route (404) to mean what the build says', async () => {
-    built('true', 'PolyU NetID')
+    built('true', 'School NetID')
     responses.push(
       json(404, { error: { code: 'not_found', message: 'no such route; GET /v1/tools lists what there is' } }),
     )
-    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'PolyU NetID', start: START } })
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'School NetID', start: START } })
 
     built('true')
     responses.push(json(404, {}))
@@ -342,9 +342,9 @@ describe('authMethods', () => {
   })
 
   it('takes no answer to mean what the build says, and does not ask again', async () => {
-    built('true', 'PolyU NetID')
+    built('true', 'School NetID')
     responses.push(() => Promise.reject(new TypeError('Failed to fetch')))
-    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'PolyU NetID', start: START } })
+    await expect(authMethods()).resolves.toEqual({ password: true, sso: { label: 'School NetID', start: START } })
     expect(calls).toHaveLength(1)
 
     built('false')
@@ -375,17 +375,17 @@ describe('authMethods', () => {
 })
 
 describe('authMethods with several identity providers', () => {
-  const OPERATOR = { id: 'polyu-adfs', label: 'PolyU NetID', start: '/v1/auth/sso/start/polyu-adfs' }
-  const SITE = { id: 'hainanu-cas', label: '海大統一認證', start: '/v1/auth/sso/start/hainanu-cas' }
+  const OPERATOR = { id: 'school-adfs', label: 'School NetID', start: '/v1/auth/sso/start/school-adfs' }
+  const SITE = { id: 'university-sso', label: '大學統一認證', start: '/v1/auth/sso/start/university-sso' }
 
   it('takes every provider offered, in Core’s order, beside the first as sso', async () => {
     responses.push(
-      json(200, { password: true, sso: { label: 'PolyU NetID', start: OPERATOR.start }, sso_providers: [OPERATOR, SITE] }),
+      json(200, { password: true, sso: { label: 'School NetID', start: OPERATOR.start }, sso_providers: [OPERATOR, SITE] }),
     )
     const m = await authMethods()
     expect(m).toEqual({
       password: true,
-      sso: { label: 'PolyU NetID', start: OPERATOR.start },
+      sso: { label: 'School NetID', start: OPERATOR.start },
       ssoProviders: [OPERATOR, SITE],
     })
     expect(ssoButtons(m)).toEqual([OPERATOR, SITE])
@@ -419,10 +419,10 @@ describe('authMethods with several identity providers', () => {
   })
 
   it('offers the one sso of a Core from before several providers, as it always did', async () => {
-    responses.push(json(200, { password: true, sso: { label: 'PolyU NetID', start: '/v1/auth/sso/start' } }))
+    responses.push(json(200, { password: true, sso: { label: 'School NetID', start: '/v1/auth/sso/start' } }))
     const m = await authMethods()
     expect(m.ssoProviders).toBeUndefined()
-    expect(ssoButtons(m)).toEqual([{ label: 'PolyU NetID', start: '/v1/auth/sso/start' }])
+    expect(ssoButtons(m)).toEqual([{ label: 'School NetID', start: '/v1/auth/sso/start' }])
     expect(ssoButtons({ sso: null })).toEqual([])
     expect(ssoButtons(null)).toEqual([])
   })

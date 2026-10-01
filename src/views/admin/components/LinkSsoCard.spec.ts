@@ -52,21 +52,25 @@ describe('linking a person at a provider', () => {
     const w = await card()
     expect(core.to('GET', SSO.list)).toHaveLength(1)
     const options = Array.from(document.querySelectorAll('.el-select-dropdown__item'), (o) => o.textContent)
-    expect(options).toEqual(['PolyU NetIDpolyu-adfs', '海大統一認證hainanu-cas', 'Librarylib-keycloaknot offered now'])
+    expect(options).toEqual([
+      'School NetIDschool-adfs',
+      '大學統一認證university-sso',
+      'Librarylib-keycloaknot offered now',
+    ])
     // The operator's is chosen first; AD FS's upn is said as it always was.
     expect(label(w, '.sso__subject')).toBe('Account (UPN)')
-    ;(w.vm as unknown as { chooseProvider: (v: string) => void }).chooseProvider('hainanu-cas')
+    ;(w.vm as unknown as { chooseProvider: (v: string) => void }).chooseProvider('university-sso')
     await flushPromises()
     expect(label(w, '.sso__subject')).toBe('Account (sub)')
-    expect(w.text()).toContain('What 海大統一認證 gives as its sub claim for this person.')
+    expect(w.text()).toContain('What 大學統一認證 gives as its sub claim for this person.')
 
     core.once('POST', LINK, () => executed({ credential_id: 'cred-1' }))
-    await w.find('.sso__subject input').setValue('20231234@hainanu.edu.cn')
+    await w.find('.sso__subject input').setValue('20231234@example.edu')
     await w.find('form').trigger('submit')
     await settle()
     const [post] = core.to('POST', LINK)
     expect(post.url).toBe(`/v1/actors/${PERSON.id}/sso`)
-    expect(JSON.parse(post.body!)).toEqual({ provider: 'hainanu-cas', subject: '20231234@hainanu.edu.cn' })
+    expect(JSON.parse(post.body!)).toEqual({ provider: 'university-sso', subject: '20231234@example.edu' })
   })
 
   it('takes the provider’s id as typed where Core gives no list', async () => {
