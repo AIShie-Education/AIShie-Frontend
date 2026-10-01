@@ -8,6 +8,7 @@ export default {
     presets: '權限預設',
     sso: '登入方式',
     runtime: 'AI 與文件',
+    export: '匯出對話',
   },
 
   courses: {

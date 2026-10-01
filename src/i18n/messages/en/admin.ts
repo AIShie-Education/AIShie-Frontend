@@ -8,6 +8,7 @@ export default {
     presets: 'Permission presets',
     sso: 'Sign-in',
     runtime: 'AI and documents',
+    export: 'Export conversations',
   },
 
   courses: {
