@@ -47,7 +47,8 @@ async function mountWelcome() {
 }
 
 describe('the welcome page', () => {
-  // One message a test, so that each renders the page once.
+  // One message a test, so that each test does less: a render, a submit,
+  // and the languages after it.
   async function failedSubmit(err: ApiError) {
     const w = await mountWelcome()
     const signIn = vi.spyOn(useSessionStore(), 'signInWithInvite').mockRejectedValueOnce(err)
