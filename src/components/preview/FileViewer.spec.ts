@@ -46,7 +46,14 @@ vi.mock('@/composables/useRuntime', async () => {
     ),
   }
 })
+const printed: Record<string, any>[] = []
+vi.mock('@/utils/printLayout', async (orig) => {
+  const real = await orig<typeof import('@/utils/printLayout')>()
+  return { ...real, printDocument: vi.fn(async (src: Record<string, any>) => void printed.push(src)) }
+})
+
 const { i18n, setLocale } = await import('@/i18n')
+const { useSessionStore } = await import('@/stores/session')
 const { default: FileViewer } = await import('./FileViewer.vue')
 const { closePreview, openPreview, previewState } = await import('./viewer')
 type PreviewFile = import('./viewer').PreviewFile
@@ -61,6 +68,7 @@ beforeEach(() => {
   transcription = true
   runtimeAsked = 0
   fetched.length = 0
+  printed.length = 0
   downloads.length = 0
   made = 0
   revoked.length = 0
@@ -352,5 +360,56 @@ describe('FileViewer', () => {
     expect($('.file-viewer__note-text')!.textContent).toBe(
       'A preview of Word, PowerPoint and Excel files is not available yet. Download it to open it.',
     )
+  })
+
+  it('downloads a text file as a PDF, through the print window: titled by its name, under its course and date', async () => {
+    useSessionStore().memberships = [
+      { course_id: 'k1', code: 'CS101', title: 'Programming', status: 'active' } as never,
+    ]
+    await open([file('notes.md', 'text/markdown', '# Recursion', { date: '2026-09-30T08:00:00Z' })], 0, {
+      title: 'Week 3',
+      courseId: 'k1',
+    })
+    const button = $('.file-viewer__actions .print-button__button')!
+    expect(button.textContent!.trim()).toBe('Download as PDF')
+    expect(document.getElementById(button.getAttribute('aria-describedby')!)!.textContent).toBe(
+      'In the print window, choose “Save as PDF”',
+    )
+    button.click()
+    await flushPromises()
+    expect(printed).toEqual([
+      {
+        title: 'notes.md',
+        lines: ['Week 3', 'CS101 · Programming', expect.stringMatching(/2026/)],
+        body: { markdown: '# Recursion' },
+        lang: 'en',
+      },
+    ])
+  })
+
+  it('downloads code as a PDF in a monospaced face, an Office file’s text version under its name, and no CSV or image', async () => {
+    await open([
+      file('fact.py', 'text/x-python', 'print(1)\n'),
+      file('essay.docx', 'application/msword', 'x', { readText: async () => done('The essay.') }),
+      file('marks.csv', 'text/csv', 'a,b\n'),
+      file('a.png', 'image/png', 'png'),
+    ])
+    $('.file-viewer__actions .print-button__button')!.click()
+    await flushPromises()
+    expect(printed[0]).toMatchObject({ title: 'fact.py', body: { text: 'print(1)\n', mono: true } })
+    $('.file-viewer__next')!.click()
+    await flushPromises()
+    await flushPromises()
+    $('.file-viewer__actions .print-button__button')!.click()
+    await flushPromises()
+    expect(printed[1]).toMatchObject({ title: 'essay.docx — text version', body: { markdown: 'The essay.' } })
+    $('.file-viewer__next')!.click()
+    await flushPromises()
+    await flushPromises()
+    expect($('.file-viewer__actions .print-button__button')).toBeNull()
+    $('.file-viewer__next')!.click()
+    await flushPromises()
+    await flushPromises()
+    expect($('.file-viewer__actions .print-button__button')).toBeNull()
   })
 })

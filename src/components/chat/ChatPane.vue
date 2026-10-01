@@ -41,6 +41,10 @@
 // back to the composer brings its files back too, where they were sent from
 // this page (uploaded again: an upload is attached once); otherwise it says
 // to attach them again.
+//
+// The ⋯ menu also downloads the conversation as a PDF (下載為 PDF): every
+// message, read back to the first, laid out for paper under who wrote it and
+// when, through the browser's print window (usePrintLayout).
 import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -53,6 +57,9 @@ import { useNow } from '@/composables/useNow'
 import { useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
 import { useDropTarget } from '@/composables/useFileDrop'
+import { courseLine, dateLine, usePrintLayout, type PrintRequest } from '@/composables/usePrintLayout'
+import { formatDateTime } from '@/utils/format'
+import { entriesHtml } from '@/utils/printLayout'
 import type { ApiError } from '@/api/http'
 import {
   answersElsewhere,
@@ -630,6 +637,51 @@ function suggest(text: string) {
 const readersOpen = ref(false)
 function onMenu(command: string) {
   if (command === 'readers') readersOpen.value = true
+  else if (command === 'print') void printer.print(transcript)
+}
+
+// Downloaded as a PDF: every message, the earliest read first (a page at a time, as the pane reads them).
+const printer = usePrintLayout()
+/** The most pages of older messages read for a transcript. */
+const TRANSCRIPT_PAGES = 50
+async function transcript(): Promise<PrintRequest> {
+  let complete = true
+  if (conv) {
+    for (let page = 0; conv.hasOlder.value && page < TRANSCRIPT_PAGES; page++) {
+      while (conv.loadingOlder.value) await new Promise((resolve) => setTimeout(resolve, 100))
+      if (!conv.hasOlder.value) break
+      await conv.loadOlder()
+      if (conv.olderError.value) break
+    }
+    complete = !conv.hasOlder.value
+  }
+  const v = view.value
+  const name = other.value?.name ?? ''
+  const list = messages.value
+  const n = list.length
+  return {
+    title: v?.title || t('preview.print.conversationWith', { name }),
+    lines: [
+      v?.title ? t('preview.print.conversationWith', { name }) : null,
+      courseLine(props.courseId),
+      `${dateLine(list[0]?.created_at ?? v?.created_at)} · ${t('preview.print.messages', { n }, n)}`,
+      complete ? null : t('preview.print.partial'),
+    ],
+    body: {
+      html: entriesHtml(
+        list.map((m) => ({
+          who: authorName(m),
+          when: formatDateTime(m.created_at),
+          note: m.retracted ? t('preview.print.withdrawn') : null,
+          markdown: !m.retracted && !fromOpener(m) ? (m.body ?? '') : null,
+          text: !m.retracted && fromOpener(m) ? (m.body ?? '') : null,
+          files: m.attachments?.length
+            ? t('preview.print.files', { names: m.attachments.map((a) => a.filename).join(', ') })
+            : null,
+        })),
+      ),
+    },
+  }
 }
 
 // --- What the line above the composer says -------------------------------------------
@@ -760,6 +812,9 @@ const closedLine = computed(() => {
             <el-dropdown-menu>
               <el-dropdown-item command="readers">
                 <el-icon aria-hidden="true"><View /></el-icon>{{ t('chat.visibleTo.button') }}
+              </el-dropdown-item>
+              <el-dropdown-item v-if="conv && messages.length" command="print" :disabled="printer.busy.value">
+                <el-icon aria-hidden="true"><Printer /></el-icon>{{ t('preview.print.button') }}
               </el-dropdown-item>
               <el-dropdown-item v-if="answerLevel" disabled class="chat-pane__menu-level">
                 <el-icon aria-hidden="true"><Stamp /></el-icon>{{ t(`enums.answerLevel.${answerLevel}`) }}

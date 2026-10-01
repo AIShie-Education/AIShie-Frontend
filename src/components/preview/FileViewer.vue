@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // The file viewer (預覽): a large dialog over the page, the whole screen on a
 // phone, showing one file of those it was opened on (viewer.ts), with the
-// previous and the next, its download (under its name), and its close
-// button. It works from the keyboard: Tab stays in it, Escape closes it
-// (focus goes back to what opened it), and the left and right arrow keys go
-// to the previous and the next file, except where they move something of
-// their own (a field, a player, a page or an image wider than the window).
+// previous and the next, its download (under its name), "Download as PDF"
+// where it is text, and its close button. It works from the keyboard: Tab
+// stays in it, Escape closes it (focus goes back to what opened it), and the
+// left and right arrow keys go to the previous and the next file, except
+// where they move something of their own (a field, a player, a page or an
+// image wider than the window).
 //
 // What a file is decides how it is shown (utils/preview.ts): a PDF in the
 // page (PdfView, with pdf.js, loaded only then); an image as an image; text,
@@ -25,10 +26,12 @@ import { useI18n } from 'vue-i18n'
 import { fetchBlob, isAbort, type ApiError } from '@/api/http'
 import type { TextStatus, TextVersion } from '@/api/types'
 import MarkdownView from '@/components/MarkdownView.vue'
+import PrintButton from '@/components/PrintButton.vue'
 import { toApiError } from '@/composables/useAsync'
 import { errorMessage, notifyError } from '@/composables/useErrors'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useRuntime, type UseRuntime } from '@/composables/useRuntime'
+import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { FILE_ICON, fileKind } from '@/utils/files'
 import { formatBytes } from '@/utils/format'
@@ -282,7 +285,7 @@ watch(
 )
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
-// --- Downloading -------------------------------------------------------------------------------------------
+// --- Downloading, and "Download as PDF" ---------------------------------------------------------------
 
 const downloading = ref(false)
 async function download() {
@@ -295,6 +298,34 @@ async function download() {
     notifyError(e, f.filename, { reasons: FILE_REFUSAL_SCOPE })
   } finally {
     downloading.value = false
+  }
+}
+
+/** Text that is laid out for paper: a text, Markdown or code file, and an Office file's text version. */
+const printable = computed(
+  () => (view.value.as === 'text' && view.value.kind !== 'csv') || view.value.as === 'textVersion',
+)
+function printSource(): PrintRequest {
+  const f = file.value!
+  const v = view.value
+  const lines = [
+    state.title && state.title !== f.filename ? state.title : null,
+    courseLine(state.courseId),
+    dateLine(f.date),
+  ]
+  if (v.as === 'textVersion') {
+    return {
+      title: t('preview.print.textVersionOf', { name: f.filename }),
+      lines,
+      body: { markdown: v.body },
+      footer: t('preview.print.textVersionNote'),
+    }
+  }
+  if (v.as === 'text' && v.kind === 'markdown') return { title: f.filename, lines, body: { markdown: v.text } }
+  return {
+    title: f.filename,
+    lines,
+    body: { text: v.as === 'text' ? v.text : '', mono: v.as === 'text' && v.kind === 'code' },
   }
 }
 
@@ -343,6 +374,7 @@ function onClosed() {
               <el-icon v-if="!downloading"><Download /></el-icon>
               <span>{{ t('preview.download') }}</span>
             </el-button>
+            <PrintButton v-if="printable" :source="printSource" />
           </div>
         </div>
         <div v-if="many" class="file-viewer__nav" role="group" :aria-label="t('preview.files')">

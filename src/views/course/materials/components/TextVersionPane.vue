@@ -10,6 +10,9 @@
 // Every read and write names the file (file_id): Core refuses to guess which
 // of several files is meant (file_id_required).
 //
+// A text that is done may be downloaded as a PDF (下載為 PDF): laid out for
+// paper and handed to the browser's print window (PrintButton).
+//
 // Whoever may write the document (document_write, as for a new version)
 // edits it (document.text_update, from the revision read: one that changed
 // meanwhile is said so, and the draft kept to be saved over the latest), and
@@ -32,6 +35,8 @@ import AsyncState from '@/components/AsyncState.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import TimeText from '@/components/TimeText.vue'
+import PrintButton from '@/components/PrintButton.vue'
+import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
 import type { ApiError } from '@/api/http'
 import {
   TEXT_STATUS_TAG,
@@ -71,6 +76,8 @@ const props = defineProps<{
   needsApproval: boolean
   /** The runtime's transcriber is on (info.features.transcription). */
   transcriptionOn: boolean
+  /** The document's title, said above the text when it is downloaded as a PDF. */
+  docTitle?: string
 }>()
 const emit = defineEmits<{
   /** The text changed here: the page may read the version again. */
@@ -174,6 +181,22 @@ usePolling(() => load(), {
   immediate: false,
   enabled: () => props.active && !editing.value && shown.value === 'queued',
 })
+
+// --- Downloaded as a PDF ------------------------------------------------------------------
+function printSource(): PrintRequest {
+  const c = current.value
+  const when = dateLine(c?.edited_at ?? c?.produced_at ?? c?.updated_at)
+  return {
+    title: t('preview.print.textVersionOf', { name: props.fileName }),
+    lines: [
+      props.docTitle,
+      courseLine(props.courseId),
+      `${t('materials.document.version', { seq: props.seq })} · ${when}`,
+    ],
+    body: { markdown: body.value },
+    footer: t('preview.print.textVersionNote'),
+  }
+}
 
 // --- Where it came from ----------------------------------------------------------------
 const source = computed(() => (status.value === 'done' ? (current.value?.source ?? 'ai') : null))
@@ -407,6 +430,11 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
         >
           <el-option v-for="p in pages" :key="p.id" :value="p.id" :label="p.text" />
         </el-select>
+        <PrintButton
+          v-if="shown === 'text' && !editing && body.trim()"
+          :source="printSource"
+          class="text-pane__print"
+        />
         <el-tooltip :content="t('materials.document.text.actions.refresh')" placement="top">
           <el-button
             size="small"

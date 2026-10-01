@@ -1,4 +1,4 @@
-// 文件预览（components/preview）。
+// 文件预览（components/preview）与“下载为 PDF”（PrintButton）。
 export default {
   open: '预览“{name}”',
   openTip: '预览',
@@ -66,5 +66,18 @@ export default {
     actualTip: '实际大小',
     fitWidth: '适合宽度',
     fit: '适合窗口',
+  },
+  print: {
+    button: '下载为 PDF',
+    hint: '在打印窗口选择“另存为 PDF”',
+    opening: '正在打开打印窗口：请在其中选择“另存为 PDF”以保存文件。',
+    failed: '无法打开打印版面',
+    textVersionOf: '{name}（文字版）',
+    textVersionNote: '文字版是从文件读出的文字，不包括原文件的版面、图片和格式。',
+    conversationWith: '与 {name} 的对话',
+    messages: '{n} 条消息',
+    withdrawn: '已撤回',
+    files: '文件：{names}',
+    partial: '最早的消息未能读取，因此没有包括在内。',
   },
 }

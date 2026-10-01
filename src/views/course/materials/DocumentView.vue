@@ -30,7 +30,9 @@
 // A new version opens on a drop zone for its files. Whoever may add one can
 // also drop files anywhere on the page, which opens it with them.
 //
-// A file opens in the file viewer (預覽), among the version's others.
+// A file opens in the file viewer (預覽); the version's text note, and each
+// file's text version, may be downloaded as a PDF (下載為 PDF), through the
+// browser's print window.
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
@@ -59,6 +61,8 @@ import Tombstone from './components/Tombstone.vue'
 import VersionDialog from './components/VersionDialog.vue'
 import VersionHistory from './components/VersionHistory.vue'
 import VersionFileList from '@/components/VersionFileList.vue'
+import PrintButton from '@/components/PrintButton.vue'
+import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
 import type { DocumentFile } from '@/api/types'
 import TextFilePicker from './components/TextFilePicker.vue'
 import { textTabShown } from './components/textVersion'
@@ -444,6 +448,20 @@ function showText(f: DocumentFile) {
 function onTextProposed(message: string) {
   pendingNote.value = message
 }
+
+// --- The version's text note, downloaded as a PDF ----------------------------------------
+function noteSource(): PrintRequest {
+  const d = doc.value!
+  const v = shown.value!
+  const when = dateLine(v.created_at)
+  // An owned file has one version, which needs no number.
+  const version = courseLevel.value ? `${t('materials.document.version', { seq: v.seq })} · ${when}` : when
+  return {
+    title: d.title,
+    lines: [courseLine(props.courseId), version],
+    body: { markdown: v.body_md ?? '' },
+  }
+}
 </script>
 
 <template>
@@ -592,6 +610,12 @@ function onTextProposed(message: string) {
                     </template>
                     <TimeText :value="shown.created_at" />
                   </span>
+                  <PrintButton
+                    v-if="shown.body_md && !versionPurge && contentTab !== 'text'"
+                    link
+                    :source="noteSource"
+                    class="doc-content__print"
+                  />
                 </div>
 
                 <Tombstone v-if="versionPurge && !docPurge" :purge="versionPurge" of="version" />
@@ -629,6 +653,7 @@ function onTextProposed(message: string) {
                     :write-disabled="writeDisabled"
                     :needs-approval="needsApproval"
                     :transcription-on="transcriptionOn"
+                    :doc-title="doc.title"
                     @changed="reloadAll"
                     @proposed="onTextProposed"
                   />
@@ -851,6 +876,9 @@ function onTextProposed(message: string) {
   flex-wrap: wrap;
   gap: 4px;
   color: var(--el-text-color-secondary);
+}
+.doc-content__print {
+  margin-left: auto;
 }
 .doc-content__dot {
   color: var(--el-text-color-placeholder);

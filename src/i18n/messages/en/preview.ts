@@ -1,4 +1,4 @@
-// The file viewer (components/preview).
+// The file viewer (components/preview) and "Download as PDF" (PrintButton).
 export default {
   open: 'Preview “{name}”',
   openTip: 'Preview',
@@ -68,5 +68,19 @@ export default {
     actualTip: 'Actual size',
     fitWidth: 'Fit width',
     fit: 'Fit',
+  },
+  print: {
+    button: 'Download as PDF',
+    hint: 'In the print window, choose “Save as PDF”',
+    opening: 'Opening the print window: choose “Save as PDF” there to save the file.',
+    failed: 'The print layout could not be opened',
+    textVersionOf: '{name} — text version',
+    textVersionNote:
+      'A text version (文字版) is the file’s words, read from it: its layout, pictures and formatting are not part of it.',
+    conversationWith: 'Conversation with {name}',
+    messages: 'One message | {n} messages',
+    withdrawn: 'Withdrawn',
+    files: 'Files: {names}',
+    partial: 'The earliest messages could not be read, and are not included.',
   },
 }

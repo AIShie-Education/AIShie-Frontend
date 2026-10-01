@@ -5,7 +5,8 @@
 // document has exactly one version, which never changes) and its files are
 // listed, each to download under its name (VersionFileList). A document of
 // one file whose name is its title is that file alone; otherwise its title
-// heads its files. One with no file downloads its text, as Markdown.
+// heads its files. One with no file downloads its text, as Markdown or as a
+// PDF (through the browser's print window, PrintButton).
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read, type ApiError } from '@/api/http'
@@ -15,6 +16,8 @@ import { errorMessage } from '@/composables/useErrors'
 import { versionFilesOf } from '@/utils/documentFiles'
 import { downloadName } from '@/utils/format'
 import VersionFileList from './VersionFileList.vue'
+import PrintButton from './PrintButton.vue'
+import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
 
 const props = defineProps<{
   courseId: string
@@ -49,6 +52,14 @@ const stem = (name: string) => name.replace(/\.[^.\s]{1,16}$/, '').trim().toLowe
 const alone = computed(
   () => files.value.length === 1 && stem(files.value[0]!.filename) === stem(doc.value?.title ?? props.title),
 )
+
+function textSource(): PrintRequest {
+  return {
+    title: doc.value?.title || props.title,
+    lines: [courseLine(props.courseId), dateLine(version.value?.created_at)],
+    body: { markdown: version.value?.body_md ?? '' },
+  }
+}
 
 function downloadText() {
   const body = version.value?.body_md
@@ -103,10 +114,13 @@ export function forgetDocumentFiles() {
       :doc-title="doc?.title || title"
       :date="version?.created_at"
     />
-    <el-button v-else-if="version?.body_md" link type="primary" class="doc-files__text" @click="downloadText">
-      <el-icon><Download /></el-icon>
-      <span>{{ t('common.files.downloadText') }}</span>
-    </el-button>
+    <div v-else-if="version?.body_md" class="doc-files__text">
+      <el-button link type="primary" @click="downloadText">
+        <el-icon><Download /></el-icon>
+        <span>{{ t('common.files.downloadText') }}</span>
+      </el-button>
+      <PrintButton link :source="textSource" />
+    </div>
     <p v-if="error" class="doc-files__error">
       {{ errorMessage(error) }}
       <el-button link type="primary" size="small" @click="load">{{ t('common.actions.retry') }}</el-button>
@@ -137,6 +151,10 @@ export function forgetDocumentFiles() {
 }
 .doc-files__text {
   align-self: flex-start;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
 }
 .doc-files__error {
   margin: 0;
