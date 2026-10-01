@@ -347,9 +347,10 @@ export function startExport(actorId: string, form: ExportForm, labels: ExportLab
     state: 'running',
   }
   lastRun.value = run
-  const p: Promise<ExportRun> = runExport(actorId, args, { form, labels }).then(
+  const p: Promise<ExportRun> = runExport(actorId, args, { form: run.form, labels: run.labels }).then(
     (exported) => {
-      rememberExport(actorId, exported.result, { scope: form.scope, labels, args })
+      // As it was asked: the form may have been changed meanwhile.
+      rememberExport(actorId, exported.result, { scope: run.form.scope, labels: run.labels, args })
       return { ...run, state: 'done' as const, exported }
     },
     (e) => ({

@@ -20,6 +20,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
+import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import { formatCountdown } from '@/utils/countdown'
@@ -250,6 +251,12 @@ const scopeOptions = computed(() =>
             :placeholder="t('auditExport.form.departmentPlaceholder')"
           />
           <div class="app-form-hint">{{ t('auditExport.form.departmentHint') }}</div>
+          <div v-if="tree.error.value && !tree.loaded.value" class="export-form__load-error" role="alert">
+            <span>{{ errorMessage(tree.error.value) }}</span>
+            <el-button size="small" link type="primary" :loading="tree.loading.value" @click="tree.reload()">
+              {{ t('common.actions.retry') }}
+            </el-button>
+          </div>
         </el-form-item>
         <div v-else class="export-form__site app-form-hint">{{ t('auditExport.form.siteHint') }}</div>
 
@@ -406,6 +413,14 @@ const scopeOptions = computed(() =>
 }
 .export-form__scopes {
   flex-wrap: wrap;
+}
+.export-form__load-error {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--el-color-danger);
 }
 .export-form__site {
   margin: -8px 0 18px;
