@@ -85,6 +85,44 @@ function panelOf(page: Page) {
   return page.locator('#chat-panel')
 }
 
+/**
+ * Yuki reads, in Core (conversation.mark_read), every conversation of hers
+ * it counts as unread: what an earlier attempt at these tests left unread,
+ * cut short before she read an answer (and retried), is not counted with
+ * this attempt's answers on the chat's button.
+ */
+async function readEverythingBefore() {
+  const yuki = demo().actors.yuki.token
+  const mine = done(await call(yuki, 'GET', '/v1/me/conversations?limit=100'), 'me.conversations')
+  const unread = (
+    (mine.conversations ?? []) as { conversation_id: string; course: { course_id: string }; unread: boolean }[]
+  ).filter((c) => c.unread)
+  for (const c of unread) {
+    const read = await call(
+      yuki,
+      'POST',
+      `/v1/courses/${c.course.course_id}/conversations/${c.conversation_id}/read`,
+      {},
+    )
+    done(read, 'conversation.mark_read')
+  }
+}
+
+/**
+ * Opens the window's history from its History button, once nothing lies
+ * over it: the mouse is moved off whatever the last step left it on, where
+ * it may hold a tooltip up (a message's Copy, a button of the composer's)
+ * over the button, and the click waits for no tooltip to be showing. Done
+ * once the history is shown.
+ */
+async function showHistory(page: Page) {
+  await page.mouse.move(0, 0)
+  await expect(page.getByRole('tooltip')).toHaveCount(0)
+  const history = panelOf(page).getByRole('button', { name: 'History', exact: true })
+  await history.click()
+  await expect(history).toHaveAttribute('aria-pressed', 'true')
+}
+
 async function box_(l: ReturnType<Page['locator']>) {
   return (await l.boundingBox())!
 }
@@ -240,6 +278,7 @@ test.describe.serial('the chat panel', () => {
       'agent.issue_token',
     ).token
     done(await call(w.tutorToken, 'POST', '/v1/me/site-chat', { on: true }), 'me.site_chat')
+    await readEverythingBefore()
   })
 
   test('is opened from its round button on every signed-in page, over the page, and never from the header', async ({
@@ -398,7 +437,7 @@ test.describe.serial('the chat panel', () => {
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
 
     // Its history: the conversation, named by course and agent, with its title and where it stands.
-    await panel.getByRole('button', { name: 'History', exact: true }).click()
+    await showHistory(page)
     const item = panel.locator('.hist-row').filter({ hasText: TITLE })
     await expect(item).toContainText(`CS101 · ${TUTOR}`)
     await expect(item.locator('.hist-row__title')).toHaveText(TITLE)
@@ -635,7 +674,7 @@ test.describe.serial('the chat panel', () => {
     await page.goto(coursePath())
     await chatButton(page).click()
     const panel = panelOf(page)
-    await panel.getByRole('button', { name: 'History', exact: true }).click()
+    await showHistory(page)
     await panel.locator('.hist-row').filter({ hasText: TITLE }).click()
     const composer = panel.locator('textarea')
     await composer.fill(LATER)
@@ -651,7 +690,7 @@ test.describe.serial('the chat panel', () => {
     await expect(chatBadge(page)).toHaveText('1')
 
     await chatButton(page).click()
-    await panel.getByRole('button', { name: 'History', exact: true }).click()
+    await showHistory(page)
     const item = panel.locator('.hist-row').filter({ hasText: TITLE })
     await expect(item).toHaveClass(/is-unread/)
     await expect(item).toContainText('New answer')
@@ -700,7 +739,7 @@ test.describe.serial('the chat panel', () => {
       // She reads it in one.
       await chatButton(a).click()
       const panel = panelOf(a)
-      await panel.getByRole('button', { name: 'History', exact: true }).click()
+      await showHistory(a)
       const item = panel.locator('.hist-row').filter({ hasText: TITLE })
       await expect(item).toHaveClass(/is-unread/)
       await item.click()
@@ -715,7 +754,7 @@ test.describe.serial('the chat panel', () => {
       // …and its history, reloaded, marks it read.
       await b.reload()
       await chatButton(b).click()
-      await panelOf(b).getByRole('button', { name: 'History', exact: true }).click()
+      await showHistory(b)
       const row = panelOf(b).locator('.hist-row').filter({ hasText: TITLE })
       await expect(row).toBeVisible()
       await expect(row).not.toHaveClass(/is-unread/)
@@ -896,7 +935,7 @@ test.describe.serial('the chat panel', () => {
       expect([box.x, box.y, box.width, box.height].map(Math.round)).toEqual([0, 0, 390, 844])
       await expect(panel.getByRole('separator')).toHaveCount(0)
 
-      await panel.getByRole('button', { name: 'History', exact: true }).click()
+      await showHistory(page)
       await panel.locator('.hist-row').filter({ hasText: TITLE }).click()
       await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
       // Its paperclip is there, within the screen.
