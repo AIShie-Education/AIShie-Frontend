@@ -5,6 +5,7 @@ import * as icons from '@element-plus/icons-vue'
 import type { MessageAttachment } from '@/api/types'
 
 const reads: { tool: string; args: Record<string, unknown> }[] = []
+const writes: { tool: string; args: Record<string, unknown> }[] = []
 let readAnswer: (tool: string, args: Record<string, unknown>) => unknown
 const fetched: string[] = []
 
@@ -19,6 +20,16 @@ vi.mock('@/api/http', async (orig) => {
     fetchBlob: vi.fn(async (url: string) => {
       fetched.push(url)
       return new Blob(['png'], { type: 'image/png' })
+    }),
+    write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+      writes.push({ tool, args })
+      return {
+        status: 'executed',
+        actionId: 'a1',
+        reviewState: 'none',
+        replayed: false,
+        result: { changed: true, rendition_id: 'r1', state: 'queued' },
+      }
     }),
   }
 })
@@ -58,6 +69,7 @@ let urls = 0
 beforeEach(() => {
   setLocale('en')
   reads.length = 0
+  writes.length = 0
   fetched.length = 0
   readAnswer = (_tool, args) => attachment(args)
   urls = 0
@@ -134,6 +146,43 @@ describe('ChatMessageFiles', () => {
     expect(reads).toEqual([])
     expect(await state.files[1]!.url()).toBe('http://core.test/v1/blobs/get-f2')
     expect(reads).toEqual([{ tool: 'conversation.attachment', args: { course_id: 'k1', attachment_id: 'f2' } }])
+    closePreview()
+  })
+
+  it('marks an Office file whose PDF is made, reads its rendition afresh, and sends it back where the caller may', async () => {
+    const PPTX = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    const files = [
+      file({ id: 's1', filename: 'slides.pptx', content_type: PPTX, rendition: { state: 'done', page_count: 4 } }),
+      file({ id: 's2', filename: 'draft.pptx', content_type: PPTX, rendition: { state: 'failed', reason: 'timeout' } }),
+      file(),
+    ]
+    readAnswer = (_tool, args) => ({
+      ...attachment(args, 'slides.pptx'),
+      rendition: { state: 'done', page_count: 4, download_url: 'http://core.test/v1/blobs/pdf-s1' },
+    })
+    const w = mount(ChatMessageFiles, { props: { courseId: 'k1', files }, global })
+    const tags = w.findAll('.msg-file').map((f) => f.find('.msg-file__pdf'))
+    expect(tags.map((t) => t.exists())).toEqual([true, false, false])
+    expect(w.findAll('.msg-file__open')[0]!.attributes('aria-label')).toBe(
+      'Preview “slides.pptx” (Slides · 1.5 KB · PDF)',
+    )
+
+    await w.findAll('.msg-file__open')[1]!.trigger('click')
+    let state = previewState()
+    expect(state.files[1]!.rendition).toEqual({ state: 'failed', reason: 'timeout' })
+    expect(state.files[2]!.rendition).toBeNull()
+    expect(await state.files[0]!.readRendition!()).toMatchObject({ state: 'done', page_count: 4 })
+    expect(reads).toEqual([{ tool: 'conversation.attachment', args: { course_id: 'k1', attachment_id: 's1' } }])
+    // Not the caller's message to send back.
+    expect(state.files[1]!.retryRendition).toBeUndefined()
+    closePreview()
+
+    await w.setProps({ retryRenditions: true })
+    await w.findAll('.msg-file__open')[1]!.trigger('click')
+    state = previewState()
+    expect(state.files[2]!.retryRendition).toBeUndefined()
+    await state.files[1]!.retryRendition!()
+    expect(writes).toEqual([{ tool: 'conversation.rendition_retry', args: { course_id: 'k1', attachment_id: 's2' } }])
     closePreview()
   })
 

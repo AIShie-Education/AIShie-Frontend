@@ -407,6 +407,7 @@ function refresh() {
                         :files="instructionFiles"
                         :doc-title="instructionsDoc.title"
                         :date="instructionsDoc.version.created_at"
+                        :retry-renditions="course.writable && course.can('document_write')"
                       />
                     </div>
                   </template>

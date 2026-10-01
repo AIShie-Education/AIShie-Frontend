@@ -43,11 +43,21 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   site's own files, page by page as it is scrolled, with page numbers, zoom and fit to width, and
   its text selectable; an image is shown fitted or zoomed; Markdown is rendered, code highlighted,
   plain text shown as it is (in UTF-8, Big5 or GB 18030), CSV as a table of its first thousand rows;
-  audio and video play in the browser. A Word, PowerPoint or Excel file, which no browser shows, is
-  shown as its text version (文字版) once Core has one, and otherwise says that no preview is
-  available yet, with its download. Files are fetched from a fresh short-lived URL and shown from
+  audio and video play in the browser. Files are fetched from a fresh short-lived URL and shown from
   object URLs let go as soon as another is shown; a file larger than is fetched to be shown (2 MB of
   text, 40 MB of an image, 100 MB of a PDF) is offered to download.
+- **Office files as PDF (統一轉 PDF)** — a Word, Excel, PowerPoint, OpenDocument or RTF file, which no
+  browser shows, is converted to PDF once, on the server, by the site's runtime (Core keeps the PDF
+  as the file's rendition), and the viewer shows that PDF as it shows any other, with 「下載 PDF」
+  beside the file's own download. Until it is ready the viewer says 「正在轉換為 PDF…」 and shows it
+  by itself once it is, asking Core again (after 2 seconds, then twice as long each time, up to 30)
+  while the file is shown. One that could not be converted says why (protected by a password,
+  not readable as an Office document, its PDF too large, the conversion failed or took too long, or
+  never finished), with the file's download, and 「再試一次」 for whoever may change the document or
+  sent the message, which queues it again. A file listed whose PDF is made says so (a PDF tag). Where
+  Core keeps no PDF of an Office file (a Core from before, or a kind it does not convert), it is
+  shown as its text version (文字版) once Core has one, and otherwise says that no preview is
+  available yet, with its download.
 - **Download as PDF (下載為 PDF)** — a version's text note, a file's text version, a text or
   Markdown file in the viewer, a submitted text and a conversation with an agent are laid out for
   paper (the title, the course and the date above, the page's number at its foot) and handed to the
@@ -439,7 +449,8 @@ src/components/           shared pieces: status tags, Markdown, the drop zone (F
                           files (VersionFileList, DocumentFiles), the file viewer (preview/: FileViewer,
                           PdfView with pdf.js), "Download as PDF" (PrintButton), permission editor…
 src/utils/                formatting, files' kinds and names (files.ts), a version's files (documentFiles.ts),
-                          how a file is previewed (preview.ts), the print layout (printLayout.ts)…
+                          how a file is previewed (preview.ts), an Office file's PDF (rendition.ts),
+                          the print layout (printLayout.ts)…
 src/layouts/              the app frame, and the course frame with its sections
 src/views/                one directory per area
 src/i18n/messages/        one file per namespace and language

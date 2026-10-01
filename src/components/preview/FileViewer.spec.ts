@@ -56,6 +56,7 @@ const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { default: FileViewer } = await import('./FileViewer.vue')
 const { closePreview, openPreview, previewState } = await import('./viewer')
+const { ApiError } = await import('@/api/http')
 type PreviewFile = import('./viewer').PreviewFile
 
 let made = 0
@@ -411,5 +412,306 @@ describe('FileViewer', () => {
     await flushPromises()
     await flushPromises()
     expect($('.file-viewer__actions .print-button__button')).toBeNull()
+  })
+})
+
+describe('FileViewer: an Office file shown as its PDF rendition', () => {
+  const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  type Rendition = NonNullable<PreviewFile['rendition']>
+  const PDF_URL = 'https://store.test/renditions/essay.pdf'
+  const doneRendition: Rendition = {
+    state: 'done',
+    page_count: 12,
+    byte_size: 13,
+    download_url: PDF_URL,
+    download_expires_at: '2026-10-01T09:15:00Z',
+  }
+  const refused = (status: number, code: string, reason: string) =>
+    new ApiError({ status, code, message: `refused: ${reason}`, details: { reason } })
+
+  /** An Office file Core converts, whose rendition reads as `reads` says, one after another (the last kept). */
+  function office(reads: (Rendition | null | Error)[], over: Partial<PreviewFile> = {}, listed?: Rendition) {
+    const queue = [...reads]
+    const readRendition = vi.fn(async () => {
+      const next = queue.length > 1 ? queue.shift()! : queue[0]!
+      if (next instanceof Error) throw next
+      return next
+    })
+    return file('essay.docx', DOCX, 'PK original', {
+      rendition: listed ?? { state: 'queued' },
+      readRendition,
+      ...over,
+    })
+  }
+  const notifications = () => $$('.el-notification').map((n) => n.textContent ?? '')
+  const messages = () => $$('.el-message').map((n) => n.textContent ?? '')
+
+  let saved: { href: string; download: string }[] = []
+  beforeEach(() => {
+    bytes.set(PDF_URL, new Blob(['%PDF-1.7 tiny'], { type: 'application/pdf' }))
+    saved = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push({ href: this.href, download: this.download })
+    })
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('shows the PDF, fetched from the fresh URL read as it opens, with “Download PDF” beside its own download', async () => {
+    const f = office([doneRendition], {}, { state: 'done', page_count: 12, byte_size: 13 })
+    await open([f])
+    await flushPromises()
+    expect(f.readRendition).toHaveBeenCalledTimes(1)
+    // The PDF's bytes, never the original's.
+    expect(f.url).not.toHaveBeenCalled()
+    expect(fetched).toEqual([PDF_URL])
+    expect($('.pdf-stub')!.textContent).toBe('essay.docx: 13 bytes')
+    expect($('.file-viewer__body')!.dataset.rendition).toBe('done')
+    expect($('.file-viewer__meta')!.textContent).toContain('Document · 11 B · PDF of 12 pages')
+    expect($('.file-viewer__download')!.getAttribute('aria-label')).toBe('Download “essay.docx”')
+    const pdf = $('.file-viewer__download-pdf')!
+    expect(pdf.textContent!.trim()).toBe('Download PDF')
+    expect(pdf.getAttribute('aria-label')).toBe('Download PDF “essay.pdf”')
+
+    // Saved under the PDF's name, from a URL read afresh.
+    pdf.click()
+    await flushPromises()
+    await flushPromises()
+    expect(f.readRendition).toHaveBeenCalledTimes(2)
+    expect(fetched).toEqual([PDF_URL, PDF_URL])
+    expect(saved).toEqual([{ href: expect.stringMatching(/^blob:local\//), download: 'essay.pdf' }])
+    // And the original, under its own.
+    $('.file-viewer__download')!.click()
+    await flushPromises()
+    expect(downloads).toEqual(['essay.docx'])
+  })
+
+  it('says it is being converted, with a spinner, asking again 2 s after, then twice as long each time, until it is done', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const f = office([{ state: 'queued' }, { state: 'claimed' }, { state: 'claimed' }, doneRendition])
+    await open([f])
+    expect(f.readRendition).toHaveBeenCalledTimes(1)
+    expect($('.file-viewer__note-title')!.textContent).toBe('Converting to PDF…')
+    expect($('.file-viewer__note-words')!.getAttribute('role')).toBe('status')
+    expect($('.file-viewer__note-icon.is-waiting .is-loading')).not.toBeNull()
+    expect($('.file-viewer__note-text')!.textContent).toContain('It appears by itself once it is ready')
+    // The original meanwhile, and no PDF to download yet.
+    expect($('.file-viewer__note-download')).not.toBeNull()
+    expect($('.file-viewer__download-pdf')).toBeNull()
+    expect($('.file-viewer__note-retry')).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(1_999)
+    expect(f.readRendition).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(f.readRendition).toHaveBeenCalledTimes(2)
+    expect($('.file-viewer__body')!.dataset.rendition).toBe('claimed')
+    expect($('.file-viewer__note-title')!.textContent).toBe('Converting to PDF…')
+    await vi.advanceTimersByTimeAsync(3_999)
+    expect(f.readRendition).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(f.readRendition).toHaveBeenCalledTimes(3)
+    await vi.advanceTimersByTimeAsync(8_000)
+    expect(f.readRendition).toHaveBeenCalledTimes(4)
+    await flushPromises()
+    expect($('.pdf-stub')!.textContent).toBe('essay.docx: 13 bytes')
+    expect($('.file-viewer__download-pdf')).not.toBeNull()
+    // Done: nothing is asked again.
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(f.readRendition).toHaveBeenCalledTimes(4)
+  })
+
+  it('waits no longer than 30 s between two asks', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const f = office([{ state: 'queued' }])
+    await open([f])
+    // 2, 4, 8, 16, then 30, 30: six more asks in 90 s.
+    await vi.advanceTimersByTimeAsync(2_000 + 4_000 + 8_000 + 16_000 + 30_000 + 30_000)
+    expect(f.readRendition).toHaveBeenCalledTimes(7)
+    await vi.advanceTimersByTimeAsync(29_999)
+    expect(f.readRendition).toHaveBeenCalledTimes(7)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(f.readRendition).toHaveBeenCalledTimes(8)
+  })
+
+  it('stops asking once it is closed, or another file is shown', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const first = office([{ state: 'queued' }])
+    const second = office([{ state: 'claimed' }], { key: 'slides.pptx', filename: 'slides.pptx' })
+    await open([first, second])
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(first.readRendition).toHaveBeenCalledTimes(2)
+    // Another file: the first is asked no more, and the second from the start.
+    $('.file-viewer__next')!.click()
+    await flushPromises()
+    await flushPromises()
+    expect(second.readRendition).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(first.readRendition).toHaveBeenCalledTimes(2)
+    const asked = (second.readRendition as ReturnType<typeof vi.fn>).mock.calls.length
+    expect(asked).toBeGreaterThan(1)
+    // Closed: nothing at all.
+    closePreview()
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(600_000)
+    expect(first.readRendition).toHaveBeenCalledTimes(2)
+    expect(second.readRendition).toHaveBeenCalledTimes(asked)
+  })
+
+  it('keeps asking through a moment with no answer, and says why when the file is gone', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const f = office([
+      { state: 'queued' },
+      new ApiError({ status: 0, code: 'network', message: 'no answer' }),
+      refused(404, 'not_found', 'not_found'),
+    ])
+    await open([f])
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect($('.file-viewer__note-title')!.textContent).toBe('Converting to PDF…')
+    await vi.advanceTimersByTimeAsync(4_000)
+    await flushPromises()
+    expect(f.readRendition).toHaveBeenCalledTimes(3)
+    expect($('.file-viewer__note-title')!.textContent).toBe('The file could not be loaded')
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(f.readRendition).toHaveBeenCalledTimes(3)
+  })
+
+  it.each([
+    ['skipped', 'password_protected', 'The file is protected by a password.'],
+    ['skipped', 'unsupported', 'The file could not be read as an Office document.'],
+    ['skipped', 'too_large', 'Its PDF would be too large to keep.'],
+    ['failed', 'conversion_failed', 'The conversion failed.'],
+    ['failed', 'timeout', 'The conversion took too long, and was stopped.'],
+    ['failed', 'attempts_exhausted', 'It was tried several times, and never finished.'],
+    ['failed', 'something_new', 'There is no PDF of it.'],
+    ['expired', null, 'There is no PDF of it.'],
+  ])('says why there is no PDF (%s, %s), with the file’s own download', async (state, reason, words) => {
+    const f = office([{ state, reason }])
+    await open([f])
+    expect($('.file-viewer__note-title')!.textContent).toBe('It could not be converted to PDF')
+    expect($('.file-viewer__note-text')!.textContent).toBe(`${words} Download the file to open it.`)
+    expect($('.file-viewer__download-pdf')).toBeNull()
+    // Not for this caller to send back.
+    expect($('.file-viewer__note-retry')).toBeNull()
+    $('.file-viewer__note-download')!.click()
+    await flushPromises()
+    expect(downloads).toEqual(['essay.docx'])
+  })
+
+  it('in Chinese too', async () => {
+    setLocale('zh-Hant')
+    await open([office([{ state: 'skipped', reason: 'password_protected' }])])
+    expect($('.file-viewer__note-title')!.textContent).toBe('無法轉換為 PDF')
+    expect($('.file-viewer__note-text')!.textContent).toBe('這個檔案設有密碼保護。 請下載檔案開啟。')
+    closePreview()
+    await flushPromises()
+    await open([office([{ state: 'queued' }])])
+    expect($('.file-viewer__note-title')!.textContent).toBe('正在轉換為 PDF…')
+    closePreview()
+    await flushPromises()
+    setLocale('zh-Hans')
+    await open([office([doneRendition])])
+    expect($('.file-viewer__download-pdf')!.textContent!.trim()).toBe('下载 PDF')
+    expect($('.file-viewer__meta')!.textContent).toContain('PDF，共 12 页')
+  })
+
+  it('sends one that failed back where the caller may, says it waits again, and shows the PDF once it is done', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const retryRendition = vi.fn(async () => ({
+      status: 'executed' as const,
+      actionId: 'a1',
+      reviewState: 'none' as const,
+      replayed: false,
+      result: { changed: true, rendition_id: 'r1', state: 'queued' },
+    }))
+    const f = office([{ state: 'failed', reason: 'timeout' }, doneRendition], { retryRendition })
+    await open([f])
+    const retry = $('.file-viewer__note-retry')!
+    expect(retry.textContent!.trim()).toBe('Try again')
+    retry.click()
+    await flushPromises()
+    expect(retryRendition).toHaveBeenCalledTimes(1)
+    expect(messages().join()).toContain('It will be converted to PDF again.')
+    expect($('.file-viewer__note-title')!.textContent).toBe('Converting to PDF…')
+    expect($('.file-viewer__body')!.dataset.rendition).toBe('queued')
+    expect(f.readRendition).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(2_000)
+    await flushPromises()
+    expect(f.readRendition).toHaveBeenCalledTimes(2)
+    expect($('.pdf-stub')!.textContent).toBe('essay.docx: 13 bytes')
+  })
+
+  it('reads it again where Core says it is done already', async () => {
+    const retryRendition = vi.fn(async () => {
+      throw refused(422, 'failed_precondition', 'rendition_done')
+    })
+    const f = office([{ state: 'failed', reason: 'conversion_failed' }, doneRendition], { retryRendition })
+    await open([f])
+    $('.file-viewer__note-retry')!.click()
+    await flushPromises()
+    await flushPromises()
+    await flushPromises()
+    expect(f.readRendition).toHaveBeenCalledTimes(2)
+    expect($('.pdf-stub')!.textContent).toBe('essay.docx: 13 bytes')
+    expect(notifications()).toEqual([])
+    expect(messages()).toEqual([])
+  })
+
+  it('says, in its words, why Core refused to send it back, and stays as it was', async () => {
+    const retryRendition = vi.fn(async () => {
+      throw refused(403, 'forbidden', 'not_your_message')
+    })
+    const f = office([{ state: 'skipped', reason: 'unsupported' }], { retryRendition })
+    await open([f])
+    $('.file-viewer__note-retry')!.click()
+    await flushPromises()
+    await flushPromises()
+    expect(messages().join()).toContain(
+      'It could not be sent to be converted again: Only whoever sent the file, and staff who decide for the one who asked, may have it converted again.',
+    )
+    expect($('.file-viewer__note-title')!.textContent).toBe('It could not be converted to PDF')
+    expect(f.readRendition).toHaveBeenCalledTimes(1)
+  })
+
+  it('says a retry that needs someone’s confirmation waits for it', async () => {
+    const retryRendition = vi.fn(async () => ({
+      status: 'proposed' as const,
+      actionId: 'a2',
+      reviewState: 'none' as const,
+      replayed: false,
+    }))
+    const f = office([{ state: 'failed', reason: 'timeout' }], { retryRendition })
+    await open([f])
+    $('.file-viewer__note-retry')!.click()
+    await flushPromises()
+    expect(notifications().join()).toContain('Sent for approval')
+    expect($('.file-viewer__note-title')!.textContent).toBe('It could not be converted to PDF')
+  })
+
+  it('offers a PDF too large to show to download, beside the file’s own', async () => {
+    await open([office([{ ...doneRendition, byte_size: 200 << 20 }])])
+    expect(fetched).toEqual([])
+    expect($('.file-viewer__note-title')!.textContent).toBe('Too large to preview')
+    expect($('.file-viewer__download-pdf')).not.toBeNull()
+  })
+
+  it('from a Core without renditions (none listed), shows the text version as before, asking nothing of a PDF', async () => {
+    const f = file('essay.docx', DOCX, 'PK', {
+      readText: async () => done('The essay, as text.'),
+      readRendition: vi.fn(async () => null),
+    })
+    await open([f])
+    expect(f.readRendition).not.toHaveBeenCalled()
+    expect($('.file-viewer__paper')!.textContent).toContain('The essay, as text.')
+    expect($('.file-viewer__download-pdf')).toBeNull()
+    expect($('.file-viewer__body')!.dataset.rendition).toBeUndefined()
+  })
+
+  it('where the rendition listed is gone when read, falls back to what an Office file is shown as', async () => {
+    const f = office([null], { readText: async () => done('The essay, as text.') })
+    await open([f])
+    expect(f.readRendition).toHaveBeenCalledTimes(1)
+    expect($('.file-viewer__paper')!.textContent).toContain('The essay, as text.')
   })
 })

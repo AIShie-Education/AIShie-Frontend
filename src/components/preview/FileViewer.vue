@@ -11,10 +11,23 @@
 // What a file is decides how it is shown (utils/preview.ts): a PDF in the
 // page (PdfView, with pdf.js, loaded only then); an image as an image; text,
 // Markdown, code and CSV as such (TextView); audio and video in the
-// browser's players; an Office file as its text version (文字版) where
-// Core has one done, since no browser shows one itself (one on its way is
-// said to be, while the runtime's transcriber is on); anything else, and
+// browser's players; an Office or OpenDocument file as the PDF the server
+// converts it into once (its rendition, utils/rendition.ts), in the same PDF
+// view, with "Download PDF" beside its own download; anything else, and
 // anything larger than is fetched to be shown, as a note with its download.
+//
+// A rendition is read afresh as the file is shown (document.file,
+// conversation.attachment), with a fresh URL to the PDF once it is done.
+// While it waits (queued, or claimed while the runtime converts it), the
+// viewer says it is being converted, and asks again, 2 seconds after, then
+// twice as long each time, up to 30 seconds, for as long as it shows that
+// file. One that failed or was skipped says why, in words, with the file's
+// own download, and "Try again" where the caller may send it back
+// (document.rendition_retry, conversation.rendition_retry). Where Core keeps
+// no rendition (a Core before them), an Office file is shown as its text
+// version (文字版) where Core has one done, since no browser shows one
+// itself (one on its way is said to be, while the runtime's transcriber is
+// on).
 //
 // Its bytes are fetched from a fresh short-lived URL (the file's own: a
 // document's file by document.file, a message's by conversation.attachment),
@@ -23,12 +36,14 @@
 // to pdf.js's worker instead.
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { fetchBlob, isAbort, type ApiError } from '@/api/http'
+import { ElMessage } from 'element-plus'
+import { ApiError, fetchBlob, isAbort } from '@/api/http'
 import type { TextStatus, TextVersion } from '@/api/types'
 import MarkdownView from '@/components/MarkdownView.vue'
 import PrintButton from '@/components/PrintButton.vue'
 import { toApiError } from '@/composables/useAsync'
 import { errorMessage, notifyError } from '@/composables/useErrors'
+import { announce } from '@/composables/useWrite'
 import { useNarrow } from '@/composables/useMediaQuery'
 import { useRuntime, type UseRuntime } from '@/composables/useRuntime'
 import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
@@ -49,11 +64,22 @@ import {
   tooLargeToPreview,
   type PreviewKind,
 } from '@/utils/preview'
+import {
+  pdfNameOf,
+  RENDITION_REFUSAL_SCOPE,
+  renditionPollDelay,
+  renditionReason,
+  renditionStage,
+  RETRY_READS_AGAIN,
+  savePdf,
+  type Rendition,
+  type RenditionReason,
+} from '@/utils/rendition'
 import { isNoText, textShown, textStatus } from '@/views/course/materials/components/textVersion'
 import ImageView from './ImageView.vue'
 import TextView from './TextView.vue'
 import { ObjectUrls } from './objectUrls'
-import { closePreview, previewState, showPreviewAt } from './viewer'
+import { closePreview, previewState, showPreviewAt, type PreviewFile } from './viewer'
 
 // pdf.js and all it brings come with this, and only once a PDF is opened.
 const PdfView = defineAsyncComponent(() => import('./PdfView.vue'))
@@ -73,10 +99,18 @@ const kind = computed<PreviewKind>(() =>
 )
 const icon = computed(() => FILE_ICON[fileKind(file.value?.contentType, file.value?.filename ?? '')])
 const iconKind = computed(() => fileKind(file.value?.contentType, file.value?.filename ?? ''))
+/** Its PDF rendition: as read as it was shown, else as listed with it; null where there is none. */
+const rendition = shallowRef<Rendition | null>(null)
+const shownRendition = computed(() => rendition.value ?? file.value?.rendition ?? null)
+/** Its PDF is there, to download beside it ("Download PDF"). */
+const pdfReady = computed(() => renditionStage(shownRendition.value) === 'done' && !!file.value?.readRendition)
+const pdfName = computed(() => pdfNameOf(file.value?.filename ?? ''))
 const meta = computed(() => {
   const f = file.value
   if (!f) return ''
-  return `${t(`common.fileKind.${iconKind.value}`)} · ${formatBytes(f.byteSize)}`
+  const pages = shownRendition.value?.page_count
+  const pdf = pdfReady.value && pages ? ` · ${t('preview.rendition.pages', { n: pages }, pages)}` : ''
+  return `${t(`common.fileKind.${iconKind.value}`)} · ${formatBytes(f.byteSize)}${pdf}`
 })
 const many = computed(() => state.files.length > 1)
 
@@ -95,18 +129,33 @@ type View =
   | { as: 'text'; kind: 'markdown' | 'code' | 'text' | 'csv'; text: string; language: string; delimiter?: string }
   | { as: 'textVersion'; body: string; text: TextVersion }
   | { as: 'office'; status: TextStatus | null }
+  /** Its PDF rendition is waiting to be converted, or being converted. */
+  | { as: 'converting' }
+  /** It has none: it failed, or was skipped, and why. */
+  | { as: 'notConverted'; state: string; reason: RenditionReason | 'other' }
 const view = shallowRef<View>({ as: 'loading' })
 /** Bumped for each file shown: what was asked for another is dropped as it comes. */
 const generation = ref(0)
 const urls = new ObjectUrls()
 let aborter: AbortController | null = null
+/** The next time a waiting rendition is asked, and how many times it has been. */
+let poll: ReturnType<typeof setTimeout> | null = null
+let polls = 0
 
-/** Lets go of what was shown: its fetch stopped, its object URLs revoked. */
+function stopPolling() {
+  if (poll) clearTimeout(poll)
+  poll = null
+}
+
+/** Lets go of what was shown: its fetch stopped, its object URLs revoked, nothing asked again. */
 function release() {
   aborter?.abort()
   aborter = null
+  stopPolling()
+  polls = 0
   generation.value++
   urls.revokeAll()
+  rendition.value = null
   view.value = { as: 'loading' }
 }
 
@@ -119,6 +168,15 @@ async function load() {
   const ctrl = (aborter = new AbortController())
   const current = () => mine === generation.value
   try {
+    // A file Core converts: its PDF, or where that stands.
+    if (f.rendition && f.readRendition) {
+      const got = await renditionView(f, ctrl.signal)
+      if (!current()) return
+      if (got) {
+        showRendition(got, mine)
+        return
+      }
+    }
     if (k === 'office') {
       runtime.value ??= useRuntime()
       const shown = await officeView(f.readText, f.text ?? null, ctrl.signal)
@@ -195,6 +253,98 @@ async function officeView(
   }
 }
 
+// --- A file's PDF rendition --------------------------------------------------------------------
+
+/** Where a file's rendition stands, read afresh: its PDF once it is done, fetched from the fresh URL. */
+async function renditionView(
+  f: PreviewFile,
+  signal: AbortSignal,
+): Promise<{ view: View; rendition: Rendition } | null> {
+  const r = await f.readRendition!(signal)
+  if (!r) return null
+  const shown = (view: View) => ({ view, rendition: r })
+  const stage = renditionStage(r)
+  if (stage === 'waiting') return shown({ as: 'converting' })
+  if (stage === 'none') return shown({ as: 'notConverted', state: r.state, reason: renditionReason(r) })
+  if (!r.download_url) {
+    const error = new ApiError({ status: 404, code: 'not_found', message: 'no URL for the PDF' })
+    return shown({ as: 'failed', error })
+  }
+  const tooLarge: View = { as: 'tooLarge', max: PREVIEW_MAX_BYTES.pdf }
+  if (tooLargeToPreview('pdf', r.byte_size)) return shown(tooLarge)
+  const blob = await fetchBlob(r.download_url, { signal })
+  if (blob.size > PREVIEW_MAX_BYTES.pdf) return shown(tooLarge)
+  return shown({ as: 'pdf', data: new Uint8Array(await blob.arrayBuffer()) })
+}
+
+/** Shows where a rendition stands, and, while it waits, asks again later. */
+function showRendition(got: { view: View; rendition: Rendition }, mine: number) {
+  rendition.value = got.rendition
+  view.value = got.view
+  if (got.view.as === 'converting') askAgainLater(mine)
+  else stopPolling()
+}
+
+/** Asks again where a waiting rendition stands, after a while: longer each time, up to RENDITION_POLL_MAX_MS. */
+function askAgainLater(mine: number) {
+  stopPolling()
+  poll = setTimeout(() => void askAgain(mine), renditionPollDelay(polls++))
+}
+
+async function askAgain(mine: number) {
+  poll = null
+  const f = file.value
+  const signal = aborter?.signal
+  if (mine !== generation.value || !state.open || !f?.readRendition || !signal) return
+  try {
+    const got = await renditionView(f, signal)
+    if (mine !== generation.value) return
+    // Gone meanwhile: shown as a file Core keeps no PDF of.
+    if (got) showRendition(got, mine)
+    else void load()
+  } catch (e) {
+    if (mine !== generation.value || isAbort(e)) return
+    const err = toApiError(e)
+    // Nothing answered, or not now: it is asked again, as it waits.
+    if (err.isNetwork || err.status >= 500 || err.code === 'rate_limited') askAgainLater(mine)
+    else view.value = { as: 'failed', error: err }
+  }
+}
+
+/** Sends a rendition that failed, or was skipped, back to be converted again, and shows it waiting. */
+const retrying = ref(false)
+async function retryRendition() {
+  const f = file.value
+  if (!f?.retryRendition || retrying.value) return
+  const mine = generation.value
+  retrying.value = true
+  try {
+    const out = await f.retryRendition()
+    if (out.status === 'proposed') {
+      // Waiting for someone to confirm it: nothing is converted until then.
+      announce(out)
+      return
+    }
+    if (mine !== generation.value) return
+    if (out.result.changed) ElMessage({ type: 'success', message: t('preview.rendition.queuedAgain') })
+    if (renditionStage({ state: out.result.state }) !== 'waiting') {
+      void load()
+      return
+    }
+    polls = 0
+    showRendition({ view: { as: 'converting' }, rendition: { state: out.result.state } }, mine)
+  } catch (e) {
+    // Done meanwhile, or none: read where it stands now.
+    if (e instanceof ApiError && RETRY_READS_AGAIN.has(String(e.details?.reason ?? ''))) {
+      if (mine === generation.value) void load()
+      return
+    }
+    notifyError(e, t('preview.rendition.retryFailed'), { reasons: RENDITION_REFUSAL_SCOPE })
+  } finally {
+    retrying.value = false
+  }
+}
+
 watch(
   () => [state.open, state.opened, state.index, state.files] as const,
   ([open]) => {
@@ -216,9 +366,25 @@ function onPdfFailed(reason: 'password' | 'invalid') {
 
 // --- What the note says, where the file is not shown -------------------------------------------
 
-const note = computed<{ title: string; text: string; retry?: boolean } | null>(() => {
+const note = computed<{
+  title: string
+  text: string
+  retry?: boolean
+  /** Waiting for its PDF: a spinner in place of its icon, said as it changes. */
+  waiting?: boolean
+  /** "Try again": its rendition sent back to be converted. */
+  retryRendition?: boolean
+} | null>(() => {
   const v = view.value
   switch (v.as) {
+    case 'converting':
+      return { title: t('preview.rendition.converting'), text: t('preview.rendition.convertingText'), waiting: true }
+    case 'notConverted':
+      return {
+        title: t('preview.rendition.none'),
+        text: `${t(`preview.rendition.reason.${v.reason}`)} ${t('preview.rendition.downloadOriginal')}`,
+        retryRendition: !!file.value?.retryRendition,
+      }
     case 'failed':
       return { title: t('preview.failed'), text: errorMessage(v.error, { reasons: FILE_REFUSAL_SCOPE }), retry: true }
     case 'tooLarge':
@@ -301,6 +467,26 @@ async function download() {
   }
 }
 
+/** Saves its PDF rendition under its name ("Download PDF"), from a fresh URL. */
+const downloadingPdf = ref(false)
+async function downloadPdf() {
+  const f = file.value
+  if (!f?.readRendition || downloadingPdf.value) return
+  const name = pdfNameOf(f.filename)
+  downloadingPdf.value = true
+  try {
+    const r = await f.readRendition()
+    if (!r?.download_url || renditionStage(r) !== 'done') {
+      throw new ApiError({ status: 404, code: 'not_found', message: 'the PDF is not there' })
+    }
+    await savePdf(r.download_url, name)
+  } catch (e) {
+    notifyError(e, name, { reasons: FILE_REFUSAL_SCOPE })
+  } finally {
+    downloadingPdf.value = false
+  }
+}
+
 /** Text that is laid out for paper: a text, Markdown or code file, and an Office file's text version. */
 const printable = computed(
   () => (view.value.as === 'text' && view.value.kind !== 'csv') || view.value.as === 'textVersion',
@@ -374,6 +560,18 @@ function onClosed() {
               <el-icon v-if="!downloading"><Download /></el-icon>
               <span>{{ t('preview.download') }}</span>
             </el-button>
+            <el-button
+              v-if="pdfReady"
+              size="small"
+              :loading="downloadingPdf"
+              class="file-viewer__download-pdf"
+              :aria-label="t('preview.rendition.downloadPdfOf', { name: pdfName })"
+              :title="t('preview.rendition.downloadPdfTip')"
+              @click="downloadPdf"
+            >
+              <el-icon v-if="!downloadingPdf"><Download /></el-icon>
+              <span>{{ t('preview.rendition.downloadPdf') }}</span>
+            </el-button>
             <PrintButton v-if="printable" :source="printSource" />
           </div>
         </div>
@@ -417,7 +615,13 @@ function onClosed() {
       </div>
     </template>
 
-    <div v-if="file" class="file-viewer__body" :class="`is-${view.as}`" :data-kind="kind">
+    <div
+      v-if="file"
+      class="file-viewer__body"
+      :class="`is-${view.as}`"
+      :data-kind="kind"
+      :data-rendition="shownRendition?.state"
+    >
       <div v-if="view.as === 'loading'" class="file-viewer__loading" role="status">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>{{ t('preview.loading', { name: file.filename }) }}</span>
@@ -466,18 +670,32 @@ function onClosed() {
           <MarkdownView :source="view.body" code-tools :empty="t('preview.text.empty')" />
         </div>
       </div>
-      <div v-else-if="note" class="file-viewer__note">
-        <span class="file-viewer__note-icon" :class="`is-${iconKind}`" aria-hidden="true">
+      <div v-else-if="note" class="file-viewer__note" :class="{ 'is-waiting': note.waiting }">
+        <span v-if="note.waiting" class="file-viewer__note-icon is-waiting" aria-hidden="true">
+          <el-icon class="is-loading"><Loading /></el-icon>
+        </span>
+        <span v-else class="file-viewer__note-icon" :class="`is-${iconKind}`" aria-hidden="true">
           <el-icon><component :is="icon" /></el-icon>
         </span>
-        <p class="file-viewer__note-title">{{ note.title }}</p>
-        <p class="file-viewer__note-text">{{ note.text }}</p>
+        <div class="file-viewer__note-words" :role="note.waiting ? 'status' : undefined">
+          <p class="file-viewer__note-title">{{ note.title }}</p>
+          <p class="file-viewer__note-text">{{ note.text }}</p>
+        </div>
         <div class="file-viewer__note-actions">
           <el-button type="primary" :loading="downloading" class="file-viewer__note-download" @click="download">
             <el-icon v-if="!downloading"><Download /></el-icon>
             <span>{{ t('preview.downloadFile', { name: file.filename }) }}</span>
           </el-button>
           <el-button v-if="note.retry" @click="load">{{ t('common.actions.retry') }}</el-button>
+          <el-button
+            v-if="note.retryRendition"
+            :loading="retrying"
+            class="file-viewer__note-retry"
+            @click="retryRendition"
+          >
+            <el-icon v-if="!retrying"><RefreshRight /></el-icon>
+            <span>{{ t('preview.rendition.retry') }}</span>
+          </el-button>
         </div>
       </div>
     </div>
@@ -700,6 +918,15 @@ function onClosed() {
   font-size: 28px;
   background: var(--el-bg-color);
   margin-bottom: 4px;
+}
+.file-viewer__note-icon.is-waiting {
+  color: var(--el-color-primary);
+}
+.file-viewer__note-words {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 .file-viewer__note-title {
   margin: 0;

@@ -93,6 +93,7 @@ async function copy() {
       class="chat-msg__files is-before"
       :course-id="courseId!"
       :files="files"
+      :retry-renditions="canRetract"
     />
     <div class="chat-msg__body">
       <template v-if="message.retracted">
@@ -112,6 +113,7 @@ async function copy() {
       class="chat-msg__files is-after"
       :course-id="courseId!"
       :files="files"
+      :retry-renditions="canRetract"
     />
     <footer class="chat-msg__foot">
       <TimeText :value="message.created_at" class="chat-msg__time" />

@@ -41,6 +41,39 @@ export default {
     textVersion:
       'This is the file’s text version (文字版): its words, read from it, without its layout, pictures or formatting. Download the file to see it as it is.',
   },
+  // An Office or OpenDocument file, shown as the PDF the server converts it into (its rendition).
+  rendition: {
+    pages: 'PDF of one page | PDF of {n} pages',
+    downloadPdf: 'Download PDF',
+    downloadPdfOf: 'Download PDF “{name}”',
+    downloadPdfTip: 'The PDF the server made of this file, as shown here',
+    listedTip: 'Previewed as the PDF the server made of it',
+    converting: 'Converting to PDF…',
+    convertingText:
+      'The server is making a PDF of this file to show here. It appears by itself once it is ready; meanwhile, download the file to open it.',
+    none: 'It could not be converted to PDF',
+    reason: {
+      password_protected: 'The file is protected by a password.',
+      unsupported: 'The file could not be read as an Office document.',
+      too_large: 'Its PDF would be too large to keep.',
+      conversion_failed: 'The conversion failed.',
+      timeout: 'The conversion took too long, and was stopped.',
+      attempts_exhausted: 'It was tried several times, and never finished.',
+      other: 'There is no PDF of it.',
+    },
+    downloadOriginal: 'Download the file to open it.',
+    retry: 'Try again',
+    queuedAgain: 'It will be converted to PDF again.',
+    retryFailed: 'It could not be sent to be converted again',
+    refusal: {
+      rendition_done: 'It has been converted already.',
+      no_rendition: 'This file is not one that is converted to PDF.',
+      permission_denied: 'Only those who may change this document may have it converted again.',
+      not_your_message:
+        'Only whoever sent the file, and staff who decide for the one who asked, may have it converted again.',
+      retracted: 'The message was withdrawn, and its files with it.',
+    },
+  },
   text: {
     empty: 'This file is empty.',
   },
