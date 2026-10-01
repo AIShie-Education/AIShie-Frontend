@@ -480,7 +480,7 @@ export default {
     providerHint: '此平台對身分提供者的命名。',
     providerNotOffered: '目前未提供',
     subject: '帳戶（UPN）',
-    subjectPlaceholder: "name{'@'}connect.polyu.hk",
+    subjectPlaceholder: "name{'@'}example.edu",
     subjectHint: 'ADFS 的使用者主體名稱（UPN），不分大小寫。',
     subjectOf: '帳戶（{claim}）',
     subjectOfHint: "{name} 為此人給出的 {claim} 聲明值。含 {'@'} 時不分大小寫。",

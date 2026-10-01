@@ -4,8 +4,10 @@
 // on 登入方式 (sso.list) are offered to choose from, the operator's first, and
 // the account is asked for as the one chosen knows it (its subject claim);
 // any other id may still be typed, since an account may be linked before its
-// provider is set up. Without the list (a Core from before it), the field is
-// typed as it always was.
+// provider is set up. Without a provider to choose from (a Core from before
+// sso.list, a failed read, or none set up), the id is typed into an empty
+// field: each installation names its own provider (OIDC_PROVIDER_NAME),
+// which the page cannot know.
 import { computed, onMounted, reactive, ref, shallowRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -13,7 +15,6 @@ import { read } from '@/api/http'
 import type { Actor } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import IdText from '@/components/IdText.vue'
-import { DEFAULT_SSO_PROVIDER } from './adminShared'
 import { ordered, type SsoProvider } from '../sso/ssoAdmin'
 
 const props = defineProps<{ actor: Actor; blockedReason?: string | null }>()
@@ -22,7 +23,7 @@ const emit = defineEmits<{ linked: [] }>()
 const { t } = useI18n()
 
 const formRef = ref<FormInstance>()
-const form = reactive({ provider: DEFAULT_SSO_PROVIDER, subject: '' })
+const form = reactive({ provider: '', subject: '' })
 const linked = ref<{ credentialId: string; subject: string } | null>(null)
 const { run, pending } = useWrite('actor.link_sso')
 
@@ -110,7 +111,13 @@ async function submit() {
               }}</span>
             </el-option>
           </el-select>
-          <el-input v-else v-model="form.provider" maxlength="100" class="sso__provider" />
+          <el-input
+            v-else
+            v-model="form.provider"
+            :placeholder="t('ssoAdmin.form.idPlaceholder')"
+            maxlength="100"
+            class="sso__provider"
+          />
           <div class="app-form-hint">{{ t('admin.sso.providerHint') }}</div>
         </el-form-item>
         <el-form-item :label="claim ? t('admin.sso.subjectOf', { claim }) : t('admin.sso.subject')" prop="subject">

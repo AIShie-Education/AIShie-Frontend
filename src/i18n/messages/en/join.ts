@@ -38,7 +38,7 @@ export default {
       noLimit: 'No limit',
       maxUsesHint: 'Leave empty for no limit.',
       domains: 'Only emails at these domains',
-      domainsPlaceholder: 'Type a domain, e.g. hainanu.edu.cn, and press Enter',
+      domainsPlaceholder: 'Type a domain, e.g. example.edu, and press Enter',
       domainsHint: 'Leave empty to let anyone join. With domains, only people whose email is at one of them can join or register.',
       badDomain: '“{d}” is not a domain',
       tooManyDomains: 'At most {n} domains',

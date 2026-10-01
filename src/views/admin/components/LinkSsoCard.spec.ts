@@ -58,7 +58,13 @@ describe('linking a person at a provider', () => {
       'Librarylib-keycloaknot offered now',
     ])
     // The operator's is chosen first; AD FS's upn is said as it always was.
+    expect(w.findComponent({ name: 'ElSelect' }).props('modelValue')).toBe('school-adfs')
     expect(label(w, '.sso__subject')).toBe('Account (UPN)')
+    core.once('POST', LINK, () => executed({ credential_id: 'cred-0' }))
+    await w.find('.sso__subject input').setValue('chan@example.edu')
+    await w.find('form').trigger('submit')
+    await settle()
+    expect(JSON.parse(core.to('POST', LINK)[0].body!)).toEqual({ provider: 'school-adfs', subject: 'chan@example.edu' })
     ;(w.vm as unknown as { chooseProvider: (v: string) => void }).chooseProvider('university-sso')
     await flushPromises()
     expect(label(w, '.sso__subject')).toBe('Account (sub)')
@@ -68,7 +74,7 @@ describe('linking a person at a provider', () => {
     await w.find('.sso__subject input').setValue('20231234@example.edu')
     await w.find('form').trigger('submit')
     await settle()
-    const [post] = core.to('POST', LINK)
+    const post = core.to('POST', LINK)[1]
     expect(post.url).toBe(`/v1/actors/${PERSON.id}/sso`)
     expect(JSON.parse(post.body!)).toEqual({ provider: 'university-sso', subject: '20231234@example.edu' })
   })
@@ -78,7 +84,20 @@ describe('linking a person at a provider', () => {
     const w = await card()
     const input = w.find('input.el-input__inner')
     expect(w.find('.sso__provider').classes()).toContain('el-input')
-    expect((input.element as HTMLInputElement).value).toBe('polyu-adfs')
+    // Nothing is filled in for the provider, whose name only the installation knows.
+    expect((input.element as HTMLInputElement).value).toBe('')
+    expect(input.attributes('placeholder')).toBe('e.g. school-adfs')
+    expect(w.find('.sso__subject input').attributes('placeholder')).toBe('name@example.edu')
     expect(label(w, '.sso__subject')).toBe('Account (UPN)')
+  })
+
+  it('takes the provider’s id as typed where none is set up', async () => {
+    core = new FakeSsoCore([]).install()
+    const w = await card()
+    expect(core.to('GET', SSO.list)).toHaveLength(1)
+    expect(w.find('.sso__provider').classes()).toContain('el-input')
+    const input = w.find('.sso__provider input')
+    expect((input.element as HTMLInputElement).value).toBe('')
+    expect(input.attributes('placeholder')).toBe('e.g. school-adfs')
   })
 })
