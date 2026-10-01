@@ -1338,6 +1338,140 @@ export interface ConversationDraftOut {
   version: number
 }
 
+/** conversation.export (write): Export conversations for audit: for root and platform administrators, anywhere; for a department's administrators, the courses of the departments they administer and beneath them, and only by naming a course (course_id) or a department (within_dept_id) of theirs. Nobody else, and never an agent (people_only). Optionally only one participant's (participant_actor_id) and only what was written in a span of time (from, before). It holds every message of the conversations it chooses, retracted ones with their text, marked retracted; what files each carries, never their bytes; and the answers and questions proposed and never posted. Two files: the conversations as JSON Lines, one to a line with their messages, and the messages as CSV, one to a row, in UTF-8 with a byte order mark. Each is given with a URL that downloads it for 15 minutes; conversation.export_file gives another until the files are removed, expires_at. The files hold personal data. Past its limits (max messages, max bytes of text) it is refused, export_too_large, saying how much it would hold: narrow it. Every export is recorded, filters and counts, as an action. */
+export interface ConversationExportIn {
+  /**
+   * only what was written before this time, as from
+   */
+  before?: null | string
+  /**
+   * only this course's conversations; give this or within_dept_id, or neither for the whole site's
+   */
+  course_id?: null | string
+  /**
+   * only what was written at or after this time: the conversations opened then, or with something written then, and in them what was written then
+   */
+  from?: null | string
+  /**
+   * only the conversations this person or agent took part in, as the one who asked or as the agent asked
+   */
+  participant_actor_id?: null | string
+  /**
+   * only the conversations of the courses in this department and every department beneath it
+   */
+  within_dept_id?: null | string
+}
+export interface ConversationExportOut {
+  /**
+   * when it was made: nothing written after it is in it
+   */
+  as_of: string
+  /**
+   * the files the messages carry, described; their bytes are not in it
+   */
+  attachments: number
+  conversations: number
+  /**
+   * a URL for each file, given once, to the caller alone; a call replayed with its idempotency key gives none, and conversation.export_file gives one again
+   */
+  downloads?:
+    | null
+    | {
+        /**
+         * a short-lived URL that serves the file as a download, under its name: GET it as it is, with no Authorization header
+         */
+        download_url: string
+        /**
+         * when download_url stops working, about 15 minutes from now; conversation.export_file gives another
+         */
+        expires_at: string
+        format: string
+      }[]
+  /**
+   * when its files are removed; conversation.export_file gives a URL for one until then
+   */
+  expires_at: string
+  /**
+   * the export's id, which is its action's: conversation.export_file takes it
+   */
+  export_id: string
+  files:
+    | null
+    | {
+        byte_size: number
+        /**
+         * sha256:<hex> of the file's bytes
+         */
+        checksum: string
+        content_type: string
+        /**
+         * the name it downloads under
+         */
+        filename: string
+        /**
+         * jsonl: the conversations, one to a line, each with its messages; csv: the messages, one to a row
+         */
+        format: string
+      }[]
+  /**
+   * the messages it holds, the retracted among them
+   */
+  messages: number
+  /**
+   * the answers and questions proposed in its conversations and never posted: waiting for a decision, rejected or cancelled
+   */
+  proposals: number
+  /**
+   * of them, how many are retracted: held with their text, and marked
+   */
+  retracted: number
+  /**
+   * the bytes of what its messages and proposals say, which max_bytes bounds
+   */
+  text_bytes: number
+}
+
+/** conversation.export_file (read): A file of an export you made (conversation.export), again: its name, type, size and checksum, and a short-lived URL that downloads it. format is jsonl, the conversations, or csv, the messages. Only for whoever made the export, while they administer what it is about, and until its files are removed (export_expired). */
+export interface ConversationExportFileIn {
+  /**
+   * an export of yours, from conversation.export
+   */
+  export_id: string
+  /**
+   * jsonl, the conversations one to a line, or csv, the messages one to a row
+   */
+  format: string
+}
+export interface ConversationExportFileOut {
+  byte_size: number
+  /**
+   * sha256:<hex> of the file's bytes
+   */
+  checksum: string
+  content_type: string
+  /**
+   * a short-lived URL that serves the file as a download, under its name: GET it as it is, with no Authorization header
+   */
+  download_url: string
+  /**
+   * when download_url stops working, about 15 minutes from now; ask again for another
+   */
+  expires_at: string
+  /**
+   * when the export's files are removed
+   */
+  export_expires_at: string
+  export_id: string
+  /**
+   * the name it downloads under
+   */
+  filename: string
+  /**
+   * jsonl: the conversations, one to a line, each with its messages; csv: the messages, one to a row
+   */
+  format: string
+}
+
 /** conversation.get (read): One conversation: who takes part, what state it is in, whether an answer waits for approval, the opener's latest message, which an answer replies to, if you take part, whether the other has written since you last read it (unread; conversation.mark_read), and the answer being written, if any (draft). Its opener may always read it; its respondent while the opener may still address it; and course staff who decide actions for the opener. */
 export interface ConversationGetIn {
   conversation_id: string
@@ -1453,7 +1587,7 @@ export interface ConversationGetOut {
    */
   unread?: null | boolean
   /**
-   * who can read what is written here, as codes: participants, the two who take part; overseers, course staff who decide actions for the opener; action_record, anyone who decides actions in the course, through the record of each message's action; respondent_answers_others, the respondent answers other members too and may repeat to them what is written here
+   * who can read what is written here, as codes: participants, the two who take part; overseers, course staff who decide actions for the opener; action_record, anyone who decides actions in the course, through the record of each message's action; respondent_answers_others, the respondent answers other members too and may repeat to them what is written here; audit_export, the site's administrators, and those of the course's department, who may export it for audit, retracted messages included
    */
   visible_to: null | string[]
 }
@@ -2505,12 +2639,16 @@ export interface DepartmentUpdateOut {
   parent_id?: null | string
 }
 
-/** document_text.complete (write): For the transcription service alone: write back what became of a version you have claimed, while the claim holds: done, with its text (Markdown, at most 2 MiB), its page count and the model's name; or failed or skipped, with why. Refused, and nothing written, once staff have written the text (edited_by_staff), or once the claim no longer holds (lease_lost): it lapsed and was claimed again, or the version was sent back to the queue. Done tells the version's readers the text is there. Recorded as an action, but for the text, which is kept only as the text version; retry it with the same idempotency key. */
+/** document_text.complete (write): For the transcription service alone: write back what became of a file you have claimed, while the claim holds: done, with its text (Markdown, at most 2 MiB), its page count and the model's name; or failed or skipped, with why. Refused, and nothing written, once staff have written the text (edited_by_staff), or once the claim no longer holds (lease_lost): it lapsed and was claimed again, or the file was sent back to the queue. Done tells the version's readers the text is there. Recorded as an action, but for the text, which is kept only as the text version; retry it with the same idempotency key. */
 export interface DocumentTextCompleteIn {
   /**
    * for done: the whole text, Markdown, at most 2 MiB
    */
   body?: null | string
+  /**
+   * the claim's file, from document_text.queue; if omitted, the file the lease is of
+   */
+  file_id?: null | string
   /**
    * the claim's, from document_text.queue
    */
@@ -2534,13 +2672,18 @@ export interface DocumentTextCompleteIn {
   version_id: string
 }
 export interface DocumentTextCompleteOut {
+  file_id: string
   revision: number
   status: string
   version_id: string
 }
 
-/** document_text.file (read): For the transcription service alone: another short-lived URL for the file of a version you have claimed, while the claim holds. Any other version's file is not yours to read (lease_lost). */
+/** document_text.file (read): For the transcription service alone: another short-lived URL for a file you have claimed, while the claim holds. Any other file is not yours to read (lease_lost). */
 export interface DocumentTextFileIn {
+  /**
+   * the claim's file, from document_text.queue; if omitted, the file the lease is of
+   */
+  file_id?: null | string
   /**
    * the claim's, from document_text.queue
    */
@@ -2556,11 +2699,14 @@ export interface DocumentTextFileOut {
    * a short-lived URL for the file
    */
   download_url: string
+  file_id: string
+  filename: string
   lease_expires_at: string
+  position: number
   version_id: string
 }
 
-/** document_text.queue (ephemeral): For the transcription service alone: claim document versions waiting to be transcribed, across the site: those added most lately waiting longest first, then those queued when text versions came in, the newest first. Each claim holds its version for you alone until lease_expires_at, and comes with a short-lived URL for its file; write the text back with document_text.complete before then, or hold it longer with document_text.renew. A claim that lapses may be claimed again, by you or another; a version claimed 5 times and not finished is failed (attempts_exhausted). Nothing in an archived course, or of an archived document, is claimed. With wait_s, a call that finds nothing waits up to that many seconds for a version to be queued, and claims it as soon as it is. Recorded nowhere; the claims are the record. */
+/** document_text.queue (ephemeral): For the transcription service alone: claim files of document versions waiting to be transcribed, across the site, each file of a version on its own: those added most lately waiting longest first, then those queued when text versions came in, the newest first, a version's files in order. Each claim holds its file's text version for you alone until lease_expires_at, and comes with a short-lived URL for the file; write the text back with document_text.complete before then, or hold it longer with document_text.renew, naming its version_id, file_id and lease_id. A claim that lapses may be claimed again, by you or another; a file claimed 5 times and not finished is failed (attempts_exhausted). Nothing in an archived course, or of an archived document, is claimed. With wait_s, a call that finds nothing waits up to that many seconds for a file to be queued, and claims it as soon as it is. Recorded nowhere; the claims are the record. */
 export interface DocumentTextQueueIn {
   /**
    * how long each claim holds, 60 to 3600 seconds; 600 if omitted. document_text.renew holds it longer
@@ -2577,13 +2723,13 @@ export interface DocumentTextQueueIn {
 }
 export interface DocumentTextQueueOut {
   /**
-   * what was claimed, uploads before what was queued when text versions came in; empty when nothing waits
+   * what was claimed, one file's text each, uploads before what was queued when text versions came in, a version's files in order; empty when nothing waits
    */
   claimed:
     | null
     | {
         /**
-         * how many times it has been claimed since it was queued, this one included; a version claimed 5 times and not finished is failed (attempts_exhausted)
+         * how many times it has been claimed since it was queued, this one included; a file claimed 5 times and not finished is failed (attempts_exhausted)
          */
         attempt: number
         /**
@@ -2601,6 +2747,11 @@ export interface DocumentTextQueueOut {
          */
         download_url: string
         /**
+         * the file whose text is claimed: give it to document_text.file, .renew and .complete
+         */
+        file_id: string
+        filename: string
+        /**
          * when the claim lapses, and the version may be claimed again, unless it is renewed
          */
         lease_expires_at: string
@@ -2608,12 +2759,20 @@ export interface DocumentTextQueueOut {
          * the claim's: give it to document_text.file, .renew and .complete
          */
         lease_id: string
+        /**
+         * the file's place among its version's files, from 1
+         */
+        position: number
         version_id: string
       }[]
 }
 
 /** document_text.renew (ephemeral): For the transcription service alone: hold a claim longer, lease_s from now, while the transcription goes on. Refused once the claim no longer holds (lease_lost), or once staff have written the text (edited_by_staff): stop the work then. Recorded nowhere. */
 export interface DocumentTextRenewIn {
+  /**
+   * the claim's file, from document_text.queue; if omitted, the file the lease is of
+   */
+  file_id?: null | string
   /**
    * the claim's, from document_text.queue
    */
@@ -2628,7 +2787,7 @@ export interface DocumentTextRenewOut {
   lease_expires_at: string
 }
 
-/** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then. */
+/** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then. It is text (body_md), files, or both, as document.create takes them: files, in order, each with its upload_token and filename; upload_token alone is one file, and is deprecated. */
 export interface DocumentAddVersionIn {
   /**
    * markdown text
@@ -2640,15 +2799,34 @@ export interface DocumentAddVersionIn {
   course_id: string
   document_id: string
   /**
+   * the version's files, in order, each uploaded first with document.upload_url; at most max_files of them, together at most max_version_bytes
+   */
+  files?:
+    | null
+    | {
+        /**
+         * the file's name, as readers are shown it and as it downloads, e.g. week1-slides.pdf: 1 to 255 characters on one line, a name and not a path. If omitted, the name given to document.upload_url; one of the two is required
+         */
+        filename?: string
+        /**
+         * from document.upload_url, once the file's bytes are PUT to its upload_url
+         */
+        upload_token: string
+      }[]
+  /**
    * publish the new version at once
    */
   publish?: boolean
   /**
-   * from document.upload_url, after uploading the file
+   * deprecated: one file, as files with one, named as it was uploaded or else after the document's title; not with files
    */
   upload_token?: null | string
 }
 export interface DocumentAddVersionOut {
+  /**
+   * document.add_version: the new version's files' ids, in order; absent when it has none
+   */
+  file_ids?: null | string[]
   published: boolean
   seq: number
   version_id: string
@@ -2666,7 +2844,7 @@ export interface DocumentArchiveOut {
   ok: boolean
 }
 
-/** document.create (write): Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here. */
+/** document.create (write): Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here. A version is text (body_md), files, or both: upload each file first (document.upload_url) and name them, in order, in files, each with its upload_token and filename; upload_token alone is one file, and is deprecated. */
 export interface DocumentCreateIn {
   /**
    * markdown text
@@ -2676,6 +2854,21 @@ export interface DocumentCreateIn {
    * the course this call is about
    */
   course_id: string
+  /**
+   * the version's files, in order, each uploaded first with document.upload_url; at most max_files of them, together at most max_version_bytes
+   */
+  files?:
+    | null
+    | {
+        /**
+         * the file's name, as readers are shown it and as it downloads, e.g. week1-slides.pdf: 1 to 255 characters on one line, a name and not a path. If omitted, the name given to document.upload_url; one of the two is required
+         */
+        filename?: string
+        /**
+         * from document.upload_url, once the file's bytes are PUT to its upload_url
+         */
+        upload_token: string
+      }[]
   /**
    * required for kind feedback: the grade this file belongs to
    */
@@ -2691,19 +2884,116 @@ export interface DocumentCreateIn {
   submission_id?: null | string
   title: string
   /**
-   * from document.upload_url, after uploading the file
+   * deprecated: one file, as files with one, named as it was uploaded or else after the document's title; not with files
    */
   upload_token?: null | string
 }
 export interface DocumentCreateOut {
   document_id: string
   /**
+   * the version's files' ids, in order; absent when it has none
+   */
+  file_ids?: null | string[]
+  /**
    * absent when the document was created empty
    */
   version_id?: null | string
 }
 
-/** document.get (read): Read a document: its text, and a short-lived URL for its file if it has one. Students get the published version; members who can read drafts get the latest. A specific version can be asked for by id — always allowed if it is the one your own submission was handed in under. */
+/** document.file (read): One file of a version of a document: its name, type, size and text version (without the text), and a short-lived URL that serves it as a download, under its name. For whoever may read its version, as document.get with that version_id: students the published version's, and the one their own work was handed in under. document.get and document.versions list each version's files, with their ids. */
+export interface DocumentFileIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  document_id: string
+  /**
+   * a file's id, from a version's files in document.get or document.versions
+   */
+  file_id: string
+}
+export interface DocumentFileOut {
+  byte_size: number
+  checksum?: null | string
+  /**
+   * the media type its uploader declared
+   */
+  content_type: string
+  document_id: string
+  /**
+   * a short-lived URL that serves the file as a download, saved under its name: GET it as it is, with no Authorization header
+   */
+  download_url: string
+  /**
+   * when download_url stops working, about 15 minutes from now; ask again for another
+   */
+  expires_at: string
+  filename: string
+  id: string
+  /**
+   * its place among its version's files, from 1
+   */
+  position: number
+  /**
+   * whether its version is the published one
+   */
+  published: boolean
+  /**
+   * its version's seq
+   */
+  seq: number
+  /**
+   * the file's text version, without the text: document.text reads it; absent for a file of a submission or of feedback
+   */
+  text?: null | {
+    /**
+     * the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text
+     */
+    body?: null | string
+    /**
+     * how long the text is, in bytes; 0 while there is none
+     */
+    bytes: number
+    edited_at?: null | string
+    /**
+     * who wrote or last edited it, for staff's
+     */
+    edited_by_member_id?: null | string
+    edited_by_name?: null | string
+    /**
+     * the model that transcribed it, as the site names it
+     */
+    model?: null | string
+    /**
+     * how many pages or slides the transcription found in the file
+     */
+    pages?: null | number
+    /**
+     * when it was transcribed
+     */
+    produced_at?: null | string
+    /**
+     * why it failed or was skipped
+     */
+    reason?: null | string
+    /**
+     * counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision
+     */
+    revision: number
+    /**
+     * whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over
+     */
+    source?: null | string
+    /**
+     * pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why
+     */
+    status: string
+    updated_at: string
+  }
+  version_id: string
+}
+
+/** document.get (read): Read a document: its text, and its files, each with a short-lived URL to download it under its name and its text version. Students get the published version; members who can read drafts get the latest. A specific version can be asked for by id — always allowed if it is the one your own submission was handed in under. The version's download_url, content_type, byte_size, checksum and text are its first file's, and are deprecated: read files. */
 export interface DocumentGetIn {
   /**
    * the course this call is about
@@ -2746,18 +3036,104 @@ export interface DocumentGetOut {
   version?: null | {
     author_member_id: string
     body_md?: null | string
+    /**
+     * deprecated: the first file's; a purged version's still says it
+     */
     byte_size?: null | number
+    /**
+     * deprecated: the first file's
+     */
     checksum?: null | string
+    /**
+     * deprecated: the first file's; a purged version's still says it
+     */
     content_type?: null | string
     created_at: string
     /**
-     * a short-lived URL for the file, if the version has one
+     * deprecated: files[0].download_url, the first file's
      */
     download_url?: null | string
+    /**
+     * the version's files, in order, each with a short-lived URL to download it under its name and its text version; empty for a version of text alone, and for a purged one
+     */
+    files:
+      | null
+      | {
+          byte_size: number
+          /**
+           * sha256:<hex> where the store worked it out from the bytes, etag:<value> where all it has is an object store's tag
+           */
+          checksum?: null | string
+          /**
+           * the media type its uploader declared
+           */
+          content_type: string
+          /**
+           * document.get only: a short-lived URL that serves the file as a download, saved under its name; GET it with no Authorization header
+           */
+          download_url?: null | string
+          filename: string
+          /**
+           * the file's id: document.file takes it, and document.text, for its text version
+           */
+          id: string
+          /**
+           * its place among the version's files, from 1, as they were given
+           */
+          position: number
+          /**
+           * the file's text version: the file transcribed into Markdown, for a file of material, instructions or a rubric; absent for any other. Its body, in document.get only, while the bodies given with the version come to at most 65536 bytes
+           */
+          text?: null | {
+            /**
+             * the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text
+             */
+            body?: null | string
+            /**
+             * how long the text is, in bytes; 0 while there is none
+             */
+            bytes: number
+            edited_at?: null | string
+            /**
+             * who wrote or last edited it, for staff's
+             */
+            edited_by_member_id?: null | string
+            edited_by_name?: null | string
+            /**
+             * the model that transcribed it, as the site names it
+             */
+            model?: null | string
+            /**
+             * how many pages or slides the transcription found in the file
+             */
+            pages?: null | number
+            /**
+             * when it was transcribed
+             */
+            produced_at?: null | string
+            /**
+             * why it failed or was skipped
+             */
+            reason?: null | string
+            /**
+             * counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision
+             */
+            revision: number
+            /**
+             * whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over
+             */
+            source?: null | string
+            /**
+             * pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why
+             */
+            status: string
+            updated_at: string
+          }
+        }[]
     id: string
     published: boolean
     /**
-     * the version was purged: its text and file are gone, and this says who removed them, when and why. Work handed in under it still names it
+     * the version was purged: its text and files are gone, and this says who removed them, when and why. Work handed in under it still names it
      */
     purged?: null | {
       at: string
@@ -2769,7 +3145,7 @@ export interface DocumentGetOut {
     }
     seq: number
     /**
-     * the version's text version: its file transcribed into Markdown, for a version with a file of material, instructions or a rubric; absent for any other
+     * deprecated: files[0].text, the first file's text version
      */
     text?: null | {
       /**
@@ -2871,6 +3247,10 @@ export interface DocumentPublishIn {
   version_id?: null | string
 }
 export interface DocumentPublishOut {
+  /**
+   * document.add_version: the new version's files' ids, in order; absent when it has none
+   */
+  file_ids?: null | string[]
   published: boolean
   seq: number
   version_id: string
@@ -2897,7 +3277,7 @@ export interface DocumentPurgeOut {
   purged_versions: number
 }
 
-/** document.text (read): Read a document version's text version: its file (slides, a PDF, a Word file) transcribed into Markdown, pictures and diagrams described in brackets, each page or slide under a heading of its own; or written by staff. Read it before the file: it is the same for every model. For whoever may read the version, as document.get: students read the published one. A long text is read in parts of at most 65536 bytes, whole pages where they fit, from part 1 to parts; read them all at one revision. Until the text is done, it says where it stands (pending, working, failed or skipped, with reason) and has no body. */
+/** document.text (read): Read the text version of a file of a document's version: the file (slides, a PDF, a Word file) transcribed into Markdown, pictures and diagrams described in brackets, each page or slide under a heading of its own; or written by staff. Each file of a version has its own; file_id says which, the version's first if omitted. Read it before the file: it is the same for every model. For whoever may read the version, as document.get: students read the published one. A long text is read in parts of at most 65536 bytes, whole pages where they fit, from part 1 to parts; read them all at one revision. Until the text is done, it says where it stands (pending, working, failed or skipped, with reason) and has no body. */
 export interface DocumentTextIn {
   /**
    * the course this call is about
@@ -2905,16 +3285,25 @@ export interface DocumentTextIn {
   course_id: string
   document_id: string
   /**
+   * which of the version's files; its first if omitted
+   */
+  file_id?: null | string
+  /**
    * which part of the text, from 1; 1 if omitted
    */
   part?: number
   /**
-   * a specific version; otherwise the one document.get gives: the published one, or the latest for members who can read drafts
+   * a specific version; otherwise the file's, when file_id is given, or the one document.get gives: the published one, or the latest for members who can read drafts
    */
   version_id?: null | string
 }
 export interface DocumentTextOut {
   document_id: string
+  /**
+   * the file whose text this is
+   */
+  file_id: string
+  filename: string
   /**
    * which part this is, while there is a text
    */
@@ -2923,6 +3312,10 @@ export interface DocumentTextOut {
    * how many parts the text is read in; 0 while there is none
    */
   parts: number
+  /**
+   * the file's place among the version's files, from 1
+   */
+  position: number
   published: boolean
   seq: number
   /**
@@ -2976,7 +3369,7 @@ export interface DocumentTextOut {
   version_id: string
 }
 
-/** document.text_retranscribe (write): Send a document version's text version to be transcribed again, or for the first time for a version added before there were text versions: it is pending again, ahead of anything queued when text versions came in, and what it said is gone until the new transcription is done; one under way is refused when it finishes. A text staff wrote or corrected is discarded only with discard_edit true (staff_edit). For whoever may write the document. base_revision refuses it if the text has changed since (text_changed). A text already waiting its turn changes nothing (changed: false). */
+/** document.text_retranscribe (write): Send the text version of a file of a document's version to be transcribed again, or for the first time for a version added before there were text versions: it is pending again, ahead of anything queued when text versions came in, and what it said is gone until the new transcription is done; one under way is refused when it finishes. file_id says which file; a version of one file needs none. A text staff wrote or corrected is discarded only with discard_edit true (staff_edit). For whoever may write the document. base_revision refuses it if the text has changed since (text_changed). A text already waiting its turn changes nothing (changed: false). */
 export interface DocumentTextRetranscribeIn {
   /**
    * the revision of the text the request was made from: if the text has changed since, it is refused (text_changed)
@@ -2991,6 +3384,10 @@ export interface DocumentTextRetranscribeIn {
    */
   discard_edit?: boolean
   document_id: string
+  /**
+   * which of the version's files; required when it has more than one (file_id_required)
+   */
+  file_id?: null | string
   version_id: string
 }
 export interface DocumentTextRetranscribeOut {
@@ -2998,12 +3395,16 @@ export interface DocumentTextRetranscribeOut {
    * false when the text already was so: nothing was done
    */
   changed: boolean
+  /**
+   * the file whose text it is
+   */
+  file_id: string
   revision: number
   status: string
   version_id: string
 }
 
-/** document.text_update (write): Write a document version's text version, in place of what there was: correct a transcription, or write one by hand. The text is staff's from then on: no transcription writes over it, and one under way is refused when it finishes. For whoever may write the document, as a new version is written; the text, at most 2 MiB of Markdown, is recorded with the action, for whoever decides or reviews it. base_revision refuses the edit if the text has changed since (text_changed). Giving the text it already is changes nothing (changed: false). */
+/** document.text_update (write): Write the text version of a file of a document's version, in place of what there was: correct a transcription, or write one by hand. file_id says which file; a version of one file needs none. The text is staff's from then on: no transcription writes over it, and one under way is refused when it finishes. For whoever may write the document, as a new version is written; the text, at most 2 MiB of Markdown, is recorded with the action, for whoever decides or reviews it. base_revision refuses the edit if the text has changed since (text_changed). Giving the text it already is changes nothing (changed: false). */
 export interface DocumentTextUpdateIn {
   /**
    * the revision of the text the edit was made from, as the views give it: if the text has changed since, the edit is refused (text_changed) rather than put over the change
@@ -3018,6 +3419,10 @@ export interface DocumentTextUpdateIn {
    */
   course_id: string
   document_id: string
+  /**
+   * which of the version's files; required when it has more than one (file_id_required)
+   */
+  file_id?: null | string
   version_id: string
 }
 export interface DocumentTextUpdateOut {
@@ -3025,6 +3430,10 @@ export interface DocumentTextUpdateOut {
    * false when the text already was so: nothing was done
    */
   changed: boolean
+  /**
+   * the file whose text it is
+   */
+  file_id: string
   revision: number
   status: string
   version_id: string
@@ -3059,7 +3468,7 @@ export interface DocumentUpdateOut {
   changed: boolean
 }
 
-/** document.upload_url (read): Get somewhere to upload a file. Files do not travel through tool calls: PUT the bytes to the URL this returns, then pass the upload_token to the tool that attaches it. Nothing is recorded until then, and an upload that is never attached is eventually discarded. A call that would attach it by way of a proposal is refused once the upload is more than 48 hours old. */
+/** document.upload_url (read): Get somewhere to upload a file. Files do not travel through tool calls: PUT the bytes to the URL this returns, then name the upload_token, with the file's name, in files of document.create or document.add_version (a version holds several files, in order), or in feedback_files of grade.submit. A filename given here is the file's name where the call that attaches it gives none. max_bytes, max_files and max_version_bytes say how large a file, how many files to a version and how much in one version. Nothing is recorded until the file is attached, and an upload that is never attached is eventually discarded. A call that would attach it by way of a proposal is refused once the upload is more than 48 hours old. */
 export interface DocumentUploadUrlIn {
   /**
    * the file's media type, e.g. application/pdf; the upload must send the same
@@ -3069,6 +3478,10 @@ export interface DocumentUploadUrlIn {
    * the course this call is about
    */
   course_id: string
+  /**
+   * the file's name, e.g. week1-slides.pdf: 1 to 255 characters on one line, a name and not a path. The file is called so when it is attached without a name of its own
+   */
+  filename?: string
   /**
    * what the file is for: material, instructions, rubric, submission or feedback
    */
@@ -3083,11 +3496,19 @@ export interface DocumentUploadUrlOut {
     [k: string]: string | undefined
   }
   /**
-   * the largest file, in bytes, that can be attached. It is checked when the file is attached, which refuses a larger one; where the URL is an object store's, a larger upload is not stopped as it arrives
+   * the largest file, in bytes, that can be attached. It is checked when the file is attached, which refuses a larger one (file_too_large); where the URL is an object store's, a larger upload is not stopped as it arrives
    */
   max_bytes: number
   /**
-   * hand this to document.create, document.add_version or grade.submit to attach what you uploaded
+   * the most files one version of a document holds (too_many_files)
+   */
+  max_files: number
+  /**
+   * the most one version's files come to, in bytes, all together (version_too_large)
+   */
+  max_version_bytes: number
+  /**
+   * name this in files of document.create or document.add_version, or in feedback_files of grade.submit, to attach what you uploaded
    */
   upload_token: string
   /**
@@ -3096,7 +3517,7 @@ export interface DocumentUploadUrlOut {
   upload_url: string
 }
 
-/** document.versions (read): Every version of a document, oldest first, with which one is published. For members who can read drafts. */
+/** document.versions (read): Every version of a document, oldest first, with which one is published, and each version's files, with their text versions, without the texts. For members who can read drafts. Each version's has_file, content_type, byte_size and text are its first file's, and are deprecated: read files. */
 export interface DocumentVersionsIn {
   /**
    * the course this call is about
@@ -3109,19 +3530,105 @@ export interface DocumentVersionsOut {
     | null
     | {
         author_member_id: string
+        /**
+         * deprecated: the first file's
+         */
         byte_size?: null | number
+        /**
+         * deprecated: the first file's
+         */
         content_type?: null | string
         created_at: string
+        /**
+         * its files, in order, each with its text version, without the text: document.file gives one to download, document.text reads its text
+         */
+        files:
+          | null
+          | {
+              byte_size: number
+              /**
+               * sha256:<hex> where the store worked it out from the bytes, etag:<value> where all it has is an object store's tag
+               */
+              checksum?: null | string
+              /**
+               * the media type its uploader declared
+               */
+              content_type: string
+              /**
+               * document.get only: a short-lived URL that serves the file as a download, saved under its name; GET it with no Authorization header
+               */
+              download_url?: null | string
+              filename: string
+              /**
+               * the file's id: document.file takes it, and document.text, for its text version
+               */
+              id: string
+              /**
+               * its place among the version's files, from 1, as they were given
+               */
+              position: number
+              /**
+               * the file's text version: the file transcribed into Markdown, for a file of material, instructions or a rubric; absent for any other. Its body, in document.get only, while the bodies given with the version come to at most 65536 bytes
+               */
+              text?: null | {
+                /**
+                 * the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text
+                 */
+                body?: null | string
+                /**
+                 * how long the text is, in bytes; 0 while there is none
+                 */
+                bytes: number
+                edited_at?: null | string
+                /**
+                 * who wrote or last edited it, for staff's
+                 */
+                edited_by_member_id?: null | string
+                edited_by_name?: null | string
+                /**
+                 * the model that transcribed it, as the site names it
+                 */
+                model?: null | string
+                /**
+                 * how many pages or slides the transcription found in the file
+                 */
+                pages?: null | number
+                /**
+                 * when it was transcribed
+                 */
+                produced_at?: null | string
+                /**
+                 * why it failed or was skipped
+                 */
+                reason?: null | string
+                /**
+                 * counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision
+                 */
+                revision: number
+                /**
+                 * whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over
+                 */
+                source?: null | string
+                /**
+                 * pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why
+                 */
+                status: string
+                updated_at: string
+              }
+            }[]
+        /**
+         * deprecated: whether it has a file; files is not empty
+         */
         has_file: boolean
         id: string
         published: boolean
         /**
-         * when its text and file were purged; document.get of it says who and why
+         * when its text and files were purged; document.get of it says who and why
          */
         purged_at?: null | string
         seq: number
         /**
-         * its text version, without the text: document.text reads it
+         * deprecated: files[0].text, the first file's text version
          */
         text?: null | {
           /**
@@ -3516,6 +4023,10 @@ export interface GradeRegradeIn {
   feedback_files?:
     | null
     | {
+        /**
+         * the file's name, as it downloads: 1 to 255 characters on one line, a name and not a path; if omitted, the name given to document.upload_url, or else the title with its type's extension
+         */
+        filename?: string
         title: string
         upload_token: string
       }[]
@@ -3585,6 +4096,10 @@ export interface GradeSubmitIn {
   feedback_files?:
     | null
     | {
+        /**
+         * the file's name, as it downloads: 1 to 255 characters on one line, a name and not a path; if omitted, the name given to document.upload_url, or else the title with its type's extension
+         */
+        filename?: string
         title: string
         upload_token: string
       }[]
@@ -5703,6 +6218,8 @@ export interface ToolMap {
   'conversation.attachment': { in: ConversationAttachmentIn; out: ConversationAttachmentOut; kind: 'read' }
   'conversation.close': { in: ConversationCloseIn; out: ConversationCloseOut; kind: 'write' }
   'conversation.draft': { in: ConversationDraftIn; out: ConversationDraftOut; kind: 'ephemeral' }
+  'conversation.export': { in: ConversationExportIn; out: ConversationExportOut; kind: 'write' }
+  'conversation.export_file': { in: ConversationExportFileIn; out: ConversationExportFileOut; kind: 'read' }
   'conversation.get': { in: ConversationGetIn; out: ConversationGetOut; kind: 'read' }
   'conversation.inbox': { in: ConversationInboxIn; out: ConversationInboxOut; kind: 'read' }
   'conversation.list': { in: ConversationListIn; out: ConversationListOut; kind: 'read' }
@@ -5743,6 +6260,7 @@ export interface ToolMap {
   'document.add_version': { in: DocumentAddVersionIn; out: DocumentAddVersionOut; kind: 'write' }
   'document.archive': { in: DocumentArchiveIn; out: DocumentArchiveOut; kind: 'write' }
   'document.create': { in: DocumentCreateIn; out: DocumentCreateOut; kind: 'write' }
+  'document.file': { in: DocumentFileIn; out: DocumentFileOut; kind: 'read' }
   'document.get': { in: DocumentGetIn; out: DocumentGetOut; kind: 'read' }
   'document.list': { in: DocumentListIn; out: DocumentListOut; kind: 'read' }
   'document.publish': { in: DocumentPublishIn; out: DocumentPublishOut; kind: 'write' }
@@ -5870,6 +6388,8 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'conversation.attachment': { method: 'GET', path: '/v1/courses/{course_id}/conversation-attachments/{attachment_id}', kind: 'read' },
   'conversation.close': { method: 'POST', path: '/v1/courses/{course_id}/conversations/{conversation_id}/close', kind: 'write' },
   'conversation.draft': { method: 'POST', path: '/v1/courses/{course_id}/conversations/{conversation_id}/draft', kind: 'ephemeral' },
+  'conversation.export': { method: 'POST', path: '/v1/conversation-exports', kind: 'write' },
+  'conversation.export_file': { method: 'GET', path: '/v1/conversation-exports/{export_id}/{format}', kind: 'read' },
   'conversation.get': { method: 'GET', path: '/v1/courses/{course_id}/conversations/{conversation_id}', kind: 'read' },
   'conversation.inbox': { method: 'GET', path: '/v1/courses/{course_id}/conversations/inbox', kind: 'read' },
   'conversation.list': { method: 'GET', path: '/v1/courses/{course_id}/conversations', kind: 'read' },
@@ -5910,6 +6430,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'document.add_version': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/versions', kind: 'write' },
   'document.archive': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/archive', kind: 'write' },
   'document.create': { method: 'POST', path: '/v1/courses/{course_id}/documents', kind: 'write' },
+  'document.file': { method: 'GET', path: '/v1/courses/{course_id}/documents/{document_id}/files/{file_id}', kind: 'read' },
   'document.get': { method: 'GET', path: '/v1/courses/{course_id}/documents/{document_id}', kind: 'read' },
   'document.list': { method: 'GET', path: '/v1/courses/{course_id}/documents', kind: 'read' },
   'document.publish': { method: 'POST', path: '/v1/courses/{course_id}/documents/{document_id}/publish', kind: 'write' },
