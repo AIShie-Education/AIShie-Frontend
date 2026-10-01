@@ -112,14 +112,15 @@ the limits themselves. A new or changed test follows these:
   render more than once are split when they are changed.
 - **End to end,** a test walks a few pages, not every one: the walk over the
   signed-in pages in `e2e/chat-panel.spec.ts` is three tests.
-- **A message that closes itself is checked from what the page kept.** An
-  `ElMessage` is gone 3 s after it comes, and a busy machine can hold a test
-  up that long between the click and a check of the screen
-  (`toast(page, …)`), which then never sees it. `keepToasts(page)`, before
-  the page is opened, has the page keep each message as it comes, and
-  `expectToasted(page, text)` checks the kept one, however late
-  (`e2e/runtime-admin.spec.ts`). Older tests that check the screen are
-  changed over when they are changed.
+- **A message that closes itself is checked from what the page kept.** A
+  success message (`ElMessage`, by default) is gone 3 s after it comes, and a
+  busy machine can hold a test up that long between the click and a check of
+  the screen (`toast(page, …)`), which then never sees it. `keepToasts(page)`,
+  before the page is opened, has the page keep each message as it comes, and
+  `expectToasted(page, text)` checks the kept one, however late, by its whole
+  text or a RegExp (`e2e/runtime-admin.spec.ts`). Older tests that check the
+  screen are changed over when they are changed. Notifications
+  (`ElNotification`) and error messages stay 6 s or more and are not kept.
 
 ## The Core the tests run against
 
