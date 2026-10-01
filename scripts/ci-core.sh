@@ -174,7 +174,11 @@ start() {
   export SIGNING_KEY SECRETS_KEY
 
   # Tests sign in dozens of times a minute from one address, and a proposal
-  # the tests make should not wait a minute to be swept.
+  # the tests make should not wait a minute to be swept. The identity
+  # provider sso-admin.spec.ts sets up (e2e/stand-in-idp.ts) is on this
+  # machine, which a Core that holds the site's providers to public
+  # addresses (AIShie-Core#56) reaches only with SSO_ALLOW_PRIVATE_ISSUERS;
+  # a Core from before ignores it.
   local -a settings=(
     "HTTP_ADDR=127.0.0.1:$PORT"
     "PUBLIC_URL=$URL"
@@ -184,6 +188,7 @@ start() {
     SIGN_IN_ATTEMPTS_PER_MINUTE=10000
     JOBS_INTERVAL=5s
     "BLOB_FS_ROOT=$DIR/blobs"
+    SSO_ALLOW_PRIVATE_ISSUERS=true
   )
   if [ "$mode" = binary ]; then
     # What it runs, as its command line reads once nohup has made way
