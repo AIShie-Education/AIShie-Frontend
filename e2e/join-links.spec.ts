@@ -309,9 +309,31 @@ test.describe.serial('invite links', () => {
 
   test('the link on the members page, left to run out, says so, and a new one takes its place', async ({ page }) => {
     const d = demo()
-    // This page's clock is wound on ten minutes; Core's is not, and says so
-    // with every answer, so that the new link counts its own ten minutes.
-    await page.clock.install({ time: new Date() })
+    // This page's clock is ten minutes fast, as a classroom computer's can
+    // be; Core's is not, and says so with every answer, and a link counts
+    // down on Core's clock. (Winding this page's clock on while Core's stays
+    // put does not run a link out: the next answer from Core, to whatever
+    // the page reads meanwhile, says the link has its ten minutes still, and
+    // the page shows it working again.) Core has no clock to wind on, so
+    // what it says of the first link made here is changed: that it ends
+    // eight seconds from now. The new link that replaces it is as Core makes it.
+    await page.clock.install({ time: new Date(Date.now() + 10 * 60_000) })
+    let first: { id: string; expiresAt: string } | undefined
+    await page.route(
+      (url) => url.pathname === `/v1/courses/${d.course.id}/join-links`,
+      async (route) => {
+        const real = await route.fetch()
+        const body = await real.json()
+        const r = body.result
+        if (route.request().method() === 'POST' && r?.link_id) {
+          first ??= { id: r.link_id, expiresAt: new Date(Date.now() + 8000).toISOString() }
+          if (r.link_id === first.id) r.expires_at = first.expiresAt
+        } else {
+          for (const link of r?.links ?? []) if (first && link.id === first.id) link.expires_at = first.expiresAt
+        }
+        await route.fulfill({ response: real, json: body })
+      },
+    )
     await signIn(page, d.actors.instructor)
     const dialog = await openInvites(page)
     // Kept to a school's domain, typed as people type it.
@@ -323,13 +345,15 @@ test.describe.serial('invite links', () => {
     await dialog.getByRole('button', { name: 'Create link' }).click()
     await expect(dialog.locator('.join-reveal__facts')).toContainText('@hainanu.edu.cn')
     const url = await dialog.locator('.join-reveal__url input').inputValue()
-    await expect(dialog.locator('.join-reveal__clock')).toHaveText(/^(10:00|09:5\d)$/)
-    await page.clock.fastForward('10:01')
-    await expect(dialog.getByText('This link has expired')).toBeVisible()
+    // Counted on this page's own clock, it would have ended ten minutes ago.
+    await expect(dialog.locator('.join-reveal__clock')).toHaveText(/^00:0[1-8]$/)
+    await expect(dialog.getByText('This link has expired')).toBeVisible({ timeout: 15_000 })
     await expect(dialog.getByRole('button', { name: 'Show full screen' })).toBeDisabled()
     await dialog.getByRole('button', { name: 'Create a new link' }).click()
     await expect(dialog.locator('.join-reveal__url input')).not.toHaveValue(url)
+    // Counted on this page's own clock, it would end now.
     await expect(dialog.locator('.join-reveal__clock')).toHaveText(/^(10:00|09:5\d)$/)
+    await expect(dialog.locator('.join-reveal__facts')).toContainText('@hainanu.edu.cn')
   })
 
   test('on a phone, in Traditional Chinese, the join page fits, and a new student joins through it', async ({
