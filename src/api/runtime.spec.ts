@@ -77,14 +77,18 @@ function failure(p: Promise<unknown>): Promise<any> {
  * stretch them.
  */
 async function pastRetries<P extends Promise<unknown>>(p: P): Promise<Awaited<P>> {
-  const settled = p.then(
-    (value) => ({ value: value as Awaited<P> }),
-    (error: unknown) => ({ error }),
+  const out: { settled?: { value: Awaited<P> } | { error: unknown } } = {}
+  void p.then(
+    (value) => (out.settled = { value: value as Awaited<P> }),
+    (error: unknown) => (out.settled = { error }),
   )
   await vi.advanceTimersByTimeAsync(500 + 1_000)
-  const out = await settled
-  if ('error' in out) throw out.error
-  return out.value
+  // A moment more, for what the last call's answer sets off: a wait grown
+  // past these, or one wait more, fails here, not at the test's limit.
+  await vi.advanceTimersByTimeAsync(0)
+  if (!out.settled) throw new Error('the call is still being sent again 1.5 s on')
+  if ('error' in out.settled) throw out.settled.error
+  return out.settled.value
 }
 
 const runtimeCalls = () => calls.filter((c) => c.url.startsWith('/runtime/') && c.url !== INFO)

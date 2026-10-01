@@ -144,7 +144,12 @@ describe('HostOnRuntimeDialog: an agent of its page', () => {
     const w = await open()
     // A 503 is asked again twice, half a second and then a second apart,
     // before it is the answer.
-    await vi.advanceTimersByTimeAsync(500 + 1_000)
+    expect(s.to('POST', RUNTIME.inspect)).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(500)
+    await flushPromises()
+    expect(s.to('POST', RUNTIME.inspect)).toHaveLength(2)
+    expect(w.text()).not.toContain('not set up to host agents')
+    await vi.advanceTimersByTimeAsync(1_000)
     await flushPromises()
     expect(s.to('POST', RUNTIME.inspect)).toHaveLength(3)
     expect(w.text()).toContain('The school’s runtime is not set up to host agents. Tell your administrator.')
