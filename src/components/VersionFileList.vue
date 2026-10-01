@@ -6,7 +6,8 @@
 // (document.file, asked for on the click, since one handed out with the
 // version may have expired). Where the version's text versions are shown
 // (textStatus), each file says where its text version stands, and may open
-// it (the text event).
+// it (the text event). An Office file whose PDF the server has made says so
+// (a PDF tag): that PDF is what the viewer shows of it.
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DocumentFile } from '@/api/types'
@@ -15,6 +16,7 @@ import { documentPreviewFiles, openPreview } from '@/components/preview/viewer'
 import { downloadDocumentFile, FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { FILE_ICON, fileKind } from '@/utils/files'
 import { formatBytes } from '@/utils/format'
+import { renditionStage } from '@/utils/rendition'
 import { TEXT_STATUS_TAG, textShown, textStatus } from '@/views/course/materials/components/textVersion'
 
 const props = defineProps<{
@@ -33,6 +35,8 @@ const props = defineProps<{
   docTitle?: string
   /** When the version was made, for "Download as PDF" from the viewer. */
   date?: string | null
+  /** The caller may write the document: a file's PDF rendition that failed may be sent back from the viewer. */
+  retryRenditions?: boolean
 }>()
 const emit = defineEmits<{ text: [file: DocumentFile] }>()
 const { t } = useI18n()
@@ -56,10 +60,15 @@ function textChip(f: DocumentFile) {
   return { type: TEXT_STATUS_TAG[status], label: t(`enums.textStatus.${status}`) }
 }
 
+/** Its PDF rendition is done: it is previewed as that PDF. */
+const hasPdf = (f: DocumentFile) => renditionStage(f.rendition) === 'done'
+
 /** Opens the viewer on a file, among the version's others. */
 function preview(f: DocumentFile) {
   openPreview({
-    files: documentPreviewFiles(props.courseId, props.documentId, props.versionId, props.files, props.date),
+    files: documentPreviewFiles(props.courseId, props.documentId, props.versionId, props.files, props.date, {
+      retry: props.retryRenditions,
+    }),
     index: props.files.indexOf(f),
     title: props.docTitle,
     courseId: props.courseId,
@@ -87,7 +96,7 @@ async function download(f: DocumentFile) {
       <button
         type="button"
         class="version-file__open"
-        :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)})`"
+        :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)}${hasPdf(f) ? ' · PDF' : ''})`"
         :title="`${t('preview.openTip')}: ${f.filename}${checksum(f) ? ` · ${checksum(f)}` : ''}`"
         @click="preview(f)"
       >
@@ -96,7 +105,10 @@ async function download(f: DocumentFile) {
         </span>
         <span class="version-file__text">
           <span class="version-file__name">{{ f.filename }}</span>
-          <span class="version-file__meta">{{ meta(f) }}</span>
+          <span class="version-file__meta">
+            <span>{{ meta(f) }}</span>
+            <span v-if="hasPdf(f)" class="version-file__pdf" :title="t('preview.rendition.listedTip')">PDF</span>
+          </span>
         </span>
         <el-icon class="version-file__view" aria-hidden="true"><View /></el-icon>
       </button>
@@ -212,9 +224,24 @@ async function download(f: DocumentFile) {
   color: var(--app-ink);
 }
 .version-file__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
+}
+/* Its PDF is made: the viewer shows that. */
+.version-file__pdf {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border: 1px solid var(--el-color-danger-light-5);
+  border-radius: 4px;
+  color: var(--el-color-danger);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  letter-spacing: 0.02em;
 }
 .version-file__view {
   flex-shrink: 0;

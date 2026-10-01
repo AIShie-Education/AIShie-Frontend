@@ -6,15 +6,20 @@
 // listed, each to download under its name (VersionFileList). A document of
 // one file whose name is its title is that file alone; otherwise its title
 // heads its files. One with no file downloads its text, as Markdown or as a
-// PDF (through the browser's print window, PrintButton).
+// PDF (through the browser's print window, PrintButton). Whoever may write
+// it (its kind's permission: a student their own submission, a grader
+// feedback) may send a file's PDF rendition that failed back from the
+// viewer.
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read, type ApiError } from '@/api/http'
 import type { DocumentFull } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { errorMessage } from '@/composables/useErrors'
+import { useCourseStore } from '@/stores/course'
 import { versionFilesOf } from '@/utils/documentFiles'
 import { downloadName } from '@/utils/format'
+import { retryPermOf } from '@/utils/rendition'
 import VersionFileList from './VersionFileList.vue'
 import PrintButton from './PrintButton.vue'
 import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
@@ -47,6 +52,11 @@ watch(() => [props.documentId, props.versionId], load)
 
 const version = computed(() => doc.value?.version ?? null)
 const files = computed(() => versionFilesOf(version.value, doc.value?.title ?? props.title))
+const course = useCourseStore()
+const retryRenditions = computed(() => {
+  const perm = retryPermOf(doc.value?.kind)
+  return !!perm && course.writable && course.can(perm)
+})
 const stem = (name: string) => name.replace(/\.[^.\s]{1,16}$/, '').trim().toLowerCase()
 /** One file named as the document is: the file says it all. */
 const alone = computed(
@@ -113,6 +123,7 @@ export function forgetDocumentFiles() {
       :files="files"
       :doc-title="doc?.title || title"
       :date="version?.created_at"
+      :retry-renditions="retryRenditions"
     />
     <div v-else-if="version?.body_md" class="doc-files__text">
       <el-button link type="primary" @click="downloadText">

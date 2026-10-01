@@ -8,22 +8,30 @@
 // shown from an object URL (attachments.ts): the page's policy for images
 // allows this origin, data: and blob: only, and a download URL may be an
 // object store's. Until it has come, or where it cannot, the icon stands.
+// An Office file whose PDF the server has made says so (a PDF tag): that PDF
+// is what the viewer shows of it, and whoever may withdraw the message may
+// send one that failed back to be converted again from there.
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { MessageAttachment } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
 import { attachmentPreviewFiles, openPreview } from '@/components/preview/viewer'
 import { formatBytes } from '@/utils/format'
+import { renditionStage } from '@/utils/rendition'
 import { downloadAttachment, FILE_ICON, fileKind, hasThumbnail, REFUSAL_SCOPE, thumbnailOf } from './attachments'
 
 const props = defineProps<{
   courseId: string
   files: MessageAttachment[]
+  /** The caller may withdraw the message (its author, staff deciding for its opener): a file's failed PDF may be sent back. */
+  retryRenditions?: boolean
 }>()
 const { t } = useI18n()
 
 const kindOf = (f: MessageAttachment) => fileKind(f.content_type, f.filename)
 const meta = (f: MessageAttachment) => `${t(`common.fileKind.${kindOf(f)}`)} · ${formatBytes(f.byte_size)}`
+/** Its PDF rendition is done: it is previewed as that PDF. */
+const hasPdf = (f: MessageAttachment) => renditionStage(f.rendition) === 'done'
 
 // --- Thumbnails, once on screen ------------------------------------------------------
 const thumbs = reactive<Record<string, string>>({})
@@ -64,7 +72,7 @@ function thumbFailed(id: string) {
 // --- Previewing, downloading -----------------------------------------------------------
 function preview(f: MessageAttachment) {
   openPreview({
-    files: attachmentPreviewFiles(props.courseId, props.files),
+    files: attachmentPreviewFiles(props.courseId, props.files, { retry: props.retryRenditions }),
     index: props.files.indexOf(f),
     courseId: props.courseId,
   })
@@ -96,7 +104,7 @@ async function download(f: MessageAttachment) {
       <button
         type="button"
         class="msg-file__open"
-        :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)})`"
+        :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)}${hasPdf(f) ? ' · PDF' : ''})`"
         :title="`${t('preview.openTip')}: ${f.filename}`"
         @click="preview(f)"
       >
@@ -114,7 +122,10 @@ async function download(f: MessageAttachment) {
           </span>
           <span class="msg-file__text">
             <span class="msg-file__name">{{ f.filename }}</span>
-            <span class="msg-file__meta">{{ meta(f) }}</span>
+            <span class="msg-file__meta">
+              <span>{{ meta(f) }}</span>
+              <span v-if="hasPdf(f)" class="msg-file__pdf" :title="t('preview.rendition.listedTip')">PDF</span>
+            </span>
           </span>
         </span>
       </button>
@@ -230,9 +241,24 @@ async function download(f: MessageAttachment) {
   color: var(--app-ink);
 }
 .msg-file__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
+}
+/* Its PDF is made: the viewer shows that. */
+.msg-file__pdf {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border: 1px solid var(--el-color-danger-light-5);
+  border-radius: 4px;
+  color: var(--el-color-danger);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  letter-spacing: 0.02em;
 }
 /* The download, on the card at its bottom right. */
 .msg-file__get {

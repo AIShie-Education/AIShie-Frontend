@@ -671,6 +671,7 @@ function noteSource(): PrintRequest {
                   :text-status="textTab"
                   :transcription-on="transcriptionOn"
                   :open-text="textTab"
+                  :retry-renditions="!!canWrite && !writeDisabled"
                   @text="showText"
                 />
 

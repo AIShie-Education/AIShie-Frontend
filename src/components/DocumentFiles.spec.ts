@@ -21,6 +21,8 @@ vi.mock('@/api/http', async (orig) => {
 
 const { i18n, setLocale } = await import('@/i18n')
 const { default: DocumentFiles, forgetDocumentFiles } = await import('./DocumentFiles.vue')
+const { useCourseStore } = await import('@/stores/course')
+const { closePreview, previewState } = await import('./preview/viewer')
 
 const pdf = (id: string, position: number, filename: string) => ({
   id,
@@ -73,5 +75,39 @@ describe('DocumentFiles', () => {
     files('d-many', 'Lab report')
     await flushPromises()
     expect(reads).toEqual(['document.get d-many'])
+  })
+
+  it('lets whoever may write it send a file’s failed PDF back: a submission by submission_write, feedback by grade_submit', async () => {
+    const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    const docx = {
+      ...pdf('f-7', 1, 'essay.docx'),
+      content_type: DOCX,
+      rendition: { state: 'failed', reason: 'timeout' },
+    }
+    docs['d-sub'] = { id: 'd-sub', title: 'essay', kind: 'submission', version: { id: 'v-3', seq: 1, files: [docx] } }
+    docs['d-fb'] = { id: 'd-fb', title: 'essay', kind: 'feedback', version: { id: 'v-4', seq: 1, files: [docx] } }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const course = useCourseStore()
+    course.permsSource = 'exact'
+    course.perms = { submission_write: 'autonomous', grade_submit: 'denied' }
+    const mountOf = (documentId: string) =>
+      mount(DocumentFiles, {
+        props: { courseId: 'c-1', documentId, title: 'essay' },
+        global: { plugins: [pinia, i18n, ElementPlus], components: icons },
+      })
+    const opened = async (documentId: string) => {
+      const w = mountOf(documentId)
+      await flushPromises()
+      await w.find('.version-file__open').trigger('click')
+      const f = previewState().files[0]!
+      closePreview()
+      return f
+    }
+    expect((await opened('d-sub')).retryRendition).toBeTypeOf('function')
+    expect((await opened('d-fb')).retryRendition).toBeUndefined()
+    course.perms = { submission_write: 'denied', grade_submit: 'confirm_required' }
+    expect((await opened('d-sub')).retryRendition).toBeUndefined()
+    expect((await opened('d-fb')).retryRendition).toBeTypeOf('function')
   })
 })
