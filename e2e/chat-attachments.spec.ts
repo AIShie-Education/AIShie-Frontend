@@ -1,7 +1,17 @@
 /// <reference lib="dom" />
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { call, coursePath, demo, dropFiles, photograph, signIn, type CoreReply, type FileSpec } from './support'
+import {
+  call,
+  coursePath,
+  demo,
+  dropFiles,
+  hostOnRuntime,
+  photograph,
+  signIn,
+  type CoreReply,
+  type FileSpec,
+} from './support'
 
 // Files in the chat, with the real Core: Yuki, a student, asks a course
 // agent made for this run with a PDF attached (the paperclip), which uploads
@@ -154,8 +164,11 @@ test.describe.serial('files in the chat', () => {
   test.beforeAll(async () => {
     const d = demo()
     const I = d.actors.instructor.token
-    // The instructor's course agent, seated to answer the course, and what runs it, which answers in the site.
-    const tutor = done(await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR }), 'agent.create').actor_id
+    // The instructor's course agent, hosted on AIshie and seated to answer the course; the test plays the runtime.
+    const tutor = done(
+      await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR, hosting: 'runtime' }),
+      'agent.create',
+    ).actor_id
     w.tutorId = tutor
     done(
       await call(I, 'POST', `/v1/courses/${d.course.id}/delegates`, {
@@ -165,11 +178,8 @@ test.describe.serial('files in the chat', () => {
       }),
       'member.add_delegate',
     )
-    w.tutorToken = done(
-      await call(I, 'POST', `/v1/me/agents/${tutor}/tokens`, { label: `files runtime ${STAMP}` }),
-      'agent.issue_token',
-    ).token
-    done(await call(w.tutorToken, 'POST', '/v1/me/site-chat', { on: true }), 'me.site_chat')
+    // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
+    w.tutorToken = await hostOnRuntime(tutor)
   })
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.

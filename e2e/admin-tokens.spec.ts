@@ -41,7 +41,7 @@ test.beforeAll(async () => {
   rootId = me.body.result.id
   rootName = me.body.result.display_name
 
-  const made = await call(token, 'POST', '/v1/actors', { kind: 'agent', display_name: AGENT })
+  const made = await call(token, 'POST', '/v1/actors', { kind: 'agent', display_name: AGENT, hosting: 'mcp' })
   expect(made.body.status, JSON.stringify(made.body)).toBe('executed')
   agentId = made.body.result.actor_id
   // The first token through the API, as a script setting the agent up would.

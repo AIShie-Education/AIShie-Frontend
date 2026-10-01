@@ -295,6 +295,59 @@ export async function call(
   return { status: res.status, body: await res.json() }
 }
 
+let runtimeService: Promise<string> | undefined
+
+/**
+ * The credential of the site's agent runtime (the agent_runtime service), as
+ * setup issues it; the runs have no runtime, so the tests play its part with
+ * it. Root issues it once a run, revoking any other (replace): a run before
+ * may have left one. It is never printed.
+ */
+function runtimeCredential(): Promise<string> {
+  runtimeService ??= call(root().token, 'POST', '/v1/services/agent_runtime/credentials', {
+    label: `e2e runtime ${demo().tag}`,
+    replace: true,
+  }).then((r) => {
+    const token = r.body.result?.token
+    if (r.body.status !== 'executed' || typeof token !== 'string')
+      throw new Error(`service.issue_credential agent_runtime: HTTP ${r.status} ${r.body.error?.code ?? r.body.status}`)
+    return token
+  })
+  return runtimeService
+}
+
+/** Calls Core as the site's agent runtime does, with its credential: a path under /v1/services/agent_runtime. */
+export async function asAgentRuntime(method: 'GET' | 'POST', path: string, body?: unknown) {
+  return call(await runtimeCredential(), method, `/v1/services/agent_runtime${path}`, body)
+}
+
+/**
+ * Hosts an agent created as hosted on AIshie as the site's runtime does:
+ * the runtime's credential is issued the agent's one token
+ * (agent_runtime.issue_token), and people may ask the agent from then on;
+ * then the runtime connects as the agent with it, so the agent is seen
+ * online. Returns that token, which the test answers as the agent with; it
+ * is never printed.
+ */
+export async function hostOnRuntime(agentId: string): Promise<string> {
+  const r = await asAgentRuntime('POST', `/agents/${agentId}/token`, { label: `e2e runtime ${demo().tag}` })
+  const token = r.body.result?.token
+  if (r.body.status !== 'executed' || typeof token !== 'string')
+    throw new Error(
+      `agent_runtime.issue_token: HTTP ${r.status} ${r.body.error?.code ?? r.body.status} ${JSON.stringify(r.body.error?.details ?? {})}`,
+    )
+  const me = await call(token, 'GET', '/v1/me')
+  expect(me.status, 'the runtime connects as the agent').toBe(200)
+  return token
+}
+
+/** Stops hosting an agent as the site's runtime does: its token is revoked, and nobody may ask it. */
+export async function stopHosting(agentId: string) {
+  const r = await asAgentRuntime('POST', `/agents/${agentId}/token/revoke`, {})
+  expect(r.body.status, `agent_runtime.revoke_token: ${r.body.error?.code ?? ''}`).toBe('executed')
+  return r.body.result as { agent_id: string; revoked: string[] }
+}
+
 /**
  * Takes up an invitation (actor.invite) with a password, as the page an
  * invitation link opens does (POST /v1/auth/invite), and returns the session

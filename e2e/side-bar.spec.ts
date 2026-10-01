@@ -235,6 +235,9 @@ test.describe('the activity bar and the side bar', () => {
     await bar.getByRole('button', { name: 'New agent' }).click()
     const create = page.getByRole('dialog', { name: 'New agent' })
     await create.getByLabel('Name').fill(AGENT)
+    // How it runs is chosen for good, with nothing chosen for one.
+    await expect(create.locator('.hosting-choice')).toContainText('This cannot be changed after it is created.')
+    await create.locator('.hosting-choice__option--mcp').click()
     await create.getByRole('button', { name: 'Create agent' }).click()
     await expect(page).toHaveURL(/\/account\/agents\/[0-9a-f-]{36}$/)
     const agentId = page.url().split('/').pop()!

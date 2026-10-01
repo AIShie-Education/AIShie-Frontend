@@ -39,7 +39,7 @@ test.beforeAll(async () => {
   const suspended = await call(token, 'POST', `/v1/actors/${sid}/suspend`, {})
   expect(suspended.body.status, JSON.stringify(suspended.body)).toBe('executed')
   samId = await register({ kind: 'human', display_name: SAM.name, email: SAM.email })
-  await register({ kind: 'agent', display_name: AGENT })
+  await register({ kind: 'agent', display_name: AGENT, hosting: 'mcp' })
 })
 
 test('an administrator finds whom to add by name, and the search fills in their ID', async ({ page }) => {

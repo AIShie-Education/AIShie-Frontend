@@ -115,7 +115,7 @@ async function transcriberOn(page: Page) {
         commit: STAMP,
         audience: 'https://e2e.test/runtime',
         issuer: 'https://e2e.test',
-        features: { connect_by_token: true, own_key: true, school_key: true, transcription: true },
+        features: { host_by_id: true, own_key: true, school_key: true, transcription: true },
       },
     }),
   )

@@ -6,6 +6,7 @@ import {
   activityBar,
   call,
   demo,
+  hostOnRuntime,
   photograph,
   showSideView,
   signIn,
@@ -15,8 +16,8 @@ import {
 } from './support'
 
 // Exporting conversations for audit (匯出對話), with the real Core. A course
-// agent made for this run answers Yuki, who asks again and withdraws her
-// second question. Root exports the course's conversations with that agent
+// agent made for this run, hosted on AIshie (the test plays the runtime),
+// answers Yuki, who asks again and withdraws her second question. Root exports the course's conversations with that agent
 // over two days on Hong Kong's calendar, sees what the export holds, and
 // downloads both files: the JSON Lines file holds the conversation with all
 // three messages, the withdrawn one marked; the CSV file opens with a byte
@@ -94,8 +95,11 @@ test.describe.serial('exporting conversations for audit', () => {
     const d = demo()
     const c = d.course.id
     const I = d.actors.instructor.token
-    // The instructor's course agent, seated to answer the course, and what runs it, which answers in the site.
-    w.agentId = done(await call(I, 'POST', '/v1/me/agents', { display_name: AGENT }), 'agent.create').actor_id
+    // The instructor's course agent, hosted on AIshie and seated to answer the course; the test plays the runtime.
+    w.agentId = done(
+      await call(I, 'POST', '/v1/me/agents', { display_name: AGENT, hosting: 'runtime' }),
+      'agent.create',
+    ).actor_id
     w.agentMemberId = done(
       await call(I, 'POST', `/v1/courses/${c}/delegates`, {
         actor_id: w.agentId,
@@ -104,11 +108,8 @@ test.describe.serial('exporting conversations for audit', () => {
       }),
       'member.add_delegate',
     ).member_id
-    w.agentToken = done(
-      await call(I, 'POST', `/v1/me/agents/${w.agentId}/tokens`, { label: `audit runtime ${STAMP}` }),
-      'agent.issue_token',
-    ).token
-    done(await call(w.agentToken, 'POST', '/v1/me/site-chat', { on: true }), 'me.site_chat')
+    // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
+    w.agentToken = await hostOnRuntime(w.agentId)
 
     // Yuki asks; the agent answers; she asks again, and withdraws it.
     const Y = d.actors.yuki.token

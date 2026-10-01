@@ -1,6 +1,15 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
-import { call, coursePath, demo, inTraditionalChinese, photograph, signIn, type CoreReply } from './support'
+import {
+  call,
+  coursePath,
+  demo,
+  hostOnRuntime,
+  inTraditionalChinese,
+  photograph,
+  signIn,
+  type CoreReply,
+} from './support'
 
 // While a course agent writes its answer, the one who asked watches it come:
 // its runtime writes a draft (conversation.draft) as it works, and the open
@@ -28,7 +37,10 @@ function done(r: { status: number; body: CoreReply }, what: string) {
 async function seatTutor(name: string) {
   const d = demo()
   const I = d.actors.instructor.token
-  w.tutorId = done(await call(I, 'POST', '/v1/me/agents', { display_name: name }), 'agent.create').actor_id
+  w.tutorId = done(
+    await call(I, 'POST', '/v1/me/agents', { display_name: name, hosting: 'runtime' }),
+    'agent.create',
+  ).actor_id
   w.seatId = done(
     await call(I, 'POST', `/v1/courses/${d.course.id}/delegates`, {
       actor_id: w.tutorId,
@@ -37,11 +49,8 @@ async function seatTutor(name: string) {
     }),
     'member.add_delegate',
   ).member_id as string
-  w.tutorToken = done(
-    await call(I, 'POST', `/v1/me/agents/${w.tutorId}/tokens`, { label: `draft runtime ${STAMP}` }),
-    'agent.issue_token',
-  ).token as string
-  done(await call(w.tutorToken, 'POST', '/v1/me/site-chat', { on: true }), 'me.site_chat')
+  // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
+  w.tutorToken = await hostOnRuntime(w.tutorId)
 }
 
 /** How the agent's answers are posted: at once (autonomous), or once someone confirms them. */
