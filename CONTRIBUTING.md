@@ -82,6 +82,29 @@ Root signs in with a password as any person does: the env file's
 register, each through an invitation. People hold no API tokens; only the
 tests' agents are given them.
 
+### Tests that hold on a busy machine
+
+A test passes on a loaded laptop or CI runner as it does on an idle one:
+
+- **No waiting on the clock.** The wait before a call is sent again (half a
+  second, then a second), a poll's, a timer's of the page are passed with fake
+  timers (`vi.useFakeTimers`, then `vi.advanceTimersByTimeAsync`), the test
+  saying how many calls went before and after; an answer that comes through
+  promises is waited for with `flushPromises`. Only a moment's wait is real:
+  past Element Plus's 100 ms debounce of a field's error (`settle()`).
+- **No bound on the wall clock.** What is bounded is how the work grows (the
+  CPU time of n and 4n, as `src/utils/markdown.spec.ts` does), or what is
+  made, never how long it took. `vi.waitFor` gives up after a second: one
+  that waits for a render is given longer (`rendered`, 20 s).
+- **One render a test.** A component rendered again, for another language or
+  another administrator, is another test (`it.each`).
+- **The limits are for CPU.** `vite.config.ts` gives a test and a hook 30 s:
+  rendering Element Plus in jsdom is up to half a second of CPU, which a busy
+  machine stretches many times over. A file that costs more says why and sets
+  its own (`PermEditor.spec.ts`).
+- **End to end,** a test walks a few pages, not every one: the walk over the
+  signed-in pages in `e2e/chat-panel.spec.ts` is three tests.
+
 ## The Core the tests run against
 
 `.github/core-image` pins one image of Core, by digest, with its commit in the
