@@ -237,8 +237,11 @@ jobs:
         if: always()
         run: scripts/ci-core.sh stop
       # Traces hold the throwaway Core's sessions and agents' tokens, which died with it.
+      # Kept for a failed run, and for a green one whose retry passed a test
+      # that had failed: test-results/ then holds the failed attempt's trace
+      # (trace: retain-on-failure), the only record of what a flaky test met.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure()
+        if: ${{ failure() || (!cancelled() && hashFiles('test-results/**/trace.zip') != '') }}
         with:
           name: e2e-${{ github.sha }}-${{ github.run_attempt }}
           path: |

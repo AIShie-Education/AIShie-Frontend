@@ -22,7 +22,10 @@ request, on every push to `main` and once a week:
 - **end to end, and Core's catalogue:** the Playwright suite against the
   build, served by `vite preview`, and a real Core: the image pinned in
   `.github/core-image`, on a scratch database. The same Core's
-  `GET /v1/tools` must be `api/catalogue.json`.
+  `GET /v1/tools` must be `api/catalogue.json`. A test is tried once more
+  when it fails; the report and the traces of what failed, with Core's log,
+  are kept as the run's artifact `e2e-<commit>-<attempt>` when the run
+  fails, and when it passes with a test that passed only on its retry.
 - **the image:** on a pull request, the weekly run and a run by hand, the
   image is built with `docker build` and `scripts/test-image.sh` runs it and
   checks it against the build: the rules it serves by, `/version.json`, its
