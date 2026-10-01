@@ -231,37 +231,59 @@ markdown-it + DOMPurify.
 The pages that host a person's agent on the school's runtime call its API, under `/runtime/api/v1`
 on this origin, through `@/api/runtime`; never `fetch` it yourself either.
 
+- **How an agent runs is chosen once, when it is created, and never changed** (`hosting`,
+  `AgentHosting` in `@/api/types`, read with `hostingOf()`): `runtime`, hosted on AIshie, which the
+  runtime runs by the agent's id and members of its courses ask on the site; or `mcp`, MCP access,
+  which its owner's own tools use with tokens the owner issues (`agent.issue_token`), and which
+  nobody asks on the site. Every place an agent is made asks for it with `<HostingChoice v-model>`
+  (no default; it says it is for good) and sends it: `agent.create`, `actor.register` for an agent,
+  and a new course agent. Nothing offers to change it (Core refuses: `hosting_fixed`). Show it,
+  wherever an agent is shown in detail, with `<HostingTag :hosting :site-chat>`, which for one hosted
+  on AIshie says whether it can be asked now (`site_chat`) where that is known. An agent with MCP
+  access has no hosting anywhere (its page shows `McpAccessCard`: its tokens, Core's MCP endpoint,
+  the header and Claude Desktop's configuration); one hosted on AIshie has no token anywhere for its
+  owner (Core refuses one: `hosted_by_runtime`), and its page shows `HostingPanel`.
+
 - **Show hosting only where there is a runtime.** `useRuntime()` from `@/composables/useRuntime`
   gives `available`, `info`, `error`, `checked` and `refresh`, from one `GET /info` per page load.
   Until `checked`, show neither the feature nor its absence. `info.features` are booleans the runtime
-  works out as it starts (`connect_by_token`, `own_key`, `school_key`): offer what each names only
+  works out as it starts (`host_by_id`, `own_key`, `school_key`): offer what each names only
   while it is true.
-- **Calls**: the contract's own, `runtime.me()`, `.models()`, `.testKey(req)`, `.inspect(req)`,
-  `.connect(req)`, `.list()`, `.get(id)`, `.update(id, version, patch)`, `.replaceToken(id, token)`,
-  `.pause(id)`, `.resume(id)`, `.remove(id, revokeToken)`, each resolving `{ data, etag, status,
-  replayed }`. Each goes as the person signed in, with an assertion Core makes for them; the client
+- **Calls**: the contract's own, `runtime.me()`, `.models()`, `.testKey(req)`, `.inspect(agentId)`,
+  `.host(agentId)`, `.list()`, `.get(id)`, `.update(id, version, patch)`, `.renewToken(id)`,
+  `.pause(id)`, `.resume(id)`, `.remove(id)`, each resolving `{ data, etag, status, replayed }`. Each goes as the person signed in, with an assertion Core makes for them; the client
   asks for it, keeps it in memory, and asks again as it needs. The runtime reads no idempotency key:
   the client sends again what the runtime answers once however often it is sent, and never a PATCH
   or a key test. `update` names the version it read; the other writes name none, but any of them may
   still answer 412: `isVersionMismatch(e)` says the agent changed since, so read it again and say so,
   keeping what the person typed.
-- `inspect` and `connect` answer the agent's other live tokens (`other_tokens`, null when Core would
-  not list them): warn with `OtherTokensNotice` when one is in use, and never refuse or revoke for
-  the owner. A token the runtime could not revoke (`revocation: 'failed'`) may still work: tell the
-  owner and offer to revoke it as them (`UnrevokedTokenNotice`).
+- An agent is hosted by its id alone: `inspect` it (nothing is written; it says whether it may be
+  hosted and why not), then `host` it (`HostOnRuntimeDialog`, then `ModelKeyDialog`). The runtime is
+  issued the agent's one token by Core itself: nothing in the app issues, shows, pastes or sends an
+  agent's token to it. Only an agent created hosted on AIshie, active and not hosted yet, is offered.
+  `needs_token` (its token revoked in Core) is mended with `renewToken` ("Connect again"). `pause`
+  and `remove` answer what became of its token in Core (`revocation`): where it was not revoked
+  (`failed`, `not_attempted`), tell the owner that people may still be offered to ask it
+  (`revocationNotice`). After any of these, read the agent from Core again: whether it can be asked
+  follows.
 - Errors are `RuntimeError` (an `ApiError`) with the runtime's `reason`; choose the words by reason
   (`hostingErrorText` in the agents' components). A 401 from the runtime is not a lapsed session
   (the client has already tried a new assertion): say the runtime refused, not that the person was
   signed out. A lapsed session shows as Core's 401 when the assertion is asked for, and the app
   handles it.
-- Never keep an agent token or a model key in reactive state, storage, a log or an error: a token
-  the page issues for the runtime lives in one local variable until the runtime has it.
+- Never keep a token or a model key in reactive state, storage, a log or an error: a credential the
+  page issues for the runtime (the transcriber's) lives in one local variable until the runtime has
+  it.
 - The runtime's administrators (Core's root and admins, as many of them as its operator names: `GET
   /me`'s `is_admin`) set it on *AI and documents* (`/admin/runtime`, `RuntimeAdminView.vue`, and its
   parts in `src/views/admin/runtime/`), through `runtimeAdmin` (`@/api/runtime`): the school's plan
   (its offers, each with the school's key, write-only, and its daily quotas in answers and dollars),
   pricing (the price table beside the operator's price file, tenants' daily quotas, hosted agents'
-  daily budgets, and what things cost), today's use of the plan, and OCR. The side bar offers the page to platform administrators where there is a runtime; the page
+  daily budgets, and what things cost), today's use of the plan, OCR, and Agent hosting: the
+  runtime's own credential for Core (`AgentRuntimeCard`, the service `agent_runtime`), listed,
+  issued (shown once, with where it goes) and revoked through Core alone, never handed to the
+  runtime by the page, since setting up the server makes it and `aishie runtime-credential` on the
+  server rotates it, which the card says first. The side bar offers the page to platform administrators where there is a runtime; the page
   says so where there is none, and offers to try again where it cannot be reached. Each tab is a
   part the runtime answers for apart, in `<RuntimeAsync>`: a runtime from before a part's routes
   answers 404, said quietly as not offered yet (`isNotOffered`), and a refusal because the caller is
@@ -284,9 +306,8 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   one issued without `replace` (with five live, only after asking, then with `replace`), put to the
   runtime (`PUT admin/transcription/credential`, never sent again by itself), the others revoked once
   it is taken; a refusal revokes the one just issued, and no answer asks the runtime's settings
-  whether it has it before revoking it. Its token lives in one local variable, as an agent's does
-  for hosting (`hostingFlow.ts`), and the runtime client takes a service's token (`aissvc_…`) out of
-  any error as it does an agent's. "Revoke" is `withdrawServiceCredential`: the runtime forgets it,
+  whether it has it before revoking it. Its token lives in one local variable, and the runtime
+  client takes a service's token (`aissvc_…`) out of any error as it does an agent's. "Revoke" is `withdrawServiceCredential`: the runtime forgets it,
   then Core revokes it (by the id it was given, or the live one its hint's prefix names). What comes
   next is another tab, or another card in its tab.
 - The runtime's route and field names live in `src/api/runtime.ts` (`RUNTIME_ROUTES`) and
@@ -368,7 +389,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - People sign in with a password, single sign-on or an invitation, and the browser calls Core with
   its session cookie alone: nothing in it sends a bearer token to Core. API tokens are for agents
   only, which do not use the app. Offer a person none: no sign-in by token, and no token to issue on
-  the Account page or a person's administration page (an agent's page and *My agents* issue them).
+  the Account page or a person's administration page (an agent's page and *My agents* issue them,
+  for an agent with MCP access alone).
   A token a person still holds, made before, is listed only to be revoked, and says so.
 - Everything held is the caller's. Signing out (or Core ending the session) closes the course store,
   and the next sign-in in the same tab loads the page afresh, so caches a view keeps at module level
@@ -436,15 +458,14 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   whether an agent is connected (never / online within two minutes / last seen). `seatPurpose()`
   (`@/utils/agents`) tells a course agent from a personal assistant by the seat's `answers_course`;
   `delegateArgsFor()` gives `member.add_delegate` both the preset and `answers_course`, always said
-  outright.
-- An agent takes conversations in the site only while whatever runs it says so (`me.site_chat`, as
-  AIshie's runtime does); one operated from an external tool (Claude through MCP) never does, and has
-  no chat box anywhere. Where Core says `site_chat: false` (`agent.get`/`.list`, an agent's seat in
-  `member.get`/`.list`), offer nothing to ask it and say why: `common.agent.external` ("Operated from
-  outside") and `common.agent.externalNote`, with `common.agent.hostedTakesChat` for its owner.
-  `conversation.respondents` leaves such agents out, and a conversation's opener learns from it
-  (`offeredIn`) whether its agent may still be asked; Core refuses a question to one as
-  `agent_answers_elsewhere`, which `errorMessage()` says in the same words.
+  outright. `<HostingTag>` says how an agent runs, beside it.
+- People ask an agent on the site only while AIshie's runtime hosts it: one hosted on AIshie for which
+  the runtime holds a live token (`site_chat: true`, which nobody declares or switches any more). One
+  with MCP access never is, and has no chat box anywhere. Show `site_chat` as a status, never a switch
+  (`SiteChatCard`; `notAskable()` in `courseAgents.ts` on the course's agents). `conversation.respondents`
+  lists only the agents that can be asked, and a conversation's opener learns from it (`offeredIn`)
+  whether its agent may still be; Core refuses one that cannot as `mcp_agent` or `agent_not_hosted`
+  (`notAskableReason()`), which the pane and `errorMessage()` say as `common.agent.notAskable`.
 - The left of every signed-in page is laid out as an editor's: an activity bar along the window's edge
   (`src/components/sidebar/ActivityBar.vue`, mounted by `AppLayout`), with the brand's mark and a button
   for each view the caller is offered (their courses; their agents, for a person; administration, for

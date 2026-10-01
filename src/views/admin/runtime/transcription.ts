@@ -10,7 +10,7 @@
 // answer until the runtime has it, and is blanked in a finally: it is in no
 // reactive state, no storage, no log and no error. Core's answer is taken
 // straight from http.ts's write, not useWrite, so that it is kept nowhere
-// else either (as hostingFlow.ts does with an agent's token).
+// else either.
 import { ApiError, newIdempotencyKey, read, write } from '@/api/http'
 import { ensureRuntimeAssertion, isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type {

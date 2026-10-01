@@ -96,12 +96,14 @@ end; the "works around it" notes say what the front end does meanwhile.
 - **Pending proposals are invisible to non-deciders**, so a TA can enter a draft while an agent's
   proposal for the same work waits, and learns only at approval that it failed ("a newer draft
   was entered").
-- **A conversation does not say whether its agent takes conversations in the site.** Its respondent
-  (`conversation.get`, `.list`) has no `site_chat`, and a student may not read `member.get`. *Works
-  around it:* the opener's pane asks `conversation.respondents`, which leaves such an agent out; but
-  it also leaves out one the opener may no longer address (its seat rescoped, its owner no longer
-  managing the members), and such an agent is then said to be operated from outside too. `site_chat`
-  on the conversation's respondent would settle it.
+- **A conversation does not say whether its agent can be asked in the site, nor why not.** Its
+  respondent (`conversation.get`, `.list`) has no `hosting` or `site_chat`, and a student may not
+  read `member.get`. *Works around it:* the opener's pane asks `conversation.respondents`, which
+  leaves such an agent out; but it also leaves out one the opener may no longer address (its seat
+  rescoped, its owner no longer managing the members). Such a conversation says only that its agent
+  cannot be asked just now, until Core refuses a question with its reason (`mcp_agent`,
+  `agent_not_hosted`), which is then said. `hosting` and `site_chat` on the conversation's
+  respondent would settle it.
 - **The caller's conversations were listed one course at a time, oldest first** (resolved). The
   chat panel's history called `conversation.list` (as opener) once per course, several at once and
   at most 20 courses, reading each course's pages to the end, and said which courses it could not
