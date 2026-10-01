@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import { call, demo, photograph, root, showSideView, signIn, signInAsRoot, toast } from './support'
+import { call, demo, expectToasted, keepToasts, photograph, root, showSideView, signIn, signInAsRoot } from './support'
 
 // The agent runtime's settings, AI and documents (/admin/runtime), for
 // platform administrators. The Core these tests run against has no runtime
@@ -9,7 +9,10 @@ import { call, demo, photograph, root, showSideView, signIn, signInAsRoot, toast
 // model to the school's plan, turns it off, adds a price, and sets OCR's
 // languages; and sets up the transcriber of documents' text versions,
 // giving it a credential the real Core issues, which the played runtime
-// receives and the page never shows, and revoking it again.
+// receives and the page never shows, and revoking it again. What the page
+// said of each write is checked from the messages it kept (keepToasts), as
+// a message closes itself after 3 s, which a busy machine can let pass
+// before the check.
 
 const STAMP = Date.now().toString(36)
 
@@ -299,6 +302,7 @@ test.describe('with an agent runtime', () => {
   }) => {
     const runtime = playRuntime(page)
     await runtime.install()
+    await keepToasts(page)
     await signInAsRoot(page)
     const side = await showSideView(page, 'Administration')
     await side.getByRole('link', { name: 'AI and documents' }).click()
@@ -319,7 +323,7 @@ test.describe('with an agent runtime', () => {
     await dialog.getByLabel('Model', { exact: true }).fill('gpt-4.1-mini')
     await dialog.getByLabel('The school’s API key').fill(KEY)
     await dialog.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(toast(page, 'School AI (quick) is on the school’s plan.')).toBeVisible()
+    await expectToasted(page, 'School AI (quick) is on the school’s plan.')
     await expect(dialog).toBeHidden()
     const made = runtime.sent.find((x) => x.method === 'POST')!
     expect(made.body).toEqual({
@@ -341,7 +345,7 @@ test.describe('with an agent runtime', () => {
     // Turned off, from the keyboard: no agent is on it, so nothing is asked first.
     await row.getByRole('switch', { name: 'Offer School AI (quick) to owners' }).focus()
     await page.keyboard.press('Enter')
-    await expect(toast(page, 'School AI (quick) is turned off.')).toBeVisible()
+    await expectToasted(page, 'School AI (quick) is turned off.')
     await expect(row.getByText('Turned off')).toBeVisible()
     const off = runtime.sent.find((x) => x.method === 'PATCH' && x.path.startsWith('/admin/school-plan/offers/'))!
     expect(off.body).toEqual({ enabled: false })
@@ -362,7 +366,7 @@ test.describe('with an agent runtime', () => {
     const today = new Date().toISOString().slice(0, 10)
     await expect(priceDialog.getByLabel('ID', { exact: true })).toHaveValue(`gpt-4.1-nano-${today}`)
     await priceDialog.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(toast(page, `The price of gpt-4.1-nano from ${today} is saved.`)).toBeVisible()
+    await expectToasted(page, `The price of gpt-4.1-nano from ${today} is saved.`)
     const priced = runtime.sent.find((x) => x.method === 'POST' && x.path === '/admin/prices')!
     expect(priced.body).toEqual({
       id: `gpt-4.1-nano-${today}`,
@@ -383,7 +387,7 @@ test.describe('with an agent runtime', () => {
     await ocr.getByText('日本語').click()
     await expect(japanese).toBeChecked()
     await ocr.getByRole('button', { name: 'Save languages' }).click()
-    await expect(toast(page, 'OCR reads in 繁體中文, English, 日本語.')).toBeVisible()
+    await expectToasted(page, 'OCR reads in 繁體中文, English, 日本語.')
     await ocr.getByRole('button', { name: 'Use the server’s default' }).click()
     await expect(ocr.getByText('Read in this order: 简体中文, 繁體中文, English')).toBeVisible()
     expect(runtime.sent.filter((x) => x.path === '/admin/settings' && x.method === 'PATCH').map((x) => x.body)).toEqual(
@@ -403,6 +407,7 @@ test.describe('the transcriber, with an agent runtime', () => {
   test('root turns it on, chooses its model, gives it a credential Core issues, and revokes it', async ({ page }) => {
     const runtime = playRuntime(page)
     await runtime.install()
+    await keepToasts(page)
     await signInAsRoot(page)
     await page.goto('/admin/runtime?tab=documents')
     const card = page.locator('.transcription-card')
@@ -411,7 +416,7 @@ test.describe('the transcriber, with an agent runtime', () => {
 
     // On at once, with the switch: blocked until it has a model and a credential.
     await card.locator('.transcription-card__enabled').click()
-    await expect(toast(page, 'Transcription is on.')).toBeVisible()
+    await expectToasted(page, 'Transcription is on.')
     await expect(card.locator('.transcription-card__state')).toHaveText('Blocked: no model chosen')
 
     // Its model, from the plan, and fewer pages a document.
@@ -422,7 +427,7 @@ test.describe('the transcriber, with an agent runtime', () => {
       .click()
     await card.locator('.transcription-card__max-pages input').fill('200')
     await card.getByRole('button', { name: 'Save' }).click()
-    await expect(toast(page, 'Transcription settings saved.')).toBeVisible()
+    await expectToasted(page, 'Transcription settings saved.')
     await expect(card.locator('.transcription-card__state')).toHaveText('Blocked: no credential')
     const patches = runtime.sent.filter((x) => x.method === 'PATCH' && x.path === '/admin/settings').map((x) => x.body)
     expect(patches).toEqual([
@@ -432,7 +437,7 @@ test.describe('the transcriber, with an agent runtime', () => {
 
     // One button: Core issues the service a credential, and the runtime is given it.
     await card.getByRole('button', { name: 'Issue and give to the runtime' }).click()
-    await expect(toast(page, 'The runtime has a new credential.')).toBeVisible()
+    await expectToasted(page, 'The runtime has a new credential.')
     await expect(card.locator('.transcription-card__state')).toHaveText('Running')
     await expect(card.locator('.transcription-card__credential-status')).toHaveText('Accepted')
     const put = runtime.sent.filter((x) => x.method === 'PUT' && x.path === '/admin/transcription/credential')
@@ -458,7 +463,7 @@ test.describe('the transcriber, with an agent runtime', () => {
     await card.getByRole('button', { name: 'Revoke' }).click()
     const box = page.getByRole('dialog', { name: 'Revoke the transcription credential?' })
     await box.getByRole('button', { name: 'Revoke' }).click()
-    await expect(toast(page, 'The credential is revoked.')).toBeVisible()
+    await expectToasted(page, 'The credential is revoked.')
     await expect(card.locator('.transcription-card__credential-status')).toHaveText('None')
     expect(runtime.sent.filter((x) => x.method === 'DELETE')).toHaveLength(1)
     expect(await liveServiceCredentials()).toEqual([])
@@ -477,6 +482,7 @@ test.describe('the agent runtime’s own credential, with an agent runtime', () 
     const LABEL = `e2e hosting ${STAMP}`
     const runtime = playRuntime(page)
     await runtime.install()
+    await keepToasts(page)
     await signInAsRoot(page)
     await page.goto('/admin/runtime')
     await page.getByRole('tab', { name: 'Agent hosting' }).click()
@@ -516,7 +522,7 @@ test.describe('the agent runtime’s own credential, with an agent runtime', () 
     const box = page.getByRole('dialog', { name: 'Revoke this credential?' })
     await expect(box).toContainText('The tokens of the agents it hosts are not revoked.')
     await box.getByRole('button', { name: 'Revoke' }).click()
-    await expect(toast(page, 'The credential is revoked.')).toBeVisible()
+    await expectToasted(page, 'The credential is revoked.')
     await expect(item).toHaveCount(0)
     expect((await agentRuntimeCredentials()).find((c) => c.id === made.id)?.live).toBe(false)
   })

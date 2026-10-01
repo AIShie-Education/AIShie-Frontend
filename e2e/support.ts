@@ -266,6 +266,52 @@ export function toast(page: Page, text: string | RegExp) {
   return page.locator('.el-message').filter({ hasText: text })
 }
 
+/**
+ * Has the page keep the text of every message Element Plus pops up
+ * (ElMessage), as each comes, on every page it opens from now on: call it
+ * before the page is opened. A message closes itself after 3 s, which a
+ * check of the screen can miss on a busy machine, where the test is held up
+ * longer than that between the click and the check; a message kept is
+ * there however late the check comes (expectToasted).
+ */
+export async function keepToasts(page: Page) {
+  await page.addInitScript(() => {
+    const w = window as unknown as { toasts: string[] }
+    w.toasts = []
+    const keep = (el: Element) => w.toasts.push((el.textContent ?? '').replace(/\s+/g, ' ').trim())
+    new MutationObserver((changes) => {
+      for (const change of changes)
+        for (const node of change.addedNodes) {
+          if (!(node instanceof Element)) continue
+          if (node.matches('.el-message')) keep(node)
+          node.querySelectorAll('.el-message').forEach(keep)
+        }
+    }).observe(document, { childList: true, subtree: true })
+  })
+}
+
+/**
+ * The page popped up this message (keepToasts), whether it is still on the
+ * screen or has closed itself since. Each message is counted once: the same
+ * text expected again waits for another.
+ */
+export async function expectToasted(page: Page, text: string) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate((text) => {
+          const w = window as unknown as { toasts?: string[] }
+          if (!w.toasts) throw new Error('the page keeps no messages: keepToasts(page) before it is opened')
+          const i = w.toasts.indexOf(text)
+          if (i < 0) return w.toasts
+          w.toasts.splice(i, 1)
+          return true
+        }, text),
+      { message: `the page popped up “${text}”` },
+    )
+    .toBe(true)
+}
+
 /** Core's reply: `result` for a read or a write carried out, `action_id` for a proposal. */
 export interface CoreReply {
   status?: string
