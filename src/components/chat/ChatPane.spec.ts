@@ -823,6 +823,7 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
+    expect(w.find('.chat-pane__presence').text()).toBe('Online')
     const ta = await type(w, 'One more question')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
@@ -830,6 +831,8 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     expect(document.querySelector('.el-notification')?.textContent).toContain(NOT_RUNNING)
     expect(w.find('textarea').exists()).toBe(false)
     expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(NOT_RUNNING)
+    // Nor is it said to be online: it was seen moments ago, but nobody can ask it here now.
+    expect(w.find('.chat-pane__presence').exists()).toBe(false)
     expect(w.emitted('changed')).toBeTruthy()
   })
 

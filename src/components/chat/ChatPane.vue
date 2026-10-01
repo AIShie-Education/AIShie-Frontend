@@ -814,7 +814,8 @@ const closedLine = computed(() => {
           <template v-else>{{ other?.name ?? '' }}</template>
         </span>
         <AgentBadge v-if="other && other.kind === 'agent' && other.mine" :kind="other.kind" mine />
-        <span v-if="other?.kind === 'agent'" class="chat-pane__presence"
+        <!-- Not said of an agent nobody can ask here now: when it was last seen tells nothing of that. -->
+        <span v-if="other?.kind === 'agent' && !elsewhere" class="chat-pane__presence"
           ><PresenceText :value="other.lastSeenAt"
         /></span>
         <StatusTag v-if="status?.state === 'closed'" vocab="conversationState" :value="status.state" />
