@@ -13,6 +13,7 @@ import { useI18n } from 'vue-i18n'
 import type { Respondent } from '@/api/types'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNow } from '@/composables/useNow'
@@ -74,6 +75,7 @@ defineExpose({ refresh })
               <span class="resp-row__name">{{ r.display_name }}</span>
               <AgentBadge :kind="r.kind" :owner-name="r.owner_name" :mine="r.is_my_delegate" />
               <StatusTag vocab="seatPurpose" :value="agentPurpose(r)" />
+              <HostingTag :hosting="r.hosting" />
             </span>
             <span class="resp-row__line resp-row__facts">
               <PresenceText :value="r.last_seen_at" />

@@ -46,9 +46,11 @@ export default {
     more: 'More',
     removeAgent:
       'Its conversations are closed, and its owner can bring it in again later, as a fresh start with a new seat.',
-    externalHelp:
-      'It is operated from an external tool (such as Claude through MCP), so nobody can ask it on the site, students included. Once AIshie’s runtime hosts it, it takes conversations there by itself.',
-    externalCourse: 'Students cannot ask it on the site: it is operated from an external tool.',
+    // A course agent nobody can ask on the site, and why: MCP access, or not running now.
+    notAskable: {
+      mcp: 'Students cannot ask it on the site: it has MCP access, and is used from its owner’s own tools.',
+      notRunning: 'Students cannot ask it on the site until AIshie runs it again: its owner hosts it from My agents.',
+    },
   },
   replies: {
     label: 'Replies',

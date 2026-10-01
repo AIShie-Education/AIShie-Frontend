@@ -308,6 +308,11 @@ export default {
     ownerUnnamed: 'someone',
     ownerFixed: 'Given when it was registered, and never changed: nobody gives an agent another owner.',
     noOwnerFixed: 'Registered without one, so it stays nobody’s: an owner is given only when an agent is registered.',
+    hostingFixed: {
+      runtime:
+        'Chosen when it was registered, and never changed: the site’s agent runtime alone is issued its token, and nobody is issued one here.',
+      mcp: 'Chosen when it was registered, and never changed: its tokens are issued here, for whatever reaches it over MCP.',
+    },
     ownedAgents: 'Agents they own',
     ownedAll: 'See all',
     ownedHint:

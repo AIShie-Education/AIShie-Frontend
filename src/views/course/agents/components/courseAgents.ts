@@ -3,7 +3,7 @@
 // where the students' own settings stand. Only for display: Core decides.
 import { read } from '@/api/http'
 import { AUTONOMY_LEVELS, type AutonomyLevel, type MemberSummary, type Preset } from '@/api/types'
-import { seatPurpose, type SeatPurpose } from '@/utils/agents'
+import { hostingOf, seatPurpose, type SeatPurpose } from '@/utils/agents'
 
 /** Where a level sits on the ladder: denied 0 … autonomous 3; anything unknown counts as denied. */
 export function levelRank(l: string | null | undefined): number {
@@ -117,13 +117,21 @@ export function agentRows(
 }
 
 /**
- * Whether an agent's seat is operated from outside: its agent takes no
- * conversations in the site (member.list's site_chat false), so nobody is
- * offered to ask it there. A record without the field (an older Core, or a
- * person's seat) says nothing.
+ * Why nobody can ask an agent's seat on the site now, or null when they can
+ * (or nothing is known): mcp, its agent is used from its owner's own tools
+ * over MCP, and never asked here; notRunning, its agent is hosted on AIshie
+ * but the site's runtime does not run it now (member.list's site_chat
+ * false). A record without the fields (an older Core, or a person's seat)
+ * says nothing.
  */
-export function operatedFromOutside(m: Pick<MemberSummary, 'kind' | 'site_chat'>): boolean {
-  return m.kind === 'agent' && m.site_chat === false
+export type NotAskable = 'mcp' | 'notRunning'
+
+export function notAskable(m: Pick<MemberSummary, 'kind' | 'hosting' | 'site_chat'>): NotAskable | null {
+  if (m.kind !== 'agent') return null
+  const h = hostingOf(m.hosting)
+  if (h === 'mcp') return 'mcp'
+  if (h === 'runtime' && m.site_chat === false) return 'notRunning'
+  return null
 }
 
 /** How the seats with one role hold one permission. */

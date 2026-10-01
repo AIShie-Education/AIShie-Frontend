@@ -21,6 +21,7 @@ import { useWrite } from '@/composables/useWrite'
 import { isUuid } from '@/utils/format'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PresenceText from '@/components/PresenceText.vue'
@@ -165,6 +166,7 @@ function onBrought() {
       <template #tags>
         <template v-if="agent">
           <AgentBadge mine size="default" />
+          <HostingTag :hosting="agent.hosting" size="default" />
           <el-tag v-if="suspended" :type="standing === 'suspendedByMe' ? 'warning' : 'danger'" disable-transitions>
             {{ t(`agents.standing.${standing}`) }}
           </el-tag>

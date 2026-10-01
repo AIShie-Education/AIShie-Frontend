@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // One group of the course's agents (course agents, personal assistants, or
-// agents nobody owns): who each is and whose, what it was seated as, whether
-// it is operated from outside (it takes no conversations in the site, so
-// students cannot ask it there), when it was last connected (where the caller
-// may know), how its replies go out, and pausing, resuming and removing it. A course agent's replies can be switched
+// agents nobody owns): who each is and whose, what it was seated as, how it
+// runs (hosted on AIshie, and whether it can be asked now, or MCP access, so
+// that students never ask it there), when it was last connected (where the
+// caller may know), how its replies go out, and pausing, resuming and
+// removing it. A course agent's replies can be switched
 // here (member.update_perms, conversation_answer); what its owner's seat
 // allows caps it, as Core does, and a way of replying above the seat's
 // ceiling (perm_ceilings) is offered greyed out, saying why. Those who decide
@@ -16,6 +17,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentBadge from '@/components/AgentBadge.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import MemberName from '@/components/MemberName.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -24,7 +26,7 @@ import RefusalAlert from '@/views/course/members/components/RefusalAlert.vue'
 import { presetLabel } from '@/views/course/members/components/seat'
 import {
   levelRank,
-  operatedFromOutside,
+  notAskable,
   presenceFor,
   REPLY_LEVELS,
   type AgentGroup,
@@ -166,11 +168,7 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
           <AgentBadge v-if="r.member.owner_name || isMine(r)" :owner-name="r.member.owner_name" :mine="isMine(r)" />
           <StatusTag v-if="r.member.status !== 'active'" vocab="memberStatus" :value="r.member.status" />
           <el-tag v-else-if="!r.live" size="small" type="info">{{ t('members.expired') }}</el-tag>
-          <el-tooltip v-if="operatedFromOutside(r.member)" :content="t('courseAgents.row.externalHelp')" placement="top">
-            <el-tag size="small" type="info" effect="plain" class="agent-row__external" disable-transitions>
-              {{ t('common.agent.external') }}
-            </el-tag>
-          </el-tooltip>
+          <HostingTag :hosting="r.member.hosting" :site-chat="r.member.site_chat" />
         </div>
         <div class="agent-row__meta">
           <span v-if="presetText(r)">{{ presetText(r) }}</span>
@@ -191,8 +189,8 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
             <span class="app-muted">{{ t('courseAgents.row.presenceUnknown') }}</span>
           </el-tooltip>
         </div>
-        <p v-if="group === 'course' && r.live && operatedFromOutside(r.member)" class="agent-row__external-note">
-          {{ t('courseAgents.row.externalCourse') }}
+        <p v-if="group === 'course' && r.live && notAskable(r.member)" class="agent-row__not-askable">
+          {{ t(`courseAgents.row.notAskable.${notAskable(r.member)}`) }}
         </p>
       </div>
 
@@ -352,7 +350,7 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
 .agent-row__dot {
   color: var(--el-text-color-placeholder);
 }
-.agent-row__external-note {
+.agent-row__not-askable {
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.5;

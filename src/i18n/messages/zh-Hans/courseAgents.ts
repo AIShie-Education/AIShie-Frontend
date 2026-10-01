@@ -42,9 +42,11 @@ export default {
     presenceUnknownHelp: '智能体最后连接的时间只向其拥有者，以及可以向它提问的人显示。',
     more: '更多',
     removeAgent: '它的对话会随之结束。拥有者以后可再次带入它，届时会以新席位重新开始。',
-    externalHelp:
-      '它是从外部工具操作的（例如 Claude 通过 MCP），所以没有人能在站内向它提问，学生也一样。交由 AIshie 的运行环境托管后，它会自行在站内接受对话。',
-    externalCourse: '学生不能在站内向它提问：它是从外部工具操作的。',
+    // A course agent nobody can ask on the site, and why: MCP access, or not running now.
+    notAskable: {
+      mcp: '学生不能在站内向它提问：它是 MCP 访问，由所有者自己的工具使用。',
+      notRunning: '在 AIshie 再次运行它之前，学生不能在站内向它提问：所有者可在“我的智能体”为它设置托管。',
+    },
   },
   replies: {
     label: '回复',

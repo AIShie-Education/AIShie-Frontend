@@ -14,6 +14,7 @@ import type { AgentSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -135,6 +136,8 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
                 >
                   {{ t(`agents.standing.${agentStanding(a)}`) }}
                 </el-tag>
+                <HostingTag v-if="agentStanding(a) === 'active'" :hosting="a.hosting" :site-chat="a.site_chat" />
+                <HostingTag v-else :hosting="a.hosting" />
                 <el-tag v-if="a.pending_requests" type="warning" effect="plain" size="small" disable-transitions>
                   {{ t('agents.list.requests', { n: a.pending_requests }, a.pending_requests) }}
                 </el-tag>

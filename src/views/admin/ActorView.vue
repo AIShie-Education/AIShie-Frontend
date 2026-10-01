@@ -23,6 +23,7 @@ import { useNarrow } from '@/composables/useMediaQuery'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AgentBadge from '@/components/AgentBadge.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import { isUuid } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -187,6 +188,7 @@ async function reactivate() {
         <template v-if="actor">
           <StatusTag v-if="!actor.owner_actor_id" vocab="actorKind" :value="actor.kind" size="default" />
           <AgentBadge v-else :owner-name="actor.owner_name ?? undefined" size="default" />
+          <HostingTag v-if="actor.kind === 'agent'" :hosting="actor.hosting" size="default" />
           <StatusTag vocab="actorStatus" :value="actor.status" size="default" />
           <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" size="default" />
         </template>
@@ -322,6 +324,12 @@ async function reactivate() {
                 </router-link>
               </template>
               <span v-else class="app-muted">{{ t('admin.actor.suspendedByUnrecorded') }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="actor.kind === 'agent' && actor.hosting" :label="t('common.agent.hosting.label')">
+              <HostingTag :hosting="actor.hosting" />
+              <div class="app-form-hint actor__owner-fixed">
+                {{ t(`admin.actor.hostingFixed.${actor.hosting === 'runtime' ? 'runtime' : 'mcp'}`) }}
+              </div>
             </el-descriptions-item>
             <el-descriptions-item v-if="actor.kind === 'agent'" :label="t('admin.actor.owner')">
               <div class="actor__owner">

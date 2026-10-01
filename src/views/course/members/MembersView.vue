@@ -15,6 +15,7 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import HostingTag from '@/components/HostingTag.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -257,6 +258,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
                 </el-tooltip>
                 <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" />
+                <HostingTag v-if="row.kind === 'agent'" :hosting="row.hosting" :site-chat="row.site_chat" />
                 <el-tooltip v-if="row.join_link_id" :content="t('join.viaHint')" placement="top">
                   <el-tag size="small" type="info" effect="plain" class="members__via" tabindex="0">
                     <el-icon><Link /></el-icon>{{ t('join.via') }}

@@ -42,9 +42,11 @@ export default {
     presenceUnknownHelp: '代理最後連線的時間只向其擁有者，以及可以向它提問的人顯示。',
     more: '更多',
     removeAgent: '它的對話會隨之結束。擁有者日後可再次帶入它，屆時會以新席位重新開始。',
-    externalHelp:
-      '它是從外部工具操作的（例如 Claude 透過 MCP），所以沒有人能在站內向它提問，學生亦然。交由 AIshie 的執行環境代管後，它會自行在站內接受對話。',
-    externalCourse: '學生不能在站內向它提問：它是從外部工具操作的。',
+    // A course agent nobody can ask on the site, and why: MCP access, or not running now.
+    notAskable: {
+      mcp: '學生不能在站內向它提問：它是 MCP 存取，由擁有者自己的工具使用。',
+      notRunning: '在 AIshie 再次執行它之前，學生不能在站內向它提問：擁有者可在「我的代理」為它設定託管。',
+    },
   },
   replies: {
     label: '回覆',
