@@ -25,6 +25,7 @@ import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { ApiError } from '@/api/http'
+import { scopedReasonMessage } from '@/composables/useErrors'
 import IdpHelp from './IdpHelp.vue'
 import RedirectUri from './RedirectUri.vue'
 import SsoTestReport from './SsoTestReport.vue'
@@ -34,6 +35,7 @@ import {
   DEFAULT_SUBJECT_CLAIM,
   DISPLAY_NAME_MAX,
   POSITION_MAX,
+  REFUSALS,
   createArgs,
   createProvider,
   emptyForm,
@@ -241,7 +243,11 @@ function showError(e: unknown) {
     const f = fieldOf(e.details?.field)
     if (f && (f !== 'id' || creating.value) && (f !== 'clientSecret' || sendingSecret.value)) {
       if (ADVANCED_FIELDS.includes(f)) advanced.value = ['advanced']
-      fieldErrors[f] = t('ssoAdmin.form.refusedField', { message: fieldRefusalText(e) })
+      // This page's words for its reason where it has them (an issuer at an
+      // address the server does not reach for a provider of the site's,
+      // issuer_address_not_allowed), and otherwise Core's, which name the rule.
+      fieldErrors[f] =
+        scopedReasonMessage(e, { reasons: REFUSALS }) ?? t('ssoAdmin.form.refusedField', { message: fieldRefusalText(e) })
       return
     }
   }

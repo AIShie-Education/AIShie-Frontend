@@ -1,17 +1,20 @@
 <script setup lang="ts">
 // What sso.test found at an issuer: whether a sign-in could go through it,
 // what stops one (problems, in red) and what may (warnings, in amber), each
-// in Core's words; the endpoints its discovery document names, its signing
+// in Core's words, after the page's own for a reason it names
+// (problemReason); the endpoints its discovery document names, its signing
 // keys, and what it says it supports. Nobody was signed in and no secret was
-// sent to find it.
+// sent to find it, and the verdict says how much of the issuer was read
+// (reportRead): nothing where the issuer itself or its discovery document
+// was refused or not reached.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { SsoReport } from './ssoAdmin'
+import { problemReason, reportRead, type SsoReport } from './ssoAdmin'
 
 const props = defineProps<{ report: SsoReport }>()
 const { t } = useI18n()
 
-const problems = computed(() => props.report.problems ?? [])
+const problems = computed(() => (props.report.problems ?? []).map((text) => ({ text, reason: problemReason(text) })))
 const warnings = computed(() => props.report.warnings ?? [])
 const endpoints = computed(() =>
   (
@@ -49,7 +52,7 @@ const supported = computed(() =>
       :closable="false"
       show-icon
       :title="t(report.ok ? 'ssoAdmin.test.ok' : 'ssoAdmin.test.notOk')"
-      :description="t('ssoAdmin.test.issuerTested', { issuer: report.issuer })"
+      :description="t(`ssoAdmin.test.read.${reportRead(report)}`, { issuer: report.issuer })"
       class="sso-report__verdict"
     />
 
@@ -58,7 +61,11 @@ const supported = computed(() =>
       <ul>
         <li v-for="(p, i) in problems" :key="i">
           <el-icon class="sso-report__icon is-problem" aria-hidden="true"><CircleCloseFilled /></el-icon>
-          <span>{{ p }}</span>
+          <span v-if="p.reason" class="sso-report__problem" :data-reason="p.reason">
+            {{ t(`ssoAdmin.test.reason.${p.reason}`) }}
+            <span class="app-muted sso-report__core-words">{{ p.text }}</span>
+          </span>
+          <span v-else>{{ p.text }}</span>
         </li>
       </ul>
     </div>
@@ -138,6 +145,10 @@ const supported = computed(() =>
   font-size: 13px;
   line-height: 1.5;
   word-break: break-word;
+}
+.sso-report__core-words {
+  display: block;
+  font-size: 12px;
 }
 .sso-report__icon {
   flex-shrink: 0;

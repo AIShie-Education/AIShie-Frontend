@@ -125,13 +125,19 @@ export function normalizeDomain(d: string): string {
   return d.trim().toLowerCase().replace(/^@+/, '')
 }
 
+/** This machine, in IPv4 (127.0.0.0/8), as the URL parser writes it. */
+const LOOPBACK_V4 = /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/
 const bytes = (s: string) => new TextEncoder().encode(s).length
 const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i])
 
 /**
- * Whether an issuer is one Core takes: https, or http for this machine
- * alone, with no user, query or fragment. Core says the same, and the test
- * says more.
+ * Whether an issuer is one Core may take: https, or http for this machine
+ * alone (localhost, 127.0.0.0/8, ::1), with no user, query or fragment. Core
+ * says the same, and the test says more. A Core that holds the site's
+ * providers to public addresses also refuses one on this machine or a private
+ * network, unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS
+ * (issuer_address_not_allowed): that is left to it, since this page cannot
+ * tell how it is set, nor where a name resolves.
  */
 export function issuerProblem(issuer: string): 'required' | 'url' | 'https' | 'long' | null {
   const v = issuer.trim()
@@ -145,7 +151,7 @@ export function issuerProblem(issuer: string): 'required' | 'url' | 'https' | 'l
   }
   if (u.username || u.password || u.search || u.hash || v.includes('#') || v.includes('?')) return 'url'
   if (u.protocol === 'https:') return null
-  const local = ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)
+  const local = u.hostname === 'localhost' || u.hostname === '[::1]' || LOOPBACK_V4.test(u.hostname)
   if (u.protocol === 'http:' && local) return null
   return 'https'
 }
@@ -320,6 +326,37 @@ export function ssoErrorText(e: unknown): string {
 export function fieldRefusalText(e: ApiError): string {
   const field = typeof e.details?.field === 'string' ? e.details.field : ''
   return field && e.message.startsWith(`${field}: `) ? e.message.slice(field.length + 2) : e.message
+}
+
+/** Reasons sso.test names in its problems, in brackets, that this page has words for. */
+const REPORT_REASONS = ['issuer_address_not_allowed'] as const
+export type ReportReason = (typeof REPORT_REASONS)[number]
+
+/**
+ * The reason a problem of sso.test's names, of those this page has words for
+ * (ssoAdmin.test.reason.*): a URL of the provider's, the issuer or one its
+ * discovery document names, at an address the server does not reach for a
+ * provider of the site's (issuer_address_not_allowed). Core writes the reason
+ * in brackets at the end of its words.
+ */
+export function problemReason(problem: string): ReportReason | null {
+  return REPORT_REASONS.find((r) => problem.includes(`(${r})`)) ?? null
+}
+
+/**
+ * How much of the issuer sso.test read, for its verdict
+ * (ssoAdmin.test.read.*): nothing when the issuer itself was refused (no
+ * discovery_url); nothing when its discovery document was not read, which
+ * Core's problem for it begins by naming (an address the server does not
+ * reach, a timeout, an HTTP error); the document but not the keys when the
+ * key set was not; and otherwise both.
+ */
+export function reportRead(report: Pick<SsoReport, 'discovery_url' | 'problems'>): 'all' | 'issuer' | 'document' | 'keys' {
+  if (!report.discovery_url) return 'issuer'
+  const problems = report.problems ?? []
+  if (problems.some((p) => p.startsWith('the discovery document:'))) return 'document'
+  if (problems.some((p) => p.startsWith('the key set:'))) return 'keys'
+  return 'all'
 }
 
 // --- Calls ---------------------------------------------------------------------------------

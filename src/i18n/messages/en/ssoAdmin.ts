@@ -98,7 +98,14 @@ export default {
     again: 'Test again',
     ok: 'Ready: a sign-in can go through this issuer.',
     notOk: 'Not ready: a sign-in would not go through, as it stands.',
-    issuerTested: 'Its discovery document and keys were read at {issuer}. Nobody was signed in and no secret was sent.',
+    // How much of the issuer was read (reportRead).
+    read: {
+      all: 'Its discovery document and keys were read at {issuer}. Nobody was signed in and no secret was sent.',
+      issuer: 'Nothing was read from {issuer}: the issuer itself is refused. Nobody was signed in and no secret was sent.',
+      document:
+        'Nothing could be read from {issuer}: its discovery document was not read. Nobody was signed in and no secret was sent.',
+      keys: 'Its discovery document was read at {issuer}, but not its keys. Nobody was signed in and no secret was sent.',
+    },
     problems: 'Problem | Problem | Problems ({n})',
     warnings: 'Warning | Warning | Warnings ({n})',
     endpoints: 'Endpoints',
@@ -126,6 +133,11 @@ export default {
       pkce: 'PKCE methods',
     },
     notSaid: 'Not said',
+    // Problems whose reason Core names: said in these words, with Core's, which name the URL, after them.
+    reason: {
+      issuer_address_not_allowed:
+        'An address here is on this machine, or private, link-local or reserved: this server reaches no provider of the site’s there unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS.',
+    },
   },
 
   form: {
@@ -144,7 +156,7 @@ export default {
     issuer: 'Issuer URL',
     issuerPlaceholder: 'https://login.example.edu/…',
     issuerHint:
-      'Exactly as the provider’s discovery document (…/.well-known/openid-configuration) writes it: a trailing / counts. Test reads it; it signs nobody in and sends no secret.',
+      'Exactly as the provider’s discovery document (…/.well-known/openid-configuration) writes it: a trailing / counts. Test reads it; it signs nobody in and sends no secret. The server may refuse an issuer on this machine or a private network unless its operator allows them.',
     test: 'Test',
     issuerLinked:
       'No account is linked at it. | One account is linked at it and stays linked: whoever the new issuer vouches for under the same subject signs in as them. | {n} accounts are linked at it and stay linked: whoever the new issuer vouches for under the same subject signs in as them.',
@@ -196,7 +208,7 @@ export default {
       displayNameLong: 'At most 64 characters',
       printable: 'Printable characters only',
       issuer_url: 'A URL, with no user, query or fragment',
-      issuer_https: 'An https URL (http only for this machine)',
+      issuer_https: 'An https URL (http only for this machine, where the server allows it)',
       issuer_long: 'At most 500 bytes',
       ascii: 'Printable ASCII characters only',
       long: 'At most 500 bytes',
@@ -223,5 +235,7 @@ export default {
     sso_provider_not_found: 'That provider no longer exists: someone deleted it meanwhile.',
     sso_provider_unavailable: 'That provider cannot be used now: its secret does not open, or its discovery document cannot be read.',
     platform_role_required: 'Only root and the platform’s administrators set up single sign-on.',
+    issuer_address_not_allowed:
+      'The issuer is on this machine, or at a private, link-local or reserved address: this server reaches no provider of the site’s there unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS.',
   },
 }

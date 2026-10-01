@@ -96,7 +96,13 @@ export default {
     again: '再測試',
     ok: '可以使用：登入可以經這個簽發者完成。',
     notOk: '未能使用：按目前設定，登入無法完成。',
-    issuerTested: '已在 {issuer} 讀取其探索文件及金鑰。過程中沒有任何人登入，也沒有送出密鑰。',
+    // 讀取了簽發者的多少內容（reportRead）。
+    read: {
+      all: '已在 {issuer} 讀取其探索文件及金鑰。過程中沒有任何人登入，也沒有送出密鑰。',
+      issuer: '沒有從 {issuer} 讀取任何內容：這個簽發者本身未被接受。過程中沒有任何人登入，也沒有送出密鑰。',
+      document: '未能從 {issuer} 讀取任何內容：其探索文件未被讀取。過程中沒有任何人登入，也沒有送出密鑰。',
+      keys: '已在 {issuer} 讀取其探索文件，但未能讀取其金鑰。過程中沒有任何人登入，也沒有送出密鑰。',
+    },
     problems: '問題 | 問題 | 問題（{n}）',
     warnings: '警告 | 警告 | 警告（{n}）',
     endpoints: '端點',
@@ -124,6 +130,11 @@ export default {
       pkce: 'PKCE 方法',
     },
     notSaid: '未有註明',
+    // Core 註明原因的問題：以這裡的文字說明，其後附上 Core 的原文（其中列出網址）。
+    reason: {
+      issuer_address_not_allowed:
+        '這裡有位址位於本機，或屬私人、鏈路本地或保留位址：除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
+    },
   },
 
   form: {
@@ -141,7 +152,7 @@ export default {
     issuer: '簽發者 URL',
     issuerPlaceholder: 'https://login.example.edu/…',
     issuerHint:
-      '須與提供者的探索文件（…/.well-known/openid-configuration）所寫的完全相同，結尾的 / 也要一致。「測試」會讀取它，不會令任何人登入，也不會送出密鑰。',
+      '須與提供者的探索文件（…/.well-known/openid-configuration）所寫的完全相同，結尾的 / 也要一致。「測試」會讀取它，不會令任何人登入，也不會送出密鑰。位於本機或私人網絡的簽發者，伺服器可能會拒絕，除非其營運者允許。',
     test: '測試',
     issuerLinked:
       '沒有帳號連結到它。 | 有 1 個帳號連結到它，並會保持連結：新簽發者以同一主體擔保的人，會以該帳號登入。 | 有 {n} 個帳號連結到它，並會保持連結：新簽發者以同一主體擔保的人，會以這些帳號登入。',
@@ -188,7 +199,7 @@ export default {
       displayNameLong: '最多 64 個字元',
       printable: '只可使用可列印字元',
       issuer_url: '須為網址，不可含用戶、查詢字串或片段',
-      issuer_https: '須為 https 網址（只有本機可用 http）',
+      issuer_https: '須為 https 網址（只有本機可用 http，且須伺服器允許）',
       issuer_long: '最多 500 位元組',
       ascii: '只可使用可列印的 ASCII 字元',
       long: '最多 500 位元組',
@@ -213,5 +224,7 @@ export default {
     sso_provider_not_found: '這個提供者已不存在：其間已有人刪除它。',
     sso_provider_unavailable: '這個提供者暫時無法使用：其密鑰無法開啟，或無法讀取其探索文件。',
     platform_role_required: '只有 root 及平台管理員可以設定單一登入。',
+    issuer_address_not_allowed:
+      '這個簽發者位於本機，或位於私人、鏈路本地或保留位址：除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
   },
 }

@@ -168,9 +168,9 @@ describe('adding a provider', () => {
 
   it('says what is wrong before sending, in each language', async () => {
     for (const [locale, words] of [
-      ['en', ['Lower-case letters, digits and hyphens', 'An https URL (http only for this machine)', 'Required']],
-      ['zh-Hant', ['小寫英文字母、數字及連字號', '須為 https 網址（只有本機可用 http）', '必填']],
-      ['zh-Hans', ['小写英文字母、数字及连字符', '须为 https 网址（只有本机可用 http）', '必填']],
+      ['en', ['Lower-case letters, digits and hyphens', 'An https URL (http only for this machine, where the server allows it)', 'Required']],
+      ['zh-Hant', ['小寫英文字母、數字及連字號', '須為 https 網址（只有本機可用 http，且須伺服器允許）', '必填']],
+      ['zh-Hans', ['小写英文字母、数字及连字符', '须为 https 网址（只有本机可用 http，且须服务器允许）', '必填']],
     ] as const) {
       const w = await open(null, { locale })
       await fill('.sso-form__id', 'School IdP')
@@ -213,6 +213,40 @@ describe('adding a provider', () => {
     expect(fieldError('.sso-form__id')).toBe(
       'That ID is taken: the operator’s provider or another provider has it. Choose another.',
     )
+  })
+
+  it('says on the issuer, in each language, that the server does not reach a provider at a private address', async () => {
+    // A Core that holds the site's providers to public addresses (AIShie-Core#62), without SSO_ALLOW_PRIVATE_ISSUERS.
+    for (const [locale, words] of [
+      [
+        'en',
+        'The issuer is on this machine, or at a private, link-local or reserved address: this server reaches no provider of the site’s there unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS.',
+      ],
+      [
+        'zh-Hant',
+        '這個簽發者位於本機，或位於私人、鏈路本地或保留位址：除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
+      ],
+      [
+        'zh-Hans',
+        '这个颁发者位于本机，或位于私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+      ],
+    ] as const) {
+      const w = await open(null, { locale })
+      await fillNew(newSecret())
+      await fill('.sso-form__issuer', 'http://localhost:8081/realms/school')
+      core.once('POST', SSO.list, () =>
+        failed(
+          400,
+          'invalid_argument',
+          'issuer: is on this machine or a private, link-local or reserved address, which this server reaches for no identity provider of the site’s unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS (issuer_address_not_allowed)',
+          { field: 'issuer', reason: 'issuer_address_not_allowed' },
+        ),
+      )
+      await click('.sso-dialog__save')
+      expect(fieldError('.sso-form__issuer')).toBe(words)
+      w.unmount()
+      document.body.innerHTML = ''
+    }
   })
 
   it('says SECRETS_KEY is not set on the server when Core has none', async () => {
@@ -300,6 +334,107 @@ describe('testing the issuer from the form', () => {
     await click('.sso-form__test')
     expect(fieldError('.sso-form__issuer')).toBe('A URL, with no user, query or fragment')
     expect(core.to('GET', SSO.test)).toHaveLength(0)
+  })
+
+  it('leaves an issuer on this machine to the server, which may refuse it, and says why in each language', async () => {
+    const issuer = 'http://127.0.0.2:8081/realms/school'
+    const words =
+      'issuer is on this machine or a private, link-local or reserved address, which this server reaches for no identity provider of the site’s unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS (issuer_address_not_allowed)'
+    core.report = { ...goodReport(issuer), ok: false, discovery_url: '', problems: [words], authorization_endpoint: null }
+    for (const [locale, reason, notRead] of [
+      [
+        'en',
+        'An address here is on this machine, or private, link-local or reserved: this server reaches no provider of the site’s there unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS.',
+        `Nothing was read from ${issuer}: the issuer itself is refused.`,
+      ],
+      [
+        'zh-Hant',
+        '這裡有位址位於本機，或屬私人、鏈路本地或保留位址：除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
+        `沒有從 ${issuer} 讀取任何內容：這個簽發者本身未被接受。`,
+      ],
+      [
+        'zh-Hans',
+        '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+        `没有从 ${issuer} 读取任何内容：这个颁发者本身未被接受。`,
+      ],
+    ] as const) {
+      const w = await open(null, { locale })
+      await fill('.sso-form__issuer', issuer)
+      await click('.sso-form__test')
+      expect(fieldError('.sso-form__issuer')).toBe('')
+      const report = q('.sso-form__report')!
+      const problem = report.querySelector('.sso-report__problems [data-reason="issuer_address_not_allowed"]')!
+      expect(problem.textContent).toContain(reason)
+      expect(problem.querySelector('.sso-report__core-words')!.textContent).toBe(words)
+      expect(report.querySelector('.sso-report__verdict')!.textContent).toContain(notRead)
+      w.unmount()
+      document.body.innerHTML = ''
+    }
+    expect(core.to('GET', SSO.test)).toHaveLength(3)
+  })
+
+  it('says nothing was read when the issuer’s name leads to an address the server does not reach, in each language', async () => {
+    // A host name that resolves to a private address: the issuer passes, its discovery document is refused when dialled.
+    const issuer = 'https://login.example.edu/realms/school'
+    const discovery = `${issuer}/.well-known/openid-configuration`
+    const words = `the discovery document: ${discovery} is on this machine or a private, link-local or reserved address, which this server reaches for no identity provider of the site’s unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS (issuer_address_not_allowed)`
+    core.report = {
+      ...goodReport(issuer),
+      ok: false,
+      discovery_url: discovery,
+      problems: [words],
+      authorization_endpoint: null,
+      token_endpoint: null,
+      jwks_uri: null,
+      signing_keys: [],
+    }
+    for (const [locale, notRead] of [
+      ['en', `Nothing could be read from ${issuer}: its discovery document was not read.`],
+      ['zh-Hant', `未能從 ${issuer} 讀取任何內容：其探索文件未被讀取。`],
+      ['zh-Hans', `未能从 ${issuer} 读取任何内容：其发现文档未被读取。`],
+    ] as const) {
+      const w = await open(null, { locale })
+      await fill('.sso-form__issuer', issuer)
+      await click('.sso-form__test')
+      const report = q('.sso-form__report')!
+      const verdict = report.querySelector('.sso-report__verdict')!.textContent!
+      expect(verdict).toContain(notRead)
+      expect(verdict).not.toMatch(/were read|已在/)
+      const problem = report.querySelector('.sso-report__problems [data-reason="issuer_address_not_allowed"]')!
+      expect(problem.querySelector('.sso-report__core-words')!.textContent).toBe(words)
+      w.unmount()
+      document.body.innerHTML = ''
+    }
+  })
+
+  it('says the keys were not read when the key set was not', async () => {
+    const issuer = 'https://login.example.edu/realms/school'
+    core.report = {
+      ...goodReport(issuer),
+      ok: false,
+      problems: [`the key set: ${issuer}/protocol/openid-connect/certs did not answer in time`],
+      signing_keys: [],
+    }
+    await open()
+    await fill('.sso-form__issuer', issuer)
+    await click('.sso-form__test')
+    expect(q('.sso-form__report .sso-report__verdict')!.textContent).toContain(
+      `Its discovery document was read at ${issuer}, but not its keys.`,
+    )
+  })
+
+  it('shows a problem whose reason it has no words for in Core’s alone, and says the document was read', async () => {
+    const issuer = 'https://login.example.edu/realms/school'
+    core.report = { ...goodReport(issuer), ok: false, problems: ['it takes no response_type code, which a sign-in here asks for'] }
+    await open()
+    await fill('.sso-form__issuer', issuer)
+    await click('.sso-form__test')
+    const report = q('.sso-form__report')!
+    expect(report.querySelector('.sso-report__problems li')!.textContent!.trim()).toBe(
+      'it takes no response_type code, which a sign-in here asks for',
+    )
+    expect(report.querySelector('[data-reason]')).toBeNull()
+    expect(report.querySelector('.sso-report__verdict')!.textContent).toContain(`Its discovery document and keys were read at ${issuer}.`)
   })
 })
 
