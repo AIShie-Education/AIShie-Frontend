@@ -6,6 +6,7 @@ import {
   coursePath,
   demo,
   hostOnRuntime,
+  inTraditionalChinese,
   photograph,
   registerPerson,
   signIn,
@@ -521,6 +522,27 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
         await expect(page.getByRole('button', { name: 'Issue token' })).toHaveCount(0)
       }
     }
+  })
+
+  test('in Traditional Chinese, the choice says what each way means, and that it is for good', async ({ page }) => {
+    await signIn(page, hana())
+    // From the next page load on.
+    await inTraditionalChinese(page)
+    await page.goto('/account/agents')
+    await page.locator('.page-header').getByRole('button', { name: '新增代理' }).click()
+    const create = page.getByRole('dialog', { name: '新增代理' })
+    await expect(create.locator('.hosting-choice__option--runtime')).toHaveText(
+      '站內託管由 AIshie 執行；課程成員可在站內向它提問',
+    )
+    await expect(create.locator('.hosting-choice__option--mcp')).toHaveText(
+      'MCP 存取由你自己的工具，例如 Claude Desktop、編輯器，透過 MCP 使用；站內無法向它提問',
+    )
+    await expect(create.locator('.hosting-choice__fixed')).toHaveText('建立後不能更改')
+    await photograph(page, 'hosting-create-zh-Hant')
+    // Each agent says how it runs in the list, too.
+    await create.getByRole('button', { name: '取消' }).click()
+    await expect(page.locator('.agents-item').filter({ hasText: MCP_AGENT })).toContainText('MCP 存取')
+    await expect(page.locator('.agents-item').filter({ hasText: RT_AGENT })).toContainText('站內託管')
   })
 
   // A person may have five agents at once: Hana's are suspended when they are done with.

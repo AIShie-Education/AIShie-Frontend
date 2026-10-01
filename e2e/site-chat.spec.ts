@@ -1,5 +1,15 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, chatButton, coursePath, demo, hostOnRuntime, signIn, stopHosting, type CoreReply } from './support'
+import {
+  call,
+  chatButton,
+  coursePath,
+  demo,
+  hostOnRuntime,
+  photograph,
+  signIn,
+  stopHosting,
+  type CoreReply,
+} from './support'
 
 // People in the site ask an agent only while AIshie's runtime hosts it: one
 // created as hosted on AIshie, while the runtime holds its one token. One
@@ -179,6 +189,7 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     await expect(row.locator('.agent-row__not-askable')).toHaveText(
       'Students cannot ask it on the site until AIshie runs it again: its owner hosts it from My agents.',
     )
+    await photograph(page, 'hosting-course-agents')
     // Its owner is offered nothing to ask it in the chat either. (The address the course's
     // conversations once had opens the panel on the course.)
     await page.goto(coursePath('conversations'))
@@ -200,6 +211,8 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     const panel = await openChat(page)
     const row = panel.locator('button.resp-row').filter({ hasText: TUTOR })
     await expect(row).toContainText('Course agent')
+    await expect(row.locator('.hosting-tag__mode')).toHaveText('Hosted on AIshie')
+    await photograph(page, 'hosting-respondents')
     await row.click()
     const composer = panel.locator('.chat-pane textarea')
     await expect(composer).toBeVisible()
@@ -264,6 +277,8 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
     await expect(panel.locator('.chat-pane__notice.is-elsewhere')).toHaveText(NOT_NOW)
     await expect(panel.locator('.chat-pane textarea')).toHaveCount(0)
+    // Seen moments ago, but nobody can ask it here now: it is not said to be online.
+    await expect(panel.locator('.chat-pane__presence')).toHaveCount(0)
     // Its menu says who can read it and ends nothing; it is still listed among his conversations.
     await panel.getByRole('button', { name: 'Conversation options' }).click()
     await expect(student.getByRole('menuitem', { name: 'Who can read this' })).toBeVisible()
@@ -300,6 +315,7 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     await expect(page.locator('.el-notification').filter({ hasText: NOT_RUNNING })).toBeVisible()
     await expect(page.locator('.chat-pane__notice.is-elsewhere')).toHaveText(NOT_RUNNING)
     await expect(page.locator('.chat-pane textarea')).toHaveCount(0)
+    await photograph(page, 'hosting-not-running')
     await expect(page.locator('.chat-msg').filter({ hasText: LATE })).toHaveCount(0)
     await expect(page.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
   })
