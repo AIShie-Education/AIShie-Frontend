@@ -224,23 +224,29 @@ export function agentPurpose(r: { is_my_delegate: boolean }): 'personal' | 'cour
 // --- Site chat ---------------------------------------------------------------------
 
 /**
- * Core's reason (details.reason) for refusing a new question, conversation.open's
- * or conversation.ask's, to an agent that takes no conversations in the site:
- * it is operated from an external tool (Claude through MCP, say), and nothing
- * that answers questions here runs it.
+ * Core's reasons (details.reason) for refusing a new question,
+ * conversation.open's or conversation.ask's, to an agent nobody asks in the
+ * site now: mcp_agent, it has MCP access, used from its owner's own tools,
+ * and is never asked here; agent_not_hosted, it is hosted on AIshie but the
+ * site's runtime does not run it just now.
  */
-export const AGENT_ANSWERS_ELSEWHERE = 'agent_answers_elsewhere'
+export const NOT_ASKABLE_REASONS = ['mcp_agent', 'agent_not_hosted'] as const
+export type NotAskableReason = (typeof NOT_ASKABLE_REASONS)[number]
 
-/** Whether Core refused a question because the agent asked takes no conversations in the site. */
-export function answersElsewhere(e: { details?: Record<string, unknown> | null } | null | undefined): boolean {
-  return e?.details?.reason === AGENT_ANSWERS_ELSEWHERE
+/** Why Core refused a question because the agent asked is asked nothing in the site now, or null for another refusal. */
+export function notAskableReason(
+  e: { details?: Record<string, unknown> | null } | null | undefined,
+): NotAskableReason | null {
+  const r = e?.details?.reason
+  return (NOT_ASKABLE_REASONS as readonly unknown[]).includes(r) ? (r as NotAskableReason) : null
 }
 
 /**
  * Whether the caller may ask a member here now, by conversation.respondents:
  * true when it lists them, false when it does not, null while it has not been
- * read (or could not be). The list leaves out every agent that takes no
- * conversations in the site, whoever else the caller may address.
+ * read (or could not be). The list leaves out every agent nobody asks in the
+ * site now (one with MCP access, or one the site's runtime does not run),
+ * whoever else the caller may address.
  */
 export function offeredIn(respondents: readonly { member_id: string }[] | null | undefined, memberId: string) {
   if (!respondents) return null
@@ -251,8 +257,8 @@ export function offeredIn(respondents: readonly { member_id: string }[] | null |
  * What the line above the composer says. waiting: the caller asked and the
  * agent has not answered (with how likely an answer is); pendingApproval: an
  * answer waits for someone's approval; start: nothing asked yet; elsewhere:
- * the agent asked takes no conversations in the site, and nothing more is
- * asked of it here; withdrawn: the opener took back the question waiting
+ * the agent asked is asked nothing in the site now (MCP access, or not
+ * running), and nothing more is asked of it here; withdrawn: the opener took back the question waiting
  * for its answer, which no agent answers; readOnly: the caller is not the
  * one asking (staff, or the one asked), and reads it.
  */
@@ -284,9 +290,10 @@ export interface ChatStatus {
  * Only its opener writes in it, to its agent (one with a person, from before,
  * Core has closed). offered: whether the caller may ask its agent now
  * (offeredIn), or null when that is not known; an agent they may not, whose
- * seat is there and which may answer, takes no conversations in the site. It
- * is asked nothing more here; what was written stays readable, and it may
- * still answer. withdrawn: the question awaiting its answer was retracted
+ * seat is there and which may answer, is asked nothing in the site now (MCP
+ * access, or the site's runtime does not run it). It is asked nothing more
+ * here; what was written stays readable, and it may still answer.
+ * withdrawn: the question awaiting its answer was retracted
  * (questionWithdrawn): nothing is awaited.
  */
 export function chatStatus(

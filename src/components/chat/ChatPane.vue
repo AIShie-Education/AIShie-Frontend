@@ -18,8 +18,8 @@
 // Laid out as an editor's agent chat is: one compact row on top, the agent
 // and whether anything runs it, with a ⋯ menu for who can read it and how
 // its answers arrive; the messages; and the composer, one box.
-// Whatever stops the caller writing (a paused or departed agent, one that
-// takes no conversations here, a closed conversation, a question or a
+// Whatever stops the caller writing (a paused or departed agent, one nobody
+// asks here now, a closed conversation, a question or a
 // conversation waiting for approval) is one muted line above it, as is an
 // answer being waited for; a new conversation takes its title from the first
 // line of its first message.
@@ -28,10 +28,14 @@
 // their memberships: the chat is beside every page, whatever course (if any)
 // the page shows.
 //
-// An agent operated from an external tool takes no conversations in the
-// site: Core no longer offers it to be asked (conversation.respondents), and
-// refuses a question to it (agent_answers_elsewhere). A conversation with one
-// stays readable, and in place of the composer the opener is told why.
+// Only an agent the site's agent runtime runs now is asked in the site: Core
+// offers no other to be asked (conversation.respondents), and refuses a
+// question to one with MCP access (mcp_agent: its owner's own tools use it)
+// or one hosted on AIshie that the runtime does not run just now
+// (agent_not_hosted). A conversation with one stays readable, and in place
+// of the composer the opener is told why: by Core's reason when it gave one,
+// and otherwise that it cannot be asked here just now (and, of their own
+// agent, that its page says why).
 //
 // A message may carry files (attachments.ts): the draft's are kept with it,
 // uploaded as they are added (the composer's paperclip, a paste, or a drop
@@ -62,7 +66,6 @@ import { formatDateTime } from '@/utils/format'
 import { entriesHtml } from '@/utils/printLayout'
 import type { ApiError } from '@/api/http'
 import {
-  answersElsewhere,
   availabilityOf,
   bodyProblem,
   charCount,
@@ -75,6 +78,7 @@ import {
   lastSent,
   lastSeq,
   noteSent,
+  notAskableReason,
   offeredIn,
   questionWithdrawn,
   REASON_MAX,
@@ -84,6 +88,7 @@ import {
   visibleToLines,
   type Availability,
   type ChatRole,
+  type NotAskableReason,
 } from './chat'
 import { useChatSeat } from './seat'
 import { useConversation } from './useConversation'
@@ -163,10 +168,16 @@ const needsOffer = computed(
     !!conv && role.value === 'opener' && view.value?.respondent.kind === 'agent' && seat.value.can('conversation_ask'),
 )
 const offers = useRespondents({ courseId: props.courseId, enabled: () => props.active && needsOffer.value, lazy: true })
-/** Core refused a question here because the agent takes no conversations in the site. */
+/** Core refused a question here because nobody asks the agent in the site now. */
 const refusedElsewhere = ref(false)
+/** Why, as Core said; kept while the agent is not offered, and forgotten once it is again. */
+const notAskableWhy = ref<NotAskableReason | null>(null)
 // Until whom one may ask has been read again since.
-watch(offers.items, () => (refusedElsewhere.value = false))
+watch(offers.items, (items) => {
+  refusedElsewhere.value = false
+  const memberId = view.value?.respondent.member_id ?? props.respondent?.member_id
+  if (memberId && offeredIn(items, memberId)) notAskableWhy.value = null
+})
 /** Whether the opener may still ask the agent here; null while that is not known. */
 const offered = computed<boolean | null>(() => {
   if (refusedElsewhere.value) return false
@@ -377,12 +388,13 @@ function afterWrite(out: { reviewState: string } | null) {
 }
 
 /**
- * The agent takes no conversations in the site after all (Core refused a
- * question to it): the composer gives way to why, and the lists are read
+ * Nobody asks the agent in the site now after all (Core refused a question
+ * to it, saying why): the composer gives way to why, and the lists are read
  * again, where it is no longer offered.
  */
-function noteElsewhere() {
+function noteElsewhere(reason: NotAskableReason) {
   refusedElsewhere.value = true
+  notAskableWhy.value = reason
   void offers.refresh()
   emit('changed')
 }
@@ -396,7 +408,8 @@ function refused(err: ApiError | null) {
   if (files.refused(err)) return
   if (closedConflict(err)) ElMessage({ type: 'warning', message: t('chat.conflict.closed'), duration: 6000 })
   else notifyError(err)
-  if (answersElsewhere(err)) noteElsewhere()
+  const notAskable = notAskableReason(err)
+  if (notAskable) noteElsewhere(notAskable)
   if (err.code === 'conflict') {
     void conv?.refresh()
     emit('changed')
@@ -433,7 +446,8 @@ async function send() {
       if (files.refused(err)) return
       // In the words every page has for such an agent.
       notifyError(err)
-      if (answersElsewhere(err)) noteElsewhere()
+      const notAskable = notAskableReason(err)
+      if (notAskable) noteElsewhere(notAskable)
       return
     }
     draft.value = ''
@@ -700,12 +714,15 @@ function availabilityText(a: Availability, name: string): string {
   }
   return ''
 }
-/** What the opener is told of an agent operated from outside; its owner, how that would change. */
+/**
+ * What the opener is told of an agent nobody asks here now: why, by Core's
+ * reason when it gave one; of their own agent, that its page says why.
+ */
 function elsewhereNotice(mine: boolean) {
   return {
     type: 'info' as const,
-    text: t('common.agent.externalNote'),
-    sub: mine ? t('common.agent.hostedTakesChat') : undefined,
+    text: t(`common.agent.notAskable.${notAskableWhy.value ?? 'unknown'}`),
+    sub: mine ? t('common.agent.notAskable.yours') : undefined,
   }
 }
 const notice = computed<{ type: 'info' | 'warning' | 'success'; text: string; sub?: string } | null>(() => {
@@ -769,7 +786,11 @@ const closedElsewhere = computed(() => {
 const closedLine = computed(() => {
   const parts = [{ class: 'chat-pane__closed-title', text: t('chat.closed.title') }]
   if (closedReason.value) parts.push({ class: 'chat-pane__closed-reason', text: closedReason.value })
-  if (closedElsewhere.value) parts.push({ class: 'chat-pane__closed-elsewhere', text: t('common.agent.externalNote') })
+  if (closedElsewhere.value)
+    parts.push({
+      class: 'chat-pane__closed-elsewhere',
+      text: t(`common.agent.notAskable.${notAskableWhy.value ?? 'unknown'}`),
+    })
   return parts
 })
 </script>

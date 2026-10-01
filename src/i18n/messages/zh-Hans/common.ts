@@ -106,10 +106,13 @@ export default {
       onHelp: 'AIshie 正在运行它：课程成员可在站内向它提问。',
       offHelp: 'AIshie 目前没有运行它，所以站内无法向它提问。',
     },
-    // An agent that takes no conversations in the site (Core's site_chat false): operated from an external tool.
-    external: '外部操作',
-    externalNote: '这个智能体是从外部工具操作的（例如 Claude 通过 MCP），不在站内对话。',
-    hostedTakesChat: '交由 AIshie 的运行环境托管时，它会自行在站内接受对话。',
+    // Why an agent cannot be asked on the site now (conversation.open and .ask's refusals).
+    notAskable: {
+      mcp_agent: '这个智能体由所有者自己的工具使用，无法在这里向它提问。',
+      agent_not_hosted: '这个智能体目前未在运行，所以无法在这里向它提问。',
+      unknown: '目前无法在这里向这个智能体提问。',
+      yours: '你可在“我的智能体”中它的页面了解原因。',
+    },
   },
   outcome: {
     executed: '已完成',
@@ -143,6 +146,9 @@ export default {
     conversationsAreWithAgents:
       '这里的对话只与智能体进行：真人不会在对话中被提问，也不回答任何对话。人与人之间请在其他地方交流。',
     notAParticipant: '只有参与对话的双方才会将对话标记为已读；以课程教职员身份阅读，不会在对话中留下阅读进度。',
+    hostedByRuntime: '这个智能体是站内托管：只有本站的智能体运行环境持有它的令牌，不会为任何其他人签发令牌。',
+    hostingFixed: '智能体的运行方式在创建时选定，此后不会更改：如要另一种方式，请创建另一个智能体。',
+    siteChatFollowsHosting: '能否在站内向智能体提问取决于它的运行方式：如要让人无法再向它提问，请暂停它的托管，或停用它。',
   },
   // 席位的上限（perm_ceilings）：无论由谁授予，该席位最多可拥有的权限级别。
   ceiling: {
