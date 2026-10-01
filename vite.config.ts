@@ -98,6 +98,16 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       include: ['src/**/*.spec.ts'],
+      // A test waits on the clock for no more than a moment (past Element
+      // Plus's 100 ms debounce of a field's error, or a frame): the wait
+      // before a call is sent again, a poll's, a timer's of the page are
+      // passed with fake timers. What its time is, besides, is CPU, mostly
+      // Element Plus rendering in jsdom: up to 0.5 s a test, the first of a
+      // file more while its modules warm up, which a busy machine stretches
+      // many times over (past 10 s for 0.4 s, at a load near 130 on 10
+      // cores). The limits are set for that, not for any wait.
+      testTimeout: 30_000,
+      hookTimeout: 30_000,
     },
   }
 })
