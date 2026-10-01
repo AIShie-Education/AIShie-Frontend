@@ -15,6 +15,8 @@ import { call, coursePath, demo, photograph, root, signIn, toast } from './suppo
 
 const STAMP = Date.now().toString(36)
 const TITLE = `Circuits slides (e2e ${STAMP})`
+/** The version's one file, as it is named. */
+const FILE = `circuits-${STAMP}.pdf`
 const TRANSCRIBED = [
   '## 第 1 頁',
   '',
@@ -62,7 +64,11 @@ async function publishedMaterialWithFile() {
   const I = d.actors.instructor.token
   const C = d.course.id
   const type = 'application/pdf'
-  const u = await call(I, 'GET', `/v1/courses/${C}/upload-url?kind=material&content_type=${encodeURIComponent(type)}`)
+  const u = await call(
+    I,
+    'GET',
+    `/v1/courses/${C}/upload-url?kind=material&content_type=${encodeURIComponent(type)}&filename=${encodeURIComponent(FILE)}`,
+  )
   expect(u.body.status, JSON.stringify(u.body.error)).toBe('executed')
   const url = new URL(u.body.result.upload_url)
   const put = await fetch(`${d.core}${url.pathname}${url.search}`, {
@@ -74,7 +80,7 @@ async function publishedMaterialWithFile() {
   const made = await call(I, 'POST', `/v1/courses/${C}/documents`, {
     kind: 'material',
     title: TITLE,
-    upload_token: u.body.result.upload_token,
+    files: [{ upload_token: u.body.result.upload_token, filename: FILE }],
   })
   expect(made.body.status, JSON.stringify(made.body.error)).toBe('executed')
   const published = await call(I, 'POST', `/v1/courses/${C}/documents/${made.body.result.document_id}/publish`, {})
@@ -86,12 +92,12 @@ async function publishedMaterialWithFile() {
  * Claims the version from Core's queue as the service: other versions the
  * run has queued may come first, and are left to lapse (a minute's lease).
  */
-async function claim(versionId: string): Promise<string> {
+async function claim(versionId: string): Promise<{ lease: string; fileId: string }> {
   for (let i = 0; i < 30; i++) {
     const out = await asService('/v1/services/document_text/queue', { max: 10, lease_s: 60 })
     expect(out.status, JSON.stringify(out.body.error)).toBe(200)
     const mine = (out.body.result.claimed ?? []).find((c: { version_id: string }) => c.version_id === versionId)
-    if (mine) return mine.lease_id as string
+    if (mine) return { lease: mine.lease_id as string, fileId: mine.file_id as string }
     if (!(out.body.result.claimed ?? []).length) break
   }
   throw new Error(`the version ${versionId} was not in the queue`)
@@ -149,14 +155,14 @@ test.describe.serial('text versions', () => {
     await signIn(page, d.actors.instructor)
     let pane = await openText(page)
     await expect(pane.locator('.text-pane__status')).toHaveText('Queued')
-    await expect(pane).toContainText('this version’s file is waiting to be transcribed into text by AI')
+    await expect(pane).toContainText('this file is waiting to be transcribed into text by AI')
 
     // The service claims it and writes the text back.
-    const lease = await claim(version.versionId)
+    const { lease, fileId } = await claim(version.versionId)
     const done = await asService(
       `/v1/services/document_text/versions/${version.versionId}/complete`,
-      { lease_id: lease, status: 'done', body: TRANSCRIBED, pages: 2, model: 'E2E Flash-Lite' },
-      `complete:${version.versionId}:${lease}`,
+      { lease_id: lease, file_id: fileId, status: 'done', body: TRANSCRIBED, pages: 2, model: 'E2E Flash-Lite' },
+      `complete:${fileId}:${lease}`,
     )
     expect(done.status, JSON.stringify(done.body.error)).toBe(200)
 
@@ -224,7 +230,7 @@ test.describe.serial('text versions', () => {
     await signIn(page, d.actors.instructor)
     const pane = await openText(page)
     await pane.getByRole('button', { name: 'Transcribe again' }).click()
-    const first = page.getByRole('dialog', { name: 'Transcribe version 1 again?' })
+    const first = page.getByRole('dialog', { name: `Transcribe “${FILE}” again?` })
     await first.getByRole('button', { name: 'Transcribe again' }).click()
     const second = page.getByRole('dialog', { name: 'Discard the changes?' })
     await expect(second).toContainText(`written or corrected by ${d.actors.instructor.display_name}`)
