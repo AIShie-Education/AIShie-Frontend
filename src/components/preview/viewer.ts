@@ -8,13 +8,18 @@
 // A file is described by what it is (PreviewFile) and how to have it: a
 // fresh short-lived URL to its bytes, asked for each time it is opened
 // (document.file, conversation.attachment), since one read with the list may
-// have expired; how to download it under its name, as the list does; and,
-// for a file of material, instructions or a rubric, how to read its text
-// version (文字版), which is what an Office file is shown as.
+// have expired; how to download it under its name, as the list does; for an
+// Office or OpenDocument file that Core converts, where its PDF rendition
+// stands, read afresh with a fresh URL to the PDF (the same reads), and how
+// to send one that failed back to be converted again, where the caller may
+// (utils/rendition.ts); and, for a file of material, instructions or a
+// rubric, how to read its text version (文字版), which is what an Office file
+// is shown as where Core keeps no rendition of it.
 import { shallowReactive } from 'vue'
-import { ApiError, read } from '@/api/http'
+import { ApiError, read, write, type ToolOut, type WriteOutcome } from '@/api/http'
 import type { DocumentFile, MessageAttachment, TextVersion } from '@/api/types'
 import { downloadDocumentFile } from '@/utils/documentFiles'
+import type { Rendition } from '@/utils/rendition'
 import { readWholeText } from '@/views/course/materials/components/textVersion'
 import { downloadAttachment } from '@/components/chat/attachments'
 
@@ -36,6 +41,24 @@ export interface PreviewFile {
   text?: TextVersion | null
   /** Reads its text version afresh, whole: where it stands, and its body once it is done. */
   readText?: (signal?: AbortSignal) => Promise<{ text: TextVersion; body: string }>
+  /**
+   * Its PDF rendition as the list had it: an Office or OpenDocument file's,
+   * from a Core that converts them; absent for any other file, and from a
+   * Core before renditions.
+   */
+  rendition?: Rendition | null
+  /** Reads its rendition afresh: where it stands, and once it is done a fresh URL that shows the PDF; null for none. */
+  readRendition?: (signal?: AbortSignal) => Promise<Rendition | null>
+  /** Sends its rendition, failed or skipped, back to be converted again; absent where the caller may not. */
+  retryRendition?: () => Promise<WriteOutcome<RetryResult>>
+}
+
+/** What document.rendition_retry (and conversation.rendition_retry alike) answers: whether it changed, and where it stands. */
+export type RetryResult = ToolOut<'document.rendition_retry'>
+
+/** Who opens the files may send a failed rendition back to be converted again (whoever may write the document, the message's author). */
+export interface PreviewFileOptions {
+  retry?: boolean
 }
 
 /** What the viewer is opened on: files, the one shown first, and what they belong to. */
@@ -93,7 +116,8 @@ export function showPreviewAt(index: number) {
  * (document.file), downloaded as VersionFileList does, and its text version
  * read by its file_id. A file with no id (a Core from before several files
  * to a version) is its version's one file, fetched from document.get's
- * deprecated download_url.
+ * deprecated download_url. Its rendition is read again by its id too, and
+ * sent back by it where the caller may write the document (opts.retry).
  */
 export function documentPreviewFiles(
   courseId: string,
@@ -101,6 +125,7 @@ export function documentPreviewFiles(
   versionId: string | null | undefined,
   files: DocumentFile[],
   date?: string | null,
+  opts: PreviewFileOptions = {},
 ): PreviewFile[] {
   return files.map((f) => ({
     key: f.id || `${documentId}/${f.position}`,
@@ -124,6 +149,16 @@ export function documentPreviewFiles(
       return url
     },
     download: () => downloadDocumentFile(courseId, documentId, f, versionId),
+    rendition: f.rendition ?? null,
+    readRendition: f.id
+      ? async (signal) =>
+          (await read('document.file', { course_id: courseId, document_id: documentId, file_id: f.id }, { signal }))
+            .rendition ?? null
+      : undefined,
+    retryRendition:
+      opts.retry && f.id && f.rendition
+        ? () => write('document.rendition_retry', { course_id: courseId, document_id: documentId, file_id: f.id })
+        : undefined,
     // Only a file of material, instructions or a rubric has a text version.
     readText:
       versionId && f.text
@@ -141,8 +176,17 @@ export function documentPreviewFiles(
   }))
 }
 
-/** The files a chat message carries, to preview: each fetched from a fresh URL (conversation.attachment). */
-export function attachmentPreviewFiles(courseId: string, files: MessageAttachment[]): PreviewFile[] {
+/**
+ * The files a chat message carries, to preview: each fetched from a fresh URL
+ * (conversation.attachment), which reads its rendition again too; sent back
+ * by its id where the caller may (opts.retry: its author, or staff who decide
+ * for the conversation's opener, as retracting it).
+ */
+export function attachmentPreviewFiles(
+  courseId: string,
+  files: MessageAttachment[],
+  opts: PreviewFileOptions = {},
+): PreviewFile[] {
   return files.map((f) => ({
     key: f.id,
     filename: f.filename,
@@ -154,5 +198,13 @@ export function attachmentPreviewFiles(courseId: string, files: MessageAttachmen
       return got.download_url
     },
     download: () => downloadAttachment(courseId, f.id),
+    rendition: f.rendition ?? null,
+    readRendition: async (signal) =>
+      (await read('conversation.attachment', { course_id: courseId, attachment_id: f.id }, { signal })).rendition ??
+      null,
+    retryRendition:
+      opts.retry && f.rendition
+        ? () => write('conversation.rendition_retry', { course_id: courseId, attachment_id: f.id })
+        : undefined,
   }))
 }
