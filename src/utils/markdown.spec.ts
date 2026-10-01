@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import katex from 'katex'
 import { pageHeadingOf, pageHeadings, renderMarkdown } from './markdown'
 
 describe('renderMarkdown', () => {
@@ -44,7 +45,47 @@ describe('renderMarkdown', () => {
   })
 })
 
+// The tests run in Node, whose process this is (the app's types leave Node's out).
+type CpuUsage = { user: number; system: number }
+const node = (globalThis as unknown as { process: { threadCpuUsage?: () => CpuUsage; cpuUsage: () => CpuUsage } })
+  .process
+
+/** The CPU time this thread has spent, in ms: unlike the wall clock, it stands still while other work has the CPU. */
+function cpuTime(): number {
+  const used = node.threadCpuUsage?.() ?? node.cpuUsage()
+  return (used.user + used.system) / 1000
+}
+
+/**
+ * How many times more CPU time renderMarkdown takes on text(4n) than on
+ * text(n), neither of which it typesets: about 4 where its work grows with
+ * the text, 16 where it grows with the text's square. CPU time, not the
+ * wall clock's: on a busy machine a short run may have a CPU to itself and a
+ * longer one share it, which the wall clock would count as work. The two
+ * are rendered one after the other, three times, and the middle one of the
+ * three ratios is taken: a run that the machine's other work slowed, or a
+ * short one it happened to leave alone, does not decide it.
+ */
+function growth(text: (n: number) => string, n: number): number {
+  const ratios: number[] = []
+  for (let round = 0; round < 3; round++) {
+    const [small, large] = [text(n), text(4 * n)].map((src) => {
+      const started = cpuTime()
+      const html = renderMarkdown(src)
+      const used = cpuTime() - started
+      expect(html).not.toContain('katex')
+      return used
+    })
+    ratios.push(large! / small!)
+  }
+  return ratios.sort((a, b) => a - b)[1]!
+}
+
 describe('math', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('typesets $…$ inline, as MathML for readers and HTML for the eye', () => {
     const html = renderMarkdown('Pythagoras: $a^2 + b^2 = c^2$.')
     expect(html).toContain('<span class="katex">')
@@ -144,15 +185,25 @@ describe('math', () => {
     }
   })
 
-  it('does not take time in the square of the number of dollar signs that close nothing', () => {
-    const started = Date.now()
-    expect(renderMarkdown('$1 '.repeat(50_000))).not.toContain('katex')
-    expect(renderMarkdown('$$a\n\n'.repeat(20_000))).not.toContain('katex')
-    expect(renderMarkdown('$a '.repeat(50_000) + '`b$')).not.toContain('katex')
-    expect(Date.now() - started).toBeLessThan(3000)
+  // What is bounded is how the work grows with the text, never how long it
+  // takes: four times the dollar signs may cost up to 8 times as much, twice
+  // the 4 of work that grows with the text and half the 16 of a search from
+  // each sign to the end of the text. The sizes are those at which such a
+  // search, were there one, would outweigh the rest of rendering, and at
+  // which a run is long enough for its cost to hold still; rendering them
+  // takes a second or two on an idle machine, and several times that on a
+  // busy one, hence the longer timeout.
+  it('does not take time in the square of the number of dollar signs that close nothing', { timeout: 30_000 }, () => {
+    const texts: [(n: number) => string, number][] = [
+      [(n) => '$1 '.repeat(n), 5_000],
+      [(n) => '$$a\n\n'.repeat(n), 1_000],
+      [(n) => '$a '.repeat(n) + '`b$', 5_000],
+    ]
+    for (const [text, n] of texts) expect(growth(text, n)).toBeLessThan(8)
   })
 
   it('shows as written what could make too much: macros defined in the text, @-named ones, very long TeX', () => {
+    const typeset = vi.spyOn(katex, 'renderToString')
     for (const tex of [
       '$\\def\\a{' + 'x'.repeat(500) + '}' + '\\a'.repeat(200) + '$',
       '$\\newcommand{\\a}{' + 'x'.repeat(500) + '}' + '\\a'.repeat(200) + '$',
@@ -160,23 +211,34 @@ describe('math', () => {
       '$\\color{' + 'a'.repeat(1000) + '}' + '\\current@color'.repeat(200) + '$',
       '$' + 'x+'.repeat(2500) + 'x$',
     ]) {
-      const started = Date.now()
       const html = renderMarkdown(tex)
-      expect(Date.now() - started).toBeLessThan(200)
       expect(html).not.toContain('class="katex')
       expect(html).toContain('md-math-error')
     }
+    // Refused before KaTeX is asked: typesetting them is what would take
+    // seconds, and make megabytes.
+    expect(typeset).not.toHaveBeenCalled()
     expect(renderMarkdown('$\\color{red}{x}$')).toContain('<span class="katex">')
     expect(renderMarkdown('$$x \\tag{1}$$')).toContain('class="katex-display"')
   })
 
   it('stops typesetting once the formulas of one text have made enough', () => {
-    const formula = '$' + '\\sqrt{x}'.repeat(300) + '$'
-    const html = renderMarkdown(Array(10).fill(formula).join('\n\n'))
+    // Each formula makes 700,000 characters, as a formula of some 500
+    // square roots would, but at once and in one element: real ones take
+    // seconds to typeset and to sanitise, and what is bounded is what a
+    // text's formulas make, whatever they are.
+    const made = '<span class="katex">' + 'x'.repeat(700_000) + '</span>'
+    const typeset = vi.spyOn(katex, 'renderToString').mockReturnValue(made)
+    const html = renderMarkdown(Array(10).fill('$x$').join('\n\n'))
     expect(html).toContain('<span class="katex">')
-    expect(html).toContain('md-math-error')
+    // Once enough is made, the rest are shown as written, KaTeX not asked.
+    const typesetHere = typeset.mock.calls.length
+    expect(typesetHere).toBeGreaterThan(0)
+    expect(typesetHere).toBeLessThan(10)
+    expect(html.match(/md-math-error/g)).toHaveLength(10 - typesetHere)
     // A new text starts again.
-    expect(renderMarkdown(formula)).toContain('<span class="katex">')
+    expect(renderMarkdown('$x$')).toContain('<span class="katex">')
+    expect(typeset).toHaveBeenCalledTimes(typesetHere + 1)
   })
 
   it('shows as written a formula that reaches beyond the sizes KaTeX allows', () => {
