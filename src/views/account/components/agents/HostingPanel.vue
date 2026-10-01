@@ -123,6 +123,11 @@ function openModelStep() {
   modelWizard.value = true
   modelOpen.value = true
 }
+/** Its model chosen, the runtime runs it, and is issued its token: whether it can be asked changes. */
+function onSaved(a: HostedAgent) {
+  hosted.value = a
+  emit('changed')
+}
 function chooseModel() {
   modelWizard.value = false
   modelOpen.value = true
@@ -247,7 +252,7 @@ watch(
         :wizard="modelWizard"
         :own-key="canChooseModel"
         :school-key="canChooseSchool"
-        @saved="hosted = $event"
+        @saved="onSaved"
       />
     </template>
   </div>

@@ -195,6 +195,17 @@ describe('HostingPanel: the runtime is here', () => {
     expect(s.issued).toEqual([])
   })
 
+  it('has Core read again once the model is saved: the runtime runs the agent, and people may ask it', async () => {
+    const needsModel = hostedAgent({ status: 'needs_model', model: { own: null, school: null }, own_key: null })
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [needsModel] }))
+    const w = await panel()
+    expect(w.find('.hosted-card__tag').text()).toBe('Choose a model')
+    w.findComponent({ name: 'ModelKeyDialog' }).vm.$emit('saved', hostedAgent())
+    await flushPromises()
+    expect(w.find('.hosted-card__tag').text()).toBe('Running')
+    expect(w.emitted('changed')).toHaveLength(1)
+  })
+
   it('opens on the model step after hosting from My agents, once', async () => {
     const needsModel = hostedAgent({ status: 'needs_model', model: { own: null, school: null }, own_key: null })
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [needsModel] }))
