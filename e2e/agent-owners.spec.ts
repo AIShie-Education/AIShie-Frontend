@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test'
 import { call, courseTab, coursePath, demo, registerPerson, root, signIn, signInAsRoot, toast, type DemoActor } from './support'
 
 // An agent's owner decides what it did where they could have done it
@@ -109,6 +109,19 @@ async function draftFor(owner: Owner, body: string): Promise<string> {
   return out.body.action_id!
 }
 
+/**
+ * Hovers a level in an open level's list, where a level out of reach says
+ * why in a tooltip, once the page has the web fonts it asked for: one that
+ * came in after the hover would set its text again, the dialog's rows with
+ * it, and the list, which follows its select, could move from under the
+ * mouse, which would then hold up no tooltip. Hovered is the part of the
+ * level that the tooltip is on.
+ */
+async function hoverLevel(page: Page, options: Locator, level: string) {
+  await page.evaluate(() => document.fonts.ready.then(() => undefined))
+  await options.filter({ hasText: level }).locator('.level-select__option').hover()
+}
+
 /** One permission's row in a permission editor, found by its key. */
 function permRow(page: Page, scope: ReturnType<Page['locator']>, perm: string) {
   return scope
@@ -140,7 +153,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
     const options = page.locator('.el-select-dropdown:visible .el-select-dropdown__item')
     await expect(options.filter({ hasText: 'Autonomous' })).toHaveClass(/is-disabled/)
     await expect(options.filter({ hasText: 'Reviewed after' })).toHaveClass(/is-disabled/)
-    await options.filter({ hasText: 'Autonomous' }).hover()
+    await hoverLevel(page, options, 'Autonomous')
     await expect(page.getByRole('tooltip').filter({ hasText: 'does this only by proposal' })).toBeVisible()
     await options.filter({ hasText: 'Needs approval' }).click()
     await expect(bring.getByText('1 set differently')).toBeVisible()
@@ -285,7 +298,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
     await expect(options.filter({ hasText: 'Autonomous' })).toHaveClass(/is-disabled/)
     await expect(options.filter({ hasText: 'Reviewed after' })).toHaveClass(/is-disabled/)
     await expect(options.filter({ hasText: 'Needs approval' })).not.toHaveClass(/is-disabled/)
-    await options.filter({ hasText: 'Autonomous' }).hover()
+    await hoverLevel(page, options, 'Autonomous')
     const why = page.getByRole('tooltip').filter({ hasText: 'an agent decides and reviews only by proposal' })
     await expect(why).toBeVisible()
     await decide.scrollIntoViewIfNeeded()
@@ -300,7 +313,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
     await zhDecide.locator('.el-select').click()
     const zhOptions = zh.locator('.el-select-dropdown:visible .el-select-dropdown__item')
     await expect(zhOptions.filter({ hasText: '自主' })).toHaveClass(/is-disabled/)
-    await zhOptions.filter({ hasText: '自主' }).hover()
+    await hoverLevel(zh, zhOptions, '自主')
     await expect(zh.getByRole('tooltip').filter({ hasText: '代理只能以提案的方式作出決定與覆核' })).toBeVisible()
     await zhDecide.scrollIntoViewIfNeeded()
     await shot(zh, 'agent-perms-greyed-zh-Hant')
