@@ -143,6 +143,10 @@ export default {
     invalidEmail: 'Enter a valid email address',
     ownerNotAutonomous:
       'You decide what your agent did only where you could have done it yourself without anyone’s confirmation. Here your own level for it is lower, or it is beyond your reach, so someone else in the course decides it.',
+    ownerWouldBeRefused:
+      'This proposal of your agent’s is not yours to decide now: approved now, it would be refused. You may withdraw it, or someone else in the course rejects it.',
+    ownerWouldBeRefusedWhy:
+      'This proposal of your agent’s is not yours to decide now: approved now, it would be refused. You may withdraw it, or someone else in the course rejects it. Why it would be refused: {why}',
     conversationsAreWithAgents:
       'Conversations here are with agents: a person is never asked in one, and answers none. People talk to each other elsewhere.',
     notAParticipant:

@@ -191,6 +191,27 @@ describe('reasonText', () => {
     const own = { ...cancelled, result: { error: { code: 'x', message: 'y', details: { reason: 'withdrawn' } } } }
     expect(reasonText(storedError(own as ActionRow))).toBe('Whoever proposed it took it back.')
   })
+  it('says an owner’s refused decision in the words the app says it in when met, not as Core’s bare reason', () => {
+    // action.decide by an agent's owner, recorded as failed (AIShie-Core#60).
+    const failed = (details: Record<string, unknown>) =>
+      ({ status: 'failed', result: { error: { code: 'forbidden', message: 'core’s own words', details } } }) as unknown as ActionRow
+    expect(
+      reasonText(
+        storedError(
+          failed({
+            reason: 'owner_would_be_refused',
+            refusal: { code: 'conflict', message: 'the document is published already' },
+          }),
+        ),
+      ),
+    ).toBe(
+      'This proposal of your agent’s is not yours to decide now: approved now, it would be refused. You may withdraw it, or someone else in the course rejects it. Why it would be refused: This conflicts with the current state: the document is published already',
+    )
+    expect(reasonText(storedError(failed({ reason: 'owner_not_autonomous' })))).toMatch(
+      /^You decide what your agent did only where you could have done it yourself without anyone’s confirmation\./,
+    )
+    expect(reasonText(storedError(failed({ reason: 'some_new_reason' })))).toBe('some_new_reason')
+  })
 })
 
 describe('routeFor', () => {

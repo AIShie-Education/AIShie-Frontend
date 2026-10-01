@@ -398,7 +398,7 @@ export default {
       ownAgent:
         'This was done by your own party — the person whose agent you are, or another of their agents — and a person and their agents count as one, so someone else deals with it.',
       ownAgentLevel:
-        'Your agent did this, and you could not have done it yourself without someone’s confirmation: your own level for it is lower than autonomous, or it is beyond your reach. So someone else in the course decides it.',
+        'Your agent did this, and it is not yours to decide: you could not have done it yourself without someone’s confirmation (your own level for it is lower than autonomous, or it is beyond your reach), or, for a proposal, approving it now would be refused. So someone else in the course decides it.',
     },
     ruleNote: 'Nobody decides or reviews their own action — from any seat they have held, and not at one remove either.',
     proposedNotice: 'Your decision is waiting for approval',
