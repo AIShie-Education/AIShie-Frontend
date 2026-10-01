@@ -271,6 +271,8 @@ export default {
     actionRecord: 'Anyone who decides actions in this course, in the record of each message',
     respondentAnswersOthers:
       'The one answering here answers other members too: it holds what each of them writes, and may repeat to them what is written here',
+    auditExport:
+      'The site’s administrators, and those of the course’s department, who may export it for audit, withdrawn messages included',
     sharedNote: 'It answers other members too: what you write here it may repeat to them.',
     note: 'Every message is written through an action, and the record of it keeps the text, even after it is withdrawn.',
   },

@@ -196,7 +196,7 @@ export const CLOSED_SEAT_REMOVED = 'seat_removed'
 export const CONVERSATIONS_ARE_WITH_AGENTS = 'conversations_are_with_agents'
 /** A conversation as every conversation tool returns it, without its messages. */
 export type ConversationView = ListItem<'conversation.list', 'conversations'>
-/** conversation.get: the view, and who can read it (visible_to, as codes: participants, overseers, action_record, respondent_answers_others). */
+/** conversation.get: the view, and who can read it (visible_to, as codes: participants, overseers, action_record, respondent_answers_others, and last audit_export). */
 export type ConversationDetail = ToolOut<'conversation.get'>
 export type ConversationOpener = ConversationView['opener']
 /** The respondent as a conversation shows it: presence, answer level, whose agent it is. */

@@ -341,20 +341,26 @@ export function closedConflict(
 // --- Who can read it -------------------------------------------------------------------
 
 /** The readers conversation.get names, by the chat's words for them. */
-export type VisibleToKey = 'participants' | 'overseers' | 'actionRecord' | 'respondentAnswersOthers'
+export type VisibleToKey = 'participants' | 'overseers' | 'actionRecord' | 'respondentAnswersOthers' | 'auditExport'
 export type VisibleToLine = { key: VisibleToKey } | { text: string }
 
 // Core says who can read a conversation as codes (visible_to), by what the
 // chat calls them. respondent_answers_others: the one answering answers other
 // members too, holds what each writes, and may repeat it to them.
+// audit_export, last of every list: the site's administrators, and those of
+// the course's department, may export it for audit (conversation.export),
+// withdrawn messages with their text.
 const VISIBLE_TO: Record<string, VisibleToKey> = {
   participants: 'participants',
   overseers: 'overseers',
   action_record: 'actionRecord',
   respondent_answers_others: 'respondentAnswersOthers',
+  audit_export: 'auditExport',
 }
-/** What Core says of every conversation, for one not read yet (or not yet started). */
+/** What Core says of every conversation, for one not read yet (or not yet started), but for its last line. */
 export const DEFAULT_VISIBLE_TO: VisibleToKey[] = ['participants', 'overseers', 'actionRecord']
+/** What Core says last of every conversation, after the rest. */
+export const DEFAULT_VISIBLE_TO_LAST: VisibleToKey[] = ['auditExport']
 
 /**
  * Who can read a conversation, in lines to show: the codes Core sends that
@@ -362,7 +368,7 @@ export const DEFAULT_VISIBLE_TO: VisibleToKey[] = ['participants', 'overseers', 
  * Before Core has said (a conversation not read yet, or not started), what it
  * says of every conversation, with the respondent's answering others when it
  * is known that it does (Core says so of every respondent that is not the
- * opener's own agent).
+ * opener's own agent), and last that administrators may export it for audit.
  */
 export function visibleToLines(
   list: readonly string[] | null | undefined,
@@ -371,6 +377,7 @@ export function visibleToLines(
   if (!list?.length) {
     const keys: VisibleToKey[] = [...DEFAULT_VISIBLE_TO]
     if (opts.answersOthers) keys.push('respondentAnswersOthers')
+    keys.push(...DEFAULT_VISIBLE_TO_LAST)
     return keys.map((key) => ({ key }))
   }
   return list.map((s) => {
