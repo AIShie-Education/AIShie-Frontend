@@ -318,6 +318,21 @@ describe('agents’ daily budgets', () => {
     expect(w.find('.budgets-card__save').attributes('disabled')).toBeDefined()
   })
 
+  it('says when the counts start again, in the reader’s time', async () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-12-01T12:00:00Z'))
+    try {
+      const w = await panel()
+      expect(w.find('.budgets-card__intro').text()).toBe(
+        'What one agent hosted here may use a day, on whichever key it answers: in all, and for each person asking it in a course. The counts start again at 16:00 (Pacific Standard Time).',
+      )
+    } finally {
+      vi.useRealTimers()
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('saves both, each field empty for no limit', async () => {
     const w = await panel()
     const usd = w.find('.budgets-card__per_agent_day .quota-inputs__usd input')

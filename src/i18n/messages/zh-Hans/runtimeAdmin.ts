@@ -137,7 +137,7 @@ export default {
     perDayPages: '每日页数',
     concurrency: '同时转写的文件数',
     numbersHint:
-      '页数超过上限的文件会被跳过；当日页数用完后（以 UTC 00:00 起计）领取的文件也会被跳过，教学人员之后可以再提交。“每日页数”留空即不限。',
+      '页数超过上限的文件会被跳过；当日页数用完后至{reset} 重新计算前，领取的文件也会被跳过，教学人员之后可以再提交。“每日页数”留空即不限。',
     saved: '已保存文件转写设置。',
     invalid: {
       maxPages: '1 至 5000 之间的整数。',
@@ -326,8 +326,8 @@ export default {
 
   quotas: {
     title: '每日额度',
-    intro: '学校方案每天可回答的次数。每天 00:00 UTC 重新计算。',
-    introUsd: '学校方案每天的回答次数和美元上限，可留空的字段留空表示不设上限。每天 00:00 UTC 重新计算。',
+    intro: '学校方案每天可回答的次数。每天{reset} 重新计算。',
+    introUsd: '学校方案每天的回答次数和美元上限，可留空的字段留空表示不设上限。每天{reset} 重新计算。',
     perOwner: '每位拥有者',
     perOwnerHint: '一位拥有者所有智能体的总和。',
     perAsker: '每位提问者',
@@ -353,7 +353,7 @@ export default {
 
   usage: {
     title: '今日学校方案用量',
-    since: '自 {since}（00:00 UTC）起',
+    since: '自 {since}起。每天{reset} 重新计算。',
     answers: '回答',
     modelCalls: '模型调用',
     cost: '费用',
@@ -462,7 +462,7 @@ export default {
   budgets: {
     title: '智能体每日预算',
     intro:
-      '在这里托管的每个智能体每天可使用的上限，不论以哪个密钥回答：包括总量，以及在一门课程中每位提问者的用量。每天 00:00 UTC 重新计算。',
+      '在这里托管的每个智能体每天可使用的上限，不论以哪个密钥回答：包括总量，以及在一门课程中每位提问者的用量。每天{reset} 重新计算。',
     perAgent: '每个智能体',
     perAgentHint: '一个智能体所有回答的总和。',
     perAsker: '每位提问者',

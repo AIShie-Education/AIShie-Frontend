@@ -11,6 +11,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { AgentBudgets } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
+import DailyReset from '@/components/DailyReset.vue'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import ChangedBy from './ChangedBy.vue'
 import QuotaInputs from './QuotaInputs.vue'
@@ -127,7 +128,9 @@ async function reset() {
 <template>
   <section class="app-card budgets-card">
     <h2 class="app-card__title">{{ t('runtimeAdmin.budgets.title') }}</h2>
-    <p class="budgets-card__intro">{{ t('runtimeAdmin.budgets.intro') }}</p>
+    <i18n-t keypath="runtimeAdmin.budgets.intro" tag="p" scope="global" class="budgets-card__intro">
+      <template #reset><DailyReset /></template>
+    </i18n-t>
     <RuntimeAsync
       :loading="budgets.loading.value && !data"
       :error="data ? null : budgets.error.value"

@@ -16,6 +16,7 @@ beforeEach(() => {
 enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   setLocale('en')
   document.body.innerHTML = ''
 })
@@ -89,6 +90,22 @@ describe('UsageCard', () => {
       'Up to 150 a day per owner, and 20 per person asking. In dollars: $2.50 per owner, No limit per person asking, and $100.00 for the whole school.',
     )
     expect(w.find('.usage-card__of-usd').text()).toBe('of $100.00 a day')
+  })
+
+  it('says since when, and when the counts start again, in the reader’s time, from the runtime’s day', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    const w = await card()
+    expect(w.find('.usage-card__since').text()).toBe(
+      'Since 2026-09-30 08:00. The counts start again at 08:00 (Hong Kong Standard Time).',
+    )
+    // A runtime whose day starts at midnight in Hong Kong.
+    state.usage = planUsage({ since: '2026-09-29T16:00:00Z' })
+    await w.find('.usage-card__refresh').trigger('click')
+    await flushPromises()
+    expect(w.find('.usage-card__since').text()).toBe(
+      'Since 2026-09-30 00:00. The counts start again at 00:00 (Hong Kong Standard Time).',
+    )
+    expect(w.find('.usage-card__since .daily-reset').attributes('datetime')).toMatch(/T16:00:00\.000Z$/)
   })
 
   it('says so when nobody has used the plan today', async () => {

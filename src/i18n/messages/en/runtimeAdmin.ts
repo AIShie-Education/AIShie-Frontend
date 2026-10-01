@@ -157,7 +157,7 @@ export default {
     perDayPages: 'Pages a day',
     concurrency: 'Documents at once',
     numbersHint:
-      'A document with more pages is skipped, and so is what is claimed once the day’s pages are used up (00:00 UTC); staff can send it again later. Leave “Pages a day” empty for no limit.',
+      'A document with more pages is skipped, and so is what is claimed once the day’s pages are used up, until they start again at {reset}; staff can send it again later. Leave “Pages a day” empty for no limit.',
     saved: 'Transcription settings saved.',
     invalid: {
       maxPages: 'A whole number from 1 to 5000.',
@@ -358,9 +358,9 @@ export default {
   // The plan's quotas a day.
   quotas: {
     title: 'Daily quotas',
-    intro: 'Answers a day on the school’s plan. The counts start again at 00:00 UTC.',
+    intro: 'Answers a day on the school’s plan. The counts start again at {reset}.',
     introUsd:
-      'Answers and dollars a day on the school’s plan, each empty for no limit where it may be. The counts start again at 00:00 UTC.',
+      'Answers and dollars a day on the school’s plan, each empty for no limit where it may be. The counts start again at {reset}.',
     perOwner: 'Per owner',
     perOwnerHint: 'Across all of one owner’s agents.',
     perAsker: 'Per person asking',
@@ -389,7 +389,7 @@ export default {
   // Today's use of the school's plan.
   usage: {
     title: 'Today on the school’s plan',
-    since: 'Since {since} (00:00 UTC)',
+    since: 'Since {since}. The counts start again at {reset}.',
     answers: 'Answers',
     modelCalls: 'Model calls',
     cost: 'Cost',
@@ -502,7 +502,7 @@ export default {
   budgets: {
     title: 'Agents’ daily budgets',
     intro:
-      'What one agent hosted here may use a day, on whichever key it answers: in all, and for each person asking it in a course. The counts start again at 00:00 UTC.',
+      'What one agent hosted here may use a day, on whichever key it answers: in all, and for each person asking it in a course. The counts start again at {reset}.',
     perAgent: 'Per agent',
     perAgentHint: 'All of one agent’s answers.',
     perAsker: 'Per person asking',

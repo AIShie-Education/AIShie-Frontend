@@ -487,6 +487,10 @@ describe('HostedAgentCard: deleting', () => {
 })
 
 describe('HostedAgentCard: on the school’s plan', () => {
+  // The reader is in Hong Kong: the runtime's day starts again at 08:00 there.
+  beforeEach(() => vi.stubEnv('TZ', 'Asia/Hong_Kong'))
+  afterEach(() => vi.unstubAllEnvs())
+
   it('shows the plan’s label, not a key, and the owner’s use of it today against the quota, with no cost', async () => {
     const w = await card(onSchoolPlan(false), { canChooseSchool: true })
     expect(w.find('.hosted-card__model').text()).toBe('School AI (Claude Haiku) claude-haiku-4-5')
@@ -496,7 +500,7 @@ describe('HostedAgentCard: on the school’s plan', () => {
     )
     expect(w.find('.hosted-card__school-count').text()).toBe('12 / 100 today')
     expect(w.find('.hosted-card__school-hint').text()).toBe(
-      'The school plan, across all your agents. Starts again at 00:00 UTC.',
+      'The school plan, across all your agents. Starts again at 08:00 (Hong Kong Standard Time).',
     )
     expect(w.find('.hosted-card__per-asker').text()).toBe('Each person who asks: up to 20 a day')
     expect(w.find('.hosted-card__agent-today').text()).toBe('4 answers')
@@ -512,7 +516,39 @@ describe('HostedAgentCard: on the school’s plan', () => {
     expect(w.find('.hosted-card__fallback').text()).toBe('OpenAI · gpt-4.1-mini, sk-…3f9a')
   })
 
-  it('says the day’s allowance is used up, and what happens until 00:00 UTC', async () => {
+  it('says when the school allowance starts again in the reader’s time, from the runtime’s day, with the exact UTC on hover', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-01T10:00:00Z'))
+    // A runtime whose day starts at midnight in Hong Kong: its today.since is
+    // 16:00 UTC, so the counts start again at 00:00 there, not at the 08:00
+    // the next 00:00 UTC would give.
+    const today = (a: HostedAgent) => ({ ...a, today: { ...a.today, since: '2026-09-30T16:00:00Z' } })
+    const w = await card(today(onSchoolPlan(false)))
+    expect(w.find('.hosted-card__school-hint').text()).toBe(
+      'The school plan, across all your agents. Starts again at 00:00 (Hong Kong Standard Time).',
+    )
+    const at = w.find('.hosted-card__school-hint time')
+    expect(at.attributes('datetime')).toBe('2026-10-01T16:00:00.000Z')
+    const tip = w
+      .findAllComponents({ name: 'ElTooltip' })
+      .find((x) => x.find('time').exists() && x.find('time').element === at.element)
+    expect(tip?.props('content')).toBe('2026-10-01 16:00 UTC')
+    w.unmount()
+    const spent = today(onSchoolPlan(true))
+    spent.today.school = { ...spent.today.school!, used: 100 }
+    const alert = await card(spent)
+    expect(alert.find('.hosted-card__spent').text()).toBe(
+      'Today’s school allowance is used up: your own key answers until 00:00 (Hong Kong Standard Time).',
+    )
+    alert.unmount()
+    setLocale('zh-Hant')
+    const zh = await card(today(onSchoolPlan(false)))
+    expect(zh.find('.hosted-card__school-hint').text()).toBe(
+      '學校方案，你所有的代理合計；每天香港標準時間 00:00 重新計算。',
+    )
+  })
+
+  it('says the day’s allowance is used up, and what happens until it starts again', async () => {
     const spent = (fallback: boolean) => {
       const a = onSchoolPlan(fallback)
       a.today.school!.used = 100
@@ -521,12 +557,12 @@ describe('HostedAgentCard: on the school’s plan', () => {
     let w = await card(spent(false))
     expect(w.find('.hosted-card__school-count').classes()).toContain('is-spent')
     expect(w.find('.hosted-card__spent').text()).toBe(
-      'Today’s school allowance is used up: until 00:00 UTC your agent asks people to try again tomorrow.',
+      'Today’s school allowance is used up: until 08:00 (Hong Kong Standard Time) your agent asks people to try again tomorrow.',
     )
     w.unmount()
     w = await card(spent(true))
     expect(w.find('.hosted-card__spent').text()).toBe(
-      'Today’s school allowance is used up: your own key answers until 00:00 UTC.',
+      'Today’s school allowance is used up: your own key answers until 08:00 (Hong Kong Standard Time).',
     )
   })
 

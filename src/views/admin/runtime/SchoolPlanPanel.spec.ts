@@ -58,6 +58,7 @@ beforeEach(() => {
 enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   setLocale('en')
   document.body.innerHTML = ''
 })
@@ -295,6 +296,14 @@ describe('the daily quotas', () => {
     )
     expect(w.find('.quotas-card__save').attributes('disabled')).toBeDefined()
     expect(w.text()).toContain('Quotas in dollars, where there are any, stay in force beside these.')
+  })
+
+  it('says when the counts start again in the reader’s time', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    const w = await panel()
+    expect(w.find('.quotas-card__intro').text()).toBe(
+      'Answers a day on the school’s plan. The counts start again at 08:00 (Hong Kong Standard Time).',
+    )
   })
 
   it('saves all three, no ceiling as null', async () => {

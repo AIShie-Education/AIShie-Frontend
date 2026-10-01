@@ -27,6 +27,7 @@ import { ApiError } from '@/api/http'
 import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { AgentPatch, HostedAgent, KeyTestAnswer, ModelsAnswer, ProviderOffer, SchoolOffer } from '@/api/runtime-types'
 import { REASONING_EFFORTS } from '@/api/runtime-types'
+import DailyReset from '@/components/DailyReset.vue'
 import {
   FIELD_REASONS,
   MAX_OUTPUT_TOKENS,
@@ -402,9 +403,17 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
                 <span v-if="o.model && !o.label.includes(o.model)" class="app-muted model-form__offer-model">{{ o.model }}</span>
               </el-radio>
             </el-radio-group>
-            <div v-if="limits" class="app-form-hint model-form__limits">
-              {{ t('hosting.school.limits', { owner: limits.per_owner_day, asker: limits.per_asker_day }) }}
-            </div>
+            <i18n-t
+              v-if="limits"
+              keypath="hosting.school.limits"
+              tag="div"
+              scope="global"
+              class="app-form-hint model-form__limits"
+            >
+              <template #owner>{{ limits.per_owner_day }}</template>
+              <template #asker>{{ limits.per_asker_day }}</template>
+              <template #reset><DailyReset :since="agent?.today.since" /></template>
+            </i18n-t>
             <div class="app-form-hint">{{ t('hosting.school.noKey') }}</div>
           </el-form-item>
           <el-alert

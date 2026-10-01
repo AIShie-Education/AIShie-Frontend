@@ -10,6 +10,7 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { OwnerPlanUse } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
 import { useNarrow } from '@/composables/useMediaQuery'
+import DailyReset from '@/components/DailyReset.vue'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
@@ -59,6 +60,7 @@ const schoolSpent = computed(() => {
         <p class="usage-card__since">
           <i18n-t keypath="runtimeAdmin.usage.since" tag="span" scope="global">
             <template #since><TimeText :value="data.since" /></template>
+            <template #reset><DailyReset :since="data.since" /></template>
           </i18n-t>
         </p>
         <dl class="usage-card__totals">

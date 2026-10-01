@@ -173,6 +173,8 @@ export default {
     ago: '{t} ago',
     due: 'Due {t}',
     noDue: 'No due date',
+    // When the agent runtime's daily counts start again, on the reader's clock.
+    dailyReset: '{time} ({zone})',
   },
   pagination: {
     loadMore: 'Load more',

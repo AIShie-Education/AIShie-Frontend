@@ -19,6 +19,7 @@ import { ElMessage, ElNotification } from 'element-plus'
 import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { HostedAgent, ProviderOffer } from '@/api/runtime-types'
 import { usePolling } from '@/composables/usePolling'
+import DailyReset from '@/components/DailyReset.vue'
 import TimeText from '@/components/TimeText.vue'
 import DeleteHostingDialog from './DeleteHostingDialog.vue'
 import {
@@ -298,7 +299,14 @@ defineExpose({ onCommand })
           <span class="hosted-card__school-count" :class="{ 'is-spent': spent }">
             {{ t('hosting.card.todaySchool', { used: schoolUse.used, limit: schoolUse.limit }) }}
           </span>
-          <span class="app-muted hosted-card__school-hint">{{ t('hosting.card.todaySchoolHint') }}</span>
+          <i18n-t
+            keypath="hosting.card.todaySchoolHint"
+            tag="span"
+            scope="global"
+            class="app-muted hosted-card__school-hint"
+          >
+            <template #reset><DailyReset :since="agent.today.since" /></template>
+          </i18n-t>
           <span class="app-muted hosted-card__per-asker">{{
             t('hosting.card.perAsker', { n: schoolUse.per_asker_limit })
           }}</span>
@@ -321,9 +329,14 @@ defineExpose({ onCommand })
       type="warning"
       :closable="false"
       show-icon
-      :title="t(school.fallback ? 'hosting.card.spentFallback' : 'hosting.card.spentNone')"
       class="hosted-card__alert hosted-card__spent"
-    />
+    >
+      <template #title>
+        <i18n-t :keypath="school.fallback ? 'hosting.card.spentFallback' : 'hosting.card.spentNone'" scope="global">
+          <template #reset><DailyReset :since="agent.today.since" /></template>
+        </i18n-t>
+      </template>
+    </el-alert>
     <el-alert
       v-if="withdrawn"
       type="warning"
