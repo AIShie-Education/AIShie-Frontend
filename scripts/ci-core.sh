@@ -29,6 +29,12 @@
 # server), and stop drops it again. A database that has been bootstrapped
 # before is refused: bootstrap runs once per database.
 #
+# A binary of Core is stopped by its pid, which start records with the
+# command it runs: stop signals the pid only while it still runs that
+# command. One that has ended (with a restart of the container, say) may
+# have left its number to another process, which is left alone: stop says
+# so, and forgets it.
+#
 # In GitHub Actions, start masks the session and the password in the log and
 # puts the three E2E_* variables in $GITHUB_ENV for the steps after it. stop
 # leaves Core's log in core.log, next to the env file, for the job to upload.
@@ -180,6 +186,9 @@ start() {
     "BLOB_FS_ROOT=$DIR/blobs"
   )
   if [ "$mode" = binary ]; then
+    # What it runs, as its command line reads once nohup has made way
+    # for it: stop signals the pid only while it runs this (is_core).
+    printf '%s serve\n' "$CORE_BIN" > "$DIR/command"
     # Its output goes to the log, not to the step's: GitHub Actions would
     # otherwise wait for it to end before ending the step.
     env "${settings[@]}" nohup "$CORE_BIN" serve </dev/null >>"$DIR/core.log" 2>&1 &
@@ -246,6 +255,24 @@ sign_in() {
   printf '%s\n' "$session"
 }
 
+# command_of PID prints the command line PID runs, its arguments joined by
+# spaces; nothing when there is no such process, or it has ended.
+command_of() {
+  if [ -r "/proc/$1/cmdline" ]; then
+    tr '\0' ' ' <"/proc/$1/cmdline" | sed 's/ $//'
+  else
+    ps -o args= -p "$1" 2>/dev/null || true
+  fi
+}
+
+# is_core PID: whether PID still runs the command start recorded with it,
+# and is the Core start ran, not a process that has taken its number since.
+is_core() {
+  local want
+  want=$(cat "$DIR/command" 2>/dev/null) || return 1
+  [ -n "$want" ] && [ "$(command_of "$1")" = "$want" ]
+}
+
 running() {
   if [ -f "$DIR/pid" ]; then
     kill -0 "$(cat "$DIR/pid")" 2>/dev/null
@@ -263,12 +290,17 @@ stop() {
   local pid i
   if [ -f "$DIR/pid" ]; then
     pid=$(cat "$DIR/pid")
-    if kill "$pid" 2>/dev/null; then
-      for i in $(seq 1 40); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
-      if kill -0 "$pid" 2>/dev/null; then kill -9 "$pid" 2>/dev/null || true; fi
+    if is_core "$pid"; then
+      kill "$pid" 2>/dev/null || true
+      for i in $(seq 1 40); do is_core "$pid" || break; sleep 0.5; done
+      if is_core "$pid"; then kill -9 "$pid" 2>/dev/null || true; fi
+      echo "stopped Core ($pid)"
+    elif [ ! -s "$DIR/command" ]; then
+      echo "ci-core: pid $pid was recorded with no command to know it by (by an older scripts/ci-core.sh): not signalled, and forgotten; stop it yourself if it is still Core" >&2
+    else
+      echo "ci-core: process $pid is not the Core this script started, which has ended: left alone, and forgotten" >&2
     fi
-    rm -f "$DIR/pid"
-    echo "stopped Core ($pid)"
+    rm -f "$DIR/pid" "$DIR/command"
   fi
   if [ -f "$DIR/container" ]; then
     logs
