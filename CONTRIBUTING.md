@@ -84,24 +84,32 @@ tests' agents are given them.
 
 ### Tests that hold on a busy machine
 
-A test passes on a loaded laptop or CI runner as it does on an idle one:
+A test passes on a loaded laptop or CI runner as it does on an idle one. On
+a busy machine what a unit test's time goes to is CPU, mostly Element Plus
+rendering in jsdom (up to half a second a test, the first of a file more),
+stretched many times over; what keeps the tests within their limits there is
+the limits themselves. A new or changed test follows these:
 
+- **The limits are for CPU.** `vite.config.ts` gives a test and a hook 30 s,
+  not the 5 s by default, which a busy machine's CPU alone runs past (at a
+  load near 130 on 10 cores, a test of 0.4 s took over 10). A file that
+  costs more says why and sets its own (`PermEditor.spec.ts`, 60 s).
 - **No waiting on the clock.** The wait before a call is sent again (half a
   second, then a second), a poll's, a timer's of the page are passed with fake
   timers (`vi.useFakeTimers`, then `vi.advanceTimersByTimeAsync`), the test
-  saying how many calls went before and after; an answer that comes through
-  promises is waited for with `flushPromises`. Only a moment's wait is real:
-  past Element Plus's 100 ms debounce of a field's error (`settle()`).
+  saying how many calls had gone by then (a component's, at each step); an
+  answer that comes through promises is waited for with `flushPromises`. Only a moment's
+  wait is real: past Element Plus's 100 ms debounce of a field's error
+  (`settle()`). The clock then costs no time, and a busy machine cannot
+  stretch it.
 - **No bound on the wall clock.** What is bounded is how the work grows (the
   CPU time of n and 4n, as `src/utils/markdown.spec.ts` does), or what is
   made, never how long it took. `vi.waitFor` gives up after a second: one
   that waits for a render is given longer (`rendered`, 20 s).
-- **One render a test.** A component rendered again, for another language or
-  another administrator, is another test (`it.each`).
-- **The limits are for CPU.** `vite.config.ts` gives a test and a hook 30 s:
-  rendering Element Plus in jsdom is up to half a second of CPU, which a busy
-  machine stretches many times over. A file that costs more says why and sets
-  its own (`PermEditor.spec.ts`).
+- **A component rendered once a test.** A component rendered again, for
+  another language or another administrator, is another test (`it.each`):
+  less work a test, and a failure that names the case. Older tests that
+  render more than once are split when they are changed.
 - **End to end,** a test walks a few pages, not every one: the walk over the
   signed-in pages in `e2e/chat-panel.spec.ts` is three tests.
 
