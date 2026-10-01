@@ -1,69 +1,29 @@
 // What the pages that host an agent on the school's runtime (M2, F2 and F3)
 // work out from what the runtime and Core say: the words for each error
-// reason and status, a seat's sentences, which token is the runtime's and
-// which others are in use, and the model form's choice. For display only:
-// the runtime and Core decide, and their refusals are shown by reason.
+// reason, status and revocation, a seat's sentences, and the model form's
+// choice. For display only: the runtime and Core decide, and their refusals
+// are shown by reason.
+//
+// The runtime hosts an agent by its id (runtime-hosting-api.md): only an
+// agent Core hosts runtime, and it alone is issued the agent's token. No
+// page here issues, hands over, shows or revokes a token for it.
 import { ApiError } from '@/api/http'
 import { isRuntimeError } from '@/api/runtime'
 import type {
-  ConnectAnswer,
   EndpointOffer,
-  HostedAgent,
   HostedStatus,
-  OtherToken,
-  OtherTokens,
   OwnModel,
   OwnModelChoice,
   ProviderOffer,
   ReasoningEffort,
-  RevokedToken,
-  RevocationProblem,
+  RevocationResult,
   SchoolUse,
   Seat,
-  TokenInfo,
 } from '@/api/runtime-types'
 import { REASONING_EFFORTS } from '@/api/runtime-types'
-import type { AgentCredential } from '@/api/types'
 import { errorMessage } from '@/composables/useErrors'
-import { credentialState } from '../credentials'
 
 type T = (key: string, params?: Record<string, unknown>) => string
-
-/** The label of the token this page issues for the runtime, in Core's Tokens list. */
-export const RUNTIME_TOKEN_LABEL = 'AIshie runtime'
-/**
- * The label earlier versions of this page gave the runtime's token, spelt
- * "AIShie runtime": tokens issued then are still hosted agents' own, and are
- * known by it.
- */
-const EARLIER_RUNTIME_TOKEN_LABEL = 'AIShie runtime'
-
-/** Whether a token's label is the one this page gives the runtime's token, as spelt now or before. */
-export function isRuntimeTokenLabel(label: string | null | undefined): boolean {
-  return label === RUNTIME_TOKEN_LABEL || label === EARLIER_RUNTIME_TOKEN_LABEL
-}
-
-/**
- * How recent a use of one of the agent's other tokens counts as something
- * else running it now: the runtime's own window (window_seconds, 900; the
- * contract's A.1), so that the page and the runtime warn alike. Core notes
- * a token's use at most once a minute, and a runtime running an agent calls
- * Core far more often than that.
- */
-export const RECENT_USE_MS = 15 * 60_000
-
-/** How many of the agent's other tokens the runtime lists at most (A.1). */
-const MAX_OTHER_TOKENS = 20
-
-/**
- * What the wizard does with the token it issues: host the agent (connect),
- * or give a hosted one a new token (replace; reconnect, when AIshie refused
- * the one it had).
- */
-export type HostMode = 'connect' | 'replace' | 'reconnect'
-
-/** An agent token as Core makes it: what inspect and connect take (§5.5). */
-export const AGENT_TOKEN_SHAPE = /^ais_[a-z2-7]{12}_[A-Za-z0-9_-]{32,128}$/
 
 // --- Errors ------------------------------------------------------------------------
 
@@ -86,15 +46,12 @@ const REASON_KEY: Record<string, string> = {
   runtime_absent: 'unavailable.absent',
   core_unavailable: 'errors.core_unavailable',
   rate_limited: 'errors.rate_limited',
-  token_malformed: 'errors.token_malformed',
-  token_refused: 'errors.token_refused',
-  token_not_agent: 'errors.token_not_agent',
+  runtime_misconfigured: 'errors.runtime_misconfigured',
+  mcp_agent: 'errors.mcp_agent',
   agent_suspended: 'errors.agent_suspended',
-  token_other_agent: 'errors.token_other_agent',
-  agent_unowned: 'errors.agent_unowned',
-  not_owner: 'errors.not_owner',
+  owner_suspended: 'errors.owner_suspended',
+  owner_changed: 'errors.owner_changed',
   core_too_old: 'errors.core_too_old',
-  already_hosted: 'errors.already_hosted',
   operator_agent: 'errors.operator_agent',
   agent_not_found: 'errors.agent_not_found',
   version_mismatch: 'errors.version_mismatch',
@@ -110,9 +67,9 @@ const REASON_KEY: Record<string, string> = {
   unknown_endpoint: 'errors.unknown_endpoint',
   invalid_field: 'errors.invalid_field',
   // The runtime reads a member only by exactly its name, and takes no query
-  // but DELETE's revoke_token (A.3.1, A.3.2): this page never sends another,
-  // so one refused is a page older or newer than the runtime. Worded with
-  // the name refused, when the runtime gave one.
+  // (A.3.1, A.3.2): this page never sends another, so one refused is a page
+  // older or newer than the runtime. Worded with the name refused, when the
+  // runtime gave one.
   unknown_field: 'errors.unknown_field',
   unknown_parameter: 'errors.unknown_parameter',
 }
@@ -148,9 +105,12 @@ function fieldNamed(e: ApiError): string {
  * The words for an error from hosting, in the person's language: by the
  * runtime's reason where §9.5 has words for it, and the app's generic words
  * (with the runtime's message) otherwise. provider names the provider for
- * the reasons that say it.
+ * the reasons that say it. notYours words agent_not_found as said of hosting
+ * an agent (inspect, POST /agents: not one of the caller's agents) rather
+ * than of a hosted one (gone from the runtime).
  */
-export function hostingErrorText(e: unknown, t: T, opts: { provider?: string } = {}): string {
+export function hostingErrorText(e: unknown, t: T, opts: { provider?: string; notYours?: boolean } = {}): string {
+  if (opts.notYours && isRuntimeError(e) && e.reason === 'agent_not_found') return t('hosting.errors.agent_not_yours')
   const key = hostingErrorKey(e)
   if (!key) return errorMessage(e)
   const err = e as ApiError
@@ -170,19 +130,14 @@ export function problemsOf(e: unknown): string[] {
 }
 
 /**
- * Whether an error is final for the request (a refusal), as the wizard's
- * revoke rule counts it (§9.2): a 4xx other than 401, and other than 412. A
- * 412 says the agent changed meanwhile, which a token replacement sent
- * again after a lost answer would be told as well: whether the runtime has
- * the token must be asked, not assumed.
+ * Whether an error is final for the request (a refusal), as the
+ * transcriber's credential hand-over counts it: a 4xx other than 401, and
+ * other than 412. A 412 says what was changed changed meanwhile, which a
+ * request sent again after a lost answer would be told as well: whether the
+ * runtime has what it was sent must be asked, not assumed.
  */
 export function isDefinitive(e: unknown): boolean {
   return e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401 && e.status !== 412
-}
-
-/** Whether nothing can be said of what became of the request: no answer, or the server's failure. */
-export function isIndeterminate(e: unknown): boolean {
-  return e instanceof ApiError && (e.isNetwork || e.status >= 500 || e.status === 401)
 }
 
 // --- Status ------------------------------------------------------------------------
@@ -256,148 +211,25 @@ export function seatSentences(s: Seat, t: T): string[] {
   return out
 }
 
-// --- Tokens --------------------------------------------------------------------------
-
-/** The credential in Core's list that is the runtime's token, by its prefix, whatever its state. */
-export function credentialByPrefix(
-  creds: readonly AgentCredential[] | null | undefined,
-  prefix: string | null | undefined,
-): AgentCredential | undefined {
-  if (!prefix) return undefined
-  return (creds ?? []).find((c) => c.kind === 'api_token' && c.token_prefix === prefix)
-}
+// --- What became of its token ------------------------------------------------------
 
 /**
- * The credential the owner revokes themselves when the runtime could not
- * (§9.4's fallback): an API token with that prefix, not revoked yet.
+ * What to tell the owner of what became of the agent's token in Core when
+ * its hosting ended (when: pausing, or deleting), in words with the
+ * problem's, or null when there is nothing to say: revoked, or there was
+ * none. Failed: it may still work, and people may still be offered to ask
+ * the agent on the site (pausing again tries again). Not attempted: the
+ * operator's configuration runs the agent and keeps its own.
  */
-export function ownerFallbackCredential(
-  creds: readonly AgentCredential[] | null | undefined,
-  prefix: string | null | undefined,
-): AgentCredential | undefined {
-  if (!prefix) return undefined
-  return (creds ?? []).find((c) => c.kind === 'api_token' && c.token_prefix === prefix && !c.revoked_at)
-}
-
-/** Whether a token was used within RECENT_USE_MS of now (a use in the future counts). */
-export function usedRecently(c: Pick<AgentCredential, 'last_used_at'>, now = Date.now()): boolean {
-  if (!c.last_used_at) return false
-  const at = Date.parse(c.last_used_at)
-  return Number.isFinite(at) && now - at <= RECENT_USE_MS
-}
-
-/**
- * The one-brain rule: the agent's live tokens other than except (the
- * runtime's own, or the one being handed to it) that were used recently.
- * Any of them means something else is running the agent now, and hosting it
- * too would give it two brains that both answer.
- */
-export function otherRecentTokens(
-  creds: readonly AgentCredential[] | null | undefined,
-  except: string | null | undefined,
-  now = Date.now(),
-): AgentCredential[] {
-  return (creds ?? []).filter(
-    (c) =>
-      c.kind === 'api_token' &&
-      credentialState(c, now) === 'active' &&
-      (!except || c.token_prefix !== except) &&
-      usedRecently(c, now),
-  )
-}
-
-/**
- * A token the runtime could not revoke in Core, which may still work (§9.4):
- * its public part, and why (null when it cannot be told whether it was
- * revoked at all: the runtime's answer was lost, or the agent was gone
- * already when it was deleted).
- */
-export interface UnrevokedToken extends TokenInfo {
-  problem: RevocationProblem | null
-}
-
-/**
- * The token a replacement or a deletion left working, for its owner to be
- * offered to revoke, or null when there is nothing to do: revoked, or
- * already not working. not_attempted is not this: a replay of the same
- * token, or a token kept on purpose.
- */
-export function unrevoked(t: RevokedToken): UnrevokedToken | null {
-  if (t.revocation !== 'failed') return null
-  return { hint: t.hint, prefix: t.prefix, problem: t.problem ?? null }
-}
-
-/** A token as the runtime shows one, by its public prefix: ais_k7v2m4qhx3ab… */
-export function tokenHint(prefix: string): string {
-  return `ais_${prefix}…`
-}
-
-/** The most recently used first, never-used ones last (the newest of those first), as the runtime lists them. */
-function byUse(a: OtherToken, b: OtherToken): number {
-  if (!a.last_used_at || !b.last_used_at) {
-    if (a.last_used_at) return -1
-    if (b.last_used_at) return 1
-    return Date.parse(b.created_at) - Date.parse(a.created_at)
-  }
-  return Date.parse(b.last_used_at) - Date.parse(a.last_used_at)
-}
-
-/**
- * The one-brain check the runtime makes when a token is inspected or
- * connected (other_tokens, A.1), made here from Core's list of the agent's
- * tokens, for where there is no such answer yet: before the page issues a
- * token of its own. The live API tokens but except (the runtime's own, when
- * it is given a new one), each marked recent when used within the runtime's
- * window. Null when there is no list to go by.
- */
-export function otherTokensFrom(
-  creds: readonly AgentCredential[] | null | undefined,
-  except: string | null | undefined,
-  now = Date.now(),
-): OtherTokens | null {
-  if (!creds) return null
-  const tokens = creds
-    .filter(
-      (c) =>
-        c.kind === 'api_token' &&
-        !!c.token_prefix &&
-        credentialState(c, now) === 'active' &&
-        (!except || c.token_prefix !== except),
-    )
-    .map(
-      (c): OtherToken => ({
-        prefix: c.token_prefix!,
-        label: c.label?.trim() || null,
-        created_at: c.created_at,
-        last_used_at: c.last_used_at ?? null,
-        expires_at: c.expires_at ?? null,
-        recent: usedRecently(c, now),
-      }),
-    )
-    .sort(byUse)
-  return { in_use: tokens.some((x) => x.recent), window_seconds: RECENT_USE_MS / 1000, tokens: tokens.slice(0, MAX_OTHER_TOKENS) }
-}
-
-/** o without the tokens of those prefixes (revoked here since), and in use only while one left is recent. */
-export function withoutTokens(o: OtherTokens, prefixes: readonly string[]): OtherTokens
-export function withoutTokens(o: OtherTokens | null | undefined, prefixes: readonly string[]): OtherTokens | null | undefined
-export function withoutTokens(o: OtherTokens | null | undefined, prefixes: readonly string[]): OtherTokens | null | undefined {
-  if (!o || !prefixes.length) return o
-  const tokens = o.tokens.filter((x) => !prefixes.includes(x.prefix))
-  return { ...o, tokens, in_use: tokens.some((x) => x.recent) }
-}
-
-/**
- * POST /agents' answer parted into the agent and its other tokens: undefined
- * when the answer did not carry them (the agent found by the runtime's list
- * after a lost answer, or a runtime that does not say).
- */
-export function connectedParts(a: ConnectAnswer | HostedAgent): {
-  agent: HostedAgent
-  others: OtherTokens | null | undefined
-} {
-  const { other_tokens: others, ...agent } = a as Partial<Pick<ConnectAnswer, 'other_tokens'>> & HostedAgent
-  return { agent, others }
+export function revocationNotice(
+  r: RevocationResult | null | undefined,
+  when: 'pause' | 'delete',
+  t: T,
+): string | null {
+  if (!r || r.outcome === 'revoked' || r.outcome === 'none') return null
+  const why = t(`hosting.revocation.why.${r.problem ?? 'unknown'}`)
+  if (r.outcome === 'failed') return t(when === 'pause' ? 'hosting.revocation.failedPause' : 'hosting.revocation.failedDelete', { why })
+  return t('hosting.revocation.not_attempted', { why })
 }
 
 // --- The model form -----------------------------------------------------------------

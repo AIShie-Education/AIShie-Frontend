@@ -6,7 +6,7 @@
 // No token or key is written in any file: the fakes make them at random as
 // a test runs, in the shapes Core and the providers use.
 import { vi } from 'vitest'
-import type { HostedAgent, OtherToken, OtherTokens, ProviderOffer, SchoolOffer, Seat } from '@/api/runtime-types'
+import type { HostedAgent, InspectAnswer, ProviderOffer, SchoolOffer, Seat } from '@/api/runtime-types'
 import type { AgentCredential } from '@/api/types'
 
 export const ACTOR = '0192f3c1-7d2e-7c3a-9b1f-2a4c6e8f0a1b'
@@ -63,7 +63,7 @@ export const INFO = {
   commit: 'abc1234',
   audience: 'https://lms.example.edu/runtime',
   issuer: 'https://lms.example.edu',
-  features: { connect_by_token: true, own_key: true, school_key: false },
+  features: { host_by_id: true, own_key: true, school_key: false },
 }
 
 export function seat(over: Partial<Seat> = {}): Seat {
@@ -95,7 +95,6 @@ export function hostedAgent(over: Partial<HostedAgent> = {}): HostedAgent {
     status: 'running',
     problem: null,
     paused: false,
-    token: { hint: 'ais_runtimetoken…', prefix: 'runtimetoken' },
     model: {
       own: {
         provider: 'openai',
@@ -238,22 +237,20 @@ export function credential(over: Partial<AgentCredential> = {}): AgentCredential
   }
 }
 
-/** One of the agent's other live tokens, as the runtime lists it (other_tokens, A.1). */
-export function otherToken(over: Partial<OtherToken> = {}): OtherToken {
+/** POST /agents/inspect's answer for one of the caller's runtime agents, hostable and not hosted yet. */
+export function inspected(over: Partial<InspectAnswer> = {}): InspectAnswer {
   return {
-    prefix: random(B32, 12),
-    label: 'laptop',
-    created_at: '2026-09-01T00:00:00Z',
-    last_used_at: null,
-    expires_at: null,
-    recent: false,
+    core_actor_id: ACTOR,
+    display_name: 'Study helper',
+    owner_actor_id: '0192f3c1-0000-7c3a-9b1f-2a4c6e8f0a1b',
+    hosting: 'runtime',
+    hostable: true,
+    reason: null,
+    live_seats: 2,
+    site_chat: false,
+    hosted: null,
     ...over,
   }
-}
-
-/** The runtime's other_tokens for these tokens: in use when one is recent. */
-export function otherTokens(tokens: OtherToken[]): OtherTokens {
-  return { in_use: tokens.some((x) => x.recent), window_seconds: 900, tokens }
 }
 
 /**
@@ -357,6 +354,7 @@ export const RUNTIME = {
 }
 
 export const CORE = {
+  agents: /^\/v1\/me\/agents$/,
   issue: /^\/v1\/me\/agents\/[^/]+\/tokens$/,
   revoke: /^\/v1\/me\/agents\/[^/]+\/credentials\/[^/]+\/revoke$/,
   credentials: /^\/v1\/me\/agents\/[^/]+\/credentials$/,

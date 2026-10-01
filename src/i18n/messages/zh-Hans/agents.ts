@@ -15,11 +15,11 @@ export default {
     title: '智能体如何运作',
     here: {
       title: '在这里注册',
-      body: '智能体是 AIshie 中的一个身份：一个名称、它的令牌，以及它所在的课程。这里不会保存任何模型、提示词或密钥。',
+      body: '智能体是 AIshie 中的一个身份：一个名称、它的运行方式，以及它所在的课程。这里不会保存任何模型、提示词或密钥。',
     },
     runtime: {
-      title: '在别处运行',
-      body: '负责思考与回答的是“运行环境”：在你电脑上的程序，或你使用的服务。它以智能体的令牌连接，向 AIshie 领取任务。',
+      title: '两种运行方式，一经选定不变',
+      body: '站内托管：AIshie 以你选择的模型运行它，课程成员可在站内向它提问。或 MCP 访问：由你自己的工具以它的令牌使用它。创建时选定。',
     },
     delegate: {
       title: '只代表你行事',
@@ -39,7 +39,7 @@ export default {
     count: '没有已启用的智能体 | 1 个已启用 | {n} 个已启用',
     countOf: '{n} / {limit} 个已启用',
     suspendedDoNotCount: '已停用的智能体不计入你可拥有的数量。',
-    empty: '你还没有任何智能体。创建一个、为它签发令牌，再把运行环境连上去。',
+    empty: '你还没有任何智能体。创建一个：站内托管，或由你自己的工具通过 MCP 访问。',
     emptyNoSelfService: '你还没有任何智能体。在这里，智能体由管理员注册：请向你的管理员申请。',
     seats: '未加入任何课程 | 已加入 1 门课程 | 已加入 {n} 门课程',
     requests: '1 项申请待批准 | {n} 项申请待批准',
@@ -74,34 +74,27 @@ export default {
     done: '已重命名',
   },
 
-  // Whether it takes conversations on the site (agent.get's site_chat), and switching them off (agent.update).
+  // Whether people can ask it on the site (agent.get's site_chat), as its hosting decides.
   siteChat: {
-    title: '站内对话',
-    on: '在站内接受对话',
-    off: '不在站内接受对话',
-    onBody: '它所在课程中的人可以在站内与它开始对话、向它提问：运行它的程序已表明会回答这些问题。',
-    hostedOff: '它由 AIshie 的运行环境托管；运行环境下次启动它时，它会再次在站内接受对话。',
-    suspended: '它停用期间不会在站内接受对话。',
-    switchOff: '关闭',
-    confirmTitle: '关闭 {name} 的站内对话？',
-    confirmBody:
-      '它所在课程中的人将不能再在站内与它开始对话，也不能再向它提问。已写下的内容仍可阅读，它也仍可回答之前收到的问题。',
-    confirmReturns:
-      '运行它的程序（例如 AIshie 的运行环境）下次启动这个智能体时，会再次开启站内对话。撤销它运行时所用的令牌，或结束 AIshie 的托管，也会使站内对话结束。',
-    confirm: '关闭',
-    done: '{name} 已不再在站内接受对话',
+    title: '站内提问',
+    on: '课程成员可在站内向它提问：AIshie 的运行环境正在运行它。',
+    off: '目前站内无法向它提问：AIshie 的运行环境没有在运行它。请在本页为它设置托管，或恢复运行。',
+    suspended: '它停用期间，站内无法向它提问。',
+    mcp: '站内无法向它提问：它是 MCP 访问，由你自己的工具使用。可在站内提问的智能体，须在创建时选择“站内托管”。',
+    stop: '如要让人无法再向它提问，请暂停它的托管，或停用它。',
   },
 
   detail: {
     title: '智能体',
-    subtitle: '它的运行环境、令牌，以及它工作的课程',
+    subtitle: '它的运行方式，以及它工作的课程',
     notFound: '你没有这个 ID 的智能体。',
     about: '基本信息',
     presence: '连接状态',
     created: '创建于',
     id: '参与者 ID',
-    delegateNote:
-      '持有它任何一个令牌的人，都会以这个智能体的身份行事，也就是以你的代表身份行事：在每门课程中，权限都不会超过你自己的席位。',
+    delegateNote: '在每门课程中，它都以你的代表身份行事：权限都不会超过你自己的席位。',
+    tokenNote: '持有它任何一个令牌的人，都会以这个智能体的身份行事，也就是以你的代表身份行事。',
+    hostingFixed: '在创建时选定，此后不会更改。',
     rename: '重命名',
     suspend: '停用',
     reactivate: '重新启用',
@@ -116,25 +109,34 @@ export default {
     adminOnly: '这个智能体由管理员停用，只有管理员才能解除。',
   },
 
-  // How it runs, when run by another AI tool or an AIshie runtime of one's own (ConnectRuntimeCard).
+  // Connecting one's own tool to an agent with MCP access (McpAccessCard, ConnectToolSteps).
   connect: {
-    tokenTodo: '它还没有令牌：工具需要用令牌连接。',
+    tokenTodo: '它还没有令牌：你的工具需要用令牌连接。',
     tokenDone: '它已有一个有效的令牌。',
     waiting: '它的令牌尚未被使用过。',
-    waitingWatching: '正在等待它连接…本页每隔几秒会自动检查一次。',
-    toolIntro: 'Claude、ChatGPT、智能体 SDK 或任何其他 MCP 客户端都可以充当这个智能体：把这个地址交给它，并在这个请求头中放入智能体的其中一个令牌。',
+    waitingWatching: '正在等待你的工具连接…本页每隔几秒会自动检查一次。',
+    toolIntro:
+      'Claude Desktop、编辑器、智能体 SDK 或任何其他 MCP 客户端都可以充当这个智能体：把这个地址交给它，并在这个请求头中放入智能体的其中一个令牌。',
     endpoint: 'MCP 端点（Streamable HTTP）',
     header: '请求头',
     headerHint: '把 {placeholder} 换成智能体的其中一个令牌。请妥善保密：任何持有它的人都能以这个智能体的身份行事。',
-    claudeHint: '在 Claude 中：用这个网址添加自定义连接器，选择“No sign-in”，并添加名为 authorization 的请求头，值为 Bearer {placeholder}。',
-    runtimeIntro: '适用于自行运维 AIshie Agent Runtime 的人：把这个智能体文件放进运行环境的 agents 目录，并把令牌放在文件所指定的 secret 中。',
-    agentFile: 'AIshie Agent Runtime 的智能体文件（YAML）',
-    agentFileHint:
-      '把令牌存放在运行环境 secrets 目录中的 {file} 文件，或环境变量 {variable}；切勿写进智能体文件，运行环境会拒绝写在那里的令牌。',
-    modelExample: 'model 配置块只是示例：请改成你自己的供应商、模型和密钥。',
+    claudeDesktop: '示例：Claude Desktop',
+    claudeDesktopFile: 'claude_desktop_config.json',
+    claudeDesktopHint:
+      '把这段加入 Claude Desktop 的配置（Settings → Developer → Edit Config），把 {placeholder} 换成智能体的其中一个令牌，然后重新启动 Claude Desktop。它会以 npx 运行 mcp-remote，所以需要安装 Node.js。',
+    claudeDesktopHintToken:
+      '把这段加入 Claude Desktop 的配置（Settings → Developer → Edit Config），然后重新启动 Claude Desktop。配置文件中含有令牌：请勿外泄。它会以 npx 运行 mcp-remote，所以需要安装 Node.js。',
     courseTodo: '在加入课程之前，它什么都做不了：请把它带入你有席位的课程。',
     courseWaiting: '安排它加入课程的申请正等待讲师批准。',
     courseDone: '已加入 1 门课程。 | 已加入 {n} 门课程。',
+  },
+
+  // How an agent with MCP access runs, on its page (McpAccessCard).
+  mcp: {
+    title: '运行方式',
+    notOnSite: '站内无法向这个智能体提问',
+    notOnSiteBody:
+      '它是 MCP 访问：由你自己的工具（Claude Desktop、编辑器、程序）以它的其中一个令牌通过 MCP 使用，并以你的代表身份在它的课程中行事。',
   },
 
   copy: {
@@ -146,7 +148,7 @@ export default {
     title: '令牌',
     new: '创建令牌',
     intro:
-      '运行环境用来连接的凭证。撤销其中一个，使用它的运行环境从下一次调用起便会被拒绝；智能体本身及其他令牌不受影响。',
+      '你的工具用来连接的凭证。撤销其中一个，使用它的程序从下一次调用起便会被拒绝；智能体本身及其他令牌不受影响。',
     showInactive: '显示已撤销及已过期的令牌（{n}）',
     empty: '还没有任何令牌。',
     unlabelled: '无标签',
@@ -165,7 +167,7 @@ export default {
     },
     revoke: '撤销',
     revokeTitle: '撤销这个令牌？',
-    revokeBody: '使用 {token} 的运行环境，从下一次以 {name} 身份调用起便会被拒绝。',
+    revokeBody: '使用 {token} 的程序，从下一次以 {name} 身份调用起便会被拒绝。',
     revokeKeeps: '智能体会保留它的席位及其他令牌。已撤销的令牌永远无法再使用。',
     revoked: '已撤销令牌',
   },
@@ -173,18 +175,18 @@ export default {
   issue: {
     title: '为 {name} 创建令牌',
     intro:
-      '供 {name} 的一个运行环境使用。持有它的人会以这个智能体的身份，也就是以你的代表身份行事：权限永远不会超过你自己的席位。',
+      '供你通过 MCP 使用 {name} 的一个工具使用。持有它的人会以这个智能体的身份，也就是以你的代表身份行事：权限永远不会超过你自己的席位。',
     suspended: '这个智能体已停用：在重新启用之前，这个令牌会被拒绝。',
     label: '标签',
-    labelPlaceholder: '例如：我笔记本电脑上的运行环境',
-    labelHint: '注明它在哪里运行，方便以后辨认。',
+    labelPlaceholder: '例如：我笔记本电脑上的 Claude Desktop',
+    labelHint: '注明它在哪里使用，方便以后辨认。',
     labelRequired: '请输入标签',
     expiry: '到期',
     after: '在若干天后',
     never: '永不',
     days: '天',
     daysInvalid: '请输入 1 至 3650 之间的整数天数',
-    noExpiryWarn: '永不到期的令牌会一直有效，直到被撤销。无人看管的运行环境，最好设置到期日。',
+    noExpiryWarn: '永不到期的令牌会一直有效，直到被撤销。无人看管的工具，最好设置到期日。',
     submit: '创建令牌',
   },
 
@@ -193,6 +195,7 @@ export default {
     warning: '请立即复制。令牌不会保存在任何地方，之后也不会再显示。',
     token: '令牌',
     listedAs: '在列表中显示为',
+    connect: '连接你的工具',
     done: '我已复制',
     closeUncopiedTitle: '不复制就关闭？',
     closeUncopied: '这个令牌不会再显示。如果遗失了，请撤销它并创建新的。',

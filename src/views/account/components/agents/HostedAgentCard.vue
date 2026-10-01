@@ -5,41 +5,33 @@
 // the school's plan: the plan's label in place of a key, the owner's use of
 // the plan today against its quota, and whether their own key stands
 // behind it; the school pays, so no cost is shown), and
-// what the owner can do: choose or change the model and key (F3), give it a
-// new token, pause or resume it (on the runtime only: this is not Core's
-// Suspend), and delete it from the runtime. It is read again every few
-// seconds while it starts, and every half minute otherwise, not while the
-// page is hidden.
-//
-// An agent has one brain at a time. While the runtime hosts it, the other
-// two ways to run it (another AI tool, or an AIshie runtime of one's own)
-// are folded away, with a note that they apply only once hosting is
-// deleted; resuming while another of its tokens is in use says so first.
+// what the owner can do: choose or change the model and key (F3), connect
+// it again when the token the runtime held was revoked in Core
+// (needs_token: the runtime is issued a new one, POST …/token), pause or
+// resume it (on the runtime only: this is not Core's Suspend; pausing
+// revokes its token, so nobody can ask it on the site meanwhile), and delete
+// it from the runtime. No token is shown or handled here. It is read again
+// every few seconds while it starts, and every half minute otherwise, not
+// while the page is hidden.
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { ApiError } from '@/api/http'
+import { ElMessage, ElNotification } from 'element-plus'
 import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { HostedAgent, ProviderOffer } from '@/api/runtime-types'
-import type { AgentCredential } from '@/api/types'
 import { usePolling } from '@/composables/usePolling'
 import TimeText from '@/components/TimeText.vue'
-import ConnectToolSteps from './ConnectToolSteps.vue'
 import DeleteHostingDialog from './DeleteHostingDialog.vue'
-import OwnRuntimeSteps from './OwnRuntimeSteps.vue'
 import {
   STATUS_TAG,
   courseLabel,
   hostingErrorText,
   isTransitional,
-  otherRecentTokens,
   pollInterval,
   providerLabel,
+  revocationNotice,
   schoolSpent,
   seatSentences,
-  type UnrevokedToken,
 } from './hosting'
-import { revokeAllAsOwner } from './hostingFlow'
 import type { AgentStanding } from './agents'
 
 const props = withDefaults(
@@ -47,23 +39,21 @@ const props = withDefaults(
     agent: HostedAgent
     actorId: string
     name: string
-    credentials?: AgentCredential[] | null
-    /** Core's standing of the agent: a suspended one cannot be given a token. */
+    /** Core's standing of the agent: a suspended one is not connected again. */
     standing?: AgentStanding
     /** GET /models' providers, for their names; the provider's id stands in without them. */
     offers?: ProviderOffer[] | null
-    /** The runtime takes a new token for it (features.connect_by_token). */
-    canConnect?: boolean
+    /** The runtime hosts by an agent's id, and so connects it again (features.host_by_id). */
+    canRenew?: boolean
     /** The runtime takes a model and key of the owner's (features.own_key). */
     canChooseModel?: boolean
     /** The runtime offers the school's plan (features.school_key). */
     canChooseSchool?: boolean
   }>(),
   {
-    credentials: null,
     standing: 'active',
     offers: null,
-    canConnect: true,
+    canRenew: true,
     canChooseModel: true,
     canChooseSchool: false,
   },
@@ -73,11 +63,8 @@ const emit = defineEmits<{
   /** No longer on the runtime (deleted here, or elsewhere). */
   deleted: []
   chooseModel: []
-  /** Give it a new token: 'reconnect' when AIshie refused the one it had. */
-  newToken: [mode: 'replace' | 'reconnect']
-  credsChanged: []
-  /** Deleting left its token working: the owner is offered to revoke it (§9.4). */
-  unrevoked: [token: UnrevokedToken]
+  /** What Core says of the agent changed (whether it can be asked on the site): read it again. */
+  changed: []
 }>()
 const { t } = useI18n()
 
@@ -88,7 +75,7 @@ const school = computed(() => props.agent.model.school ?? null)
 const schoolUse = computed(() => props.agent.today.school ?? null)
 /** A model and key, or the school's plan, may be chosen here. */
 const canChoose = computed(() => props.canChooseModel || props.canChooseSchool)
-const busy = ref<'pause' | 'resume' | null>(null)
+const busy = ref<'pause' | 'resume' | 'renew' | null>(null)
 const error = shallowRef<unknown>(null)
 const deleteOpen = ref(false)
 const active = computed(() => (props.standing ?? 'active') === 'active')
@@ -166,48 +153,30 @@ watch(
   { immediate: true },
 )
 
-// --- Pause and resume ------------------------------------------------------------------
+// --- Pause, resume, and a new token ------------------------------------------------------
 // Sent without a version (§9.1). Should the runtime all the same answer 412,
-// the agent changed meanwhile: it is read again, and the owner told.
+// the agent changed meanwhile: it is read again, and the owner told. Pausing
+// revokes the agent's token in Core: when that failed, the owner is told,
+// since people may still be offered to ask it (pausing again tries again).
 async function pause() {
   busy.value = 'pause'
   error.value = null
   try {
-    emit('update', (await runtime.pause(props.agent.id)).data)
-    ElMessage({ type: 'success', message: t('hosting.card.paused') })
+    const { revocation, ...agent } = (await runtime.pause(props.agent.id)).data
+    emit('update', agent)
+    const notice = revocationNotice(revocation, 'pause', t)
+    if (notice)
+      ElNotification({ type: 'warning', title: t('hosting.card.paused'), message: notice, duration: 0 })
+    else ElMessage({ type: 'success', message: t('hosting.card.paused') })
   } catch (e) {
     await onError(e)
   } finally {
     busy.value = null
+    emit('changed')
   }
 }
 
 async function resume() {
-  // Resuming starts hosting again: not while something else runs the agent, unless the owner says so.
-  const others = otherRecentTokens(props.credentials, props.agent.token.prefix)
-  if (others.length) {
-    const choice = await ElMessageBox.confirm(t('hosting.oneBrain.body'), t('hosting.oneBrain.title'), {
-      type: 'warning',
-      distinguishCancelAndClose: true,
-      confirmButtonText: t('hosting.oneBrain.revokeResume'),
-      cancelButtonText: t('hosting.oneBrain.anywayResume'),
-    }).then(
-      () => 'revoke' as const,
-      (action: unknown) => (action === 'cancel' ? ('anyway' as const) : null),
-    )
-    if (!choice) return
-    if (choice === 'revoke') {
-      const failed = await revokeAllAsOwner(
-        props.actorId,
-        others.map((c) => c.id),
-      )
-      emit('credsChanged')
-      if (failed) {
-        error.value = new ApiError({ status: 0, code: 'revoke_failed', message: t('hosting.oneBrain.revokeFailed') })
-        return
-      }
-    }
-  }
   busy.value = 'resume'
   error.value = null
   try {
@@ -217,6 +186,22 @@ async function resume() {
     await onError(e)
   } finally {
     busy.value = null
+    emit('changed')
+  }
+}
+
+/** Connects it again after its token was revoked in Core: the runtime is issued a new one. */
+async function renew() {
+  busy.value = 'renew'
+  error.value = null
+  try {
+    emit('update', (await runtime.renewToken(props.agent.id)).data)
+    ElMessage({ type: 'success', message: t('hosting.card.renewed', { name: props.name }) })
+  } catch (e) {
+    await onError(e)
+  } finally {
+    busy.value = null
+    emit('changed')
   }
 }
 
@@ -250,17 +235,16 @@ const errorText = computed(() => {
 // None where the runtime does not offer it (a feature false in GET /info).
 type Primary = 'chooseModel' | 'reconnect' | 'changeModel'
 const primary = computed<Primary | null>(() => {
-  if (status.value === 'needs_token') return props.canConnect ? 'reconnect' : null
+  if (status.value === 'needs_token') return props.canRenew ? 'reconnect' : null
   if (!canChoose.value) return null
   return status.value === 'needs_model' ? 'chooseModel' : 'changeModel'
 })
 function onPrimary() {
-  if (primary.value === 'reconnect') emit('newToken', 'reconnect')
+  if (primary.value === 'reconnect') void renew()
   else emit('chooseModel')
 }
 function onCommand(cmd: string) {
-  if (cmd === 'replace' && props.canConnect) emit('newToken', 'replace')
-  else if (cmd === 'delete') deleteOpen.value = true
+  if (cmd === 'delete') deleteOpen.value = true
 }
 defineExpose({ onCommand })
 </script>
@@ -308,10 +292,6 @@ defineExpose({ onCommand })
           <code>{{ agent.own_key.hint }}</code>
         </dd>
       </template>
-      <dt>{{ t('hosting.card.token') }}</dt>
-      <dd>
-        <code>{{ agent.token.hint }}</code>
-      </dd>
       <template v-if="school && schoolUse">
         <dt>{{ t('hosting.card.schoolAllowance') }}</dt>
         <dd class="hosted-card__today hosted-card__school-use">
@@ -370,13 +350,15 @@ defineExpose({ onCommand })
     <el-alert v-if="error" type="error" :closable="false" show-icon :title="errorText" class="hosted-card__alert" />
 
     <p v-if="!canChoose" class="app-form-hint hosted-card__off">{{ t('hosting.card.ownKeyOff') }}</p>
-    <p v-if="!canConnect" class="app-form-hint hosted-card__off">{{ t('hosting.card.connectOff') }}</p>
+    <p v-if="!canRenew && status === 'needs_token'" class="app-form-hint hosted-card__off">
+      {{ t('hosting.card.renewOff') }}
+    </p>
 
     <div class="hosted-card__actions">
       <el-tooltip
         v-if="primary"
         :disabled="primary !== 'reconnect' || active"
-        :content="t('hosting.choice.hostSuspended')"
+        :content="t('hosting.offer.hostSuspended')"
         placement="top"
       >
         <span>
@@ -384,6 +366,7 @@ defineExpose({ onCommand })
             type="primary"
             class="hosted-card__primary"
             :disabled="primary === 'reconnect' && !active"
+            :loading="busy === 'renew'"
             @click="onPrimary"
           >
             {{ t(`hosting.card.primary.${primary}`) }}
@@ -407,39 +390,18 @@ defineExpose({ onCommand })
         </el-button>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item v-if="canConnect" command="replace" :disabled="!active">
-              {{ t('hosting.card.replaceToken') }}
-            </el-dropdown-item>
-            <el-dropdown-item command="delete" :divided="canConnect">{{ t('hosting.card.delete') }}</el-dropdown-item>
+            <el-dropdown-item command="delete">{{ t('hosting.card.delete') }}</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
     </div>
 
-    <details class="hosted-card__self">
-      <summary>{{ t('hosting.choice.selfWhileHosted') }}</summary>
-      <el-alert
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('hosting.choice.selfWhileHostedNote')"
-        class="hosted-card__self-note"
-      />
-      <h4 class="hosted-card__self-h">{{ t('hosting.choice.tool') }}</h4>
-      <ConnectToolSteps />
-      <h4 class="hosted-card__self-h">{{ t('hosting.choice.runtime') }}</h4>
-      <OwnRuntimeSteps :name="name" :actor-id="actorId" />
-    </details>
-
     <DeleteHostingDialog
       v-model="deleteOpen"
-      :actor-id="actorId"
       :name="name"
       :agent="agent"
-      :credentials="credentials"
       @deleted="emit('deleted')"
       @changed="emit('update', $event)"
-      @unrevoked="emit('unrevoked', $event)"
     />
   </section>
 </template>
@@ -555,21 +517,5 @@ defineExpose({ onCommand })
 }
 .hosted-card__actions .el-button + .el-button {
   margin-left: 0;
-}
-.hosted-card__self {
-  margin-top: 16px;
-  font-size: 13px;
-}
-.hosted-card__self summary {
-  cursor: pointer;
-  color: var(--el-color-primary);
-}
-.hosted-card__self-note {
-  margin: 10px 0;
-}
-.hosted-card__self-h {
-  margin: 14px 0 6px;
-  font-size: 13px;
-  font-weight: 600;
 }
 </style>

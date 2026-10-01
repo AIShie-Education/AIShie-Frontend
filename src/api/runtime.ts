@@ -1,6 +1,8 @@
 // The AIshie Agent Runtime's API: what this front end calls to host a
 // person's agents on the school's runtime (M2). The contract is
-// m2.api.spec.md; its objects are in runtime-types.ts.
+// m2.api.spec.md, and runtime-hosting-api.md for hosting an agent by its id
+// (every agent is hosted one way in Core: the runtime hosts the runtime
+// ones, and nobody gives it a token); its objects are in runtime-types.ts.
 //
 // The runtime is on this origin, under /runtime/api/v1. The proxy in front
 // sends that path to it and strips the Cookie header on the way, so Core's
@@ -28,7 +30,7 @@
 // Errors are RuntimeError, an ApiError with the runtime's details.reason,
 // from Core's envelope, which the runtime answers in. The runtime reads no
 // Idempotency-Key: each of its writes is safe to send again by a natural key
-// (the same token, the same value), or never sent again (PATCH, key tests),
+// (the same agent, the same value), or never sent again (PATCH, key tests),
 // as the contract's §5.14 says; this client retries accordingly.
 //
 // The runtime's administrators have routes of their own (runtimeAdmin, at
@@ -43,8 +45,8 @@ import type {
   AgentBudgets,
   AgentBudgetsPut,
   AgentPatch,
+  AgentRequest,
   ClientErrorReason,
-  ConnectAnswer,
   CostQuery,
   CostReport,
   DeleteAnswer,
@@ -56,14 +58,13 @@ import type {
   OfferCreate,
   OfferDeleted,
   OfferPatch,
+  PauseAnswer,
   PlanOffer,
   PriceCreate,
   PricePatch,
   PriceRow,
   PriceTable,
   QuotasPut,
-  ReplaceTokenAnswer,
-  ReplaceTokenRequest,
   RuntimeFeatures,
   RuntimeInfo,
   RuntimeMe,
@@ -74,7 +75,6 @@ import type {
   TenantList,
   TenantPut,
   TenantQuota,
-  TokenRequest,
   TranscriptionCredentialPut,
   TranscriptionJobList,
   TranscriptionJobQuery,
@@ -135,7 +135,11 @@ function isJsonType(h: Headers): boolean {
   return /^application\/([a-z0-9.+-]*\+)?json\s*(;|$)/.test(ct)
 }
 
-/** A feature flag as the runtime sent it (a boolean, true or false), or the v1 default when it sent none. */
+/**
+ * A feature flag as the runtime sent it (a boolean, true or false), or the
+ * default when it sent none: v1's, or false for one a runtime from before it
+ * never sends.
+ */
 function flag(v: unknown, v1: boolean): boolean {
   return typeof v === 'boolean' ? v : v1
 }
@@ -148,7 +152,8 @@ function infoFrom(b: unknown): RuntimeInfo | null {
   if (typeof o.audience !== 'string' || !o.audience) return null
   const f = (o.features && typeof o.features === 'object' ? o.features : {}) as Record<string, unknown>
   const features: RuntimeFeatures = {
-    connect_by_token: flag(f.connect_by_token, true),
+    // A runtime from before hosting by id took pasted tokens, which this page no longer gives.
+    host_by_id: flag(f.host_by_id, false),
     own_key: flag(f.own_key, true),
     school_key: flag(f.school_key, false),
     transcription: flag(f.transcription, false),
@@ -636,18 +641,22 @@ const agentPath = (route: string, id: string) => runtimePath(route, { id })
 
 /**
  * The contract's calls (§9.1), each resolving { data, etag, status,
- * replayed }. Retried as §5.14 says: reads, inspect, connect, a token
- * replacement, pause, resume and delete, which the runtime answers once
- * however often they are sent; never a PATCH (If-Match makes it safe to
- * repeat by hand) or a key test (it spends a token of the owner's).
+ * replayed }. Retried as §5.14 says: reads, inspect, hosting by id, a new
+ * token, pause, resume and delete, which the runtime answers once however
+ * often they are sent (hosting the same agent again replays its row; a new
+ * token asked again of a row holding none writes nothing); never a PATCH
+ * (If-Match makes it safe to repeat by hand) or a key test (it spends a
+ * token of the owner's).
  *
  * Only PATCH names a version (If-Match), as it must. Pause, resume and
- * delete are sent without one, as §9.1 has them, and so is a token
- * replacement unless its caller names one: the runtime then settles a race
- * with another write itself. Any write to a hosted agent may still answer
- * 412 version_mismatch (DELETE after three races with new tokens, A.3.3;
- * PUT /token likewise): the pages read the agent again and say it changed
+ * delete are sent without one, as §9.1 has them, and so is a new token
+ * unless its caller names one: the runtime then settles a race with another
+ * write itself. Any write to a hosted agent may still answer 412
+ * version_mismatch: the pages read the agent again and say it changed
  * meanwhile (isVersionMismatch).
+ *
+ * No call takes or answers a token: the worker running an agent is issued
+ * its one token by its id, and the runtime revokes it as the hosting ends.
  */
 export const runtime = {
   me: () => runtimeRequest<RuntimeMe>('GET', RUNTIME_ROUTES.me),
@@ -655,15 +664,20 @@ export const runtime = {
   /** Tries an own key with one token; never stored, never retried. */
   testKey: (req: KeyTestRequest) =>
     runtimeRequest<KeyTestAnswer>('POST', RUNTIME_ROUTES.keyTest, { body: req, retry: false }),
-  /** What a token is, before connecting it. */
-  inspect: (req: TokenRequest) =>
-    runtimeRequest<InspectAnswer>('POST', RUNTIME_ROUTES.inspect, { body: req, retry: true }),
+  /** One of the caller's agents as Core hosts it, and whether it may be hosted here; nothing is written. */
+  inspect: (agentId: string) => {
+    const body: AgentRequest = { agent_id: agentId }
+    return runtimeRequest<InspectAnswer>('POST', RUNTIME_ROUTES.inspect, { body, retry: true })
+  },
   /**
-   * Connects an agent by its token: 201, or 200 replayed for the same token;
-   * the agent, with its other live tokens in Core beside it (other_tokens).
+   * Hosts one of the caller's agents by its id: 201 with the new row
+   * (needs_model, holding no token yet), or 200 replayed when the caller
+   * hosts it already.
    */
-  connect: (req: TokenRequest) =>
-    runtimeRequest<ConnectAnswer>('POST', RUNTIME_ROUTES.agents, { body: req, retry: true }),
+  host: (agentId: string) => {
+    const body: AgentRequest = { agent_id: agentId }
+    return runtimeRequest<HostedAgent>('POST', RUNTIME_ROUTES.agents, { body, retry: true })
+  },
   list: () => runtimeRequest<{ agents: HostedAgent[] }>('GET', RUNTIME_ROUTES.agents),
   get: (id: string) => runtimeRequest<HostedAgent>('GET', agentPath(RUNTIME_ROUTES.agent, id)),
   /** Model and own key, at the version read (If-Match); 412 when it has moved on. Never retried. */
@@ -674,34 +688,27 @@ export const runtime = {
       retry: false,
     }),
   /**
-   * Gives the runtime a new token for the agent, the token alone (the agent
-   * is the one hosted: no core_actor_id); it revokes the one it had. Sent
-   * again by itself only without a version: with one (If-Match), a request
-   * that went through but met no answer would be answered 412 the second
-   * time, as a write since the version named.
+   * A new token for the agent after the one the runtime held was revoked in
+   * Core (needs_token): the row drops it, and the worker is issued another.
+   * No body. Sent again by itself only without a version: with one
+   * (If-Match), a request that went through but met no answer would be
+   * answered 412 the second time, as a write since the version named.
    */
-  replaceToken: (id: string, token: string, version?: string | number) => {
-    const body: ReplaceTokenRequest = { token }
-    return runtimeRequest<ReplaceTokenAnswer>('PUT', agentPath(RUNTIME_ROUTES.agentToken, id), {
-      body,
+  renewToken: (id: string, version?: string | number) =>
+    runtimeRequest<HostedAgent>('POST', agentPath(RUNTIME_ROUTES.agentToken, id), {
       ifMatch: version,
       retry: version === undefined,
-    })
-  },
-  /** Stops the agent on the runtime; it stays active in Core (this is not Core's Suspend). */
-  pause: (id: string) => runtimeRequest<HostedAgent>('POST', agentPath(RUNTIME_ROUTES.agentPause, id), { retry: true }),
+    }),
+  /**
+   * Stops the agent on the runtime, which revokes its token in Core (the
+   * answer says what became of it); it stays active in Core (this is not
+   * Core's Suspend). Pausing again revokes again.
+   */
+  pause: (id: string) => runtimeRequest<PauseAnswer>('POST', agentPath(RUNTIME_ROUTES.agentPause, id), { retry: true }),
   resume: (id: string) =>
     runtimeRequest<HostedAgent>('POST', agentPath(RUNTIME_ROUTES.agentResume, id), { retry: true }),
-  /**
-   * Deletes the hosting, and by default revokes the agent's token in Core
-   * (D7). No If-Match: the runtime deletes the row holding whichever token
-   * it revoked, reading it again when a new one was put in meanwhile.
-   */
-  remove: (id: string, revokeToken = true) =>
-    runtimeRequest<DeleteAnswer>('DELETE', agentPath(RUNTIME_ROUTES.agent, id), {
-      query: { revoke_token: revokeToken ? 'true' : 'false' },
-      retry: true,
-    }),
+  /** Deletes the hosting, which always revokes the agent's token in Core; the answer says what became of it. */
+  remove: (id: string) => runtimeRequest<DeleteAnswer>('DELETE', agentPath(RUNTIME_ROUTES.agent, id), { retry: true }),
 }
 
 const offerPath = (id: string) => runtimePath(RUNTIME_ROUTES.planOffer, { id })

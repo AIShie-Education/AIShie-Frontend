@@ -1,129 +1,62 @@
-// Hosting an agent on the school's runtime (M2): the choice of where an agent
-// runs, connecting it, its model and key, its hosted card, and the runtime's
+// Hosting an agent on the school's runtime (M2): offering it to a runtime
+// agent not hosted yet, hosting it by its id, its model and key, its hosted
+// card, what became of its token when its hosting ended, and the runtime's
 // errors by reason. The words for statuses, problems and errors are the
-// contract's (m2.api.spec.md §6.1 and §9.5).
+// contract's (m2.api.spec.md §6.1 and §9.5, and runtime-hosting-api.md).
 export default {
-  // Where the agent runs: one brain at a time.
-  choice: {
-    title: 'How this agent runs',
-    intro:
-      'An agent has one brain at a time: AIshie hosts it, or an AI tool or runtime of yours runs it. Not two at once, or both would answer every question.',
-    hosted: 'Host it on AIshie',
-    hostedHint:
-      'AIshie runs it for you, on a model you choose with your own API key. Nothing to install, no token to handle.',
-    recommended: 'Recommended',
-    tool: 'Connect another AI tool (Claude, ChatGPT, an agent SDK…)',
-    toolHint: 'Your own AI tool answers as this agent, over MCP, with one of its tokens.',
-    runtime: 'Run the AIshie runtime yourself (advanced)',
-    runtimeHint: 'For someone who operates an AIshie Agent Runtime of their own.',
-    hostedIntro:
-      'AIshie makes a token for the agent and hands it to the school’s runtime without showing it; then you choose a model and give your API key.',
+  // A runtime agent not hosted yet, on its page: hosting it.
+  offer: {
+    title: 'Hosted on AIshie',
+    notHosted: 'Not hosted yet',
+    body: 'AIshie’s runtime runs this agent once you choose the model it answers with; then people in its courses can ask it on the site. You never handle a token.',
+    bodySchool:
+      'AIshie’s runtime runs this agent once you choose the school’s plan, or a model with your own API key; then people in its courses can ask it on the site. You never handle a token.',
     host: 'Set up hosting',
-    hostedHintSchool:
-      'AIshie runs it for you, on the school’s AI plan or on a model you choose with your own API key. Nothing to install, no token to handle.',
-    hostedIntroSchool:
-      'AIshie makes a token for the agent and hands it to the school’s runtime without showing it; then you choose the school’s plan, or a model with your own API key.',
     hostSuspended: 'The agent is suspended: reactivate it first.',
-    paste: 'I have a token for this agent',
-    selfWhileHosted: 'Connect another AI tool, or run the runtime yourself, instead',
-    selfWhileHostedNote:
-      'These apply only after you stop hosting: delete the agent from AIshie’s hosting first (More ▸ Delete), which revokes the runtime’s token. While both run it, both answer every question.',
+    absent:
+      'AIshie’s agent runtime is not available on this server, so this agent cannot run here yet. Tell your administrator.',
+    notById: 'The school’s runtime cannot host agents at the moment: it is not set up to. Tell your administrator.',
+    noModel: 'The school’s runtime offers no model to choose at the moment, so it cannot host agents now.',
   },
 
-  // The wizard's first step, and giving a hosted agent a new token.
-  connect: {
-    title: 'Host {name} on the school’s runtime',
+  // Hosting one of one's agents by its id: the wizard's first step, before "Model and key".
+  host: {
+    open: 'Host an agent on AIshie',
+    title: 'Host an agent on AIshie',
+    titleNamed: 'Host {name} on AIshie',
     steps: {
-      confirm: 'Confirm',
+      agent: 'Agent',
       model: 'Model and key',
     },
-    body: 'The school’s runtime will run this agent as it is seated in AIshie. It keeps the agent’s token encrypted; you will not see it. Next you choose a model and give your API key.',
+    body: 'The school’s runtime runs the agent as it is seated in AIshie, and people in its courses can ask it on the site. The runtime is issued the agent’s token itself: you never see one. Next you choose a model and give your API key.',
     bodySchool:
-      'The school’s runtime will run this agent as it is seated in AIshie. It keeps the agent’s token encrypted; you will not see it. Next you choose the school’s plan, or a model with your own API key.',
-    seats: 'Where it is seated',
-    noSeats: 'It is not in any course yet. Once hosted, it has nothing to answer until you bring it into one.',
-    purpose: {
-      personal: 'Answers only you',
-      course: 'Answers every student',
-    },
-    submit: 'Connect',
-    done: '{name} is on the school’s runtime',
-    replaceTitle: 'New token for {name} on the school’s runtime',
-    replaceBody:
-      'A new token labelled “AIshie runtime” is made and handed to the runtime, which then revokes the one it had. You will not see either.',
-    replaceSubmit: 'Replace token',
-    reconnectTitle: 'Connect {name} again',
-    reconnectBody:
-      'AIshie refused the token the runtime had. A new token labelled “AIshie runtime” is made and handed to the runtime; you will not see it.',
-    reconnectSubmit: 'Connect again',
-    replaced: 'The runtime has a new token for {name}',
-  },
-
-  // A token the runtime could not revoke, after replacing or deleting (§9.4).
-  unrevoked: {
-    title: 'A token of this agent may still work',
-    body: 'The school’s runtime could not revoke the token {token} in AIshie ({why}), so whatever has it may still act as your agent. Revoke it here, as the agent’s owner.',
-    why: {
-      agent_suspended: 'the agent is suspended in AIshie',
-      core_unavailable: 'it could not reach AIshie',
-      core_refused: 'AIshie refused its request',
-      unknown: 'it could not tell whether it did',
-    },
-    revoke: 'Revoke it in AIshie',
-    later: 'Not now',
-    revoked: '{token} is revoked.',
-    gone: '{token} no longer works: there was nothing to revoke.',
-    held: 'The runtime holds {token} now, so it was not revoked.',
-    failed: 'It could not be revoked here either. Revoke it in the Tokens list below.',
-  },
-
-  // The agent's other tokens, as the runtime lists them on inspect and connect
-  // (A.1), or as the page works them out from Core's list before it issues one.
-  otherTokens: {
-    inUseTitle: 'This agent seems to be running somewhere else',
-    inUse:
-      'Its token {token} was used {ago}. An agent has one brain at a time. Stop the other runtime, or revoke that token in AIshie, so that only this runtime answers as your agent.',
-    unusedTitle: 'This agent has other tokens',
-    unused: 'They still work, but have not been used lately. Revoke any that nothing of yours needs.',
-    unknown: 'Could not check for other copies of this agent.',
-    unlabelled: 'No label',
-    recent: 'In use',
-    lastUsed: 'last used',
-    neverUsed: 'never used',
-    revoke: 'Revoke',
-    revoked: '{token} is revoked: nothing can act as your agent with it now.',
-    gone: '{token} no longer works: there was nothing to revoke.',
-    revokeFailed: 'It could not be revoked. Try again, or revoke it in the Tokens list below.',
-    anyway: 'Connect anyway',
-    anywayReplace: 'Go on anyway',
-  },
-
-  // The one-brain rule, when resuming a hosted agent, and for a pasted token used lately.
-  oneBrain: {
-    title: 'Something else is running this agent',
-    body: 'Another of its tokens was used in the last few minutes: a runtime of your own, or another MCP client, is running it. If the school’s runtime runs it too, both answer every question. Revoke those tokens to stop it, or go on if you will stop it yourself.',
-    revokeResume: 'Revoke them and resume',
-    anywayResume: 'Resume anyway',
-    revokeFailed:
-      'Not every one of those tokens could be revoked, so nothing more was done. Try again, or revoke them in the Tokens list below.',
-    sameTokenTitle: 'This token is in use',
-    sameToken:
-      'If a runtime of your own uses this token, stop it first: both would answer every question. It was last used',
-  },
-
-  // "I have a token for this agent".
-  paste: {
-    title: 'Host {name} with a token you have',
-    intro:
-      'Paste one of this agent’s tokens. The runtime keeps it encrypted and it is not shown again. This page never revokes a token you paste: you decide what else uses it.',
-    token: 'Agent token',
-    placeholder: 'ais_…',
-    check: 'Check',
+      'The school’s runtime runs the agent as it is seated in AIshie, and people in its courses can ask it on the site. The runtime is issued the agent’s token itself: you never see one. Next you choose the school’s plan, or a model with your own API key.',
     agent: 'Agent',
-    seats: 'Where it is seated',
-    alreadyConnected: 'Already connected.',
-    takesOver: 'Connecting replaces the copy an earlier owner left.',
-    submit: 'Connect',
+    agentPlaceholder: 'Choose one of your agents',
+    none: 'None of your agents is waiting to be hosted. Only an agent created as “Hosted on AIshie” can be: one with MCP access is used from your own tools.',
+    checking: 'Asking AIshie about it…',
+    seats: 'It is not in any course yet: once hosted, it has nothing to answer until you bring it into one. | It is in one course. | It is in {n} courses.',
+    already: 'It is hosted on AIshie already.',
+    openIt: 'Open its page',
+    takesOver: 'An earlier hosting of it, left by someone else, is replaced.',
+    submit: 'Host it',
+    done: '{name} is hosted on AIshie',
+  },
+
+  // What became of its token in AIshie when its hosting ended (pausing, deleting).
+  revocation: {
+    failedPause:
+      'Its token could not be revoked in AIshie ({why}), so people may still be offered to ask it on the site. Pause it again to try once more.',
+    failedDelete:
+      'Its token could not be revoked in AIshie ({why}), so people may still be offered to ask it on the site. Suspend the agent to stop that.',
+    not_attempted: 'Its token was not revoked ({why}).',
+    why: {
+      core_unavailable: 'AIshie could not be reached',
+      runtime_misconfigured: 'the school’s runtime is not set up to',
+      core_too_old: 'this AIshie server is too old',
+      operator_agent: 'the school’s operator runs this agent',
+      unknown: 'for a reason it did not say',
+    },
   },
 
   // The model and the owner's own key (F3).
@@ -223,9 +156,9 @@ export default {
   status: {
     needs_model: {
       title: 'Choose a model',
-      body: 'Your agent is connected, but it has no model yet. Choose a provider and model and give your API key to start it.',
+      body: 'Your agent is hosted, but it has no model yet. Choose a provider and model and give your API key to start it.',
       bodySchool:
-        'Your agent is connected, but it has no model yet. Choose the school’s plan, or a provider and model with your API key, to start it.',
+        'Your agent is hosted, but it has no model yet. Choose the school’s plan, or a provider and model with your API key, to start it.',
     },
     starting: {
       title: 'Starting',
@@ -237,11 +170,11 @@ export default {
     },
     paused: {
       title: 'Paused',
-      body: 'Your agent answers nobody and makes no calls, so it shows as offline. Resume it to start again. (This is not Suspend: the agent stays active in AIshie.)',
+      body: 'Your agent answers nobody, makes no calls and cannot be asked on the site: its token was revoked in AIshie. Resume it to start again with a new one. (This is not Suspend: the agent stays active in AIshie.)',
     },
     needs_token: {
       title: 'Needs a new token',
-      body: 'AIshie refused your agent’s token: it was revoked or expired. Connect it again to give the runtime a new one.',
+      body: 'The token the runtime held for your agent was revoked in AIshie, by you or an administrator. Connect it again to have the runtime issued a new one; you never see it.',
     },
     error: {
       title: 'Not running',
@@ -255,16 +188,19 @@ export default {
 
   // Why it needs a token or does not run (problem.reason).
   problem: {
-    token_refused: 'AIshie refused the agent’s token.',
+    token_refused: 'AIshie revoked the token the runtime held for it.',
     settings_rejected: 'Its settings do not work here: {detail}. Change the model or key.',
     runtime_misconfigured: 'The school’s runtime is not set up to run hosted agents. Tell your administrator.',
     operator_agent: 'The school’s operator already runs this agent, so this copy does not run.',
     actor_in_use: 'Another agent here already uses this agent’s identity.',
-    token_other_agent: 'Its token belongs to another agent. Connect it again.',
-    token_not_agent: 'Its token is a person’s, not the agent’s. Connect it again.',
+    token_other_agent: 'The token the runtime held belongs to another agent. Connect it again.',
     owner_changed: 'AIshie does not count this agent as yours, so the runtime stopped it. Delete it here.',
     core_too_old: 'This AIshie server cannot say who owns an agent. Tell your administrator.',
     agent_suspended: 'The agent is suspended in AIshie. Reactivate it and it starts again by itself.',
+    owner_suspended: 'Its owner is suspended in AIshie. It starts again by itself once they are reactivated.',
+    mcp_agent:
+      'AIshie says this agent has MCP access: it is used from its owner’s own tools, so the runtime cannot host it. Delete it here.',
+    agent_not_found: 'AIshie has no such agent any more. Delete it here.',
     failing: 'It could not start and will try again shortly: {detail}.',
     offer_withdrawn:
       'The school no longer offers the model it was on, and no model of yours stands behind it, so it does not run. Choose another of the school’s models, or a model of your own.',
@@ -299,7 +235,6 @@ export default {
     model: 'Model',
     noModel: 'None yet',
     key: 'Key',
-    token: 'Token',
     today: 'Today',
     answers: 'No answers | One answer | {n} answers',
     costUnknown: 'cost unknown',
@@ -316,12 +251,11 @@ export default {
     paused: 'Paused on the school’s runtime',
     resumed: 'Resumed on the school’s runtime',
     more: 'More',
-    replaceToken: 'Replace token',
     delete: 'Delete from the school’s runtime',
-    usedByRuntime: 'Used by the school’s runtime',
+    renewed: 'The runtime is being issued a new token for {name}.',
     ownKeyOff:
       'The school’s runtime does not take a model and key of your own at the moment, so they cannot be changed here.',
-    connectOff: 'The school’s runtime does not take new tokens at the moment, so it cannot be given one here.',
+    renewOff: 'The school’s runtime cannot host agents by their id at the moment, so it cannot be connected again here.',
     plan: 'Plan',
     schoolPlan: 'School plan (paid by the school)',
     fallback: 'Fallback',
@@ -336,22 +270,16 @@ export default {
     offerWithdrawn: 'The school no longer offers this plan. Choose another, or your own key.',
     offerWithdrawnFallback:
       'The school no longer offers this plan: your agent answers with your own model and key until you choose another.',
-    issueWhileHosted:
-      'The school’s runtime runs this agent. Anything you start with a new token would answer too: to run it yourself, delete it from the school’s runtime first.',
   },
 
   // Deleting it from the runtime.
   delete: {
     title: 'Delete {name} from the school’s runtime?',
-    body: 'The runtime stops this agent, forgets its settings and your key, and revokes its token “AIshie runtime”. The agent stays in AIshie; you can host it again later.',
+    body: 'The runtime stops this agent and forgets its settings and your key, and its token is revoked in AIshie: nobody can ask it on the site until you host it again. The agent stays in AIshie.',
     proposals:
       'One answer still waiting for approval stays in AIshie. | {n} answers still waiting for approval stay in AIshie.',
-    alsoRevoke: 'Also revoke its token',
-    alsoRevokeHint: 'This page did not make its token (“{label}”). Keep it only if something else uses it.',
-    alsoRevokeHintUnlabelled: 'This page did not make its token. Keep it only if something else uses it.',
     submit: 'Delete',
     done: '{name} is no longer on the school’s runtime',
-    notAttempted: 'Its token still works; revoke it below if nothing else uses it.',
   },
 
   // The runtime's errors, by reason (§9.5).
@@ -362,17 +290,15 @@ export default {
     network: 'The school’s runtime could not be reached. Check your connection and try again.',
     core_unavailable: 'The runtime could not reach AIshie. Try again in a minute.',
     rate_limited: 'Too many tries. Wait {seconds} seconds.',
-    token_malformed: 'That is not an AIshie agent token (it should begin with ais_).',
-    token_refused: 'AIshie refused this token: it was revoked or has expired.',
-    token_not_agent: 'This token is a person’s, not an agent’s. The runtime only takes an agent’s own token.',
+    runtime_misconfigured: 'The school’s runtime is not set up to host agents. Tell your administrator.',
+    mcp_agent: 'This agent has MCP access: it is used from your own tools, and is never hosted here.',
     agent_suspended: 'This agent is suspended in AIshie. Reactivate it first.',
-    token_other_agent: 'This token belongs to another agent.',
-    agent_unowned: 'Nobody owns this agent in AIshie, so it cannot be connected here. Ask an administrator.',
-    not_owner: 'This agent belongs to someone else. Only its owner can connect it.',
+    owner_suspended: 'Its owner is suspended in AIshie, so it cannot be hosted. Ask an administrator.',
+    owner_changed: 'AIshie no longer counts this agent as yours: delete it here.',
     core_too_old: 'This AIshie server is too old for hosting. Tell your administrator.',
-    already_hosted: 'This agent is already on the school’s runtime.',
     operator_agent: 'The school’s operator already runs this agent.',
     agent_not_found: 'This agent is no longer on the school’s runtime.',
+    agent_not_yours: 'AIshie does not count this as one of your agents.',
     version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
     changedMeanwhile:
       'This agent changed meanwhile, in another tab or window. Here it is as it is now: check it and try again.',
