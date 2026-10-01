@@ -167,24 +167,21 @@ describe('adding a provider', () => {
     expect(inPage(secret)).toBe(false)
   })
 
-  it('says what is wrong before sending, in each language', async () => {
-    for (const [locale, words] of [
-      ['en', ['Lower-case letters, digits and hyphens', 'An https URL (http only for this machine)', 'Required']],
-      ['zh-Hant', ['小寫英文字母、數字及連字號', '須為 https 網址（只有本機可用 http）', '必填']],
-      ['zh-Hans', ['小写英文字母、数字及连字符', '须为 https 网址（只有本机可用 http）', '必填']],
-    ] as const) {
-      const w = await open(null, { locale })
-      await fill('.sso-form__id', 'School IdP')
-      await fill('.sso-form__name', 'School')
-      await fill('.sso-form__issuer', 'http://login.example.edu')
-      await fill('.sso-form__client-id', 'aishie')
-      await click('.sso-dialog__save')
-      expect(fieldError('.sso-form__id')).toContain(words[0])
-      expect(fieldError('.sso-form__issuer')).toBe(words[1])
-      expect(fieldError('.sso-form__secret')).toBe(words[2])
-      w.unmount()
-      document.body.innerHTML = ''
-    }
+  // One language a test, so that each opens the dialog once.
+  it.each([
+    ['en', ['Lower-case letters, digits and hyphens', 'An https URL (http only for this machine)', 'Required']],
+    ['zh-Hant', ['小寫英文字母、數字及連字號', '須為 https 網址（只有本機可用 http）', '必填']],
+    ['zh-Hans', ['小写英文字母、数字及连字符', '须为 https 网址（只有本机可用 http）', '必填']],
+  ] as const)('says what is wrong before sending, in %s', async (locale, words) => {
+    await open(null, { locale })
+    await fill('.sso-form__id', 'School IdP')
+    await fill('.sso-form__name', 'School')
+    await fill('.sso-form__issuer', 'http://login.example.edu')
+    await fill('.sso-form__client-id', 'aishie')
+    await click('.sso-dialog__save')
+    expect(fieldError('.sso-form__id')).toContain(words[0])
+    expect(fieldError('.sso-form__issuer')).toBe(words[1])
+    expect(fieldError('.sso-form__secret')).toBe(words[2])
     expect(core.to('POST', SSO.list)).toHaveLength(0)
   })
 

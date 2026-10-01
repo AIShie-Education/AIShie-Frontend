@@ -86,6 +86,18 @@ describe('the price table', () => {
     expect(w.text()).toContain('A change applies to calls from now on: costs already recorded keep the price they had.')
   })
 
+  it('asks for the provider and the prices before adding one, and sends nothing without them', async () => {
+    const w = await panel()
+    await w.find('.prices-card__add').trigger('click')
+    await flushPromises()
+    fill('.price-form__model', 'gpt-4.1-nano')
+    await flushPromises()
+    await click(dialog().querySelector('.price-dialog__save'))
+    expect(fieldError('.price-form__provider')).toBe('Required')
+    expect(fieldError('.price-form__input')).toBe('Required')
+    expect(s.to('POST', ADMIN.prices)).toHaveLength(0)
+  })
+
   it('adds a price, suggesting its ID from the model and day, the cache prices the input’s unless given', async () => {
     const w = await panel()
     await w.find('.prices-card__add').trigger('click')
@@ -93,11 +105,6 @@ describe('the price table', () => {
     fill('.price-form__model', 'gpt-4.1-nano')
     await flushPromises()
     expect((dialog().querySelector('.price-form__id input') as HTMLInputElement).value).toBe('gpt-4.1-nano-2026-09-30')
-    await click(dialog().querySelector('.price-dialog__save'))
-    expect(fieldError('.price-form__provider')).toBe('Required')
-    expect(fieldError('.price-form__input')).toBe('Required')
-    expect(s.to('POST', ADMIN.prices)).toHaveLength(0)
-
     const vm = w.findComponent({ name: 'PriceDialog' }).vm as unknown as { form: Record<string, string> }
     vm.form.provider = 'openai'
     fill('.price-form__input', '0.1')

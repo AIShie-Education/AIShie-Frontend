@@ -80,19 +80,24 @@ describe('RuntimeAdminView', () => {
     expect(s.to('GET', ADMIN.settings)).toHaveLength(0)
   })
 
-  it('opens the tab the address names, and names the tab chosen in it', async () => {
-    const { w, router } = await page('/admin/runtime?tab=documents')
+  it('opens the tab the address names', async () => {
+    const { w } = await page('/admin/runtime?tab=documents')
     expect(w.find('.ocr-card').exists()).toBe(true)
     expect(w.find('.transcription-card').exists()).toBe(true)
     expect(w.find('.offers-card').exists()).toBe(false)
     expect(s.to('GET', ADMIN.usage)).toHaveLength(0)
-    await w.findAll('.el-tabs__item')[2].trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.query.tab).toBe('usage')
+  })
+
+  it('names the tab chosen in the address, and the first by none', async () => {
+    const { w, router } = await page('/admin/runtime?tab=usage')
     expect(w.find('.usage-card').exists()).toBe(true)
     await w.findAll('.el-tabs__item')[0].trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.tab).toBeUndefined()
+    expect(w.find('.offers-card').exists()).toBe(true)
+    await w.findAll('.el-tabs__item')[2].trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.tab).toBe('usage')
   })
 
   it('shows nothing, and no absence, until the runtime has answered', async () => {
@@ -141,18 +146,29 @@ describe('RuntimeAdminView', () => {
     expect(s.to('GET', ADMIN.plan)).toHaveLength(0)
   })
 
-  it('on a runtime from before the plan’s routes, says so in their tabs, and shows today’s use', async () => {
-    s.on('GET', ADMIN.plan, () => noRoute())
-    s.on('GET', ADMIN.settings, () => noRoute())
-    let { w } = await page()
-    expect(w.find('.runtime-async__not-offered').exists()).toBe(true)
-    w.unmount()
-    ;({ w } = await page('/admin/runtime?tab=usage'))
-    expect(w.find('.usage-card__table').exists()).toBe(true)
-    w.unmount()
-    ;({ w } = await page('/admin/runtime?tab=documents'))
-    expect(w.find('.runtime-async__not-offered').exists()).toBe(true)
-    expect(w.find('.el-alert--error').exists()).toBe(false)
+  // One tab a test, so that each renders the page once.
+  describe('on a runtime from before the plan’s routes', () => {
+    beforeEach(() => {
+      s.on('GET', ADMIN.plan, () => noRoute())
+      s.on('GET', ADMIN.settings, () => noRoute())
+    })
+
+    it('says so in the plan’s tab', async () => {
+      const { w } = await page()
+      expect(w.find('.runtime-async__not-offered').exists()).toBe(true)
+      expect(w.find('.el-alert--error').exists()).toBe(false)
+    })
+
+    it('shows today’s use', async () => {
+      const { w } = await page('/admin/runtime?tab=usage')
+      expect(w.find('.usage-card__table').exists()).toBe(true)
+    })
+
+    it('says so in the documents’ tab', async () => {
+      const { w } = await page('/admin/runtime?tab=documents')
+      expect(w.find('.runtime-async__not-offered').exists()).toBe(true)
+      expect(w.find('.el-alert--error').exists()).toBe(false)
+    })
   })
 
   it('reads in Traditional Chinese', async () => {

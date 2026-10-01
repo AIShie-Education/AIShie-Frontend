@@ -262,15 +262,16 @@ async function exportNow(w: VueWrapper) {
 const scopes = (w: VueWrapper) => w.findAll('.export-form__scopes .el-radio-button').map((r) => r.text())
 
 describe('what each administrator is offered', () => {
-  it('offers a platform administrator a course, a department or the whole site, and the directory to find anyone', async () => {
-    for (const who of ['root', 'admin'] as const) {
+  // One page a test, so that each renders it once.
+  it.each(['root', 'admin'] as const)(
+    'offers a platform administrator (%s) a course, a department or the whole site, and the directory to find anyone',
+    async (who) => {
       const w = await page(who)
       expect(w.get('.page-header').text()).toContain('Export conversations')
       expect(scopes(w)).toEqual(['A course', 'A department', 'The whole site'])
       expect(w.find('.participant-picker__select').exists()).toBe(true)
-      w.unmount()
-    }
-  })
+    },
+  )
 
   it('offers a department’s administrator a course or a department of theirs, and a person by whole email or number', async () => {
     const w = await page('deptAdmin')
@@ -282,16 +283,13 @@ describe('what each administrator is offered', () => {
     expect(core.calls.some((c) => c.path === '/v1/actors')).toBe(false)
   })
 
-  it('says it in each language', async () => {
-    for (const [locale, title, scope] of [
-      ['zh-Hant', '匯出對話', '整個網站'],
-      ['zh-Hans', '导出对话', '整个网站'],
-    ] as const) {
-      const w = await page('root', locale)
-      expect(w.get('.page-header').text()).toContain(title)
-      expect(scopes(w)).toContain(scope)
-      w.unmount()
-    }
+  it.each([
+    ['zh-Hant', '匯出對話', '整個網站'],
+    ['zh-Hans', '导出对话', '整个网站'],
+  ] as const)('says it in %s', async (locale, title, scope) => {
+    const w = await page('root', locale)
+    expect(w.get('.page-header').text()).toContain(title)
+    expect(scopes(w)).toContain(scope)
   })
 })
 
