@@ -326,42 +326,38 @@ test.describe.serial('the chat panel', () => {
 
   // The walk over every signed-in page is a few tests, each of a few pages:
   // one test of them all held thirteen pages' time, and on a busy machine,
-  // every page slower alike, ran out of its 60 s.
-  for (const [part, pages] of [
-    [
-      'the home page and the course’s overview, materials and assignments',
-      [
-        [() => '/', 'home'],
-        [() => coursePath(), 'the course overview'],
-        [() => coursePath('materials'), 'materials'],
-        [() => coursePath('assignments'), 'assignments'],
-      ],
-    ],
-    [
-      'an assignment and the course’s submissions, grades and members',
-      [
-        [() => coursePath(`assignments/${demo().course.assignments.hw1}`), 'an assignment'],
-        [() => coursePath('submissions'), 'submissions'],
-        [() => coursePath('grades'), 'grades'],
-        [() => coursePath('members'), 'members'],
-      ],
-    ],
-    [
-      'the course’s approvals, activity and agents, and the account’s pages',
-      [
-        [() => coursePath('approvals'), 'approvals'],
-        [() => coursePath('activity'), 'activity'],
-        [() => coursePath('agents'), 'the course’s agents'],
-        [() => '/account', 'the account'],
-        [() => '/account/agents', 'my agents'],
-      ],
-    ],
-  ] as const) {
-    test(`is opened from its round button on ${part}, over the page, and never from the header`, async ({ page }) => {
-      await signIn(page, demo().actors.instructor)
-      for (const [path, what] of pages) await opensFromItsButton(page, path(), what)
-    })
-  }
+  // every page slower alike, ran out of its 60 s. Each is a test of its own
+  // line, so that a report or a rerun by file:line names one.
+  test('is opened from its round button on the home page and the course’s overview, materials and assignments, over the page, and never from the header', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await opensFromItsButton(page, '/', 'home')
+    await opensFromItsButton(page, coursePath(), 'the course overview')
+    await opensFromItsButton(page, coursePath('materials'), 'materials')
+    await opensFromItsButton(page, coursePath('assignments'), 'assignments')
+  })
+
+  test('is opened from its round button on an assignment and the course’s submissions, grades and members, over the page, and never from the header', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await opensFromItsButton(page, coursePath(`assignments/${demo().course.assignments.hw1}`), 'an assignment')
+    await opensFromItsButton(page, coursePath('submissions'), 'submissions')
+    await opensFromItsButton(page, coursePath('grades'), 'grades')
+    await opensFromItsButton(page, coursePath('members'), 'members')
+  })
+
+  test('is opened from its round button on the course’s approvals, activity and agents, and the account’s pages, over the page, and never from the header', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await opensFromItsButton(page, coursePath('approvals'), 'approvals')
+    await opensFromItsButton(page, coursePath('activity'), 'activity')
+    await opensFromItsButton(page, coursePath('agents'), 'the course’s agents')
+    await opensFromItsButton(page, '/account', 'the account')
+    await opensFromItsButton(page, '/account/agents', 'my agents')
+  })
 
   test('is reached from the keyboard, says its shortcut, and gives its button focus again once it closes', async ({
     page,
