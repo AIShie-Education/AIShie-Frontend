@@ -407,13 +407,21 @@ describe('retractedBy', () => {
 describe('visibleToLines', () => {
   it('translates the codes Core sends and shows any other as sent', () => {
     expect(
-      visibleToLines(['participants', 'overseers', 'action_record', 'respondent_answers_others', 'the_dean']),
+      visibleToLines([
+        'participants',
+        'overseers',
+        'action_record',
+        'respondent_answers_others',
+        'the_dean',
+        'audit_export',
+      ]),
     ).toEqual([
       { key: 'participants' },
       { key: 'overseers' },
       { key: 'actionRecord' },
       { key: 'respondentAnswersOthers' },
       { text: 'the_dean' },
+      { key: 'auditExport' },
     ])
   })
 
@@ -422,12 +430,14 @@ describe('visibleToLines', () => {
       'participants',
       'overseers',
       'actionRecord',
+      'auditExport',
     ])
     expect(visibleToLines([], { answersOthers: true }).map((l) => ('key' in l ? l.key : l.text))).toEqual([
       'participants',
       'overseers',
       'actionRecord',
       'respondentAnswersOthers',
+      'auditExport',
     ])
   })
 })

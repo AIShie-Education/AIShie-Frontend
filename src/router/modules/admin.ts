@@ -1,10 +1,11 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-// Administration: outside any course. Courses and departments are for
-// platform administrators and for the administrators of a department, who see
-// only what is beneath their appointments; people, terms, presets, sign-in
-// (single sign-on's identity providers) and the agent runtime's settings are
-// for platform administrators alone.
+// Administration: outside any course. Courses, departments and exporting
+// conversations for audit are for platform administrators and for the
+// administrators of a department, who see only what is beneath their
+// appointments; people, terms, presets, sign-in (single sign-on's identity
+// providers) and the agent runtime's settings are for platform administrators
+// alone.
 const routes: RouteRecordRaw[] = [
   {
     path: 'admin',
@@ -61,6 +62,15 @@ const routes: RouteRecordRaw[] = [
         name: 'admin-sso',
         component: () => import('@/views/admin/SsoAdminView.vue'),
         meta: { title: 'ssoAdmin.title', admin: true },
+      },
+      {
+        // 匯出對話: conversations exported for audit, as JSON Lines and CSV
+        // (conversation.export). A department's administrator exports the
+        // courses of their departments; a platform administrator, anything.
+        path: 'conversation-exports',
+        name: 'admin-export',
+        component: () => import('@/views/admin/ExportView.vue'),
+        meta: { title: 'auditExport.title' },
       },
       {
         // The school's agent runtime: its AI plan and OCR. Its own administrators are among these.

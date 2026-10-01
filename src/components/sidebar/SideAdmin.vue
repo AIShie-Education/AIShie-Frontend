@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // The side bar's administration: the administration pages the caller may
-// open. Courses and departments are for a platform administrator and for a
-// department's administrator, who sees only what is beneath their
-// appointments; people, terms, presets and sign-in (single sign-on's
+// open. Courses, departments and exporting conversations for audit are for a
+// platform administrator and for a department's administrator, who sees only
+// what is beneath their appointments; people, terms, presets and sign-in (single sign-on's
 // identity providers) are a platform administrator's alone
 // (router/modules/admin.ts decides the same). So are the agent
 // runtime's settings (AI and documents), offered only where this server has
@@ -27,6 +27,7 @@ const SECTIONS = [
   { name: 'admin-presets', icon: 'Key', label: 'admin.nav.presets', platform: true },
   { name: 'admin-sso', icon: 'Lock', label: 'admin.nav.sso', platform: true },
   { name: 'admin-runtime', icon: 'MagicStick', label: 'admin.nav.runtime', platform: true, runtime: true },
+  { name: 'admin-export', icon: 'Download', label: 'admin.nav.export' },
 ]
 const sections = computed(() =>
   SECTIONS.filter((s) => (!s.platform || session.isAdmin) && (!s.runtime || !!rt?.available.value)),

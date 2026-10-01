@@ -127,6 +127,7 @@ async function mountAs(
       { path: '/admin/presets', name: 'admin-presets', component: View },
       { path: '/admin/sign-in', name: 'admin-sso', component: View },
       { path: '/admin/runtime', name: 'admin-runtime', component: View },
+      { path: '/admin/conversation-exports', name: 'admin-export', component: View },
     ],
   })
   await router.push(opts.path ?? '/')
@@ -516,7 +517,15 @@ describe('the administration view', () => {
   it('lists every administration page for a platform administrator, the one open standing out', async () => {
     const { w } = await mountAs('platformAdmin', { path: '/admin/actors/p1' })
     const body = w.get('#side-bar')
-    expect(links(body)).toEqual(['Courses', 'People & agents', 'Terms', 'Departments', 'Permission presets', 'Sign-in'])
+    expect(links(body)).toEqual([
+      'Courses',
+      'People & agents',
+      'Terms',
+      'Departments',
+      'Permission presets',
+      'Sign-in',
+      'Export conversations',
+    ])
     expect(body.findAll('.side-item.is-active').map((a) => a.text())).toEqual(['People & agents'])
   })
 
@@ -533,6 +542,7 @@ describe('the administration view', () => {
         'Permission presets',
         'Sign-in',
         'AI and documents',
+        'Export conversations',
       ])
       expect(body.findAll('.side-item.is-active').map((a) => a.text())).toEqual(['AI and documents'])
       expect(body.find('a[href="/admin/runtime"]').attributes('aria-current')).toBe('page')
@@ -546,18 +556,22 @@ describe('the administration view', () => {
     runtimeHere.asked = 0
     try {
       const { w } = await mountAs('deptAdmin', { path: '/admin/departments' })
-      expect(links(w.get('#side-bar'))).toEqual(['Courses', 'Departments'])
+      expect(links(w.get('#side-bar'))).toEqual(['Courses', 'Departments', 'Export conversations'])
       expect(runtimeHere.asked).toBe(0)
     } finally {
       runtimeHere.available = false
     }
   })
 
-  it('lists courses and departments alone for a department’s administrator', async () => {
+  it('lists courses, departments and exporting conversations alone for a department’s administrator', async () => {
     const { w } = await mountAs('deptAdmin', { path: '/admin/departments' })
     const body = w.get('#side-bar')
-    expect(links(body)).toEqual(['Courses', 'Departments'])
-    expect(body.findAll('a').map((a) => a.attributes('href'))).toEqual(['/admin/courses', '/admin/departments'])
+    expect(links(body)).toEqual(['Courses', 'Departments', 'Export conversations'])
+    expect(body.findAll('a').map((a) => a.attributes('href'))).toEqual([
+      '/admin/courses',
+      '/admin/departments',
+      '/admin/conversation-exports',
+    ])
   })
 })
 

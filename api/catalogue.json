@@ -3628,6 +3628,254 @@
       "path": "/v1/courses/{course_id}/conversations/{conversation_id}/draft"
     },
     {
+      "description": "Export conversations for audit: for root and platform administrators, anywhere; for a department's administrators, the courses of the departments they administer and beneath them, and only by naming a course (course_id) or a department (within_dept_id) of theirs. Nobody else, and never an agent (people_only). Optionally only one participant's (participant_actor_id) and only what was written in a span of time (from, before). It holds every message of the conversations it chooses, retracted ones with their text, marked retracted; what files each carries, never their bytes; and the answers and questions proposed and never posted. Two files: the conversations as JSON Lines, one to a line with their messages, and the messages as CSV, one to a row, in UTF-8 with a byte order mark. Each is given with a URL that downloads it for 15 minutes; conversation.export_file gives another until the files are removed, expires_at. The files hold personal data. Past its limits (max messages, max bytes of text) it is refused, export_too_large, saying how much it would hold: narrow it. Every export is recorded, filters and counts, as an action.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "description": "only what was written before this time, as from",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "course_id": {
+            "description": "only this course's conversations; give this or within_dept_id, or neither for the whole site's",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "from": {
+            "description": "only what was written at or after this time: the conversations opened then, or with something written then, and in them what was written then",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_actor_id": {
+            "description": "only the conversations this person or agent took part in, as the one who asked or as the agent asked",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "within_dept_id": {
+            "description": "only the conversations of the courses in this department and every department beneath it",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "kind": "write",
+      "method": "POST",
+      "name": "conversation.export",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "description": "when it was made: nothing written after it is in it",
+            "type": "string"
+          },
+          "attachments": {
+            "description": "the files the messages carry, described; their bytes are not in it",
+            "type": "integer"
+          },
+          "conversations": {
+            "type": "integer"
+          },
+          "downloads": {
+            "description": "a URL for each file, given once, to the caller alone; a call replayed with its idempotency key gives none, and conversation.export_file gives one again",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "download_url": {
+                  "description": "a short-lived URL that serves the file as a download, under its name: GET it as it is, with no Authorization header",
+                  "type": "string"
+                },
+                "expires_at": {
+                  "description": "when download_url stops working, about 15 minutes from now; conversation.export_file gives another",
+                  "type": "string"
+                },
+                "format": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "format",
+                "download_url",
+                "expires_at"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "expires_at": {
+            "description": "when its files are removed; conversation.export_file gives a URL for one until then",
+            "type": "string"
+          },
+          "export_id": {
+            "description": "the export's id, which is its action's: conversation.export_file takes it",
+            "format": "uuid",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "byte_size": {
+                  "type": "integer"
+                },
+                "checksum": {
+                  "description": "sha256:<hex> of the file's bytes",
+                  "type": "string"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "filename": {
+                  "description": "the name it downloads under",
+                  "type": "string"
+                },
+                "format": {
+                  "description": "jsonl: the conversations, one to a line, each with its messages; csv: the messages, one to a row",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "format",
+                "filename",
+                "content_type",
+                "byte_size",
+                "checksum"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "messages": {
+            "description": "the messages it holds, the retracted among them",
+            "type": "integer"
+          },
+          "proposals": {
+            "description": "the answers and questions proposed in its conversations and never posted: waiting for a decision, rejected or cancelled",
+            "type": "integer"
+          },
+          "retracted": {
+            "description": "of them, how many are retracted: held with their text, and marked",
+            "type": "integer"
+          },
+          "text_bytes": {
+            "description": "the bytes of what its messages and proposals say, which max_bytes bounds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "export_id",
+          "as_of",
+          "conversations",
+          "messages",
+          "retracted",
+          "attachments",
+          "proposals",
+          "text_bytes",
+          "files",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/conversation-exports"
+    },
+    {
+      "description": "A file of an export you made (conversation.export), again: its name, type, size and checksum, and a short-lived URL that downloads it. format is jsonl, the conversations, or csv, the messages. Only for whoever made the export, while they administer what it is about, and until its files are removed (export_expired).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "export_id": {
+            "description": "an export of yours, from conversation.export",
+            "format": "uuid",
+            "type": "string"
+          },
+          "format": {
+            "description": "jsonl, the conversations one to a line, or csv, the messages one to a row",
+            "type": "string"
+          }
+        },
+        "required": [
+          "export_id",
+          "format"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "conversation.export_file",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "byte_size": {
+            "type": "integer"
+          },
+          "checksum": {
+            "description": "sha256:<hex> of the file's bytes",
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "download_url": {
+            "description": "a short-lived URL that serves the file as a download, under its name: GET it as it is, with no Authorization header",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "when download_url stops working, about 15 minutes from now; ask again for another",
+            "type": "string"
+          },
+          "export_expires_at": {
+            "description": "when the export's files are removed",
+            "type": "string"
+          },
+          "export_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "filename": {
+            "description": "the name it downloads under",
+            "type": "string"
+          },
+          "format": {
+            "description": "jsonl: the conversations, one to a line, each with its messages; csv: the messages, one to a row",
+            "type": "string"
+          }
+        },
+        "required": [
+          "export_id",
+          "format",
+          "filename",
+          "content_type",
+          "byte_size",
+          "checksum",
+          "download_url",
+          "expires_at",
+          "export_expires_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/conversation-exports/{export_id}/{format}"
+    },
+    {
       "description": "One conversation: who takes part, what state it is in, whether an answer waits for approval, the opener's latest message, which an answer replies to, if you take part, whether the other has written since you last read it (unread; conversation.mark_read), and the answer being written, if any (draft). Its opener may always read it; its respondent while the opener may still address it; and course staff who decide actions for the opener.",
       "input_schema": {
         "additionalProperties": false,
@@ -3871,7 +4119,7 @@
             ]
           },
           "visible_to": {
-            "description": "who can read what is written here, as codes: participants, the two who take part; overseers, course staff who decide actions for the opener; action_record, anyone who decides actions in the course, through the record of each message's action; respondent_answers_others, the respondent answers other members too and may repeat to them what is written here",
+            "description": "who can read what is written here, as codes: participants, the two who take part; overseers, course staff who decide actions for the opener; action_record, anyone who decides actions in the course, through the record of each message's action; respondent_answers_others, the respondent answers other members too and may repeat to them what is written here; audit_export, the site's administrators, and those of the course's department, who may export it for audit, retracted messages included",
             "items": {
               "type": "string"
             },
@@ -6585,12 +6833,20 @@
       "path": "/v1/departments/{dept_id}"
     },
     {
-      "description": "For the transcription service alone: write back what became of a version you have claimed, while the claim holds: done, with its text (Markdown, at most 2 MiB), its page count and the model's name; or failed or skipped, with why. Refused, and nothing written, once staff have written the text (edited_by_staff), or once the claim no longer holds (lease_lost): it lapsed and was claimed again, or the version was sent back to the queue. Done tells the version's readers the text is there. Recorded as an action, but for the text, which is kept only as the text version; retry it with the same idempotency key.",
+      "description": "For the transcription service alone: write back what became of a file you have claimed, while the claim holds: done, with its text (Markdown, at most 2 MiB), its page count and the model's name; or failed or skipped, with why. Refused, and nothing written, once staff have written the text (edited_by_staff), or once the claim no longer holds (lease_lost): it lapsed and was claimed again, or the file was sent back to the queue. Done tells the version's readers the text is there. Recorded as an action, but for the text, which is kept only as the text version; retry it with the same idempotency key.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
           "body": {
             "description": "for done: the whole text, Markdown, at most 2 MiB",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "file_id": {
+            "description": "the claim's file, from document_text.queue; if omitted, the file the lease is of",
+            "format": "uuid",
             "type": [
               "null",
               "string"
@@ -6646,6 +6902,10 @@
       "output_schema": {
         "additionalProperties": false,
         "properties": {
+          "file_id": {
+            "format": "uuid",
+            "type": "string"
+          },
           "revision": {
             "maximum": 2147483647,
             "minimum": -2147483648,
@@ -6661,6 +6921,7 @@
         },
         "required": [
           "version_id",
+          "file_id",
           "status",
           "revision"
         ],
@@ -6669,10 +6930,18 @@
       "path": "/v1/services/document_text/versions/{version_id}/complete"
     },
     {
-      "description": "For the transcription service alone: another short-lived URL for the file of a version you have claimed, while the claim holds. Any other version's file is not yours to read (lease_lost).",
+      "description": "For the transcription service alone: another short-lived URL for a file you have claimed, while the claim holds. Any other file is not yours to read (lease_lost).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "file_id": {
+            "description": "the claim's file, from document_text.queue; if omitted, the file the lease is of",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "lease_id": {
             "description": "the claim's, from document_text.queue",
             "format": "uuid",
@@ -6714,8 +6983,20 @@
             "description": "a short-lived URL for the file",
             "type": "string"
           },
+          "file_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
           "lease_expires_at": {
             "type": "string"
+          },
+          "position": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
           },
           "version_id": {
             "format": "uuid",
@@ -6724,6 +7005,9 @@
         },
         "required": [
           "version_id",
+          "file_id",
+          "position",
+          "filename",
           "content_type",
           "byte_size",
           "download_url",
@@ -6735,7 +7019,7 @@
       "path": "/v1/services/document_text/versions/{version_id}/file"
     },
     {
-      "description": "For the transcription service alone: claim document versions waiting to be transcribed, across the site: those added most lately waiting longest first, then those queued when text versions came in, the newest first. Each claim holds its version for you alone until lease_expires_at, and comes with a short-lived URL for its file; write the text back with document_text.complete before then, or hold it longer with document_text.renew. A claim that lapses may be claimed again, by you or another; a version claimed 5 times and not finished is failed (attempts_exhausted). Nothing in an archived course, or of an archived document, is claimed. With wait_s, a call that finds nothing waits up to that many seconds for a version to be queued, and claims it as soon as it is. Recorded nowhere; the claims are the record.",
+      "description": "For the transcription service alone: claim files of document versions waiting to be transcribed, across the site, each file of a version on its own: those added most lately waiting longest first, then those queued when text versions came in, the newest first, a version's files in order. Each claim holds its file's text version for you alone until lease_expires_at, and comes with a short-lived URL for the file; write the text back with document_text.complete before then, or hold it longer with document_text.renew, naming its version_id, file_id and lease_id. A claim that lapses may be claimed again, by you or another; a file claimed 5 times and not finished is failed (attempts_exhausted). Nothing in an archived course, or of an archived document, is claimed. With wait_s, a call that finds nothing waits up to that many seconds for a file to be queued, and claims it as soon as it is. Recorded nowhere; the claims are the record.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6763,12 +7047,12 @@
         "additionalProperties": false,
         "properties": {
           "claimed": {
-            "description": "what was claimed, uploads before what was queued when text versions came in; empty when nothing waits",
+            "description": "what was claimed, one file's text each, uploads before what was queued when text versions came in, a version's files in order; empty when nothing waits",
             "items": {
               "additionalProperties": false,
               "properties": {
                 "attempt": {
-                  "description": "how many times it has been claimed since it was queued, this one included; a version claimed 5 times and not finished is failed (attempts_exhausted)",
+                  "description": "how many times it has been claimed since it was queued, this one included; a file claimed 5 times and not finished is failed (attempts_exhausted)",
                   "maximum": 2147483647,
                   "minimum": -2147483648,
                   "type": "integer"
@@ -6804,6 +7088,14 @@
                   "description": "a short-lived URL for the file; document_text.file gives another while the claim holds",
                   "type": "string"
                 },
+                "file_id": {
+                  "description": "the file whose text is claimed: give it to document_text.file, .renew and .complete",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                },
                 "lease_expires_at": {
                   "description": "when the claim lapses, and the version may be claimed again, unless it is renewed",
                   "type": "string"
@@ -6813,6 +7105,12 @@
                   "format": "uuid",
                   "type": "string"
                 },
+                "position": {
+                  "description": "the file's place among its version's files, from 1",
+                  "maximum": 2147483647,
+                  "minimum": -2147483648,
+                  "type": "integer"
+                },
                 "version_id": {
                   "format": "uuid",
                   "type": "string"
@@ -6820,6 +7118,9 @@
               },
               "required": [
                 "version_id",
+                "file_id",
+                "position",
+                "filename",
                 "document_id",
                 "course_id",
                 "lease_id",
@@ -6851,6 +7152,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "file_id": {
+            "description": "the claim's file, from document_text.queue; if omitted, the file the lease is of",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "lease_id": {
             "description": "the claim's, from document_text.queue",
             "format": "uuid",
@@ -6889,7 +7198,7 @@
       "path": "/v1/services/document_text/versions/{version_id}/renew"
     },
     {
-      "description": "Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then.",
+      "description": "Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then. It is text (body_md), files, or both, as document.create takes them: files, in order, each with its upload_token and filename; upload_token alone is one file, and is deprecated.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -6909,12 +7218,36 @@
             "format": "uuid",
             "type": "string"
           },
+          "files": {
+            "description": "the version's files, in order, each uploaded first with document.upload_url; at most max_files of them, together at most max_version_bytes",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "filename": {
+                  "description": "the file's name, as readers are shown it and as it downloads, e.g. week1-slides.pdf: 1 to 255 characters on one line, a name and not a path. If omitted, the name given to document.upload_url; one of the two is required",
+                  "type": "string"
+                },
+                "upload_token": {
+                  "description": "from document.upload_url, once the file's bytes are PUT to its upload_url",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "upload_token"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
           "publish": {
             "description": "publish the new version at once",
             "type": "boolean"
           },
           "upload_token": {
-            "description": "from document.upload_url, after uploading the file",
+            "description": "deprecated: one file, as files with one, named as it was uploaded or else after the document's title; not with files",
             "type": [
               "null",
               "string"
@@ -6933,6 +7266,17 @@
       "output_schema": {
         "additionalProperties": false,
         "properties": {
+          "file_ids": {
+            "description": "document.add_version: the new version's files' ids, in order; absent when it has none",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
           "published": {
             "type": "boolean"
           },
@@ -6994,7 +7338,7 @@
       "path": "/v1/courses/{course_id}/documents/{document_id}/archive"
     },
     {
-      "description": "Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here.",
+      "description": "Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here. A version is text (body_md), files, or both: upload each file first (document.upload_url) and name them, in order, in files, each with its upload_token and filename; upload_token alone is one file, and is deprecated.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7009,6 +7353,30 @@
             "description": "the course this call is about",
             "format": "uuid",
             "type": "string"
+          },
+          "files": {
+            "description": "the version's files, in order, each uploaded first with document.upload_url; at most max_files of them, together at most max_version_bytes",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "filename": {
+                  "description": "the file's name, as readers are shown it and as it downloads, e.g. week1-slides.pdf: 1 to 255 characters on one line, a name and not a path. If omitted, the name given to document.upload_url; one of the two is required",
+                  "type": "string"
+                },
+                "upload_token": {
+                  "description": "from document.upload_url, once the file's bytes are PUT to its upload_url",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "upload_token"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
           },
           "grade_id": {
             "description": "required for kind feedback: the grade this file belongs to",
@@ -7039,7 +7407,7 @@
             "type": "string"
           },
           "upload_token": {
-            "description": "from document.upload_url, after uploading the file",
+            "description": "deprecated: one file, as files with one, named as it was uploaded or else after the document's title; not with files",
             "type": [
               "null",
               "string"
@@ -7063,6 +7431,17 @@
             "format": "uuid",
             "type": "string"
           },
+          "file_ids": {
+            "description": "the version's files' ids, in order; absent when it has none",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
           "version_id": {
             "description": "absent when the document was created empty",
             "format": "uuid",
@@ -7080,7 +7459,209 @@
       "path": "/v1/courses/{course_id}/documents"
     },
     {
-      "description": "Read a document: its text, and a short-lived URL for its file if it has one. Students get the published version; members who can read drafts get the latest. A specific version can be asked for by id — always allowed if it is the one your own submission was handed in under.",
+      "description": "One file of a version of a document: its name, type, size and text version (without the text), and a short-lived URL that serves it as a download, under its name. For whoever may read its version, as document.get with that version_id: students the published version's, and the one their own work was handed in under. document.get and document.versions list each version's files, with their ids.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "description": "the course this call is about",
+            "format": "uuid",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "file_id": {
+            "description": "a file's id, from a version's files in document.get or document.versions",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_id",
+          "document_id",
+          "file_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "document.file",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "byte_size": {
+            "type": "integer"
+          },
+          "checksum": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_type": {
+            "description": "the media type its uploader declared",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "download_url": {
+            "description": "a short-lived URL that serves the file as a download, saved under its name: GET it as it is, with no Authorization header",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "when download_url stops working, about 15 minutes from now; ask again for another",
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "position": {
+            "description": "its place among its version's files, from 1",
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "published": {
+            "description": "whether its version is the published one",
+            "type": "boolean"
+          },
+          "seq": {
+            "description": "its version's seq",
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "integer"
+          },
+          "text": {
+            "additionalProperties": false,
+            "description": "the file's text version, without the text: document.text reads it; absent for a file of a submission or of feedback",
+            "properties": {
+              "body": {
+                "description": "the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "bytes": {
+                "description": "how long the text is, in bytes; 0 while there is none",
+                "maximum": 2147483647,
+                "minimum": -2147483648,
+                "type": "integer"
+              },
+              "edited_at": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "edited_by_member_id": {
+                "description": "who wrote or last edited it, for staff's",
+                "format": "uuid",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "edited_by_name": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "model": {
+                "description": "the model that transcribed it, as the site names it",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "pages": {
+                "description": "how many pages or slides the transcription found in the file",
+                "maximum": 2147483647,
+                "minimum": -2147483648,
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              },
+              "produced_at": {
+                "description": "when it was transcribed",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "reason": {
+                "description": "why it failed or was skipped",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "revision": {
+                "description": "counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision",
+                "maximum": 2147483647,
+                "minimum": -2147483648,
+                "type": "integer"
+              },
+              "source": {
+                "description": "whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over",
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "status": {
+                "description": "pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why",
+                "type": "string"
+              },
+              "updated_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "revision",
+              "updated_at",
+              "bytes"
+            ],
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "version_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "filename",
+          "content_type",
+          "byte_size",
+          "document_id",
+          "version_id",
+          "seq",
+          "published",
+          "download_url",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/courses/{course_id}/documents/{document_id}/files/{file_id}"
+    },
+    {
+      "description": "Read a document: its text, and its files, each with a short-lived URL to download it under its name and its text version. Students get the published version; members who can read drafts get the latest. A specific version can be asked for by id — always allowed if it is the one your own submission was handed in under. The version's download_url, content_type, byte_size, checksum and text are its first file's, and are deprecated: read files.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7204,18 +7785,21 @@
                 ]
               },
               "byte_size": {
+                "description": "deprecated: the first file's; a purged version's still says it",
                 "type": [
                   "null",
                   "integer"
                 ]
               },
               "checksum": {
+                "description": "deprecated: the first file's",
                 "type": [
                   "null",
                   "string"
                 ]
               },
               "content_type": {
+                "description": "deprecated: the first file's; a purged version's still says it",
                 "type": [
                   "null",
                   "string"
@@ -7225,10 +7809,164 @@
                 "type": "string"
               },
               "download_url": {
-                "description": "a short-lived URL for the file, if the version has one",
+                "description": "deprecated: files[0].download_url, the first file's",
                 "type": [
                   "null",
                   "string"
+                ]
+              },
+              "files": {
+                "description": "the version's files, in order, each with a short-lived URL to download it under its name and its text version; empty for a version of text alone, and for a purged one",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "byte_size": {
+                      "type": "integer"
+                    },
+                    "checksum": {
+                      "description": "sha256:<hex> where the store worked it out from the bytes, etag:<value> where all it has is an object store's tag",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "content_type": {
+                      "description": "the media type its uploader declared",
+                      "type": "string"
+                    },
+                    "download_url": {
+                      "description": "document.get only: a short-lived URL that serves the file as a download, saved under its name; GET it with no Authorization header",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "filename": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "the file's id: document.file takes it, and document.text, for its text version",
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "position": {
+                      "description": "its place among the version's files, from 1, as they were given",
+                      "maximum": 2147483647,
+                      "minimum": -2147483648,
+                      "type": "integer"
+                    },
+                    "text": {
+                      "additionalProperties": false,
+                      "description": "the file's text version: the file transcribed into Markdown, for a file of material, instructions or a rubric; absent for any other. Its body, in document.get only, while the bodies given with the version come to at most 65536 bytes",
+                      "properties": {
+                        "body": {
+                          "description": "the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text",
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "bytes": {
+                          "description": "how long the text is, in bytes; 0 while there is none",
+                          "maximum": 2147483647,
+                          "minimum": -2147483648,
+                          "type": "integer"
+                        },
+                        "edited_at": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "edited_by_member_id": {
+                          "description": "who wrote or last edited it, for staff's",
+                          "format": "uuid",
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "edited_by_name": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "model": {
+                          "description": "the model that transcribed it, as the site names it",
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "pages": {
+                          "description": "how many pages or slides the transcription found in the file",
+                          "maximum": 2147483647,
+                          "minimum": -2147483648,
+                          "type": [
+                            "null",
+                            "integer"
+                          ]
+                        },
+                        "produced_at": {
+                          "description": "when it was transcribed",
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "reason": {
+                          "description": "why it failed or was skipped",
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "revision": {
+                          "description": "counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision",
+                          "maximum": 2147483647,
+                          "minimum": -2147483648,
+                          "type": "integer"
+                        },
+                        "source": {
+                          "description": "whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over",
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "status": {
+                          "description": "pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why",
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "revision",
+                        "updated_at",
+                        "bytes"
+                      ],
+                      "type": [
+                        "null",
+                        "object"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "position",
+                    "filename",
+                    "content_type",
+                    "byte_size"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "null",
+                  "array"
                 ]
               },
               "id": {
@@ -7240,7 +7978,7 @@
               },
               "purged": {
                 "additionalProperties": false,
-                "description": "the version was purged: its text and file are gone, and this says who removed them, when and why. Work handed in under it still names it",
+                "description": "the version was purged: its text and files are gone, and this says who removed them, when and why. Work handed in under it still names it",
                 "properties": {
                   "at": {
                     "type": "string"
@@ -7271,7 +8009,7 @@
               },
               "text": {
                 "additionalProperties": false,
-                "description": "the version's text version: its file transcribed into Markdown, for a version with a file of material, instructions or a rubric; absent for any other",
+                "description": "deprecated: files[0].text, the first file's text version",
                 "properties": {
                   "body": {
                     "description": "the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text",
@@ -7372,6 +8110,7 @@
             "required": [
               "id",
               "seq",
+              "files",
               "author_member_id",
               "created_at",
               "published"
@@ -7543,6 +8282,17 @@
       "output_schema": {
         "additionalProperties": false,
         "properties": {
+          "file_ids": {
+            "description": "document.add_version: the new version's files' ids, in order; absent when it has none",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
           "published": {
             "type": "boolean"
           },
@@ -7621,7 +8371,7 @@
       "path": "/v1/courses/{course_id}/documents/{document_id}/purge"
     },
     {
-      "description": "Read a document version's text version: its file (slides, a PDF, a Word file) transcribed into Markdown, pictures and diagrams described in brackets, each page or slide under a heading of its own; or written by staff. Read it before the file: it is the same for every model. For whoever may read the version, as document.get: students read the published one. A long text is read in parts of at most 65536 bytes, whole pages where they fit, from part 1 to parts; read them all at one revision. Until the text is done, it says where it stands (pending, working, failed or skipped, with reason) and has no body.",
+      "description": "Read the text version of a file of a document's version: the file (slides, a PDF, a Word file) transcribed into Markdown, pictures and diagrams described in brackets, each page or slide under a heading of its own; or written by staff. Each file of a version has its own; file_id says which, the version's first if omitted. Read it before the file: it is the same for every model. For whoever may read the version, as document.get: students read the published one. A long text is read in parts of at most 65536 bytes, whole pages where they fit, from part 1 to parts; read them all at one revision. Until the text is done, it says where it stands (pending, working, failed or skipped, with reason) and has no body.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7634,12 +8384,20 @@
             "format": "uuid",
             "type": "string"
           },
+          "file_id": {
+            "description": "which of the version's files; its first if omitted",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "part": {
             "description": "which part of the text, from 1; 1 if omitted",
             "type": "integer"
           },
           "version_id": {
-            "description": "a specific version; otherwise the one document.get gives: the published one, or the latest for members who can read drafts",
+            "description": "a specific version; otherwise the file's, when file_id is given, or the one document.get gives: the published one, or the latest for members who can read drafts",
             "format": "uuid",
             "type": [
               "null",
@@ -7663,12 +8421,26 @@
             "format": "uuid",
             "type": "string"
           },
+          "file_id": {
+            "description": "the file whose text this is",
+            "format": "uuid",
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
           "part": {
             "description": "which part this is, while there is a text",
             "type": "integer"
           },
           "parts": {
             "description": "how many parts the text is read in; 0 while there is none",
+            "type": "integer"
+          },
+          "position": {
+            "description": "the file's place among the version's files, from 1",
+            "maximum": 2147483647,
+            "minimum": -2147483648,
             "type": "integer"
           },
           "published": {
@@ -7785,6 +8557,9 @@
           "version_id",
           "seq",
           "published",
+          "file_id",
+          "position",
+          "filename",
           "text",
           "parts"
         ],
@@ -7793,7 +8568,7 @@
       "path": "/v1/courses/{course_id}/documents/{document_id}/text"
     },
     {
-      "description": "Send a document version's text version to be transcribed again, or for the first time for a version added before there were text versions: it is pending again, ahead of anything queued when text versions came in, and what it said is gone until the new transcription is done; one under way is refused when it finishes. A text staff wrote or corrected is discarded only with discard_edit true (staff_edit). For whoever may write the document. base_revision refuses it if the text has changed since (text_changed). A text already waiting its turn changes nothing (changed: false).",
+      "description": "Send the text version of a file of a document's version to be transcribed again, or for the first time for a version added before there were text versions: it is pending again, ahead of anything queued when text versions came in, and what it said is gone until the new transcription is done; one under way is refused when it finishes. file_id says which file; a version of one file needs none. A text staff wrote or corrected is discarded only with discard_edit true (staff_edit). For whoever may write the document. base_revision refuses it if the text has changed since (text_changed). A text already waiting its turn changes nothing (changed: false).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7819,6 +8594,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "file_id": {
+            "description": "which of the version's files; required when it has more than one (file_id_required)",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "version_id": {
             "format": "uuid",
             "type": "string"
@@ -7841,6 +8624,11 @@
             "description": "false when the text already was so: nothing was done",
             "type": "boolean"
           },
+          "file_id": {
+            "description": "the file whose text it is",
+            "format": "uuid",
+            "type": "string"
+          },
           "revision": {
             "maximum": 2147483647,
             "minimum": -2147483648,
@@ -7856,6 +8644,7 @@
         },
         "required": [
           "version_id",
+          "file_id",
           "changed",
           "status",
           "revision"
@@ -7865,7 +8654,7 @@
       "path": "/v1/courses/{course_id}/documents/{document_id}/versions/{version_id}/text/retranscribe"
     },
     {
-      "description": "Write a document version's text version, in place of what there was: correct a transcription, or write one by hand. The text is staff's from then on: no transcription writes over it, and one under way is refused when it finishes. For whoever may write the document, as a new version is written; the text, at most 2 MiB of Markdown, is recorded with the action, for whoever decides or reviews it. base_revision refuses the edit if the text has changed since (text_changed). Giving the text it already is changes nothing (changed: false).",
+      "description": "Write the text version of a file of a document's version, in place of what there was: correct a transcription, or write one by hand. file_id says which file; a version of one file needs none. The text is staff's from then on: no transcription writes over it, and one under way is refused when it finishes. For whoever may write the document, as a new version is written; the text, at most 2 MiB of Markdown, is recorded with the action, for whoever decides or reviews it. base_revision refuses the edit if the text has changed since (text_changed). Giving the text it already is changes nothing (changed: false).",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7891,6 +8680,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "file_id": {
+            "description": "which of the version's files; required when it has more than one (file_id_required)",
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "version_id": {
             "format": "uuid",
             "type": "string"
@@ -7914,6 +8711,11 @@
             "description": "false when the text already was so: nothing was done",
             "type": "boolean"
           },
+          "file_id": {
+            "description": "the file whose text it is",
+            "format": "uuid",
+            "type": "string"
+          },
           "revision": {
             "maximum": 2147483647,
             "minimum": -2147483648,
@@ -7929,6 +8731,7 @@
         },
         "required": [
           "version_id",
+          "file_id",
           "changed",
           "status",
           "revision"
@@ -8029,7 +8832,7 @@
       "path": "/v1/courses/{course_id}/documents/{document_id}"
     },
     {
-      "description": "Get somewhere to upload a file. Files do not travel through tool calls: PUT the bytes to the URL this returns, then pass the upload_token to the tool that attaches it. Nothing is recorded until then, and an upload that is never attached is eventually discarded. A call that would attach it by way of a proposal is refused once the upload is more than 48 hours old.",
+      "description": "Get somewhere to upload a file. Files do not travel through tool calls: PUT the bytes to the URL this returns, then name the upload_token, with the file's name, in files of document.create or document.add_version (a version holds several files, in order), or in feedback_files of grade.submit. A filename given here is the file's name where the call that attaches it gives none. max_bytes, max_files and max_version_bytes say how large a file, how many files to a version and how much in one version. Nothing is recorded until the file is attached, and an upload that is never attached is eventually discarded. A call that would attach it by way of a proposal is refused once the upload is more than 48 hours old.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8040,6 +8843,10 @@
           "course_id": {
             "description": "the course this call is about",
             "format": "uuid",
+            "type": "string"
+          },
+          "filename": {
+            "description": "the file's name, e.g. week1-slides.pdf: 1 to 255 characters on one line, a name and not a path. The file is called so when it is attached without a name of its own",
             "type": "string"
           },
           "kind": {
@@ -8071,11 +8878,19 @@
             "type": "object"
           },
           "max_bytes": {
-            "description": "the largest file, in bytes, that can be attached. It is checked when the file is attached, which refuses a larger one; where the URL is an object store's, a larger upload is not stopped as it arrives",
+            "description": "the largest file, in bytes, that can be attached. It is checked when the file is attached, which refuses a larger one (file_too_large); where the URL is an object store's, a larger upload is not stopped as it arrives",
+            "type": "integer"
+          },
+          "max_files": {
+            "description": "the most files one version of a document holds (too_many_files)",
+            "type": "integer"
+          },
+          "max_version_bytes": {
+            "description": "the most one version's files come to, in bytes, all together (version_too_large)",
             "type": "integer"
           },
           "upload_token": {
-            "description": "hand this to document.create, document.add_version or grade.submit to attach what you uploaded",
+            "description": "name this in files of document.create or document.add_version, or in feedback_files of grade.submit, to attach what you uploaded",
             "type": "string"
           },
           "upload_url": {
@@ -8088,14 +8903,16 @@
           "headers",
           "upload_token",
           "expires_at",
-          "max_bytes"
+          "max_bytes",
+          "max_files",
+          "max_version_bytes"
         ],
         "type": "object"
       },
       "path": "/v1/courses/{course_id}/upload-url"
     },
     {
-      "description": "Every version of a document, oldest first, with which one is published. For members who can read drafts.",
+      "description": "Every version of a document, oldest first, with which one is published, and each version's files, with their text versions, without the texts. For members who can read drafts. Each version's has_file, content_type, byte_size and text are its first file's, and are deprecated: read files.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -8130,12 +8947,14 @@
                   "type": "string"
                 },
                 "byte_size": {
+                  "description": "deprecated: the first file's",
                   "type": [
                     "null",
                     "integer"
                   ]
                 },
                 "content_type": {
+                  "description": "deprecated: the first file's",
                   "type": [
                     "null",
                     "string"
@@ -8144,7 +8963,162 @@
                 "created_at": {
                   "type": "string"
                 },
+                "files": {
+                  "description": "its files, in order, each with its text version, without the text: document.file gives one to download, document.text reads its text",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "byte_size": {
+                        "type": "integer"
+                      },
+                      "checksum": {
+                        "description": "sha256:<hex> where the store worked it out from the bytes, etag:<value> where all it has is an object store's tag",
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "content_type": {
+                        "description": "the media type its uploader declared",
+                        "type": "string"
+                      },
+                      "download_url": {
+                        "description": "document.get only: a short-lived URL that serves the file as a download, saved under its name; GET it with no Authorization header",
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "filename": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "the file's id: document.file takes it, and document.text, for its text version",
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "position": {
+                        "description": "its place among the version's files, from 1, as they were given",
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "type": "integer"
+                      },
+                      "text": {
+                        "additionalProperties": false,
+                        "description": "the file's text version: the file transcribed into Markdown, for a file of material, instructions or a rubric; absent for any other. Its body, in document.get only, while the bodies given with the version come to at most 65536 bytes",
+                        "properties": {
+                          "body": {
+                            "description": "the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text",
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "bytes": {
+                            "description": "how long the text is, in bytes; 0 while there is none",
+                            "maximum": 2147483647,
+                            "minimum": -2147483648,
+                            "type": "integer"
+                          },
+                          "edited_at": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "edited_by_member_id": {
+                            "description": "who wrote or last edited it, for staff's",
+                            "format": "uuid",
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "edited_by_name": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "model": {
+                            "description": "the model that transcribed it, as the site names it",
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "pages": {
+                            "description": "how many pages or slides the transcription found in the file",
+                            "maximum": 2147483647,
+                            "minimum": -2147483648,
+                            "type": [
+                              "null",
+                              "integer"
+                            ]
+                          },
+                          "produced_at": {
+                            "description": "when it was transcribed",
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "reason": {
+                            "description": "why it failed or was skipped",
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "revision": {
+                            "description": "counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision",
+                            "maximum": 2147483647,
+                            "minimum": -2147483648,
+                            "type": "integer"
+                          },
+                          "source": {
+                            "description": "whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over",
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "status": {
+                            "description": "pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why",
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status",
+                          "revision",
+                          "updated_at",
+                          "bytes"
+                        ],
+                        "type": [
+                          "null",
+                          "object"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "position",
+                      "filename",
+                      "content_type",
+                      "byte_size"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "null",
+                    "array"
+                  ]
+                },
                 "has_file": {
+                  "description": "deprecated: whether it has a file; files is not empty",
                   "type": "boolean"
                 },
                 "id": {
@@ -8155,7 +9129,7 @@
                   "type": "boolean"
                 },
                 "purged_at": {
-                  "description": "when its text and file were purged; document.get of it says who and why",
+                  "description": "when its text and files were purged; document.get of it says who and why",
                   "type": [
                     "null",
                     "string"
@@ -8168,7 +9142,7 @@
                 },
                 "text": {
                   "additionalProperties": false,
-                  "description": "its text version, without the text: document.text reads it",
+                  "description": "deprecated: files[0].text, the first file's text version",
                   "properties": {
                     "body": {
                       "description": "the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text",
@@ -8269,6 +9243,7 @@
               "required": [
                 "id",
                 "seq",
+                "files",
                 "has_file",
                 "author_member_id",
                 "created_at",
@@ -9155,6 +10130,10 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "filename": {
+                  "description": "the file's name, as it downloads: 1 to 255 characters on one line, a name and not a path; if omitted, the name given to document.upload_url, or else the title with its type's extension",
+                  "type": "string"
+                },
                 "title": {
                   "type": "string"
                 },
@@ -9321,6 +10300,10 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "filename": {
+                  "description": "the file's name, as it downloads: 1 to 255 characters on one line, a name and not a path; if omitted, the name given to document.upload_url, or else the title with its type's extension",
+                  "type": "string"
+                },
                 "title": {
                   "type": "string"
                 },
