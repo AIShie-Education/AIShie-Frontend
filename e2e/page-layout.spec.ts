@@ -442,11 +442,12 @@ test.describe('an administrator’s pages beside the side bar, under the chat’
     expect(await pageWidth(page)).toBe(900 - 48 - 260)
     await expect.poll(strip).toMatchObject({ rows: 1, scrolls: false, more: true })
     // Narrower than the six tabs (a window of 700 px, its side bar a menu): fewer of them beside More, one row.
+    // The 900 px window's strip has fewer than seven places too: wait for the side bar to go, and the strip to
+    // be laid out for the page that is left, before reading it.
     await page.setViewportSize({ width: 700, height: 800 })
-    await expect.poll(async () => (await strip()).places).toBeLessThan(7)
-    expect((await strip()).rows).toBe(1)
-    expect((await strip()).more).toBe(true)
-    expect((await strip()).scrolls).toBe(false)
+    await expect.poll(() => pageWidth(page)).toBe(700)
+    await expect.poll(strip).toMatchObject({ rows: 1, scrolls: false, more: true })
+    expect((await strip()).places).toBeLessThan(7)
     // A phone's page: every tab, scrolling.
     await page.setViewportSize({ width: 600, height: 800 })
     await expect.poll(strip).toMatchObject({ rows: 1, scrolls: true, more: false })
