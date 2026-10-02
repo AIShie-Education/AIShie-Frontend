@@ -186,6 +186,23 @@ test.describe('at phone width', () => {
     await expect(chatButton(page)).toBeVisible()
   })
 
+  test('a field one types into is in 16 px on a touch screen, the Markdown editor’s included, so iOS does not zoom into it', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath('grades'))
+    await page.getByRole('button', { name: 'Enter a component grade' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Grade a directly graded component' })
+    await expect(dialog).toBeVisible()
+    const sizes = await dialog.evaluate((el) => ({
+      coarse: matchMedia('(pointer: coarse)').matches,
+      field: getComputedStyle(el.querySelector('.enter-dialog__score-input input')!).fontSize,
+      markdown: getComputedStyle(el.querySelector('.md-editor textarea')!).fontSize,
+    }))
+    expect(sizes).toEqual({ coarse: true, field: '16px', markdown: '16px' })
+  })
+
   test('dialogs fit a phone', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)

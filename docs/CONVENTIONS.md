@@ -565,8 +565,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `usePhoneScreen()` (640 px or narrower) for a dialog or a drawer laid over the page that fills a
   phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch. On a
   touch screen (`pointer: coarse`, `styles/element.css`) Element Plus's controls are 44 px (40 small,
-  48 large) and its fields' text 16 px, below which iOS zooms into a field it focuses; a control of
-  the app's own that is pressed often is at least 40 px there. Never set `maximum-scale` or
+  48 large) and its fields' text 16 px, below which iOS zooms into a field it focuses; a component
+  that sets the text size of a field one types into (`MarkdownEditor`'s 13 px monospace, the PDF
+  viewer's page number) outweighs that rule, and so sets 16 px under `pointer: coarse` itself. A
+  control of the app's own that is pressed often is at least 40 px there. Never set `maximum-scale` or
   `user-scalable` in the viewport: zooming is the reader's.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
