@@ -497,7 +497,7 @@ async function headingWidth(table: Locator, name: string) {
 test.describe('a course’s tables beside the side bar, under the chat’s window', () => {
   noResizeObserverLoops()
 
-  test('a course’s members, actions, assignments, grades and submissions are laid out for the page’s width, not the window’s', async ({
+  test('a course’s members, a member’s page and My actions are laid out for the page’s width, not the window’s', async ({
     page,
   }) => {
     const d = demo()
@@ -544,6 +544,10 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await expect(page.locator('.my-actions__stack').first()).toBeVisible()
     await layout(page, 1000, 800, { side: false })
     await expect.poll(() => headingsOf(page, '.my-actions__table')).toContain('Status')
+  })
+
+  test('a course’s assignments and grades are laid out for the page’s width, not the window’s', async ({ page }) => {
+    await signIn(page, demo().actors.instructor)
 
     // What switched where a window was a phone's (640 px, 592 of page) switches where the page is as narrow: in
     // 900 px of window with the side bar open, 544 px of page, and not in 1000 (644), nor in 900 with the side bar
@@ -573,8 +577,16 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await layout(page, 1000, 800, { side: true })
     await expect(page.locator('.grades-view__table')).toBeVisible()
     await expect(page.locator('.grades-list')).toHaveCount(0)
+  })
 
-    // An assignment's roster, and the submissions: a card each in 544 px of page.
+  test('an assignment’s roster, the submissions and a grade’s breakdown are laid out for the page’s width, not the window’s', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+
+    // What switched where a window was a phone's (640 px, 592 of page) switches where the page is as narrow, in
+    // 900 px of window with the side bar open (544 px of page). An assignment's roster, and the submissions: a card each in 544 px of page.
     await page.goto(coursePath(`submissions?assignment=${d.course.assignments.hw1}`))
     await expect(page.locator('.roster-table, .roster-cards').first()).toBeVisible()
     await layout(page, 900, 800, { side: true })
@@ -614,7 +626,11 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await layout(page, 1000, 800, { side: true })
     await expect(breakdown.locator('.el-table')).toBeVisible()
     await expect(breakdown.locator('.bd-list')).toHaveCount(0)
-    await page.unroute(`**${gradePath}`)
+  })
+
+  test('a student’s gradebook is laid out for its card’s width, not the window’s', async ({ page }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
 
     // A student's gradebook: every column where its card has the 1060 px they take with a grader's actions, as
     // with the side bar open in 1920 px of window, or collapsed in 1280; in 1280 with it open what they say goes
