@@ -62,7 +62,7 @@ describe('ChatDraftSteps', () => {
   it('sums up what was consulted in one line once collapsed, which opens to list them again', async () => {
     const w = mount(ChatDraftSteps, { props: { steps: READ, collapsed: true }, global })
     const summary = w.get('button.chat-steps__summary')
-    expect(summary.text()).toBe('已查閱 3 項')
+    expect(summary.text()).toBe('已查閱3項')
     expect(summary.attributes('aria-expanded')).toBe('false')
     expect(w.find('.chat-steps__step').exists()).toBe(false)
     await summary.trigger('click')
@@ -99,7 +99,7 @@ describe('ChatDraft', () => {
       },
       global,
     })
-    expect(w.get('.chat-steps__summary').text()).toBe('已查閱 3 項')
+    expect(w.get('.chat-steps__summary').text()).toBe('已查閱3項')
     // Writing is what the caret says: not listed.
     expect(w.find('.chat-steps__step').exists()).toBe(false)
     const text = w.get('.chat-draft__text .markdown-body')

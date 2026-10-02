@@ -31,8 +31,8 @@ describe('AnswerSources', () => {
   })
 
   it.each([
-    ['zh-Hant', '依據 1 項課程教材'],
-    ['zh-Hans', '依据 1 项课程教材'],
+    ['zh-Hant', '依據1項課程教材'],
+    ['zh-Hans', '依据1项课程教材'],
   ] as const)('counts them in %s', (locale, text) => {
     setLocale(locale)
     expect(render({ body: 'x', sources: [source] }).text()).toBe(text)

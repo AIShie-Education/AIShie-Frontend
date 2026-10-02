@@ -35,6 +35,7 @@ export default {
   },
   post: {
     selected: 'Post selected ({n})',
+    more: 'More posting actions',
     assignment: 'Post all drafts for this assignment',
     pickAssignment: 'Tick draft rows to post them, or filter by an assignment to post all its drafts at once.',
     selectHint: 'Tick draft rows to post just those, or post every draft waiting for this assignment.',
@@ -214,7 +215,7 @@ export default {
     finalWrittenOwn:
       'Your totals were written as final grades: every later post or regrade counts your ungraded work as zero. The figures below are a grade so far.',
     showFinal: 'Show as final',
-    lastWritten: 'Last written down at posting:',
+    lastWritten: 'Last written down at posting',
     noSnapshot: 'No total has been written down at posting yet.',
     breakdown: 'By component',
     item: 'Component or assignment',

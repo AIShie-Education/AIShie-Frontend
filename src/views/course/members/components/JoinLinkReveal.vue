@@ -73,7 +73,10 @@ async function download() {
         <div v-if="ended" class="join-reveal__veil">{{ t('join.links.status.expired') }}</div>
       </div>
       <figcaption class="join-reveal__caption">
-        <strong>{{ courseLabel }}</strong>
+        <strong
+          >{{ code }}<template v-if="code && section"><span class="app-sep">·</span></template
+          >{{ section }}</strong
+        >
         <span v-if="title">{{ title }}</span>
       </figcaption>
     </figure>

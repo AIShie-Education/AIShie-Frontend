@@ -65,7 +65,7 @@ describe('ExistingGradesChoice', () => {
   it('says it in Traditional Chinese', () => {
     setLocale('zh-Hant')
     const w = mountChoice({ scores: ['85'], from: 100, to: '50' })
-    expect(w.text()).toContain('已輸入 1 份成績')
-    expect(option(w, 'rescale').text()).toContain('例如 85/100 會變成 42.5/50')
+    expect(w.text()).toContain('已輸入1份成績')
+    expect(option(w, 'rescale').text()).toContain('例如85/100會變成42.5/50')
   })
 })

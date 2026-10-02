@@ -529,7 +529,7 @@ test.describe.serial('Office files previewed as the PDF the server makes', () =>
     const p = (await page1.boundingBox())!
     expect(p.x).toBeGreaterThanOrEqual(0)
     expect(p.x + p.width).toBeLessThanOrEqual(390)
-    await expect(dialog.locator('.file-viewer__meta')).toContainText('PDF，共 2 頁')
+    await expect(dialog.locator('.file-viewer__meta')).toContainText('PDF，共2頁')
     for (const name of ['關閉預覽', '下一個檔案', `下載「${HANDOUT.name}」`, `下載 PDF「${pdfName(HANDOUT)}」`]) {
       const b = dialog.getByRole('button', { name, exact: true })
       await expect(b, name).toBeVisible()

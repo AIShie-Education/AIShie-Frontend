@@ -97,7 +97,7 @@ export default {
   zoom: {
     in: 'Zoom in',
     out: 'Zoom out',
-    actual: 'Zoom {n} %: show at actual size',
+    actual: 'Zoom {n}: show at actual size',
     actualTip: 'Actual size',
     fitWidth: 'Fit width',
     fit: 'Fit',

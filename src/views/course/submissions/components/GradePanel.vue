@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
 import { read, type UploadedFile } from '@/api/http'
 import type { ActionSummary, Assignment, GradeSummary, Submission } from '@/api/types'
+import StatusTag from '@/components/StatusTag.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
@@ -256,9 +257,7 @@ async function submit() {
   <section class="app-card grade-panel">
     <h2 class="app-card__title">
       <span>{{ t('submissions.grade.title') }}</span>
-      <el-tag v-if="needsApproval" type="warning" size="small" disable-transitions>
-        {{ t('enums.level.confirm_required') }}
-      </el-tag>
+      <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
     </h2>
 
     <el-alert

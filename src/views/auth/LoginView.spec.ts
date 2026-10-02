@@ -153,7 +153,7 @@ describe('single sign-on on the sign-in page', () => {
     expect(ssoButton(en)?.text()).toBe('Sign in with single sign-on')
     en.unmount()
     const zh = await mountAt('/login', 'zh-Hant')
-    expect(ssoButton(zh)?.text()).toBe('以 單一登入 登入')
+    expect(ssoButton(zh)?.text()).toBe('以單一登入登入')
     zh.unmount()
   })
 
@@ -229,10 +229,10 @@ describe('several identity providers on the sign-in page', () => {
   it('names them in Chinese too', async () => {
     vi.mocked(authMethods).mockResolvedValue({ password: true, sso: null, ssoProviders: PROVIDERS })
     const zh = await mountAt('/login', 'zh-Hant')
-    expect(buttons(zh).map((b) => b.text())).toEqual(['以 School NetID 登入', '以 大學統一認證 登入', '以 單一登入 登入'])
+    expect(buttons(zh).map((b) => b.text())).toEqual(['以School NetID登入', '以大學統一認證登入', '以單一登入登入'])
     zh.unmount()
     const hans = await mountAt('/login', 'zh-Hans')
-    expect(buttons(hans).at(-1)!.text()).toBe('以 单点登录 登录')
+    expect(buttons(hans).at(-1)!.text()).toBe('以单点登录登录')
     hans.unmount()
   })
 })

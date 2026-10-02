@@ -9,6 +9,7 @@
 // for when it can. The switch saves at once; the languages when saved.
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatList } from '@/utils/format'
 import { ElMessage } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { OcrSettings, RuntimeSettings, RuntimeSettingsPatch } from '@/api/runtime-types'
@@ -46,7 +47,7 @@ const languageProblem = computed(() => {
   if (chosen.value.length > OCR_MAX_LANGUAGES) return t('runtimeAdmin.ocr.tooMany')
   return ''
 })
-const listOf = (codes: readonly string[]) => codes.map((c) => languageName(c, t)).join(', ')
+const listOf = (codes: readonly string[]) => formatList(codes.map((c) => languageName(c, t)))
 
 const saving = ref<'enabled' | 'languages' | 'default' | null>(null)
 const error = shallowRef<unknown>(null)

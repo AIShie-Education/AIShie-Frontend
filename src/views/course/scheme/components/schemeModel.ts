@@ -7,7 +7,7 @@
 // does. These helpers say what to show and what to offer, and name the rules
 // Core would refuse a change by, so the person can see them before trying.
 import type { AssignmentSummary, Component, GradeSummary } from '@/api/types'
-import { formatNumber } from '@/utils/format'
+import { formatPct } from '@/utils/format'
 
 /**
  * How a node is worked out, as gradecalc sees it:
@@ -299,7 +299,7 @@ export function gradedBeneath(n: SchemeNode, f: GradeFacts | null): boolean {
 /** A share in [0, 1] as a percentage, or "—". */
 export function pct(v: number | null | undefined, digits = 1): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—'
-  return `${formatNumber(v * 100, digits)}%`
+  return formatPct(v, digits)
 }
 
 /** Its share among siblings were its weight `w` (and the rest as they are). */

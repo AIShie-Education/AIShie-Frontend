@@ -750,9 +750,7 @@ function capToMine() {
 
     <template #footer>
       <div class="add-member__footer">
-        <el-tag v-if="course.needsApproval('member_manage')" type="warning" effect="plain">
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag v-if="course.needsApproval('member_manage')" vocab="level" value="confirm_required" size="default" />
         <span class="app-toolbar__spacer" />
         <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>
         <el-button

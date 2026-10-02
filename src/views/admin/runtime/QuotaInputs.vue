@@ -3,7 +3,8 @@
 // limit, with what the server would have beside each (runtime.yaml's).
 import { useI18n } from 'vue-i18n'
 import type { DailyQuota } from '@/api/runtime-types'
-import { QUOTA_MAX, usdShown, type QuotaFields } from './runtimeAdmin'
+import { QUOTA_MAX, type QuotaFields } from './runtimeAdmin'
+import { formatMoney } from '@/utils/format'
 
 const model = defineModel<QuotaFields>({ required: true })
 defineProps<{
@@ -55,7 +56,7 @@ const { t } = useI18n()
       <div v-if="server !== undefined" class="app-form-hint">
         {{
           server?.usd != null
-            ? t('runtimeAdmin.money.serverUsd', { usd: usdShown(server.usd) })
+            ? t('runtimeAdmin.money.serverUsd', { usd: formatMoney(server.usd) })
             : t('runtimeAdmin.money.serverNone')
         }}
       </div>

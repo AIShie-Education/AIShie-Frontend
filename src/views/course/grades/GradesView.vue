@@ -115,6 +115,8 @@ const paged = usePaged<GradeSummary>(
   },
   { watch: [assignment, student] },
 )
+/** The posting toolbar, over the list: where it is shown, posting is the view's one primary action. */
+const postBar = computed(() => canPost.value && !paged.error.value?.isForbidden)
 const rows = computed(() =>
   stateFilter.value === 'all' ? paged.items.value : paged.items.value.filter((g) => g.state === stateFilter.value),
 )
@@ -264,18 +266,22 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
       :title="mine ? t('grades.mine.title') : t('grades.title')"
       :subtitle="mine ? t('grades.mine.subtitle') : t('grades.list.subtitle')"
     >
-      <el-button v-if="canEnter" type="primary" :disabled="!course.writable" @click="enterVisible = true">
+      <!-- One primary to a view: where the posting toolbar is shown, posting is it. -->
+      <el-button
+        v-if="canEnter"
+        :type="postBar ? undefined : 'primary'"
+        :disabled="!course.writable"
+        @click="enterVisible = true"
+      >
         <el-icon><EditPen /></el-icon>
         <span>{{ t('grades.enter.button') }}</span>
-        <el-tag
+        <StatusTag
           v-if="course.needsApproval('grade_submit')"
-          size="small"
-          type="warning"
-          effect="plain"
+          vocab="level"
+          value="confirm_required"
           class="grades-view__approval"
-        >
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+          size="small"
+        />
       </el-button>
     </PageHeader>
 
@@ -383,39 +389,15 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
         </el-button>
       </div>
 
-      <div v-if="canPost && !paged.error.value?.isForbidden" class="grades-view__post">
-        <el-button type="success" :disabled="!course.writable || !selected.length" @click="postSelected">
+      <div v-if="postBar" class="grades-view__post">
+        <el-button type="primary" :disabled="!course.writable || !selected.length" @click="postSelected">
           <el-icon><Promotion /></el-icon>
           <span>{{ t('grades.post.selected', { n: selected.length }) }}</span>
         </el-button>
-        <el-button
-          type="success"
-          plain
-          :disabled="!course.writable || !assignment || noDraftsForAssignment"
-          @click="postAssignment"
-        >
+        <el-button :disabled="!course.writable || !assignment || noDraftsForAssignment" @click="postAssignment">
           <span>{{ t('grades.post.assignment') }}</span>
         </el-button>
-        <el-tag v-if="course.needsApproval('grade_post')" type="warning" effect="plain">
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
-        <el-tooltip
-          :content="!spansAssignments ? t('grades.undoFinal.wholeCourse') : t('common.archivedCourse')"
-          :disabled="canUndoFinal && course.writable"
-          placement="top"
-        >
-          <span>
-            <el-button
-              type="warning"
-              plain
-              :disabled="!canUndoFinal || !course.writable"
-              class="grades-view__undo"
-              @click="undoVisible = true"
-            >
-              <el-icon><RefreshLeft /></el-icon><span>{{ t('grades.undoFinal.button') }}</span>
-            </el-button>
-          </span>
-        </el-tooltip>
+        <StatusTag v-if="course.needsApproval('grade_post')" vocab="level" value="confirm_required" size="default" />
         <span class="app-form-hint grades-view__post-hint">
           {{
             !assignment
@@ -425,6 +407,25 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
                 : t('grades.post.selectHint')
           }}
         </span>
+        <!-- What cannot be taken back is not beside posting: it is in the toolbar's menu, at its far end. -->
+        <el-dropdown trigger="click" placement="bottom-end" @command="undoVisible = true">
+          <el-button class="grades-view__more" :aria-label="t('grades.post.more')">
+            <el-icon><MoreFilled /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="undo" :disabled="!canUndoFinal || !course.writable" class="grades-view__undo">
+                <el-icon><RefreshLeft /></el-icon>
+                <span class="grades-view__undo-text">
+                  <span>{{ t('grades.undoFinal.button') }}</span>
+                  <span v-if="!canUndoFinal || !course.writable" class="grades-view__undo-why">
+                    {{ !spansAssignments ? t('grades.undoFinal.wholeCourse') : t('common.archivedCourse') }}
+                  </span>
+                </span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
       <p v-if="stateFilter !== 'all' && paged.hasMore.value" class="app-form-hint">
         {{ t('grades.list.stateFilterHint') }}
@@ -467,9 +468,14 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
                   ><TimeText :value="mine ? g.posted_at : g.created_at" relative
                 /></span>
               </div>
+              <!-- The pair is one item of the line's flex: its gap would put a space after the colon. -->
               <div v-if="!mine" class="grades-list__line app-muted">
-                {{ g.origin === 'computed' ? t('grades.detail.writtenBy') : t('grades.columns.grader') }}:
-                <MemberName :id="g.grader_member_id" show-kind />
+                <i18n-t keypath="common.pair" tag="span" scope="global">
+                  <template #label>{{
+                    g.origin === 'computed' ? t('grades.detail.writtenBy') : t('grades.columns.grader')
+                  }}</template>
+                  <template #value><MemberName :id="g.grader_member_id" show-kind /></template>
+                </i18n-t>
               </div>
             </div>
             <el-icon class="grades-list__chev"><ArrowRight /></el-icon>
@@ -628,9 +634,29 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
 .grades-view__post .el-button + .el-button {
   margin-left: 0;
 }
+/* On a phone, the chat's round button floats at the screen's bottom right,
+   where the toolbar's ⋯ would be under it when the page opens: the toolbar
+   keeps clear of that column (the button's size and its 16 px inset). */
+.has-chat-fab .grades-view__post {
+  padding-right: calc(var(--app-fab-size, 48px) + 16px);
+}
 .grades-view__post-hint {
   margin: 0;
   flex: 1 1 200px;
+}
+/* The ⋯ menu at the toolbar's far end, on its row's right even when it wraps. */
+.grades-view__post > .el-dropdown {
+  margin-left: auto;
+}
+.grades-view__undo-text {
+  display: flex;
+  flex-direction: column;
+}
+.grades-view__undo-why {
+  max-width: 280px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
 }
 .grades-view__table :deep(.el-table__row) {
   cursor: pointer;

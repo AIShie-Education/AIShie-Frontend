@@ -36,20 +36,20 @@ export default {
   list: {
     title: '你的智能体',
     new: '添加智能体',
-    count: '没有已启用的智能体 | 1 个已启用 | {n} 个已启用',
-    countOf: '{n} / {limit} 个已启用',
+    count: '没有已启用的智能体 | 1个已启用 | {n}个已启用',
+    countOf: '{n} / {limit}个已启用',
     suspendedDoNotCount: '已停用的智能体不计入你可拥有的数量。',
     empty: '你还没有任何智能体。创建一个：站内托管，或由你自己的工具通过 MCP 访问。',
     emptyNoSelfService: '你还没有任何智能体。在这里，智能体由管理员注册：请向你的管理员申请。',
-    seats: '未加入任何课程 | 已加入 1 门课程 | 已加入 {n} 门课程',
-    requests: '1 项申请待批准 | {n} 项申请待批准',
+    seats: '未加入任何课程 | 已加入1门课程 | 已加入{n}门课程',
+    requests: '1项申请待批准 | {n}项申请待批准',
     created: '创建于',
   },
 
   limit: {
     noSelfService:
       '在这里只有管理员可以注册智能体：请向你的管理员申请。智能体归你所有后，你可以在此页为它签发令牌，并把它带进你的课程。',
-    reached: '你已有 {limit} 个未停用的智能体，已达上限。请先停用一个不再使用的智能体，才能再创建新的。',
+    reached: '你已有{limit}个未停用的智能体，已达上限。请先停用一个不再使用的智能体，才能再创建新的。',
   },
 
   create: {
@@ -65,7 +65,7 @@ export default {
       course: '把它带入你有席位的课程。',
     },
     submit: '创建智能体',
-    done: '已创建 {name}',
+    done: '已创建{name}',
   },
 
   rename: {
@@ -98,11 +98,11 @@ export default {
     rename: '重命名',
     suspend: '停用',
     reactivate: '重新启用',
-    suspendTitle: '停用 {name}？',
+    suspendTitle: '停用{name}？',
     suspendBody:
       '从现在起，它在所有课程中的每一个操作都会被拒绝，直到你重新启用为止。它的席位、令牌及记录都会保留。已停用的智能体不计入你可拥有的数量。',
-    suspended: '已停用 {name}',
-    reactivated: '{name} 已重新启用',
+    suspended: '已停用{name}',
+    reactivated: '{name}已重新启用',
     suspendedByMe: '你已停用这个智能体：它的每一个操作都会被拒绝。重新启用即可让它恢复工作。',
     suspendedByAdmin: '这个智能体已被管理员停用',
     suspendedByAdminBody: '它的每一个操作都会被拒绝，而且只有管理员才能解除停用。如你认为应该解除，请联系平台管理员。',
@@ -119,16 +119,16 @@ export default {
       'Claude Desktop、编辑器、智能体 SDK 或任何其他 MCP 客户端都可以充当这个智能体：把这个地址交给它，并在这个请求头中放入智能体的其中一个令牌。',
     endpoint: 'MCP 端点（Streamable HTTP）',
     header: '请求头',
-    headerHint: '把 {placeholder} 换成智能体的其中一个令牌。请妥善保密：任何持有它的人都能以这个智能体的身份行事。',
+    headerHint: '把{placeholder}换成智能体的其中一个令牌。请妥善保密：任何持有它的人都能以这个智能体的身份行事。',
     claudeDesktop: '示例：Claude Desktop',
     claudeDesktopFile: 'claude_desktop_config.json',
     claudeDesktopHint:
-      '把这段加入 Claude Desktop 的配置（Settings → Developer → Edit Config），把 {placeholder} 换成智能体的其中一个令牌，然后重新启动 Claude Desktop。它会以 npx 运行 mcp-remote，所以需要安装 Node.js。',
+      '把这段加入 Claude Desktop 的配置（Settings → Developer → Edit Config），把{placeholder}换成智能体的其中一个令牌，然后重新启动 Claude Desktop。它会以 npx 运行 mcp-remote，所以需要安装 Node.js。',
     claudeDesktopHintToken:
       '把这段加入 Claude Desktop 的配置（Settings → Developer → Edit Config），然后重新启动 Claude Desktop。配置文件中含有令牌：请勿外泄。它会以 npx 运行 mcp-remote，所以需要安装 Node.js。',
     courseTodo: '在加入课程之前，它什么都做不了：请把它带入你有席位的课程。',
     courseWaiting: '安排它加入课程的申请正等待讲师批准。',
-    courseDone: '已加入 1 门课程。 | 已加入 {n} 门课程。',
+    courseDone: '已加入1门课程。 | 已加入{n}门课程。',
   },
 
   // How an agent with MCP access runs, on its page (McpAccessCard).
@@ -167,15 +167,15 @@ export default {
     },
     revoke: '撤销',
     revokeTitle: '撤销这个令牌？',
-    revokeBody: '使用 {token} 的程序，从下一次以 {name} 身份调用起便会被拒绝。',
+    revokeBody: '使用{token}的程序，从下一次以{name}身份调用起便会被拒绝。',
     revokeKeeps: '智能体会保留它的席位及其他令牌。已撤销的令牌永远无法再使用。',
     revoked: '已撤销令牌',
   },
 
   issue: {
-    title: '为 {name} 创建令牌',
+    title: '为{name}创建令牌',
     intro:
-      '供你通过 MCP 使用 {name} 的一个工具使用。持有它的人会以这个智能体的身份，也就是以你的代表身份行事：权限永远不会超过你自己的席位。',
+      '供你通过 MCP 使用{name}的一个工具使用。持有它的人会以这个智能体的身份，也就是以你的代表身份行事：权限永远不会超过你自己的席位。',
     suspended: '这个智能体已停用：在重新启用之前，这个令牌会被拒绝。',
     label: '标签',
     labelPlaceholder: '例如：我笔记本电脑上的 Claude Desktop',
@@ -185,13 +185,13 @@ export default {
     after: '在若干天后',
     never: '永不',
     days: '天',
-    daysInvalid: '请输入 1 至 3650 之间的整数天数',
+    daysInvalid: '请输入1至3650之间的整数天数',
     noExpiryWarn: '永不到期的令牌会一直有效，直到被撤销。无人看管的工具，最好设置到期日。',
     submit: '创建令牌',
   },
 
   reveal: {
-    title: '{name} 的新令牌',
+    title: '{name}的新令牌',
     warning: '请立即复制。令牌不会保存在任何地方，之后也不会再显示。',
     token: '令牌',
     listedAs: '在列表中显示为',
@@ -219,11 +219,11 @@ export default {
     allPerms: '所有权限',
     cappedHint: '每一项都取智能体自己的级别与你的级别之中较低者。',
     withdraw: '撤出',
-    withdrawTitle: '把它从 {course} 撤出？',
+    withdrawTitle: '把它从{course}撤出？',
     withdrawBody:
-      '{name} 会失去在 {course} 的席位，它提出而还没有人决定的申请会一并取消。它做过的一切都会保留记录。之后再带它加入，会是一个新席位：一切从头开始。',
-    withdrawn: '已从 {course} 撤出',
-    withdrawnCancelled: '已从 {course} 撤出，并取消了它的 1 项申请 | 已从 {course} 撤出，并取消了它的 {n} 项申请',
+      '{name}会失去在{course}的席位，它提出而还没有人决定的申请会一并取消。它做过的一切都会保留记录。之后再带它加入，会是一个新席位：一切从头开始。',
+    withdrawn: '已从{course}撤出',
+    withdrawnCancelled: '已从{course}撤出，并取消了它的1项申请 | 已从{course}撤出，并取消了它的{n}项申请',
     archived: '已归档的课程不接受任何更改，包括这一项。',
     proposals: '它在这里的提议',
   },
@@ -234,13 +234,13 @@ export default {
     since: '申请于',
     takeBack: '撤回',
     takeBackTitle: '撤回这项申请？',
-    takeBackBody: '安排 {name} 加入 {course} 的申请将被取消。你可以之后再提出新的申请。',
-    takenBack: '已撤回加入 {course} 的申请',
+    takeBackBody: '安排{name}加入{course}的申请将被取消。你可以之后再提出新的申请。',
+    takenBack: '已撤回加入{course}的申请',
   },
 
   bring: {
     open: '带入课程',
-    title: '把 {name} 带入课程',
+    title: '把{name}带入课程',
     intro: '它会以你的代表身份加入：在那里，它能做的永远不会比你多，触及范围不会更广，你离开后它也不会留下。',
     course: '课程',
     noCourses: '你没有在任何课程中拥有席位。',
@@ -281,21 +281,21 @@ export default {
         all: '全班',
         nobody: '不触及任何人的作业',
         you: '只有你：你自己的作业与成绩',
-        listed: '1 位学生 | {n} 位学生',
+        listed: '1位学生 | {n}位学生',
       },
       assignments: {
         all: '所有作业',
         nobody: '没有',
-        listed: '1 份作业 | {n} 份作业',
+        listed: '1份作业 | {n}份作业',
       },
     },
     cappedHint: '已按你自己的席位设置上限。负责管理课程成员的人以后可以调整它的权限，但永远不会超过你的权限。',
     adjust: '全部权限，以及另定级别',
     adjustHelp:
       '留空的权限按预设给予。它在这里不可拥有的级别会以灰色显示，并注明原因；如果你是学生，超出个人助手范围的事（例如替你起草提交）它只能以提议的方式进行，由你确认后才执行。',
-    changed: '已另定 {n} 项',
+    changed: '已另定{n}项',
     submit: '带入',
     submitRequest: '提交申请',
-    done: '{name} 已加入 {course}',
+    done: '{name}已加入{course}',
   },
 }

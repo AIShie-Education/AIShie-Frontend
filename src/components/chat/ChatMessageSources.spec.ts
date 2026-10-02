@@ -197,14 +197,14 @@ describe('ChatMessageSources', () => {
   it.each([
     [
       'zh-Hant',
-      '依據：《Week 2 — Variables》· 2 項',
-      '《Week 2 — Variables》· lecture2.pdf · 第 3 頁',
+      '依據：《Week 2 — Variables》· 2項',
+      '《Week 2 — Variables》· lecture2.pdf · 第3頁',
       '一份你無法開啟的課程教材',
     ],
     [
       'zh-Hans',
-      '依据：《Week 2 — Variables》· 2 项',
-      '《Week 2 — Variables》· lecture2.pdf · 第 3 页',
+      '依据：《Week 2 — Variables》· 2项',
+      '《Week 2 — Variables》· lecture2.pdf · 第3页',
       '一份你无法打开的课程教材',
     ],
   ] as const)('says what it relied on in %s', async (locale, line, first, second) => {

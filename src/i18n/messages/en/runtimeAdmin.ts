@@ -351,7 +351,7 @@ export default {
     answersOf: '{what}: answers a day',
     usdOf: '{what}: dollars a day',
     serverAnswers: 'Server: {n}',
-    serverUsd: 'Server: ${usd}',
+    serverUsd: 'Server: {usd}',
     serverNone: 'Server: no limit',
   },
 
@@ -555,7 +555,7 @@ export default {
     cost: 'Cost',
     tokens: 'Tokens',
     inOut: '{input} in · {output} out',
-    otherLine: '{kind}: {calls} calls, ${usd}',
+    otherLine: '{kind}: {calls} calls, {usd}',
     kinds: {
       model_calls: 'Model calls',
       transcription: 'Document transcription',
@@ -564,7 +564,7 @@ export default {
     all: 'Everything',
     offers: 'offers: {ids}',
     unpriced:
-      'No call went without a price. | One call had no price when it was made, and is counted as $0. | {n} calls had no price when they were made, and are counted as $0.',
+      'No call went without a price. | One call had no price when it was made, and is counted as US$0. | {n} calls had no price when they were made, and are counted as US$0.',
     unpricedShort: '{n} unpriced',
     toPrices: 'Go to the prices',
     empty: 'Nothing was recorded in these days.',

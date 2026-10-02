@@ -235,8 +235,8 @@ describe('switching a provider on and off', () => {
   it('switches one that is on but not offered off without asking, and promises no button leaving the sign-in page', async () => {
     for (const [locale, words] of [
       ['en', '大學統一認證 is off. Nobody is unlinked.'],
-      ['zh-Hant', '已停用 大學統一認證。不會解除任何連結。'],
-      ['zh-Hans', '已停用 大學統一認證。不会解除任何关联。'],
+      ['zh-Hant', '已停用大學統一認證。不會解除任何連結。'],
+      ['zh-Hans', '已停用大學統一認證。不会解除任何关联。'],
     ] as const) {
       vi.mocked(ElMessageBox.confirm).mockClear()
       core.providers = [
@@ -333,7 +333,7 @@ describe('deleting a provider', () => {
     const w = await page('zh-Hant')
     await rowOf(w, 'university-sso').find('.sso-cell__delete').trigger('click')
     await settle()
-    expect(confirmCalls()[0][0]).toContain('3 個帳號將無法再以此方式登入')
+    expect(confirmCalls()[0][0]).toContain('3個帳號將無法再以此方式登入')
     expect(core.to('POST', SSO.remove)).toHaveLength(0)
   })
 

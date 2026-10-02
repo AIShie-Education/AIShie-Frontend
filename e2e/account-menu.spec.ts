@@ -17,7 +17,7 @@ import {
 // caller's name, at the bottom of the activity bar, whose menu says who is
 // signed in and holds the account's settings, the language and the theme
 // (each a submenu, the choice in use checked) and signing out. The header
-// holds the page's title alone. On a phone, the account is a row at the
+// holds the page's title and the chat's button. On a phone, the account is a row at the
 // bottom of the side menu, its submenus opening beneath their items.
 
 test.describe('the account menu', () => {
@@ -28,8 +28,9 @@ test.describe('the account menu', () => {
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
     await expect(page.locator('.course-head')).toBeVisible()
-    // The header holds the title, and no button.
-    await expect(page.locator('.app-header button')).toHaveCount(0)
+    // The header holds the title, and no button but the chat's.
+    await expect(page.locator('.app-header button')).toHaveCount(1)
+    await expect(page.locator('.app-header button')).toHaveAttribute('aria-controls', 'chat-panel')
     await expect(page.locator('.app-header .el-dropdown')).toHaveCount(0)
 
     const button = accountButton(page)

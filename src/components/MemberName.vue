@@ -20,8 +20,9 @@ const name = computed(() => course.memberName(props.id))
   <span v-if="!id">—</span>
   <span v-else-if="name" class="member-name" :title="id">
     <el-icon v-if="showKind && member?.kind === 'agent'" class="member-name__agent"><Cpu /></el-icon>
-    {{ name }}
-    <span v-if="isMe" class="member-name__me">({{ t('common.labels.you') }})</span>
+    <span
+      >{{ name }}<span v-if="isMe" class="member-name__me app-you">{{ t('common.labels.youTag') }}</span></span
+    >
   </span>
   <IdText v-else :id="id" />
 </template>

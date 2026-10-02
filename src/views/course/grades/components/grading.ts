@@ -7,7 +7,7 @@ import { ApiError, read } from '@/api/http'
 import type { Decimal, GradeSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
-import { formatDecimal } from '@/utils/format'
+import { formatDecimal, formatPct as percentOfFraction } from '@/utils/format'
 import type { BreakdownRow } from '@/views/course/submissions/components/BreakdownEditor.vue'
 import { isNonNegativeDecimal } from '@/views/course/submissions/components/decimal'
 
@@ -281,9 +281,11 @@ export function formatScore(v: Decimal | null | undefined): string {
   return formatDecimal(s, Math.min(s.split('.')[1]?.length ?? 0, 20))
 }
 
-/** A percentage Core already worked out (a computed total, gradebook percent): "91.25%". */
+/** A percentage Core already worked out (a computed total, gradebook percent): "91.25%", every decimal place kept. */
 export function formatPct(v: Decimal | null | undefined): string {
-  return plainDecimal(v) === null ? '—' : `${formatScore(v)}%`
+  const s = plainDecimal(v)
+  if (s === null) return '—'
+  return percentOfFraction(Number(s) / 100, Math.min(s.split('.')[1]?.length ?? 0, 20))
 }
 
 /** score out of outOf as a percentage to two places, or "—". */

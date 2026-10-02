@@ -14,17 +14,11 @@ import type { TenantQuota } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
+import { formatMoney } from '@/utils/format'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import QuotaInputs from './QuotaInputs.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
-import {
-  adminErrorText,
-  quotaFieldsOf,
-  quotaFieldsProblems,
-  quotaInputOf,
-  usdShown,
-  type QuotaFields,
-} from './runtimeAdmin'
+import { adminErrorText, quotaFieldsOf, quotaFieldsProblems, quotaInputOf, type QuotaFields } from './runtimeAdmin'
 
 const { t } = useI18n()
 // Every column where the card has the 690 px they take; with less, a
@@ -144,7 +138,7 @@ function answersText(n: number | null | undefined): string {
   return n != null ? String(n) : t('runtimeAdmin.money.noLimit')
 }
 function usdText(v: string | null | undefined): string {
-  return v != null ? `$${usdShown(v)}` : t('runtimeAdmin.money.noLimit')
+  return v != null ? formatMoney(v) : t('runtimeAdmin.money.noLimit')
 }
 function serverText(q: TenantQuota): string {
   const c = q.config_per_day
