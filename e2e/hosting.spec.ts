@@ -298,11 +298,10 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
       status: 422,
       reason: 'hosting_fixed',
     })
-    // Nor is whether people ask it declared any more: that follows how it runs.
-    expect(refusal(await call(H, 'POST', `/v1/me/agents/${w.rtId}`, { site_chat: true }))).toEqual({
-      status: 400,
-      reason: 'site_chat_follows_hosting',
-    })
+    // Nor is whether people ask it declared any more: that follows how it
+    // runs. Core refused site_chat for a release (site_chat_follows_hosting),
+    // and takes no such field since (AIShie-Core #54): refused either way.
+    expect((await call(H, 'POST', `/v1/me/agents/${w.rtId}`, { site_chat: true })).status).toBe(400)
     for (const [id, hosting] of [
       [w.mcpId, 'mcp'],
       [w.rtId, 'runtime'],

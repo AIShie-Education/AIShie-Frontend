@@ -187,7 +187,13 @@ const week2 = await call(I, 'document.create', {
   body_md: `# Variables and types\n\n*Draft — not yet published.*\n\n| Type | Example |\n|---|---|\n| int | \`42\` |\n| float | \`3.14\` |\n| str | \`"hi"\` |\n`,
 })
 const syllabusToken = await uploadText(I, C, 'material', 'syllabus.txt', `CS101 syllabus (demo ${tag})\n\nAssessment: assignments 60%, midterm 40%.\n`)
-const syllabus = await call(I, 'document.create', { course_id: C, kind: 'material', title: 'Syllabus (file)', sort_order: 0, upload_token: syllabusToken })
+const syllabus = await call(I, 'document.create', {
+  course_id: C,
+  kind: 'material',
+  title: 'Syllabus (file)',
+  sort_order: 0,
+  files: [{ upload_token: syllabusToken, filename: 'syllabus.txt' }],
+})
 await call(I, 'document.publish', { course_id: C, document_id: syllabus.document_id })
 made.course.documents = { week1: week1.document_id, week2: week2.document_id, syllabus: syllabus.document_id }
 
@@ -253,7 +259,7 @@ const yukiDoc = await call(A.yuki.token, 'document.create', {
   kind: 'submission',
   submission_id: yukiSub.submission_id,
   title: 'converter.py',
-  upload_token: yukiFile,
+  files: [{ upload_token: yukiFile, filename: 'converter.py' }],
 })
 await call(A.yuki.token, 'submission.submit', {
   course_id: C,
