@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// One action in a queue: what it is, who, what about, when; and deciding or
+// One action in a queue: what it is, who, what about, when, and the proposal
+// it revises, if it revises one sent back for changes; and deciding or
 // reviewing it without leaving the list. A proposal of the caller's own, or of
 // an agent of theirs, may be taken back here while it waits (action.withdraw).
 import { computed } from 'vue'
@@ -15,6 +16,7 @@ import ActionActor from './ActionActor.vue'
 import ActionTarget from './ActionTarget.vue'
 import AnswerSources from './AnswerSources.vue'
 import DecidePanel from './DecidePanel.vue'
+import RevisesLine from './RevisesLine.vue'
 import { payloadOf, str, typeLabel, useJudgeRules, type ActionRow } from './actionText'
 import type { Done } from './decide'
 
@@ -96,6 +98,8 @@ const excerpt = computed(() => {
       </div>
       <span class="action-card__when"><TimeText :value="action.created_at" relative /></span>
     </header>
+
+    <RevisesLine v-if="action.revises_action_id" :course-id="courseId" :action-id="action.revises_action_id" />
 
     <dl class="action-card__facts">
       <div class="action-card__fact">
