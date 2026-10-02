@@ -353,6 +353,19 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     expect(await panel.locator('.chat-panel__pick').evaluate((e) => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(
       0,
     )
+    // My agents: the "AI" ends the name's last line, never the line of tags under it.
+    await page.goto('/account/agents')
+    for (const n of [LONG, HYPHEN]) {
+      const item = page.locator('.agents-item').filter({ hasText: n }).first()
+      await expect(item).toBeVisible()
+      await inside(item)
+      const name = item.locator('.agents-item__name')
+      await expect(name.locator('.ai-badge')).toBeVisible()
+      const [box, ai] = await Promise.all([name.boundingBox(), name.locator('.ai-badge').boundingBox()])
+      expect(ai!.y).toBeGreaterThanOrEqual(box!.y - 0.5)
+      expect(ai!.y + ai!.height).toBeLessThanOrEqual(box!.y + box!.height + 0.5)
+    }
+    expect(await sideways()).toBeLessThanOrEqual(0)
   })
 
   test('in Chinese, the “AI” stays “AI”, and a personal agent is called one', async ({ page }) => {

@@ -25,7 +25,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import AgentAvatar from '@/components/AgentAvatar.vue'
-import AiBadge from '@/components/AiBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ActorSummary from './ActorSummary.vue'
@@ -325,10 +325,13 @@ async function seat() {
             :to="{ name: 'admin-actor', params: { actorId: m.actor_id } }"
             class="seat__person-name"
           >
-            {{ m.display_name }}
+            <AgentName v-if="m.kind === 'agent'" :name="m.display_name" />
+            <template v-else>{{ m.display_name }}</template>
           </router-link>
-          <span v-else class="seat__person-name">{{ m.display_name }}</span>
-          <AiBadge v-if="m.kind === 'agent'" />
+          <span v-else class="seat__person-name">
+            <AgentName v-if="m.kind === 'agent'" :name="m.display_name" />
+            <template v-else>{{ m.display_name }}</template>
+          </span>
           <span v-if="m.actor_id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
           <StatusTag v-if="m.status !== 'active'" vocab="memberStatus" :value="m.status" />
         </li>
@@ -619,6 +622,7 @@ async function seat() {
   font-weight: 600;
   text-decoration: none;
   word-break: break-word;
+  min-width: 0;
 }
 .seat__person-name:hover {
   text-decoration: underline;

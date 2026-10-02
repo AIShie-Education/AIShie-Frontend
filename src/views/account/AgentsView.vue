@@ -23,7 +23,7 @@ import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
-import AiBadge from '@/components/AiBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import TimeText from '@/components/TimeText.vue'
 import AboutAgentsCard from './components/agents/AboutAgentsCard.vue'
@@ -151,9 +151,8 @@ function onHosted(_: unknown, actorId: string) {
                   class="agents-item__name"
                   @click.stop
                 >
-                  {{ a.display_name }}
+                  <AgentName :name="a.display_name" />
                 </router-link>
-                <AiBadge />
                 <el-tag
                   v-if="agentStanding(a) !== 'active'"
                   :type="STANDING_TAG[agentStanding(a)]"
@@ -247,7 +246,7 @@ function onHosted(_: unknown, actorId: string) {
 .agents-item__name {
   font-weight: 600;
   text-decoration: none;
-  word-break: break-word;
+  min-width: 0;
 }
 .agents-item__name:hover {
   text-decoration: underline;

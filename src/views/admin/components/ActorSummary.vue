@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // One actor at a glance: name, kind, standing, platform role, email, id.
 import AgentAvatar from '@/components/AgentAvatar.vue'
-import AiBadge from '@/components/AiBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 
@@ -29,11 +29,14 @@ defineProps<{
     <div class="actor-summary__body">
       <div class="actor-summary__line">
         <router-link v-if="link" :to="{ name: 'admin-actor', params: { actorId: actor.id } }" class="actor-summary__name">
-          {{ actor.display_name }}
+          <AgentName v-if="actor.kind === 'agent'" :name="actor.display_name" />
+          <template v-else>{{ actor.display_name }}</template>
         </router-link>
-        <span v-else class="actor-summary__name">{{ actor.display_name }}</span>
-        <AiBadge v-if="actor.kind === 'agent'" />
-        <StatusTag v-else vocab="actorKind" :value="actor.kind" />
+        <span v-else class="actor-summary__name">
+          <AgentName v-if="actor.kind === 'agent'" :name="actor.display_name" />
+          <template v-else>{{ actor.display_name }}</template>
+        </span>
+        <StatusTag v-if="actor.kind !== 'agent'" vocab="actorKind" :value="actor.kind" />
         <StatusTag v-if="actor.status && actor.status !== 'active'" vocab="actorStatus" :value="actor.status" />
         <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" />
       </div>
@@ -78,6 +81,7 @@ defineProps<{
 .actor-summary__name {
   font-weight: 600;
   word-break: break-word;
+  min-width: 0;
 }
 a.actor-summary__name {
   text-decoration: none;

@@ -21,7 +21,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
-import AiBadge from '@/components/AiBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './components/ActorSummary.vue'
@@ -371,9 +371,9 @@ async function openById() {
                       class="actors__link"
                       @click.stop
                     >
-                      {{ row.display_name }}
+                      <AgentName v-if="row.kind === 'agent'" :name="row.display_name" />
+                      <template v-else>{{ row.display_name }}</template>
                     </router-link>
-                    <AiBadge v-if="row.kind === 'agent'" />
                     <span v-if="row.id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
                   </div>
                   <!-- Two with the same name are told apart by their IDs. -->
@@ -562,6 +562,7 @@ async function openById() {
   font-weight: 600;
   text-decoration: none;
   word-break: break-word;
+  min-width: 0;
 }
 .actors__link:hover {
   text-decoration: underline;
