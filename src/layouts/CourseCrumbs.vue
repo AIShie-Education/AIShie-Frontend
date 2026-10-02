@@ -6,7 +6,7 @@
 // grades' tab chosen follows. Only the last step is the page shown
 // (aria-current): on the overview, the course is a link to it all the same,
 // marked no more than on any other page. On a phone the course is its code
-// alone.
+// alone, cut short where the steps after it leave it too little room.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -122,10 +122,17 @@ const sub = computed(() =>
   font-weight: var(--app-weight-strong, 600);
   color: var(--app-ink);
 }
-/* On a phone: the course's code alone, then the tab. */
+/* On a phone: the course's code alone, then the tab. Where they do not all fit (a long code, a narrow phone),
+   the code gives way, cut short with an ellipsis, rather than run under the tab. */
 @media (max-width: 640px) {
   .course-crumbs__title {
     display: none;
+  }
+  .course-crumbs__code {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 </style>

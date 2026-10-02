@@ -183,6 +183,32 @@ test.describe('at phone width', () => {
     }
   })
 
+  test('the top bar’s way up cuts the course’s code short, rather than run it under the tab, on a narrow phone', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    // The narrowest of phones, on a page three steps down: the course, Grades, the grading scheme.
+    await page.setViewportSize({ width: 320, height: 700 })
+    await page.goto(coursePath('scheme'))
+    const crumbs = page.getByRole('navigation', { name: 'Where you are' })
+    await expect(crumbs.getByText('Grading scheme')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    const steps = await crumbs.evaluate((nav) => {
+      const code = nav.querySelector('.course-crumbs__code')!
+      const after = [...nav.querySelectorAll('li')].slice(1)
+      return {
+        cut: code.scrollWidth > code.clientWidth,
+        codeRight: code.getBoundingClientRect().right,
+        nextLeft: after[0]!.getBoundingClientRect().left,
+        lastRight: after[after.length - 1]!.getBoundingClientRect().right,
+      }
+    })
+    expect(steps.cut).toBe(true)
+    expect(steps.codeRight).toBeLessThanOrEqual(steps.nextLeft)
+    expect(steps.lastRight).toBeLessThanOrEqual(320)
+  })
+
   test('the chat is a sheet over the whole screen, opened from a floating button, and fits it', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
