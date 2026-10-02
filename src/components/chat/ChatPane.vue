@@ -53,9 +53,9 @@ import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox, type DropdownInstance } from 'element-plus'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
-import AgentBadge from '@/components/AgentBadge.vue'
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
-import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useBackCloses } from '@/composables/useBackCloses'
 import { useNow } from '@/composables/useNow'
@@ -63,7 +63,7 @@ import { useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
 import { useDropTarget } from '@/composables/useFileDrop'
 import { courseLine, dateLine, usePrintLayout, type PrintRequest } from '@/composables/usePrintLayout'
-import { formatDateTime } from '@/utils/format'
+import { formatDateTime, formatList } from '@/utils/format'
 import { entriesHtml } from '@/utils/printLayout'
 import type { ApiError } from '@/api/http'
 import {
@@ -99,6 +99,7 @@ import { courseMentions } from './mentions'
 import ChatMessage from './ChatMessage.vue'
 import ChatStatusLine from './ChatStatusLine.vue'
 import ChatDraft from './ChatDraft.vue'
+import AskableText from './AskableText.vue'
 import { attachmentsFor, rememberSent, sentFilesOf } from './attachments'
 
 const props = withDefaults(
@@ -210,6 +211,7 @@ interface Party {
   mine?: boolean
   lastSeenAt?: string | null
   answerLevel?: string | null
+  seatStatus?: string | null
 }
 /** The one the caller talks to (for staff reading it, the respondent). */
 const other = computed<Party | null>(() => {
@@ -236,7 +238,15 @@ const other = computed<Party | null>(() => {
     mine: role.value === 'opener' && r.is_delegate_of_opener,
     lastSeenAt: r.last_seen_at,
     answerLevel: r.answer_level,
+    seatStatus: r.seat_status,
   }
+})
+/** Whose agent it is, for the caller: said on hover, as the header has no room for it. */
+const whose = computed(() => {
+  const o = other.value
+  if (!o || o.kind !== 'agent') return undefined
+  if (o.mine) return t('common.agent.yours')
+  return o.ownerName ? t('common.agent.ownersAgent', { owner: o.ownerName }) : undefined
 })
 /** What the agent's answers go through, when not straight out. */
 const answerLevel = computed(() => {
@@ -702,7 +712,7 @@ async function transcript(): Promise<PrintRequest> {
           markdown: !m.retracted && !fromOpener(m) ? (m.body ?? '') : null,
           text: !m.retracted && fromOpener(m) ? (m.body ?? '') : null,
           files: m.attachments?.length
-            ? t('preview.print.files', { names: m.attachments.map((a) => a.filename).join(', ') })
+            ? t('preview.print.files', { names: formatList(m.attachments.map((a) => a.filename)) })
             : null,
         })),
       ),
@@ -812,8 +822,13 @@ const closedLine = computed(() => {
       <span>{{ t('chat.attach.dropHere') }}</span>
     </div>
     <header class="chat-pane__head">
-      <!-- One row: the agent, whether anything runs it, and a closed conversation's state; its title on hover. -->
+      <!--
+        One row: the agent (its avatar, name and "AI"), whether it can be asked now, and a closed
+        conversation's state; its title on hover. Only the course and the name give way to a narrow
+        panel: the "AI" and whether it can be asked stay whole. Whose agent it is is said on hover.
+      -->
       <div class="chat-pane__name-row" :title="view?.title || undefined">
+        <AgentAvatar v-if="other?.kind === 'agent' && role !== 'overseer'" :name="other.name" size="small" />
         <span class="chat-pane__name">
           <template v-if="courseLabel"
             ><span class="chat-pane__course">{{ courseLabel }}</span> ·
@@ -823,10 +838,18 @@ const closedLine = computed(() => {
           </template>
           <template v-else>{{ other?.name ?? '' }}</template>
         </span>
-        <AgentBadge v-if="other && other.kind === 'agent' && other.mine" :kind="other.kind" mine />
-        <!-- Not said of an agent nobody can ask here now: when it was last seen tells nothing of that. -->
+        <AiBadge v-if="other?.kind === 'agent'" class="chat-pane__ai" />
+        <!-- Not said of an agent nobody can ask here now: whether something runs it tells nothing of that. -->
         <span v-if="other?.kind === 'agent' && !elsewhere" class="chat-pane__presence"
-          ><PresenceText :value="other.lastSeenAt"
+          ><AskableText
+            :who="{
+              kind: other.kind,
+              last_seen_at: other.lastSeenAt,
+              answer_level: other.answerLevel,
+              seat_status: other.seatStatus,
+            }"
+            :name="other.name"
+            :whose="whose"
         /></span>
         <StatusTag v-if="status?.state === 'closed'" vocab="conversationState" :value="status.state" />
       </div>
@@ -913,7 +936,7 @@ const closedLine = computed(() => {
                 <p class="chat-pane__held-text">{{ h.body }}</p>
                 <p v-if="h.files.length" class="chat-pane__held-files">
                   <el-icon aria-hidden="true"><Paperclip /></el-icon>
-                  {{ t('chat.attach.held', { n: h.files.length, names: h.files.join(', ') }, h.files.length) }}
+                  {{ t('chat.attach.held', { n: h.files.length, names: formatList(h.files) }, h.files.length) }}
                 </p>
               </div>
               <div class="chat-pane__held-note">
@@ -1070,17 +1093,19 @@ const closedLine = computed(() => {
   color: var(--app-indigo);
 }
 .chat-pane__name {
-  min-width: 0;
+  /* However narrow the panel, the name keeps room to be read. */
+  min-width: 4em;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 14px;
   font-weight: 600;
 }
-/* Whether anything runs it stays whole; a long name gives way first. */
+/* The "AI" and whether it can be asked stay whole; a long name gives way first. */
+.chat-pane__ai,
 .chat-pane__presence {
   flex-shrink: 0;
 }
-.chat-pane__presence :deep(.presence) {
+.chat-pane__presence :deep(.askable) {
   font-size: 12px;
 }
 .chat-pane__head-actions {

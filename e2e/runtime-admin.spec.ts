@@ -381,15 +381,15 @@ test.describe('with an agent runtime', () => {
     await page.getByRole('tab', { name: 'Documents' }).click()
     await expect(page).toHaveURL(/tab=documents/)
     const ocr = page.locator('.ocr-card')
-    await expect(ocr.getByText('Read in this order: 繁體中文, English')).toBeVisible()
+    await expect(ocr.getByText('Read in this order: 繁體中文 and English')).toBeVisible()
     const japanese = ocr.getByRole('checkbox', { name: /日本語/ })
     await expect(japanese).not.toBeChecked()
     await ocr.getByText('日本語').click()
     await expect(japanese).toBeChecked()
     await ocr.getByRole('button', { name: 'Save languages' }).click()
-    await expectToasted(page, 'OCR reads in 繁體中文, English, 日本語.')
+    await expectToasted(page, 'OCR reads in 繁體中文, English, and 日本語.')
     await ocr.getByRole('button', { name: 'Use the server’s default' }).click()
-    await expect(ocr.getByText('Read in this order: 简体中文, 繁體中文, English')).toBeVisible()
+    await expect(ocr.getByText('Read in this order: 简体中文, 繁體中文, and English')).toBeVisible()
     expect(runtime.sent.filter((x) => x.path === '/admin/settings' && x.method === 'PATCH').map((x) => x.body)).toEqual(
       [{ ocr: { languages: ['chi_tra', 'eng', 'jpn'] } }, { ocr: { languages: null } }],
     )

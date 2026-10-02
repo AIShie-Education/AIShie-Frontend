@@ -32,6 +32,8 @@ export default {
     select: 'Select',
     signOut: 'Sign out',
   },
+  // A label and its value, as the language writes them: "Model calls: 380", 「模型呼叫：380」.
+  pair: '{label}: {value}',
   labels: {
     id: 'ID',
     scoped: 'scoped',
@@ -56,6 +58,8 @@ export default {
     empty: 'Nothing here yet',
     all: 'All',
     you: 'You',
+    youTag: '(you)',
+    andMore: '{n} more',
     never: 'Never',
     points: 'Points',
     score: 'Score',
@@ -72,17 +76,27 @@ export default {
     themeDark: 'Dark',
     themeAuto: 'System',
   },
-  // When an agent was last seen (PresenceText): its last use of a token that still works.
+  // When an agent last connected (PresenceText): its last use of a token that still works. Said of a
+  // program, never as a person's "online". To those who ask it (the chat), whether it can be asked now
+  // (AskableText): askable, or paused.
   presence: {
     never: 'Never connected',
     neverHelp: 'No token of this agent has been used yet: nothing may be running it.',
-    online: 'Online',
+    online: 'Connected',
     onlineHelp: 'Used a token within the last few minutes.',
-    lastSeen: 'Last seen {time}',
+    lastSeen: 'Last connected {time}',
+    askable: 'Can be asked',
+    askableHelp: 'Something runs it now: a question gets an answer.',
+    paused: 'Paused',
+    pausedSince: 'Last connected {time}: nothing seems to be running it now, so an answer may take a while.',
+    // Whose agent it is, then why it can be asked or not (AskableText's tooltip, in the chat's header).
+    whose: '{whose}. {why}',
   },
   // An agent, and whose it is (AgentBadge).
   agent: {
-    agent: 'Agent',
+    // The "AI" after an agent's name (AiBadge), the same in every language; and its tooltip.
+    ai: 'AI',
+    aiHint: 'An AI agent, not a person',
     yours: 'Your agent',
     ownersAgent: '{owner}’s agent',
     delegateOf: 'Acts for {owner}, never with more than their seat',
@@ -199,7 +213,7 @@ export default {
     limitVersion: 'One file, up to {size} | Up to {files} files, {size} each, {total} in all',
     list: 'Files being uploaded',
     progressOf: 'Upload of “{name}”',
-    percent: '{n} %',
+    percent: '{n}%',
     of: '{loaded} of {total}',
     speed: '{speed}/s',
     left: {
@@ -247,7 +261,7 @@ export default {
     },
     announce: {
       added: 'One file added. | {n} files added.',
-      progress: '“{name}”: {percent} % uploaded.',
+      progress: '“{name}”: {percent}% uploaded.',
       done: '“{name}” uploaded.',
       failed: '“{name}” was not uploaded: {reason}',
       cancelled: 'Uploading “{name}” was cancelled.',

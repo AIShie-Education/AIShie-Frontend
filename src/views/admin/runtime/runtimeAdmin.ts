@@ -393,14 +393,6 @@ export function sameQuotas(a: PlanQuotas, b: PlanQuotas): boolean {
 /** A decimal of at most six places, with no sign or exponent: what the forms take. */
 const DECIMAL = /^[0-9]{1,7}(\.[0-9]{1,6})?$/
 
-/** Dollars as a person reads them: the runtime's six places, trimmed to what is needed, and at least cents. */
-export function usdShown(v: string | null | undefined): string {
-  if (v === null || v === undefined || v === '') return ''
-  const [whole, frac = ''] = v.split('.')
-  const kept = frac.replace(/0+$/, '')
-  return `${whole}.${kept.length >= 2 ? kept : kept.padEnd(2, '0')}`
-}
-
 /** Dollars as a form field holds them: no trailing zeros ("2.500000" → "2.5"); '' for none. */
 export function usdField(v: string | null | undefined): string {
   if (v === null || v === undefined || v === '') return ''

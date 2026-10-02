@@ -17,6 +17,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { delegateArgsFor, hostingOf } from '@/utils/agents'
 import HostingChoice from '@/components/HostingChoice.vue'
+import AgentName from '@/components/AgentName.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -225,7 +226,7 @@ async function submit() {
               :disabled="!!unavailable(a)"
             >
               <div class="add-agent__option">
-                <span class="add-agent__option-name">{{ a.display_name }}</span>
+                <AgentName :name="a.display_name" ellipsis class="add-agent__option-name" />
                 <span v-if="unavailable(a)" class="add-agent__option-meta">{{ unavailable(a) }}</span>
                 <PresenceText v-else :value="a.last_seen_at" />
               </div>

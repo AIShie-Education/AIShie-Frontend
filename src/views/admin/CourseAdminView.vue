@@ -118,9 +118,11 @@ function onSeated(_memberId: string, actorId: string) {
   <div class="course-admin">
     <PageHeader
       :title="course?.title ?? t('admin.course.title')"
-      :subtitle="codeLabel || undefined"
       :back="{ name: 'admin-courses' }"
     >
+      <template v-if="course" #subtitle
+        >{{ course.code }}<template v-if="course.section"><span class="app-sep">·</span>{{ course.section }}</template></template
+      >
       <template #tags>
         <StatusTag v-if="course" vocab="courseStatus" :value="course.status" size="default" />
       </template>

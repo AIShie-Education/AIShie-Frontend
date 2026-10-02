@@ -24,6 +24,7 @@ import JsonView from '@/components/JsonView.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import ActionActor from './components/ActionActor.vue'
 import ActionTarget from './components/ActionTarget.vue'
 import ActionTimeline from './components/ActionTimeline.vue'
@@ -315,7 +316,7 @@ const errorTitle = computed(() => {
           </template>
           <template #subtitle>
             <span class="action-view__subtitle">
-              <ActionActor :member-id="action.member_id" :actor-id="action.actor_id" show-kind />
+              <ActionActor :member-id="action.member_id" :actor-id="action.actor_id" />
               <span>·</span>
               <TimeText :value="action.created_at" />
               <code class="action-view__code">{{ action.action_type }}</code>
@@ -382,7 +383,7 @@ const errorTitle = computed(() => {
                 <div>
                   <dt>{{ action.authz_result === 'confirm_required' ? t('actions.fields.proposer') : t('actions.fields.actor') }}</dt>
                   <dd class="action-view__inline">
-                    <ActionActor :member-id="action.member_id" :actor-id="action.actor_id" show-kind />
+                    <ActionActor :member-id="action.member_id" :actor-id="action.actor_id" />
                   </dd>
                 </div>
                 <div>
@@ -447,7 +448,7 @@ const errorTitle = computed(() => {
                     {{ typeLabel(aboutAction.action_type) }}
                   </router-link>
                   <StatusTag vocab="actionStatus" :value="aboutAction.status" />
-                  <ActionActor :member-id="aboutAction.member_id" :actor-id="aboutAction.actor_id" show-kind />
+                  <ActionActor :member-id="aboutAction.member_id" :actor-id="aboutAction.actor_id" />
                   <ActionTarget :action="aboutAction" :course-id="courseId" :depth="1" link />
                 </template>
                 <MaybeLink v-else :to="actionRoute(action.target_id)">
@@ -547,7 +548,7 @@ const errorTitle = computed(() => {
 
               <template v-else-if="action.status === 'executed'">
                 <p v-if="rules.byOwner(action, 'decided')" class="action-view__owner">
-                  <el-icon><Cpu /></el-icon>{{ t('actions.result.approvedByOwner') }}
+                  <el-icon><AgentSeatIcon /></el-icon>{{ t('actions.result.approvedByOwner') }}
                 </p>
                 <p class="action-view__help">{{ t('actions.result.made') }}</p>
                 <FieldsView v-if="hasResult" :course-id="courseId" :value="action.result" />

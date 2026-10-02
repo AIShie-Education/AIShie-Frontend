@@ -4,8 +4,11 @@ import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import { defineComponent, h } from 'vue'
 import { i18n, setLocale } from '@/i18n'
+import { read } from '@/api/http'
 import EventItem from './EventItem.vue'
-import type { CourseEvent } from './feed'
+import { useCourseStore } from '@/stores/course'
+import { ensureEventWho, forgetActionWho } from './actors'
+import { whoReachOf, type CourseEvent } from './feed'
 
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
@@ -35,8 +38,13 @@ function event(type: string, kind: string | undefined): CourseEvent {
   }
 }
 
-function mountItem(e: CourseEvent) {
+function mountItem(e: CourseEvent, perms: Record<string, string> = {}) {
   setActivePinia(createPinia())
+  if (Object.keys(perms).length) {
+    const course = useCourseStore()
+    course.permsSource = 'exact'
+    course.perms = perms as never
+  }
   return mount(EventItem, {
     props: { event: e, courseId: COURSE },
     global: {
@@ -308,7 +316,7 @@ describe('EventItem, a message posted in a conversation', () => {
     )
     await flushPromises()
     expect(w.text()).toContain('With 2 files')
-    expect(tips(w)).toEqual(['notes.pdf, plot.png'])
+    expect(tips(w)).toEqual(['notes.pdf and plot.png'])
     w.unmount()
   })
 
@@ -352,5 +360,337 @@ describe('EventItem, a new version of a document', () => {
     expect(old.text()).not.toContain('file')
     expect(old.text()).not.toContain('Text only')
     old.unmount()
+  })
+})
+
+describe('EventItem, who acted', () => {
+  const DECIDES = { action_decide: 'autonomous' }
+  const action = (type: string, payload: Record<string, unknown> = {}): CourseEvent => ({
+    seq: 30,
+    type,
+    occurred_at: '2026-09-01T00:00:00Z',
+    subject_type: 'action',
+    subject_id: 'act-1',
+    action_id: 'act-1',
+    payload: { action_type: 'grade.submit', ...payload },
+  })
+  // Any other event, filed under the action it was done under.
+  const done = (type: string, actionId: string | undefined): CourseEvent => ({
+    seq: 31,
+    type,
+    occurred_at: '2026-09-01T00:00:00Z',
+    subject_type: 'grade',
+    subject_id: 'g-1',
+    ...(actionId ? { action_id: actionId } : {}),
+    payload: {},
+  })
+  let asked: string[] = []
+  let decided: string | null = 'm-teacher'
+  beforeEach(() => {
+    forgetActionWho()
+    asked = []
+    decided = 'm-teacher'
+    vi.mocked(read).mockImplementation((async (name: string, args: Record<string, unknown>) => {
+      asked.push(`${name} ${args.action_id}`)
+      if (name !== 'action.get') throw new Error(`unexpected ${name}`)
+      return { id: args.action_id, member_id: 'm-agent', decided_by_member_id: decided, reviewed_by_member_id: null }
+    }) as unknown as typeof read)
+  })
+  const names = (w: ReturnType<typeof mountItem>) =>
+    w.findAll('.event-item__who member-name-stub').map((x) => x.attributes('id'))
+
+  it('names who proposed it, then who decided it, read once from the action, on the row’s first line', async () => {
+    const w = mountItem(action('action.approved', { outcome: 'executed' }), DECIDES)
+    await flushPromises()
+    expect(asked).toEqual(['action.get act-1'])
+    expect(names(w)).toEqual(['m-agent', 'm-teacher'])
+    expect(w.find('.event-item__who').text()).toMatch(/proposed\s*→\s*approved/)
+    // First, before what happened.
+    expect(w.find('.event-item__body').element.firstElementChild?.classList).toContain('event-item__who')
+    w.unmount()
+    // Its proposal, after: read already.
+    const p = mountItem(action('action.proposed'), DECIDES)
+    await flushPromises()
+    expect(asked).toEqual(['action.get act-1'])
+    expect(names(p)).toEqual(['m-agent'])
+    expect(p.find('.event-item__who').text()).toBe('proposed')
+    p.unmount()
+  })
+
+  it('reads in Chinese with no spaces of its own', async () => {
+    setLocale('zh-Hant')
+    const w = mountItem(action('action.rejected'), DECIDES)
+    await flushPromises()
+    expect(w.find('.event-item__who').text()).toMatch(/^提出\s*→\s*駁回$/)
+    w.unmount()
+  })
+
+  it.each([
+    ['en', /^proposed\s*→\s*requested changes$/],
+    ['zh-Hant', /^提出\s*→\s*要求修改$/],
+  ] as const)('names who proposed it and who sent it back for changes (%s)', async (locale, text) => {
+    setLocale(locale)
+    const w = mountItem(action('action.changes_requested', { by_action_id: 'd1' }), DECIDES)
+    await flushPromises()
+    expect(names(w)).toEqual(['m-agent', 'm-teacher'])
+    expect(w.find('.event-item__who').text()).toMatch(text)
+    w.unmount()
+  })
+
+  it('names who did any other event, from the action it was done under', async () => {
+    decided = null
+    const w = mountItem(done('grade.created', 'act-9'), DECIDES)
+    await flushPromises()
+    expect(asked).toEqual(['action.get act-9'])
+    expect(names(w)).toEqual(['m-agent'])
+    expect(w.find('.event-item__who').text()).toBe('did it')
+    w.unmount()
+  })
+
+  it('names who proposed it and who approved it, for an event of an approved proposal', async () => {
+    const w = mountItem(done('grade.created', 'act-8'), DECIDES)
+    await flushPromises()
+    expect(names(w)).toEqual(['m-agent', 'm-teacher'])
+    expect(w.find('.event-item__who').text()).toMatch(/proposed\s*→\s*approved/)
+    w.unmount()
+  })
+
+  it('asks nothing for a seat it does not know, nor for an event of no action', async () => {
+    const w = mountItem(action('action.proposed'))
+    await flushPromises()
+    const g = mountItem(done('grade.created', 'act-7'), { action_decide: 'denied' })
+    await flushPromises()
+    const n = mountItem(done('grade.created', undefined), DECIDES)
+    await flushPromises()
+    expect(asked).toEqual([])
+    for (const x of [w, g, n]) {
+      expect(x.find('.event-item__who').exists()).toBe(false)
+      x.unmount()
+    }
+  })
+
+  it('names nobody where the action cannot be read, and in a short list', async () => {
+    vi.mocked(read).mockImplementation((async () => Promise.reject(new Error('forbidden'))) as unknown as typeof read)
+    const w = mountItem(action('action.proposed'), DECIDES)
+    await flushPromises()
+    expect(w.find('.event-item__who').exists()).toBe(false)
+    w.unmount()
+    forgetActionWho()
+    setActivePinia(createPinia())
+    const course = useCourseStore()
+    course.permsSource = 'exact'
+    course.perms = DECIDES as never
+    const c = mount(EventItem, {
+      props: { event: action('action.proposed'), courseId: COURSE, compact: true },
+      global: {
+        plugins: [i18n, ElementPlus],
+        stubs: { ElTooltip: TooltipStub, RouterLink: true, MemberName: true, TimeText: true },
+      },
+    })
+    await flushPromises()
+    expect(c.find('.event-item__who').exists()).toBe(false)
+    c.unmount()
+  })
+})
+
+describe('EventItem, who acted, to a seat that does not decide actions', () => {
+  const STUDENT = { action_decide: 'denied', document_read: 'autonomous' }
+  const done = (actionId: string, student: string | null = 'm-yuki'): CourseEvent => ({
+    seq: 40,
+    type: 'submission.submitted',
+    occurred_at: '2026-09-01T00:00:00Z',
+    subject_type: 'submission',
+    subject_id: 's-1',
+    action_id: actionId,
+    ...(student ? { student_member_id: student } : {}),
+    payload: {},
+  })
+  let asked: string[] = []
+  beforeEach(() => {
+    forgetActionWho()
+    asked = []
+    vi.mocked(read).mockImplementation((async (name: string, args: Record<string, unknown>) => {
+      if (name === 'action.list_mine') {
+        asked.push(`${name} ${args.after ?? ''} ${String(args.exclude_types)}`)
+        // Her own: one she did, and one she proposed that her teacher approved.
+        return {
+          actions: [
+            { id: 'act-1', actor_id: 'a-yuki', member_id: 'm-yuki' },
+            { id: 'act-2', actor_id: 'a-yuki', member_id: 'm-yuki', decided_by_member_id: 'm-teacher' },
+          ],
+        }
+      }
+      asked.push(`${name} ${args.action_id ?? ''}`)
+      if (name === 'agent.list') return { agents: [{ actor_id: 'a-helper', display_name: 'Yuki’s revision helper' }] }
+      // Core lets her read her own agent's action, and no one else's.
+      if (name === 'action.get' && args.action_id === 'act-agent')
+        return { id: 'act-agent', actor_id: 'a-helper', member_id: 'm-helper', decided_by_member_id: 'm-teacher' }
+      throw new Error('forbidden')
+    }) as unknown as typeof read)
+  })
+  function mountAs(e: CourseEvent, ownsAgent: boolean) {
+    setActivePinia(createPinia())
+    const course = useCourseStore()
+    course.permsSource = 'exact'
+    course.perms = STUDENT as never
+    course.membership = { member_id: 'm-yuki' } as never
+    course.ownsAgentHere = ownsAgent
+    return mount(EventItem, {
+      props: { event: e, courseId: COURSE },
+      global: {
+        plugins: [i18n, ElementPlus],
+        stubs: { ElTooltip: TooltipStub, RouterLink: true, MemberName: true, TimeText: true },
+      },
+    })
+  }
+  const parts = (w: ReturnType<typeof mountAs>) =>
+    w.findAll('.event-item__who member-name-stub').map((x) => [x.attributes('id'), x.attributes('agent') ?? ''])
+
+  it('names who acted in her own actions, from her own list of them, leaving out her chats', async () => {
+    const w = mountAs(done('act-1'), false)
+    const p = mountAs(done('act-2'), false)
+    await flushPromises()
+    // Read from the start, then on from where it ended for whatever was asked while it was read.
+    expect(asked).toEqual([
+      'action.list_mine  conversation.ask,conversation.answer',
+      'action.list_mine act-2 conversation.ask,conversation.answer',
+    ])
+    expect(parts(w)).toEqual([['m-yuki', '']])
+    expect(w.find('.event-item__who').text()).toBe('did it')
+    expect(parts(p)).toEqual([
+      ['m-yuki', ''],
+      ['m-teacher', ''],
+    ])
+    expect(p.find('.event-item__who').text()).toMatch(/proposed\s*→\s*approved/)
+    w.unmount()
+    p.unmount()
+  })
+
+  it('names her own agent, by its name, where it acted on her work, and asks nothing of anyone else’s', async () => {
+    const w = mountAs(done('act-agent'), true)
+    await flushPromises()
+    expect(asked).toEqual([
+      'action.list_mine  conversation.ask,conversation.answer',
+      'action.get act-agent',
+      'agent.list ',
+    ])
+    expect(parts(w)).toEqual([
+      ['m-helper', '[object Object]'],
+      ['m-teacher', ''],
+    ])
+    w.unmount()
+    // Another's action about her work: asked of, refused, and named nobody; about no work of hers, never asked.
+    const o = mountAs(done('act-other'), true)
+    const c = mountAs(done('act-course', null), true)
+    await flushPromises()
+    expect(asked.slice(3).filter((a) => a.startsWith('action.get'))).toEqual(['action.get act-other'])
+    for (const x of [o, c]) {
+      expect(x.find('.event-item__who').exists()).toBe(false)
+      x.unmount()
+    }
+  })
+
+  it('names her own agent where she is found to own one while her own list is still being read', async () => {
+    // Her list comes back late: the course learns meanwhile that she owns an agent here
+    // (course.ownsAgentHere, asked when the course opens), and the feed asks again (ActivityView).
+    let release!: () => void
+    const late = new Promise<void>((r) => (release = r))
+    const plain = vi.mocked(read).getMockImplementation()!
+    vi.mocked(read).mockImplementation((async (name: string, args: Record<string, unknown>) => {
+      if (name === 'action.list_mine') await late
+      return plain(name as never, args as never)
+    }) as unknown as typeof read)
+    const e = done('act-agent')
+    const w = mountAs(e, false)
+    await flushPromises()
+    const course = useCourseStore()
+    course.ownsAgentHere = true
+    ensureEventWho(COURSE, e, whoReachOf(course))
+    release()
+    await flushPromises()
+    expect(asked.filter((a) => a.startsWith('action.get'))).toEqual(['action.get act-agent'])
+    expect(parts(w)).toEqual([
+      ['m-helper', '[object Object]'],
+      ['m-teacher', ''],
+    ])
+    w.unmount()
+  })
+
+  it('names nobody, and asks nothing but her own list, where she owns no agent here', async () => {
+    const w = mountAs(done('act-agent'), false)
+    await flushPromises()
+    expect(asked).toEqual(['action.list_mine  conversation.ask,conversation.answer'])
+    expect(w.find('.event-item__who').exists()).toBe(false)
+    w.unmount()
+  })
+})
+
+describe('EventItem, an agent seated as someone’s delegate', () => {
+  it('is shown as the kind of agent it is, not in the role “Assistant”', async () => {
+    const e: CourseEvent = {
+      seq: 40,
+      type: 'member.added',
+      occurred_at: '2026-09-01T00:00:00Z',
+      subject_type: 'member',
+      subject_id: 'm-tutor',
+      payload: { role: 'assistant' },
+    }
+    setActivePinia(createPinia())
+    const course = useCourseStore()
+    course.members = new Map([
+      [
+        'm-tutor',
+        { id: 'm-tutor', kind: 'agent', role: 'assistant', principal_member_id: 'm-yuki', answers_course: false },
+      ],
+    ]) as never
+    course.membersState = 'loaded'
+    const w = mount(EventItem, {
+      props: { event: e, courseId: COURSE },
+      global: {
+        plugins: [i18n, ElementPlus],
+        stubs: { ElTooltip: TooltipStub, RouterLink: true, MemberName: true, TimeText: true },
+      },
+    })
+    await flushPromises()
+    expect(w.find('.event-item__facts').text()).toBe('Personal agent')
+    expect(w.text()).not.toContain('Assistant')
+    w.unmount()
+  })
+
+  it.each([
+    [true, 'Course agent'],
+    [false, 'Personal agent'],
+  ])(
+    'is shown as the kind the event says, to a seat that cannot read the member list (answers the course: %s)',
+    async (answers, kind) => {
+      const e: CourseEvent = {
+        seq: 41,
+        type: 'member.added',
+        occurred_at: '2026-09-01T00:00:00Z',
+        subject_type: 'course_member',
+        subject_id: 'm-hidden',
+        payload: { role: 'assistant', delegate: true, principal_member_id: 'm-yuki', answers_course: answers },
+      }
+      const w = mountItem(e)
+      await flushPromises()
+      expect(w.find('.event-item__facts').text()).toBe(kind)
+      expect(w.text()).not.toContain('Assistant')
+      w.unmount()
+    },
+  )
+
+  it('keeps the role “Assistant” for a seat that is nobody’s delegate, as far as anyone can tell', async () => {
+    const e: CourseEvent = {
+      seq: 42,
+      type: 'member.added',
+      occurred_at: '2026-09-01T00:00:00Z',
+      subject_type: 'course_member',
+      subject_id: 'm-ta',
+      payload: { role: 'assistant' },
+    }
+    const w = mountItem(e)
+    await flushPromises()
+    expect(w.find('.event-item__facts').text()).toBe('Assistant')
+    w.unmount()
   })
 })

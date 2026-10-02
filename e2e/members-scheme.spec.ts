@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { call, coursePath, courseTab, demo, expectToasted, keepToasts, pickOption, signIn } from './support'
+import { call, coursePath, openCourseTab, demo, expectToasted, keepToasts, pickOption, signIn } from './support'
 
 const NAME = `Nora Newcomer ${Date.now().toString(36)}`
 let actorId = ''
@@ -26,7 +26,7 @@ test.describe.serial('members and the grading scheme', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Members').click()
+    await openCourseTab(page, 'Members')
     await expect(page.locator('.el-table__row').filter({ hasText: 'Yuki Tanaka' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Add member' }).click()
@@ -82,7 +82,7 @@ test.describe.serial('members and the grading scheme', () => {
     await expect(postRow).toContainText('Needs approval')
 
     // The member list has them.
-    await courseTab(page, 'Members').click()
+    await openCourseTab(page, 'Members')
     const row = page.locator('.el-table__row').filter({ hasText: NAME })
     await expect(row).toContainText('Teaching assistant')
     await expect(row).toContainText('Active')
@@ -108,7 +108,7 @@ test.describe.serial('members and the grading scheme', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Grading scheme').click()
+    await openCourseTab(page, 'Grading scheme')
     const tree = page.getByRole('table', { name: 'Components' })
     const rootRow = tree.locator('.st-row.is-root')
     await expect(rootRow).toBeVisible()

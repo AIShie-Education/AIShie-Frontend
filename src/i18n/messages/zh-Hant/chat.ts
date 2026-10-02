@@ -3,7 +3,7 @@ export default {
   panel: {
     title: '對話',
     toggle: '與代理對話',
-    toggleUnread: '與代理對話：{n} 則未讀',
+    toggleUnread: '與代理對話：{n}則未讀',
     toggleTip: '與代理對話（{key}）',
     course: '課程',
     new: '新對話',
@@ -18,7 +18,7 @@ export default {
     backToHistory: '返回過往對話',
     backToAgents: '返回代理列表',
     pickTitle: '向代理提問',
-    pickHint: '你在 {course} 可以提問的代理：課程自己的代理，以及你的個人助理。',
+    pickHint: '你在{course}可以提問的代理：課程自己的代理，以及你的個人代理。',
     noCourses: '你的課程都不允許你向代理提問。',
   },
   history: {
@@ -52,7 +52,7 @@ export default {
   older: '較早的訊息',
   olderFailed: '無法載入，請再試一次。',
   empty: {
-    opener: '還沒有任何訊息。在下方向 {name} 提出你的問題吧。',
+    opener: '還沒有任何訊息。在下方向{name}提出你的問題吧。',
     other: '還沒有任何訊息。',
   },
   // The line in the messages while an answer is awaited: the agent at work, and for how long.
@@ -61,32 +61,32 @@ export default {
     seconds: '{s}s',
     minutes: '{m}m {s}s',
   },
-  typing: '正在等待 {name}…',
+  typing: '正在等待{name}…',
   held: '等待批准中：獲批准後才會在這裡顯示。',
   myActions: '我的操作',
   trouble: '連線到伺服器時遇到問題，正在重試…',
   new: {
-    intro: '開始與 {name} 對話。傳送第一則訊息即會開啟對話。',
+    intro: '開始與{name}對話。傳送第一則訊息即會開啟對話。',
     yourAgent: '這是你自己的代理：它代表你行事，權限永不超過你的席位。',
   },
   proposed: {
     title: '等待批准',
-    body: '你與 {name} 的對話需經批准後才會開始。你可以在「我的操作」中查看進度。',
+    body: '你與{name}的對話需經批准後才會開始。你可以在「我的操作」中查看進度。',
   },
   // What the line above the composer says.
   state: {
     waitingApproval: '每則回覆都須經批准，你才會看到。',
     answerPending: '有一則回覆正在等待批准。',
-    withdrawn: '你撤回了問題，{name} 不會回答它。',
-    start: '有任何關於課程的問題，都可以問 {name}。',
+    withdrawn: '你撤回了問題，{name}不會回答它。',
+    start: '有任何關於課程的問題，都可以問{name}。',
     overseeing: '你正以課程教職員的身分閱讀這段對話。',
     readOnly: '現在由代理在對話中回答問題，你可以閱讀這段對話。',
   },
   // Why an answer may not come.
   availability: {
-    gone: '{name} 已不在這個課程中。請改為與其他人開始新的對話。',
-    paused: '{name} 在這個課程中已被暫停，目前無法回覆。',
-    notAnswering: '{name} 目前不回答問題。',
+    gone: '{name}已不在這個課程中。請改為與其他人開始新的對話。',
+    paused: '{name}在這個課程中已被暫停，目前無法回覆。',
+    notAnswering: '{name}目前不回答問題。',
   },
   blocked: {
     archived: '這個課程已封存，無法再發言。',
@@ -98,7 +98,7 @@ export default {
   },
   composer: {
     label: '你的訊息',
-    askPlaceholder: '向 {name} 提問…',
+    askPlaceholder: '向{name}提問…',
     send: '傳送',
     sendTip: '傳送（Enter）· Shift+Enter 換行',
     stop: '停止',
@@ -106,24 +106,24 @@ export default {
     // The list a slash opens (commands), and what the empty box hints at.
     commands: '指令',
     hintCommands: '/ 指令',
-    hintMentions: "{'@'} 引用作業或教材",
-    count: '{n} / {max} 字',
+    hintMentions: "{'@'}引用作業或教材",
+    count: '{n} / {max}字',
   },
   // Files a message carries: attached in the composer (the paperclip, dropped on the chat panel, or pasted),
   // each uploaded at once, as a chip; and in the messages, each with its icon, name, size and a download.
   attach: {
     button: '附加檔案',
-    buttonTip: '附加檔案：最多 {n} 個，每個最大 {size}',
-    full: '每則訊息最多附 {n} 個檔案',
+    buttonTip: '附加檔案：最多{n}個，每個最大{size}',
+    full: '每則訊息最多附{n}個檔案',
     chips: '要傳送的檔案',
     dropHere: '放開即附加到你的訊息',
     // The empty box, once files are attached: it invites the question; and sending them with no words asks for one.
-    placeholder: '想請 {name} 就這個檔案做些甚麼？',
-    needText: '請寫一句話跟檔案一起傳送，讓 {name} 知道你想要甚麼：一個問題，或要看哪裡。',
+    placeholder: '想請{name}就這個檔案做些甚麼？',
+    needText: '請寫一句話跟檔案一起傳送，讓{name}知道你想要甚麼：一個問題，或要看哪裡。',
     waiting: '正在等候檔案上傳完成…',
     failed: '有檔案未能上傳：重試或移除後才能傳送。',
     tooLarge: '有檔案太大，無法傳送：移除後才能傳送其餘的。',
-    tooMany: '每則訊息最多附 {max} 個檔案：有 {skipped} 個未有加入。',
+    tooMany: '每則訊息最多附{max}個檔案：有{skipped}個未有加入。',
     folders: '資料夾無法附加：請改為附加裡面的檔案。',
     again: '正在重新上傳：完成後再傳送一次即可。',
     reattach: '它的檔案已隨之撤回：如要傳送，請重新附加。',
@@ -132,10 +132,10 @@ export default {
     list: '附件',
     download: '下載「{name}」',
     downloadTip: '下載',
-    held: '附 {n} 個檔案：{names}',
+    held: '附{n}個檔案：{names}',
     // Core's refusals because of a message's files, or of a file (details.reason).
     refusal: {
-      too_many_attachments: '每則訊息最多附 {max_files} 個檔案：請移除一些再傳送。',
+      too_many_attachments: '每則訊息最多附{max_files}個檔案：請移除一些再傳送。',
       bad_filename: '有檔案的名稱無法照樣傳送：名稱太長，或含有不可用的字元。請把檔案改名後再附加。',
       duplicate_attachment: '同一個檔案附加了兩次：請移除其中一個再傳送。',
       attachments_need_body: '檔案要跟訊息一起傳送：請寫一句話。',
@@ -145,7 +145,7 @@ export default {
       not_uploaded: '有檔案尚未上傳完成。',
       upload_too_old: '這些檔案上傳得太久，不能等候批准。',
       file_too_large: '有檔案超過訊息可附的大小（{max}）：請移除它，或改附較小的檔案。',
-      conversation_attachments_full: '這個對話的檔案已達上限（共 {max_total}）：如要傳送更多，請開始新對話。',
+      conversation_attachments_full: '這個對話的檔案已達上限（共{max_total}）：如要傳送更多，請開始新對話。',
       no_file_storage: '本網站沒有設定存放檔案的地方，所以無法傳送檔案：請聯絡網站管理員。',
       retracted: '這個檔案已隨訊息撤回。',
       not_a_member: '你已不在這個課程，所以無法在此傳送檔案。',
@@ -182,7 +182,7 @@ export default {
   // An answer in the making (the draft: ChatDraft, ChatDraftSteps): the agent's steps, running and done, with
   // what each works on (target) or without, and the answer's text, or that it shows once confirmed.
   draft: {
-    consulted: '已查閱 {n} 項',
+    consulted: '已查閱{n}項',
     stepsLabel: '代理正在做的事',
     done: '已完成',
     running: '進行中',
@@ -233,8 +233,8 @@ export default {
       tool: {
         running: '正在使用工具…',
         done: '已使用工具',
-        runningTarget: '正在使用 {target}…',
-        doneTarget: '已使用 {target}',
+        runningTarget: '正在使用{target}…',
+        doneTarget: '已使用{target}',
       },
     },
   },
@@ -260,22 +260,22 @@ export default {
     edit: '編輯',
     editTip: '撤回這則問題，放回輸入框修改後再送出',
     retractedByYou: '你已撤回這則訊息。',
-    retractedBy: '{name} 已撤回這則訊息。',
+    retractedBy: '{name}已撤回這則訊息。',
     retractedByStaff: '課程教職員已撤回這則訊息。',
     reason: '原因：{reason}',
   },
   // Under an answer: the course materials it relied on (AIShie-Core#69), each as the reader may open it now.
   sources: {
     basedOn: '依據：{source}',
-    summary: '依據：{title}· {n} 項',
-    summaryNone: '依據：{n} 項你無法開啟的課程教材',
+    summary: '依據：{title}· {n}項',
+    summaryNone: '依據：{n}項你無法開啟的課程教材',
     label: '這則回答依據的課程教材',
     quoted: '《{title}》',
     // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
     entry: '{title}· {where}',
-    page: '第 {n} 頁',
-    slide: '第 {n} 張投影片',
-    version: '第 {seq} 版',
+    page: '第{n}頁',
+    slide: '第{n}張投影片',
+    version: '第{seq}版',
     openFile: '開啟檔案中回答所依據之處',
     openVersion: '開啟這份教材的這個版本',
     earlier: '較早的版本',
@@ -285,22 +285,22 @@ export default {
     noneTip: '代理表示這則回答沒有依據任何課程教材。',
   },
   reasonPlaceholder: '原因（選填）',
-  reasonTooLong: '最多 {max} 字',
+  reasonTooLong: '最多{max}字',
   // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
   menu: {
     label: '對話選項',
   },
   // A question awaiting its answer, taken back to the composer: to edit it, or to stop waiting.
   edit: {
-    done: '問題已撤回並放回輸入框，修改後再送出即可。{name} 不會回答已撤回的問題，已開始寫的回答也會停下。',
+    done: '問題已撤回並放回輸入框，修改後再送出即可。{name}不會回答已撤回的問題，已開始寫的回答也會停下。',
   },
   stop: {
-    done: '已停止：問題已撤回並放回輸入框。{name} 不會回答已撤回的問題，已開始寫的回答也會停下。',
+    done: '已停止：問題已撤回並放回輸入框。{name}不會回答已撤回的問題，已開始寫的回答也會停下。',
   },
   retract: {
     title: '要撤回這則訊息嗎？',
     bodyMine: '這則訊息的內容將不再在此顯示，但寫入它的操作紀錄仍會保留原文。',
-    bodyStaff: '{name} 的這則訊息將不再在此顯示，但寫入它的操作紀錄仍會保留原文。',
+    bodyStaff: '{name}的這則訊息將不再在此顯示，但寫入它的操作紀錄仍會保留原文。',
     confirm: '撤回',
     done: '訊息已撤回',
   },

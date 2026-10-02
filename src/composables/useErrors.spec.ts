@@ -174,7 +174,7 @@ describe('errorMessage, by the reason Core gives', () => {
   it('in Traditional Chinese too', () => {
     setLocale('zh-Hant')
     expect(errorMessage(refusal('forbidden', { reason: 'department_out_of_scope' }))).toBe('這不在你所管理的部門範圍內。')
-    expect(errorMessage(refusal('failed_precondition', { reason: 'too_deep', max_depth: 8 }))).toBe('這會令部門超過 8 層。')
+    expect(errorMessage(refusal('failed_precondition', { reason: 'too_deep', max_depth: 8 }))).toBe('這會令部門超過8層。')
   })
 
   it('in Simplified Chinese too', () => {

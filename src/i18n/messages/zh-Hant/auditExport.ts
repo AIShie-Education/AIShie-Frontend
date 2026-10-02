@@ -21,7 +21,7 @@ export default {
     to: '截至並包括（選填）',
     anyStart: '不限開始',
     anyEnd: '直至現在',
-    zone: '日期按你的日曆計算，時區為 {zone}（UTC{offset}）：由首日零時起，至最後一日完結為止。',
+    zone: '日期按你的日曆計算，時區為{zone}（UTC{offset}）：由首日零時起，至最後一日完結為止。',
     zoneOffset: '日期按你的日曆計算（UTC{offset}）：由首日零時起，至最後一日完結為止。',
     sent: '實際傳送',
     submit: '匯出',
@@ -48,26 +48,26 @@ export default {
   },
 
   pending: {
-    title: '於 {time} 提出的匯出未有回應',
+    title: '於{time}提出的匯出未有回應',
     body: '表單已還原當時的選擇。再次匯出即可取得：伺服器會交回已完成的匯出，不會重複匯出。',
     discard: '重新開始',
   },
 
   running: {
     title: '正在匯出',
-    elapsed: '已進行 {time}。',
+    elapsed: '已進行{time}。',
     note: '大型匯出可能需時數分鐘。期間你可以前往其他頁面再回來：匯出會繼續進行，結果會在此顯示。如連線中斷，請以相同選擇再次匯出：伺服器會交回已完成的匯出，不會重複匯出。',
   },
 
   outcome: {
     title: '已匯出',
     replayed: '再次取得',
-    recorded: '已記錄為操作 {id}：匯出者、時間及所選範圍。',
+    recorded: '已記錄為操作{id}：匯出者、時間及所選範圍。',
   },
 
   privacy: {
     title: '這些檔案包含個人資料',
-    body: '檔案包含各人所寫的內容（包括已撤回的訊息）及其姓名。請只在所屬機構規定容許的地方保存，切勿交給不應閱讀的人。每條下載連結約 15 分鐘內有效，需要時本頁會取得新連結。檔案會於 {time} 從伺服器刪除，之後無法再下載。',
+    body: '檔案包含各人所寫的內容（包括已撤回的訊息）及其姓名。請只在所屬機構規定容許的地方保存，切勿交給不應閱讀的人。每條下載連結約15分鐘內有效，需要時本頁會取得新連結。檔案會於{time}從伺服器刪除，之後無法再下載。',
   },
 
   refused: {
@@ -84,7 +84,7 @@ export default {
 
   refusal: {
     export_too_large:
-      '此匯出將包含 {conversations} 段對話中的 {messages} 則訊息及 {text} 文字，超出上限（{maxMessages} 則訊息、{maxText}）。請縮小範圍：',
+      '此匯出將包含{conversations}段對話中的{messages}則訊息及{text}文字，超出上限（{maxMessages}則訊息、{maxText}）。請縮小範圍：',
     department_out_of_scope: '該課程或部門不在（或已不在）你所管理的部門之內。請選擇你獲委任的部門或其下的課程或部門。',
     platform_role_required:
       '只有網站管理員可以匯出對話；部門管理員只可匯出其部門的課程，並須指定所管理的課程或部門。整個網站須由平台管理員匯出。',
@@ -98,7 +98,7 @@ export default {
 
   recent: {
     title: '最近的匯出',
-    note: '你在此瀏覽器所作、檔案仍然保留的匯出，可再次下載。檔案包含個人資料；每條連結約 15 分鐘內有效。',
+    note: '你在此瀏覽器所作、檔案仍然保留的匯出，可再次下載。檔案包含個人資料；每條連結約15分鐘內有效。',
     forget: '從清單移除',
     gone: '該匯出的檔案已被刪除，已從清單移除。',
   },
@@ -113,8 +113,8 @@ export default {
       csv: '每列一則訊息，已撤回的會標示：可用試算表開啟，中文亦能正確顯示。',
     },
     checksum: '校驗碼',
-    download: '下載 {format}',
-    linksLive: '下載連結仍有 {time} 有效。',
+    download: '下載{format}',
+    linksLive: '下載連結仍有{time}有效。',
     linksExpired: '下載連結已過期。',
     linksNone: '每次下載都會向伺服器取得新連結。',
     refresh: '取得新連結',
@@ -127,7 +127,7 @@ export default {
     participant: '參與者：{who}',
     conversations: '對話',
     messages: '訊息',
-    withdrawn: '其中 {n} 則已撤回',
+    withdrawn: '其中{n}則已撤回',
     proposals: '從未發佈的提案',
     attachments: '附件（只有說明）',
     text: '文字',
@@ -140,8 +140,8 @@ export default {
     notFound: '你所管理的課程中沒有此 ID。',
     none: '沒有可選擇的課程。',
     noMatch: '沒有符合的課程。',
-    typeMore: '只顯示首 {n} 項符合的結果：請輸入更多字以縮窄範圍。',
-    pasteId: '只搜尋首 {n} 門課程：其後的課程請貼上其 ID。',
+    typeMore: '只顯示首{n}項符合的結果：請輸入更多字以縮窄範圍。',
+    pasteId: '只搜尋首{n}門課程：其後的課程請貼上其 ID。',
   },
 
   participant: {
@@ -152,7 +152,7 @@ export default {
     lookupPlaceholder: '完整的電子郵件、學號／工號，或 ID',
     find: '查找',
     invalid: '請輸入完整的電子郵件地址、完整的學號／工號，或 ID。',
-    notFound: '沒有人以 {who} 登記。',
+    notFound: '沒有人以{who}登記。',
     byId: 'ID {id}',
     byIdShort: '按 ID',
     clear: '改為任何人',

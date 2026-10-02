@@ -41,6 +41,35 @@ h2,
 #app {
   min-height: 100vh;
 }
+/* Chinese, either script: the browser puts a little room between Han and
+   Latin letters or figures ("第3次" reads 第 3 次), so that the messages
+   need no spaces of their own around a name or a number; and a paragraph
+   leaves no single character alone on its last line, nor a heading two
+   lines of very different lengths. */
+html:lang(zh) {
+  text-autospace: normal;
+}
+html:lang(zh) :is(p, .page-header__subtitle, .app-form-hint, .el-alert__description) {
+  text-wrap: pretty;
+}
+html:lang(zh) :is(h1, h2, h3, .app-card__title) {
+  text-wrap: balance;
+}
+/* The dot between a course's code and its section ("CS101·A"): Latin, so
+   that a Chinese typeface does not make it a full-width one, with a quarter
+   of an em each side instead of spaces. */
+.app-sep {
+  font-family: 'IBM Plex Sans', var(--app-font-sans);
+  margin: 0 0.25em;
+}
+/* "(you)" after a name: a space before it in English; none before 「（你）」,
+   whose bracket brings its own. */
+.app-you {
+  margin-inline-start: 0.25em;
+}
+html:lang(zh) .app-you {
+  margin-inline-start: 0;
+}
 a {
   color: var(--app-indigo);
 }
@@ -299,4 +328,36 @@ summary:focus-visible,
   background: currentColor;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Ccircle cx='9' cy='10' r='1.5'/%3E%3Cpath d='m21 16-5-5-8 8'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Ccircle cx='9' cy='10' r='1.5'/%3E%3Cpath d='m21 16-5-5-8 8'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* A level of autonomy (StatusTag, LevelIcon): told by its mark and its
+   weight, lightest for the level that leaves an agent least to itself and
+   heaviest for the one that leaves it most, never by red and green. */
+.el-tag.app-level-tag {
+  --el-tag-border-color: transparent;
+  font-weight: 500;
+}
+.app-level-tag .el-tag__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.el-tag.app-level-tag.is-denied {
+  --el-tag-bg-color: var(--app-neutral-bg);
+  --el-tag-text-color: var(--app-neutral-fg);
+}
+.el-tag.app-level-tag.is-confirm_required {
+  --el-tag-bg-color: var(--app-indigo-tint);
+  --el-tag-text-color: var(--app-indigo);
+}
+.el-tag.app-level-tag.is-pending_review {
+  --el-tag-bg-color: transparent;
+  --el-tag-border-color: var(--app-ink-2);
+  --el-tag-text-color: var(--app-ink);
+  font-weight: 600;
+}
+.el-tag.app-level-tag.is-autonomous {
+  --el-tag-bg-color: var(--app-ink);
+  --el-tag-text-color: var(--app-ground);
+  font-weight: 600;
 }

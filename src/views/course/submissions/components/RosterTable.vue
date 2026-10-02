@@ -224,9 +224,7 @@ const emptyText = computed(() =>
                 <el-icon><DocumentRemove /></el-icon>
                 <span>{{ t('submissions.roster.markMissing') }}</span>
               </el-button>
-              <el-tag v-if="needsApproval" type="warning" size="small" disable-transitions>
-                {{ t('enums.level.confirm_required') }}
-              </el-tag>
+              <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
             </div>
             <div v-else-if="isProposed(row)" class="roster-action">
               <el-tag type="warning" size="small" disable-transitions>{{ t('enums.actionStatus.proposed') }}</el-tag>
@@ -277,9 +275,7 @@ const emptyText = computed(() =>
         <el-table-column min-width="220" align="right">
           <template #default="{ row }">
             <div v-if="markable(row)" class="roster-action roster-action--end">
-              <el-tag v-if="needsApproval" type="warning" size="small" disable-transitions>
-                {{ t('enums.level.confirm_required') }}
-              </el-tag>
+              <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
               <el-button
                 size="small"
                 :loading="busy === row.student_member_id"

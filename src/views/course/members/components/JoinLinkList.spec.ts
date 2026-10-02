@@ -129,7 +129,7 @@ describe('JoinLinkList', () => {
     setLocale('zh-Hans')
     const w = await mountList([link({})])
     expect(w.text()).toContain('剩余时间')
-    expect(w.text()).toContain('已有 3 人加入（上限 30 人）')
+    expect(w.text()).toContain('已有3人加入（上限30人）')
     w.unmount()
   })
 })

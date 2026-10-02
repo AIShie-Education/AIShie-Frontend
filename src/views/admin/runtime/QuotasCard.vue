@@ -18,6 +18,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { PlanQuotas, ProviderOffer, QuotasPut, SchoolPlan } from '@/api/runtime-types'
 import DailyReset from '@/components/DailyReset.vue'
+import { formatMoney } from '@/utils/format'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import OperatorDetail from '../components/OperatorDetail.vue'
 import ChangedBy from './ChangedBy.vue'
@@ -32,7 +33,6 @@ import {
   usdField,
   usdProblem,
   usdSent,
-  usdShown,
   type UnpricedItem,
 } from './runtimeAdmin'
 
@@ -123,7 +123,7 @@ function defaultAnswers(k: Answers): string {
 }
 function defaultUsd(k: Dollars): string {
   const v = defaults.value[k]
-  return v == null ? t('runtimeAdmin.quotas.defaultNone') : t('runtimeAdmin.quotas.default', { n: `$${usdShown(v)}` })
+  return v == null ? t('runtimeAdmin.quotas.defaultNone') : t('runtimeAdmin.quotas.default', { n: formatMoney(v) })
 }
 
 function clearMessages() {
@@ -179,7 +179,7 @@ async function save() {
 async function reset() {
   if (saving.value) return
   const d = defaults.value
-  const usd = (v: string | null | undefined) => (v == null ? t('runtimeAdmin.quotas.noCeiling') : `$${usdShown(v)}`)
+  const usd = (v: string | null | undefined) => (v == null ? t('runtimeAdmin.quotas.noCeiling') : formatMoney(v))
   const body =
     t('runtimeAdmin.quotas.resetBody', {
       owner: d.per_owner_day,

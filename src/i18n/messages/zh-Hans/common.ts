@@ -32,6 +32,8 @@ export default {
     select: '选择',
     signOut: '退出登录',
   },
+  // A label and its value, as the language writes them: "Model calls: 380", 「模型呼叫：380」.
+  pair: '{label}：{value}',
   labels: {
     id: 'ID',
     scoped: '受范围限制',
@@ -56,6 +58,8 @@ export default {
     empty: '尚无内容',
     all: '全部',
     you: '你',
+    youTag: '（你）',
+    andMore: '另外{n}个',
     never: '从不',
     points: '分数',
     score: '得分',
@@ -72,20 +76,30 @@ export default {
     themeDark: '深色',
     themeAuto: '跟随系统',
   },
-  // When an agent was last seen (PresenceText): its last use of a token that still works.
+  // When an agent last connected (PresenceText): its last use of a token that still works. Said of a
+  // program, never as a person's "online". To those who ask it (the chat), whether it can be asked now
+  // (AskableText): askable, or paused.
   presence: {
     never: '从未连接',
     neverHelp: '这个智能体的令牌从未被使用：可能没有程序在运行它。',
-    online: '在线',
+    online: '已连接',
     onlineHelp: '过去几分钟内曾使用令牌。',
-    lastSeen: '最后上线：{time}',
+    lastSeen: '最后连接：{time}',
+    askable: '可提问',
+    askableHelp: '目前有程序在运行它：提问会得到回复。',
+    paused: '暂停',
+    pausedSince: '最后连接：{time}。目前似乎没有程序在运行它，回复可能需要一段时间。',
+    // Whose agent it is, then why it can be asked or not (AskableText's tooltip, in the chat's header).
+    whose: '{whose}。{why}',
   },
   // An agent, and whose it is (AgentBadge).
   agent: {
-    agent: '智能体',
+    // The "AI" after an agent's name (AiBadge), the same in every language; and its tooltip.
+    ai: 'AI',
+    aiHint: 'AI 智能体，不是真人',
     yours: '你的智能体',
-    ownersAgent: '{owner} 的智能体',
-    delegateOf: '代表 {owner} 行事，权限永不超过其席位',
+    ownersAgent: '{owner}的智能体',
+    delegateOf: '代表{owner}行事，权限永不超过其席位',
     yourDelegate: '代表你行事，权限永不超过你的席位',
     // How it is run, chosen when it is registered and never changed (HostingChoice, HostingTag).
     hosting: {
@@ -137,7 +151,7 @@ export default {
     invalid: '输入未被接受',
     precondition: '规则不允许此操作',
     idempotency: '此请求的标识已用于另一个不同的请求。',
-    recordedAs: '已记录为操作 {id}',
+    recordedAs: '已记录为操作{id}',
     required: '必填',
     invalidDecimal: '请输入数字',
     invalidEmail: '请输入有效的邮箱地址',
@@ -170,7 +184,7 @@ export default {
   },
   time: {
     ago: '{t}前',
-    due: '截止 {t}',
+    due: '截止{t}',
     noDue: '无截止日期',
     dailyReset: '{zone} {time}',
   },
@@ -190,37 +204,37 @@ export default {
     pasteHint: '也可以粘贴已复制的文件。',
     phoneMany: '选择文件',
     phoneOne: '选择一个文件',
-    limit: '最大 {size}',
-    limitEach: '每个最大 {size}',
-    limitVersion: '最多 {files} 个文件，每个最大 {size}，合计最大 {total}',
+    limit: '最大{size}',
+    limitEach: '每个最大{size}',
+    limitVersion: '最多{files}个文件，每个最大{size}，合计最大{total}',
     list: '正在上传的文件',
     progressOf: '“{name}”的上传进度',
     percent: '{n}%',
     of: '{loaded}／{total}',
     speed: '{speed}/秒',
     left: {
-      seconds: '约剩 {n} 秒',
-      minutes: '约剩 {n} 分钟',
-      hours: '约剩 {h} 小时 {m} 分钟',
+      seconds: '约剩{n}秒',
+      minutes: '约剩{n}分钟',
+      hours: '约剩{h}小时{m}分钟',
     },
     status: {
       queued: '等待上传…',
       preparing: '准备中…',
       finishing: '即将完成…',
-      retrying: '连接中断，正在重试（第 {attempt} 次）…',
+      retrying: '连接中断，正在重试（第{attempt}次）…',
       offline: '已离线：连接恢复后会继续…',
       done: '已上传',
       cancelled: '已取消',
     },
-    tooLarge: '文件太大，无法上传：它有 {size}，每个文件最大 {max}。',
-    tooLargeUnknown: '文件太大，无法在此上传：它有 {size}。',
+    tooLarge: '文件太大，无法上传：它有{size}，每个文件最大{max}。',
+    tooLargeUnknown: '文件太大，无法在此上传：它有{size}。',
     // 一个版本的文件：放不下的不会上传。
-    overFiles: '未上传：一个版本最多 {max} 个文件。从列表移除另一个，才能放入这一个。',
+    overFiles: '未上传：一个版本最多{max}个文件。从列表移除另一个，才能放入这一个。',
     overFilesUnknown: '未上传：这个版本放不下更多文件。从列表移除另一个，才能放入这一个。',
     overBytes: '未上传：加上它，文件合计会超过一个版本的上限（{max}）。从列表移除另一个，才能放入这一个。',
     overBytesUnknown: '未上传：加上它，文件合计会超过一个版本的上限。从列表移除另一个，才能放入这一个。',
-    excessFiles: '一个版本最多 {max} 个文件：请从列表移除 {n} 个。',
-    excessBytes: '这些文件合计 {total}，而一个版本最多 {max}：请从列表移除一些。',
+    excessFiles: '一个版本最多{max}个文件：请从列表移除{n}个。',
+    excessBytes: '这些文件合计{total}，而一个版本最多{max}：请从列表移除一些。',
     uploadingAgain: '文件正在重新上传：上传完成后再保存。',
     folders: '文件夹无法上传：请改为拖放里面的文件。',
     waitToSave: '正在等待文件上传完成…',
@@ -238,18 +252,18 @@ export default {
       moveDownFile: '将“{name}”下移',
     },
     announce: {
-      added: '已添加 {n} 个文件。',
-      progress: '“{name}”已上传 {percent}%。',
+      added: '已添加{n}个文件。',
+      progress: '“{name}”已上传{percent}%。',
       done: '“{name}”已上传。',
       failed: '“{name}”未能上传：{reason}',
       cancelled: '已取消上传“{name}”。',
       removed: '已移除“{name}”。',
-      moved: '“{name}”现在是 {total} 个文件中的第 {n} 个。',
+      moved: '“{name}”现在是{total}个文件中的第{n}个。',
     },
     // Core 因版本的文件或其上传而拒绝的原因（details.reason）。
     refusal: {
-      too_many_files: '一个版本最多 {max_files} 个文件：请从列表移除一些，再保存。',
-      version_too_large: '这些文件合计 {byte_size_shown}，而一个版本最多 {max_version_bytes_shown}：请从列表移除一些，再保存。',
+      too_many_files: '一个版本最多{max_files}个文件：请从列表移除一些，再保存。',
+      version_too_large: '这些文件合计{byte_size_shown}，而一个版本最多{max_version_bytes_shown}：请从列表移除一些，再保存。',
       file_too_large: '有文件超过一个版本可放的大小（{max_bytes_shown}）：请从列表移除它，或改放较小的文件。',
       bad_filename: '有文件的名称无法照样使用：名称太长，或含有不可用的字符。请把文件改名后再放入。',
       duplicate_file: '同一个上传列了两次：请从列表移除其中一个，再保存。',
@@ -258,7 +272,7 @@ export default {
       not_your_upload: '有一个上传不属于你，不能在此附加。',
       already_attached: '有文件已附加到另一个版本。',
       not_uploaded: '有文件尚未上传完成。',
-      upload_too_old: '这些文件上传得太久（超过 48 小时），不能等待批准。',
+      upload_too_old: '这些文件上传得太久（超过48小时），不能等待批准。',
       no_file_storage: '本站点没有设置存放文件的地方，所以无法附加文件：请联系站点管理员。',
     },
   },
@@ -278,7 +292,7 @@ export default {
   // 文档版本的文件，列出供下载。
   files: {
     list: '文件',
-    count: '{n} 个文件',
+    count: '{n}个文件',
     download: '下载“{name}”',
     downloadTip: '下载',
     text: '文字版',
@@ -290,7 +304,7 @@ export default {
   // 与文档文件一同附上的文字（DocumentTextField）。
   docText: {
     add: '添加文字说明（选填）',
-    chars: '文字说明（{chars} 个字符）',
+    chars: '文字说明（{chars}个字符）',
   },
   copyId: '复制 ID',
   operatorDetail: '供服务器运维方参考：{detail}',

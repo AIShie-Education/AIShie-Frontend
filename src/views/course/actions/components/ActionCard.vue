@@ -104,7 +104,7 @@ const excerpt = computed(() => {
     <dl class="action-card__facts">
       <div class="action-card__fact">
         <dt>{{ t('actions.fields.actor') }}</dt>
-        <dd><ActionActor :member-id="action.member_id" :actor-id="action.actor_id" show-kind /></dd>
+        <dd><ActionActor :member-id="action.member_id" :actor-id="action.actor_id" /></dd>
       </div>
       <div class="action-card__fact">
         <dt>{{ t('actions.fields.target') }}</dt>

@@ -159,6 +159,26 @@ describe('DecidePanel, asking for changes', () => {
     expect(write).not.toHaveBeenCalled()
   })
 
+  it('ranks Request changes as Reject: outlined, pressed in while its form is open, whose confirm is the one primary', async () => {
+    mountAsTeacher()
+    await flushPromises()
+    const hue = (b: HTMLButtonElement | undefined) =>
+      [...b!.classList].filter((c) => /^el-button--(primary|success|warning|danger|info)$/.test(c))
+    expect(hue(button('Approve'))).toEqual(['el-button--primary'])
+    expect(hue(button('Request changes'))).toEqual([])
+    expect(hue(button('Reject'))).toEqual([])
+    button('Request changes')!.click()
+    await flushPromises()
+    expect(button('Request changes')!.classList).toContain('is-chosen')
+    expect(button('Request changes')!.getAttribute('aria-pressed')).toBe('true')
+    expect(button('Reject')!.getAttribute('aria-pressed')).toBe('false')
+    expect(hue(button('Approve'))).toEqual([])
+    expect(hue(button('Request changes'))).toEqual([])
+    await type('Test the empty list.')
+    expect(hue(confirmButton())).toEqual(['el-button--primary'])
+    expect(confirmButton()!.disabled).toBe(false)
+  })
+
   it('is not offered on an agent’s answer, which the runtime of today would leave waiting for good', async () => {
     mountAsTeacher(ANSWER)
     await flushPromises()

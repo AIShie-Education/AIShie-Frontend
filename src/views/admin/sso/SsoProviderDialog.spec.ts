@@ -351,12 +351,12 @@ describe('testing the issuer from the form', () => {
     [
       'zh-Hant',
       '這裡有位址位於本機，或屬私人、鏈路本地或保留位址：除非伺服器營運者允許，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
-      `沒有從 ${localIssuer} 讀取任何內容：這個簽發者本身未被接受。`,
+      `沒有從${localIssuer}讀取任何內容：這個簽發者本身未被接受。`,
     ],
     [
       'zh-Hans',
       '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者允许，否则本服务器不会连接位于这些地址、在此设置的提供者。',
-      `没有从 ${localIssuer} 读取任何内容：这个颁发者本身未被接受。`,
+      `没有从${localIssuer}读取任何内容：这个颁发者本身未被接受。`,
     ],
   ] as const)(
     'leaves an issuer on this machine to the server, which may refuse it, and says why in %s',
@@ -388,8 +388,8 @@ describe('testing the issuer from the form', () => {
   // One language a test, so that each opens the dialog once.
   it.each([
     ['en', `Nothing could be read from ${namedIssuer}: its discovery document was not read.`],
-    ['zh-Hant', `未能從 ${namedIssuer} 讀取任何內容：其探索文件未被讀取。`],
-    ['zh-Hans', `未能从 ${namedIssuer} 读取任何内容：其发现文档未被读取。`],
+    ['zh-Hant', `未能從${namedIssuer}讀取任何內容：其探索文件未被讀取。`],
+    ['zh-Hans', `未能从${namedIssuer}读取任何内容：其发现文档未被读取。`],
   ] as const)(
     'says nothing was read when the issuer’s name leads to an address the server does not reach, in %s',
     async (locale, notRead) => {

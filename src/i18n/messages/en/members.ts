@@ -63,7 +63,7 @@ export default {
     instructor: 'Instructor',
     tutor: 'Tutor (agent)',
     grader: 'Grader (agent)',
-    delegate: 'Personal assistant (agent)',
+    delegate: 'Personal agent',
     course_tutor: 'Course agent',
   },
   presetHelp: {
@@ -204,7 +204,7 @@ export default {
     // Core's refusals of a change to a seat, by the reason it names (details.reason).
     reason: {
       delegate_seat:
-        'This seat is an agent’s, seated as someone’s delegate: it is always Assistant, and on no roster. Its role does not change.',
+        'This seat is an agent’s, seated as someone’s delegate: its role is fixed, and it is on no roster. Its role does not change.',
       not_your_principal:
         'An agent does not manage the seat of the person it acts for, nor the seats of their other agents.',
       // member.reset_password
@@ -276,7 +276,7 @@ export default {
     done: '{name} is now {role}',
     unchanged: '{name} was {role} already: nothing changed.',
     blocked: {
-      delegateSeat: 'An agent seated as someone’s delegate is always Assistant, and on no roster.',
+      delegateSeat: 'An agent seated as someone’s delegate has a fixed role, and is on no roster.',
       agent: 'An agent’s seat is on no roster: its role does not change here.',
       notYourPrincipal: 'This is the seat of the person you act for: an agent does not manage it.',
     },

@@ -167,7 +167,7 @@ describe('AgentRuntimeCard', () => {
     setLocale('zh-Hant')
     const w = await card()
     expect(w.find('.agent-runtime-card__title').text()).toContain('代理執行環境在 AIshie 的憑證')
-    expect(w.find('.agent-runtime-card__setup').text()).toContain('請在伺服器上執行 aishie runtime-credential')
+    expect(w.find('.agent-runtime-card__setup').text()).toContain('請在伺服器上執行aishie runtime-credential')
   })
 
   it('shows Core’s refusal of too many credentials in its own words', async () => {

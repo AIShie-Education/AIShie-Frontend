@@ -12,6 +12,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
+import StatusTag from '@/components/StatusTag.vue'
 import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -159,13 +160,6 @@ const confirmLabel = computed(() => {
   }
   return t('actions.decision.confirmReviewed')
 })
-const confirmType = computed(() =>
-  choice.value === 'reject'
-    ? 'danger'
-    : choice.value === 'escalated' || choice.value === 'request_changes'
-      ? 'warning'
-      : 'success',
-)
 
 function stale(code: string | undefined) {
   return code === 'conflict' || code === 'not_found'
@@ -272,9 +266,10 @@ function tell(
     <div v-if="!decidedElsewhere" class="decide-panel__buttons">
       <template v-if="mode === 'decide'">
         <el-button
-          type="success"
-          :plain="choice !== 'approve'"
+          :type="!choice || choice === 'approve' ? 'primary' : undefined"
           :size="size"
+          :class="{ 'is-chosen': choice === 'approve' }"
+          :aria-pressed="choice === 'approve'"
           :disabled="!!blocked || !!approveBlocked || pending"
           @click="open('approve')"
         >
@@ -283,9 +278,9 @@ function tell(
         </el-button>
         <el-button
           v-if="offersChanges"
-          type="warning"
-          :plain="choice !== 'request_changes'"
           :size="size"
+          :class="{ 'is-chosen': choice === 'request_changes' }"
+          :aria-pressed="choice === 'request_changes'"
           :disabled="!!blocked || pending"
           @click="open('request_changes')"
         >
@@ -293,9 +288,9 @@ function tell(
           <span>{{ t('actions.decision.requestChanges') }}</span>
         </el-button>
         <el-button
-          type="danger"
-          :plain="choice !== 'reject'"
           :size="size"
+          :class="{ 'is-chosen': choice === 'reject' }"
+          :aria-pressed="choice === 'reject'"
           :disabled="!!blocked || pending"
           @click="open('reject')"
         >
@@ -305,9 +300,10 @@ function tell(
       </template>
       <template v-else>
         <el-button
-          type="success"
-          :plain="choice !== 'reviewed'"
+          :type="!choice || choice === 'reviewed' ? 'primary' : undefined"
           :size="size"
+          :class="{ 'is-chosen': choice === 'reviewed' }"
+          :aria-pressed="choice === 'reviewed'"
           :disabled="!!blocked || pending"
           @click="open('reviewed')"
         >
@@ -316,9 +312,9 @@ function tell(
         </el-button>
         <el-button
           v-if="action.review_state === 'pending'"
-          type="warning"
-          :plain="choice !== 'escalated'"
           :size="size"
+          :class="{ 'is-chosen': choice === 'escalated' }"
+          :aria-pressed="choice === 'escalated'"
           :disabled="!!blocked || pending"
           @click="open('escalated')"
         >
@@ -327,7 +323,7 @@ function tell(
         </el-button>
       </template>
       <el-tooltip v-if="needsApproval && !blocked" :content="t('actions.decision.willBeProposal')" placement="top">
-        <el-tag type="warning" effect="plain" size="small">{{ t('enums.level.confirm_required') }}</el-tag>
+        <StatusTag vocab="level" value="confirm_required" size="small" />
       </el-tooltip>
     </div>
 
@@ -353,7 +349,7 @@ function tell(
       </p>
       <div class="decide-panel__confirm">
         <el-button :size="size" :disabled="pending" @click="cancel">{{ t('common.actions.cancel') }}</el-button>
-        <el-button :type="confirmType" :size="size" :loading="pending" :disabled="noteMissing" @click="confirm">
+        <el-button type="primary" :size="size" :loading="pending" :disabled="noteMissing" @click="confirm">
           {{ confirmLabel }}
         </el-button>
       </div>
@@ -376,6 +372,23 @@ function tell(
 }
 .decide-panel__buttons .el-button + .el-button {
   margin-left: 0;
+}
+/* The choice open below, while its form asks for a reason: its button stays
+   pressed in, a 2 px indigo edge on the indigo's tint, in bold, and the
+   other choice is an ordinary secondary button beside it; the form's own
+   button is the one primary. */
+.decide-panel__buttons .el-button.is-chosen {
+  --el-button-bg-color: var(--app-indigo-tint);
+  --el-button-border-color: var(--app-indigo);
+  --el-button-text-color: var(--app-indigo);
+  --el-button-hover-bg-color: var(--app-indigo-tint);
+  --el-button-hover-border-color: var(--app-indigo);
+  --el-button-hover-text-color: var(--app-indigo);
+  --el-button-active-bg-color: var(--app-indigo-tint);
+  --el-button-active-border-color: var(--app-indigo);
+  --el-button-active-text-color: var(--app-indigo);
+  box-shadow: inset 0 0 0 1px var(--app-indigo);
+  font-weight: 600;
 }
 .decide-panel__blocked {
   display: flex;

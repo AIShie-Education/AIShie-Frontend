@@ -29,7 +29,7 @@ import { useUploadQueue } from '@/composables/useUploadQueue'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE, filesPayload, versionFilesOf, versionFilesRefused } from '@/utils/documentFiles'
-import { formatBytes, formatNumber } from '@/utils/format'
+import { formatBytes, formatList, formatNumber } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
@@ -141,7 +141,9 @@ const canSave = computed(
 /** The latest version's files, named, for the word that they are not carried over. */
 const baseFileNames = computed(() => {
   const names = baseFiles.value.map((f) => `${f.filename} (${formatBytes(f.byte_size)})`)
-  return names.length > 4 ? [...names.slice(0, 4), '…'].join(', ') : names.join(', ')
+  return formatList(
+    names.length > 4 ? [...names.slice(0, 4), t('common.labels.andMore', { n: names.length - 4 })] : names,
+  )
 })
 
 /** What becomes of the text, said under the file while there is some. */

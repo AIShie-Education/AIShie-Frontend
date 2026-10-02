@@ -5,15 +5,25 @@
 // which views there are and whose each is, which one a page belongs to, and
 // what this browser remembers of the side bar: open or not, and the view.
 
+import { markRaw, type Component, type InjectionKey } from 'vue'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+
 export type SideView = 'courses' | 'agents' | 'admin'
+
+/** Whether a view is shown in the phone's menu (SideBar's mode 'drawer'), not docked beside the page. */
+export const SIDE_IN_DRAWER: InjectionKey<boolean> = Symbol('side-in-drawer')
 
 /** Every view, in the order the activity bar lists them. */
 export const SIDE_VIEWS: readonly SideView[] = ['courses', 'agents', 'admin']
 
-/** Each view's icon (registered globally by its component's name) and its name's message. */
-export const VIEW_META: Record<SideView, { icon: string; label: string }> = {
+/**
+ * Each view's icon (an Element Plus icon registered globally by its
+ * component's name, or a component of the app's own: the agents' seat) and
+ * its name's message.
+ */
+export const VIEW_META: Record<SideView, { icon: string | Component; label: string }> = {
   courses: { icon: 'Collection', label: 'layout.courses' },
-  agents: { icon: 'Cpu', label: 'layout.agents' },
+  agents: { icon: markRaw(AgentSeatIcon), label: 'layout.agents' },
   admin: { icon: 'Setting', label: 'common.nav.admin' },
 }
 

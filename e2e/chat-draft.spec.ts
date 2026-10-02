@@ -165,7 +165,7 @@ test.describe.serial('an answer in the making', () => {
     await expect(draft.locator('.is-streaming strong')).toHaveText('100°C')
     await expect(draft.locator('.md-code__lang')).toHaveText('python')
     // The steps done, in one line, which opens to list them.
-    const summary = draft.getByRole('button', { name: '已查閱 3 項' })
+    const summary = draft.getByRole('button', { name: '已查閱3項' })
     await expect(summary).toHaveAttribute('aria-expanded', 'false')
     await page.mouse.move(900, 200)
     await photograph(page, 'draft-streaming')

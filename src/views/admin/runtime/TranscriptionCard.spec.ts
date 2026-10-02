@@ -76,7 +76,7 @@ describe('TranscriptionCard', () => {
     expect(find(w, 'withdraw').exists()).toBe(true)
     expect(find(w, 'pages').text()).toBe('120')
     expect(find(w, 'documents').text()).toBe('9')
-    expect(find(w, 'cost').text()).toBe('$0.0312')
+    expect(find(w, 'cost').text()).toBe('US$0.0312')
     // Nothing to save until something is changed.
     expect(find(w, 'save').exists()).toBe(false)
   })
@@ -89,7 +89,7 @@ describe('TranscriptionCard', () => {
     )
     setLocale('zh-Hant')
     await flushPromises()
-    expect(find(w, 'numbers-hint').text()).toContain('當日頁數用完後至香港標準時間 08:00 重新計算前')
+    expect(find(w, 'numbers-hint').text()).toContain('當日頁數用完後至香港標準時間 08:00重新計算前')
   })
 
   it('turns it off and on at once, with the switch', async () => {
@@ -253,7 +253,7 @@ describe('TranscriptionCard', () => {
     expect(rows[0].find('.job-cell__file').exists()).toBe(false)
     expect(rows[1].find('.job-cell__file').text()).toBe('week3-handout.pdf')
     expect(rows[1].find('.job-cell__doc').attributes('href')).toContain('&tab=text&file=file-2')
-    expect(w.findAll('.job-cell__cost').map((c) => c.text())).toEqual(['$0.0041', 'No price'])
+    expect(w.findAll('.job-cell__cost').map((c) => c.text())).toEqual(['US$0.0041', 'No price'])
 
     await w.find('.load-more button').trigger('click')
     await flushPromises()
@@ -300,6 +300,6 @@ describe('the jobs, by their own width', () => {
     expect(heads()).toEqual(['Document'])
     const meta = w.findAll('.job-cell')[0].findAll('.job-cell__meta').at(-1)!
     // Its time, relative to now, last.
-    expect(meta.text().replace(/\s+/g, ' ')).toMatch(/^12 pages · \$0\.0041 · \S/)
+    expect(meta.text().replace(/\s+/g, ' ')).toMatch(/^12 pages · US\$0\.0041 · \S/)
   })
 })

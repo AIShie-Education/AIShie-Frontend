@@ -4,7 +4,7 @@ import { expect, test, type Browser, type Locator, type Page } from '@playwright
 import {
   call,
   coursePath,
-  courseTab,
+  openCourseTab,
   demo,
   expectToasted,
   keepToasts,
@@ -130,10 +130,12 @@ async function draftFor(owner: Owner, body: string): Promise<string> {
  * came in after the hover would set its text again, the dialog's rows with
  * it, and the list, which follows its select, could move from under the
  * mouse, which would then hold up no tooltip. Hovered is the part of the
- * level that the tooltip is on.
+ * level that the tooltip is on. So could the list itself while it is still
+ * opening (Element Plus scales it in): the hover waits for that to end.
  */
 async function hoverLevel(page: Page, options: Locator, level: string) {
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
+  await page.waitForFunction(() => !document.querySelector('.el-select__popper[class*="-enter-active"]'))
   await options.filter({ hasText: level }).locator('.level-select__option').hover()
 }
 
@@ -207,7 +209,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
     await page.setViewportSize({ width: 1280, height: 900 })
     await signIn(page, nora)
     await page.goto(coursePath())
-    await courseTab(page, 'Your agents’ proposals').click()
+    await openCourseTab(page, 'Your agents’ proposals')
     await expect(page).toHaveURL(new RegExp(`${coursePath('approvals')}$`))
     await expect(page.locator('.page-header')).toContainText('Your agents’ proposals')
     const cards = page.locator('.action-card')

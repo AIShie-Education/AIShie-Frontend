@@ -354,7 +354,7 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   412 reads it again and keeps what the administrator changed over it. A key's trial that failed
   (`key_test_failed`) says what the provider answered (`keyTrialOf`). Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
-  cent at least (`usdShown`) and typed as decimals (`usdProblem`), empty for no limit. A refusal
+  cent at least, as US dollars (`formatMoney`, "US$0.0184") and typed as decimals (`usdProblem`), empty for no limit. A refusal
   that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
   models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
   agents' lines. Costs are shown by `lines` kind: a document's transcription is a line of its own
@@ -441,7 +441,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   required, 1 to 2000 characters and not spaces alone: the confirm button stays off until there is
   one, and Core's refusals of it (`note_required`, `note_too_long`) are worded under
   `actions.decision.refusal`. The proposal ends in `changes_requested`, a final state that is no
-  failure: its tag is `warning`, as a proposal's that waits is, not a rejection's `danger`. Its
+  failure: its tag is `warning`, amber, as it waits on its proposer to propose again, not a
+  rejection's `danger`. Its button is outlined, as Reject's is, and pressed in while its form is
+  open, whose confirm button is the one primary. Its
   note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and
   who asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal
   it revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the
@@ -502,7 +504,39 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 
 - Every page starts with `<PageHeader :title :subtitle :back>` with its primary actions in the
   default slot, then content in `.app-card` sections (`.app-card__title` for a section heading).
-  Actions that are all `v-if`'d away leave no empty row.
+  Actions that are all `v-if`'d away leave no empty row. Its title is the page's one `<h1>`: nothing
+  else the app draws on a page is one (headings inside rendered material, a document's or an
+  assignment's Markdown, are the author's, and are left as they wrote them).
+- **A course's pages** (`CourseLayout`): the top bar is the way back up, not the page's name again
+  (`CourseCrumbs`: "CS101·A Introduction to Programming › Materials", the course leading to its
+  overview, the tab to its page where the page is one under it, and only the last step marked as the
+  page, `aria-current`); then a line of context, the course's code, its name in the sans and its
+  status, never a heading, on one line (a long name is cut short with an ellipsis; only on a phone's
+  page does it wrap, to two lines at most); then the tabs, one row (above). A page's title that only
+  names the tab chosen is not shown again: `PageHeader` keeps it for screen readers, and its
+  subtitle and actions share one row (`coursePage.ts`, by the title's
+  words, so title a tab's page with the tab's own name). A page's own title (a document, a member)
+  shows as before. The tabs, which a seat is offered, and which one a page belongs to are
+  `useCourseNav()` (`src/layouts/courseNav.ts`), which the strip, the top bar and the phone's menu
+  all read; the phone's menu lists the course's tabs under the course the page is in. The gradebook
+  and the grading scheme are pages of the Grades tab, all three read with `grade_read`: their
+  header shows the grades' own tabs (`CourseSubTabs`) in the title's place, the student a page is
+  about going with the way to the other; the first is All grades (a student's, My grades), never
+  Grades again. A new tab goes in `COURSE_TABS`, in the order most used, and the target stays: on a
+  laptop's screen (1280 × 800), with the side bar open, a course page starts its content within
+  200 px of the window's top. Inside a course the page's header has 12 px under it, not 20. Known
+  to miss it, by a line of their own: an assignment, a submission and a proposal, whose header has
+  a back link, a title and a line of facts beside their actions (about 220 px), and the Submissions
+  and Grading scheme pages (205 and 215 px), whose subtitle takes a second line; in English, whose
+  subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a pixel or so
+  (201 px); do not add to them.
+- **Navigation's icons are outlined, never filled**: the activity bar, the side bar, the phone's
+  header, a course's tabs and More's menu, the grades' tabs. A filled glyph among outlined ones
+  reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
+  do not say so (`Stamp`, `List`, `Grid`, `Menu`), are refused in navigation's files
+  (`src/layouts`, `src/components/sidebar`) by `npm run lint` (`eslint.config.js`), however they are
+  named: imported, as a string, or as a tag in a template. Another solid glyph found among them goes
+  on that list.
 - A page inside a course whose route does not say which tab it belongs to calls
   `useCourseTab(() => routeName)` (`@/composables/useCourseTab`) with the route whose tab to highlight
   (a document that is an assignment's instructions → `'course-assignments'`). A page that is another
@@ -512,6 +546,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
+- **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
+  approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
+  for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
+  its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
+  of seat. What is new or unread, and a count of what waits for the reader's decision, is indigo. A
+  level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
+  `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
+  confirm_required a raised hand on the indigo's tint; pending_review an eye, outlined in ink;
+  autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
+  The 「需批准」 beside an action the caller's seat must have approved is that level too:
+  `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
@@ -519,8 +564,21 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
+- **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else: `type="primary"`
+  (solid indigo) for the one main action of a view or a dialog, approving and publishing among them;
+  no type (outlined, the ink's text) for everything beside it, rejecting, requesting changes and
+  cancelling among them, rejecting being the safe choice, not a destructive one; `type="danger" plain` (a red outline) for a
+  destructive action on a page (archive, remove, revoke), which asks first; and solid red alone for
+  the last step of that confirmation (`confirmButtonClass: 'el-button--danger'`, or a dialog's
+  button that does it at once). `success`, `warning` and `info` are outcomes' colours, for tags,
+  never a button's. A disabled button has no hue, whatever its rank. What cannot be taken back is
+  not put beside what is done every day: it goes in the toolbar's ⋯ menu (`MoreFilled`), at its far
+  end, as undoing final grades is beside posting them.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
-  mobile width in mind (`min-width` on columns, not fixed widths everywhere).
+  mobile width in mind (`min-width` on columns, not fixed widths everywhere). A table has no ground of its own:
+  it lies on its card (`styles/element.css`), white being a field's alone, and a column of figures is
+  right-aligned, where its digits line up (`tabular-nums`; `data-num` elsewhere). `el-descriptions`
+  with `border` is drawn as rows parted by a thin line on the card, not a boxed grid.
 - **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`
   in `views/course/grades/components/`; a student, or a chosen student, has `GradebookView` as before)
   is students by assignments, read from what the seat may read alone (every page of `grade.list`
@@ -555,7 +613,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   window's, a table or a card per row included (below): the side bar can leave a page narrow on a
   wide window. Only what belongs to the window asks it, with `@/composables/useMediaQuery`:
   `usePhoneScreen()` (640 px or narrower) for a dialog or a drawer laid over the page that fills a
-  phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch.
+  phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch. On a
+  touch screen (`pointer: coarse`, `styles/element.css`) Element Plus's controls are 44 px (40 small,
+  48 large) and its fields' text 16 px, below which iOS zooms into a field it focuses; a component
+  that sets the text size of a field one types into (`MarkdownEditor`'s 13 px monospace, the PDF
+  viewer's page number) outweighs that rule, and so sets 16 px under `pointer: coarse` itself. A
+  control of the app's own that is pressed often is at least 40 px there. Never set `maximum-scale` or
+  `user-scalable` in the viewport: zooming is the reader's.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
   component. Opening adds an entry to history at the page's own address, back closes the overlay
@@ -575,8 +639,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
   left less than about 420 px (the overview at 800 px of page, an assignment at 740, two cards of an
-  actor's page at 856). A course's tabs wrap onto two rows from 720 px of page, and scroll sideways
-  below. What the template itself switches follows the same width: `useContainerNarrow(el, max)`
+  actor's page at 856). A course's tabs keep to one row at any width, never wrapped: as many as fit
+  by the strip's own width show (`fitTabs`, from each tab's width laid out unseen), and only those
+  that do not fit are under More (更多 ▾) in the last place, each still a link (its address to open
+  in a new tab or to copy), More marked as the tab chosen while the page is one of them. On a phone,
+  where the side bar is the menu's drawer and the page is a phone's (592 px), every tab is in the
+  strip, which scrolls sideways, each end fading over 16 px; beside the docked side bar the strip
+  never scrolls, however narrow the page, since a mouse might not reach its end. What the template itself switches follows the same width: `useContainerNarrow(el, max)`
   from `@/composables/useContainerWidth` says whether an element is `max` px wide or less, as
   `@container (max-width: …)` would, for el-descriptions' columns, which of a table's columns show,
   or a table or a card per row (the administration's courses, departments, people and an actor's
@@ -617,12 +686,55 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
-- Agents: `<AgentBadge :kind :owner-name :mine />` beside an actor's or member's name ("Agent",
-  "Your agent", "Yuki's agent"; nothing for a person); `<PresenceText :value="last_seen_at" />` for
-  whether an agent is connected (never / online within two minutes / last seen). `seatPurpose()`
-  (`@/utils/agents`) tells a course agent from a personal assistant by the seat's `answers_course`;
-  `delegateArgsFor()` gives `member.add_delegate` both the preset and `answers_course`, always said
-  outright. `<HostingTag>` says how an agent runs, beside it.
+- **An agent always looks like one, and never like a person or a machine.** Its shape says so, not a
+  hue of its own (no orange for agents: it would be taken for a waiting pill or the brand's light):
+  - One agent in particular is shown by `<AgentAvatar :name size>` (`@/components`): a rounded square
+    (radius 8 at 28 px; a person is always a circle) on `--app-indigo-tint`, its initials in
+    `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or Korean
+    character), with the brand's light at its top right corner. 28 px (`default`) where it heads a row
+    of a list of agents (the chat's list to ask, the course's agents), 20 px (`small`) inline in a line of
+    text (the chat's header and author line, a proposal's proposer or target, a name in a table, the
+    feed's who line, a draft's drafter), 36 px (`large`) heading an entry of a list of agents with their
+    details (My agents, the administration's card). It is decorative (`aria-hidden`); its initials are
+    drawn by CSS.
+  - Agents as a kind (a view of the activity bar, a course's tab, a kind to choose, a note about
+    agents) take `<AgentSeatIcon />`, the person-beside-a-seat line icon of aishie.app (stroke 1.8,
+    round caps; in an `<el-icon>`, or by component where icons are listed). Never the chip (`Cpu`).
+  - After an agent's name, wherever the name is shown, `<AiBadge />`: "AI" in every language
+    (`common.agent.ai`), 11 px, on the indigo tint, radius 4, its words on hover; it takes no focus.
+    It never parts from the name: `<AgentName :name />` keeps the name's last character (with any
+    punctuation after it) on the line of the "AI" when the name wraps, and nothing more, so a name with
+    no spaces (`cs101-introduction-to-programming-weekly-revision-tutor`) still breaks wherever it must
+    and never pushes the "AI" out of its row; a last word breaks no sooner than it would have. `<AgentName
+    :name ellipsis />` cuts the name short on one line and keeps the "AI" whole. `<AgentBadge :kind :owner-name :mine />` beside
+    an actor's or member's name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an
+    outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`.
+    `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI". Inside a
+    control (a row that is a button), `AgentBadge` and `AskableText` take `hint-id`: they take no focus,
+    and what their tooltips say goes in hidden elements of those ids, for the control's
+    `aria-describedby`.
+  - An agent seated as someone's delegate is in Core's role `assistant`, a person's word: `<RoleTag
+    :member />` shows which kind of agent it is (course agent, personal agent) in its place.
+  - An agent is never "online". To those who ask it (the chat's header and list of agents),
+    `<AskableText :who :name />` says "Can be asked" or "Paused" (可提問／暫停, 可提问／暂停) from
+    `availabilityOf`, and why on hover; in the chat's header, after whose agent it is (`whose`), which
+    the header has no room to show. To its owner and those who manage it,
+    `<PresenceText :value="last_seen_at" />` speaks of a program connecting (never connected /
+    connected within two minutes / last connected). Both in plain ink, with no dot of colour.
+  - What an agent made says so where it is shown: a draft grade names its drafter, and what its draft
+    filled into a form carries a 3 px `--app-indigo` line at its left (the indigo line is under 3:1)
+    until it is changed, and says so in its label to a screen reader (`GradePanel`). Each row of the
+    feed starts with who acted: who did it, or who proposed it and who decided it, read from the
+    action it was done under (`action_id`, or the action a log event is about), where the caller may
+    read that action (`actors.ts`). Those who decide actions read any (`action.get`); anyone else reads
+    their own (`action.list_mine`) and, owning an agent seated there, that agent's (`action.get`, as
+    its owner; asked only of events about their own work), and learns nothing of anyone else's, until
+    the feed itself says who acted. The *Agents* chip keeps what agents did, for those who decide
+    actions and those who own an agent there.
+
+  `seatPurpose()` (`@/utils/agents`) tells a course agent from a personal agent by the seat's
+  `answers_course`; `delegateArgsFor()` gives `member.add_delegate` both the preset and
+  `answers_course`, always said outright. `<HostingTag>` says how an agent runs, beside it.
 - People ask an agent on the site only while AIshie's runtime hosts it: one hosted on AIshie for which
   the runtime holds a live token (`site_chat: true`, which nobody declares or switches any more). One
   with MCP access never is, and has no chat box anywhere. Show `site_chat` as a status, never a switch
@@ -639,8 +751,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   opens a collapsed side bar. `useSideBarStore()` (`@/stores/sidebar`) holds the view and whether it is
   open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
-  no activity bar: the header's menu button opens the views in a drawer, as tabs along its top, and
-  following a link in it closes it, as back does.
+  no activity bar: three lines at the header's left (`Expand`, an outlined icon, 20 px in a 44 px
+  button named 「選單」) open the views in a drawer, with the wordmark (`AppWordmark`) at its top and
+  the views as tabs under it (the course the page is in with its tabs under it), and following a link
+  in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
@@ -650,7 +764,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   hold it under the side bar and the header, and focus returns to the account button as it closes) and
   signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
-  title alone (and, on a phone, the menu's button): nothing else is offered there.
+  title (on a course's pages, the way up to it: the course and the tab) and, at its right end, the
+  chat's button (on a phone, the menu's button before the title and no chat's button): nothing else
+  is offered there.
 - A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,
   mounted by `AppLayout`) reads `index.html` again (`cache: 'no-store'`) every five minutes and when the
   tab is shown again, and compares the entry script it names (`/assets/index-<hash>.js`) with the one
@@ -660,14 +776,21 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - The chat with agents is one window over every signed-in page (`src/components/chat/ChatPanel.vue`,
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
   agent. Nothing runs along the window's right edge: the header and the page reach it. The chat's
-  entry is a round button floating at the bottom right of every page (`.app-chat-fab`, on a desktop as
-  on a phone), 16 px from the screen's edges and above a phone's safe area, with the count of answers
-  not read and, from 900 px up, a tooltip saying its shortcut; the header holds only the page's title,
-  and the activity bar only the side bar's views. The page keeps room below its last item for the
-  button (`.has-chat-fab`: its size and twice its inset), so that a list's last item, its pages or a
-  button are never under it; a page that pins something to the bottom of the screen keeps it clear of
-  the button too. The button opens the chat in its corner, and is gone while the chat is open; Ctrl/⌘+J
-  opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
+  entry (`.app-chat-entry`, `#chat-panel-toggle`), with the count of answers not read in the indigo,
+  is, from 900 px up, an icon button at the header's right end (`.app-header__chat`), with a tooltip
+  saying its shortcut: nothing floats over the page, whose rows keep their actions, times and status
+  at their right end in sight. It stays while the chat is open (`aria-expanded`, on the indigo's
+  tint), and pressed again minimizes it. On a phone (up to 899 px) it is a 48 px round button
+  floating at the bottom right (`.app-chat-fab`), 16 px from the screen's edges and above the safe
+  area, in the thumb's reach: it slides out of the way while the page is scrolled down and comes back
+  as soon as it is scrolled up, reaches its top, or the button takes focus (at once, with no slide,
+  where motion is reduced), and the page keeps room below its last item for it (`.has-chat-fab`,
+  88 px and the safe area), so that a list's last item, its pages or a button are never under it; a
+  page that pins something to the bottom of the screen keeps it clear of the button too, and so does
+  a toolbar whose action at its right end would be under it when the page opens (`.has-chat-fab`
+  `.grades-view__post`: the button's column kept clear). The
+  activity bar holds only the side bar's views. The button opens the chat in its corner (a phone's
+  button is gone while the sheet is open); Ctrl/⌘+J opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
   width, which stays as it is, and usable, behind it (a dialog, not a modal one: `role="dialog"`,
   `aria-modal="false"`, named by its title bar). It is 400 × 600 px (`WINDOW_WIDTH`, `WINDOW_HEIGHT`),
   16 px from the viewport's bottom right corner, and clear of the header where the viewport is too
@@ -684,7 +807,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   lays over it, with a shadow all round (`--app-z-panel`, `--app-shadow-window`; the layers are in
   `styles/tokens.css`). Minimized (its button, Escape from within it, or Ctrl/⌘+J), it opens again on
   what it showed; closed, on a new conversation in the course it asks in (the chat store's `close`);
-  either way focus goes back to the round button. Files dropped anywhere on the window, its title bar
+  either way focus goes back to the chat's button. Files dropped anywhere on the window, its title bar
   too, go to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
   screen, a modal dialog with no edge to drag, closed with its one button, Escape or back, keeping what it
   showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
@@ -721,8 +844,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   browser keeps only the course the caller last asked in (`aishie.chatCourse.<actorId>`). Those
   who decide actions read each agent's conversations from the course's *Agents* page (its
   conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
-  (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent, whether
-  anything runs it (`PresenceText`) and, only once it is closed, its state, and a ⋯ menu for who can
+  (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent (its avatar, name
+  and "AI"; only the course and the name give way to a narrow panel), whether it can be asked now
+  (`AskableText`) and, only once it is closed, its state, and a ⋯ menu for who can
   read it, how its answers arrive, and to download it as a PDF, every message read back to the first
   (nothing ends a conversation from the chat); the messages; and
   the composer (`ChatComposer.vue`), one bordered box whose send button, small and icon-only, sits
@@ -843,6 +967,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
+- One word for an agent in each language, and one for each of its two kinds: 代理, 課程代理, 個人代理
+  (zh-Hant); 智能体, 课程智能体, 个人智能体 (zh-Hans); agent, course agent, personal agent (English).
+  Never 助手, 助理, 小幫手, assistant or helper for an agent: the role `assistant` (助理, Assistant) is
+  Core's name for a seat's role, which a person may hold too. The names people give their agents are
+  theirs, and are shown as given.
 - Examples in placeholders and hints name no real school: ids such as `school-adfs` or
   `university-sso`, emails such as `name@example.edu`, domains such as `example.edu`. Tests and
   their fixtures use the same, so that none is copied into the page from them.
@@ -860,6 +989,21 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<code>`. `src/i18n/copy.spec.ts` scans every message in every language for these words (a dotted or an
   underscored tool name, a setting or a family of them such as `OIDC_*`); a message only an operator reads, or
   one that sets up an agent's MCP client, is let through there by its key, saying why.
+- **No punctuation in templates.** What joins words is the language's, so it is in the messages:
+  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), a label and
+  its value `common.pair` ("Model calls: 380", 「模型呼叫：380」; `<i18n-t keypath="common.pair">`
+  where the value is a component). Numbers go through `@/utils/format`: a percentage through
+  `formatPct` (a fraction; the gradebook's `formatPct` for a percentage Core worked out), money
+  through `formatMoney` ("US$0.0184": a "$" alone reads as Hong Kong's), a list through
+  `formatList` ("a, b, and c", 「甲、乙和丙」), never `"%"` written after a number nor
+  `.join(', ')`. The dot between a course's code and its section is `<span class="app-sep">·</span>`
+  with no spaces, so that a Chinese typeface does not make it a full-width one.
+- **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
+  never 「{owner} 的代理」, nor around a figure written in the message: 「1個學期 | {n}個學期」, never
+  「1 個學期」 (`src/i18n/spacing.spec.ts` refuses both). The page puts the room between Han
+  and Latin letters or figures itself (`text-autospace` under `html:lang(zh)`, `styles/main.css`),
+  which also keeps a paragraph from leaving one character alone on its last line (`text-wrap`).
+  Small capitals' tracking (a side bar's headings) is 0 in Chinese.
 - Some vocabularies are keyed by Core's own dotted names (`enums.event`: `grade.posted`, …).
   vue-i18n splits a key path on dots, so look those up with a bracketed segment:
   ``t(`enums.event['${type}']`)``.

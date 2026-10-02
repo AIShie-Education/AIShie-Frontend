@@ -204,7 +204,9 @@ function openEdit(o: PlanOffer) {
             <template v-if="narrow">
               <OfferStatus :offer="row" />
               <OfferKey :offer="row" />
-              <span class="offer-cell__agents">{{ t('runtimeAdmin.offers.agents') }}: {{ row.agents }}</span>
+              <span class="offer-cell__agents">{{
+                t('common.pair', { label: t('runtimeAdmin.offers.agents'), value: row.agents })
+              }}</span>
               <div v-if="row.source === 'site'" class="offer-cell__actions">
                 <el-button link type="primary" :disabled="!!busy" class="offer-cell__edit" @click="openEdit(row)">
                   {{ t('runtimeAdmin.offers.edit') }}

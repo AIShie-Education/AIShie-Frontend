@@ -24,7 +24,7 @@ export default {
   roster: {
     unavailable: '這個伺服器無法列出尚未開始的學生，因此這裡只顯示已有的提交。',
     summary: {
-      total: '共 {n} 位學生',
+      total: '共{n}位學生',
       partial: '以上數字只計算目前已載入的學生。',
     },
     empty: '這份作業沒有你可查看的在學學生。',
@@ -37,7 +37,7 @@ export default {
       title: '將{name}標記為缺交？',
       body: '這會記錄{name}沒有繳交「{assignment}」的任何作業，以便就此評分（例如給零分）。若學生之後補交作業，只要這筆紀錄尚未評分，補交的作業便會取而代之。',
       thisAssignment: '這份作業',
-      notDue: '這份作業要到 {due} 才截止。',
+      notDue: '這份作業要到{due}才截止。',
       needsApproval: '此操作須經他人批准才會生效。',
     },
     done: '已將{name}標記為缺交。',
@@ -54,7 +54,7 @@ export default {
   },
   detail: {
     title: '提交',
-    attempt: '第 {n} 次',
+    attempt: '第{n}次',
     facts: {
       assignment: '作業',
       student: '學生',
@@ -65,7 +65,7 @@ export default {
       points: '滿分',
       instructions: '作業說明',
     },
-    pointsValue: '{n} 分',
+    pointsValue: '{n}分',
     noDue: '沒有截止時間',
     instructionsLink: '繳交當時的版本',
     noInstructionsVersion: '沒有記錄',
@@ -108,15 +108,21 @@ export default {
     openPosted: '開啟已發佈的成績',
     draftExists: '這份作業已有一份草稿成績（{score}）。儲存新的成績會取代它。',
     openDraft: '開啟草稿',
+    // Who drafted it: an agent with its avatar and "AI" (MemberName), a person by name.
+    draftBy: '由{name}起草',
+    // While what the draft filled in is unchanged: those fields carry a line at their left.
+    prefilledBy: '左側有直線的欄位仍是{name}起草的內容，你尚未修改。',
+    // After the label of each such field, said to a screen reader alone.
+    prefilledMark: '（代理起草，尚未修改）',
     startFromDraft: '以目前的草稿為基礎',
     forMissing:
       '學生沒有繳交任何作業：這個成績是針對缺交而給。若在成績生效前有遲交的作業取代了這個佔位紀錄，成績會被拒絕，需重新檢視作業。',
     needsApprovalHint: '你在這裡輸入的成績須經他人批准才會生效。',
     score: '得分',
-    outOf: '滿分 {points}',
-    scorePlaceholder: '例如 8.5',
+    outOf: '滿分{points}',
+    scorePlaceholder: '例如8.5',
     scoreNegative: '得分不可為負數',
-    scoreAbove: '超過滿分 {points} 分。如要給分，請勾選「允許額外加分」。',
+    scoreAbove: '超過滿分{points}分。如要給分，請勾選「允許額外加分」。',
     allowExtra: '允許額外加分（得分超過滿分）',
     breakdown: '評分明細',
     breakdownHint: '選填：依評分準則逐項填寫，每項一行。',
@@ -168,13 +174,13 @@ export default {
     comment: '評語（選填）',
     add: '新增評分細項',
     remove: '移除這一行',
-    total: '合計 {points} / {max}',
+    total: '合計{points} / {max}',
     useTotal: '用作得分',
-    invalid: '每一行都需填寫評分細項，得分與滿分須為 0 或以上的數字',
+    invalid: '每一行都需填寫評分細項，得分與滿分須為0或以上的數字',
   },
   rubric: {
     title: '評分準則',
-    version: '第 {n} 版',
+    version: '第{n}版',
     recorded: '成績會記錄這個版本。',
     none: '這份作業沒有評分準則，成績會記錄評分時未參照任何準則。',
     unpublished: '評分準則尚未發佈，因此成績不會記錄任何準則。',

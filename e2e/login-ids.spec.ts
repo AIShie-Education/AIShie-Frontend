@@ -198,10 +198,10 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await page.goto(`/courses/${courseId}/members/${lena.member_id}`)
     await page.getByRole('button', { name: '重設密碼' }).click()
     await page
-      .getByRole('dialog', { name: `重設 ${lena.display_name} 的密碼？` })
+      .getByRole('dialog', { name: `重設${lena.display_name}的密碼？` })
       .getByRole('button', { name: '重設密碼' })
       .click()
-    const zh = page.getByRole('dialog', { name: `${lena.display_name} 的臨時密碼` })
+    const zh = page.getByRole('dialog', { name: `${lena.display_name}的臨時密碼` })
     await expect(zh).toContainText('只會顯示這一次')
     await expect(zh.locator('.reset-dialog__login')).toHaveText(lena.login_id)
     temporary = (await zh.locator('[data-test="temporary-password"]').textContent())!.trim()

@@ -10,7 +10,8 @@ request, on every push to `main` and once a week:
 
 - **checks and build:** the generated API types are what `npm run gen:api`
   makes of `api/catalogue.json`; `npm run typecheck`, `npm run check:i18n`,
-  `npm test`, `npm run build`. The build is kept as the run's artifact
+  `npm run lint` (the few rules of `eslint.config.js`), `npm test`,
+  `npm run build`. The build is kept as the run's artifact
   `web-<commit>`: everything after this uses those files, a deploy ships
   them, and the image, which builds the sources again, must hold them file
   for file.

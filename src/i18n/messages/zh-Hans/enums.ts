@@ -46,7 +46,7 @@ export default {
     member_manage: '添加、移除成员及调整范围',
     member_invite: '创建、查看和撤销课程的邀请链接；任何持有链接的人都能通过它以学生身份加入',
     action_decide: '批准提议与事后审核',
-    agent_delegate: '把自己拥有的智能体带入课程当你的助手；它的权限永远不会超过你自己的席位',
+    agent_delegate: '把自己拥有的智能体带入课程当你的个人智能体；它的权限永远不会超过你自己的席位',
     conversation_ask: '与课程智能体或自己的智能体开始对话，并在对话中发言',
     conversation_answer: '接受提问并作答；级别决定回复如何发出',
   },
@@ -55,7 +55,7 @@ export default {
     agent_never: '代表他人行事的智能体不会带入自己的智能体',
     agent_decides_by_proposal: '智能体只能以提议的方式作出决定与审核，并须由人确认',
     student_agent_by_proposal:
-      '不管理本课程成员的人，其智能体做这件事只能以提议的方式进行，因为这超出了“个人助手”预设所给的权限',
+      '不管理本课程成员的人，其智能体做这件事只能以提议的方式进行，因为这超出了“个人智能体”预设所给的权限',
     principal_level: '代表他人行事的智能体，权限永不超过该人',
     principal_level_conversation_answer: '代表他人行事的智能体，回答的自主程度不会超过该人提问的权限',
     conversations_are_with_agents: '对话只与智能体进行，真人不回答任何对话',
@@ -68,7 +68,7 @@ export default {
     instructor: '讲师',
     tutor: '辅导（智能体）',
     grader: '评分（智能体）',
-    delegate: '个人助手（智能体）',
+    delegate: '个人智能体',
     course_tutor: '课程智能体',
   },
   presetHelp: {
@@ -83,7 +83,7 @@ export default {
   },
   // What an agent seated as someone's delegate is there for.
   seatPurpose: {
-    personal: '个人助手',
+    personal: '个人智能体',
     course: '课程智能体',
   },
   role: {

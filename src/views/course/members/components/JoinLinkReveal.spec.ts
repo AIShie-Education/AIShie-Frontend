@@ -135,7 +135,7 @@ describe('JoinLinkFullscreen', () => {
     await flushPromises()
     const page = document.body.querySelector('.join-fs')!
     expect(page.getAttribute('role')).toBe('dialog')
-    expect(page.textContent).toContain('CS101 · A')
+    expect(page.textContent).toContain('CS101·A')
     expect(page.textContent).toContain('Introduction to Programming')
     expect(page.textContent).toContain('Scan to join')
     expect(page.querySelector('.join-fs__clock')!.textContent).toContain('10:00')

@@ -443,7 +443,7 @@ test.describe.serial('the file viewer', () => {
     await expect.poll(async () => (await watch.printed()).length).toBe(1)
     const [print] = await watch.printed()
     expect(print!.lang).toBe('zh-Hant')
-    expect(print!.head).toContain('第 1 版')
+    expect(print!.head).toContain('第1版')
     // The layout, as the print window would show it, for the record.
     const frame = page.frameLocator('iframe.app-print-frame')
     await expect(frame.locator('h1.print-title')).toHaveText(TITLE)

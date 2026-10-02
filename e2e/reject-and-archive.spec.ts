@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import {
   call,
   coursePath,
-  courseTab,
+  openCourseTab,
   demo,
   expectToasted,
   keepToasts,
@@ -43,7 +43,7 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
 
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Approvals').click()
+    await openCourseTab(page, 'Approvals')
     const card = page.locator('.action-card').filter({ hasText: FEEDBACK })
     await expect(card).toHaveCount(1)
     await expect(card).toContainText('grader-v2')
@@ -116,7 +116,7 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
 
     await signIn(page, pia)
     await page.goto(coursePath())
-    await courseTab(page, 'My actions').click()
+    await openCourseTab(page, 'My actions')
     const row = page.locator('.el-table__row').filter({ hasText: PIA_REASON })
     await expect(row).toHaveCount(1)
     await expect(row).toContainText('Enter a grade')
@@ -161,13 +161,13 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     ).toBeVisible()
     await expect(ip.locator('.course-head')).toContainText('Archived')
 
-    await courseTab(ip, 'Materials').click()
+    await openCourseTab(ip, 'Materials')
     await expect(ip.getByRole('button', { name: 'New material' })).toBeDisabled()
     await ip.locator('.material-row').filter({ hasText: 'Week 2 — Variables and types' }).click()
     await expect(ip.getByRole('button', { name: 'New version' })).toBeDisabled()
     await expect(ip.getByRole('button', { name: 'Publish this version' })).toBeDisabled()
 
-    await courseTab(ip, 'Assignments').click()
+    await openCourseTab(ip, 'Assignments')
     await expect(ip.getByRole('button', { name: 'New assignment' })).toBeDisabled()
     await ip.goto(coursePath(`assignments/${d.course.assignments.hw2}`))
     await expect(ip.locator('.page-header').getByRole('button', { name: 'Edit' })).toBeDisabled()
@@ -177,19 +177,19 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     await expect(ip.getByText('The course is archived: grades can no longer be entered.')).toBeVisible()
     await expect(ip.getByRole('button', { name: 'Mark as late' })).toBeDisabled()
 
-    await courseTab(ip, 'Grades').click()
+    await openCourseTab(ip, 'Grades')
     await expect(ip.getByRole('button', { name: 'Enter a component grade' })).toBeDisabled()
 
-    await courseTab(ip, 'Grading scheme').click()
+    await openCourseTab(ip, 'Grading scheme')
     await expect(ip.getByRole('button', { name: 'Add component' })).toBeDisabled()
 
-    await courseTab(ip, 'Members').click()
+    await openCourseTab(ip, 'Members')
     await expect(ip.getByRole('button', { name: 'Add member' })).toBeDisabled()
     await ip.locator('.el-table__row').filter({ hasText: 'Ken Wong' }).click()
     await expect(ip.locator('.page-header').getByRole('button', { name: 'Pause' })).toBeDisabled()
     await expect(ip.getByRole('button', { name: 'Edit permissions' })).toBeDisabled()
 
-    await courseTab(ip, 'Approvals').click()
+    await openCourseTab(ip, 'Approvals')
     // Whatever still waits (the seeded proposal, unless the worked example has
     // approved it) cannot be decided now.
     const pending = ip.locator('.action-card').first()

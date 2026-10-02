@@ -9,13 +9,14 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import { ElMessage, ElNotification, type FormInstance, type FormItemRule } from 'element-plus'
+import StatusTag from '@/components/StatusTag.vue'
 import type { ToolIn, WriteOutcome } from '@/api/http'
 import type { Assignment, DocumentSummary } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE, uploadedPayload } from '@/utils/documentFiles'
-import { isDecimal } from '@/utils/format'
+import { formatList, isDecimal } from '@/utils/format'
 import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
 import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
 import DocChoiceField from './DocChoiceField.vue'
@@ -28,7 +29,7 @@ const visible = defineModel<boolean>('visible', { default: false })
 const props = defineProps<{ courseId: string; assignment?: Assignment | null }>()
 const emit = defineEmits<{ saved: [result: { status: 'executed' | 'proposed'; id?: string }] }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const course = useCourseStore()
 // Loaded when the dialog opens (init), not while it sits closed.
 const scheme = useScheme(() => props.courseId, { immediate: false })
@@ -310,7 +311,7 @@ function announceSaved(out: WriteOutcome<unknown>, verb: 'created' | 'saved', ma
     ElNotification({
       type: 'info',
       title: t('common.outcome.proposedTitle'),
-      message: t('assignments.form.proposedWithDocs', { titles: listFormat(titles) }, titles.length),
+      message: t('assignments.form.proposedWithDocs', { titles: formatList(titles) }, titles.length),
       duration: 8000,
     })
     return
@@ -326,14 +327,7 @@ function announceSaved(out: WriteOutcome<unknown>, verb: 'created' | 'saved', ma
 function noteCreatedDocs() {
   if (!createdTitles.value.length || docNotice.value) return
   const titles = createdTitles.value.map((x) => t('assignments.form.quoted', { title: x }))
-  docNotice.value = t('assignments.form.docsKept', { titles: listFormat(titles) }, titles.length)
-}
-function listFormat(items: string[]): string {
-  try {
-    return new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(items)
-  } catch {
-    return items.join(', ')
-  }
+  docNotice.value = t('assignments.form.docsKept', { titles: formatList(titles) }, titles.length)
 }
 
 function sameDecimal(a: string, b: string | number): boolean {
@@ -604,9 +598,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 
     <template #footer>
       <div class="assignment-form__footer">
-        <el-tag v-if="saveNeedsApproval" type="warning" size="small" disable-transitions>
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag v-if="saveNeedsApproval" vocab="level" value="confirm_required" size="small" />
         <span class="app-toolbar__spacer" />
         <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
         <el-button type="primary" :loading="busy" :disabled="disabled || anyUploading" @click="submit">

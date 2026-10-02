@@ -13,11 +13,15 @@ import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
+import AgentName from '@/components/AgentName.vue'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RoleTag from '@/components/RoleTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AddMemberDialog from './components/AddMemberDialog.vue'
@@ -191,9 +195,12 @@ function rowClass({ row }: { row: MemberSummary }) {
             <span>{{ t('members.addMember') }}</span>
           </el-button>
         </el-tooltip>
-        <el-tag v-if="canManage && course.needsApproval('member_manage')" type="warning" effect="plain">
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag
+          v-if="canManage && course.needsApproval('member_manage')"
+          vocab="level"
+          value="confirm_required"
+          size="default"
+        />
       </div>
     </PageHeader>
 
@@ -223,7 +230,7 @@ function rowClass({ row }: { row: MemberSummary }) {
             {{ count(counts.human) }}
           </el-radio-button>
           <el-radio-button value="agent">
-            <el-icon class="members__tab-icon"><Cpu /></el-icon>{{ t('members.tabs.agents') }} ·
+            <el-icon class="members__tab-icon"><AgentSeatIcon /></el-icon>{{ t('members.tabs.agents') }} ·
             {{ count(counts.agent) }}
           </el-radio-button>
         </el-radio-group>
@@ -264,15 +271,25 @@ function rowClass({ row }: { row: MemberSummary }) {
           >
             <template #default="{ row }">
               <div class="members__name">
-                <el-icon class="members__kind-icon" :class="{ 'is-agent': row.kind === 'agent' }">
-                  <Cpu v-if="row.kind === 'agent'" /><User v-else />
-                </el-icon>
-                <span class="members__name-text">{{ row.display_name }}</span>
-                <span v-if="row.id === course.myMemberId" class="members__me">({{ t('common.labels.you') }})</span>
+                <!-- The avatar, the name and its "AI" never part: the name is cut short instead. -->
+                <span v-if="row.kind === 'agent'" class="members__agent">
+                  <AgentAvatar :name="row.display_name" size="small" />
+                  <AgentName :name="row.display_name" ellipsis class="members__name-text" />
+                </span>
+                <template v-else>
+                  <el-icon class="members__kind-icon"><User /></el-icon>
+                  <!-- 「（你）」 is with the name, not a flex item after it: the line's gap would part them. -->
+                  <span class="members__who"
+                    ><span class="members__name-text">{{ row.display_name }}</span
+                    ><span v-if="row.id === course.myMemberId" class="members__me app-you">{{
+                      t('common.labels.youTag')
+                    }}</span></span
+                  >
+                </template>
                 <el-tooltip v-if="row.login_id" :content="t('members.loginId')" placement="top">
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
                 </el-tooltip>
-                <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" />
+                <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" no-ai />
                 <HostingTag v-if="row.kind === 'agent'" :hosting="row.hosting" :site-chat="row.site_chat" />
                 <el-tooltip v-if="row.join_link_id" :content="t('join.viaHint')" placement="top">
                   <el-tag size="small" type="info" effect="plain" class="members__via" tabindex="0">
@@ -281,7 +298,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                 </el-tooltip>
               </div>
               <div v-if="narrow" class="members__stack">
-                <StatusTag vocab="role" :value="row.role" />
+                <RoleTag :member="row" />
                 <StatusTag v-if="row.status !== 'active'" vocab="memberStatus" :value="row.status" />
                 <el-tag v-if="row.status !== 'removed' && isExpired(row.expires_at)" size="small" type="info">
                   {{ t('members.expired') }}
@@ -290,7 +307,7 @@ function rowClass({ row }: { row: MemberSummary }) {
             </template>
           </el-table-column>
           <el-table-column v-if="!narrow" prop="role" :label="t('members.columns.role')" min-width="150" sortable>
-            <template #default="{ row }"><StatusTag vocab="role" :value="row.role" /></template>
+            <template #default="{ row }"><RoleTag :member="row" /></template>
           </el-table-column>
           <el-table-column v-if="!narrow" prop="status" :label="t('members.columns.status')" min-width="100">
             <template #default="{ row }">
@@ -389,6 +406,19 @@ function rowClass({ row }: { row: MemberSummary }) {
   gap: 2px 6px;
   min-width: 0;
 }
+.members__agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+/* The name and 「（你）」 after it, with no gap between them: the name is cut short first. */
+.members__who {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
 .members__name-text {
   font-weight: 500;
   overflow: hidden;
@@ -398,9 +428,6 @@ function rowClass({ row }: { row: MemberSummary }) {
 .members__kind-icon {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
-}
-.members__kind-icon.is-agent {
-  color: var(--el-color-primary);
 }
 .members__via :deep(.el-tag__content) {
   display: inline-flex;
@@ -414,6 +441,7 @@ function rowClass({ row }: { row: MemberSummary }) {
   white-space: nowrap;
 }
 .members__me {
+  flex-shrink: 0;
   color: var(--el-text-color-secondary);
   font-size: 12px;
   white-space: nowrap;

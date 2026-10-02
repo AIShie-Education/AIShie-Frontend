@@ -150,7 +150,7 @@ describe('New version', () => {
   it('names the latest version’s files, which it does not carry over, and says saving without them drops them', async () => {
     await dialog()
     const note = document.body.querySelector('.version-dialog__alert')!.textContent
-    expect(note).toContain('Version 1 has 2 files: week1.pdf (10 B), setup.docx (2 KB).')
+    expect(note).toContain('Version 1 has 2 files: week1.pdf (10 B) and setup.docx (2 KB).')
     expect(note).toContain('A new version does not carry them over')
     expect(document.body.querySelector('.version-dialog__why')!.textContent).toContain(
       'The same text as version 1, without its files.',

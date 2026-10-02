@@ -59,29 +59,39 @@ test.describe('language', () => {
     await page.goto(coursePath())
     const tabs = page.getByRole('navigation', { name: 'Course sections' })
     await expect(tabs.getByRole('link', { name: 'Overview' })).toBeVisible()
-    await expect(tabs.getByRole('link', { name: 'Members' })).toBeVisible()
 
     await chooseLanguage(page, '繁體中文')
 
+    // Every tab in the strip where they all fit, as they do in Chinese beside the side bar.
     const zhTabs = page.getByRole('navigation', { name: '課程分頁' })
-    for (const name of ['概覽', '教材', '作業', '提交', '成績', '成員', '審批', '我的操作']) {
+    for (const name of ['概覽', '教材', '作業', '提交', '成績', '審批', '成員', '代理', '動態', '我的操作']) {
       await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
+    await expect(zhTabs.getByRole('button', { name: /^更多/ })).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Overview' })).toHaveCount(0)
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
-    // The chat with the course's agents, over every page from its round button at the bottom right, and no longer a
+    // The chat with the course's agents, over every page from its button at the header's right end, and no longer a
     // tab of the course.
-    await expect(page.locator('.app-chat-fab').getByRole('button', { name: '與代理對話' })).toBeVisible()
+    await expect(page.locator('.app-header').getByRole('button', { name: '與代理對話' })).toBeVisible()
     await expect(zhTabs.getByRole('link', { name: '對話' })).toHaveCount(0)
     // Core's vocabularies too: the course's status and the caller's role.
     await expect(page.locator('.course-head')).not.toContainText('Active')
     await expect(page.locator('.course-head')).not.toContainText('Instructor')
 
-    // It stays while moving around the course.
-    await zhTabs.getByRole('link', { name: '成員' }).click()
-    await expect(page).toHaveURL(new RegExp(`${coursePath('members')}$`))
-    await expect(page.getByRole('button', { name: 'Add member' })).toHaveCount(0)
-    await expect(page.getByRole('heading', { name: '成員' })).toBeVisible()
+    // It stays while moving around the course. In a narrower window, those that do not fit are under More, each
+    // still a link to its page.
+    await page.setViewportSize({ width: 1000, height: 720 })
+    await zhTabs.getByRole('button', { name: '更多' }).click()
+    const myActions = page.getByRole('menuitem', { name: '我的操作', exact: true })
+    await expect(myActions).toBeVisible()
+    await expect(myActions.getByRole('link')).toHaveAttribute('href', coursePath('my-actions'))
+    await myActions.click()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('my-actions')}$`))
+    await expect(page.getByRole('heading', { name: '我的操作', level: 1 })).toHaveCount(1)
+    // More is the tab chosen, and says which; the top bar says where the page is, and only that is the page.
+    await expect(zhTabs.getByRole('button', { name: '更多（目前：我的操作）' })).toHaveClass(/is-active/)
+    await expect(page.locator('.app-header .course-crumbs [aria-current="page"]')).toHaveText('我的操作')
+    await expect(page.locator('.app-header .course-crumbs [aria-current]')).toHaveCount(1)
 
     await chooseLanguage(page, 'English')
     await expect(courseTab(page, 'Overview')).toBeVisible()
@@ -103,11 +113,11 @@ test.describe('language', () => {
     await chooseLanguage(page, '简体中文')
 
     const zhTabs = page.getByRole('navigation', { name: '课程栏目' })
-    for (const name of ['概览', '教材', '作业', '提交', '成绩', '成员', '审批', '我的操作']) {
+    for (const name of ['概览', '教材', '作业', '提交', '成绩', '审批']) {
       await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
-    await expect(page.locator('.app-chat-fab').getByRole('button', { name: '与智能体对话' })).toBeVisible()
+    await expect(page.locator('.app-header').getByRole('button', { name: '与智能体对话' })).toBeVisible()
     // Simplified glyphs, from Noto Sans SC: the SC faces are fetched, the TC ones never.
     await expect.poll(() => fonts.includes('sc'), { message: 'an SC face is fetched' }).toBe(true)
     expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Noto Sans SC/)
@@ -132,7 +142,18 @@ test.describe('at phone width', () => {
     // More tabs than fit: the strip scrolls, the page does not.
     const strip = await tabs.evaluate((n) => ({ scroll: n.scrollWidth, client: n.clientWidth }))
     expect(strip.scroll).toBeGreaterThan(strip.client)
+    await expect(tabs.getByRole('button', { name: /^More/ })).toHaveCount(0)
     await expectFits(page, 'the overview')
+
+    // The phone's menu lists the course's tabs under it, and goes to one.
+    await page.getByRole('button', { name: 'Menu' }).click()
+    const sections = page.getByRole('navigation', { name: /^Sections of / })
+    await expect(sections.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
+    // The course over them is the one the page is in, not the page: that is the tab.
+    await expect(page.locator('.app-nav-drawer .side-course.is-active')).toHaveAttribute('aria-current', 'true')
+    await sections.getByRole('link', { name: 'Members' }).click()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('members')}$`))
+    await expect(sections).toHaveCount(0)
 
     // A tab off to the right can be reached and opened.
     const activity = tabs.getByRole('link', { name: 'Activity' })
@@ -162,6 +183,32 @@ test.describe('at phone width', () => {
     }
   })
 
+  test('the top bar’s way up cuts the course’s code short, rather than run it under the tab, on a narrow phone', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    // The narrowest of phones, on a page three steps down: the course, Grades, the grading scheme.
+    await page.setViewportSize({ width: 320, height: 700 })
+    await page.goto(coursePath('scheme'))
+    const crumbs = page.getByRole('navigation', { name: 'Where you are' })
+    await expect(crumbs.getByText('Grading scheme')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    const steps = await crumbs.evaluate((nav) => {
+      const code = nav.querySelector('.course-crumbs__code')!
+      const after = [...nav.querySelectorAll('li')].slice(1)
+      return {
+        cut: code.scrollWidth > code.clientWidth,
+        codeRight: code.getBoundingClientRect().right,
+        nextLeft: after[0]!.getBoundingClientRect().left,
+        lastRight: after[after.length - 1]!.getBoundingClientRect().right,
+      }
+    })
+    expect(steps.cut).toBe(true)
+    expect(steps.codeRight).toBeLessThanOrEqual(steps.nextLeft)
+    expect(steps.lastRight).toBeLessThanOrEqual(320)
+  })
+
   test('the chat is a sheet over the whole screen, opened from a floating button, and fits it', async ({ page }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
@@ -184,6 +231,23 @@ test.describe('at phone width', () => {
     await expect(sheet).toHaveCount(0)
     await expect(page.locator('.page-header').first()).toBeVisible()
     await expect(chatButton(page)).toBeVisible()
+  })
+
+  test('a field one types into is in 16 px on a touch screen, the Markdown editor’s included, so iOS does not zoom into it', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath('grades'))
+    await page.getByRole('button', { name: 'Enter a component grade' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Grade a directly graded component' })
+    await expect(dialog).toBeVisible()
+    const sizes = await dialog.evaluate((el) => ({
+      coarse: matchMedia('(pointer: coarse)').matches,
+      field: getComputedStyle(el.querySelector('.enter-dialog__score-input input')!).fontSize,
+      markdown: getComputedStyle(el.querySelector('.md-editor textarea')!).fontSize,
+    }))
+    expect(sizes).toEqual({ coarse: true, field: '16px', markdown: '16px' })
   })
 
   test('dialogs fit a phone', async ({ page }) => {

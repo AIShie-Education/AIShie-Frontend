@@ -549,7 +549,7 @@ describe('HostedAgentCard: on the school’s plan', () => {
     setLocale('zh-Hant')
     const zh = await card(today(onSchoolPlan(false)))
     expect(zh.find('.hosted-card__school-hint').text()).toBe(
-      '學校方案，你所有的代理合計；每天香港標準時間 00:00 重新計算。',
+      '學校方案，你所有的代理合計；每天香港標準時間 00:00重新計算。',
     )
   })
 
@@ -622,8 +622,8 @@ describe('HostedAgentCard: on the school’s plan', () => {
     setLocale('zh-Hant')
     const w = await card(onSchoolPlan(false), { canChooseSchool: true })
     expect(w.find('.hosted-card__plan').text()).toBe('學校方案（由學校付費）')
-    expect(w.find('.hosted-card__school-count').text()).toBe('今日 12 / 100 次')
-    expect(w.find('.hosted-card__per-asker').text()).toBe('每位提問者每天最多 20 次')
+    expect(w.find('.hosted-card__school-count').text()).toBe('今日12 / 100次')
+    expect(w.find('.hosted-card__per-asker').text()).toBe('每位提問者每天最多20次')
   })
 
   it('offers choosing a model where only the school’s plan is offered, and asks for one on it', async () => {

@@ -691,6 +691,31 @@ describe('ChatPane', () => {
     expect(w.find('.chat-msg.is-retracted').text()).toContain('Off topic')
   })
 
+  it('keeps the “AI” and whether it can be asked whole in its header, and says whose agent it is on hover', async () => {
+    seat('student')
+    const respondent: Respondent = {
+      member_id: 'mine',
+      display_name: 'Introduction to Programming weekly revision and practice tutor',
+      kind: 'agent',
+      role: 'assistant',
+      is_my_delegate: true,
+      answers_course: false,
+      hosting: 'runtime',
+      answer_level: 'autonomous',
+      last_seen_at: new Date().toISOString(),
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent }, global })
+    await flushPromises()
+    const row = w.find('.chat-pane__name-row')
+    // In this order, each a part of the row of its own: only the name may be cut short.
+    const parts = row.findAll(':scope > *').map((e) => e.classes()[0])
+    expect(parts).toEqual(['agent-avatar', 'chat-pane__name', 'ai-badge', 'chat-pane__presence'])
+    // Whose agent it is is not a chip to be cut short too: it is said with whether it can be asked.
+    expect(row.find('.agent-badge').exists()).toBe(false)
+    expect(row.text()).not.toContain('Your agent')
+    expect(row.find('.chat-pane__presence .tooltip-stub').attributes('data-tip')).toMatch(/^Your agent\. Something runs it now/)
+  })
+
   it('opens a new conversation with its first message, titled by its first line, and says quietly that nothing runs the agent', async () => {
     seat('student')
     writeAnswer = () => executed({ conversation_id: 'c2', message_id: 'm1' })
@@ -707,8 +732,9 @@ describe('ChatPane', () => {
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', respondent }, global })
     await flushPromises()
-    // Beside its name, not in a box of its own; and no title to fill in.
-    expect(w.find('.chat-pane__name-row').text()).toMatch(/^Course tutor\s*Never connected$/)
+    // Beside its name and its "AI", not in a box of its own; and no title to fill in. Nothing has run it: paused.
+    expect(w.find('.chat-pane__name-row').text()).toMatch(/^Course tutor\s*AI\s*Paused$/)
+    expect(w.find('.chat-pane__name-row .agent-avatar').exists()).toBe(true)
     expect(w.find('.chat-pane__notice').exists()).toBe(false)
     expect(w.find('.el-alert').exists()).toBe(false)
     expect(w.findAll('input')).toHaveLength(0)
@@ -738,7 +764,7 @@ describe('ChatPane', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const row = w.find('.chat-pane__name-row')
-    expect(row.text()).toMatch(/^Course tutor\s*Last seen 37 minutes ago$/)
+    expect(row.text()).toMatch(/^Course tutor\s*AI\s*Paused$/)
     expect(row.attributes('title')).toBe('Loops')
     // An open conversation shows no state; nothing but the row and the menu in the header.
     expect(row.find('.status-tag, .el-tag').exists()).toBe(false)
@@ -763,7 +789,7 @@ describe('ChatPane', () => {
     await flushPromises()
     // Nothing runs it now: it is waited for, not "thinking", and the line above the composer says nothing more.
     expect(w.find('.chat-pane__notice').exists()).toBe(false)
-    expect(w.find('.chat-pane__presence').text()).toBe('Last seen 3 hours ago')
+    expect(w.find('.chat-pane__presence').text()).toBe('Paused')
     expect(w.find('.chat-pane__typing .chat-status__label').text()).toBe('Waiting for Course tutor…')
     expect(w.find('textarea').exists()).toBe(true)
   })
@@ -838,7 +864,7 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(w.find('.chat-pane__presence').text()).toBe('Online')
+    expect(w.find('.chat-pane__presence').text()).toBe('Can be asked')
     const ta = await type(w, 'One more question')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()

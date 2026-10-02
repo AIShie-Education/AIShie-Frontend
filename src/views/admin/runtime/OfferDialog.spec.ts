@@ -488,7 +488,7 @@ describe('editing a model of the site’s', () => {
   it('reads in Traditional Chinese', async () => {
     setLocale('zh-Hant')
     const { w } = await open(fast())
-    expect(w.find('.el-dialog__title').text()).toBe('編輯 School AI (fast)')
-    expect(w.find('.offer-form__keymode').text()).toContain('保留金鑰 sk-…3f9a')
+    expect(w.find('.el-dialog__title').text()).toBe('編輯School AI (fast)')
+    expect(w.find('.offer-form__keymode').text()).toContain('保留金鑰sk-…3f9a')
   })
 })

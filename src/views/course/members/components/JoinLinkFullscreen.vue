@@ -104,7 +104,9 @@ onBeforeUnmount(() => {
       </el-button>
 
       <header class="join-fs__course">
-        <div class="join-fs__code">{{ courseLabel }}</div>
+        <div class="join-fs__code">
+          {{ code }}<template v-if="code && section"><span class="app-sep">·</span></template>{{ section }}
+        </div>
         <div v-if="title" class="join-fs__title">{{ title }}</div>
       </header>
 

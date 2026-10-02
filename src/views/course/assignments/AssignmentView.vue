@@ -17,6 +17,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import { versionFilesOf } from '@/utils/documentFiles'
+import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import VersionFileList from '@/components/VersionFileList.vue'
 import Tombstone from '@/views/course/materials/components/Tombstone.vue'
@@ -292,15 +293,13 @@ function refresh() {
             </el-button>
           </span>
         </el-tooltip>
-        <el-tag
+        <StatusTag
           v-if="course.needsApproval('assignment_write')"
-          type="warning"
-          size="small"
+          vocab="level"
+          value="confirm_required"
           class="assignment-view__approval"
-          disable-transitions
-        >
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+          size="small"
+        />
       </template>
     </PageHeader>
 

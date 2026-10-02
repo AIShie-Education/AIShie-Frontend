@@ -288,7 +288,7 @@ function toggleRules() {
               <el-badge
                 v-if="proposed.items.value.length"
                 :value="count(proposed)"
-                type="warning"
+                type="primary"
                 class="approvals__badge"
               />
             </span>

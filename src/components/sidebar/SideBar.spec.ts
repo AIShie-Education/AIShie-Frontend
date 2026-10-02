@@ -47,6 +47,7 @@ vi.mock('@/composables/useRuntime', async () => {
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { useSideBarStore } = await import('@/stores/sidebar')
+const { useCourseStore } = await import('@/stores/course')
 const { default: AppLayout } = await import('@/layouts/AppLayout.vue')
 
 const View = { render: () => null }
@@ -94,7 +95,7 @@ function me(who: Who) {
 /** Signed in as `who`, on a wide screen or a phone's, at `path`. */
 async function mountAs(
   who: Who,
-  opts: { phone?: boolean; path?: string; seats?: unknown[] } = {},
+  opts: { phone?: boolean; path?: string; seats?: unknown[]; openCourse?: string } = {},
 ): Promise<{ w: VueWrapper; router: Router; side: ReturnType<typeof useSideBarStore> }> {
   window.matchMedia = ((query: string) => ({
     matches: !!opts.phone && query.includes('max-width'),
@@ -109,12 +110,33 @@ async function mountAs(
   session.status = 'signedIn'
   session.memberships = (opts.seats ??
     (who === 'instructor' ? SEATS.map((s: { role: string }) => ({ ...s, role: 'instructor' })) : SEATS)) as never
+  if (opts.openCourse) {
+    // The course the page is in, as its layout has read it: the caller's seat in it, its permissions unknown.
+    const course = useCourseStore()
+    const s = session.memberships.find((m) => m.course_id === opts.openCourse)!
+    course.courseId = s.course_id
+    course.course = { id: s.course_id, code: s.code, section: s.section, title: s.title, status: 'active' } as never
+    course.membership = s
+  }
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
       { path: '/', name: 'home', component: View },
       { path: '/courses/:courseId', name: 'course-overview', component: View },
       { path: '/courses/:courseId/materials', name: 'course-materials', component: View },
+      { path: '/courses/:courseId/documents/:documentId', name: 'course-document', component: View },
+      ...[
+        'assignments',
+        'submissions',
+        'grades',
+        'gradebook',
+        'scheme',
+        'approvals',
+        'members',
+        'agents',
+        'activity',
+        'my-actions',
+      ].map((p) => ({ path: `/courses/:courseId/${p}`, name: `course-${p}`, component: View })),
       { path: '/account', name: 'account', component: View },
       { path: '/account/agents', name: 'account-agents', component: View },
       { path: '/account/agents/:actorId', name: 'account-agent', component: View },
@@ -480,7 +502,7 @@ describe('the agents view', () => {
     const items = body.findAll('.side-agent')
     expect(items.map((a) => a.attributes('href'))).toEqual(['/account/agents/ag1', '/account/agents/ag2'])
     expect(items[0]!.text()).toContain('Study buddy')
-    expect(items[0]!.text()).toContain('Online')
+    expect(items[0]!.text()).toContain('Connected')
     expect(items[1]!.text()).toContain('Never connected')
     expect(items[1]!.text()).toContain('Suspended by you')
     expect(items[1]!.classes()).toContain('is-active')
@@ -639,5 +661,79 @@ describe('on a phone', () => {
     await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/courses/k2')
     expect(visible()).toBe(false)
+  })
+})
+
+describe('on a course’s pages', () => {
+  it('heads the page with the way back up: the course, then the tab, rather than the page’s name', async () => {
+    const { w } = await mountAs('student', { path: '/courses/k1/documents/d1', openCourse: 'k1' })
+    const crumbs = w.get('.app-header nav.course-crumbs')
+    expect(crumbs.attributes('aria-label')).toBe('Where you are')
+    const steps = crumbs.findAll('li')
+    expect(steps.map((li) => words(li.element))).toEqual(['CS101 · A Programming', 'Materials'])
+    expect(steps[0]!.get('a').attributes('href')).toBe('/courses/k1')
+    // A document is under Materials: the tab is the way back to its page.
+    expect(steps[1]!.get('a').attributes('href')).toBe('/courses/k1/materials')
+    expect(w.find('.app-header__title').exists()).toBe(false)
+  })
+
+  it('names the tab shown as the page it is on', async () => {
+    const { w } = await mountAs('student', { path: '/courses/k1/materials', openCourse: 'k1' })
+    const last = w.findAll('.course-crumbs li').at(-1)!
+    expect(last.find('a').exists()).toBe(false)
+    expect(last.get('[aria-current="page"]').text()).toBe('Materials')
+  })
+
+  it('marks only the tab as the page on the overview, the course before it a link like any other', async () => {
+    const { w } = await mountAs('student', { path: '/courses/k1', openCourse: 'k1' })
+    const crumbs = w.get('.app-header nav.course-crumbs')
+    expect(crumbs.findAll('[aria-current]').map((el) => [el.text(), el.attributes('aria-current')])).toEqual([
+      ['Overview', 'page'],
+    ])
+    expect(crumbs.get('li a').attributes('href')).toBe('/courses/k1')
+  })
+
+  it('follows Grades with the grades’ tab shown', async () => {
+    const { w } = await mountAs('student', { path: '/courses/k1/scheme', openCourse: 'k1' })
+    const steps = w.findAll('.course-crumbs li')
+    expect(steps.map((li) => words(li.element))).toEqual(['CS101 · A Programming', 'Grades', 'Grading scheme'])
+    expect(steps[1]!.get('a').attributes('href')).toBe('/courses/k1/grades')
+  })
+
+  it('heads a page of no course with its name, as before', async () => {
+    const { w } = await mountAs('student', { path: '/account' })
+    expect(w.find('.course-crumbs').exists()).toBe(false)
+    expect(w.find('.app-header__title').exists()).toBe(true)
+  })
+
+  it('lists the course’s tabs under it in the phone’s menu, the page’s marked, and closes as one is followed', async () => {
+    const { w, router } = await mountAs('student', { phone: true, path: '/courses/k1/materials', openCourse: 'k1' })
+    await w.get('.app-header button[aria-label="Menu"]').trigger('click')
+    await flushPromises()
+    const drawer = document.body.querySelector<HTMLElement>('.app-nav-drawer')!
+    const tabs = drawer.querySelector<HTMLElement>('nav.side-course-tabs')!
+    expect(tabs.getAttribute('aria-label')).toBe('Sections of CS101 · A')
+    // Right under the course the page is in, and under no other.
+    expect(tabs.previousElementSibling?.getAttribute('href')).toBe('/courses/k1')
+    expect(drawer.querySelectorAll('nav.side-course-tabs')).toHaveLength(1)
+    const items = [...tabs.querySelectorAll<HTMLAnchorElement>('a')]
+    expect(items.map((a) => a.textContent?.trim())).toContain('Assignments')
+    expect(tabs.querySelector('[aria-current="page"]')?.textContent?.trim()).toBe('Materials')
+    // The course over them is the one the page is in, not the page, which is the tab.
+    expect(drawer.querySelector('.side-course[href="/courses/k1"]')?.getAttribute('aria-current')).toBe('true')
+    expect(drawer.querySelectorAll('[aria-current="page"]')).toHaveLength(1)
+
+    const overlay = drawer.closest<HTMLElement>('.el-overlay')!
+    items.find((a) => a.textContent?.trim() === 'Assignments')!.click()
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/courses/k1/assignments')
+    expect(overlay.style.display).toBe('none')
+  })
+
+  it('lists no course’s tabs in the docked side bar, where the course is the page only on its overview', async () => {
+    const { w } = await mountAs('student', { path: '/courses/k1/materials', openCourse: 'k1' })
+    const side = w.get('#side-bar')
+    expect(side.find('nav.side-course-tabs').exists()).toBe(false)
+    expect(side.get('.side-course[href="/courses/k1"]').attributes('aria-current')).toBe('true')
   })
 })
