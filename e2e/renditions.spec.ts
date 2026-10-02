@@ -5,12 +5,13 @@ import {
   call,
   coursePath,
   demo,
+  expectToasted,
   hostOnRuntime,
   inTraditionalChinese,
+  keepToasts,
   photograph,
   root,
   signIn,
-  toast,
   type CoreReply,
   type FileSpec,
 } from './support'
@@ -351,6 +352,7 @@ test.describe.serial('Office files previewed as the PDF the server makes', () =>
     page,
     browser,
   }) => {
+    await keepToasts(page)
     const runtime = await playRuntime()
     try {
       const claim = await runtime.claim((c) => c.file_id === fileIds[LOCKED.name])
@@ -388,7 +390,7 @@ test.describe.serial('Office files previewed as the PDF the server makes', () =>
     )
     await photograph(page, 'rendition-skipped')
     await dialog.getByRole('button', { name: 'Try again' }).click()
-    await expect(toast(page, 'It will be converted to PDF again.')).toBeVisible()
+    await expectToasted(page, 'It will be converted to PDF again.')
     await expect(dialog.locator('.file-viewer__note-title')).toHaveText('Converting to PDF…')
     expect((await renditionOf(fileIds[LOCKED.name]!)).state).toBe('queued')
 

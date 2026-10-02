@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { courseTab, coursePath, demo, signIn, toast } from './support'
+import { coursePath, courseTab, demo, expectToasted, keepToasts, signIn } from './support'
 
 const ANSWER = [
   '```python',
@@ -13,6 +13,7 @@ const FILE = 'mei_converter.py'
 
 test.describe.serial('a student hands in work', () => {
   test('Mei starts a draft of HW1, writes, attaches a file and hands it in', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.mei)
     await page.goto(coursePath())
@@ -25,7 +26,7 @@ test.describe.serial('a student hands in work', () => {
     const work = page.locator('.my-work')
     await expect(work).toContainText('You have not started this assignment yet.')
     await work.getByRole('button', { name: 'Start a draft' }).click()
-    await expect(toast(page, 'Draft started.')).toBeVisible()
+    await expectToasted(page, 'Draft started.')
     await expect(work).toContainText('Attempt 1')
 
     // Write a first line and save it; then the rest, left unsaved.
@@ -33,7 +34,7 @@ test.describe.serial('a student hands in work', () => {
     await text.fill('A first try.')
     await expect(work).toContainText('Unsaved changes')
     await work.getByRole('button', { name: 'Save draft' }).click()
-    await expect(toast(page, 'Draft saved.')).toBeVisible()
+    await expectToasted(page, 'Draft saved.')
     await expect(work).toContainText('All changes saved')
     await text.fill(ANSWER)
     await expect(work).toContainText('Unsaved changes')
@@ -44,7 +45,7 @@ test.describe.serial('a student hands in work', () => {
       mimeType: 'text/x-python',
       buffer: Buffer.from('def c_to_f(c):\n    return c * 1.8 + 32\n'),
     })
-    await expect(toast(page, `“${FILE}” attached.`)).toBeVisible()
+    await expectToasted(page, `“${FILE}” attached.`)
     await expect(work.locator('.my-work__files')).toContainText(FILE)
     // Once attached it is no longer listed as an upload waiting to be attached.
     await expect(work.locator('.file-drop__list')).toHaveCount(0)
@@ -57,7 +58,7 @@ test.describe.serial('a student hands in work', () => {
     const box = page.getByRole('dialog', { name: 'Hand in attempt 1?' })
     await expect(box).toBeVisible()
     await box.getByRole('button', { name: 'Hand in' }).click()
-    await expect(toast(page, 'Handed in.')).toBeVisible()
+    await expectToasted(page, 'Handed in.')
 
     // The attempt is listed as submitted, and there is no open draft.
     const attempt = work.locator('.my-work__attempt').filter({ hasText: 'Attempt 1' })

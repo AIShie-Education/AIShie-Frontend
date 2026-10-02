@@ -1,7 +1,19 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Browser, type Locator, type Page } from '@playwright/test'
-import { call, courseTab, coursePath, demo, registerPerson, root, signIn, signInAsRoot, toast, type DemoActor } from './support'
+import {
+  call,
+  coursePath,
+  courseTab,
+  demo,
+  expectToasted,
+  keepToasts,
+  registerPerson,
+  root,
+  signIn,
+  signInAsRoot,
+  type DemoActor,
+} from './support'
 
 // An agent's owner decides what it did where they could have done it
 // themselves, and nobody else of theirs. Two students of the course each
@@ -190,6 +202,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
     page,
     browser,
   }) => {
+    await keepToasts(page)
     const d = demo()
     await page.setViewportSize({ width: 1280, height: 900 })
     await signIn(page, nora)
@@ -223,7 +236,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
     await card.getByRole('button', { name: 'Approve', exact: true }).click()
     await expect(card).toContainText('You decide this as its owner')
     await card.getByRole('button', { name: 'Approve now' }).click()
-    await expect(toast(page, 'Approved and carried out, as your own doing')).toBeVisible()
+    await expectToasted(page, 'Approved and carried out, as your own doing')
     await expect(cards).toHaveCount(0)
     await expect(page.locator('.approvals__recent')).toContainText(
       'You decided this as the owner of the agent that proposed it',
@@ -264,6 +277,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
   })
 
   test('Omar takes his agent’s draft back, as its owner', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, omar)
     await page.goto(coursePath('approvals'))
@@ -274,7 +288,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
     const box = page.getByRole('dialog', { name: 'Withdraw your agent’s proposal?' })
     await expect(box).toContainText('Your agent learns that you took it back')
     await box.getByRole('button', { name: 'Withdraw' }).click()
-    await expect(toast(page, 'Your agent’s proposal is withdrawn')).toBeVisible()
+    await expectToasted(page, 'Your agent’s proposal is withdrawn')
     await expect(card).toHaveCount(0)
 
     const got = await call(omar.token, 'GET', `/v1/courses/${d.course.id}/actions/${omarProposal}`)

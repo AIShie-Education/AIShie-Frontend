@@ -6,8 +6,10 @@ import {
   call,
   coursePath,
   demo,
+  expectToasted,
   hostOnRuntime,
   inTraditionalChinese,
+  keepToasts,
   photograph,
   signIn,
   type CoreReply,
@@ -376,6 +378,7 @@ test.describe.serial('the file viewer', () => {
     page,
   }) => {
     const watch = await watchPage(page)
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath(`documents/${documentId}`))
@@ -394,7 +397,7 @@ test.describe.serial('the file viewer', () => {
     expect(print!.text).toContain(`Read the slides first, then try the exercises (${tag}).`)
     // Set in the app's own style sheets, copied in.
     expect(print!.styles).toBeGreaterThan(1)
-    await expect(page.locator('.el-message')).toContainText('choose “Save as PDF” there')
+    await expectToasted(page, 'Opening the print window: choose “Save as PDF” there to save the file.')
 
     // A Markdown file, from the viewer.
     const dialog = await openFile(page, NOTES)

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { call, courseTab, coursePath, demo, signIn, toast } from './support'
+import { call, coursePath, courseTab, demo, expectToasted, keepToasts, signIn } from './support'
 
 // A score as ScoreText shows it, "8 / 10": the gaps around it are margins,
 // not spaces, so in a row's text it can run into its neighbours
@@ -21,6 +21,7 @@ test.beforeAll(async () => {
 
 test.describe.serial('grading a submission', () => {
   test('the TA grades Ken’s HW1 with a breakdown', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.ta)
     await page.goto(coursePath())
@@ -71,7 +72,7 @@ test.describe.serial('grading a submission', () => {
     await expect(uploader.locator('.file-drop__item')).toContainText('Uploaded')
 
     await panel.getByRole('button', { name: 'Save draft grade' }).click()
-    await expect(toast(page, 'Draft grade saved')).toBeVisible()
+    await expectToasted(page, 'Draft grade saved')
     await expect(panel.getByRole('link', { name: 'Open the grade' })).toBeVisible()
 
     // The work's grades list the new draft.
@@ -114,6 +115,7 @@ test.describe.serial('grading a submission', () => {
   })
 
   test('the instructor regrades it; the old grade shows as superseded', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('grades'))
@@ -133,7 +135,7 @@ test.describe.serial('grading a submission', () => {
     await expect(dialog.getByPlaceholder('Criterion').first()).toHaveValue('Correctness')
     await score.fill('8')
     await dialog.getByRole('button', { name: 'Regrade and post' }).click()
-    await expect(toast(page, 'Regraded and posted.')).toBeVisible()
+    await expectToasted(page, /^Regraded and posted\. Totals written or changed: \d+\.$/)
 
     // The new grade, posted, with the old one in its history as superseded.
     await expect(page).not.toHaveURL(oldUrl)

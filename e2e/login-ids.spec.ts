@@ -4,14 +4,15 @@ import {
   call,
   demo,
   expectSignedInAs,
+  expectToasted,
   inTraditionalChinese,
+  keepToasts,
   photograph,
   pickOption,
   registerPerson,
   root,
   signIn,
   signInAsRoot,
-  toast,
   type DemoActor,
 } from './support'
 
@@ -142,6 +143,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
   })
 
   test('an instructor sees students’ numbers, and resets a student’s password, shown once', async ({ page }) => {
+    await keepToasts(page)
     await signIn(page, instructor())
     await page.goto(`/courses/${courseId}/members`)
     const row = page.locator('.el-table__row').filter({ hasText: lena.display_name })
@@ -177,7 +179,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await expect(result).toContainText('Their 2 sessions were signed out.')
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     await result.getByRole('button', { name: 'Copy' }).click()
-    await expect(toast(page, 'Copied')).toBeVisible()
+    await expectToasted(page, 'Copied')
     const first = (await shown.textContent())!.trim()
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(first)
     await photograph(page, 'reset-password-en')
@@ -340,6 +342,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
   })
 
   test('an instructor finds someone to add by their whole student number', async ({ page }) => {
+    await keepToasts(page)
     const nils = await registerPerson(`Nils Lookup ${STAMP}`, { login_id: `N${STAMP}` })
     await signIn(page, instructor())
     await page.goto(`/courses/${courseId}/members`)
@@ -350,12 +353,13 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await find.press('Enter')
     await expect(dialog.locator('.add-member__actor')).toContainText(nils.display_name)
     await dialog.getByRole('button', { name: 'Add member' }).click()
-    await expect(toast(page, 'Member added')).toBeVisible()
+    await expectToasted(page, 'Member added')
     await expect(page.locator('.page-header')).toContainText(nils.display_name)
     await expect(page.locator('.member__login-id')).toHaveText(`N${STAMP}`)
   })
 
   test('an administrator gives a person a number, and vouches for one typed in through a link', async ({ page }) => {
+    await keepToasts(page)
     await signInAsRoot(page)
     await page.goto('/admin/actors')
     await page.locator('.page-header').getByRole('button', { name: 'Register' }).click()
@@ -368,7 +372,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     ).toBeVisible()
     await register.getByLabel('Student/staff number').fill(`O${STAMP}`)
     await register.getByRole('button', { name: 'Register' }).click()
-    await expect(toast(page, `Olga Staff ${STAMP} is registered`)).toBeVisible()
+    await expectToasted(page, `Olga Staff ${STAMP} is registered`)
     await page.getByPlaceholder('Search by name, email or student/staff number, or paste an ID').fill(`o${STAMP}`)
     const row = page.locator('.actors__table .el-table__body tr').filter({ hasText: `Olga Staff ${STAMP}` })
     await expect(row).toContainText(`O${STAMP}`)
@@ -384,7 +388,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await expect(edit.locator('input[name=login_id]')).toHaveValue(joiner.loginId)
     await edit.getByText('I have checked it: save it as confirmed').click()
     await edit.getByRole('button', { name: 'Save' }).click()
-    await expect(toast(page, 'Saved')).toBeVisible()
+    await expectToasted(page, 'Saved')
     await expect(desc).toContainText(joiner.loginId)
     await expect(desc.getByText('Unverified')).toHaveCount(0)
 

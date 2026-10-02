@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, courseTab, coursePath, demo, signIn, toast } from './support'
+import { call, coursePath, courseTab, demo, expectToasted, keepToasts, signIn } from './support'
 
 // A publication made by mistake can be taken back while nobody has started
 // on the assignment; once a student has a draft, it stays published.
@@ -25,7 +25,7 @@ async function publish(page: Page) {
     'It can be unpublished again only until a student starts on it (a draft counts) or its due date passes.',
   )
   await box.getByRole('button', { name: 'Publish', exact: true }).click()
-  await expect(toast(page, 'Assignment published.')).toBeVisible()
+  await expectToasted(page, 'Assignment published.')
   await expect(header(page)).not.toContainText('Not published')
   await expect(publishButton(page)).toHaveCount(0)
 }
@@ -40,6 +40,7 @@ async function studentAssignments(page: Page) {
 
 test.describe.serial('unpublishing an assignment nobody has started', () => {
   test('the instructor creates and publishes an assignment, then unpublishes it', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
@@ -49,7 +50,7 @@ test.describe.serial('unpublishing an assignment nobody has started', () => {
     await dialog.getByLabel('Title', { exact: true }).fill(TITLE)
     await dialog.getByLabel('Points possible').fill('5')
     await dialog.getByRole('button', { name: 'Create' }).click()
-    await expect(toast(page, 'Assignment created. It is not published yet.')).toBeVisible()
+    await expectToasted(page, 'Assignment created. It is not published yet.')
     await expect(page).toHaveURL(/\/assignments\/[0-9a-f-]{36}$/)
     assignmentId = new URL(page.url()).pathname.split('/').pop()!
     await expect(header(page)).toContainText('Not published')
@@ -66,7 +67,7 @@ test.describe.serial('unpublishing an assignment nobody has started', () => {
     await expect(box).toContainText(`Unpublish “${TITLE}”?`)
     await expect(box).toContainText('Students will no longer see it or be able to hand in work for it.')
     await box.getByRole('button', { name: 'Unpublish', exact: true }).click()
-    await expect(toast(page, 'Assignment unpublished. Students no longer see it.')).toBeVisible()
+    await expectToasted(page, 'Assignment unpublished. Students no longer see it.')
 
     await expect(header(page)).toContainText('Not published')
     await expect(publishButton(page)).toBeVisible()
@@ -92,6 +93,7 @@ test.describe.serial('unpublishing an assignment nobody has started', () => {
   })
 
   test('published again, a student starts a draft', async ({ page, browser }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath(`assignments/${assignmentId}`))
@@ -102,6 +104,7 @@ test.describe.serial('unpublishing an assignment nobody has started', () => {
     // Ken, in a browser of his own, sees it now and starts on it.
     const context = await browser.newContext()
     const kp = await context.newPage()
+    await keepToasts(kp)
     await signIn(kp, d.actors.ken)
     const row = await studentAssignments(kp)
     await expect(row).toContainText('Not started')
@@ -109,7 +112,7 @@ test.describe.serial('unpublishing an assignment nobody has started', () => {
     const work = kp.locator('.my-work')
     await expect(work).toContainText('You have not started this assignment yet.')
     await work.getByRole('button', { name: 'Start a draft' }).click()
-    await expect(toast(kp, 'Draft started.')).toBeVisible()
+    await expectToasted(kp, 'Draft started.')
     await context.close()
   })
 

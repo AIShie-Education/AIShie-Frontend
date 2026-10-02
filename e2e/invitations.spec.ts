@@ -1,5 +1,15 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, demo, expectSignedInAs, pickOption, root, signInAsRoot, signOut, toast } from './support'
+import {
+  call,
+  demo,
+  expectSignedInAs,
+  expectToasted,
+  keepToasts,
+  pickOption,
+  root,
+  signInAsRoot,
+  signOut,
+} from './support'
 
 // Everyone registered is in the administrators' directory, and a person an
 // administrator registers gets in by an invitation link: they open it, choose
@@ -67,6 +77,7 @@ test.describe.serial('the directory and invitations', () => {
   })
 
   test('an administrator registers a person, finds them, and makes an invitation link', async ({ page }) => {
+    await keepToasts(page)
     await signInAsRoot(page)
     await page.goto('/admin/actors')
     await page.locator('.page-header').getByRole('button', { name: 'Register' }).click()
@@ -74,7 +85,7 @@ test.describe.serial('the directory and invitations', () => {
     await dialog.getByLabel('Display name').fill(PERSON.name)
     await dialog.getByLabel('Email').fill(PERSON.email)
     await dialog.getByRole('button', { name: 'Register' }).click()
-    await expect(toast(page, `${PERSON.name} is registered`)).toBeVisible()
+    await expectToasted(page, `${PERSON.name} is registered`)
 
     const panel = page.locator('.actors__new')
     await expect(panel).toContainText('Create an invitation link on their page')
@@ -233,6 +244,7 @@ test('a link without its code says it is incomplete', async ({ page }) => {
 })
 
 test('an email is given, and a new one withdraws the invitation waiting', async ({ page }) => {
+  await keepToasts(page)
   const token = root().token
   const name = `Wanda Waiting ${stamp}`
   const reg = await call(token, 'POST', '/v1/actors', { kind: 'human', display_name: name })
@@ -248,7 +260,7 @@ test('an email is given, and a new one withdraws the invitation waiting', async 
   const dialog = page.getByRole('dialog', { name: 'Edit registration' })
   await dialog.getByLabel('Email').fill(`wanda+${stamp}@e2e.test`)
   await dialog.getByRole('button', { name: 'Save' }).click()
-  await expect(toast(page, 'Saved')).toBeVisible()
+  await expectToasted(page, 'Saved')
   await expect(page.locator('.page-header')).toContainText(`wanda+${stamp}@e2e.test`)
   await expect(card.getByRole('button', { name: 'Create invitation link' })).toBeVisible()
 

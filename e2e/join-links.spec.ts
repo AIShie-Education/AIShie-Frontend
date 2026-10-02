@@ -1,5 +1,15 @@
 import { expect, test, type Browser, type BrowserContextOptions, type Page } from '@playwright/test'
-import { call, coursePath, demo, expectSignedInAs, registerPerson, signIn, toast, type CoreReply } from './support'
+import {
+  call,
+  coursePath,
+  demo,
+  expectSignedInAs,
+  expectToasted,
+  keepToasts,
+  registerPerson,
+  signIn,
+  type CoreReply,
+} from './support'
 
 // A course's invite link, shown to a class as a QR code: whoever may create
 // one (member_invite, which the instructor holds and the TA does not) makes
@@ -199,6 +209,7 @@ test.describe.serial('invite links', () => {
     const who = await person(`Omar Existing ${STAMP}`, `omar+${STAMP}@e2e.test`)
     expect(await seatOf(who.token)).toBeUndefined()
     const { context, page } = await stranger(browser)
+    await keepToasts(page)
     await page.goto(w.link)
     await page.getByRole('link', { name: 'Sign in to join' }).click()
     await expect(page).toHaveURL(/\/login\?next=/)
@@ -212,7 +223,7 @@ test.describe.serial('invite links', () => {
     await page.goto(w.link)
     await expect(page.getByText(`Signed in as Omar Existing ${STAMP}`)).toBeVisible()
     await page.getByRole('button', { name: 'Join course' }).click()
-    await expect(toast(page, 'You are already in this course.')).toBeVisible()
+    await expectToasted(page, 'You are already in this course.')
     await expect(page).toHaveURL(new RegExp(`/courses/${demo().course.id}$`))
     await context.close()
 
@@ -223,6 +234,7 @@ test.describe.serial('invite links', () => {
   })
 
   test('a revoked link says it was revoked', async ({ page, browser }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     const dialog = await openInvites(page)
@@ -232,7 +244,7 @@ test.describe.serial('invite links', () => {
     const confirm = page.getByRole('dialog', { name: 'Revoke this invite link?' })
     await expect(confirm).toContainText('The 2 people who joined through it stay in the course.')
     await confirm.getByRole('button', { name: 'Revoke' }).click()
-    await expect(toast(page, 'The invite link is revoked')).toBeVisible()
+    await expectToasted(page, 'The invite link is revoked')
     // The link it showed is gone from above; below, it has ended.
     await expect(dialog.locator('.join-reveal')).toHaveCount(0)
     await expect(dialog.getByRole('button', { name: 'Create link' })).toBeVisible()

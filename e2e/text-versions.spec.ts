@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, coursePath, demo, photograph, root, signIn, toast } from './support'
+import { call, coursePath, demo, expectToasted, keepToasts, photograph, root, signIn } from './support'
 
 // A document version's text version (文字版), with the real Core: root issues
 // the transcription service a credential through Core's REST, and the test,
@@ -194,6 +194,7 @@ test.describe.serial('text versions', () => {
   })
 
   test('the instructor corrects it, and it is theirs from then on', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await transcriberOn(page)
     await signIn(page, d.actors.instructor)
@@ -204,7 +205,7 @@ test.describe.serial('text versions', () => {
     await photograph(page, 'text-version-editor')
     await editor.fill(TRANSCRIBED.replace('# Ohm’s law', '# Ohm’s law (corrected)'))
     await pane.getByRole('button', { name: 'Save the text version' }).click()
-    await expect(toast(page, 'Text version saved')).toBeVisible()
+    await expectToasted(page, 'Text version saved')
     await expect(pane.locator('.text-pane__editor')).toHaveCount(0)
     await expect(pane.getByRole('heading', { name: 'Ohm’s law (corrected)' })).toBeVisible()
     await expect(pane.locator('.text-pane__source')).toContainText(`Edited by ${d.actors.instructor.display_name}`)
@@ -229,6 +230,7 @@ test.describe.serial('text versions', () => {
   })
 
   test('transcribing it again discards the correction only once the instructor says so twice', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await transcriberOn(page)
     await signIn(page, d.actors.instructor)
@@ -239,7 +241,7 @@ test.describe.serial('text versions', () => {
     const second = page.getByRole('dialog', { name: 'Discard the changes?' })
     await expect(second).toContainText(`written or corrected by ${d.actors.instructor.display_name}`)
     await second.getByRole('button', { name: 'Discard the changes' }).click()
-    await expect(toast(page, 'Queued to be transcribed')).toBeVisible()
+    await expectToasted(page, 'Queued to be transcribed')
     await expect(pane.locator('.text-pane__status')).toHaveText('Queued')
     await expect(pane.locator('.text-pane__body')).toHaveCount(0)
 

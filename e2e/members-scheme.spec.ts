@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { call, courseTab, coursePath, demo, pickOption, signIn, toast } from './support'
+import { call, coursePath, courseTab, demo, expectToasted, keepToasts, pickOption, signIn } from './support'
 
 const NAME = `Nora Newcomer ${Date.now().toString(36)}`
 let actorId = ''
@@ -22,6 +22,7 @@ test.beforeAll(async () => {
 
 test.describe.serial('members and the grading scheme', () => {
   test('the instructor seats a new TA, changes a permission, pauses and resumes the seat', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
@@ -38,7 +39,7 @@ test.describe.serial('members and the grading scheme', () => {
     await expect(dialog).toContainText('Reads everything and enters grades')
     await expect(dialog.locator('.add-member__role')).toContainText('Teaching assistant')
     await dialog.getByRole('button', { name: 'Add member' }).click()
-    await expect(toast(page, 'Member added')).toBeVisible()
+    await expectToasted(page, 'Member added')
 
     // The new seat's page.
     await expect(page).toHaveURL(/\/members\/[0-9a-f-]{36}$/)
@@ -55,7 +56,7 @@ test.describe.serial('members and the grading scheme', () => {
     await pickOption(page, postRow.locator('.level-select'), 'Needs approval')
     await expect(page.getByText('1 changed')).toBeVisible()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(toast(page, 'Permissions updated')).toBeVisible()
+    await expectToasted(page, 'Permissions updated')
     await expect(page.getByRole('button', { name: 'Edit permissions' })).toBeVisible()
     await expect(postRow).toContainText('Needs approval')
     await expect(
@@ -66,7 +67,7 @@ test.describe.serial('members and the grading scheme', () => {
     await header.getByRole('button', { name: 'Pause' }).click()
     const pauseBox = page.getByRole('dialog', { name: 'Pause this seat?' })
     await pauseBox.getByRole('button', { name: 'Pause' }).click()
-    await expect(toast(page, `${NAME} is paused`)).toBeVisible()
+    await expectToasted(page, `${NAME} is paused`)
     await expect(header).toContainText('Paused')
     await expect(page.getByText('This seat is paused', { exact: false })).toBeVisible()
 
@@ -74,7 +75,7 @@ test.describe.serial('members and the grading scheme', () => {
     await header.getByRole('button', { name: 'Resume' }).click()
     const resumeBox = page.getByRole('dialog', { name: 'Resume this seat?' })
     await resumeBox.getByRole('button', { name: 'Resume' }).click()
-    await expect(toast(page, `${NAME} is resumed`)).toBeVisible()
+    await expectToasted(page, `${NAME} is resumed`)
     await expect(header).toContainText('Active')
     await expect(header.getByRole('button', { name: 'Pause' })).toBeVisible()
     // Resuming gives the seat back as it was, the changed permission included.
@@ -103,6 +104,7 @@ test.describe.serial('members and the grading scheme', () => {
   })
 
   test('the instructor adds a directly graded component under the course total', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
@@ -124,7 +126,7 @@ test.describe.serial('members and the grading scheme', () => {
     // 20 against the siblings' 60 and 40.
     await expect(dialog).toContainText('That is 16.7% of')
     await dialog.getByRole('button', { name: 'Create' }).click()
-    await expect(toast(page, 'Component added')).toBeVisible()
+    await expectToasted(page, 'Component added')
     await expect(dialog).toBeHidden()
 
     const row = tree.locator('.st-row').filter({ hasText: 'Participation' })

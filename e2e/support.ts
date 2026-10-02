@@ -262,22 +262,13 @@ export async function pickOption(page: Page, trigger: ReturnType<Page['locator']
 }
 
 /**
- * The message Element Plus pops up after a write (ElMessage), on the screen
- * now. A success message closes itself after 3 s: a test checks that one
- * with keepToasts and expectToasted instead, which a busy machine cannot
- * make it miss.
- */
-export function toast(page: Page, text: string | RegExp) {
-  return page.locator('.el-message').filter({ hasText: text })
-}
-
-/**
  * Has the page keep the text of every message Element Plus pops up
  * (ElMessage), as each comes, on every page it opens from now on: call it
  * before the page is opened. A success message closes itself after 3 s,
  * which a check of the screen can miss on a busy machine, where the test is
  * held up longer than that between the click and the check; a message kept
- * is there however late the check comes (expectToasted). A notification
+ * is there however late the check comes (expectToasted). What a page kept
+ * goes with it when it is loaded again (page.goto). A notification
  * (ElNotification) is not kept.
  */
 export async function keepToasts(page: Page) {

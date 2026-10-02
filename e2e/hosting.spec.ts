@@ -5,14 +5,15 @@ import {
   chatButton,
   coursePath,
   demo,
+  expectToasted,
   hostOnRuntime,
   inTraditionalChinese,
+  keepToasts,
   photograph,
   registerPerson,
   signIn,
   signInAsRoot,
   stopHosting,
-  toast,
   type CoreReply,
   type DemoActor,
 } from './support'
@@ -241,6 +242,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
   })
 
   test('creating an agent asks how it runs, with nothing chosen for one, and says it is for good', async ({ page }) => {
+    await keepToasts(page)
     await signIn(page, hana())
     const create = await newAgent(page, MCP_AGENT)
     const choice = create.locator('.hosting-choice')
@@ -265,7 +267,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     // MCP access.
     await create.locator('.hosting-choice__option--mcp').click()
     await create.getByRole('button', { name: 'Create agent' }).click()
-    await expect(toast(page, `${MCP_AGENT} is created`)).toBeVisible()
+    await expectToasted(page, `${MCP_AGENT} is created`)
     await expect(page).toHaveURL(/\/account\/agents\/[0-9a-f-]{36}$/)
     w.mcpId = page.url().split('/').pop()!
     await expect(page.locator('.page-header .hosting-tag__mode')).toHaveText('MCP access')
@@ -274,7 +276,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     const again = await newAgent(page, RT_AGENT)
     await again.locator('.hosting-choice__option--runtime').click()
     await again.getByRole('button', { name: 'Create agent' }).click()
-    await expect(toast(page, `${RT_AGENT} is created`)).toBeVisible()
+    await expectToasted(page, `${RT_AGENT} is created`)
     await expect(page).toHaveURL(/\/account\/agents\/[0-9a-f-]{36}$/)
     w.rtId = page.url().split('/').pop()!
     await expect(page.locator('.page-header .hosting-tag__mode')).toHaveText('Hosted on AIshie')
@@ -331,6 +333,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
   test('an agent with MCP access: its owner issues a token, with how to connect a tool, and revokes it', async ({
     page,
   }) => {
+    await keepToasts(page)
     await signIn(page, hana())
     await page.goto(`/account/agents/${w.mcpId}`)
     const card = page.locator('.mcp-card')
@@ -369,7 +372,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await row.getByRole('button', { name: 'Revoke' }).click()
     const confirm = page.getByRole('dialog', { name: 'Revoke this token?' })
     await confirm.getByRole('button', { name: 'Revoke' }).click()
-    await expect(toast(page, 'Token revoked')).toBeVisible()
+    await expectToasted(page, 'Token revoked')
     expect((await call(token, 'GET', '/v1/me')).status).toBe(401)
   })
 
@@ -505,6 +508,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
   test('an administrator registers one of each, and is offered tokens to issue only for the one with MCP access', async ({
     page,
   }) => {
+    await keepToasts(page)
     await signInAsRoot(page)
     for (const [hosting, name] of [
       ['mcp', `ops-grader-${STAMP}`],
@@ -520,7 +524,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
       await dialog.locator(`.hosting-choice__option--${hosting}`).click()
       if (hosting === 'mcp') await photograph(page, 'hosting-admin-register')
       await dialog.getByRole('button', { name: 'Register' }).click()
-      await expect(toast(page, `${name} is registered`)).toBeVisible()
+      await expectToasted(page, `${name} is registered`)
       // The directory says how it runs.
       await page.getByPlaceholder('Search by name, email or student/staff number, or paste an ID').fill(name)
       const row = page.locator('.actors__table .el-table__body tr').filter({ hasText: name })

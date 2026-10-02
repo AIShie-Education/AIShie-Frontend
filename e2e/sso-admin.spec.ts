@@ -2,13 +2,14 @@ import { expect, test, type Browser, type Page } from '@playwright/test'
 import {
   call,
   demo,
+  expectSignedInAs,
+  expectToasted,
+  keepToasts,
   photograph,
   registerPerson,
   root,
   showSideView,
   signInAsRoot,
-  expectSignedInAs,
-  toast,
 } from './support'
 import { startStandInIdp, type StandInIdp } from './stand-in-idp'
 
@@ -84,6 +85,7 @@ test('root adds a provider, tests it and switches it on; a person signs in throu
   page,
   browser,
 }) => {
+  await keepToasts(page)
   await openSignInAdmin(page)
   await expect(page.locator('.sso-admin__redirect .redirect-uri__value')).toHaveText(redirectUri)
 
@@ -125,7 +127,10 @@ test('root adds a provider, tests it and switches it on; a person signs in throu
   await photograph(page, 'sso-dialog')
 
   await dialog.getByRole('button', { name: 'Add provider' }).click()
-  await expect(toast(page, `${NAME} is added, switched off`)).toBeVisible()
+  await expectToasted(
+    page,
+    `${NAME} is added, switched off: test it, link accounts at it or turn on linking by email, then switch it on in the list.`,
+  )
   await expect(dialog).toBeHidden()
   // Its secret is nowhere in the page once the dialog is gone.
   expect(await page.content()).not.toContain(idp.clientSecret)
@@ -151,7 +156,7 @@ test('root adds a provider, tests it and switches it on; a person signs in throu
 
   await expect(row.getByRole('switch', { name: `Offer ${NAME} on the sign-in page` })).not.toBeChecked()
   await row.locator('.sso-cell__enabled').click()
-  await expect(toast(page, `${NAME} is on`)).toBeVisible()
+  await expectToasted(page, `${NAME} is on: its button is on the sign-in page within a minute.`)
   await expect(row.locator('.sso-status__status')).toHaveText('Offered')
   await photograph(page, 'sso-list')
 
@@ -176,6 +181,7 @@ test('switched off, its button leaves the sign-in page; deleted, its one account
   page,
   browser,
 }) => {
+  await keepToasts(page)
   await openSignInAdmin(page)
   const row = providerRow(page)
   await expect(row.locator('.sso-status__status')).toHaveText('Offered')
@@ -185,7 +191,7 @@ test('switched off, its button leaves the sign-in page; deleted, its one account
   const confirm = page.locator('.el-message-box')
   await expect(confirm).toContainText('One account signs in through it')
   await confirm.getByRole('button', { name: 'Switch off' }).click()
-  await expect(toast(page, `${NAME} is off`)).toBeVisible()
+  await expectToasted(page, `${NAME} is off: its button leaves the sign-in page within a minute. Nobody is unlinked.`)
   await expect(row.locator('.sso-status__status')).toHaveText('Off')
 
   const signIn = await freshSignInPage(browser)
@@ -200,7 +206,7 @@ test('switched off, its button leaves the sign-in page; deleted, its one account
   await expect(confirm).toContainText('1 account is linked at it and will no longer be able to sign in through it')
   await photograph(page, 'sso-delete')
   await confirm.getByRole('button', { name: 'Delete and unlink 1 account' }).click()
-  await expect(toast(page, `${NAME} is deleted; 1 account was unlinked.`)).toBeVisible()
+  await expectToasted(page, `${NAME} is deleted; 1 account was unlinked.`)
   await expect(row).toHaveCount(0)
 
   const gone = await call(root().token, 'GET', `/v1/sso/providers/${PROVIDER_ID}`)

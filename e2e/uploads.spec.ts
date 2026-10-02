@@ -1,5 +1,16 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, courseTab, coursePath, demo, dropFiles, photograph, signIn, toast, type FileSpec } from './support'
+import {
+  call,
+  coursePath,
+  courseTab,
+  demo,
+  dropFiles,
+  expectToasted,
+  keepToasts,
+  photograph,
+  signIn,
+  type FileSpec,
+} from './support'
 
 // Uploading, with the real Core: files dropped on the materials page become
 // one material holding them all; one file and a text note become one
@@ -32,6 +43,7 @@ test.describe.serial('uploading', () => {
   test('two files dropped on the materials page become one material holding both, titled from the first', async ({
     page,
   }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
@@ -56,7 +68,7 @@ test.describe.serial('uploading', () => {
     await photograph(page, 'upload-materials-dialog')
 
     await dialog.getByRole('button', { name: 'Create', exact: true }).click()
-    await expect(toast(page, 'Material created')).toBeVisible()
+    await expectToasted(page, 'Material created')
     await expect(dialog).toBeHidden()
     const lecture = page.locator('.material-row').filter({ hasText: LECTURE })
     await expect(lecture).toContainText('Not published')
@@ -72,6 +84,7 @@ test.describe.serial('uploading', () => {
   })
 
   test('a file and a text note under it become one material holding both', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('materials'))
@@ -94,7 +107,7 @@ test.describe.serial('uploading', () => {
     )
     await photograph(page, 'upload-file-and-text')
     await dialog.getByRole('button', { name: 'Create', exact: true }).click()
-    await expect(toast(page, 'Material created')).toBeVisible()
+    await expectToasted(page, 'Material created')
     await expect(dialog).toBeHidden()
 
     await page.locator('.material-row').filter({ hasText: GUIDE }).click()
@@ -111,6 +124,7 @@ test.describe.serial('uploading', () => {
   test('a new version opens on its drop zone, and takes a file dropped in it, or on the document’s page', async ({
     page,
   }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('materials'))
@@ -131,7 +145,7 @@ test.describe.serial('uploading', () => {
     await expect(dialog).toContainText('Text: as written here (34 characters).')
     await photograph(page, 'upload-new-version-text')
     await dialog.getByRole('button', { name: 'Save version' }).click()
-    await expect(toast(page, 'New version saved')).toBeVisible()
+    await expectToasted(page, 'New version saved')
     await expect(dialog).toBeHidden()
     await expect(page.locator('.doc-content__meta')).toContainText('Version 2')
     await expect(page.locator('.doc-content')).toContainText('Read chapter 4 before the lecture.')
@@ -219,6 +233,7 @@ test.describe.serial('uploading', () => {
   })
 
   test('a student drops files on her draft, anywhere on the page, and hands them in', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     // An assignment of this run's own, published, that Mei has not started.
     const made = await call(d.actors.instructor.token, 'POST', `/v1/courses/${d.course.id}/assignments`, {
@@ -239,7 +254,7 @@ test.describe.serial('uploading', () => {
     await page.goto(coursePath(`assignments/${hw3}`))
     const work = page.locator('.my-work')
     await work.getByRole('button', { name: 'Start a draft' }).click()
-    await expect(toast(page, 'Draft started.')).toBeVisible()
+    await expectToasted(page, 'Draft started.')
     const zone = work.getByRole('button', { name: /^Files for your work/ })
     await expect(zone).toBeVisible()
 
@@ -247,9 +262,9 @@ test.describe.serial('uploading', () => {
     await dropFiles(zone, [
       txt(`mei-recursion-${tag}.py`, 'def fact(n):\n    return 1 if n < 2 else n * fact(n - 1)\n'),
     ])
-    await expect(toast(page, `“mei-recursion-${tag}.py” attached.`)).toBeVisible()
+    await expectToasted(page, `“mei-recursion-${tag}.py” attached.`)
     await dropFiles(page.locator('.page-header'), [txt(`mei-tests-${tag}.txt`, 'fact(0) = 1\nfact(5) = 120\n')])
-    await expect(toast(page, `“mei-tests-${tag}.txt” attached.`)).toBeVisible()
+    await expectToasted(page, `“mei-tests-${tag}.txt” attached.`)
     await expect(work.locator('.my-work__files')).toContainText(`mei-recursion-${tag}.py`)
     await expect(work.locator('.my-work__files')).toContainText(`mei-tests-${tag}.txt`)
     await expect(work.locator('.file-drop__list')).toHaveCount(0)
@@ -257,7 +272,7 @@ test.describe.serial('uploading', () => {
 
     await work.getByRole('button', { name: 'Hand in' }).click()
     await page.getByRole('dialog', { name: 'Hand in attempt 1?' }).getByRole('button', { name: 'Hand in' }).click()
-    await expect(toast(page, 'Handed in.')).toBeVisible()
+    await expectToasted(page, 'Handed in.')
     const attempt = work.locator('.my-work__attempt').filter({ hasText: 'Attempt 1' })
     await expect(attempt).toContainText('Submitted')
     await attempt.getByRole('link', { name: 'View' }).click()
