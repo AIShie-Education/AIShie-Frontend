@@ -185,13 +185,22 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   (each file knows how to have a fresh URL, `document.file` or `conversation.attachment`, how to
   download itself, and, for material, instructions or a rubric, how to read its text version). The
   viewer (`FileViewer`, mounted once by `AppLayout`) is a large dialog, the whole screen on a phone,
-  with the previous and the next file (buttons, and the left and right arrow keys where nothing in
-  it takes them), the download under the file's name, and its close button; Escape closes it and the
-  focus goes back to the row. What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
+  upright or on its side (a window 480 px tall or less), with the previous and the next file
+  (buttons, and the left and right arrow keys where nothing in it takes them), the download under
+  the file's name, and its close button; Escape closes it and the focus goes back to the row.
+  What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
   the name's extension first, then the declared type): a PDF in the page with pdf.js (`PdfView`,
   loaded only when one is opened, the legacy build, its worker, character maps, WebAssembly decoders
   and two standard fonts all files of the build under `/assets/`: `pdfjs.ts`), pages one under the
-  other drawn as they come near the screen, page by page, zoom and fit to width, the text selectable;
+  other drawn as they come near the screen, page by page, zoom and fit to width (`pdfZoom.ts`), a
+  pinch of two fingers or a touchpad's zooming the pages and not the screen, the text selectable,
+  and one page control, none for a page alone; on a phone (640 px or less of the view's own width,
+  or 400 px or less of its own height) the page control and the zoom are one compact bar at the
+  bottom, within a thumb's reach, fitted to the width saying so rather than its per cent (zoomed by
+  hand, its per cent again; where the bar has no room, it measures and leaves out its per cent, then
+  its count of pages, never cutting a digit short), and the viewer's previous and next file two
+  arrows by its close button, their position said only to a screen reader, so that one count is
+  on the screen;
   an image as an `<img>` (an SVG too, never inline), zoomed or fitted; Markdown by `MarkdownView`,
   code highlighted as fenced code, plain text as it is, CSV as a table of its first thousand rows
   (`parseCsv`), text read as UTF-8 or the legacy encoding of the reader's script (`decodeText`);
