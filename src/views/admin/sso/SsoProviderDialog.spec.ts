@@ -42,6 +42,7 @@ beforeEach(() => {
 })
 enableAutoUnmount(afterEach)
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   setLocale('en')
@@ -166,24 +167,21 @@ describe('adding a provider', () => {
     expect(inPage(secret)).toBe(false)
   })
 
-  it('says what is wrong before sending, in each language', async () => {
-    for (const [locale, words] of [
-      ['en', ['Lower-case letters, digits and hyphens', 'An https URL (http only for this machine)', 'Required']],
-      ['zh-Hant', ['小寫英文字母、數字及連字號', '須為 https 網址（只有本機可用 http）', '必填']],
-      ['zh-Hans', ['小写英文字母、数字及连字符', '须为 https 网址（只有本机可用 http）', '必填']],
-    ] as const) {
-      const w = await open(null, { locale })
-      await fill('.sso-form__id', 'School IdP')
-      await fill('.sso-form__name', 'School')
-      await fill('.sso-form__issuer', 'http://login.example.edu')
-      await fill('.sso-form__client-id', 'aishie')
-      await click('.sso-dialog__save')
-      expect(fieldError('.sso-form__id')).toContain(words[0])
-      expect(fieldError('.sso-form__issuer')).toBe(words[1])
-      expect(fieldError('.sso-form__secret')).toBe(words[2])
-      w.unmount()
-      document.body.innerHTML = ''
-    }
+  // One language a test, so that each opens the dialog once.
+  it.each([
+    ['en', ['Lower-case letters, digits and hyphens', 'An https URL (http only for this machine)', 'Required']],
+    ['zh-Hant', ['小寫英文字母、數字及連字號', '須為 https 網址（只有本機可用 http）', '必填']],
+    ['zh-Hans', ['小写英文字母、数字及连字符', '须为 https 网址（只有本机可用 http）', '必填']],
+  ] as const)('says what is wrong before sending, in %s', async (locale, words) => {
+    await open(null, { locale })
+    await fill('.sso-form__id', 'School IdP')
+    await fill('.sso-form__name', 'School')
+    await fill('.sso-form__issuer', 'http://login.example.edu')
+    await fill('.sso-form__client-id', 'aishie')
+    await click('.sso-dialog__save')
+    expect(fieldError('.sso-form__id')).toContain(words[0])
+    expect(fieldError('.sso-form__issuer')).toBe(words[1])
+    expect(fieldError('.sso-form__secret')).toBe(words[2])
     expect(core.to('POST', SSO.list)).toHaveLength(0)
   })
 
@@ -245,13 +243,20 @@ describe('adding a provider', () => {
   })
 
   it('retries after no answer under the same key, and takes a new one once anything changes', async () => {
+    // The clock is moved past the waits before the write is sent again
+    // (half a second, then a second), not waited for.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     await open()
     await fillNew(newSecret())
     core.once('POST', SSO.list, () => Promise.reject(new TypeError('Failed to fetch')))
     core.once('POST', SSO.list, () => Promise.reject(new TypeError('Failed to fetch')))
     core.once('POST', SSO.list, () => Promise.reject(new TypeError('Failed to fetch')))
     await click('.sso-dialog__save')
-    await new Promise((r) => setTimeout(r, 1700))
+    expect(core.to('POST', SSO.list)).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(500)
+    await settle()
+    expect(core.to('POST', SSO.list)).toHaveLength(2)
+    await vi.advanceTimersByTimeAsync(1_000)
     await settle()
     const first = core.to('POST', SSO.list).map((c) => c.headers['Idempotency-Key'])
     expect(first).toHaveLength(3)
@@ -391,6 +396,7 @@ describe('changing a provider', () => {
 
 describe('the secret', () => {
   it('is in its field alone while editing, and gone from the page once the dialog closes', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     const secret = newSecret()
     const w = await open()
     await fillNew(secret)
@@ -400,7 +406,7 @@ describe('the secret', () => {
     // Cancel.
     ;(dialog().querySelector('.el-dialog__footer .el-button') as HTMLElement).click()
     await settle()
-    await new Promise((r) => setTimeout(r, 400))
+    await vi.advanceTimersByTimeAsync(400)
     await settle()
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([false])
     expect(inPage(secret)).toBe(false)

@@ -32,6 +32,11 @@ beforeEach(() => {
   vi.mocked(ElMessageBox.confirm).mockReset()
 })
 
+// vi.waitFor gives up after a second of the clock; what it waits for here
+// is a render, whose CPU a busy machine stretches past that. It waits for as
+// long as the test may, nearly (vite.config.ts).
+const rendered = { timeout: 20_000 }
+
 enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -379,7 +384,7 @@ describe('HostedAgentCard: deleting', () => {
   async function submit(w: VueWrapper) {
     await w.find('.delete-hosting__submit').trigger('click')
     await flushPromises()
-    await vi.waitFor(() => expect(w.find('.delete-hosting__submit.is-loading').exists()).toBe(false))
+    await vi.waitFor(() => expect(w.find('.delete-hosting__submit.is-loading').exists()).toBe(false), rendered)
     await flushPromises()
   }
   const answer = (outcome: string, problem: string | null = null) =>
@@ -481,7 +486,7 @@ describe('HostedAgentCard: deleting', () => {
     const w = await deleteDialog(hostedAgent())
     await w.find('.delete-hosting__submit').trigger('click')
     await vi.advanceTimersByTimeAsync(20_000)
-    await vi.waitFor(() => expect(w.text()).toContain('Too many tries. Wait 7 seconds.'))
+    await vi.waitFor(() => expect(w.text()).toContain('Too many tries. Wait 7 seconds.'), rendered)
     expect(w.emitted('deleted')).toBeUndefined()
   })
 })

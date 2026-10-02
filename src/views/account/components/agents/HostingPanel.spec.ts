@@ -50,22 +50,32 @@ beforeEach(async () => {
   await router.push(`/account/agents/${ACTOR}`)
 })
 
+// vi.waitFor gives up after a second of the clock; what it waits for here
+// is a render, whose CPU a busy machine stretches past that. It waits for as
+// long as the test may, nearly (vite.config.ts).
+const rendered = { timeout: 20_000 }
+
 enableAutoUnmount(afterEach)
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   document.body.innerHTML = ''
 })
 
-async function panel(props: Record<string, unknown> = {}) {
+function mountPanel(props: Record<string, unknown> = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
-  const w = mount(HostingPanel, {
+  return mount(HostingPanel, {
     props: { agent: AGENT, standing: 'active', ...props },
     global: { plugins: [pinia, i18n, ElementPlus, router], components: icons },
     attachTo: document.body,
   })
+}
+
+async function panel(props: Record<string, unknown> = {}) {
+  const w = mountPanel(props)
   await flushPromises()
-  await vi.waitFor(() => expect(w.find('.hosting-panel__checking').exists()).toBe(false))
+  await vi.waitFor(() => expect(w.find('.hosting-panel__checking').exists()).toBe(false), rendered)
   await flushPromises()
   return w
 }
@@ -110,13 +120,13 @@ describe('HostingPanel: no runtime here', () => {
     expect(w.find('.hosting-offer').exists()).toBe(false)
     release(new Response(null, { status: 502 }))
     await flushPromises()
-    await vi.waitFor(() => expectAbsent(w))
+    await vi.waitFor(() => expectAbsent(w), rendered)
   })
 
   it('says so, with no error, when Core makes no assertions for the runtime', async () => {
     s.on('POST', /^\/v1\/auth\/assertion$/, () => json(404, { error: { code: 'not_found', message: 'none' } }))
     const w = await panel()
-    await vi.waitFor(() => expectAbsent(w))
+    await vi.waitFor(() => expectAbsent(w), rendered)
     expect(s.to('GET', RUNTIME.agents)).toHaveLength(0)
   })
 })
@@ -156,22 +166,27 @@ describe('HostingPanel: the runtime is here', () => {
   })
 
   it('says the runtime is not available now, with a retry', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    try {
-      s.on('GET', RUNTIME.agents, () =>
-        json(503, { error: { code: 'unavailable', message: 'db', details: { reason: 'store_unavailable' } } }),
-      )
-      const w = await panel()
-      await vi.waitFor(
-        () => expect(w.text()).toContain('The school’s runtime is not available right now. Try again in a minute.'),
-        { timeout: 5000 },
-      )
-      s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
-      await w.find('.hosting-offer__error button').trigger('click')
-      await vi.waitFor(() => expect(w.find('.hosting-offer__host').exists()).toBe(true))
-    } finally {
-      vi.useRealTimers()
-    }
+    // The clock is moved past the waits before the read is sent again (half
+    // a second, then a second), not waited for.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    s.on('GET', RUNTIME.agents, () =>
+      json(503, { error: { code: 'unavailable', message: 'db', details: { reason: 'store_unavailable' } } }),
+    )
+    const w = mountPanel()
+    await flushPromises()
+    expect(s.to('GET', RUNTIME.agents)).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(500)
+    await flushPromises()
+    expect(s.to('GET', RUNTIME.agents)).toHaveLength(2)
+    expect(w.text()).not.toContain('The school’s runtime is not available right now.')
+    await vi.advanceTimersByTimeAsync(1_000)
+    await flushPromises()
+    expect(s.to('GET', RUNTIME.agents)).toHaveLength(3)
+    expect(w.text()).toContain('The school’s runtime is not available right now. Try again in a minute.')
+    s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
+    await w.find('.hosting-offer__error button').trigger('click')
+    await flushPromises()
+    expect(w.find('.hosting-offer__host').exists()).toBe(true)
   })
 
   it('hosts the agent by its id: the first step, then the model and key, with the card behind it', async () => {
@@ -184,7 +199,7 @@ describe('HostingPanel: the runtime is here', () => {
     await w.find('.hosting-offer__host').trigger('click')
     await flushPromises()
     ;(document.body.querySelector('.host-dialog__submit') as HTMLElement).click()
-    await vi.waitFor(() => expect(w.find('.hosted-card').exists()).toBe(true))
+    await vi.waitFor(() => expect(w.find('.hosted-card').exists()).toBe(true), rendered)
     await flushPromises()
     expect(w.find('.hosted-card__tag').text()).toBe('Choose a model')
     expect(document.body.querySelector('.model-dialog__steps')?.textContent).toContain('Model and key')
@@ -211,7 +226,7 @@ describe('HostingPanel: the runtime is here', () => {
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [needsModel] }))
     await router.push(`/account/agents/${ACTOR}?host=model`)
     await panel()
-    await vi.waitFor(() => expect(document.body.querySelector('.model-dialog__steps')).not.toBeNull())
+    await vi.waitFor(() => expect(document.body.querySelector('.model-dialog__steps')).not.toBeNull(), rendered)
     expect(router.currentRoute.value.query.host).toBeUndefined()
   })
 })

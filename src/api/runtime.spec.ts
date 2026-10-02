@@ -69,6 +69,28 @@ function failure(p: Promise<unknown>): Promise<any> {
   )
 }
 
+/**
+ * p, once the clock has moved past the waits before a call is sent again:
+ * half a second before the second time and a second before the third, or the
+ * second a rate limit's Retry-After: 1 asks for. The clock moves only when a
+ * test moves it, so these waits take no time, and a busy machine cannot
+ * stretch them.
+ */
+async function pastRetries<P extends Promise<unknown>>(p: P): Promise<Awaited<P>> {
+  const out: { settled?: { value: Awaited<P> } | { error: unknown } } = {}
+  void p.then(
+    (value) => (out.settled = { value: value as Awaited<P> }),
+    (error: unknown) => (out.settled = { error }),
+  )
+  await vi.advanceTimersByTimeAsync(500 + 1_000)
+  // A moment more, for what the last call's answer sets off: a wait grown
+  // past these, or one wait more, fails here, not at the test's limit.
+  await vi.advanceTimersByTimeAsync(0)
+  if (!out.settled) throw new Error('the call is still being sent again 1.5 s on')
+  if ('error' in out.settled) throw out.settled.error
+  return out.settled.value
+}
+
 const runtimeCalls = () => calls.filter((c) => c.url.startsWith('/runtime/') && c.url !== INFO)
 const mintCalls = () => calls.filter((c) => c.url === MINT)
 const infoCalls = () => calls.filter((c) => c.url === INFO)
@@ -79,7 +101,7 @@ beforeEach(async () => {
   mintAnswers = []
   runtimeAnswers = []
   infoAnswer = json(200, INFO_BODY)
-  vi.useFakeTimers({ shouldAdvanceTime: true })
+  vi.useFakeTimers()
   vi.setSystemTime(T0)
   try {
     sessionStorage.clear()
@@ -415,7 +437,7 @@ describe('the assertion', () => {
     rt.forgetRuntimeAssertion()
     const limited = json(429, { error: { code: 'rate_limited', message: 'slow down' } }, { 'Retry-After': '1' })
     mintAnswers.push(limited, limited, limited)
-    const err = await failure(rt.runtimeApi.get('/agents'))
+    const err = await pastRetries(failure(rt.runtimeApi.get('/agents')))
     expect(err.status).toBe(429)
     expect(mintCalls()).toHaveLength(4)
   })
@@ -542,7 +564,7 @@ describe('the assertion stays secret', () => {
     errors.push(await failure(rt.runtimeApi.get('/b')))
     // No answer, a page, and an answer that is not JSON.
     runtimeAnswers.push(...Array(3).fill(() => Promise.reject(new TypeError('Failed to fetch'))))
-    errors.push(await failure(rt.runtimeApi.get('/c')))
+    errors.push(await pastRetries(failure(rt.runtimeApi.get('/c'))))
     runtimeAnswers.push(text(500, '<h1>error</h1>'))
     errors.push(await failure(rt.runtimeApi.delete('/d')))
     runtimeAnswers.push(text(200, 'not json', 'text/plain'))
@@ -711,7 +733,7 @@ describe('errors', () => {
 
   it('say when no answer came, in their own words', async () => {
     runtimeAnswers.push(...Array(3).fill(() => Promise.reject(new TypeError('Failed to fetch'))))
-    const err = await failure(rt.runtimeApi.get('/a'))
+    const err = await pastRetries(failure(rt.runtimeApi.get('/a')))
     expect(err.isNetwork).toBe(true)
     expect(err.reason).toBe('network')
     expect(err.message).toBe('the agent runtime could not be reached')
@@ -720,7 +742,7 @@ describe('errors', () => {
 
   it('from a gateway are retried for a read, and not for a PATCH', async () => {
     runtimeAnswers.push(empty(503), json(200, { ok: true }))
-    await expect(rt.runtimeApi.get('/a')).resolves.toEqual({ ok: true })
+    await expect(pastRetries(rt.runtimeApi.get('/a'))).resolves.toEqual({ ok: true })
     expect(runtimeCalls()).toHaveLength(2)
 
     runtimeAnswers.push(empty(503))
@@ -811,7 +833,7 @@ describe('the contract’s calls', () => {
       () => Promise.reject(new TypeError('Failed to fetch')),
       json(200, AGENT, { 'Idempotency-Replayed': 'true' }),
     )
-    const out = await call()
+    const out = await pastRetries(call())
     expect(out.replayed).toBe(true)
     const sent = runtimeCalls()
     expect(sent).toHaveLength(3)
@@ -1113,7 +1135,7 @@ describe('the administrators’ calls', () => {
     expect(runtimeCalls()).toHaveLength(1)
 
     runtimeAnswers.push(empty(502), json(200, {}))
-    await rt.runtimeAdmin.deleteTranscriptionCredential()
+    await pastRetries(rt.runtimeAdmin.deleteTranscriptionCredential())
     expect(runtimeCalls()).toHaveLength(3)
   })
 
@@ -1162,7 +1184,7 @@ describe('the administrators’ calls', () => {
     ['costs', () => rt.runtimeAdmin.costs({ group: 'day' })],
   ] as const)('%s is sent again after a 503 or no answer, as the same request', async (_, call) => {
     runtimeAnswers.push(empty(503), () => Promise.reject(new TypeError('Failed to fetch')), json(200, {}))
-    await call()
+    await pastRetries(call())
     const sent = runtimeCalls()
     expect(sent).toHaveLength(3)
     expect(new Set(sent.map((c) => `${c.method} ${c.url} ${c.body}`)).size).toBe(1)

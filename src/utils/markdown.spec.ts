@@ -192,8 +192,8 @@ describe('math', () => {
   // search, were there one, would outweigh the rest of rendering, and at
   // which a run is long enough for its cost to hold still; rendering them
   // takes a second or two on an idle machine, and several times that on a
-  // busy one, hence the longer timeout.
-  it('does not take time in the square of the number of dollar signs that close nothing', { timeout: 30_000 }, () => {
+  // busy one, within the suite's 30 s (vite.config.ts).
+  it('does not take time in the square of the number of dollar signs that close nothing', () => {
     const texts: [(n: number) => string, number][] = [
       [(n) => '$1 '.repeat(n), 5_000],
       [(n) => '$$a\n\n'.repeat(n), 1_000],

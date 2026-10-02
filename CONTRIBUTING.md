@@ -22,7 +22,10 @@ request, on every push to `main` and once a week:
 - **end to end, and Core's catalogue:** the Playwright suite against the
   build, served by `vite preview`, and a real Core: the image pinned in
   `.github/core-image`, on a scratch database. The same Core's
-  `GET /v1/tools` must be `api/catalogue.json`.
+  `GET /v1/tools` must be `api/catalogue.json`. A test is tried once more
+  when it fails; the report and the traces of what failed, with Core's log,
+  are kept as the run's artifact `e2e-<commit>-<attempt>` when the run
+  fails, and when it passes with a test that passed only on its retry.
 - **the image:** on a pull request, the weekly run and a run by hand, the
   image is built with `docker build` and `scripts/test-image.sh` runs it and
   checks it against the build: the rules it serves by, `/version.json`, its
@@ -78,6 +81,46 @@ Root signs in with a password as any person does: the env file's
 `E2E_PASSWORD` is root's password and the one the tests give the people they
 register, each through an invitation. People hold no API tokens; only the
 tests' agents are given them.
+
+### Tests that hold on a busy machine
+
+A test passes on a loaded laptop or CI runner as it does on an idle one. On
+a busy machine what a unit test's time goes to is CPU, mostly Element Plus
+rendering in jsdom (up to half a second a test, the first of a file more),
+stretched many times over; what keeps the tests within their limits there is
+the limits themselves. A new or changed test follows these:
+
+- **The limits are for CPU.** `vite.config.ts` gives a test and a hook 30 s,
+  not the 5 s by default, which a busy machine's CPU alone runs past (at a
+  load near 130 on 10 cores, a test of 0.4 s took over 10). A file that
+  costs more says why and sets its own (`PermEditor.spec.ts`, 60 s).
+- **No waiting on the clock.** The wait before a call is sent again (half a
+  second, then a second), a poll's, a timer's of the page are passed with fake
+  timers (`vi.useFakeTimers`, then `vi.advanceTimersByTimeAsync`), the test
+  saying how many calls had gone by then (a component's, at each step); an
+  answer that comes through promises is waited for with `flushPromises`. Only a moment's
+  wait is real: past Element Plus's 100 ms debounce of a field's error
+  (`settle()`). The clock then costs no time, and a busy machine cannot
+  stretch it.
+- **No bound on the wall clock.** What is bounded is how the work grows (the
+  CPU time of n and 4n, as `src/utils/markdown.spec.ts` does), or what is
+  made, never how long it took. `vi.waitFor` gives up after a second: one
+  that waits for a render is given longer (`rendered`, 20 s).
+- **A component rendered once a test.** A component rendered again, for
+  another language or another administrator, is another test (`it.each`):
+  less work a test, and a failure that names the case. Older tests that
+  render more than once are split when they are changed.
+- **End to end,** a test walks a few pages, not every one: the walk over the
+  signed-in pages in `e2e/chat-panel.spec.ts` is three tests.
+- **A message that closes itself is checked from what the page kept.** A
+  success message (`ElMessage`, by default) is gone 3 s after it comes, and a
+  busy machine can hold a test up that long between the click and a check of
+  the screen (`toast(page, …)`), which then never sees it. `keepToasts(page)`,
+  before the page is opened, has the page keep each message as it comes, and
+  `expectToasted(page, text)` checks the kept one, however late, by its whole
+  text or a RegExp (`e2e/runtime-admin.spec.ts`). Older tests that check the
+  screen are changed over when they are changed. Notifications
+  (`ElNotification`) and error messages stay 6 s or more and are not kept.
 
 ## The Core the tests run against
 

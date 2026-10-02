@@ -57,6 +57,7 @@ beforeEach(() => {
 })
 enableAutoUnmount(afterEach)
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   setLocale('en')
   document.body.innerHTML = ''
@@ -252,6 +253,7 @@ describe('the models on the plan', () => {
   })
 
   it('offers to try again when the runtime could not answer', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     let fail = true
     s.on('GET', ADMIN.plan, () =>
       fail
@@ -259,8 +261,14 @@ describe('the models on the plan', () => {
         : json(200, state.plan),
     )
     const w = await panel()
-    // A read is sent again twice after a 503, a moment apart, before it is an error.
-    await vi.waitFor(() => expect(w.find('.runtime-async__error').exists()).toBe(true), { timeout: 5000 })
+    // A read is sent again twice after a 503, half a second and then a
+    // second apart, before it is an error.
+    await vi.advanceTimersByTimeAsync(500)
+    expect(s.to('GET', ADMIN.plan)).toHaveLength(2)
+    expect(w.find('.runtime-async__error').exists()).toBe(false)
+    await vi.advanceTimersByTimeAsync(1_000)
+    await flushPromises()
+    expect(w.find('.runtime-async__error').exists()).toBe(true)
     expect(s.to('GET', ADMIN.plan)).toHaveLength(3)
     expect(w.find('.runtime-async__error').text()).toContain('The school’s runtime is not available right now.')
     fail = false

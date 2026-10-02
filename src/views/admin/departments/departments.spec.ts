@@ -108,6 +108,11 @@ beforeEach(() => {
   confirm.mockClear()
   answers = { 'preset.list': async () => ({ presets: [] }) }
 })
+// vi.waitFor gives up after a second of the clock; what it waits for here
+// is a render, whose CPU a busy machine stretches past that. It waits for as
+// long as the test may, nearly (vite.config.ts).
+const rendered = { timeout: 20_000 }
+
 enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -168,7 +173,7 @@ describe('DepartmentsView', () => {
       )
       if (!shown) throw new Error('the menu of Computing is not shown yet')
       return shown
-    })
+    }, rendered)
     item.click()
     await flushPromises()
     const input = document.body.querySelector<HTMLInputElement>('input[name=department-name]')!

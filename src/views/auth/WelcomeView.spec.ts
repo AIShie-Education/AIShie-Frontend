@@ -47,31 +47,39 @@ async function mountWelcome() {
 }
 
 describe('the welcome page', () => {
-  it('puts a message already shown into the language chosen afterwards', async () => {
+  // One message a test, so that each test does less: a render, a submit,
+  // and the languages after it.
+  async function failedSubmit(err: ApiError) {
     const w = await mountWelcome()
-    const signIn = vi.spyOn(useSessionStore(), 'signInWithInvite')
-    const submit = async (err: ApiError) => {
-      signIn.mockRejectedValueOnce(err)
-      await w.find('form.el-form').trigger('submit')
-      await flushPromises()
-    }
+    const signIn = vi.spyOn(useSessionStore(), 'signInWithInvite').mockRejectedValueOnce(err)
     await w.find('input[name="password"]').setValue('a long enough password')
     await w.find('input[name="repeat"]').setValue('a long enough password')
+    await w.find('form.el-form').trigger('submit')
+    await flushPromises()
+    expect(signIn).toHaveBeenCalledTimes(1)
+    return w
+  }
 
-    await submit(
+  it('puts a message already shown into the language chosen afterwards', async () => {
+    const w = await failedSubmit(
       new ApiError({ status: 429, code: 'rate_limited', message: 'slow', details: { retry_after_seconds: 30 } }),
     )
     expect(w.find('.el-alert--error').text()).toContain('請等候 30 秒')
     useUiStore().locale = 'en'
     await flushPromises()
     expect(w.find('.el-alert--error').text()).toContain('Wait 30 seconds')
+    w.unmount()
+  })
 
-    await submit(new ApiError({ status: 0, code: 'network', message: '' }))
+  it('puts a failure to reach the server into the language chosen afterwards, back again too', async () => {
+    const w = await failedSubmit(new ApiError({ status: 0, code: 'network', message: '' }))
+    expect(w.find('.el-alert--error').text()).toContain('無法連線到伺服器')
+    useUiStore().locale = 'en'
+    await flushPromises()
     expect(w.find('.el-alert--error').text()).toContain('Cannot reach the server')
     useUiStore().locale = 'zh-Hant'
     await flushPromises()
     expect(w.find('.el-alert--error').text()).toContain('無法連線到伺服器')
-    expect(signIn).toHaveBeenCalledTimes(2)
     w.unmount()
   })
 })
