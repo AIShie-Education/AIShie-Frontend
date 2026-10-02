@@ -451,14 +451,18 @@ describe('filtering and sorting', () => {
     })
     const found = (q: string) => filterRows(byId, q).map((r) => r.student.id)
     // Every ID of a class begins alike; a part of one is no search.
-    expect(found('01')).toEqual(['01a0d79f-2222-70da-a7cc-f009b1efe423'])
+    expect(found('01')).toEqual([])
+    expect(found('01a0d79f')).toEqual([])
     expect(found('c')).toEqual([])
     expect(found(ID)).toEqual([ID])
     expect(found(ID.replace(/-/g, ''))).toEqual([ID])
     expect(found('027c')).toEqual([])
     expect(found('ab6d027c')).toEqual([ID])
-    // A student with no name to show is found by the start or the end of theirs.
+    // A student with no name to show ("Student b1efe423") is found by a part
+    // of what is shown in its place, or by the whole of their ID.
+    expect(found('b1ef')).toEqual(['01a0d79f-2222-70da-a7cc-f009b1efe423'])
     expect(found('b1efe423')).toEqual(['01a0d79f-2222-70da-a7cc-f009b1efe423'])
+    expect(found('01a0d79f-2222-70da-a7cc-f009b1efe423')).toEqual(['01a0d79f-2222-70da-a7cc-f009b1efe423'])
   })
 
   it('keeps those with drafts, missing work or work to grade', () => {

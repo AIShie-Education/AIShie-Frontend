@@ -30,7 +30,7 @@ export default {
   outOf: '/ {n}',
   average: 'Class average',
   averageHint:
-    '{posted} posted, {drafts} draft. The mean of the posted grades of the students shown; drafts and removed students are left out.',
+    'Posted: {posted}. Drafts: {drafts}. The mean of the posted grades of the students shown; drafts and removed students are left out.',
   sortBy: 'Sort by {name}',
   sort: {
     label: 'Sort by',

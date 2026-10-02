@@ -439,8 +439,9 @@ const fold = (s: string) => s.normalize('NFKC').toLocaleLowerCase()
  * The rows whose student's name or login ID holds what was typed, and that
  * have what the filter asks for. A student is found by member ID only where
  * the whole of it (or the short form a page shows) was typed, or, for a
- * student with no name to show ("Student 1a2b3c4d"), by its start or end:
- * every ID of a class begins alike, so a part of one would find them all.
+ * student with no name to show ("Student 1a2b3c4d"), by a part of the short
+ * form shown in its place: every ID of a class begins alike, so a part of
+ * the rest would find them all.
  */
 export function filterRows(rows: readonly MatrixRow[], query: string, filter: RowFilter = 'all'): MatrixRow[] {
   const q = fold(query.trim())
@@ -453,8 +454,8 @@ export function filterRows(rows: readonly MatrixRow[], query: string, filter: Ro
     if (r.student.loginId !== null && fold(r.student.loginId).includes(q)) return true
     const id = r.student.id.toLowerCase()
     const bare = id.replace(/-/g, '')
-    if (r.student.name === null) return id.startsWith(q) || bare.endsWith(q)
-    return q === id || q === bare || q === bare.slice(-8)
+    if (q === id || q === bare) return true
+    return r.student.name === null ? bare.slice(-8).includes(q) : q === bare.slice(-8)
   })
 }
 
