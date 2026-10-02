@@ -521,7 +521,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   not put beside what is done every day: it goes in the toolbar's ⋯ menu (`MoreFilled`), at its far
   end, as undoing final grades is beside posting them.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
-  mobile width in mind (`min-width` on columns, not fixed widths everywhere).
+  mobile width in mind (`min-width` on columns, not fixed widths everywhere). A table has no ground of its own:
+  it lies on its card (`styles/element.css`), white being a field's alone, and a column of figures is
+  right-aligned, where its digits line up (`tabular-nums`; `data-num` elsewhere). `el-descriptions`
+  with `border` is drawn as rows parted by a thin line on the card, not a boxed grid.
 - **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`
   in `views/course/grades/components/`; a student, or a chosen student, has `GradebookView` as before)
   is students by assignments, read from what the seat may read alone (every page of `grade.list`

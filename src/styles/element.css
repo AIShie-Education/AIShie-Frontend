@@ -451,11 +451,60 @@ html.dark .el-card {
   --el-border-color: var(--app-line);
 }
 
-/* Tables: headings in the third ink, rows that turn to the ground on hover. */
+/* Tables: no ground of their own. A table lies on the card it is in, as the
+   card's text does (white is a field's alone, the one surface that asks for
+   input); its headings are in the third ink over a stronger line, and a row
+   turns to the ground's shade on hover. A column fixed to an edge is laid
+   on the card's colour (the overlay's, in a dialog or a drawer), or what
+   scrolls under it would show through. */
 .el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: transparent;
+  --el-table-expanded-cell-bg-color: transparent;
   --el-table-header-text-color: var(--app-ink-3);
   --el-table-row-hover-bg-color: var(--el-fill-color-light);
+  --app-table-ground: var(--app-card);
+}
+:is(.el-dialog, .el-drawer, .el-popover) .el-table {
+  --app-table-ground: var(--app-overlay);
 }
 .el-table th.el-table__cell {
   font-weight: 600;
+}
+.el-table th.el-table__cell.is-leaf {
+  border-bottom: 1px solid var(--app-line-strong);
+}
+.el-table tr > .el-table__cell:is(.el-table-fixed-column--left, .el-table-fixed-column--right) {
+  background-color: var(--app-table-ground);
+}
+.el-table .el-table__body tr:is(:hover, .hover-row) > .el-table__cell:is(.el-table-fixed-column--left, .el-table-fixed-column--right) {
+  background-color: var(--el-table-row-hover-bg-color);
+}
+/* Figures in a column of figures (right-aligned), and wherever a number is
+   marked as one, line up digit under digit. */
+.el-table .is-right .cell,
+[data-num] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Descriptions: label and value on the card, rows parted by a thin line,
+   not a boxed grid of white cells beside grey ones. */
+.el-descriptions {
+  --el-descriptions-table-border: 1px solid var(--app-line-soft);
+  --el-descriptions-item-bordered-label-background: transparent;
+}
+.el-descriptions__body {
+  background-color: transparent;
+}
+.el-descriptions__body .el-descriptions__table.is-bordered .el-descriptions__cell {
+  border-width: 0 0 1px;
+  padding-left: 0;
+}
+.el-descriptions__body .el-descriptions__table.is-bordered .el-descriptions__cell + .el-descriptions__cell {
+  padding-left: 16px;
+}
+.el-descriptions__label.el-descriptions__cell.is-bordered-label {
+  color: var(--app-ink-3);
+  font-weight: 500;
 }
