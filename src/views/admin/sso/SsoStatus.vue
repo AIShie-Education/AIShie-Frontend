@@ -1,9 +1,11 @@
 <script setup lang="ts">
 // How an identity provider stands, in tags, and why where it is not offered:
-// switched off, its id the operator's provider's (id_taken), or its client
-// secret one the server's keys no longer open (secret_unavailable); whether
-// it is the operator's, whether it links by email, and whether its secret
-// waits to be sealed again under the server's newer key.
+// switched off, its id the operator's provider's (id_taken), its client
+// secret one the server's keys no longer open (secret_unavailable), or its
+// issuer at an address that is plainly not public while the server is held
+// to public ones (issuer_address_not_allowed); whether it is the operator's,
+// whether it links by email, and whether its secret waits to be sealed again
+// under the server's newer key.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isOperator, sealedByOlderKey, type SsoProvider } from './ssoAdmin'
@@ -16,6 +18,7 @@ const TAG: Record<string, 'success' | 'info' | 'danger'> = {
   disabled: 'info',
   id_taken: 'danger',
   secret_unavailable: 'danger',
+  issuer_address_not_allowed: 'danger',
 }
 const status = computed(() => props.provider.status)
 const statusText = computed(() =>

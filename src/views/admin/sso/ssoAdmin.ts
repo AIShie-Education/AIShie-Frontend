@@ -14,7 +14,7 @@ import { errorMessage } from '@/composables/useErrors'
 export type SsoList = ToolOut<'sso.list'>
 export type SsoProvider = ToolOut<'sso.get'>
 export type SsoReport = ToolOut<'sso.test'>
-export type SsoStatus = 'offered' | 'disabled' | 'id_taken' | 'secret_unavailable'
+export type SsoStatus = 'offered' | 'disabled' | 'id_taken' | 'secret_unavailable' | 'issuer_address_not_allowed'
 
 /** Where Core's refusals of the sso tools are put in words, by reason (details.reason). */
 export const REFUSALS = 'ssoAdmin.refusal'

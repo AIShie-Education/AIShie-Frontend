@@ -130,6 +130,19 @@ export function goodReport(issuer = 'https://login.example.edu/realms/school'): 
   }
 }
 
+/** Core's publicHost, as far as the tests need it: localhost, *.localhost, or a private or loopback address written out. */
+function plainlyNotPublic(issuer: string): boolean {
+  const host = new URL(issuer).hostname
+  return (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    /^(127|10)\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    host === '[::1]'
+  )
+}
+
 const hint = (secret: string) => (secret.length >= 20 ? `…${secret.slice(-4)}` : '…')
 
 /**
@@ -140,6 +153,8 @@ export class FakeSsoCore {
   calls: Call[] = []
   providers: SsoProvider[] = []
   canAdd = true
+  /** SSO_ALLOW_PRIVATE_ISSUERS: off, a provider whose issuer is plainly not public is switched on but not offered. */
+  privateIssuersAllowed = true
   report: SsoReport = goodReport()
   private overrides: { method: string; re: RegExp; answer: Answer }[] = []
 
@@ -272,7 +287,11 @@ export class FakeSsoCore {
       }
       if (p.enabled !== body.enabled) {
         p.enabled = body.enabled
-        p.status = body.enabled ? 'offered' : 'disabled'
+        p.status = !body.enabled
+          ? 'disabled'
+          : !this.privateIssuersAllowed && plainlyNotPublic(p.issuer)
+            ? 'issuer_address_not_allowed'
+            : 'offered'
         p.version = (p.version ?? 0) + 1
       }
       return executed(p)

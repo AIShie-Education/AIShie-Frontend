@@ -6,4 +6,4 @@
 # To move it (README, Moving the Core pin): take the new image's tag and
 # digest from the package's page or Core's CI run, write them below, refresh
 # api/catalogue.json from a Core of that version, and push both together.
-ghcr.io/aishie-education/aishie-core:sha-4042026@sha256:1ecd2632c9c51e590b8c100871f5e8afac5be4baf653a5e271276ea3796aae9b
+ghcr.io/aishie-education/aishie-core:sha-2ba8ac7@sha256:997817f614fdd64080b012196e8b464cb5ddbfaf92cf881996782d6bd0f8c308

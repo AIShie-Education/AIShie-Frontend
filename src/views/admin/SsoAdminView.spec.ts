@@ -123,6 +123,34 @@ describe('the list of providers', () => {
     expect(lost.find('.sso-status__older-key').exists()).toBe(false)
   })
 
+  it('says, in each language, why one whose issuer is not at a public address is not offered', async () => {
+    core.providers = [
+      operatorProvider(),
+      siteProvider({
+        id: 'campus',
+        issuer: 'http://127.0.0.1:9000/realms/campus',
+        status: 'issuer_address_not_allowed',
+      }),
+    ]
+    for (const [locale, status, why] of [
+      ['en', 'Issuer not public', 'which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS'],
+      ['zh-Hant', '簽發者位址非公開', '除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS'],
+      ['zh-Hans', '颁发者地址非公开', '除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS'],
+    ] as const) {
+      const w = await page(locale)
+      const tag = rowOf(w, 'campus').find('.sso-status__status')
+      expect(tag.text()).toBe(status)
+      expect(tag.attributes('data-status')).toBe('issuer_address_not_allowed')
+      // A refusal, as id_taken and secret_unavailable are.
+      expect(tag.classes()).toContain('el-tag--danger')
+      expect(rowOf(w, 'campus').find('.sso-status__why').text()).toContain(why)
+      // It is still the site's to change: moving its issuer is the way out.
+      expect(rowOf(w, 'campus').find('.sso-cell__edit').exists()).toBe(true)
+      expect(rowOf(w, 'campus').find('.sso-cell__enabled').classes()).toContain('is-checked')
+      w.unmount()
+    }
+  })
+
   it('offers nothing to add without SECRETS_KEY on the server, and says so in each language', async () => {
     core.canAdd = false
     for (const [locale, words] of [
@@ -185,6 +213,52 @@ describe('switching a provider on and off', () => {
     expect(core.lastBody('POST', SSO.enabled)).toEqual({ enabled: true, version: 3 })
     // On, with nobody linked and no linking by email: said.
     expect(lastMessage()!.message).toContain('No account is linked at it yet')
+  })
+
+  it('says when one switched on is still not offered, its issuer not at a public address', async () => {
+    core.privateIssuersAllowed = false
+    core.providers = [
+      operatorProvider(),
+      siteProvider({ id: 'campus', issuer: 'http://localhost:9000/realms/campus', enabled: false, status: 'disabled' }),
+    ]
+    const w = await page()
+    await rowOf(w, 'campus').find('.sso-cell__enabled').trigger('click')
+    await settle()
+    expect(core.lastBody('POST', SSO.enabled)).toEqual({ enabled: true, version: 4 })
+    expect(lastMessage()).toMatchObject({ type: 'warning' })
+    expect(lastMessage()!.message).toBe(
+      '大學統一認證 is on, but its button is not on the sign-in page (Issuer not public): its status in the list says why.',
+    )
+    expect(rowOf(w, 'campus').find('.sso-status__status').text()).toBe('Issuer not public')
+  })
+
+  it('switches one that is on but not offered off without asking, and promises no button leaving the sign-in page', async () => {
+    for (const [locale, words] of [
+      ['en', '大學統一認證 is off. Nobody is unlinked.'],
+      ['zh-Hant', '已停用 大學統一認證。不會解除任何連結。'],
+      ['zh-Hans', '已停用 大學統一認證。不会解除任何关联。'],
+    ] as const) {
+      vi.mocked(ElMessageBox.confirm).mockClear()
+      core.providers = [
+        operatorProvider(),
+        siteProvider({
+          id: 'campus',
+          issuer: 'http://127.0.0.1:9000/realms/campus',
+          status: 'issuer_address_not_allowed',
+          linked_accounts: 3,
+        }),
+      ]
+      const w = await page(locale)
+      await rowOf(w, 'campus').find('.sso-cell__enabled').trigger('click')
+      await settle()
+      // Nobody signs in through it now, so switching it off takes nothing from them.
+      expect(confirmCalls()).toHaveLength(0)
+      expect(core.lastBody('POST', SSO.enabled)).toMatchObject({ enabled: false })
+      expect(lastMessage()).toMatchObject({ type: 'success' })
+      expect(lastMessage()!.message).toBe(words)
+      expect(rowOf(w, 'campus').find('.sso-cell__enabled').classes()).not.toContain('is-checked')
+      w.unmount()
+    }
   })
 
   it('asks first when accounts sign in through it, and unlinks nobody', async () => {
