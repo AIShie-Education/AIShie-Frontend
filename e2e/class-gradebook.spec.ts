@@ -1,6 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { call, demo, photograph, pickOption, registerPerson, root, signIn, type DemoActor } from './support'
+import {
+  call,
+  chooseLanguage,
+  demo,
+  photograph,
+  pickOption,
+  registerPerson,
+  root,
+  signIn,
+  type DemoActor,
+} from './support'
 
 // The whole class's gradebook (AIShie-Frontend#80), in a course of the
 // test's own: five students, two homeworks in an Assignments bucket and a
@@ -510,5 +520,32 @@ test.describe('a class larger than the screen', () => {
     await expect.poll(() => where(page)).toEqual(left)
     // And it scrolls on from there: the rows near the screen are drawn.
     await expect(matrix(page).locator(`tbody tr[aria-rowindex="${Math.floor(left.top / 44) + 4}"]`)).toBeVisible()
+  })
+
+  test('fits its box to the window again without a loop of ResizeObservers the browser reports', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.addInitScript(() => {
+      const w = window as unknown as { loops: string[] }
+      w.loops = []
+      window.addEventListener('error', (e) => {
+        if (String(e.message).includes('ResizeObserver loop')) w.loops.push(e.message)
+      })
+    })
+    await signIn(page, instructor())
+    await page.goto(`/courses/${bigId}/gradebook`)
+    await expect(matrix(page)).toBeVisible()
+    // The page's height changes under the box as the language changes and the class is read again.
+    await chooseLanguage(page, '繁體中文')
+    await expect(matrix(page).locator('tfoot th')).toHaveText('全班平均')
+    await chooseLanguage(page, 'English')
+    await expect(matrix(page).locator('tfoot th')).toHaveText('Class average')
+    const refresh = page.getByRole('button', { name: 'Refresh' })
+    await refresh.click()
+    await expect(refresh).not.toHaveClass(/is-loading/)
+    await expect(matrix(page)).toBeVisible()
+    await page.waitForTimeout(300)
+    expect(await page.evaluate(() => (window as unknown as { loops: string[] }).loops)).toEqual([])
+    // Still fitted: its foot on the screen.
+    await expect.poll(() => box(page).evaluate((el) => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(800 - 16)
   })
 })

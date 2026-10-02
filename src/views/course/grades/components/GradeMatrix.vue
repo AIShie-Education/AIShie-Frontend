@@ -81,6 +81,7 @@ function fit() {
 
 let observer: ResizeObserver | null = null
 let above: ResizeObserver | null = null
+let later = 0
 onMounted(() => {
   const el = scroller.value
   if (!el) return
@@ -94,13 +95,20 @@ onMounted(() => {
   })
   observer.observe(el)
   // What is above the box grows or shrinks (a toolbar wraps, a line of
-  // progress comes and goes): the page's height changes with it.
-  above = new ResizeObserver(() => fit())
+  // progress comes and goes): the page's height changes with it. Fitted a
+  // task later, never in the observer's callback, where the box's new height
+  // would change the page's again before the paint, a loop the browser
+  // reports (docs/CONVENTIONS.md).
+  above = new ResizeObserver(() => {
+    clearTimeout(later)
+    later = window.setTimeout(fit)
+  })
   above.observe(document.body)
 })
 onBeforeUnmount(() => {
   observer?.disconnect()
   above?.disconnect()
+  clearTimeout(later)
   window.removeEventListener('resize', fit)
   if (frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame)
 })
