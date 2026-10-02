@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// Approve or reject a proposal (action.decide), or send it back for changes,
-// or review an action that ran pending review (action.review), with a reason
+// Approve or reject a proposal (action.decide), or send it back for changes
+// (an agent's answer in a conversation not yet: offersChanges, below), or
+// review an action that ran pending review (action.review), with a reason
 // or note, right where it is listed. The reason is optional, but for a request
 // for changes, whose note says what to change: 1 to 2000 characters, not
 // spaces alone, or Core refuses it. Core refuses anyone deciding or reviewing
@@ -55,6 +56,16 @@ const text = ref('')
 
 /** A request for changes says what to change: it is not sent without a note. */
 const noteMissing = computed(() => choice.value === 'request_changes' && !text.value.trim())
+
+/**
+ * An agent's answer in a conversation is not sent back for changes yet. Only
+ * the site's runtime runs an agent people ask in the site, and a runtime that
+ * does not know of requests for changes leaves an answer sent back waiting for
+ * good: until the one that does (AIShie-Agent-Runtime#52) runs wherever this
+ * front end does, the answer is rejected with a reason, which the agent
+ * answers again with (Core's docs/deploying.md, Migration 0028).
+ */
+const offersChanges = computed(() => props.action.action_type !== 'conversation.answer')
 
 const decide = useWrite('action.decide')
 const review = useWrite('action.review')
@@ -233,6 +244,7 @@ function tell(
           <span>{{ t('actions.decision.approve') }}</span>
         </el-button>
         <el-button
+          v-if="offersChanges"
           type="warning"
           :plain="choice !== 'request_changes'"
           :size="size"

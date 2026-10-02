@@ -53,6 +53,22 @@ const PROPOSAL = {
   yours_to_decide: true,
 } as ActionRow
 
+/** A course agent's answer to a student's question, waiting for the teacher. */
+const ANSWER = {
+  id: 'p2',
+  actor_id: 'actor-tutor',
+  member_id: 'tutor',
+  action_type: 'conversation.answer',
+  target_type: 'conversation',
+  target_id: 'c1',
+  payload: { conversation_id: 'c1', in_reply_to_message_id: 'm1', body: 'Multiply by 9/5, then add 32.' },
+  authz_result: 'confirm_required',
+  status: 'proposed',
+  review_state: 'none',
+  created_at: '2026-09-28T10:05:00Z',
+  yours_to_decide: true,
+} as ActionRow
+
 const mounted: { unmount: () => void }[] = []
 beforeEach(() => {
   forgetMyAgents()
@@ -69,8 +85,8 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-/** The teacher, who decides here at once, with the grading agent (someone else's) seated. */
-function mountAsTeacher() {
+/** The teacher, who decides here at once, with the grading agent and the tutor (someone else's) seated. */
+function mountAsTeacher(action: ActionRow = PROPOSAL) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({ me: { id: 'actor-teacher', kind: 'human', display_name: 'Teacher' } } as never)
@@ -83,10 +99,14 @@ function mountAsTeacher() {
     permsSource: 'exact',
     membersState: 'loaded',
   } as never)
-  const seats = [seat('teacher'), seat('grader', { kind: 'agent', role: 'grader', owner_actor_id: 'actor-admin' })]
+  const seats = [
+    seat('teacher'),
+    seat('grader', { kind: 'agent', role: 'grader', owner_actor_id: 'actor-admin' }),
+    seat('tutor', { kind: 'agent', role: 'tutor', owner_actor_id: 'actor-admin', hosting: 'runtime' }),
+  ]
   course.members = new Map(seats.map((m) => [m.id, m]))
   const w = mount(DecidePanel, {
-    props: { action: PROPOSAL, courseId: COURSE, mode: 'decide' },
+    props: { action, courseId: COURSE, mode: 'decide' },
     attachTo: document.body,
     global: {
       plugins: [
@@ -137,6 +157,18 @@ describe('DecidePanel, asking for changes', () => {
     confirmButton()!.click()
     await flushPromises()
     expect(write).not.toHaveBeenCalled()
+  })
+
+  it('is not offered on an agent’s answer, which the runtime of today would leave waiting for good', async () => {
+    mountAsTeacher(ANSWER)
+    await flushPromises()
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['Approve', 'Reject'])
+    // Rejecting it, with a reason the agent answers again with, is as before.
+    button('Reject')!.click()
+    await flushPromises()
+    expect(document.body.querySelector('.decide-panel__form textarea')!.getAttribute('placeholder')).toBe(
+      'Why? (optional, but it helps whoever proposed it)',
+    )
   })
 
   it('sends the note, trimmed, as the reason of a request_changes decision, and says what became of it', async () => {

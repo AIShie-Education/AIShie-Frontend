@@ -1,18 +1,37 @@
 import { expect, test } from '@playwright/test'
-import { call, coursePath, courseTab, demo, expectToasted, keepToasts, signIn, type CoreReply } from './support'
+import {
+  call,
+  coursePath,
+  courseTab,
+  demo,
+  expectToasted,
+  hostOnRuntime,
+  keepToasts,
+  signIn,
+  type CoreReply,
+} from './support'
 
 // A teacher sends an agent's proposed grade back for changes, with a note of
 // what to change, instead of rejecting it (AIShie-Core#68). The agent, which
 // does not sign in to the app, reads the note through Core and proposes again,
 // naming the proposal it revises (the Revises header); the queue and the
-// revision's page link to the earlier one.
+// revision's page link to the earlier one. A course agent's answer is not
+// sent back yet: the site's runtime of today would leave it waiting for good.
 
 const STAMP = Date.now().toString(36)
 const FEEDBACK = `First try (${STAMP}): the code runs.`
 const NOTE = `Say which tests fail, and why, before the score (${STAMP}).`
 const REVISED = `Second try (${STAMP}): two edge cases fail, so 8.`
+const TUTOR = `Answers-on-approval tutor ${STAMP}`
+const QUESTION = `Is 0 °C 32 °F? (${STAMP})`
+const ANSWER = `Yes: 0 × 9/5 + 32 = 32 (${STAMP}).`
 let proposalId = ''
 let revisionId = ''
+
+function done(r: { status: number; body: CoreReply }, what: string) {
+  expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
+  return r.body.result
+}
 
 /** A write as the agent makes it, naming the proposal it revises: Core's Revises header. */
 async function proposeRevising(token: string, path: string, body: unknown, revises: string) {
@@ -161,5 +180,68 @@ test.describe.serial('sending a proposal back for changes, and its revision', ()
     // The course's activity lists the request for changes.
     await page.goto(coursePath('activity'))
     await expect(page.getByText('Proposal sent back for changes').first()).toBeVisible()
+  })
+})
+
+test.describe('a course agent’s answer, which the runtime of today does not revise', () => {
+  const w = { tutorId: '', tutorToken: '', answerId: '' }
+
+  test.afterAll(async () => {
+    const d = demo()
+    // The answer, if it still waits, is taken back by the agent; the agent is
+    // suspended, as a person may have five agents at once, for the specs after it.
+    if (w.answerId) await call(w.tutorToken, 'POST', `/v1/courses/${d.course.id}/actions/${w.answerId}/withdraw`, {})
+    if (w.tutorId) await call(d.actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
+  })
+
+  test('is approved or rejected, and not sent back for changes', async ({ page }) => {
+    const d = demo()
+    const c = d.course.id
+    const I = d.actors.instructor.token
+    // The instructor's course agent, hosted on the site's runtime (the test
+    // plays it), whose answers wait for someone's confirmation.
+    w.tutorId = done(
+      await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR, hosting: 'runtime' }),
+      'agent.create',
+    ).actor_id
+    const seatId = done(
+      await call(I, 'POST', `/v1/courses/${c}/delegates`, {
+        actor_id: w.tutorId,
+        preset: 'course_tutor',
+        answers_course: true,
+      }),
+      'member.add_delegate',
+    ).member_id as string
+    done(
+      await call(I, 'POST', `/v1/courses/${c}/members/${seatId}/perms`, {
+        perms: { conversation_answer: 'confirm_required' },
+      }),
+      'member.update_perms',
+    )
+    w.tutorToken = await hostOnRuntime(w.tutorId)
+
+    // Yuki asks it, and its answer waits for approval.
+    const conv = done(
+      await call(d.actors.yuki.token, 'POST', `/v1/courses/${c}/conversations`, {
+        respondent_member_id: seatId,
+        body: QUESTION,
+      }),
+      'conversation.open',
+    )
+    const answer = await call(w.tutorToken, 'POST', `/v1/courses/${c}/conversations/${conv.conversation_id}/answer`, {
+      in_reply_to_message_id: conv.message_id,
+      body: ANSWER,
+    })
+    expect(answer.body.status, JSON.stringify(answer.body)).toBe('proposed')
+    w.answerId = answer.body.action_id!
+
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath())
+    await courseTab(page, 'Approvals').click()
+    const card = page.locator('.action-card').filter({ hasText: TUTOR })
+    await expect(card).toHaveCount(1)
+    await expect(card.getByRole('button', { name: 'Approve' })).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Reject' })).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Request changes' })).toHaveCount(0)
   })
 })
