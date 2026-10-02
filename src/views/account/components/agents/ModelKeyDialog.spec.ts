@@ -428,7 +428,10 @@ describe('ModelKeyDialog: the school’s plan', () => {
 
   beforeEach(() => {
     s.on('GET', RUNTIME.models, () => json(200, modelsWithSchool()))
+    // The reader is in Hong Kong: the runtime's day starts again at 08:00 there.
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
   })
+  afterEach(() => vi.unstubAllEnvs())
 
   it('offers the school’s plan first, with its offers and quotas, and saves it with no key', async () => {
     const { w, vm } = await open({ schoolKey: true })
@@ -440,7 +443,7 @@ describe('ModelKeyDialog: the school’s plan', () => {
     expect(offers.map((o) => o.find('.model-form__offer-label').text())).toEqual(['School AI (Claude Haiku)', 'School AI'])
     expect(offers.map((o) => o.find('.model-form__offer-model').text())).toEqual(['claude-haiku-4-5', 'deepseek-chat'])
     expect(w.find('.model-form__limits').text()).toBe(
-      'Up to 100 answers a day across all your agents, and 20 a day for each person who asks. The counts start again at 00:00 UTC.',
+      'Up to 100 answers a day across all your agents, and 20 a day for each person who asks. The counts start again at 08:00 (Hong Kong Standard Time).',
     )
     // No key field, no provider, no key test.
     expect(w.find('.model-form__key').exists()).toBe(false)
@@ -524,8 +527,24 @@ describe('ModelKeyDialog: the school’s plan', () => {
     const { w } = await open({ schoolKey: true })
     expect(w.findAll('.model-form__plan-title').map((p) => p.text())).toEqual(['學校方案', '你自己的金鑰'])
     expect(w.find('.model-form__limits').text()).toBe(
-      '你所有的代理合計每天最多回答 100 次，每位提問者每天最多 20 次。每天 00:00 UTC 重新計算。',
+      '你所有的代理合計每天最多回答 100 次，每位提問者每天最多 20 次。每天香港標準時間 08:00 重新計算。',
     )
+  })
+
+  it('says when the counts start again from the agent’s day, as the runtime counts it', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-01T10:00:00Z'))
+    try {
+      // A runtime whose day starts at midnight in Hong Kong, 16:00 UTC.
+      agent = { ...agent, today: { ...agent.today, since: '2026-09-30T16:00:00Z' } }
+      const { w } = await open({ schoolKey: true })
+      expect(w.find('.model-form__limits').text()).toBe(
+        'Up to 100 answers a day across all your agents, and 20 a day for each person who asks. The counts start again at 00:00 (Hong Kong Standard Time).',
+      )
+      expect(w.find('.model-form__limits time').attributes('datetime')).toBe('2026-10-01T16:00:00.000Z')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('offers no plan where the runtime does not (features.school_key false)', async () => {

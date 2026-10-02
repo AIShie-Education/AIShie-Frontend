@@ -124,7 +124,7 @@ export default {
     ownHint: 'A provider and model you choose, on your own API key.',
     offer: 'Model',
     limits:
-      'Up to {owner} answers a day across all your agents, and {asker} a day for each person who asks. The counts start again at 00:00 UTC.',
+      'Up to {owner} answers a day across all your agents, and {asker} a day for each person who asks. The counts start again at {reset}.',
     noKey: 'The school’s key stays on the school’s server. Nobody sees it, you included.',
     warning:
       'Your questions, and the course material and work your agent reads, go to the model’s provider under the school’s agreement with it.',
@@ -262,11 +262,11 @@ export default {
     fallbackNone: 'None: answers pause until tomorrow once the allowance is used up',
     schoolAllowance: 'School allowance',
     todaySchool: '{used} / {limit} today',
-    todaySchoolHint: 'The school plan, across all your agents. Starts again at 00:00 UTC.',
+    todaySchoolHint: 'The school plan, across all your agents. Starts again at {reset}.',
     perAsker: 'Each person who asks: up to {n} a day',
     thisAgent: 'This agent today',
-    spentFallback: 'Today’s school allowance is used up: your own key answers until 00:00 UTC.',
-    spentNone: 'Today’s school allowance is used up: until 00:00 UTC your agent asks people to try again tomorrow.',
+    spentFallback: 'Today’s school allowance is used up: your own key answers until {reset}.',
+    spentNone: 'Today’s school allowance is used up: until {reset} your agent asks people to try again tomorrow.',
     offerWithdrawn: 'The school no longer offers this plan. Choose another, or your own key.',
     offerWithdrawnFallback:
       'The school no longer offers this plan: your agent answers with your own model and key until you choose another.',

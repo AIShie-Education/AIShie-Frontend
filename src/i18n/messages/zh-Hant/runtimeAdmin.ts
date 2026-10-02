@@ -137,7 +137,7 @@ export default {
     perDayPages: '每日頁數',
     concurrency: '同時轉寫的文件數',
     numbersHint:
-      '頁數超過上限的文件會被略過；當日頁數用完後（以 UTC 00:00 起計）領取的文件也會被略過，教學人員之後可以再送出。「每日頁數」留空即不限。',
+      '頁數超過上限的文件會被略過；當日頁數用完後至{reset} 重新計算前，領取的文件也會被略過，教學人員之後可以再送出。「每日頁數」留空即不限。',
     saved: '已儲存文件轉寫設定。',
     invalid: {
       maxPages: '1 至 5000 之間的整數。',
@@ -326,14 +326,15 @@ export default {
 
   quotas: {
     title: '每日額度',
-    intro: '學校方案每天可回答的次數。每天 00:00 UTC 重新計算。',
-    introUsd: '學校方案每天的回答次數和美元上限，可留空的欄位留空表示不設上限。每天 00:00 UTC 重新計算。',
+    intro: '學校方案每天可回答的次數。每天{reset} 重新計算。',
+    introUsd: '學校方案每天的回答次數和美元上限，可留空的欄位留空表示不設上限。每天{reset} 重新計算。',
     perOwner: '每位擁有者',
     perOwnerHint: '一位擁有者所有代理的總和。',
     perAsker: '每位提問者',
     perAskerHint: '每位提問者在一個課程中向一個代理提問。',
     perDay: '全校',
-    perDayHint: '所有人使用學校金鑰的總和。留空表示不設上限。',
+    perDayHint:
+      '學校金鑰上的所有用量，不論是誰的代理回答：方案上的代理、營運者使用學校金鑰的代理，以及（以美元計）文件轉寫。任何人自己的金鑰上的用量都不計算在內。留空表示不設上限。',
     noCeiling: '不設上限',
     default: '伺服器預設：{n}',
     defaultNone: '伺服器預設：不設上限',
@@ -353,7 +354,7 @@ export default {
 
   usage: {
     title: '今日學校方案用量',
-    since: '自 {since}（00:00 UTC）起',
+    since: '自 {since}起。每天{reset} 重新計算。',
     answers: '回答',
     modelCalls: '模型呼叫',
     cost: '費用',
@@ -361,6 +362,7 @@ export default {
     noCeiling: '全校不設上限',
     limits: '每位擁有者每天最多 {owner} 次，每位提問者最多 {asker} 次。',
     limitsUsd: '以美元計：每位擁有者 {owner}，每位提問者 {asker}，全校 {day}。',
+    noTranscription: '這裡的費用不含文件轉寫，但全校的美元上限也把轉寫計算在內。',
     owner: '擁有者',
     operator: '營運者的代理',
     unknownOwner: '執行環境尚未見過的使用者',
@@ -462,7 +464,7 @@ export default {
   budgets: {
     title: '代理每日預算',
     intro:
-      '在這裡託管的每個代理每天可使用的上限，不論以哪個金鑰回答：包括總量，以及在一個課程中每位提問者的用量。每天 00:00 UTC 重新計算。',
+      '在這裡託管的每個代理每天可使用的上限，不論以哪個金鑰回答：包括總量，以及在一個課程中每位提問者的用量。每天{reset} 重新計算。',
     perAgent: '每個代理',
     perAgentHint: '一個代理所有回答的總和。',
     perAsker: '每位提問者',

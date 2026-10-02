@@ -59,6 +59,7 @@ enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   setLocale('en')
   document.body.innerHTML = ''
 })
@@ -303,6 +304,17 @@ describe('the daily quotas', () => {
     )
     expect(w.find('.quotas-card__save').attributes('disabled')).toBeDefined()
     expect(w.text()).toContain('Quotas in dollars, where there are any, stay in force beside these.')
+  })
+
+  it('says when the counts start again in the reader’s time, and what the whole school’s ceiling counts', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    const w = await panel()
+    expect(w.find('.quotas-card__intro').text()).toBe(
+      'Answers a day on the school’s plan. The counts start again at 08:00 (Hong Kong Standard Time).',
+    )
+    expect(w.find('.quotas-card__per_day .app-form-hint').text()).toBe(
+      'Everything on the school’s key, whoever’s agent answers: agents on the plan, the operator’s agents on the school’s key, and, in dollars, the transcription of documents. Nothing on anyone’s own key counts. Empty for no ceiling.',
+    )
   })
 
   it('saves all three, no ceiling as null', async () => {

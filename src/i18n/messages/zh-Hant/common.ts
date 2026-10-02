@@ -173,6 +173,7 @@ export default {
     ago: '{t}前',
     due: '截止 {t}',
     noDue: '無截止日期',
+    dailyReset: '{zone} {time}',
   },
   pagination: {
     loadMore: '載入更多',

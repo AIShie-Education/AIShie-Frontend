@@ -1,8 +1,9 @@
 import dayjs from 'dayjs'
 import type { Decimal } from '@/api/types'
 
-// Numbers are written as the page's language writes them, as dates are:
-// i18n's setLocale gives the language as Intl names it (zh-CN, zh-TW, en).
+// Numbers, and the names of time zones, are written as the page's language
+// writes them, as dates are: i18n's setLocale gives the language as Intl
+// names it (zh-CN, zh-TW, en).
 let numberLocale: string | undefined
 
 export function setNumberLocale(tag: string | undefined): void {
@@ -46,6 +47,37 @@ export function formatDateTime(v: string | null | undefined): string {
 export function formatDate(v: string | null | undefined): string {
   if (!v) return '—'
   return dayjs(v).format('YYYY-MM-DD')
+}
+
+/** The time of day v is on the reader's clock: "08:00". */
+export function formatTime(v: string | null | undefined): string {
+  if (!v) return '—'
+  return dayjs(v).format('HH:mm')
+}
+
+/** v exactly, in UTC, whatever the reader's time zone: "2026-10-02 00:00 UTC". */
+export function formatUtc(v: string | null | undefined): string {
+  const ms = v ? Date.parse(v) : NaN
+  if (!Number.isFinite(ms)) return '—'
+  const iso = new Date(ms).toISOString()
+  return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`
+}
+
+/**
+ * The reader's time zone as it is at v, named in the page's language
+ * ("Hong Kong Standard Time", 「香港標準時間」, "Pacific Daylight Time"),
+ * or, where the browser cannot name it, its offset then ("UTC+08:00").
+ */
+export function timeZoneName(v: string): string {
+  try {
+    const name = new Intl.DateTimeFormat(numberLocale, { timeZoneName: 'long' })
+      .formatToParts(new Date(v))
+      .find((p) => p.type === 'timeZoneName')?.value
+    if (name) return name
+  } catch {
+    /* an engine without time zones' names: the offset alone */
+  }
+  return `UTC${dayjs(v).format('Z')}`
 }
 
 export function fromNow(v: string | null | undefined): string {
