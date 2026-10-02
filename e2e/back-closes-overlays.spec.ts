@@ -18,12 +18,13 @@ import {
 // over the page instead of leaving it: the file viewer, the chat's sheet, the
 // menu, an administrator's drawer, the top one first where one is open over
 // another (a message box, or who can read a conversation, asked over the chat
-// or an agent's conversation log first of all). Closed by its own
-// button, an overlay goes back over the entry it added, so that back from
-// there leaves the page, as it would have before it opened; a link followed
-// from the menu takes the menu's place in history; and a page reloaded with
-// an overlay open leaves none behind. On a wider screen the chat is a window
-// that stays open from page to page, and back moves between them.
+// or an agent's conversation log first of all; a menu left open in the log
+// goes with it). Closed by its own button, an overlay goes back over the
+// entry it added, so that back from there leaves the page, as it would have
+// before it opened; a link followed from the menu takes the menu's place in
+// history; and a page reloaded with an overlay open leaves none behind. On a
+// wider screen the chat is a window that stays open from page to page, and
+// back moves between them.
 
 const tag = Date.now().toString(36)
 
@@ -243,7 +244,7 @@ test.describe('on a phone, back', () => {
     }
   })
 
-  test('with who can read a conversation open over an agent’s conversation log, closes that, then the log, then leaves the page', async ({
+  test('with who can read a conversation open over an agent’s conversation log, closes that, then the log, its ⋯ menu with it, then leaves the page', async ({
     page,
   }) => {
     const d = demo()
@@ -291,6 +292,22 @@ test.describe('on a phone, back', () => {
       expect(page.url()).toBe(agents)
       // Closed with the log, it does not come back over the page.
       await expect(readers).toBeHidden()
+
+      // Opened again on the conversation, with its ⋯ menu open: back takes the menu with the log, leaving neither over the page.
+      await page
+        .locator('.agent-row')
+        .filter({ hasText: name })
+        .getByRole('button', { name: 'Conversation log' })
+        .click()
+      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      await log.getByRole('button', { name: 'Conversation options' }).click()
+      const menu = page.locator('.chat-pane__menu:visible')
+      await expect(menu.getByRole('menuitem', { name: 'Who can read this' })).toBeVisible()
+      await page.goBack()
+      await expect(log).toBeHidden()
+      await expect(menu).toHaveCount(0)
+      await atPagesOwnEntry(page)
+      expect(page.url()).toBe(agents)
 
       await page.goBack()
       await expect(page).toHaveURL(/\/$/)
