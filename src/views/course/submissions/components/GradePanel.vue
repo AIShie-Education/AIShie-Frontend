@@ -3,7 +3,12 @@
 // beside the form. A draft is not visible to the student until it is posted;
 // for a seat whose grading waits for approval, the grade does not exist at
 // all until someone approves it.
-import { computed, reactive, ref, watch } from 'vue'
+//
+// A draft says who drafted it: an agent with its avatar and "AI", a person by
+// name. Filled into the form from an agent's draft, what it wrote carries a
+// line at its left (--app-indigo-line) until the grader changes it, and a
+// note above the form says so.
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
 import { read, type UploadedFile } from '@/api/http'
@@ -11,6 +16,7 @@ import type { ActionSummary, Assignment, GradeSummary, Submission } from '@/api/
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import MemberName from '@/components/MemberName.vue'
 import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -39,6 +45,7 @@ const emit = defineEmits<{ graded: [] }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const { run, pending } = useWrite('grade.submit')
+onMounted(() => void course.ensureMembers())
 
 /** Whether the form is offered: the work is handed in (or missing) and has no posted grade. */
 const showForm = computed(() => course.writable && props.submission.state !== 'draft' && !props.livePosted)
@@ -156,6 +163,37 @@ const draftFilesHint = computed(() => {
   return draftFileList.value.length ? t('submissions.grade.draftFiles') : null
 })
 
+/** Who drafted the live draft, where the member list says: its seat, and whether it is an agent's. */
+const drafter = computed(() => {
+  const id = props.liveDraft?.grader_member_id
+  const name = course.memberName(id)
+  return id && name ? { id, name, agent: course.members.get(id)?.kind === 'agent' } : null
+})
+
+/**
+ * What an agent's draft filled in, as it filled it in: a field still the
+ * same is marked as the agent's. Nothing while the form was not filled
+ * from an agent's draft.
+ */
+interface Prefill {
+  name: string
+  score: string
+  feedback: string
+  breakdown: string
+}
+const prefill = ref<Prefill | null>(null)
+const breakdownKey = (rows: BreakdownRow[]) =>
+  JSON.stringify(rows.map((r) => [r.criterion, r.points, r.max, r.comment]))
+const untouched = computed(() => {
+  const p = prefill.value
+  return {
+    score: !!p && form.score === p.score,
+    feedback: !!p && !!p.feedback && form.feedback === p.feedback,
+    breakdown: !!p && p.breakdown !== '[]' && breakdownKey(form.breakdown) === p.breakdown,
+  }
+})
+const anyUntouched = computed(() => Object.values(untouched.value).some(Boolean))
+
 /** Fills the form from the current draft, to change it rather than start again. */
 function startFromDraft() {
   const g = props.liveDraft
@@ -173,6 +211,11 @@ function startFromDraft() {
     max: r.max === undefined || r.max === null ? '' : String(r.max),
     comment: typeof r.comment === 'string' ? r.comment : '',
   }))
+  const d = drafter.value
+  prefill.value =
+    d?.agent && d.id === g.grader_member_id
+      ? { name: d.name, score: form.score, feedback: form.feedback, breakdown: breakdownKey(form.breakdown) }
+      : null
   formRef.value?.clearValidate()
 }
 
@@ -184,6 +227,7 @@ const uploadingFiles = ref(false)
 
 function reset() {
   Object.assign(form, blank())
+  prefill.value = null
   draftFilesSeq++
   draftFiles.value = null
   breakdownChecked.value = false
@@ -334,6 +378,11 @@ async function submit() {
         {{ t('submissions.grade.forMissing') }}
       </el-alert>
       <el-alert v-if="liveDraft" type="info" :closable="false" show-icon class="grade-panel__alert">
+        <p v-if="drafter" class="grade-panel__alert-text grade-panel__drafter">
+          <i18n-t keypath="submissions.grade.draftBy" tag="span" scope="global">
+            <template #name><MemberName :id="drafter.id" show-kind class="grade-panel__drafter-name" /></template>
+          </i18n-t>
+        </p>
         <p class="grade-panel__alert-text">
           {{
             t('submissions.grade.draftExists', {
@@ -360,7 +409,10 @@ async function submit() {
           class="grade-panel__form"
           @submit.prevent="submit"
         >
-          <el-form-item :label="t('submissions.grade.score')" prop="score">
+          <p v-if="anyUntouched && prefill" class="app-form-hint grade-panel__prefilled-note">
+            {{ t('submissions.grade.prefilledBy', { name: prefill.name }) }}
+          </p>
+          <el-form-item :label="t('submissions.grade.score')" prop="score" :class="{ 'is-prefilled': untouched.score }">
             <div class="grade-panel__score">
               <el-input
                 v-model="form.score"
@@ -377,7 +429,7 @@ async function submit() {
             <el-checkbox v-model="form.allowExtra" :label="t('submissions.grade.allowExtra')" />
           </el-form-item>
 
-          <el-form-item :label="t('submissions.grade.breakdown')">
+          <el-form-item :label="t('submissions.grade.breakdown')" :class="{ 'is-prefilled': untouched.breakdown }">
             <div class="grade-panel__block">
               <BreakdownEditor v-model="form.breakdown" :strict="breakdownChecked" @use-total="useTotal" />
               <div v-if="breakdownError" class="grade-panel__error" role="alert">
@@ -387,7 +439,7 @@ async function submit() {
             </div>
           </el-form-item>
 
-          <el-form-item :label="t('submissions.grade.feedback')">
+          <el-form-item :label="t('submissions.grade.feedback')" :class="{ 'is-prefilled': untouched.feedback }">
             <MarkdownEditor
               v-model="form.feedback"
               :rows="8"
@@ -536,6 +588,29 @@ async function submit() {
   white-space: normal;
   text-align: left;
   overflow-wrap: anywhere;
+}
+.grade-panel__drafter {
+  display: flex;
+  align-items: center;
+  /* The light at the avatar's corner is ringed in the note's ground. */
+  --agent-avatar-ring: var(--el-color-info-light-9);
+}
+/* The drafter stands a little apart from the words around it, which have no spaces of their own in Chinese. */
+.grade-panel__drafter-name {
+  margin: 0 0.3em;
+  vertical-align: middle;
+}
+/*
+ * What an agent drafted and the grader has not changed: a line at its left,
+ * in the gutter, so that the field does not move when it goes.
+ */
+.grade-panel__form :deep(.el-form-item.is-prefilled > .el-form-item__content) {
+  margin-left: -13px;
+  padding-left: 10px;
+  border-left: 3px solid var(--app-indigo-line);
+}
+.grade-panel__prefilled-note {
+  margin: 0 0 12px;
 }
 .grade-panel__actions {
   display: flex;

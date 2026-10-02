@@ -108,6 +108,10 @@ export default {
     openPosted: '打开已发布的成绩',
     draftExists: '这份作业已有一份草稿成绩（{score}）。保存新的成绩会取代它。',
     openDraft: '打开草稿',
+    // Who drafted it: an agent with its avatar and "AI" (MemberName), a person by name.
+    draftBy: '由{name}起草',
+    // While what the draft filled in is unchanged: those fields carry a line at their left.
+    prefilledBy: '左侧有竖线的字段仍是{name}起草的内容，你尚未修改。',
     startFromDraft: '以当前草稿为基础',
     forMissing:
       '学生没有提交任何作业：这个成绩是针对缺交而给。若在成绩生效前有迟交的作业取代了这个占位记录，成绩会被拒绝，需重新查看作业。',
