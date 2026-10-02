@@ -36,6 +36,7 @@ export default {
   },
   post: {
     selected: '發佈所選（{n}）',
+    more: '更多發佈操作',
     assignment: '發佈此作業的全部草稿',
     pickAssignment: '勾選草稿列即可發佈；或先篩選一份作業，一次發佈其所有草稿。',
     selectHint: '可只勾選部分草稿發佈，或發佈此作業所有待發佈的草稿。',

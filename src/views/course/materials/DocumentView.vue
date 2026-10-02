@@ -520,7 +520,7 @@ function noteSource(): PrintRequest {
           {{ t('enums.level.confirm_required') }}
         </el-tag>
         <el-tooltip v-if="canPurge" :content="t('materials.document.purge.adminOnly')" placement="bottom">
-          <el-button type="danger" @click="openPurge(null)">
+          <el-button type="danger" plain @click="openPurge(null)">
             <el-icon><Delete /></el-icon>
             <span>{{ t('materials.document.actions.purge') }}</span>
           </el-button>

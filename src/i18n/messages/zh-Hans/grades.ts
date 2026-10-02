@@ -36,6 +36,7 @@ export default {
   },
   post: {
     selected: '发布所选（{n}）',
+    more: '更多发布操作',
     assignment: '发布此作业的全部草稿',
     pickAssignment: '勾选草稿行即可发布；或先筛选一份作业，一次发布其所有草稿。',
     selectHint: '可只勾选部分草稿发布，或发布此作业所有待发布的草稿。',

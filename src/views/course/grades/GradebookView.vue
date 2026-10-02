@@ -373,6 +373,7 @@ async function undoFinal() {
         type: 'warning',
         confirmButtonText: t('grades.undoFinal.confirmButton'),
         cancelButtonText: t('common.actions.cancel'),
+        confirmButtonClass: 'el-button--danger',
       },
     )
   } catch {
@@ -558,8 +559,6 @@ watch(
                   <span>
                     <el-button
                       size="small"
-                      type="warning"
-                      plain
                       :disabled="!course.writable"
                       :loading="undoWrite.pending.value"
                       @click="undoFinal"

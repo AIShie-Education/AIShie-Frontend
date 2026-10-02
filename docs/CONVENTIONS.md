@@ -501,6 +501,16 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
+- **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else: `type="primary"`
+  (solid indigo) for the one main action of a view or a dialog, approving and publishing among them;
+  no type (outlined, the ink's text) for everything beside it, rejecting and cancelling among them,
+  rejecting being the safe choice, not a destructive one; `type="danger" plain` (a red outline) for a
+  destructive action on a page (archive, remove, revoke), which asks first; and solid red alone for
+  the last step of that confirmation (`confirmButtonClass: 'el-button--danger'`, or a dialog's
+  button that does it at once). `success`, `warning` and `info` are outcomes' colours, for tags,
+  never a button's. A disabled button has no hue, whatever its rank. What cannot be taken back is
+  not put beside what is done every day: it goes in the toolbar's ⋯ menu (`MoreFilled`), at its far
+  end, as undoing final grades is beside posting them.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
   mobile width in mind (`min-width` on columns, not fixed widths everywhere).
 - **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`

@@ -361,7 +361,8 @@ test.describe.serial('records that change after the fact', () => {
     await asInstructor(page, `/gradebook/${tia.member_id}`)
     await expect(page.locator('.gradebook__final')).toContainText('written as final grades')
     await page.goto(`/courses/${courseId}/grades`)
-    await page.getByRole('button', { name: 'Undo final grades…' }).click()
+    await page.getByRole('button', { name: 'More posting actions' }).click()
+    await page.getByRole('menuitem', { name: 'Undo final grades…' }).click()
     const dialog = page.getByRole('dialog', { name: 'Undo final grades' })
     await expect(dialog).toContainText('Grades themselves are not touched')
     await dialog.getByText('Every student whose totals count ungraded work as zero').click()
@@ -378,7 +379,8 @@ test.describe.serial('records that change after the fact', () => {
 
     // Nothing is left to undo: Core refuses, and says so in words.
     await page.goto(`/courses/${courseId}/grades`)
-    await page.getByRole('button', { name: 'Undo final grades…' }).click()
+    await page.getByRole('button', { name: 'More posting actions' }).click()
+    await page.getByRole('menuitem', { name: 'Undo final grades…' }).click()
     await page
       .getByRole('dialog', { name: 'Undo final grades' })
       .getByRole('button', { name: 'Undo final grades' })

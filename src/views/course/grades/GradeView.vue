@@ -234,7 +234,7 @@ const backLink = computed(() => ({
               <span>{{ kindLabel }}</span>
             </span>
           </template>
-          <el-button v-if="canPostThis" type="success" :disabled="!course.writable" @click="postVisible = true">
+          <el-button v-if="canPostThis" type="primary" :disabled="!course.writable" @click="postVisible = true">
             <el-icon><Promotion /></el-icon>
             <span>{{ t('grades.detail.post') }}</span>
             <el-tag

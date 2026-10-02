@@ -37,6 +37,7 @@ export default {
   },
   post: {
     selected: 'Post selected ({n})',
+    more: 'More posting actions',
     assignment: 'Post all drafts for this assignment',
     pickAssignment: 'Tick draft rows to post them, or filter by an assignment to post all its drafts at once.',
     selectHint: 'Tick draft rows to post just those, or post every draft waiting for this assignment.',

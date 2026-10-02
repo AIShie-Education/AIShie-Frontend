@@ -121,13 +121,6 @@ const confirmLabel = computed(() => {
   }
   return t('actions.decision.confirmReviewed')
 })
-const confirmType = computed(() =>
-  choice.value === 'reject'
-    ? 'danger'
-    : choice.value === 'escalated' || choice.value === 'request_changes'
-      ? 'warning'
-      : 'success',
-)
 
 function stale(code: string | undefined) {
   return code === 'conflict' || code === 'not_found'
@@ -234,9 +227,11 @@ function tell(
     <div class="decide-panel__buttons">
       <template v-if="mode === 'decide'">
         <el-button
-          type="success"
-          :plain="choice !== 'approve'"
+          type="primary"
+          :plain="!!choice && choice !== 'approve'"
           :size="size"
+          :class="{ 'is-chosen': choice === 'approve' }"
+          :aria-pressed="choice === 'approve'"
           :disabled="!!blocked || !!approveBlocked || pending"
           @click="open('approve')"
         >
@@ -245,9 +240,9 @@ function tell(
         </el-button>
         <el-button
           v-if="offersChanges"
-          type="warning"
-          :plain="choice !== 'request_changes'"
           :size="size"
+          :class="{ 'is-chosen': choice === 'request_changes' }"
+          :aria-pressed="choice === 'request_changes'"
           :disabled="!!blocked || pending"
           @click="open('request_changes')"
         >
@@ -255,9 +250,9 @@ function tell(
           <span>{{ t('actions.decision.requestChanges') }}</span>
         </el-button>
         <el-button
-          type="danger"
-          :plain="choice !== 'reject'"
           :size="size"
+          :class="{ 'is-chosen': choice === 'reject' }"
+          :aria-pressed="choice === 'reject'"
           :disabled="!!blocked || pending"
           @click="open('reject')"
         >
@@ -267,9 +262,11 @@ function tell(
       </template>
       <template v-else>
         <el-button
-          type="success"
-          :plain="choice !== 'reviewed'"
+          type="primary"
+          :plain="!!choice && choice !== 'reviewed'"
           :size="size"
+          :class="{ 'is-chosen': choice === 'reviewed' }"
+          :aria-pressed="choice === 'reviewed'"
           :disabled="!!blocked || pending"
           @click="open('reviewed')"
         >
@@ -278,9 +275,9 @@ function tell(
         </el-button>
         <el-button
           v-if="action.review_state === 'pending'"
-          type="warning"
-          :plain="choice !== 'escalated'"
           :size="size"
+          :class="{ 'is-chosen': choice === 'escalated' }"
+          :aria-pressed="choice === 'escalated'"
           :disabled="!!blocked || pending"
           @click="open('escalated')"
         >
@@ -315,7 +312,7 @@ function tell(
       </p>
       <div class="decide-panel__confirm">
         <el-button :size="size" :disabled="pending" @click="cancel">{{ t('common.actions.cancel') }}</el-button>
-        <el-button :type="confirmType" :size="size" :loading="pending" :disabled="noteMissing" @click="confirm">
+        <el-button type="primary" :size="size" :loading="pending" :disabled="noteMissing" @click="confirm">
           {{ confirmLabel }}
         </el-button>
       </div>
@@ -338,6 +335,16 @@ function tell(
 }
 .decide-panel__buttons .el-button + .el-button {
   margin-left: 0;
+}
+/* The choice open below, while its form asks for a reason: its button stays
+   pressed in, and the form's own button is the one primary. */
+.decide-panel__buttons .el-button.is-chosen {
+  --el-button-bg-color: var(--app-indigo-tint);
+  --el-button-border-color: var(--app-indigo);
+  --el-button-text-color: var(--app-indigo);
+  --el-button-hover-bg-color: var(--app-indigo-tint);
+  --el-button-hover-border-color: var(--app-indigo);
+  --el-button-hover-text-color: var(--app-indigo);
 }
 .decide-panel__blocked {
   display: flex;

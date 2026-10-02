@@ -289,13 +289,25 @@ html.dark .el-card {
   --el-checkbox-height: var(--el-component-size);
 }
 
-/* Buttons: the primary one is indigo and darkens on hover; a plain primary
-   one is the ghost, an indigo outline. One without a type is outlined in the
-   line's colour and takes the indigo's tint on hover. A link turns darker,
-   never paler, on hover, so that it keeps its contrast; so do the others'
-   fills. */
+/* Buttons, by rank (docs/CONVENTIONS.md, "Buttons"), the same on every page:
+   - primary: solid indigo, at most one to a view or a dialog: approve,
+     publish, save. It darkens on hover. A plain primary one is the ghost,
+     an indigo outline.
+   - secondary, a button without a type: outlined in a control's edge (3:1
+     on a card and on the ground) with the ink's text, taking the indigo's
+     tint on hover: reject, cancel, everything else.
+   - danger on a page (plain): an outline in the danger colour on no ground,
+     as the ghost is: archive, remove, revoke. It asks before it does
+     anything, in a confirmation, whose last step alone is solid red.
+   - solid danger: only the last step of a confirmation, in a dialog or a
+     message box: delete, undo the final grade.
+   - disabled, of any rank: the ground's second shade, the disabled ink and
+     the line, with no hue: nothing about it says it can be pressed.
+   A link turns darker, never paler, on hover, so that it keeps its
+   contrast; so do the others' fills. Success, warning and info are no
+   button's: their colours are outcomes', in tags. */
 .el-button:not(.el-button--primary, .el-button--success, .el-button--warning, .el-button--danger, .el-button--info) {
-  --el-button-border-color: var(--app-line-strong);
+  --el-button-border-color: var(--app-control-border);
   --el-button-text-color: var(--app-ink);
   --el-button-hover-text-color: var(--app-indigo);
   --el-button-hover-bg-color: var(--app-indigo-tint);
@@ -322,6 +334,18 @@ html.dark .el-card {
   --el-button-active-text-color: var(--app-indigo-dark);
   border-width: 1.5px;
 }
+.el-button--danger.is-plain {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: var(--app-danger-fg);
+  --el-button-text-color: var(--app-danger-fg);
+  --el-button-hover-bg-color: var(--app-danger-bg);
+  --el-button-hover-border-color: var(--app-danger-fg);
+  --el-button-hover-text-color: var(--app-danger-fg);
+  --el-button-active-bg-color: var(--app-danger-bg);
+  --el-button-active-border-color: var(--el-color-danger-dark-2);
+  --el-button-active-text-color: var(--el-color-danger-dark-2);
+  border-width: 1.5px;
+}
 .el-button--success {
   --el-button-hover-bg-color: var(--el-color-success-dark-2);
   --el-button-hover-border-color: var(--el-color-success-dark-2);
@@ -341,6 +365,18 @@ html.dark .el-card {
   --el-button-hover-bg-color: var(--el-color-info-dark-2);
   --el-button-hover-border-color: var(--el-color-info-dark-2);
   --el-button-hover-link-text-color: var(--el-color-info-dark-2);
+}
+/* Disabled, whatever its rank or type: no hue. Element Plus gives each type
+   a pale step of its own colour, which still reads as pressable. */
+.el-button.is-disabled:not(.is-link, .is-text),
+.el-button.is-disabled:not(.is-link, .is-text):is(:hover, :focus, :active) {
+  color: var(--app-ink-disabled);
+  background-color: var(--app-ground-2);
+  border-color: var(--app-line);
+}
+.el-button.is-disabled:is(.is-link, .is-text),
+.el-button.is-disabled:is(.is-link, .is-text):is(:hover, :focus, :active) {
+  color: var(--app-ink-disabled);
 }
 
 /* Focus: a ring in the focus colour (the indigo), clear of the control, on

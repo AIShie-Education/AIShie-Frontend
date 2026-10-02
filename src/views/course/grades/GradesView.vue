@@ -406,38 +406,16 @@ const gradebookLink = computed(() =>
       </div>
 
       <div v-if="canPost && !paged.error.value?.isForbidden" class="grades-view__post">
-        <el-button type="success" :disabled="!course.writable || !selected.length" @click="postSelected">
+        <el-button type="primary" :disabled="!course.writable || !selected.length" @click="postSelected">
           <el-icon><Promotion /></el-icon>
           <span>{{ t('grades.post.selected', { n: selected.length }) }}</span>
         </el-button>
-        <el-button
-          type="success"
-          plain
-          :disabled="!course.writable || !assignment || noDraftsForAssignment"
-          @click="postAssignment"
-        >
+        <el-button :disabled="!course.writable || !assignment || noDraftsForAssignment" @click="postAssignment">
           <span>{{ t('grades.post.assignment') }}</span>
         </el-button>
         <el-tag v-if="course.needsApproval('grade_post')" type="warning" effect="plain">
           {{ t('enums.level.confirm_required') }}
         </el-tag>
-        <el-tooltip
-          :content="!spansAssignments ? t('grades.undoFinal.wholeCourse') : t('common.archivedCourse')"
-          :disabled="canUndoFinal && course.writable"
-          placement="top"
-        >
-          <span>
-            <el-button
-              type="warning"
-              plain
-              :disabled="!canUndoFinal || !course.writable"
-              class="grades-view__undo"
-              @click="undoVisible = true"
-            >
-              <el-icon><RefreshLeft /></el-icon><span>{{ t('grades.undoFinal.button') }}</span>
-            </el-button>
-          </span>
-        </el-tooltip>
         <span class="app-form-hint grades-view__post-hint">
           {{
             !assignment
@@ -447,6 +425,25 @@ const gradebookLink = computed(() =>
                 : t('grades.post.selectHint')
           }}
         </span>
+        <!-- What cannot be taken back is not beside posting: it is in the toolbar's menu, at its far end. -->
+        <el-dropdown trigger="click" placement="bottom-end" @command="undoVisible = true">
+          <el-button class="grades-view__more" :aria-label="t('grades.post.more')">
+            <el-icon><MoreFilled /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="undo" :disabled="!canUndoFinal || !course.writable" class="grades-view__undo">
+                <el-icon><RefreshLeft /></el-icon>
+                <span class="grades-view__undo-text">
+                  <span>{{ t('grades.undoFinal.button') }}</span>
+                  <span v-if="!canUndoFinal || !course.writable" class="grades-view__undo-why">
+                    {{ !spansAssignments ? t('grades.undoFinal.wholeCourse') : t('common.archivedCourse') }}
+                  </span>
+                </span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
       <p v-if="stateFilter !== 'all' && paged.hasMore.value" class="app-form-hint">
         {{ t('grades.list.stateFilterHint') }}
@@ -653,6 +650,16 @@ const gradebookLink = computed(() =>
 .grades-view__post-hint {
   margin: 0;
   flex: 1 1 200px;
+}
+.grades-view__undo-text {
+  display: flex;
+  flex-direction: column;
+}
+.grades-view__undo-why {
+  max-width: 280px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
 }
 .grades-view__table :deep(.el-table__row) {
   cursor: pointer;
