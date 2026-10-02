@@ -10,6 +10,8 @@ import { health } from '@/api/http'
 import AppWordmark from '@/components/AppWordmark.vue'
 
 const open = defineModel<boolean>({ required: true })
+/** Once the dialog has gone, so the caller can put focus back where it came from. */
+const emit = defineEmits<{ closed: [] }>()
 const { t } = useI18n()
 
 const web = ref<string | null>(null)
@@ -40,7 +42,18 @@ watch(open, async (v) => {
 </script>
 
 <template>
-  <el-dialog v-model="open" :title="t('layout.about.title')" width="400px" destroy-on-close class="about-dialog">
+  <!-- On the body, so it covers the whole window: the account button that
+       opens it sits in the activity bar, whose own layer would hold it below
+       the side bar and the header. -->
+  <el-dialog
+    v-model="open"
+    :title="t('layout.about.title')"
+    width="400px"
+    append-to-body
+    destroy-on-close
+    class="about-dialog"
+    @closed="emit('closed')"
+  >
     <div class="about">
       <AppWordmark class="about__wordmark" decorative />
       <p class="about__tagline">{{ t('common.tagline') }}</p>
@@ -65,7 +78,7 @@ watch(open, async (v) => {
   align-items: flex-start;
   gap: 8px;
 }
-.about__wordmark {
+.about .about__wordmark {
   height: 28px;
   color: var(--app-wordmark);
 }

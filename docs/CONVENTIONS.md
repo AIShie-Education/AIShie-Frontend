@@ -572,7 +572,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
   account's settings, the language and the theme, each a submenu with the choice in use checked, About AIshie
   (`AboutDialog`: the web app's version from `/version.json` and the server's from `/healthz`, the only place
-  either is shown; the sign-in page names none) and signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
+  either is shown; the sign-in page names none; `append-to-body`, as the activity bar's sticky layer would
+  hold it under the side bar and the header, and focus returns to the account button as it closes) and
+  signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
   title alone (and, on a phone, the menu's button): nothing else is offered there.
 - A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,

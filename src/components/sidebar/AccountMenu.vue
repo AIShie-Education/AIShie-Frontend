@@ -175,8 +175,13 @@ function onSubItem(which: Sub) {
 
 const about = ref(false)
 function showAbout() {
+  // The menu item goes with the menu, so focus returns to the account button
+  // once the dialog closes.
   hide(false)
   about.value = true
+}
+function aboutClosed() {
+  trigger.value?.focus()
 }
 function goAccount() {
   hide(false)
@@ -405,7 +410,7 @@ defineExpose({ show, hide })
         </button>
       </div>
     </Teleport>
-    <AboutDialog v-model="about" />
+    <AboutDialog v-model="about" @closed="aboutClosed" />
   </div>
 </template>
 
