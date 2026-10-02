@@ -484,10 +484,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   AIshie kept theirs under `aishiteru.`: `src/migrateStorage.ts`, the first thing `main.ts` imports,
   moves those at start, before anything reads a key, so nothing else reads the old names.
 - Views are responsive down to phone width, and work in light and dark (use Element Plus CSS
-  variables, never hard-coded colours). `useNarrow()` / `useMediaQuery()` from
-  `@/composables/useMediaQuery` switch a wide table to cards on a phone; a page that the side bar
-  can leave narrow on a wide window switches on its own width instead (below). The members, a
-  member's page and My actions still ask the window for 767 px (`useNarrow(767)`), and are yet to.
+  variables, never hard-coded colours). A page takes its layout from its own width, never the
+  window's, a table or a card per row included (below): the side bar can leave a page narrow on a
+  wide window. Only what belongs to the window asks it, with `@/composables/useMediaQuery`:
+  `usePhoneScreen()` (640 px or narrower) for a dialog or a drawer laid over the page that fills a
+  phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch.
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
@@ -497,14 +498,21 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   from `@/composables/useContainerWidth` says whether an element is `max` px wide or less, as
   `@container (max-width: …)` would, for el-descriptions' columns, which of a table's columns show,
   or a table or a card per row (the administration's courses, departments, people and an actor's
-  page). Measure a part as wide as the card that no `el-table` changes the size of, its title or
+  page). A table that folds its columns under its first does so where they no longer all fit at
+  their `min-width`s, when what it folds keeps what they say (the courses, departments and terms,
+  sign-in's providers, the school's AI plan, prices and quotas per person, the gradebook). A phone's
+  layout, a card per row, or a fold that leaves something out, switches where the page is as
+  narrow as in a window of 640 px without the side bar: 592 px of page, 542 of a card's content
+  (the members, a member's page, My actions and the people, which switched at 767 px, at 719 and
+  669). Measure a part as wide as the card that no `el-table` changes the size of, its title or
   its toolbar, never the card around an `el-table`, which lays itself out again from a
   `ResizeObserver` of its own (the card would change height in that observer's callback, a loop the
   browser reports). What the switch itself changes in the measured part is safe, a toolbar's row
   that wraps, say: the switch is never made in an observer's callback, but a task later or on the
   window's `resize`; the unit tests give elements widths with `fakeContainerWidths()`
   (`@/composables/containerWidthFakes`), and without it jsdom shows the wide layout. A dialog's
-  breakpoints, and a phone's (640 px and narrower), stay `@media` queries on the window. Columns of
+  breakpoints, and a phone's CSS (a card's padding, a filter taking the toolbar's whole row, at
+  640 px and narrower), stay `@media` queries on the window. Columns of
   cards use the shared `.app-columns` (the grid) and `.app-column` (a stack of cards, 16 px apart)
   from `styles/main.css`: side by side, both columns are as tall as their row and the last card of
   each grows to fill it, so that they end on one line, with what each card holds at its top;
