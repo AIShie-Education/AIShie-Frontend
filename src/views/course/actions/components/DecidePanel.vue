@@ -1,11 +1,13 @@
 <script setup lang="ts">
-// Approve or reject a proposal (action.decide), or review an action that ran
-// pending review (action.review), with an optional reason or note, right
-// where it is listed. Core refuses anyone deciding or reviewing their own
-// action; where that can be seen here the buttons are off and say why. The
-// owner of the agent that did it decides it where they could have done it
-// themselves, and then as their own doing of it: at once, whatever they hold
-// of action_decide, so it never becomes a proposal of theirs.
+// Approve or reject a proposal (action.decide), or send it back for changes,
+// or review an action that ran pending review (action.review), with a reason
+// or note, right where it is listed. The reason is optional, but for a request
+// for changes, whose note says what to change: 1 to 2000 characters, not
+// spaces alone, or Core refuses it. Core refuses anyone deciding or reviewing
+// their own action; where that can be seen here the buttons are off and say
+// why. The owner of the agent that did it decides it where they could have
+// done it themselves, and then as their own doing of it: at once, whatever
+// they hold of action_decide, so it never becomes a proposal of theirs.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
@@ -14,7 +16,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import type { ApiError, WriteOutcome } from '@/api/http'
 import { isAboutAction, reasonText, useJudgeRules, type ActionRow } from './actionText'
-import type { Done } from './decide'
+import type { Decision, Done } from './decide'
 import { useLookup, useSpecs } from './lookups'
 
 const props = withDefaults(
@@ -47,9 +49,12 @@ const approveBlocked = computed(() =>
 const asOwner = computed(() => rules.isOwnAgent(props.action))
 const needsApproval = computed(() => course.needsApproval('action_decide') && !asOwner.value)
 
-type Choice = 'approve' | 'reject' | 'reviewed' | 'escalated'
+type Choice = Decision | 'reviewed' | 'escalated'
 const choice = ref<Choice | null>(null)
 const text = ref('')
+
+/** A request for changes says what to change: it is not sent without a note. */
+const noteMissing = computed(() => choice.value === 'request_changes' && !text.value.trim())
 
 const decide = useWrite('action.decide')
 const review = useWrite('action.review')
@@ -70,6 +75,8 @@ const hint = computed(() => {
       return t('actions.decision.approveHint')
     case 'reject':
       return t('actions.decision.rejectHint')
+    case 'request_changes':
+      return t('actions.decision.requestChangesHint')
     case 'reviewed':
       return t('actions.decision.reviewedHint')
     case 'escalated':
@@ -83,6 +90,8 @@ const placeholder = computed(() => {
       return t('actions.decision.reasonPlaceholder')
     case 'reject':
       return t('actions.decision.rejectPlaceholder')
+    case 'request_changes':
+      return t('actions.decision.requestChangesPlaceholder')
     case 'escalated':
       return t('actions.decision.escalatePlaceholder')
   }
@@ -94,13 +103,19 @@ const confirmLabel = computed(() => {
       return t('actions.decision.confirmApprove')
     case 'reject':
       return t('actions.decision.confirmReject')
+    case 'request_changes':
+      return t('actions.decision.confirmRequestChanges')
     case 'escalated':
       return t('actions.decision.confirmEscalate')
   }
   return t('actions.decision.confirmReviewed')
 })
 const confirmType = computed(() =>
-  choice.value === 'reject' ? 'danger' : choice.value === 'escalated' ? 'warning' : 'success',
+  choice.value === 'reject'
+    ? 'danger'
+    : choice.value === 'escalated' || choice.value === 'request_changes'
+      ? 'warning'
+      : 'success',
 )
 
 function stale(code: string | undefined) {
@@ -110,7 +125,8 @@ function stale(code: string | undefined) {
 /**
  * Says what useWrite would have said, except when someone else got there
  * first: that is no error, and the page says so itself and refreshes. True
- * in that case.
+ * in that case. A refusal of the note (note_required, note_too_long) is said
+ * in the words under actions.decision.refusal.
  */
 function sayUnlessStale(out: WriteOutcome<unknown> | null, err: ApiError | null): boolean {
   if (out) {
@@ -119,7 +135,7 @@ function sayUnlessStale(out: WriteOutcome<unknown> | null, err: ApiError | null)
   }
   if (!err) return false
   if (stale(err.code)) return true
-  notifyError(err)
+  notifyError(err, undefined, { reasons: 'actions.decision.refusal' })
   return false
 }
 
@@ -127,7 +143,8 @@ async function confirm() {
   const c = choice.value
   if (!c) return
   const note = text.value.trim() || undefined
-  if (c === 'approve' || c === 'reject') {
+  if (c === 'request_changes' && !note) return
+  if (c === 'approve' || c === 'reject' || c === 'request_changes') {
     const out = await decide.run(
       { course_id: props.courseId, action_id: props.action.id, decision: c, reason: note },
       { notify: false },
@@ -159,7 +176,10 @@ async function confirm() {
   emit('done', { kind: 'reviewed', state: c, byOwner: out.result.by_owner === true })
 }
 
-/** Says what became of the proposal: executed, failed, rejected or cancelled; and that its owner decided it. */
+/**
+ * Says what became of the proposal: executed, failed, rejected, sent back for
+ * changes or cancelled; and that its owner decided it.
+ */
 function tell(
   outcome: string,
   error?: { code: string; message: string; details?: Record<string, unknown> },
@@ -171,6 +191,12 @@ function tell(
       break
     case 'rejected':
       ElMessage({ type: 'info', message: t(byOwner ? 'actions.outcome.rejectedByOwner' : 'actions.outcome.rejected') })
+      break
+    case 'changes_requested':
+      ElMessage({
+        type: 'info',
+        message: t(byOwner ? 'actions.outcome.changesRequestedByOwner' : 'actions.outcome.changes_requested'),
+      })
       break
     case 'failed':
       ElNotification({
@@ -205,6 +231,16 @@ function tell(
         >
           <el-icon><Check /></el-icon>
           <span>{{ t('actions.decision.approve') }}</span>
+        </el-button>
+        <el-button
+          type="warning"
+          :plain="choice !== 'request_changes'"
+          :size="size"
+          :disabled="!!blocked || pending"
+          @click="open('request_changes')"
+        >
+          <el-icon><EditPen /></el-icon>
+          <span>{{ t('actions.decision.requestChanges') }}</span>
         </el-button>
         <el-button
           type="danger"
@@ -261,12 +297,15 @@ function tell(
         maxlength="2000"
         show-word-limit
       />
+      <p v-if="noteMissing" class="decide-panel__hint">{{ t('actions.decision.noteRequired') }}</p>
       <p v-if="needsApproval" class="decide-panel__hint decide-panel__hint--warn">
         {{ t('actions.decision.willBeProposal') }}
       </p>
       <div class="decide-panel__confirm">
         <el-button :size="size" :disabled="pending" @click="cancel">{{ t('common.actions.cancel') }}</el-button>
-        <el-button :type="confirmType" :size="size" :loading="pending" @click="confirm">{{ confirmLabel }}</el-button>
+        <el-button :type="confirmType" :size="size" :loading="pending" :disabled="noteMissing" @click="confirm">
+          {{ confirmLabel }}
+        </el-button>
       </div>
     </div>
   </div>

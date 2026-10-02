@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // The caller's own actions in this course (action.list_mine): everything they
 // did or tried, proposals included, and what became of each. It is how an
-// agent's operator — or anyone who proposed something — learns the outcome.
+// agent's operator — or anyone who proposed something — learns the outcome:
+// a rejection's reason, or what a proposal sent back for changes should
+// change, and which earlier proposal a revision revises.
 // Core lists them oldest first; they are all loaded (up to a limit) and shown
 // newest first, or oldest first if the person prefers.
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
@@ -17,6 +19,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActionActor from './components/ActionActor.vue'
 import ActionTarget from './components/ActionTarget.vue'
+import RevisesLine from './components/RevisesLine.vue'
 import { reasonText, storedDecision, storedError, typeLabel, type ActionRow } from './components/actionText'
 
 const props = defineProps<{ courseId: string }>()
@@ -90,7 +93,16 @@ const page = ref(1)
 const PER_PAGE = 20
 watch([status, type, order], () => (page.value = 1))
 
-const STATUS_ORDER = ['proposed', 'executed', 'failed', 'rejected', 'cancelled', 'denied', 'approved']
+const STATUS_ORDER = [
+  'proposed',
+  'executed',
+  'failed',
+  'rejected',
+  'changes_requested',
+  'cancelled',
+  'denied',
+  'approved',
+]
 const statusCounts = computed(() => {
   const m = new Map<string, number>()
   for (const a of items.value) m.set(a.status, (m.get(a.status) ?? 0) + 1)
@@ -116,8 +128,10 @@ function outcomeNote(a: ActionRow): string | null {
   const e = storedError(a)
   if (e) return reasonText(e) ?? `${t('actions.outcome.coreSays')}: ${e.message}`
   const d = storedDecision(a)
-  if (d) return d.reason ? t('actions.outcome.reasonLabel', { reason: d.reason }) : null
-  return null
+  if (!d?.reason) return null
+  return a.status === 'changes_requested'
+    ? t('actions.outcome.changesLabel', { note: d.reason })
+    : t('actions.outcome.reasonLabel', { reason: d.reason })
 }
 
 function open(row: ActionRow) {
@@ -201,6 +215,7 @@ function open(row: ActionRow) {
                   {{ typeLabel(row.action_type) }}
                 </router-link>
                 <ActionTarget :action="row" :course-id="courseId" />
+                <RevisesLine v-if="row.revises_action_id" :course-id="courseId" :action-id="row.revises_action_id" />
                 <p
                   v-if="outcomeNote(row)"
                   class="my-actions__note"

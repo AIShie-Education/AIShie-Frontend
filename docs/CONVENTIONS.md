@@ -408,6 +408,19 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   approving now would refuse), with the refusal it would meet (`details.refusal`) in the reader's
   words where the app has them, and Core's alone for a bare `forbidden`; `reasonText()` says either
   in the same words where a decision refused so is listed, as the failed action Core records.
+- **A proposal sent back for changes.** Wherever a proposal is decided (`DecidePanel`), *Request
+  changes* (要求修改) is offered beside Approve and Reject, under the same rules as Reject:
+  `action.decide` with `decision: 'request_changes'` and the note as `reason`. The note is
+  required, 1 to 2000 characters and not spaces alone: the confirm button stays off until there is
+  one, and Core's refusals of it (`note_required`, `note_too_long`) are worded under
+  `actions.decision.refusal`. The proposal ends in `changes_requested`, a final state that is no
+  failure: its tag is `warning`, as a proposal's that waits is, not a rejection's `danger`. Its
+  note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and
+  who asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal
+  it revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the
+  queue, *My actions* and the action's page, as the feed does from the revision's
+  `action.proposed`; the earlier one says nothing of it. `action.changes_requested` is listed in
+  the feed with its decision, as `action.rejected` is.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous

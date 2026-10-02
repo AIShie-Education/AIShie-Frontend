@@ -163,6 +163,40 @@ describe('EventItem, a decision by the owner of the agent that made it', () => {
   })
 })
 
+describe('EventItem, a proposal sent back for changes, and its revision', () => {
+  const ev = (type: string, payload: Record<string, unknown>): CourseEvent => ({
+    seq: 4,
+    type,
+    occurred_at: '2026-10-02T10:00:00Z',
+    subject_type: 'action',
+    subject_id: 'p2',
+    action_id: 'p2',
+    payload: { action_type: 'grade.submit', ...payload },
+  })
+
+  it('names the event, and the owner where they sent it back', async () => {
+    const w = mountItem(ev('action.changes_requested', { by_action_id: 'd1', by_owner: true }))
+    await flushPromises()
+    expect(w.find('.event-item__title').text()).toBe('Proposal sent back for changes')
+    expect(w.text()).toContain('Decided by its agent’s owner')
+    w.unmount()
+  })
+
+  it('says a proposal revises an earlier one', async () => {
+    const w = mountItem(ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }))
+    await flushPromises()
+    expect(w.text()).toContain('Revises an earlier proposal')
+    w.unmount()
+  })
+
+  it('says nothing of revising where a proposal revises none', async () => {
+    const w = mountItem(ev('action.proposed', { target_type: 'submission' }))
+    await flushPromises()
+    expect(w.text()).not.toContain('Revises')
+    w.unmount()
+  })
+})
+
 describe('EventItem, the flexible records', () => {
   const ev = (type: string, subject_type: string, payload: Record<string, unknown>, over: Partial<CourseEvent> = {}) =>
     ({
