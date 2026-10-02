@@ -264,6 +264,26 @@ export default {
     retractedByStaff: '課程教職員已撤回這則訊息。',
     reason: '原因：{reason}',
   },
+  // Under an answer: the course materials it relied on (AIShie-Core#69), each as the reader may open it now.
+  sources: {
+    basedOn: '依據：{source}',
+    summary: '依據：{title}· {n} 項',
+    summaryNone: '依據：{n} 項你無法開啟的課程教材',
+    label: '這則回答依據的課程教材',
+    quoted: '《{title}》',
+    // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
+    entry: '{title}· {where}',
+    page: '第 {n} 頁',
+    slide: '第 {n} 張投影片',
+    version: '第 {seq} 版',
+    openFile: '開啟檔案中回答所依據之處',
+    openVersion: '開啟這份教材的這個版本',
+    earlier: '較早的版本',
+    earlierTip: '這則回答依據的是這份教材較早的版本，你現在無法開啟；這裡開啟的是教材目前的版本。',
+    restricted: '一份你無法開啟的課程教材',
+    none: '未引用課程教材',
+    noneTip: '代理表示這則回答沒有依據任何課程教材。',
+  },
   reasonPlaceholder: '原因（選填）',
   reasonTooLong: '最多 {max} 字',
   // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
