@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // The file viewer (預覽): a large dialog over the page, the whole screen on a
-// phone, showing one file of those it was opened on (viewer.ts), with the
-// previous and the next, its download (under its name), "Download as PDF"
-// where it is text, and its close button. It works from the keyboard: Tab
-// stays in it, Escape closes it (focus goes back to what opened it), and the
+// phone (upright or on its side), showing one file of those it was opened on
+// (viewer.ts), with the previous and the next, its download (under its
+// name), "Download as PDF" where it is text, and its close button. It works
+// from the keyboard: Tab stays in it, Escape closes it (focus goes back to
+// what opened it), and the
 // left and right arrow keys go to the previous and the next file, except
 // where they move something of their own (a field, a player, a page or an
 // image wider than the window).
@@ -44,7 +45,7 @@ import PrintButton from '@/components/PrintButton.vue'
 import { toApiError } from '@/composables/useAsync'
 import { errorMessage, notifyError } from '@/composables/useErrors'
 import { announce } from '@/composables/useWrite'
-import { usePhoneScreen } from '@/composables/useMediaQuery'
+import { useMediaQuery, usePhoneScreen } from '@/composables/useMediaQuery'
 import { useRuntime, type UseRuntime } from '@/composables/useRuntime'
 import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
@@ -87,6 +88,8 @@ const PdfView = defineAsyncComponent(() => import('./PdfView.vue'))
 const { t, locale } = useI18n()
 const state = previewState()
 const phone = usePhoneScreen()
+/** A phone on its side: the whole screen too, its height being too little to leave any of. */
+const short = useMediaQuery('(max-height: 480px)')
 // Whether anything transcribes: a text waiting for a transcriber that is off is said to be none.
 // Asked of the runtime only once an Office file is shown (useRuntime asks it on first use), so that
 // a page where no such file is opened never asks whether there is a runtime.
@@ -524,7 +527,7 @@ function onClosed() {
   <el-dialog
     :model-value="state.open"
     :class="[dialogClass, { 'is-phone': phone }]"
-    :fullscreen="phone"
+    :fullscreen="phone || short"
     width="min(1200px, calc(100vw - 48px))"
     top="3vh"
     :show-close="false"
