@@ -1,4 +1,15 @@
-import { computed, onScopeDispose, ref, toValue, watch, type ComputedRef, type MaybeRefOrGetter, type Ref } from 'vue'
+import {
+  computed,
+  nextTick,
+  onScopeDispose,
+  ref,
+  toValue,
+  watch,
+  type ComputedRef,
+  type MaybeRefOrGetter,
+  type Ref,
+  type WatchSource,
+} from 'vue'
 
 /**
  * How wide an element is, kept up to date: its content box, which is what an
@@ -90,4 +101,27 @@ export function useContainerNarrow(
 ): ComputedRef<boolean> {
   const width = useContainerWidth(target)
   return computed(() => width.value !== null && width.value <= toValue(maxWidth))
+}
+
+/**
+ * Lays an el-table out again as soon as `source` (a switch from
+ * useContainerNarrow) has changed its columns: which it has, or how wide they
+ * may be. Left to itself, an el-table lays a change of its columns out 50 ms
+ * later; in between, the browser lays its rows out on the old columns'
+ * widths, and where the table then changes height (rows that wrap anew, its
+ * scroll bar gone), the table's own ResizeObserver lays it out again in its
+ * callback and it changes height a second time in that same frame: a loop of
+ * observers the browser reports. Laid out here, once the switch is in the
+ * page (after the update that made it, and the columns it added have joined
+ * the table as they mount), and in the same task, the browser lays the table
+ * out once, on its new columns.
+ */
+export function useTableRelayout(
+  table: Readonly<Ref<{ doLayout: () => void } | null | undefined>>,
+  source: WatchSource<unknown> | WatchSource<unknown>[],
+): void {
+  watch(source, async () => {
+    await nextTick()
+    table.value?.doLayout()
+  })
 }

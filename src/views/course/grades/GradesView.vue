@@ -7,14 +7,14 @@
 // without reading them (the built-in grader agent) is told where its work is.
 //
 // Filters come from and go to the query: ?assignment=<id>&student=<memberId>.
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import type { TableInstance } from 'element-plus'
 import { read, type ToolOut, type WriteOutcome } from '@/api/http'
 import type { GradeSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import AsyncState from '@/components/AsyncState.vue'
@@ -38,7 +38,12 @@ const route = useRoute()
 const router = useRouter()
 const course = useCourseStore()
 const lookups = useGradeLookups(() => props.courseId)
-const narrow = useNarrow()
+// A card per grade, with its own checkbox, where the card is as narrow as on a
+// phone: its toolbar 542 px or less, the width it has in a window of 640 px
+// without the side bar. By the card's own width, not the window's: the side bar
+// takes from it.
+const toolbar = useTemplateRef<HTMLElement>('toolbar')
+const narrow = useContainerNarrow(toolbar, 542)
 
 /** A student sees their own posted grades: "My grades". */
 const mine = computed(() => course.role === 'student')
@@ -144,7 +149,7 @@ watch([assignment, student, narrow], () => {
   selected.value = []
   table.value?.clearSelection()
 })
-// On a phone the rows are cards with their own checkboxes.
+// Narrow, the rows are cards with their own checkboxes.
 function isSelected(g: GradeSummary): boolean {
   return selected.value.some((x) => x.id === g.id)
 }
@@ -366,7 +371,7 @@ const gradebookLink = computed(() =>
     </section>
 
     <section v-else class="app-card">
-      <div class="app-toolbar">
+      <div ref="toolbar" class="app-toolbar">
         <AssignmentSelect
           v-model="assignmentModel"
           clearable
@@ -454,7 +459,7 @@ const gradebookLink = computed(() =>
         :empty-text="filtered ? t('grades.list.emptyFiltered') : mine ? t('grades.mine.empty') : t('grades.list.empty')"
         @retry="paged.reload"
       >
-        <!-- Phone width: one card per grade -->
+        <!-- Narrow: one card per grade -->
         <ul v-if="narrow" class="grades-list">
           <li
             v-for="g in rows"

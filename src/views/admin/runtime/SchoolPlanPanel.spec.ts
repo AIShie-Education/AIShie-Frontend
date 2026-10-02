@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { fakeContainerWidths } from '@/composables/containerWidthFakes'
 import { setLocale } from '@/i18n'
 import SchoolPlanPanel from './SchoolPlanPanel.vue'
 import {
@@ -492,5 +493,24 @@ describe('the daily quotas', () => {
       'The server’s defaults (runtime.yaml), as its operator set them.',
     )
     expect(w.find('.quotas-card__reset').exists()).toBe(false)
+  })
+})
+
+describe('the models, by their card’s width', () => {
+  it('folds an offer’s status, key, agents and actions under its name where the card has less than 810 px', async () => {
+    // The window is wide (matchMedia says nothing matches): the card decides, measured by its title.
+    const sizes = fakeContainerWidths({ '.offers-card .app-card__title': 810 })
+    const w = await panel()
+    const heads = () => w.findAll('.offers-card__table thead th').map((th) => th.text())
+    expect(heads()).toEqual(['Model', 'Status', 'Key', 'Agents', 'Offered', 'Actions'])
+
+    await sizes.resize('.offers-card .app-card__title', 809)
+    await flushPromises()
+    expect(heads()).toEqual(['Model', 'Offered'])
+    const fast = rowOf(w, 'site:fast')
+    expect(fast.find('.offer-status__status').text()).toBe('Offered')
+    expect(fast.find('.offer-key__hint').text()).toBe('sk-…3f9a')
+    expect(fast.find('.offer-cell__agents').exists()).toBe(true)
+    expect(fast.find('.offer-cell__edit').exists()).toBe(true)
   })
 })

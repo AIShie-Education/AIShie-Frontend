@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { forgetRuntimeAssertion } from '@/api/runtime'
+import { fakeContainerWidths } from '@/composables/containerWidthFakes'
 import { setLocale } from '@/i18n'
 import { shortId } from '@/utils/format'
 import TranscriptionCard from './TranscriptionCard.vue'
@@ -269,5 +270,22 @@ describe('TranscriptionCard', () => {
     expect(find(w, 'state').text()).toBe('受阻：沒有憑證')
     expect(find(w, 'issue').text()).toBe('發放並交給 runtime')
     expect(find(w, 'credential-status').text()).toBe('未設定')
+  })
+})
+
+describe('the jobs, by their own width', () => {
+  it('put a job’s pages, cost and time under its document where they are as narrow as on a phone, 542 px', async () => {
+    // The window is wide (matchMedia says nothing matches): the list decides, measured by its head.
+    const sizes = fakeContainerWidths({ '.transcription-jobs__head': 543 })
+    const w = await card()
+    const heads = () => w.findAll('.transcription-jobs__table thead th').map((th) => th.text())
+    expect(heads()).toEqual(['Document', 'Pages', 'Cost', 'Finished'])
+
+    await sizes.resize('.transcription-jobs__head', 542)
+    await flushPromises()
+    expect(heads()).toEqual(['Document'])
+    const meta = w.findAll('.job-cell')[0].findAll('.job-cell__meta').at(-1)!
+    // Its time, relative to now, last.
+    expect(meta.text().replace(/\s+/g, ' ')).toMatch(/^12 pages · \$0\.0041 · \S/)
   })
 })

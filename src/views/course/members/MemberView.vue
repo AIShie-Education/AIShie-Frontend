@@ -5,13 +5,13 @@
 // (member.pause / member.resume), removal (member.remove), and for a student a
 // temporary password (member.reset_password). Nobody manages their own seat,
 // and a removed or expired seat is only read.
-import { computed, h, ref, watch, type VNode } from 'vue'
+import { computed, h, ref, useTemplateRef, watch, type VNode } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { ApiError, read } from '@/api/http'
 import { DELEGATE_NEVER_PERMS, PERMS, type AutonomyLevel, type Member, type Perm, type PermLevels } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
@@ -47,7 +47,11 @@ const props = defineProps<{ courseId: string; memberId: string }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const session = useSessionStore()
-const narrow = useNarrow(767)
+// The seat's facts in one column, each label above its value, where the page is
+// narrower than 720 px (the seat card's title 669 px or less), by its own
+// width, not the window's: the side bar takes from it. Wider, two columns.
+const seatTitle = useTemplateRef<HTMLElement>('seatTitle')
+const narrow = useContainerNarrow(seatTitle, 669)
 const presets = usePresets()
 
 const state = useAsync<Member>(() => read('member.get', { course_id: props.courseId, member_id: props.memberId }), {
@@ -503,7 +507,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
 
         <!-- The seat -->
         <section class="app-card">
-          <h2 class="app-card__title">{{ t('members.detail.seat') }}</h2>
+          <h2 ref="seatTitle" class="app-card__title">{{ t('members.detail.seat') }}</h2>
           <el-descriptions
             :column="narrow ? 1 : 2"
             :direction="narrow ? 'vertical' : 'horizontal'"

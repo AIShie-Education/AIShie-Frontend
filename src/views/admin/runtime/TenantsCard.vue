@@ -6,12 +6,12 @@
 // tenants of runtime.yaml's. runtime.yaml's quotas are the operator's and
 // shown beside; the site's replace a tenant's whole quota until reset. A
 // page of tenants at a time, by id.
-import { computed, reactive, ref, shallowRef } from 'vue'
+import { computed, reactive, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { TenantQuota } from '@/api/runtime-types'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import { problemsOf } from '@/views/account/components/agents/hosting'
@@ -27,7 +27,14 @@ import {
 } from './runtimeAdmin'
 
 const { t } = useI18n()
-const narrow = useNarrow()
+// Every column where the card has the 690 px they take; with less, a
+// tenant's source, quotas (the server's beside them) and actions go under its
+// name. By the card's own width (its title's), not the window's: the side bar
+// takes from it.
+const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
+const narrow = useContainerNarrow(cardTitle, 689)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const tenants = ref<TenantQuota[]>([])
 const next = ref<string | null>(null)
@@ -148,7 +155,7 @@ function serverText(q: TenantQuota): string {
 
 <template>
   <section class="app-card tenants-card">
-    <h2 class="app-card__title">
+    <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.tenants.title') }}</span>
       <el-button
         circle
@@ -163,7 +170,7 @@ function serverText(q: TenantQuota): string {
     <p class="tenants-card__intro">{{ t('runtimeAdmin.tenants.intro') }}</p>
     <RuntimeAsync :loading="loading && !loaded" :error="loaded ? null : loadError" @retry="load()">
       <el-empty v-if="!tenants.length" :description="t('runtimeAdmin.tenants.empty')" class="tenants-card__empty" />
-      <el-table v-else :data="tenants" row-key="tenant_id" class="tenants-card__table">
+      <el-table v-else ref="tableRef" :data="tenants" row-key="tenant_id" class="tenants-card__table">
         <el-table-column :label="t('runtimeAdmin.tenants.tenant')" min-width="200">
           <template #default="{ row }">
             <div class="tenant-cell" :data-tenant="row.tenant_id">
@@ -192,6 +199,13 @@ function serverText(q: TenantQuota): string {
                 </el-tag>
                 <span class="tenant-cell__meta">
                   {{ answersText(row.per_day.answers) }} · {{ usdText(row.per_day.usd) }}
+                </span>
+                <span v-if="row.source === 'site' && row.config_per_day" class="tenant-cell__server">
+                  {{
+                    t('runtimeAdmin.tenants.server', {
+                      v: `${answersText(row.config_per_day.answers)} · ${usdText(row.config_per_day.usd)}`,
+                    })
+                  }}
                 </span>
                 <div class="tenant-cell__actions">
                   <el-button link type="primary" class="tenant-cell__edit" @click="openEdit(row)">

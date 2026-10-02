@@ -44,7 +44,7 @@ import PrintButton from '@/components/PrintButton.vue'
 import { toApiError } from '@/composables/useAsync'
 import { errorMessage, notifyError } from '@/composables/useErrors'
 import { announce } from '@/composables/useWrite'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { usePhoneScreen } from '@/composables/useMediaQuery'
 import { useRuntime, type UseRuntime } from '@/composables/useRuntime'
 import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
@@ -86,7 +86,7 @@ const PdfView = defineAsyncComponent(() => import('./PdfView.vue'))
 
 const { t, locale } = useI18n()
 const state = previewState()
-const narrow = useNarrow(640)
+const phone = usePhoneScreen()
 // Whether anything transcribes: a text waiting for a transcriber that is off is said to be none.
 // Asked of the runtime only once an Office file is shown (useRuntime asks it on first use), so that
 // a page where no such file is opened never asks whether there is a runtime.
@@ -523,8 +523,8 @@ function onClosed() {
 <template>
   <el-dialog
     :model-value="state.open"
-    :class="[dialogClass, { 'is-phone': narrow }]"
-    :fullscreen="narrow"
+    :class="[dialogClass, { 'is-phone': phone }]"
+    :fullscreen="phone"
     width="min(1200px, calc(100vw - 48px))"
     top="3vh"
     :show-close="false"

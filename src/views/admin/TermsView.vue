@@ -1,14 +1,14 @@
 <script setup lang="ts">
 // Terms (term.list, readable by anyone signed in) and making one
 // (term.create, administrators only). A term cannot be edited or removed.
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import type { FormInstance, FormRules } from 'element-plus'
 import { read } from '@/api/http'
 import type { Term } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
@@ -17,8 +17,14 @@ import PageHeader from '@/components/PageHeader.vue'
 
 const { t } = useI18n()
 const session = useSessionStore()
-// On a phone the dates go under the name, instead of in columns off-screen.
-const narrow = useNarrow()
+// Every column where the card has the 780 px they take; with less, the dates go
+// under the name, instead of in columns out of sight, and the ID is left out.
+// By the card's own width (its toolbar's), not the window's: the side bar takes
+// from it.
+const toolbar = useTemplateRef<HTMLElement>('toolbar')
+const narrow = useContainerNarrow(toolbar, 779)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const terms = useAsync(() => read('term.list', {}).then((o) => o.terms ?? []), { keepData: true })
 const filter = ref('')
@@ -45,7 +51,7 @@ function lengthOf(x: Term): string {
 const all = computed(() => terms.data.value ?? [])
 const rows = computed(() => {
   const q = filter.value.trim().toLowerCase()
-  // Latest first, also on a phone, where the date columns (and their sorting) are hidden.
+  // Latest first, also where the date columns (and their sorting) are left out.
   return all.value
     .filter((x) => !q || x.name.toLowerCase().includes(q))
     .sort((x, y) => y.starts_on.localeCompare(x.starts_on))
@@ -118,7 +124,7 @@ async function save() {
     </PageHeader>
 
     <section class="app-card">
-      <div class="app-toolbar">
+      <div ref="toolbar" class="app-toolbar">
         <el-input v-model="filter" :placeholder="t('adminSetup.terms.filter')" clearable class="setup-filter">
           <template #prefix
             ><el-icon><Search /></el-icon
@@ -142,7 +148,7 @@ async function save() {
         :empty-text="all.length ? t('adminSetup.terms.noMatch') : t('adminSetup.terms.empty')"
         @retry="terms.reload"
       >
-        <el-table :data="rows" row-key="id" :default-sort="{ prop: 'starts_on', order: 'descending' }">
+        <el-table ref="tableRef" :data="rows" row-key="id" :default-sort="{ prop: 'starts_on', order: 'descending' }">
           <el-table-column
             prop="name"
             :label="t('adminSetup.terms.name')"

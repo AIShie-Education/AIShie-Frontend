@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { fakeContainerWidths } from '@/composables/containerWidthFakes'
 import { setLocale } from '@/i18n'
 import UsageCard from './UsageCard.vue'
 import { ADMIN, ADMIN_ID, Servers, adminState, planUsage, refusal, withAdmin, type AdminState } from './adminFakes'
@@ -132,5 +133,18 @@ describe('UsageCard', () => {
     const w = await card()
     expect(w.find('.usage-card__of').text()).toBe('每日上限 5000')
     expect(rows(w)[0][1]).toBe('150 / 150 今日已用完')
+  })
+})
+
+describe('UsageCard, by its own width', () => {
+  it('puts an owner’s model calls and cost under their name where the card is as narrow as on a phone, 542 px', async () => {
+    // The window is wide (matchMedia says nothing matches): the card decides, measured by its title.
+    const sizes = fakeContainerWidths({ '.usage-card .app-card__title': 543 })
+    const w = await card()
+    expect(rows(w)[0]).toEqual(['Ada Admin', '150 / 150 Used up for today', '380', '$1.020000'])
+
+    await sizes.resize('.usage-card .app-card__title', 542)
+    await flushPromises()
+    expect(rows(w)[0]).toEqual(['Ada Admin Model calls: 380 · $1.020000', '150 / 150 Used up for today'])
   })
 })

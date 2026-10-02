@@ -8,13 +8,13 @@
 // document's transcription as a line of its own ("Document transcription"),
 // which by agent is under no agent (key transcription) and by person under
 // the site's own (key site), each named so.
-import { computed, ref, shallowRef, watch } from 'vue'
+import { computed, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import { runtimeAdmin } from '@/api/runtime'
 import type { CostGroup, CostGroupBy, CostLine, CostReport, CostSum, KeySource } from '@/api/runtime-types'
 import { COST_GROUPS } from '@/api/runtime-types'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import { formatNumber } from '@/utils/format'
@@ -22,7 +22,14 @@ import RuntimeAsync from './RuntimeAsync.vue'
 import { COST_SPAN_DAYS, costRange, usdShown, utcToday } from './runtimeAdmin'
 
 const { t, te } = useI18n()
-const narrow = useNarrow()
+// A phone's layout, a group's model calls under it and its tokens left out (the
+// totals above have them), where the card is as narrow as on a phone: its title
+// 542 px or less, the width it has in a window of 640 px without the side bar.
+// By the card's own width, not the window's: the side bar takes from it.
+const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
+const narrow = useContainerNarrow(cardTitle, 542)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const range = ref<[string, string]>(costRange(utcToday()))
 const group = ref<CostGroupBy>('day')
@@ -86,7 +93,7 @@ function toPrices() {
 
 <template>
   <section class="app-card costs-card">
-    <h2 class="app-card__title">
+    <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.costs.title') }}</span>
       <el-button
         circle
@@ -168,7 +175,7 @@ function toPrices() {
         </el-alert>
 
         <el-empty v-if="!rows.length" :description="t('runtimeAdmin.costs.empty')" class="costs-card__empty" />
-        <el-table v-else :data="rows" row-key="key" class="costs-card__table">
+        <el-table v-else ref="tableRef" :data="rows" row-key="key" class="costs-card__table">
           <el-table-column :label="t(`runtimeAdmin.costs.groupColumn.${report.group}`)" min-width="200">
             <template #default="{ row }">
               <div class="cost-cell" :data-key="row.key">

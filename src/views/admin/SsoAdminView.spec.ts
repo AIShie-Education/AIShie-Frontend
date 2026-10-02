@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { fakeContainerWidths } from '@/composables/containerWidthFakes'
 import { setLocale, type Locale } from '@/i18n'
 import SsoAdminView from './SsoAdminView.vue'
 import {
@@ -345,5 +346,24 @@ describe('the dialog from the list', () => {
     expect(added.find('.sso-status__status').text()).toBe('Off')
     expect(added.find('.sso-cell__enabled').classes()).not.toContain('is-checked')
     expect(rows(w).at(-1)!.find('[data-provider]').attributes('data-provider')).toBe('school-google')
+  })
+})
+
+describe('the list, by its card’s width', () => {
+  it('folds a provider’s status, accounts and actions under its name where the card has less than 760 px', async () => {
+    // The window is wide (matchMedia says nothing matches): the card decides, measured by its title.
+    const sizes = fakeContainerWidths({ '.sso-admin__providers .app-card__title': 760 })
+    const w = await page()
+    const heads = () => w.findAll('.sso-admin__table thead th').map((th) => th.text())
+    expect(heads()).toEqual(['Provider', 'Status', 'Linked', 'On', 'Actions'])
+    expect(w.find('.sso-cell__linked').exists()).toBe(false)
+
+    await sizes.resize('.sso-admin__providers .app-card__title', 759)
+    await flushPromises()
+    expect(heads()).toEqual(['Provider', 'On'])
+    const site = rowOf(w, 'university-sso')
+    expect(site.find('.sso-status__status').exists()).toBe(true)
+    expect(site.find('.sso-cell__linked').exists()).toBe(true)
+    expect(site.find('.sso-cell__delete').exists()).toBe(true)
   })
 })

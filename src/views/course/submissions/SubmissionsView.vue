@@ -9,7 +9,7 @@
 // (submission.roster): every student in scope, including those who have not
 // started, whom a list of submissions cannot show, and who can be recorded
 // there as having handed in nothing. A Core without the roster gets the list.
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
@@ -26,7 +26,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { usePaged } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 
 const props = defineProps<{ courseId: string }>()
@@ -124,9 +124,13 @@ const emptyText = computed(() =>
       : t('submissions.empty.none'),
 )
 
-// On a phone the table's columns would not fit side by side: the list is
-// shown as one card per submission instead.
-const narrow = useNarrow()
+// Where the page is as narrow as on a phone, the table's columns would not fit
+// side by side: the list is shown as one card per submission instead. That is
+// where its toolbar is 592 px or less, the width it has in a window of 640 px
+// without the side bar. By the page's own width, not the window's: the side bar
+// takes from it.
+const toolbar = useTemplateRef<HTMLElement>('toolbar')
+const narrow = useContainerNarrow(toolbar, 592)
 
 function open(row: SubmissionSummary) {
   void router.push({ name: 'course-submission', params: { courseId: props.courseId, submissionId: row.id } })
@@ -159,7 +163,7 @@ function open(row: SubmissionSummary) {
       </router-link>
     </PageHeader>
 
-    <div v-if="!list.error.value?.isForbidden" class="app-toolbar">
+    <div v-if="!list.error.value?.isForbidden" ref="toolbar" class="app-toolbar">
       <AssignmentSelect
         v-model="assignment"
         class="submissions-filter"

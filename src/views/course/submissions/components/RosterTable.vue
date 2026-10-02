@@ -5,7 +5,7 @@
 // handed in nothing (submission.record_missing), so that it can be graded; if
 // they hand work in later, it takes that record's place. The page loads the
 // rows; this shows them, and marks.
-import { computed, h, ref, watch } from 'vue'
+import { computed, h, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
@@ -16,7 +16,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatDateTime } from '@/utils/format'
@@ -49,7 +49,12 @@ const emit = defineEmits<{ more: []; retry: []; changed: [] }>()
 const { t } = useI18n()
 const router = useRouter()
 const course = useCourseStore()
-const narrow = useNarrow()
+// A card per student where the roster is as narrow as on a phone: its summary
+// 566 px or less, the width it has in a window of 640 px without the side bar
+// (the page's 592 px, less the card's edges). By its own width, not the
+// window's: the side bar takes from it.
+const summaryLine = useTemplateRef<HTMLElement>('summaryLine')
+const narrow = useContainerNarrow(summaryLine, 566)
 
 const shown = computed(() => forStudent(props.rows, props.studentId))
 const summary = computed(() => countByState(props.rows))
@@ -168,7 +173,7 @@ const emptyText = computed(() =>
       :empty-text="emptyText"
       @retry="emit('retry')"
     >
-      <div class="roster-summary">
+      <div ref="summaryLine" class="roster-summary">
         <span class="roster-summary__total">
           {{ t('submissions.roster.summary.total', { n: summary.total }, summary.total) }}
         </span>

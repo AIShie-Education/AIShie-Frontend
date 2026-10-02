@@ -3,14 +3,14 @@
 // (member.add). Each row is a seat: its roster role, status, reach, lifetime
 // and the preset its levels were copied from, and for a person who has one,
 // the student or staff number they sign in with.
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
 import { isUuid } from '@/utils/format'
 import { ROLES, type Member, type MemberSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentBadge from '@/components/AgentBadge.vue'
@@ -31,7 +31,15 @@ const router = useRouter()
 const route = useRoute()
 const course = useCourseStore()
 const session = useSessionStore()
-const narrow = useNarrow(767)
+// Role and status go under the name, and the preset and dates are left out
+// (they are on the member's page), where the page is narrower than 720 px (the
+// list's toolbar 669 px or less), by its own width, not the window's: the side
+// bar takes from it. Wider, every column, the table scrolling sideways where
+// they do not all fit.
+const toolbar = useTemplateRef<HTMLElement>('toolbar')
+const narrow = useContainerNarrow(toolbar, 669)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 const presets = usePresets()
 
 const PAGE = 100
@@ -207,7 +215,7 @@ function rowClass({ row }: { row: MemberSummary }) {
     </el-alert>
 
     <div class="app-card">
-      <div v-if="!list.error.value?.isForbidden" class="app-toolbar">
+      <div v-if="!list.error.value?.isForbidden" ref="toolbar" class="app-toolbar">
         <el-radio-group v-model="kind" size="default">
           <el-radio-button value="all">{{ t('members.tabs.all') }} · {{ count(counts.all) }}</el-radio-button>
           <el-radio-button value="human">
@@ -240,7 +248,14 @@ function rowClass({ row }: { row: MemberSummary }) {
         <template #empty>
           <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
         </template>
-        <el-table :data="rows" row-key="id" class="members__table" :row-class-name="rowClass" @row-click="open">
+        <el-table
+          ref="tableRef"
+          :data="rows"
+          row-key="id"
+          class="members__table"
+          :row-class-name="rowClass"
+          @row-click="open"
+        >
           <el-table-column
             prop="display_name"
             :label="t('members.columns.name')"

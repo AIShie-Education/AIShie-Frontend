@@ -1,15 +1,20 @@
 <script setup lang="ts">
 // An entered grade's breakdown, criterion by criterion, with totals.
-import { computed } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Decimal } from '@/api/types'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { sumDecimals } from '@/views/course/submissions/components/decimal'
 import { formatScore, plainDecimal, type BreakdownItem } from './grading'
 
 const props = defineProps<{ items: BreakdownItem[]; score?: Decimal | null }>()
 const { t } = useI18n()
-const narrow = useNarrow()
+// A block per criterion, the comment beneath it, where the table is as narrow
+// as on a phone: 542 px or less, the width it has in a window of 640 px
+// without the side bar, its total's 518 or less (less the total's padding). By
+// its own width, not the window's: the side bar takes from it.
+const total = useTemplateRef<HTMLElement>('total')
+const narrow = useContainerNarrow(total, 518)
 
 const sum = (vs: Decimal[]) => sumDecimals(vs.map((v) => plainDecimal(v) ?? String(v)))
 const totalPoints = computed(() => sum(props.items.map((b) => b.points)))
@@ -25,7 +30,7 @@ const differs = computed(
 
 <template>
   <div class="bd-table">
-    <!-- Phone width: one block per criterion, the comment beneath it -->
+    <!-- Narrow: one block per criterion, the comment beneath it -->
     <ul v-if="narrow" class="bd-list">
       <li v-for="(b, i) in items" :key="i" class="bd-list__item">
         <div class="bd-list__head">
@@ -60,7 +65,7 @@ const differs = computed(
         </template>
       </el-table-column>
     </el-table>
-    <div class="bd-table__total">
+    <div ref="total" class="bd-table__total">
       <span>{{ t('grades.breakdown.total') }}</span>
       <strong class="bd-table__num">{{ formatScore(totalPoints) }}</strong>
       <span class="app-muted">/ {{ formatScore(totalMax) }}</span>
