@@ -3,6 +3,8 @@
 // should read it: the conversation, the question it answers, and the reply
 // itself, rendered. A reply answers the opener's latest message; if they have
 // written again since, approving is refused, and the page says so first.
+// Under the reply, how many course materials it says it relied on
+// (AnswerSources).
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConversationDetail, ConversationMessage } from '@/api/types'
@@ -11,6 +13,7 @@ import IdText from '@/components/IdText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import AnswerSources from './AnswerSources.vue'
 import MaybeLink from './MaybeLink.vue'
 import { payloadOf, routeFor, str, type ActionRow } from './actionText'
 import { useLookup, useSpecs } from './lookups'
@@ -106,6 +109,7 @@ const closed = computed(() => c.value?.status === 'closed')
     <div class="answer-proposal__message answer-proposal__message--reply">
       <MarkdownView :source="body" />
     </div>
+    <AnswerSources :payload="p" />
   </div>
 </template>
 
