@@ -126,7 +126,7 @@ test.describe.serial('invite links', () => {
     await dialog.getByRole('button', { name: 'Show full screen' }).click()
     const full = page.getByRole('dialog', { name: 'Invite link, full screen' })
     await expect(full).toBeVisible()
-    await expect(full).toContainText('CS101 · A')
+    await expect(full).toContainText('CS101·A')
     await expect(full).toContainText('Introduction to Programming')
     await expect(full).toContainText('Scan to join')
     await expect(full.locator('.join-fs__clock')).toHaveText(/^\s*(10:00|09:[45]\d)\s*$/)

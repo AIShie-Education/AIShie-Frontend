@@ -347,7 +347,7 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   412 reads it again and keeps what the administrator changed over it. A key's trial that failed
   (`key_test_failed`) says what the provider answered (`keyTrialOf`). Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
-  cent at least (`usdShown`) and typed as decimals (`usdProblem`), empty for no limit. A refusal
+  cent at least, as US dollars (`formatMoney`, "US$0.0184") and typed as decimals (`usdProblem`), empty for no limit. A refusal
   that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
   models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
   agents' lines. Costs are shown by `lines` kind: a document's transcription is a line of its own

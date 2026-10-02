@@ -16,7 +16,7 @@ import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE, uploadedPayload } from '@/utils/documentFiles'
-import { isDecimal } from '@/utils/format'
+import { formatList, isDecimal } from '@/utils/format'
 import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
 import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
 import DocChoiceField from './DocChoiceField.vue'
@@ -29,7 +29,7 @@ const visible = defineModel<boolean>('visible', { default: false })
 const props = defineProps<{ courseId: string; assignment?: Assignment | null }>()
 const emit = defineEmits<{ saved: [result: { status: 'executed' | 'proposed'; id?: string }] }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const course = useCourseStore()
 // Loaded when the dialog opens (init), not while it sits closed.
 const scheme = useScheme(() => props.courseId, { immediate: false })
@@ -311,7 +311,7 @@ function announceSaved(out: WriteOutcome<unknown>, verb: 'created' | 'saved', ma
     ElNotification({
       type: 'info',
       title: t('common.outcome.proposedTitle'),
-      message: t('assignments.form.proposedWithDocs', { titles: listFormat(titles) }, titles.length),
+      message: t('assignments.form.proposedWithDocs', { titles: formatList(titles) }, titles.length),
       duration: 8000,
     })
     return
@@ -327,14 +327,7 @@ function announceSaved(out: WriteOutcome<unknown>, verb: 'created' | 'saved', ma
 function noteCreatedDocs() {
   if (!createdTitles.value.length || docNotice.value) return
   const titles = createdTitles.value.map((x) => t('assignments.form.quoted', { title: x }))
-  docNotice.value = t('assignments.form.docsKept', { titles: listFormat(titles) }, titles.length)
-}
-function listFormat(items: string[]): string {
-  try {
-    return new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(items)
-  } catch {
-    return items.join(', ')
-  }
+  docNotice.value = t('assignments.form.docsKept', { titles: formatList(titles) }, titles.length)
 }
 
 function sameDecimal(a: string, b: string | number): boolean {

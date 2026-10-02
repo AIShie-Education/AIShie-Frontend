@@ -105,7 +105,9 @@ async function takeBack(r: AgentRequest) {
       <li v-for="s in seats" :key="s.member_id" class="agent-seat">
         <div class="agent-seat__head">
           <router-link :to="{ name: 'course-overview', params: { courseId: s.course_id } }" class="agent-seat__course">
-            <span class="agent-seat__code">{{ courseName(s) }}</span>
+            <span class="agent-seat__code"
+              >{{ s.code }}<template v-if="s.section"><span class="app-sep">·</span>{{ s.section }}</template></span
+            >
             <span class="agent-seat__title">{{ s.title }}</span>
           </router-link>
           <div class="agent-seat__tags">
@@ -196,7 +198,8 @@ async function takeBack(r: AgentRequest) {
               :to="{ name: 'course-overview', params: { courseId: r.course_id } }"
               class="agent-request__course"
             >
-              {{ courseName(r) }} <span class="agent-request__title">{{ r.title }}</span>
+              {{ r.code }}<template v-if="r.section"><span class="app-sep">·</span>{{ r.section }}</template>
+              <span class="agent-request__title">{{ r.title }}</span>
             </router-link>
             <div class="agent-request__meta">
               {{ t('agents.requests.since') }}

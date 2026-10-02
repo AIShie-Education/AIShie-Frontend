@@ -23,7 +23,6 @@ import {
   unpricedItems,
   usdField,
   usdProblem,
-  usdShown,
   formFromOffer,
   isNotAdmin,
   isNotOffered,
@@ -425,14 +424,6 @@ describe('a quota', () => {
 })
 
 describe('dollars', () => {
-  it('are shown to the cent at least, and to the places that matter', () => {
-    expect(usdShown('2.500000')).toBe('2.50')
-    expect(usdShown('0.000125')).toBe('0.000125')
-    expect(usdShown('15.000000')).toBe('15.00')
-    expect(usdShown('3')).toBe('3.00')
-    expect(usdShown(null)).toBe('')
-  })
-
   it('are held by a field without trailing zeros, and none as empty', () => {
     expect(usdField('2.500000')).toBe('2.5')
     expect(usdField('100.000000')).toBe('100')

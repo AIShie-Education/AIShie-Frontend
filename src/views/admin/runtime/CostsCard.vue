@@ -17,7 +17,7 @@ import { COST_GROUPS } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
-import { formatMoney, formatNumber } from '@/utils/format'
+import { formatList, formatMoney, formatNumber } from '@/utils/format'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { COST_SPAN_DAYS, costRange, utcToday } from './runtimeAdmin'
 
@@ -206,7 +206,7 @@ function toPrices() {
                   <span class="cost-cell__meta">
                     {{ row.key_source ? t(`runtimeAdmin.costs.keySources.${row.key_source}`) : '' }}
                     <template v-if="row.offers?.length">
-                      · {{ t('runtimeAdmin.costs.offers', { ids: row.offers.join(', ') }) }}</template
+                      · {{ t('runtimeAdmin.costs.offers', { ids: formatList(row.offers) }) }}</template
                     >
                   </span>
                 </template>
