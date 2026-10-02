@@ -14,6 +14,10 @@
 // download: the person's over their bubble, on the right, as they were sent
 // with it; the agent's under its words. A retracted message shows none, as it
 // shows no text (Core no longer sends them either).
+//
+// Under an answer, the course materials it relied on, where it said
+// (ChatMessageSources): a quiet line naming them, or a neutral pill where it
+// relied on none. An answer that did not say shows nothing.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConversationMessage } from '@/api/types'
@@ -25,6 +29,7 @@ import { copyText } from '@/utils/clipboard'
 import '@/styles/chat-prose.css'
 import { retractedBy } from './chat'
 import ChatMessageFiles from './ChatMessageFiles.vue'
+import ChatMessageSources from './ChatMessageSources.vue'
 
 const props = defineProps<{
   message: ConversationMessage
@@ -60,6 +65,10 @@ const withdrawnText = computed(() => {
 })
 /** The files it carries, while it is not withdrawn. */
 const files = computed(() => (props.message.retracted || !props.courseId ? [] : (props.message.attachments ?? [])))
+/** What an answer relied on, where it said (an empty list: none); null where it did not, and once withdrawn. */
+const sources = computed(() =>
+  props.message.retracted || props.fromOpener || !props.courseId ? null : (props.message.sources ?? null),
+)
 /** The name over a run of messages: the agent's always; the person's only when it is not the caller's own. */
 const showAuthor = computed(() => !props.grouped && (!props.fromOpener || !props.mine))
 
@@ -118,6 +127,7 @@ async function copy() {
       :files="files"
       :retry-renditions="canRetract"
     />
+    <ChatMessageSources v-if="sources" :course-id="courseId!" :sources="sources" />
     <footer class="chat-msg__foot">
       <TimeText :value="message.created_at" class="chat-msg__time" />
       <template v-if="!message.retracted">

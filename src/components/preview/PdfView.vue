@@ -9,10 +9,12 @@
 // The bar says which page is read and goes to another (the previous, the
 // next, or one typed), where there is more than one, and zooms: in and out by
 // steps, and to the width of the pages, which is how it opens and which it
-// keeps as they change until it is zoomed by hand. Two fingers pinch the
-// pages larger or smaller (a touchpad's pinch, which comes as a wheel with
-// Ctrl held, too), about the point between them, and the browser does not
-// zoom the screen as well; a pinch that ends near the width fits it again.
+// keeps as they change until it is zoomed by hand. It opens at its first
+// page, or at the one it is given (the page an answer relied on). Two fingers
+// pinch the pages larger or smaller (a touchpad's pinch, which comes as a
+// wheel with Ctrl held, too), about the point between them, and the browser
+// does not zoom the screen as well; a pinch that ends near the width fits it
+// again.
 //
 // Where the view is narrow (a phone, 640 px or less of its own width, as the
 // viewer is the whole screen up to a window that wide) or short (a phone on
@@ -37,6 +39,8 @@ const props = defineProps<{
   data: Uint8Array
   /** The file's name, which names the pages to a screen reader. */
   name: string
+  /** The page to open at, from 1; past the last, the last. */
+  page?: number | null
 }>()
 const emit = defineEmits<{
   /** It cannot be shown: protected by a password, or not a PDF this can read. */
@@ -519,6 +523,7 @@ onMounted(async () => {
   zoom.value = widthZoom()
   loading.value = false
   await nextTick()
+  if (props.page && props.page > 1) goTo(props.page)
   observe()
   if (scroller.value && typeof ResizeObserver !== 'undefined') {
     resizer = new ResizeObserver(() => {

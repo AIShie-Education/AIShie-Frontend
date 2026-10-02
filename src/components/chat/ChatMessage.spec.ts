@@ -173,6 +173,29 @@ describe('ChatMessage', () => {
     expect(kids.indexOf('msg-files')).toBeGreaterThan(kids.indexOf('chat-msg__body'))
   })
 
+  it('says under an answer’s words and files that it relied on no course material, where it said so', () => {
+    const csv = { id: 'f2', filename: 'data.csv', content_type: 'text/csv', byte_size: 300, created_at: 'x' }
+    const w = agent({ sources: [], attachments: [csv] }, { courseId: 'k1' })
+    expect(w.get('.chat-sources').text()).toBe('No course material cited')
+    const kids = [...w.get('article').element.children].map((c) => c.classList[0])
+    expect(kids.slice(-4)).toEqual(['chat-msg__body', 'msg-files', 'chat-sources', 'chat-msg__foot'])
+  })
+
+  it.each([
+    ['an answer that did not say what it relied on', () => agent({}, { courseId: 'k1' })],
+    [
+      'a withdrawn answer',
+      () =>
+        agent(
+          { body: null, sources: [], retracted: { at: 'x', by_member_id: 'me', reason: null } },
+          { courseId: 'k1' },
+        ),
+    ],
+    ['a question', () => person({ sources: [] }, { courseId: 'k1' })],
+  ])('says nothing of sources under %s', (_, render) => {
+    expect(render().find('.chat-sources').exists()).toBe(false)
+  })
+
   it('shows no files of a withdrawn message, as it shows no text', () => {
     const w = person(
       {

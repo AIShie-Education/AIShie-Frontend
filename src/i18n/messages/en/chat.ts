@@ -274,6 +274,27 @@ export default {
     retractedByStaff: 'Course staff withdrew this message.',
     reason: 'Reason: {reason}',
   },
+  // Under an answer: the course materials it relied on (AIShie-Core#69), each as the reader may open it now.
+  sources: {
+    basedOn: 'Based on: {source}',
+    summary: 'Based on: {title} · {n} items',
+    summaryNone: 'Based on: {n} course materials you cannot open',
+    label: 'Course materials this answer relied on',
+    quoted: '“{title}”',
+    // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
+    entry: '{title} · {where}',
+    page: 'page {n}',
+    slide: 'slide {n}',
+    version: 'version {seq}',
+    openFile: 'Open the file, where the answer read it',
+    openVersion: 'Open this version of the material',
+    earlier: 'an earlier version',
+    earlierTip:
+      'The answer relied on an earlier version of this material, which you cannot open now: this opens the material as it is.',
+    restricted: 'a course material you cannot open',
+    none: 'No course material cited',
+    noneTip: 'The agent said this answer relied on no course material.',
+  },
   reasonPlaceholder: 'Reason (optional)',
   reasonTooLong: 'At most {max} characters',
   // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
