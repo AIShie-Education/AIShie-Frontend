@@ -423,7 +423,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   required, 1 to 2000 characters and not spaces alone: the confirm button stays off until there is
   one, and Core's refusals of it (`note_required`, `note_too_long`) are worded under
   `actions.decision.refusal`. The proposal ends in `changes_requested`, a final state that is no
-  failure: its tag is `warning`, as a proposal's that waits is, not a rejection's `danger`. Its
+  failure: its tag is `warning`, amber, as it waits on its proposer to propose again, not a
+  rejection's `danger`. Its button is outlined, as Reject's is, and pressed in while its form is
+  open, whose confirm button is the one primary. Its
   note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and
   who asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal
   it revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the
@@ -495,8 +497,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
-  approved), refused, failed or missing in red, waiting on someone in amber (proposed, late, not
-  published). A category is neutral, the ground's second shade under the third ink, told apart by
+  approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
+  for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
   its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
   of seat. What is new or unread, and a count of what waits for the reader's decision, is indigo. A
   level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
@@ -514,8 +516,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   irreversible actions with `ElMessageBox.confirm`.
 - **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else: `type="primary"`
   (solid indigo) for the one main action of a view or a dialog, approving and publishing among them;
-  no type (outlined, the ink's text) for everything beside it, rejecting and cancelling among them,
-  rejecting being the safe choice, not a destructive one; `type="danger" plain` (a red outline) for a
+  no type (outlined, the ink's text) for everything beside it, rejecting, requesting changes and
+  cancelling among them, rejecting being the safe choice, not a destructive one; `type="danger" plain` (a red outline) for a
   destructive action on a page (archive, remove, revoke), which asks first; and solid red alone for
   the last step of that confirmation (`confirmButtonClass: 'el-button--danger'`, or a dialog's
   button that does it at once). `success`, `warning` and `info` are outcomes' colours, for tags,

@@ -18,6 +18,8 @@ describe('StatusTag', () => {
     expect(tag('actionStatus', 'rejected').classes()).toContain('el-tag--danger')
     expect(tag('actionStatus', 'failed').classes()).toContain('el-tag--danger')
     expect(tag('actionStatus', 'proposed').classes()).toContain('el-tag--warning')
+    // Sent back for changes: not refused, it waits on its proposer to propose again.
+    expect(tag('actionStatus', 'changes_requested').classes()).toContain('el-tag--warning')
   })
 
   it('tells a level of autonomy by its mark, not its hue: denied is a neutral lock, not red', () => {
