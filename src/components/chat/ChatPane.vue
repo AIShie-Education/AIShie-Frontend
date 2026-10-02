@@ -57,6 +57,7 @@ import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { useNow } from '@/composables/useNow'
 import { useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
@@ -649,8 +650,9 @@ function suggest(text: string) {
 
 // --- The ⋯ menu: who can read it, how its answers arrive ---------------------------------
 
-/** Who can read it, opened from the menu. */
+/** Who can read it, opened from the menu: over the chat's sheet or an agent's log, back closes it first. */
 const readersOpen = ref(false)
+useBackCloses(readersOpen, () => (readersOpen.value = false))
 function onMenu(command: string) {
   if (command === 'readers') readersOpen.value = true
   else if (command === 'print') void printer.print(transcript)

@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import {
   call,
   chatButton,
@@ -17,7 +17,8 @@ import {
 // On a phone, back (the gesture, or Android's button) closes what is laid
 // over the page instead of leaving it: the file viewer, the chat's sheet, the
 // menu, an administrator's drawer, the top one first where one is open over
-// another (a message box asked over the chat first of all). Closed by its own
+// another (a message box, or who can read a conversation, asked over the chat
+// or an agent's conversation log first of all). Closed by its own
 // button, an overlay goes back over the entry it added, so that back from
 // there leaves the page, as it would have before it opened; a link followed
 // from the menu takes the menu's place in history; and a page reloaded with
@@ -50,6 +51,15 @@ async function openSyllabus(page: Page) {
   const viewer = page.getByRole('dialog', { name: 'syllabus.txt' })
   await expect(viewer).toBeVisible()
   return viewer
+}
+
+/** Who can read the conversation shown in `pane`, asked from its ⋯ menu. */
+async function openReaders(page: Page, pane: Locator) {
+  await pane.getByRole('button', { name: 'Conversation options' }).click()
+  await page.locator('.chat-pane__menu:visible').getByRole('menuitem', { name: 'Who can read this' }).click()
+  const readers = page.getByRole('dialog', { name: 'Who can read this conversation' })
+  await expect(readers).toBeVisible()
+  return readers
 }
 
 function menuButton(page: Page) {
@@ -214,6 +224,13 @@ test.describe('on a phone, back', () => {
       await expect(card).toBeVisible()
       expect(page.url()).toBe(course)
 
+      // So is who can read the conversation, asked from its ⋯ menu: back closes that alone too.
+      const readers = await openReaders(page, panel)
+      await page.goBack()
+      await expect(readers).toBeHidden()
+      await expect(card).toBeVisible()
+      expect(page.url()).toBe(course)
+
       await page.goBack()
       await expect(chatWindow(page)).toHaveCount(0)
       expect(page.url()).toBe(course)
@@ -222,6 +239,62 @@ test.describe('on a phone, back', () => {
       await expect(page).toHaveURL(/\/$/)
     } finally {
       // A person may have five agents at once: this run's is suspended, for the specs after it.
+      await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})
+    }
+  })
+
+  test('with who can read a conversation open over an agent’s conversation log, closes that, then the log, then leaves the page', async ({
+    page,
+  }) => {
+    const d = demo()
+    const I = d.actors.instructor.token
+    const Y = d.actors.yuki.token
+    const C = `/v1/courses/${d.course.id}`
+    const name = `Log tutor ${tag}`
+    const agent = (await done(I, '/v1/me/agents', { display_name: name, hosting: 'runtime' })).actor_id as string
+    try {
+      await done(I, `${C}/delegates`, { actor_id: agent, preset: 'course_tutor', answers_course: true })
+      await hostOnRuntime(agent)
+      const respondents = await call(Y, 'GET', `${C}/conversations/respondents`)
+      const tutor = (respondents.body.result.respondents as { member_id: string; display_name: string }[]).find(
+        (r) => r.display_name === name,
+      )!
+      const title = `Queues (${tag})`
+      await done(Y, `${C}/conversations`, {
+        respondent_member_id: tutor.member_id,
+        title,
+        body: `${title}\nWhich end comes out first?`,
+      })
+
+      await signIn(page, d.actors.instructor)
+      await twoPages(page, '/', coursePath('agents'))
+      const agents = page.url()
+      await page
+        .locator('.agent-row')
+        .filter({ hasText: name })
+        .getByRole('button', { name: 'Conversation log' })
+        .click()
+      const log = page.locator('.agent-log')
+      await expect(log.getByText(`Conversation log: ${name}`)).toBeVisible()
+      await log.locator('.log-row').filter({ hasText: title }).click()
+      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+
+      const readers = await openReaders(page, log)
+      await page.goBack()
+      await expect(readers).toBeHidden()
+      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      expect(page.url()).toBe(agents)
+
+      await page.goBack()
+      await expect(log).toBeHidden()
+      await atPagesOwnEntry(page)
+      expect(page.url()).toBe(agents)
+      // Closed with the log, it does not come back over the page.
+      await expect(readers).toBeHidden()
+
+      await page.goBack()
+      await expect(page).toHaveURL(/\/$/)
+    } finally {
       await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})
     }
   })
