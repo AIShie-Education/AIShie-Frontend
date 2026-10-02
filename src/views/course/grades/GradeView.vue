@@ -237,15 +237,13 @@ const backLink = computed(() => ({
           <el-button v-if="canPostThis" type="primary" :disabled="!course.writable" @click="postVisible = true">
             <el-icon><Promotion /></el-icon>
             <span>{{ t('grades.detail.post') }}</span>
-            <el-tag
+            <StatusTag
               v-if="course.needsApproval('grade_post')"
-              size="small"
-              type="warning"
-              effect="plain"
+              vocab="level"
+              value="confirm_required"
               class="grade-view__approval"
-            >
-              {{ t('enums.level.confirm_required') }}
-            </el-tag>
+              size="small"
+            />
           </el-button>
           <TotalMenu
             v-if="canTouchTotal && g.component_id"
@@ -261,9 +259,13 @@ const backLink = computed(() => ({
           <el-button v-if="canRegrade" type="primary" :disabled="!course.writable" @click="regradeVisible = true">
             <el-icon><EditPen /></el-icon>
             <span>{{ t('grades.regrade.button') }}</span>
-            <el-tag v-if="regradeNeedsApproval" size="small" type="warning" effect="plain" class="grade-view__approval">
-              {{ t('enums.level.confirm_required') }}
-            </el-tag>
+            <StatusTag
+              v-if="regradeNeedsApproval"
+              vocab="level"
+              value="confirm_required"
+              class="grade-view__approval"
+              size="small"
+            />
           </el-button>
         </PageHeader>
 

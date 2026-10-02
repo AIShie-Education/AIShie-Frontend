@@ -503,6 +503,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
   confirm_required a raised hand on the indigo's tint; pending_review an eye, outlined in ink;
   autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
+  The 「需批准」 beside an action the caller's seat must have approved is that level too:
+  `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.

@@ -191,9 +191,12 @@ function rowClass({ row }: { row: MemberSummary }) {
             <span>{{ t('members.addMember') }}</span>
           </el-button>
         </el-tooltip>
-        <el-tag v-if="canManage && course.needsApproval('member_manage')" type="warning" effect="plain">
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag
+          v-if="canManage && course.needsApproval('member_manage')"
+          vocab="level"
+          value="confirm_required"
+          size="default"
+        />
       </div>
     </PageHeader>
 

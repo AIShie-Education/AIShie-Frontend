@@ -8,6 +8,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import StatusTag from '@/components/StatusTag.vue'
 import type { Decimal } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -124,9 +125,7 @@ function onCommand(cmd: string | number | object) {
         </el-dropdown>
       </span>
     </el-tooltip>
-    <el-tag v-if="needsApproval" size="small" type="warning" effect="plain" disable-transitions>
-      {{ t('enums.level.confirm_required') }}
-    </el-tag>
+    <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
     <TotalDialog
       v-if="dialog"
       v-model="dialogOpen"

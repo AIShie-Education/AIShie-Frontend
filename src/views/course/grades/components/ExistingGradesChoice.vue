@@ -5,6 +5,7 @@
 // and one Core would refuse is greyed out with why.
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import StatusTag from '@/components/StatusTag.vue'
 import { formatScore, percentOf } from './grading'
 import { pointsPlan, type ExistingGrades } from './pointsChange'
 
@@ -90,9 +91,7 @@ function blockText(o: ExistingGrades): string | null {
       </el-radio>
     </el-radio-group>
     <p class="app-form-hint existing-grades__note">{{ t('grades.pointsChange.totals') }}</p>
-    <el-tag v-if="needsApproval" type="warning" size="small" effect="plain" disable-transitions>
-      {{ t('enums.level.confirm_required') }}
-    </el-tag>
+    <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
   </div>
 </template>
 

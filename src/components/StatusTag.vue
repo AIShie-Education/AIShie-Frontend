@@ -52,8 +52,10 @@ const COLORS: Record<string, TagType> = {
   proposed: 'warning',
   approved: 'success',
   rejected: 'danger',
-  // Sent back for changes: over, as a rejection is, but not refused; its proposer may propose again.
+  // Sent back for changes: not refused, it waits on its proposer, who may propose again; amber.
   changes_requested: 'warning',
+  // an action Core refused (actionStatus); the level of the same name never comes here
+  denied: 'danger',
   cancelled: 'info',
   executed: 'success',
   failed: 'danger',

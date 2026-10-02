@@ -9,6 +9,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import { ElMessage, ElNotification, type FormInstance, type FormItemRule } from 'element-plus'
+import StatusTag from '@/components/StatusTag.vue'
 import type { ToolIn, WriteOutcome } from '@/api/http'
 import type { Assignment, DocumentSummary } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
@@ -604,9 +605,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 
     <template #footer>
       <div class="assignment-form__footer">
-        <el-tag v-if="saveNeedsApproval" type="warning" size="small" disable-transitions>
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag v-if="saveNeedsApproval" vocab="level" value="confirm_required" size="small" />
         <span class="app-toolbar__spacer" />
         <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
         <el-button type="primary" :loading="busy" :disabled="disabled || anyUploading" @click="submit">

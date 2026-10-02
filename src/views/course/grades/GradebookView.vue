@@ -24,6 +24,7 @@ import { useContainerNarrow, useTableRelayout } from '@/composables/useContainer
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isUuid, shortId } from '@/utils/format'
+import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -567,14 +568,12 @@ watch(
                     </el-button>
                   </span>
                 </el-tooltip>
-                <el-tag
+                <StatusTag
                   v-if="canUndoFinal && course.needsApproval('grade_post')"
+                  vocab="level"
+                  value="confirm_required"
                   size="small"
-                  type="warning"
-                  effect="plain"
-                >
-                  {{ t('enums.level.confirm_required') }}
-                </el-tag>
+                />
               </div>
             </el-alert>
             <p v-if="rootSnapshot" class="gradebook__snapshot">

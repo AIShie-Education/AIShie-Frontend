@@ -12,6 +12,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
+import StatusTag from '@/components/StatusTag.vue'
 import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -286,7 +287,7 @@ function tell(
         </el-button>
       </template>
       <el-tooltip v-if="needsApproval && !blocked" :content="t('actions.decision.willBeProposal')" placement="top">
-        <el-tag type="warning" effect="plain" size="small">{{ t('enums.level.confirm_required') }}</el-tag>
+        <StatusTag vocab="level" value="confirm_required" size="small" />
       </el-tooltip>
     </div>
 

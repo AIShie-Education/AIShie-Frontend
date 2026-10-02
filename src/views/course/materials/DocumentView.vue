@@ -516,9 +516,13 @@ function noteSource(): PrintRequest {
           <el-icon><RefreshLeft /></el-icon>
           <span>{{ t('materials.document.actions.unarchive') }}</span>
         </el-button>
-        <el-tag v-if="canWrite && needsApproval" type="warning" class="doc-view__approval" disable-transitions>
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag
+          v-if="canWrite && needsApproval"
+          vocab="level"
+          value="confirm_required"
+          class="doc-view__approval"
+          size="default"
+        />
         <el-tooltip v-if="canPurge" :content="t('materials.document.purge.adminOnly')" placement="bottom">
           <el-button type="danger" plain @click="openPurge(null)">
             <el-icon><Delete /></el-icon>

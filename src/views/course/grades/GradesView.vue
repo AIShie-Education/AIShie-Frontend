@@ -289,15 +289,13 @@ const gradebookLink = computed(() =>
       <el-button v-if="canEnter" type="primary" :disabled="!course.writable" @click="enterVisible = true">
         <el-icon><EditPen /></el-icon>
         <span>{{ t('grades.enter.button') }}</span>
-        <el-tag
+        <StatusTag
           v-if="course.needsApproval('grade_submit')"
-          size="small"
-          type="warning"
-          effect="plain"
+          vocab="level"
+          value="confirm_required"
           class="grades-view__approval"
-        >
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+          size="small"
+        />
       </el-button>
     </PageHeader>
 
@@ -413,9 +411,7 @@ const gradebookLink = computed(() =>
         <el-button :disabled="!course.writable || !assignment || noDraftsForAssignment" @click="postAssignment">
           <span>{{ t('grades.post.assignment') }}</span>
         </el-button>
-        <el-tag v-if="course.needsApproval('grade_post')" type="warning" effect="plain">
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag v-if="course.needsApproval('grade_post')" vocab="level" value="confirm_required" size="default" />
         <span class="app-form-hint grades-view__post-hint">
           {{
             !assignment
