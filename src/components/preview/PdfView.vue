@@ -9,7 +9,8 @@
 // The bar above says which page is read and goes to another (the previous,
 // the next, or one typed), and zooms: in and out by steps, and to the
 // width of the window, which is how it opens and which it keeps as the
-// window changes until it is zoomed by hand.
+// window changes until it is zoomed by hand. It opens at its first page, or
+// at the one it is given (the page an answer relied on).
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { openPdf, TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from './pdfjs'
@@ -19,6 +20,8 @@ const props = defineProps<{
   data: Uint8Array
   /** The file's name, which names the pages to a screen reader. */
   name: string
+  /** The page to open at, from 1; past the last, the last. */
+  page?: number | null
 }>()
 const emit = defineEmits<{
   /** It cannot be shown: protected by a password, or not a PDF this can read. */
@@ -344,6 +347,7 @@ onMounted(async () => {
   zoom.value = widthZoom()
   loading.value = false
   await nextTick()
+  if (props.page && props.page > 1) goTo(props.page)
   observe()
   if (scroller.value && typeof ResizeObserver !== 'undefined') {
     resizer = new ResizeObserver(() => {

@@ -631,6 +631,7 @@ function onClosed() {
         :key="`${file.key}/${generation}`"
         :data="view.data"
         :name="file.filename"
+        :page="state.page"
         @failed="onPdfFailed"
       />
       <ImageView
