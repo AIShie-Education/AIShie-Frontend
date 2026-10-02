@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import {
   call,
@@ -179,6 +181,26 @@ test('root adds a provider, tests it and switches it on; a person signs in throu
   // Linked by the email the provider vouched for: one account signs in through it now.
   await page.getByRole('button', { name: 'Refresh' }).click()
   await expect(row.locator('.sso-cell__count')).toHaveText('1')
+})
+
+test('scripts/shot.mjs still signs in with a password while a provider comes first', async ({ baseURL }, info) => {
+  // The README's tool for looking at a page by eye follows the link to the password form, as a person does.
+  const out = info.outputPath('shot.png')
+  const run = spawnSync(
+    process.execPath,
+    ['scripts/shot.mjs', '--as', 'instructor', '--path', '/', '--out', out, '--base', baseURL!],
+    {
+      env: {
+        ...process.env,
+        DEMO_FILE: fileURLToPath(new URL('./.demo.json', import.meta.url)),
+        DEMO_PASSWORD: process.env.E2E_PASSWORD,
+      },
+      encoding: 'utf8',
+      timeout: 90_000,
+    },
+  )
+  expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0)
+  expect(run.stdout).toContain(`instructor → / → ${out}`)
 })
 
 test('switched off, its button leaves the sign-in page; deleted, its one account is unlinked', async ({
