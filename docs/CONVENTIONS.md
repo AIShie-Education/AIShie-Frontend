@@ -458,13 +458,23 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 
 - Every page starts with `<PageHeader :title :subtitle :back>` with its primary actions in the
   default slot, then content in `.app-card` sections (`.app-card__title` for a section heading).
-  Actions that are all `v-if`'d away leave no empty row.
-- A page inside a course whose route does not say which tab it belongs to calls
-  `useCourseTab(() => routeName)` (`@/composables/useCourseTab`) with the route whose tab to highlight
-  (a document that is an assignment's instructions → `'course-assignments'`). A page that is another
-  page for some callers names itself in the header and the browser's tab with
-  `usePageTitle(routeName, () => key)` (`@/router/title`): the approval queue, for someone who decides
-  nothing there, is their agents' proposals.
+  Actions that are all `v-if`'d away leave no empty row. Its title is the page's one `<h1>`: nothing
+  else on a page is one.
+- **A course's pages** (`CourseLayout`): the top bar is the way back up, not the page's name again
+  (`CourseCrumbs`: "CS101 · A Introduction to Programming › Materials", the course leading to its
+  overview, the tab to its page where the page is one under it); then a line of context, the
+  course's code, its name in the sans and its status, never a heading; then the tabs, one row
+  (above). A page's title that only names the tab chosen is not shown again: `PageHeader` keeps it
+  for screen readers, and its subtitle and actions share one row (`coursePage.ts`, by the title's
+  words, so title a tab's page with the tab's own name). A page's own title (a document, a member)
+  shows as before. The tabs, which a seat is offered, and which one a page belongs to are
+  `useCourseNav()` (`src/layouts/courseNav.ts`), which the strip, the top bar and the phone's menu
+  all read; the phone's menu lists the course's tabs under the course the page is in. The gradebook
+  and the grading scheme are pages of the Grades tab, all three read with `grade_read`: their
+  header shows the grades' own tabs (`CourseSubTabs`) in the title's place, the student a page is
+  about going with the way to the other. A new tab goes in `COURSE_TABS`, in the order most used,
+  and the target stays: on a laptop's screen (1280 × 800) a course page's own content starts within
+  200 px of the window's top.
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
@@ -493,8 +503,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
   left less than about 420 px (the overview at 800 px of page, an assignment at 740, two cards of an
-  actor's page at 856). A course's tabs wrap onto two rows from 720 px of page, and scroll sideways
-  below. What the template itself switches follows the same width: `useContainerNarrow(el, max)`
+  actor's page at 856). A course's tabs keep to one row at any width, never wrapped: as many as fit
+  by the strip's own width show (`fitTabs`, from each tab's width laid out unseen), seven places at
+  most, and the rest are under More (更多 ▾) in the last place, marked as the tab chosen while the
+  page is one of them; where the page is a phone's (592 px), every tab is in the strip, which scrolls
+  sideways, each end fading over 16 px. What the template itself switches follows the same width: `useContainerNarrow(el, max)`
   from `@/composables/useContainerWidth` says whether an element is `max` px wide or less, as
   `@container (max-width: …)` would, for el-descriptions' columns, which of a table's columns show,
   or a table or a card per row (the administration's courses, departments, people and an actor's
@@ -550,15 +563,16 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   opens a collapsed side bar. `useSideBarStore()` (`@/stores/sidebar`) holds the view and whether it is
   open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
-  no activity bar: the header's menu button opens the views in a drawer, as tabs along its top, and
-  following a link in it closes it.
+  no activity bar: the header's menu button opens the views in a drawer, as tabs along its top (the
+  course the page is in with its tabs under it), and following a link in it closes it.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
   account's settings, the language and the theme, each a submenu with the choice in use checked, and
   signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
-  title alone (and, on a phone, the menu's button): nothing else is offered there.
+  title alone (on a course's pages, the way up to it: the course and the tab; and, on a phone, the
+  menu's button): nothing else is offered there.
 - A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,
   mounted by `AppLayout`) reads `index.html` again (`cache: 'no-store'`) every five minutes and when the
   tab is shown again, and compares the entry script it names (`/assets/index-<hash>.js`) with the one
@@ -570,8 +584,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   agent. Nothing runs along the window's right edge: the header and the page reach it. The chat's
   entry is a round button floating at the bottom right of every page (`.app-chat-fab`, on a desktop as
   on a phone), 16 px from the screen's edges and above a phone's safe area, with the count of answers
-  not read and, from 900 px up, a tooltip saying its shortcut; the header holds only the page's title,
-  and the activity bar only the side bar's views. The page keeps room below its last item for the
+  not read and, from 900 px up, a tooltip saying its shortcut; the header holds only the page's title
+  (or a course's way up to it), and the activity bar only the side bar's views. The page keeps room below its last item for the
   button (`.has-chat-fab`: its size and twice its inset), so that a list's last item, its pages or a
   button are never under it; a page that pins something to the bottom of the screen keeps it clear of
   the button too. The button opens the chat in its corner, and is gone while the chat is open; Ctrl/⌘+J

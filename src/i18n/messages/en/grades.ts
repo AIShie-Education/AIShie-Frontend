@@ -20,7 +20,6 @@ export default {
     stateFilterHint: 'The state filter applies to the rows loaded so far; load more to look further.',
     empty: 'No grades yet',
     emptyFiltered: 'No grades match these filters',
-    gradebook: 'Gradebook',
   },
   noRead: {
     title: 'This seat does not read grades',
@@ -32,7 +31,6 @@ export default {
   mine: {
     title: 'My grades',
     subtitle: 'Grades released to you. A grade stays hidden until it is posted.',
-    gradebook: 'My gradebook',
     empty: 'No grades have been posted to you yet',
   },
   post: {
@@ -193,7 +191,6 @@ export default {
     title: 'Gradebook',
     subtitle: 'A student’s standing across the grading scheme, computed now from posted grades.',
     subtitleOwn: 'Your standing across the grading scheme, computed now from your posted grades.',
-    toGrades: 'Grades',
     pickStudent: 'Choose a student',
     pasteMemberId: 'Choose, or paste a member ID',
     noSeenStudents: 'No students seen yet: paste a member ID',

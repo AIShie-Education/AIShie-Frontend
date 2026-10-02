@@ -5,8 +5,9 @@
 // stands out, and archived courses wait behind a switch. Then, for an
 // administrator, the courses they administer without a seat, newest first
 // (the way in is their administration page, as on home), and a link to the
-// whole list, My courses.
-import { computed, ref, watch } from 'vue'
+// whole list, My courses. In the phone's menu, where there is no tab strip
+// beside it, the course the page is in lists its tabs under it.
+import { computed, inject, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { read } from '@/api/http'
@@ -14,6 +15,9 @@ import type { Course } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useSessionStore } from '@/stores/session'
 import StatusTag from '@/components/StatusTag.vue'
+import { useCourseStore } from '@/stores/course'
+import { useCourseNav } from '@/layouts/courseNav'
+import { SIDE_IN_DRAWER } from './frame'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -29,6 +33,11 @@ const matches = (c: { code: string; section: string; title: string }) =>
 const pageCourse = computed(() =>
   route.path.startsWith('/courses/') && typeof route.params.courseId === 'string' ? route.params.courseId : null,
 )
+/** In the phone's menu, the course the page is in, once read, whose tabs are listed under it. */
+const inDrawer = inject(SIDE_IN_DRAWER, false)
+const openCourse = useCourseStore()
+const courseNav = useCourseNav()
+const tabsOf = (id: string) => inDrawer && pageCourse.value === id && openCourse.courseId === id && !!openCourse.course
 /** The course whose administration page this is. */
 const adminCourse = computed(() =>
   route.name === 'admin-course' && typeof route.params.courseId === 'string' ? route.params.courseId : null,
@@ -98,25 +107,42 @@ const archivedCount = computed(
     </div>
 
     <nav class="side-list" :aria-label="t('layout.courses')">
-      <router-link
-        v-for="m in seated"
-        :key="m.member_id"
-        :to="{ name: 'course-overview', params: { courseId: m.course_id } }"
-        class="side-item side-course"
-        :class="{ 'is-active': pageCourse === m.course_id }"
-        :aria-current="pageCourse === m.course_id ? 'page' : undefined"
-        :title="m.title"
-      >
-        <span class="side-course__top">
-          <span class="side-course__code">{{ m.code }}{{ m.section ? ` · ${m.section}` : '' }}</span>
-          <StatusTag vocab="role" :value="m.role" />
-        </span>
-        <span class="side-course__title">{{ m.title }}</span>
-        <span v-if="m.status === 'paused' || m.course_status !== 'active'" class="side-course__flags">
-          <StatusTag v-if="m.status === 'paused'" vocab="memberStatus" :value="m.status" />
-          <StatusTag v-if="m.course_status !== 'active'" vocab="courseStatus" :value="m.course_status" />
-        </span>
-      </router-link>
+      <template v-for="m in seated" :key="m.member_id">
+        <router-link
+          :to="{ name: 'course-overview', params: { courseId: m.course_id } }"
+          class="side-item side-course"
+          :class="{ 'is-active': pageCourse === m.course_id }"
+          :aria-current="pageCourse === m.course_id ? 'page' : undefined"
+          :title="m.title"
+        >
+          <span class="side-course__top">
+            <span class="side-course__code">{{ m.code }}{{ m.section ? ` · ${m.section}` : '' }}</span>
+            <StatusTag vocab="role" :value="m.role" />
+          </span>
+          <span class="side-course__title">{{ m.title }}</span>
+          <span v-if="m.status === 'paused' || m.course_status !== 'active'" class="side-course__flags">
+            <StatusTag v-if="m.status === 'paused'" vocab="memberStatus" :value="m.status" />
+            <StatusTag v-if="m.course_status !== 'active'" vocab="courseStatus" :value="m.course_status" />
+          </span>
+        </router-link>
+        <nav
+          v-if="tabsOf(m.course_id)"
+          class="side-list side-course-tabs"
+          :aria-label="t('layout.side.courseTabs', { course: m.section ? `${m.code} · ${m.section}` : m.code })"
+        >
+          <router-link
+            v-for="tab in courseNav.tabs.value"
+            :key="tab.name"
+            :to="{ name: tab.name, params: { courseId: m.course_id } }"
+            class="side-item"
+            :class="{ 'is-active': courseNav.activeName.value === tab.name }"
+            :aria-current="courseNav.activeName.value === tab.name ? 'page' : undefined"
+          >
+            <el-icon aria-hidden="true"><component :is="tab.icon" /></el-icon>
+            <span>{{ t(tab.label) }}</span>
+          </router-link>
+        </nav>
+      </template>
     </nav>
     <p v-if="!seated.length" class="side-note">
       {{ session.liveMemberships.length ? t('layout.side.noMatch') : t('layout.side.noCourses') }}
@@ -158,6 +184,12 @@ const archivedCount = computed(
 </template>
 
 <style scoped>
+/* The tabs of the course the page is in, under it in the phone's menu, set in from its edge. */
+.side-course-tabs {
+  margin: 2px 0 6px 12px;
+  padding-left: 8px;
+  border-left: 1px solid var(--app-line);
+}
 .side-courses__tools {
   display: flex;
   flex-direction: column;

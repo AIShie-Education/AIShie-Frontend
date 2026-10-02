@@ -13,7 +13,9 @@
 // deployed while the tab is open is said in a small notice
 // (NewVersionNotice), which reloads only when asked. A file opened from any
 // list of files is shown in the file viewer (FileViewer), over the page,
-// whose code is fetched the first time a file is opened.
+// whose code is fetched the first time a file is opened. On a course's
+// pages the top bar is the way back up, the course and the tab
+// (CourseCrumbs), rather than the page's name again.
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -29,6 +31,8 @@ import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
 import { useSideBarStore } from '@/stores/sidebar'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { titleKey } from '@/router/title'
+import { useCourseStore } from '@/stores/course'
+import CourseCrumbs from './CourseCrumbs.vue'
 
 const chat = useChatStore()
 const route = useRoute()
@@ -74,6 +78,12 @@ const pageTitle = computed(() => {
   const key = titleKey(route)
   return key ? t(key) : ''
 })
+// On a course's pages, once the course is read: its breadcrumb.
+const course = useCourseStore()
+const crumbsCourse = computed(() => {
+  const id = route.params.courseId
+  return typeof id === 'string' && route.path.startsWith('/courses/') && course.courseId === id ? course.course : null
+})
 </script>
 
 <template>
@@ -107,7 +117,8 @@ const pageTitle = computed(() => {
           <el-button v-if="narrow" text circle :aria-label="t('layout.menu')" @click="drawer = true">
             <el-icon :size="20"><Menu /></el-icon>
           </el-button>
-          <span class="app-header__title">{{ pageTitle }}</span>
+          <CourseCrumbs v-if="crumbsCourse" :course="crumbsCourse" class="app-header__crumbs" />
+          <span v-else class="app-header__title">{{ pageTitle }}</span>
         </div>
       </el-header>
 

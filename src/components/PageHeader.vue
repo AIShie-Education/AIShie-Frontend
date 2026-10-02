@@ -1,9 +1,21 @@
 <script setup lang="ts">
-import { Comment, Fragment, Text, type VNode } from 'vue'
+// A page's header: its title, the page's one h1, a line under it, and its
+// primary actions. Inside a course, a title that only names the tab chosen
+// (Materials, under the Materials tab) is not shown again: the h1 is kept
+// for screen readers, and the subtitle and the actions alone show. On the
+// grades' pages, the grades' own tabs take the title's place.
+import { computed, Comment, Fragment, inject, Text, useSlots, type VNode } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { COURSE_PAGE } from '@/layouts/coursePage'
 
-defineProps<{ title: string; subtitle?: string; back?: string | object }>()
+const props = defineProps<{ title: string; subtitle?: string; back?: string | object }>()
 const { t } = useI18n()
+const slots = useSlots()
+const coursePage = inject(COURSE_PAGE, null)
+
+/** The title says no more than the course's tab strip: shown to screen readers alone. */
+const quiet = computed(() => !props.back && !!coursePage?.isTabName(props.title))
+const subNav = computed(() => (props.back ? null : (coursePage?.subNav.value ?? null)))
 
 /**
  * Whether what a slot gave holds anything to show. A slot passed with every
@@ -20,7 +32,7 @@ function filled(nodes: VNode[] | undefined): boolean {
 </script>
 
 <template>
-  <div class="page-header">
+  <div class="page-header" :class="{ 'is-quiet': quiet }">
     <div class="page-header__main">
       <router-link
         v-if="back"
@@ -31,11 +43,12 @@ function filled(nodes: VNode[] | undefined): boolean {
       >
         <el-icon aria-hidden="true"><ArrowLeft /></el-icon>
       </router-link>
-      <div class="page-header__text">
-        <h1 class="page-header__title">
-          {{ title }}
+      <div class="page-header__text" :class="{ 'has-subnav': !!subNav }">
+        <h1 class="page-header__title" :class="{ 'is-quiet': quiet, 'has-tags': filled(slots.tags?.()) }">
+          <span class="page-header__title-text">{{ title }}</span>
           <slot name="tags" />
         </h1>
+        <component :is="subNav" v-if="subNav" />
         <p v-if="subtitle || filled($slots.subtitle?.())" class="page-header__subtitle">
           <slot name="subtitle">{{ subtitle }}</slot>
         </p>
@@ -84,6 +97,39 @@ function filled(nodes: VNode[] | undefined): boolean {
   gap: 8px;
   flex-wrap: wrap;
   word-break: break-word;
+}
+/* A title the tab strip already says: kept for screen readers, with any tags beside it still shown. */
+.page-header__title.is-quiet:not(.has-tags),
+.page-header__title.is-quiet .page-header__title-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+/* Then the subtitle and the actions share one row, the actions at its end. */
+.page-header.is-quiet {
+  align-items: center;
+  margin-bottom: 12px;
+}
+/* The line under it takes what the actions leave, down to 320 px, before the actions go under it. */
+.page-header.is-quiet .page-header__main {
+  flex: 1 1 320px;
+}
+/* The grades' own tabs, and the subtitle after them on the same line where it fits. */
+.page-header__text.has-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
+}
+.page-header.is-quiet .page-header__subtitle {
+  margin-top: 0;
 }
 .page-header__subtitle {
   margin: 4px 0 0;

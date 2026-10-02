@@ -1,21 +1,30 @@
 <script setup lang="ts">
-// One course: its header, and the parts of it the caller's seat reaches.
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
+// One course: a row that says which course it is, its tabs, and the page.
+// The course's name is a line of context, not a heading: the page's header
+// (PageHeader) holds the page's one h1, and the top bar the way back up
+// (CourseCrumbs). The tabs keep to one row at any width: those that do not
+// fit, and any past the strip's seventh place, are under More at its end, which
+// is marked as the tab chosen while the page is one of them. Where the page is
+// as narrow as a phone's, the strip scrolls sideways instead, and the
+// phone's menu lists the course's tabs too (SideCourses).
+import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
-import { courseTabClaim } from '@/composables/useCourseTab'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
+import { useContainerWidth } from '@/composables/useContainerWidth'
 import { findCourse } from '@/views/admin/components/adminShared'
-import type { Perm } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { fitTabs, useCourseNav } from './courseNav'
+import { COURSE_PAGE } from './coursePage'
+import CourseSubTabs from './CourseSubTabs.vue'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
 const session = useSessionStore()
-const route = useRoute()
+const router = useRouter()
 const { t, locale } = useI18n()
 
 watch(
@@ -24,55 +33,13 @@ watch(
   { immediate: true },
 )
 
-interface Tab {
-  name: string
-  label: string
-  icon: string
-  /** Offered when the seat holds any of these (or when that cannot be known). */
-  perms?: Perm[]
-  /** Route names that count as this tab. */
-  also?: string[]
-}
-// In the order most used; on a phone the strip scrolls, and what is at its
-// end is furthest away.
-const tabs: Tab[] = [
-  { name: 'course-overview', label: 'layout.course.overview', icon: 'Odometer' },
-  { name: 'course-materials', label: 'layout.course.materials', icon: 'Reading', perms: ['document_read'], also: ['course-document'] },
-  { name: 'course-assignments', label: 'layout.course.assignments', icon: 'EditPen', perms: ['document_read'], also: ['course-assignment'] },
-  { name: 'course-submissions', label: 'layout.course.submissions', icon: 'Files', perms: ['submission_read'], also: ['course-submission'] },
-  { name: 'course-grades', label: 'layout.course.grades', icon: 'Medal', perms: ['grade_read'], also: ['course-grade'] },
-  { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
-  { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read', 'member_invite'], also: ['course-member'] },
-  // Those who manage the members manage the agents; those who decide actions oversee what they answered.
-  { name: 'course-agents', label: 'layout.course.agents', icon: 'Cpu', perms: ['member_manage', 'action_decide'] },
-  { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
-  { name: 'course-my-actions', label: 'layout.course.myActions', icon: 'List', perms: ['document_read'] },
-  { name: 'course-gradebook', label: 'layout.course.gradebook', icon: 'Tickets', perms: ['grade_read'] },
-  { name: 'course-scheme', label: 'layout.course.scheme', icon: 'Share', perms: ['grade_read'] },
-]
+const { tabs: visibleTabs, activeName: activeTab, active, subTabs, activeSub } = useCourseNav()
 
-/**
- * The approval queue is offered to whoever decides here, and to a person who
- * does not but owns an agent seated here: for them it is their own agents'
- * proposals, and says so.
- */
-const agentsQueue = computed(() => !course.can('action_decide') && course.ownsAgentHere === true)
-const visibleTabs = computed(() =>
-  tabs
-    .filter(
-      (tab) =>
-        !tab.perms || tab.perms.some((p) => course.can(p)) || (tab.name === 'course-approvals' && agentsQueue.value),
-    )
-    .map((tab) =>
-      tab.name === 'course-approvals' && agentsQueue.value ? { ...tab, label: 'layout.course.agentProposals' } : tab,
-    ),
-)
-const tabOf = (list: Tab[], routeName: string | undefined) =>
-  routeName ? list.find((tab) => tab.name === routeName || tab.also?.includes(routeName)) : undefined
-const activeTab = computed(() => {
-  // A page may say which tab it belongs to (useCourseTab), where that tab is offered.
-  const claimed = tabOf(visibleTabs.value, courseTabClaim.value?.route)
-  return (claimed ?? tabOf(tabs, route.name as string | undefined))?.name ?? 'course-overview'
+// The page's header leaves out a title that only names the tab chosen, and
+// shows the grades' own tabs on their pages.
+provide(COURSE_PAGE, {
+  isTabName: (title) => title === t(active.value.label) || (!!activeSub.value && title === t(activeSub.value.label)),
+  subNav: computed(() => (subTabs.value ? markRaw(CourseSubTabs) : null)),
 })
 
 const ready = computed(() => course.courseId === props.courseId && !!course.course)
@@ -109,47 +76,88 @@ const adminWithoutSeat = computed(
 // The way to the course's administration page, for whoever administers it.
 const administers = useAdministersCourse()
 
-// Where the tabs do not fit (a phone, or a page the side bar leaves narrow),
-// they scroll sideways: the active one is kept in view, and each end fades
-// while there is more beyond it. A wider page wraps them instead, so every tab
-// is always in sight.
+// --- The tab strip -----------------------------------------------------------
+// Its own width decides, never the window's: the side bar takes from the page.
+// A copy of every tab and of More, laid out unseen, gives each one's width;
+// as many tabs show as fit beside More (fitTabs). Where the page is a phone's
+// (592 px of page, as in a window of 640 without the side bar), every tab is
+// in the strip, which scrolls sideways: the active one is kept in view, and
+// each end fades while there is more beyond it.
+const PHONE_PAGE_MAX = 592
+const GAP = 2
 const nav = ref<HTMLElement | null>(null)
-const more = reactive({ start: false, end: false })
-function measure() {
-  const el = nav.value
+const measurer = ref<HTMLElement | null>(null)
+const navWidth = useContainerWidth(nav)
+const scrolls = computed(() => navWidth.value !== null && navWidth.value <= PHONE_PAGE_MAX)
+const widths = ref<number[]>([])
+const moreWidth = ref(0)
+function measureTabs() {
+  const el = measurer.value
   if (!el) return
+  const items = [...el.children] as HTMLElement[]
+  const sizes = items.map((item) => item.getBoundingClientRect().width)
+  moreWidth.value = sizes.pop() ?? 0
+  widths.value = sizes
+}
+/** How many tabs show in the strip; the rest are under More. */
+const shownCount = computed(() => {
+  const n = visibleTabs.value.length
+  if (scrolls.value) return n
+  // Unknown widths (nothing laid out yet, or no layout at all): as if every tab were narrow.
+  const known = widths.value.length === n ? widths.value : visibleTabs.value.map(() => 0)
+  return fitTabs(known, moreWidth.value, navWidth.value ?? Infinity, GAP)
+})
+const shownTabs = computed(() => visibleTabs.value.slice(0, shownCount.value))
+const moreTabs = computed(() => visibleTabs.value.slice(shownCount.value))
+const moreActive = computed(() => moreTabs.value.some((tab) => tab.name === activeTab.value))
+const moreLabel = computed(() => {
+  const current = moreTabs.value.find((tab) => tab.name === activeTab.value)
+  return current ? t('layout.course.moreCurrent', { tab: t(current.label) }) : t('layout.course.more')
+})
+function openMore(name: string) {
+  void router.push({ name, params: { courseId: props.courseId } })
+}
+
+// Tabs in another language, or in their own typeface once it has loaded, are another width.
+watch([() => visibleTabs.value.map((tab) => tab.label).join(), locale, measurer], () => void nextTick(measureTabs), {
+  flush: 'post',
+  immediate: true,
+})
+const fonts = typeof document !== 'undefined' ? document.fonts : undefined
+const onFonts = () => measureTabs()
+onMounted(() => {
+  fonts?.addEventListener?.('loadingdone', onFonts)
+  void fonts?.ready?.then(onFonts)
+})
+onBeforeUnmount(() => fonts?.removeEventListener?.('loadingdone', onFonts))
+
+const ends = reactive({ start: false, end: false })
+function measureEnds() {
+  const el = nav.value
+  if (!el || !scrolls.value) {
+    ends.start = ends.end = false
+    return
+  }
   const max = el.scrollWidth - el.clientWidth
-  more.start = max > 1 && el.scrollLeft > 1
-  more.end = max > 1 && el.scrollLeft < max - 1
+  ends.start = max > 1 && el.scrollLeft > 1
+  ends.end = max > 1 && el.scrollLeft < max - 1
 }
 function revealActive(smooth: boolean) {
   const el = nav.value
   const item = el?.querySelector<HTMLElement>('.course-tabs__item.is-active')
-  if (!el || !item) return measure()
-  const clear = 32 // past the fade
+  if (!el || !item || !scrolls.value) return measureEnds()
+  const clear = 24 // past the fade
   const left = item.offsetLeft - clear
   const right = item.offsetLeft + item.offsetWidth + clear
   let to = el.scrollLeft
   if (left < to) to = Math.max(0, left)
   else if (right > to + el.clientWidth) to = right - el.clientWidth
   if (to !== el.scrollLeft) el.scrollTo({ left: to, behavior: smooth ? 'smooth' : 'auto' })
-  measure()
+  measureEnds()
 }
-let observer: ResizeObserver | null = null
-watch(nav, (el) => {
-  observer?.disconnect()
-  observer = null
-  if (!el) return
-  if (typeof ResizeObserver !== 'undefined') {
-    observer = new ResizeObserver(() => measure())
-    observer.observe(el)
-  }
-  void nextTick(() => revealActive(false))
-})
+watch([nav, scrolls], () => void nextTick(() => revealActive(false)), { flush: 'post' })
 watch([activeTab, () => visibleTabs.value.length], () => void nextTick(() => revealActive(true)), { flush: 'post' })
-// Labels in another language are another width.
-watch(locale, () => void nextTick(() => revealActive(false)), { flush: 'post' })
-onBeforeUnmount(() => observer?.disconnect())
+watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flush: 'post' })
 </script>
 
 <template>
@@ -174,21 +182,19 @@ onBeforeUnmount(() => observer?.disconnect())
       @retry="course.open(courseId, true)"
     >
       <template v-if="ready && course.course">
+        <!-- Which course this is: a line of context, not a heading. -->
         <header class="course-head">
-          <div class="course-head__text">
-            <div class="course-head__code">
-              {{ course.course.code }}<template v-if="course.course.section"> · {{ course.course.section }}</template>
-            </div>
-            <h1 class="course-head__title">{{ course.course.title }}</h1>
-          </div>
-          <div class="course-head__tags">
-            <StatusTag vocab="courseStatus" :value="course.course.status" size="default" />
-            <StatusTag v-if="course.role" vocab="role" :value="course.role" size="default" />
+          <span class="course-head__code">
+            {{ course.course.code }}<template v-if="course.course.section"> · {{ course.course.section }}</template>
+          </span>
+          <span class="course-head__title">{{ course.course.title }}</span>
+          <span class="course-head__tags">
+            <StatusTag vocab="courseStatus" :value="course.course.status" />
+            <StatusTag v-if="course.role" vocab="role" :value="course.role" />
             <StatusTag
               v-if="course.membership && course.membership.status !== 'active'"
               vocab="memberStatus"
               :value="course.membership.status"
-              size="default"
             />
             <router-link
               v-if="administers"
@@ -199,7 +205,7 @@ onBeforeUnmount(() => observer?.disconnect())
             >
               <el-icon aria-hidden="true"><Setting /></el-icon>
             </router-link>
-          </div>
+          </span>
         </header>
 
         <el-alert v-if="course.archived" type="info" :closable="false" show-icon class="course-banner">
@@ -215,25 +221,70 @@ onBeforeUnmount(() => observer?.disconnect())
           {{ t('layout.course.paused') }}
         </el-alert>
 
-        <nav
-          ref="nav"
-          class="course-tabs"
-          :class="{ 'has-more-start': more.start, 'has-more-end': more.end }"
-          :aria-label="t('layout.course.nav')"
-          @scroll.passive="measure"
-        >
-          <router-link
-            v-for="tab in visibleTabs"
-            :key="tab.name"
-            :to="{ name: tab.name, params: { courseId } }"
-            class="course-tabs__item"
-            :class="{ 'is-active': activeTab === tab.name }"
-            :aria-current="activeTab === tab.name ? 'page' : undefined"
+        <div class="course-nav">
+          <nav
+            ref="nav"
+            class="course-tabs"
+            :class="{ 'is-scrolling': scrolls, 'has-more-start': ends.start, 'has-more-end': ends.end }"
+            :aria-label="t('layout.course.nav')"
+            @scroll.passive="measureEnds"
           >
-            <el-icon aria-hidden="true"><component :is="tab.icon" /></el-icon>
-            <span>{{ t(tab.label) }}</span>
-          </router-link>
-        </nav>
+            <router-link
+              v-for="tab in shownTabs"
+              :key="tab.name"
+              :to="{ name: tab.name, params: { courseId } }"
+              class="course-tabs__item"
+              :class="{ 'is-active': activeTab === tab.name }"
+              :aria-current="activeTab === tab.name ? 'page' : undefined"
+            >
+              <el-icon aria-hidden="true"><component :is="tab.icon" /></el-icon>
+              <span>{{ t(tab.label) }}</span>
+            </router-link>
+            <el-dropdown
+              v-if="moreTabs.length"
+              trigger="click"
+              placement="bottom-end"
+              class="course-tabs__more-wrap"
+              popper-class="course-tabs__menu"
+              @command="openMore"
+            >
+              <button
+                type="button"
+                class="course-tabs__item course-tabs__more"
+                :class="{ 'is-active': moreActive }"
+                :aria-label="moreLabel"
+              >
+                <span>{{ t('layout.course.more') }}</span>
+                <el-icon aria-hidden="true" class="course-tabs__caret"><ArrowDown /></el-icon>
+              </button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item
+                    v-for="tab in moreTabs"
+                    :key="tab.name"
+                    :command="tab.name"
+                    :class="{ 'is-active': activeTab === tab.name }"
+                    :aria-current="activeTab === tab.name ? 'page' : undefined"
+                  >
+                    <el-icon aria-hidden="true"><component :is="tab.icon" /></el-icon>
+                    <span>{{ t(tab.label) }}</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </nav>
+          <!-- Every tab and More, laid out unseen, for their widths. -->
+          <div ref="measurer" class="course-tabs__measure" aria-hidden="true" inert>
+            <span v-for="tab in visibleTabs" :key="tab.name" class="course-tabs__item is-active">
+              <el-icon><component :is="tab.icon" /></el-icon>
+              <span>{{ t(tab.label) }}</span>
+            </span>
+            <span class="course-tabs__item course-tabs__more is-active">
+              <span>{{ t('layout.course.more') }}</span>
+              <el-icon class="course-tabs__caret"><ArrowDown /></el-icon>
+            </span>
+          </div>
+        </div>
 
         <div class="course-body">
           <router-view :key="courseId" />
@@ -248,34 +299,47 @@ onBeforeUnmount(() => observer?.disconnect())
 .course-layout {
   container-type: inline-size;
 }
+/* The course's three rows (which course, its tabs, the page's header) start 12 px under the top bar, not the
+   page's 24, so that the page's own content starts within 200 px of the window's top on a laptop's screen. */
+@media (min-width: 601px) {
+  .course-layout {
+    margin-top: -12px;
+  }
+}
 .course-layout__no-seat :deep(.el-result__subtitle) {
   max-width: 60ch;
   margin-left: auto;
   margin-right: auto;
   line-height: 1.6;
 }
+/* Which course: its code, its name in the sans, and its status, on one line where it fits. */
 .course-head {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
+  align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  column-gap: 10px;
+  row-gap: 2px;
+  min-height: 28px;
+  margin-bottom: 6px;
 }
 .course-head__code {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong, 600);
   color: var(--app-indigo);
   letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 .course-head__title {
-  margin: 2px 0 0;
-  font-size: 28px;
-  line-height: 1.25;
+  min-width: 0;
+  font-family: var(--app-font-sans);
+  font-size: 19px;
+  line-height: 28px;
+  font-weight: var(--app-weight-strong, 600);
+  color: var(--app-ink);
   word-break: break-word;
 }
 .course-head__tags {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
@@ -291,19 +355,31 @@ onBeforeUnmount(() => observer?.disconnect())
   color: var(--app-indigo);
 }
 .course-banner {
+  margin: 8px 0;
+}
+/* The tabs: one row, ruled under, never wrapped. */
+.course-nav {
+  position: relative;
   margin-bottom: 12px;
 }
 .course-tabs {
-  position: relative;
   display: flex;
+  flex-wrap: nowrap;
   gap: 2px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--app-line);
-  margin-bottom: 20px;
-  scrollbar-width: thin;
-  --fade: 40px;
+  overflow: hidden;
+  box-shadow: inset 0 -1px 0 var(--app-line);
+  --fade: 16px;
 }
-/* More beyond an end: that end fades out. */
+/* A phone's page: every tab in the strip, which scrolls sideways. */
+.course-tabs.is-scrolling {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.course-tabs.is-scrolling::-webkit-scrollbar {
+  display: none;
+}
+/* More beyond an end: that end fades out, over 16 px, so that the next tab still shows. */
 .course-tabs.has-more-end {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
@@ -316,24 +392,23 @@ onBeforeUnmount(() => observer?.disconnect())
   -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
   mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
 }
-/* With room for every tab in two rows, every tab shows: they wrap onto a second row. */
-@container (min-width: 720px) {
-  .course-tabs {
-    flex-wrap: wrap;
-    overflow-x: visible;
-  }
-}
 .course-tabs__item {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
-  padding: 10px 14px;
+  height: 36px;
+  padding: 2px 12px 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
   color: var(--el-text-color-regular);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
   text-decoration: none;
   white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  font-size: 14px;
+  cursor: pointer;
 }
 .course-tabs__item:hover {
   color: var(--app-indigo);
@@ -343,9 +418,41 @@ onBeforeUnmount(() => observer?.disconnect())
   border-bottom-color: var(--app-indigo);
   font-weight: 500;
 }
-/* The strip scrolls, and would clip a ring outside a tab: this one is inside. */
+/* The strip clips, and would clip a ring outside a tab: this one is inside. */
 .course-tabs__item:focus-visible {
+  outline: 2px solid var(--app-focus);
   outline-offset: -2px;
   border-radius: var(--app-radius-control);
+}
+.course-tabs__more-wrap {
+  flex: 0 0 auto;
+}
+.course-tabs__caret {
+  font-size: 12px;
+}
+/* Every tab and More, laid out as in the strip but unseen and taking no room: their widths. */
+.course-tabs__measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+}
+</style>
+
+<style>
+/* More's menu: the tab chosen, if it is one of them, marked as the strip marks it. */
+.course-tabs__menu .el-dropdown-menu__item {
+  gap: 8px;
+}
+.course-tabs__menu .el-dropdown-menu__item .el-icon {
+  margin-right: 0;
+}
+.course-tabs__menu .el-dropdown-menu__item.is-active {
+  color: var(--app-indigo);
+  background: var(--app-indigo-tint);
+  font-weight: 500;
 }
 </style>

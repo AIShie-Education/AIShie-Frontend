@@ -405,20 +405,7 @@ watch(
     <PageHeader
       :title="t('grades.gradebook.title')"
       :subtitle="isOwn ? t('grades.gradebook.subtitleOwn') : t('grades.gradebook.subtitle')"
-    >
-      <router-link
-        :to="{
-          name: 'course-grades',
-          params: { courseId },
-          query: mine || !student ? {} : { student },
-        }"
-      >
-        <el-button>
-          <el-icon><Medal /></el-icon>
-          <span>{{ mine ? t('grades.mine.title') : t('grades.gradebook.toGrades') }}</span>
-        </el-button>
-      </router-link>
-    </PageHeader>
+    />
 
     <section class="app-card gradebook__controls">
       <div v-if="!mine" class="gradebook__control">
