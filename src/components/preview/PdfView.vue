@@ -245,10 +245,19 @@ function pageInView(): number {
   return found + 1
 }
 let tracking = 0
+/**
+ * Where going to a page left the pages scrolled: a page near the end, which
+ * cannot come to the top of the screen, is still the page read until they
+ * are scrolled from there.
+ */
+let heldAt: number | null = null
 function onScroll() {
   if (tracking) return
   tracking = requestAnimationFrame(() => {
     tracking = 0
+    const el = scroller.value
+    if (heldAt !== null && el && Math.abs(el.scrollTop - heldAt) < 1) return
+    heldAt = null
     const page = pageInView()
     if (page !== current.value) current.value = page
   })
@@ -259,7 +268,11 @@ watch(current, (page) => (pageInput.value = String(page)))
 function goTo(page: number) {
   const target = Math.min(Math.max(1, Math.round(page)), pageCount.value || 1)
   const slot = slotOf(target)
-  if (slot && scroller.value) scroller.value.scrollTop = slot.offsetTop - GUTTER
+  const el = scroller.value
+  if (slot && el) {
+    el.scrollTop = slot.offsetTop - GUTTER
+    heldAt = el.scrollTop
+  }
   current.value = target
   pageInput.value = String(target)
 }
