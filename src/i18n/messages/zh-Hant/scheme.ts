@@ -21,7 +21,7 @@ export default {
   },
   tree: {
     title: '評分項目',
-    count: '共 {n} 個項目',
+    count: '共{n}個項目',
     cols: {
       name: '評分項目',
       weight: '權重',
@@ -77,7 +77,7 @@ export default {
   uncounted: {
     title: '不計入課程總成績',
     help: '未歸入任何評分項目的作業屬練習性質：可以評分，但不計入課程總成績。如要計分，請在作業頁面為它選擇評分項目。',
-    points: '{n} 分',
+    points: '{n}分',
   },
   reasons: {
     direct: '「{name}」是直接評分的項目，不能再有子項目。',
@@ -101,7 +101,7 @@ export default {
     points: '滿分',
     weight: '權重',
     weightHelp: '相對於同層其他項目：60 與 40 等同 3 與 2。設為 0 則會顯示但不計分。',
-    sharePreview: '即佔「{parent}」的 {share}。',
+    sharePreview: '即佔「{parent}」的{share}。',
     shareNone: '同層項目的權重全部為 0，所以都不計分。',
     dropLowest: '剔除最低',
     dropLowestHelp: '計算此項目成績時，略去底下最低分的項目數目；永遠不會全部略去。',
@@ -124,7 +124,7 @@ export default {
     newParent: '新位置',
     current: '目前位置',
     submit: '移動',
-    sharePreview: '以權重 {weight} 計算，它將佔「{parent}」的 {share}。',
+    sharePreview: '以權重{weight}計算，它將佔「{parent}」的{share}。',
     noTarget: '沒有其他可以移到的位置。',
     graded:
       '底下已有成績輸入。移動它會立即重新記錄受影響的每一項已發佈總分（原位置及新位置皆然），並保留記錄；因此需要涵蓋整個課程中所有有總分的學生。',
@@ -133,9 +133,9 @@ export default {
     created: '已新增評分項目',
     updated: '已儲存評分項目',
     moved: '已移動評分項目',
-    movedTotals: '已移動評分項目：重新記錄了 {n} 項總分。',
-    updatedTotals: '已儲存評分項目：重新記錄了 {n} 項總分。',
-    updatedRescaled: '已儲存評分項目：換算了 {r} 份成績，重新記錄了 {n} 項總分。',
+    movedTotals: '已移動評分項目：重新記錄了{n}項總分。',
+    updatedTotals: '已儲存評分項目：重新記錄了{n}項總分。',
+    updatedRescaled: '已儲存評分項目：換算了{r}份成績，重新記錄了{n}項總分。',
     proposed: '你對評分結構的更改正等待批准，獲批前不會生效。',
     viewMine: '查看我的操作',
   },

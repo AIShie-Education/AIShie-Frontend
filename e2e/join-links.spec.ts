@@ -382,7 +382,7 @@ test.describe.serial('invite links', () => {
     await page.goto(`/join/${link.token}`)
     await expect(page.getByText('你獲邀加入')).toBeVisible()
     await expect(page.getByText('你會立即以學生身分加入。')).toBeVisible()
-    await expect(page.getByText(/^此連結尚餘 (10:00|09:[0-5]\d) 有效。$/)).toBeVisible()
+    await expect(page.getByText(/^此連結尚餘(10:00|09:[0-5]\d)有效。$/)).toBeVisible()
     await expect(page.getByRole('link', { name: '登入以加入' })).toBeVisible()
     const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     expect(await fits()).toBe(true)

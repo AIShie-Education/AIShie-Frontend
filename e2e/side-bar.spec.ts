@@ -95,7 +95,7 @@ test.describe('the activity bar and the side bar', () => {
     await expect(bar.getByRole('heading', { name: 'Courses', exact: true })).toBeVisible()
 
     const course = bar.locator(`a.side-course[href="${coursePath()}"]`)
-    await expect(course).toContainText('CS101 · A')
+    await expect(course).toContainText('CS101·A')
     await expect(course).toContainText('Introduction to Programming')
     await expect(course).toContainText('Instructor')
     await expect(course).not.toHaveAttribute('aria-current', 'page')
@@ -163,7 +163,7 @@ test.describe('the activity bar and the side bar', () => {
     await expect(courses.getByRole('heading', { name: 'Administered, without a seat' })).toBeVisible()
     const unseated = courses.locator('a.side-course.is-unseated')
     await expect(unseated.first()).toHaveAttribute('href', `/admin/courses/${courseId}`)
-    await expect(unseated.first()).toContainText(`SIDE1 · ${STAMP}`)
+    await expect(unseated.first()).toContainText(`SIDE1·${STAMP}`)
     await expect(unseated.first()).toContainText(title)
     await expect(unseated.first()).toContainText('Draft')
     await unseated.first().click()

@@ -19,7 +19,7 @@ export default {
   },
   seats: {
     title: '課程席位',
-    summary: '沒有席位 | 已加入 1 個課程 | 已加入 {n} 個課程',
+    summary: '沒有席位 | 已加入 1 個課程 | 已加入{n}個課程',
     empty: '你尚未加入任何課程。',
     hint: '每個席位各有自己的角色、範圍與權限，由安排你加入的人設定。',
     students: '學生：{scope}',
@@ -58,7 +58,7 @@ export default {
     thisBrowser: '此瀏覽器',
     sessionVia: {
       password: '以密碼登入',
-      sso: '透過 {provider} 登入',
+      sso: '透過{provider}登入',
       invite: '接受邀請後登入',
     },
     token: '權杖',
@@ -88,12 +88,12 @@ export default {
   },
   revoke: {
     title: '要撤銷這個憑證嗎？',
-    api_token: '任何使用權杖 {name} 的程式，下一次呼叫起都會被拒絕。',
+    api_token: '任何使用權杖{name}的程式，下一次呼叫起都會被拒絕。',
     session: '使用這個登入階段的瀏覽器，會在下一次請求時被登出。',
     sessionMaybeMine: '如果這正是目前這個瀏覽器使用的登入階段，你在這裡也會被登出。',
     currentSession: '這是此瀏覽器正在使用的登入階段：你會在這裡被登出。',
     password: '在設定新密碼之前，你將無法再以密碼登入。',
-    sso: '你將無法再透過 {provider} 登入，直到管理員把該身分重新連結到此帳戶為止。',
+    sso: '你將無法再透過{provider}登入，直到管理員把該身分重新連結到此帳戶為止。',
     invite: '邀請連結將會失效。',
     irreversible: '已撤銷的憑證無法恢復。',
     confirm: '撤銷',

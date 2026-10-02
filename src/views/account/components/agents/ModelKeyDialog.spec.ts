@@ -191,7 +191,7 @@ describe('ModelKeyDialog', () => {
     await fill(vm)
     answerTest('key_refused', 401)
     await click(w, '.model-dialog__test-button')
-    expect(w.find('.model-dialog__test').text()).toBe('OpenAI 拒絕了這個金鑰。')
+    expect(w.find('.model-dialog__test').text()).toBe('OpenAI拒絕了這個金鑰。')
   })
 
   it('saves at the version it read, without asking, once the key passed a test of exactly these inputs', async () => {
@@ -326,7 +326,7 @@ describe('ModelKeyDialog', () => {
     const { w, vm } = await open()
     await fill(vm, newToken().token)
     await click(w, '.model-dialog__test-button')
-    expect(w.text()).toContain('這是 AIshie 的權杖（你的或代理的），不是 OpenAI 的 API 金鑰。')
+    expect(w.text()).toContain('這是 AIshie 的權杖（你的或代理的），不是OpenAI的 API 金鑰。')
   })
 
   it('puts a field’s refusal on its field', async () => {
@@ -527,7 +527,7 @@ describe('ModelKeyDialog: the school’s plan', () => {
     const { w } = await open({ schoolKey: true })
     expect(w.findAll('.model-form__plan-title').map((p) => p.text())).toEqual(['學校方案', '你自己的金鑰'])
     expect(w.find('.model-form__limits').text()).toBe(
-      '你所有的代理合計每天最多回答 100 次，每位提問者每天最多 20 次。每天香港標準時間 08:00 重新計算。',
+      '你所有的代理合計每天最多回答100次，每位提問者每天最多20次。每天香港標準時間 08:00重新計算。',
     )
   })
 

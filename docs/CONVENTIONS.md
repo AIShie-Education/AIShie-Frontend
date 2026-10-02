@@ -833,6 +833,20 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   their fixtures use the same, so that none is copied into the page from them.
 - Core's error messages are English and are shown as they are, after a translated lead
   (`errorMessage()` does this).
+- **No punctuation in templates.** What joins words is the language's, so it is in the messages:
+  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), a label and
+  its value `common.pair` ("Model calls: 380", 「模型呼叫：380」; `<i18n-t keypath="common.pair">`
+  where the value is a component). Numbers go through `@/utils/format`: a percentage through
+  `formatPct` (a fraction; the gradebook's `formatPct` for a percentage Core worked out), money
+  through `formatMoney` ("US$0.0184": a "$" alone reads as Hong Kong's), a list through
+  `formatList` ("a, b, and c", 「甲、乙和丙」), never `"%"` written after a number nor
+  `.join(', ')`. The dot between a course's code and its section is `<span class="app-sep">·</span>`
+  with no spaces, so that a Chinese typeface does not make it a full-width one.
+- **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
+  never 「{owner} 的代理」 (`src/i18n/spacing.spec.ts` refuses it). The page puts the room between Han
+  and Latin letters or figures itself (`text-autospace` under `html:lang(zh)`, `styles/main.css`),
+  which also keeps a paragraph from leaving one character alone on its last line (`text-wrap`).
+  Small capitals' tracking (a side bar's headings) is 0 in Chinese.
 - Some vocabularies are keyed by Core's own dotted names (`enums.event`: `grade.posted`, …).
   vue-i18n splits a key path on dots, so look those up with a bracketed segment:
   ``t(`enums.event['${type}']`)``.

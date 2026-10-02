@@ -21,7 +21,7 @@ export default {
   },
   tree: {
     title: '评分项',
-    count: '共 {n} 个评分项',
+    count: '共{n}个评分项',
     cols: {
       name: '评分项',
       weight: '权重',
@@ -77,7 +77,7 @@ export default {
   uncounted: {
     title: '不计入课程总成绩',
     help: '未归入任何评分项的作业属练习性质：可以评分，但不计入课程总成绩。如要计分，请在作业页面为它选择评分项。',
-    points: '{n} 分',
+    points: '{n}分',
   },
   reasons: {
     direct: '“{name}”是直接评分的评分项，不能再有子项。',
@@ -101,7 +101,7 @@ export default {
     points: '满分',
     weight: '权重',
     weightHelp: '相对于同级其他项：60 与 40 等同 3 与 2。设为 0 则会显示但不计分。',
-    sharePreview: '即占“{parent}”的 {share}。',
+    sharePreview: '即占“{parent}”的{share}。',
     shareNone: '同级项的权重全部为 0，所以都不计分。',
     dropLowest: '剔除最低',
     dropLowestHelp: '计算此评分项成绩时，略去其下最低分的项数；永远不会全部略去。',
@@ -124,7 +124,7 @@ export default {
     newParent: '新位置',
     current: '当前位置',
     submit: '移动',
-    sharePreview: '以权重 {weight} 计算，它将占“{parent}”的 {share}。',
+    sharePreview: '以权重{weight}计算，它将占“{parent}”的{share}。',
     noTarget: '没有其他可以移到的位置。',
     graded:
       '底下已有成绩输入。移动它会立即重新记录受影响的每一项已发布总分（原位置及新位置皆然），并保留记录；因此需要覆盖整门课程中所有有总分的学生。',
@@ -133,9 +133,9 @@ export default {
     created: '已添加评分项',
     updated: '已保存评分项',
     moved: '已移动评分项',
-    movedTotals: '已移动评分项：重新记录了 {n} 项总分。',
-    updatedTotals: '已保存评分项：重新记录了 {n} 项总分。',
-    updatedRescaled: '已保存评分项：换算了 {r} 份成绩，重新记录了 {n} 项总分。',
+    movedTotals: '已移动评分项：重新记录了{n}项总分。',
+    updatedTotals: '已保存评分项：重新记录了{n}项总分。',
+    updatedRescaled: '已保存评分项：换算了{r}份成绩，重新记录了{n}项总分。',
     proposed: '你对评分结构的更改正等待批准，获批前不会生效。',
     viewMine: '查看我的操作',
   },

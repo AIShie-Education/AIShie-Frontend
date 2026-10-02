@@ -268,7 +268,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                   <Cpu v-if="row.kind === 'agent'" /><User v-else />
                 </el-icon>
                 <span class="members__name-text">{{ row.display_name }}</span>
-                <span v-if="row.id === course.myMemberId" class="members__me">({{ t('common.labels.you') }})</span>
+                <span v-if="row.id === course.myMemberId" class="members__me">{{ t('common.labels.youTag') }}</span>
                 <el-tooltip v-if="row.login_id" :content="t('members.loginId')" placement="top">
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
                 </el-tooltip>

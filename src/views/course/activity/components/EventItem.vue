@@ -7,6 +7,7 @@
 // whether the caller may see it.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatList } from '@/utils/format'
 import type { RouteLocationRaw } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
 import IdText from '@/components/IdText.vue'
@@ -348,7 +349,7 @@ const facts = computed<Fact[]>(() => {
         kind: 'text',
         text: t('activity.fact.files', { n: files.length }, files.length),
         tone: 'info',
-        tip: names.length ? names.join(', ') : undefined,
+        tip: names.length ? formatList(names) : undefined,
       })
     }
   }

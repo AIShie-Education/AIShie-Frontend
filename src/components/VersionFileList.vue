@@ -97,7 +97,7 @@ async function download(f: DocumentFile) {
         type="button"
         class="version-file__open"
         :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)}${hasPdf(f) ? ' · PDF' : ''})`"
-        :title="`${t('preview.openTip')}: ${f.filename}${checksum(f) ? ` · ${checksum(f)}` : ''}`"
+        :title="t('common.pair', { label: t('preview.openTip'), value: f.filename }) + (checksum(f) ? ` · ${checksum(f)}` : '')"
         @click="preview(f)"
       >
         <span class="version-file__icon" :class="`is-${kindOf(f)}`" aria-hidden="true">
@@ -116,7 +116,7 @@ async function download(f: DocumentFile) {
         type="button"
         class="version-file__get"
         :aria-label="t('common.files.download', { name: f.filename })"
-        :title="`${t('common.files.downloadTip')}: ${f.filename}`"
+        :title="t('common.pair', { label: t('common.files.downloadTip'), value: f.filename })"
         :aria-busy="busy === f.id ? 'true' : undefined"
         @click="download(f)"
       >

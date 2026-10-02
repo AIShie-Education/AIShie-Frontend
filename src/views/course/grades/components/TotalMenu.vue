@@ -101,7 +101,7 @@ function onCommand(cmd: string | number | object) {
             :disabled="!!blocked"
             :loading="clearWrite.pending.value"
             class="total-menu__button"
-            :aria-label="t('grades.override.actions') + ': ' + what"
+            :aria-label="t('common.pair', { label: t('grades.override.actions'), value: what })"
           >
             <el-icon><EditPen /></el-icon>
             <span>{{ t('grades.override.actions') }}</span>

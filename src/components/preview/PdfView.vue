@@ -29,6 +29,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useContainerWidth } from '@/composables/useContainerWidth'
+import { formatPct } from '@/utils/format'
 import { openPdf, TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from './pdfjs'
 import { clampZoom, CSS_UNITS, fitWidthOf, nearFit, pinchZoom, wheelZoom, zoomStep } from './pdfZoom'
 
@@ -606,7 +607,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           :title="t('preview.zoom.actualTip')"
           @click="actualSize"
         >
-          {{ percent }} %
+          {{ formatPct(percent / 100) }}
         </button>
         <el-button
           text

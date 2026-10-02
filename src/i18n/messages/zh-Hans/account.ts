@@ -19,7 +19,7 @@ export default {
   },
   seats: {
     title: '课程席位',
-    summary: '没有席位 | 已加入 1 门课程 | 已加入 {n} 门课程',
+    summary: '没有席位 | 已加入 1 门课程 | 已加入{n}门课程',
     empty: '你尚未加入任何课程。',
     hint: '每个席位各有自己的角色、范围与权限，由安排你加入的人设置。',
     students: '学生：{scope}',
@@ -58,7 +58,7 @@ export default {
     thisBrowser: '此浏览器',
     sessionVia: {
       password: '以密码登录',
-      sso: '通过 {provider} 登录',
+      sso: '通过{provider}登录',
       invite: '接受邀请后登录',
     },
     token: '令牌',
@@ -88,12 +88,12 @@ export default {
   },
   revoke: {
     title: '要撤销这个凭证吗？',
-    api_token: '任何使用令牌 {name} 的程序，下一次调用起都会被拒绝。',
+    api_token: '任何使用令牌{name}的程序，下一次调用起都会被拒绝。',
     session: '使用这个会话的浏览器，会在下一次请求时被退出登录。',
     sessionMaybeMine: '如果这正是当前浏览器使用的会话，你在这里也会被退出登录。',
     currentSession: '这是此浏览器正在使用的会话：你会在这里被退出登录。',
     password: '在设置新密码之前，你将无法再以密码登录。',
-    sso: '你将无法再通过 {provider} 登录，直到管理员把该身份重新关联到此账号为止。',
+    sso: '你将无法再通过{provider}登录，直到管理员把该身份重新关联到此账号为止。',
     invite: '邀请链接将会失效。',
     irreversible: '已撤销的凭证无法恢复。',
     confirm: '撤销',

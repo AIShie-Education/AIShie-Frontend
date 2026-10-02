@@ -371,7 +371,7 @@ async function openById() {
                     >
                       {{ row.display_name }}
                     </router-link>
-                    <span v-if="row.id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
+                    <span v-if="row.id === session.me?.id" class="app-muted">{{ t('common.labels.youTag') }}</span>
                   </div>
                   <!-- Two with the same name are told apart by their IDs. -->
                   <IdText :id="row.id" />

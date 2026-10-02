@@ -325,7 +325,7 @@ async function seat() {
             {{ m.display_name }}
           </router-link>
           <span v-else class="seat__person-name">{{ m.display_name }}</span>
-          <span v-if="m.actor_id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
+          <span v-if="m.actor_id === session.me?.id" class="app-muted">{{ t('common.labels.youTag') }}</span>
           <StatusTag v-if="m.status !== 'active'" vocab="memberStatus" :value="m.status" />
         </li>
       </ul>
@@ -342,7 +342,7 @@ async function seat() {
               {{ p.name }}
             </router-link>
             <span v-else class="seat__person-name">{{ p.name }}</span>
-            <span v-if="p.actorId === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
+            <span v-if="p.actorId === session.me?.id" class="app-muted">{{ t('common.labels.youTag') }}</span>
             <span class="app-muted">{{ t('admin.seat.seatedJustNow') }}</span>
           </li>
         </ul>

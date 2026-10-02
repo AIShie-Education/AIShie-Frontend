@@ -6,6 +6,7 @@
 // window it scrolls.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatPct } from '@/utils/format'
 
 defineProps<{
   src: string
@@ -107,7 +108,7 @@ defineExpose({ zoomIn, zoomOut, toFit, actualSize, fit, zoom })
         :title="t('preview.zoom.actualTip')"
         @click="actualSize"
       >
-        {{ percent }} %
+        {{ formatPct(percent / 100) }}
       </button>
       <el-button text size="small" :aria-label="t('preview.zoom.in')" :title="t('preview.zoom.in')" @click="zoomIn">
         <el-icon><ZoomIn /></el-icon>

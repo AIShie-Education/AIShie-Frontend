@@ -486,10 +486,12 @@ const gradebookLink = computed(() =>
                   ><TimeText :value="mine ? g.posted_at : g.created_at" relative
                 /></span>
               </div>
-              <div v-if="!mine" class="grades-list__line app-muted">
-                {{ g.origin === 'computed' ? t('grades.detail.writtenBy') : t('grades.columns.grader') }}:
-                <MemberName :id="g.grader_member_id" show-kind />
-              </div>
+              <i18n-t v-if="!mine" keypath="common.pair" tag="div" scope="global" class="grades-list__line app-muted">
+                <template #label>{{
+                  g.origin === 'computed' ? t('grades.detail.writtenBy') : t('grades.columns.grader')
+                }}</template>
+                <template #value><MemberName :id="g.grader_member_id" show-kind /></template>
+              </i18n-t>
             </div>
             <el-icon class="grades-list__chev"><ArrowRight /></el-icon>
           </li>

@@ -193,13 +193,13 @@ test.describe.serial('records that change after the fact', () => {
     await inTraditionalChinese(page)
     await page.goto(`/courses/${courseId}/members/${uma.member_id}`)
     await page.getByRole('button', { name: '更改角色' }).click()
-    const zh = page.getByRole('dialog', { name: `更改 ${uma.display_name} 的名冊角色` })
+    const zh = page.getByRole('dialog', { name: `更改${uma.display_name}的名冊角色` })
     await expect(zh).toContainText('這只會更改名冊角色')
     await zh.locator('.role-dialog__role').filter({ hasText: '學生' }).click()
     await expect(zh).toContainText('將加入名冊')
     await photograph(page, 'role-change-zh-Hant')
     await zh.getByRole('button', { name: '改為學生' }).click()
-    await expectToasted(page, `${uma.display_name} 現在是學生`)
+    await expectToasted(page, `${uma.display_name}現在是學生`)
   })
 
   test('an instructor renames the course and describes it; its code and term are the administrators’', async ({
@@ -275,13 +275,13 @@ test.describe.serial('records that change after the fact', () => {
     const edit = page.getByRole('dialog', { name: /Midterm/ })
     await edit.locator('.el-form-item').filter({ hasText: '滿分' }).first().locator('input').fill('100')
     const zh = edit.locator('.existing-grades')
-    await expect(zh).toContainText('已輸入 2 份成績')
-    await expect(zh.locator('[data-choice="rescale"]')).toContainText('例如 40/50 會變成 80/100')
-    await expect(zh.locator('[data-choice="keep_scores"]')).toContainText('例如 40/50（80%）會變成 40/100（40%）')
+    await expect(zh).toContainText('已輸入2份成績')
+    await expect(zh.locator('[data-choice="rescale"]')).toContainText('例如40/50會變成80/100')
+    await expect(zh.locator('[data-choice="keep_scores"]')).toContainText('例如40/50（80%）會變成40/100（40%）')
     await zh.locator('[data-choice="keep_scores"]').click()
     await photograph(page, 'points-change-zh-Hant')
     await edit.getByRole('button', { name: '儲存' }).click()
-    await expectToasted(page, /^已儲存評分項目：重新記錄了 \d+ 項總分。$/)
+    await expectToasted(page, /^已儲存評分項目：重新記錄了\d+項總分。$/)
   })
 
   test('a grader overrides a student’s course total with a reason and comments on it; the student sees neither who nor why', async ({
@@ -349,7 +349,7 @@ test.describe.serial('records that change after the fact', () => {
     await expect(page.locator('.grade-view__override')).toContainText('原因：Moderated at the exam board')
 
     // Taking it off: the total worked out counts again.
-    await page.getByRole('button', { name: '總分: ' + '課程總成績' }).click()
+    await page.getByRole('button', { name: '總分：課程總成績' }).click()
     await page.locator('.el-dropdown-menu:visible').getByText('取消覆寫').click()
     await page.getByRole('dialog', { name: '取消覆寫？' }).getByRole('button', { name: '取消覆寫' }).click()
     await expectToasted(page, '已取消覆寫。')
@@ -470,8 +470,8 @@ test.describe.serial('records that change after the fact', () => {
     await purge.getByText('我明白此操作會永久移除內容').click()
     await photograph(admin, 'purge-dialog-zh-Hant')
     await purge.getByRole('button', { name: '清除' }).click()
-    await expectToasted(admin, /^已清除：\d+ 個版本，從儲存空間刪除了 \d+ 個檔案。$/)
-    await expect(admin.locator('.tombstone--document')).toContainText('由 你 清除')
+    await expectToasted(admin, /^已清除：\d+個版本，從儲存空間刪除了\d+個檔案。$/)
+    await expect(admin.locator('.tombstone--document')).toContainText('由你清除')
     await expect(admin.locator('.tombstone--document')).toContainText('原因：整份講義誤傳')
     await photograph(admin, 'tombstone-zh-Hant')
     await admin.close()

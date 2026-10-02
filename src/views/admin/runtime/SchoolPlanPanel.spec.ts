@@ -338,7 +338,7 @@ describe('the daily quotas', () => {
     await w.find('.quotas-card__reset').trigger('click')
     await flushPromises()
     expect(vi.mocked(ElMessageBox.confirm).mock.calls[0][0]).toBe(
-      'The quotas go back to runtime.yaml’s. Per owner: 100. Per person asking: 20. For the whole school: No ceiling. In dollars, per owner: No ceiling. Per person asking: $0.50. For the whole school: No ceiling.',
+      'The quotas go back to runtime.yaml’s. Per owner: 100. Per person asking: 20. For the whole school: No ceiling. In dollars, per owner: No ceiling. Per person asking: US$0.50. For the whole school: No ceiling.',
     )
   })
 
@@ -382,7 +382,7 @@ describe('the daily quotas', () => {
     expect((usd('per_asker_day').element as HTMLInputElement).value).toBe('')
     expect((usd('per_day').element as HTMLInputElement).value).toBe('100')
     expect(w.find('.quotas-card__per_asker_day .quotas-card__usd .quotas-card__default').text()).toBe(
-      'Server default: $0.50',
+      'Server default: US$0.50',
     )
     expect(w.find('.quotas-card__per_owner_day .quotas-card__usd input').attributes('aria-label')).toBe(
       'Per owner: dollars a day',

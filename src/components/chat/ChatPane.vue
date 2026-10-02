@@ -63,7 +63,7 @@ import { useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
 import { useDropTarget } from '@/composables/useFileDrop'
 import { courseLine, dateLine, usePrintLayout, type PrintRequest } from '@/composables/usePrintLayout'
-import { formatDateTime } from '@/utils/format'
+import { formatDateTime, formatList } from '@/utils/format'
 import { entriesHtml } from '@/utils/printLayout'
 import type { ApiError } from '@/api/http'
 import {
@@ -702,7 +702,7 @@ async function transcript(): Promise<PrintRequest> {
           markdown: !m.retracted && !fromOpener(m) ? (m.body ?? '') : null,
           text: !m.retracted && fromOpener(m) ? (m.body ?? '') : null,
           files: m.attachments?.length
-            ? t('preview.print.files', { names: m.attachments.map((a) => a.filename).join(', ') })
+            ? t('preview.print.files', { names: formatList(m.attachments.map((a) => a.filename)) })
             : null,
         })),
       ),
@@ -913,7 +913,7 @@ const closedLine = computed(() => {
                 <p class="chat-pane__held-text">{{ h.body }}</p>
                 <p v-if="h.files.length" class="chat-pane__held-files">
                   <el-icon aria-hidden="true"><Paperclip /></el-icon>
-                  {{ t('chat.attach.held', { n: h.files.length, names: h.files.join(', ') }, h.files.length) }}
+                  {{ t('chat.attach.held', { n: h.files.length, names: formatList(h.files) }, h.files.length) }}
                 </p>
               </div>
               <div class="chat-pane__held-note">

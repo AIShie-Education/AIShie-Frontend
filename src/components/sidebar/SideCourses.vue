@@ -108,7 +108,9 @@ const archivedCount = computed(
         :title="m.title"
       >
         <span class="side-course__top">
-          <span class="side-course__code">{{ m.code }}{{ m.section ? ` · ${m.section}` : '' }}</span>
+          <span class="side-course__code"
+            >{{ m.code }}<template v-if="m.section"><span class="app-sep">·</span>{{ m.section }}</template></span
+          >
           <StatusTag vocab="role" :value="m.role" />
         </span>
         <span class="side-course__title">{{ m.title }}</span>
@@ -135,7 +137,9 @@ const archivedCount = computed(
           :title="c.title"
         >
           <span class="side-course__top">
-            <span class="side-course__code">{{ c.code }}{{ c.section ? ` · ${c.section}` : '' }}</span>
+            <span class="side-course__code"
+              >{{ c.code }}<template v-if="c.section"><span class="app-sep">·</span>{{ c.section }}</template></span
+            >
             <StatusTag v-if="c.status !== 'active'" vocab="courseStatus" :value="c.status" />
           </span>
           <span class="side-course__title">{{ c.title }}</span>

@@ -30,7 +30,7 @@ import {
   type GradeFacts,
   type SchemeNode,
 } from './components/schemeModel'
-import { formatDecimal } from '@/utils/format'
+import { formatDecimal, formatList } from '@/utils/format'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
@@ -253,7 +253,7 @@ function collapseAll() {
             <div
               class="glance-bar"
               role="img"
-              :aria-label="segments.map((s) => `${s.name} ${pct(s.share)}`).join(', ')"
+              :aria-label="formatList(segments.map((s) => t('common.pair', { label: s.name, value: pct(s.share) })))"
             >
               <span
                 v-for="s in segments"

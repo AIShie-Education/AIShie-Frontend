@@ -26,7 +26,8 @@ import ActorLink from './ActorLink.vue'
 import ChangedBy from './ChangedBy.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
 import TranscriptionJobs from './TranscriptionJobs.vue'
-import { adminErrorText, usdShown } from './runtimeAdmin'
+import { adminErrorText } from './runtimeAdmin'
+import { formatMoney } from '@/utils/format'
 import {
   CONCURRENCY_LIMIT,
   CREDENTIAL_TAG,
@@ -486,7 +487,7 @@ async function withdraw() {
             </div>
             <div>
               <dt>{{ t('runtimeAdmin.transcription.today.cost') }}</dt>
-              <dd class="transcription-card__cost">${{ usdShown(tr.today.cost_usd) }}</dd>
+              <dd class="transcription-card__cost">{{ formatMoney(tr.today.cost_usd) }}</dd>
             </div>
           </dl>
         </div>

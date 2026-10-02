@@ -613,7 +613,7 @@ describe('FileViewer: an Office file shown as its PDF rendition', () => {
     setLocale('zh-Hans')
     await open([office([doneRendition])])
     expect($('.file-viewer__download-pdf')!.textContent!.trim()).toBe('下载 PDF')
-    expect($('.file-viewer__meta')!.textContent).toContain('PDF，共 12 页')
+    expect($('.file-viewer__meta')!.textContent).toContain('PDF，共12页')
   })
 
   it('sends one that failed back where the caller may, says it waits again, and shows the PDF once it is done', async () => {

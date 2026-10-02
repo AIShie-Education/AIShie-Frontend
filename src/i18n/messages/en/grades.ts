@@ -218,7 +218,7 @@ export default {
     finalWrittenOwn:
       'Your totals were written as final grades: every later post or regrade counts your ungraded work as zero. The figures below are a grade so far.',
     showFinal: 'Show as final',
-    lastWritten: 'Last written down at posting:',
+    lastWritten: 'Last written down at posting',
     noSnapshot: 'No total has been written down at posting yet.',
     breakdown: 'By component',
     item: 'Component or assignment',

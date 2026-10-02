@@ -41,6 +41,35 @@ h2,
 #app {
   min-height: 100vh;
 }
+/* Chinese, either script: the browser puts a little room between Han and
+   Latin letters or figures ("第3次" reads 第 3 次), so that the messages
+   need no spaces of their own around a name or a number; and a paragraph
+   leaves no single character alone on its last line, nor a heading two
+   lines of very different lengths. */
+html:lang(zh) {
+  text-autospace: normal;
+}
+html:lang(zh) :is(p, .page-header__subtitle, .app-form-hint, .el-alert__description) {
+  text-wrap: pretty;
+}
+html:lang(zh) :is(h1, h2, h3, .app-card__title) {
+  text-wrap: balance;
+}
+/* The dot between a course's code and its section ("CS101·A"): Latin, so
+   that a Chinese typeface does not make it a full-width one, with a quarter
+   of an em each side instead of spaces. */
+.app-sep {
+  font-family: 'IBM Plex Sans', var(--app-font-sans);
+  margin: 0 0.25em;
+}
+/* "(you)" after a name: a space before it in English; none before 「（你）」,
+   whose bracket brings its own. */
+.app-you {
+  margin-inline-start: 0.25em;
+}
+html:lang(zh) .app-you {
+  margin-inline-start: 0;
+}
 a {
   color: var(--app-indigo);
 }

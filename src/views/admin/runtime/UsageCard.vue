@@ -17,7 +17,7 @@ import DailyReset from '@/components/DailyReset.vue'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
-import { usdShown } from './runtimeAdmin'
+import { formatMoney } from '@/utils/format'
 
 const { t } = useI18n()
 // A phone's layout, an owner's model calls and cost under their name, where the
@@ -38,7 +38,7 @@ const spent = (o: OwnerPlanUse) => !!data.value && !!o.owner_actor_id && o.answe
 const usdLimits = computed(() => {
   const l = data.value?.limits
   if (!l || (l.per_owner_day_usd == null && l.per_asker_day_usd == null && l.per_day_usd == null)) return null
-  const shown = (v: string | null | undefined) => (v == null ? t('runtimeAdmin.money.noLimit') : `$${usdShown(v)}`)
+  const shown = (v: string | null | undefined) => (v == null ? t('runtimeAdmin.money.noLimit') : formatMoney(v))
   return { owner: shown(l.per_owner_day_usd), asker: shown(l.per_asker_day_usd), day: shown(l.per_day_usd) }
 })
 const schoolSpent = computed(() => {
@@ -91,9 +91,9 @@ const schoolSpent = computed(() => {
           </div>
           <div class="usage-card__total">
             <dt>{{ t('runtimeAdmin.usage.cost') }}</dt>
-            <dd class="usage-card__cost">${{ data.total.cost_usd }}</dd>
+            <dd class="usage-card__cost">{{ formatMoney(data.total.cost_usd) }}</dd>
             <dd v-if="data.limits.per_day_usd != null" class="usage-card__of usage-card__of-usd">
-              {{ t('runtimeAdmin.usage.ofDay', { n: `$${usdShown(data.limits.per_day_usd)}` }) }}
+              {{ t('runtimeAdmin.usage.ofDay', { n: formatMoney(data.limits.per_day_usd) }) }}
             </dd>
           </div>
         </dl>
@@ -125,7 +125,8 @@ const schoolSpent = computed(() => {
                   {{ t('runtimeAdmin.usage.operator') }} <code class="app-muted">{{ row.tenant_id }}</code>
                 </span>
                 <span v-if="narrow" class="usage-owner__meta">
-                  {{ t('runtimeAdmin.usage.modelCalls') }}: {{ row.model_calls }} · ${{ row.cost_usd }}
+                  {{ t('common.pair', { label: t('runtimeAdmin.usage.modelCalls'), value: row.model_calls }) }} ·
+                  {{ formatMoney(row.cost_usd) }}
                 </span>
               </div>
             </template>
@@ -148,7 +149,7 @@ const schoolSpent = computed(() => {
           </el-table-column>
           <el-table-column v-if="!narrow" :label="t('runtimeAdmin.usage.cost')" min-width="110" align="right">
             <template #default="{ row }"
-              ><span class="usage-owner__num">${{ row.cost_usd }}</span></template
+              ><span class="usage-owner__num">{{ formatMoney(row.cost_usd) }}</span></template
             >
           </el-table-column>
         </el-table>

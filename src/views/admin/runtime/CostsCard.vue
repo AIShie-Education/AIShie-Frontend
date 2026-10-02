@@ -17,9 +17,9 @@ import { COST_GROUPS } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
-import { formatNumber } from '@/utils/format'
+import { formatMoney, formatNumber } from '@/utils/format'
 import RuntimeAsync from './RuntimeAsync.vue'
-import { COST_SPAN_DAYS, costRange, usdShown, utcToday } from './runtimeAdmin'
+import { COST_SPAN_DAYS, costRange, utcToday } from './runtimeAdmin'
 
 const { t, te } = useI18n()
 // A phone's layout, a group's model calls under it and its tokens left out (the
@@ -142,7 +142,7 @@ function toPrices() {
         <dl class="costs-card__totals">
           <div class="costs-card__total">
             <dt>{{ t('runtimeAdmin.costs.cost') }}</dt>
-            <dd class="costs-card__cost">${{ usdShown(total.cost_usd) }}</dd>
+            <dd class="costs-card__cost">{{ formatMoney(total.cost_usd) }}</dd>
           </div>
           <div class="costs-card__total">
             <dt>{{ t('runtimeAdmin.usage.modelCalls') }}</dt>
@@ -162,7 +162,11 @@ function toPrices() {
         </dl>
         <p v-for="l in otherLines(total)" :key="l.kind" class="costs-card__other">
           {{
-            t('runtimeAdmin.costs.otherLine', { kind: kindName(l.kind), calls: n(l.calls), usd: usdShown(l.cost_usd) })
+            t('runtimeAdmin.costs.otherLine', {
+              kind: kindName(l.kind),
+              calls: n(l.calls),
+              usd: formatMoney(l.cost_usd),
+            })
           }}
         </p>
         <el-alert v-if="unpricedTotal" type="warning" :closable="false" show-icon class="costs-card__unpriced">
@@ -211,7 +215,7 @@ function toPrices() {
                 </template>
                 <span v-else>{{ t('runtimeAdmin.costs.all') }}</span>
                 <span v-if="narrow" class="cost-cell__meta">
-                  {{ t('runtimeAdmin.usage.modelCalls') }}: {{ n(callsOf(row)?.calls) }}
+                  {{ t('common.pair', { label: t('runtimeAdmin.usage.modelCalls'), value: n(callsOf(row)?.calls) }) }}
                 </span>
               </div>
             </template>
@@ -244,9 +248,9 @@ function toPrices() {
           </el-table-column>
           <el-table-column :label="t('runtimeAdmin.costs.cost')" min-width="110" align="right">
             <template #default="{ row }">
-              <span class="cost-cell__num cost-cell__cost">${{ usdShown(row.cost_usd) }}</span>
+              <span class="cost-cell__num cost-cell__cost">{{ formatMoney(row.cost_usd) }}</span>
               <span v-for="l in otherLines(row)" :key="l.kind" class="cost-cell__other">
-                {{ kindName(l.kind) }}: ${{ usdShown(l.cost_usd) }}
+                {{ t('common.pair', { label: kindName(l.kind), value: formatMoney(l.cost_usd) }) }}
               </span>
               <el-tag
                 v-if="narrow && callsOf(row)?.unpriced_calls"

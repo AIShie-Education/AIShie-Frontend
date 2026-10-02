@@ -578,15 +578,14 @@ watch(
               </div>
             </el-alert>
             <p v-if="rootSnapshot" class="gradebook__snapshot">
-              {{ t('grades.gradebook.lastWritten') }}
-              <router-link
-                :to="{
-                  name: 'course-grade',
-                  params: { courseId, gradeId: rootSnapshot.id },
-                }"
-              >
-                {{ formatPct(rootSnapshot.override?.score ?? rootSnapshot.score) }}
-              </router-link>
+              <i18n-t keypath="common.pair" scope="global">
+                <template #label>{{ t('grades.gradebook.lastWritten') }}</template>
+                <template #value>
+                  <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: rootSnapshot.id } }">{{
+                    formatPct(rootSnapshot.override?.score ?? rootSnapshot.score)
+                  }}</router-link>
+                </template>
+              </i18n-t>
               <span v-if="rootSnapshot.override" class="app-muted">{{
                 t('grades.override.computed', { value: formatPct(rootSnapshot.score) })
               }}</span>

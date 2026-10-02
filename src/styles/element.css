@@ -496,7 +496,10 @@ html.dark .el-card {
 .el-table tr > .el-table__cell:is(.el-table-fixed-column--left, .el-table-fixed-column--right) {
   background-color: var(--app-table-ground);
 }
-.el-table .el-table__body tr:is(:hover, .hover-row) > .el-table__cell:is(.el-table-fixed-column--left, .el-table-fixed-column--right) {
+.el-table
+  .el-table__body
+  tr:is(:hover, .hover-row)
+  > .el-table__cell:is(.el-table-fixed-column--left, .el-table-fixed-column--right) {
   background-color: var(--el-table-row-hover-bg-color);
 }
 /* Figures in a column of figures (right-aligned), and wherever a number is

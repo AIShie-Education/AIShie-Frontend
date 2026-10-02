@@ -210,7 +210,7 @@ describe('a key’s trial that failed', () => {
     expect(keyTrialDetail(away, t)).toBe('')
     setLocale('zh-Hant')
     expect(keyTrialText(away, t, { provider: 'OpenAI', model: 'm' })).toBe(
-      '金鑰未通過試用：無法連接 OpenAI。請再試一次。',
+      '金鑰未通過試用：無法連接OpenAI。請再試一次。',
     )
   })
 
