@@ -3,7 +3,7 @@
 // phone, showing one file of those it was opened on (viewer.ts), with the
 // previous and the next, its download (under its name), "Download as PDF"
 // where it is text, and its close button. It works from the keyboard: Tab
-// stays in it, Escape closes it (focus goes back to what opened it), and the
+// stays in it, Escape or back closes it (focus goes back to what opened it), and the
 // left and right arrow keys go to the previous and the next file, except
 // where they move something of their own (a field, a player, a page or an
 // image wider than the window).
@@ -44,6 +44,7 @@ import PrintButton from '@/components/PrintButton.vue'
 import { toApiError } from '@/composables/useAsync'
 import { errorMessage, notifyError } from '@/composables/useErrors'
 import { announce } from '@/composables/useWrite'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { usePhoneScreen } from '@/composables/useMediaQuery'
 import { useRuntime, type UseRuntime } from '@/composables/useRuntime'
 import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
@@ -86,6 +87,8 @@ const PdfView = defineAsyncComponent(() => import('./PdfView.vue'))
 
 const { t, locale } = useI18n()
 const state = previewState()
+// Back closes it, on a phone as on a desktop: it is laid over the page, which it never outlives.
+useBackCloses(() => state.open, closePreview)
 const phone = usePhoneScreen()
 // Whether anything transcribes: a text waiting for a transcriber that is off is said to be none.
 // Asked of the runtime only once an Office file is shown (useRuntime asks it on first use), so that
