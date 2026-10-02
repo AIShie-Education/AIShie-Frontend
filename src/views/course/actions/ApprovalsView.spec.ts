@@ -180,9 +180,11 @@ describe('ApprovalsView, for a student who owns an agent', () => {
     answer([proposal('p2', false, 'grade.submit')])
     await mountAsStudent()
     const [card] = cards()
-    expect(button(card!, 'Approve')!.disabled).toBe(true)
+    // One sentence says who decides it, and nothing is offered to press but withdrawing it.
+    expect(button(card!, 'Approve')).toBeFalsy()
+    expect(button(card!, 'Reject')).toBeFalsy()
     expect(card!.querySelector('.decide-panel__blocked')!.textContent).toContain(
-      'your own level for it is lower than autonomous',
+      'Decided by the course’s teaching staff: you could not do this yourself without someone’s confirmation',
     )
     write.mockResolvedValueOnce({
       status: 'executed',

@@ -171,6 +171,27 @@ function onDone(a: ActionRow, d: Done, which: Tab) {
 function dismiss(key: number) {
   recent.value = recent.value.filter((r) => r.key !== key)
 }
+
+// The page's rules (what deciding does, who may decide what) are one
+// disclosure under its title: open the first time the page is shown in this
+// browser, and kept as the person leaves it after that.
+const RULES_KEY = 'aishie.approvalsRules'
+function rulesWereClosed(): boolean {
+  try {
+    return localStorage.getItem(RULES_KEY) === 'closed'
+  } catch {
+    return false
+  }
+}
+const rulesOpen = ref(!rulesWereClosed())
+function toggleRules() {
+  rulesOpen.value = !rulesOpen.value
+  try {
+    localStorage.setItem(RULES_KEY, rulesOpen.value ? 'open' : 'closed')
+  } catch {
+    // Not remembered: it opens again next time.
+  }
+}
 </script>
 
 <template>
@@ -188,17 +209,33 @@ function dismiss(key: number) {
           <el-tag type="warning" effect="plain">{{ t('actions.approvals.decisionsNeedApproval') }}</el-tag>
         </el-tooltip>
       </template>
+      <el-button
+        text
+        class="approvals__rules-toggle"
+        :aria-expanded="rulesOpen ? 'true' : 'false'"
+        aria-controls="approvals-rules"
+        @click="toggleRules"
+      >
+        <span>{{ t('actions.approvals.rules') }}</span>
+        <el-icon class="el-icon--right"><InfoFilled /></el-icon>
+      </el-button>
       <el-button :loading="proposed.loading.value || review.loading.value" @click="refresh">
         <el-icon><Refresh /></el-icon>
         <span>{{ t('common.actions.refresh') }}</span>
       </el-button>
     </PageHeader>
 
-    <el-alert v-if="agentsOnly" type="info" :closable="false" show-icon class="approvals__owner">
-      <template #title>{{ t('actions.approvals.agentsIntroTitle') }}</template>
-      <p class="approvals__owner-text">{{ t('actions.approvals.agentsIntro') }}</p>
-      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('actions.mine.title') }}</router-link>
-    </el-alert>
+    <section v-if="rulesOpen" id="approvals-rules" class="approvals__rules" :aria-label="t('actions.approvals.rules')">
+      <ul class="approvals__rules-list">
+        <li>{{ agentsOnly ? t('actions.approvals.agentsProposedHelp') : t('actions.approvals.proposedHelp') }}</li>
+        <li>{{ agentsOnly ? t('actions.approvals.agentsReviewHelp') : t('actions.approvals.reviewHelp') }}</li>
+        <li>{{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}</li>
+        <li>{{ t('actions.approvals.oldestFirst') }}</li>
+      </ul>
+      <router-link v-if="agentsOnly" :to="{ name: 'course-my-actions', params: { courseId } }">
+        {{ t('actions.mine.title') }}
+      </router-link>
+    </section>
 
     <section v-if="recent.length" class="app-card approvals__recent">
       <h2 class="app-card__title">
@@ -232,13 +269,6 @@ function dismiss(key: number) {
               />
             </span>
           </template>
-          <p class="approvals__help">
-            {{ agentsOnly ? t('actions.approvals.agentsProposedHelp') : t('actions.approvals.proposedHelp') }}
-          </p>
-          <p class="approvals__help approvals__help--small">
-            <el-icon><Sort /></el-icon> {{ t('actions.approvals.oldestFirst') }} ·
-            {{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}
-          </p>
           <AsyncState
             :loading="proposed.loading.value && !proposed.items.value.length"
             :error="proposed.error.value"
@@ -269,13 +299,6 @@ function dismiss(key: number) {
               <el-badge v-if="review.items.value.length" :value="count(review)" type="primary" class="approvals__badge" />
             </span>
           </template>
-          <p class="approvals__help">
-            {{ agentsOnly ? t('actions.approvals.agentsReviewHelp') : t('actions.approvals.reviewHelp') }}
-          </p>
-          <p class="approvals__help approvals__help--small">
-            <el-icon><Sort /></el-icon> {{ t('actions.approvals.oldestFirst') }} ·
-            {{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}
-          </p>
           <AsyncState
             :loading="review.loading.value && !review.items.value.length"
             :error="review.error.value"
@@ -304,12 +327,25 @@ function dismiss(key: number) {
 </template>
 
 <style scoped>
-.approvals__owner {
+.approvals__rules {
   margin-bottom: 16px;
-}
-.approvals__owner-text {
-  margin: 0 0 4px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--app-indigo-line);
+  border-radius: 0 var(--app-radius-item) var(--app-radius-item) 0;
+  background: color-mix(in srgb, var(--app-indigo-tint) 50%, transparent);
+  font-size: 14px;
   line-height: 1.6;
+  color: var(--app-ink-2);
+}
+.approvals__rules-list {
+  margin: 0 0 4px;
+  padding-left: 1.2em;
+}
+.approvals__rules-list li + li {
+  margin-top: 4px;
+}
+.approvals__rules-toggle .el-icon {
+  color: var(--app-ink-3);
 }
 .approvals__tab {
   display: inline-flex;
@@ -328,17 +364,6 @@ function dismiss(key: number) {
   font-size: 13px;
   line-height: 1.6;
   color: var(--el-text-color-secondary);
-}
-.approvals__help--small {
-  font-size: 12px;
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-  margin-bottom: 16px;
-}
-.approvals__help--small .el-icon {
-  margin-top: 3px;
-  flex-shrink: 0;
 }
 .approvals__list {
   display: flex;

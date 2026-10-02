@@ -408,6 +408,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   approving now would refuse), with the refusal it would meet (`details.refusal`) in the reader's
   words where the app has them, and Core's alone for a bare `forbidden`; `reasonText()` says either
   in the same words where a decision refused so is listed, as the failed action Core records.
+  In the queues, an agent's action that is not its owner's to decide says so to the owner in one
+  sentence naming who decides (the people whose seat decides, by name where the member list is
+  readable, else "the course's teaching staff"), with no Approve or Reject to press. The approvals
+  page says its rules once, in a disclosure under its title (「規則」), open the first time it is
+  shown and then kept as it was left (`aishie.approvalsRules`), not again over each tab.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous

@@ -21,9 +21,7 @@ export default {
     stale: 'Someone else has dealt with this in the meantime. The list has been refreshed.',
     agentsTitle: 'Your agents’ proposals',
     agentsSubtitle: 'What your agents proposed in this course, or did under review: yours to decide where you could have done it yourself.',
-    agentsIntroTitle: 'You decide what your own agents do here, where you could have done it yourself',
-    agentsIntro:
-      'Your agents act only for you. What one of them proposes, you approve or reject here wherever you could have done it without anyone’s confirmation: it is then carried out at once, as your own doing. Anything else is for someone else in the course to decide, and says why. You may withdraw any of its proposals while it waits.',
+    rules: 'Rules',
     agentsProposedHelp:
       'Nothing here has happened yet. Approving carries it out now, as your agent, once the system has checked its permissions again; withdrawing cancels it.',
     agentsReviewHelp:
@@ -397,13 +395,13 @@ export default {
       closesOwnEscalation: 'Approving this would close an escalation you raised, which is for someone else to do. You can still reject it.',
       ownAgent:
         'This was done by your own party — the person whose agent you are, or another of their agents — and a person and their agents count as one, so someone else deals with it.',
-      ownAgentLevel:
-        'Your agent did this, and it is not yours to decide: you could not have done it yourself without someone’s confirmation (your own level for it is lower than autonomous, or it is beyond your reach), or, for a proposal, approving it now would be refused. So someone else in the course decides it.',
+      ownAgentLevel: 'Decided by {who}: you could not do this yourself without someone’s confirmation, or approving it now would be refused.',
     },
     ruleNote: 'Nobody decides or reviews their own action — from any seat they have held, and not at one remove either.',
     proposedNotice: 'Your decision is waiting for approval',
     viewDecision: 'View your decision',
     ownerRuleNote: 'You decide what your agent did only where you could have done it yourself without anyone’s confirmation.',
+    teachingStaff: 'the course’s teaching staff',
     asOwner: 'You decide this as its owner: it is carried out at once, as your own doing.',
   },
   outcome: {
