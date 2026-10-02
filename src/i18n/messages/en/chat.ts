@@ -263,6 +263,54 @@ export default {
     sharedNote: 'It answers other members too: what you write here it may repeat to them.',
     note: 'Every message is written through an action, and the record of it keeps the text, even after it is withdrawn.',
   },
+  // Who reads a conversation and where an agent sends it (AIShie-Frontend#79; components/chat/privacy.ts):
+  // a short line under the composer, its points on a new conversation the first time, the whole notice behind More.
+  privacy: {
+    more: 'More',
+    moreLabel: 'More: who reads this conversation, and where it goes',
+    title: 'Who reads this, and where it goes',
+    routeTitle: 'Where it goes to be answered',
+    keptTitle: 'What is kept',
+    firstTitle: 'Before you ask',
+    gotIt: 'Got it',
+    line: {
+      model:
+        'Course staff and site administrators can read this conversation. {name} sends it to {provider} to answer.',
+      runtime:
+        'Course staff and site administrators can read this conversation. {name} sends it to its AI model’s provider to answer.',
+      mcp: 'Course staff and site administrators can read this conversation. {name} answers from its owner’s own tools.',
+      unknown:
+        'Course staff and site administrators can read this conversation, and it goes to {name}’s AI model to be answered.',
+    },
+    points: {
+      readers: 'Course staff can read this conversation, and the site’s administrators can export it for audit.',
+      model: '{name} sends what you write here to {provider}, its AI model’s provider, to answer it.',
+      runtime: '{name} sends what you write here to its AI model’s provider to answer it.',
+      mcp: '{name} is used from its owner’s own tools, which may send what you write to any AI service they use.',
+      unknown: 'What you write here goes to {name}’s AI model to be answered.',
+      kept: 'Nothing here is deleted: a message you withdraw is hidden, but kept.',
+    },
+    route: {
+      hosted:
+        '{name} is hosted on AIshie. To answer, AIshie’s agent runtime sends the messages of this conversation, the files attached to them, and what {name} reads in the course to its AI model.',
+      school: 'That model is {model}, from {provider}, on the school’s plan.',
+      own: 'That model is {model}, from {provider}, on your own API key.',
+      fallback:
+        'When the school’s model cannot answer (today’s allowance is used up, or it fails), your own model answers instead: {model}, from {provider}.',
+      unknownModel:
+        'That is the model chosen for {name}, on the school’s plan or its owner’s own key, so it goes to that model’s provider. This page cannot show you which provider it is.',
+      mcp: '{name} has MCP access: it is used from its owner’s own tools, which read this conversation from AIshie and answer it. Where they send what they read is up to its owner, and AIshie cannot tell.',
+      unknown:
+        '{name} answers through an AI model: AIshie’s agent runtime, or its owner’s own tools, send what is written here to that model, and so to its provider. This page cannot show you which.',
+    },
+    kept: {
+      notDeleted: 'Conversations are never deleted. A closed one can still be read.',
+      withdrawn:
+        'A withdrawn message is hidden here, but its text and files are kept: in the record of the action that wrote it, and in exports for audit.',
+      withdrawnModel:
+        'Once a message is withdrawn, AIshie’s agent runtime no longer sends it to {name}’s model; what was sent before cannot be taken back.',
+    },
+  },
   message: {
     retract: 'Withdraw',
     // Under a message, on hover: copy it (as Markdown), and take the question awaiting its answer back to edit it.

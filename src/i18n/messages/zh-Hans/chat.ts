@@ -253,6 +253,48 @@ export default {
     sharedNote: '对方也会回答其他成员：你在这里写的内容，它可能会转述给他们。',
     note: '每条消息都经由一项操作写入，其记录会保留原文，即使消息已被撤回。',
   },
+  // Who reads a conversation and where an agent sends it (AIShie-Frontend#79; components/chat/privacy.ts):
+  // a short line under the composer, its points on a new conversation the first time, the whole notice behind More.
+  privacy: {
+    more: '详情',
+    moreLabel: '详情：谁会阅读这段对话、内容会发送到哪里',
+    title: '谁会阅读，内容会发送到哪里',
+    routeTitle: '内容会发送到哪里生成回答',
+    keptTitle: '会保留什么',
+    firstTitle: '提问之前',
+    gotIt: '知道了',
+    line: {
+      model: '课程教职员和网站管理员可以阅读这段对话。{name} 会把内容发送给 {provider} 来生成回答。',
+      runtime: '课程教职员和网站管理员可以阅读这段对话。{name} 会把内容发送给其 AI 模型的供应商来生成回答。',
+      mcp: '课程教职员和网站管理员可以阅读这段对话。{name} 通过其拥有者自己的工具回答。',
+      unknown: '课程教职员和网站管理员可以阅读这段对话，内容会发送给 {name} 的 AI 模型来生成回答。',
+    },
+    points: {
+      readers: '课程教职员可以阅读这段对话，网站管理员还可以导出用于审计。',
+      model: '{name} 会把你在这里写的内容发送给其 AI 模型的供应商 {provider} 来生成回答。',
+      runtime: '{name} 会把你在这里写的内容发送给其 AI 模型的供应商来生成回答。',
+      mcp: '{name} 由其拥有者自己的工具使用，这些工具可能把你写的内容发送给它们使用的任何 AI 服务。',
+      unknown: '你在这里写的内容会发送给 {name} 的 AI 模型来生成回答。',
+      kept: '这里的内容不会被删除：你撤回的消息会被隐藏，但仍会保留。',
+    },
+    route: {
+      hosted:
+        '{name} 由 AIshie 托管。为了生成回答，AIshie 的运行环境会把这段对话的消息、消息附带的文件，以及 {name} 在课程中读取的内容发送给它的 AI 模型。',
+      school: '该模型是学校方案中 {provider} 的 {model}。',
+      own: '该模型是 {provider} 的 {model}，使用你自己的 API 密钥。',
+      fallback: '学校的模型无法回答时（今天的额度已用完，或模型出错），会改由你自己的模型回答：{provider} 的 {model}。',
+      unknownModel:
+        '该模型是为 {name} 选定的模型，来自学校方案或其拥有者自己的密钥，因此内容会发送给该模型的供应商。此页面无法显示是哪一家供应商。',
+      mcp: '{name} 使用 MCP 访问：它由其拥有者自己的工具使用，这些工具会从 AIshie 读取这段对话并回答。它们把读到的内容发送到哪里，由拥有者决定，AIshie 无从得知。',
+      unknown:
+        '{name} 通过 AI 模型回答：AIshie 的运行环境或其拥有者自己的工具，会把这里写的内容发送给该模型，也就是发送给其供应商。此页面无法显示是哪一家。',
+    },
+    kept: {
+      notDeleted: '对话永远不会被删除。已关闭的对话仍可阅读。',
+      withdrawn: '撤回的消息会在这里隐藏，但其文字和文件仍会保留：保留在写入它的操作记录中，以及用于审计的导出文件中。',
+      withdrawnModel: '消息撤回后，AIshie 的运行环境不会再把它发送给 {name} 的模型；之前已发送的内容无法收回。',
+    },
+  },
   message: {
     retract: '撤回',
     // Under a message, on hover: copy it (as Markdown), and take the question awaiting its answer back to edit it.
