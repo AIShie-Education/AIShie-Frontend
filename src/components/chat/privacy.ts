@@ -9,15 +9,23 @@
 //   decides actions in the course (through each message's action), the
 //   respondent's other askers where it answers others, and, of every
 //   conversation, the site's administrators and the course's department's,
-//   who may export it for audit (docs/schema.md §2.8).
+//   who may export it for audit (docs/schema.md §2.8). Whoever decides
+//   actions in the course may be an agent (a seat may hold action_decide at
+//   confirm_required, §2.2), so the short line and the points name such
+//   agents among the readers, and the notice says where they send it.
 // - Nothing in a conversation is deleted: no conversation is, messages are
-//   append-only, and a withdrawn message keeps its text and files, in the
-//   action that wrote it and in an export for audit (§2.8).
+//   append-only, and a withdrawn message keeps its text, in the action that
+//   wrote it and in an export for audit, and its files, which an export
+//   describes but holds none of the bytes of (§2.8).
 // - An agent hosted on AIshie answers through the runtime, which sends the
 //   conversation's messages (a withdrawn one as "[message retracted]"), the
 //   files it reads and what it reads in the course to the agent's model:
 //   the school's plan's, with the owner's own model as its fallback, or the
-//   owner's own (the runtime's design, §6 and D8). Which model that is the
+//   owner's own (the runtime's design, §6 and D8); on the school's plan the
+//   fallback answers too when the school's model cannot (§5.3), so the line
+//   names both providers where they differ. The text the runtime reads by
+//   OCR from an attached image or scan it keeps 180 days, withdrawn or not
+//   (§4, OCR; §8). Which model that is the
 //   runtime tells the agent's owner alone (GET /agents), so a provider is
 //   named only to the owner; anyone else is told that a model's provider
 //   receives it, never which.
@@ -103,7 +111,9 @@ export interface PrivacyNotice {
   line: Said
   /** Who can read it, as the chat words Core's visible_to. */
   readers: VisibleToLine[]
-  /** Where it goes to be answered. */
+  /** Under the readers: where an agent among them sends what it reads; null where none may be. */
+  readersNote: Said | null
+  /** Where it goes to be answered: none where the respondent is a person (a conversation from before agents alone). */
   route: Said[]
   /** What is kept of it. */
   kept: Said[]
@@ -114,6 +124,8 @@ export interface PrivacyNotice {
 export interface PrivacyFacts {
   /** The agent's name. */
   name: string
+  /** The respondent is an agent (the default); false for a person, of a conversation from before. */
+  agent?: boolean
   /** Core's visible_to, once read; null before (a new conversation). */
   visibleTo?: readonly string[] | null
   /** The respondent answers others too (Core says so of any but the opener's own agent). */
@@ -130,8 +142,19 @@ export function privacyNotice(f: PrivacyFacts): PrivacyNotice {
   const name = f.name
   const label = f.providerName ?? ((p: string) => p)
   const readers = visibleToLines(f.visibleTo, { answersOthers: f.answersOthers })
-  const kind: RouteKind =
-    f.hosting === 'mcp' ? 'mcp' : f.hosting === 'runtime' ? (f.models ? 'model' : 'runtime') : 'unknown'
+  const agent = f.agent ?? true
+  const readersNote = readers.some((l) => 'key' in l && (l.key === 'overseers' || l.key === 'actionRecord'))
+    ? { key: 'agentReaders', params: {} }
+    : null
+  const kind: RouteKind = !agent
+    ? 'unknown'
+    : f.hosting === 'mcp'
+      ? 'mcp'
+      : f.hosting === 'runtime'
+        ? f.models
+          ? 'model'
+          : 'runtime'
+        : 'unknown'
 
   const route: Said[] = []
   const kept: Said[] = [
@@ -144,8 +167,15 @@ export function privacyNotice(f: PrivacyFacts): PrivacyNotice {
     case 'model': {
       const m = f.models!
       const provider = label(m.model.provider)
-      line = { key: 'line.model', params: { name, provider } }
-      goes = { key: 'points.model', params: { name, provider } }
+      // The fallback's provider too, where it is another: it answers when the school's model cannot.
+      const fallbackProvider = m.fallback ? label(m.fallback.provider) : null
+      if (fallbackProvider && m.fallback!.provider !== m.model.provider) {
+        line = { key: 'line.modelFallback', params: { name, provider, fallbackProvider } }
+        goes = { key: 'points.modelFallback', params: { name, provider, fallbackProvider } }
+      } else {
+        line = { key: 'line.model', params: { name, provider } }
+        goes = { key: 'points.model', params: { name, provider } }
+      }
       route.push({ key: 'route.hosted', params: { name } })
       route.push({
         key: m.plan === 'school' ? 'route.school' : 'route.own',
@@ -172,15 +202,20 @@ export function privacyNotice(f: PrivacyFacts): PrivacyNotice {
     default:
       line = { key: 'line.unknown', params: { name } }
       goes = { key: 'points.unknown', params: { name } }
-      route.push({ key: 'route.unknown', params: { name } })
+      if (agent) route.push({ key: 'route.unknown', params: { name } })
   }
-  // The runtime sends a withdrawn message to the model no more; what it sent before stays sent.
-  if (kind === 'model' || kind === 'runtime') kept.push({ key: 'kept.withdrawnModel', params: { name } })
+  // The runtime sends a withdrawn message to the model no more; what it sent before stays sent. What
+  // it read by OCR of an attached image or scan it keeps, withdrawn or not.
+  if (kind === 'model' || kind === 'runtime') {
+    kept.push({ key: 'kept.withdrawnModel', params: { name } })
+    kept.push({ key: 'kept.ocr', params: {} })
+  }
 
   return {
     kind,
     line,
     readers,
+    readersNote,
     route,
     kept,
     points: [{ key: 'points.readers', params: {} }, goes, { key: 'points.kept', params: {} }],

@@ -293,6 +293,7 @@ const answer = useAnswerModels({
 const privacy = computed(() =>
   privacyNotice({
     name: other.value?.name ?? '',
+    agent: other.value?.kind === 'agent',
     visibleTo: conv?.visibleTo.value,
     answersOthers: answersOthers.value,
     hosting: hosting.value,
@@ -309,6 +310,11 @@ const firstSeen = ref(privacySeen(actorId.value))
 function seenPrivacy() {
   notePrivacySeen(actorId.value)
   firstSeen.value = true
+}
+/** Got it: the points give way to the line, and the new conversation to its ways to begin, at its foot. */
+function gotPrivacy() {
+  seenPrivacy()
+  void nextTick(toBottom)
 }
 /** The one asking, with an agent: they are told, where they ask, who reads it and where it goes. */
 const asksAgent = computed(() => role.value === 'opener' && other.value?.kind === 'agent')
@@ -402,11 +408,23 @@ watch(
   },
   { flush: 'post' },
 )
-// A conversation opens on its newest message; a new one at its top, where
-// who it is with is said (and, the first time, who reads it).
-onMounted(() => {
-  if (conv) void nextTick(toBottom)
-})
+/**
+ * The first time's points, brought into view whole on a new conversation:
+ * scrolled down until their foot (More, Got it) shows, never past their top.
+ */
+const firstPoints = ref<HTMLElement | null>(null)
+function revealFirstPoints() {
+  const el = scroller.value
+  const box = firstPoints.value
+  if (!el || !box) return
+  const view = el.getBoundingClientRect()
+  const b = box.getBoundingClientRect()
+  const below = b.bottom - view.bottom
+  if (below > 0) el.scrollTop += Math.min(below, Math.max(0, b.top - view.top))
+}
+// A conversation opens on its newest message, a new one on its ways to
+// begin; the first time, on the points instead, whole.
+onMounted(() => void nextTick(showsFirstPoints.value ? revealFirstPoints : toBottom))
 
 async function older() {
   if (!conv) return
@@ -925,7 +943,7 @@ const closedLine = computed(() => {
 
     <el-dialog
       v-model="privacyOpen"
-      :title="t('chat.privacy.title')"
+      :title="t(other?.kind === 'agent' ? 'chat.privacy.title' : 'chat.visibleTo.title')"
       width="min(440px, calc(100vw - 32px))"
       append-to-body
       align-center
@@ -1009,7 +1027,12 @@ const closedLine = computed(() => {
           <p class="chat-pane__start-title">{{ t('chat.new.intro', { name: respondent.display_name }) }}</p>
           <p v-if="respondent.is_my_delegate" class="app-muted">{{ t('chat.new.yourAgent') }}</p>
           <p v-if="sharedNote" class="chat-pane__shared">{{ t('chat.visibleTo.sharedNote') }}</p>
-          <section v-if="showsFirstPoints" class="chat-pane__privacy-first" aria-labelledby="chat-pane-privacy-first">
+          <section
+            v-if="showsFirstPoints"
+            ref="firstPoints"
+            class="chat-pane__privacy-first"
+            aria-labelledby="chat-pane-privacy-first"
+          >
             <h3 id="chat-pane-privacy-first" class="chat-pane__privacy-first-title">
               <el-icon aria-hidden="true"><Lock /></el-icon>{{ t('chat.privacy.firstTitle') }}
             </h3>
@@ -1020,7 +1043,7 @@ const closedLine = computed(() => {
               <el-button link type="primary" size="small" @click="privacyOpen = true">
                 {{ t('chat.privacy.more') }}
               </el-button>
-              <el-button size="small" @click="seenPrivacy">{{ t('chat.privacy.gotIt') }}</el-button>
+              <el-button size="small" @click="gotPrivacy">{{ t('chat.privacy.gotIt') }}</el-button>
             </div>
           </section>
           <div

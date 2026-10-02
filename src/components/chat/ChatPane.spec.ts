@@ -909,9 +909,7 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(MCP)
     setLocale('zh-Hant')
     await flushPromises()
-    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(
-      '這個代理由擁有者自己的工具使用，無法在這裡向它提問。',
-    )
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe('這個代理由擁有者自己的工具使用，無法在這裡向它提問。')
   })
 
   it('says so when a new conversation is refused because the agent is not running now', async () => {
@@ -972,7 +970,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
     await flushPromises()
     const line = w.find('.chat-pane__privacy')
     expect(line.find('.chat-pane__privacy-text').text()).toBe(
-      'Course staff and site administrators can read this conversation. Course tutor sends it to its AI model’s provider to answer.',
+      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Course tutor sends it to its AI model’s provider to answer.',
     )
     expect(line.find('button').text()).toBe('More')
     // It follows the composer, and nobody else's agent is asked of the runtime.
@@ -990,7 +988,10 @@ describe('ChatPane: who reads it, and where it goes', () => {
     expect(text).toContain('Course tutor is hosted on AIshie.')
     expect(text).toContain('This page cannot show you which provider it is.')
     expect(text).toContain('Conversations are never deleted.')
-    expect(text).toContain('A withdrawn message is hidden here, but its text and files are kept')
+    // Core says only the two read this one: no agent deciding actions is spoken of.
+    expect(text).not.toContain('An agent that decides actions')
+    expect(text).toContain('A withdrawn message is hidden here, but kept')
+    expect(text).toContain('kept for up to 180 days')
   })
 
   it('names the provider of the caller’s own agent, as the runtime tells its owner', async () => {
@@ -1037,7 +1038,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
     const first = w.find('.chat-pane__privacy-first')
     expect(first.find('h3').text()).toBe('Before you ask')
     expect(first.findAll('li').map((l) => l.text())).toEqual([
-      'Course staff can read this conversation, and the site’s administrators can export it for audit.',
+      'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
       'Course tutor sends what you write here to its AI model’s provider to answer it.',
       'Nothing here is deleted: a message you withdraw is hidden, but kept.',
     ])
@@ -1067,6 +1068,29 @@ describe('ChatPane: who reads it, and where it goes', () => {
     expect(localStorage.getItem('aishie.chatPrivacySeen.p1')).toBe('1')
   })
 
+  it('says nothing of a model of a conversation with a person, from before', async () => {
+    seat('student')
+    signedIn()
+    server.view = view({
+      status: 'closed',
+      state: 'closed',
+      closed_reason: 'conversations_are_with_agents',
+      respondent: { ...view().respondent, member_id: 'ta', display_name: 'Ms Wong', kind: 'human', last_seen_at: null },
+    })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    await w.findAll('.chat-pane__head [role="menuitem"]')[0]!.trigger('click')
+    await flushPromises()
+    const notice = document.body.querySelector('.chat-pane__readers')!
+    expect(notice.querySelector('.el-dialog__title')?.textContent).toBe('Who can read this conversation')
+    expect(notice.querySelector('.chat-privacy__route')).toBeNull()
+    const text = notice.textContent ?? ''
+    expect(text).toContain('The two taking part')
+    expect(text).toContain('Conversations are never deleted.')
+    expect(text).not.toContain('AI model')
+    expect(text).not.toContain('180 days')
+  })
+
   it('in Traditional Chinese', async () => {
     seat('student')
     signedIn()
@@ -1075,7 +1099,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
     await flushPromises()
     const line = w.find('.chat-pane__privacy')
     expect(line.find('.chat-pane__privacy-text').text()).toBe(
-      '課程教職員及網站管理員可閱讀這段對話。Course tutor 會把內容傳送至其 AI 模型的供應商以作答。',
+      '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員，都可閱讀這段對話。Course tutor 會把內容傳送至其 AI 模型的供應商以作答。',
     )
     expect(line.find('button').text()).toBe('詳情')
   })
@@ -1334,5 +1358,80 @@ describe('ChatComposer', () => {
     expect(document.body.querySelector('.el-message')?.textContent).toContain(
       'Its files were withdrawn with it: attach them again to send them.',
     )
+  })
+})
+
+describe('ChatPane: where a conversation opens', () => {
+  // jsdom lays nothing out: each element's scroll position is kept here, its height is 900, and the
+  // first time's points and the messages are placed as a test says.
+  const tops = new WeakMap<Element, number>()
+  let rects: Record<string, { top: number; bottom: number }> = {}
+  const spies: { mockRestore(): void }[] = []
+  beforeEach(() => {
+    rects = {}
+    spies.push(
+      vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockReturnValue(900),
+      vi.spyOn(Element.prototype, 'scrollTop', 'get').mockImplementation(function (this: Element) {
+        return tops.get(this) ?? 0
+      }),
+      vi.spyOn(Element.prototype, 'scrollTop', 'set').mockImplementation(function (this: Element, v: number) {
+        tops.set(this, v)
+      }),
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        const at = Object.entries(rects).find(([c]) => this.classList.contains(c))?.[1] ?? { top: 0, bottom: 0 }
+        return { ...at, left: 0, right: 400, width: 400, height: at.bottom - at.top, x: 0, y: at.top } as DOMRect
+      }),
+    )
+  })
+  afterEach(() => {
+    for (const s of spies.splice(0)) s.mockRestore()
+  })
+  function signedIn() {
+    useSessionStore().me = { id: 'p1', kind: 'human', display_name: 'Chan Tai Man' } as never
+  }
+  const scrollTop = (w: ReturnType<typeof mount>) => w.find('.chat-pane__messages').element.scrollTop
+
+  it('opens a conversation under way on its newest message', async () => {
+    seat('student')
+    signedIn()
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(scrollTop(w)).toBe(900)
+  })
+
+  it('opens a new conversation on its ways to begin once the points have been seen', async () => {
+    seat('student')
+    signedIn()
+    localStorage.setItem('aishie.chatPrivacySeen.p1', '1')
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__privacy-first').exists()).toBe(false)
+    expect(scrollTop(w)).toBe(900)
+  })
+
+  it('the first time, brings the points into view whole, their foot included, and after Got it goes to the foot', async () => {
+    seat('student')
+    signedIn()
+    // The points run 120px below the messages' foot, and start 150px under their top.
+    rects = { 'chat-pane__messages': { top: 100, bottom: 400 }, 'chat-pane__privacy-first': { top: 250, bottom: 520 } }
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__privacy-first').exists()).toBe(true)
+    expect(scrollTop(w)).toBe(120)
+    await w
+      .findAll('.chat-pane__privacy-first button')
+      .find((b) => b.text() === 'Got it')!
+      .trigger('click')
+    await flushPromises()
+    expect(scrollTop(w)).toBe(900)
+  })
+
+  it('never scrolls past the points’ top where they are taller than the messages’ window', async () => {
+    seat('student')
+    signedIn()
+    rects = { 'chat-pane__messages': { top: 100, bottom: 400 }, 'chat-pane__privacy-first': { top: 150, bottom: 700 } }
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    expect(scrollTop(w)).toBe(50)
   })
 })

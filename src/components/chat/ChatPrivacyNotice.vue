@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // The whole of what the chat says about a conversation's privacy (privacy.ts):
-// who can read it, as Core says; where it goes to be answered; and what is
-// kept of it. Shown in the pane's dialog, from "More" and the ⋯ menu.
+// who can read it, as Core says, and where an agent among them sends it;
+// where it goes to be answered (said of an agent alone); and what is kept of
+// it. Shown in the pane's dialog, from "More" and the ⋯ menu.
 import { useI18n } from 'vue-i18n'
 import type { PrivacyNotice } from './privacy'
 
@@ -18,8 +19,11 @@ const { t } = useI18n()
           {{ 'key' in line ? t(`chat.visibleTo.${line.key}`) : line.text }}
         </li>
       </ul>
+      <p v-if="notice.readersNote" class="chat-privacy__readers-note">
+        {{ t(`chat.privacy.${notice.readersNote.key}`, notice.readersNote.params) }}
+      </p>
     </section>
-    <section class="chat-privacy__route">
+    <section v-if="notice.route.length" class="chat-privacy__route">
       <h3 class="chat-privacy__heading">{{ t('chat.privacy.routeTitle') }}</h3>
       <p v-for="s in notice.route" :key="s.key">{{ t(`chat.privacy.${s.key}`, s.params) }}</p>
     </section>
@@ -55,6 +59,10 @@ const { t } = useI18n()
 }
 .chat-privacy p {
   margin: 0 0 4px;
+}
+.chat-privacy p.chat-privacy__readers-note {
+  margin-top: 6px;
+  color: var(--el-text-color-secondary);
 }
 .chat-privacy p:last-child {
   margin-bottom: 0;

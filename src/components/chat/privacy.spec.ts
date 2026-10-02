@@ -20,6 +20,7 @@ function words(n: PrivacyNotice, locale: 'en' | 'zh-Hant' | 'zh-Hans' = 'en') {
   return {
     line: t(n.line),
     points: n.points.map(t),
+    readersNote: n.readersNote ? t(n.readersNote) : null,
     route: n.route.map(t).join(' '),
     kept: n.kept.map(t).join(' '),
   }
@@ -49,14 +50,20 @@ describe('privacyNotice: who can read it, for every agent', () => {
       'auditExport',
     ])
     const w = words(n)
-    expect(w.line).toMatch(/^Course staff and site administrators can read this conversation/)
-    expect(w.points[0]).toBe(
-      'Course staff can read this conversation, and the site’s administrators can export it for audit.',
+    // Whoever decides actions in the course may be an agent, and department administrators export too.
+    expect(w.line).toMatch(
+      /^Course staff, agents that decide actions in the course, and site and department administrators can read this conversation/,
     )
-    // Nothing is deleted, and a withdrawn message is kept, for export too.
+    expect(w.points[0]).toBe(
+      'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
+    )
+    expect(w.readersNote).toMatch(/^An agent that decides actions in the course can read this conversation too\./)
+    // Nothing is deleted, and a withdrawn message is kept: its text in exports too, its files listed there, never held.
     expect(w.kept).toContain('Conversations are never deleted.')
-    expect(w.kept).toContain('its text and files are kept')
-    expect(w.kept).toContain('in exports for audit')
+    expect(w.kept).toContain(
+      'its text in the record of the action that wrote it and in exports for audit, and its files on the site, which exports list without their contents.',
+    )
+    expect(w.kept).not.toContain('text and files are kept')
   })
 
   it('takes what Core said once it has, the opener’s own agent answering nobody else', () => {
@@ -81,15 +88,26 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(n.kind).toBe('model')
     const w = words(n)
     expect(w.line).toBe(
-      'Course staff and site administrators can read this conversation. Ken’s helper sends it to DeepSeek to answer.',
+      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Ken’s helper sends it to DeepSeek to answer, or to OpenAI when the school’s model cannot.',
     )
     expect(w.points[1]).toBe(
-      'Ken’s helper sends what you write here to DeepSeek, its AI model’s provider, to answer it.',
+      'Ken’s helper sends what you write here to DeepSeek, its AI model’s provider, to answer it, or to OpenAI when the school’s model cannot.',
     )
     expect(w.route).toContain('Ken’s helper is hosted on AIshie.')
     expect(w.route).toContain('That model is deepseek-chat, from DeepSeek, on the school’s plan.')
     expect(w.route).toContain('your own model answers instead: gpt-5-mini, from OpenAI.')
     expect(w.kept).toContain('no longer sends it to Ken’s helper’s model')
+    expect(w.kept).toContain('reads from an attached image or scanned PDF is kept for up to 180 days')
+  })
+
+  it('names one provider where the school’s model and its fallback come from the same one', () => {
+    const same: AnswerModels = { ...SCHOOL, fallback: { provider: 'deepseek', model: 'deepseek-reasoner' } }
+    const n = privacyNotice({ name: 'Ken’s helper', hosting: 'runtime', models: same, providerName: label })
+    expect(n.line.key).toBe('line.model')
+    expect(words(n).line).toBe(
+      `Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Ken’s helper sends it to DeepSeek to answer.`,
+    )
+    expect(words(n).route).toContain('your own model answers instead: deepseek-reasoner, from DeepSeek.')
   })
 
   it('names the provider of the caller’s own agent on their own key, with no fallback', () => {
@@ -109,12 +127,13 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(n.kind).toBe('runtime')
     const w = words(n)
     expect(w.line).toBe(
-      'Course staff and site administrators can read this conversation. Lab tutor sends it to its AI model’s provider to answer.',
+      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Lab tutor sends it to its AI model’s provider to answer.',
     )
     expect(w.route).toContain('AIshie’s agent runtime sends the messages of this conversation')
     expect(w.route).toContain('This page cannot show you which provider it is.')
     for (const p of Object.values(LABELS)) expect(`${w.line} ${w.route}`).not.toContain(p)
     expect(w.kept).toContain('no longer sends it to Lab tutor’s model')
+    expect(w.kept).toContain('kept for up to 180 days')
   })
 
   it('says an agent with MCP access answers from its owner’s own tools, naming no provider', () => {
@@ -122,12 +141,13 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(n.kind).toBe('mcp')
     const w = words(n)
     expect(w.line).toBe(
-      'Course staff and site administrators can read this conversation. Ken’s notes answers from its owner’s own tools.',
+      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Ken’s notes answers from its owner’s own tools.',
     )
     expect(w.route).toContain('it is used from its owner’s own tools')
     expect(w.route).not.toContain('agent runtime sends')
     // The runtime does not send it, so nothing is said of what the runtime stops sending.
     expect(w.kept).not.toContain('runtime')
+    expect(w.kept).not.toContain('180 days')
   })
 
   it('says only that a model answers where how the agent is run is not known', () => {
@@ -135,17 +155,33 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(n.kind).toBe('unknown')
     const w = words(n)
     expect(w.line).toBe(
-      'Course staff and site administrators can read this conversation, and it goes to Tutor’s AI model to be answered.',
+      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation, and it goes to Tutor’s AI model to be answered.',
     )
     expect(w.route).not.toContain('DeepSeek')
     expect(w.route).not.toContain('deepseek')
   })
 
+  it('says nothing of where it goes, nor of a model, where the respondent is a person', () => {
+    const n = privacyNotice({ name: 'Ms Wong', agent: false, hosting: null, models: SCHOOL })
+    expect(n.route).toEqual([])
+    const w = words(n)
+    expect(w.kept).not.toContain('model')
+    expect(w.kept).not.toContain('180 days')
+    expect(w.kept).toContain('Conversations are never deleted.')
+  })
+
   it.each(['zh-Hant', 'zh-Hans'] as const)('says it in %s', (locale) => {
     const w = words(privacyNotice({ name: '助教', hosting: 'runtime', models: SCHOOL, providerName: label }), locale)
     expect(w.line).toContain('DeepSeek')
-    expect(w.line).toContain(locale === 'zh-Hant' ? '課程教職員及網站管理員' : '课程教职员和网站管理员')
+    expect(w.line).toContain('OpenAI')
+    expect(w.line).toContain(
+      locale === 'zh-Hant'
+        ? '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員'
+        : '课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员',
+    )
     expect(w.route).toContain('deepseek-chat')
+    expect(w.kept).toContain(locale === 'zh-Hant' ? '匯出檔只列出檔案，不含其內容' : '导出文件只列出文件，不包含其内容')
+    expect(w.kept).toContain('180')
   })
 })
 

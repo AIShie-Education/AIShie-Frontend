@@ -272,18 +272,25 @@ export default {
     keptTitle: 'What is kept',
     firstTitle: 'Before you ask',
     gotIt: 'Got it',
+    agentReaders:
+      'An agent that decides actions in the course can read this conversation too. Where it sends what it reads depends on how it is hosted: to its AI model through AIshie’s agent runtime, or to its owner’s own tools.',
     line: {
       model:
-        'Course staff and site administrators can read this conversation. {name} sends it to {provider} to answer.',
+        'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} sends it to {provider} to answer.',
+      modelFallback:
+        'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} sends it to {provider} to answer, or to {fallbackProvider} when the school’s model cannot.',
       runtime:
-        'Course staff and site administrators can read this conversation. {name} sends it to its AI model’s provider to answer.',
-      mcp: 'Course staff and site administrators can read this conversation. {name} answers from its owner’s own tools.',
+        'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} sends it to its AI model’s provider to answer.',
+      mcp: 'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} answers from its owner’s own tools.',
       unknown:
-        'Course staff and site administrators can read this conversation, and it goes to {name}’s AI model to be answered.',
+        'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation, and it goes to {name}’s AI model to be answered.',
     },
     points: {
-      readers: 'Course staff can read this conversation, and the site’s administrators can export it for audit.',
+      readers:
+        'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
       model: '{name} sends what you write here to {provider}, its AI model’s provider, to answer it.',
+      modelFallback:
+        '{name} sends what you write here to {provider}, its AI model’s provider, to answer it, or to {fallbackProvider} when the school’s model cannot.',
       runtime: '{name} sends what you write here to its AI model’s provider to answer it.',
       mcp: '{name} is used from its owner’s own tools, which may send what you write to any AI service they use.',
       unknown: 'What you write here goes to {name}’s AI model to be answered.',
@@ -305,9 +312,10 @@ export default {
     kept: {
       notDeleted: 'Conversations are never deleted. A closed one can still be read.',
       withdrawn:
-        'A withdrawn message is hidden here, but its text and files are kept: in the record of the action that wrote it, and in exports for audit.',
+        'A withdrawn message is hidden here, but kept: its text in the record of the action that wrote it and in exports for audit, and its files on the site, which exports list without their contents.',
       withdrawnModel:
         'Once a message is withdrawn, AIshie’s agent runtime no longer sends it to {name}’s model; what was sent before cannot be taken back.',
+      ocr: 'Text that AIshie’s agent runtime reads from an attached image or scanned PDF is kept for up to 180 days, even after the message is withdrawn.',
     },
   },
   message: {
