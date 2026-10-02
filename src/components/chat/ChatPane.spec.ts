@@ -692,8 +692,9 @@ describe('ChatPane', () => {
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', respondent }, global })
     await flushPromises()
-    // Beside its name, not in a box of its own; and no title to fill in.
-    expect(w.find('.chat-pane__name-row').text()).toMatch(/^Course tutor\s*Never connected$/)
+    // Beside its name and its "AI", not in a box of its own; and no title to fill in. Nothing has run it: paused.
+    expect(w.find('.chat-pane__name-row').text()).toMatch(/^Course tutor\s*AI\s*Paused$/)
+    expect(w.find('.chat-pane__name-row .agent-avatar').exists()).toBe(true)
     expect(w.find('.chat-pane__notice').exists()).toBe(false)
     expect(w.find('.el-alert').exists()).toBe(false)
     expect(w.findAll('input')).toHaveLength(0)
@@ -723,7 +724,7 @@ describe('ChatPane', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const row = w.find('.chat-pane__name-row')
-    expect(row.text()).toMatch(/^Course tutor\s*Last seen 37 minutes ago$/)
+    expect(row.text()).toMatch(/^Course tutor\s*AI\s*Paused$/)
     expect(row.attributes('title')).toBe('Loops')
     // An open conversation shows no state; nothing but the row and the menu in the header.
     expect(row.find('.status-tag, .el-tag').exists()).toBe(false)
@@ -748,7 +749,7 @@ describe('ChatPane', () => {
     await flushPromises()
     // Nothing runs it now: it is waited for, not "thinking", and the line above the composer says nothing more.
     expect(w.find('.chat-pane__notice').exists()).toBe(false)
-    expect(w.find('.chat-pane__presence').text()).toBe('Last seen 3 hours ago')
+    expect(w.find('.chat-pane__presence').text()).toBe('Paused')
     expect(w.find('.chat-pane__typing .chat-status__label').text()).toBe('Waiting for Course tutor…')
     expect(w.find('textarea').exists()).toBe(true)
   })
@@ -823,7 +824,7 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(w.find('.chat-pane__presence').text()).toBe('Online')
+    expect(w.find('.chat-pane__presence').text()).toBe('Can be asked')
     const ta = await type(w, 'One more question')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()

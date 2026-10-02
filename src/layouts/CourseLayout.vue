@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // One course: its header, and the parts of it the caller's seat reaches.
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, markRaw, nextTick, onBeforeUnmount, reactive, ref, watch, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
@@ -9,6 +9,7 @@ import { courseTabClaim } from '@/composables/useCourseTab'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { findCourse } from '@/views/admin/components/adminShared'
 import type { Perm } from '@/api/types'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
 
@@ -27,7 +28,8 @@ watch(
 interface Tab {
   name: string
   label: string
-  icon: string
+  /** An Element Plus icon by its registered name, or a component of the app's own (the agents' seat). */
+  icon: string | Component
   /** Offered when the seat holds any of these (or when that cannot be known). */
   perms?: Perm[]
   /** Route names that count as this tab. */
@@ -44,7 +46,7 @@ const tabs: Tab[] = [
   { name: 'course-approvals', label: 'layout.course.approvals', icon: 'Stamp', perms: ['action_decide'], also: ['course-action'] },
   { name: 'course-members', label: 'layout.course.members', icon: 'UserFilled', perms: ['member_read', 'member_invite'], also: ['course-member'] },
   // Those who manage the members manage the agents; those who decide actions oversee what they answered.
-  { name: 'course-agents', label: 'layout.course.agents', icon: 'Cpu', perms: ['member_manage', 'action_decide'] },
+  { name: 'course-agents', label: 'layout.course.agents', icon: markRaw(AgentSeatIcon), perms: ['member_manage', 'action_decide'] },
   { name: 'course-activity', label: 'layout.course.activity', icon: 'Bell', perms: ['document_read'] },
   { name: 'course-my-actions', label: 'layout.course.myActions', icon: 'List', perms: ['document_read'] },
   { name: 'course-gradebook', label: 'layout.course.gradebook', icon: 'Tickets', perms: ['grade_read'] },

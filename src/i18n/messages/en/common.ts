@@ -72,17 +72,24 @@ export default {
     themeDark: 'Dark',
     themeAuto: 'System',
   },
-  // When an agent was last seen (PresenceText): its last use of a token that still works.
+  // When an agent last connected (PresenceText): its last use of a token that still works. Said of a
+  // program, never as a person's "online". To those who ask it (the chat), whether it can be asked now
+  // (AskableText): askable, or paused.
   presence: {
     never: 'Never connected',
     neverHelp: 'No token of this agent has been used yet: nothing may be running it.',
-    online: 'Online',
+    online: 'Connected',
     onlineHelp: 'Used a token within the last few minutes.',
-    lastSeen: 'Last seen {time}',
+    lastSeen: 'Last connected {time}',
+    askable: 'Can be asked',
+    askableHelp: 'Something runs it now: a question gets an answer.',
+    paused: 'Paused',
+    pausedSince: 'Last connected {time}: nothing seems to be running it now, so an answer may take a while.',
   },
   // An agent, and whose it is (AgentBadge).
   agent: {
-    agent: 'Agent',
+    // The "AI" after an agent's name (AiBadge): its tooltip.
+    aiHint: 'An AI agent, not a person',
     yours: 'Your agent',
     ownersAgent: '{owner}’s agent',
     delegateOf: 'Acts for {owner}, never with more than their seat',

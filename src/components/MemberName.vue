@@ -1,9 +1,13 @@
 <script setup lang="ts">
 // A course member by name, where the caller may read the member list; else
-// "you" for the caller's own seat and a short id for anyone else.
+// "you" for the caller's own seat and a short id for anyone else. With
+// show-kind, an agent is shown as one: its avatar before the name and "AI"
+// after it.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
+import AgentAvatar from './AgentAvatar.vue'
+import AiBadge from './AiBadge.vue'
 import IdText from './IdText.vue'
 
 const props = defineProps<{ id: string | null | undefined; showKind?: boolean }>()
@@ -14,13 +18,15 @@ onMounted(() => void course.ensureMembers())
 const isMe = computed(() => !!props.id && props.id === course.myMemberId)
 const member = computed(() => (props.id ? course.members.get(props.id) : undefined))
 const name = computed(() => course.memberName(props.id))
+const agent = computed(() => props.showKind && member.value?.kind === 'agent')
 </script>
 
 <template>
   <span v-if="!id">—</span>
-  <span v-else-if="name" class="member-name" :title="id">
-    <el-icon v-if="showKind && member?.kind === 'agent'" class="member-name__agent"><Cpu /></el-icon>
+  <span v-else-if="name" class="member-name" :class="{ 'is-agent': agent }" :title="id">
+    <AgentAvatar v-if="agent" :name="name" size="small" />
     {{ name }}
+    <AiBadge v-if="agent" />
     <span v-if="isMe" class="member-name__me">({{ t('common.labels.you') }})</span>
   </span>
   <IdText v-else :id="id" />
@@ -36,7 +42,8 @@ const name = computed(() => course.memberName(props.id))
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
-.member-name__agent {
-  color: var(--el-color-primary);
+/* The avatar and the "AI" stand a little apart from the name. */
+.member-name.is-agent {
+  gap: 6px;
 }
 </style>

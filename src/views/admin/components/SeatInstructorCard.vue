@@ -24,6 +24,8 @@ import { useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ActorSummary from './ActorSummary.vue'
@@ -316,7 +318,8 @@ async function seat() {
       <div v-if="instructorsLoading && !instructors" class="app-muted seat__note">{{ t('common.labels.loading') }}</div>
       <ul v-else-if="instructors?.length" class="seat__people">
         <li v-for="m in instructors" :key="m.id" class="seat__person">
-          <el-icon class="seat__person-icon"><Cpu v-if="m.kind === 'agent'" /><User v-else /></el-icon>
+          <AgentAvatar v-if="m.kind === 'agent'" :name="m.display_name" size="small" />
+          <el-icon v-else class="seat__person-icon"><User /></el-icon>
           <router-link
             v-if="mode === 'directory'"
             :to="{ name: 'admin-actor', params: { actorId: m.actor_id } }"
@@ -325,6 +328,7 @@ async function seat() {
             {{ m.display_name }}
           </router-link>
           <span v-else class="seat__person-name">{{ m.display_name }}</span>
+          <AiBadge v-if="m.kind === 'agent'" />
           <span v-if="m.actor_id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
           <StatusTag v-if="m.status !== 'active'" vocab="memberStatus" :value="m.status" />
         </li>

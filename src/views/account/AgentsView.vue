@@ -22,6 +22,8 @@ import { hostingOf } from '@/utils/agents'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import TimeText from '@/components/TimeText.vue'
 import AboutAgentsCard from './components/agents/AboutAgentsCard.vue'
@@ -141,9 +143,7 @@ function onHosted(_: unknown, actorId: string) {
       >
         <ul class="agents-list">
           <li v-for="a in agents" :key="a.actor_id" class="agents-item" @click="open(a)">
-            <el-avatar :size="36" class="agents-item__avatar" aria-hidden="true">
-              <el-icon><Cpu /></el-icon>
-            </el-avatar>
+            <AgentAvatar :name="a.display_name" size="large" class="agents-item__avatar" />
             <div class="agents-item__main">
               <div class="agents-item__head">
                 <router-link
@@ -153,6 +153,7 @@ function onHosted(_: unknown, actorId: string) {
                 >
                   {{ a.display_name }}
                 </router-link>
+                <AiBadge />
                 <el-tag
                   v-if="agentStanding(a) !== 'active'"
                   :type="STANDING_TAG[agentStanding(a)]"
@@ -232,8 +233,6 @@ function onHosted(_: unknown, actorId: string) {
 }
 .agents-item__avatar {
   flex-shrink: 0;
-  background: var(--el-color-primary-light-8);
-  color: var(--el-color-primary);
 }
 .agents-item__main {
   flex: 1;

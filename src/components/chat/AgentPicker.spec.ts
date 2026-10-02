@@ -96,17 +96,28 @@ describe('AgentPicker', () => {
     expect(none.text()).toContain('No agent here answers your questions yet.')
   })
 
-  it('says what each agent is to the caller, and whether it is running', async () => {
+  it('says what each agent is to the caller, that it is one, and whether it can be asked now', async () => {
     respondents = [
       { ...tutor, last_seen_at: null },
-      { ...tutor, member_id: 'mine', display_name: 'My helper', is_my_delegate: true, answers_course: false },
+      {
+        ...tutor,
+        member_id: 'mine',
+        display_name: 'My helper',
+        is_my_delegate: true,
+        answers_course: false,
+        last_seen_at: new Date().toISOString(),
+      },
     ]
     const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     const rows = w.findAll('button.resp-row')
     expect(rows.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutor', 'My helper'])
     expect(rows[0]!.text()).toContain('Course agent')
-    expect(rows[0]!.text()).toContain('Never connected')
+    expect(rows[0]!.find('.ai-badge').text()).toBe('AI')
+    expect(rows[0]!.find('.agent-avatar').exists()).toBe(true)
+    // Not "online", as a person would be: whether it can be asked, in plain words.
+    expect(rows[0]!.find('.askable').text()).toBe('Paused')
+    expect(rows[1]!.find('.askable').text()).toBe('Can be asked')
     expect(rows[0]!.text()).toContain('It answers other members too')
     expect(rows[1]!.text()).toContain('Personal assistant')
     expect(rows[1]!.text()).toContain('Your agent')

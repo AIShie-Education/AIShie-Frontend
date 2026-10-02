@@ -61,6 +61,9 @@ describe('ChatMessage', () => {
     const w = agent({ body: '## Steps\n\n1. **Read** it\n2. Try `x`' })
     expect(w.classes()).toContain('is-agent')
     expect(w.find('.chat-msg__author').text()).toBe('Course tutor')
+    // As an agent: its avatar before the name and "AI" after it.
+    expect(w.find('.chat-msg__head .agent-avatar').exists()).toBe(true)
+    expect(w.find('.chat-msg__head .ai-badge').text()).toBe('AI')
     expect(w.find('.chat-prose h2').text()).toBe('Steps')
     expect(w.find('.chat-prose ol li strong').text()).toBe('Read')
     expect(w.find('.chat-prose code').text()).toBe('x')
@@ -75,6 +78,7 @@ describe('ChatMessage', () => {
     // Someone else's words (a staff member reading), named.
     const other = person({}, { mine: false, authorName: 'Chan Tai Man' })
     expect(other.find('.chat-msg__author').text()).toBe('Chan Tai Man')
+    expect(other.find('.chat-msg__head .ai-badge').exists()).toBe(false)
   })
 
   it('says the name once for a run of messages', () => {

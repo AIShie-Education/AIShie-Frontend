@@ -1,8 +1,11 @@
 <script setup lang="ts">
-// Whether an agent is connected, from when it last used a token
-// (last_seen_at): "Never connected", "Online" (within a couple of minutes), or
-// "Last seen 3 hours ago" with the exact time on hover. Only agents have it:
-// Core records it for them alone.
+// Whether something runs an agent, from when it last used a token
+// (last_seen_at): "Never connected", "Connected" (within a couple of
+// minutes), or "Last connected 3 hours ago" with the exact time on hover.
+// Only agents have it: Core records it for them alone. It is said of a
+// program, in plain ink with no dot of colour, never as a person's
+// "online": for its owner and those who manage it. Those who ask it are told
+// whether it can be asked now (AskableText, in the chat).
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNow } from '@/composables/useNow'
@@ -13,12 +16,10 @@ const props = withDefaults(
   defineProps<{
     /** last_seen_at as Core sends it; absent means never. */
     value: string | null | undefined
-    /** How recent counts as online. */
+    /** How recent counts as connected. */
     withinMs?: number
-    /** A coloured dot before the text. */
-    dot?: boolean
   }>(),
-  { withinMs: ONLINE_WITHIN_MS, dot: true },
+  { withinMs: ONLINE_WITHIN_MS },
 )
 const { t, locale } = useI18n()
 const now = useNow()
@@ -44,38 +45,17 @@ const hint = computed(() => {
 
 <template>
   <el-tooltip :content="hint" placement="top">
-    <span class="presence" :class="`is-${state}`">
-      <span v-if="dot" class="presence__dot" aria-hidden="true" />
-      <span>{{ text }}</span>
-    </span>
+    <span class="presence" :class="`is-${state}`">{{ text }}</span>
   </el-tooltip>
 </template>
 
 <style scoped>
 .presence {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   font-size: 13px;
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
   white-space: nowrap;
 }
 .presence.is-online {
-  color: var(--el-color-success);
-}
-.presence__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: var(--el-text-color-placeholder);
-}
-.presence.is-online .presence__dot {
-  background: var(--el-color-success);
-}
-.presence.is-never .presence__dot {
-  background: transparent;
-  border: 1.5px solid var(--el-color-warning);
-  box-sizing: border-box;
+  color: var(--app-ink-2);
 }
 </style>

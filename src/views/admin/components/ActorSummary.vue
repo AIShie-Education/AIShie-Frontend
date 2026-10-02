@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // One actor at a glance: name, kind, standing, platform role, email, id.
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 
@@ -19,9 +21,9 @@ defineProps<{
 
 <template>
   <div class="actor-summary">
-    <el-avatar :size="36" class="actor-summary__avatar" :class="{ 'is-agent': actor.kind === 'agent' }">
-      <el-icon v-if="actor.kind === 'agent'"><Cpu /></el-icon>
-      <el-icon v-else-if="actor.kind === 'system'"><Setting /></el-icon>
+    <AgentAvatar v-if="actor.kind === 'agent'" :name="actor.display_name" size="large" />
+    <el-avatar v-else :size="36" class="actor-summary__avatar">
+      <el-icon v-if="actor.kind === 'system'"><Setting /></el-icon>
       <template v-else>{{ actor.display_name.slice(0, 1) }}</template>
     </el-avatar>
     <div class="actor-summary__body">
@@ -30,7 +32,8 @@ defineProps<{
           {{ actor.display_name }}
         </router-link>
         <span v-else class="actor-summary__name">{{ actor.display_name }}</span>
-        <StatusTag vocab="actorKind" :value="actor.kind" />
+        <AiBadge v-if="actor.kind === 'agent'" />
+        <StatusTag v-else vocab="actorKind" :value="actor.kind" />
         <StatusTag v-if="actor.status && actor.status !== 'active'" vocab="actorStatus" :value="actor.status" />
         <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" />
       </div>
@@ -58,10 +61,6 @@ defineProps<{
   background: var(--el-fill-color-dark);
   color: var(--el-text-color-primary);
   font-weight: 600;
-}
-.actor-summary__avatar.is-agent {
-  background: var(--el-color-primary-light-8);
-  color: var(--el-color-primary);
 }
 .actor-summary__body {
   display: flex;

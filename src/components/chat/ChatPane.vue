@@ -53,9 +53,9 @@ import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
-import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNow } from '@/composables/useNow'
 import { useWrite } from '@/composables/useWrite'
@@ -98,6 +98,7 @@ import { courseMentions } from './mentions'
 import ChatMessage from './ChatMessage.vue'
 import ChatStatusLine from './ChatStatusLine.vue'
 import ChatDraft from './ChatDraft.vue'
+import AskableText from './AskableText.vue'
 import { attachmentsFor, rememberSent, sentFilesOf } from './attachments'
 
 const props = withDefaults(
@@ -209,6 +210,7 @@ interface Party {
   mine?: boolean
   lastSeenAt?: string | null
   answerLevel?: string | null
+  seatStatus?: string | null
 }
 /** The one the caller talks to (for staff reading it, the respondent). */
 const other = computed<Party | null>(() => {
@@ -235,6 +237,7 @@ const other = computed<Party | null>(() => {
     mine: role.value === 'opener' && r.is_delegate_of_opener,
     lastSeenAt: r.last_seen_at,
     answerLevel: r.answer_level,
+    seatStatus: r.seat_status,
   }
 })
 /** What the agent's answers go through, when not straight out. */
@@ -802,8 +805,9 @@ const closedLine = computed(() => {
       <span>{{ t('chat.attach.dropHere') }}</span>
     </div>
     <header class="chat-pane__head">
-      <!-- One row: the agent, whether anything runs it, and a closed conversation's state; its title on hover. -->
+      <!-- One row: the agent (its avatar, name and "AI"), whether it can be asked now, and a closed conversation's state; its title on hover. -->
       <div class="chat-pane__name-row" :title="view?.title || undefined">
+        <AgentAvatar v-if="other?.kind === 'agent' && role !== 'overseer'" :name="other.name" size="small" />
         <span class="chat-pane__name">
           <template v-if="courseLabel"
             ><span class="chat-pane__course">{{ courseLabel }}</span> ·
@@ -813,10 +817,17 @@ const closedLine = computed(() => {
           </template>
           <template v-else>{{ other?.name ?? '' }}</template>
         </span>
-        <AgentBadge v-if="other && other.kind === 'agent' && other.mine" :kind="other.kind" mine />
-        <!-- Not said of an agent nobody can ask here now: when it was last seen tells nothing of that. -->
+        <AgentBadge v-if="other && other.kind === 'agent'" :kind="other.kind" :mine="other.mine" />
+        <!-- Not said of an agent nobody can ask here now: whether something runs it tells nothing of that. -->
         <span v-if="other?.kind === 'agent' && !elsewhere" class="chat-pane__presence"
-          ><PresenceText :value="other.lastSeenAt"
+          ><AskableText
+            :who="{
+              kind: other.kind,
+              last_seen_at: other.lastSeenAt,
+              answer_level: other.answerLevel,
+              seat_status: other.seatStatus,
+            }"
+            :name="other.name"
         /></span>
         <StatusTag v-if="status?.state === 'closed'" vocab="conversationState" :value="status.state" />
       </div>
@@ -1070,7 +1081,7 @@ const closedLine = computed(() => {
 .chat-pane__presence {
   flex-shrink: 0;
 }
-.chat-pane__presence :deep(.presence) {
+.chat-pane__presence :deep(.askable) {
   font-size: 12px;
 }
 .chat-pane__head-actions {

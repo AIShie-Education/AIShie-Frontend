@@ -20,6 +20,8 @@ import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import HostingTag from '@/components/HostingTag.vue'
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './components/ActorSummary.vue'
@@ -357,9 +359,9 @@ async function openById() {
           <el-table-column :label="t('admin.actors.col.name')" min-width="200">
             <template #default="{ row }">
               <div class="actors__name">
-                <el-icon class="actors__kind-icon" :class="{ 'is-agent': row.kind === 'agent' }">
-                  <Cpu v-if="row.kind === 'agent'" />
-                  <Setting v-else-if="row.kind === 'system'" />
+                <AgentAvatar v-if="row.kind === 'agent'" :name="row.display_name" size="small" />
+                <el-icon v-else class="actors__kind-icon">
+                  <Setting v-if="row.kind === 'system'" />
                   <User v-else />
                 </el-icon>
                 <div class="actors__name-text">
@@ -371,6 +373,7 @@ async function openById() {
                     >
                       {{ row.display_name }}
                     </router-link>
+                    <AiBadge v-if="row.kind === 'agent'" />
                     <span v-if="row.id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
                   </div>
                   <!-- Two with the same name are told apart by their IDs. -->
@@ -554,9 +557,6 @@ async function openById() {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-.actors__kind-icon.is-agent {
-  color: var(--el-color-primary);
 }
 .actors__link {
   font-weight: 600;

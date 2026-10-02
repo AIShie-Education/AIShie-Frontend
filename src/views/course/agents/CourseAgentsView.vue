@@ -7,13 +7,14 @@
 // start conversations (member.update_perms_bulk, role student). Those who
 // decide actions here, whether or not they manage the members, read each
 // answering agent's conversation log.
-import { computed, ref } from 'vue'
+import { computed, markRaw, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { ActionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { usePresets } from '@/views/course/members/components/seat'
@@ -110,7 +111,11 @@ function onAdded(out: { status: 'executed'; memberId: string } | { status: 'prop
   void refresh()
 }
 
-const GROUP_ICONS: Record<AgentGroup, string> = { course: 'School', personal: 'User', unowned: 'Cpu' }
+const GROUP_ICONS: Record<AgentGroup, string | Component> = {
+  course: 'School',
+  personal: 'User',
+  unowned: markRaw(AgentSeatIcon),
+}
 </script>
 
 <template>

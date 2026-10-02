@@ -33,6 +33,7 @@ import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import { probeActorList, useActorSearch } from '@/views/admin/components/actorSearch'
 import RefusalAlert from './RefusalAlert.vue'
 import {
@@ -541,7 +542,7 @@ function capToMine() {
           </span>
           <template v-else-if="actorInfo">
             <div class="add-member__actor-who">
-              <el-icon><Cpu v-if="actorInfo.kind === 'agent'" /><User v-else /></el-icon>
+              <el-icon><AgentSeatIcon v-if="actorInfo.kind === 'agent'" /><User v-else /></el-icon>
               <strong>{{ actorInfo.display_name }}</strong>
               <StatusTag vocab="actorKind" :value="actorInfo.kind" />
               <StatusTag v-if="actorInfo.status !== 'active'" vocab="actorStatus" :value="actorInfo.status" />

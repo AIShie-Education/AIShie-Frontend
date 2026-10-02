@@ -13,7 +13,9 @@ import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -223,7 +225,7 @@ function rowClass({ row }: { row: MemberSummary }) {
             {{ count(counts.human) }}
           </el-radio-button>
           <el-radio-button value="agent">
-            <el-icon class="members__tab-icon"><Cpu /></el-icon>{{ t('members.tabs.agents') }} ·
+            <el-icon class="members__tab-icon"><AgentSeatIcon /></el-icon>{{ t('members.tabs.agents') }} ·
             {{ count(counts.agent) }}
           </el-radio-button>
         </el-radio-group>
@@ -264,9 +266,8 @@ function rowClass({ row }: { row: MemberSummary }) {
           >
             <template #default="{ row }">
               <div class="members__name">
-                <el-icon class="members__kind-icon" :class="{ 'is-agent': row.kind === 'agent' }">
-                  <Cpu v-if="row.kind === 'agent'" /><User v-else />
-                </el-icon>
+                <AgentAvatar v-if="row.kind === 'agent'" :name="row.display_name" size="small" />
+                <el-icon v-else class="members__kind-icon"><User /></el-icon>
                 <span class="members__name-text">{{ row.display_name }}</span>
                 <span v-if="row.id === course.myMemberId" class="members__me">({{ t('common.labels.you') }})</span>
                 <el-tooltip v-if="row.login_id" :content="t('members.loginId')" placement="top">
@@ -398,9 +399,6 @@ function rowClass({ row }: { row: MemberSummary }) {
 .members__kind-icon {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
-}
-.members__kind-icon.is-agent {
-  color: var(--el-color-primary);
 }
 .members__via :deep(.el-tag__content) {
   display: inline-flex;

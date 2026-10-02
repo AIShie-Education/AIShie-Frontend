@@ -17,6 +17,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConversationMessage } from '@/api/types'
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import TimeText from '@/components/TimeText.vue'
 import { copyText } from '@/utils/clipboard'
@@ -85,8 +87,9 @@ async function copy() {
     :aria-label="authorName"
   >
     <header v-if="showAuthor" class="chat-msg__head">
-      <span v-if="!fromOpener" class="chat-msg__mark" aria-hidden="true" />
+      <AgentAvatar v-if="!fromOpener" :name="authorName" size="small" />
       <span class="chat-msg__author">{{ authorName }}</span>
+      <AiBadge v-if="!fromOpener" />
     </header>
     <ChatMessageFiles
       v-if="files.length && fromOpener"
@@ -181,13 +184,6 @@ async function copy() {
   min-width: 0;
   font-size: 12px;
   line-height: 1.4;
-}
-.chat-msg__mark {
-  flex-shrink: 0;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--app-light);
 }
 .chat-msg__author {
   font-weight: 600;

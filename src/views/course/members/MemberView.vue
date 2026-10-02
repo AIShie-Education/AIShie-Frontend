@@ -15,7 +15,9 @@ import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import IdText from '@/components/IdText.vue'
@@ -517,9 +519,8 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           >
             <el-descriptions-item :label="t('members.detail.actor')">
               <span class="member__actor">
-                <el-icon :class="{ member__agent: m.kind === 'agent' }"
-                  ><Cpu v-if="m.kind === 'agent'" /><User v-else
-                /></el-icon>
+                <AgentAvatar v-if="m.kind === 'agent'" :name="m.display_name" size="small" />
+                <el-icon v-else><User /></el-icon>
                 <span>{{ m.display_name }}</span>
                 <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" />
                 <StatusTag v-else vocab="actorKind" :value="m.kind" />
@@ -636,10 +637,11 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           <p class="app-form-hint member__scope-help">{{ t('members.detail.delegate.theirAgentsHelp') }}</p>
           <ul class="member__delegates">
             <li v-for="d in delegates" :key="d.id">
-              <el-icon class="member__agent"><Cpu /></el-icon>
+              <AgentAvatar :name="d.display_name" size="small" />
               <router-link :to="{ name: 'course-member', params: { courseId, memberId: d.id } }">
                 {{ d.display_name }}
               </router-link>
+              <AiBadge />
               <span v-if="presetName(d.preset_id)" class="app-muted">{{ presetName(d.preset_id) }}</span>
               <StatusTag v-if="d.status !== 'active'" vocab="memberStatus" :value="d.status" />
             </li>
@@ -814,9 +816,6 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
 }
 .member__actions .el-button + .el-button {
   margin-left: 0;
-}
-.member__agent {
-  color: var(--el-color-primary);
 }
 .member__alert {
   margin-bottom: 16px;

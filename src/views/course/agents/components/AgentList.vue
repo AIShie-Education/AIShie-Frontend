@@ -16,6 +16,7 @@ import type { AutonomyLevel, Preset } from '@/api/types'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -161,11 +162,11 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
     <li v-for="r in rows" :key="r.member.id" class="agent-row" :class="{ 'is-gone': !r.live }">
       <div class="agent-row__main">
         <div class="agent-row__name">
-          <el-icon class="agent-row__icon"><Cpu /></el-icon>
+          <AgentAvatar :name="r.member.display_name" />
           <router-link :to="{ name: 'course-member', params: { courseId, memberId: r.member.id } }">
             {{ r.member.display_name }}
           </router-link>
-          <AgentBadge v-if="r.member.owner_name || isMine(r)" :owner-name="r.member.owner_name" :mine="isMine(r)" />
+          <AgentBadge :owner-name="r.member.owner_name" :mine="isMine(r)" />
           <StatusTag v-if="r.member.status !== 'active'" vocab="memberStatus" :value="r.member.status" />
           <el-tag v-else-if="!r.live" size="small" type="info">{{ t('members.expired') }}</el-tag>
           <HostingTag :hosting="r.member.hosting" :site-chat="r.member.site_chat" />
@@ -331,9 +332,10 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
   text-decoration: none;
   overflow-wrap: anywhere;
 }
-.agent-row__icon {
-  color: var(--el-color-primary);
-  flex-shrink: 0;
+/* What is said under the name lines up with it, past the avatar (28 px and the gap). */
+.agent-row__meta,
+.agent-row__not-askable {
+  padding-left: 34px;
 }
 .agent-row__meta {
   display: flex;
