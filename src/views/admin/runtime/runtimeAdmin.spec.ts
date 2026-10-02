@@ -84,13 +84,13 @@ describe('whether a section is there', () => {
 
 describe('the words for the administrators’ refusals', () => {
   const OWN: Record<string, [Record<string, unknown>, string]> = {
-    not_admin: [{}, 'Only the runtime’s administrators may do this, and your account is not one of them.'],
+    not_admin: [{}, 'Only the agent service’s administrators may do this, and your account is not one of them.'],
     ocr_unavailable: [
       { field: '/ocr/enabled' },
       'OCR cannot run on this server now, so it cannot be turned on or given languages. It can still be turned off, or set back to the server’s languages.',
     ],
     offer_not_found: [{}, 'This model is no longer on the plan: someone deleted it meanwhile.'],
-    offer_read_only: [{}, 'The server’s operator set this model in runtime.yaml, so it cannot be changed here.'],
+    offer_read_only: [{}, 'The server’s operator set this model in the server’s settings, so it cannot be changed here.'],
     offer_not_priced: [
       { field: '/model', offers: ['fast'] },
       'A quota in dollars needs a price today for every model of the school’s plan, and this would leave one without. Add a price for it, then try again.',
@@ -107,7 +107,7 @@ describe('the words for the administrators’ refusals', () => {
     key_required: [{ field: '/key' }, 'Another provider needs its own key: enter the school’s key for OpenAI.'],
     model_denied: [
       { field: '/model' },
-      'The server’s model lists (allowed_models and denied_models in runtime.yaml) do not allow this model on the school’s key. Choose another, or ask the operator.',
+      'The server’s model lists do not allow this model on the school’s key. Choose another, or ask the operator.',
     ],
   }
 
@@ -126,7 +126,7 @@ describe('the words for the administrators’ refusals', () => {
 
   it('says whose an ID taken is, runtime.yaml’s or the site’s', () => {
     expect(adminErrorText(err('offer_exists', { field: '/id', source: 'config' }, 409), t)).toBe(
-      'The server’s runtime.yaml already has a model with this ID. Choose another.',
+      'The server’s settings already have a model with this ID. Choose another.',
     )
     expect(adminErrorText(err('offer_exists', { field: '/id', source: 'site' }, 409), t)).toBe(
       'The plan already has a model with this ID. Choose another, or edit that one.',
@@ -142,16 +142,16 @@ describe('the words for the administrators’ refusals', () => {
 
   it('names the member refused, when the runtime names one', () => {
     expect(adminErrorText(err('invalid_field', { field: '/per_day' }), t)).toBe(
-      'The runtime did not take this: “/per_day” is not accepted. Check it and try again.',
+      'The agent service did not take this: “/per_day” is not accepted. Check it and try again.',
     )
     expect(adminErrorText(err('missing_field', { field: '/label' }), t)).toBe(
-      'The runtime did not take this: “/label” is missing. Reload the page and try again.',
+      'The agent service did not take this: “/label” is missing. Reload the page and try again.',
     )
   })
 
   it('leaves what it shares with the hosting pages to their words', () => {
     expect(adminErrorText(err('network', {}, 0), t)).toBe(
-      'The school’s runtime could not be reached. Check your connection and try again.',
+      'The school’s agent service could not be reached. Check your connection and try again.',
     )
     expect(adminErrorText(err('rate_limited', { retry_after_seconds: 9 }, 429), t)).toBe(
       'Too many tries. Wait 9 seconds.',

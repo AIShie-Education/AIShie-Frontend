@@ -729,6 +729,15 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   their fixtures use the same, so that none is copied into the page from them.
 - Core's error messages are English and are shown as they are, after a translated lead
   (`errorMessage()` does this).
+- **Say what happens, not what does it.** No message names Core, the runtime, a tool (`actor.list`), a field of
+  an answer (`details.reason`) or a setting of the server (`OCR=off`, `SECRETS_KEY`, `runtime.yaml`): a teacher
+  who has never heard of Core takes it for a second authority deciding behind the first. Say what happens: "the
+  system checks the permissions again" (「系統會再檢查一次權限」), "the agent service" (「執行環境」, 「运行环境」),
+  "The server has turned this off; ask the server's operator" (「伺服器已停用此功能，請聯絡系統管理員」), "This
+  server cannot … yet". What only the server's operator acts on (a setting, a command) goes in a tooltip beside
+  the words: `<OperatorDetail :text>` (`src/views/admin/components`), its text in `runtimeAdmin.flags` or
+  `ssoAdmin.flags`. `src/i18n/copy.spec.ts` scans every message in every language for these words; a message
+  only an operator reads is let through there by its key, saying why.
 - Some vocabularies are keyed by Core's own dotted names (`enums.event`: `grade.posted`, …).
   vue-i18n splits a key path on dots, so look those up with a bracketed segment:
   ``t(`enums.event['${type}']`)``.

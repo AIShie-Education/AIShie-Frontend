@@ -13,6 +13,7 @@ import { ElMessage } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { OcrSettings, RuntimeSettings, RuntimeSettingsPatch } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
+import OperatorDetail from '../components/OperatorDetail.vue'
 import ChangedBy from './ChangedBy.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { OCR_MAX_LANGUAGES, adminErrorText, languageName, sameLanguages } from './runtimeAdmin'
@@ -116,6 +117,7 @@ function undo() {
           :title="t(`runtimeAdmin.ocr.unavailable.${ocr.unavailable_reason ?? 'not_installed'}`)"
           class="ocr-card__alert ocr-card__unavailable"
         >
+          <OperatorDetail v-if="ocr.unavailable_reason === 'operator_off'" :text="t('runtimeAdmin.flags.ocrOff')" />
           <details v-if="ocr.unavailable_detail" class="ocr-card__details">
             <summary>{{ t('runtimeAdmin.ocr.details') }}</summary>
             <code>{{ ocr.unavailable_detail }}</code>

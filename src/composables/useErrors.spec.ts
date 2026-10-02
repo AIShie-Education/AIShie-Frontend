@@ -202,7 +202,7 @@ describe('errorMessage, by the reason Core gives', () => {
 
   it('says why an agent’s hosting refuses what was asked of it', () => {
     expect(errorMessage(refusal('forbidden', { reason: 'hosted_by_runtime' }, { status: 403 }))).toBe(
-      'This agent is hosted on AIshie: the site’s agent runtime alone holds its token, and none is issued to anyone else.',
+      'This agent is hosted on AIshie: the site’s agent service alone holds its token, and none is issued to anyone else.',
     )
     expect(errorMessage(refusal('failed_precondition', { reason: 'hosting_fixed' }, { status: 422 }))).toBe(
       'How an agent runs is chosen when it is created, and never changed: create another agent for the other way.',

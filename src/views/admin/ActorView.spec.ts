@@ -189,9 +189,9 @@ describe('an actor’s page', () => {
     const w = await open(HOSTED)
     expect(w.find('.page-header .hosting-tag').text()).toBe('Hosted on AIshie')
     expect(buttons(w)).not.toContain('Issue token')
-    expect(w.find('.token__runtime').text()).toContain('the site’s agent runtime alone is issued its one token')
+    expect(w.find('.token__runtime').text()).toContain('the site’s agent service alone is issued its one token')
     const token = w.find('.creds-token')
-    expect(token.text()).toContain('The site’s agent runtime')
+    expect(token.text()).toContain('The site’s agent service')
     // It can still be revoked here, which stops people asking the agent until the runtime is issued another.
     expect(token.find('button').text()).toBe('Revoke')
   })

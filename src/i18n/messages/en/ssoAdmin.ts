@@ -4,7 +4,7 @@ export default {
   subtitle: 'Single sign-on: the identity providers people may sign in through, besides their password',
   add: 'Add provider',
   noSecretsKey:
-    'The server’s operator sets SECRETS_KEY in its environment (base64 of 32 random bytes) and restarts it; its client secrets are sealed with it. The provider the operator set in the environment works without it.',
+    'The server’s operator gives the server a key to seal client secrets with, and restarts it. The provider the operator set on the server works without it.',
 
   redirect: {
     label: 'Redirect URI',
@@ -55,7 +55,7 @@ export default {
     linksByEmail: 'Links by email',
     olderKey: 'Older key',
     olderKeyWhy:
-      'Its secret was sealed under an earlier SECRETS_KEY, which the server still holds. The operator runs aishie-core secrets rewrap to seal it again under the new one.',
+      'Its secret was sealed under the server’s earlier key, which the server still holds. The server’s operator can seal it again under the new one.',
     unnamed: 'No name: the button says “single sign-on”',
     always: 'Always on',
     enabledLabel: 'Offer {name} on the sign-in page',
@@ -93,9 +93,9 @@ export default {
     id_taken:
       'The server’s operator has set a provider with the same ID, which is offered in its place. This one is not offered, and cannot be changed or deleted here while the operator’s has its ID.',
     secret_unavailable:
-      'Its client secret does not open with the server’s keys (SECRETS_KEY was removed, or replaced without keeping the old one): it is not offered. Edit it and give the secret again.',
+      'Its client secret does not open with the server’s keys (the key was removed, or replaced without keeping the old one): it is not offered. Edit it and give the secret again.',
     issuer_address_not_allowed:
-      'Its issuer is on this machine, or at a private, link-local or other address that is not public, which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS: it is not offered, and a sign-in through it is refused. Edit it to move the issuer, or ask the server’s operator.',
+      'Its issuer is on this machine, or at a private, link-local or other address that is not public, which the server reaches only if its operator allows it: it is not offered, and a sign-in through it is refused. Edit it to move the issuer, or ask the server’s operator.',
   },
 
   test: {
@@ -142,7 +142,7 @@ export default {
     // Problems whose reason Core names: said in these words, with Core's, which name the URL, after them.
     reason: {
       issuer_address_not_allowed:
-        'An address here is on this machine, or private, link-local or reserved: this server reaches no provider of the site’s there unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS.',
+        'An address here is on this machine, or private, link-local or reserved: this server reaches no provider of the site’s there unless its operator allows it.',
     },
   },
 
@@ -231,7 +231,7 @@ export default {
 
   refusal: {
     secrets_key_missing:
-      'SECRETS_KEY is not set on the server: no provider can be added, and no client secret given, until its operator sets it.',
+      'The server has no key to seal client secrets with: no provider can be added, and no client secret given, until its operator sets one.',
     set_by_operator: 'This provider is set by the server’s operator (OIDC_*): it cannot be changed here.',
     id_taken: 'That ID is taken: the operator’s provider or another provider has it. Choose another.',
     version_mismatch: 'Someone changed this provider meanwhile.',
@@ -242,6 +242,12 @@ export default {
     sso_provider_unavailable: 'That provider cannot be used now: its secret does not open, or its discovery document cannot be read.',
     platform_role_required: 'Only root and the platform’s administrators set up single sign-on.',
     issuer_address_not_allowed:
-      'The issuer is on this machine, or at a private, link-local or reserved address: this server reaches no provider of the site’s there unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS.',
+      'The issuer is on this machine, or at a private, link-local or reserved address: this server reaches no provider of the site’s there unless its operator allows it.',
+  },
+  // What only the server's operator acts on, named in a tooltip beside the words (OperatorDetail).
+  flags: {
+    secretsKey: 'SECRETS_KEY in the server’s environment, the base64 of 32 random bytes.',
+    rewrap: 'aishie-core secrets rewrap.',
+    privateIssuers: 'SSO_ALLOW_PRIVATE_ISSUERS.',
   },
 }

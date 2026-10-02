@@ -293,6 +293,7 @@ export default {
     chars: '文字说明（{chars} 个字符）',
   },
   copyId: '复制 ID',
+  operatorDetail: '供服务器运维方参考：{detail}',
   notSignedIn: '尚未登录',
   archivedCourse: '此课程已归档：可以查看，但无法再作任何更改。',
   draftCourse: '此课程为草稿。',

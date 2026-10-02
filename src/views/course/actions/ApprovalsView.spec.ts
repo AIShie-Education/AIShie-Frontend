@@ -137,7 +137,7 @@ describe('ApprovalsView, for a student who owns an agent', () => {
     answer([proposal('p1', true)])
     await mountAsStudent()
     expect(document.body.querySelector('.page-header')!.textContent).toContain('Your agents’ proposals')
-    expect(document.body.textContent).not.toContain('permission')
+    expect(document.body.textContent).not.toContain('permission denied')
     expect(read).toHaveBeenCalledWith('action.list_pending_review', { course_id: COURSE, limit: 50, after: undefined })
     // The review tab (rendered, if hidden): nothing there for her.
     expect(document.body.textContent).toContain('Nothing your agents did is waiting for review.')

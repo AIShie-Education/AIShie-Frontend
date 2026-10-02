@@ -77,7 +77,7 @@ export default {
     mixed: '學生的設定不一：{summary}。',
     confirm: '這位現有學生的席位將設為「{what}」。 | 全部 {n} 位現有學生的席位將設為「{what}」。',
     future: '日後加入的學生則按其權限預設處理（內建「學生」預設：帶入代理需批准，對話開啟）。',
-    partialConfirm: '這裏只能計算部分成員；Core 會更改每一位現有學生的席位。',
+    partialConfirm: '這裏只能計算部分成員；更改會套用到每一位現有學生的席位。',
     apply: '套用至所有學生',
     success: '已為 {n} 位學生更改 | 已為 {n} 位學生更改',
     agents: {
@@ -128,7 +128,7 @@ export default {
     hostingHelp: '只有站內託管的課程代理，學生才能在站內向它提問；MCP 存取的代理由你自己的工具使用，站內無法向它提問。',
     mcpPicked: '學生無法在站內向 {name} 提問：它是 MCP 存取，由你自己的工具使用。',
     preview: '它將擁有的權限',
-    previewHelp: '按 Core 現時的安排：「課程代理」預設，並限制在你自己席位的權限之內。',
+    previewHelp: '按現時的安排：「課程代理」預設，並限制在你自己席位的權限之內。',
     can: '權限',
     work: '學生作業',
     readsNobody: '不閱讀任何人的作業或成績。',

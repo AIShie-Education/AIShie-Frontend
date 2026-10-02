@@ -20,7 +20,7 @@ export default {
     unreachable: '它可能正在重启，或已停止运行。请一分钟后再试。',
     notAdminTitle: '你不是这个运行环境的管理员',
     notAdmin:
-      '运行环境的运维方会从 AIshie 的管理员中指定谁可以管理它（运行环境的 ADMIN_ACTOR_IDS）。请联系运维方把你加入。',
+      '运行环境的运维方会从 AIshie 的管理员中指定谁可以管理它。请联系运维方把你加入。',
     notOffered: '这个运行环境尚未提供这项功能：它会在较新版本的智能体运行环境中提供。',
     reloadFailed: '无法重新读取：以下内容可能不是最新的。',
   },
@@ -30,10 +30,10 @@ export default {
     ocr_unavailable: '这个服务器目前无法运行 OCR，所以不能开启它或设置语言。你仍可以关闭它，或改回服务器默认的语言。',
     offer_not_found: '这个模型已不在方案中：有人刚把它删除了。',
     offer_exists: {
-      config: '服务器的 runtime.yaml 已有使用这个 ID 的模型。请改用其他 ID。',
+      config: '服务器设置中已有使用这个 ID 的模型。请改用其他 ID。',
       site: '方案中已有使用这个 ID 的模型。请改用其他 ID，或编辑那个模型。',
     },
-    offer_read_only: '这个模型由服务器运维方在 runtime.yaml 中设置，不能在这里更改。',
+    offer_read_only: '这个模型由服务器运维方在服务器设置中设置，不能在这里更改。',
     offer_not_priced:
       '以美元计的额度需要学校方案中每个模型今天都有价格，而这项更改会令其中一个没有价格。请先为它添加价格，然后再试一次。',
     model_not_priced: '以美元计的额度会涵盖一些模型没有价格的智能体。请为它们添加价格，或只以回答次数设置额度。',
@@ -46,7 +46,7 @@ export default {
     key_required: '改用其他供应商需要该供应商的密钥：请输入学校在 {provider} 的密钥。',
     key_test_failed: '密钥未通过试用，因此没有保存任何内容。',
     model_denied:
-      '服务器的模型清单（runtime.yaml 中的 allowed_models 和 denied_models）不允许以学校的密钥使用这个模型。请改选其他模型，或联系运维方。',
+      '服务器设置的模型清单不允许以学校的密钥使用这个模型。请改选其他模型，或联系运维方。',
     version_mismatch: '这项设置刚在另一个标签页或由另一位管理员更改了。以下是最新的内容：请检查后再试一次。',
     bad_if_match: '运行环境没有接受这项更改。请重新加载页面后再试。',
     missing_field: '运行环境没有接受这项更改：缺少“{field}”。请重新加载页面后再试。',
@@ -54,7 +54,7 @@ export default {
     transcription_unavailable:
       '文件转写现在无法在这台服务器上执行，所以不能开启。它仍可关闭，设置也会保留至可以执行时使用。',
     offer_no_file_input: '这个模型既不能读取 PDF 也不能读取图片，所以无法转写。请选择方案中可读取文件的模型。',
-    credential_rejected: '运行环境测试时 Core 不接受这个凭证，所以运行环境没有保存它。',
+    credential_rejected: '运行环境测试时 AIshie 不接受这个凭证，所以运行环境没有保存它。',
   },
 
   ocr: {
@@ -67,7 +67,7 @@ export default {
     },
     unavailable: {
       operator_off:
-        '服务器运维方已关闭 OCR（OCR=off），所以无论这里如何设置，它都不会运行。你的设置会保留到它开启时使用。',
+        '服务器已停用此功能，所以无论这里如何设置，它都不会运行。你的设置会保留到它开启时使用；如需开启，请联系系统管理员。',
       not_installed: '这个服务器没有安装 OCR 的程序或语言，所以它无法运行。你的设置会保留到安装完成时使用。',
     },
     details: '详细信息',
@@ -108,7 +108,7 @@ export default {
     },
     blocked: {
       no_credential: '没有凭证',
-      credential_rejected: 'Core 拒绝了它的凭证',
+      credential_rejected: 'AIshie 拒绝了它的凭证',
       no_offer: '未选择模型',
       offer_unavailable: '所选模型无法使用',
       quota_exhausted: '今日页数已用完',
@@ -116,8 +116,8 @@ export default {
     },
     unavailable: {
       operator_off:
-        '服务器运营者已关闭文件转写（TRANSCRIBE=off），所以无论这里如何设置都不会执行。你在这里的设置会保留，待开启后使用。',
-      core_too_old: '这个运行环境连接的 Core 尚未有转写队列，所以无法执行。你在这里的设置会保留，待 Core 支持后使用。',
+        '服务器已停用文件转写，所以无论这里如何设置都不会执行。你在这里的设置会保留，待开启后使用；如需开启，请联系系统管理员。',
+      core_too_old: '这个运行环境连接的服务器尚未有转写队列，所以无法执行。你在这里的设置会保留，待服务器支持后使用。',
     },
     enabled: '把文件转写成文字版',
     enabledHint: '关闭时不会转写任何文件，课程页面也不会显示排队状态。已写好的文字版会保留，教学人员仍可自行撰写。',
@@ -146,40 +146,40 @@ export default {
     },
     neverChanged: '未在此更改：沿用服务器运营者的设置。',
     credential: {
-      title: '与 AIshie Core 的凭证',
+      title: '与 AIshie 的凭证',
       status: {
         none: '未设置',
         ok: '已获接受',
         untested: '尚未测试',
         rejected: '被拒',
       },
-      lastSeen: 'Core 最后接受于',
+      lastSeen: 'AIshie 最后接受于',
       givenBy: '由 {who} 于 {when} 交给运行环境',
       given: '于 {when} 交给运行环境',
       neverSeen: '尚未使用',
-      rejected: 'Core 拒绝了这个凭证：它已被撤销或已过期。请签发一个新的。',
-      issue: '签发并交给 runtime',
+      rejected: 'AIshie 拒绝了这个凭证：它已被撤销或已过期。请签发一个新的。',
+      issue: '签发并交给运行环境',
       replace: '更换',
       withdraw: '撤销',
-      hint: '“签发”会在 Core 为转写服务签发一个凭证，并直接交给运行环境，由它先行测试：凭证不会在这里显示，也不会保存在这个浏览器中。之后会撤销转写服务的其他凭证。',
+      hint: '“签发”会在 AIshie 为转写服务签发一个凭证，并直接交给运行环境，由它先行测试：凭证不会在这里显示，也不会保存在这个浏览器中。之后会撤销转写服务的其他凭证。',
       replaceAllTitle: '更换所有凭证？',
       replaceAllBody:
-        '转写服务已有 {n} 个凭证，已达 Core 的上限。新的凭证会取代全部旧凭证：它们会立即失效，运行环境取得新凭证之前也无法运作。',
+        '转写服务已有 {n} 个凭证，已达 AIshie 的上限。新的凭证会取代全部旧凭证：它们会立即失效，运行环境取得新凭证之前也无法运作。',
       replaceAll: '全部更换',
       handedOver: '运行环境已取得新的凭证。',
-      unrevoked: '有 {n} 个转写服务的其他凭证无法在 Core 撤销，可能仍然有效。',
+      unrevoked: '有 {n} 个转写服务的其他凭证无法在 AIshie 撤销，可能仍然有效。',
       withdrawTitle: '撤销文件转写的凭证？',
-      withdrawBody: '运行环境会删除它，Core 亦会撤销它：在签发新凭证之前不会转写任何文件，进行中的工作也会停止。',
+      withdrawBody: '运行环境会删除它，AIshie 亦会撤销它：在签发新凭证之前不会转写任何文件，进行中的工作也会停止。',
       withdrawn: '已撤销凭证。',
-      notRevoked: '运行环境已删除它，但 Core 无法撤销它：它可能仍然有效。请稍后在这里再试。',
+      notRevoked: '运行环境已删除它，但 AIshie 无法撤销它：它可能仍然有效。请稍后在这里再试。',
       refused: {
-        rejected: '运行环境测试时 Core 不接受这个凭证，所以运行环境没有保存它。刚签发的凭证已被撤销。',
-        notService: 'Core 不认为这是转写服务的凭证，所以运行环境没有保存它。刚签发的凭证已被撤销。',
+        rejected: '运行环境测试时 AIshie 不接受这个凭证，所以运行环境没有保存它。刚签发的凭证已被撤销。',
+        notService: 'AIshie 不认为这是转写服务的凭证，所以运行环境没有保存它。刚签发的凭证已被撤销。',
       },
     },
     // Core 以原因拒绝服务凭证时的说明。
     coreRefusal: {
-      too_many_credentials: '转写服务的凭证数目已达 Core 的上限。请撤销一个，或全部更换。',
+      too_many_credentials: '转写服务的凭证数目已达 AIshie 的上限。请撤销一个，或全部更换。',
       platform_role_required: '只有 AIshie 的平台管理员可以签发或撤销文件转写的凭证。',
     },
     today: {
@@ -233,10 +233,10 @@ export default {
       model_not_allowed: '不被允许',
     },
     why: {
-      config: '由服务器运维方在 runtime.yaml 中设置。',
+      config: '由服务器运维方在服务器设置中设置。',
       disabled: '拥有者看不到它。使用它的智能体会改用拥有者自己的模型，或暂停等待。',
-      id_taken: 'runtime.yaml 有一个 ID 相同的模型，拥有者会改为得到那个模型。',
-      model_not_allowed: 'runtime.yaml 的模型清单已不允许它的模型，所以不会提供。',
+      id_taken: '服务器设置中有一个 ID 相同的模型，拥有者会改为得到那个模型。',
+      model_not_allowed: '服务器设置的模型清单已不允许它的模型，所以不会提供。',
     },
     config: '只读',
     configKey: '保存在服务器上',
@@ -289,7 +289,7 @@ export default {
     retests: '保留的密钥是以另一个模型试用的。按现在的设置保存后，它会显示为未测试：更换密钥便会以这个模型试用。',
     warning:
       '拥有者的提问，以及他们的智能体读取的课程资料和作业，会以学校的密钥、按学校与 {provider} 的协议发送给 {provider}。',
-    noProviders: '运行环境没有提供可使用密钥的供应商。运维方可以在 runtime.yaml 中提供模型。',
+    noProviders: '运行环境没有提供可使用密钥的供应商。运维方可以在服务器设置中提供模型。',
     providersFailed: '无法读取运行环境提供的供应商。',
     add: '添加',
     created: '{label} 已加入学校方案。',
@@ -339,11 +339,11 @@ export default {
     default: '服务器默认：{n}',
     defaultNone: '服务器默认：不设上限',
     set: '已在这里设置，取代服务器默认。',
-    defaults: '服务器默认（runtime.yaml），由运维方设置。',
+    defaults: '服务器默认，由运维方设置。',
     dollars: '如设有以美元计的额度，它们会与这些额度一同生效。',
     reset: '使用服务器默认',
     resetTitle: '要使用服务器默认吗？',
-    resetBody: '额度会改回 runtime.yaml 的设置。每位拥有者：{owner}。每位提问者：{asker}。全校：{day}。',
+    resetBody: '额度会改回服务器的设置。每位拥有者：{owner}。每位提问者：{asker}。全校：{day}。',
     resetBodyUsd: '以美元计，每位拥有者：{owner}。每位提问者：{asker}。全校：{day}。',
     usdNeedsPrices: '以美元计的额度按价目表计算学校密钥的费用：方案中每个模型都需要有价格。',
     unpricedTitle: '以美元计的额度需要方案中每个模型都有价格，而这些模型今天没有：',
@@ -438,19 +438,19 @@ export default {
   tenants: {
     title: '每人额度',
     intro:
-      '一个人所有的智能体（或运维方的一个租户）每天可使用学校密钥的上限，与方案的额度一同生效。服务器的 runtime.yaml 会设置部分额度；在这里设置的会取代它，直到重置为止。',
+      '一个人所有的智能体（或运维方的一个租户）每天可使用学校密钥的上限，与方案的额度一同生效。服务器设置会设置部分额度；在这里设置的会取代它，直到重置为止。',
     empty: '运行环境尚未知道任何租户。',
     tenant: '人员或租户',
     agents: '没有智能体 | 1 个智能体 | {n} 个智能体',
     source: '设置者',
     sources: {
       site: '在这里设置',
-      config: 'runtime.yaml',
+      config: '服务器设置',
       none: '没有',
     },
     server: '服务器：{v}',
-    serverNone: 'runtime.yaml 没有设置。',
-    serverQuota: 'runtime.yaml 的设置：每天 {answers} 次回答，以及 {usd}。',
+    serverNone: '服务器设置没有设置。',
+    serverQuota: '服务器的设置：每天 {answers} 次回答，以及 {usd}。',
     editTitle: '{who} 的额度',
     editIntro: '一个人所有智能体每天使用学校密钥的回答次数和美元。其中一项留空表示不设上限，但不可两项都留空。',
     oneAtLeast: '请设置回答次数、美元，或两者：如要改回服务器的设置，请改为重置。',
@@ -470,12 +470,12 @@ export default {
     perAsker: '每位提问者',
     perAskerHint: '一个智能体在一门课程中为一位提问者回答。',
     set: '已在这里设置，取代服务器默认。',
-    defaults: '服务器默认（runtime.yaml），由运维方设置。',
-    hostedOnly: '这些预算适用于在这里托管的智能体。服务器本身配置的智能体保留 runtime.yaml 给它们的预算。',
+    defaults: '服务器默认，由运维方设置。',
+    hostedOnly: '这些预算适用于在这里托管的智能体。服务器本身配置的智能体保留服务器设置给它们的预算。',
     saved: '已保存智能体的预算。',
     restored: '智能体的预算已改回服务器默认。',
     resetTitle: '要使用服务器默认吗？',
-    resetBody: '在这里设置的预算会被移除，托管的智能体会再次按 runtime.yaml 的预算运行。',
+    resetBody: '在这里设置的预算会被移除，托管的智能体会再次按服务器设置的预算运行。',
   },
 
   costs: {
@@ -530,7 +530,7 @@ export default {
   agentRuntime: {
     title: '智能体运行环境在 AIshie 的凭证',
     intro:
-      'AIshie 的智能体运行环境以自己的凭证（aissvc_…，即它的服务 agent_runtime）调用 AIshie：只有凭它，才能核查智能体的所有者，并获取及撤销它所托管的每个智能体唯一的令牌。没有有效的凭证，它就不会托管任何智能体。',
+      'AIshie 的智能体运行环境以自己的凭证连接 AIshie：只有凭它，才能核查智能体的所有者，并获取及撤销它所托管的每个智能体唯一的令牌。没有有效的凭证，它就不会托管任何智能体。',
     setup: '设置服务器时会创建它并交给运行环境。如要更换，请在服务器上运行 {command}：它会签发新的凭证、撤销其他凭证，并以新凭证重新启动运行环境。',
     none: '目前没有有效的凭证，所以运行环境不会托管任何智能体。请在服务器上运行 {command}。',
     showInactive: '显示已撤销及已过期的凭证（{n}）',
@@ -569,5 +569,12 @@ export default {
     coreRefusal: {
       too_many_credentials: '智能体运行环境持有的凭证已达 AIshie 允许的上限。请先撤销一个，或在签发新凭证时撤销其他凭证。',
     },
+  },
+  // 只有服务器运维方会处理的设置，放在文字旁的提示中（OperatorDetail）。
+  flags: {
+    ocrOff: '运行环境的 OCR=off',
+    transcribeOff: '运行环境的 TRANSCRIBE=off',
+    adminActorIds: '运行环境的 ADMIN_ACTOR_IDS',
+    serverFile: '运行环境的 runtime.yaml',
   },
 }

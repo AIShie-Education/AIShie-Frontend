@@ -178,7 +178,7 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     await expect(page.locator('.page-header')).toContainText('Hosted on AIshie')
     const card = siteChatCard(page)
     await expect(card.locator('.el-tag')).toHaveText('Not running')
-    await expect(card).toContainText('AIshie’s runtime is not running it')
+    await expect(card).toContainText('AIshie’s agent service is not running it')
     await expect(card.getByRole('button')).toHaveCount(0)
 
     // Staff see which of the course's agents nobody can ask here, and why.

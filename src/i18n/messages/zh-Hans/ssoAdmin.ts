@@ -4,7 +4,7 @@ export default {
   subtitle: '单点登录：除密码之外，用户可通过这些身份提供者登录',
   add: '添加提供者',
   noSecretsKey:
-    '需由服务器运维者在环境配置中加入 SECRETS_KEY（32 个随机字节的 base64）并重启；提供者的客户端密钥会用它加密保存。运维者在环境配置中设置的提供者不受影响。',
+    '需由服务器运维者为服务器设置一把用来加密客户端密钥的密钥，并重启。运维者在服务器上设置的提供者不受影响。',
 
   redirect: {
     label: '重定向 URI',
@@ -54,7 +54,7 @@ export default {
     operatorWhy: '在服务器环境配置（OIDC_*）中设置，此处只读。',
     linksByEmail: '以邮箱关联',
     olderKey: '旧密钥',
-    olderKeyWhy: '其密钥以之前的 SECRETS_KEY 加密，服务器仍保留该密钥。运维者执行 aishie-core secrets rewrap 即可改以新密钥重新加密。',
+    olderKeyWhy: '其密钥以服务器之前的密钥加密，服务器仍保留该密钥。服务器运维者可改以新密钥重新加密。',
     unnamed: '未命名：按钮显示“单点登录”',
     always: '始终启用',
     enabledLabel: '在登录页提供 {name}',
@@ -89,9 +89,9 @@ export default {
     id_taken:
       '服务器运维者设置了一个同一 ID 的提供者，并以它取代此项。此项不会提供；在运维者的提供者使用这个 ID 期间，此处也无法修改或删除它。',
     secret_unavailable:
-      '服务器的密钥无法打开其客户端密钥（SECRETS_KEY 被移除，或更换时没有保留旧密钥），因此不会提供。请编辑并重新输入密钥。',
+      '服务器的密钥无法打开其客户端密钥（密钥被移除，或更换时没有保留旧密钥），因此不会提供。请编辑并重新输入密钥。',
     issuer_address_not_allowed:
-      '其颁发者位于本机，或位于私有、链路本地或其他非公开地址；除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则服务器不会连接它，因此不会提供，通过它登录也会被拒绝。请编辑以更换颁发者，或联系服务器运维者。',
+      '其颁发者位于本机，或位于私有、链路本地或其他非公开地址；除非服务器运维者允许，否则服务器不会连接它，因此不会提供，通过它登录也会被拒绝。请编辑以更换颁发者，或联系服务器运维者。',
   },
 
   test: {
@@ -137,7 +137,7 @@ export default {
     // Core 注明原因的问题：以这里的文字说明，其后附上 Core 的原文（其中列出网址）。
     reason: {
       issuer_address_not_allowed:
-        '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+        '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者允许，否则本服务器不会连接位于这些地址、在此设置的提供者。',
     },
   },
 
@@ -219,7 +219,7 @@ export default {
   },
 
   refusal: {
-    secrets_key_missing: '管理员需先在服务器设置 SECRETS_KEY：在运维者设置之前，无法添加提供者，也无法输入客户端密钥。',
+    secrets_key_missing: '服务器尚未设置用来加密客户端密钥的密钥：在运维者设置之前，无法添加提供者，也无法输入客户端密钥。',
     set_by_operator: '这个提供者由服务器运维者设置（OIDC_*），此处无法修改。',
     id_taken: '这个 ID 已被占用：运维者的提供者或另一个提供者已使用它。请另选一个。',
     version_mismatch: '其间已有人修改这个提供者。',
@@ -229,6 +229,12 @@ export default {
     sso_provider_unavailable: '这个提供者暂时无法使用：其密钥无法打开，或无法读取其发现文档。',
     platform_role_required: '只有 root 及平台管理员可以设置单点登录。',
     issuer_address_not_allowed:
-      '这个颁发者位于本机，或位于私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+      '这个颁发者位于本机，或位于私有、链路本地或保留地址：除非服务器运维者允许，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+  },
+  // 只有服务器运维方会处理的设置，放在文字旁的提示中（OperatorDetail）。
+  flags: {
+    secretsKey: '服务器环境配置中的 SECRETS_KEY（32 个随机字节的 base64）',
+    rewrap: 'aishie-core secrets rewrap',
+    privateIssuers: 'SSO_ALLOW_PRIVATE_ISSUERS',
   },
 }

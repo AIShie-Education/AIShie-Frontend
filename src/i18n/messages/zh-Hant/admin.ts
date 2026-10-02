@@ -121,10 +121,10 @@ export default {
     placeholderId: '貼上參與者 ID',
     noMatch: '沒有符合的人。',
     pasteId: '請貼上完整的參與者 ID。',
-    noSearch: '此 Core 版本尚未支援以姓名或電子郵件搜尋（需要更新），請改為貼上參與者 ID。',
-    suspended: '對方已被停用，Core 不會為已停用的人員或代理安排席位。請先將其重新啟用。',
+    noSearch: '這個伺服器版本尚未支援以姓名或電子郵件搜尋（需要更新），請改為貼上參與者 ID。',
+    suspended: '對方已被停用，已停用的人員或代理不能獲安排席位。請先將其重新啟用。',
     system: '系統帳戶負責執行背景工作，不會加入任何課程。',
-    alreadySeated: '你已在此課程擁有席位，Core 不會為同一人安排兩個席位。',
+    alreadySeated: '你已在此課程擁有席位，同一人不能有兩個席位。',
     agent: '這是一個代理。若指派為講師，它將擁有講師預設的全部權限。',
     submit: '指派為講師',
     done: '已指派 {name} 為講師',
@@ -166,8 +166,8 @@ export default {
     byId: '已按 ID 找到。按 Enter 開啟其頁面。',
     notFound: '找不到此 ID 的人員或代理。',
     noList: {
-      title: '此 Core 版本尚未能列出人員與代理',
-      body: '瀏覽及搜尋人員與代理需要較新版本的 AIshie Core（具備 actor.list 的版本）。在伺服器更新之前，請按參與者 ID 開啟，或登記新的人員或代理。',
+      title: '這個伺服器版本尚未能列出人員與代理',
+      body: '瀏覽及搜尋人員與代理需要伺服器上較新版本的 AIshie。在伺服器更新之前，請按參與者 ID 開啟，或登記新的人員或代理。',
     },
     openById: {
       title: '按 ID 開啟人員或代理',
@@ -313,7 +313,7 @@ export default {
     placeholderId: '貼上人員的身分 ID',
     noMatch: '沒有相符的啟用中人員。',
     pasteId: '請貼上完整的身分 ID。',
-    noSearch: '這個 Core 版本尚未支援以姓名或電郵搜尋（需要更新）：請改為貼上身分 ID。',
+    noSearch: '這個伺服器版本尚未支援以姓名或電郵搜尋（需要更新）：請改為貼上身分 ID。',
     blocked: {
       notHuman: '不是人員',
       suspended: '已停用',
@@ -324,7 +324,7 @@ export default {
   token: {
     title: 'API 權杖',
     intro:
-      '發出權杖，讓對方可以呼叫 Core：代理無法自行登入申請權杖，第一個憑證便是由此取得。權杖只會顯示一次，Core 只保存其雜湊值。',
+      '發出權杖，讓代理可以連接 AIshie：代理無法自行登入申請權杖，第一個憑證便是由此取得。權杖只會顯示一次，系統只保存其雜湊值。',
     label: '標籤',
     labelPlaceholder: 'CS101 秋季學期評分代理',
     labelHint: '註明權杖用途，方便日後辨認。',
@@ -340,7 +340,7 @@ export default {
     runtimeAgent:
       '這裡不會發出權杖：這個代理是站內託管，只有本站的代理執行環境在託管它時，會按代理的 ID 取得它唯一的權杖。在下方撤銷那個權杖，在執行環境取得新權杖之前，站內便無法向它提問。',
     revealTitle: '請立即複製權杖',
-    once: '權杖只會在此顯示一次。Core 只保存其雜湊值；如遺失，請重新發出。',
+    once: '權杖只會在此顯示一次。系統只保存其雜湊值；如遺失，請重新發出。',
     replayed: '這是重複的請求，因此不會再次顯示權杖。如尚未複製，請重新發出。',
     token: '權杖',
     prefix: '前綴',
@@ -361,7 +361,7 @@ export default {
   credentials: {
     title: '權杖與登入方式',
     introAgent:
-      '此代理用來呼叫 Core 的 API 權杖。撤銷其中一個，該權杖下一次呼叫起便會被拒絕，而代理本身不會被停用：其他權杖及席位都會保留。',
+      '此代理用來連接 AIshie 的 API 權杖。撤銷其中一個，該權杖下一次呼叫起便會被拒絕，而代理本身不會被停用：其他權杖及席位都會保留。',
     introHuman:
       '進入此帳戶的所有方式：瀏覽器登入階段、密碼、單一登入及邀請連結。可逐一撤銷，無須停用對方：其他憑證及席位都會保留。',
     // Above the API tokens a person still holds: only agents are given them.
@@ -408,7 +408,7 @@ export default {
     revoke: '撤銷',
     revoked: '已撤銷',
     signedOut: '已登出',
-    missing: '此 Core 版本尚未能列出其權杖及登入方式（需要更新）。在更新之前，權杖一旦外洩，只能停用對方來阻止。',
+    missing: '這個伺服器版本尚未能列出其權杖及登入方式（需要更新）。在更新之前，權杖一旦外洩，只能停用對方來阻止。',
     confirm: {
       titleToken: '撤銷權杖「{label}」？',
       titleSession: '登出這個瀏覽器登入階段？',

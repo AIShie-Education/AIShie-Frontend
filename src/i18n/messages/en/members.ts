@@ -92,7 +92,7 @@ export default {
     actorHelpFound:
       'Filled in when you pick someone above; an actor ID can also be pasted. It is not a member ID: that is made when they are seated here.',
     noSearch:
-      'This Core cannot search by name or email yet (it needs updating): paste the actor ID. It is not a member ID: that is made when they are seated here.',
+      'This server cannot search by name or email yet (it needs updating): paste the actor ID. It is not a member ID: that is made when they are seated here.',
     findEmail: 'Find by student/staff number or email',
     emailPlaceholder: "20231234 or name{'@'}example.edu",
     findButton: 'Find',
@@ -105,12 +105,12 @@ export default {
     actorHelpEmail:
       'Filled in when you find someone by email above. An agent has no email: ask a platform administrator, who can tell you their actor ID. It is not a member ID: that is made when they are seated here.',
     noSearchEmail:
-      'This Core cannot search by name or email yet (it needs updating), only by a whole email address: give one above, or paste the actor ID. It is not a member ID: that is made when they are seated here.',
+      'This server cannot search by name or email yet (it needs updating), only by a whole email address: give one above, or paste the actor ID. It is not a member ID: that is made when they are seated here.',
     actorInvalid: 'An actor ID has the form 01a0d79f-13c6-70da-a7cc-f009b1efe423.',
     actorMissing: 'No actor has this ID.',
     alreadySeated: 'They already have a seat in this course. Change that seat rather than adding another.',
     openSeat: 'Open their seat',
-    suspended: 'Suspended: Core seats nobody who is suspended until a platform administrator reinstates them.',
+    suspended: 'Suspended: nobody suspended can be seated until a platform administrator reinstates them.',
     ownedAgent: 'This agent belongs to {owner}, so it cannot be added here.',
     ownedAgentNoName: 'This agent belongs to someone, so it cannot be added here.',
     ownedAgentHelp:
@@ -152,8 +152,8 @@ export default {
   grant: {
     rulesTitle: 'Nobody hands out more than they hold',
     rules:
-      'A seat you give may not hold any permission at a higher level than your own, reach students or assignments outside your own reach, or last longer than your own seat. Core refuses a seat that does.',
-    willRefuse: 'Core will refuse this, because:',
+      'A seat you give may not hold any permission at a higher level than your own, reach students or assignments outside your own reach, or last longer than your own seat. A seat that does is refused.',
+    willRefuse: 'This will be refused, because:',
     permAbove: 'You hold “{perm}” at “{held}”; this seat would have it at “{wanted}”.',
     rowAbove: 'Higher than your own level, “{held}”',
     studentsAll: 'Your own reach is a list of students, so you cannot give a seat that reaches all students.',
@@ -165,7 +165,7 @@ export default {
     outlives: 'Your own seat ends at {t}; this seat would last longer.',
   },
   refusal: {
-    coreSaid: 'Core said:',
+    coreSaid: 'The server said:',
     permAbove:
       'You hold “{perm}” at “{held}” yourself, so you cannot give it at “{wanted}”. Lower that level, or ask someone who holds it to do this.',
     studentsAll: 'Your own reach is a list of students, so the seat must be limited to listed students too.',
@@ -286,7 +286,7 @@ export default {
     intro:
       'Choose which students and assignments this seat’s submission and grade permissions reach, and when the seat ends. Narrowing is always allowed; widening is a grant.',
     staleStudents:
-      '{n} student on this list is no longer a student of this course. Core refuses a changed list that still names them. | {n} students on this list are no longer students of this course. Core refuses a changed list that still names them.',
+      '{n} student on this list is no longer a student of this course. A changed list that still names them is refused. | {n} students on this list are no longer students of this course. A changed list that still names them is refused.',
     dropStale: 'Take them off the list',
     currently: 'Currently:',
     keep: 'Keep',

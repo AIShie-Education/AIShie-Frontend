@@ -84,7 +84,7 @@ async function panel(props: Record<string, unknown> = {}) {
 function expectAbsent(w: VueWrapper) {
   expect(w.find('.hosting-offer__title').text()).toContain('Hosted on AIshie')
   expect(w.find('.hosting-offer__title').text()).toContain('Not hosted yet')
-  expect(w.text()).toContain('AIshie’s agent runtime is not available on this server')
+  expect(w.text()).toContain('AIshie’s agent service is not available on this server')
   expect(w.find('.hosting-offer__host').exists()).toBe(false)
   expect(w.find('.copy-block').exists()).toBe(false)
   expect(w.text()).not.toContain('Authorization')
@@ -136,7 +136,7 @@ describe('HostingPanel: the runtime is here', () => {
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [hostedAgent({ core_actor_id: 'someone-else' })] }))
     const w = await panel()
     expect(w.find('.hosting-offer__intro').text()).toBe(
-      'AIshie’s runtime runs this agent once you choose the model it answers with; then people in its courses can ask it on the site. You never handle a token.',
+      'AIshie’s agent service runs this agent once you choose the model it answers with; then people in its courses can ask it on the site. You never handle a token.',
     )
     expect(w.find('.hosting-offer__host').text()).toBe('Set up hosting')
     expect(w.find('.copy-block').exists()).toBe(false)
@@ -161,7 +161,7 @@ describe('HostingPanel: the runtime is here', () => {
   it('says hosting is not for this account when Core will not vouch for it', async () => {
     s.on('POST', /^\/v1\/auth\/assertion$/, () => json(403, { error: { code: 'forbidden', message: 'suspended' } }))
     const w = await panel()
-    expect(w.text()).toContain('Hosting on the school’s runtime is not available for this account.')
+    expect(w.text()).toContain('Hosting on the school’s agent service is not available for this account.')
     expect(w.find('.hosting-offer__host').exists()).toBe(false)
   })
 
@@ -178,11 +178,11 @@ describe('HostingPanel: the runtime is here', () => {
     await vi.advanceTimersByTimeAsync(500)
     await flushPromises()
     expect(s.to('GET', RUNTIME.agents)).toHaveLength(2)
-    expect(w.text()).not.toContain('The school’s runtime is not available right now.')
+    expect(w.text()).not.toContain('The school’s agent service is not available right now.')
     await vi.advanceTimersByTimeAsync(1_000)
     await flushPromises()
     expect(s.to('GET', RUNTIME.agents)).toHaveLength(3)
-    expect(w.text()).toContain('The school’s runtime is not available right now. Try again in a minute.')
+    expect(w.text()).toContain('The school’s agent service is not available right now. Try again in a minute.')
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
     await w.find('.hosting-offer__error button').trigger('click')
     await flushPromises()
@@ -240,7 +240,7 @@ describe('HostingPanel: what the runtime offers', () => {
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
     const w = await panel()
     expect(w.find('.hosting-offer__host').exists()).toBe(false)
-    expect(w.text()).toContain('The school’s runtime cannot host agents at the moment: it is not set up to.')
+    expect(w.text()).toContain('The school’s agent service cannot host agents at the moment: it is not set up to.')
   })
 
   it('says the runtime offers no model where it takes neither a key nor the school’s plan', async () => {
@@ -248,7 +248,7 @@ describe('HostingPanel: what the runtime offers', () => {
     s.on('GET', RUNTIME.agents, () => json(200, { agents: [] }))
     const w = await panel()
     expect(w.find('.hosting-offer__host').exists()).toBe(false)
-    expect(w.text()).toContain('The school’s runtime offers no model to choose at the moment')
+    expect(w.text()).toContain('The school’s agent service offers no model to choose at the moment')
   })
 
   it('shows an agent hosted already whatever the features say, without the actions they do not offer', async () => {
@@ -257,8 +257,8 @@ describe('HostingPanel: what the runtime offers', () => {
     const w = await panel()
     expect(w.find('.hosted-card').exists()).toBe(true)
     expect(w.find('.hosted-card__primary').exists()).toBe(false)
-    expect(w.text()).toContain('The school’s runtime cannot host agents by their id at the moment')
-    expect(w.text()).toContain('The school’s runtime does not take a model and key of your own at the moment')
+    expect(w.text()).toContain('The school’s agent service cannot host agents by their id at the moment')
+    expect(w.text()).toContain('The school’s agent service does not take a model and key of your own at the moment')
     expect(w.find('.hosted-card__pause').exists()).toBe(true)
   })
 

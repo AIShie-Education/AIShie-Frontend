@@ -116,7 +116,7 @@ describe('the list of providers', () => {
     expect(lost.find('.sso-status__status').text()).toBe('Secret can’t be opened')
     expect(lost.text()).toContain('give the secret again')
     expect(rotated.find('.sso-status__older-key').text()).toBe('Older key')
-    expect(rotated.text()).toContain('aishie-core secrets rewrap')
+    expect(rotated.text()).toContain('The server’s operator can seal it again under the new one.')
     expect(off.find('.sso-status__status').text()).toBe('Off')
     expect(off.find('.sso-status__by-email').text()).toBe('Links by email')
     expect(off.find('.sso-cell__enabled').classes()).not.toContain('is-checked')
@@ -133,9 +133,9 @@ describe('the list of providers', () => {
       }),
     ]
     for (const [locale, status, why] of [
-      ['en', 'Issuer not public', 'which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS'],
-      ['zh-Hant', '簽發者位址非公開', '除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS'],
-      ['zh-Hans', '颁发者地址非公开', '除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS'],
+      ['en', 'Issuer not public', 'which the server reaches only if its operator allows it'],
+      ['zh-Hant', '簽發者位址非公開', '除非伺服器營運者允許'],
+      ['zh-Hans', '颁发者地址非公开', '除非服务器运维者允许'],
     ] as const) {
       const w = await page(locale)
       const tag = rowOf(w, 'campus').find('.sso-status__status')
@@ -154,9 +154,9 @@ describe('the list of providers', () => {
   it('offers nothing to add without SECRETS_KEY on the server, and says so in each language', async () => {
     core.canAdd = false
     for (const [locale, words] of [
-      ['en', 'SECRETS_KEY is not set on the server'],
-      ['zh-Hant', '管理員需先在伺服器設定 SECRETS_KEY'],
-      ['zh-Hans', '管理员需先在服务器设置 SECRETS_KEY'],
+      ['en', 'The server has no key to seal client secrets with'],
+      ['zh-Hant', '伺服器尚未設定用來加密用戶端密鑰的金鑰'],
+      ['zh-Hans', '服务器尚未设置用来加密客户端密钥的密钥'],
     ] as const) {
       const w = await page(locale)
       expect(w.find('.sso-admin__no-key').text()).toContain(words)

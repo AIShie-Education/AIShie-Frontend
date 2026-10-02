@@ -96,7 +96,7 @@ export default {
       mcpHint: 'Your own tools, such as Claude Desktop or an editor, use it over MCP; nobody can ask it on the site.',
       fixed: 'This cannot be changed after it is created.',
       required: 'Choose how it runs',
-      runtimeHelp: 'Run by AIshie’s own agent runtime: members of its courses ask it on the site while it runs.',
+      runtimeHelp: 'Run by AIshie’s own agent service: members of its courses ask it on the site while it runs.',
       mcpHelp: 'Used from its owner’s own tools over MCP: nobody can ask it on the site.',
     },
     // Whether people can ask an agent hosted on AIshie now (site_chat).
@@ -152,7 +152,7 @@ export default {
     notAParticipant:
       'Only the two taking part in a conversation mark it read: reading it as course staff keeps no place in it.',
     hostedByRuntime:
-      'This agent is hosted on AIshie: the site’s agent runtime alone holds its token, and none is issued to anyone else.',
+      'This agent is hosted on AIshie: the site’s agent service alone holds its token, and none is issued to anyone else.',
     hostingFixed: 'How an agent runs is chosen when it is created, and never changed: create another agent for the other way.',
   },
   // A seat's ceilings (perm_ceilings): the most it may hold of a permission, whoever grants it.
@@ -304,6 +304,7 @@ export default {
     chars: 'Text note ({chars} characters)',
   },
   copyId: 'Copy ID',
+  operatorDetail: 'For the server’s operator: {detail}',
   notSignedIn: 'Not signed in',
   archivedCourse: 'This course is archived: it can be read, but nothing in it can be changed.',
   draftCourse: 'This course is a draft.',

@@ -63,7 +63,7 @@ export default {
     zeroWeight: 'Weight 0: shown, but it counts for nothing.',
     zeroPoints: 'Worth 0 points: neither counted nor missed.',
     unpublished: 'Not published',
-    unpublishedHelp: 'Not counted until it is published: Core leaves unpublished work out of every total.',
+    unpublishedHelp: 'Not counted until it is published: unpublished work is left out of every total.',
     ignored: 'Counts toward nothing: its component has sub-components.',
     graded: {
       placement: 'Grades have been entered beneath it: moving it writes again, at once, the posted totals it changes.',
@@ -71,8 +71,8 @@ export default {
     },
     checking: 'Checking where grades have already been entered…',
     partial:
-      'Not every grade could be checked, so some parts that can no longer change may not be marked. Core refuses such a change anyway.',
-    factsFailed: 'Could not check where grades have been entered. Core still refuses any change its rules forbid.',
+      'Not every grade could be checked, so some parts that can no longer change may not be marked. Such a change is refused anyway.',
+    factsFailed: 'Could not check where grades have been entered. Any change the rules forbid is still refused.',
     assignmentsHidden: 'Assignments are not shown: you cannot read this course’s assignments.',
     assignmentsFailed: 'The assignments could not be loaded.',
     assignmentsPartial:
@@ -88,7 +88,7 @@ export default {
     assignments: '“{name}” holds assignments and cannot also have sub-components.',
     self: 'A component cannot go beneath itself.',
     root: 'The course total is the root of the scheme and stays there.',
-    unseen: '“{name}” may hold assignments that are not shown to you; if it does, Core refuses this.',
+    unseen: '“{name}” may hold assignments that are not shown to you; if it does, this is refused.',
   },
   form: {
     createTitle: 'Add a component',
@@ -97,7 +97,7 @@ export default {
     name: 'Name',
     namePlaceholder: 'e.g. Quizzes, Final exam',
     rootNameHint:
-      'Core names the course total “Total”. Until it is renamed, it is shown as “{shown}”, in each reader’s language.',
+      'The course total is named “Total” at first. Until it is renamed, it is shown as “{shown}”, in each reader’s language.',
     type: 'How it is graded',
     typeRolled: 'Rolled up',
     typeRolledHelp: 'From the assignments hung on it, or from sub-components added under it',
@@ -120,7 +120,7 @@ export default {
     clearFrozen: 'Grades have been entered on it, so it stays graded directly.',
     directBlocked:
       'It carries totals that were posted while it was rolled up. Add a new component for what is graded directly.',
-    directUnseen: 'It may hold assignments that are not shown to you; if it does, Core refuses to grade it directly.',
+    directUnseen: 'It may hold assignments that are not shown to you; if it does, grading it directly is refused.',
     needsApproval: 'Changes to the grading scheme wait for someone to approve them before they take effect.',
     notRewritten:
       'Totals students have already been shown are not rewritten now: they change when grades beneath them are next posted or regraded.',

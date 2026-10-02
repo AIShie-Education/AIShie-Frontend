@@ -72,7 +72,7 @@ describe('UsageCard', () => {
     })
     const w = await card()
     expect(w.find('.usage-card__of').text()).toBe('no ceiling for the school')
-    expect(w.find('.usage-owner__unknown').text()).toContain('Someone the runtime has not seen yet')
+    expect(w.find('.usage-owner__unknown').text()).toContain('Someone the agent service has not seen yet')
   })
 
   it('says the quotas in dollars in force, where there are any', async () => {

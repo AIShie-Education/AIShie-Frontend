@@ -249,7 +249,7 @@ describe('quotas per person', () => {
     expect(me.find('.tenant-cell__reset').exists()).toBe(true)
     const ops = tenantRow(w, 't_ops')
     expect(ops.find('.tenant-cell__id').text()).toBe('t_ops')
-    expect(ops.find('.tenant-cell__source').text()).toBe('runtime.yaml')
+    expect(ops.find('.tenant-cell__source').text()).toBe('Server settings')
     expect(ops.find('.tenant-cell__reset').exists()).toBe(false)
     // Two a page here: the third comes with the next.
     expect(w.find('[data-tenant^="ten_0192f3c1-1111"]').exists()).toBe(false)
@@ -302,10 +302,10 @@ describe('quotas per person', () => {
     await tenantRow(w, `ten_${ADMIN_ID}`).find('.tenant-cell__reset').trigger('click')
     await flushPromises()
     expect(vi.mocked(ElMessageBox.confirm).mock.calls[0][0]).toBe(
-      'The quota set here is removed. runtime.yaml’s: 200 a day, and No limit.',
+      'The quota set here is removed. The server’s settings: 200 a day, and No limit.',
     )
     expect(s.to('DELETE', ADMIN.tenant)).toHaveLength(1)
-    expect(tenantRow(w, `ten_${ADMIN_ID}`).find('.tenant-cell__source').text()).toBe('runtime.yaml')
+    expect(tenantRow(w, `ten_${ADMIN_ID}`).find('.tenant-cell__source').text()).toBe('Server settings')
   })
 })
 
@@ -322,7 +322,7 @@ describe('agents’ daily budgets', () => {
     expect(w.find('.budgets-card__source').text()).toMatch(
       /^Set here, in place of the server’s defaults.\s*Changed by Ada Admin/,
     )
-    expect(w.text()).toContain('The server’s own configured agents keep the budgets runtime.yaml gives them.')
+    expect(w.text()).toContain('The server’s own configured agents keep the budgets its settings give them.')
     expect(w.find('.budgets-card__save').attributes('disabled')).toBeDefined()
   })
 
@@ -374,7 +374,7 @@ describe('agents’ daily budgets', () => {
     expect(s.to('DELETE', ADMIN.budgets)).toHaveLength(1)
     expect(input(w, 'per_agent_day', 'answers').value).toBe('400')
     expect(w.find('.budgets-card__source').text()).toBe(
-      'The server’s defaults (runtime.yaml), as its operator set them.',
+      'The server’s defaults, as its operator set them.',
     )
     expect(w.find('.budgets-card__reset').exists()).toBe(false)
   })

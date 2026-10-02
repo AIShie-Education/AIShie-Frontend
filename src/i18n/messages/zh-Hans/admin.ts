@@ -121,10 +121,10 @@ export default {
     placeholderId: '粘贴参与者 ID',
     noMatch: '没有匹配的人。',
     pasteId: '请粘贴完整的参与者 ID。',
-    noSearch: '此 Core 版本尚未支持以姓名或邮箱搜索（需要更新），请改为粘贴参与者 ID。',
-    suspended: '对方已被停用，Core 不会为已停用的人员或智能体安排席位。请先将其重新启用。',
+    noSearch: '这个服务器版本尚未支持以姓名或邮箱搜索（需要更新），请改为粘贴参与者 ID。',
+    suspended: '对方已被停用，已停用的人员或智能体不能获安排席位。请先将其重新启用。',
     system: '系统账号负责执行后台任务，不会加入任何课程。',
-    alreadySeated: '你已在此课程拥有席位，Core 不会为同一人安排两个席位。',
+    alreadySeated: '你已在此课程拥有席位，同一人不能有两个席位。',
     agent: '这是一个智能体。若指派为讲师，它将拥有讲师预设的全部权限。',
     submit: '指派为讲师',
     done: '已指派 {name} 为讲师',
@@ -166,8 +166,8 @@ export default {
     byId: '已按 ID 找到。按 Enter 打开其页面。',
     notFound: '找不到此 ID 的人员或智能体。',
     noList: {
-      title: '此 Core 版本还不能列出人员与智能体',
-      body: '浏览及搜索人员与智能体需要较新版本的 AIshie Core（具备 actor.list 的版本）。在服务器更新之前，请按参与者 ID 打开，或注册新的人员或智能体。',
+      title: '这个服务器版本还不能列出人员与智能体',
+      body: '浏览及搜索人员与智能体需要服务器上较新版本的 AIshie。在服务器更新之前，请按参与者 ID 打开，或注册新的人员或智能体。',
     },
     openById: {
       title: '按 ID 打开人员或智能体',
@@ -312,7 +312,7 @@ export default {
     placeholderId: '粘贴人员的参与者 ID',
     noMatch: '没有匹配的已启用人员。',
     pasteId: '请粘贴完整的参与者 ID。',
-    noSearch: '这个 Core 版本尚未支持以姓名或邮箱搜索（需要更新）：请改为粘贴参与者 ID。',
+    noSearch: '这个服务器版本尚未支持以姓名或邮箱搜索（需要更新）：请改为粘贴参与者 ID。',
     blocked: {
       notHuman: '不是人员',
       suspended: '已停用',
@@ -323,7 +323,7 @@ export default {
   token: {
     title: 'API 令牌',
     intro:
-      '签发令牌，让对方可以调用 Core：智能体无法自行登录申请令牌，第一个凭证就是由此获得。令牌只会显示一次，Core 只保存其哈希值。',
+      '签发令牌，让智能体可以连接 AIshie：智能体无法自行登录申请令牌，第一个凭证就是由此获得。令牌只会显示一次，系统只保存其哈希值。',
     label: '标签',
     labelPlaceholder: 'CS101 秋季学期评分智能体',
     labelHint: '注明令牌用途，方便以后辨认。',
@@ -339,7 +339,7 @@ export default {
     runtimeAgent:
       '这里不会签发令牌：这个智能体是站内托管，只有本站的智能体运行环境在托管它时，会按智能体的 ID 获取它唯一的令牌。在下方撤销那个令牌，在运行环境获得新令牌之前，站内便无法向它提问。',
     revealTitle: '请立即复制令牌',
-    once: '令牌只会在此显示一次。Core 只保存其哈希值；如遗失，请重新签发。',
+    once: '令牌只会在此显示一次。系统只保存其哈希值；如遗失，请重新签发。',
     replayed: '这是重复的请求，因此不会再次显示令牌。如尚未复制，请重新签发。',
     token: '令牌',
     prefix: '前缀',
@@ -360,7 +360,7 @@ export default {
   credentials: {
     title: '令牌与登录方式',
     introAgent:
-      '此智能体用来调用 Core 的 API 令牌。撤销其中一个，该令牌下一次调用起便会被拒绝，而智能体本身不会被停用：其他令牌及席位都会保留。',
+      '此智能体用来连接 AIshie 的 API 令牌。撤销其中一个，该令牌下一次调用起便会被拒绝，而智能体本身不会被停用：其他令牌及席位都会保留。',
     introHuman:
       '进入此账号的所有方式：浏览器会话、密码、单点登录及邀请链接。可逐一撤销，无须停用对方：其他凭证及席位都会保留。',
     // Above the API tokens a person still holds: only agents are given them.
@@ -407,7 +407,7 @@ export default {
     revoke: '撤销',
     revoked: '已撤销',
     signedOut: '已退出登录',
-    missing: '此 Core 版本还不能列出其令牌及登录方式（需要更新）。在更新之前，令牌一旦外泄，只能停用对方来阻止。',
+    missing: '这个服务器版本还不能列出其令牌及登录方式（需要更新）。在更新之前，令牌一旦外泄，只能停用对方来阻止。',
     confirm: {
       titleToken: '撤销令牌“{label}”？',
       titleSession: '让这个浏览器会话退出登录？',

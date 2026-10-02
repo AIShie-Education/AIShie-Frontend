@@ -8,7 +8,7 @@ export default {
       proposed: 'Awaiting approval',
       review: 'Awaiting review',
     },
-    proposedHelp: 'Nothing here has happened yet. Approving carries it out now, as the person or agent who proposed it, once Core has checked they may still do it.',
+    proposedHelp: 'Nothing here has happened yet. Approving carries it out now, as whoever proposed it, once the system has checked their permissions again.',
     reviewHelp: 'These have already happened. Reviewing records that someone has looked; it undoes nothing. Escalating asks a second person to look.',
     emptyProposed: 'Nothing is waiting for approval.',
     emptyReview: 'Nothing is waiting for review.',
@@ -25,7 +25,7 @@ export default {
     agentsIntro:
       'Your agents act only for you. What one of them proposes, you approve or reject here wherever you could have done it without anyone’s confirmation: it is then carried out at once, as your own doing. Anything else is for someone else in the course to decide, and says why. You may withdraw any of its proposals while it waits.',
     agentsProposedHelp:
-      'Nothing here has happened yet. Approving carries it out now, as your agent, once Core has checked it may still do it; withdrawing cancels it.',
+      'Nothing here has happened yet. Approving carries it out now, as your agent, once the system has checked its permissions again; withdrawing cancels it.',
     agentsReviewHelp:
       'Your agent has already done these. Reviewing records that you have looked; it undoes nothing. Escalating asks someone else in the course to look.',
     agentsEmptyProposed: 'None of your agents’ proposals is waiting.',
@@ -34,7 +34,7 @@ export default {
   detail: {
     title: 'Action',
     what: 'What was asked',
-    whatHelp: 'The arguments as Core stored them. For a proposal this includes what was fixed when it was made, such as the rubric version or the points the score is out of.',
+    whatHelp: 'The details as they were recorded. For a proposal this includes what was fixed when it was made, such as the rubric version or the points the score is out of.',
     raw: 'Raw payload (JSON)',
     rawResult: 'Raw result (JSON)',
     result: 'What came of it',
@@ -54,7 +54,7 @@ export default {
     title: 'My actions',
     subtitle: 'Everything you have done or tried to do in this course, and what became of it.',
     help: 'Proposals appear here as soon as they are made, and change once someone decides.',
-    helpAgent: 'The agent reads the same list with the action.list_mine tool.',
+    helpAgent: 'Your agents see this same list.',
     empty: 'You have not done anything in this course yet.',
     emptyFiltered: 'None of your actions match this filter.',
     filterStatus: 'Status',
@@ -64,7 +64,7 @@ export default {
       oldest: 'Oldest first',
     },
     loadingAll: 'Loading your actions… {n} so far',
-    capped: 'Showing your first {n} actions. Core lists them oldest first, so newer ones are still to load.',
+    capped: 'Showing your first {n} actions. They are listed oldest first, so newer ones are still to load.',
     loadRest: 'Load newer',
     showChat: 'Include chat messages',
     waiting: '{n} waiting for a decision',
@@ -328,7 +328,7 @@ export default {
     can: 'May',
     clipped: '{n} set lower than the preset | {n} set lower than the preset',
     checkedAgain:
-      'Core works the seat out again when this is approved: if {owner} may no longer bring agents in, or now holds less, what is carried out is no wider than that, or it is refused.',
+      'The seat is worked out again when this is approved: if {owner} may no longer bring agents in, or now holds less, what is carried out is no wider than that, or it is refused.',
   },
   answer: {
     title: 'The reply',
@@ -356,8 +356,8 @@ export default {
   },
   grant: {
     title: 'What approving grants',
-    help: 'The seat approving would make: the preset as it stands now (Core copies it when the proposal is carried out), with this proposal’s own settings laid over it.',
-    presetMissing: 'The preset this names could not be found. If it no longer exists, Core will not carry this out.',
+    help: 'The seat approving would make: the preset as it stands now (copied when the proposal is carried out), with this proposal’s own settings laid over it.',
+    presetMissing: 'The preset this names could not be found. If it no longer exists, this will not be carried out.',
     deptPreset: 'Department preset',
     listsItself: 'Themselves',
     nobody: 'Nobody',
@@ -415,7 +415,7 @@ export default {
     reviewed: 'Marked as reviewed',
     escalated: 'Escalated for a second reviewer',
     reasonLabel: 'Why: {reason}',
-    coreSays: 'Core says',
+    coreSays: 'The server says',
     decisionAction: 'Decision recorded as',
     inner: 'The proposal it decided: {what}',
     executedByOwner: 'Approved and carried out, as your own doing',

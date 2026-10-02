@@ -230,7 +230,7 @@ describe('adding a model to the plan', () => {
       'offer_exists',
       { field: '/id', source: 'config' },
       '.offer-form__id',
-      'The server’s runtime.yaml already has a model with this ID.',
+      'The server’s settings already have a model with this ID.',
     ],
     [422, 'failed_precondition', 'model_denied', { field: '/model' }, '.offer-form__model', 'The server’s model lists'],
     [
@@ -327,14 +327,14 @@ describe('adding a model to the plan', () => {
 
   it('says when the runtime offers no provider, or they could not be read', async () => {
     let { w } = await open(null, { providers: [] })
-    expect(w.find('.offer-dialog__no-providers').text()).toContain('The runtime offers no provider for a key.')
+    expect(w.find('.offer-dialog__no-providers').text()).toContain('The agent service offers no provider for a key.')
     w.unmount()
     ;({ w } = await open(null, {
       providers: null,
       providersError: refusal(503, 'unavailable', 'store_unavailable') && new Error('x'),
     }))
     expect(w.find('.offer-dialog__providers-failed').text()).toContain(
-      'Could not read the providers the runtime offers.',
+      'Could not read the providers the agent service offers.',
     )
     await w.find('.offer-dialog__providers-failed button').trigger('click')
     expect(w.emitted('reloadProviders')).toHaveLength(1)
