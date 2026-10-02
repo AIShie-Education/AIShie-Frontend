@@ -3,16 +3,20 @@
 // versions are running, this web app's (/version.json, which the image
 // serves) and the server's (/healthz). Each is read when the dialog opens,
 // and left out where it cannot be read (a development server has no
-// /version.json). The versions live here, not on the sign-in page.
+// /version.json). The versions live here, not on the sign-in page. On a
+// phone it opens over the menu's drawer, and back closes it first, as it
+// does the drawer under it (useBackCloses).
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { health } from '@/api/http'
+import { useBackCloses } from '@/composables/useBackCloses'
 import AppWordmark from '@/components/AppWordmark.vue'
 
 const open = defineModel<boolean>({ required: true })
 /** Once the dialog has gone, so the caller can put focus back where it came from. */
 const emit = defineEmits<{ closed: [] }>()
 const { t } = useI18n()
+useBackCloses(open, () => (open.value = false))
 
 const web = ref<string | null>(null)
 const server = ref<string | null>(null)

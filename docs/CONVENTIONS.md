@@ -565,8 +565,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider screen stays open from
   page to page, and back moves between them), the agent's conversation log, the invite link put up
   full screen, and the administrators' drawers of a preset and of a department's administrators
-  (full width on a phone, `DRAWER_SIZE`), and who can read a conversation, the chat pane's dialog
-  opened over the sheet or the log; a new drawer or dialog that fills a phone's screen, or that opens
+  (full width on a phone, `DRAWER_SIZE`), who can read a conversation, the chat pane's dialog
+  opened over the sheet or the log, and About (`AboutDialog`), which on a phone opens over the
+  menu from the account's row at its bottom; a new drawer or dialog that fills a phone's screen, or that opens
   over one of these, uses it too. The router (`installBackCloses`) goes back over the overlays' entries before it adds a page's,
   so that a link followed from one takes its place, and over those a page left before it was
   reloaded; going back to a page's own entry leaves it where it was scrolled.
