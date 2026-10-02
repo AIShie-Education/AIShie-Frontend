@@ -116,6 +116,8 @@ const paged = usePaged<GradeSummary>(
   },
   { watch: [assignment, student] },
 )
+/** The posting toolbar, over the list: where it is shown, posting is the view's one primary action. */
+const postBar = computed(() => canPost.value && !paged.error.value?.isForbidden)
 const rows = computed(() =>
   stateFilter.value === 'all' ? paged.items.value : paged.items.value.filter((g) => g.state === stateFilter.value),
 )
@@ -286,7 +288,13 @@ const gradebookLink = computed(() =>
           <span>{{ mine ? t('grades.mine.gradebook') : t('grades.list.gradebook') }}</span>
         </el-button>
       </router-link>
-      <el-button v-if="canEnter" type="primary" :disabled="!course.writable" @click="enterVisible = true">
+      <!-- One primary to a view: where the posting toolbar is shown, posting is it. -->
+      <el-button
+        v-if="canEnter"
+        :type="postBar ? undefined : 'primary'"
+        :disabled="!course.writable"
+        @click="enterVisible = true"
+      >
         <el-icon><EditPen /></el-icon>
         <span>{{ t('grades.enter.button') }}</span>
         <StatusTag
@@ -403,7 +411,7 @@ const gradebookLink = computed(() =>
         </el-button>
       </div>
 
-      <div v-if="canPost && !paged.error.value?.isForbidden" class="grades-view__post">
+      <div v-if="postBar" class="grades-view__post">
         <el-button type="primary" :disabled="!course.writable || !selected.length" @click="postSelected">
           <el-icon><Promotion /></el-icon>
           <span>{{ t('grades.post.selected', { n: selected.length }) }}</span>
@@ -645,9 +653,19 @@ const gradebookLink = computed(() =>
 .grades-view__post .el-button + .el-button {
   margin-left: 0;
 }
+/* On a phone, the chat's round button floats at the screen's bottom right,
+   where the toolbar's ⋯ would be under it when the page opens: the toolbar
+   keeps clear of that column (the button's size and its 16 px inset). */
+.has-chat-fab .grades-view__post {
+  padding-right: calc(var(--app-fab-size, 48px) + 16px);
+}
 .grades-view__post-hint {
   margin: 0;
   flex: 1 1 200px;
+}
+/* The ⋯ menu at the toolbar's far end, on its row's right even when it wraps. */
+.grades-view__post > .el-dropdown {
+  margin-left: auto;
 }
 .grades-view__undo-text {
   display: flex;

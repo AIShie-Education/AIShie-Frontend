@@ -671,7 +671,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   as soon as it is scrolled up, reaches its top, or the button takes focus (at once, with no slide,
   where motion is reduced), and the page keeps room below its last item for it (`.has-chat-fab`,
   88 px and the safe area), so that a list's last item, its pages or a button are never under it; a
-  page that pins something to the bottom of the screen keeps it clear of the button too. The
+  page that pins something to the bottom of the screen keeps it clear of the button too, and so does
+  a toolbar whose action at its right end would be under it when the page opens (`.has-chat-fab`
+  `.grades-view__post`: the button's column kept clear). The
   activity bar holds only the side bar's views. The button opens the chat in its corner (a phone's
   button is gone while the sheet is open); Ctrl/⌘+J opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
   width, which stays as it is, and usable, behind it (a dialog, not a modal one: `role="dialog"`,

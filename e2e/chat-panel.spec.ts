@@ -1041,6 +1041,35 @@ test.describe.serial('the chat panel', () => {
       await expect(chatButton(page)).toBeFocused()
     })
 
+    test('its floating button leaves the grades’ posting toolbar, its ⋯ menu at the right end, clear', async ({
+      page,
+    }) => {
+      const d = demo()
+      await signIn(page, d.actors.instructor)
+      await page.goto(coursePath('grades'))
+      const more = page.getByRole('button', { name: 'More posting actions' })
+      await expect(more).toBeVisible()
+      await expect(chatButton(page)).toBeVisible()
+      // As the page opens, the ⋯ is not in the button's column, and where it is on the screen it is the ⋯ a tap finds.
+      const at = await more.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const fab = document.querySelector('.app-chat-fab__button')!.getBoundingClientRect()
+        const hit = (x: number, y: number) => {
+          const found = document.elementFromPoint(x, y)
+          return !!found && el.contains(found)
+        }
+        const y = r.top + r.height / 2
+        const shown = y >= 0 && y <= window.innerHeight
+        return {
+          clear: r.right <= fab.left,
+          centre: !shown || hit(r.left + r.width / 2, y),
+          right: !shown || hit(r.right - 2, y),
+        }
+      })
+      expect(at).toEqual({ clear: true, centre: true, right: true })
+      await photograph(page, 'grades-toolbar-phone')
+    })
+
     test('its floating button stays under the side menu and its dimmed layer', async ({ page }) => {
       const d = demo()
       await signIn(page, d.actors.yuki)
