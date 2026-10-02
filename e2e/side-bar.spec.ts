@@ -268,10 +268,13 @@ test.describe('on a phone', () => {
     const tabs = menu.getByRole('tablist', { name: 'Side bar views' })
     await expect(tabs.getByRole('tab')).toHaveText(['Courses', 'Agents'])
     await expect(tabs.getByRole('tab', { name: 'Courses' })).toHaveAttribute('aria-selected', 'true')
-    // At the menu's top, the view below them.
+    // At the menu's top, under the wordmark, the view below them.
     const top = (await tabs.boundingBox())!
     const menuBox = (await menu.boundingBox())!
-    expect(Math.round(top.y)).toBe(Math.round(menuBox.y))
+    const brand = (await menu.locator('.app-nav-drawer__brand').boundingBox())!
+    expect(Math.round(brand.y)).toBe(Math.round(menuBox.y))
+    await expect(menu.locator('.app-nav-drawer__brand').getByRole('img', { name: 'aishie' })).toBeVisible()
+    expect(Math.round(top.y)).toBe(Math.round(brand.y + brand.height))
     const panel = menu.getByRole('tabpanel')
     await expect(panel.locator(`a.side-course[href="${coursePath()}"]`)).toHaveAttribute('aria-current', 'page')
     expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(390)

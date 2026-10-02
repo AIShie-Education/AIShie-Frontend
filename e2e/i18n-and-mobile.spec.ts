@@ -69,9 +69,9 @@ test.describe('language', () => {
     }
     await expect(page.getByRole('link', { name: 'Overview' })).toHaveCount(0)
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
-    // The chat with the course's agents, over every page from its round button at the bottom right, and no longer a
+    // The chat with the course's agents, over every page from its button at the header's right end, and no longer a
     // tab of the course.
-    await expect(page.locator('.app-chat-fab').getByRole('button', { name: '與代理對話' })).toBeVisible()
+    await expect(page.locator('.app-header').getByRole('button', { name: '與代理對話' })).toBeVisible()
     await expect(zhTabs.getByRole('link', { name: '對話' })).toHaveCount(0)
     // Core's vocabularies too: the course's status and the caller's role.
     await expect(page.locator('.course-head')).not.toContainText('Active')
@@ -107,7 +107,7 @@ test.describe('language', () => {
       await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
-    await expect(page.locator('.app-chat-fab').getByRole('button', { name: '与智能体对话' })).toBeVisible()
+    await expect(page.locator('.app-header').getByRole('button', { name: '与智能体对话' })).toBeVisible()
     // Simplified glyphs, from Noto Sans SC: the SC faces are fetched, the TC ones never.
     await expect.poll(() => fonts.includes('sc'), { message: 'an SC face is fetched' }).toBe(true)
     expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Noto Sans SC/)

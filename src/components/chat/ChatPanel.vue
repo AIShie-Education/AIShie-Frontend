@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // The chat, a window floating over every signed-in page, as a chat on a web
 // page is: it neither docks nor takes its width from the page, which stays
-// as it is, and usable, behind it. It opens from the chat's round button at
-// the bottom right (AppLayout), in the button's corner, 400 × 600 px until
+// as it is, and usable, behind it. It opens from the chat's button at the
+// header's right end (AppLayout), in the bottom right corner, 400 × 600 px until
 // it is moved by its title bar or resized from its top edge, its left edge
 // or its top left corner (the edges also with the arrow keys, as
 // separators), always within the viewport; a double click on its title bar
@@ -198,7 +198,7 @@ async function focusPanel() {
     el.querySelector<HTMLElement>('.chat-panel__bar button')
   ;(first ?? el).focus()
 }
-/** Back to the button that opens it, the round one at the bottom right, shown again once it is closed. */
+/** Back to the button that opens it: the header's, or on a phone the round one, shown again once the sheet is closed. */
 function focusToggle() {
   document.getElementById('chat-panel-toggle')?.focus()
 }

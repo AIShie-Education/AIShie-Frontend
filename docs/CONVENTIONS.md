@@ -639,15 +639,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   opens a collapsed side bar. `useSideBarStore()` (`@/stores/sidebar`) holds the view and whether it is
   open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
-  no activity bar: the header's menu button opens the views in a drawer, as tabs along its top, and
-  following a link in it closes it, as back does.
+  no activity bar: the brand's mark at the header's left (`AppMark`, 24 px in a 44 px button named
+  「選單」) opens the views in a drawer, with the wordmark (`AppWordmark`) at its top and the views as
+  tabs under it, and following a link in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
   account's settings, the language and the theme, each a submenu with the choice in use checked, and
   signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
-  title alone (and, on a phone, the menu's button): nothing else is offered there.
+  title and, at its right end, the chat's button (on a phone, the menu's button before the title and no
+  chat's button): nothing else is offered there.
 - A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,
   mounted by `AppLayout`) reads `index.html` again (`cache: 'no-store'`) every five minutes and when the
   tab is shown again, and compares the entry script it names (`/assets/index-<hash>.js`) with the one
@@ -657,14 +659,19 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - The chat with agents is one window over every signed-in page (`src/components/chat/ChatPanel.vue`,
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
   agent. Nothing runs along the window's right edge: the header and the page reach it. The chat's
-  entry is a round button floating at the bottom right of every page (`.app-chat-fab`, on a desktop as
-  on a phone), 16 px from the screen's edges and above a phone's safe area, with the count of answers
-  not read and, from 900 px up, a tooltip saying its shortcut; the header holds only the page's title,
-  and the activity bar only the side bar's views. The page keeps room below its last item for the
-  button (`.has-chat-fab`: its size and twice its inset), so that a list's last item, its pages or a
-  button are never under it; a page that pins something to the bottom of the screen keeps it clear of
-  the button too. The button opens the chat in its corner, and is gone while the chat is open; Ctrl/⌘+J
-  opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
+  entry (`.app-chat-entry`, `#chat-panel-toggle`), with the count of answers not read in the indigo,
+  is, from 900 px up, an icon button at the header's right end (`.app-header__chat`), with a tooltip
+  saying its shortcut: nothing floats over the page, whose rows keep their actions, times and status
+  at their right end in sight. It stays while the chat is open (`aria-expanded`, on the indigo's
+  tint), and pressed again minimizes it. On a phone (up to 899 px) it is a 48 px round button
+  floating at the bottom right (`.app-chat-fab`), 16 px from the screen's edges and above the safe
+  area, in the thumb's reach: it slides out of the way while the page is scrolled down and comes back
+  as soon as it is scrolled up, reaches its top, or the button takes focus (at once, with no slide,
+  where motion is reduced), and the page keeps room below its last item for it (`.has-chat-fab`,
+  88 px and the safe area), so that a list's last item, its pages or a button are never under it; a
+  page that pins something to the bottom of the screen keeps it clear of the button too. The
+  activity bar holds only the side bar's views. The button opens the chat in its corner (a phone's
+  button is gone while the sheet is open); Ctrl/⌘+J opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
   width, which stays as it is, and usable, behind it (a dialog, not a modal one: `role="dialog"`,
   `aria-modal="false"`, named by its title bar). It is 400 × 600 px (`WINDOW_WIDTH`, `WINDOW_HEIGHT`),
   16 px from the viewport's bottom right corner, and clear of the header where the viewport is too
@@ -681,7 +688,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   lays over it, with a shadow all round (`--app-z-panel`, `--app-shadow-window`; the layers are in
   `styles/tokens.css`). Minimized (its button, Escape from within it, or Ctrl/⌘+J), it opens again on
   what it showed; closed, on a new conversation in the course it asks in (the chat store's `close`);
-  either way focus goes back to the round button. Files dropped anywhere on the window, its title bar
+  either way focus goes back to the chat's button. Files dropped anywhere on the window, its title bar
   too, go to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
   screen, a modal dialog with no edge to drag, closed with its one button, Escape or back, keeping what it
   showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
