@@ -51,10 +51,14 @@ export interface WhoReach {
 export const NO_REACH: WhoReach = { decides: false, me: null, ownsAgent: false }
 
 /** What the action log's events say of who acted: the verb for its maker, and for whoever decided or reviewed it. */
-const LOG: Record<string, { by: 'proposed' | 'did'; then?: 'approved' | 'rejected' | 'reviewed' | 'escalated' }> = {
+const LOG: Record<
+  string,
+  { by: 'proposed' | 'did'; then?: 'approved' | 'rejected' | 'changesRequested' | 'reviewed' | 'escalated' }
+> = {
   'action.proposed': { by: 'proposed' },
   'action.approved': { by: 'proposed', then: 'approved' },
   'action.rejected': { by: 'proposed', then: 'rejected' },
+  'action.changes_requested': { by: 'proposed', then: 'changesRequested' },
   'action.cancelled': { by: 'proposed' },
   'action.reviewed': { by: 'did', then: 'reviewed' },
   'action.escalated': { by: 'did', then: 'escalated' },

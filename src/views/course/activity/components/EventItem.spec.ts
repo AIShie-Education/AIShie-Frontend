@@ -425,6 +425,18 @@ describe('EventItem, who acted', () => {
     w.unmount()
   })
 
+  it.each([
+    ['en', /^proposed\s*→\s*requested changes$/],
+    ['zh-Hant', /^提出\s*→\s*要求修改$/],
+  ] as const)('names who proposed it and who sent it back for changes (%s)', async (locale, text) => {
+    setLocale(locale)
+    const w = mountItem(action('action.changes_requested', { by_action_id: 'd1' }), DECIDES)
+    await flushPromises()
+    expect(names(w)).toEqual(['m-agent', 'm-teacher'])
+    expect(w.find('.event-item__who').text()).toMatch(text)
+    w.unmount()
+  })
+
   it('names who did any other event, from the action it was done under', async () => {
     decided = null
     const w = mountItem(done('grade.created', 'act-9'), DECIDES)

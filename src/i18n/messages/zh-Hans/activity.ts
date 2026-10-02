@@ -43,6 +43,7 @@ export default {
     did: '{who}执行',
     approved: '{who}批准',
     rejected: '{who}拒绝',
+    changesRequested: '{who}要求修改',
     reviewed: '{who}审核',
     escalated: '{who}升级',
   },

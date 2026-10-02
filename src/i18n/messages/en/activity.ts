@@ -43,6 +43,7 @@ export default {
     did: '{who} did it',
     approved: '{who} approved',
     rejected: '{who} rejected',
+    changesRequested: '{who} requested changes',
     reviewed: '{who} reviewed',
     escalated: '{who} escalated',
   },
