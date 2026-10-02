@@ -42,6 +42,7 @@ beforeEach(() => {
 enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   setLocale('en')
   document.body.innerHTML = ''
 })
@@ -77,6 +78,17 @@ describe('TranscriptionCard', () => {
     expect(find(w, 'cost').text()).toBe('$0.0312')
     // Nothing to save until something is changed.
     expect(find(w, 'save').exists()).toBe(false)
+  })
+
+  it('says when the day’s pages start again, in the reader’s time', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    const w = await card()
+    expect(find(w, 'numbers-hint').text()).toBe(
+      'A document with more pages is skipped, and so is what is claimed once the day’s pages are used up, until they start again at 08:00 (Hong Kong Standard Time); staff can send it again later. Leave “Pages a day” empty for no limit.',
+    )
+    setLocale('zh-Hant')
+    await flushPromises()
+    expect(find(w, 'numbers-hint').text()).toContain('當日頁數用完後至香港標準時間 08:00 重新計算前')
   })
 
   it('turns it off and on at once, with the switch', async () => {

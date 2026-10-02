@@ -11,12 +11,12 @@
 // nothing. One's own are listed but revoked on the Account page, which can
 // tell which session is the one in use. A Core without the tool gets a line
 // saying so, not a card.
-import { computed, h, ref } from 'vue'
+import { computed, h, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import type { Actor } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
-import { useMediaQuery } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
@@ -44,9 +44,11 @@ const props = defineProps<{ actor: Actor; isSelf?: boolean; blockedReason?: stri
 const emit = defineEmits<{ changed: [] }>()
 const { t, te } = useI18n()
 const session = useSessionStore()
-// Six columns and a button want about 1000px inside the card, which beside
-// the menu and the page's margins is a 1360px screen: below it, a card per token.
-const narrow = useMediaQuery('(max-width: 1359px)')
+// Six columns and a button want about 1000px inside the card: with less, a
+// card per token. The card's own width decides, not the window's; it is
+// measured by its title, as wide as the table.
+const title = useTemplateRef<HTMLElement>('title')
+const narrow = useContainerNarrow(title, 999)
 
 /** Core lists one's own, and another's only to whoever may act on them (the rule blockedReason gives). */
 const listable = computed(() => props.isSelf || !props.blockedReason)
@@ -207,7 +209,7 @@ defineExpose({ reload: () => list.reload() })
     <span>{{ t('admin.credentials.missing') }}</span>
   </p>
   <section v-else class="app-card creds">
-    <h2 class="app-card__title creds__title">
+    <h2 ref="title" class="app-card__title creds__title">
       <span>{{ t('admin.credentials.title') }}</span>
       <el-switch
         v-if="arranged.inactive"
@@ -247,7 +249,7 @@ defineExpose({ reload: () => list.reload() })
           }}
         </p>
 
-        <!-- Short of a wide screen, a card per token. -->
+        <!-- Short of a wide card, a card per token. -->
         <ul v-else-if="narrow" class="creds__list">
           <li
             v-for="{ c, state, issuer } in tokens"

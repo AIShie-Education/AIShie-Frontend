@@ -55,6 +55,11 @@ beforeEach(async () => {
   await router.push(`/account/agents/${ACTOR}`)
 })
 
+// vi.waitFor gives up after a second of the clock; what it waits for here
+// is a render, whose CPU a busy machine stretches past that. It waits for as
+// long as the test may, nearly (vite.config.ts).
+const rendered = { timeout: 20_000 }
+
 enableAutoUnmount(afterEach)
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -70,7 +75,7 @@ async function page() {
     attachTo: document.body,
   })
   await flushPromises()
-  await vi.waitFor(() => expect(w.find('.agent-view__grid').exists()).toBe(true))
+  await vi.waitFor(() => expect(w.find('.agent-view__grid').exists()).toBe(true), rendered)
   await flushPromises()
   return w
 }

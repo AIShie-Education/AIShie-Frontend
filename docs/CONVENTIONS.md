@@ -303,6 +303,21 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
 - Never keep a token or a model key in reactive state, storage, a log or an error: a credential the
   page issues for the runtime (the transcriber's) lives in one local variable until the runtime has
   it.
+- **The runtime's daily counts** (the school plan's quotas, tenants' quotas, agents' budgets, the
+  transcriber's pages a day) start again once a day. Say when with `<DailyReset :since />`
+  (`@/components/DailyReset.vue`), as a message's `{reset}` slot, never as "00:00 UTC" in words: the
+  time on the reader's own clock with their time zone named in the page's language ("08:00 (Hong Kong
+  Standard Time)", 「香港標準時間 08:00」; `formatTime` and `timeZoneName` from `@/utils/format`),
+  and the exact instant in UTC in its tooltip (`formatUtc`). The instant is `nextDailyReset`
+  (`@/utils/dailyReset`): a day after the `since` the runtime gives with what was used (an agent's
+  `today.since`, `admin/school-plan/usage`'s `since`), so that a runtime whose day starts at another
+  hour is followed; where its answer gives none (`GET /models`, the settings), the next 00:00 UTC,
+  the rule its documents state, written there alone. It moves on by itself once it has passed
+  (`useNow`), for a page left open with no fresh `since`. The school's ceiling (`per_day`) counts
+  everything on the school's key, whoever's agent answers, and the transcriber's model calls in
+  dollars; nothing on anyone's own key: say so where it is set. Today's use
+  (`admin/school-plan/usage`) costs the answers' model calls alone, so where its cost stands beside
+  the ceiling in dollars, say that transcription is not in it.
 - The runtime's administrators (Core's root and admins, as many of them as its operator names: `GET
   /me`'s `is_admin`) set it on *AI and documents* (`/admin/runtime`, `RuntimeAdminView.vue`, and its
   parts in `src/views/admin/runtime/`), through `runtimeAdmin` (`@/api/runtime`): the school's plan
@@ -389,7 +404,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   is offered to them as their agents' proposals. The queues mark each action `yours_to_decide`;
   `useJudgeRules()` (`isOwnAgent`, `byOwner`, `block`) says why one is not the caller's, and a
   queue Core will not show is simply empty. `owner_not_autonomous` is put in words by
-  `errorMessage()`.
+  `errorMessage()`, and so is `owner_would_be_refused` (a proposal of the owner's agent that
+  approving now would refuse), with the refusal it would meet (`details.refusal`) in the reader's
+  words where the app has them, and Core's alone for a bare `forbidden`; `reasonText()` says either
+  in the same words where a decision refused so is listed, as the failed action Core records.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous
@@ -467,11 +485,25 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   moves those at start, before anything reads a key, so nothing else reads the old names.
 - Views are responsive down to phone width, and work in light and dark (use Element Plus CSS
   variables, never hard-coded colours). `useNarrow()` / `useMediaQuery()` from
-  `@/composables/useMediaQuery` switch a wide table to cards on a phone.
+  `@/composables/useMediaQuery` switch a wide table to cards on a phone; a page that the side bar
+  can leave narrow on a wide window switches on its own width instead (below). The members, a
+  member's page and My actions still ask the window for 767 px (`useNarrow(767)`), and are yet to.
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
-  left less than about 420 px (the overview at 800 px of page, an assignment at 740). A dialog's
+  left less than about 420 px (the overview at 800 px of page, an assignment at 740, two cards of an
+  actor's page at 856). A course's tabs wrap onto two rows from 720 px of page, and scroll sideways
+  below. What the template itself switches follows the same width: `useContainerNarrow(el, max)`
+  from `@/composables/useContainerWidth` says whether an element is `max` px wide or less, as
+  `@container (max-width: …)` would, for el-descriptions' columns, which of a table's columns show,
+  or a table or a card per row (the administration's courses, departments, people and an actor's
+  page). Measure a part as wide as the card that no `el-table` changes the size of, its title or
+  its toolbar, never the card around an `el-table`, which lays itself out again from a
+  `ResizeObserver` of its own (the card would change height in that observer's callback, a loop the
+  browser reports). What the switch itself changes in the measured part is safe, a toolbar's row
+  that wraps, say: the switch is never made in an observer's callback, but a task later or on the
+  window's `resize`; the unit tests give elements widths with `fakeContainerWidths()`
+  (`@/composables/containerWidthFakes`), and without it jsdom shows the wide layout. A dialog's
   breakpoints, and a phone's (640 px and narrower), stay `@media` queries on the window. Columns of
   cards use the shared `.app-columns` (the grid) and `.app-column` (a stack of cards, 16 px apart)
   from `styles/main.css`: side by side, both columns are as tall as their row and the last card of
@@ -678,6 +710,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
+- Examples in placeholders and hints name no real school: ids such as `school-adfs` or
+  `university-sso`, emails such as `name@example.edu`, domains such as `example.edu`. Tests and
+  their fixtures use the same, so that none is copied into the page from them.
 - Core's error messages are English and are shown as they are, after a translated lead
   (`errorMessage()` does this).
 - Some vocabularies are keyed by Core's own dotted names (`enums.event`: `grade.posted`, …).

@@ -45,6 +45,8 @@ export default {
     presets: 'Presets',
     viewPresets: 'View',
     viewPresetsN: 'View (built-ins only) | View (built-ins + 1 own) | View (built-ins + {n} own)',
+    // Under a department's name, where the tree has no room for a column of presets.
+    presetsN: 'Presets: built-ins only | Presets: built-ins + 1 own | Presets: built-ins + {n} own',
     create: {
       title: 'New department',
       name: 'Name',

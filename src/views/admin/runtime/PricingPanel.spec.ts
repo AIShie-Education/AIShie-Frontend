@@ -86,6 +86,18 @@ describe('the price table', () => {
     expect(w.text()).toContain('A change applies to calls from now on: costs already recorded keep the price they had.')
   })
 
+  it('asks for the provider and the prices before adding one, and sends nothing without them', async () => {
+    const w = await panel()
+    await w.find('.prices-card__add').trigger('click')
+    await flushPromises()
+    fill('.price-form__model', 'gpt-4.1-nano')
+    await flushPromises()
+    await click(dialog().querySelector('.price-dialog__save'))
+    expect(fieldError('.price-form__provider')).toBe('Required')
+    expect(fieldError('.price-form__input')).toBe('Required')
+    expect(s.to('POST', ADMIN.prices)).toHaveLength(0)
+  })
+
   it('adds a price, suggesting its ID from the model and day, the cache prices the input’s unless given', async () => {
     const w = await panel()
     await w.find('.prices-card__add').trigger('click')
@@ -93,11 +105,6 @@ describe('the price table', () => {
     fill('.price-form__model', 'gpt-4.1-nano')
     await flushPromises()
     expect((dialog().querySelector('.price-form__id input') as HTMLInputElement).value).toBe('gpt-4.1-nano-2026-09-30')
-    await click(dialog().querySelector('.price-dialog__save'))
-    expect(fieldError('.price-form__provider')).toBe('Required')
-    expect(fieldError('.price-form__input')).toBe('Required')
-    expect(s.to('POST', ADMIN.prices)).toHaveLength(0)
-
     const vm = w.findComponent({ name: 'PriceDialog' }).vm as unknown as { form: Record<string, string> }
     vm.form.provider = 'openai'
     fill('.price-form__input', '0.1')
@@ -316,6 +323,21 @@ describe('agents’ daily budgets', () => {
     )
     expect(w.text()).toContain('The server’s own configured agents keep the budgets runtime.yaml gives them.')
     expect(w.find('.budgets-card__save').attributes('disabled')).toBeDefined()
+  })
+
+  it('says when the counts start again, in the reader’s time', async () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-12-01T12:00:00Z'))
+    try {
+      const w = await panel()
+      expect(w.find('.budgets-card__intro').text()).toBe(
+        'What one agent hosted here may use a day, on whichever key it answers: in all, and for each person asking it in a course. The counts start again at 16:00 (Pacific Standard Time).',
+      )
+    } finally {
+      vi.useRealTimers()
+      vi.unstubAllEnvs()
+    }
   })
 
   it('saves both, each field empty for no limit', async () => {

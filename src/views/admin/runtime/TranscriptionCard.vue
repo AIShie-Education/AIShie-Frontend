@@ -20,6 +20,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { RuntimeSettingsPatch, TranscriptionSettings } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
+import DailyReset from '@/components/DailyReset.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorLink from './ActorLink.vue'
 import ChangedBy from './ChangedBy.vue'
@@ -333,9 +334,14 @@ async function withdraw() {
               />
             </el-form-item>
           </div>
-          <p class="app-form-hint transcription-card__numbers-hint">
-            {{ t('runtimeAdmin.transcription.numbersHint') }}
-          </p>
+          <i18n-t
+            keypath="runtimeAdmin.transcription.numbersHint"
+            tag="p"
+            scope="global"
+            class="app-form-hint transcription-card__numbers-hint"
+          >
+            <template #reset><DailyReset /></template>
+          </i18n-t>
           <div v-if="changed" class="transcription-card__actions">
             <el-button
               type="primary"

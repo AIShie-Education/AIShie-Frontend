@@ -47,8 +47,8 @@ export const MAX_DOMAINS = 20
 const DOMAIN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/
 
 /**
- * A domain as typed (" @HainanU.edu.cn "), as a link keeps it
- * ("hainanu.edu.cn"): trimmed, lower case, without an @ or a trailing dot
+ * A domain as typed (" @Campus.Example.EDU "), as a link keeps it
+ * ("campus.example.edu"): trimmed, lower case, without an @ or a trailing dot
  * before it. Null when what is left is not a domain.
  */
 export function normalizeDomain(text: string): string | null {

@@ -34,7 +34,7 @@ export default {
       noLimit: '不限',
       maxUsesHint: '留空即不设上限。',
       domains: '只限以下域名的邮箱',
-      domainsPlaceholder: '输入域名（例如 hainanu.edu.cn）后按回车',
+      domainsPlaceholder: '输入域名（例如 example.edu）后按回车',
       domainsHint: '留空即任何人都可加入。设置域名后，只有邮箱属于其中一个域名的人，才能加入或注册。',
       badDomain: '“{d}”不是域名',
       tooManyDomains: '最多 {n} 个域名',

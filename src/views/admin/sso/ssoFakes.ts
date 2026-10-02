@@ -46,11 +46,11 @@ const readOk = (result: unknown) => json(200, { status: 'executed', result })
 /** The operator's provider, as sso.list shows it: read-only, always first. */
 export function operatorProvider(over: Partial<SsoProvider> = {}): SsoProvider {
   return {
-    id: 'polyu-adfs',
+    id: 'school-adfs',
     source: 'operator',
     read_only: true,
-    display_name: 'PolyU NetID',
-    issuer: 'https://adfs.polyu.edu.hk/adfs',
+    display_name: 'School NetID',
+    issuer: 'https://adfs.example.edu/adfs',
     client_id: 'aishie',
     client_secret_hint: '…',
     client_secret_key_id: null,
@@ -76,11 +76,11 @@ export function operatorProvider(over: Partial<SsoProvider> = {}): SsoProvider {
 /** A provider of the site's. */
 export function siteProvider(over: Partial<SsoProvider> = {}): SsoProvider {
   return {
-    id: 'hainanu-cas',
+    id: 'university-sso',
     source: 'site',
     read_only: false,
-    display_name: '海大統一認證',
-    issuer: 'https://cas.hainanu.edu.cn/oidc',
+    display_name: '大學統一認證',
+    issuer: 'https://sso.example.edu/oidc',
     client_id: 'aishie',
     client_secret_hint: '…k3Qz',
     client_secret_key_id: KEY_ID,

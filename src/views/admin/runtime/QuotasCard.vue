@@ -17,6 +17,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { PlanQuotas, ProviderOffer, QuotasPut, SchoolPlan } from '@/api/runtime-types'
+import DailyReset from '@/components/DailyReset.vue'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import ChangedBy from './ChangedBy.vue'
 import UnpricedNotice from './UnpricedNotice.vue'
@@ -219,7 +220,14 @@ function undo() {
 <template>
   <section class="app-card quotas-card">
     <h2 class="app-card__title">{{ t('runtimeAdmin.quotas.title') }}</h2>
-    <p class="quotas-card__intro">{{ t(dollars ? 'runtimeAdmin.quotas.introUsd' : 'runtimeAdmin.quotas.intro') }}</p>
+    <i18n-t
+      :keypath="dollars ? 'runtimeAdmin.quotas.introUsd' : 'runtimeAdmin.quotas.intro'"
+      tag="p"
+      scope="global"
+      class="quotas-card__intro"
+    >
+      <template #reset><DailyReset /></template>
+    </i18n-t>
     <el-form label-position="top" class="quotas-card__form" :class="{ 'has-dollars': dollars }" @submit.prevent="save">
       <div v-if="dollars" class="quotas-card__heads" aria-hidden="true">
         <span />

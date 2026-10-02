@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // What Core answers each read with, and what was asked.
 let answer: (tool: string, args: Record<string, unknown>) => Promise<unknown>
@@ -31,6 +31,11 @@ const MEI = '01a0d79f-13c6-70da-a7cc-00000000000a'
 const NO_ROUTE = 'no such route; GET /v1/tools lists what there is'
 // What the tool answers when nobody has that email or id.
 const NOBODY = 'nobody is registered with that email or id'
+
+// The module and what it imports are loaded once, before the tests: the first
+// load is most of a test's time (some 0.5 s of CPU, many times that on a busy
+// machine), and each test's page() then evaluates them again from that.
+beforeAll(() => page())
 
 beforeEach(() => {
   asked = []

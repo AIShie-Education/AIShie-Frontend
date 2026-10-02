@@ -44,6 +44,7 @@ export default {
     presets: '权限预设',
     viewPresets: '查看',
     viewPresetsN: '查看（仅内置） | 查看（内置＋本部门 1 个） | 查看（内置＋本部门 {n} 个）',
+    presetsN: '权限预设：仅内置 | 权限预设：内置＋本部门 1 个 | 权限预设：内置＋本部门 {n} 个',
     create: {
       title: '创建部门',
       name: '名称',

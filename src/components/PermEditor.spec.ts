@@ -52,8 +52,9 @@ function row(w: ReturnType<typeof mountEditor>, perm: string) {
 // real Element Plus select, with its dropdown's four options and their
 // tooltips rendered too, which take some 0.6 s of CPU in jsdom (1 s for the
 // first, while the modules warm up). A busy machine stretches that many
-// times over, past the default 5 s: with a load near 15 the first test took
-// up to 19 s and the others up to 14 s. The timeout is set for that.
+// times over: with a load near 15 the first test took up to 19 s and the
+// others up to 14 s. That is near the suite's 30 s (vite.config.ts) for
+// one test; these have 60 s.
 describe('PermEditor with a seat’s ceilings', { timeout: 60_000 }, () => {
   it('greys out the levels above a ceiling, each saying why, and leaves the rest', () => {
     const w = mountEditor({ modelValue: { action_decide: 'denied', grade_submit: 'confirm_required' } })

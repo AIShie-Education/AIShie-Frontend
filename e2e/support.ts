@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-import { expect, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 export interface DemoActor {
   actor_id: string
@@ -261,9 +261,75 @@ export async function pickOption(page: Page, trigger: ReturnType<Page['locator']
     .click()
 }
 
-/** The message Element Plus pops up after a write (ElMessage). */
+/**
+ * The message Element Plus pops up after a write (ElMessage), on the screen
+ * now. A success message closes itself after 3 s: a test checks that one
+ * with keepToasts and expectToasted instead, which a busy machine cannot
+ * make it miss.
+ */
 export function toast(page: Page, text: string | RegExp) {
   return page.locator('.el-message').filter({ hasText: text })
+}
+
+/**
+ * Has the page keep the text of every message Element Plus pops up
+ * (ElMessage), as each comes, on every page it opens from now on: call it
+ * before the page is opened. A success message closes itself after 3 s,
+ * which a check of the screen can miss on a busy machine, where the test is
+ * held up longer than that between the click and the check; a message kept
+ * is there however late the check comes (expectToasted). A notification
+ * (ElNotification) is not kept.
+ */
+export async function keepToasts(page: Page) {
+  await page.addInitScript(() => {
+    const w = window as unknown as { toasts: string[] }
+    w.toasts = []
+    const keep = (el: Element) => w.toasts.push((el.textContent ?? '').replace(/\s+/g, ' ').trim())
+    new MutationObserver((changes) => {
+      for (const change of changes)
+        for (const node of change.addedNodes) {
+          if (!(node instanceof Element)) continue
+          if (node.matches('.el-message')) keep(node)
+          node.querySelectorAll('.el-message').forEach(keep)
+        }
+    }).observe(document, { childList: true, subtree: true })
+  })
+}
+
+/**
+ * The page popped up this message (keepToasts), whether it is still on the
+ * screen or has closed itself since: one whose whole text is `text`, or one
+ * that `text` as a RegExp matches. Each message is counted once: the same
+ * text expected again waits for another. A failure is reported at the line
+ * of the test that called it.
+ */
+export async function expectToasted(page: Page, text: string | RegExp) {
+  const wanted =
+    typeof text === 'string'
+      ? { text, source: '', flags: '' }
+      : { text: '', source: text.source, flags: text.flags.replace(/[gy]/g, '') }
+  const shown = typeof text === 'string' ? `“${text}”` : String(text)
+  await test.step(
+    `the page popped up ${shown}`,
+    async () => {
+      await expect
+        .poll(
+          () =>
+            page.evaluate(({ text, source, flags }) => {
+              const w = window as unknown as { toasts?: string[] }
+              if (!w.toasts) throw new Error('the page keeps no messages: keepToasts(page) before it is opened')
+              const pattern = source ? new RegExp(source, flags) : null
+              const i = w.toasts.findIndex((toast) => (pattern ? pattern.test(toast) : toast === text))
+              if (i < 0) return w.toasts
+              w.toasts.splice(i, 1)
+              return true
+            }, wanted),
+          { message: `the page popped up ${shown}` },
+        )
+        .toBe(true)
+    },
+    { box: true },
+  )
 }
 
 /** Core's reply: `result` for a read or a write carried out, `action_id` for a proposal. */

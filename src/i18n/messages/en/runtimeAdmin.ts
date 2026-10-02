@@ -157,7 +157,7 @@ export default {
     perDayPages: 'Pages a day',
     concurrency: 'Documents at once',
     numbersHint:
-      'A document with more pages is skipped, and so is what is claimed once the day’s pages are used up (00:00 UTC); staff can send it again later. Leave “Pages a day” empty for no limit.',
+      'A document with more pages is skipped, and so is what is claimed once the day’s pages are used up, until they start again at {reset}; staff can send it again later. Leave “Pages a day” empty for no limit.',
     saved: 'Transcription settings saved.',
     invalid: {
       maxPages: 'A whole number from 1 to 5000.',
@@ -358,15 +358,16 @@ export default {
   // The plan's quotas a day.
   quotas: {
     title: 'Daily quotas',
-    intro: 'Answers a day on the school’s plan. The counts start again at 00:00 UTC.',
+    intro: 'Answers a day on the school’s plan. The counts start again at {reset}.',
     introUsd:
-      'Answers and dollars a day on the school’s plan, each empty for no limit where it may be. The counts start again at 00:00 UTC.',
+      'Answers and dollars a day on the school’s plan, each empty for no limit where it may be. The counts start again at {reset}.',
     perOwner: 'Per owner',
     perOwnerHint: 'Across all of one owner’s agents.',
     perAsker: 'Per person asking',
     perAskerHint: 'For each person who asks one agent, in one course.',
     perDay: 'For the whole school',
-    perDayHint: 'Across everyone, on the school’s keys. Empty for no ceiling.',
+    perDayHint:
+      'Everything on the school’s key, whoever’s agent answers: agents on the plan, the operator’s agents on the school’s key, and, in dollars, the transcription of documents. Nothing on anyone’s own key counts. Empty for no ceiling.',
     noCeiling: 'No ceiling',
     default: 'Server default: {n}',
     defaultNone: 'Server default: no ceiling',
@@ -389,7 +390,7 @@ export default {
   // Today's use of the school's plan.
   usage: {
     title: 'Today on the school’s plan',
-    since: 'Since {since} (00:00 UTC)',
+    since: 'Since {since}. The counts start again at {reset}.',
     answers: 'Answers',
     modelCalls: 'Model calls',
     cost: 'Cost',
@@ -397,6 +398,8 @@ export default {
     noCeiling: 'no ceiling for the school',
     limits: 'Up to {owner} a day per owner, and {asker} per person asking.',
     limitsUsd: 'In dollars: {owner} per owner, {asker} per person asking, and {day} for the whole school.',
+    noTranscription:
+      'This cost leaves out the transcription of documents, which the whole school’s ceiling in dollars counts too.',
     owner: 'Owner',
     operator: 'The operator’s agents',
     unknownOwner: 'Someone the runtime has not seen yet',
@@ -502,7 +505,7 @@ export default {
   budgets: {
     title: 'Agents’ daily budgets',
     intro:
-      'What one agent hosted here may use a day, on whichever key it answers: in all, and for each person asking it in a course. The counts start again at 00:00 UTC.',
+      'What one agent hosted here may use a day, on whichever key it answers: in all, and for each person asking it in a course. The counts start again at {reset}.',
     perAgent: 'Per agent',
     perAgentHint: 'All of one agent’s answers.',
     perAsker: 'Per person asking',

@@ -5,15 +5,15 @@
 // which Core alone decides. By term and by department, with or without the
 // departments beneath it; and creating one (course.create) in a department
 // they administer.
-import { computed, ref } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
 import type { Term } from '@/api/types'
 import { useAsync, usePaged } from '@/composables/useAsync'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { errorMessage } from '@/composables/useErrors'
-import { useNarrow } from '@/composables/useMediaQuery'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -25,9 +25,14 @@ import type { CourseRow } from './components/adminShared'
 
 const { t } = useI18n()
 const route = useRoute()
-const narrow = useNarrow()
 const router = useRouter()
 const session = useSessionStore()
+// The table's five columns want 800 px in its card, whatever the window (the
+// side bar takes from the page): with less, the term and the department go
+// under the course's name, and when it was created is left out. The card is
+// measured by its toolbar, as wide as the table.
+const toolbar = useTemplateRef<HTMLElement>('toolbar')
+const narrow = useContainerNarrow(toolbar, 799)
 
 // The filters live in the address, so that coming back to the list keeps them.
 function queryParam(name: string) {
@@ -143,7 +148,7 @@ function rowClick(row: CourseRow) {
     </el-alert>
 
     <div class="app-card">
-      <div class="app-toolbar">
+      <div ref="toolbar" class="app-toolbar">
         <el-select
           v-model="termId"
           clearable

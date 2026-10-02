@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Actor } from '@/api/types'
 
 // What Core answers each read with, and what was asked.
@@ -41,6 +41,11 @@ function actor(over: Partial<Actor> = {}): Actor {
     ...over,
   }
 }
+
+// The module and what it imports are loaded once, before the tests: the first
+// load is most of a test's time (some 0.5 s of CPU, many times that on a busy
+// machine), and each test's page() then evaluates them again from that.
+beforeAll(() => page())
 
 beforeEach(() => {
   asked = []

@@ -6,6 +6,7 @@ import * as icons from '@element-plus/icons-vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { i18n, setLocale } from '@/i18n'
 import type { DepartmentNode } from '@/api/types'
+import { fakeContainerWidths } from '@/composables/containerWidthFakes'
 import { forgetDepartmentTree } from '@/composables/useDepartmentTree'
 import { useSessionStore } from '@/stores/session'
 import CoursesView from './CoursesView.vue'
@@ -130,6 +131,37 @@ describe('CoursesView for a department administrator', () => {
     expect(w.findAll('a').map((a) => a.attributes('href'))).not.toContain('/admin/terms')
     // Nothing platform-only is read.
     expect(asked.map((a) => a.tool)).not.toContain('department.list')
+  })
+
+  it('folds the term and the department under the course where its card is narrow, whatever the window', async () => {
+    answers['course.list'] = async () => ({
+      courses: [
+        {
+          id: 'C1',
+          code: 'CS101',
+          section: 'A',
+          title: 'Introduction to Programming',
+          status: 'active',
+          term_id: 'T',
+          dept_id: 'S',
+          created_at: '2026-09-01T00:00:00Z',
+        },
+      ],
+    })
+    // The window is wide (matchMedia says nothing matches); the card is what decides, measured by its toolbar.
+    const sizes = fakeContainerWidths({ '.app-toolbar': 800 })
+    const opts = setup()
+    await router.push({ name: 'admin-courses' })
+    const w = mount(CoursesView, { attachTo: document.body, ...opts })
+    await flushPromises()
+    const heads = () => w.findAll('th').map((th) => th.text())
+    expect(heads()).toEqual(['Course', 'Status', 'Term', 'Department', 'Created'])
+    expect(w.find('.courses__meta').exists()).toBe(false)
+
+    await sizes.resize('.app-toolbar', 799)
+    await flushPromises()
+    expect(heads()).toEqual(['Course', 'Status'])
+    expect(w.find('.courses__meta').text()).toBe('2026/27 S1 · Computing')
   })
 })
 

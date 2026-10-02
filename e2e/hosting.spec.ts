@@ -189,6 +189,8 @@ function playRuntime(page: Page, owner: () => DemoActor) {
       // Its model chosen, the runtime runs it, and is issued its token by Core.
       const r = byId(one[1])
       r.model.school = { ...SCHOOL_OFFER, offer: body.model.school.offer, offered: true, fallback: false }
+      // On the plan, today's use of it is her own across her agents.
+      r.today.school = { scope: 'owner', used: 0, limit: 100, used_usd: '0', limit_usd: null, per_asker_limit: 20 }
       token = await hostOnRuntime(r.core_actor_id)
       Object.assign(r, { status: 'running', version: r.version + 1, updated_at: new Date().toISOString() })
       return answer(route, 200, r)
@@ -223,6 +225,9 @@ function playRuntime(page: Page, owner: () => DemoActor) {
 }
 
 test.describe.serial('how an agent runs, chosen once when it is created', () => {
+  // Her browser keeps Hong Kong's time: the plan's day, the runtime's UTC day, starts again at 08:00 there.
+  test.use({ timezoneId: 'Asia/Hong_Kong' })
+
   test.beforeAll(async () => {
     const d = demo()
     w.hana = await registerPerson(`Hana ${STAMP}`, { email: `hana+${STAMP}@e2e.test` })
@@ -298,11 +303,10 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
       status: 422,
       reason: 'hosting_fixed',
     })
-    // Nor is whether people ask it declared any more: that follows how it runs.
-    expect(refusal(await call(H, 'POST', `/v1/me/agents/${w.rtId}`, { site_chat: true }))).toEqual({
-      status: 400,
-      reason: 'site_chat_follows_hosting',
-    })
+    // Nor is whether people ask it declared any more: that follows how it
+    // runs. Core refused site_chat for a release (site_chat_follows_hosting),
+    // and takes no such field since (AIShie-Core #54): refused either way.
+    expect((await call(H, 'POST', `/v1/me/agents/${w.rtId}`, { site_chat: true })).status).toBe(400)
     for (const [id, hosting] of [
       [w.mcpId, 'mcp'],
       [w.rtId, 'runtime'],
@@ -454,6 +458,9 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     const model = page.locator('.model-dialog')
     await expect(model.locator('.model-dialog__steps')).toContainText('Model and key')
     await expect(model).toContainText('School AI (standard)')
+    await expect(model.locator('.model-form__limits')).toHaveText(
+      'Up to 100 answers a day across all your agents, and 20 a day for each person who asks. The counts start again at 08:00 (Hong Kong Standard Time).',
+    )
     await model.locator('.model-dialog__save').click()
     await expect(model).toBeHidden()
 
@@ -469,6 +476,14 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     // Running, and asked on the site.
     await expect(page.locator('.hosted-card__tag')).toHaveText('Running')
     await expect(page.locator('.site-chat .el-tag')).toHaveText('Can be asked on the site')
+    // The plan's allowance starts again in her time, the zone named; the exact time in UTC on hover.
+    const reset = page.locator('.hosted-card__school-hint')
+    await expect(reset).toHaveText(
+      'The school plan, across all your agents. Starts again at 08:00 (Hong Kong Standard Time).',
+    )
+    await reset.locator('time').hover()
+    await expect(page.getByRole('tooltip').filter({ hasText: 'UTC' })).toHaveText(/^\d{4}-\d\d-\d\d 00:00 UTC$/)
+    await page.mouse.move(0, 0)
     await expect(page.locator('.el-message')).toHaveCount(0)
     await photograph(page, 'hosting-runtime-running')
     expect(done(await call(hana().token, 'GET', `/v1/me/agents/${w.rtId}`), 'agent.get').site_chat).toBe(true)

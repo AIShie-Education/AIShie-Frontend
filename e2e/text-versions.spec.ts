@@ -39,7 +39,7 @@ const TRANSCRIBED = [
   '',
 ].join('\n')
 
-let version = { documentId: '', versionId: '' }
+let version = { documentId: '', versionId: '', fileId: '' }
 /** The service's credential in Core, to revoke at the end; its token is in serviceToken alone. */
 let credentialId = ''
 let serviceToken = ''
@@ -58,7 +58,7 @@ async function asService(path: string, body: unknown, key?: string) {
   return { status: res.status, body: await res.json() }
 }
 
-/** Uploads a file as the instructor and makes it published material; its document and version. */
+/** Uploads a file as the instructor and makes it published material; its document, version and file. */
 async function publishedMaterialWithFile() {
   const d = demo()
   const I = d.actors.instructor.token
@@ -85,7 +85,11 @@ async function publishedMaterialWithFile() {
   expect(made.body.status, JSON.stringify(made.body.error)).toBe('executed')
   const published = await call(I, 'POST', `/v1/courses/${C}/documents/${made.body.result.document_id}/publish`, {})
   expect(published.body.status, JSON.stringify(published.body.error)).toBe('executed')
-  return { documentId: made.body.result.document_id as string, versionId: made.body.result.version_id as string }
+  return {
+    documentId: made.body.result.document_id as string,
+    versionId: made.body.result.version_id as string,
+    fileId: made.body.result.file_ids[0] as string,
+  }
 }
 
 /**
@@ -209,7 +213,7 @@ test.describe.serial('text versions', () => {
     const text = await call(
       d.actors.instructor.token,
       'GET',
-      `/v1/courses/${d.course.id}/documents/${version.documentId}/text?version_id=${version.versionId}`,
+      `/v1/courses/${d.course.id}/documents/${version.documentId}/text?version_id=${version.versionId}&file_id=${version.fileId}`,
     )
     expect(text.body.result.text).toMatchObject({ status: 'done', source: 'staff' })
   })
@@ -242,7 +246,7 @@ test.describe.serial('text versions', () => {
     const text = await call(
       d.actors.instructor.token,
       'GET',
-      `/v1/courses/${d.course.id}/documents/${version.documentId}/text?version_id=${version.versionId}`,
+      `/v1/courses/${d.course.id}/documents/${version.documentId}/text?version_id=${version.versionId}&file_id=${version.fileId}`,
     )
     expect(text.body.result).toMatchObject({ parts: 0, text: { status: 'pending' } })
   })

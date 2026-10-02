@@ -85,7 +85,7 @@ describe('the sign-in page', () => {
   it('offers no API token to sign in with, in any language: people sign in with a password or single sign-on', async () => {
     vi.mocked(authMethods).mockResolvedValue({
       password: true,
-      sso: { label: 'PolyU NetID', start: '/v1/auth/sso/start' },
+      sso: { label: 'School NetID', start: '/v1/auth/sso/start' },
     })
     for (const [locale, words] of [
       ['en', ['API token', 'token']],
@@ -123,12 +123,12 @@ describe('single sign-on on the sign-in page', () => {
   })
 
   it('names the provider as Core does, and starts where Core says, coming back to where it was going', async () => {
-    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: 'PolyU NetID', start: START } })
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: 'School NetID', start: START } })
     // The address the browser is sent to: only the fragment changes, which a test page can follow.
     vi.mocked(ssoStartUrl).mockReturnValueOnce('#sso-started')
     const w = await mountAt('/login?next=/courses/c1', 'en')
     const button = ssoButton(w)
-    expect(button?.text()).toBe('Sign in with PolyU NetID')
+    expect(button?.text()).toBe('Sign in with School NetID')
     await button!.trigger('click')
     expect(ssoStartUrl).toHaveBeenCalledWith('/courses/c1', START)
     expect(window.location.hash).toBe('#sso-started')
@@ -164,17 +164,17 @@ describe('single sign-on on the sign-in page', () => {
     expect(w.find('input[name="login"]').exists()).toBe(true)
     expect(w.find('.login__version').text()).toBe('Server 1.0.0')
     expect(ssoButton(w)).toBeUndefined()
-    answer({ password: true, sso: { label: 'PolyU NetID', start: START } })
+    answer({ password: true, sso: { label: 'School NetID', start: START } })
     await flushPromises()
-    expect(ssoButton(w)?.text()).toBe('Sign in with PolyU NetID')
+    expect(ssoButton(w)?.text()).toBe('Sign in with School NetID')
     w.unmount()
   })
 })
 
 describe('several identity providers on the sign-in page', () => {
   const PROVIDERS = [
-    { id: 'polyu-adfs', label: 'PolyU NetID', start: '/v1/auth/sso/start/polyu-adfs' },
-    { id: 'hainanu-cas', label: '海大統一認證', start: '/v1/auth/sso/start/hainanu-cas' },
+    { id: 'school-adfs', label: 'School NetID', start: '/v1/auth/sso/start/school-adfs' },
+    { id: 'university-sso', label: '大學統一認證', start: '/v1/auth/sso/start/university-sso' },
     { id: 'lib', label: null, start: '/v1/auth/sso/start/lib' },
   ]
   const buttons = (w: Awaited<ReturnType<typeof mountAt>>) => w.findAll('button.login__sso')
@@ -182,13 +182,13 @@ describe('several identity providers on the sign-in page', () => {
   it('shows a button for each, in Core’s order, named as Core names it or in the page’s own words', async () => {
     vi.mocked(authMethods).mockResolvedValue({
       password: true,
-      sso: { label: 'PolyU NetID', start: PROVIDERS[0].start },
+      sso: { label: 'School NetID', start: PROVIDERS[0].start },
       ssoProviders: PROVIDERS,
     })
     const w = await mountAt('/login', 'en')
     expect(buttons(w).map((b) => b.text())).toEqual([
-      'Sign in with PolyU NetID',
-      'Sign in with 海大統一認證',
+      'Sign in with School NetID',
+      'Sign in with 大學統一認證',
       'Sign in with single sign-on',
     ])
     // One "or" between the password and them all; the password form as it was.
@@ -200,11 +200,11 @@ describe('several identity providers on the sign-in page', () => {
 
   it('starts at the provider chosen, coming back to where it was going', async () => {
     vi.mocked(authMethods).mockResolvedValue({ password: true, sso: null, ssoProviders: PROVIDERS })
-    vi.mocked(ssoStartUrl).mockReturnValueOnce('#hainanu-started')
+    vi.mocked(ssoStartUrl).mockReturnValueOnce('#university-started')
     const w = await mountAt('/login?next=/courses/c1', 'en')
     await buttons(w)[1].trigger('click')
-    expect(ssoStartUrl).toHaveBeenCalledWith('/courses/c1', '/v1/auth/sso/start/hainanu-cas')
-    expect(window.location.hash).toBe('#hainanu-started')
+    expect(ssoStartUrl).toHaveBeenCalledWith('/courses/c1', '/v1/auth/sso/start/university-sso')
+    expect(window.location.hash).toBe('#university-started')
     w.unmount()
   })
 
@@ -217,10 +217,10 @@ describe('several identity providers on the sign-in page', () => {
   })
 
   it('keeps the one button of a Core from before several providers', async () => {
-    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: 'PolyU NetID', start: '/v1/auth/sso/start' } })
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: 'School NetID', start: '/v1/auth/sso/start' } })
     vi.mocked(ssoStartUrl).mockReturnValueOnce('#one-started')
     const w = await mountAt('/login', 'en')
-    expect(buttons(w).map((b) => b.text())).toEqual(['Sign in with PolyU NetID'])
+    expect(buttons(w).map((b) => b.text())).toEqual(['Sign in with School NetID'])
     await buttons(w)[0].trigger('click')
     expect(ssoStartUrl).toHaveBeenCalledWith('/', '/v1/auth/sso/start')
     w.unmount()
@@ -229,7 +229,7 @@ describe('several identity providers on the sign-in page', () => {
   it('names them in Chinese too', async () => {
     vi.mocked(authMethods).mockResolvedValue({ password: true, sso: null, ssoProviders: PROVIDERS })
     const zh = await mountAt('/login', 'zh-Hant')
-    expect(buttons(zh).map((b) => b.text())).toEqual(['以 PolyU NetID 登入', '以 海大統一認證 登入', '以 單一登入 登入'])
+    expect(buttons(zh).map((b) => b.text())).toEqual(['以 School NetID 登入', '以 大學統一認證 登入', '以 單一登入 登入'])
     zh.unmount()
     const hans = await mountAt('/login', 'zh-Hans')
     expect(buttons(hans).at(-1)!.text()).toBe('以 单点登录 登录')

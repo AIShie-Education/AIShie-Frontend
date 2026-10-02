@@ -143,6 +143,9 @@ export default {
     invalidEmail: '请输入有效的邮箱地址',
     ownerNotAutonomous:
       '你的智能体所做的事，只有在你自己无需任何人确认也能做时，才由你决定。这里你在这方面的级别较低，或它超出你的范围，因此须由课程中的其他人决定。',
+    ownerWouldBeRefused: '你的智能体的这项提议现在不由你决定：若现在批准，它会被拒绝。你可以撤回它，或由课程中的其他人拒绝。',
+    ownerWouldBeRefusedWhy:
+      '你的智能体的这项提议现在不由你决定：若现在批准，它会被拒绝。你可以撤回它，或由课程中的其他人拒绝。被拒绝的原因：{why}',
     conversationsAreWithAgents:
       '这里的对话只与智能体进行：真人不会在对话中被提问，也不回答任何对话。人与人之间请在其他地方交流。',
     notAParticipant: '只有参与对话的双方才会将对话标记为已读；以课程教职员身份阅读，不会在对话中留下阅读进度。',
@@ -170,6 +173,7 @@ export default {
     ago: '{t}前',
     due: '截止 {t}',
     noDue: '无截止日期',
+    dailyReset: '{zone} {time}',
   },
   pagination: {
     loadMore: '加载更多',

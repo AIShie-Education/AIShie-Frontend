@@ -123,7 +123,9 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   revokes on its page, beside Core's MCP endpoint, the header and Claude Desktop's configuration, and
   which nobody asks on the site. An agent hosted on AIshie is hosted by its id (the agent, then its
   model and key, or the school's plan): the runtime alone is issued its one token, by Core, and its
-  owner never sees, pastes or issues one. Wherever an agent is shown in detail (its page, member
+  owner never sees, pastes or issues one. On the school's plan its page shows how much of the day's
+  allowance its owner has used and when it starts again, on the reader's own clock with their time
+  zone named (the exact time in UTC on hover). Wherever an agent is shown in detail (its page, member
   lists, the agents one may ask) it says how it runs, and one hosted on AIshie whether it can be
   asked now (「可在站內提問」 or 「未在執行」); the chat offers only the agents that can be, and says
   why one cannot.
@@ -167,7 +169,11 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   plan: the models the school provides and pays for, the operator's (runtime.yaml) shown read-only
   and the site's added, edited, turned off and deleted, each with the school's key, which is tried
   with the provider before it is kept and never shown again, and each saying first what becomes of
-  the agents on it; the plan's daily quotas, in answers and dollars, and today's use of it.
+  the agents on it; the plan's daily quotas, in answers and dollars, and today's use of it, with
+  when the counts start again in the reader's own time; the whole school's ceiling counts everything
+  on the school's key (the plan's agents, the operator's on the school's key and, in dollars,
+  transcription), nothing on anyone's own key, and today's cost, which leaves transcription out,
+  says so beside it.
   Pricing: the price table (the operator's price file, read-only, and the site's prices before it,
   from a day on), each person's daily quota on the school's key, hosted agents' daily budgets, and
   what things cost, by day, person, agent, model or key, a document's transcription as a line of its
@@ -284,7 +290,7 @@ Built into the app at build time (see `.env.example`):
 |---|---|
 | `VITE_API_BASE` | Where Core is, when it is not this origin. Leave empty for a same-origin deployment (recommended). |
 | `VITE_SSO_ENABLED` | Only for a Core without `GET /v1/auth/methods` (it answers 404), or when Core cannot be asked: `true` shows the single sign-on button; Core must have `OIDC_ISSUER` set. |
-| `VITE_SSO_LABEL` | The button's provider name then, e.g. `PolyU NetID`. |
+| `VITE_SSO_LABEL` | The button's provider name then, e.g. `School NetID`. |
 
 The published image is built with none of them set: Core on the page's own origin, and single
 sign-on as Core says, or none from a Core too old to say

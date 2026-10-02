@@ -479,7 +479,7 @@ export default {
     providerHint: '此平台对身份提供者的命名。',
     providerNotOffered: '目前未提供',
     subject: '账号（UPN）',
-    subjectPlaceholder: "name{'@'}connect.polyu.hk",
+    subjectPlaceholder: "name{'@'}example.edu",
     subjectHint: 'ADFS 的用户主体名称（UPN），不分大小写。',
     subjectOf: '账号（{claim}）',
     subjectOfHint: "{name} 为此人给出的 {claim} 声明值。含 {'@'} 时不分大小写。",

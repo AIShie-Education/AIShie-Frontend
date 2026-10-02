@@ -10,7 +10,7 @@ interface ImportMetaEnv {
    * that does not say itself (GET /v1/auth/methods): one that does is taken at its word.
    */
   readonly VITE_SSO_ENABLED?: string
-  /** The label on that button, e.g. "PolyU NetID", on the same terms. */
+  /** The label on that button, e.g. "School NetID", on the same terms. */
   readonly VITE_SSO_LABEL?: string
 }
 

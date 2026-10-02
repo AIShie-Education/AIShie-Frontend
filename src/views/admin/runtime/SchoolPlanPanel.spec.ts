@@ -57,7 +57,9 @@ beforeEach(() => {
 })
 enableAutoUnmount(afterEach)
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   setLocale('en')
   document.body.innerHTML = ''
 })
@@ -252,6 +254,7 @@ describe('the models on the plan', () => {
   })
 
   it('offers to try again when the runtime could not answer', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     let fail = true
     s.on('GET', ADMIN.plan, () =>
       fail
@@ -259,8 +262,14 @@ describe('the models on the plan', () => {
         : json(200, state.plan),
     )
     const w = await panel()
-    // A read is sent again twice after a 503, a moment apart, before it is an error.
-    await vi.waitFor(() => expect(w.find('.runtime-async__error').exists()).toBe(true), { timeout: 5000 })
+    // A read is sent again twice after a 503, half a second and then a
+    // second apart, before it is an error.
+    await vi.advanceTimersByTimeAsync(500)
+    expect(s.to('GET', ADMIN.plan)).toHaveLength(2)
+    expect(w.find('.runtime-async__error').exists()).toBe(false)
+    await vi.advanceTimersByTimeAsync(1_000)
+    await flushPromises()
+    expect(w.find('.runtime-async__error').exists()).toBe(true)
     expect(s.to('GET', ADMIN.plan)).toHaveLength(3)
     expect(w.find('.runtime-async__error').text()).toContain('The school’s runtime is not available right now.')
     fail = false
@@ -295,6 +304,17 @@ describe('the daily quotas', () => {
     )
     expect(w.find('.quotas-card__save').attributes('disabled')).toBeDefined()
     expect(w.text()).toContain('Quotas in dollars, where there are any, stay in force beside these.')
+  })
+
+  it('says when the counts start again in the reader’s time, and what the whole school’s ceiling counts', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    const w = await panel()
+    expect(w.find('.quotas-card__intro').text()).toBe(
+      'Answers a day on the school’s plan. The counts start again at 08:00 (Hong Kong Standard Time).',
+    )
+    expect(w.find('.quotas-card__per_day .app-form-hint').text()).toBe(
+      'Everything on the school’s key, whoever’s agent answers: agents on the plan, the operator’s agents on the school’s key, and, in dollars, the transcription of documents. Nothing on anyone’s own key counts. Empty for no ceiling.',
+    )
   })
 
   it('saves all three, no ceiling as null', async () => {

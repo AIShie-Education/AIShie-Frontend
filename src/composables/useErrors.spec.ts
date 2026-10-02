@@ -37,6 +37,64 @@ describe('errorMessage, to an agent’s owner who could not have done it themsel
   })
 })
 
+describe('errorMessage, to an agent’s owner whose approval would be refused', () => {
+  const base =
+    'This proposal of your agent’s is not yours to decide now: approved now, it would be refused. You may withdraw it, or someone else in the course rejects it.'
+  it('says so, with the refusal approving would meet, in each language', () => {
+    // action.decide by the owner, of a proposal to publish a document they published meanwhile.
+    const e = refusal(
+      'forbidden',
+      {
+        reason: 'owner_would_be_refused',
+        refusal: { code: 'conflict', message: 'the document is published already' },
+      },
+      { actionId: 'a1', actionStatus: 'failed' },
+    )
+    expect(errorMessage(e)).toBe(
+      `${base} Why it would be refused: This conflicts with the current state: the document is published already`,
+    )
+    setLocale('zh-Hant')
+    expect(errorMessage(e)).toBe(
+      '你的代理的這項提案現在不由你決定：若現在批准，它會被拒絕。你可以撤回它，或由課程中的其他人駁回。被拒絕的原因：與目前狀態衝突: the document is published already',
+    )
+    setLocale('zh-Hans')
+    expect(errorMessage(e)).toBe(
+      '你的智能体的这项提议现在不由你决定：若现在批准，它会被拒绝。你可以撤回它，或由课程中的其他人拒绝。被拒绝的原因：与当前状态冲突: the document is published already',
+    )
+  })
+  it('puts the refusal in the app’s own words where it has them', () => {
+    const e = refusal('forbidden', {
+      reason: 'owner_would_be_refused',
+      refusal: { code: 'forbidden', message: 'only the two taking part mark it read', details: { reason: 'not_a_participant' } },
+    })
+    expect(errorMessage(e)).toBe(
+      `${base} Why it would be refused: Only the two taking part in a conversation mark it read: reading it as course staff keeps no place in it.`,
+    )
+  })
+  it('says so alone when Core gives no refusal', () => {
+    expect(errorMessage(refusal('forbidden', { reason: 'owner_would_be_refused' }))).toBe(base)
+    expect(errorMessage(refusal('forbidden', { reason: 'owner_would_be_refused', refusal: 'approved now, refused' }))).toBe(base)
+  })
+  it('says a refusal that is itself owner_would_be_refused as the base alone', () => {
+    const e = refusal('forbidden', {
+      reason: 'owner_would_be_refused',
+      refusal: { code: 'forbidden', message: 'approved now, it would be refused', details: { reason: 'owner_would_be_refused' } },
+    })
+    expect(errorMessage(e)).toBe(base)
+  })
+  it('gives a bare forbidden in Core’s words alone, not as a permission the owner lacks', () => {
+    // An approval refused by a rule of Core's that the app has no words for.
+    const e = refusal('forbidden', {
+      reason: 'owner_would_be_refused',
+      refusal: { code: 'forbidden', message: 'an escalation is for someone else to look at' },
+    })
+    expect(errorMessage(e)).toBe(`${base} Why it would be refused: an escalation is for someone else to look at`)
+    expect(errorMessage(refusal('forbidden', { reason: 'owner_would_be_refused', refusal: { code: 'forbidden', message: '' } }))).toBe(
+      base,
+    )
+  })
+})
+
 describe('errorMessage, of conversations, which are with agents', () => {
   it('says a person is never asked, and answers none, in each language', () => {
     // conversation.open with a person as respondent, or conversation.answer by a person.
