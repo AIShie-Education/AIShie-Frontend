@@ -7,8 +7,8 @@ import { i18n, setLocale } from '@/i18n'
 import { read } from '@/api/http'
 import EventItem from './EventItem.vue'
 import { useCourseStore } from '@/stores/course'
-import { forgetActionWho } from './actors'
-import type { CourseEvent } from './feed'
+import { ensureEventWho, forgetActionWho } from './actors'
+import { whoReachOf, type CourseEvent } from './feed'
 
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
@@ -588,6 +588,32 @@ describe('EventItem, who acted, to a seat that does not decide actions', () => {
       expect(x.find('.event-item__who').exists()).toBe(false)
       x.unmount()
     }
+  })
+
+  it('names her own agent where she is found to own one while her own list is still being read', async () => {
+    // Her list comes back late: the course learns meanwhile that she owns an agent here
+    // (course.ownsAgentHere, asked when the course opens), and the feed asks again (ActivityView).
+    let release!: () => void
+    const late = new Promise<void>((r) => (release = r))
+    const plain = vi.mocked(read).getMockImplementation()!
+    vi.mocked(read).mockImplementation((async (name: string, args: Record<string, unknown>) => {
+      if (name === 'action.list_mine') await late
+      return plain(name as never, args as never)
+    }) as unknown as typeof read)
+    const e = done('act-agent')
+    const w = mountAs(e, false)
+    await flushPromises()
+    const course = useCourseStore()
+    course.ownsAgentHere = true
+    ensureEventWho(COURSE, e, whoReachOf(course))
+    release()
+    await flushPromises()
+    expect(asked.filter((a) => a.startsWith('action.get'))).toEqual(['action.get act-agent'])
+    expect(parts(w)).toEqual([
+      ['m-helper', '[object Object]'],
+      ['m-teacher', ''],
+    ])
+    w.unmount()
   })
 
   it('names nobody, and asks nothing but her own list, where she owns no agent here', async () => {

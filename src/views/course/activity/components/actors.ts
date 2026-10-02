@@ -89,6 +89,12 @@ const asked = new Set<string>()
 const again = new Set<string>()
 /** Not the caller's own, and not asked of as their agent's: asked again once they are known to own one. */
 const notMine = new Set<string>()
+/**
+ * Asked of as their agent's while a read of it, not as such, was still
+ * waiting or under way (the caller became known to own an agent meanwhile):
+ * that read asks it so too, rather than settling on nobody.
+ */
+const asOwnerToo = new Set<string>()
 const waiting: (() => Promise<void>)[] = []
 const AT_ONCE = 4
 let running = 0
@@ -198,7 +204,10 @@ export function ensureActionWho(
   let full = false
   if (asked.has(k)) {
     const w = who.get(k)
-    if (w === undefined) return
+    if (w === undefined) {
+      if (asOwner) asOwnerToo.add(k)
+      return
+    }
     if (w === null && asOwner && notMine.delete(k)) {
       // Not the caller's own: now asked of as their agent's.
     } else {
@@ -213,7 +222,7 @@ export function ensureActionWho(
       await syncMine(courseId, full)
       const row = mines.get(courseId)?.rows.get(actionId)
       if (row) return void who.set(k, row)
-      if (!asOwner) {
+      if (!asOwner && !asOwnerToo.has(k)) {
         notMine.add(k)
         return void who.set(k, null)
       }
@@ -293,6 +302,7 @@ export function forgetActionWho() {
   asked.clear()
   again.clear()
   notMine.clear()
+  asOwnerToo.clear()
   mines.clear()
   agents = null
   waiting.length = 0
