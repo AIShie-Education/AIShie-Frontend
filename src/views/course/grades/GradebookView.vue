@@ -627,6 +627,9 @@ watch(
                     <span v-if="score(row) !== null" class="gradebook__num"
                       >{{ score(row) }} / {{ formatScore(row.points) }}</span
                     >
+                    <span v-else-if="!row.rolled && row.points !== null" class="gradebook__num app-muted"
+                      >— / {{ formatScore(row.points) }}</span
+                    >
                     <span v-if="row.weight !== null" class="gradebook__num app-muted">
                       {{ t('grades.gradebook.weight') }}
                       {{
@@ -639,16 +642,19 @@ watch(
                       <template v-if="shareText(row) !== null">({{ shareText(row) }})</template>
                     </span>
                     <el-tag v-if="row.dropped" size="small" type="info">{{ t('grades.working.dropped') }}</el-tag>
-                    <el-tag
-                      v-if="
-                        row.kind === 'component' && row.fraction !== null && row.fraction !== undefined && !row.complete
-                      "
-                      size="small"
-                      type="warning"
-                      effect="plain"
-                    >
-                      {{ t('grades.gradebook.incomplete') }}
-                    </el-tag>
+                    <template v-if="row.kind === 'component'">
+                      <el-tag
+                        v-if="row.fraction === null || row.fraction === undefined"
+                        size="small"
+                        type="info"
+                        effect="plain"
+                      >
+                        {{ t('grades.gradebook.nothingYet') }}
+                      </el-tag>
+                      <el-tag v-else-if="!row.complete" size="small" type="warning" effect="plain">
+                        {{ t('grades.gradebook.incomplete') }}
+                      </el-tag>
+                    </template>
                     <el-tag v-if="row.dropLowest > 0" size="small" effect="plain">{{
                       t('grades.gradebook.dropLowest', { n: row.dropLowest })
                     }}</el-tag>

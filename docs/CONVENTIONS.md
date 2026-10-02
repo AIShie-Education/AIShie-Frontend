@@ -499,23 +499,23 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `@container (max-width: …)` would, for el-descriptions' columns, which of a table's columns show,
   or a table or a card per row (the administration's courses, departments, people and an actor's
   page). A table that folds its columns under its first does so where they no longer all fit at
-  their `min-width`s, when what it folds keeps what they say (the courses, departments and terms,
-  sign-in's providers, the school's AI plan, prices and quotas per person, the gradebook). A phone's
-  layout, a card per row, or a fold that leaves something out, switches where the page is as
-  narrow as in a window of 640 px without the side bar: 592 px of page, 542 of a card's content
-  (the members, a member's page, My actions and the people, which switched at 767 px, at 719 and
-  669). Measure a part as wide as the card that no `el-table` changes the size of, its title or
-  its toolbar, never the card around an `el-table`, which lays itself out again from a
-  `ResizeObserver` of its own (the card would change height in that observer's callback, a loop the
-  browser reports). What the switch itself changes in the measured part is safe, a toolbar's row
-  that wraps, say: the switch is never made in an observer's callback, but a task later or on the
-  window's `resize`. A table whose columns, or their widths, follow the switch is given it with
-  `useTableRelayout(table, narrow)` (the same module), which lays the table out again in that same
-  task: left to itself, an `el-table` lays a change of its columns out 50 ms later, the browser lays
-  its rows out on the old columns' widths in between, and where they then change height the table's
-  own observer lays it out again in its callback, a loop the browser reports (as the side bar opens
-  on the members, at 900 px of window). The unit tests give elements widths with
-  `fakeContainerWidths()`
+  their `min-width`s, when the fold keeps what they say (sign-in's providers, the school's AI plan,
+  prices and quotas per person, the gradebook) or leaves out no more than an ID (the departments,
+  the terms) or when a course was created, which its own page shows (the courses). A phone's
+  layout, a card per row, or a fold that leaves out more, switches where the page is as narrow as
+  in a window of 640 px without the side bar: 592 px of page, 542 of a card's content (the members,
+  a member's page, My actions and the people, which switched at 767 px, at 719 and 669). Measure a
+  part as wide as the card that no `el-table` changes the size of, its title or its toolbar, never
+  the card around an `el-table`, which lays itself out again from a `ResizeObserver` of its own
+  (the card would change height in that observer's callback, a loop the browser reports). What the
+  switch itself changes in the measured part is safe, a toolbar's row that wraps, say: the switch
+  is never made in an observer's callback, but a task later or on the window's `resize`. A table
+  whose columns, or their widths, follow the switch is given it with `useTableRelayout(table,
+  narrow)` (the same module), which lays the table out again in that same task: left to itself, an
+  `el-table` lays a change of its columns out 50 ms later, the browser lays its rows out on the old
+  columns' widths in between, and where they then change height the table's own observer lays it
+  out again in its callback, a loop the browser reports (as the side bar opens on the members, at
+  900 px of window). The unit tests give elements widths with `fakeContainerWidths()`
   (`@/composables/containerWidthFakes`), and without it jsdom shows the wide layout. A dialog's
   breakpoints, and a phone's CSS (a card's padding, a filter taking the toolbar's whole row, at
   640 px and narrower), stay `@media` queries on the window. Columns of

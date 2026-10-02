@@ -625,6 +625,9 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await layout(page, 1280, 800, { side: true })
     await expect.poll(() => headingsOf(page, gradebook)).toEqual(['Component or assignment', 'Result'])
     await expect(page.locator('.gradebook__sub').filter({ hasText: 'Weight' }).first()).toBeVisible()
+    // The fold keeps what the columns said: an unscored line's points possible, and a component with nothing posted.
+    await expect(page.locator('.gradebook__sub').filter({ hasText: '— / 100' }).first()).toBeVisible()
+    await expect(page.locator('.gradebook__sub').filter({ hasText: 'No posted grades yet' }).first()).toBeVisible()
     expect(await noSideways(page)).toBe(true)
     await page.locator('.gradebook__table').scrollIntoViewIfNeeded()
     await page.mouse.move(0, 400)
