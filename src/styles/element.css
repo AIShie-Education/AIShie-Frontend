@@ -375,10 +375,15 @@ html.dark .el-card {
   --el-button-hover-border-color: var(--el-color-warning-dark-2);
   --el-button-hover-link-text-color: var(--el-color-warning-dark-2);
 }
+/* Pressed too: a message box's confirm button is a primary one with the
+   danger class added (confirmButtonClass), which would otherwise take the
+   primary's indigo while it is held down. */
 .el-button--danger {
   --el-button-hover-bg-color: var(--el-color-danger-dark-2);
   --el-button-hover-border-color: var(--el-color-danger-dark-2);
   --el-button-hover-link-text-color: var(--el-color-danger-dark-2);
+  --el-button-active-bg-color: var(--el-color-danger-dark-2);
+  --el-button-active-border-color: var(--el-color-danger-dark-2);
 }
 .el-button--info {
   --el-button-hover-bg-color: var(--el-color-info-dark-2);

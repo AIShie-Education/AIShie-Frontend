@@ -376,10 +376,24 @@ test.describe.serial('records that change after the fact', () => {
     await expect(dialog).toContainText('Grades themselves are not touched')
     await dialog.getByText('Every student whose totals count ungraded work as zero').click()
     await dialog.getByRole('button', { name: 'Undo final grades' }).click()
-    await page
+    // The last step is solid red, held down too: never the indigo of the primary button it is drawn from.
+    const last = page
       .getByRole('dialog', { name: 'Undo final grades?' })
       .getByRole('button', { name: 'Undo final grades' })
-      .click()
+    // Its colour is read at once, with no transition from the hover's (the same red) under way.
+    const red = await last.evaluate((el) => {
+      el.style.transition = 'none'
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--el-color-danger-dark-2)'
+      el.append(probe)
+      const colour = getComputedStyle(probe).color
+      probe.remove()
+      return colour
+    })
+    await last.hover()
+    await page.mouse.down()
+    expect(await last.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(red)
+    await page.mouse.up()
     await expectToasted(page, /^1 student’s totals no longer count ungraded work as zero: \d+ totals written again\.$/)
 
     await page.goto(`/courses/${courseId}/gradebook/${tia.member_id}`)
