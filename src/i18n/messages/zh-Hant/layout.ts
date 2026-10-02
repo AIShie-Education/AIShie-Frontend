@@ -13,7 +13,7 @@ export default {
   // 帳戶選單中的「關於 AIshie」（AboutDialog）：正在運行的版本。
   about: {
     item: '關於 AIshie',
-    title: '關於 AIshie',
+    title: '關於',
     web: '網頁應用程式',
     server: '伺服器',
     unknown: '未知',

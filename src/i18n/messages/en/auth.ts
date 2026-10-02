@@ -1,13 +1,15 @@
 export default {
   title: 'Sign in',
-  welcome: 'Welcome to AIshie',
   email: 'Email',
   loginOrEmail: 'Student/staff number or email',
   password: 'Password',
   signIn: 'Sign in',
   sso: 'Sign in with {provider}',
   ssoDefault: 'single sign-on',
-  or: 'or',
+  // Where single sign-on is offered, the password form is behind a link (and back).
+  usePassword: 'Use your student number and password instead',
+  useEmailPassword: 'Use your email and password instead',
+  useSso: 'Sign in another way',
   failed: 'Email or password is not correct.',
   failedLogin: 'The student/staff number or email, or the password, is not correct.',
   expired: 'Your session has ended. Please sign in again.',

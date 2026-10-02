@@ -63,6 +63,13 @@ markdown-it + DOMPurify.
   key only until Core answers or the form changes, and not through `useWrite`, which keeps the
   arguments it sent to compare with. The sign-in page shows a button for each of
   `ssoButtons(authMethods())`: Core's `sso_providers`, or the one `sso` of a Core from before them.
+  Where there is one, single sign-on comes first, its first button the page's primary, and the
+  password form is behind a link ("Use your student number and password instead"), and back; the
+  page waits a moment (400 ms) for Core to say, so as not to show the form and take it away, and
+  keeps a form already typed in. The four pages before the app (signing in, an invitation, a join
+  link, a password of one's own) are one card on the flat ground, `.app-auth-page` with its
+  `__lang`, `__card` and `__wordmark` (`styles/main.css`), under the public site's line
+  (`common.tagline`).
 - **Exporting conversations for audit** is *匯出對話* (`/admin/conversation-exports`, `admin-export`,
   `ExportView.vue`, and its parts in `src/views/admin/export/`), for platform administrators and
   department administrators alike (meta `admin: 'departments'`, the side bar's last entry), through

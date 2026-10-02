@@ -123,15 +123,15 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="change-pw">
-    <div class="change-pw__lang">
+  <div class="app-auth-page change-pw">
+    <div class="app-auth-page__lang">
       <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
         <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" />
       </el-select>
     </div>
-    <main class="change-pw__card" :aria-busy="leaving">
+    <main class="app-auth-page__card" :aria-busy="leaving">
       <div class="change-pw__brand">
-        <AppWordmark class="change-pw__wordmark" decorative />
+        <AppWordmark class="app-auth-page__wordmark change-pw__wordmark" decorative />
         <h1 class="change-pw__title">{{ t('auth.change.title') }}</h1>
         <p class="change-pw__lead">{{ t('auth.change.lead') }}</p>
       </div>
@@ -203,32 +203,6 @@ async function signOut() {
 </template>
 
 <style scoped>
-.change-pw {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 56px 16px 24px;
-  background:
-    radial-gradient(1200px 600px at 10% -10%, var(--app-indigo-tint), transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, var(--app-light) 16%, transparent), transparent 60%),
-    var(--app-ground);
-  position: relative;
-}
-.change-pw__lang {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-}
-.change-pw__card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--app-card);
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-card);
-  padding: 32px 28px 20px;
-  box-shadow: var(--app-shadow-raised);
-}
 .change-pw__brand {
   display: flex;
   flex-direction: column;
@@ -236,8 +210,6 @@ async function signOut() {
   margin-bottom: 20px;
 }
 .change-pw__wordmark {
-  height: 34px;
-  margin-bottom: 14px;
   align-self: flex-start;
 }
 .change-pw__title {

@@ -1,13 +1,15 @@
 export default {
   title: '登入',
-  welcome: '歡迎使用 AIshie',
   email: '電子郵件',
   loginOrEmail: '學號／工號或電子郵件',
   password: '密碼',
   signIn: '登入',
   sso: '以 {provider} 登入',
   ssoDefault: '單一登入',
-  or: '或',
+  // Where single sign-on is offered, the password form is behind a link (and back).
+  usePassword: '改用學號／密碼登入',
+  useEmailPassword: '改用電子郵件及密碼登入',
+  useSso: '改用其他方式登入',
   failed: '電子郵件或密碼不正確。',
   failedLogin: '學號／工號或電子郵件，或密碼不正確。',
   expired: '登入已過期，請重新登入。',

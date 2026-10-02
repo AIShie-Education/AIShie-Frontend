@@ -172,6 +172,43 @@ describe('single sign-on on the sign-in page', () => {
   })
 })
 
+describe('single sign-on first', () => {
+  const START = '/v1/auth/sso/start'
+
+  it('offers a student number and password behind a link, where Core takes one', async () => {
+    vi.mocked(authMethods).mockResolvedValue({
+      password: true,
+      passwordAccepts: ['login_id', 'email'],
+      sso: { label: 'School NetID', start: START },
+    })
+    const w = await mountAt('/login', 'zh-Hant')
+    expect(w.find('button.login__sso').classes()).toContain('el-button--primary')
+    expect(w.find('button.login__use-password').text()).toBe('改用學號／密碼登入')
+    expect(w.find('form.el-form').isVisible()).toBe(false)
+    w.unmount()
+  })
+
+  it('keeps a form already typed in when Core names a provider late', async () => {
+    vi.useFakeTimers()
+    try {
+      let answer!: (m: AuthMethods) => void
+      vi.mocked(authMethods).mockReturnValue(new Promise((resolve) => (answer = resolve)))
+      const w = await mountAt('/login', 'en')
+      await vi.advanceTimersByTimeAsync(400)
+      const form = w.find('form.el-form')
+      expect(form.isVisible()).toBe(true)
+      await w.find('input[name="login"]').setValue('someone@example.edu')
+      answer({ password: true, sso: { label: 'School NetID', start: START } })
+      await flushPromises()
+      expect(form.isVisible()).toBe(true)
+      expect(w.find('button.login__use-sso').text()).toBe('Sign in another way')
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
 describe('several identity providers on the sign-in page', () => {
   const PROVIDERS = [
     { id: 'school-adfs', label: 'School NetID', start: '/v1/auth/sso/start/school-adfs' },
@@ -192,10 +229,19 @@ describe('several identity providers on the sign-in page', () => {
       'Sign in with 大學統一認證',
       'Sign in with single sign-on',
     ])
-    // One "or" between the password and them all; the password form as it was.
-    expect(w.findAll('.el-divider')).toHaveLength(1)
+    // Single sign-on first, the first provider the page's one primary; the password behind a link.
+    expect(buttons(w).map((b) => b.classes().includes('el-button--primary'))).toEqual([true, false, false])
+    const form = w.find('form.el-form')
+    expect(form.isVisible()).toBe(false)
+    await w.find('button.login__use-password').trigger('click')
+    expect(w.find('button.login__use-password').exists()).toBe(false)
+    expect(form.isVisible()).toBe(true)
     expect(w.findAll('.login__card input').map((i) => i.attributes('name'))).toEqual(['login', 'password'])
     expect(w.find('button[type="submit"]').text()).toBe('Sign in')
+    // And back to the providers.
+    await w.find('button.login__use-sso').trigger('click')
+    expect(form.isVisible()).toBe(false)
+    expect(buttons(w)).toHaveLength(3)
     w.unmount()
   })
 

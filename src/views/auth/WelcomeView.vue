@@ -160,15 +160,15 @@ function proceed() {
 </script>
 
 <template>
-  <div class="welcome">
-    <div class="welcome__lang">
+  <div class="app-auth-page welcome">
+    <div class="app-auth-page__lang">
       <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
         <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" />
       </el-select>
     </div>
-    <div class="welcome__card">
+    <div class="app-auth-page__card welcome__card">
       <div class="welcome__brand">
-        <AppWordmark class="welcome__wordmark" decorative />
+        <AppWordmark class="app-auth-page__wordmark" decorative />
         <h1 class="welcome__title">{{ t('auth.invite.title') }}</h1>
         <p class="welcome__tagline">{{ t('common.tagline') }}</p>
       </div>
@@ -254,31 +254,8 @@ function proceed() {
 </template>
 
 <style scoped>
-.welcome {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 56px 16px 24px;
-  background:
-    radial-gradient(1200px 600px at 10% -10%, var(--app-indigo-tint), transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, var(--app-light) 16%, transparent), transparent 60%),
-    var(--app-ground);
-  position: relative;
-}
-.welcome__lang {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-}
 .welcome__card {
-  width: 100%;
   max-width: 440px;
-  background: var(--app-card);
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-card);
-  padding: 32px 28px 24px;
-  box-shadow: var(--app-shadow-raised);
 }
 .welcome__brand {
   display: flex;
@@ -286,10 +263,6 @@ function proceed() {
   align-items: flex-start;
   gap: 4px;
   margin-bottom: 20px;
-}
-.welcome__wordmark {
-  height: 34px;
-  margin-bottom: 18px;
 }
 .welcome__title {
   margin: 0;
@@ -320,10 +293,5 @@ function proceed() {
   margin: 0;
   line-height: 1.6;
   word-break: break-word;
-}
-@media (max-width: 480px) {
-  .welcome__card {
-    padding: 24px 18px 20px;
-  }
 }
 </style>

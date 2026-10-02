@@ -66,7 +66,8 @@ async function freshSignInPage(browser: Browser): Promise<Page> {
     } catch {}
   })
   await page.goto('/login')
-  await expect(page.locator('input[name=password]')).toBeVisible()
+  // The password form, or, where single sign-on is offered, the link to it beneath the providers.
+  await expect(page.locator('input[name=password]:visible, button.login__use-password:visible').first()).toBeVisible()
   return page
 }
 
@@ -160,10 +161,13 @@ test('root adds a provider, tests it and switches it on; a person signs in throu
   await expect(row.locator('.sso-status__status')).toHaveText('Offered')
   await photograph(page, 'sso-list')
 
-  // The sign-in page shows its button beside the password; the person signs in through it.
+  // The sign-in page shows its button first, as the page's primary, and the password behind a
+  // link; the person signs in through it.
   const signIn = await freshSignInPage(browser)
   await expect(ssoButton(signIn)).toBeVisible()
-  await expect(signIn.locator('button[type=submit]')).toHaveText('Sign in')
+  await expect(ssoButton(signIn)).toHaveClass(/el-button--primary/)
+  await expect(signIn.locator('input[name=password]')).toBeHidden()
+  await expect(signIn.getByRole('button', { name: 'Use your student number and password instead' })).toBeVisible()
   await photograph(signIn, 'sso-sign-in')
   await ssoButton(signIn).click()
   await expect(signIn).not.toHaveURL(/\/login/)

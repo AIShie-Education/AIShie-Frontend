@@ -13,7 +13,7 @@ export default {
   // About AIshie, from the account menu (AboutDialog): which versions are running.
   about: {
     item: 'About AIshie',
-    title: 'About AIshie',
+    title: 'About',
     web: 'Web app',
     server: 'Server',
     unknown: 'Not known',
