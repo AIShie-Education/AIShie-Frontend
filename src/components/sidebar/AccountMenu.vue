@@ -399,7 +399,8 @@ defineExpose({ show, hide })
         </div>
 
         <button type="button" class="account-menu__item" role="menuitem" data-item tabindex="-1" @click="showAbout">
-          <el-icon aria-hidden="true"><InfoFilled /></el-icon>
+          <!-- Navigation's icons are outlined: Element Plus has no outlined "i", and its outlined "!" turned over is one. -->
+          <el-icon class="account-menu__about-icon" aria-hidden="true"><Warning /></el-icon>
           <span class="account-menu__label">{{ t('layout.about.item') }}</span>
         </button>
 
@@ -584,6 +585,9 @@ defineExpose({ show, hide })
 .account-menu__item .el-icon {
   flex-shrink: 0;
   color: var(--app-ink-3);
+}
+.account-menu__about-icon {
+  transform: rotate(180deg);
 }
 .account-menu__item:hover,
 .account-menu__item:focus-visible,
