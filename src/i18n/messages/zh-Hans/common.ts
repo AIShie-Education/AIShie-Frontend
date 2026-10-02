@@ -151,7 +151,6 @@ export default {
     notAParticipant: '只有参与对话的双方才会将对话标记为已读；以课程教职员身份阅读，不会在对话中留下阅读进度。',
     hostedByRuntime: '这个智能体是站内托管：只有本站的智能体运行环境持有它的令牌，不会为任何其他人签发令牌。',
     hostingFixed: '智能体的运行方式在创建时选定，此后不会更改：如要另一种方式，请创建另一个智能体。',
-    siteChatFollowsHosting: '能否在站内向智能体提问取决于它的运行方式：如要让人无法再向它提问，请暂停它的托管，或停用它。',
   },
   // 席位的上限（perm_ceilings）：无论由谁授予，该席位最多可拥有的权限级别。
   ceiling: {
@@ -255,7 +254,6 @@ export default {
       bad_filename: '有文件的名称无法照样使用：名称太长，或含有不可用的字符。请把文件改名后再放入。',
       duplicate_file: '同一个上传列了两次：请从列表移除其中一个，再保存。',
       filename_required: '有文件没有名称：请重新放入。',
-      files_and_upload_token: '文件以两种方式同时发送：请重新加载页面，再放入文件。',
       bad_upload_token: '有一个上传无法识别。',
       not_your_upload: '有一个上传不属于你，不能在此附加。',
       already_attached: '有文件已附加到另一个版本。',

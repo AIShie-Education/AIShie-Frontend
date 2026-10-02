@@ -8,53 +8,21 @@
 // document.get gave may have expired meanwhile).
 //
 // Writing: a version's files are sent in order as files: [{upload_token,
-// filename}] (filesPayload, uploadedPayload), never the deprecated
-// upload_token alone. What Core refuses because of them (details.reason) has
-// words of the app's (common.upload.refusal), and versionFilesRefused marks
-// the files it was about in the upload queue they came from.
+// filename}] (filesPayload, uploadedPayload). What Core refuses because of
+// them (details.reason) has words of the app's (common.upload.refusal), and
+// versionFilesRefused marks the files it was about in the upload queue they
+// came from.
 import { ApiError, blobUrl, FILE_TOO_LARGE, read, type UploadedFile } from '@/api/http'
-import type { DocumentFile, DocumentFull, DocumentVersion, TextVersion } from '@/api/types'
+import type { DocumentFile, DocumentFull, DocumentVersion } from '@/api/types'
 import type { UploadQueue } from '@/composables/useUploadQueue'
-import { downloadName } from './format'
 
-/** A version as document.get or document.versions gives it: its files, and the deprecated fields of its first. */
-type AnyVersion = (NonNullable<DocumentFull['version']> | DocumentVersion) & {
-  download_url?: string | null
-  text?: TextVersion | null
-}
+/** A version as document.get or document.versions gives it. */
+type AnyVersion = NonNullable<DocumentFull['version']> | DocumentVersion
 
-/**
- * A version's files, in order. Core lists them (files) since AIShie-Core
- * #49, and this reads them alone. The version's own download_url,
- * content_type, byte_size, checksum and text are its first file's there,
- * deprecated, and are read only as a fallback, where files is absent (a
- * Core from before #49): as one file with no id, named after the document
- * (downloadDocumentFile then downloads it from document.get's download_url).
- * A purged version has none.
- */
-export function versionFilesOf(v: AnyVersion | null | undefined, docTitle = ''): DocumentFile[] {
+/** A version's files, in order (files); a purged version has none. */
+export function versionFilesOf(v: AnyVersion | null | undefined): DocumentFile[] {
   if (!v || (v as { purged?: unknown }).purged || (v as { purged_at?: unknown }).purged_at) return []
-  if (Array.isArray(v.files)) return [...v.files].sort((a, b) => a.position - b.position)
-  // Deprecated: the first file's fields, from a Core before several files to a version.
-  const legacy = v as {
-    content_type?: string | null
-    byte_size?: number | null
-    checksum?: string | null
-    has_file?: boolean
-  }
-  if (!v.download_url && !legacy.content_type && !legacy.has_file) return []
-  return [
-    {
-      id: '',
-      position: 1,
-      filename: downloadName(docTitle || 'file', legacy.content_type),
-      content_type: legacy.content_type ?? 'application/octet-stream',
-      byte_size: legacy.byte_size ?? 0,
-      checksum: legacy.checksum ?? null,
-      download_url: v.download_url ?? null,
-      text: v.text ?? null,
-    },
-  ]
+  return [...(v.files ?? [])].sort((a, b) => a.position - b.position)
 }
 
 /** Goes to a download URL Core handed out, which saves the file under its name. */
@@ -80,30 +48,15 @@ function saveFrom(url: string, filename: string) {
 
 /**
  * Downloads a file of a document: a fresh short-lived URL (document.file),
- * then the browser goes to it and saves the file under its name. A file
- * with no id (a Core from before several files to a version) is its
- * version's one file, downloaded from document.get's deprecated
- * download_url.
+ * then the browser goes to it and saves the file under its name.
  */
 export async function downloadDocumentFile(
   courseId: string,
   documentId: string,
-  file: Pick<DocumentFile, 'id' | 'filename'>,
-  versionId?: string | null,
+  file: Pick<DocumentFile, 'id'>,
 ): Promise<void> {
-  if (file.id) {
-    const f = await read('document.file', { course_id: courseId, document_id: documentId, file_id: file.id })
-    saveFrom(f.download_url, f.filename)
-    return
-  }
-  const doc = await read('document.get', {
-    course_id: courseId,
-    document_id: documentId,
-    version_id: versionId ?? undefined,
-  })
-  const url = (doc.version as { download_url?: string | null } | null | undefined)?.download_url
-  if (!url) throw new ApiError({ status: 404, code: 'not_found', message: 'the file is no longer there' })
-  saveFrom(url, file.filename)
+  const f = await read('document.file', { course_id: courseId, document_id: documentId, file_id: file.id })
+  saveFrom(f.download_url, f.filename)
 }
 
 /** What a version's files are sent as: each upload's token and name, in order. */
@@ -139,7 +92,6 @@ export const FILE_REASONS = [
   'bad_filename',
   'duplicate_file',
   'filename_required',
-  'files_and_upload_token',
   'bad_upload_token',
   'not_your_upload',
   'already_attached',

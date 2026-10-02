@@ -154,8 +154,6 @@ export default {
     hostedByRuntime:
       'This agent is hosted on AIshie: the site’s agent runtime alone holds its token, and none is issued to anyone else.',
     hostingFixed: 'How an agent runs is chosen when it is created, and never changed: create another agent for the other way.',
-    siteChatFollowsHosting:
-      'Whether people can ask an agent on the site follows how it runs: pause its hosting, or suspend it, to stop them.',
   },
   // A seat's ceilings (perm_ceilings): the most it may hold of a permission, whoever grants it.
   ceiling: {
@@ -267,7 +265,6 @@ export default {
         'A file’s name cannot be used as it is: it is too long, or holds a character a name may not. Rename the file, and put it in again.',
       duplicate_file: 'The same upload is named twice: take one off the list, and save again.',
       filename_required: 'A file has no name: put it in again.',
-      files_and_upload_token: 'The files were sent in two ways at once: reload the page, and put them in again.',
       bad_upload_token: 'An upload was not recognised.',
       not_your_upload: 'An upload was not yours to attach here.',
       already_attached: 'A file was attached already, to another version.',

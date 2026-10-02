@@ -55,9 +55,7 @@ const instructions = useAsync<DocumentFull | null>(
 )
 const instructionsDoc = computed(() => instructions.data.value ?? null)
 /** The instructions' files, in order. */
-const instructionFiles = computed(() =>
-  versionFilesOf(instructionsDoc.value?.version, instructionsDoc.value?.title ?? ''),
-)
+const instructionFiles = computed(() => versionFilesOf(instructionsDoc.value?.version))
 /** Instructions exist but students have nothing of them to read. */
 const instructionsUnpublished = computed(() => !!instructionsDoc.value && !instructionsDoc.value.published_version_id)
 

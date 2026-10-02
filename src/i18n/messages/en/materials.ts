@@ -310,7 +310,6 @@ export default {
       'Staff have written this text version since: transcribing it again discards their changes, which has to be confirmed.',
     text_too_long: 'The text is too long: a text version holds at most 2 MiB of Markdown.',
     no_text: 'There is no text version of this file: it has none, and none can be made of it.',
-    file_id_required: 'This version holds {files} files: name the file whose text version this is, and try again.',
     document_archived: 'The document is archived: bring it back first.',
     course_archived: 'The course is archived: nothing in it changes.',
   },

@@ -9,24 +9,15 @@ describe('versionFilesOf', () => {
       { id: 'b', position: 2, filename: 'b.docx', content_type: 'application/msword', byte_size: 2 },
       { id: 'a', position: 1, filename: 'a.pdf', content_type: 'application/pdf', byte_size: 1 },
     ]
-    expect(versionFilesOf({ files, content_type: 'application/pdf' } as never).map((f) => f.id)).toEqual(['a', 'b'])
-    // Text alone: none, whatever the deprecated fields might say.
+    expect(versionFilesOf({ files } as never).map((f) => f.id)).toEqual(['a', 'b'])
+    // Text alone: none.
     expect(versionFilesOf({ files: [] } as never)).toEqual([])
   })
 
-  it('reads the deprecated first file’s fields only where files is absent, as one file named after the document', () => {
-    const legacy = versionFilesOf(
-      { content_type: 'application/pdf', byte_size: 10, download_url: 'http://x/v1/blobs/1', text: null } as never,
-      'Week 1',
-    )
-    expect(legacy).toEqual([
-      expect.objectContaining({ id: '', position: 1, filename: 'Week 1.pdf', byte_size: 10, download_url: 'http://x/v1/blobs/1' }),
-    ])
-  })
-
   it('has none for a purged version', () => {
-    expect(versionFilesOf({ files: [], purged: { reason: 'x' }, content_type: 'application/pdf' } as never)).toEqual([])
-    expect(versionFilesOf({ purged_at: '2026-09-30T00:00:00Z', has_file: true } as never)).toEqual([])
+    const files = [{ id: 'a', position: 1, filename: 'a.pdf', content_type: 'application/pdf', byte_size: 1 }]
+    expect(versionFilesOf({ files, purged: { reason: 'x' } } as never)).toEqual([])
+    expect(versionFilesOf({ files, purged_at: '2026-09-30T00:00:00Z' } as never)).toEqual([])
   })
 })
 

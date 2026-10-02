@@ -111,7 +111,7 @@ const hasText = computed(() => form.body.trim() !== '')
 const hasFiles = computed(() => ready.value.length > 0)
 const hasContent = computed(() => hasText.value || hasFiles.value)
 /** The latest version's files, which a new version does not carry over. */
-const baseFiles = computed(() => versionFilesOf(base.value, props.docTitle))
+const baseFiles = computed(() => versionFilesOf(base.value))
 const baseHasFile = computed(() => baseFiles.value.length > 0)
 const sameText = computed(() => !!base.value && form.body === baseText.value)
 // A new version holds only what it is given: the same text without the files

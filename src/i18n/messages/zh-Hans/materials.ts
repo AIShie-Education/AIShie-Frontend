@@ -287,7 +287,6 @@ export default {
     staff_edit: '教学人员其后修改了这个文字版：重新转写会放弃他们的修改，须先确认。',
     text_too_long: '文字过长：文字版最多容纳 2 MiB 的 Markdown。',
     no_text: '这个文件没有文字版，也无法为它制作。',
-    file_id_required: '这个版本有 {files} 个文件：请指明是哪个文件的文字版，再试一次。',
     document_archived: '这份文档已归档：请先把它恢复。',
     course_archived: '课程已归档：其中的内容不能再更改。',
   },

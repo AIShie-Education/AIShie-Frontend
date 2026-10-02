@@ -18,7 +18,7 @@ const doc = computed(() =>
 )
 const version = computed(() => doc.value?.version ?? null)
 /** The rubric's files, in order. */
-const files = computed(() => versionFilesOf(version.value, doc.value?.title ?? ''))
+const files = computed(() => versionFilesOf(version.value))
 const hasFile = computed(() => files.value.length > 0)
 
 const note = computed(() => {

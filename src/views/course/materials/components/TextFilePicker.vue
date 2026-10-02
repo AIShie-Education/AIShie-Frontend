@@ -32,7 +32,7 @@ function chip(f: DocumentFile) {
   <div v-if="files.length > 1" class="text-files" role="group" :aria-label="t('materials.document.text.pickFile')">
     <button
       v-for="(f, i) in files"
-      :key="f.id || i"
+      :key="f.id"
       type="button"
       class="text-file"
       :class="{ 'is-on': f === selected }"

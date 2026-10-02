@@ -7,8 +7,7 @@
 // by its refresh button; a long one part by part (readWholeText), and while
 // one waits for the transcriber that is on, every 15 seconds.
 //
-// Every read and write names the file (file_id): Core refuses to guess which
-// of several files is meant (file_id_required).
+// Every read and write names the file (file_id), as Core requires.
 //
 // A text that is done may be downloaded as a PDF (下載為 PDF): laid out for
 // paper and handed to the browser's print window (PrintButton).
@@ -56,7 +55,7 @@ const props = defineProps<{
   documentId: string
   versionId: string
   seq: number
-  /** The file whose text version this is ('' for the one file of a Core from before several files to a version). */
+  /** The file whose text version this is. */
   fileId: string
   /** The file's name. */
   fileName: string
@@ -93,8 +92,6 @@ const { t, te, n } = useI18n()
  * of its own on the page.
  */
 const ANCHORS = (props.position ?? 1) > 1 ? `text-f${props.position}-` : 'text-'
-/** Names the file in every call about its text version; none for a Core that has no files' ids. */
-const fileArg = () => (props.fileId ? { file_id: props.fileId } : {})
 /** How often a text waiting for the transcriber is read again, while the tab is shown. */
 const QUEUED_POLL_MS = 15_000
 
@@ -133,7 +130,7 @@ async function load() {
   progress.value = null
   try {
     const whole = await readWholeText(
-      { course_id: props.courseId, document_id: props.documentId, version_id: props.versionId, ...fileArg() },
+      { course_id: props.courseId, document_id: props.documentId, version_id: props.versionId, file_id: props.fileId },
       {
         onProgress: (read, parts) => {
           if (mine === generation && parts > 1) progress.value = { read, parts }
@@ -248,7 +245,7 @@ async function save() {
       course_id: props.courseId,
       document_id: props.documentId,
       version_id: props.versionId,
-      ...fileArg(),
+      file_id: props.fileId,
       body: draft.value,
       ...(baseRevision.value !== null ? { base_revision: baseRevision.value } : {}),
     },
@@ -340,7 +337,7 @@ async function retranscribe() {
       course_id: props.courseId,
       document_id: props.documentId,
       version_id: props.versionId,
-      ...fileArg(),
+      file_id: props.fileId,
       ...(c ? { base_revision: c.revision } : {}),
       ...(staff ? { discard_edit: true } : {}),
     },

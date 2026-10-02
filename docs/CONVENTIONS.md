@@ -133,12 +133,11 @@ markdown-it + DOMPurify.
   by buttons named for it, `files` following the order. `files` is `UploadedFile[]`: hand each to
   the tool that attaches it by its `uploadToken` and `fileName` (`document.create`/`add_version`
   `files: [{upload_token, filename}]`, in order, by `uploadedPayload` or, from a queue,
-  `filesPayload` (`@/utils/documentFiles`); `grade.submit` `feedback_files` with `filename`; never
-  the deprecated `upload_token` alone); taking one off the list takes it out of `files`, and one the
-  caller takes out (once attached) leaves the list. A caller that reads each file's item (to say
-  what is left out, to mark the files a refusal was about) makes the queue itself
-  (`useUploadQueue`) and passes it as `:queue`, with an `#item="{ item }"` slot beside each file if
-  it puts anything there; `v-model` is not kept then.
+  `filesPayload` (`@/utils/documentFiles`); `grade.submit` `feedback_files` with `filename`);
+  taking one off the list takes it out of `files`, and one the caller takes out (once attached)
+  leaves the list. A caller that reads each file's item (to say what is left out, to mark the files
+  a refusal was about) makes the queue itself (`useUploadQueue`) and passes it as `:queue`, with an
+  `#item="{ item }"` slot beside each file if it puts anything there; `v-model` is not kept then.
 - Where a document is made (new material, a new version, new instructions or a rubric), the files
   come first and its text second, in the same version: the drop zone is what opens, and under it
   `<DocumentTextField v-model="body" v-model:open :summary>` (`@/components`), one line that opens
@@ -160,11 +159,9 @@ markdown-it + DOMPurify.
   again"), and a limit it names is learnt. A submission's files are attached with
   `document.create` (`kind: 'submission'`, `submission_id`, `files` of one) as each is up, while it
   is a draft; `submission.submit` then takes the list of their document ids as a guard.
-- **A version's files** are read from `version.files` alone, by `versionFilesOf(version, title)`
+- **A version's files** are read from `version.files`, by `versionFilesOf(version)`
   (`@/utils/documentFiles`): in order, each with its `id`, `position`, `filename`, type, size and
-  text version. The version's own `download_url`, `content_type`, `byte_size`, `checksum`, `text`
-  and `has_file` are its first file's, deprecated, and read only where `files` is absent (a Core
-  from before #49), as one file named after the document. List them with
+  text version; a purged version has none. List them with
   `<VersionFileList :course-id :document-id :version-id :files :doc-title :date />` (`@/components`):
   an icon by type (`fileKind` and `FILE_ICON`, `@/utils/files`, shared with the chat), the name and
   size, which opens the file viewer (below) on it among the version's others, and beside it a
@@ -175,9 +172,8 @@ markdown-it + DOMPurify.
   `<DocumentFiles :course-id :document-id :title />`, which reads its one version once for the page
   and lists its files, the title heading several. Each file of material, instructions or a rubric
   has its own text version: every `document.text`, `text_update` and `text_retranscribe` names its
-  `file_id` (Core refuses to guess among several, `file_id_required`), and the document page has a
-  `TextVersionPane` for each file, picked with `TextFilePicker` and kept in the address
-  (`?tab=text&file=`).
+  `file_id`, which Core requires, and the document page has a `TextVersionPane` for each file,
+  picked with `TextFilePicker` and kept in the address (`?tab=text&file=`).
 - **Previewing a file (預覽).** Every list of files opens the file viewer, never a page of its own and
   never the file's URL: `openPreview({ files, index, title, courseId })` from
   `@/components/preview/viewer`, with `documentPreviewFiles(courseId, documentId, versionId, files,
