@@ -34,7 +34,7 @@ export default {
     agentPlaceholder: '選擇你的其中一個代理',
     none: '你沒有等待託管的代理。只有建立時選擇「站內託管」的代理才能託管：MCP 存取的代理由你自己的工具使用。',
     checking: '正向 AIshie 查詢…',
-    seats: '它還未加入任何課程：託管後，在你把它帶入課程之前，它沒有任何問題要回答。 | 它在 1 個課程中。 | 它在{n}個課程中。',
+    seats: '它還未加入任何課程：託管後，在你把它帶入課程之前，它沒有任何問題要回答。 | 它在1個課程中。 | 它在{n}個課程中。',
     already: '它已經由 AIshie 託管。',
     openIt: '前往它的頁面',
     takesOver: '其他人先前留下的託管會被取代。',
@@ -84,7 +84,7 @@ export default {
     keyNotStored: '金鑰會交給學校的執行環境，為這個代理加密保存。本頁不會保留它，也不會再顯示它。',
     advanced: '進階',
     maxOutputTokens: '每個回答的輸出 token 上限',
-    maxOutputTokensHint: '256 至 32000。留空則使用執行環境的預設值。',
+    maxOutputTokensHint: '256至32000。留空則使用執行環境的預設值。',
     reasoningEffort: '推理強度',
     reasoningDefault: '模型預設',
     effort: {
@@ -105,10 +105,10 @@ export default {
     changedElsewhere: '這個代理已在另一個分頁或視窗中被更改；請檢查後再儲存一次。',
     invalid: {
       required: '必填',
-      model: '模型名稱只可包含字母、數字及 . _ : / @ + -，最多 128 個字元。',
+      model: '模型名稱只可包含字母、數字及 . _ : / @ + -，最多128個字元。',
       resource: '只可包含小寫字母、數字和連字號，與 Azure 的資源命名方式相同。',
       region: 'AWS 區域，例如 us-east-1。',
-      maxOutputTokens: '256 至 32000 之間的整數。',
+      maxOutputTokens: '256至32000之間的整數。',
     },
   },
 
@@ -227,9 +227,9 @@ export default {
     noModel: '尚未選擇',
     key: '金鑰',
     today: '今日',
-    answers: '沒有回答 | 1 個回答 | {n}個回答',
+    answers: '沒有回答 | 1個回答 | {n}個回答',
     costUnknown: '費用不明',
-    proposals: '1 個回答正等待批准。 | {n}個回答正等待批准。',
+    proposals: '1個回答正等待批准。 | {n}個回答正等待批准。',
     seats: '課程',
     primary: {
       chooseModel: '選擇模型',
@@ -265,7 +265,7 @@ export default {
   delete: {
     title: '從學校的執行環境刪除{name}？',
     body: '執行環境會停止這個代理，刪除它的設定和你的金鑰，並在 AIshie 中撤銷它的權杖：在你再次託管它之前，站內無法向它提問。代理會保留在 AIshie 中。',
-    proposals: '1 個仍在等待批准的回答會保留在 AIshie 中。 | {n}個仍在等待批准的回答會保留在 AIshie 中。',
+    proposals: '1個仍在等待批准的回答會保留在 AIshie 中。 | {n}個仍在等待批准的回答會保留在 AIshie 中。',
     submit: '刪除',
     done: '{name}已不在學校的執行環境上',
   },

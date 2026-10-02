@@ -325,7 +325,7 @@ export default {
     intro:
       '签发令牌，让对方可以调用 Core：智能体无法自行登录申请令牌，第一个凭证就是由此获得。令牌只会显示一次，Core 只保存其哈希值。',
     label: '标签',
-    labelPlaceholder: 'CS101 秋季学期评分智能体',
+    labelPlaceholder: 'CS101秋季学期评分智能体',
     labelHint: '注明令牌用途，方便以后辨认。',
     expiry: '有效期',
     days: '{n}天',
@@ -333,7 +333,7 @@ export default {
     custom: '其他…',
     customDays: '天数',
     daysPlaceholder: '1–3650',
-    daysInvalid: '请输入 1 至 3650 天',
+    daysInvalid: '请输入1至3650天',
     submit: '签发令牌',
     suspendedNote: '对方已被停用：现在签发的令牌在重新启用之前都会被拒绝。',
     runtimeAgent:

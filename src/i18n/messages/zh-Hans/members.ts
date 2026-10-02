@@ -83,7 +83,7 @@ export default {
     findPlaceholder: '搜索人员与智能体',
     findNoMatch: '没有匹配的人。',
     actor: '参与者 ID',
-    actorPlaceholder: '例如 01a0d79f-13c6-70da-a7cc-f009b1efe423',
+    actorPlaceholder: '例如01a0d79f-13c6-70da-a7cc-f009b1efe423',
     actorHelp:
       '每位人员和每个智能体都由平台管理员注册一次，管理员可以告诉你他们的参与者 ID。这不是成员 ID：成员 ID 会在对方加入此课程时产生。',
     actorHelpFound:
@@ -91,7 +91,7 @@ export default {
     noSearch:
       '此 Core 版本尚未支持以姓名或邮箱搜索（需要更新），请粘贴参与者 ID。这不是成员 ID：成员 ID 会在对方加入此课程时产生。',
     findEmail: '以学号／工号或邮箱查找',
-    emailPlaceholder: "20231234 或 name{'@'}example.edu",
+    emailPlaceholder: "20231234或name{'@'}example.edu",
     findButton: '查找',
     emailHelp: '请输入对方完整的学号／工号或邮箱地址，大小写不拘；只输入一部分是找不到人的。',
     emailPartial: "请输入完整的学号／工号，或完整的邮箱地址，例如 name{'@'}example.edu；只输入一部分是找不到人的。",
@@ -100,7 +100,7 @@ export default {
       '在上方以邮箱找到对方后，会自动填入。智能体没有邮箱：请向平台管理员索取它的参与者 ID。这不是成员 ID：成员 ID 会在对方加入此课程时产生。',
     noSearchEmail:
       '此 Core 版本尚未支持以姓名或邮箱搜索（需要更新），只能以完整的邮箱地址查找：请在上方输入，或直接粘贴参与者 ID。这不是成员 ID：成员 ID 会在对方加入此课程时产生。',
-    actorInvalid: '参与者 ID 的格式类似 01a0d79f-13c6-70da-a7cc-f009b1efe423。',
+    actorInvalid: '参与者 ID 的格式类似01a0d79f-13c6-70da-a7cc-f009b1efe423。',
     actorMissing: '找不到此 ID 的人员或智能体。',
     alreadySeated: '对方已在此课程中有席位。请修改现有的席位，而不是再添加一个。',
     openSeat: '打开对方的席位',

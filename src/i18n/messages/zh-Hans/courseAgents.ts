@@ -123,7 +123,7 @@ export default {
     alreadyHere: '已在本课程',
     suspended: '已停用',
     name: '名称',
-    namePlaceholder: '例如：COMP1010 课程助教',
+    namePlaceholder: '例如：COMP1010课程助教',
     nameHelp: '学生向它提问时会看到这个名称。',
     hostingHelp: '只有站内托管的课程智能体，学生才能在站内向它提问；MCP 访问的智能体由你自己的工具使用，站内无法向它提问。',
     mcpPicked: '学生无法在站内向{name}提问：它是 MCP 访问，由你自己的工具使用。',

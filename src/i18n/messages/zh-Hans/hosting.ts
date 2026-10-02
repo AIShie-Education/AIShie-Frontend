@@ -34,7 +34,7 @@ export default {
     agentPlaceholder: '选择你的其中一个智能体',
     none: '你没有等待托管的智能体。只有创建时选择“站内托管”的智能体才能托管：MCP 访问的智能体由你自己的工具使用。',
     checking: '正在向 AIshie 查询…',
-    seats: '它还未加入任何课程：托管后，在你把它带入课程之前，它没有任何问题要回答。 | 它在 1 门课程中。 | 它在{n}门课程中。',
+    seats: '它还未加入任何课程：托管后，在你把它带入课程之前，它没有任何问题要回答。 | 它在1门课程中。 | 它在{n}门课程中。',
     already: '它已经由 AIshie 托管。',
     openIt: '前往它的页面',
     takesOver: '其他人先前留下的托管会被取代。',
@@ -84,7 +84,7 @@ export default {
     keyNotStored: '密钥会交给学校的运行环境，为这个智能体加密保存。本页不会保留它，也不会再显示它。',
     advanced: '高级',
     maxOutputTokens: '每个回答的输出 token 上限',
-    maxOutputTokensHint: '256 至 32000。留空则使用运行环境的默认值。',
+    maxOutputTokensHint: '256至32000。留空则使用运行环境的默认值。',
     reasoningEffort: '推理强度',
     reasoningDefault: '模型默认',
     effort: {
@@ -105,10 +105,10 @@ export default {
     changedElsewhere: '这个智能体已在另一个标签页或窗口中被更改；请检查后再保存一次。',
     invalid: {
       required: '必填',
-      model: '模型名称只能包含字母、数字及 . _ : / @ + -，最多 128 个字符。',
+      model: '模型名称只能包含字母、数字及 . _ : / @ + -，最多128个字符。',
       resource: '只能包含小写字母、数字和连字符，与 Azure 的资源命名方式相同。',
       region: 'AWS 区域，例如 us-east-1。',
-      maxOutputTokens: '256 至 32000 之间的整数。',
+      maxOutputTokens: '256至32000之间的整数。',
     },
   },
 
@@ -227,9 +227,9 @@ export default {
     noModel: '尚未选择',
     key: '密钥',
     today: '今天',
-    answers: '没有回答 | 1 个回答 | {n}个回答',
+    answers: '没有回答 | 1个回答 | {n}个回答',
     costUnknown: '费用未知',
-    proposals: '1 个回答正等待批准。 | {n}个回答正等待批准。',
+    proposals: '1个回答正等待批准。 | {n}个回答正等待批准。',
     seats: '课程',
     primary: {
       chooseModel: '选择模型',
@@ -265,7 +265,7 @@ export default {
   delete: {
     title: '从学校的运行环境删除{name}？',
     body: '运行环境会停止这个智能体，删除它的设置和你的密钥，并在 AIshie 中撤销它的令牌：在你再次托管它之前，站内无法向它提问。智能体会保留在 AIshie 中。',
-    proposals: '1 个仍在等待批准的回答会保留在 AIshie 中。 | {n}个仍在等待批准的回答会保留在 AIshie 中。',
+    proposals: '1个仍在等待批准的回答会保留在 AIshie 中。 | {n}个仍在等待批准的回答会保留在 AIshie 中。',
     submit: '删除',
     done: '{name}已不在学校的运行环境上',
   },

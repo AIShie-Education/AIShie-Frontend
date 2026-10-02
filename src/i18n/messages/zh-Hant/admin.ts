@@ -326,7 +326,7 @@ export default {
     intro:
       '發出權杖，讓對方可以呼叫 Core：代理無法自行登入申請權杖，第一個憑證便是由此取得。權杖只會顯示一次，Core 只保存其雜湊值。',
     label: '標籤',
-    labelPlaceholder: 'CS101 秋季學期評分代理',
+    labelPlaceholder: 'CS101秋季學期評分代理',
     labelHint: '註明權杖用途，方便日後辨認。',
     expiry: '有效期',
     days: '{n}天',
@@ -334,7 +334,7 @@ export default {
     custom: '其他…',
     customDays: '天數',
     daysPlaceholder: '1–3650',
-    daysInvalid: '請輸入 1 至 3650 天',
+    daysInvalid: '請輸入1至3650天',
     submit: '發出權杖',
     suspendedNote: '對方已被停用：現在發出的權杖在重新啟用之前都會被拒絕。',
     runtimeAgent:

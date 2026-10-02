@@ -850,7 +850,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `.join(', ')`. The dot between a course's code and its section is `<span class="app-sep">·</span>`
   with no spaces, so that a Chinese typeface does not make it a full-width one.
 - **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
-  never 「{owner} 的代理」 (`src/i18n/spacing.spec.ts` refuses it). The page puts the room between Han
+  never 「{owner} 的代理」, nor around a figure written in the message: 「1個學期 | {n}個學期」, never
+  「1 個學期」 (`src/i18n/spacing.spec.ts` refuses both). The page puts the room between Han
   and Latin letters or figures itself (`text-autospace` under `html:lang(zh)`, `styles/main.css`),
   which also keeps a paragraph from leaving one character alone on its last line (`text-wrap`).
   Small capitals' tracking (a side bar's headings) is 0 in Chinese.

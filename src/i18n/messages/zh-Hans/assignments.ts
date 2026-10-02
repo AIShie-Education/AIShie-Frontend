@@ -42,7 +42,7 @@ export default {
     title: '标题',
     titlePlaceholder: '例如：HW3 — 递归',
     points: '满分',
-    pointsInvalid: '请输入 0 或以上的数字',
+    pointsInvalid: '请输入0或以上的数字',
     pointsHint: '已有成绩输入后，更改满分时会询问这些成绩应如何处理；更改满分或计分位置都会重新记录受影响的总分。',
     due: '截止时间',
     duePlaceholder: '不设截止时间',

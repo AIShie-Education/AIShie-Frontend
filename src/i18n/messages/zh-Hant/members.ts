@@ -83,7 +83,7 @@ export default {
     findPlaceholder: '搜尋人員與代理',
     findNoMatch: '沒有符合的人。',
     actor: '參與者 ID',
-    actorPlaceholder: '例如 01a0d79f-13c6-70da-a7cc-f009b1efe423',
+    actorPlaceholder: '例如01a0d79f-13c6-70da-a7cc-f009b1efe423',
     actorHelp:
       '每位人員和每個代理都由平台管理員登記一次，管理員可以告訴你他們的參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
     actorHelpFound:
@@ -91,7 +91,7 @@ export default {
     noSearch:
       '此 Core 版本尚未支援以姓名或電子郵件搜尋（需要更新），請貼上參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
     findEmail: '以學號／工號或電子郵件查找',
-    emailPlaceholder: "20231234 或 name{'@'}example.edu",
+    emailPlaceholder: "20231234或name{'@'}example.edu",
     findButton: '查找',
     emailHelp: '請輸入對方完整的學號／工號或電子郵件地址，大小寫不拘；只輸入一部分是找不到人的。',
     emailPartial: "請輸入完整的學號／工號，或完整的電子郵件地址，例如 name{'@'}example.edu；只輸入一部分是找不到人的。",
@@ -100,7 +100,7 @@ export default {
       '在上方以電子郵件找到對方後，會自動填入。代理沒有電子郵件：請向平台管理員索取它的參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
     noSearchEmail:
       '此 Core 版本尚未支援以姓名或電子郵件搜尋（需要更新），只能以完整的電子郵件地址查找：請在上方輸入，或直接貼上參與者 ID。這不是成員 ID：成員 ID 會在對方加入此課程時產生。',
-    actorInvalid: '參與者 ID 的格式類似 01a0d79f-13c6-70da-a7cc-f009b1efe423。',
+    actorInvalid: '參與者 ID 的格式類似01a0d79f-13c6-70da-a7cc-f009b1efe423。',
     actorMissing: '找不到此 ID 的人員或代理。',
     alreadySeated: '對方已在此課程中有席位。請修改現有的席位，而不是再新增一個。',
     openSeat: '開啟對方的席位',

@@ -262,7 +262,7 @@ export default {
       not_your_upload: '有一个上传不属于你，不能在此附加。',
       already_attached: '有文件已附加到另一个版本。',
       not_uploaded: '有文件尚未上传完成。',
-      upload_too_old: '这些文件上传得太久（超过 48 小时），不能等待批准。',
+      upload_too_old: '这些文件上传得太久（超过48小时），不能等待批准。',
       no_file_storage: '本站点没有设置存放文件的地方，所以无法附加文件：请联系站点管理员。',
     },
   },

@@ -36,13 +36,13 @@ export default {
   list: {
     title: '你的智能体',
     new: '添加智能体',
-    count: '没有已启用的智能体 | 1 个已启用 | {n}个已启用',
+    count: '没有已启用的智能体 | 1个已启用 | {n}个已启用',
     countOf: '{n} / {limit}个已启用',
     suspendedDoNotCount: '已停用的智能体不计入你可拥有的数量。',
     empty: '你还没有任何智能体。创建一个：站内托管，或由你自己的工具通过 MCP 访问。',
     emptyNoSelfService: '你还没有任何智能体。在这里，智能体由管理员注册：请向你的管理员申请。',
-    seats: '未加入任何课程 | 已加入 1 门课程 | 已加入{n}门课程',
-    requests: '1 项申请待批准 | {n}项申请待批准',
+    seats: '未加入任何课程 | 已加入1门课程 | 已加入{n}门课程',
+    requests: '1项申请待批准 | {n}项申请待批准',
     created: '创建于',
   },
 
@@ -128,7 +128,7 @@ export default {
       '把这段加入 Claude Desktop 的配置（Settings → Developer → Edit Config），然后重新启动 Claude Desktop。配置文件中含有令牌：请勿外泄。它会以 npx 运行 mcp-remote，所以需要安装 Node.js。',
     courseTodo: '在加入课程之前，它什么都做不了：请把它带入你有席位的课程。',
     courseWaiting: '安排它加入课程的申请正等待讲师批准。',
-    courseDone: '已加入 1 门课程。 | 已加入{n}门课程。',
+    courseDone: '已加入1门课程。 | 已加入{n}门课程。',
   },
 
   // How an agent with MCP access runs, on its page (McpAccessCard).
@@ -185,7 +185,7 @@ export default {
     after: '在若干天后',
     never: '永不',
     days: '天',
-    daysInvalid: '请输入 1 至 3650 之间的整数天数',
+    daysInvalid: '请输入1至3650之间的整数天数',
     noExpiryWarn: '永不到期的令牌会一直有效，直到被撤销。无人看管的工具，最好设置到期日。',
     submit: '创建令牌',
   },
@@ -223,7 +223,7 @@ export default {
     withdrawBody:
       '{name}会失去在{course}的席位，它提出而还没有人决定的申请会一并取消。它做过的一切都会保留记录。之后再带它加入，会是一个新席位：一切从头开始。',
     withdrawn: '已从{course}撤出',
-    withdrawnCancelled: '已从{course}撤出，并取消了它的 1 项申请 | 已从{course}撤出，并取消了它的{n}项申请',
+    withdrawnCancelled: '已从{course}撤出，并取消了它的1项申请 | 已从{course}撤出，并取消了它的{n}项申请',
     archived: '已归档的课程不接受任何更改，包括这一项。',
     proposals: '它在这里的提议',
   },
@@ -281,12 +281,12 @@ export default {
         all: '全班',
         nobody: '不触及任何人的作业',
         you: '只有你：你自己的作业与成绩',
-        listed: '1 位学生 | {n}位学生',
+        listed: '1位学生 | {n}位学生',
       },
       assignments: {
         all: '所有作业',
         nobody: '没有',
-        listed: '1 份作业 | {n}份作业',
+        listed: '1份作业 | {n}份作业',
       },
     },
     cappedHint: '已按你自己的席位设置上限。负责管理课程成员的人以后可以调整它的权限，但永远不会超过你的权限。',

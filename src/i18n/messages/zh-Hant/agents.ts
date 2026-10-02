@@ -36,13 +36,13 @@ export default {
   list: {
     title: '你的代理',
     new: '新增代理',
-    count: '沒有啟用中的代理 | 1 個啟用中 | {n}個啟用中',
+    count: '沒有啟用中的代理 | 1個啟用中 | {n}個啟用中',
     countOf: '{n} / {limit}個啟用中',
     suspendedDoNotCount: '已停用的代理不計入你可擁有的數量。',
     empty: '你還沒有任何代理。建立一個：站內託管，或由你自己的工具透過 MCP 存取。',
     emptyNoSelfService: '你還沒有任何代理。在這裡，代理由管理員登記：請向你的管理員申請。',
-    seats: '未加入任何課程 | 已加入 1 個課程 | 已加入{n}個課程',
-    requests: '1 項申請待批 | {n}項申請待批',
+    seats: '未加入任何課程 | 已加入1個課程 | 已加入{n}個課程',
+    requests: '1項申請待批 | {n}項申請待批',
     created: '建立於',
   },
 
@@ -128,7 +128,7 @@ export default {
       '把這段加入 Claude Desktop 的設定（Settings → Developer → Edit Config），然後重新啟動 Claude Desktop。設定檔中含有權杖：請勿外洩。它會以 npx 執行 mcp-remote，所以需要安裝 Node.js。',
     courseTodo: '在加入課程之前，它甚麼都做不了：請把它帶入你有席位的課程。',
     courseWaiting: '安排它加入課程的申請正等待講師批准。',
-    courseDone: '已加入 1 個課程。 | 已加入{n}個課程。',
+    courseDone: '已加入1個課程。 | 已加入{n}個課程。',
   },
 
   // How an agent with MCP access runs, on its page (McpAccessCard).
@@ -185,7 +185,7 @@ export default {
     after: '在若干天後',
     never: '永不',
     days: '天',
-    daysInvalid: '請輸入 1 至 3650 之間的整數天數',
+    daysInvalid: '請輸入1至3650之間的整數天數',
     noExpiryWarn: '永不到期的權杖會一直有效，直至被撤銷。無人看管的工具，最好設定到期日。',
     submit: '建立權杖',
   },
@@ -223,7 +223,7 @@ export default {
     withdrawBody:
       '{name}會失去在{course}的席位，它提出而尚未有人決定的申請會一併取消。它做過的一切都會保留紀錄。之後再帶它加入，會是一個新席位：一切從頭開始。',
     withdrawn: '已從{course}撤出',
-    withdrawnCancelled: '已從{course}撤出，並取消了它的 1 項申請 | 已從{course}撤出，並取消了它的{n}項申請',
+    withdrawnCancelled: '已從{course}撤出，並取消了它的1項申請 | 已從{course}撤出，並取消了它的{n}項申請',
     archived: '已封存的課程不接受任何更改，包括這一項。',
     proposals: '它在這裡的提案',
   },
@@ -281,12 +281,12 @@ export default {
         all: '全班',
         nobody: '不觸及任何人的作業',
         you: '只有你：你自己的作業與成績',
-        listed: '1 位學生 | {n}位學生',
+        listed: '1位學生 | {n}位學生',
       },
       assignments: {
         all: '所有作業',
         nobody: '沒有',
-        listed: '1 份作業 | {n}份作業',
+        listed: '1份作業 | {n}份作業',
       },
     },
     cappedHint: '已按你自己的席位設定上限。負責管理課程成員的人日後可以調整它的權限，但永遠不會超過你的權限。',

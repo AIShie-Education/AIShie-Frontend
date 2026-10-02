@@ -4,7 +4,7 @@ export default {
   subtitle: '单点登录：除密码之外，用户可通过这些身份提供者登录',
   add: '添加提供者',
   noSecretsKey:
-    '需由服务器运维者在环境配置中加入 SECRETS_KEY（32 个随机字节的 base64）并重启；提供者的客户端密钥会用它加密保存。运维者在环境配置中设置的提供者不受影响。',
+    '需由服务器运维者在环境配置中加入 SECRETS_KEY（32个随机字节的 base64）并重启；提供者的客户端密钥会用它加密保存。运维者在环境配置中设置的提供者不受影响。',
 
   redirect: {
     label: '重定向 URI',
@@ -35,7 +35,7 @@ export default {
     keycloak: {
       where:
         '在管理控制台选择 realm，然后 Clients → Create client，类型 OpenID Connect，并开启 Client authentication。粘贴到 Valid redirect URIs。客户端 ID 是你所起的名称；密钥在其 Credentials 标签页。',
-      note: 'Keycloak 17 之前的版本，路径以 /auth 开头：…/auth/realms/<realm>。',
+      note: 'Keycloak 17之前的版本，路径以 /auth 开头：…/auth/realms/<realm>。',
     },
   },
 
@@ -58,11 +58,11 @@ export default {
     unnamed: '未命名：按钮显示“单点登录”',
     always: '始终启用',
     enabledLabel: '在登录页提供{name}',
-    linkedCount: '没有已关联的账号 | 已关联 1 个账号 | 已关联{n}个账号',
+    linkedCount: '没有已关联的账号 | 已关联1个账号 | 已关联{n}个账号',
     changedMeanwhile: '其间已有人修改，列表已显示最新状态。如仍需要，请再试一次。',
     turnOffTitle: '停用{name}？',
     turnOff:
-      '没有账号关联到它。 | 有 1 个账号通过它登录：停用后，在重新启用之前都无法通过它登录。不会解除任何关联。 | 有{n}个账号通过它登录：停用后，在重新启用之前都无法通过它登录。不会解除任何关联。',
+      '没有账号关联到它。 | 有1个账号通过它登录：停用后，在重新启用之前都无法通过它登录。不会解除任何关联。 | 有{n}个账号通过它登录：停用后，在重新启用之前都无法通过它登录。不会解除任何关联。',
     turnOffConfirm: '停用',
     turnedOn: '已启用{name}：一分钟内其按钮会出现在登录页。',
     turnedOnNobody: '已启用{name}：一分钟内其按钮会出现在登录页。目前没有账号关联到它，在关联账号之前没有人能通过它登录。',
@@ -72,9 +72,9 @@ export default {
     deleteTitle: '删除{name}？',
     deleteNone: '它会被移除，其按钮也会从登录页消失。目前没有账号关联到它。日后以同一 ID 重新创建，也不会自动恢复任何关联。',
     deleteLinked:
-      '不会有账号失去单点登录。 | 1 个账号将无法再以此方式登录：其关联会被解除，之后只能以密码登录或无法登录。如要保留关联，请改为停用。 | {n}个账号将无法再以此方式登录：其关联会被解除，之后只能以密码登录或无法登录。如要保留关联，请改为停用。',
-    deleteForce: '删除 | 删除并解除 1 个账号的关联 | 删除并解除{n}个账号的关联',
-    deleted: '已删除{name}。 | 已删除{name}，并解除了 1 个账号的关联。 | 已删除{name}，并解除了{n}个账号的关联。',
+      '不会有账号失去单点登录。 | 1个账号将无法再以此方式登录：其关联会被解除，之后只能以密码登录或无法登录。如要保留关联，请改为停用。 | {n}个账号将无法再以此方式登录：其关联会被解除，之后只能以密码登录或无法登录。如要保留关联，请改为停用。',
+    deleteForce: '删除 | 删除并解除1个账号的关联 | 删除并解除{n}个账号的关联',
+    deleted: '已删除{name}。 | 已删除{name}，并解除了1个账号的关联。 | 已删除{name}，并解除了{n}个账号的关联。',
   },
 
   status: {
@@ -159,7 +159,7 @@ export default {
       '须与提供者的发现文档（…/.well-known/openid-configuration）所写的完全相同，结尾的 / 也要一致。“测试”会读取它，不会令任何人登录，也不会发送密钥。位于本机或私有网络的颁发者，服务器可能会拒绝，除非其运维者允许。',
     test: '测试',
     issuerLinked:
-      '没有账号关联到它。 | 有 1 个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以该账号登录。 | 有{n}个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以这些账号登录。',
+      '没有账号关联到它。 | 有1个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以该账号登录。 | 有{n}个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以这些账号登录。',
     clientId: '客户端 ID',
     clientSecret: '客户端密钥',
     secretKeep: '保留现有密钥（{hint}）',
@@ -176,7 +176,7 @@ export default {
     emailClaimHint: '载有用户邮箱的声明，只在以邮箱关联时读取。',
     position: '在登录页的位置',
     positionLast: '排在其他之后',
-    positionHint: '数字小的排前，0 至 10000。运维者的提供者一定排第一。',
+    positionHint: '数字小的排前，0至10000。运维者的提供者一定排第一。',
     linkByEmail: '允许以已验证邮箱自动关联现有账号',
     byEmail: {
       intro: '关闭时，只有已关联的账号可以通过它登录。开启后，首次通过它登录、身份尚未关联任何账号的人，在以下各项全部成立时，会关联到现有账号：',
@@ -198,23 +198,23 @@ export default {
     refusedField: '未被接受：{message}',
     invalid: {
       required: '必填',
-      id: '小写英文字母、数字及连字符，以字母或数字开头及结尾，最多 64 个字符',
+      id: '小写英文字母、数字及连字符，以字母或数字开头及结尾，最多64个字符',
       idTaken: '已有提供者使用这个 ID',
-      displayNameLong: '最多 64 个字符',
+      displayNameLong: '最多64个字符',
       printable: '只可使用可打印字符',
       issuer_url: '须为网址，不可含用户、查询字符串或片段',
       issuer_https: '须为 https 网址（只有本机可用 http，且须服务器允许）',
-      issuer_long: '最多 500 字节',
+      issuer_long: '最多500字节',
       ascii: '只可使用可打印的 ASCII 字符',
-      long: '最多 500 字节',
+      long: '最多500字节',
       openid: '范围必须包括 openid',
-      scopesMany: '最多 20 个范围',
+      scopesMany: '最多20个范围',
       scope: '范围不可含空格、引号或反斜杠',
       claim: '声明名称，不可含空格',
       domainsRequired: '以邮箱关联须列出允许的邮箱域名',
-      domainsMany: '最多 50 个域名',
+      domainsMany: '最多50个域名',
       domain: '例如 example.edu 的域名',
-      position: '0 至 10000 的整数',
+      position: '0至10000的整数',
     },
   },
 

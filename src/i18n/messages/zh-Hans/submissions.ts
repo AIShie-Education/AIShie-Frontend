@@ -114,7 +114,7 @@ export default {
     needsApprovalHint: '你在这里输入的成绩须经他人批准才会生效。',
     score: '得分',
     outOf: '满分{points}',
-    scorePlaceholder: '例如 8.5',
+    scorePlaceholder: '例如8.5',
     scoreNegative: '得分不可为负数',
     scoreAbove: '超过满分{points}分。如要给分，请勾选“允许额外加分”。',
     allowExtra: '允许额外加分（得分超过满分）',
@@ -170,7 +170,7 @@ export default {
     remove: '移除这一行',
     total: '合计{points} / {max}',
     useTotal: '用作得分',
-    invalid: '每一行都需填写评分细项，得分与满分须为 0 或以上的数字',
+    invalid: '每一行都需填写评分细项，得分与满分须为0或以上的数字',
   },
   rubric: {
     title: '评分标准',

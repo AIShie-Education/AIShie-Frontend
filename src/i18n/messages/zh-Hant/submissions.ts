@@ -114,7 +114,7 @@ export default {
     needsApprovalHint: '你在這裡輸入的成績須經他人批准才會生效。',
     score: '得分',
     outOf: '滿分{points}',
-    scorePlaceholder: '例如 8.5',
+    scorePlaceholder: '例如8.5',
     scoreNegative: '得分不可為負數',
     scoreAbove: '超過滿分{points}分。如要給分，請勾選「允許額外加分」。',
     allowExtra: '允許額外加分（得分超過滿分）',
@@ -170,7 +170,7 @@ export default {
     remove: '移除這一行',
     total: '合計{points} / {max}',
     useTotal: '用作得分',
-    invalid: '每一行都需填寫評分細項，得分與滿分須為 0 或以上的數字',
+    invalid: '每一行都需填寫評分細項，得分與滿分須為0或以上的數字',
   },
   rubric: {
     title: '評分準則',
