@@ -1,7 +1,8 @@
 import { effectScope, ref } from 'vue'
 import type { Router } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { closeAllOverlays, installBackCloses, isSamePage, useBackCloses } from './useBackCloses'
+import { ElMessageBox } from 'element-plus'
+import { STEP_TIMEOUT_MS, closeAllOverlays, installBackCloses, isSamePage, useBackCloses } from './useBackCloses'
 
 // Back closes the overlay on top, with jsdom's history: each test starts on a
 // page's own entry, marked so that it is known again, and leaves history
@@ -183,6 +184,67 @@ describe('useBackCloses', () => {
     history.forward()
     await settles(() => expect(atPage()).toBe(true))
     expect(viewer.open.value).toBe(false)
+  })
+
+  it('back with a message box asked over an overlay dismisses the box alone, as cancelled', async () => {
+    const chat = overlay()
+    chat.open.value = true
+    await settles(() => expect(depthHere()).toBe(1))
+    const length = history.length
+    const asked = ElMessageBox.prompt('Withdraw this message?', 'Withdraw').then(
+      () => 'confirmed',
+      (action: unknown) => action,
+    )
+    await vi.waitFor(() => expect(document.querySelector('.el-overlay.is-message-box')).not.toBeNull())
+
+    history.back()
+    expect(await asked).toBe('cancel')
+    await settles(() => expect(depthHere()).toBe(1))
+    expect(chat.open.value).toBe(true)
+    expect(chat.close).not.toHaveBeenCalled()
+    expect(history.length).toBe(length)
+
+    // The box gone, back is the overlay's again.
+    await vi.waitFor(() => expect(document.querySelector('.el-overlay.is-message-box')).toBeNull())
+    history.back()
+    await settles(() => expect(chat.open.value).toBe(false))
+    expect(atPage()).toBe(true)
+  })
+
+  it('a step the browser never takes is given up after its timeout, and what comes after it goes on', async () => {
+    const viewer = overlay()
+    viewer.open.value = true
+    await settles(() => expect(depthHere()).toBe(1))
+    const length = history.length
+    const realGo = history.go.bind(history)
+    const go = vi.spyOn(history, 'go').mockImplementation(() => {})
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      // Closed by its button: its step back never lands.
+      viewer.open.value = false
+      const next = overlay()
+      next.open.value = true
+      await vi.advanceTimersByTimeAsync(STEP_TIMEOUT_MS - 1)
+      expect(go).toHaveBeenCalledWith(-1)
+      expect(history.length).toBe(length)
+      // Given up: the next one's entry is added.
+      await vi.advanceTimersByTimeAsync(1)
+      expect(history.length).toBe(length + 1)
+      expect(depthHere()).toBe(1)
+
+      // Closing them all resolves too, its step given up as well, and closes what is left.
+      let all = false
+      void closeAllOverlays().then(() => (all = true))
+      await vi.advanceTimersByTimeAsync(STEP_TIMEOUT_MS)
+      expect(all).toBe(true)
+      expect(next.close).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+      go.mockRestore()
+    }
+    // The step landing late, on an entry nothing is open for: on, to the page.
+    realGo(-1)
+    await settles(() => expect(atPage()).toBe(true))
   })
 
   it('opened already, it adds its entry at once', async () => {

@@ -9,13 +9,15 @@ import {
   hostOnRuntime,
   openChat,
   signIn,
+  signInAsRoot,
   type CoreReply,
   type FileSpec,
 } from './support'
 
 // On a phone, back (the gesture, or Android's button) closes what is laid
 // over the page instead of leaving it: the file viewer, the chat's sheet, the
-// menu, the top one first where one is open over another. Closed by its own
+// menu, an administrator's drawer, the top one first where one is open over
+// another (a message box asked over the chat first of all). Closed by its own
 // button, an overlay goes back over the entry it added, so that back from
 // there leaves the page, as it would have before it opened; a link followed
 // from the menu takes the menu's place in history; and a page reloaded with
@@ -201,6 +203,17 @@ test.describe('on a phone, back', () => {
       await expect(card).toBeVisible()
       expect(page.url()).toBe(course)
 
+      // A message box asked over the chat is on top of it: back dismisses the box alone.
+      const mine = panel.locator('.chat-msg').filter({ hasText: 'Are my notes right?' })
+      await mine.hover()
+      await mine.getByRole('button', { name: 'Withdraw' }).click()
+      const box = page.getByRole('dialog', { name: 'Withdraw this message?' })
+      await expect(box).toBeVisible()
+      await page.goBack()
+      await expect(box).toBeHidden()
+      await expect(card).toBeVisible()
+      expect(page.url()).toBe(course)
+
       await page.goBack()
       await expect(chatWindow(page)).toHaveCount(0)
       expect(page.url()).toBe(course)
@@ -211,6 +224,20 @@ test.describe('on a phone, back', () => {
       // A person may have five agents at once: this run's is suspended, for the specs after it.
       await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})
     }
+  })
+
+  test('closes an administrator’s drawer, which fills a phone’s screen', async ({ page }) => {
+    await signInAsRoot(page)
+    await twoPages(page, '/', '/admin/presets')
+    const url = page.url()
+    await page.getByRole('button', { name: 'Details' }).first().click()
+    const drawer = page.locator('.preset-drawer')
+    await expect(drawer).toBeVisible()
+    await page.goBack()
+    await expect(drawer).toBeHidden()
+    expect(page.url()).toBe(url)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
   })
 
   test('a page reloaded with the viewer open leaves no entry of it: back leaves the page', async ({ page }) => {

@@ -1,5 +1,6 @@
 import { onScopeDispose, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import type { Router } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 
 // Back closes what is laid over the page (the file viewer, the chat's sheet,
 // the phone's menu, a drawer or a dialog that fills a phone's screen), as a
@@ -10,7 +11,8 @@ import type { Router } from 'vue-router'
 // the page's own address (history.pushState, its state marked with how deep
 // it is), so that back comes to the entry under it, and this closes every
 // overlay above the entry back came to: the top one only, one at a time, for
-// overlays opened over one another. Closed by its own means (its button,
+// overlays opened over one another; a message box (ElMessageBox) asked over
+// them is on top of them all, and goes first. Closed by its own means (its button,
 // Escape, a click beside it), an overlay goes back over its own entry once,
 // so that history is as it was before it opened. One closed from under
 // another still open keeps its entry until that one is gone back over too.
@@ -32,7 +34,7 @@ const KEY = 'aishieOverlay'
 /** This page load's, telling its entries from those a load before left (a reload's). */
 const LOAD = Math.random().toString(36).slice(2)
 /** How long a step through history is waited for, should the browser not take it. */
-const STEP_TIMEOUT_MS = 2000
+export const STEP_TIMEOUT_MS = 2000
 
 interface Marker {
   load: string
@@ -106,9 +108,35 @@ function dropClosed(): number {
   return n
 }
 
+/**
+ * Dismisses the Element Plus message box open over everything (ElMessageBox:
+ * a prompt or a confirmation asked from within an overlay, say), as its own
+ * close button does, so that whoever asked is told it was cancelled. Says
+ * whether there was one.
+ */
+function dismissMessageBox(): boolean {
+  const box = [...document.querySelectorAll<HTMLElement>('.el-overlay.is-message-box')].find(
+    // One on its way out (its fade) or gone (v-show) is not what back closes.
+    (el) => el.style.display !== 'none' && !el.className.includes('-leave-'),
+  )
+  if (!box) return false
+  const button = box.querySelector<HTMLElement>('.el-message-box__headerbtn')
+  if (button) button.click()
+  else ElMessageBox.close()
+  return true
+}
+
 function onPopState() {
-  // Back past them: each overlay above the entry come to closes, the top one first.
   const depth = depthHere()
+  // A message box over the overlays is what is on top: back dismisses it
+  // alone, and the overlays' entries it went back over are put back.
+  if (!stepping && depth < layers.length && dismissMessageBox()) {
+    for (let d = depth + 1; d <= layers.length; d++) {
+      history.pushState({ ...(history.state as object | null), [KEY]: { load: LOAD, depth: d } }, '')
+    }
+    return
+  }
+  // Back past them: each overlay above the entry come to closes, the top one first.
   while (layers.length > depth) {
     const layer = layers.pop()!
     if (layer.open) {

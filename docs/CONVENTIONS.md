@@ -492,11 +492,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
   component. Opening adds an entry to history at the page's own address, back closes the overlay
-  on top (one at a time, where one is open over another), and closed by its own means (its button,
-  Escape, a click beside it) it goes back over its entry, so that history is as it was. It is used by
-  the file viewer, the phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider
-  screen stays open from page to page, and back moves between them), the agent's conversation log
-  and the invite link put up full screen; a new drawer or dialog that fills a phone's screen uses it
+  on top (one at a time, where one is open over another; a message box asked over them, ElMessageBox,
+  is dismissed first, as cancelled), and closed by its own means (its button, Escape, a click beside
+  it) it goes back over its entry, so that history is as it was. It is used by the file viewer, the
+  phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider screen stays open from
+  page to page, and back moves between them), the agent's conversation log, the invite link put up
+  full screen, and the administrators' drawers of a preset and of a department's administrators
+  (full width on a phone, `DRAWER_SIZE`); a new drawer or dialog that fills a phone's screen uses it
   too. The router (`installBackCloses`) goes back over the overlays' entries before it adds a page's,
   so that a link followed from one takes its place, and over those a page left before it was
   reloaded; going back to a page's own entry leaves it where it was scrolled.
