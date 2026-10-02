@@ -165,8 +165,20 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
   test('agents as a kind take the seat icon, and a proposal’s proposer its avatar and “AI”', async ({ page }) => {
     await signIn(page, demo().actors.instructor)
     await page.goto(coursePath('approvals'))
-    // The course's Agents tab and the activity bar's Agents view: the seat, not a chip.
-    await expect(courseTab(page, 'Agents').locator('svg.agent-seat-icon')).toBeVisible()
+    // The course's Agents tab and the activity bar's Agents view: the seat, not a chip. The tab is in
+    // the strip, or under More where the strip has no room for it (in English at 1280 px, beside the
+    // side bar). Asked again until the strip has measured its tabs and put away those that do not fit.
+    const strip = page.getByRole('navigation', { name: 'Course sections' })
+    const underMore = page.getByRole('menuitem', { name: 'Agents' })
+    await expect(async () => {
+      if (await courseTab(page, 'Agents').count()) {
+        await expect(courseTab(page, 'Agents').locator('svg.agent-seat-icon')).toBeVisible({ timeout: 1000 })
+        return
+      }
+      if (!(await underMore.isVisible())) await strip.getByRole('button', { name: /^More/ }).click()
+      await expect(underMore.locator('svg.agent-seat-icon')).toBeVisible({ timeout: 1000 })
+    }).toPass()
+    if (await underMore.isVisible()) await page.keyboard.press('Escape')
     await expect(page.locator('.activity-bar svg.agent-seat-icon')).toBeVisible()
     // The grading agent's proposal from the demo, still waiting.
     const actor = page.locator('.action-card').filter({ hasText: 'grader-v2' }).first().locator('.action-actor')
