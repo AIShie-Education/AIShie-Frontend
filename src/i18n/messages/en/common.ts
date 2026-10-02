@@ -1,6 +1,6 @@
 export default {
   appName: 'AIshie',
-  tagline: 'An LMS where people and agents work through the same tools',
+  tagline: 'The LMS for the agent era',
   actions: {
     save: 'Save',
     cancel: 'Cancel',

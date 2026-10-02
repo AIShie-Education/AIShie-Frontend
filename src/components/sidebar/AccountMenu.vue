@@ -19,6 +19,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useZIndex } from 'element-plus'
 import StatusTag from '@/components/StatusTag.vue'
+import AboutDialog from './AboutDialog.vue'
 import { LOCALES, type Locale } from '@/i18n'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore, type Theme } from '@/stores/ui'
@@ -172,6 +173,11 @@ function onSubItem(which: Sub) {
   else void openSub(which, true)
 }
 
+const about = ref(false)
+function showAbout() {
+  hide(false)
+  about.value = true
+}
 function goAccount() {
   hide(false)
   void router.push({ name: 'account' })
@@ -387,6 +393,11 @@ defineExpose({ show, hide })
           </div>
         </div>
 
+        <button type="button" class="account-menu__item" role="menuitem" data-item tabindex="-1" @click="showAbout">
+          <el-icon aria-hidden="true"><InfoFilled /></el-icon>
+          <span class="account-menu__label">{{ t('layout.about.item') }}</span>
+        </button>
+
         <div class="account-menu__sep" role="separator" />
         <button type="button" class="account-menu__item" role="menuitem" data-item tabindex="-1" @click="signOut">
           <el-icon aria-hidden="true"><SwitchButton /></el-icon>
@@ -394,6 +405,7 @@ defineExpose({ show, hide })
         </button>
       </div>
     </Teleport>
+    <AboutDialog v-model="about" />
   </div>
 </template>
 

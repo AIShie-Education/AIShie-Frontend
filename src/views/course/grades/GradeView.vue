@@ -390,7 +390,7 @@ const backLink = computed(() => ({
                 <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: g.superseded_by } }">
                   {{ t('grades.detail.newerGrade') }}
                 </router-link>
-                <IdText :id="g.superseded_by" />
+                <IdText v-if="course.can('action_decide')" :id="g.superseded_by" />
               </dd>
             </div>
             <div v-if="replaced.length">
@@ -418,7 +418,7 @@ const backLink = computed(() => ({
                     {{ t('grades.detail.rubricVersion') }}
                   </router-link>
                   <span v-else>{{ t('grades.detail.rubricRecorded') }}</span>
-                  <IdText :id="g.rubric_version_id" />
+                  <IdText v-if="course.can('action_decide')" :id="g.rubric_version_id" />
                 </template>
                 <span v-else class="app-muted">{{ t('grades.detail.noRubric') }}</span>
               </dd>

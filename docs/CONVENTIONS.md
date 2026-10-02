@@ -530,6 +530,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   stacked, nothing grows. Leave `align-items` off such a grid, or it wins over `.app-columns`.
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
+  `<IdText>` is quiet (12 px, the third ink, its copy button on hover): an id is for an administrator
+  to find or paste, beside a name, never a chip as heavy as an email. A student's own pages show none
+  but a reference they are asked to quote (the action that made a grade).
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
@@ -560,8 +563,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
-  account's settings, the language and the theme, each a submenu with the choice in use checked, and
-  signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
+  account's settings, the language and the theme, each a submenu with the choice in use checked, About AIshie
+  (`AboutDialog`: the web app's version from `/version.json` and the server's from `/healthz`, the only place
+  either is shown; the sign-in page names none) and signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
   title alone (and, on a phone, the menu's button): nothing else is offered there.
 - A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,

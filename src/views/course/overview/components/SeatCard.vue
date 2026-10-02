@@ -65,7 +65,8 @@ function scopeText(which: 'student' | 'assignment'): string {
           <p v-if="m.status === 'paused'" class="app-form-hint">{{ t('overview.seat.pausedHelp') }}</p>
         </dd>
       </div>
-      <div class="seat__row seat__row--block">
+      <!-- An id is for those who manage the course, not for a student's own page. -->
+      <div v-if="m.role !== 'student'" class="seat__row seat__row--block">
         <dt>{{ t('overview.seat.memberId') }}</dt>
         <dd>
           <IdText :id="m.member_id" full />

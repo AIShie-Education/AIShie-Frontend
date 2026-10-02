@@ -12,7 +12,6 @@ export default {
   failedLogin: 'The student/staff number or email, or the password, is not correct.',
   expired: 'Your session has ended. Please sign in again.',
   serverDown: 'The server cannot be reached right now.',
-  serverVersion: 'Server {version}',
   invite: {
     title: 'Choose your password',
     intro:

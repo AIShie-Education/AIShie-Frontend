@@ -162,7 +162,8 @@ describe('single sign-on on the sign-in page', () => {
     vi.mocked(authMethods).mockReturnValue(new Promise((resolve) => (answer = resolve)))
     const w = await mountAt('/login', 'en')
     expect(w.find('input[name="login"]').exists()).toBe(true)
-    expect(w.find('.login__version').text()).toBe('Server 1.0.0')
+    // Which version the server runs is not the sign-in page's business: it is in the account menu's About.
+    expect(w.text()).not.toContain('1.0.0')
     expect(ssoButton(w)).toBeUndefined()
     answer({ password: true, sso: { label: 'School NetID', start: START } })
     await flushPromises()

@@ -30,7 +30,6 @@ const error = computed(() =>
 )
 /** Core takes a login ID as well as an email: the field says so, and the name goes as `login`. */
 const byLoginId = ref(false)
-const version = ref<string | null>(null)
 const serverDown = ref(false)
 
 // Single sign-on as Core offers it (authMethods): a button for each identity
@@ -81,8 +80,8 @@ onMounted(async () => {
     byLoginId.value = acceptsLoginId(m)
   })
   try {
+    // Whether it answers; which version it runs is in the account menu's About, once signed in.
     const h = await health()
-    version.value = h?.version ?? null
     serverDown.value = !h || h.status !== 'ok'
   } catch {
     serverDown.value = true
@@ -213,7 +212,6 @@ function sso(m: SsoMethod) {
         </div>
       </template>
 
-      <p v-if="version" class="login__version">{{ t('auth.serverVersion', { version }) }}</p>
     </div>
   </div>
 </template>
@@ -285,11 +283,5 @@ function sso(m: SsoMethod) {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.login__version {
-  margin: 20px 0 0;
-  text-align: center;
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
 }
 </style>

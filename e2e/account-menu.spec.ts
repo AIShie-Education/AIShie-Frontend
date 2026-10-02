@@ -53,6 +53,7 @@ test.describe('the account menu', () => {
       'Account settings',
       /Language\s*English$/,
       /Theme\s*System$/,
+      'About AIshie',
       'Sign out',
     ])
     await expect(menu).not.toContainText('My agents')

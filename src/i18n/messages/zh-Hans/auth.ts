@@ -12,7 +12,6 @@ export default {
   failedLogin: '学号／工号或邮箱，或密码不正确。',
   expired: '登录已过期，请重新登录。',
   serverDown: '目前无法连接到服务器。',
-  serverVersion: '服务器 {version}',
   invite: {
     title: '设置密码',
     intro: '请为你的 AIshie 账号设置密码；如果你已有密码，新密码将替换它。设置后即会登录。',

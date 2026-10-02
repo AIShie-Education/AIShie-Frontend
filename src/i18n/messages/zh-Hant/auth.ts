@@ -12,7 +12,6 @@ export default {
   failedLogin: '學號／工號或電子郵件，或密碼不正確。',
   expired: '登入已過期，請重新登入。',
   serverDown: '目前無法連線到伺服器。',
-  serverVersion: '伺服器 {version}',
   invite: {
     title: '設定密碼',
     intro: '請為你的 AIshie 帳戶設定密碼；如你原本已有密碼，新密碼會取代它。設定後便會立即登入。',
