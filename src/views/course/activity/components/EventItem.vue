@@ -4,7 +4,10 @@
 // is (the student and the assignment it belongs to), and the few small facts
 // its payload carries. Events carry ids, never content: a document's title or
 // a grade's score is fetched by the view the link opens, which decides
-// whether the caller may see it.
+// whether the caller may see it. An event of the action log says who acted,
+// under its title: who proposed or did the action it is about, then who
+// decided or reviewed it (actors.ts reads them from the action; an agent
+// with its avatar and "AI").
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw } from 'vue-router'
@@ -15,6 +18,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { typeLabel } from '@/views/course/actions/components/actionText'
 import { CORE_ROOT_NAME } from '@/views/course/scheme/components/schemeModel'
+import { actionWho, ensureActionWho } from './actors'
 import { componentName, documentTitle, ensureComponentNames, ensureDocumentTitles } from './names'
 import {
   CATEGORY_ICON,
@@ -76,9 +80,31 @@ const subjectLink = computed(() =>
 const componentId = computed(() =>
   kind.value === 'component' ? props.event.subject_id : payloadString(props.event, 'component_id'),
 )
+/** What the action log's events say of who acted: the verb for its maker, and for whoever decided or reviewed it. */
+const WHO: Record<string, { by: 'proposed' | 'did'; then?: 'approved' | 'rejected' | 'reviewed' | 'escalated' }> = {
+  'action.proposed': { by: 'proposed' },
+  'action.approved': { by: 'proposed', then: 'approved' },
+  'action.rejected': { by: 'proposed', then: 'rejected' },
+  'action.cancelled': { by: 'proposed' },
+  'action.reviewed': { by: 'did', then: 'reviewed' },
+  'action.escalated': { by: 'did', then: 'escalated' },
+}
+const whoWords = computed(() => (props.compact || kind.value !== 'action' ? undefined : WHO[props.event.type]))
+const who = computed(() => {
+  const words = whoWords.value
+  const w = words ? actionWho(props.courseId, props.event.subject_id) : undefined
+  if (!words || !w) return []
+  const out: { id: string; key: string }[] = []
+  if (w.by) out.push({ id: w.by, key: `activity.who.${words.by}` })
+  const then = words.then === 'reviewed' || words.then === 'escalated' ? w.reviewedBy : w.decidedBy
+  if (words.then && then) out.push({ id: then, key: `activity.who.${words.then}` })
+  return out
+})
+
 onMounted(() => {
   if (kind.value === 'material') void ensureDocumentTitles(props.courseId)
   if (componentId.value) void ensureComponentNames(props.courseId)
+  if (whoWords.value) ensureActionWho(props.courseId, props.event.subject_id, !!whoWords.value.then)
 })
 const component = computed(() => componentName(componentId.value))
 
@@ -393,6 +419,16 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
         </span>
       </div>
 
+      <!-- Who acted: who proposed or did it, then who decided or reviewed it. -->
+      <div v-if="who.length" class="event-item__who" :aria-label="t('activity.who.label')">
+        <template v-for="(w, i) in who" :key="w.key">
+          <span v-if="i" class="event-item__who-then" aria-hidden="true">→</span>
+          <i18n-t :keypath="w.key" tag="span" scope="global" class="event-item__who-part">
+            <template #who><MemberName :id="w.id" show-kind class="event-item__who-name" /></template>
+          </i18n-t>
+        </template>
+      </div>
+
       <div class="event-item__line">
         <template v-if="kind === 'member' && event.subject_id">
           <router-link v-if="subjectTo" :to="subjectTo" class="event-item__subject">
@@ -529,6 +565,29 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   gap: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+.event-item__who {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--app-ink-2);
+  min-width: 0;
+}
+.event-item__who-part {
+  min-width: 0;
+}
+.event-item__who-name {
+  vertical-align: middle;
+  color: var(--app-ink);
+}
+/* In Chinese the verb has no space before it: the name stands a little apart by itself. */
+:lang(zh) .event-item__who-name {
+  margin-inline-end: 0.25em;
+}
+.event-item__who-then {
+  color: var(--app-ink-3);
 }
 .event-item__line {
   display: flex;

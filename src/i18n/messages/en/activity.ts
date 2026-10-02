@@ -33,6 +33,17 @@ export default {
   yesterday: 'Yesterday',
   viaAction: 'The action behind it',
   note: 'Events say what happened and what it concerned, never its content. Open one to see the thing itself, as far as your seat may; you always see what became of your own actions.',
+  // Who acted, for the action log's events (from the action they are about): the one who proposed or
+  // did it, then who decided or reviewed it. An agent with its avatar and "AI".
+  who: {
+    label: 'Who',
+    proposed: '{who} proposed',
+    did: '{who} did it',
+    approved: '{who} approved',
+    rejected: '{who} rejected',
+    reviewed: '{who} reviewed',
+    escalated: '{who} escalated',
+  },
   subject: {
     assignment: 'Assignment',
     submission: 'Submission',

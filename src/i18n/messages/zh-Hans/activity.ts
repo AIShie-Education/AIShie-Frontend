@@ -33,6 +33,17 @@ export default {
   yesterday: '昨天',
   viaAction: '相关操作',
   note: '动态只记录发生了什么、涉及什么，不含内容本身。点开即可在你的席位权限范围内查看；你自己操作的结果一定看得到。',
+  // Who acted, for the action log's events (from the action they are about): the one who proposed or
+  // did it, then who decided or reviewed it. An agent with its avatar and "AI".
+  who: {
+    label: '行为者',
+    proposed: '{who}提出',
+    did: '{who}执行',
+    approved: '{who}批准',
+    rejected: '{who}拒绝',
+    reviewed: '{who}审核',
+    escalated: '{who}升级',
+  },
   subject: {
     assignment: '作业',
     submission: '提交',

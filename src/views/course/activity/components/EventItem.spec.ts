@@ -4,7 +4,9 @@ import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import { defineComponent, h } from 'vue'
 import { i18n, setLocale } from '@/i18n'
+import { read } from '@/api/http'
 import EventItem from './EventItem.vue'
+import { forgetActionWho } from './actors'
 import type { CourseEvent } from './feed'
 
 vi.mock('@/api/http', async (orig) => {
@@ -318,5 +320,73 @@ describe('EventItem, a new version of a document', () => {
     expect(old.text()).not.toContain('file')
     expect(old.text()).not.toContain('Text only')
     old.unmount()
+  })
+})
+
+describe('EventItem, who acted on an action', () => {
+  const action = (type: string, payload: Record<string, unknown> = {}): CourseEvent => ({
+    seq: 30,
+    type,
+    occurred_at: '2026-09-01T00:00:00Z',
+    subject_type: 'action',
+    subject_id: 'act-1',
+    action_id: 'act-1',
+    payload: { action_type: 'grade.submit', ...payload },
+  })
+  let asked: string[] = []
+  beforeEach(() => {
+    forgetActionWho()
+    asked = []
+    vi.mocked(read).mockImplementation((async (name: string, args: Record<string, unknown>) => {
+      asked.push(`${name} ${args.action_id}`)
+      if (name !== 'action.get') throw new Error(`unexpected ${name}`)
+      return { id: 'act-1', member_id: 'm-agent', decided_by_member_id: 'm-teacher', reviewed_by_member_id: null }
+    }) as unknown as typeof read)
+  })
+  const names = (w: ReturnType<typeof mountItem>) =>
+    w.findAll('.event-item__who member-name-stub').map((x) => x.attributes('id'))
+
+  it('names who proposed it, then who decided it, read once from the action', async () => {
+    const w = mountItem(action('action.approved', { outcome: 'executed' }))
+    await flushPromises()
+    expect(asked).toEqual(['action.get act-1'])
+    expect(names(w)).toEqual(['m-agent', 'm-teacher'])
+    expect(w.find('.event-item__who').text()).toMatch(/proposed\s*→\s*approved/)
+    w.unmount()
+    // Its proposal, after: read already.
+    const p = mountItem(action('action.proposed'))
+    await flushPromises()
+    expect(asked).toEqual(['action.get act-1'])
+    expect(names(p)).toEqual(['m-agent'])
+    expect(p.find('.event-item__who').text()).toBe('proposed')
+    p.unmount()
+  })
+
+  it('reads in Chinese with no spaces of its own', async () => {
+    setLocale('zh-Hant')
+    const w = mountItem(action('action.rejected'))
+    await flushPromises()
+    expect(w.find('.event-item__who').text()).toMatch(/^提出\s*→\s*駁回$/)
+    w.unmount()
+  })
+
+  it('names nobody where the action cannot be read, and in a short list', async () => {
+    vi.mocked(read).mockImplementation((async () => Promise.reject(new Error('forbidden'))) as unknown as typeof read)
+    const w = mountItem(action('action.proposed'))
+    await flushPromises()
+    expect(w.find('.event-item__who').exists()).toBe(false)
+    w.unmount()
+    forgetActionWho()
+    setActivePinia(createPinia())
+    const c = mount(EventItem, {
+      props: { event: action('action.proposed'), courseId: COURSE, compact: true },
+      global: {
+        plugins: [i18n, ElementPlus],
+        stubs: { ElTooltip: TooltipStub, RouterLink: true, MemberName: true, TimeText: true },
+      },
+    })
+    await flushPromises()
+    expect(c.find('.event-item__who').exists()).toBe(false)
+    c.unmount()
   })
 })
