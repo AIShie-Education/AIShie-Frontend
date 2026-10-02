@@ -511,8 +511,10 @@ export interface ColumnSummary {
 
 /**
  * For each column, over the rows shown: the mean of what is posted, and how
- * many are posted and drafts. Removed students, shown when asked for, are
- * left out: they are no longer of the class.
+ * many are posted and drafts. A posted grade with a newer draft over it is
+ * still posted: it counts in the mean, and the draft among the drafts.
+ * Removed students, shown when asked for, are left out: they are no longer
+ * of the class.
  */
 export function summarise(rows: readonly MatrixRow[], columns: readonly MatrixColumn[]): Map<string, ColumnSummary> {
   const out = new Map<string, ColumnSummary>()
@@ -524,10 +526,14 @@ export function summarise(rows: readonly MatrixRow[], columns: readonly MatrixCo
     for (const r of current) {
       const c = r.cells[col.key]
       if (!c) continue
-      if (c.state === 'posted' && c.value !== null) {
-        sum += c.value
+      // A draft over a posted grade: the posted one still counts until the
+      // draft is posted (as the totals count it), and the draft is counted too.
+      const p = c.state === 'posted' ? c.value : c.state === 'draft' ? num(c.postedScore) : null
+      if (p !== null) {
+        sum += p
         posted++
-      } else if (c.state === 'draft') drafts++
+      }
+      if (c.state === 'draft') drafts++
     }
     out.set(col.key, { mean: posted ? sum / posted : null, posted, drafts })
   }

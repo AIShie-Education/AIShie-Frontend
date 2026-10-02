@@ -6,7 +6,7 @@
 // of hundreds has thousands of cells): the rows above and below are blank
 // space of their height, every row being the same height. A column's heading
 // sorts by it; a student's name opens their gradebook, a grade the grade.
-import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { formatNumber } from '@/utils/format'
@@ -44,8 +44,19 @@ const tableWidth = computed(() => NAME_WIDTH + props.columns.reduce((s, c) => s 
 const scroller = useTemplateRef<HTMLElement>('scroller')
 const scrollTop = ref(0)
 const viewport = ref(720)
+/**
+ * Where the box is scrolled to, kept as it scrolls: kept alive out of the
+ * page, the box is taken out of the document before it is told so, and reads
+ * 0 either way by then.
+ */
+const at = { top: 0, left: 0 }
 let frame = 0
 function onScroll() {
+  const el = scroller.value
+  if (el?.isConnected) {
+    at.top = el.scrollTop
+    at.left = el.scrollLeft
+  }
   if (frame) return
   const update = () => {
     frame = 0
@@ -100,20 +111,18 @@ watch(
   () => {
     if (scroller.value && scroller.value.scrollTop > 0) scroller.value.scrollTop = 0
     scrollTop.value = 0
+    at.top = 0
   },
 )
-// Kept alive while a student's gradebook is open: back where it was left.
-let left = { top: 0, left: 0 }
-onDeactivated(() => {
-  left = { top: scroller.value?.scrollTop ?? 0, left: scroller.value?.scrollLeft ?? 0 }
-})
+// Kept alive while a student's gradebook is open: back where it was left,
+// as it was last scrolled (the box, put back, is at its top and left).
 onActivated(() => {
   const el = scroller.value
   if (!el) return
-  el.scrollTop = left.top
-  el.scrollLeft = left.left
-  scrollTop.value = el.scrollTop
   fit()
+  scrollTop.value = at.top
+  el.scrollTop = at.top
+  el.scrollLeft = at.left
 })
 
 const first = computed(() => Math.max(0, Math.floor(scrollTop.value / ROW) - OVERSCAN))
@@ -307,7 +316,11 @@ function meanHint(col: MatrixColumn): string {
             v-for="v in d.cells"
             :key="v.key"
             class="matrix__cell"
-            :class="[`is-${v.cell.state}`, `is-${v.col.kind}`, { 'is-root': v.col.isRoot }]"
+            :class="[
+              `is-${v.cell.state}`,
+              `is-${v.col.kind}`,
+              { 'is-root': v.col.isRoot, 'is-waiting': v.cell.waiting },
+            ]"
           >
             <a
               v-if="v.cell.gradeId"
@@ -626,9 +639,21 @@ function meanHint(col: MatrixColumn): string {
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-light);
 }
-/* Work waiting beside a grade: after the grade's link, not part of it. */
+/*
+ * Work waiting beside a grade: after the grade's link, not part of it, on a
+ * line of its own under it, so that a score, a draft's flag and this one fit
+ * a column in every language. Two lines of 18 px fit the row's 44.
+ */
+.matrix__cell.is-waiting {
+  line-height: 18px;
+}
+.matrix__cell.is-waiting .matrix__flag {
+  line-height: 16px;
+}
 .matrix__also {
-  margin-left: 4px;
+  display: block;
+  width: fit-content;
+  margin: 1px 0 0 auto;
 }
 .matrix__none {
   color: var(--el-text-color-placeholder);

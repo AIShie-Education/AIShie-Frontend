@@ -497,6 +497,26 @@ describe('filtering and sorting', () => {
     expect(s.get('c:mid')).toEqual({ mean: null, posted: 0, drafts: 0 })
   })
 
+  it('still averages a posted grade with a newer draft over it, and counts the draft too', () => {
+    const over = buildMatrix({
+      students,
+      columns,
+      grades: [
+        grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-1', score: 6 }),
+        grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-2', score: 8, state: 'draft' }),
+        grade({ student_member_id: 'ken', assignment_id: 'a1', score: 9 }),
+        // A draft with nothing posted under it: counted as a draft alone.
+        grade({ student_member_id: 'mei', assignment_id: 'a1', score: 2, state: 'draft' }),
+      ],
+      submissions: [
+        { id: 's-yuki-1', assignment_id: 'a1', student_member_id: 'yuki', attempt: 1, state: 'submitted' },
+        { id: 's-yuki-2', assignment_id: 'a1', student_member_id: 'yuki', attempt: 2, state: 'submitted' },
+      ],
+    })
+    expect(over.find((r) => r.student.id === 'yuki')!.cells['a:a1']).toMatchObject({ state: 'draft', postedScore: 6 })
+    expect(summarise(over, columns).get('a:a1')).toEqual({ mean: 7.5, posted: 2, drafts: 2 })
+  })
+
   it('leaves removed students, shown when asked for, out of the averages', () => {
     const withRemoved = rows.map((r) =>
       r.student.id === 'mei' ? { ...r, student: { ...r.student, status: 'removed' } } : r,

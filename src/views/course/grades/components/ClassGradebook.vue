@@ -180,9 +180,31 @@ watch(
   },
   { immediate: true },
 )
-const failed = computed(() => data.error.value ?? lookups.tree.error.value)
+
+/**
+ * The assignments, the other half of what the columns are made of: never
+ * dropped unsaid. Those last read are kept (by the store) while they are
+ * read again; where they could not be read, the page says so, with a Retry
+ * and nothing to export; where the seat may not read them, it says that
+ * their grades are not shown.
+ */
+const assignmentsSeen = ref(course.assignmentsState === 'loaded')
+watch(
+  () => course.assignmentsState,
+  (s) => {
+    if (s === 'loaded') assignmentsSeen.value = true
+  },
+)
+const assignmentsKnown = computed(
+  () =>
+    course.assignmentsState === 'loaded' ||
+    course.assignmentsState === 'forbidden' ||
+    (course.assignmentsState === 'loading' && assignmentsSeen.value),
+)
+const assignmentsFailed = computed(() => (course.assignmentsState === 'error' ? course.assignmentsError : null))
+const failed = computed(() => data.error.value ?? lookups.tree.error.value ?? assignmentsFailed.value)
 /** Everything the matrix is made of has been read. */
-const ready = computed(() => !!data.data.value && !!scheme.value && !failed.value)
+const ready = computed(() => !!data.data.value && !!scheme.value && assignmentsKnown.value && !failed.value)
 
 function reload() {
   course.invalidate('all')
@@ -466,6 +488,14 @@ function exportCsv() {
           })
         }}
       </p>
+      <el-alert
+        v-if="ready && course.assignmentsState === 'forbidden'"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="classbook__notice"
+        :title="t('classbook.assignmentsForbidden')"
+      />
       <AsyncState
         :loading="loading"
         :error="failed"
@@ -529,7 +559,8 @@ function exportCsv() {
 .classbook__count {
   font-size: 13px;
 }
-.classbook__reading {
+.classbook__reading,
+.classbook__notice {
   margin: 0 0 12px;
 }
 .classbook__legend {

@@ -18,6 +18,7 @@ export default {
   reading: '正在读取全班成绩：已读取 {grades} 条成绩、{submissions} 份提交…',
   empty: '没有可显示的学生。',
   emptyFiltered: '没有符合条件的学生。',
+  assignmentsForbidden: '你的席位无法读取本课程的作业，所以这里和导出的文件中都不会显示作业成绩。',
   unnamed: '学生 {id}',
   student: '学生',
   loginId: '学号',

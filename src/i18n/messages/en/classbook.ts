@@ -19,6 +19,8 @@ export default {
   reading: 'Reading the class’s grades: {grades} grades and {submissions} submissions so far…',
   empty: 'There are no students to show.',
   emptyFiltered: 'No student matches.',
+  assignmentsForbidden:
+    'Your seat cannot read this course’s assignments, so their grades are not shown here or in the export.',
   unnamed: 'Student {id}',
   student: 'Student',
   loginId: 'Student number',

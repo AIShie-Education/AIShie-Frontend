@@ -348,3 +348,167 @@ test.describe('the whole class’s gradebook', () => {
     await expect(page.locator('.classbook__count')).toHaveText('2 students')
   })
 })
+
+// A class of its own, of 32 students by eight homeworks out of 100: more
+// than the box holds either way, for where it is scrolled to. Fay has a
+// posted 61.75 on HW1 with a draft 72.25 over it, and work handed in since;
+// Gus a posted 72.25 with work handed in since. The rest have nothing.
+test.describe('a class larger than the screen', () => {
+  let bigId = ''
+  let bigHw1 = ''
+  const big: Record<'fay' | 'gus', DemoActor & { member_id: string }> = {} as never
+
+  test.beforeAll(async () => {
+    const d = demo()
+    const made = await ok(root().token, 'POST', '/v1/courses', {
+      dept_id: d.course.dept_id,
+      term_id: d.course.term_id,
+      code: 'BOOK102',
+      section: STAMP,
+      title: `A larger class ${STAMP}`,
+    })
+    bigId = made.course_id
+    await ok(root().token, 'POST', `/v1/courses/${bigId}/activate`, {})
+    await ok(root().token, 'POST', `/v1/courses/${bigId}/instructors`, { actor_id: instructor().actor_id })
+    const I = instructor().token
+    const tree = await ok(I, 'GET', `/v1/courses/${bigId}/components`)
+    const top = (tree.components as { id: string; parent_id?: string | null }[]).find((c) => !c.parent_id)!.id
+    const bucket = (
+      await ok(I, 'POST', `/v1/courses/${bigId}/components`, { parent_id: top, name: 'Homework', weight: 1 })
+    ).id
+    for (let i = 1; i <= 8; i++) {
+      const a = await ok(I, 'POST', `/v1/courses/${bigId}/assignments`, {
+        title: `HW${i}`,
+        points_possible: 100,
+        component_id: bucket,
+        due_at: new Date(Date.now() + i * 24 * 3600 * 1000).toISOString(),
+      })
+      await ok(I, 'POST', `/v1/courses/${bigId}/assignments/${a.id}/publish`, {})
+      if (i === 1) bigHw1 = a.id
+    }
+    for (const [key, display] of [
+      ['fay', 'Fay Wong'],
+      ['gus', 'Gus Ruiz'],
+    ] as const) {
+      const who = await registerPerson(`${display} ${STAMP}`, { email: `${key}+${STAMP}@book.test` })
+      const seat = await ok(I, 'POST', `/v1/courses/${bigId}/members`, { actor_id: who.actor_id, preset: 'student' })
+      big[key] = { ...who, member_id: seat.member_id as string }
+    }
+    // Thirty more, who never sign in.
+    for (let i = 1; i <= 30; i++) {
+      const who = await ok(root().token, 'POST', '/v1/actors', {
+        kind: 'human',
+        display_name: `Filler ${String(i).padStart(2, '0')} ${STAMP}`,
+        login_id: `bf${STAMP}${i}`,
+      })
+      await ok(I, 'POST', `/v1/courses/${bigId}/members`, { actor_id: who.actor_id, preset: 'student' })
+    }
+    const at = (who: { token: string }) =>
+      call(who.token, 'POST', `/v1/courses/${bigId}/submissions`, { assignment_id: bigHw1, body: 'My work' }).then(
+        async (s) => {
+          expect(s.body.status, JSON.stringify(s.body)).toBe('executed')
+          const id = (s.body.result.submission_id ?? s.body.result.id) as string
+          await ok(who.token, 'POST', `/v1/courses/${bigId}/submissions/${id}/submit`, {})
+          return id
+        },
+      )
+    const gradeOn = async (submission_id: string, score: number) =>
+      (await ok(I, 'POST', `/v1/courses/${bigId}/grades`, { no_rubric: true, submission_id, score })).grade_id as string
+    const fayPosted = await gradeOn(await at(big.fay), 61.75)
+    const gusPosted = await gradeOn(await at(big.gus), 72.25)
+    await ok(I, 'POST', `/v1/courses/${bigId}/grades/post`, { grade_ids: [fayPosted, gusPosted] })
+    await gradeOn(await at(big.fay), 72.25)
+    await at(big.fay)
+    await at(big.gus)
+  })
+
+  const box = (page: Page) => page.locator('.matrix')
+  const where = (page: Page) => box(page).evaluate((el) => ({ top: el.scrollTop, left: el.scrollLeft }))
+
+  test('fits a score, a draft and work to grade in a cell in every language, and averages the posted grade under a draft', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, instructor())
+    for (const [locale, draft, toGrade] of [
+      ['en', 'Draft', 'To grade'],
+      ['zh-Hant', '草稿', '待評分'],
+      ['zh-Hans', '草稿', '待评分'],
+    ] as const) {
+      await page.addInitScript((l) => {
+        try {
+          localStorage.setItem('aishie.locale', l)
+        } catch {}
+      }, locale)
+      // Highest on HW1 first: Fay and Gus.
+      await page.goto(`/courses/${bigId}/gradebook?sort=-a:${bigHw1}`)
+      const fay = matrix(page).locator('tbody tr').filter({ hasText: big.fay.display_name }).locator('td').nth(1)
+      const gus = matrix(page).locator('tbody tr').filter({ hasText: big.gus.display_name }).locator('td').nth(1)
+      await expect(fay).toContainText('72.25')
+      await expect(fay).toContainText(draft)
+      await expect(fay).toContainText(toGrade)
+      await expect(gus).toContainText('72.25')
+      await expect(gus).toContainText(toGrade)
+      // Nothing is cut off, and every row is still 44 px (the drawing of the rows near the screen counts on it).
+      const cut = await matrix(page)
+        .locator('td.matrix__cell')
+        .evaluateAll((tds) =>
+          tds
+            .filter((td) => td.scrollWidth > td.clientWidth || td.scrollHeight > td.clientHeight)
+            .map((td) => td.textContent),
+        )
+      expect(cut, locale).toEqual([])
+      const heights = await matrix(page)
+        .locator('tr.matrix__row')
+        .evaluateAll((rs) => [...new Set(rs.map((r) => r.getBoundingClientRect().height))])
+      expect(heights, locale).toEqual([44])
+      // Fay's 61.75 still counts until her draft is posted: (61.75 + 72.25) / 2.
+      await expect(matrix(page).locator('tfoot td').nth(1)).toHaveText('67')
+      if (locale !== 'zh-Hant') {
+        await photograph(page, `class-gradebook-waiting-1280-${locale}-light`)
+        await page.emulateMedia({ colorScheme: 'dark' })
+        await photograph(page, `class-gradebook-waiting-1280-${locale}-dark`)
+        await page.emulateMedia({ colorScheme: 'light' })
+      }
+    }
+  })
+
+  test('is found scrolled where it was left, by Back and by Whole class', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, instructor())
+    await page.goto(`/courses/${bigId}/gradebook`)
+    await expect(matrix(page)).toBeVisible()
+    const scroll = await box(page).evaluate((el) => ({
+      down: el.scrollHeight - el.clientHeight,
+      across: el.scrollWidth - el.clientWidth,
+    }))
+    expect(scroll.down).toBeGreaterThan(400)
+    expect(scroll.across).toBeGreaterThan(100)
+
+    await box(page).hover()
+    await page.mouse.wheel(0, 400)
+    await page.mouse.wheel(100, 0)
+    await expect.poll(async () => Object.values(await where(page)).every((n) => n > 0)).toBe(true)
+    await page.waitForTimeout(300)
+    const left = await where(page)
+    /** A student whose row is on the screen, a few rows below its top. */
+    const onScreen = () =>
+      matrix(page)
+        .locator(`tbody tr[aria-rowindex="${Math.floor(left.top / 44) + 4}"] .matrix__student`)
+        .first()
+
+    await onScreen().click()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.goBack()
+    await expect(matrix(page)).toBeVisible()
+    await expect.poll(() => where(page)).toEqual(left)
+
+    await onScreen().click()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.getByRole('link', { name: 'Whole class', exact: true }).click()
+    await expect(matrix(page)).toBeVisible()
+    await expect.poll(() => where(page)).toEqual(left)
+    // And it scrolls on from there: the rows near the screen are drawn.
+    await expect(matrix(page).locator(`tbody tr[aria-rowindex="${Math.floor(left.top / 44) + 4}"]`)).toBeVisible()
+  })
+})

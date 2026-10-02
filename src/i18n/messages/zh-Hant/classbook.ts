@@ -18,6 +18,7 @@ export default {
   reading: '正在讀取全班成績：已讀 {grades} 項成績、{submissions} 份提交…',
   empty: '沒有可顯示的學生。',
   emptyFiltered: '沒有符合的學生。',
+  assignmentsForbidden: '你的席位無法讀取本課程的作業，因此這裡和匯出的檔案都不會顯示作業的成績。',
   unnamed: '學生 {id}',
   student: '學生',
   loginId: '學號',

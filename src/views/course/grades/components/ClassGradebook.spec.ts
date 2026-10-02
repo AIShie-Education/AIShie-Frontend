@@ -92,8 +92,11 @@ let scheme: () => unknown = () => ({
     { id: 'bucket', name: 'Homework', weight: 1, drop_lowest: 0, sort_order: 1, parent_id: 'root' },
   ],
 })
+/** assignment.list's answer; a test may make it fail. */
+let assignmentList: () => unknown = () => ({ assignments, next: null })
 beforeEach(() => {
   roster = students
+  assignmentList = () => ({ assignments, next: null })
   scheme = () => ({
     components: [
       { id: 'root', name: 'Course', weight: 1, drop_lowest: 0, sort_order: 0, parent_id: null },
@@ -120,7 +123,7 @@ beforeEach(() => {
         return { members: p.items, next: p.next }
       }
       case 'assignment.list':
-        return { assignments, next: null }
+        return assignmentList()
       case 'component.tree':
         return scheme()
       case 'grade.list': {
@@ -291,6 +294,37 @@ describe('the whole class’s gradebook', () => {
     expect(w.find('.el-result').text()).toContain('Retry')
     const exportButton = w.findAll('button').find((b) => b.text() === 'Export CSV')!
     expect(exportButton.attributes('disabled')).toBeDefined()
+  })
+
+  it('says it could not read the assignments, rather than show the class without them, and reads them again', async () => {
+    assignmentList = () => {
+      throw new ApiError({ status: 503, code: 'unavailable', message: 'Core is busy' })
+    }
+    const { w } = await mountClass({ settle: '.el-result' })
+    expect(w.find('.matrix__table').exists()).toBe(false)
+    expect(w.find('.classbook__count').exists()).toBe(false)
+    const exportButton = () => w.findAll('button').find((b) => b.text() === 'Export CSV')!
+    expect(exportButton().attributes('disabled')).toBeDefined()
+    assignmentList = () => ({ assignments, next: null })
+    await w.find('.el-result button').trigger('click')
+    await vi.waitFor(
+      async () => {
+        await flushPromises()
+        expect(w.find('.classbook__count').exists()).toBe(true)
+      },
+      { timeout: 20_000 },
+    )
+    expect(w.findAll('thead .matrix__head-title').map((h) => h.text())).toContain('HW1')
+    expect(exportButton().attributes('disabled')).toBeUndefined()
+  })
+
+  it('says so where the seat may not read the assignments, rather than drop their grades unsaid', async () => {
+    assignmentList = () => {
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    }
+    const { w } = await mountClass()
+    expect(w.find('.el-alert').text()).toContain('Your seat cannot read this course’s assignments')
+    expect(w.findAll('thead .matrix__head-title').map((h) => h.text())).not.toContain('HW1')
   })
 
   it('marks removed students, when shown, and leaves them out of the averages', async () => {
