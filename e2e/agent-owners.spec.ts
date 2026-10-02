@@ -4,7 +4,7 @@ import { expect, test, type Browser, type Locator, type Page } from '@playwright
 import {
   call,
   coursePath,
-  courseTab,
+  openCourseTab,
   demo,
   expectToasted,
   keepToasts,
@@ -207,7 +207,7 @@ test.describe.serial('an agent’s owner decides what it did, where they could h
     await page.setViewportSize({ width: 1280, height: 900 })
     await signIn(page, nora)
     await page.goto(coursePath())
-    await courseTab(page, 'Your agents’ proposals').click()
+    await openCourseTab(page, 'Your agents’ proposals')
     await expect(page).toHaveURL(new RegExp(`${coursePath('approvals')}$`))
     await expect(page.locator('.page-header')).toContainText('Your agents’ proposals')
     const cards = page.locator('.action-card')

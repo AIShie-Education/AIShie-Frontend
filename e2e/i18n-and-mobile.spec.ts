@@ -59,14 +59,16 @@ test.describe('language', () => {
     await page.goto(coursePath())
     const tabs = page.getByRole('navigation', { name: 'Course sections' })
     await expect(tabs.getByRole('link', { name: 'Overview' })).toBeVisible()
-    await expect(tabs.getByRole('link', { name: 'Members' })).toBeVisible()
+    await expect(tabs.getByRole('button', { name: 'More' })).toBeVisible()
 
     await chooseLanguage(page, '繁體中文')
 
+    // Six tabs and More, the strip's seventh place, with the rest under it.
     const zhTabs = page.getByRole('navigation', { name: '課程分頁' })
-    for (const name of ['概覽', '教材', '作業', '提交', '成績', '成員', '審批', '我的操作']) {
+    for (const name of ['概覽', '教材', '作業', '提交', '成績', '審批']) {
       await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
+    await expect(zhTabs.getByRole('button', { name: '更多' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Overview' })).toHaveCount(0)
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
     // The chat with the course's agents, over every page from its round button at the bottom right, and no longer a
@@ -78,10 +80,17 @@ test.describe('language', () => {
     await expect(page.locator('.course-head')).not.toContainText('Instructor')
 
     // It stays while moving around the course.
-    await zhTabs.getByRole('link', { name: '成員' }).click()
+    await zhTabs.getByRole('button', { name: '更多' }).click()
+    for (const name of ['成員', '代理', '動態', '我的操作']) {
+      await expect(page.getByRole('menuitem', { name, exact: true })).toBeVisible()
+    }
+    await page.getByRole('menuitem', { name: '成員', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`${coursePath('members')}$`))
     await expect(page.getByRole('button', { name: 'Add member' })).toHaveCount(0)
-    await expect(page.getByRole('heading', { name: '成員' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '成員', level: 1 })).toHaveCount(1)
+    // More is the tab chosen, and says which; the top bar says where the page is.
+    await expect(zhTabs.getByRole('button', { name: '更多（目前：成員）' })).toHaveClass(/is-active/)
+    await expect(page.locator('.app-header .course-crumbs [aria-current="page"]')).toHaveText('成員')
 
     await chooseLanguage(page, 'English')
     await expect(courseTab(page, 'Overview')).toBeVisible()
@@ -103,9 +112,10 @@ test.describe('language', () => {
     await chooseLanguage(page, '简体中文')
 
     const zhTabs = page.getByRole('navigation', { name: '课程栏目' })
-    for (const name of ['概览', '教材', '作业', '提交', '成绩', '成员', '审批', '我的操作']) {
+    for (const name of ['概览', '教材', '作业', '提交', '成绩', '审批']) {
       await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
+    await expect(zhTabs.getByRole('button', { name: '更多' })).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
     await expect(page.locator('.app-chat-fab').getByRole('button', { name: '与智能体对话' })).toBeVisible()
     // Simplified glyphs, from Noto Sans SC: the SC faces are fetched, the TC ones never.
@@ -132,7 +142,16 @@ test.describe('at phone width', () => {
     // More tabs than fit: the strip scrolls, the page does not.
     const strip = await tabs.evaluate((n) => ({ scroll: n.scrollWidth, client: n.clientWidth }))
     expect(strip.scroll).toBeGreaterThan(strip.client)
+    await expect(tabs.getByRole('button', { name: /^More/ })).toHaveCount(0)
     await expectFits(page, 'the overview')
+
+    // The phone's menu lists the course's tabs under it, and goes to one.
+    await page.getByRole('button', { name: 'Menu' }).click()
+    const sections = page.getByRole('navigation', { name: /^Sections of / })
+    await expect(sections.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
+    await sections.getByRole('link', { name: 'Members' }).click()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('members')}$`))
+    await expect(sections).toHaveCount(0)
 
     // A tab off to the right can be reached and opened.
     const activity = tabs.getByRole('link', { name: 'Activity' })

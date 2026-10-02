@@ -410,28 +410,43 @@ test.describe('an administrator’s pages beside the side bar, under the chat’
     await layout(page, 1100, 800, { side: true, view: 'Administration' })
     await expect.poll(() => headings(tree)).not.toContain('ID')
 
-    // The course's tabs: wrapped onto two rows where the page has 720 px or more, as in a window of 1100 px
-    // with the side bar open; scrolled sideways, in one row, where it has less, as in one of 1000.
+    // The course's tabs: one row at every width, never wrapped. As many as fit by the strip's own width, seven
+    // places at most, the rest under More: in a window of 1100 px with the side bar open, fewer than with it
+    // collapsed in one of 1000, where six and More fit. Where the page is a phone's, every tab is in the strip,
+    // which scrolls sideways.
     await page.goto(`/courses/${courseId}`)
     const tabs = page.locator('.course-tabs')
     await expect(tabs).toBeVisible()
     const strip = () =>
       tabs.evaluate((nav) => {
-        const tops = [...nav.querySelectorAll('.course-tabs__item')].map((t) =>
-          Math.round(t.getBoundingClientRect().top),
-        )
-        return { rows: new Set(tops).size, scrolls: nav.scrollWidth > nav.clientWidth }
+        const items = [...nav.querySelectorAll('.course-tabs__item')]
+        const tops = items.map((t) => Math.round(t.getBoundingClientRect().top))
+        return {
+          rows: new Set(tops).size,
+          scrolls: nav.scrollWidth > nav.clientWidth,
+          places: items.length,
+          more: !!nav.querySelector('.course-tabs__more'),
+        }
       })
     await layout(page, 1100, 800, { side: true })
     expect(await pageWidth(page)).toBe(1100 - 48 - 260)
-    expect(await strip()).toEqual({ rows: 2, scrolls: false })
+    await expect.poll(strip).toMatchObject({ rows: 1, scrolls: false, more: true })
+    const beside = (await strip()).places
+    expect(beside).toBeLessThanOrEqual(7)
     await page.mouse.move(0, 400)
     await photograph(page, 'layout-course-tabs-1100')
-    await layout(page, 1000, 800, { side: true })
-    await expect.poll(strip).toEqual({ rows: 1, scrolls: true })
-    // Collapsed, the side bar leaves the same window room to wrap them again.
     await layout(page, 1000, 800, { side: false })
-    await expect.poll(strip).toEqual({ rows: 2, scrolls: false })
+    await expect.poll(strip).toEqual({ rows: 1, scrolls: false, places: 7, more: true })
+    // Narrower than the six tabs (a window of 700 px, its side bar a menu): fewer of them beside More, one row.
+    await page.setViewportSize({ width: 700, height: 800 })
+    await expect.poll(async () => (await strip()).places).toBeLessThan(7)
+    expect((await strip()).rows).toBe(1)
+    expect((await strip()).more).toBe(true)
+    expect((await strip()).scrolls).toBe(false)
+    // A phone's page: every tab, scrolling.
+    await page.setViewportSize({ width: 600, height: 800 })
+    await expect.poll(strip).toMatchObject({ rows: 1, scrolls: true, more: false })
+    expect(await noSideways(page)).toBe(true)
   })
 
   test('the people and an actor’s page are laid out for the page’s width, and for their cards’, not the window’s', async ({

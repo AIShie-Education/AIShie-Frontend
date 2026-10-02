@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   call,
   coursePath,
-  courseTab,
+  openCourseTab,
   demo,
   dropFiles,
   expectToasted,
@@ -47,7 +47,7 @@ test.describe.serial('uploading', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Materials').click()
+    await openCourseTab(page, 'Materials')
     await expect(page.getByText('Drop files anywhere on this page to make new material of them.')).toBeVisible()
 
     const exercises = `week4-exercises-${tag}.txt`

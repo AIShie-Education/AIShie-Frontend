@@ -96,9 +96,31 @@ export function coursePath(sub = '') {
   return `/courses/${d.course.id}${sub ? `/${sub}` : ''}`
 }
 
-/** The course's section tabs. */
+/** A course's tab in its strip; one that does not fit, or is past the strip's seventh place, is under More. */
 export function courseTab(page: Page, name: string | RegExp) {
   return page.getByRole('navigation', { name: 'Course sections' }).getByRole('link', { name })
+}
+
+/** The Grades tab's own tabs, in the header of each of its pages. */
+const GRADES_TABS = ['Grades', 'My grades', 'Gradebook', 'Grading scheme']
+
+/**
+ * Opens a course's tab as a person would: from the strip, from More's menu
+ * where it is under More, or, for the gradebook and the grading scheme, from
+ * the Grades tab's own tabs.
+ */
+export async function openCourseTab(page: Page, name: string) {
+  const strip = page.getByRole('navigation', { name: 'Course sections' })
+  await expect(strip).toBeVisible()
+  if (GRADES_TABS.includes(name) && name !== 'Grades') {
+    await openCourseTab(page, 'Grades')
+    await page.getByRole('navigation', { name: 'Grades sections' }).getByRole('link', { name, exact: true }).click()
+    return
+  }
+  const tab = courseTab(page, name)
+  if (await tab.count()) return tab.click()
+  await strip.getByRole('button', { name: /^More/ }).click()
+  await page.getByRole('menuitem', { name }).click()
 }
 
 /**

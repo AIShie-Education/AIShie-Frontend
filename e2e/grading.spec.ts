@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { call, coursePath, courseTab, demo, expectToasted, keepToasts, signIn } from './support'
+import { call, coursePath, openCourseTab, demo, expectToasted, keepToasts, signIn } from './support'
 
 // A score as ScoreText shows it, "8 / 10": the gaps around it are margins,
 // not spaces, so in a row's text it can run into its neighbours
@@ -25,7 +25,7 @@ test.describe.serial('grading a submission', () => {
     const d = demo()
     await signIn(page, d.actors.ta)
     await page.goto(coursePath())
-    await courseTab(page, 'Submissions').click()
+    await openCourseTab(page, 'Submissions')
     const row = page.locator('.el-table__row').filter({ hasText: 'Ken Wong' }).filter({ hasText: 'HW1' })
     await expect(row).toContainText('Submitted')
     await row.click()
