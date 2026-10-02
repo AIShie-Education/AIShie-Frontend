@@ -542,8 +542,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
   `<IdText>` is quiet (12 px, the third ink, its copy button on hover): an id is for an administrator
-  to find or paste, beside a name, never a chip as heavy as an email. A student's own pages show none
-  but a reference they are asked to quote (the action that made a grade).
+  to find or paste, beside a name, never a chip as heavy as an email. A student's seat shows no member
+  ID (the course overview's seat card, their seats on Account), nor does their grade show the ids of a
+  newer grade or of its rubric's version. What they may be asked to quote stays: the action that made
+  a grade, an action's own page (its id, its actor's and its target's), and their account's ID on
+  Account. Where a person cannot be named to them (a student may not read the member list),
+  `<MemberName>` still shows a short member ID, a grade's grader say, until Core names them.
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.

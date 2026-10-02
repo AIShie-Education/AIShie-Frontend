@@ -8,6 +8,7 @@
 import { reactive, watch, type Ref } from 'vue'
 import { read } from '@/api/http'
 import type { ListItem } from '@/api/types'
+import { QUEUE_PAGE } from '@/views/course/overview/waiting'
 
 export type Membership = ListItem<'me.memberships', 'memberships'>
 
@@ -23,7 +24,6 @@ export interface CourseFacts {
 /** At most this many courses' facts are read: past it, the page is a list to filter, not to read. */
 export const FACTS_FOR = 12
 const PAGE = 100
-const QUEUE = 50
 
 const allowed = (m: Membership, perm: string) => {
   const level = m.perms?.[perm]
@@ -53,7 +53,7 @@ export async function readCourseFacts(m: Membership, terms: Promise<Map<string, 
     read('course.get', { course_id: id }),
     allowed(m, 'document_read') ? read('assignment.list', { course_id: id, limit: PAGE }) : Promise.reject(),
     // The queue shows a person who decides nothing here their own agents' proposals, or refuses them.
-    live ? read('action.list_proposed', { course_id: id, limit: QUEUE }) : Promise.reject(),
+    live ? read('action.list_proposed', { course_id: id, limit: QUEUE_PAGE }) : Promise.reject(),
     terms,
   ])
   const out: CourseFacts = {}
@@ -66,7 +66,9 @@ export async function readCourseFacts(m: Membership, terms: Promise<Map<string, 
     if (next) out.next = next
   }
   if (queue.status === 'fulfilled') {
-    // Counted as the course's overview counts them (AttentionCard): every proposal the queue shows the caller.
+    // Counted as the course's overview counts them (AttentionCard, QUEUE_PAGE): every proposal the
+    // queue shows the caller. The overview asks only a seat that decides or owns an agent here; this
+    // asks every live seat, as whether one owns an agent is not known here, and a refusal says nothing.
     const n = (queue.value.actions ?? []).length
     out.waiting = { n, more: !!queue.value.next, agentsOnly: !allowed(m, 'action_decide') }
   }

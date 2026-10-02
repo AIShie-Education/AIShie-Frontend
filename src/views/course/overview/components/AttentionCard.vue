@@ -13,6 +13,7 @@ import { ApiError, read } from '@/api/http'
 import { toApiError, useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import TimeText from '@/components/TimeText.vue'
+import { QUEUE_PAGE } from '../waiting'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
@@ -46,10 +47,10 @@ function count(list: { created_at: string }[], more: boolean): Count {
 const queues = useAsync<{ proposals: Count; reviews: Count | ApiError } | null>(
   async () => {
     if (!decides.value && !ownersQueue.value) return null
-    const p = await read('action.list_proposed', { course_id: props.courseId, limit: PAGE })
+    const p = await read('action.list_proposed', { course_id: props.courseId, limit: QUEUE_PAGE })
     let reviews: Count | ApiError
     try {
-      const r = await read('action.list_pending_review', { course_id: props.courseId, limit: PAGE })
+      const r = await read('action.list_pending_review', { course_id: props.courseId, limit: QUEUE_PAGE })
       reviews = count(r.actions ?? [], !!r.next)
     } catch (e) {
       reviews = toApiError(e)
