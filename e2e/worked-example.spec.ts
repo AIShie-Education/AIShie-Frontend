@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test'
-import { call, courseTab, coursePath, demo, pickOption, signIn, toast } from './support'
+import { call, coursePath, courseTab, demo, expectToasted, keepToasts, pickOption, signIn } from './support'
 
 // Core's schema §5, told through the app: a grading agent proposes a grade,
 // the instructor approves it, posts it, and the student sees it.
 test.describe.serial('the worked example', () => {
   test('the instructor finds the grader’s proposal in Approvals and approves it', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
@@ -25,7 +26,7 @@ test.describe.serial('the worked example', () => {
     await expect(page.locator('.page-header').getByText('Awaiting approval')).toBeVisible()
     await page.getByRole('button', { name: 'Approve', exact: true }).click()
     await page.getByRole('button', { name: 'Approve now' }).click()
-    await expect(toast(page, 'Approved and carried out')).toBeVisible()
+    await expectToasted(page, 'Approved and carried out')
     await expect(page.locator('.page-header').getByText('Executed')).toBeVisible()
     await expect(page.locator('.action-timeline')).toContainText('Approved by Sato Hiroshi')
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { courseTab, coursePath, demo, signIn, toast } from './support'
+import { coursePath, courseTab, demo, expectToasted, keepToasts, signIn } from './support'
 
 const TITLE = `Week 3 — Loops (e2e ${Date.now().toString(36)})`
 const BODY = [
@@ -18,6 +18,7 @@ const BODY = [
 
 test.describe.serial('course material', () => {
   test('the instructor writes material in Markdown and publishes it', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
@@ -41,7 +42,7 @@ test.describe.serial('course material', () => {
     await expect(dialog.getByRole('heading', { name: 'Loops' })).toBeVisible()
     await expect(dialog.locator('strong')).toHaveText('per item')
     await dialog.getByRole('button', { name: 'Create' }).click()
-    await expect(toast(page, 'Material created')).toBeVisible()
+    await expectToasted(page, 'Material created')
     await expect(dialog).toBeHidden()
 
     const row = page.locator('.material-row').filter({ hasText: TITLE })
@@ -54,7 +55,7 @@ test.describe.serial('course material', () => {
     await page.getByRole('button', { name: 'Publish this version' }).click()
     const box = page.getByRole('dialog', { name: 'Publish version 1?' })
     await box.getByRole('button', { name: 'Publish' }).click()
-    await expect(toast(page, 'Version 1 published')).toBeVisible()
+    await expectToasted(page, 'Version 1 published')
     await expect(page.getByRole('button', { name: 'Publish this version' })).toHaveCount(0)
     await expect(page.locator('.doc-content__meta')).toContainText('Published')
 

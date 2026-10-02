@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, demo, root, signIn, toast } from './support'
+import { call, demo, expectNothingElseToasted, expectToasted, keepToasts, root, signIn } from './support'
 
 // An instructor who is not a platform administrator may not search the
 // directory (actor.list), so they find whom to seat by that person's whole
@@ -71,6 +71,7 @@ async function openAddMember(page: Page) {
 test('an instructor finds a registered person by their whole email, in any case, and seats them', async ({
   page,
 }, testInfo) => {
+  await keepToasts(page)
   const tag = `${stamp}-${testInfo.retry}`
   const pat = { name: `Pat Lookup ${tag}`, email: `pat+${tag}@e2e.test` }
   const patId = await register({ kind: 'human', display_name: pat.name, email: pat.email })
@@ -88,7 +89,7 @@ test('an instructor finds a registered person by their whole email, in any case,
   await email.fill(`nobody+${tag}@e2e.test`)
   await email.press('Enter')
   await expect(dialog).toContainText('Nobody is registered with that number or email. Ask a platform administrator')
-  await expect(page.locator('.el-message')).toHaveCount(0)
+  await expectNothingElseToasted(page)
   await expect(idField).toHaveValue('')
 
   // The whole address, in another case, finds Pat and fills in his actor ID.
@@ -102,7 +103,7 @@ test('an instructor finds a registered person by their whole email, in any case,
 
   await expect(submit).toBeEnabled()
   await submit.click()
-  await expect(toast(page, 'Member added')).toBeVisible()
+  await expectToasted(page, 'Member added')
   await expect(page).toHaveURL(new RegExp(`/courses/${courseId}/members/[0-9a-f-]{36}$`))
   await expect(page.locator('.page-header')).toContainText(pat.name)
   // The directory, which Core would refuse them, was never asked.
@@ -158,6 +159,7 @@ test('someone who already has a seat is not offered a second, and their seat is 
 test('an agent, which has no email, is seated by its pasted ID and starts from the grader preset', async ({
   page,
 }, testInfo) => {
+  await keepToasts(page)
   const agent = `lookup-agent-${stamp}-${testInfo.retry}`
   const agentId = await register({ kind: 'agent', display_name: agent, hosting: 'mcp' })
 
@@ -172,7 +174,7 @@ test('an agent, which has no email, is seated by its pasted ID and starts from t
 
   await expect(submit).toBeEnabled()
   await submit.click()
-  await expect(toast(page, 'Member added')).toBeVisible()
+  await expectToasted(page, 'Member added')
   await expect(page).toHaveURL(new RegExp(`/courses/${courseId}/members/[0-9a-f-]{36}$`))
   await expect(page.locator('.page-header')).toContainText(agent)
   expect(listed).toEqual([])

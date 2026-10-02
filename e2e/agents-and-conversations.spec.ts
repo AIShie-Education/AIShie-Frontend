@@ -1,5 +1,15 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, chatButton, courseTab, coursePath, demo, hostOnRuntime, signIn, toast } from './support'
+import {
+  call,
+  chatButton,
+  coursePath,
+  courseTab,
+  demo,
+  expectToasted,
+  hostOnRuntime,
+  keepToasts,
+  signIn,
+} from './support'
 
 // Agents a person owns, told through the app: a student makes an agent hosted
 // on AIshie (for good: she is given no token for it), and asks to bring it
@@ -35,6 +45,7 @@ async function openChat(page: Page) {
 
 test.describe.serial('an agent of one’s own, and a course agent', () => {
   test('a student creates an agent hosted on AIshie on My agents, and is given no token for it', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.mei)
     await page.goto('/account/agents')
@@ -48,7 +59,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await create.getByLabel('Name').fill(AGENT)
     await create.locator('.hosting-choice__option--runtime').click()
     await create.getByRole('button', { name: 'Create agent' }).click()
-    await expect(toast(page, `${AGENT} is created`)).toBeVisible()
+    await expectToasted(page, `${AGENT} is created`)
     await expect(page).toHaveURL(/\/account\/agents\/[0-9a-f-]{36}$/)
     agentId = page.url().split('/').pop()!
 
@@ -88,6 +99,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
   })
 
   test('the instructor approves it in Approvals', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
@@ -97,7 +109,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await expect(card).toContainText('Personal assistant')
     await card.getByRole('button', { name: 'Approve', exact: true }).click()
     await card.getByRole('button', { name: 'Approve now' }).click()
-    await expect(toast(page, 'Approved and carried out')).toBeVisible()
+    await expectToasted(page, 'Approved and carried out')
     await expect(card).toHaveCount(0)
 
     // Seated as Mei's delegate, answering her alone.
@@ -175,6 +187,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
   test('an instructor adds a course agent, and a student finds it among those to ask', async ({ browser }) => {
     const d = demo()
     const instructor = await browser.newPage()
+    await keepToasts(instructor)
     await signIn(instructor, d.actors.instructor)
     await instructor.goto(coursePath('agents'))
     await instructor.getByRole('button', { name: 'Add a course agent' }).first().click()
@@ -184,7 +197,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await dialog.locator('#add-agent-name').fill(TUTOR)
     await dialog.locator('.hosting-choice__option--runtime').click()
     await dialog.getByRole('button', { name: /^(Add course agent|Request to add)$/ }).click()
-    await expect(toast(instructor, `${TUTOR} is now a course agent`)).toBeVisible()
+    await expectToasted(instructor, `${TUTOR} is now a course agent`)
     await expect(dialog).toBeHidden()
 
     // Seated to answer the course (answers_course), which the member list records.

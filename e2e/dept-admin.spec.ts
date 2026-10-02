@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
 import { buildDeptWorld, type DeptWorld, type Person } from './dept-world'
-import { activityBar, showSideView, sideBar, toast } from './support'
+import { activityBar, expectToasted, keepToasts, showSideView, sideBar } from './support'
 
 // A department's administrator, from signing in to losing the appointment:
 // they see and manage the courses and departments beneath their appointment
@@ -107,6 +107,7 @@ test.describe.serial('a department administrator', () => {
   })
 
   test('creates a course in AI and seats an instructor she finds by email', async ({ page }) => {
+    await keepToasts(page)
     await signInAs(page, w.people.ada)
     await page.goto('/admin/courses')
     await page.locator('.page-header').getByRole('button', { name: 'New course' }).click()
@@ -128,10 +129,11 @@ test.describe.serial('a department administrator', () => {
     await page.getByRole('button', { name: 'Find' }).click()
     await expect(page.locator('.lookup__found')).toContainText(w.people.chan.display_name)
     await page.getByRole('button', { name: 'Seat as instructor' }).click()
-    await expect(toast(page, `${w.people.chan.display_name} is seated as instructor`)).toBeVisible()
+    await expectToasted(page, `${w.people.chan.display_name} is seated as instructor`)
   })
 
   test('invites someone new, sees the link the once, and seats them', async ({ page }) => {
+    await keepToasts(page)
     await signInAs(page, w.people.ada)
     await page.goto(`/admin/courses/${w.courses.ai.id}`)
     const email = `pat+${w.tag}@dept.test`
@@ -156,7 +158,7 @@ test.describe.serial('a department administrator', () => {
     expect(await page.content()).not.toContain(token)
 
     await page.getByRole('button', { name: 'Seat Pat Lee as instructor' }).click()
-    await expect(toast(page, 'Pat Lee is seated as instructor')).toBeVisible()
+    await expectToasted(page, 'Pat Lee is seated as instructor')
 
     // Found again, she has not signed in, and Ada may invite her again.
     await page.getByRole('button', { name: 'Seat another instructor' }).click()
@@ -167,6 +169,7 @@ test.describe.serial('a department administrator', () => {
   })
 
   test('opens a course she is not seated in, is told to seat herself, and does', async ({ page }) => {
+    await keepToasts(page)
     await signInAs(page, w.people.ada)
     await page.goto(`/courses/${w.courses.computing.id}`)
     await expect(page.getByText('You have no seat in this course')).toBeVisible()
@@ -177,7 +180,7 @@ test.describe.serial('a department administrator', () => {
 
     await page.getByRole('button', { name: 'Me', exact: true }).click()
     await page.getByRole('button', { name: 'Seat as instructor' }).click()
-    await expect(toast(page, 'Ada Lovelace is seated as instructor')).toBeVisible()
+    await expectToasted(page, 'Ada Lovelace is seated as instructor')
     await page.getByRole('button', { name: 'Open course' }).click()
     await expect(page).toHaveURL(new RegExp(`/courses/${w.courses.computing.id}$`))
     await expect(page.locator('.course-head__title')).toHaveText(w.courses.computing.title)
@@ -186,6 +189,7 @@ test.describe.serial('a department administrator', () => {
   })
 
   test('restructures: moves a course, makes and renames a department, and appoints Bob', async ({ page }) => {
+    await keepToasts(page)
     await signInAs(page, w.people.ada)
     await page.goto(`/admin/courses/${w.courses.ai.id}`)
     await page.getByRole('button', { name: 'Move to another department' }).click()
@@ -193,7 +197,7 @@ test.describe.serial('a department administrator', () => {
     await move.locator('#move-course-to').click()
     await page.locator('.el-tree-node__content:visible').filter({ hasText: /^\s*Design\s*$/ }).click()
     await move.getByRole('button', { name: 'Move' }).click()
-    await expect(toast(page, 'Moved to Design')).toBeVisible()
+    await expectToasted(page, 'Moved to Design')
     await expect(page.locator('.course-admin__path')).toHaveText(`University ${w.tag} › Engineering › Design`)
 
     await page.goto('/admin/departments')
@@ -202,14 +206,14 @@ test.describe.serial('a department administrator', () => {
     let form = page.getByRole('dialog', { name: 'New department under Computing' })
     await form.locator('input[name=department-name]').fill('Robotics')
     await form.getByRole('button', { name: 'Create' }).click()
-    await expect(toast(page, 'Department created')).toBeVisible()
+    await expectToasted(page, 'Department created')
     await expect(page.locator('.dept-name__text', { hasText: /^Robotics$/ })).toBeVisible()
 
     await deptMenu(page, 'Robotics', 'Rename')
     form = page.getByRole('dialog', { name: 'Rename Robotics' })
     await form.locator('input[name=department-name]').fill('Robotics & Control')
     await form.getByRole('button', { name: 'Save' }).click()
-    await expect(toast(page, 'Department renamed')).toBeVisible()
+    await expectToasted(page, 'Department renamed')
     await expect(page.locator('.dept-name__text', { hasText: 'Robotics & Control' })).toBeVisible()
 
     // A sibling's name, in another case, is refused before Core is asked.
@@ -232,7 +236,7 @@ test.describe.serial('a department administrator', () => {
     await drawer.locator('input[name=lookup-email]').fill(w.people.bob.email)
     await drawer.getByRole('button', { name: 'Find' }).click()
     await drawer.getByRole('button', { name: `Appoint ${w.people.bob.display_name}` }).click()
-    await expect(toast(page, `${w.people.bob.display_name} is appointed`)).toBeVisible()
+    await expectToasted(page, `${w.people.bob.display_name} is appointed`)
     await expect(drawer.locator('.admins-drawer__group').filter({ hasText: 'Appointed here' })).toContainText(w.people.bob.display_name)
   })
 

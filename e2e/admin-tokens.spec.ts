@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { call, demo, root, signInAsRoot, toast } from './support'
+import { call, demo, expectToasted, keepToasts, root, signInAsRoot } from './support'
 
 // An administrator sees an agent's API tokens on its page, with who issued
 // each, and revokes one that has leaked without suspending the agent: the
@@ -54,6 +54,7 @@ test.describe('an agent’s tokens on its admin page', () => {
   test('an administrator lists an agent’s tokens with their issuer, and revokes the one that leaked', async ({
     page,
   }) => {
+    await keepToasts(page)
     await signInAsRoot(page)
     await page.goto(`/admin/actors/${agentId}`)
     await expect(page.locator('.page-header')).toContainText(AGENT)
@@ -105,7 +106,7 @@ test.describe('an agent’s tokens on its admin page', () => {
     await expect(confirm).toContainText('This cannot be undone')
     await expect(confirm).toContainText(`${AGENT} keeps their other tokens and sign-ins, and their seats.`)
     await confirm.getByRole('button', { name: 'Revoke' }).click()
-    await expect(toast(page, 'Revoked')).toBeVisible()
+    await expectToasted(page, 'Revoked')
 
     // Gone from the live tokens; shown as revoked on asking, with nothing more to do to it.
     await expect(first).toHaveCount(0)

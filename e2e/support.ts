@@ -262,23 +262,14 @@ export async function pickOption(page: Page, trigger: ReturnType<Page['locator']
 }
 
 /**
- * The message Element Plus pops up after a write (ElMessage), on the screen
- * now. A success message closes itself after 3 s: a test checks that one
- * with keepToasts and expectToasted instead, which a busy machine cannot
- * make it miss.
- */
-export function toast(page: Page, text: string | RegExp) {
-  return page.locator('.el-message').filter({ hasText: text })
-}
-
-/**
  * Has the page keep the text of every message Element Plus pops up
  * (ElMessage), as each comes, on every page it opens from now on: call it
  * before the page is opened. A success message closes itself after 3 s,
  * which a check of the screen can miss on a busy machine, where the test is
  * held up longer than that between the click and the check; a message kept
- * is there however late the check comes (expectToasted). A notification
- * (ElNotification) is not kept.
+ * is there however late the check comes (expectToasted). A page loaded
+ * again (page.goto) starts with nothing kept: check a message before the
+ * page is loaded again. A notification (ElNotification) is not kept.
  */
 export async function keepToasts(page: Page) {
   await page.addInitScript(() => {
@@ -327,6 +318,24 @@ export async function expectToasted(page: Page, text: string | RegExp) {
           { message: `the page popped up ${shown}` },
         )
         .toBe(true)
+    },
+    { box: true },
+  )
+}
+
+/**
+ * The page has popped up no message (keepToasts) that a check has not
+ * already counted (expectToasted), not even one that has closed itself
+ * since. A failure lists the messages it kept, and is reported at the line
+ * of the test that called it.
+ */
+export async function expectNothingElseToasted(page: Page) {
+  await test.step(
+    'the page popped up no other message',
+    async () => {
+      const kept = await page.evaluate(() => (window as unknown as { toasts?: string[] }).toasts)
+      if (!kept) throw new Error('the page keeps no messages: keepToasts(page) before it is opened')
+      expect(kept, 'the page popped up no other message').toEqual([])
     },
     { box: true },
   )

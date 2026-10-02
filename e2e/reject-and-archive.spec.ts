@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test'
-import { call, courseTab, coursePath, demo, registerPerson, root, signIn, signInAsRoot, toast } from './support'
+import {
+  call,
+  coursePath,
+  courseTab,
+  demo,
+  expectToasted,
+  keepToasts,
+  registerPerson,
+  root,
+  signIn,
+  signInAsRoot,
+} from './support'
 
 const STAMP = Date.now().toString(36)
 const FEEDBACK = `Second opinion (${STAMP}): the testing is thin.`
@@ -20,6 +31,7 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
   })
 
   test('the grader proposes a grade; the instructor rejects it with a reason', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     const out = await call(d.actors.grader.token, 'POST', `/v1/courses/${d.course.id}/grades`, {
       submission_id: d.course.submissions.yuki_hw1,
@@ -41,7 +53,7 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     await expect(card).toContainText('Nothing is carried out. The proposer is told.')
     await card.getByPlaceholder('Why? (optional, but it helps whoever proposed it)').fill(REASON)
     await card.locator('.decide-panel__confirm').getByRole('button', { name: 'Reject' }).click()
-    await expect(toast(page, 'Rejected')).toBeVisible()
+    await expectToasted(page, 'Rejected')
 
     // Gone from the queue, and listed as decided just now.
     await expect(card).toHaveCount(0)
@@ -125,6 +137,7 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
 
   // Last: it archives the run's course (reopened again after the file).
   test('root archives the course; the instructor finds it read-only', async ({ page, browser }) => {
+    await keepToasts(page)
     const d = demo()
     await signInAsRoot(page)
     await page.goto(`/admin/courses/${d.course.id}`)
@@ -134,7 +147,7 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     await header.getByRole('button', { name: 'Archive' }).click()
     const box = page.getByRole('dialog', { name: 'Archive CS101 · A?' })
     await box.getByRole('button', { name: 'Archive' }).click()
-    await expect(toast(page, 'The course is archived')).toBeVisible()
+    await expectToasted(page, 'The course is archived')
     await expect(header).toContainText('Archived')
     await expect(header.getByRole('button', { name: 'Reopen' })).toBeVisible()
 

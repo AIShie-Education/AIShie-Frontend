@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { call, coursePath, demo, root, signIn, signInAsRoot, toast } from './support'
+import { call, coursePath, demo, expectToasted, keepToasts, root, signIn, signInAsRoot } from './support'
 
 // A platform administrator seated in a course finds whom to add by name or
 // email, since the directory (actor.list) answers them; the search fills in
@@ -43,6 +43,7 @@ test.beforeAll(async () => {
 })
 
 test('an administrator finds whom to add by name, and the search fills in their ID', async ({ page }) => {
+  await keepToasts(page)
   // Opening the dialog asks Core whether it has the directory: slowly here.
   await page.route(
     (url) => url.pathname === '/v1/actors' && url.searchParams.get('limit') === '1',
@@ -102,7 +103,7 @@ test('an administrator finds whom to add by name, and the search fills in their 
   await expect(dialog.locator('.add-member__actor')).toContainText(SAM.name)
 
   await dialog.getByRole('button', { name: 'Add member' }).click()
-  await expect(toast(page, 'Member added')).toBeVisible()
+  await expectToasted(page, 'Member added')
   await expect(page).toHaveURL(/\/members\/[0-9a-f-]{36}$/)
   await expect(page.locator('.page-header')).toContainText(SAM.name)
 })

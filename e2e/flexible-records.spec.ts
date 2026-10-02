@@ -2,13 +2,14 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   call,
   demo,
+  expectToasted,
   inTraditionalChinese,
+  keepToasts,
   photograph,
   registerPerson,
   root,
   signIn,
   signInAsRoot,
-  toast,
   type DemoActor,
 } from './support'
 
@@ -150,6 +151,7 @@ test.describe.serial('records that change after the fact', () => {
   test('an instructor changes a seat’s roster role, which changes nothing else, and it is in the activity', async ({
     page,
   }) => {
+    await keepToasts(page)
     await asInstructor(page, `/members/${uma.member_id}`)
     const header = page.locator('.page-header')
     await expect(header).toContainText(uma.display_name)
@@ -165,7 +167,7 @@ test.describe.serial('records that change after the fact', () => {
     await expect(dialog).toContainText(`${uma.display_name} leaves the roster`)
     await photograph(page, 'role-change-en')
     await dialog.getByRole('button', { name: 'Change to Teaching assistant' }).click()
-    await expect(toast(page, `${uma.display_name} is now Teaching assistant`)).toBeVisible()
+    await expectToasted(page, `${uma.display_name} is now Teaching assistant`)
     await expect(header).toContainText('Teaching assistant')
     // Nothing it may do changed: the student's preset still.
     await expect(page.getByText('All as the preset “Student” gave them.')).toBeVisible()
@@ -197,12 +199,13 @@ test.describe.serial('records that change after the fact', () => {
     await expect(zh).toContainText('將加入名冊')
     await photograph(page, 'role-change-zh-Hant')
     await zh.getByRole('button', { name: '改為學生' }).click()
-    await expect(toast(page, '現在是學生')).toBeVisible()
+    await expectToasted(page, `${uma.display_name} 現在是學生`)
   })
 
   test('an instructor renames the course and describes it; its code and term are the administrators’', async ({
     page,
   }) => {
+    await keepToasts(page)
     await asInstructor(page, '')
     const about = page.locator('.about')
     await about.getByRole('button', { name: 'Edit' }).click()
@@ -216,7 +219,7 @@ test.describe.serial('records that change after the fact', () => {
       .getByPlaceholder('What the course is about, in Markdown')
       .fill('Grades that **change** after the fact.')
     await dialog.getByRole('button', { name: 'Save' }).click()
-    await expect(toast(page, 'The course’s title and description are saved')).toBeVisible()
+    await expectToasted(page, 'The course’s title and description are saved')
     await expect(page.locator('.course-head__title')).toHaveText(`${TITLE} (renamed)`)
     await expect(about.locator('.about__desc strong')).toHaveText('change')
 
@@ -229,6 +232,7 @@ test.describe.serial('records that change after the fact', () => {
   test('changing what graded work is worth asks what becomes of its grades, with an example in the actual numbers', async ({
     page,
   }) => {
+    await keepToasts(page)
     await asInstructor(page, `/assignments/${essay}`)
     await page.locator('.page-header').getByRole('button', { name: 'Edit' }).click()
     const dialog = page.getByRole('dialog', { name: 'Edit assignment' })
@@ -250,7 +254,7 @@ test.describe.serial('records that change after the fact', () => {
     await rescale.click()
     await photograph(page, 'points-change-en')
     await dialog.getByRole('button', { name: 'Save' }).click()
-    await expect(toast(page, /Saved: 2 grades rescaled, \d+ totals written again\./)).toBeVisible()
+    await expectToasted(page, /^Saved: 2 grades rescaled, \d+ totals written again\.$/)
 
     // Sam's 85 is now 42.5 of 50.
     await page.goto(`/courses/${courseId}/grades?assignment=${essay}&student=${sam.member_id}`)
@@ -277,13 +281,14 @@ test.describe.serial('records that change after the fact', () => {
     await zh.locator('[data-choice="keep_scores"]').click()
     await photograph(page, 'points-change-zh-Hant')
     await edit.getByRole('button', { name: '儲存' }).click()
-    await expect(toast(page, /已儲存評分項目：重新記錄了 \d+ 項總分。/)).toBeVisible()
+    await expectToasted(page, /^已儲存評分項目：重新記錄了 \d+ 項總分。$/)
   })
 
   test('a grader overrides a student’s course total with a reason and comments on it; the student sees neither who nor why', async ({
     page,
     browser,
   }) => {
+    await keepToasts(page)
     await asInstructor(page, `/gradebook/${sam.member_id}`)
     const card = page.locator('.gradebook__total')
     const worked = (await card.locator('.gradebook__total-value').innerText()).trim()
@@ -294,7 +299,7 @@ test.describe.serial('records that change after the fact', () => {
     await dialog.locator('input[name=score]').fill('92')
     await dialog.locator('textarea[name=reason]').fill('Moderated at the exam board')
     await dialog.getByRole('button', { name: 'Override' }).click()
-    await expect(toast(page, 'Overridden.')).toBeVisible()
+    await expectToasted(page, 'Overridden.')
     await expect(card.locator('.gradebook__total-value')).toHaveText('92%')
     await expect(card).toContainText(`Worked out: ${worked}`)
     await expect(card).toContainText('Overridden')
@@ -304,7 +309,7 @@ test.describe.serial('records that change after the fact', () => {
     const comment = page.getByRole('dialog', { name: 'Comment: Course total' })
     await comment.locator('textarea').fill('A strong term, well done.')
     await comment.getByRole('button', { name: 'Save' }).click()
-    await expect(toast(page, 'Comment saved')).toBeVisible()
+    await expectToasted(page, 'Comment saved')
     await expect(card.locator('.gradebook__comment')).toContainText('A strong term, well done.')
     await photograph(page, 'total-override-en')
 
@@ -347,11 +352,12 @@ test.describe.serial('records that change after the fact', () => {
     await page.getByRole('button', { name: '總分: ' + '課程總成績' }).click()
     await page.locator('.el-dropdown-menu:visible').getByText('取消覆寫').click()
     await page.getByRole('dialog', { name: '取消覆寫？' }).getByRole('button', { name: '取消覆寫' }).click()
-    await expect(toast(page, /已取消覆寫/)).toBeVisible()
+    await expectToasted(page, '已取消覆寫。')
     await expect(page.locator('.grade-view__override')).toHaveCount(0)
   })
 
   test('final grades are undone where posting is, and undoing them again is refused in words', async ({ page }) => {
+    await keepToasts(page)
     await asInstructor(page, `/gradebook/${tia.member_id}`)
     await expect(page.locator('.gradebook__final')).toContainText('written as final grades')
     await page.goto(`/courses/${courseId}/grades`)
@@ -364,9 +370,7 @@ test.describe.serial('records that change after the fact', () => {
       .getByRole('dialog', { name: 'Undo final grades?' })
       .getByRole('button', { name: 'Undo final grades' })
       .click()
-    await expect(
-      toast(page, /^1 student’s totals no longer count ungraded work as zero: \d+ totals written again\.$/),
-    ).toBeVisible()
+    await expectToasted(page, /^1 student’s totals no longer count ungraded work as zero: \d+ totals written again\.$/)
 
     await page.goto(`/courses/${courseId}/gradebook/${tia.member_id}`)
     await expect(page.locator('.gradebook__total')).toBeVisible()
@@ -393,6 +397,7 @@ test.describe.serial('records that change after the fact', () => {
     page,
     browser,
   }) => {
+    await keepToasts(page)
     const handout = await ok(instructor().token, 'POST', `/v1/courses/${courseId}/documents`, {
       kind: 'material',
       title: 'Handout',
@@ -414,7 +419,7 @@ test.describe.serial('records that change after the fact', () => {
     const details = page.getByRole('dialog', { name: 'Title and place of “Handout”' })
     await details.locator('input[name=title]').fill('Week 1 handout')
     await details.getByRole('button', { name: 'Save' }).click()
-    await expect(toast(page, 'Saved')).toBeVisible()
+    await expectToasted(page, 'Saved')
     await expect(header).toContainText('Week 1 handout')
 
     await header.getByRole('button', { name: 'Archive' }).click()
@@ -422,19 +427,20 @@ test.describe.serial('records that change after the fact', () => {
       .getByRole('dialog', { name: 'Archive “Week 1 handout”?' })
       .getByRole('button', { name: 'Archive' })
       .click()
-    await expect(toast(page, 'Document archived')).toBeVisible()
+    await expectToasted(page, 'Document archived')
     await header.getByRole('button', { name: 'Bring back' }).click()
     await page
       .getByRole('dialog', { name: 'Bring back “Week 1 handout”?' })
       .getByRole('button', { name: 'Bring back' })
       .click()
-    await expect(toast(page, 'Document brought back')).toBeVisible()
+    await expectToasted(page, 'Document brought back')
     await expect(header.getByRole('button', { name: 'Archive' })).toBeVisible()
 
     // The platform's root, seated in the course, purges the first version.
     const rootMe = await ok(root().token, 'GET', '/v1/me')
     await ok(instructor().token, 'POST', `/v1/courses/${courseId}/members`, { actor_id: rootMe.id, preset: 'ta' })
     const admin = await browser.newPage()
+    await keepToasts(admin)
     await signInAsRoot(admin)
     await admin.goto(`/courses/${courseId}/documents/${docId}`)
     const history = admin.locator('.version-list')
@@ -449,7 +455,7 @@ test.describe.serial('records that change after the fact', () => {
     await purge1.locator('textarea[name=reason]').fill('A student’s name was in it')
     await purge1.getByText('I understand that this removes it for good').click()
     await purge1.getByRole('button', { name: 'Purge' }).click()
-    await expect(toast(admin, 'Purged: 1 versions, 0 files deleted from storage.')).toBeVisible()
+    await expectToasted(admin, 'Purged: 1 versions, 0 files deleted from storage.')
     await expect(history.locator('.version-item').filter({ hasText: 'v1' })).toContainText('Purged')
 
     // The whole document, in Traditional Chinese.
@@ -462,7 +468,7 @@ test.describe.serial('records that change after the fact', () => {
     await purge.getByText('我明白此操作會永久移除內容').click()
     await photograph(admin, 'purge-dialog-zh-Hant')
     await purge.getByRole('button', { name: '清除' }).click()
-    await expect(toast(admin, /已清除：/)).toBeVisible()
+    await expectToasted(admin, /^已清除：\d+ 個版本，從儲存空間刪除了 \d+ 個檔案。$/)
     await expect(admin.locator('.tombstone--document')).toContainText('由 你 清除')
     await expect(admin.locator('.tombstone--document')).toContainText('原因：整份講義誤傳')
     await photograph(admin, 'tombstone-zh-Hant')

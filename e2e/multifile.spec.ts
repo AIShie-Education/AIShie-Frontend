@@ -1,6 +1,17 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
-import { call, coursePath, demo, dropFiles, photograph, root, signIn, toast, type FileSpec } from './support'
+import {
+  call,
+  coursePath,
+  demo,
+  dropFiles,
+  expectToasted,
+  keepToasts,
+  photograph,
+  root,
+  signIn,
+  type FileSpec,
+} from './support'
 
 // Several files to one document's version (一份文件含多個檔案), with the real
 // Core: an instructor drops three files and a note on the materials page,
@@ -115,6 +126,7 @@ test.describe.serial('several files to a version', () => {
   test('three files and a note dropped on the materials page make one material, whose version lists them to download', async ({
     page,
   }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('materials'))
@@ -136,7 +148,7 @@ test.describe.serial('several files to a version', () => {
     await dialog.getByPlaceholder('Markdown').fill('## Before the lecture\n\nRead the **slides** first.')
     await photograph(page, 'multifile-create-dialog')
     await dialog.getByRole('button', { name: 'Create', exact: true }).click()
-    await expect(toast(page, 'Material created')).toBeVisible()
+    await expectToasted(page, 'Material created')
     await expect(dialog).toBeHidden()
 
     // One material, not three.
@@ -171,6 +183,7 @@ test.describe.serial('several files to a version', () => {
   test('a new version takes two files, put in another order, and the history counts and names each version’s', async ({
     page,
   }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath(`documents/${documentId}`))
@@ -185,7 +198,7 @@ test.describe.serial('several files to a version', () => {
     await expect(dialog).toContainText('Text: version 1’s, as it is')
     await photograph(page, 'multifile-new-version')
     await dialog.getByRole('button', { name: 'Save version' }).click()
-    await expect(toast(page, 'New version saved')).toBeVisible()
+    await expectToasted(page, 'New version saved')
     await expect(dialog).toBeHidden()
 
     await expect(page.locator('.doc-content__meta')).toContainText('Version 2')
@@ -228,6 +241,7 @@ test.describe.serial('several files to a version', () => {
   })
 
   test('the text version of the second file is read, and corrected, on its own', async ({ page }) => {
+    await keepToasts(page)
     const d = demo()
     const issued = await call(root().token, 'POST', '/v1/services/document_text/credentials', {
       label: `e2e multifile ${tag}`,
@@ -279,7 +293,7 @@ test.describe.serial('several files to a version', () => {
     await expect(editor).toHaveValue(text)
     await editor.fill(text.replace('Recursion, the slides', 'Recursion, the slides (corrected)'))
     await pane.getByRole('button', { name: 'Save the text version' }).click()
-    await expect(toast(page, 'Text version saved')).toBeVisible()
+    await expectToasted(page, 'Text version saved')
     await expect(pane.getByRole('heading', { name: 'Recursion, the slides (corrected)' })).toBeVisible()
     await expect(pane.locator('.text-pane__source')).toContainText(`Edited by ${d.actors.instructor.display_name}`)
 
@@ -350,6 +364,7 @@ test.describe.serial('several files to a version', () => {
   test('what a version holds is said before anything is sent, and Core’s refusal of too many files in words', async ({
     page,
   }) => {
+    await keepToasts(page)
     const d = demo()
     await signIn(page, d.actors.instructor)
     // Core as one whose versions hold two files, 60 B in all.
@@ -397,11 +412,12 @@ test.describe.serial('several files to a version', () => {
     await expect(dialog.getByRole('button', { name: 'Create', exact: true })).toBeDisabled()
     await dialog.getByRole('button', { name: `Remove “${many[20]!.name}”` }).click()
     await dialog.getByRole('button', { name: 'Create', exact: true }).click()
-    await expect(toast(page, 'Material created')).toBeVisible()
+    await expectToasted(page, 'Material created')
     await expect(dialog).toBeHidden()
   })
 
   test('on a phone, files are chosen with the big button, moved, and read as a list', async ({ page }) => {
+    await keepToasts(page)
     await page.setViewportSize({ width: 390, height: 844 })
     const d = demo()
     await signIn(page, d.actors.instructor)
@@ -420,7 +436,7 @@ test.describe.serial('several files to a version', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
     await photograph(page, 'multifile-phone-dialog')
     await dialog.getByRole('button', { name: 'Create', exact: true }).click()
-    await expect(toast(page, 'Material created')).toBeVisible()
+    await expectToasted(page, 'Material created')
 
     await page.locator('.material-row').filter({ hasText: phoneTitle }).click()
     const files = page.locator('.version-file')

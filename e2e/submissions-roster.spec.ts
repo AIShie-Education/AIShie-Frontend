@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { call, demo, pickOption, root, signIn, toast } from './support'
+import { call, demo, expectToasted, keepToasts, pickOption, root, signIn } from './support'
 
 // From a pilot tester: Submissions said it listed work marked missing, but
 // nothing could be marked missing, and a published assignment did not list
@@ -53,6 +53,7 @@ test.beforeAll(async () => {
 })
 
 test('the instructor sees who has not started on an assignment, and marks them missing', async ({ page }) => {
+  await keepToasts(page)
   const d = demo()
   await signIn(page, d.actors.instructor)
   await page.goto(`/courses/${courseId}/submissions`)
@@ -88,7 +89,7 @@ test('the instructor sees who has not started on an assignment, and marks them m
   await expect(box).toContainText(`handed in nothing for “${TITLE}”`)
   await expect(box).toContainText('If they hand in work later, it takes the place of this record')
   await box.getByRole('button', { name: 'Mark missing' }).click()
-  await expect(toast(page, 'Ken Wong is marked as missing.')).toBeVisible()
+  await expectToasted(page, 'Ken Wong is marked as missing.')
 
   // The roster is read again: Ken is missing now, and nobody is left to mark.
   await expect(ken).toContainText('Missing')
