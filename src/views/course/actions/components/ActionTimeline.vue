@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // An action's history from its own row: made (proposed, done or refused),
-// decided, carried out or failed or cancelled, reviewed or escalated — and
+// decided (approved, rejected, or sent back for changes, by whom and when),
+// carried out or failed or cancelled, reviewed or escalated — and
 // what it is still waiting for. A decision, review or withdrawal by the owner
 // of the agent that made it says so: it was the owner's own doing.
 import { computed } from 'vue'
@@ -44,18 +45,23 @@ const items = computed<Item[]>(() => {
 
   if (a.decided_at || a.decided_by_member_id) {
     const rejected = a.status === 'rejected'
+    const changes = a.status === 'changes_requested'
     const owner = rules.byOwner(a, 'decided')
     out.push({
       key: 'decided',
-      tone: rejected ? 'danger' : 'success',
-      icon: rejected ? 'CloseBold' : 'Stamp',
+      tone: rejected ? 'danger' : changes ? 'warning' : 'success',
+      icon: rejected ? 'CloseBold' : changes ? 'EditPen' : 'Stamp',
       text: rejected
         ? owner
           ? 'actions.timeline.rejectedByOwner'
           : 'actions.timeline.rejected'
-        : owner
-          ? 'actions.timeline.approvedByOwner'
-          : 'actions.timeline.approved',
+        : changes
+          ? owner
+            ? 'actions.timeline.changesRequestedByOwner'
+            : 'actions.timeline.changesRequested'
+          : owner
+            ? 'actions.timeline.approvedByOwner'
+            : 'actions.timeline.approved',
       who: { memberId: a.decided_by_member_id },
       time: a.decided_at,
     })

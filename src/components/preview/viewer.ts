@@ -1,9 +1,10 @@
 // The file viewer (預覽): one dialog over every signed-in page (FileViewer,
 // mounted by AppLayout), opened on a file from wherever files are listed
 // (openPreview): a document version's files (VersionFileList, and through it
-// a submitted or feedback document's, DocumentFiles) and the files a chat
-// message carries (ChatMessageFiles). It steps through the files listed
-// with it (a version's, a message's).
+// a submitted or feedback document's, DocumentFiles), the files a chat
+// message carries (ChatMessageFiles), and a file an answer relied on
+// (ChatMessageSources), at the page or slide it named. It steps through the
+// files listed with it (a version's, a message's).
 //
 // A file is described by what it is (PreviewFile) and how to have it: a
 // fresh short-lived URL to its bytes, asked for each time it is opened
@@ -69,6 +70,8 @@ export interface PreviewSet {
   title?: string
   /** The course they are in, for the print layout. */
   courseId?: string | null
+  /** The page to open the first file shown at, from 1, where it is shown as a PDF (a slide's, in its PDF). */
+  page?: number | null
 }
 
 /** What the viewer shows: whether it is open, the files, which one, and what they belong to. */
@@ -78,11 +81,21 @@ export interface PreviewState {
   index: number
   title: string
   courseId: string | null
+  /** The page the file it was opened on is shown at, until another file is shown. */
+  page: number | null
   /** Bumped each time it is opened, so that opening the same file again reads it afresh. */
   opened: number
 }
 
-const state: PreviewState = shallowReactive({ open: false, files: [], index: 0, title: '', courseId: null, opened: 0 })
+const state: PreviewState = shallowReactive({
+  open: false,
+  files: [],
+  index: 0,
+  title: '',
+  courseId: null,
+  page: null,
+  opened: 0,
+})
 
 /** The viewer's state, which FileViewer shows. */
 export function previewState(): PreviewState {
@@ -96,6 +109,7 @@ export function openPreview(set: PreviewSet) {
   state.index = Math.min(Math.max(0, set.index ?? 0), set.files.length - 1)
   state.title = set.title ?? ''
   state.courseId = set.courseId ?? null
+  state.page = set.page ?? null
   state.opened++
   state.open = true
 }
@@ -108,6 +122,7 @@ export function closePreview() {
 /** Shows another file of the set, by its place; past either end it stays where it is. */
 export function showPreviewAt(index: number) {
   if (index < 0 || index >= state.files.length) return
+  state.page = null
   state.index = index
 }
 

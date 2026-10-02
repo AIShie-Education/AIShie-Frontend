@@ -13,7 +13,9 @@
 // deployed while the tab is open is said in a small notice
 // (NewVersionNotice), which reloads only when asked. A file opened from any
 // list of files is shown in the file viewer (FileViewer), over the page,
-// whose code is fetched the first time a file is opened.
+// whose code is fetched the first time a file is opened. Back closes the
+// phone's menu, the chat's sheet and the file viewer, the top one first,
+// rather than leaving the page (useBackCloses).
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -27,6 +29,7 @@ import ActivityBar from '@/components/sidebar/ActivityBar.vue'
 import SideBar from '@/components/sidebar/SideBar.vue'
 import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
 import { useSideBarStore } from '@/stores/sidebar'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { titleKey } from '@/router/title'
 
@@ -35,8 +38,9 @@ const route = useRoute()
 const { t } = useI18n()
 
 const narrow = useMediaQuery(`(max-width: ${SIDEBAR_DRAWER_MAX_WIDTH}px)`)
-// The phone's menu closes as a link in it is followed.
+// The phone's menu closes as a link in it is followed, and with back.
 const drawer = ref(false)
+useBackCloses(drawer, () => (drawer.value = false), { when: narrow })
 watch(
   () => route.fullPath,
   () => (drawer.value = false),

@@ -48,6 +48,8 @@ const COLORS: Record<string, TagType> = {
   proposed: 'warning',
   approved: 'primary',
   rejected: 'danger',
+  // Sent back for changes: over, as a rejection is, but not refused; its proposer may propose again.
+  changes_requested: 'warning',
   cancelled: 'info',
   executed: 'success',
   failed: 'danger',

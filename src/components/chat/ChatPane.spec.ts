@@ -80,6 +80,8 @@ const Tooltip = defineComponent({
     () =>
       h('span', { class: 'tooltip-stub', 'data-tip': props.disabled ? null : props.content }, slots.default?.()),
 })
+/** Each time a dropdown is told to close its menu (its handleClose). */
+const dropdownClosed = vi.fn()
 /**
  * Element Plus's dropdown, whose menu it lays over the page when its trigger
  * is clicked: here the trigger and the menu both, each item a button that
@@ -88,8 +90,9 @@ const Tooltip = defineComponent({
 const Dropdown = defineComponent({
   name: 'ElDropdown',
   emits: ['command'],
-  setup(_, { slots, emit }) {
+  setup(_, { slots, emit, expose }) {
     provide('stub-dropdown', (c: unknown) => emit('command', c))
+    expose({ handleClose: dropdownClosed })
     return () =>
       h('div', { class: 'dropdown-stub' }, [slots.default?.(), h('div', { role: 'menu' }, slots.dropdown?.())])
   },
@@ -230,6 +233,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-09-26T12:00:00Z'))
   writes.length = 0
   printed.length = 0
+  dropdownClosed.mockClear()
   forgetSent()
   forgetAttachments()
   server = {
@@ -587,6 +591,17 @@ describe('ChatPane', () => {
     await flushPromises()
     expect(w.text()).toContain('Another')
     expect(writes.map((x) => x.args.up_to_message_id)).toEqual(['m4', 'm6'])
+  })
+
+  it('closes its ⋯ menu as it goes off screen (an agent’s log closed by back), rather than leaving it over the page', async () => {
+    seat('staff', { action_decide: 'autonomous' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', oversee: true }, global })
+    await flushPromises()
+    expect(dropdownClosed).not.toHaveBeenCalled()
+    await w.setProps({ active: false })
+    expect(dropdownClosed).toHaveBeenCalledTimes(1)
+    await w.setProps({ active: true })
+    expect(dropdownClosed).toHaveBeenCalledTimes(1)
   })
 
   it('marks nothing read for staff reading it', async () => {

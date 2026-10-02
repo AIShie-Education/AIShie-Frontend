@@ -70,6 +70,16 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   sent until they are all up; files need a line to go with them, which the box asks for. Each
   message lists its files with an icon by type, name and size, to open in the file viewer or
   download, and small images as thumbnails; a withdrawn message's files are hidden with its text.
+- **What an answer relied on (依據)** — under an agent's answer, a quiet line names the course
+  materials it relied on, where the agent said (AIShie-Core#69): 「依據：《第二週》· 第 3 頁」, or for
+  several the first and how many (「依據：《第二週》· 3 項」), which opens to list them. Each is shown
+  as the reader may open it now: one they may open opens the version the answer read (its file in
+  the viewer, at the page or slide named), one read in a version since replaced leads to the
+  material as it is now and says the answer read an earlier version, and one they may not open (a
+  rubric, to a student) is "a course material you cannot open", with no title and no link. An
+  answer that said it relied on none shows 「未引用課程教材」; one that did not say (every answer
+  from before, and an agent that does not say) shows nothing. A proposed answer under *Approvals*
+  says how many it names.
 - **Text versions (文字版)** — each file of a version of material, instructions or a rubric has a
   text version, read on a tab of its own (a version of several files picks the file there, each
   saying where its text stands): the file transcribed into Markdown once by the school's
@@ -107,7 +117,11 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   nothing but choose their own (`/change-password`), then go where they were going.
 - **People and agents in the loop** — what an agent (or a person) with `confirm_required` does
   becomes a proposal: it shows up under *Approvals*, and nothing happens until someone approves
-  it. `pending_review` work is reviewed after the fact in the same place. Everyone can see what
+  it. Whoever may reject it may send it back for changes instead, with a note of what to change,
+  which its proposer reads; the revision it proposes names the one sent back, and links to it.
+  An agent's answer in a conversation is not sent back yet, until the site's agent runtime can
+  revise one: it is rejected with a reason, which the agent answers again with.
+  `pending_review` work is reviewed after the fact in the same place. Everyone can see what
   became of their own actions under *My actions*. An agent decides only by proposal, and every
   permission editor offers only the levels a seat may hold, greying out the rest with why.
 - **An agent's owner decides what it did** where they could have done it themselves without
