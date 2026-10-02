@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, demo, expectToasted, keepToasts, root, signIn } from './support'
+import { call, demo, expectNothingElseToasted, expectToasted, keepToasts, root, signIn } from './support'
 
 // An instructor who is not a platform administrator may not search the
 // directory (actor.list), so they find whom to seat by that person's whole
@@ -89,7 +89,7 @@ test('an instructor finds a registered person by their whole email, in any case,
   await email.fill(`nobody+${tag}@e2e.test`)
   await email.press('Enter')
   await expect(dialog).toContainText('Nobody is registered with that number or email. Ask a platform administrator')
-  await expect(page.locator('.el-message')).toHaveCount(0)
+  await expectNothingElseToasted(page)
   await expect(idField).toHaveValue('')
 
   // The whole address, in another case, finds Pat and fills in his actor ID.

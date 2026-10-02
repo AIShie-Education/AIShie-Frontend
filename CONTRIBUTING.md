@@ -119,9 +119,10 @@ the limits themselves. A new or changed test follows these:
   it. `keepToasts(page)`, before the page is opened, has the page keep each
   message as it comes, and `expectToasted(page, text)` checks the kept one,
   however late, by its whole text or a RegExp; the end-to-end tests check
-  every success or information message this way. Notifications
-  (`ElNotification`), which are not kept, and error messages stay 6 s or
-  more, and are checked on the screen.
+  every success or information message this way, and
+  `expectNothingElseToasted(page)` checks that no other message came. A
+  refusal is checked on the screen: one Core recorded comes as a
+  notification (`ElNotification`, 8 s), which is not kept.
 
 ## The Core the tests run against
 
