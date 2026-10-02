@@ -387,6 +387,7 @@ export default {
       closesOwnEscalation: '批准此项会关闭你自己提出的升级，这应由其他人处理；你仍可拒绝。',
       ownAgent: '这是由你所属的一方做的——你所代表的人，或他们的另一个智能体。一个人与其智能体视为同一方，因此须由其他人处理。',
       ownAgentLevel: '由{who}决定：这件事你自己做也需要他人确认，或现在批准会被拒绝。',
+      ownAgentLevelReview: '由{who}审核：这件事你自己做也需要他人确认。',
     },
     ruleNote: '任何人都不能决定或审核自己的操作——无论用过哪个席位，也不论隔了多少层。',
     proposedNotice: '你的决定正等待批准',

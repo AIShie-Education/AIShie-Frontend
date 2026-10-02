@@ -174,22 +174,28 @@ function dismiss(key: number) {
 
 // The page's rules (what deciding does, who may decide what) are one
 // disclosure under its title: open the first time the page is shown in this
-// browser, and kept as the person leaves it after that.
+// browser, closed after that unless the person left them open. Where the
+// browser keeps nothing, they start closed, so they never push the queue down
+// on every visit.
 const RULES_KEY = 'aishie.approvalsRules'
-function rulesWereClosed(): boolean {
+function rulesAtFirst(): boolean {
   try {
-    return localStorage.getItem(RULES_KEY) === 'closed'
+    const was = localStorage.getItem(RULES_KEY)
+    if (was) return was === 'open'
+    // Seen now: the next visit starts closed.
+    localStorage.setItem(RULES_KEY, 'closed')
+    return true
   } catch {
     return false
   }
 }
-const rulesOpen = ref(!rulesWereClosed())
+const rulesOpen = ref(rulesAtFirst())
 function toggleRules() {
   rulesOpen.value = !rulesOpen.value
   try {
     localStorage.setItem(RULES_KEY, rulesOpen.value ? 'open' : 'closed')
   } catch {
-    // Not remembered: it opens again next time.
+    // Not remembered: they start closed next time.
   }
 }
 </script>
@@ -216,8 +222,11 @@ function toggleRules() {
         aria-controls="approvals-rules"
         @click="toggleRules"
       >
+        <el-icon><InfoFilled /></el-icon>
         <span>{{ t('actions.approvals.rules') }}</span>
-        <el-icon class="el-icon--right"><InfoFilled /></el-icon>
+        <el-icon class="el-icon--right approvals__rules-chevron" :class="{ 'is-open': rulesOpen }" aria-hidden="true">
+          <ArrowDown />
+        </el-icon>
       </el-button>
       <el-button :loading="proposed.loading.value || review.loading.value" @click="refresh">
         <el-icon><Refresh /></el-icon>
@@ -225,7 +234,7 @@ function toggleRules() {
       </el-button>
     </PageHeader>
 
-    <section v-if="rulesOpen" id="approvals-rules" class="approvals__rules" :aria-label="t('actions.approvals.rules')">
+    <section v-show="rulesOpen" id="approvals-rules" class="approvals__rules" :aria-label="t('actions.approvals.rules')">
       <ul class="approvals__rules-list">
         <li>{{ agentsOnly ? t('actions.approvals.agentsProposedHelp') : t('actions.approvals.proposedHelp') }}</li>
         <li>{{ agentsOnly ? t('actions.approvals.agentsReviewHelp') : t('actions.approvals.reviewHelp') }}</li>
@@ -347,6 +356,12 @@ function toggleRules() {
 .approvals__rules-toggle .el-icon {
   color: var(--app-ink-3);
 }
+.approvals__rules-chevron {
+  transition: transform 0.15s ease;
+}
+.approvals__rules-chevron.is-open {
+  transform: rotate(180deg);
+}
 .approvals__tab {
   display: inline-flex;
   align-items: center;
@@ -391,6 +406,11 @@ function toggleRules() {
   padding: 0 14px;
 }
 @media (max-width: 480px) {
+  /* Flush with the title above it, as the page's other text is. */
+  .approvals__rules-toggle {
+    padding-left: 0;
+    padding-right: 0;
+  }
   .approvals__tabs :deep(.el-tabs__item) {
     padding: 0 8px;
     font-size: 13px;

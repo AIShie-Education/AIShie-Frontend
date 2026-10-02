@@ -387,6 +387,7 @@ export default {
       closesOwnEscalation: '批准此項會了結你自己提出的升級，這應由其他人處理；你仍可駁回。',
       ownAgent: '這是由你所屬的一方做的——你所代表的人，或他們的另一個代理。一個人與其代理視為同一方，因此須由其他人處理。',
       ownAgentLevel: '由{who}決定：這件事你自己做也需要他人確認，或現在批准會被拒絕。',
+      ownAgentLevelReview: '由{who}覆核：這件事你自己做也需要他人確認。',
     },
     ruleNote: '任何人都不能決定或覆核自己的操作——無論用過哪個席位，也不論隔了多少層。',
     proposedNotice: '你的決定正等待批准',

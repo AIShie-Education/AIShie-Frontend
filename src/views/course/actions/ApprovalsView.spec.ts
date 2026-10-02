@@ -45,13 +45,14 @@ function proposal(id: string, yours: boolean, type = 'submission.create') {
   }
 }
 
-function answer(queue: unknown[]) {
+function answer(queue: unknown[], reviews?: unknown[]) {
   read.mockImplementation(async (tool: string) => {
     switch (tool) {
       case 'action.list_proposed':
         return { actions: queue }
       case 'action.list_pending_review':
         // A queue Core will not show: nothing in it is hers.
+        if (reviews) return { actions: reviews }
         throw forbidden()
       case 'agent.list':
         return { agents: [{ actor_id: 'actor-helper', display_name: 'Mei’s helper' }] }
@@ -69,6 +70,7 @@ beforeEach(() => {
     removeEventListener: () => undefined,
   }))
   forgetMyAgents()
+  localStorage.clear()
   read.mockReset()
   write.mockReset()
   confirm.mockClear()
@@ -80,7 +82,13 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountAsStudent() {
+/** The course's members, where Mei may read them: her seat, her agent's, and who decides. */
+function member(id: string, name: string, extra: Record<string, unknown> = {}) {
+  return { id, actor_id: `actor-${id}`, kind: 'human', status: 'active', display_name: name, role: 'instructor', ...extra }
+}
+const DECIDES = { perms: { action_decide: 'autonomous' } }
+
+async function mountAsStudent(members?: ReturnType<typeof member>[]) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({ me: { id: 'actor-mei', kind: 'human', display_name: 'Mei' } } as never)
@@ -93,11 +101,15 @@ async function mountAsStudent() {
       document_read: 'autonomous',
       submission_write: 'autonomous',
       action_decide: 'denied',
-      member_read: 'denied',
+      member_read: members ? 'autonomous' : 'denied',
     },
     permsSource: 'exact',
     ownsAgentHere: true,
   } as never)
+  if (members) {
+    course.members = new Map(members.map((m) => [m.id, m])) as never
+    course.$patch({ membersState: 'loaded' } as never)
+  }
   const stub = { render: () => null }
   const router = createRouter({
     history: createMemoryHistory(),
@@ -137,7 +149,9 @@ describe('ApprovalsView, for a student who owns an agent', () => {
     answer([proposal('p1', true)])
     await mountAsStudent()
     expect(document.body.querySelector('.page-header')!.textContent).toContain('Your agents’ proposals')
+    // Neither Core's refusal nor the app's own words for one.
     expect(document.body.textContent).not.toContain('permission denied')
+    expect(document.body.textContent).not.toContain('You do not have permission')
     expect(read).toHaveBeenCalledWith('action.list_pending_review', { course_id: COURSE, limit: 50, after: undefined })
     // The review tab (rendered, if hidden): nothing there for her.
     expect(document.body.textContent).toContain('Nothing your agents did is waiting for review.')
@@ -208,11 +222,94 @@ describe('ApprovalsView, for a student who owns an agent', () => {
     )
   })
 
+  it('names who decides, where she may read the course’s members', async () => {
+    answer([proposal('p2', false, 'grade.submit')])
+    await mountAsStudent([
+      member('m-mei', 'Mei', { role: 'student' }),
+      member('m-helper', 'Mei’s helper', { kind: 'agent', role: 'student', owner_actor_id: 'actor-mei' }),
+      member('m-lin', 'Lin Wen', DECIDES),
+      member('m-sato', 'Sato Ken', DECIDES),
+      // Neither a former member nor a seat that decides nothing is named.
+      member('m-old', 'Old Hand', { ...DECIDES, status: 'removed' }),
+      member('m-ta', 'Tess', { perms: { action_decide: 'denied' } }),
+    ])
+    const [card] = cards()
+    expect(card!.querySelector('.decide-panel__blocked')!.textContent).toContain(
+      'Decided by Lin Wen and Sato Ken: you could not do this yourself without someone’s confirmation',
+    )
+  })
+
+  it('says who reviews what her agent did, in the review queue, without a refusal that is a proposal’s', async () => {
+    answer([], [{ ...proposal('r1', false, 'grade.submit'), status: 'executed', review_state: 'pending' }])
+    await mountAsStudent()
+    const [card] = cards()
+    const said = card!.querySelector('.decide-panel__blocked')!.textContent!
+    expect(said).toContain(
+      'Reviewed by the course’s teaching staff: you could not have done this yourself without someone’s confirmation.',
+    )
+    expect(said).not.toContain('refused')
+    expect(button(card!, 'Mark reviewed')).toBeFalsy()
+  })
+
   it('says it in the reader’s language', async () => {
     setLocale('zh-Hant')
     answer([])
     await mountAsStudent()
     expect(document.body.querySelector('.page-header')!.textContent).toContain('你的代理的提案')
     expect(document.body.textContent).toContain('你的代理沒有待批准的提案。')
+  })
+})
+
+describe('ApprovalsView’s rules', () => {
+  const toggle = () => document.body.querySelector<HTMLButtonElement>('.approvals__rules-toggle')!
+  const rules = () => document.body.querySelector<HTMLElement>('#approvals-rules')!
+  const shown = () => rules().style.display !== 'none'
+
+  it('are open the first time the page is shown in this browser, and closed after that', async () => {
+    answer([])
+    await mountAsStudent()
+    expect(shown()).toBe(true)
+    expect(toggle().getAttribute('aria-expanded')).toBe('true')
+    expect(rules().textContent).toContain('You decide what your agent did only where')
+    for (const w of mounted.splice(0)) w.unmount()
+
+    await mountAsStudent()
+    expect(shown()).toBe(false)
+    // What the toggle controls is still there, hidden.
+    expect(toggle().getAttribute('aria-controls')).toBe('approvals-rules')
+    expect(toggle().getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('stay as the person left them', async () => {
+    localStorage.setItem('aishie.approvalsRules', 'closed')
+    answer([])
+    await mountAsStudent()
+    expect(shown()).toBe(false)
+    toggle().click()
+    await flushPromises()
+    expect(shown()).toBe(true)
+    expect(localStorage.getItem('aishie.approvalsRules')).toBe('open')
+    for (const w of mounted.splice(0)) w.unmount()
+
+    await mountAsStudent()
+    expect(shown()).toBe(true)
+    toggle().click()
+    await flushPromises()
+    expect(shown()).toBe(false)
+    expect(localStorage.getItem('aishie.approvalsRules')).toBe('closed')
+  })
+
+  it('start closed where the browser keeps nothing, and still open and close', async () => {
+    const refuse = () => {
+      throw new DOMException('denied', 'SecurityError')
+    }
+    vi.stubGlobal('localStorage', { getItem: refuse, setItem: refuse, removeItem: refuse, clear: refuse })
+    answer([])
+    await mountAsStudent()
+    expect(shown()).toBe(false)
+    toggle().click()
+    await flushPromises()
+    expect(shown()).toBe(true)
+    expect(toggle().getAttribute('aria-expanded')).toBe('true')
   })
 })
