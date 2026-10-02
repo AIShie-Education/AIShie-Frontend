@@ -595,10 +595,12 @@ async function submit() {
   /* The light at the avatar's corner is ringed in the note's ground. */
   --agent-avatar-ring: var(--el-color-info-light-9);
 }
-/* The drafter stands a little apart from the words around it, which have no spaces of their own in Chinese. */
 .grade-panel__drafter-name {
-  margin: 0 0.3em;
   vertical-align: middle;
+}
+/* In Chinese the words around the drafter have no spaces of their own: it stands a little apart by itself. */
+:lang(zh) .grade-panel__drafter-name {
+  margin: 0 0.3em;
 }
 /*
  * What an agent drafted and the grader has not changed: a line at its left,
