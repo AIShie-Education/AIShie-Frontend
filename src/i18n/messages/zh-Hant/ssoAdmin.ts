@@ -67,7 +67,9 @@ export default {
     turnOffConfirm: '停用',
     turnedOn: '已啟用 {name}：一分鐘內其按鈕會出現在登入頁。',
     turnedOnNobody: '已啟用 {name}：一分鐘內其按鈕會出現在登入頁。目前沒有帳號連結到它，在連結帳號之前沒有人能經它登入。',
+    turnedOnNotOffered: '已啟用 {name}，但其按鈕不會出現在登入頁（{status}）：原因見清單中的狀態。',
     turnedOff: '已停用 {name}：一分鐘內其按鈕會從登入頁消失。不會解除任何連結。',
+    turnedOffNotOffered: '已停用 {name}。不會解除任何連結。',
     deleteTitle: '刪除 {name}？',
     deleteNone: '它會被移除，其按鈕也會從登入頁消失。目前沒有帳號連結到它。日後以同一 ID 重新建立，也不會自動恢復任何連結。',
     deleteLinked:
@@ -81,6 +83,7 @@ export default {
     disabled: '已停用',
     id_taken: 'ID 已被佔用',
     secret_unavailable: '無法開啟密鑰',
+    issuer_address_not_allowed: '簽發者位址非公開',
   },
   statusWhy: {
     disabled: '已停用：不會在登入頁出現。已連結的帳號不會被解除連結。',
@@ -88,6 +91,8 @@ export default {
       '伺服器營運者設定了一個同一 ID 的提供者，並以它取代此項。此項不會提供；在營運者的提供者使用這個 ID 期間，此處也無法修改或刪除它。',
     secret_unavailable:
       '伺服器的金鑰無法開啟其用戶端密鑰（SECRETS_KEY 被移除，或更換時沒有保留舊金鑰），因此不會提供。請編輯並重新輸入密鑰。',
+    issuer_address_not_allowed:
+      '其簽發者位於本機，或位於私人、鏈路本地或其他非公開位址；除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則伺服器不會連往它，因此不會提供，經它登入也會被拒絕。請編輯以更換簽發者，或聯絡伺服器營運者。',
   },
 
   test: {

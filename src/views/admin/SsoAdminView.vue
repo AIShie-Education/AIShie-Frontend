@@ -43,7 +43,7 @@ import {
   type SsoProvider,
 } from './sso/ssoAdmin'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 // Every column where the providers' card has the 760 px they take; with less, a
 // provider's status, accounts and actions go under its name. By the card's own
 // width (its title's), not the window's: the side bar takes from it.
@@ -101,7 +101,11 @@ async function confirmed(message: string, title: string, confirmButtonText: stri
 async function toggle(p: SsoProvider, on: string | number | boolean) {
   const enabled = on === true
   if (busy.value || !isEditable(p)) return
-  if (!enabled && p.linked_accounts > 0) {
+  // One switched on but not offered (its secret does not open, or its issuer
+  // is not at a public address) has no button on the sign-in page, and nobody
+  // signs in through it now: switching it off takes nothing from anyone.
+  const offered = p.status === 'offered'
+  if (!enabled && offered && p.linked_accounts > 0) {
     const ok = await confirmed(
       t('ssoAdmin.list.turnOff', { n: p.linked_accounts }, p.linked_accounts),
       t('ssoAdmin.list.turnOffTitle', { name: nameOf(p) }),
@@ -115,11 +119,28 @@ async function toggle(p: SsoProvider, on: string | number | boolean) {
   try {
     const out = await setEnabled.run({ provider_id: p.id, enabled, version: p.version }, { notify: false })
     if (!out) return onError(setEnabled.lastError.value)
+    // Switched on is not always offered: one whose issuer is plainly not at
+    // a public address is switched on but not offered while the server is
+    // held to public addresses (issuer_address_not_allowed).
+    const now = out.status === 'executed' ? out.result.status : 'offered'
+    if (enabled && now !== 'offered') {
+      const status = te(`ssoAdmin.status.${now}`) ? t(`ssoAdmin.status.${now}`) : now
+      ElMessage({
+        type: 'warning',
+        message: t('ssoAdmin.list.turnedOnNotOffered', { name: nameOf(p), status }),
+        duration: 8000,
+        showClose: true,
+      })
+      await list.reload()
+      return
+    }
     const words = enabled
       ? p.linked_accounts || p.link_by_email
         ? 'ssoAdmin.list.turnedOn'
         : 'ssoAdmin.list.turnedOnNobody'
-      : 'ssoAdmin.list.turnedOff'
+      : offered
+        ? 'ssoAdmin.list.turnedOff'
+        : 'ssoAdmin.list.turnedOffNotOffered'
     ElMessage({ type: 'success', message: t(words, { name: nameOf(p) }), duration: 6000, showClose: true })
     await list.reload()
   } finally {

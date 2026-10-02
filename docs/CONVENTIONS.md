@@ -46,7 +46,11 @@ markdown-it + DOMPurify.
   the `sso` tools by way of `ssoAdmin.ts` (`listProviders`, `testProvider`, `createProvider`,
   `updateProvider`; the form's `formProblems`, `createArgs`, `updateArgs`, `testArgs`). The operator's
   provider (`source: 'operator'`) is read-only and first, the site's follow by `position` (`ordered`);
-  one whose id the operator's has (`id_taken`) takes no write (`isEditable`). Every write sends the
+  one whose id the operator's has (`id_taken`) takes no write (`isEditable`). A provider's status
+  is worded under `ssoAdmin.status`, and why one is not offered under `ssoAdmin.statusWhy`
+  (`SsoStatus.vue`, refusals in red). Switched on is not always offered: one whose issuer is plainly
+  not at a public address gets `issuer_address_not_allowed` while the server is held to public
+  addresses, and switching it on says so instead of promising its button. Every write sends the
   version read, in its body (Core takes it as `If-Match` too); `version_mismatch` reads the list, or
   the provider, again and says so, the dialog keeping what the administrator changed over what it
   reads. Refusals are worded by reason under `ssoAdmin.refusal` (`ssoErrorText`), and Core's refusal

@@ -68,7 +68,10 @@ export default {
     turnedOn: '{name} is on: its button is on the sign-in page within a minute.',
     turnedOnNobody:
       '{name} is on: its button is on the sign-in page within a minute. No account is linked at it yet, so nobody can sign in through it until one is.',
+    turnedOnNotOffered:
+      '{name} is on, but its button is not on the sign-in page ({status}): its status in the list says why.',
     turnedOff: '{name} is off: its button leaves the sign-in page within a minute. Nobody is unlinked.',
+    turnedOffNotOffered: '{name} is off. Nobody is unlinked.',
     deleteTitle: 'Delete {name}?',
     deleteNone:
       'It is removed, and its button leaves the sign-in page. No account is linked at it. Creating one with the same ID later links nobody back.',
@@ -83,6 +86,7 @@ export default {
     disabled: 'Off',
     id_taken: 'ID taken',
     secret_unavailable: 'Secret can’t be opened',
+    issuer_address_not_allowed: 'Issuer not public',
   },
   statusWhy: {
     disabled: 'Switched off: not on the sign-in page. Nobody linked at it is unlinked.',
@@ -90,6 +94,8 @@ export default {
       'The server’s operator has set a provider with the same ID, which is offered in its place. This one is not offered, and cannot be changed or deleted here while the operator’s has its ID.',
     secret_unavailable:
       'Its client secret does not open with the server’s keys (SECRETS_KEY was removed, or replaced without keeping the old one): it is not offered. Edit it and give the secret again.',
+    issuer_address_not_allowed:
+      'Its issuer is on this machine, or at a private, link-local or other address that is not public, which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS: it is not offered, and a sign-in through it is refused. Edit it to move the issuer, or ask the server’s operator.',
   },
 
   test: {

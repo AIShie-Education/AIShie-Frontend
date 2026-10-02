@@ -5910,7 +5910,7 @@ export interface SsoCreateOut {
    */
   source: string
   /**
-   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again; issuer_address_not_allowed: its issuer is on this machine or at a private, link-local or other address that is not public, which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS
    */
   status: string
   /**
@@ -6012,7 +6012,7 @@ export interface SsoGetOut {
    */
   source: string
   /**
-   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again; issuer_address_not_allowed: its issuer is on this machine or at a private, link-local or other address that is not public, which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS
    */
   status: string
   /**
@@ -6102,7 +6102,7 @@ export interface SsoListOut {
          */
         source: string
         /**
-         * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+         * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again; issuer_address_not_allowed: its issuer is on this machine or at a private, link-local or other address that is not public, which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS
          */
         status: string
         /**
@@ -6129,10 +6129,10 @@ export interface SsoListOut {
   secrets_key_id: null | string
 }
 
-/** sso.set_enabled (write): Switch a site's identity provider on or off. Off, it is not offered on the sign-in page, a sign-in through it is refused, even one already under way, and nobody is unlinked: switched on again, everyone linked signs in as before. One whose client secret does not open with this server's keys is not switched on (secret_unavailable): give the secret again (sso.update). Already so, nothing changes. The operator's provider is refused (set_by_operator). Root and platform administrators only. */
+/** sso.set_enabled (write): Switch a site's identity provider on or off. Off, it is not offered on the sign-in page, a sign-in through it is refused, even one already under way, and nobody is unlinked: switched on again, everyone linked signs in as before. One whose client secret does not open with this server's keys is not switched on (secret_unavailable): give the secret again (sso.update). One whose issuer is plainly not at a public address (localhost, or such an address written out) is switched on but, while the server is held to public addresses, not offered, and a sign-in through it is refused (status issuer_address_not_allowed): the server's operator may set SSO_ALLOW_PRIVATE_ISSUERS, or you may move the issuer with sso.update. Already so, nothing changes. The operator's provider is refused (set_by_operator). Root and platform administrators only. */
 export interface SsoSetEnabledIn {
   /**
-   * true offers it on the sign-in page and lets a sign-in through it; false stops both, at once, and unlinks nobody
+   * true offers it on the sign-in page and lets a sign-in through it, unless its issuer is plainly not at a public address (localhost, or such an address written out) and the server's operator has not set SSO_ALLOW_PRIVATE_ISSUERS (status issuer_address_not_allowed); false stops both, at once, and unlinks nobody
    */
   enabled: boolean
   provider_id: string
@@ -6197,7 +6197,7 @@ export interface SsoSetEnabledOut {
    */
   source: string
   /**
-   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again; issuer_address_not_allowed: its issuer is on this machine or at a private, link-local or other address that is not public, which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS
    */
   status: string
   /**
@@ -6361,7 +6361,7 @@ export interface SsoUpdateOut {
    */
   source: string
   /**
-   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again
+   * offered: a sign-in may go through it; disabled: switched off; id_taken: the operator's provider has its id, and is offered in its place; secret_unavailable: its client secret does not open with this server's keys, so give it again; issuer_address_not_allowed: its issuer is on this machine or at a private, link-local or other address that is not public, which the server reaches only if its operator sets SSO_ALLOW_PRIVATE_ISSUERS
    */
   status: string
   /**

@@ -66,7 +66,9 @@ export default {
     turnOffConfirm: '停用',
     turnedOn: '已启用 {name}：一分钟内其按钮会出现在登录页。',
     turnedOnNobody: '已启用 {name}：一分钟内其按钮会出现在登录页。目前没有账号关联到它，在关联账号之前没有人能通过它登录。',
+    turnedOnNotOffered: '已启用 {name}，但其按钮不会出现在登录页（{status}）：原因见列表中的状态。',
     turnedOff: '已停用 {name}：一分钟内其按钮会从登录页消失。不会解除任何关联。',
+    turnedOffNotOffered: '已停用 {name}。不会解除任何关联。',
     deleteTitle: '删除 {name}？',
     deleteNone: '它会被移除，其按钮也会从登录页消失。目前没有账号关联到它。日后以同一 ID 重新创建，也不会自动恢复任何关联。',
     deleteLinked:
@@ -80,6 +82,7 @@ export default {
     disabled: '已停用',
     id_taken: 'ID 已被占用',
     secret_unavailable: '无法打开密钥',
+    issuer_address_not_allowed: '颁发者地址非公开',
   },
   statusWhy: {
     disabled: '已停用：不会在登录页出现。已关联的账号不会被解除关联。',
@@ -87,6 +90,8 @@ export default {
       '服务器运维者设置了一个同一 ID 的提供者，并以它取代此项。此项不会提供；在运维者的提供者使用这个 ID 期间，此处也无法修改或删除它。',
     secret_unavailable:
       '服务器的密钥无法打开其客户端密钥（SECRETS_KEY 被移除，或更换时没有保留旧密钥），因此不会提供。请编辑并重新输入密钥。',
+    issuer_address_not_allowed:
+      '其颁发者位于本机，或位于私有、链路本地或其他非公开地址；除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则服务器不会连接它，因此不会提供，通过它登录也会被拒绝。请编辑以更换颁发者，或联系服务器运维者。',
   },
 
   test: {
