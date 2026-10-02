@@ -168,7 +168,9 @@ test('an agent, which has no email, is seated by its pasted ID and starts from t
 
   await idField.fill(agentId.toUpperCase())
   await expect(who).toContainText(agent)
-  await expect(who).toContainText('Agent')
+  // Shown as an agent: its avatar, and "AI" after its name.
+  await expect(who.locator('.agent-avatar')).toBeVisible()
+  await expect(who.locator('.ai-badge')).toHaveText('AI')
   await expect(who).not.toContainText('already have a seat')
   await expect(preset).toContainText('Grader (agent)')
 

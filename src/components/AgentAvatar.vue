@@ -8,10 +8,12 @@
 // the initials are drawn by CSS, so that they are not in the text a screen
 // reader reads, a selection copies or a test finds beside the name.
 //
-// 28 px where an agent heads a row (a proposal's proposer, a list of
-// agents, the chat's header); `small` (20 px) inline in a line of text (a
-// name in a table, the chat's author line); `large` (36 px) at the head of
-// an agent's own page or a list of agents with their details.
+// 28 px where an agent heads a row of a list of agents (the chat's list to
+// ask, the course's agents); `small` (20 px) inline in a line of text (the
+// chat's header and author line, a proposal's proposer, a name in a table,
+// the feed's who line, a draft's drafter); `large` (36 px) heading an entry
+// of a list of agents with their details (My agents, the administration's
+// card of an agent). An agent's own page is headed by its name alone.
 import { computed } from 'vue'
 import { agentInitials } from '@/utils/initials'
 import AgentSeatIcon from './AgentSeatIcon.vue'

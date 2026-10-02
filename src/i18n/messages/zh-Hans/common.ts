@@ -85,10 +85,13 @@ export default {
     askableHelp: '目前有程序在运行它：提问会得到回复。',
     paused: '暂停',
     pausedSince: '最后连接：{time}。目前似乎没有程序在运行它，回复可能需要一段时间。',
+    // Whose agent it is, then why it can be asked or not (AskableText's tooltip, in the chat's header).
+    whose: '{whose}。{why}',
   },
   // An agent, and whose it is (AgentBadge).
   agent: {
-    // The "AI" after an agent's name (AiBadge): its tooltip.
+    // The "AI" after an agent's name (AiBadge), the same in every language; and its tooltip.
+    ai: 'AI',
     aiHint: 'AI 智能体，不是真人',
     yours: '你的智能体',
     ownersAgent: '{owner} 的智能体',

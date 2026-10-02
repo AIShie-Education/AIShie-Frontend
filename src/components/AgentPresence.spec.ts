@@ -87,6 +87,8 @@ describe('AgentBadge', () => {
 
   it('says a delegate never holds more than its owner', () => {
     const w = mount(AgentBadge, { props: { ownerName: 'Yuki' }, global })
-    expect(w.find('.tip').attributes('data-tip')).toContain('never with more than their seat')
+    expect(w.find('.agent-badge__owner').element.closest('.tip')?.getAttribute('data-tip')).toContain(
+      'never with more than their seat',
+    )
   })
 })

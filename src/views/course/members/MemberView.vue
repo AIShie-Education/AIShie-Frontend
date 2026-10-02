@@ -17,13 +17,14 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
-import AiBadge from '@/components/AiBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PermEditor from '@/components/PermEditor.vue'
+import RoleTag from '@/components/RoleTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { ceilingsOf } from '@/utils/ceilings'
@@ -388,7 +389,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         <template v-if="m">
           <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" size="default" />
           <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" :site-chat="m.site_chat" size="default" />
-          <StatusTag vocab="role" :value="m.role" size="default" />
+          <RoleTag :member="m" size="default" />
           <StatusTag vocab="memberStatus" :value="m.status" size="default" />
           <el-tag v-if="expired" type="info">{{ t('members.expired') }}</el-tag>
           <el-tag v-if="isSelf" type="primary" effect="plain">{{ t('common.labels.you') }}</el-tag>
@@ -521,8 +522,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               <span class="member__actor">
                 <AgentAvatar v-if="m.kind === 'agent'" :name="m.display_name" size="small" />
                 <el-icon v-else><User /></el-icon>
-                <span>{{ m.display_name }}</span>
-                <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" />
+                <AgentName v-if="m.kind === 'agent'" :name="m.display_name" />
+                <span v-else>{{ m.display_name }}</span>
+                <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" no-ai />
                 <StatusTag v-else vocab="actorKind" :value="m.kind" />
                 <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" />
               </span>
@@ -548,7 +550,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.role')">
               <span class="member__role">
-                <StatusTag vocab="role" :value="m.role" />
+                <RoleTag :member="m" />
                 <el-tooltip v-if="roleOffered" :content="disabledReason" :disabled="!disabledReason" placement="top">
                   <span>
                     <el-button link type="primary" size="small" :disabled="!manageable" @click="roleOpen = true">
@@ -639,9 +641,8 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             <li v-for="d in delegates" :key="d.id">
               <AgentAvatar :name="d.display_name" size="small" />
               <router-link :to="{ name: 'course-member', params: { courseId, memberId: d.id } }">
-                {{ d.display_name }}
+                <AgentName :name="d.display_name" />
               </router-link>
-              <AiBadge />
               <span v-if="presetName(d.preset_id)" class="app-muted">{{ presetName(d.preset_id) }}</span>
               <StatusTag v-if="d.status !== 'active'" vocab="memberStatus" :value="d.status" />
             </li>

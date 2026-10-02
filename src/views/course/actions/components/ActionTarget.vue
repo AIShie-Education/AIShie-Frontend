@@ -10,6 +10,7 @@ import { componentLabel } from '@/views/course/scheme/components/schemeModel'
 import { useCourseStore } from '@/stores/course'
 import { presetLabel } from '@/views/course/members/components/seat'
 import { seatPurpose } from '@/utils/agents'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -241,6 +242,7 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       <span v-if="permChanges.length > 3" class="action-target__muted">+{{ permChanges.length - 3 }}</span>
     </template>
     <template v-else-if="type === 'member.add_delegate'">
+      <AgentAvatar v-if="agentName" :name="agentName" size="small" />
       <MaybeLink v-if="seatedId" :to="link ? routeFor(courseId, 'member_id', seatedId) : null" class="action-target__part">
         <MemberName :id="seatedId" />
       </MaybeLink>
@@ -318,7 +320,7 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       </MaybeLink>
       <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
       <span v-if="str(p.respondent_member_id)" class="action-target__part">
-        → <MemberName :id="str(p.respondent_member_id)" />
+        → <MemberName :id="str(p.respondent_member_id)" show-kind />
       </span>
       <span v-if="quote && excerpt(p.body)" class="action-target__quote">“{{ excerpt(p.body) }}”</span>
       <span v-else-if="quote && type === 'conversation.close' && str(p.reason)" class="action-target__quote">

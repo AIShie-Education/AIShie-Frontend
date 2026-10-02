@@ -54,7 +54,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 import AgentAvatar from '@/components/AgentAvatar.vue'
-import AgentBadge from '@/components/AgentBadge.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNow } from '@/composables/useNow'
@@ -239,6 +239,13 @@ const other = computed<Party | null>(() => {
     answerLevel: r.answer_level,
     seatStatus: r.seat_status,
   }
+})
+/** Whose agent it is, for the caller: said on hover, as the header has no room for it. */
+const whose = computed(() => {
+  const o = other.value
+  if (!o || o.kind !== 'agent') return undefined
+  if (o.mine) return t('common.agent.yours')
+  return o.ownerName ? t('common.agent.ownersAgent', { owner: o.ownerName }) : undefined
 })
 /** What the agent's answers go through, when not straight out. */
 const answerLevel = computed(() => {
@@ -805,7 +812,11 @@ const closedLine = computed(() => {
       <span>{{ t('chat.attach.dropHere') }}</span>
     </div>
     <header class="chat-pane__head">
-      <!-- One row: the agent (its avatar, name and "AI"), whether it can be asked now, and a closed conversation's state; its title on hover. -->
+      <!--
+        One row: the agent (its avatar, name and "AI"), whether it can be asked now, and a closed
+        conversation's state; its title on hover. Only the course and the name give way to a narrow
+        panel: the "AI" and whether it can be asked stay whole. Whose agent it is is said on hover.
+      -->
       <div class="chat-pane__name-row" :title="view?.title || undefined">
         <AgentAvatar v-if="other?.kind === 'agent' && role !== 'overseer'" :name="other.name" size="small" />
         <span class="chat-pane__name">
@@ -817,7 +828,7 @@ const closedLine = computed(() => {
           </template>
           <template v-else>{{ other?.name ?? '' }}</template>
         </span>
-        <AgentBadge v-if="other && other.kind === 'agent'" :kind="other.kind" :mine="other.mine" />
+        <AiBadge v-if="other?.kind === 'agent'" class="chat-pane__ai" />
         <!-- Not said of an agent nobody can ask here now: whether something runs it tells nothing of that. -->
         <span v-if="other?.kind === 'agent' && !elsewhere" class="chat-pane__presence"
           ><AskableText
@@ -828,6 +839,7 @@ const closedLine = computed(() => {
               seat_status: other.seatStatus,
             }"
             :name="other.name"
+            :whose="whose"
         /></span>
         <StatusTag v-if="status?.state === 'closed'" vocab="conversationState" :value="status.state" />
       </div>
@@ -1071,13 +1083,15 @@ const closedLine = computed(() => {
   color: var(--app-indigo);
 }
 .chat-pane__name {
-  min-width: 0;
+  /* However narrow the panel, the name keeps room to be read. */
+  min-width: 4em;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 14px;
   font-weight: 600;
 }
-/* Whether anything runs it stays whole; a long name gives way first. */
+/* The "AI" and whether it can be asked stay whole; a long name gives way first. */
+.chat-pane__ai,
 .chat-pane__presence {
   flex-shrink: 0;
 }

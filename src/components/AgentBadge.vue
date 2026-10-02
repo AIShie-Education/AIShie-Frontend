@@ -20,6 +20,8 @@ const props = defineProps<{
   size?: 'small' | 'default' | 'large'
   /** The "AI" is said beside the name already. */
   noAi?: boolean
+  /** Inside a control: takes no focus, and says why in a hidden element of this id. */
+  hintId?: string
 }>()
 const { t } = useI18n()
 
@@ -40,8 +42,9 @@ const hint = computed(() => {
   <span v-if="shown && (!noAi || owner)" class="agent-badge" :class="`is-${size ?? 'small'}`">
     <AiBadge v-if="!noAi" />
     <el-tooltip v-if="owner" :content="hint" placement="top">
-      <span class="agent-badge__owner" tabindex="0">{{ owner }}</span>
+      <span class="agent-badge__owner" :tabindex="hintId ? undefined : 0">{{ owner }}</span>
     </el-tooltip>
+    <span v-if="hintId && hint" :id="hintId" hidden>{{ hint }}</span>
   </span>
 </template>
 

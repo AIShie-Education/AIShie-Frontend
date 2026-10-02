@@ -85,10 +85,13 @@ export default {
     askableHelp: 'Something runs it now: a question gets an answer.',
     paused: 'Paused',
     pausedSince: 'Last connected {time}: nothing seems to be running it now, so an answer may take a while.',
+    // Whose agent it is, then why it can be asked or not (AskableText's tooltip, in the chat's header).
+    whose: '{whose}. {why}',
   },
   // An agent, and whose it is (AgentBadge).
   agent: {
-    // The "AI" after an agent's name (AiBadge): its tooltip.
+    // The "AI" after an agent's name (AiBadge), the same in every language; and its tooltip.
+    ai: 'AI',
     aiHint: 'An AI agent, not a person',
     yours: 'Your agent',
     ownersAgent: '{owner}’s agent',

@@ -28,3 +28,23 @@ export function agentInitials(name: string | null | undefined): string {
   if (latin.length >= 2) return (letters(latin[0])[0] + letters(latin[1])[0]).toLocaleUpperCase()
   return letters(latin[0]).slice(0, 2).join('').toLocaleUpperCase()
 }
+
+/**
+ * A name split before its last word, so that what follows the name (its
+ * "AI", AgentName) can be kept on the line of that word: the head may wrap,
+ * the end never parts from what follows. The last word of a name in a
+ * Latin script; the last character of one in Chinese, Japanese or Korean,
+ * which breaks between any two characters.
+ */
+export function splitNameEnd(name: string | null | undefined): { head: string; end: string } {
+  const s = (name ?? '').trimEnd()
+  const at = s.search(/\S+$/u)
+  if (at < 0) return { head: '', end: s }
+  const word = s.slice(at)
+  if (!WIDE.test(word)) return { head: s.slice(0, at), end: word }
+  const chars = Array.from(word)
+  const last = chars[chars.length - 1]
+  // Closing punctuation after the last wide character stays with it.
+  const k = WIDE.test(last) ? 1 : Math.min(2, chars.length)
+  return { head: s.slice(0, at) + chars.slice(0, -k).join(''), end: chars.slice(-k).join('') }
+}

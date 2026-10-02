@@ -11,7 +11,7 @@ import { useI18n } from 'vue-i18n'
 import type { Respondent } from '@/api/types'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
-import AiBadge from '@/components/AiBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -48,21 +48,33 @@ defineExpose({ refresh })
   >
     <ul class="resp-list">
       <li v-for="r in list.items.value" :key="r.member_id">
-        <button type="button" class="resp-row" @click="emit('pick', r)">
+        <!--
+          The row is the one control: what it holds takes no focus of its own, and what their
+          tooltips say is the row's description (hidden elements of these ids).
+        -->
+        <button
+          type="button"
+          class="resp-row"
+          :aria-describedby="`resp-${r.member_id}-ask resp-${r.member_id}-whose`"
+          @click="emit('pick', r)"
+        >
           <AgentAvatar :name="r.display_name" class="resp-row__avatar" />
           <span class="resp-row__main">
             <span class="resp-row__line">
-              <!-- The "AI" stays with the name when the line wraps. -->
-              <span class="resp-row__who"
-                ><span class="resp-row__name">{{ r.display_name }}</span
-                ><AiBadge class="resp-row__ai"
-              /></span>
-              <AgentBadge :kind="r.kind" :owner-name="r.owner_name" :mine="r.is_my_delegate" no-ai />
+              <!-- The "AI" stays with the name's last word when the line wraps. -->
+              <AgentName :name="r.display_name" class="resp-row__name" />
+              <AgentBadge
+                :kind="r.kind"
+                :owner-name="r.owner_name"
+                :mine="r.is_my_delegate"
+                no-ai
+                :hint-id="`resp-${r.member_id}-whose`"
+              />
               <StatusTag vocab="seatPurpose" :value="agentPurpose(r)" />
               <HostingTag :hosting="r.hosting" />
             </span>
             <span class="resp-row__line resp-row__facts">
-              <AskableText :who="r" :name="r.display_name" />
+              <AskableText :who="r" :name="r.display_name" :hint-id="`resp-${r.member_id}-ask`" />
               <StatusTag v-if="r.answer_level !== 'autonomous'" vocab="answerLevel" :value="r.answer_level" />
             </span>
             <span v-if="!r.is_my_delegate" class="resp-row__note">{{ t('chat.respondents.sharedHint') }}</span>
@@ -128,15 +140,9 @@ defineExpose({ refresh })
   gap: 6px;
   min-width: 0;
 }
-.resp-row__who {
-  min-width: 0;
-}
 .resp-row__name {
   font-weight: 600;
   overflow-wrap: anywhere;
-}
-.resp-row__ai {
-  margin-left: 6px;
 }
 .resp-row__note {
   font-size: 12px;

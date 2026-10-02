@@ -191,8 +191,9 @@ async function reactivate() {
     >
       <template #tags>
         <template v-if="actor">
-          <StatusTag v-if="!actor.owner_actor_id" vocab="actorKind" :value="actor.kind" size="default" />
-          <AgentBadge v-else :owner-name="actor.owner_name ?? undefined" size="default" />
+          <!-- An agent, owned or not, is marked "AI" (and whose it is); a person or the system by kind. -->
+          <AgentBadge v-if="actor.kind === 'agent'" :owner-name="actor.owner_name ?? undefined" size="default" />
+          <StatusTag v-else vocab="actorKind" :value="actor.kind" size="default" />
           <HostingTag v-if="actor.kind === 'agent'" :hosting="actor.hosting" size="default" />
           <StatusTag vocab="actorStatus" :value="actor.status" size="default" />
           <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" size="default" />

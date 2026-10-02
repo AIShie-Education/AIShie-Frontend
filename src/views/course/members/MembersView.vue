@@ -15,11 +15,13 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RoleTag from '@/components/RoleTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AddMemberDialog from './components/AddMemberDialog.vue'
@@ -266,14 +268,20 @@ function rowClass({ row }: { row: MemberSummary }) {
           >
             <template #default="{ row }">
               <div class="members__name">
-                <AgentAvatar v-if="row.kind === 'agent'" :name="row.display_name" size="small" />
-                <el-icon v-else class="members__kind-icon"><User /></el-icon>
-                <span class="members__name-text">{{ row.display_name }}</span>
+                <!-- The avatar, the name and its "AI" never part: the name is cut short instead. -->
+                <span v-if="row.kind === 'agent'" class="members__agent">
+                  <AgentAvatar :name="row.display_name" size="small" />
+                  <AgentName :name="row.display_name" ellipsis class="members__name-text" />
+                </span>
+                <template v-else>
+                  <el-icon class="members__kind-icon"><User /></el-icon>
+                  <span class="members__name-text">{{ row.display_name }}</span>
+                </template>
                 <span v-if="row.id === course.myMemberId" class="members__me">({{ t('common.labels.you') }})</span>
                 <el-tooltip v-if="row.login_id" :content="t('members.loginId')" placement="top">
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
                 </el-tooltip>
-                <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" />
+                <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" no-ai />
                 <HostingTag v-if="row.kind === 'agent'" :hosting="row.hosting" :site-chat="row.site_chat" />
                 <el-tooltip v-if="row.join_link_id" :content="t('join.viaHint')" placement="top">
                   <el-tag size="small" type="info" effect="plain" class="members__via" tabindex="0">
@@ -282,7 +290,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                 </el-tooltip>
               </div>
               <div v-if="narrow" class="members__stack">
-                <StatusTag vocab="role" :value="row.role" />
+                <RoleTag :member="row" />
                 <StatusTag v-if="row.status !== 'active'" vocab="memberStatus" :value="row.status" />
                 <el-tag v-if="row.status !== 'removed' && isExpired(row.expires_at)" size="small" type="info">
                   {{ t('members.expired') }}
@@ -291,7 +299,7 @@ function rowClass({ row }: { row: MemberSummary }) {
             </template>
           </el-table-column>
           <el-table-column v-if="!narrow" prop="role" :label="t('members.columns.role')" min-width="150" sortable>
-            <template #default="{ row }"><StatusTag vocab="role" :value="row.role" /></template>
+            <template #default="{ row }"><RoleTag :member="row" /></template>
           </el-table-column>
           <el-table-column v-if="!narrow" prop="status" :label="t('members.columns.status')" min-width="100">
             <template #default="{ row }">
@@ -389,6 +397,13 @@ function rowClass({ row }: { row: MemberSummary }) {
   flex-wrap: wrap;
   gap: 2px 6px;
   min-width: 0;
+}
+.members__agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 .members__name-text {
   font-weight: 500;

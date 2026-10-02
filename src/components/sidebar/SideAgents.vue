@@ -14,6 +14,7 @@ import { read } from '@/api/http'
 import type { AgentSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { usePolling } from '@/composables/usePolling'
+import AgentName from '@/components/AgentName.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import CreateAgentDialog from '@/views/account/components/agents/CreateAgentDialog.vue'
 import {
@@ -95,7 +96,7 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
         :class="{ 'is-active': shownAgent === a.actor_id }"
         :aria-current="shownAgent === a.actor_id ? 'page' : undefined"
       >
-        <span class="side-agent__name">{{ a.display_name }}</span>
+        <AgentName :name="a.display_name" ellipsis class="side-agent__name" />
         <span class="side-agent__meta">
           <PresenceText :value="a.last_seen_at" />
           <el-tag

@@ -534,26 +534,40 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
     (radius 8 at 28 px; a person is always a circle) on `--app-indigo-tint`, its initials in
     `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or Korean
     character), with the brand's light at its top right corner. 28 px (`default`) where it heads a row
-    (a list of agents, the chat's list and header), 20 px (`small`) inline in a line of text (a name in a
-    table, a proposal's proposer, the chat's author line, the feed's who line), 36 px (`large`) heading a
-    list of agents with their details. It is decorative (`aria-hidden`); its initials are drawn by CSS.
+    of a list of agents (the chat's list to ask, the course's agents), 20 px (`small`) inline in a line of
+    text (the chat's header and author line, a proposal's proposer or target, a name in a table, the
+    feed's who line, a draft's drafter), 36 px (`large`) heading an entry of a list of agents with their
+    details (My agents, the administration's card). It is decorative (`aria-hidden`); its initials are
+    drawn by CSS.
   - Agents as a kind (a view of the activity bar, a course's tab, a kind to choose, a note about
     agents) take `<AgentSeatIcon />`, the person-beside-a-seat line icon of aishie.app (stroke 1.8,
     round caps; in an `<el-icon>`, or by component where icons are listed). Never the chip (`Cpu`).
-  - After an agent's name, wherever the name is shown, `<AiBadge />`: "AI" in every language, 11 px, on
-    the indigo tint, radius 4. `<AgentBadge :kind :owner-name :mine />` beside an actor's or member's
-    name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an outline, never in the
-    links' indigo; nothing for a person; `no-ai` where the name carries the "AI" already.
-    `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI".
+  - After an agent's name, wherever the name is shown, `<AiBadge />`: "AI" in every language
+    (`common.agent.ai`), 11 px, on the indigo tint, radius 4, its words on hover; it takes no focus.
+    It never parts from the name: `<AgentName :name />` keeps the name's last word (in Chinese, its
+    last character) on the line of the "AI" when the name wraps, and `<AgentName :name ellipsis />` cuts
+    the name short on one line and keeps the "AI" whole. `<AgentBadge :kind :owner-name :mine />` beside
+    an actor's or member's name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an
+    outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`.
+    `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI". Inside a
+    control (a row that is a button), `AgentBadge` and `AskableText` take `hint-id`: they take no focus,
+    and what their tooltips say goes in hidden elements of those ids, for the control's
+    `aria-describedby`.
+  - An agent seated as someone's delegate is in Core's role `assistant`, a person's word: `<RoleTag
+    :member />` shows which kind of agent it is (course agent, personal agent) in its place.
   - An agent is never "online". To those who ask it (the chat's header and list of agents),
     `<AskableText :who :name />` says "Can be asked" or "Paused" (可提問／暫停, 可提问／暂停) from
-    `availabilityOf`, and why on hover. To its owner and those who manage it,
+    `availabilityOf`, and why on hover; in the chat's header, after whose agent it is (`whose`), which
+    the header has no room to show. To its owner and those who manage it,
     `<PresenceText :value="last_seen_at" />` speaks of a program connecting (never connected /
     connected within two minutes / last connected). Both in plain ink, with no dot of colour.
   - What an agent made says so where it is shown: a draft grade names its drafter, and what its draft
-    filled into a form carries a 3 px `--app-indigo-line` at its left until it is changed
-    (`GradePanel`); an event of the action log names who proposed and who decided (`actors.ts` in the
-    feed, from `action.get`, as Core's events carry no actor).
+    filled into a form carries a 3 px `--app-indigo` line at its left (the indigo line is under 3:1)
+    until it is changed, and says so in its label to a screen reader (`GradePanel`). Each row of the
+    feed starts with who acted, for those who decide actions: who did it, or who proposed it and who
+    decided it, read from the action it was done under (`action_id`, or the action a log event is
+    about) with `action.get`, which nobody else may read (`actors.ts`); the *Agents* chip keeps what
+    agents did.
 
   `seatPurpose()` (`@/utils/agents`) tells a course agent from a personal agent by the seat's
   `answers_course`; `delegateArgsFor()` gives `member.add_delegate` both the preset and
@@ -654,7 +668,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   who decide actions read each agent's conversations from the course's *Agents* page (its
   conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
   (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent (its avatar, name
-  and "AI"), whether it can be asked now (`AskableText`) and, only once it is closed, its state, and a ⋯ menu for who can
+  and "AI"; only the course and the name give way to a narrow panel), whether it can be asked now
+  (`AskableText`) and, only once it is closed, its state, and a ⋯ menu for who can
   read it, how its answers arrive, and to download it as a PDF, every message read back to the first
   (nothing ends a conversation from the chat); the messages; and
   the composer (`ChatComposer.vue`), one bordered box whose send button, small and icon-only, sits

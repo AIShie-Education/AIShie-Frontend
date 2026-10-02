@@ -605,7 +605,7 @@ function noteSource(): PrintRequest {
                   </el-button>
                   <span class="doc-content__by">
                     <template v-if="showAuthor">
-                      <MemberName :id="shown.author_member_id" />
+                      <MemberName :id="shown.author_member_id" show-kind />
                       <span class="doc-content__dot">·</span>
                     </template>
                     <TimeText :value="shown.created_at" />

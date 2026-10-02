@@ -676,6 +676,31 @@ describe('ChatPane', () => {
     expect(w.find('.chat-msg.is-retracted').text()).toContain('Off topic')
   })
 
+  it('keeps the “AI” and whether it can be asked whole in its header, and says whose agent it is on hover', async () => {
+    seat('student')
+    const respondent: Respondent = {
+      member_id: 'mine',
+      display_name: 'Introduction to Programming weekly revision and practice tutor',
+      kind: 'agent',
+      role: 'assistant',
+      is_my_delegate: true,
+      answers_course: false,
+      hosting: 'runtime',
+      answer_level: 'autonomous',
+      last_seen_at: new Date().toISOString(),
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent }, global })
+    await flushPromises()
+    const row = w.find('.chat-pane__name-row')
+    // In this order, each a part of the row of its own: only the name may be cut short.
+    const parts = row.findAll(':scope > *').map((e) => e.classes()[0])
+    expect(parts).toEqual(['agent-avatar', 'chat-pane__name', 'ai-badge', 'chat-pane__presence'])
+    // Whose agent it is is not a chip to be cut short too: it is said with whether it can be asked.
+    expect(row.find('.agent-badge').exists()).toBe(false)
+    expect(row.text()).not.toContain('Your agent')
+    expect(row.find('.chat-pane__presence .tooltip-stub').attributes('data-tip')).toMatch(/^Your agent\. Something runs it now/)
+  })
+
   it('opens a new conversation with its first message, titled by its first line, and says quietly that nothing runs the agent', async () => {
     seat('student')
     writeAnswer = () => executed({ conversation_id: 'c2', message_id: 'm1' })
