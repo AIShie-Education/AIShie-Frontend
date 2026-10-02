@@ -475,6 +475,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   about going with the way to the other. A new tab goes in `COURSE_TABS`, in the order most used,
   and the target stays: on a laptop's screen (1280 × 800) a course page's own content starts within
   200 px of the window's top.
+- **Navigation's icons are outlined, never filled**: the activity bar, the side bar, a course's tabs
+  and More's menu, the grades' tabs. A filled glyph among outlined ones reads as chosen, or as news.
+  Element Plus's `*Filled` icons are refused in navigation's files by the lint rule
+  (`no-restricted-imports` and the named-icon check in `eslint.config.js`, `npm run lint`), so
+  navigation imports its icons from `@element-plus/icons-vue` rather than naming them; one written
+  by name in a template is not seen by it, so do not.
+- A page inside a course whose route does not say which tab it belongs to calls
+  `useCourseTab(() => routeName)` (`@/composables/useCourseTab`) with the route whose tab to highlight
+  (a document that is an assignment's instructions → `'course-assignments'`). A page that is another
+  page for some callers names itself in the header and the browser's tab with
+  `usePageTitle(routeName, () => key)` (`@/router/title`): the approval queue, for someone who decides
+  nothing there, is their agents' proposals.
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
