@@ -289,6 +289,24 @@ html.dark .el-card {
   --el-checkbox-height: var(--el-component-size);
 }
 
+/* On a touch screen, controls a finger can hit (44px; 40px small, so that a
+   small icon button is no longer 28; 48px large), and fields in 16px, below
+   which iOS zooms the page into the field it focuses and leaves it zoomed.
+   Zooming stays the reader's: the viewport never sets maximum-scale. */
+@media (pointer: coarse) {
+  :root {
+    --el-component-size: 44px;
+    --el-component-size-small: 40px;
+    --el-component-size-large: 48px;
+  }
+  .el-input__inner,
+  .el-textarea__inner,
+  .el-select .el-select__wrapper,
+  .el-select-v2 .el-select__wrapper {
+    font-size: 16px;
+  }
+}
+
 /* Buttons, by rank (docs/CONVENTIONS.md, "Buttons"), the same on every page:
    - primary: solid indigo, at most one to a view or a dialog: approve,
      publish, save. It darkens on hover. A plain primary one is the ghost,
