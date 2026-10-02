@@ -9,9 +9,9 @@ about who may do what.
 ## Stack
 
 Vue 3 (`<script setup lang="ts">`, Composition API only), Vite, TypeScript (strict), Vue Router,
-Pinia (setup stores), vue-i18n (composition mode), Element Plus (registered globally, icons
-registered globally by their component names: `<el-icon><Edit /></el-icon>`), dayjs,
-markdown-it + DOMPurify.
+Pinia (setup stores), vue-i18n (composition mode; English, Traditional and Simplified Chinese: see
+[Text](#text)), Element Plus (registered globally, icons registered globally by their component
+names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
 
 ## Talking to Core
 
@@ -732,9 +732,24 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 ## Text
 
 - No user-visible string in code. Every view uses `const { t } = useI18n()` and keys in its own
-  namespace: `src/i18n/messages/en/<ns>.ts` and `src/i18n/messages/zh-Hant/<ns>.ts`, both exporting
-  the same key tree (the file name is the namespace: `t('members.add.title')`). Traditional Chinese
-  is written for Hong Kong / Taiwan readers (繁體中文), not machine-literal.
+  namespace, in each of the three languages the app offers (`LOCALES` in `src/i18n/index.ts`):
+  `src/i18n/messages/en/<ns>.ts`, `src/i18n/messages/zh-Hant/<ns>.ts` and
+  `src/i18n/messages/zh-Hans/<ns>.ts`, all exporting the same key tree (the file name is the
+  namespace: `t('members.add.title')`); `npm run check:i18n` fails on a key or a placeholder one of
+  them lacks. Traditional Chinese is written for Hong Kong / Taiwan readers (繁體中文), not
+  machine-literal. Simplified Chinese (简体中文) is written in the Mainland's own wording, not
+  converted from the Traditional character by character: 保存, 创建, 搜索, 智能体, where the
+  Traditional has 儲存, 建立, 搜尋, 代理.
+- Which language a page is in is chosen by the reader (the account menu's *Language*, or the
+  select on the sign-in, `/welcome`, `/join/<token>` and change-password pages), remembered in this
+  browser (`aishie.locale`), and at first is the browser's (`localeForTag`: `zh-Hant` or `zh-Hans`
+  as its tag's script says, or else by its region, Traditional for TW, HK and MO and Simplified
+  otherwise; English for anything not Chinese). The language is `useUiStore().locale`: the menu and
+  the selects all set it, and code that changes the language sets it too, never calling `setLocale`
+  itself. The store's watcher calls `setLocale`, which switches vue-i18n, dayjs, Intl's numbers,
+  `<html lang>` and the typefaces it chooses (`styles/tokens.css`, `styles/fonts.ts`) and saves
+  `aishie.locale`. Element Plus follows the same `ui.locale` through `App.vue`'s
+  `<el-config-provider>` (`elementLocale` in `i18n/elementPlus.ts`), as does the menu's check mark.
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
