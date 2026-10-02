@@ -194,9 +194,11 @@ markdown-it + DOMPurify.
   and two standard fonts all files of the build under `/assets/`: `pdfjs.ts`), pages one under the
   other drawn as they come near the screen, page by page, zoom and fit to width (`pdfZoom.ts`), a
   pinch of two fingers or a touchpad's zooming the pages and not the screen, the text selectable,
-  and one page control, none for a page alone; on a phone (560 px or less of the view's own width,
-  or the short window) the page control and the zoom are one compact bar at the bottom, within a
-  thumb's reach, fitted to the width saying so rather than its per cent;
+  and one page control, none for a page alone; on a phone (640 px or less of the view's own width,
+  or 400 px or less of its own height) the page control and the zoom are one compact bar at the
+  bottom, within a thumb's reach, fitted to the width saying so rather than its per cent (zoomed by
+  hand, its per cent again), and the viewer's previous and next file two arrows by its close button,
+  their position said only to a screen reader, so that one count is on the screen;
   an image as an `<img>` (an SVG too, never inline), zoomed or fitted; Markdown by `MarkdownView`,
   code highlighted as fenced code, plain text as it is, CSV as a table of its first thousand rows
   (`parseCsv`), text read as UTF-8 or the legacy encoding of the reader's script (`decodeText`);

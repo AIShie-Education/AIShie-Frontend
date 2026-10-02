@@ -526,7 +526,7 @@ function onClosed() {
 <template>
   <el-dialog
     :model-value="state.open"
-    :class="[dialogClass, { 'is-phone': phone }]"
+    :class="[dialogClass, { 'is-phone': phone, 'is-full': phone || short }]"
     :fullscreen="phone || short"
     width="min(1200px, calc(100vw - 48px))"
     top="3vh"
@@ -958,6 +958,30 @@ function onClosed() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/*
+ * The whole screen (a phone, upright or on its side): the previous and the
+ * next file two arrows by the close button, their position said only to a
+ * screen reader, so that the one count on the screen is the pages' (#82).
+ */
+.file-viewer.is-full .file-viewer__position {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.file-viewer.is-full .file-viewer__nav {
+  gap: 2px;
+}
+.file-viewer.is-full .file-viewer__nav .el-button {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
 /* A phone: the whole screen, the name and close on top, the rest of the head under them. */
 .file-viewer.is-phone .el-dialog__header {
   padding: 10px 8px 8px 12px;
@@ -973,13 +997,7 @@ function onClosed() {
   flex: 1 1 0;
 }
 .file-viewer.is-phone .file-viewer__nav {
-  order: 3;
-  width: 100%;
-  justify-content: space-between;
   padding: 0;
-}
-.file-viewer.is-phone .file-viewer__close {
-  order: 2;
 }
 .file-viewer.is-phone .file-viewer__paper {
   padding: 18px 16px;

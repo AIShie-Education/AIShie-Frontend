@@ -14,14 +14,16 @@
 // Ctrl held, too), about the point between them, and the browser does not
 // zoom the screen as well; a pinch that ends near the width fits it again.
 //
-// Where the view is narrow (a phone, 560 px or less of its own width) or the
-// window short (a phone on its side), the bar is a compact one at the bottom,
-// within a thumb's reach, over the pages, which scroll clear of it, and the
-// zoom is not said in per cent: fitted to the width, it says that instead.
+// Where the view is narrow (a phone, 640 px or less of its own width, as the
+// viewer is the whole screen up to a window that wide) or short (a phone on
+// its side, 400 px or less of its own height), the bar is a compact one at
+// the bottom, within a thumb's reach, over the pages, which scroll clear of
+// it; fitted to the width it says so rather than its per cent, which it says
+// again once zoomed by hand. Narrower still (360 px or less), its buttons are
+// a little smaller, and the count of pages gives way before they leave it.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
-import { useMediaQuery } from '@/composables/useMediaQuery'
 import { openPdf, TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from './pdfjs'
 import { clampZoom, CSS_UNITS, fitWidthOf, nearFit, pinchZoom, wheelZoom, zoomStep } from './pdfZoom'
 
@@ -44,9 +46,13 @@ const GUTTER = 16
 
 const root = ref<HTMLElement | null>(null)
 const scroller = ref<HTMLElement | null>(null)
-/** A phone's view, upright (its own width) or on its side (the window's height): the compact bar at the bottom. */
-const narrow = useContainerNarrow(root, 560)
-const short = useMediaQuery('(max-height: 480px)')
+/** A phone's view, upright (its own width) or on its side (its own height): the compact bar at the bottom. */
+const narrow = useContainerNarrow(root, 640)
+/** A small phone's (320 or 360 px): the compact bar's buttons a little smaller, to keep within it. */
+const tight = useContainerNarrow(root, 360)
+/** The view's own height, measured once it is laid out; null until then. */
+const height = ref<number | null>(null)
+const short = computed(() => height.value !== null && height.value <= 400)
 const compact = computed(() => narrow.value || short.value)
 const doc = shallowRef<PDFDocumentProxy | null>(null)
 const pageCount = ref(0)
@@ -79,6 +85,7 @@ const drawn = new Map<number, Drawn>()
 const near = new Set<number>()
 let observer: IntersectionObserver | null = null
 let resizer: ResizeObserver | null = null
+let sizer: ResizeObserver | null = null
 
 const slotOf = (page: number) => scroller.value?.querySelector<HTMLElement>(`.pdf-page[data-page="${page}"]`) ?? null
 
@@ -255,10 +262,15 @@ function pageAt(mark: number): number {
   }
   return found + 1
 }
-/** The page at the top third of the screen. */
+/**
+ * The page at the top third of what is seen of the pages: on a phone, above
+ * the bar laid over their foot (the room they leave it). At the top, the first.
+ */
 function pageInView(): number {
   const el = scroller.value
-  return el ? pageAt(el.scrollTop + el.clientHeight / 3) : 1
+  if (!el || el.scrollTop < 1) return 1
+  const under = compact.value ? parseFloat(getComputedStyle(el).paddingBottom) || 0 : 0
+  return pageAt(el.scrollTop + Math.max(0, el.clientHeight - under) / 3)
 }
 let tracking = 0
 /**
@@ -421,6 +433,15 @@ function onWheel(e: WheelEvent) {
 // --- Opening it ------------------------------------------------------------------------------
 
 onMounted(async () => {
+  const box = root.value
+  if (box && typeof ResizeObserver !== 'undefined') {
+    // Its height as laid out (a dialog's coming in moves it, not its size).
+    height.value = box.offsetHeight || null
+    sizer = new ResizeObserver((entries) => {
+      height.value = entries.at(-1)!.contentRect.height || null
+    })
+    sizer.observe(box)
+  }
   const area = scroller.value
   if (area) {
     // Not passive: a pinch's moves, and a touchpad's, are kept from the browser.
@@ -469,6 +490,7 @@ onBeforeUnmount(() => {
   disposed = true
   observer?.disconnect()
   resizer?.disconnect()
+  sizer?.disconnect()
   cancelAnimationFrame(scheduled)
   cancelAnimationFrame(tracking)
   cancelAnimationFrame(queuedFrame)
@@ -484,7 +506,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
 </script>
 
 <template>
-  <div ref="root" class="pdf-view" :class="{ 'is-compact': compact }">
+  <div ref="root" class="pdf-view" :class="{ 'is-compact': compact, 'is-tight': compact && tight }">
     <div class="pdf-view__bar" role="toolbar" :aria-label="t('preview.pdf.toolbar')">
       <div v-if="pageCount !== 1" class="pdf-view__group pdf-view__paging">
         <el-button
@@ -533,7 +555,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           <el-icon><ZoomOut /></el-icon>
         </el-button>
         <button
-          v-if="!compact"
+          v-if="!compact || !fitWidth"
           type="button"
           class="pdf-view__percent"
           :disabled="!pageCount"
@@ -789,13 +811,16 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
 .pdf-view.is-compact .pdf-view__bar {
   position: absolute;
   z-index: 2;
-  left: 50%;
+  /* As wide as what it holds, centred, and never wider than the view less 8 px a side. */
+  left: 8px;
+  right: 8px;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
+  width: fit-content;
+  max-width: calc(100% - 16px);
+  margin: 0 auto;
   flex-wrap: nowrap;
   justify-content: center;
   gap: 0;
-  max-width: calc(100% - 16px);
   padding: 4px;
   border: 1px solid var(--app-line);
   border-radius: 999px;
@@ -826,5 +851,44 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
 }
 .pdf-view.is-compact .pdf-view__of {
   margin: 0 2px 0 4px;
+  /* The last to give way where the bar has no room (its count is still in the pages' name). */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pdf-view.is-compact .pdf-view__paging {
+  min-width: 0;
+}
+.pdf-view.is-compact .pdf-view__zoom {
+  flex-shrink: 0;
+}
+.pdf-view.is-compact .pdf-view__bar .el-button,
+.pdf-view.is-compact .pdf-view__page-input,
+.pdf-view.is-compact .pdf-view__percent {
+  flex-shrink: 0;
+}
+.pdf-view.is-compact .pdf-view__percent {
+  min-width: 0;
+  padding: 0 4px;
+}
+.pdf-view.is-tight .pdf-view__bar .el-button {
+  width: 36px;
+  height: 36px;
+}
+.pdf-view.is-tight .pdf-view__group {
+  gap: 0;
+}
+.pdf-view.is-tight .pdf-view__paging + .pdf-view__zoom {
+  margin-left: 2px;
+  padding-left: 2px;
+}
+.pdf-view.is-tight .pdf-view__page-input {
+  padding: 4px;
+}
+.pdf-view.is-tight .pdf-view__of {
+  margin: 0 2px;
+}
+.pdf-view.is-tight .pdf-view__percent {
+  padding: 0 2px;
 }
 </style>

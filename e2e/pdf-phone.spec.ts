@@ -7,9 +7,11 @@ import { call, coursePath, demo, photograph, signIn, type FileSpec } from './sup
 // pages) and a note of one page. On a phone, upright or on its side, the
 // viewer fills the screen; the first page fills the width; the pages and the
 // zoom are one bar at the bottom, within a thumb's reach, which the last page
-// scrolls clear of; a PDF of one page has no page control; and two fingers
-// pinch the pages larger, not the whole screen. On a desktop the bar is above
-// the pages, with the zoom in per cent, as it was.
+// scrolls clear of; the files are two arrows by the close button, so that
+// the only count on the screen is the pages'; a PDF of one page has no page
+// control; and two fingers pinch the pages larger, not the whole screen. On a
+// small phone a document of 1,200 pages keeps its bar within it. On a desktop
+// the bar is above the pages, with the zoom in per cent, as it was.
 
 const tag = Date.now().toString(36)
 const TITLE = `Week 7 — Sorting (e2e ${tag})`
@@ -74,6 +76,16 @@ const NOTE: FileSpec = {
   mimeType: 'application/pdf',
   buffer: pdfOf(595, 842, ['Before the lecture'], 4),
 }
+const READER: FileSpec = {
+  name: `sorting-reader-${tag}.pdf`,
+  mimeType: 'application/pdf',
+  buffer: pdfOf(
+    595,
+    842,
+    Array.from({ length: 1200 }, (_, i) => `Reader, ${i + 1}`),
+    1,
+  ),
+}
 
 let documentId = ''
 
@@ -81,7 +93,7 @@ test.beforeAll(async () => {
   const d = demo()
   const I = d.actors.instructor.token
   const files = []
-  for (const f of [DECK, HANDOUT, NOTE]) {
+  for (const f of [DECK, HANDOUT, NOTE, READER]) {
     const q = `kind=material&content_type=${encodeURIComponent(f.mimeType)}&filename=${encodeURIComponent(f.name)}`
     const u = await call(I, 'GET', `/v1/courses/${d.course.id}/upload-url?${q}`)
     expect(u.body.status, JSON.stringify(u.body.error)).toBe('executed')
@@ -143,10 +155,28 @@ async function expectFillsWidth(dialog: Locator, pdfPage: Locator, gutter: numbe
   expect((await pdfPage.boundingBox())!.width).toBeLessThanOrEqual(area)
 }
 
-/** The one page control there is, and the zoom: each button wholly on the screen, in its lower part on a phone. */
+/** The texts on the screen that count pages or files ("of 8", "2 of 3"), those said only to a screen reader left out. */
+function countsShown(dialog: Locator) {
+  return dialog.evaluate((d) =>
+    [...d.querySelectorAll<HTMLElement>('*')]
+      .filter((el) => [...el.childNodes].some((c) => c.nodeType === 3 && /\bof \d/.test(c.textContent ?? '')))
+      .filter((el) => {
+        const r = el.getBoundingClientRect()
+        return r.width > 1 && r.height > 1 && el.checkVisibility({ visibilityProperty: true })
+      })
+      .map((el) => el.textContent!.trim()),
+  )
+}
+
+/**
+ * The one page control there is, and the zoom: each button wholly on the
+ * screen and within the bar, in its lower part on a phone, where the files
+ * are only arrows and the pages' count is the only one on the screen.
+ */
 async function expectOneBar(page: Page, dialog: Locator, where: 'top' | 'bottom', pages = true) {
   const { width, height } = page.viewportSize()!
-  await expect(dialog.getByRole('toolbar', { name: 'Pages and zoom' })).toHaveCount(1)
+  const toolbar = dialog.getByRole('toolbar', { name: 'Pages and zoom' })
+  await expect(toolbar).toHaveCount(1)
   await expect(dialog.getByRole('textbox', { name: 'Page number' })).toHaveCount(pages ? 1 : 0)
   const names = ['Zoom out', 'Zoom in', 'Fit width']
   if (pages) names.unshift('Previous page', 'Next page')
@@ -158,13 +188,27 @@ async function expectOneBar(page: Page, dialog: Locator, where: 'top' | 'bottom'
     expect(r.x, name).toBeGreaterThanOrEqual(0)
     expect(r.x + r.width, name).toBeLessThanOrEqual(width)
     if (where === 'bottom') {
+      const pill = (await toolbar.boundingBox())!
+      expect(r.x, name).toBeGreaterThanOrEqual(pill.x)
+      expect(r.x + r.width, name).toBeLessThanOrEqual(pill.x + pill.width)
       // Within a thumb's reach: the lowest fifth of the screen, and big enough to touch.
       expect(r.y, name).toBeGreaterThan(height * 0.8)
       expect(r.y + r.height, name).toBeLessThanOrEqual(height)
       expect(Math.min(r.width, r.height), name).toBeGreaterThanOrEqual(36)
     } else expect(r.y + r.height, name).toBeLessThan(height * 0.3)
   }
+  expect(await toolbar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  if (where === 'bottom') {
+    const counts = await countsShown(dialog)
+    expect(counts.length, counts.join(' | ')).toBe(pages ? 1 : 0)
+    if (pages) await expect(dialog.locator('.pdf-view__of')).toHaveText(counts[0]!)
+  }
+}
+
+/** Lets a scroll's handling, at the next frame, be done. */
+async function settled(page: Page) {
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
 }
 
 async function inDark(page: Page, name: string) {
@@ -192,14 +236,25 @@ test.describe('on a phone', () => {
     await expect(dialog.getByRole('button', { name: 'Fit width', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(dialog.locator('.pdf-view__percent')).toBeHidden()
 
+    // Scrolled a little and back to the top: the first slide is read, and the next is the second.
+    const field = dialog.getByRole('textbox', { name: 'Page number' })
+    const pages = dialog.locator('.pdf-view__pages')
+    await pages.evaluate((el) => (el.scrollTop = 5))
+    await settled(page)
+    await pages.evaluate((el) => (el.scrollTop = 0))
+    await settled(page)
+    await expect(field).toHaveValue('1')
     // The next slide, from the bar.
     await dialog.getByRole('button', { name: 'Next page', exact: true }).click()
-    await expect(dialog.getByRole('textbox', { name: 'Page number' })).toHaveValue('2')
+    await expect(field).toHaveValue('2')
     // The last one, by its number: scrolled to the end, it clears the bar.
-    await dialog.getByRole('textbox', { name: 'Page number' }).fill('8')
-    await dialog.getByRole('textbox', { name: 'Page number' }).press('Enter')
-    await expect(dialog.getByRole('textbox', { name: 'Page number' })).toHaveValue('8')
-    await dialog.locator('.pdf-view__pages').evaluate((el) => (el.scrollTop = el.scrollHeight))
+    await field.fill('8')
+    await field.press('Enter')
+    await settled(page)
+    await expect(field).toHaveValue('8')
+    await pages.evaluate((el) => (el.scrollTop = el.scrollHeight))
+    await settled(page)
+    await expect(field).toHaveValue('8')
     const last = (await dialog.locator('.pdf-page[data-page="8"]').boundingBox())!
     const bar = (await dialog.getByRole('toolbar', { name: 'Pages and zoom' }).boundingBox())!
     expect(last.y + last.height).toBeLessThanOrEqual(bar.y)
@@ -230,6 +285,9 @@ test.describe('on a phone', () => {
     await dialog.getByRole('button', { name: 'Zoom in', exact: true }).click()
     await expect(fit).toHaveAttribute('aria-pressed', 'false')
     await expect.poll(async () => (await first.boundingBox())!.width).toBeGreaterThan(area)
+    // Zoomed by hand, it says its per cent again, which goes to the actual size.
+    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+ %/)
+    await expectOneBar(page, dialog, 'bottom')
     await photograph(page, 'phone-handout-zoomed')
     await fit.click()
     await expect(fit).toHaveAttribute('aria-pressed', 'true')
@@ -296,6 +354,38 @@ test.describe('on a phone on its side', () => {
     await inDark(page, 'landscape-deck-dark')
     await expectFillsWidth(dialog, first, 8)
     await expectOneBar(page, dialog, 'bottom')
+  })
+})
+
+test.describe('on a small phone', () => {
+  test.use({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true })
+
+  test('a document of 1,200 pages keeps its bar within it, fitted and zoomed', async ({ page }) => {
+    await signIn(page, demo().actors.instructor)
+    await page.goto(coursePath(`documents/${documentId}`))
+    const dialog = await open(page, READER)
+    const first = await firstPageDrawn(page, dialog, true)
+    await expectFillsWidth(dialog, first, 8)
+    await expectOneBar(page, dialog, 'bottom')
+    await photograph(page, 'small-reader-light')
+    await dialog.getByRole('button', { name: 'Zoom in', exact: true }).click()
+    await expect(dialog.locator('.pdf-view__percent')).toBeVisible()
+    await expectOneBar(page, dialog, 'bottom')
+    await photograph(page, 'small-reader-zoomed')
+  })
+})
+
+test.describe('in a window 600 px wide', () => {
+  test.use({ viewport: { width: 600, height: 900 } })
+
+  test('the viewer fills it, with the compact bar at the bottom', async ({ page }) => {
+    await signIn(page, demo().actors.instructor)
+    await page.goto(coursePath(`documents/${documentId}`))
+    const dialog = await open(page, HANDOUT)
+    const first = await firstPageDrawn(page, dialog, true)
+    await expectFillsWidth(dialog, first, 8)
+    await expectOneBar(page, dialog, 'bottom')
+    await photograph(page, 'w600-handout-light')
   })
 })
 
