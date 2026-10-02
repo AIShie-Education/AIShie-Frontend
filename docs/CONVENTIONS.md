@@ -566,10 +566,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   - What an agent made says so where it is shown: a draft grade names its drafter, and what its draft
     filled into a form carries a 3 px `--app-indigo` line at its left (the indigo line is under 3:1)
     until it is changed, and says so in its label to a screen reader (`GradePanel`). Each row of the
-    feed starts with who acted, for those who decide actions: who did it, or who proposed it and who
-    decided it, read from the action it was done under (`action_id`, or the action a log event is
-    about) with `action.get`, which nobody else may read (`actors.ts`); the *Agents* chip keeps what
-    agents did.
+    feed starts with who acted: who did it, or who proposed it and who decided it, read from the
+    action it was done under (`action_id`, or the action a log event is about), where the caller may
+    read that action (`actors.ts`). Those who decide actions read any (`action.get`); anyone else reads
+    their own (`action.list_mine`) and, owning an agent seated there, that agent's (`action.get`, as
+    its owner; asked only of events about their own work), and learns nothing of anyone else's, until
+    the feed itself says who acted. The *Agents* chip keeps what agents did, for those who decide
+    actions and those who own an agent there.
 
   `seatPurpose()` (`@/utils/agents`) tells a course agent from a personal agent by the seat's
   `answers_course`; `delegateArgsFor()` gives `member.add_delegate` both the preset and

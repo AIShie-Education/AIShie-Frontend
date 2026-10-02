@@ -18,7 +18,7 @@ export default {
     actions: 'Actions',
     course: 'Course',
     other: 'Other',
-    // What agents did: who acted is read from the action each event was done under (deciders alone).
+    // What agents did: who acted is read from the action each event was done under (deciders, and owners of an agent seated here).
     agents: 'Agents',
   },
   fresh: 'New',

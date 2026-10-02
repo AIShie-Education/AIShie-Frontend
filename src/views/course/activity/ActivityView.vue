@@ -5,9 +5,11 @@
 // POLL_MS while the page is visible, highlighting what arrived. Everything
 // shown is what Core decided this seat may know about: event types by
 // permission, rows by student and assignment scope, and always the events of
-// the caller's own actions. For those who decide actions, each event says
-// who acted (EventItem, actors.ts), and the Agents chip keeps what agents
-// did or proposed.
+// the caller's own actions. Each event says who acted where the caller may
+// read the action it was done under (EventItem, actors.ts): any, for those
+// who decide actions; their own and their own agents', for anyone else. The
+// Agents chip keeps what agents did or proposed, for those who decide
+// actions and for those who own an agent here.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
@@ -32,8 +34,8 @@ import {
   mergeNewestFirst,
   newestWindow,
   olderWindow,
-  reachOf,
   runsOf,
+  whoReachOf,
   type Category,
   type Run,
   type CourseEvent,
@@ -197,24 +199,25 @@ const chips = computed<Category[]>(() => (counts.value.other ? [...CATEGORIES, '
 function toggle(c: Category) {
   selected.value = selected.value.includes(c) ? selected.value.filter((x) => x !== c) : [...selected.value, c]
 }
-// What agents did or proposed: who acted is read from each event's action, which only a
-// seat that decides actions may read; for it, every loaded event's is read.
-const decides = computed(() => reachOf(course).decides)
+// What agents did or proposed: who acted is read from each event's action, where the
+// caller may read it (actors.ts); every loaded event's is read. Only a seat that decides
+// actions, or owns an agent here, can learn that an agent did anything.
+const whoReach = computed(() => whoReachOf(course))
+const agentsChip = computed(() => whoReach.value.decides || whoReach.value.ownsAgent)
 const byAgents = ref(false)
 watch(
-  [events, decides],
+  [events, whoReach],
   () => {
-    if (!decides.value) return
-    void course.ensureMembers()
-    for (const e of events.value) ensureEventWho(props.courseId, e, true)
+    if (whoReach.value.decides) void course.ensureMembers()
+    for (const e of events.value) ensureEventWho(props.courseId, e, whoReach.value)
   },
   { immediate: true },
 )
 function byAgent(e: CourseEvent): boolean {
-  const id = eventActor(props.courseId, e, decides.value)
-  return !!id && course.members.get(id)?.kind === 'agent'
+  const a = eventActor(props.courseId, e, whoReach.value)
+  return !!a?.id && (a.agent || course.members.get(a.id)?.kind === 'agent')
 }
-const agentCount = computed(() => (decides.value ? events.value.filter(byAgent).length : 0))
+const agentCount = computed(() => (agentsChip.value ? events.value.filter(byAgent).length : 0))
 function showAll() {
   selected.value = []
   byAgents.value = false
@@ -223,7 +226,7 @@ const shown = computed(() => {
   const list = selected.value.length
     ? events.value.filter((e) => selected.value.includes(categoryOf(e.type)))
     : events.value
-  return byAgents.value && decides.value ? list.filter(byAgent) : list
+  return byAgents.value && agentsChip.value ? list.filter(byAgent) : list
 })
 const freshCount = computed(() => fresh.value.size)
 
@@ -316,7 +319,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           </el-check-tag>
           <!-- What agents did or proposed, with whatever family is chosen. -->
           <el-check-tag
-            v-if="decides"
+            v-if="agentsChip"
             :checked="byAgents"
             class="activity__chip activity__chip--agents"
             :class="{ 'is-zero': !agentCount }"

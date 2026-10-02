@@ -4,10 +4,10 @@
 // is (the student and the assignment it belongs to), and the few small facts
 // its payload carries. Events carry ids, never content: a document's title or
 // a grade's score is fetched by the view the link opens, which decides
-// whether the caller may see it. Its first line says who acted, for those
-// who may read the action it was done under (actors.ts): who did it, or who
-// proposed it and who decided or reviewed it; an agent with its avatar and
-// "AI".
+// whether the caller may see it. Its first line says who acted, where the
+// caller may read the action it was done under (actors.ts): who did it, or
+// who proposed it and who decided or reviewed it; an agent with its avatar
+// and "AI".
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw } from 'vue-router'
@@ -32,6 +32,7 @@ import {
   reachOf,
   subjectKind,
   subjectRoute,
+  whoReachOf,
   type CourseEvent,
 } from './feed'
 
@@ -81,13 +82,17 @@ const subjectLink = computed(() =>
 const componentId = computed(() =>
   kind.value === 'component' ? props.event.subject_id : payloadString(props.event, 'component_id'),
 )
-/** Who acted, once read (actors.ts): only a seat that decides actions may read who did another's. */
-const who = computed(() => (props.compact ? [] : eventWho(props.courseId, props.event, reach.value.decides)))
+/**
+ * Who acted, once read (actors.ts): any event's, for a seat that decides
+ * actions; for any other, its own actions' and its own agents'.
+ */
+const whoReach = computed(() => whoReachOf(course))
+const who = computed(() => (props.compact ? [] : eventWho(props.courseId, props.event, whoReach.value)))
 
 onMounted(() => {
   if (kind.value === 'material') void ensureDocumentTitles(props.courseId)
   if (componentId.value) void ensureComponentNames(props.courseId)
-  if (!props.compact) ensureEventWho(props.courseId, props.event, reach.value.decides)
+  if (!props.compact) ensureEventWho(props.courseId, props.event, whoReach.value)
 })
 const component = computed(() => componentName(componentId.value))
 
@@ -398,7 +403,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
         <template v-for="(w, i) in who" :key="w.key">
           <span v-if="i" class="event-item__who-then" aria-hidden="true">→</span>
           <i18n-t :keypath="w.key" tag="span" scope="global" class="event-item__who-part">
-            <template #who><MemberName :id="w.id" show-kind class="event-item__who-name" /></template>
+            <template #who><MemberName :id="w.id" show-kind :agent="w.agent" class="event-item__who-name" /></template>
           </i18n-t>
         </template>
       </div>
