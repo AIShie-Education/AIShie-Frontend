@@ -251,7 +251,6 @@ export default {
     respondentAnswersOthers: '回答的一方也會回答其他成員：它會記住每個人寫的內容，並可能把這裡寫的內容轉述給他們',
     auditExport: '網站及課程所屬部門的管理員可匯出作稽核，包括已撤回的訊息',
     sharedNote: '對方也會回答其他成員：你在這裡寫的內容，它可能會轉述給他們。',
-    note: '每則訊息都經由一項操作寫入，其紀錄會保留原文，即使訊息已被撤回。',
   },
   // Who reads a conversation and where an agent sends it (AIShie-Frontend#79; components/chat/privacy.ts):
   // a short line under the composer, its points on a new conversation the first time, the whole notice behind More.

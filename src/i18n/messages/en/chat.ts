@@ -261,7 +261,6 @@ export default {
     auditExport:
       'The site’s administrators, and those of the course’s department, who may export it for audit, withdrawn messages included',
     sharedNote: 'It answers other members too: what you write here it may repeat to them.',
-    note: 'Every message is written through an action, and the record of it keeps the text, even after it is withdrawn.',
   },
   // Who reads a conversation and where an agent sends it (AIShie-Frontend#79; components/chat/privacy.ts):
   // a short line under the composer, its points on a new conversation the first time, the whole notice behind More.

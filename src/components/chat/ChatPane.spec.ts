@@ -48,6 +48,59 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+// The runtime, as it answers the owner of an agent it hosts: its model, for the privacy notice to name.
+let hostedAgents: unknown[] = []
+const runtimeCalls: string[] = []
+vi.mock('@/composables/useRuntime', async () => {
+  const { computed } = await import('vue')
+  return {
+    useRuntime: () => ({
+      available: computed(() => true),
+      info: computed(() => null),
+      error: computed(() => null),
+      checked: computed(() => true),
+      refresh: async () => true,
+    }),
+  }
+})
+vi.mock('@/api/runtime', async (orig) => {
+  const real = await orig<typeof import('@/api/runtime')>()
+  return {
+    ...real,
+    runtime: {
+      ...real.runtime,
+      list: vi.fn(async () => {
+        runtimeCalls.push('list')
+        return { data: { agents: hostedAgents }, status: 200, etag: null, replayed: false }
+      }),
+      models: vi.fn(async () => {
+        runtimeCalls.push('models')
+        return {
+          data: {
+            own_key: {
+              offered: true,
+              providers: [
+                {
+                  provider: 'anthropic',
+                  label: 'Anthropic',
+                  adapters: [],
+                  endpoint: { kind: 'fixed', base_url: '' },
+                  key_prefix: null,
+                  suggested_models: [],
+                },
+              ],
+            },
+            school_key: { offered: false, offers: [] },
+          },
+          status: 200,
+          etag: null,
+          replayed: false,
+        }
+      }),
+    },
+  }
+})
+
 // The print window, as "Download as PDF" opens it: what it was asked to lay out.
 const printed: Record<string, any>[] = []
 vi.mock('@/utils/printLayout', async (orig) => {
@@ -62,6 +115,7 @@ const { default: ChatPane } = await import('./ChatPane.vue')
 const { default: ChatComposer } = await import('./ChatComposer.vue')
 const { forgetSent } = await import('./chat')
 const { forgetAttachments, rememberSent } = await import('./attachments')
+const { forgetPrivacySeen } = await import('./privacy')
 
 const Passthrough = (name: string) =>
   defineComponent({
@@ -232,6 +286,10 @@ beforeEach(() => {
   printed.length = 0
   forgetSent()
   forgetAttachments()
+  forgetPrivacySeen()
+  localStorage.clear()
+  hostedAgents = []
+  runtimeCalls.length = 0
   server = {
     messages: [
       msg(1, 'student'),
@@ -851,7 +909,9 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(MCP)
     setLocale('zh-Hant')
     await flushPromises()
-    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe('這個代理由擁有者自己的工具使用，無法在這裡向它提問。')
+    expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(
+      '這個代理由擁有者自己的工具使用，無法在這裡向它提問。',
+    )
   })
 
   it('says so when a new conversation is refused because the agent is not running now', async () => {
@@ -896,6 +956,128 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     expect(w.find('.chat-pane__closed-elsewhere').exists()).toBe(false)
     expect(w.text()).not.toContain('can’t be asked here')
     expect(w.find('.chat-pane__closed button').exists()).toBe(false)
+  })
+})
+
+describe('ChatPane: who reads it, and where it goes', () => {
+  /** The one asking, signed in as p1: the first time is remembered for them. */
+  function signedIn() {
+    useSessionStore().me = { id: 'p1', kind: 'human', display_name: 'Chan Tai Man' } as never
+  }
+
+  it('says under the composer who else reads it and where the agent sends it, and More opens the whole notice', async () => {
+    seat('student')
+    signedIn()
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const line = w.find('.chat-pane__privacy')
+    expect(line.find('.chat-pane__privacy-text').text()).toBe(
+      'Course staff and site administrators can read this conversation. Course tutor sends it to its AI model’s provider to answer.',
+    )
+    expect(line.find('button').text()).toBe('More')
+    // It follows the composer, and nobody else's agent is asked of the runtime.
+    expect(w.find('.chat-pane__foot').element.lastElementChild).toBe(line.element)
+    expect(runtimeCalls).toEqual([])
+    const more = w.find('.chat-pane__privacy-more')
+    expect(more.attributes('aria-label')).toBe('More: who reads this conversation, and where it goes')
+    await more.trigger('click')
+    await flushPromises()
+    const notice = document.body.querySelector('.chat-pane__readers')!
+    expect(notice.querySelector('.el-dialog__title')?.textContent).toBe('Who reads this, and where it goes')
+    const text = notice.textContent ?? ''
+    expect(text).toContain('Who can read this conversation')
+    expect(text).toContain('The two taking part')
+    expect(text).toContain('Course tutor is hosted on AIshie.')
+    expect(text).toContain('This page cannot show you which provider it is.')
+    expect(text).toContain('Conversations are never deleted.')
+    expect(text).toContain('A withdrawn message is hidden here, but its text and files are kept')
+  })
+
+  it('names the provider of the caller’s own agent, as the runtime tells its owner', async () => {
+    seat('student')
+    signedIn()
+    hostedAgents = [
+      {
+        id: 'agt_1',
+        display_name: 'My helper',
+        seats: [{ course_id: 'k1' }],
+        model: {
+          own: { provider: 'anthropic', adapter: 'anthropic_messages', model: 'claude-sonnet' },
+          school: null,
+        },
+      },
+    ]
+    server.view = view({
+      respondent: { ...view().respondent, member_id: 'helper', display_name: 'My helper', is_delegate_of_opener: true },
+    })
+    server.respondents = [{ ...tutorOffered, member_id: 'helper', display_name: 'My helper', is_my_delegate: true }]
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(runtimeCalls).toEqual(['list', 'models'])
+    expect(w.find('.chat-pane__privacy').text()).toContain('My helper sends it to Anthropic to answer.')
+    await w.find('.chat-pane__privacy-more').trigger('click')
+    await flushPromises()
+    expect(document.body.querySelector('.chat-pane__readers')?.textContent).toContain(
+      'That model is claude-sonnet, from Anthropic, on your own API key.',
+    )
+  })
+
+  it('shows no line to staff reading a conversation', async () => {
+    seat('staff', { action_decide: 'autonomous' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', oversee: true }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__privacy').exists()).toBe(false)
+  })
+
+  it('puts its points on a new conversation the first time, until the person says they have seen them', async () => {
+    seat('student')
+    signedIn()
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    const first = w.find('.chat-pane__privacy-first')
+    expect(first.find('h3').text()).toBe('Before you ask')
+    expect(first.findAll('li').map((l) => l.text())).toEqual([
+      'Course staff can read this conversation, and the site’s administrators can export it for audit.',
+      'Course tutor sends what you write here to its AI model’s provider to answer it.',
+      'Nothing here is deleted: a message you withdraw is hidden, but kept.',
+    ])
+    // Said once: the line under the composer waits.
+    expect(w.find('.chat-pane__privacy').exists()).toBe(false)
+    await first
+      .findAll('button')
+      .find((b) => b.text() === 'Got it')!
+      .trigger('click')
+    expect(w.find('.chat-pane__privacy-first').exists()).toBe(false)
+    expect(w.find('.chat-pane__privacy').text()).toContain('Course tutor sends it to its AI model’s provider')
+    expect(localStorage.getItem('aishie.chatPrivacySeen.p1')).toBe('1')
+  })
+
+  it('takes a first question sent as the points seen', async () => {
+    seat('student')
+    signedIn()
+    writeAnswer = () => executed({ conversation_id: 'c2', message_id: 'm1' })
+    const w = mount(ChatPane, { props: { courseId: 'k1', respondent: tutorOffered }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__privacy-first').exists()).toBe(true)
+    const ta = w.find('textarea')
+    await ta.setValue('When is the lab?')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(w.emitted('opened')?.[0]).toEqual(['c2'])
+    expect(localStorage.getItem('aishie.chatPrivacySeen.p1')).toBe('1')
+  })
+
+  it('in Traditional Chinese', async () => {
+    seat('student')
+    signedIn()
+    setLocale('zh-Hant')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const line = w.find('.chat-pane__privacy')
+    expect(line.find('.chat-pane__privacy-text').text()).toBe(
+      '課程教職員及網站管理員可閱讀這段對話。Course tutor 會把內容傳送至其 AI 模型的供應商以作答。',
+    )
+    expect(line.find('button').text()).toBe('詳情')
   })
 })
 
