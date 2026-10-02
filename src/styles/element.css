@@ -530,3 +530,14 @@ html.dark .el-card {
   color: var(--app-ink-3);
   font-weight: 500;
 }
+/* Stacked (direction="vertical", as on a phone): a label is a small heading
+   over its value, with no line between them; the line is under the value,
+   between one pair and the next. */
+.el-descriptions__body .el-descriptions__table.is-bordered .el-descriptions__cell.is-vertical-label {
+  border-bottom-width: 0;
+  padding-bottom: 0;
+  font-size: 12px;
+}
+.el-descriptions__body .el-descriptions__table.is-bordered .el-descriptions__cell.is-vertical-content {
+  padding-top: 2px;
+}
