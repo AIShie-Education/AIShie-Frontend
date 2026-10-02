@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { Course } from '@/api/types'
@@ -9,6 +9,7 @@ import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import { useCourseFacts } from './courseFacts'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -27,6 +28,8 @@ const courses = computed(() => {
     .sort((a, b) => `${a.code}${a.section}`.localeCompare(`${b.code}${b.section}`))
 })
 const hasArchived = computed(() => session.liveMemberships.some((m) => m.course_status === 'archived'))
+// Each card's term, next deadline and what waits there, read after the page is shown.
+const facts = useCourseFacts(courses)
 
 // An administrator creates courses without joining them, and neither a
 // platform role nor a department's appointment opens a course: what anyone
@@ -67,12 +70,28 @@ const unseatedAll = computed(() => {
 const unseated = computed(() => unseatedAll.value.slice(0, SHOWN))
 const unseatedMore = computed(() => unseatedAll.value.length > SHOWN || !!platformCourses.data.value?.more)
 const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
+
+// A few courses are read at a glance, and the side bar filters them too: the
+// page's own filter is offered from FILTER_FROM courses on.
+const FILTER_FROM = 8
+const offersFilter = computed(
+  () => session.liveMemberships.length + (platformCourses.data.value?.courses.length ?? 0) >= FILTER_FROM,
+)
+watch(offersFilter, (on) => {
+  if (!on) filter.value = ''
+})
 </script>
 
 <template>
   <div>
     <PageHeader :title="t('home.greeting', { name: session.me?.display_name ?? '' })" :subtitle="t('home.subtitle')">
-      <el-input v-model="filter" :placeholder="t('home.filterPlaceholder')" clearable style="width: 220px">
+      <el-input
+        v-if="offersFilter"
+        v-model="filter"
+        :placeholder="t('home.filterPlaceholder')"
+        clearable
+        style="width: 220px"
+      >
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
       <el-checkbox v-if="hasArchived" v-model="showArchived" :label="t('home.showArchived')" border />
@@ -109,10 +128,36 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
           <h3 class="course-card__title">{{ m.title }}</h3>
           <div class="course-card__meta">
             <StatusTag vocab="role" :value="m.role" />
+            <span v-if="facts.get(m.course_id)?.term" class="app-muted">{{ facts.get(m.course_id)?.term }}</span>
             <span v-if="m.expires_at" class="app-muted">
               {{ t('home.expires', { t: '' }) }}<TimeText :value="m.expires_at" relative />
             </span>
           </div>
+          <p v-if="facts.get(m.course_id)?.next" class="course-card__due">
+            <el-icon aria-hidden="true"><Calendar /></el-icon>
+            <i18n-t keypath="home.nextDue" tag="span" scope="global">
+              <template #title>{{ facts.get(m.course_id)!.next!.title }}</template>
+              <template #when><TimeText :value="facts.get(m.course_id)!.next!.dueAt" relative /></template>
+            </i18n-t>
+          </p>
+          <!-- What waits for the caller here, as the course's overview says it (AttentionCard). -->
+          <span v-if="(facts.get(m.course_id)?.waiting?.n ?? 0) > 0" class="course-card__waiting">
+            <span class="course-card__waiting-icon"><el-icon aria-hidden="true"><Stamp /></el-icon></span>
+            <span class="course-card__waiting-label">
+              {{
+                facts.get(m.course_id)!.waiting!.agentsOnly
+                  ? t('overview.attention.agentProposals')
+                  : t('overview.attention.proposals')
+              }}
+            </span>
+            <span class="course-card__waiting-count">
+              {{
+                facts.get(m.course_id)!.waiting!.more
+                  ? t('overview.attention.atLeast', { n: facts.get(m.course_id)!.waiting!.n })
+                  : facts.get(m.course_id)!.waiting!.n
+              }}
+            </span>
+          </span>
         </router-link>
       </div>
     </AsyncState>
@@ -233,5 +278,50 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
   gap: 8px;
   font-size: 12px;
   flex-wrap: wrap;
+}
+.course-card__due {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--app-ink-2);
+}
+.course-card__due .el-icon {
+  flex-shrink: 0;
+  color: var(--app-ink-3);
+}
+/* The overview's "waiting for you" row, small: the wait pill's colours. */
+.course-card__waiting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--app-radius-item);
+  border: 1px solid color-mix(in srgb, var(--app-wait-fg) 30%, transparent);
+  background: var(--app-wait-bg);
+  color: var(--app-ink);
+  font-size: 13px;
+}
+.course-card__waiting-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--app-card);
+  color: var(--app-wait-fg);
+  flex-shrink: 0;
+}
+.course-card__waiting-label {
+  flex: 1;
+  min-width: 0;
+}
+.course-card__waiting-count {
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-wait-fg);
 }
 </style>
