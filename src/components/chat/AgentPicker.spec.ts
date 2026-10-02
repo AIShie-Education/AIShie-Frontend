@@ -111,9 +111,9 @@ describe('AgentPicker', () => {
     const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     const rows = w.findAll('button.resp-row')
-    // The "AI" right after the name, with its last word, so that it never stands alone on a line.
+    // The "AI" right after the name, held to its last letter, so that it never stands alone on a line.
     expect(rows.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutorAI', 'My helperAI'])
-    expect(rows[0]!.find('.agent-name__end').text()).toBe('tutorAI')
+    expect(rows[0]!.find('.agent-name__end').text()).toBe('rAI')
     expect(rows[0]!.text()).toContain('Course agent')
     expect(rows[0]!.find('.ai-badge').text()).toBe('AI')
     expect(rows[0]!.find('.agent-avatar').exists()).toBe(true)

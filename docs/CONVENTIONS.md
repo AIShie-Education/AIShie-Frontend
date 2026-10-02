@@ -544,9 +544,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
     round caps; in an `<el-icon>`, or by component where icons are listed). Never the chip (`Cpu`).
   - After an agent's name, wherever the name is shown, `<AiBadge />`: "AI" in every language
     (`common.agent.ai`), 11 px, on the indigo tint, radius 4, its words on hover; it takes no focus.
-    It never parts from the name: `<AgentName :name />` keeps the name's last word (in Chinese, its
-    last character) on the line of the "AI" when the name wraps, and `<AgentName :name ellipsis />` cuts
-    the name short on one line and keeps the "AI" whole. `<AgentBadge :kind :owner-name :mine />` beside
+    It never parts from the name: `<AgentName :name />` keeps the name's last character (with any
+    punctuation after it) on the line of the "AI" when the name wraps, and nothing more, so a name with
+    no spaces (`cs101-introduction-to-programming-weekly-revision-tutor`) still breaks wherever it must
+    and never pushes the "AI" out of its row; a last word breaks no sooner than it would have. `<AgentName
+    :name ellipsis />` cuts the name short on one line and keeps the "AI" whole. `<AgentBadge :kind :owner-name :mine />` beside
     an actor's or member's name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an
     outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`.
     `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI". Inside a

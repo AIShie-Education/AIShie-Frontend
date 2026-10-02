@@ -30,21 +30,20 @@ export function agentInitials(name: string | null | undefined): string {
 }
 
 /**
- * A name split before its last word, so that what follows the name (its
- * "AI", AgentName) can be kept on the line of that word: the head may wrap,
- * the end never parts from what follows. The last word of a name in a
- * Latin script; the last character of one in Chinese, Japanese or Korean,
- * which breaks between any two characters.
+ * A name split before its last character, so that what follows the name
+ * (its "AI", AgentName) can be kept on the line of that character: the head
+ * may wrap, the end never parts from what follows. Only the last letter or
+ * digit, with whatever punctuation closes the name after it: a last word in
+ * a Latin script is not broken where it would not be anyway (between its
+ * letters), so it still goes to the line of the "AI" whole; Chinese,
+ * Japanese and Korean break between any two characters; and a long name with
+ * no spaces ("cs101-introduction-to-programming-weekly-revision-tutor") still
+ * breaks wherever it must, rather than running out of its row with its "AI".
  */
 export function splitNameEnd(name: string | null | undefined): { head: string; end: string } {
   const s = (name ?? '').trimEnd()
-  const at = s.search(/\S+$/u)
-  if (at < 0) return { head: '', end: s }
-  const word = s.slice(at)
-  if (!WIDE.test(word)) return { head: s.slice(0, at), end: word }
-  const chars = Array.from(word)
-  const last = chars[chars.length - 1]
-  // Closing punctuation after the last wide character stays with it.
-  const k = WIDE.test(last) ? 1 : Math.min(2, chars.length)
-  return { head: s.slice(0, at) + chars.slice(0, -k).join(''), end: chars.slice(-k).join('') }
+  const m = /[\p{L}\p{N}]\p{M}*[^\p{L}\p{N}]*$/u.exec(s)
+  if (m) return { head: s.slice(0, m.index), end: s.slice(m.index) }
+  const chars = Array.from(s)
+  return { head: chars.slice(0, -1).join(''), end: chars.slice(-1).join('') }
 }

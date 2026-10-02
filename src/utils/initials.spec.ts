@@ -24,12 +24,22 @@ describe('agentInitials', () => {
 
 describe('splitNameEnd', () => {
   it.each([
-    ['Introduction to Programming tutor', 'Introduction to Programming ', 'tutor'],
-    ['grader-v2', '', 'grader-v2'],
+    ['Introduction to Programming tutor', 'Introduction to Programming tuto', 'r'],
+    ['grader-v2', 'grader-v', '2'],
+    // No spaces: all of it but its last letter may still break.
+    [
+      'cs101-introduction-to-programming-weekly-revision-tutor',
+      'cs101-introduction-to-programming-weekly-revision-tuto',
+      'r',
+    ],
+    ['Course tutor (beta)', 'Course tutor (bet', 'a)'],
     ['小明的溫習助手', '小明的溫習助', '手'],
     ['CS101 課程小幫手', 'CS101 課程小幫', '手'],
     ['「溫習」小幫手」', '「溫習」小幫', '手」'],
-    ['Tutor  ', '', 'Tutor'],
+    ['Café', 'Caf', 'é'],
+    ['Cafe\u0301', 'Caf', 'e\u0301'],
+    ['Tutor  ', 'Tuto', 'r'],
+    ['— · —', '— · ', '—'],
     ['', '', ''],
     [null, '', ''],
   ])('%j → %j + %j', (name, head, end) => {

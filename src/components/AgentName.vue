@@ -1,10 +1,12 @@
 <script setup lang="ts">
 // An agent's name with its "AI" (AiBadge) after it, which never parts from
-// it. A name that wraps keeps its last word (in Chinese, its last character)
-// on the line of the "AI" (splitNameEnd), so that the "AI" never stands
-// alone on a line of its own. `ellipsis`: the name is cut short on one line
-// instead, and the "AI" stays whole after it. Whose agent it is, and how it
-// runs, go after this (AgentBadge with no-ai, HostingTag).
+// it. A name that wraps keeps its last character on the line of the "AI"
+// (splitNameEnd), and so a last word, which does not break, so that the "AI"
+// never stands alone on a line of its own; the rest of the name breaks
+// wherever it must, a name with no spaces too, rather than running out of
+// its row. `ellipsis`: the name is cut short on one line instead, and the
+// "AI" stays whole after it. Whose agent it is, and how it runs, go after
+// this (AgentBadge with no-ai, HostingTag).
 import { computed } from 'vue'
 import { splitNameEnd } from '@/utils/initials'
 import AiBadge from './AiBadge.vue'
@@ -26,6 +28,7 @@ const parts = computed(() => splitNameEnd(props.name))
 <style scoped>
 .agent-name {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .agent-name__end {
   white-space: nowrap;
