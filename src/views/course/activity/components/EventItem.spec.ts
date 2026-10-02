@@ -630,4 +630,41 @@ describe('EventItem, an agent seated as someone’s delegate', () => {
     expect(w.text()).not.toContain('Assistant')
     w.unmount()
   })
+
+  it.each([
+    [true, 'Course agent'],
+    [false, 'Personal agent'],
+  ])(
+    'is shown as the kind the event says, to a seat that cannot read the member list (answers the course: %s)',
+    async (answers, kind) => {
+      const e: CourseEvent = {
+        seq: 41,
+        type: 'member.added',
+        occurred_at: '2026-09-01T00:00:00Z',
+        subject_type: 'course_member',
+        subject_id: 'm-hidden',
+        payload: { role: 'assistant', delegate: true, principal_member_id: 'm-yuki', answers_course: answers },
+      }
+      const w = mountItem(e)
+      await flushPromises()
+      expect(w.find('.event-item__facts').text()).toBe(kind)
+      expect(w.text()).not.toContain('Assistant')
+      w.unmount()
+    },
+  )
+
+  it('keeps the role “Assistant” for a seat that is nobody’s delegate, as far as anyone can tell', async () => {
+    const e: CourseEvent = {
+      seq: 42,
+      type: 'member.added',
+      occurred_at: '2026-09-01T00:00:00Z',
+      subject_type: 'course_member',
+      subject_id: 'm-ta',
+      payload: { role: 'assistant' },
+    }
+    const w = mountItem(e)
+    await flushPromises()
+    expect(w.find('.event-item__facts').text()).toBe('Assistant')
+    w.unmount()
+  })
 })

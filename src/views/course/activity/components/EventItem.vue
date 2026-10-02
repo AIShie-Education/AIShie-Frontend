@@ -338,10 +338,17 @@ const facts = computed<Fact[]>(() => {
   if (type === 'member.added') {
     const role = payloadString(e, 'role')
     // An agent seated as someone's delegate is in the role `assistant`, a person's word: its
-    // avatar and "AI" say what it is, and the tag which kind of agent (RoleTag).
+    // avatar and "AI" say what it is, and the tag which kind of agent (RoleTag). The event
+    // says it was seated as a delegate (delegate, answers_course), which only an agent is, for
+    // those who cannot read the member list too; the member list says so for the rest.
     const m = e.subject_id ? course.members.get(e.subject_id) : undefined
-    if (role && m?.kind === 'agent' && role === 'assistant') {
-      const purpose = m.principal_member_id ? seatPurpose(m) : null
+    const delegate = payloadBool(e, 'delegate') === true
+    if (role === 'assistant' && (delegate || m?.kind === 'agent')) {
+      const purpose = delegate
+        ? seatPurpose({ answers_course: payloadBool(e, 'answers_course') ?? m?.answers_course })
+        : m?.principal_member_id
+          ? seatPurpose(m)
+          : null
       if (purpose) out.push({ kind: 'tag', vocab: 'seatPurpose', value: purpose })
     } else if (role) out.push({ kind: 'tag', vocab: 'role', value: role })
     // A person who took their seat through an invite link.
