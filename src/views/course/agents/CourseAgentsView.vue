@@ -15,6 +15,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { usePresets } from '@/views/course/members/components/seat'
@@ -132,9 +133,12 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
             <span>{{ t('courseAgents.add') }}</span>
           </el-button>
         </el-tooltip>
-        <el-tag v-if="course.needsApproval('agent_delegate')" type="warning" effect="plain">
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag
+          v-if="course.needsApproval('agent_delegate')"
+          vocab="level"
+          value="confirm_required"
+          size="default"
+        />
       </template>
     </PageHeader>
 

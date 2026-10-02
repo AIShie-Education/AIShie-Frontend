@@ -23,12 +23,21 @@ export function formatDecimal(v: Decimal | null | undefined, maxFraction = 2): s
   return formatNumber(n, maxFraction)
 }
 
+/**
+ * A fraction (0.8846) as a percentage the page's language writes ("88.5%"),
+ * with at most maxFraction decimals: every percentage the app shows goes
+ * through here, never a "%" written after a number.
+ */
+export function formatPct(fraction: number, maxFraction = 1): string {
+  return new Intl.NumberFormat(numberLocale, { style: 'percent', maximumFractionDigits: maxFraction }).format(fraction)
+}
+
 /** score / points as a percentage, or "—" when either is missing. */
 export function formatPercent(score: Decimal | null | undefined, of: Decimal | null | undefined): string {
   const s = Number(score)
   const p = Number(of)
   if (score === null || score === undefined || !Number.isFinite(s) || !Number.isFinite(p) || p === 0) return '—'
-  return `${formatNumber((s / p) * 100, 1)}%`
+  return formatPct(s / p)
 }
 
 /** A fraction in [0, 1] (or beyond, with extra credit) as a percentage. */
@@ -36,7 +45,45 @@ export function formatFraction(f: Decimal | null | undefined): string {
   if (f === null || f === undefined || f === '') return '—'
   const n = Number(f)
   if (!Number.isFinite(n)) return String(f)
-  return `${formatNumber(n * 100, 1)}%`
+  return formatPct(n)
+}
+
+/**
+ * US dollars as the page's language writes them, always "US$" (a "$" alone
+ * reads as Hong Kong's in Hong Kong): to the cent from a dollar up, and below
+ * it to three significant figures (US$0.0184 a call, not US$0.02 nor
+ * US$0.018400). Core's decimals ("0.018400") are taken as they come; "—"
+ * for none.
+ */
+export function formatMoney(usd: Decimal | null | undefined): string {
+  if (usd === null || usd === undefined || usd === '') return '—'
+  const n = Number(usd)
+  if (!Number.isFinite(n)) return String(usd)
+  const cents = n === 0 || Math.abs(n) >= 1
+  const options: Intl.NumberFormatOptions = {
+    style: 'currency',
+    currency: 'USD',
+    currencyDisplay: 'code',
+    ...(cents
+      ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+      : { minimumSignificantDigits: 2, maximumSignificantDigits: 3 }),
+  }
+  return new Intl.NumberFormat(numberLocale, options)
+    .formatToParts(n)
+    .map((p) => (p.type === 'currency' ? 'US$' : p.type === 'literal' && /^\s+$/.test(p.value) ? '' : p.value))
+    .join('')
+}
+
+/**
+ * Items as a list in the page's language: "a, b, and c" in English,
+ * 「甲、乙和丙」 in Chinese, never items joined by a comma written here.
+ */
+export function formatList(items: readonly string[]): string {
+  try {
+    return new Intl.ListFormat(numberLocale, { type: 'conjunction' }).format(items)
+  } catch {
+    return items.join(', ')
+  }
 }
 
 export function formatDateTime(v: string | null | undefined): string {

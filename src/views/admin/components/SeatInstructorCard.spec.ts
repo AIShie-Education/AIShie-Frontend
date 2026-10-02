@@ -174,7 +174,7 @@ describe('SeatInstructorCard', () => {
     // me.memberships has not answered again (or failed to): the card knows all the same.
     const text = wrapper.text()
     expect(text).toContain('Root Admin')
-    expect(text).toContain('(You)')
+    expect(text).toContain('(you)')
     expect(text).not.toContain('You have no seat in this course')
     expect(text).not.toContain('Seat yourself to work in it')
     const links = wrapper.findAll('a').map((a) => a.attributes('href'))

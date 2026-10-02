@@ -10,6 +10,7 @@
 // and "AI".
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatList } from '@/utils/format'
 import type { RouteLocationRaw } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
 import IdText from '@/components/IdText.vue'
@@ -375,7 +376,7 @@ const facts = computed<Fact[]>(() => {
         kind: 'text',
         text: t('activity.fact.files', { n: files.length }, files.length),
         tone: 'info',
-        tip: names.length ? names.join(', ') : undefined,
+        tip: names.length ? formatList(names) : undefined,
       })
     }
   }
@@ -500,7 +501,9 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
 
 <style scoped>
 .event-item {
-  --event-accent: var(--el-color-info);
+  /* A category is told by its icon's shape, never by a hue: hues are for
+     outcomes (docs/CONVENTIONS.md, "Colour"). What is new is indigo. */
+  --event-accent: var(--app-ink-3);
   display: flex;
   gap: 12px;
   padding: 12px 12px 12px 10px;
@@ -508,28 +511,8 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   border-left: 3px solid transparent;
   min-width: 0;
 }
-.event-item.is-grades {
-  --event-accent: var(--el-color-success);
-}
-.event-item.is-submissions {
-  --event-accent: var(--el-color-primary);
-}
-.event-item.is-assignments {
-  --event-accent: var(--el-color-warning);
-}
-.event-item.is-documents {
-  --event-accent: var(--el-color-primary);
-}
-.event-item.is-members {
-  --event-accent: var(--el-color-info);
-}
-.event-item.is-actions {
-  --event-accent: var(--el-color-danger);
-}
-.event-item.is-course {
-  --event-accent: var(--el-color-info);
-}
 .event-item.is-fresh {
+  --event-accent: var(--app-indigo);
   background: var(--el-color-primary-light-9);
   border-left-color: var(--el-color-primary);
 }
@@ -546,8 +529,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   justify-content: center;
   color: var(--event-accent);
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
+  background: var(--app-ground-2);
   font-size: 15px;
 }
 .event-item.is-compact .event-item__icon {

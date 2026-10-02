@@ -2,7 +2,6 @@
 export default {
   subtitle:
     'The whole class at once: each student’s grades on every assignment, and the totals written down at posting.',
-  allGrades: 'All grades',
   wholeClass: 'Whole class',
   export: 'Export CSV',
   search: 'Search by name or number',

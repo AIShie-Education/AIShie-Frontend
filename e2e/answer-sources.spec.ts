@@ -372,7 +372,7 @@ test.describe.serial('what an answer relied on', () => {
     const panel = await openConversation(page)
     const msg = answerIn(panel, 4)
     const summary = msg.locator('.chat-sources__summary')
-    await expect(summary).toHaveText(`依據：《${LECTURE}》· 2 項`)
+    await expect(summary).toHaveText(`依據：《${LECTURE}》· 2項`)
     await summary.click()
     const items = msg.locator('.chat-sources__item')
     await expect(items).toHaveText(['一份你無法開啟的課程教材', `《${LECTURE}》`])
@@ -383,7 +383,7 @@ test.describe.serial('what an answer relied on', () => {
       `${coursePath(`documents/${w.lectureId}`)}?version=${w.lectureVersion}`,
     )
     // The others as before, in her language.
-    await expect(answerIn(panel, 1).locator('.chat-sources')).toHaveText(`依據：《${LECTURE}》· ${PDF_NAME} · 第 2 頁`)
+    await expect(answerIn(panel, 1).locator('.chat-sources')).toHaveText(`依據：《${LECTURE}》· ${PDF_NAME} · 第2頁`)
     await expect(answerIn(panel, 2).locator('.chat-sources')).toHaveText('未引用課程教材')
     await page.mouse.move(0, 400)
     await photograph(page, 'answer-sources-restricted')

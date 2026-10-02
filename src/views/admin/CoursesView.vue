@@ -202,7 +202,9 @@ function rowClick(row: CourseRow) {
           <el-table-column :label="t('admin.courses.col.course')" :min-width="narrow ? 200 : 240">
             <template #default="{ row }">
               <div class="courses__course">
-                <span class="courses__code">{{ row.code }}<template v-if="row.section"> · {{ row.section }}</template></span>
+                <span class="courses__code"
+                  >{{ row.code }}<template v-if="row.section"><span class="app-sep">·</span>{{ row.section }}</template></span
+                >
                 <span class="courses__title">{{ row.title }}</span>
                 <span v-if="narrow" class="courses__meta">
                   {{ termById.get(row.term_id)?.name ?? t('admin.courses.unknown') }}

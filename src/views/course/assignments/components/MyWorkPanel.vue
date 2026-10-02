@@ -392,9 +392,7 @@ defineExpose({ reload })
   <section class="app-card my-work">
     <h2 class="app-card__title">
       <span>{{ t('assignments.work.title') }}</span>
-      <el-tag v-if="needsApproval" type="warning" size="small" disable-transitions>
-        {{ t('enums.level.confirm_required') }}
-      </el-tag>
+      <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
     </h2>
 
     <el-alert v-if="warning" type="warning" show-icon class="my-work__alert" :title="warning" @close="warning = null" />

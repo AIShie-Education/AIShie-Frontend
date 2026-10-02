@@ -366,15 +366,19 @@ async function openById() {
                 </el-icon>
                 <div class="actors__name-text">
                   <div class="actors__name-line">
-                    <router-link
-                      :to="{ name: 'admin-actor', params: { actorId: row.id } }"
-                      class="actors__link"
-                      @click.stop
+                    <!-- 「（你）」 is with the name, not a flex item after it: the line's gap would part them. -->
+                    <span
+                      ><router-link
+                        :to="{ name: 'admin-actor', params: { actorId: row.id } }"
+                        class="actors__link"
+                        @click.stop
+                        ><AgentName v-if="row.kind === 'agent'" :name="row.display_name" /><template v-else>{{
+                          row.display_name
+                        }}</template></router-link
+                      ><span v-if="row.id === session.me?.id" class="app-muted app-you">{{
+                        t('common.labels.youTag')
+                      }}</span></span
                     >
-                      <AgentName v-if="row.kind === 'agent'" :name="row.display_name" />
-                      <template v-else>{{ row.display_name }}</template>
-                    </router-link>
-                    <span v-if="row.id === session.me?.id" class="app-muted">({{ t('common.labels.you') }})</span>
                   </div>
                   <!-- Two with the same name are told apart by their IDs. -->
                   <IdText :id="row.id" />

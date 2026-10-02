@@ -100,7 +100,9 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
           class="course-card"
         >
           <div class="course-card__top">
-            <span class="course-card__code">{{ m.code }}<template v-if="m.section"> · {{ m.section }}</template></span>
+            <span class="course-card__code"
+              >{{ m.code }}<template v-if="m.section"><span class="app-sep">·</span>{{ m.section }}</template></span
+            >
             <div class="course-card__tags">
               <StatusTag v-if="m.course_status !== 'active'" vocab="courseStatus" :value="m.course_status" />
               <StatusTag v-if="m.status !== 'active'" vocab="memberStatus" :value="m.status" />
@@ -130,7 +132,9 @@ const termName = (id: string) => platformCourses.data.value?.terms.get(id) ?? ''
           class="course-card course-card--unseated"
         >
           <div class="course-card__top">
-            <span class="course-card__code">{{ c.code }}<template v-if="c.section"> · {{ c.section }}</template></span>
+            <span class="course-card__code"
+              >{{ c.code }}<template v-if="c.section"><span class="app-sep">·</span>{{ c.section }}</template></span
+            >
             <div class="course-card__tags">
               <StatusTag vocab="courseStatus" :value="c.status" />
             </div>

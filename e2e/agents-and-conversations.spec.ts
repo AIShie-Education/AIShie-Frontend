@@ -3,7 +3,7 @@ import {
   call,
   chatButton,
   coursePath,
-  courseTab,
+  openCourseTab,
   demo,
   expectToasted,
   hostOnRuntime,
@@ -103,7 +103,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Approvals').click()
+    await openCourseTab(page, 'Approvals')
     const card = page.locator('.action-card').filter({ hasText: AGENT })
     await expect(card).toHaveCount(1)
     await expect(card).toContainText('Personal agent')

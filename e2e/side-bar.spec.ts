@@ -84,6 +84,8 @@ test.describe('the activity bar and the side bar', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto('/account')
+    // The account's own list of seats parts a course's code and section as the side bar does.
+    await expect(page.locator(`.seats-list a[href="${coursePath()}"] .seat__code`)).toHaveText('CS101·A')
     // Collapsed first: the Courses button opens the side bar on the courses.
     const courses = activityBar(page).getByRole('button', { name: 'Courses', exact: true })
     await expect(courses).toHaveAttribute('aria-expanded', 'true')
@@ -95,7 +97,7 @@ test.describe('the activity bar and the side bar', () => {
     await expect(bar.getByRole('heading', { name: 'Courses', exact: true })).toBeVisible()
 
     const course = bar.locator(`a.side-course[href="${coursePath()}"]`)
-    await expect(course).toContainText('CS101 · A')
+    await expect(course).toContainText('CS101·A')
     await expect(course).toContainText('Introduction to Programming')
     await expect(course).toContainText('Instructor')
     await expect(course).not.toHaveAttribute('aria-current', 'page')
@@ -163,7 +165,7 @@ test.describe('the activity bar and the side bar', () => {
     await expect(courses.getByRole('heading', { name: 'Administered, without a seat' })).toBeVisible()
     const unseated = courses.locator('a.side-course.is-unseated')
     await expect(unseated.first()).toHaveAttribute('href', `/admin/courses/${courseId}`)
-    await expect(unseated.first()).toContainText(`SIDE1 · ${STAMP}`)
+    await expect(unseated.first()).toContainText(`SIDE1·${STAMP}`)
     await expect(unseated.first()).toContainText(title)
     await expect(unseated.first()).toContainText('Draft')
     await unseated.first().click()
@@ -268,12 +270,19 @@ test.describe('on a phone', () => {
     const tabs = menu.getByRole('tablist', { name: 'Side bar views' })
     await expect(tabs.getByRole('tab')).toHaveText(['Courses', 'Agents'])
     await expect(tabs.getByRole('tab', { name: 'Courses' })).toHaveAttribute('aria-selected', 'true')
-    // At the menu's top, the view below them.
+    // At the menu's top, under the wordmark, the view below them.
     const top = (await tabs.boundingBox())!
     const menuBox = (await menu.boundingBox())!
-    expect(Math.round(top.y)).toBe(Math.round(menuBox.y))
+    const brand = (await menu.locator('.app-nav-drawer__brand').boundingBox())!
+    expect(Math.round(brand.y)).toBe(Math.round(menuBox.y))
+    await expect(menu.locator('.app-nav-drawer__brand').getByRole('img', { name: 'aishie' })).toBeVisible()
+    expect(Math.round(top.y)).toBe(Math.round(brand.y + brand.height))
     const panel = menu.getByRole('tabpanel')
-    await expect(panel.locator(`a.side-course[href="${coursePath()}"]`)).toHaveAttribute('aria-current', 'page')
+    // The course the page is in, its tabs under it: the Overview tab is the page, the course the one it is in.
+    await expect(panel.locator(`a.side-course[href="${coursePath()}"]`)).toHaveAttribute('aria-current', 'true')
+    await expect(
+      panel.getByRole('navigation', { name: /^Sections of / }).getByRole('link', { name: 'Overview' }),
+    ).toHaveAttribute('aria-current', 'page')
     expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(390)
 
     await tabs.getByRole('tab', { name: 'Agents' }).click()

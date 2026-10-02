@@ -560,6 +560,14 @@ defineExpose({ focus: () => input.value?.focus() })
   padding: 0;
   border-radius: 8px;
 }
+/* On a touch screen the paperclip and the send button are 40 px, apart enough not to be pressed for each other. */
+@media (pointer: coarse) {
+  .chat-composer__attach.el-button,
+  .chat-composer__send.el-button {
+    width: 40px;
+    height: 40px;
+  }
+}
 /* The stop button: a square, in the ink, on the box. */
 .chat-composer__stop.el-button {
   border-color: var(--app-line-strong);

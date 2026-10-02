@@ -13,6 +13,7 @@ import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import ComponentDialog from './components/ComponentDialog.vue'
@@ -30,7 +31,7 @@ import {
   type GradeFacts,
   type SchemeNode,
 } from './components/schemeModel'
-import { formatDecimal } from '@/utils/format'
+import { formatDecimal, formatList } from '@/utils/format'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
@@ -215,9 +216,7 @@ function collapseAll() {
             <el-icon><Plus /></el-icon>
             <span>{{ t('scheme.actions.addComponent') }}</span>
           </el-button>
-          <el-tag v-if="needsApproval" type="warning" size="small" disable-transitions>
-            {{ t('enums.level.confirm_required') }}
-          </el-tag>
+          <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
         </span>
       </el-tooltip>
     </PageHeader>
@@ -253,7 +252,7 @@ function collapseAll() {
             <div
               class="glance-bar"
               role="img"
-              :aria-label="segments.map((s) => `${s.name} ${pct(s.share)}`).join(', ')"
+              :aria-label="formatList(segments.map((s) => t('common.pair', { label: s.name, value: pct(s.share) })))"
             >
               <span
                 v-for="s in segments"

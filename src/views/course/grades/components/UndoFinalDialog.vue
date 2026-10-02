@@ -49,6 +49,7 @@ async function submit() {
         type: 'warning',
         confirmButtonText: t('grades.undoFinal.confirmButton'),
         cancelButtonText: t('common.actions.cancel'),
+        confirmButtonClass: 'el-button--danger',
       },
     )
   } catch {
@@ -103,7 +104,7 @@ async function submit() {
     />
     <template #footer>
       <el-button :disabled="pending" @click="open = false">{{ t('common.actions.cancel') }}</el-button>
-      <el-button type="warning" :loading="pending" :disabled="!course.writable" @click="submit">
+      <el-button type="primary" :loading="pending" :disabled="!course.writable" @click="submit">
         {{ t('grades.undoFinal.confirmButton') }}
       </el-button>
     </template>

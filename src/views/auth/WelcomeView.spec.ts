@@ -64,7 +64,7 @@ describe('the welcome page', () => {
     const w = await failedSubmit(
       new ApiError({ status: 429, code: 'rate_limited', message: 'slow', details: { retry_after_seconds: 30 } }),
     )
-    expect(w.find('.el-alert--error').text()).toContain('請等候 30 秒')
+    expect(w.find('.el-alert--error').text()).toContain('請等候30秒')
     useUiStore().locale = 'en'
     await flushPromises()
     expect(w.find('.el-alert--error').text()).toContain('Wait 30 seconds')

@@ -6,6 +6,7 @@
 // is shown.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatList } from '@/utils/format'
 import { componentLabel } from '@/views/course/scheme/components/schemeModel'
 import { useCourseStore } from '@/stores/course'
 import { presetLabel } from '@/views/course/members/components/seat'
@@ -287,7 +288,7 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
         :check="action.status === 'proposed'"
       />
       <!-- The files a version holds: how many, their names on hover (never their upload tokens). -->
-      <span v-if="messageFiles.length" class="action-target__muted" :title="messageFiles.join(', ')">
+      <span v-if="messageFiles.length" class="action-target__muted" :title="formatList(messageFiles)">
         {{ t('actions.summary.files', { n: messageFiles.length }, messageFiles.length) }}
       </span>
     </template>
@@ -328,7 +329,7 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
         “{{ excerpt(p.reason) }}”
       </span>
       <!-- The files a question or an answer carries: how many, their names on hover (never their upload tokens). -->
-      <span v-if="messageFiles.length" class="action-target__muted" :title="messageFiles.join(', ')">
+      <span v-if="messageFiles.length" class="action-target__muted" :title="formatList(messageFiles)">
         {{ t('actions.summary.files', { n: messageFiles.length }, messageFiles.length) }}
       </span>
     </template>

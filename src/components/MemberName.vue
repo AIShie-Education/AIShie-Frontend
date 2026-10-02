@@ -26,9 +26,11 @@ const agent = computed(() => props.showKind && (member.value?.kind === 'agent' |
   <span v-if="!id">—</span>
   <span v-else-if="name" class="member-name" :class="{ 'is-agent': agent }" :title="id">
     <AgentAvatar v-if="agent" :name="name" size="small" />
-    {{ name }}
+    <!-- 「（你）」 is with the name, not a flex item after it: the gap would part them. -->
+    <span
+      >{{ name }}<span v-if="isMe" class="member-name__me app-you">{{ t('common.labels.youTag') }}</span></span
+    >
     <AiBadge v-if="agent" />
-    <span v-if="isMe" class="member-name__me">({{ t('common.labels.you') }})</span>
   </span>
   <IdText v-else :id="id" />
 </template>

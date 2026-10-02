@@ -5,7 +5,7 @@ export default {
   files: '檔案',
   previous: '上一個檔案',
   next: '下一個檔案',
-  position: '第 {n} 個，共 {total} 個',
+  position: '第{n}個，共{total}個',
   close: '關閉預覽',
   download: '下載',
   downloadFile: '下載「{name}」',
@@ -13,7 +13,7 @@ export default {
   failed: '無法載入檔案',
   tooLarge: {
     title: '檔案太大，無法預覽',
-    text: '這裏只預覽 {max} 以內的檔案。請下載後開啟。',
+    text: '這裏只預覽{max}以內的檔案。請下載後開啟。',
   },
   none: {
     title: '這類檔案無法預覽',
@@ -41,7 +41,7 @@ export default {
   },
   // Office 或 OpenDocument 檔案：以伺服器轉換出的 PDF 顯示。
   rendition: {
-    pages: 'PDF，共 {n} 頁',
+    pages: 'PDF，共{n}頁',
     downloadPdf: '下載 PDF',
     downloadPdfOf: '下載 PDF「{name}」',
     downloadPdfTip: '伺服器從這個檔案轉換出的 PDF，即這裏顯示的版本',
@@ -75,16 +75,16 @@ export default {
   },
   csv: {
     table: '「{name}」的內容',
-    rowsCut: '只顯示首 {n} 行。如要查看全部，請下載檔案。',
-    columnsCut: '只顯示首 {n} 欄。',
+    rowsCut: '只顯示首{n}行。如要查看全部，請下載檔案。',
+    columnsCut: '只顯示首{n}欄。',
   },
   pdf: {
     toolbar: '頁面與縮放',
     prevPage: '上一頁',
     nextPage: '下一頁',
     pageInput: '頁碼',
-    of: '/ {total} 頁',
-    pages: '{name}，第 {page} 頁，共 {total} 頁',
+    of: '/ {total}頁',
+    pages: '{name}，第{page}頁，共{total}頁',
   },
   image: {
     toolbar: '縮放',
@@ -93,7 +93,7 @@ export default {
   zoom: {
     in: '放大',
     out: '縮小',
-    actual: '縮放 {n} %：以實際大小顯示',
+    actual: '縮放{n}：以實際大小顯示',
     actualTip: '實際大小',
     fitWidth: '符合寬度',
     fit: '符合視窗',
@@ -105,8 +105,8 @@ export default {
     failed: '無法開啟列印版面',
     textVersionOf: '{name}（文字版）',
     textVersionNote: '文字版是從檔案讀出的文字，不包括原檔的版面、圖片和格式。',
-    conversationWith: '與 {name} 的對話',
-    messages: '{n} 則訊息',
+    conversationWith: '與{name}的對話',
+    messages: '{n}則訊息',
     withdrawn: '已撤回',
     files: '檔案：{names}',
     partial: '最早的訊息未能讀取，因此沒有包括在內。',

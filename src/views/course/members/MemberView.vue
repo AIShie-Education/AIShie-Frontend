@@ -436,7 +436,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             >
               <el-icon><Delete /></el-icon><span>{{ t('members.detail.remove.action') }}</span>
             </el-button>
-            <el-tag v-if="approval" type="warning" effect="plain">{{ t('enums.level.confirm_required') }}</el-tag>
+            <StatusTag v-if="approval" vocab="level" value="confirm_required" size="default" />
           </div>
         </el-tooltip>
       </template>
@@ -776,7 +776,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                     : t('members.detail.perms.unchanged')
                 }}
               </span>
-              <el-tag v-if="approval" type="warning" effect="plain">{{ t('enums.level.confirm_required') }}</el-tag>
+              <StatusTag v-if="approval" vocab="level" value="confirm_required" size="default" />
               <span class="app-toolbar__spacer" />
               <el-button @click="cancelEdit">{{ t('common.actions.cancel') }}</el-button>
               <el-button

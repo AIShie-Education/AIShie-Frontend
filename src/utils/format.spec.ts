@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { downloadName, formatTime, formatUtc, setNumberLocale, timeZoneName, titleFromFileName } from './format'
+import {
+  downloadName,
+  formatList,
+  formatMoney,
+  formatPct,
+  formatPercent,
+  formatTime,
+  formatUtc,
+  setNumberLocale,
+  timeZoneName,
+  titleFromFileName,
+} from './format'
 
 describe('downloadName', () => {
   it('keeps a name that has an extension', () => {
@@ -76,5 +87,38 @@ describe('the time of day, in the reader’s time zone and in UTC', () => {
     expect(formatUtc(null)).toBe('—')
     expect(formatUtc('soon')).toBe('—')
     expect(formatTime(undefined)).toBe('—')
+  })
+})
+
+describe('percentages, money and lists, in the page’s language', () => {
+  afterEach(() => setNumberLocale(undefined))
+
+  it.each(['en', 'zh-TW', 'zh-CN'])('writes a percentage with no space before its sign, in %s', (tag) => {
+    setNumberLocale(tag)
+    expect(formatPct(0.8846, 2)).toBe('88.46%')
+    expect(formatPct(0.47, 0)).toBe('47%')
+    expect(formatPercent('9.125', '10')).toBe('91.3%')
+  })
+
+  it('writes dollars as US dollars, to the cent from a dollar up and to three figures below it', () => {
+    setNumberLocale('zh-TW')
+    expect(formatMoney('0.018400')).toBe('US$0.0184')
+    expect(formatMoney('2.118200')).toBe('US$2.12')
+    expect(formatMoney('100')).toBe('US$100.00')
+    expect(formatMoney('0.5')).toBe('US$0.50')
+    expect(formatMoney('0')).toBe('US$0.00')
+    expect(formatMoney('1234.5')).toBe('US$1,234.50')
+    expect(formatMoney(null)).toBe('—')
+    setNumberLocale('en')
+    expect(formatMoney('0.998100')).toBe('US$0.998')
+  })
+
+  it.each([
+    ['en', 'Traditional Chinese, Simplified Chinese, and English'],
+    ['zh-TW', 'Traditional Chinese、Simplified Chinese和English'],
+  ])('joins a list as the language does, in %s', (tag, list) => {
+    setNumberLocale(tag)
+    expect(formatList(['Traditional Chinese', 'Simplified Chinese', 'English'])).toBe(list)
+    expect(formatList([])).toBe('')
   })
 })
