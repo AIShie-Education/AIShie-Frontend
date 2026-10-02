@@ -481,7 +481,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   200 px of the window's top. Inside a course the page's header has 12 px under it, not 20. Known
   to miss it, by a line of their own: an assignment, a submission and a proposal, whose header has
   a back link, a title and a line of facts beside their actions (about 220 px), and the Submissions
-  and Grading scheme pages (205 and 215 px); do not add to them.
+  and Grading scheme pages (205 and 215 px), whose subtitle takes a second line; in English, whose
+  subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a pixel or so
+  (201 px); do not add to them.
 - **Navigation's icons are outlined, never filled**: the activity bar, the side bar, the phone's
   header, a course's tabs and More's menu, the grades' tabs. A filled glyph among outlined ones
   reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
