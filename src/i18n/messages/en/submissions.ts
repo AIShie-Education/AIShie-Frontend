@@ -118,6 +118,8 @@ export default {
     draftBy: 'Drafted by {name}',
     // While what the draft filled in is unchanged: those fields carry a line at their left.
     prefilledBy: 'The fields with a line at their left are as {name} drafted them: you have not changed them yet.',
+    // After the label of each such field, said to a screen reader alone.
+    prefilledMark: '(as an agent drafted it: not changed yet)',
     startFromDraft: 'Start from the current draft',
     forMissing:
       'Nothing was handed in: this grade is for handing in nothing. If late work takes the placeholder’s place before the grade is entered, the grade is refused and the work must be looked at afresh.',

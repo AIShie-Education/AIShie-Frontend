@@ -6,8 +6,8 @@
 //
 // A draft says who drafted it: an agent with its avatar and "AI", a person by
 // name. Filled into the form from an agent's draft, what it wrote carries a
-// line at its left (--app-indigo-line) until the grader changes it, and a
-// note above the form says so.
+// line at its left (--app-indigo) until the grader changes it, a note above
+// the form says so, and each such field's label says it to a screen reader.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
@@ -413,6 +413,12 @@ async function submit() {
             {{ t('submissions.grade.prefilledBy', { name: prefill.name }) }}
           </p>
           <el-form-item :label="t('submissions.grade.score')" prop="score" :class="{ 'is-prefilled': untouched.score }">
+            <template #label
+              >{{ t('submissions.grade.score')
+              }}<span v-if="untouched.score" class="grade-panel__sr">{{
+                t('submissions.grade.prefilledMark')
+              }}</span></template
+            >
             <div class="grade-panel__score">
               <el-input
                 v-model="form.score"
@@ -430,6 +436,12 @@ async function submit() {
           </el-form-item>
 
           <el-form-item :label="t('submissions.grade.breakdown')" :class="{ 'is-prefilled': untouched.breakdown }">
+            <template #label
+              >{{ t('submissions.grade.breakdown')
+              }}<span v-if="untouched.breakdown" class="grade-panel__sr">{{
+                t('submissions.grade.prefilledMark')
+              }}</span></template
+            >
             <div class="grade-panel__block">
               <BreakdownEditor v-model="form.breakdown" :strict="breakdownChecked" @use-total="useTotal" />
               <div v-if="breakdownError" class="grade-panel__error" role="alert">
@@ -440,6 +452,12 @@ async function submit() {
           </el-form-item>
 
           <el-form-item :label="t('submissions.grade.feedback')" :class="{ 'is-prefilled': untouched.feedback }">
+            <template #label
+              >{{ t('submissions.grade.feedback')
+              }}<span v-if="untouched.feedback" class="grade-panel__sr">{{
+                t('submissions.grade.prefilledMark')
+              }}</span></template
+            >
             <MarkdownEditor
               v-model="form.feedback"
               :rows="8"
@@ -609,10 +627,20 @@ async function submit() {
 .grade-panel__form :deep(.el-form-item.is-prefilled > .el-form-item__content) {
   margin-left: -13px;
   padding-left: 10px;
-  border-left: 3px solid var(--app-indigo-line);
+  /* The indigo itself: the indigo line is too faint (under 3:1) for the one mark that says this. */
+  border-left: 3px solid var(--app-indigo);
 }
 .grade-panel__prefilled-note {
   margin: 0 0 12px;
+}
+/* Said to a screen reader with the field's label: the line at its left is seen alone. */
+.grade-panel__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .grade-panel__actions {
   display: flex;

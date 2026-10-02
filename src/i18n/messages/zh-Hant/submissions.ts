@@ -112,6 +112,8 @@ export default {
     draftBy: '由{name}起草',
     // While what the draft filled in is unchanged: those fields carry a line at their left.
     prefilledBy: '左側有直線的欄位仍是{name}起草的內容，你尚未修改。',
+    // After the label of each such field, said to a screen reader alone.
+    prefilledMark: '（代理起草，尚未修改）',
     startFromDraft: '以目前的草稿為基礎',
     forMissing:
       '學生沒有繳交任何作業：這個成績是針對缺交而給。若在成績生效前有遲交的作業取代了這個佔位紀錄，成績會被拒絕，需重新檢視作業。',
