@@ -689,17 +689,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   quoted, for the agent to find; their list works from the keyboard and never takes the Enter an
   input method uses. Whatever stops the caller writing (an agent paused, gone, not answering or
   operated elsewhere, a closed conversation, one waiting for approval) is one muted line above the
-  composer, never an alert box. Under the composer, for the one asking, one muted line says who else reads the
-  conversation and where the agent sends it, with "More" for the whole notice (`privacy.ts`,
-  `ChatPrivacyNotice`), which the ⋯ menu's "Who can read this" opens too: who reads it is Core's
-  `visible_to`; where it goes follows how the agent is hosted, a provider named only for the caller's
-  own agent, whose model the runtime tells its owner (`useAnswerModels`), and its fallback's
-  provider too where it is another; and nothing in it is deleted, a withdrawn message kept (its
-  files listed in an export, never held there). A new conversation opens at its foot, the first
-  time on the points, scrolled until More and Got it show. The first time a person starts a conversation in this browser
-  (`aishie.chatPrivacySeen.<actorId>`), its points are on the new conversation instead, until "Got
-  it" or the first question. A new conversation has no title field: it is titled by the first
-  line of its first message (`titleFrom`), and it offers a few ways to begin, which fill the box.
+  composer, never an alert box. Under the composer, for the one asking, one muted line says who
+  else reads the conversation and where the agent sends it, with "More" for the whole notice
+  (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read this" opens too: who reads
+  it is Core's `visible_to`; where it goes follows how the agent is hosted, a provider named only
+  for the caller's own agent, whose model the runtime tells its owner (`useAnswerModels`), and its
+  fallback's provider too where it is another; and nothing in it is deleted, a withdrawn message
+  kept (its files listed in an export, never held there). A new conversation opens at its foot,
+  the first time on the points, scrolled until More and Got it show. The first time a person
+  starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points are on
+  the new conversation instead, until "Got it" or the first question. A new conversation has no
+  title field: it is titled by the first line of its first message (`titleFrom`), and it offers a
+  few ways to begin, which fill the box.
   An answer in the making (`draft.ts`, the contract Core, the runtime and this app share) takes the
   working line's place: `ChatDraft` under the agent's name, its steps (`ChatDraftSteps`: each done
   step with a tick, 「已閱讀《HW1.pdf》」, the running one with the turning glyph, and the steps
