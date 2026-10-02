@@ -159,8 +159,12 @@ async function remove(a: Appointment) {
           <ul v-else class="admins-drawer__list">
             <li v-for="a in here" :key="a.id" class="admins-drawer__item" :class="{ 'is-ended': !!a.removed_at }">
               <div class="admins-drawer__who">
-                <span class="admins-drawer__name">{{ a.display_name }}</span>
-                <span v-if="a.actor_id === session.me?.id" class="app-muted">{{ t('common.labels.youTag') }}</span>
+                <span class="admins-drawer__name"
+                  >{{ a.display_name
+                  }}<span v-if="a.actor_id === session.me?.id" class="app-muted app-you">{{
+                    t('common.labels.youTag')
+                  }}</span></span
+                >
                 <el-tag v-if="a.removed_at" type="info" size="small" disable-transitions>{{ t('deptAdmin.admins.ended') }}</el-tag>
               </div>
               <div class="admins-drawer__meta">
@@ -193,8 +197,12 @@ async function remove(a: Appointment) {
           <ul class="admins-drawer__list">
             <li v-for="a in g.admins" :key="a.id" class="admins-drawer__item">
               <div class="admins-drawer__who">
-                <span class="admins-drawer__name">{{ a.display_name }}</span>
-                <span v-if="a.actor_id === session.me?.id" class="app-muted">{{ t('common.labels.youTag') }}</span>
+                <span class="admins-drawer__name"
+                  >{{ a.display_name
+                  }}<span v-if="a.actor_id === session.me?.id" class="app-muted app-you">{{
+                    t('common.labels.youTag')
+                  }}</span></span
+                >
               </div>
               <i18n-t keypath="deptAdmin.admins.appointedBy" tag="div" scope="global" class="admins-drawer__meta">
                 <template #name>{{ a.appointed_by_name }}</template>
@@ -285,6 +293,9 @@ async function remove(a: Appointment) {
 .admins-drawer__name {
   font-weight: 600;
   word-break: break-word;
+}
+.admins-drawer__name .app-you {
+  font-weight: 400;
 }
 .admins-drawer__meta {
   grid-column: 1;

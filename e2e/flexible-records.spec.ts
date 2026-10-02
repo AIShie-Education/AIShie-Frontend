@@ -345,6 +345,15 @@ test.describe.serial('records that change after the fact', () => {
     await expect(page.locator('.gradebook__total')).toContainText('已覆寫')
     await expect(page.locator('.gradebook__total')).toContainText('計算所得')
     await photograph(page, 'total-override-zh-Hant')
+    // 「…總分：」 and the figure after it are one item of the line's flex: no gap after the full-width colon.
+    const gap = await page.locator('.gradebook__snapshot a').evaluate((link) => {
+      let colon = link.previousSibling
+      while (colon && !(colon.nodeType === Node.TEXT_NODE && colon.textContent!.trim())) colon = colon.previousSibling
+      const label = document.createRange()
+      label.selectNodeContents(colon!)
+      return link.getBoundingClientRect().left - label.getBoundingClientRect().right
+    })
+    expect(gap).toBeLessThan(1)
     await page.locator('.gradebook__snapshot a').click()
     await expect(page.locator('.grade-view__override')).toContainText('原因：Moderated at the exam board')
 

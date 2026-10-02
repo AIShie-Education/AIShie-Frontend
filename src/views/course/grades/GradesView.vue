@@ -490,12 +490,15 @@ const gradebookLink = computed(() =>
                   ><TimeText :value="mine ? g.posted_at : g.created_at" relative
                 /></span>
               </div>
-              <i18n-t v-if="!mine" keypath="common.pair" tag="div" scope="global" class="grades-list__line app-muted">
-                <template #label>{{
-                  g.origin === 'computed' ? t('grades.detail.writtenBy') : t('grades.columns.grader')
-                }}</template>
-                <template #value><MemberName :id="g.grader_member_id" show-kind /></template>
-              </i18n-t>
+              <!-- The pair is one item of the line's flex: its gap would put a space after the colon. -->
+              <div v-if="!mine" class="grades-list__line app-muted">
+                <i18n-t keypath="common.pair" tag="span" scope="global">
+                  <template #label>{{
+                    g.origin === 'computed' ? t('grades.detail.writtenBy') : t('grades.columns.grader')
+                  }}</template>
+                  <template #value><MemberName :id="g.grader_member_id" show-kind /></template>
+                </i18n-t>
+              </div>
             </div>
             <el-icon class="grades-list__chev"><ArrowRight /></el-icon>
           </li>

@@ -270,8 +270,13 @@ function rowClass({ row }: { row: MemberSummary }) {
                 <el-icon class="members__kind-icon" :class="{ 'is-agent': row.kind === 'agent' }">
                   <Cpu v-if="row.kind === 'agent'" /><User v-else />
                 </el-icon>
-                <span class="members__name-text">{{ row.display_name }}</span>
-                <span v-if="row.id === course.myMemberId" class="members__me">{{ t('common.labels.youTag') }}</span>
+                <!-- 「（你）」 is with the name, not a flex item after it: the line's gap would part them. -->
+                <span class="members__who"
+                  ><span class="members__name-text">{{ row.display_name }}</span
+                  ><span v-if="row.id === course.myMemberId" class="members__me app-you">{{
+                    t('common.labels.youTag')
+                  }}</span></span
+                >
                 <el-tooltip v-if="row.login_id" :content="t('members.loginId')" placement="top">
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
                 </el-tooltip>
@@ -392,6 +397,12 @@ function rowClass({ row }: { row: MemberSummary }) {
   gap: 2px 6px;
   min-width: 0;
 }
+/* The name and 「（你）」 after it, with no gap between them: the name is cut short first. */
+.members__who {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
 .members__name-text {
   font-weight: 500;
   overflow: hidden;
@@ -417,6 +428,7 @@ function rowClass({ row }: { row: MemberSummary }) {
   white-space: nowrap;
 }
 .members__me {
+  flex-shrink: 0;
   color: var(--el-text-color-secondary);
   font-size: 12px;
   white-space: nowrap;

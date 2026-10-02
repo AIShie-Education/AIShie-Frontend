@@ -577,7 +577,8 @@ watch(
               </div>
             </el-alert>
             <p v-if="rootSnapshot" class="gradebook__snapshot">
-              <i18n-t keypath="common.pair" scope="global">
+              <!-- One item of the line's flex: its gap would put a space after the colon. -->
+              <i18n-t keypath="common.pair" tag="span" scope="global">
                 <template #label>{{ t('grades.gradebook.lastWritten') }}</template>
                 <template #value>
                   <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: rootSnapshot.id } }">{{

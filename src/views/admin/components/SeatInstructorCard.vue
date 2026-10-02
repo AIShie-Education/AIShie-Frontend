@@ -317,15 +317,17 @@ async function seat() {
       <ul v-else-if="instructors?.length" class="seat__people">
         <li v-for="m in instructors" :key="m.id" class="seat__person">
           <el-icon class="seat__person-icon"><Cpu v-if="m.kind === 'agent'" /><User v-else /></el-icon>
-          <router-link
-            v-if="mode === 'directory'"
-            :to="{ name: 'admin-actor', params: { actorId: m.actor_id } }"
-            class="seat__person-name"
+          <span
+            ><router-link
+              v-if="mode === 'directory'"
+              :to="{ name: 'admin-actor', params: { actorId: m.actor_id } }"
+              class="seat__person-name"
+              >{{ m.display_name }}</router-link
+            ><span v-else class="seat__person-name">{{ m.display_name }}</span
+            ><span v-if="m.actor_id === session.me?.id" class="app-muted app-you">{{
+              t('common.labels.youTag')
+            }}</span></span
           >
-            {{ m.display_name }}
-          </router-link>
-          <span v-else class="seat__person-name">{{ m.display_name }}</span>
-          <span v-if="m.actor_id === session.me?.id" class="app-muted">{{ t('common.labels.youTag') }}</span>
           <StatusTag v-if="m.status !== 'active'" vocab="memberStatus" :value="m.status" />
         </li>
       </ul>
@@ -334,15 +336,17 @@ async function seat() {
         <ul v-if="seatedHere.length" class="seat__people">
           <li v-for="p in seatedHere" :key="p.memberId" class="seat__person">
             <el-icon class="seat__person-icon"><UserFilled /></el-icon>
-            <router-link
-              v-if="mode === 'directory'"
-              :to="{ name: 'admin-actor', params: { actorId: p.actorId } }"
-              class="seat__person-name"
+            <span
+              ><router-link
+                v-if="mode === 'directory'"
+                :to="{ name: 'admin-actor', params: { actorId: p.actorId } }"
+                class="seat__person-name"
+                >{{ p.name }}</router-link
+              ><span v-else class="seat__person-name">{{ p.name }}</span
+              ><span v-if="p.actorId === session.me?.id" class="app-muted app-you">{{
+                t('common.labels.youTag')
+              }}</span></span
             >
-              {{ p.name }}
-            </router-link>
-            <span v-else class="seat__person-name">{{ p.name }}</span>
-            <span v-if="p.actorId === session.me?.id" class="app-muted">{{ t('common.labels.youTag') }}</span>
             <span class="app-muted">{{ t('admin.seat.seatedJustNow') }}</span>
           </li>
         </ul>
