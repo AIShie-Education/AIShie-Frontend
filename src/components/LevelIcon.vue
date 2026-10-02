@@ -2,8 +2,10 @@
 // The mark of an autonomy level, by shape, not by hue: a lock for denied, a
 // raised hand for confirm_required (someone approves each), an eye for
 // pending_review (someone looks after) and a bolt for autonomous. Line icons
-// of 24 px, drawn in the current colour (after Lucide's lock, hand, eye and
-// zap; ISC licence).
+// of 24 px, drawn in the current colour: the path data of Lucide's lock,
+// hand, eye and zap (https://lucide.dev), under the ISC License, lock
+// derived from Feather under the MIT License. Their copyright and permission
+// notices are in THIRD-PARTY-NOTICES.md, at the repository's root.
 import type { AutonomyLevel } from '@/api/types'
 
 defineProps<{ level: AutonomyLevel | string }>()
