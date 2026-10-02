@@ -706,6 +706,12 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+/* On a touch screen, 16 px, below which iOS zooms into a field it focuses. */
+@media (pointer: coarse) {
+  .pdf-view__page-input {
+    font-size: 16px;
+  }
+}
 .pdf-view__page-input:focus-visible {
   outline: 2px solid var(--app-focus);
   outline-offset: 1px;

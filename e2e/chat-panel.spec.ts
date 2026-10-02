@@ -948,6 +948,44 @@ test.describe.serial('the chat panel', () => {
     }
   })
 
+  test('keeps its count of unread answers within the window, however many there are', async ({ page }) => {
+    const d = demo()
+    await page.setViewportSize({ width: 1280, height: 800 })
+    // Core's list of her conversations, with as many more unread ones with an agent as the step asks for.
+    let extra = 0
+    await page.route(/\/v1\/me\/conversations(\?|$)/, async (route) => {
+      const res = await route.fetch()
+      const body = await res.json()
+      const real = (body.result?.conversations ?? []) as Record<string, unknown>[]
+      const fake = Array.from({ length: extra }, (_, i) => ({
+        ...(real[0] ?? {}),
+        conversation_id: `00000000-0000-7000-8000-${String(i).padStart(12, '0')}`,
+        respondent: { kind: 'agent' },
+        unread: true,
+      }))
+      await route.fulfill({
+        response: res,
+        json: { ...body, result: { ...body.result, conversations: [...fake, ...real] } },
+      })
+    })
+    await signIn(page, d.actors.yuki)
+    for (const [n, shown] of [
+      [12, '12'],
+      [120, '99+'],
+    ] as const) {
+      extra = n
+      await page.goto(coursePath())
+      await expect(chatBadge(page)).toHaveText(shown, { timeout: 40_000 })
+      const fit = await page.evaluate(() => ({
+        scroll: document.scrollingElement!.scrollWidth,
+        width: document.documentElement.clientWidth,
+        badge: document.querySelector('.app-header .el-badge__content')!.getBoundingClientRect().right,
+      }))
+      expect(fit.scroll, `${shown}: the page is no wider than the window`).toBeLessThanOrEqual(fit.width)
+      expect(fit.badge, `${shown}: the count is within the window`).toBeLessThanOrEqual(fit.width)
+    }
+  })
+
   test.describe('at phone width', () => {
     test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 

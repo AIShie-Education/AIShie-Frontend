@@ -668,6 +668,12 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   margin-left: 0;
   padding: 5px 7px;
 }
+/* On a touch screen, square: as wide as a small control is tall (40 px). */
+@media (pointer: coarse) {
+  .chat-panel__icon {
+    min-width: var(--el-component-size-small);
+  }
+}
 .chat-panel__bar .el-button + .el-button {
   margin-left: 0;
 }

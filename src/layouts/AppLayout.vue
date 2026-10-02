@@ -308,9 +308,21 @@ const pageTitle = computed(() => {
   border-color: var(--app-indigo-line);
   color: var(--app-indigo);
 }
+/* The count at the button's top right corner, half over it, whatever its
+   width: Element's own pushes it its whole width past the corner, so that
+   "12" or "99+" ran past the window's edge. The header's 20 px of padding
+   take the half that is outside. */
 .app-header__chat :deep(.el-badge__content.is-fixed) {
-  top: 2px;
-  right: 4px;
+  top: 0;
+  right: 0;
+  transform: translate(40%, -30%);
+}
+/* On a touch screen, a control pressed often is at least 40 px. */
+@media (pointer: coarse) {
+  .app-header__chat-button {
+    width: 44px;
+    height: 44px;
+  }
 }
 .app-header__title {
   font-weight: 600;
