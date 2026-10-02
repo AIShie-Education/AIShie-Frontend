@@ -84,6 +84,8 @@ test.describe('the activity bar and the side bar', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto('/account')
+    // The account's own list of seats parts a course's code and section as the side bar does.
+    await expect(page.locator(`.seats-list a[href="${coursePath()}"] .seat__code`)).toHaveText('CS101·A')
     // Collapsed first: the Courses button opens the side bar on the courses.
     const courses = activityBar(page).getByRole('button', { name: 'Courses', exact: true })
     await expect(courses).toHaveAttribute('aria-expanded', 'true')
