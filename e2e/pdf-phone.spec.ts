@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { call, coursePath, demo, photograph, signIn, type FileSpec } from './support'
+import { call, coursePath, demo, inTraditionalChinese, photograph, signIn, type FileSpec } from './support'
 
 // The PDF viewer on a phone, and on a desktop as before, with the real Core:
 // material of a slide deck (eight wide pages), a long handout (twelve A4
@@ -9,9 +9,12 @@ import { call, coursePath, demo, photograph, signIn, type FileSpec } from './sup
 // zoom are one bar at the bottom, within a thumb's reach, which the last page
 // scrolls clear of; the files are two arrows by the close button, so that
 // the only count on the screen is the pages'; a PDF of one page has no page
-// control; and two fingers pinch the pages larger, not the whole screen. On a
-// small phone a document of 1,200 pages keeps its bar within it. On a desktop
-// the bar is above the pages, with the zoom in per cent, as it was.
+// control; and two fingers pinch the pages larger, not the whole screen.
+// Where the bar has no room for all it holds, it leaves something out, never
+// cutting a digit of the count short: a document of 150 pages zoomed by hand
+// on a phone, in English and in Traditional Chinese, and one of 1,200 pages
+// on a small phone. On a desktop the bar is above the pages, with the zoom in
+// per cent, as it was.
 
 const tag = Date.now().toString(36)
 const TITLE = `Week 7 — Sorting (e2e ${tag})`
@@ -87,13 +90,24 @@ const READER: FileSpec = {
   ),
 }
 
+const EXERCISES: FileSpec = {
+  name: `sorting-exercises-${tag}.pdf`,
+  mimeType: 'application/pdf',
+  buffer: pdfOf(
+    595,
+    842,
+    Array.from({ length: 150 }, (_, i) => `Exercise ${i + 1}`),
+    1,
+  ),
+}
+
 let documentId = ''
 
 test.beforeAll(async () => {
   const d = demo()
   const I = d.actors.instructor.token
   const files = []
-  for (const f of [DECK, HANDOUT, NOTE, READER]) {
+  for (const f of [DECK, HANDOUT, NOTE, READER, EXERCISES]) {
     const q = `kind=material&content_type=${encodeURIComponent(f.mimeType)}&filename=${encodeURIComponent(f.name)}`
     const u = await call(I, 'GET', `/v1/courses/${d.course.id}/upload-url?${q}`)
     expect(u.body.status, JSON.stringify(u.body.error)).toBe('executed')
@@ -197,12 +211,30 @@ async function expectOneBar(page: Page, dialog: Locator, where: 'top' | 'bottom'
       expect(Math.min(r.width, r.height), name).toBeGreaterThanOrEqual(36)
     } else expect(r.y + r.height, name).toBeLessThan(height * 0.3)
   }
-  expect(await toolbar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  await expectNothingCut(dialog)
   if (where === 'bottom') {
     const counts = await countsShown(dialog)
     expect(counts.length, counts.join(' | ')).toBe(pages ? 1 : 0)
     if (pages) await expect(dialog.locator('.pdf-view__of')).toHaveText(counts[0]!)
+  }
+}
+
+/**
+ * Whatever the bar shows, it shows whole and within it: the bar holds all it
+ * lays out, and no text in it is cut short (the count of pages, its per
+ * cent), which would read as another number.
+ */
+async function expectNothingCut(dialog: Locator) {
+  const bar = dialog.locator('.pdf-view__bar')
+  expect(await bar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0)
+  const pill = (await bar.boundingBox())!
+  for (const part of await bar.locator('.pdf-view__of, .pdf-view__percent, .pdf-view__page-input').all()) {
+    const what = await part.evaluate((el) => el.className)
+    expect(await part.evaluate((el) => el.scrollWidth - el.clientWidth), what).toBeLessThanOrEqual(0)
+    const r = (await part.boundingBox())!
+    expect(r.x, what).toBeGreaterThanOrEqual(pill.x)
+    expect(r.x + r.width, what).toBeLessThanOrEqual(pill.x + pill.width)
   }
 }
 
@@ -360,18 +392,68 @@ test.describe('on a phone on its side', () => {
 test.describe('on a small phone', () => {
   test.use({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true })
 
-  test('a document of 1,200 pages keeps its bar within it, fitted and zoomed', async ({ page }) => {
+  test('a document of 1,200 pages keeps its bar within it, fitted and zoomed, its count whole', async ({ page }) => {
     await signIn(page, demo().actors.instructor)
     await page.goto(coursePath(`documents/${documentId}`))
     const dialog = await open(page, READER)
     const first = await firstPageDrawn(page, dialog, true)
     await expectFillsWidth(dialog, first, 8)
     await expectOneBar(page, dialog, 'bottom')
+    await expect(dialog.locator('.pdf-view__of')).toHaveText('of 1,200')
     await photograph(page, 'small-reader-light')
     await dialog.getByRole('button', { name: 'Zoom in', exact: true }).click()
-    await expect(dialog.locator('.pdf-view__percent')).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Fit width', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    // No room for its per cent as well: it is left out (Fit width says it is not fitted), and the count stays whole.
+    await expect(dialog.locator('.pdf-view__percent')).toHaveCount(0)
     await expectOneBar(page, dialog, 'bottom')
+    await expect(dialog.locator('.pdf-view__of')).toHaveText('of 1,200')
     await photograph(page, 'small-reader-zoomed')
+  })
+})
+
+test.describe('on a phone of 375 × 667', () => {
+  test.use({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true })
+
+  test('a document of 150 pages zoomed by hand keeps its count whole', async ({ page }) => {
+    await signIn(page, demo().actors.instructor)
+    await page.goto(coursePath(`documents/${documentId}`))
+    const dialog = await open(page, EXERCISES)
+    await firstPageDrawn(page, dialog, true)
+    await expectOneBar(page, dialog, 'bottom')
+    await dialog.getByRole('button', { name: 'Zoom in', exact: true }).click()
+    await expect(dialog.getByRole('button', { name: 'Fit width', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    // Its buttons a little smaller, there is room for its per cent and the whole count.
+    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+ %/)
+    await expectOneBar(page, dialog, 'bottom')
+    await expect(dialog.locator('.pdf-view__of')).toHaveText('of 150')
+    await photograph(page, 'mid-375-exercises-zoomed')
+  })
+})
+
+test.describe('on a phone, in Traditional Chinese', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('a document of 150 pages zoomed by hand keeps its count whole', async ({ page }) => {
+    await signIn(page, demo().actors.instructor)
+    await inTraditionalChinese(page)
+    await page.goto(coursePath(`documents/${documentId}`))
+    const dialog = await open(page, EXERCISES)
+    await firstPageDrawn(page, dialog, true)
+    await expectNothingCut(dialog)
+    await expect(dialog.locator('.pdf-view__of')).toHaveText('/ 150 頁')
+    await dialog.getByRole('button', { name: '放大', exact: true }).click()
+    await expect(dialog.getByRole('button', { name: '符合寬度', exact: true })).toHaveAttribute('aria-pressed', 'false')
+    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+ %/)
+    await expectNothingCut(dialog)
+    await expect(dialog.locator('.pdf-view__of')).toHaveText('/ 150 頁')
+    await photograph(page, 'phone-exercises-zh-Hant-zoomed-light')
+    await inDark(page, 'phone-exercises-zh-Hant-zoomed-dark')
   })
 })
 

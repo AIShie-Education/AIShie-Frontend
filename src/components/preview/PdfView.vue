@@ -20,10 +20,15 @@
 // the bottom, within a thumb's reach, over the pages, which scroll clear of
 // it; fitted to the width it says so rather than its per cent, which it says
 // again once zoomed by hand. Narrower still (360 px or less), its buttons are
-// a little smaller, and the count of pages gives way before they leave it.
+// a little smaller. Where it still has no room for all it holds (a long
+// document, a language whose words are longer, zoomed by hand), it leaves out
+// one thing after another until it fits: its buttons a little smaller, then
+// its per cent (the Fit width button says whether it is fitted), then the
+// count of pages (still in the pages' name to a screen reader); never a digit
+// cut short, which would read as another number.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerWidth } from '@/composables/useContainerWidth'
 import { openPdf, TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from './pdfjs'
 import { clampZoom, CSS_UNITS, fitWidthOf, nearFit, pinchZoom, wheelZoom, zoomStep } from './pdfZoom'
 
@@ -37,7 +42,7 @@ const emit = defineEmits<{
   /** It cannot be shown: protected by a password, or not a PDF this can read. */
   failed: [reason: 'password' | 'invalid']
 }>()
-const { t, n } = useI18n()
+const { t, n, locale } = useI18n()
 
 /** The most pixels a page's canvas holds: past it, it is drawn at less than the screen's density. */
 const MAX_CANVAS_PIXELS = 1 << 24
@@ -46,10 +51,13 @@ const GUTTER = 16
 
 const root = ref<HTMLElement | null>(null)
 const scroller = ref<HTMLElement | null>(null)
+const bar = ref<HTMLElement | null>(null)
+/** The view's own width (null until it is laid out), as `@container (max-width: …)` would measure it. */
+const width = useContainerWidth(root)
 /** A phone's view, upright (its own width) or on its side (its own height): the compact bar at the bottom. */
-const narrow = useContainerNarrow(root, 640)
+const narrow = computed(() => width.value !== null && width.value <= 640)
 /** A small phone's (320 or 360 px): the compact bar's buttons a little smaller, to keep within it. */
-const tight = useContainerNarrow(root, 360)
+const tight = computed(() => width.value !== null && width.value <= 360)
 /** The view's own height, measured once it is laid out; null until then. */
 const height = ref<number | null>(null)
 const short = computed(() => height.value !== null && height.value <= 400)
@@ -66,6 +74,12 @@ const pageInput = ref('1')
 const loading = ref(true)
 
 const percent = computed(() => Math.round(zoom.value * 100))
+/**
+ * How much the compact bar leaves out to fit, measured (fitBar): 0, nothing;
+ * 1, its buttons are a little smaller; 2, its per cent is left out too; 3,
+ * the count of pages as well.
+ */
+const give = ref(0)
 const canPrev = computed(() => current.value > 1)
 const canNext = computed(() => current.value < pageCount.value)
 
@@ -430,6 +444,30 @@ function onWheel(e: WheelEvent) {
   queueZoom(wheelZoom(queued?.zoom ?? zoom.value, delta), { x: e.clientX, y: e.clientY })
 }
 
+// --- The compact bar's room ------------------------------------------------------------------
+
+let fitting = 0
+/**
+ * Leaves out of the compact bar, one after the other, what it has no room
+ * for (`give`), from all it holds: measured before the browser paints, so
+ * that nothing is ever shown cut short.
+ */
+async function fitBar() {
+  const run = ++fitting
+  give.value = 0
+  if (!compact.value) return
+  await nextTick()
+  while (run === fitting && give.value < 3 && bar.value && bar.value.scrollWidth > bar.value.clientWidth) {
+    give.value++
+    await nextTick()
+  }
+}
+// What changes what it holds, or its room: the view's size, the per cent's
+// digits, whether it is shown (fitted or not), the count's digits, the language.
+watch([compact, width, fitWidth, () => String(percent.value).length, pageCount, locale], () => void fitBar(), {
+  flush: 'post',
+})
+
 // --- Opening it ------------------------------------------------------------------------------
 
 onMounted(async () => {
@@ -442,6 +480,10 @@ onMounted(async () => {
     })
     sizer.observe(box)
   }
+  // The bar's words are measured again in the font they are shown in, once it has come.
+  void document.fonts?.ready.then(() => {
+    if (!disposed) void fitBar()
+  })
   const area = scroller.value
   if (area) {
     // Not passive: a pinch's moves, and a touchpad's, are kept from the browser.
@@ -506,8 +548,8 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
 </script>
 
 <template>
-  <div ref="root" class="pdf-view" :class="{ 'is-compact': compact, 'is-tight': compact && tight }">
-    <div class="pdf-view__bar" role="toolbar" :aria-label="t('preview.pdf.toolbar')">
+  <div ref="root" class="pdf-view" :class="{ 'is-compact': compact, 'is-tight': compact && (tight || give >= 1) }">
+    <div ref="bar" class="pdf-view__bar" role="toolbar" :aria-label="t('preview.pdf.toolbar')">
       <div v-if="pageCount !== 1" class="pdf-view__group pdf-view__paging">
         <el-button
           text
@@ -527,10 +569,11 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           :aria-label="t('preview.pdf.pageInput')"
           :disabled="!pageCount"
           :size="Math.max(2, String(pageCount).length)"
+          :style="{ '--digits': Math.max(2, String(pageCount).length) }"
           @keydown.enter.prevent="goToTyped"
           @blur="goToTyped"
         />
-        <span class="pdf-view__of">{{ t('preview.pdf.of', { total: n(pageCount) }) }}</span>
+        <span v-if="!compact || give < 3" class="pdf-view__of">{{ t('preview.pdf.of', { total: n(pageCount) }) }}</span>
         <el-button
           text
           size="small"
@@ -555,7 +598,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           <el-icon><ZoomOut /></el-icon>
         </el-button>
         <button
-          v-if="!compact || !fitWidth"
+          v-if="!compact || (!fitWidth && give < 2)"
           type="button"
           class="pdf-view__percent"
           :disabled="!pageCount"
@@ -846,24 +889,20 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
 .pdf-view.is-compact .pdf-view__page-input {
   /* 16 px, or a phone's browser zooms the screen to it as it is focused. */
   font-size: 16px;
-  min-width: 2.2em;
+  /* As wide as the count's digits (tabular, each 1ch), and no narrower than a button. */
+  box-sizing: border-box;
+  width: calc(var(--digits, 2) * 1ch + 16px);
+  min-width: 36px;
   padding: 4px 6px;
 }
 .pdf-view.is-compact .pdf-view__of {
   margin: 0 2px 0 4px;
-  /* The last to give way where the bar has no room (its count is still in the pages' name). */
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.pdf-view.is-compact .pdf-view__paging {
-  min-width: 0;
-}
-.pdf-view.is-compact .pdf-view__zoom {
-  flex-shrink: 0;
-}
+/* Nothing shrinks, and nothing is cut short: what has no room is left out (fitBar). */
+.pdf-view.is-compact .pdf-view__group,
 .pdf-view.is-compact .pdf-view__bar .el-button,
 .pdf-view.is-compact .pdf-view__page-input,
+.pdf-view.is-compact .pdf-view__of,
 .pdf-view.is-compact .pdf-view__percent {
   flex-shrink: 0;
 }
@@ -883,6 +922,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   padding-left: 2px;
 }
 .pdf-view.is-tight .pdf-view__page-input {
+  width: calc(var(--digits, 2) * 1ch + 12px);
   padding: 4px;
 }
 .pdf-view.is-tight .pdf-view__of {
