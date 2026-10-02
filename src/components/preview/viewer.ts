@@ -16,7 +16,7 @@
 // rubric, how to read its text version (文字版), which is what an Office file
 // is shown as where Core keeps no rendition of it.
 import { shallowReactive } from 'vue'
-import { ApiError, read, write, type ToolOut, type WriteOutcome } from '@/api/http'
+import { read, write, type ToolOut, type WriteOutcome } from '@/api/http'
 import type { DocumentFile, MessageAttachment, TextVersion } from '@/api/types'
 import { downloadDocumentFile } from '@/utils/documentFiles'
 import type { Rendition } from '@/utils/rendition'
@@ -114,10 +114,8 @@ export function showPreviewAt(index: number) {
 /**
  * A document version's files, to preview: each fetched from a fresh URL
  * (document.file), downloaded as VersionFileList does, and its text version
- * read by its file_id. A file with no id (a Core from before several files
- * to a version) is its version's one file, fetched from document.get's
- * deprecated download_url. Its rendition is read again by its id too, and
- * sent back by it where the caller may write the document (opts.retry).
+ * read by its file_id. Its rendition is read again by its id too, and sent
+ * back by it where the caller may write the document (opts.retry).
  */
 export function documentPreviewFiles(
   courseId: string,
@@ -128,35 +126,21 @@ export function documentPreviewFiles(
   opts: PreviewFileOptions = {},
 ): PreviewFile[] {
   return files.map((f) => ({
-    key: f.id || `${documentId}/${f.position}`,
+    key: f.id,
     filename: f.filename,
     contentType: f.content_type,
     byteSize: f.byte_size,
     date: date ?? null,
     text: f.text ?? null,
-    url: async () => {
-      if (f.id) {
-        const got = await read('document.file', { course_id: courseId, document_id: documentId, file_id: f.id })
-        return got.download_url
-      }
-      const doc = await read('document.get', {
-        course_id: courseId,
-        document_id: documentId,
-        version_id: versionId ?? undefined,
-      })
-      const url = (doc.version as { download_url?: string | null } | null | undefined)?.download_url
-      if (!url) throw new ApiError({ status: 404, code: 'not_found', message: 'the file is no longer there' })
-      return url
-    },
-    download: () => downloadDocumentFile(courseId, documentId, f, versionId),
+    url: async () =>
+      (await read('document.file', { course_id: courseId, document_id: documentId, file_id: f.id })).download_url,
+    download: () => downloadDocumentFile(courseId, documentId, f),
     rendition: f.rendition ?? null,
-    readRendition: f.id
-      ? async (signal) =>
-          (await read('document.file', { course_id: courseId, document_id: documentId, file_id: f.id }, { signal }))
-            .rendition ?? null
-      : undefined,
+    readRendition: async (signal) =>
+      (await read('document.file', { course_id: courseId, document_id: documentId, file_id: f.id }, { signal }))
+        .rendition ?? null,
     retryRendition:
-      opts.retry && f.id && f.rendition
+      opts.retry && f.rendition
         ? () => write('document.rendition_retry', { course_id: courseId, document_id: documentId, file_id: f.id })
         : undefined,
     // Only a file of material, instructions or a rubric has a text version.
@@ -168,7 +152,7 @@ export function documentPreviewFiles(
                 course_id: courseId,
                 document_id: documentId,
                 version_id: versionId,
-                ...(f.id ? { file_id: f.id } : {}),
+                file_id: f.id,
               },
               { signal },
             )

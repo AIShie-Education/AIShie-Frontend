@@ -387,22 +387,4 @@ describe('TextVersionPane, one file of several', () => {
     expect(confirm.mock.calls[0]![1]).toBe('Transcribe “loops.py” again?')
     expect(writes[0]!.args).toMatchObject({ version_id: 'v-2', file_id: 'f-3' })
   })
-
-  it('says Core’s refusal to guess which file, in words', async () => {
-    writeAnswer = () =>
-      new ApiError({
-        status: 400,
-        code: 'invalid_argument',
-        message: 'file_id is required',
-        details: { reason: 'file_id_required', files: 3 },
-      })
-    const { ElMessage } = await import('element-plus')
-    const w = await staff()
-    await button(w, 'retranscribe').trigger('click')
-    await flushPromises()
-    const said = vi.mocked(ElMessage).mock.calls.map((c) => (c[0] as { message: string }).message)
-    expect(said.some((m) => m.includes('This version holds 3 files: name the file whose text version this is'))).toBe(
-      true,
-    )
-  })
 })

@@ -31,7 +31,7 @@ const {
   TEXT_READ_RESTARTS,
 } = await import('./textVersion')
 
-const REF = { course_id: 'c-1', document_id: 'd-1', version_id: 'v-1' }
+const REF = { course_id: 'c-1', document_id: 'd-1', version_id: 'v-1', file_id: 'f-1' }
 
 function text(over: Partial<TextVersion> = {}): TextVersion {
   return {

@@ -207,9 +207,6 @@ describe('errorMessage, by the reason Core gives', () => {
     expect(errorMessage(refusal('failed_precondition', { reason: 'hosting_fixed' }, { status: 422 }))).toBe(
       'How an agent runs is chosen when it is created, and never changed: create another agent for the other way.',
     )
-    expect(errorMessage(refusal('invalid_argument', { reason: 'site_chat_follows_hosting' }, { status: 400 }))).toMatch(
-      /follows how it runs/,
-    )
   })
 
   it('never takes a reason for one of an object’s own properties', () => {

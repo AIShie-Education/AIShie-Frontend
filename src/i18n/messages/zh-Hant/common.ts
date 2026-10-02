@@ -151,7 +151,6 @@ export default {
     notAParticipant: '只有參與對話的雙方才會將對話標示為已讀；以課程教職員身分閱讀，不會在對話中留下閱讀進度。',
     hostedByRuntime: '這個代理是站內託管：只有本站的代理執行環境持有它的權杖，不會為任何其他人發出權杖。',
     hostingFixed: '代理的運行方式在建立時選定，此後不會更改：如要另一種方式，請建立另一個代理。',
-    siteChatFollowsHosting: '能否在站內向代理提問取決於它的運行方式：如要讓人無法再向它提問，請暫停它的託管，或停用它。',
   },
   // 席位的上限（perm_ceilings）：無論由誰授予，該席位最多可擁有的權限等級。
   ceiling: {
@@ -255,7 +254,6 @@ export default {
       bad_filename: '有檔案的名稱無法照樣使用：名稱太長，或含有不可用的字元。請把檔案改名後再放入。',
       duplicate_file: '同一個上傳列了兩次：請從清單移除其中一個，再儲存。',
       filename_required: '有檔案沒有名稱：請重新放入。',
-      files_and_upload_token: '檔案以兩種方式同時送出：請重新載入頁面，再放入檔案。',
       bad_upload_token: '有一個上傳無法識別。',
       not_your_upload: '有一個上傳不屬於你，不能在此附加。',
       already_attached: '有檔案已附加到另一個版本。',

@@ -22,7 +22,7 @@ import { TEXT_STATUS_TAG, textShown, textStatus } from '@/views/course/materials
 const props = defineProps<{
   courseId: string
   documentId: string
-  /** The version the files are of: for a file with no id (a Core from before several files), its download. */
+  /** The version the files are of: their text versions are read at it. */
   versionId?: string | null
   files: DocumentFile[]
   /** Say where each file's text version stands, as the text version's tab would. */
@@ -77,11 +77,11 @@ function preview(f: DocumentFile) {
 
 const busy = ref<string | null>(null)
 async function download(f: DocumentFile) {
-  const key = f.id || f.filename
+  const key = f.id
   if (busy.value) return
   busy.value = key
   try {
-    await downloadDocumentFile(props.courseId, props.documentId, f, props.versionId)
+    await downloadDocumentFile(props.courseId, props.documentId, f)
   } catch (e) {
     notifyError(e, f.filename, { reasons: FILE_REFUSAL_SCOPE })
   } finally {
@@ -92,7 +92,7 @@ async function download(f: DocumentFile) {
 
 <template>
   <ol class="version-files" :aria-label="t('common.files.list')">
-    <li v-for="f in files" :key="f.id || f.filename" class="version-file" :data-file="f.filename">
+    <li v-for="f in files" :key="f.id" class="version-file" :data-file="f.filename">
       <button
         type="button"
         class="version-file__open"
@@ -117,11 +117,11 @@ async function download(f: DocumentFile) {
         class="version-file__get"
         :aria-label="t('common.files.download', { name: f.filename })"
         :title="`${t('common.files.downloadTip')}: ${f.filename}`"
-        :aria-busy="busy === (f.id || f.filename) ? 'true' : undefined"
+        :aria-busy="busy === f.id ? 'true' : undefined"
         @click="download(f)"
       >
         <el-icon aria-hidden="true"
-          ><Loading v-if="busy === (f.id || f.filename)" class="is-loading" /><Download v-else
+          ><Loading v-if="busy === f.id" class="is-loading" /><Download v-else
         /></el-icon>
       </button>
       <span v-if="textChip(f) || (openText && f.text)" class="version-file__side">

@@ -287,7 +287,6 @@ export default {
     staff_edit: '教學人員其後修改了這個文字版：重新轉寫會捨棄他們的修改，須先確認。',
     text_too_long: '文字過長：文字版最多容納 2 MiB 的 Markdown。',
     no_text: '這個檔案沒有文字版，也無法為它製作。',
-    file_id_required: '這個版本有 {files} 個檔案：請指明是哪個檔案的文字版，再試一次。',
     document_archived: '這份文件已封存：請先把它恢復。',
     course_archived: '課程已封存：當中的內容不能再更改。',
   },

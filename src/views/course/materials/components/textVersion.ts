@@ -21,12 +21,12 @@ type Te = (key: string) => boolean
 /** How many times reading a text's parts starts again when it changes meanwhile, before giving up. */
 export const TEXT_READ_RESTARTS = 3
 
-/** Which text version: a file of a version (its first where no file is named), as document.text takes it. */
+/** Which text version: a file of a version, as document.text takes it. */
 export interface TextRef {
   course_id: string
   document_id: string
   version_id: string
-  file_id?: string
+  file_id: string
 }
 
 /** A text version read whole: as it stood at one revision, its whole body ('' while it is not done). */

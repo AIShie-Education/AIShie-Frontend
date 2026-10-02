@@ -226,7 +226,7 @@ const versionPurge = computed(() => shown.value?.purged ?? null)
 const purged = computed(() => !!doc.value?.purged_at || !!docPurge.value)
 
 /** The version's files, in order; none once it is purged. */
-const files = computed(() => (versionPurge.value || docPurge.value ? [] : versionFilesOf(shown.value, doc.value?.title)))
+const files = computed(() => (versionPurge.value || docPurge.value ? [] : versionFilesOf(shown.value)))
 const hasFile = computed(() => files.value.length > 0)
 
 // Writing: material, instructions and rubrics are written with document_write.
@@ -437,12 +437,12 @@ const contentTab = computed({
 /** The file whose text version is shown: ?file=, or the first. */
 const textFile = computed<DocumentFile | null>(() => {
   const want = route.query.file
-  return files.value.find((f) => f.id && f.id === want) ?? files.value[0] ?? null
+  return files.value.find((f) => f.id === want) ?? files.value[0] ?? null
 })
 /** Shows a file's text version, remembering it in the address (none for the first). */
 function showText(f: DocumentFile) {
   const first = files.value[0]?.id === f.id
-  void router.replace({ query: { ...route.query, tab: 'text', file: first ? undefined : f.id || undefined } })
+  void router.replace({ query: { ...route.query, tab: 'text', file: first ? undefined : f.id } })
 }
 
 function onTextProposed(message: string) {
@@ -638,7 +638,7 @@ function noteSource(): PrintRequest {
                   <TextVersionPane
                     v-for="f in files"
                     v-show="contentTab === 'text' && f === textFile"
-                    :key="`${shown.id}/${f.id || f.position}`"
+                    :key="`${shown.id}/${f.id}`"
                     :course-id="courseId"
                     :document-id="doc.id"
                     :version-id="shown.id"

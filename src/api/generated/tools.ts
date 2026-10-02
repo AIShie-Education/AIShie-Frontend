@@ -3,7 +3,7 @@
 // Every tool in AIshie Core's catalogue (GET /v1/tools), with its input and
 // output types and its REST route.
 
-/** action.decide (write): Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor their owner's, nor another agent's of their owner, nor a decision someone else proposed about any of those, nor approves closing an escalation they raised or approved. An agent's owner decides its proposal only where they could do the same themselves without anyone's confirmation: their own level for it autonomous, and its target within their reach; by_owner then says so. That needs no action_decide of their own, and is done at once, as their own doing of it: a student confirms her own agent's drafts of her work. */
+/** action.decide (write): Approve or reject a proposal: an action that was blocked before execution because its proposer needs confirmation. Approving runs it now, as the proposer, after checking that the proposer is still allowed to do it; if not, or if the proposal is too old, it is cancelled instead. Nobody decides their own proposal, nor their owner's, nor another agent's of their owner, nor a decision someone else proposed about any of those, nor approves closing an escalation they raised or approved. An agent's owner decides its proposal only where they could do the same themselves without anyone's confirmation: their own level for it autonomous, its target within their reach, and the tool's own checks of what it asks passing as approving it now would run them; by_owner then says so. That needs no action_decide of their own, and is done at once, as their own doing of it: a student confirms her own agent's drafts of her work. An owner whose own level or reach falls short is refused (owner_not_autonomous), and one whose agent's proposal approving now would refuse is refused with that refusal in details.refusal (owner_would_be_refused): either way, if they hold action_decide; one who does not is refused as anyone without it is (permission_denied). A decision that would be refused as it is made, about a proposal that no longer waits or is not the caller's to decide, is refused at once, and never waits for anyone's confirmation. */
 export interface ActionDecideIn {
   /**
    * the proposal being decided
@@ -66,7 +66,7 @@ export interface ActionGetOut {
   target_id?: null | string
   target_type: string
   /**
-   * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
+   * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach, or, for a proposal, the tool's own checks of what it asks refuse it as approving it now would run them): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
    */
   yours_to_decide?: null | boolean
 }
@@ -112,7 +112,7 @@ export interface ActionListMineOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach, or, for a proposal, the tool's own checks of what it asks refuse it as approving it now would run them): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
@@ -156,7 +156,7 @@ export interface ActionListPendingReviewOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach, or, for a proposal, the tool's own checks of what it asks refuse it as approving it now would run them): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
@@ -200,7 +200,7 @@ export interface ActionListProposedOut {
         target_id?: null | string
         target_type: string
         /**
-         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
+         * in the approval and review queues: false when the action is yours, your owner's or another agent's of your owner, and when it is your own agent's and you could not do the same yourself without anyone's confirmation (your own level for it below autonomous, or its target beyond your reach, or, for a proposal, the tool's own checks of what it asks refuse it as approving it now would run them): someone else decides and reviews those; true otherwise, though a decision about a decision may still be refused at one remove
          */
         yours_to_decide?: null | boolean
       }[]
@@ -362,11 +362,11 @@ export interface ActorIssueTokenOut {
 export interface ActorLinkSsoIn {
   actor_id: string
   /**
-   * this installation's name for the identity provider, e.g. polyu-adfs
+   * this installation's name for the identity provider, e.g. school-adfs
    */
   provider: string
   /**
-   * the account at the provider: for ADFS, the UPN, e.g. yuki@connect.polyu.hk
+   * the account at the provider: for ADFS, the UPN, e.g. name@example.edu
    */
   subject: string
 }
@@ -1222,7 +1222,7 @@ export interface AgentSuspendOut {
   ok: boolean
 }
 
-/** agent.update (write): Rename one of your agents. How it is hosted never changes (hosting_fixed). site_chat is deprecated and refused (site_chat_follows_hosting): people in the site ask a runtime agent while the site's runtime hosts it, and never an mcp agent. */
+/** agent.update (write): Rename one of your agents. How it is hosted never changes (hosting_fixed). Whether people in the site ask it is set by nobody: they ask a runtime agent while the site's runtime hosts it, and never an mcp agent. */
 export interface AgentUpdateIn {
   actor_id: string
   /**
@@ -1233,10 +1233,6 @@ export interface AgentUpdateIn {
    * never changes: another than it has is refused (hosting_fixed); register another agent for the other
    */
   hosting?: null | ('runtime' | 'mcp')
-  /**
-   * deprecated, and refused (site_chat_follows_hosting): people in the site ask a runtime agent while the site's runtime hosts it, and never an mcp agent. To stop them asking a runtime agent, stop it in the runtime, or suspend it (agent.suspend)
-   */
-  site_chat?: null | boolean
 }
 export interface AgentUpdateOut {
   ok: boolean
@@ -3124,9 +3120,9 @@ export interface DocumentTextCompleteIn {
    */
   body?: null | string
   /**
-   * the claim's file, from document_text.queue; if omitted, the file the lease is of
+   * the claim's file, from document_text.queue
    */
-  file_id?: null | string
+  file_id: string
   /**
    * the claim's, from document_text.queue
    */
@@ -3159,9 +3155,9 @@ export interface DocumentTextCompleteOut {
 /** document_text.file (read): For the transcription service alone: another short-lived URL for a file you have claimed, while the claim holds. Any other file is not yours to read (lease_lost). */
 export interface DocumentTextFileIn {
   /**
-   * the claim's file, from document_text.queue; if omitted, the file the lease is of
+   * the claim's file, from document_text.queue
    */
-  file_id?: null | string
+  file_id: string
   /**
    * the claim's, from document_text.queue
    */
@@ -3248,9 +3244,9 @@ export interface DocumentTextQueueOut {
 /** document_text.renew (ephemeral): For the transcription service alone: hold a claim longer, lease_s from now, while the transcription goes on. Refused once the claim no longer holds (lease_lost), or once staff have written the text (edited_by_staff): stop the work then. Recorded nowhere. */
 export interface DocumentTextRenewIn {
   /**
-   * the claim's file, from document_text.queue; if omitted, the file the lease is of
+   * the claim's file, from document_text.queue
    */
-  file_id?: null | string
+  file_id: string
   /**
    * the claim's, from document_text.queue
    */
@@ -3265,7 +3261,7 @@ export interface DocumentTextRenewOut {
   lease_expires_at: string
 }
 
-/** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then. It is text (body_md), files, or both, as document.create takes them: files, in order, each with its upload_token and filename; upload_token alone is one file, and is deprecated. */
+/** document.add_version (write): Edit material, instructions or a rubric by adding a version. Versions are never changed or removed, but for an administrator's purge of one uploaded by mistake (document.purge). The new version is a draft until it is published; what students read does not change until then. It is text (body_md), files, or both, as document.create takes them: files, in order, each with its upload_token and filename. */
 export interface DocumentAddVersionIn {
   /**
    * markdown text
@@ -3295,10 +3291,6 @@ export interface DocumentAddVersionIn {
    * publish the new version at once
    */
   publish?: boolean
-  /**
-   * deprecated: one file, as files with one, named as it was uploaded or else after the document's title; not with files
-   */
-  upload_token?: null | string
 }
 export interface DocumentAddVersionOut {
   /**
@@ -3322,7 +3314,7 @@ export interface DocumentArchiveOut {
   ok: boolean
 }
 
-/** document.create (write): Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here. A version is text (body_md), files, or both: upload each file first (document.upload_url) and name them, in order, in files, each with its upload_token and filename; upload_token alone is one file, and is deprecated. */
+/** document.create (write): Create a document. Material, instructions and rubrics are versioned and start unpublished — students see nothing until document.publish. A submission file is attached to a draft submission, and a feedback file to a grade, a computed total included; those have exactly one version and are given their content here. A version is text (body_md), files, or both: upload each file first (document.upload_url) and name them, in order, in files, each with its upload_token and filename. */
 export interface DocumentCreateIn {
   /**
    * markdown text
@@ -3361,10 +3353,6 @@ export interface DocumentCreateIn {
    */
   submission_id?: null | string
   title: string
-  /**
-   * deprecated: one file, as files with one, named as it was uploaded or else after the document's title; not with files
-   */
-  upload_token?: null | string
 }
 export interface DocumentCreateOut {
   document_id: string
@@ -3500,7 +3488,7 @@ export interface DocumentFileOut {
   version_id: string
 }
 
-/** document.get (read): Read a document: its text, and its files, each with a short-lived URL to download it under its name, its text version, and, for an Office or OpenDocument file, its PDF rendition, with a URL that shows the PDF once it is done. Students get the published version; members who can read drafts get the latest. A specific version can be asked for by id — always allowed if it is the one your own submission was handed in under. The version's download_url, content_type, byte_size, checksum and text are its first file's, and are deprecated: read files. */
+/** document.get (read): Read a document: its text, and its files, each with a short-lived URL to download it under its name, its text version, and, for an Office or OpenDocument file, its PDF rendition, with a URL that shows the PDF once it is done. Students get the published version; members who can read drafts get the latest. A specific version can be asked for by id — always allowed if it is the one your own submission was handed in under. */
 export interface DocumentGetIn {
   /**
    * the course this call is about
@@ -3543,23 +3531,7 @@ export interface DocumentGetOut {
   version?: null | {
     author_member_id: string
     body_md?: null | string
-    /**
-     * deprecated: the first file's; a purged version's still says it
-     */
-    byte_size?: null | number
-    /**
-     * deprecated: the first file's
-     */
-    checksum?: null | string
-    /**
-     * deprecated: the first file's; a purged version's still says it
-     */
-    content_type?: null | string
     created_at: string
-    /**
-     * deprecated: files[0].download_url, the first file's
-     */
-    download_url?: null | string
     /**
      * the version's files, in order, each with a short-lived URL to download it under its name and its text version; empty for a version of text alone, and for a purged one
      */
@@ -3680,54 +3652,6 @@ export interface DocumentGetOut {
       reason: string
     }
     seq: number
-    /**
-     * deprecated: files[0].text, the first file's text version
-     */
-    text?: null | {
-      /**
-       * the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text
-       */
-      body?: null | string
-      /**
-       * how long the text is, in bytes; 0 while there is none
-       */
-      bytes: number
-      edited_at?: null | string
-      /**
-       * who wrote or last edited it, for staff's
-       */
-      edited_by_member_id?: null | string
-      edited_by_name?: null | string
-      /**
-       * the model that transcribed it, as the site names it
-       */
-      model?: null | string
-      /**
-       * how many pages or slides the transcription found in the file
-       */
-      pages?: null | number
-      /**
-       * when it was transcribed
-       */
-      produced_at?: null | string
-      /**
-       * why it failed or was skipped
-       */
-      reason?: null | string
-      /**
-       * counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision
-       */
-      revision: number
-      /**
-       * whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over
-       */
-      source?: null | string
-      /**
-       * pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why
-       */
-      status: string
-      updated_at: string
-    }
   }
 }
 
@@ -3837,7 +3761,7 @@ export interface DocumentRenditionRetryOut {
   state: string
 }
 
-/** document.text (read): Read the text version of a file of a document's version: the file (slides, a PDF, a Word file) transcribed into Markdown, pictures and diagrams described in brackets, each page or slide under a heading of its own; or written by staff. Each file of a version has its own; file_id says which, the version's first if omitted. Read it before the file: it is the same for every model. For whoever may read the version, as document.get: students read the published one. A long text is read in parts of at most 65536 bytes, whole pages where they fit, from part 1 to parts; read them all at one revision. Until the text is done, it says where it stands (pending, working, failed or skipped, with reason) and has no body. */
+/** document.text (read): Read the text version of a file of a document's version: the file (slides, a PDF, a Word file) transcribed into Markdown, pictures and diagrams described in brackets, each page or slide under a heading of its own; or written by staff. Each file of a version has its own; file_id says which. Read it before the file: it is the same for every model. For whoever may read the version, as document.get: students read the published one. A long text is read in parts of at most 65536 bytes, whole pages where they fit, from part 1 to parts; read them all at one revision. Until the text is done, it says where it stands (pending, working, failed or skipped, with reason) and has no body. */
 export interface DocumentTextIn {
   /**
    * the course this call is about
@@ -3845,15 +3769,15 @@ export interface DocumentTextIn {
   course_id: string
   document_id: string
   /**
-   * which of the version's files; its first if omitted
+   * which file's text: the id document.get gives it in version.files
    */
-  file_id?: null | string
+  file_id: string
   /**
    * which part of the text, from 1; 1 if omitted
    */
   part?: number
   /**
-   * a specific version; otherwise the file's, when file_id is given, or the one document.get gives: the published one, or the latest for members who can read drafts
+   * the file's version; the file says which if omitted
    */
   version_id?: null | string
 }
@@ -3929,7 +3853,7 @@ export interface DocumentTextOut {
   version_id: string
 }
 
-/** document.text_retranscribe (write): Send the text version of a file of a document's version to be transcribed again, or for the first time for a version added before there were text versions: it is pending again, ahead of anything queued when text versions came in, and what it said is gone until the new transcription is done; one under way is refused when it finishes. file_id says which file; a version of one file needs none. A text staff wrote or corrected is discarded only with discard_edit true (staff_edit). For whoever may write the document. base_revision refuses it if the text has changed since (text_changed). A text already waiting its turn changes nothing (changed: false). */
+/** document.text_retranscribe (write): Send the text version of a file of a document's version to be transcribed again, or for the first time for a version added before there were text versions: it is pending again, ahead of anything queued when text versions came in, and what it said is gone until the new transcription is done; one under way is refused when it finishes. file_id says which file. A text staff wrote or corrected is discarded only with discard_edit true (staff_edit). For whoever may write the document. base_revision refuses it if the text has changed since (text_changed). A text already waiting its turn changes nothing (changed: false). */
 export interface DocumentTextRetranscribeIn {
   /**
    * the revision of the text the request was made from: if the text has changed since, it is refused (text_changed)
@@ -3945,9 +3869,9 @@ export interface DocumentTextRetranscribeIn {
   discard_edit?: boolean
   document_id: string
   /**
-   * which of the version's files; required when it has more than one (file_id_required)
+   * which of the version's files
    */
-  file_id?: null | string
+  file_id: string
   version_id: string
 }
 export interface DocumentTextRetranscribeOut {
@@ -3964,7 +3888,7 @@ export interface DocumentTextRetranscribeOut {
   version_id: string
 }
 
-/** document.text_update (write): Write the text version of a file of a document's version, in place of what there was: correct a transcription, or write one by hand. file_id says which file; a version of one file needs none. The text is staff's from then on: no transcription writes over it, and one under way is refused when it finishes. For whoever may write the document, as a new version is written; the text, at most 2 MiB of Markdown, is recorded with the action, for whoever decides or reviews it. base_revision refuses the edit if the text has changed since (text_changed). Giving the text it already is changes nothing (changed: false). */
+/** document.text_update (write): Write the text version of a file of a document's version, in place of what there was: correct a transcription, or write one by hand. file_id says which file. The text is staff's from then on: no transcription writes over it, and one under way is refused when it finishes. For whoever may write the document, as a new version is written; the text, at most 2 MiB of Markdown, is recorded with the action, for whoever decides or reviews it. base_revision refuses the edit if the text has changed since (text_changed). Giving the text it already is changes nothing (changed: false). */
 export interface DocumentTextUpdateIn {
   /**
    * the revision of the text the edit was made from, as the views give it: if the text has changed since, the edit is refused (text_changed) rather than put over the change
@@ -3980,9 +3904,9 @@ export interface DocumentTextUpdateIn {
   course_id: string
   document_id: string
   /**
-   * which of the version's files; required when it has more than one (file_id_required)
+   * which of the version's files
    */
-  file_id?: null | string
+  file_id: string
   version_id: string
 }
 export interface DocumentTextUpdateOut {
@@ -4077,7 +4001,7 @@ export interface DocumentUploadUrlOut {
   upload_url: string
 }
 
-/** document.versions (read): Every version of a document, oldest first, with which one is published, and each version's files, with their text versions, without the texts, and where their PDF renditions stand. For members who can read drafts. Each version's has_file, content_type, byte_size and text are its first file's, and are deprecated: read files. */
+/** document.versions (read): Every version of a document, oldest first, with which one is published, and each version's files, with their text versions, without the texts, and where their PDF renditions stand. For members who can read drafts. */
 export interface DocumentVersionsIn {
   /**
    * the course this call is about
@@ -4090,14 +4014,6 @@ export interface DocumentVersionsOut {
     | null
     | {
         author_member_id: string
-        /**
-         * deprecated: the first file's
-         */
-        byte_size?: null | number
-        /**
-         * deprecated: the first file's
-         */
-        content_type?: null | string
         created_at: string
         /**
          * its files, in order, each with its text version, without the text: document.file gives one to download, document.text reads its text
@@ -4205,10 +4121,6 @@ export interface DocumentVersionsOut {
                 updated_at: string
               }
             }[]
-        /**
-         * deprecated: whether it has a file; files is not empty
-         */
-        has_file: boolean
         id: string
         published: boolean
         /**
@@ -4216,54 +4128,6 @@ export interface DocumentVersionsOut {
          */
         purged_at?: null | string
         seq: number
-        /**
-         * deprecated: files[0].text, the first file's text version
-         */
-        text?: null | {
-          /**
-           * the whole text, Markdown, when it is done and no longer than one part (65536 bytes); a longer one is read with document.text
-           */
-          body?: null | string
-          /**
-           * how long the text is, in bytes; 0 while there is none
-           */
-          bytes: number
-          edited_at?: null | string
-          /**
-           * who wrote or last edited it, for staff's
-           */
-          edited_by_member_id?: null | string
-          edited_by_name?: null | string
-          /**
-           * the model that transcribed it, as the site names it
-           */
-          model?: null | string
-          /**
-           * how many pages or slides the transcription found in the file
-           */
-          pages?: null | number
-          /**
-           * when it was transcribed
-           */
-          produced_at?: null | string
-          /**
-           * why it failed or was skipped
-           */
-          reason?: null | string
-          /**
-           * counts the changes to the text: an edit names the revision it was made from (base_revision), and a long text is read part by part at one revision
-           */
-          revision: number
-          /**
-           * whose the text is, once it is done: ai, a transcription, or staff, written or corrected by a member of staff, which no transcription writes over
-           */
-          source?: null | string
-          /**
-           * pending: waiting to be transcribed; working: being transcribed; done: there is a text; failed or skipped: there is none, and reason says why
-           */
-          status: string
-          updated_at: string
-        }
       }[]
 }
 
@@ -4972,20 +4836,6 @@ export interface MeMembershipsOut {
         student_scope: string
         title: string
       }[]
-}
-
-/** me.site_chat (write): Deprecated: nothing is declared any more. People in the site ask a runtime agent while the site's agent runtime hosts it, and never an mcp agent; me_get says which you are (hosting). Called with the token the site's runtime holds for you, it changes nothing, on true or false, and says whether people may ask you now; with any other credential it is refused (not_runtime_hosted). */
-export interface MeSiteChatIn {
-  /**
-   * deprecated, and changes nothing either way: people in the site ask a runtime agent while the site's runtime hosts it
-   */
-  on: boolean
-}
-export interface MeSiteChatOut {
-  /**
-   * whether people in the site may ask you now: while the site's runtime hosts you, and you and your owner are active
-   */
-  site_chat: boolean
 }
 
 /** member.add (write): Seat an actor — a person or an agent — in the course. A preset gives the starting role, permissions and scope, and any of them can be overridden here. You cannot grant more than you hold yourself: no permission above your own level, and no scope wider than your own. An agent decides and reviews only by proposal: its action_decide is confirm_required at most, a preset's cut down to it and a level named above it refused (agent_decides_by_proposal). An agent someone owns is not seated here: its owner brings it in as their delegate, with member.add_delegate. */
@@ -5956,7 +5806,7 @@ export interface ServiceRevokeCredentialOut {
 /** sso.create (write): Set up an identity provider (OpenID Connect) a person may sign in through. Register the redirect URI sso.list gives with the provider first, and test its issuer (sso.test). The client secret is sealed with the server's secrets key before it is kept, never recorded, and never shown again but as its hint; without a secrets key nothing is added (secrets_key_missing). It is created switched off unless enabled is true. An id the operator's provider or another has is refused (id_taken). Accounts sign in through it once linked at it (actor.link_sso, with its id), or by the email it vouches for with link_by_email. Root and platform administrators only. */
 export interface SsoCreateIn {
   /**
-   * the domains an email may be linked from, such as polyu.edu.hk; required with link_by_email
+   * the domains an email may be linked from, such as example.edu; required with link_by_email
    */
   allowed_email_domains?: null | string[]
   /**
@@ -5968,7 +5818,7 @@ export interface SsoCreateIn {
    */
   client_secret: string
   /**
-   * the name on the sign-in button, such as PolyU NetID: 1 to 64 printable characters
+   * the name on the sign-in button, such as School NetID: 1 to 64 printable characters
    */
   display_name: string
   /**
@@ -5980,11 +5830,11 @@ export interface SsoCreateIn {
    */
   enabled?: boolean
   /**
-   * the provider's id: 1 to 64 lower-case letters, digits and hyphens, such as hainanu-cas; what actor.link_sso names, and what it is known by for good
+   * the provider's id: 1 to 64 lower-case letters, digits and hyphens, such as university-sso; what actor.link_sso names, and what it is known by for good
    */
   id: string
   /**
-   * the provider's issuer, exactly as its discovery document writes it: an https URL (http only for this machine), such as https://adfs.example.edu/adfs
+   * the provider's issuer, exactly as its discovery document writes it: an https URL, such as https://adfs.example.edu/adfs, at a public address: localhost, or an address on this machine or a private or link-local one, is refused (issuer_address_not_allowed) unless the server's operator sets SSO_ALLOW_PRIVATE_ISSUERS, and http is taken only then, for this machine; a name that resolves to such an address is taken, and sso.test reports it
    */
   issuer: string
   /**
@@ -6030,7 +5880,7 @@ export interface SsoCreateOut {
   email_claim: null | string
   enabled: boolean
   /**
-   * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+   * the provider's id, such as school-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
    */
   id: string
   issuer: string
@@ -6102,7 +5952,7 @@ export interface SsoDeleteOut {
 /** sso.get (read): Read one identity provider, the operator's or the site's: its settings, status, version and who last changed it, and the redirect URI to register with it. Never its client secret: a hint of it. Root and platform administrators only. */
 export interface SsoGetIn {
   /**
-   * the provider's id, such as polyu-adfs
+   * the provider's id, such as school-adfs
    */
   provider_id: string
 }
@@ -6132,7 +5982,7 @@ export interface SsoGetOut {
   email_claim: null | string
   enabled: boolean
   /**
-   * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+   * the provider's id, such as school-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
    */
   id: string
   issuer: string
@@ -6222,7 +6072,7 @@ export interface SsoListOut {
         email_claim: null | string
         enabled: boolean
         /**
-         * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+         * the provider's id, such as school-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
          */
         id: string
         issuer: string
@@ -6317,7 +6167,7 @@ export interface SsoSetEnabledOut {
   email_claim: null | string
   enabled: boolean
   /**
-   * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+   * the provider's id, such as school-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
    */
   id: string
   issuer: string
@@ -6365,7 +6215,7 @@ export interface SsoSetEnabledOut {
   version: null | number
 }
 
-/** sso.test (read): Test an identity provider's issuer without signing anyone in: read its discovery document (<issuer>/.well-known/openid-configuration) and its key set, check them as a sign-in would use them, and say what was found — its endpoints, its signing keys, the scopes and claims it supports — with problems (what stops a sign-in: ok is false) and warnings (what may). Give provider_id for a provider set up, or issuer for one to be. It sends no secret, follows no redirect and changes nothing. Root and platform administrators only. */
+/** sso.test (read): Test an identity provider's issuer without signing anyone in: read its discovery document (<issuer>/.well-known/openid-configuration) and its key set, check them as a sign-in would use them, and say what was found — its endpoints, its signing keys, the scopes and claims it supports — with problems (what stops a sign-in: ok is false) and warnings (what may). Give provider_id for a provider set up, or issuer for one to be. It sends no secret, follows no redirect and changes nothing. A provider of the site's is fetched only from a public address, checked on the address each connection is made to, and its token endpoint, which is not fetched, is resolved: one on this machine, or on a private or link-local address, is a problem (issuer_address_not_allowed) unless the server's operator sets SSO_ALLOW_PRIVATE_ISSUERS. Root and platform administrators only. */
 export interface SsoTestIn {
   /**
    * with issuer: the claim an email would be read from
@@ -6481,7 +6331,7 @@ export interface SsoUpdateOut {
   email_claim: null | string
   enabled: boolean
   /**
-   * the provider's id, such as polyu-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
+   * the provider's id, such as school-adfs: what actor.link_sso names, and what a sign-in through it starts with; it never changes
    */
   id: string
   issuer: string
@@ -6898,7 +6748,6 @@ export interface ToolMap {
   'me.conversations': { in: MeConversationsIn; out: MeConversationsOut; kind: 'read' }
   'me.get': { in: MeGetIn; out: MeGetOut; kind: 'read' }
   'me.memberships': { in: MeMembershipsIn; out: MeMembershipsOut; kind: 'read' }
-  'me.site_chat': { in: MeSiteChatIn; out: MeSiteChatOut; kind: 'write' }
   'member.add': { in: MemberAddIn; out: MemberAddOut; kind: 'write' }
   'member.add_delegate': { in: MemberAddDelegateIn; out: MemberAddDelegateOut; kind: 'write' }
   'member.delegate_defaults': { in: MemberDelegateDefaultsIn; out: MemberDelegateDefaultsOut; kind: 'read' }
@@ -7079,7 +6928,6 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'me.conversations': { method: 'GET', path: '/v1/me/conversations', kind: 'read' },
   'me.get': { method: 'GET', path: '/v1/me', kind: 'read' },
   'me.memberships': { method: 'GET', path: '/v1/me/memberships', kind: 'read' },
-  'me.site_chat': { method: 'POST', path: '/v1/me/site-chat', kind: 'write' },
   'member.add': { method: 'POST', path: '/v1/courses/{course_id}/members', kind: 'write' },
   'member.add_delegate': { method: 'POST', path: '/v1/courses/{course_id}/delegates', kind: 'write' },
   'member.delegate_defaults': { method: 'GET', path: '/v1/courses/{course_id}/delegates/defaults', kind: 'read' },

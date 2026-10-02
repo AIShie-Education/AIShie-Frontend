@@ -51,7 +51,7 @@ onMounted(load)
 watch(() => [props.documentId, props.versionId], load)
 
 const version = computed(() => doc.value?.version ?? null)
-const files = computed(() => versionFilesOf(version.value, doc.value?.title ?? props.title))
+const files = computed(() => versionFilesOf(version.value))
 const course = useCourseStore()
 const retryRenditions = computed(() => {
   const perm = retryPermOf(doc.value?.kind)
