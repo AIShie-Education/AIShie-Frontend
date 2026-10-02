@@ -5,8 +5,10 @@
 // POLL_MS while the page is visible, highlighting what arrived. Everything
 // shown is what Core decided this seat may know about: event types by
 // permission, rows by student and assignment scope, and always the events of
-// the caller's own actions.
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+// the caller's own actions. For those who decide actions, each event says
+// who acted (EventItem, actors.ts), and the Agents chip keeps what agents
+// did or proposed.
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import type { ApiError } from '@/api/http'
@@ -14,11 +16,13 @@ import { toApiError } from '@/composables/useAsync'
 import { notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useUiStore } from '@/stores/ui'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TimeText from '@/components/TimeText.vue'
 import EventItem from './components/EventItem.vue'
+import { ensureEventWho, eventActor } from './components/actors'
 import {
   CATEGORIES,
   CATEGORY_ICON,
@@ -28,6 +32,7 @@ import {
   mergeNewestFirst,
   newestWindow,
   olderWindow,
+  reachOf,
   runsOf,
   type Category,
   type Run,
@@ -192,9 +197,34 @@ const chips = computed<Category[]>(() => (counts.value.other ? [...CATEGORIES, '
 function toggle(c: Category) {
   selected.value = selected.value.includes(c) ? selected.value.filter((x) => x !== c) : [...selected.value, c]
 }
-const shown = computed(() =>
-  selected.value.length ? events.value.filter((e) => selected.value.includes(categoryOf(e.type))) : events.value,
+// What agents did or proposed: who acted is read from each event's action, which only a
+// seat that decides actions may read; for it, every loaded event's is read.
+const decides = computed(() => reachOf(course).decides)
+const byAgents = ref(false)
+watch(
+  [events, decides],
+  () => {
+    if (!decides.value) return
+    void course.ensureMembers()
+    for (const e of events.value) ensureEventWho(props.courseId, e, true)
+  },
+  { immediate: true },
 )
+function byAgent(e: CourseEvent): boolean {
+  const id = eventActor(props.courseId, e, decides.value)
+  return !!id && course.members.get(id)?.kind === 'agent'
+}
+const agentCount = computed(() => (decides.value ? events.value.filter(byAgent).length : 0))
+function showAll() {
+  selected.value = []
+  byAgents.value = false
+}
+const shown = computed(() => {
+  const list = selected.value.length
+    ? events.value.filter((e) => selected.value.includes(categoryOf(e.type)))
+    : events.value
+  return byAgents.value && decides.value ? list.filter(byAgent) : list
+})
 const freshCount = computed(() => fresh.value.size)
 
 // Grouped by day, in the reader's language. Within a day, a run of the same
@@ -268,7 +298,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
         </div>
 
         <div class="activity__chips" role="group" :aria-label="t('activity.filterLabel')">
-          <el-check-tag :checked="selected.length === 0" class="activity__chip" @change="selected = []">
+          <el-check-tag :checked="selected.length === 0 && !byAgents" class="activity__chip" @change="showAll">
             {{ t('activity.filter.all') }}
             <span class="activity__chip-count">{{ events.length }}</span>
           </el-check-tag>
@@ -283,6 +313,18 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
             <el-icon><component :is="CATEGORY_ICON[c]" /></el-icon>
             {{ t(`activity.filter.${c}`) }}
             <span class="activity__chip-count">{{ counts[c] }}</span>
+          </el-check-tag>
+          <!-- What agents did or proposed, with whatever family is chosen. -->
+          <el-check-tag
+            v-if="decides"
+            :checked="byAgents"
+            class="activity__chip activity__chip--agents"
+            :class="{ 'is-zero': !agentCount }"
+            @change="byAgents = !byAgents"
+          >
+            <el-icon><AgentSeatIcon /></el-icon>
+            {{ t('activity.filter.agents') }}
+            <span class="activity__chip-count">{{ agentCount }}</span>
           </el-check-tag>
         </div>
 

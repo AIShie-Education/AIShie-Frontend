@@ -4,10 +4,10 @@
 // is (the student and the assignment it belongs to), and the few small facts
 // its payload carries. Events carry ids, never content: a document's title or
 // a grade's score is fetched by the view the link opens, which decides
-// whether the caller may see it. An event of the action log says who acted,
-// under its title: who proposed or did the action it is about, then who
-// decided or reviewed it (actors.ts reads them from the action; an agent
-// with its avatar and "AI").
+// whether the caller may see it. Its first line says who acted, for those
+// who may read the action it was done under (actors.ts): who did it, or who
+// proposed it and who decided or reviewed it; an agent with its avatar and
+// "AI".
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw } from 'vue-router'
@@ -17,8 +17,9 @@ import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { typeLabel } from '@/views/course/actions/components/actionText'
+import { seatPurpose } from '@/utils/agents'
 import { CORE_ROOT_NAME } from '@/views/course/scheme/components/schemeModel'
-import { actionWho, ensureActionWho } from './actors'
+import { ensureEventWho, eventWho } from './actors'
 import { componentName, documentTitle, ensureComponentNames, ensureDocumentTitles } from './names'
 import {
   CATEGORY_ICON,
@@ -80,31 +81,13 @@ const subjectLink = computed(() =>
 const componentId = computed(() =>
   kind.value === 'component' ? props.event.subject_id : payloadString(props.event, 'component_id'),
 )
-/** What the action log's events say of who acted: the verb for its maker, and for whoever decided or reviewed it. */
-const WHO: Record<string, { by: 'proposed' | 'did'; then?: 'approved' | 'rejected' | 'reviewed' | 'escalated' }> = {
-  'action.proposed': { by: 'proposed' },
-  'action.approved': { by: 'proposed', then: 'approved' },
-  'action.rejected': { by: 'proposed', then: 'rejected' },
-  'action.cancelled': { by: 'proposed' },
-  'action.reviewed': { by: 'did', then: 'reviewed' },
-  'action.escalated': { by: 'did', then: 'escalated' },
-}
-const whoWords = computed(() => (props.compact || kind.value !== 'action' ? undefined : WHO[props.event.type]))
-const who = computed(() => {
-  const words = whoWords.value
-  const w = words ? actionWho(props.courseId, props.event.subject_id) : undefined
-  if (!words || !w) return []
-  const out: { id: string; key: string }[] = []
-  if (w.by) out.push({ id: w.by, key: `activity.who.${words.by}` })
-  const then = words.then === 'reviewed' || words.then === 'escalated' ? w.reviewedBy : w.decidedBy
-  if (words.then && then) out.push({ id: then, key: `activity.who.${words.then}` })
-  return out
-})
+/** Who acted, once read (actors.ts): only a seat that decides actions may read who did another's. */
+const who = computed(() => (props.compact ? [] : eventWho(props.courseId, props.event, reach.value.decides)))
 
 onMounted(() => {
   if (kind.value === 'material') void ensureDocumentTitles(props.courseId)
   if (componentId.value) void ensureComponentNames(props.courseId)
-  if (whoWords.value) ensureActionWho(props.courseId, props.event.subject_id, !!whoWords.value.then)
+  if (!props.compact) ensureEventWho(props.courseId, props.event, reach.value.decides)
 })
 const component = computed(() => componentName(componentId.value))
 
@@ -169,7 +152,7 @@ const showStudent = computed(
 )
 
 type Fact =
-  | { kind: 'tag'; vocab: 'actionStatus' | 'role' | 'submissionState'; value: string }
+  | { kind: 'tag'; vocab: 'actionStatus' | 'role' | 'seatPurpose' | 'submissionState'; value: string }
   | { kind: 'text'; text: string; tone?: 'danger' | 'warning' | 'success' | 'info'; tip?: string }
   | { kind: 'link'; text: string; to: RouteLocationRaw; id: string }
 
@@ -333,7 +316,13 @@ const facts = computed<Fact[]>(() => {
   }
   if (type === 'member.added') {
     const role = payloadString(e, 'role')
-    if (role) out.push({ kind: 'tag', vocab: 'role', value: role })
+    // An agent seated as someone's delegate is in the role `assistant`, a person's word: its
+    // avatar and "AI" say what it is, and the tag which kind of agent (RoleTag).
+    const m = e.subject_id ? course.members.get(e.subject_id) : undefined
+    if (role && m?.kind === 'agent' && role === 'assistant') {
+      const purpose = m.principal_member_id ? seatPurpose(m) : null
+      if (purpose) out.push({ kind: 'tag', vocab: 'seatPurpose', value: purpose })
+    } else if (role) out.push({ kind: 'tag', vocab: 'role', value: role })
     // A person who took their seat through an invite link.
     if (payloadString(e, 'via') === 'join_link') out.push({ kind: 'text', text: t('join.via') })
   }
@@ -404,6 +393,15 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
       <el-icon><component :is="icon" /></el-icon>
     </span>
     <div class="event-item__body">
+      <!-- First, who acted: who did it, or who proposed it, then who decided or reviewed it. -->
+      <div v-if="who.length" class="event-item__who" :aria-label="t('activity.who.label')">
+        <template v-for="(w, i) in who" :key="w.key">
+          <span v-if="i" class="event-item__who-then" aria-hidden="true">→</span>
+          <i18n-t :keypath="w.key" tag="span" scope="global" class="event-item__who-part">
+            <template #who><MemberName :id="w.id" show-kind class="event-item__who-name" /></template>
+          </i18n-t>
+        </template>
+      </div>
       <div class="event-item__head">
         <span class="event-item__title">{{ title }}</span>
         <el-tag v-if="fresh" size="small" type="primary" effect="dark" round disable-transitions>
@@ -417,16 +415,6 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
           </el-tooltip>
           <TimeText :value="event.occurred_at" relative />
         </span>
-      </div>
-
-      <!-- Who acted: who proposed or did it, then who decided or reviewed it. -->
-      <div v-if="who.length" class="event-item__who" :aria-label="t('activity.who.label')">
-        <template v-for="(w, i) in who" :key="w.key">
-          <span v-if="i" class="event-item__who-then" aria-hidden="true">→</span>
-          <i18n-t :keypath="w.key" tag="span" scope="global" class="event-item__who-part">
-            <template #who><MemberName :id="w.id" show-kind class="event-item__who-name" /></template>
-          </i18n-t>
-        </template>
       </div>
 
       <div class="event-item__line">

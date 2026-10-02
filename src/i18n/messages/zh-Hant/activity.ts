@@ -18,6 +18,8 @@ export default {
     actions: '操作',
     course: '課程',
     other: '其他',
+    // What agents did: who acted is read from the action each event was done under (deciders alone).
+    agents: '代理',
   },
   fresh: '新',
   freshBanner: '開啟此頁後有 {n} 則新動態',

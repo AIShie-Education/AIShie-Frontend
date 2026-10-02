@@ -18,6 +18,8 @@ export default {
     actions: '操作',
     course: '课程',
     other: '其他',
+    // What agents did: who acted is read from the action each event was done under (deciders alone).
+    agents: '智能体',
   },
   fresh: '新',
   freshBanner: '打开此页后有 {n} 条新动态',

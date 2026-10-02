@@ -18,6 +18,8 @@ export default {
     actions: 'Actions',
     course: 'Course',
     other: 'Other',
+    // What agents did: who acted is read from the action each event was done under (deciders alone).
+    agents: 'Agents',
   },
   fresh: 'New',
   freshBanner: 'New since you opened this page: {n}',
