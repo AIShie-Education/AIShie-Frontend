@@ -34,7 +34,7 @@ export default {
       noLimit: '不限',
       maxUsesHint: '留空即不設上限。',
       domains: '只限以下網域的電子郵件',
-      domainsPlaceholder: '輸入網域（例如 hainanu.edu.cn）後按 Enter',
+      domainsPlaceholder: '輸入網域（例如 example.edu）後按 Enter',
       domainsHint: '留空即任何人都可加入。設定網域後，只有電子郵件屬於其中一個網域的人，才能加入或註冊。',
       badDomain: '「{d}」不是網域',
       tooManyDomains: '最多 {n} 個網域',

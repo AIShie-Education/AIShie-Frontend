@@ -20,7 +20,7 @@ const props = {
   section: 'A',
   title: 'Introduction to Programming',
   maxUses: 40,
-  domains: ['hainanu.edu.cn'],
+  domains: ['campus.example.edu'],
 }
 
 beforeEach(() => {
@@ -60,7 +60,7 @@ describe('JoinLinkReveal', () => {
     expect(w.get('.join-reveal__clock').text()).toBe('10:00')
     expect(w.get('[role="timer"]').attributes('aria-label')).toBe('10 min 0 s left')
     expect(w.text()).toContain('Up to 40 people')
-    expect(w.text()).toContain('@hainanu.edu.cn')
+    expect(w.text()).toContain('@campus.example.edu')
 
     vi.advanceTimersByTime(61_000)
     await flushPromises()

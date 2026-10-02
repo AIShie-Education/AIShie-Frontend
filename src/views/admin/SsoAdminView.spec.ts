@@ -63,15 +63,15 @@ describe('the list of providers', () => {
     expect(core.to('GET', SSO.list)).toHaveLength(1)
     expect(w.find('.page-header').text()).toContain('Sign-in')
     expect(rows(w).map((r) => r.find('[data-provider]').attributes('data-provider'))).toEqual([
-      'polyu-adfs',
-      'hainanu-cas',
+      'school-adfs',
+      'university-sso',
       'lib-keycloak',
     ])
 
-    const op = rowOf(w, 'polyu-adfs')
-    expect(op.find('.sso-cell__name').text()).toBe('PolyU NetID')
-    expect(op.find('.sso-cell__id').text()).toBe('polyu-adfs')
-    expect(op.find('.sso-cell__issuer').text()).toBe('https://adfs.polyu.edu.hk/adfs')
+    const op = rowOf(w, 'school-adfs')
+    expect(op.find('.sso-cell__name').text()).toBe('School NetID')
+    expect(op.find('.sso-cell__id').text()).toBe('school-adfs')
+    expect(op.find('.sso-cell__issuer').text()).toBe('https://adfs.example.edu/adfs')
     expect(op.find('.sso-status__operator').text()).toBe('Set by the server’s operator')
     expect(op.find('.sso-status__status').text()).toBe('Offered')
     expect(op.text()).toContain('read-only here')
@@ -83,8 +83,8 @@ describe('the list of providers', () => {
     expect(op.find('.sso-cell__test').exists()).toBe(true)
     expect(op.find('.sso-cell__count').text()).toBe('412')
 
-    const site = rowOf(w, 'hainanu-cas')
-    expect(site.find('.sso-cell__name').text()).toBe('海大統一認證')
+    const site = rowOf(w, 'university-sso')
+    expect(site.find('.sso-cell__name').text()).toBe('大學統一認證')
     expect(site.find('.sso-status__operator').exists()).toBe(false)
     expect(site.find('.sso-cell__enabled').classes()).toContain('is-checked')
     expect(site.find('.sso-cell__edit').exists()).toBe(true)
@@ -99,7 +99,7 @@ describe('the list of providers', () => {
   it('says why one is not offered: its id the operator’s, its secret one the keys no longer open, an older key', async () => {
     core.providers = [
       operatorProvider(),
-      siteProvider({ id: 'polyu-adfs', status: 'id_taken', linked_accounts: 0, position: 1 }),
+      siteProvider({ id: 'school-adfs', status: 'id_taken', linked_accounts: 0, position: 1 }),
       siteProvider({ id: 'lost', status: 'secret_unavailable', position: 2 }),
       siteProvider({ id: 'rotated', client_secret_key_id: '0000000000000001', position: 3 }),
       siteProvider({ id: 'off', status: 'disabled', enabled: false, link_by_email: true, position: 4 }),
@@ -189,16 +189,16 @@ describe('switching a provider on and off', () => {
   it('asks first when accounts sign in through it, and unlinks nobody', async () => {
     vi.mocked(ElMessageBox.confirm).mockRejectedValueOnce('cancel')
     const w = await page()
-    await rowOf(w, 'hainanu-cas').find('.sso-cell__enabled').trigger('click')
+    await rowOf(w, 'university-sso').find('.sso-cell__enabled').trigger('click')
     await settle()
     expect(confirmCalls()[0][0]).toBe(
       '3 accounts sign in through it: switched off, they cannot until it is on again. Nobody is unlinked.',
     )
-    expect(confirmCalls()[0][1]).toBe('Switch off 海大統一認證?')
+    expect(confirmCalls()[0][1]).toBe('Switch off 大學統一認證?')
     expect(core.to('POST', SSO.enabled)).toHaveLength(0)
 
     vi.mocked(ElMessageBox.confirm).mockResolvedValueOnce('confirm' as never)
-    await rowOf(w, 'hainanu-cas').find('.sso-cell__enabled').trigger('click')
+    await rowOf(w, 'university-sso').find('.sso-cell__enabled').trigger('click')
     await settle()
     expect(core.lastBody('POST', SSO.enabled)).toEqual({ enabled: false, version: 4 })
   })
@@ -243,20 +243,20 @@ describe('deleting a provider', () => {
   it('says how many accounts lose single sign-on, offers switching off instead, and sends force', async () => {
     vi.mocked(ElMessageBox.confirm).mockResolvedValue('confirm' as never)
     const w = await page()
-    await rowOf(w, 'hainanu-cas').find('.sso-cell__delete').trigger('click')
+    await rowOf(w, 'university-sso').find('.sso-cell__delete').trigger('click')
     await settle()
     const [message, , opts] = confirmCalls()[0] as unknown as [string, string, { confirmButtonText: string }]
     expect(message).toContain('3 accounts are linked at it and will no longer be able to sign in through it')
     expect(message).toContain('Switch it off instead to keep them linked.')
     expect(opts.confirmButtonText).toBe('Delete and unlink 3 accounts')
     expect(core.lastBody('POST', SSO.remove)).toEqual({ version: 4, force: true })
-    expect(lastMessage()!.message).toBe('海大統一認證 is deleted; 3 accounts were unlinked.')
+    expect(lastMessage()!.message).toBe('大學統一認證 is deleted; 3 accounts were unlinked.')
   })
 
   it('says it in Chinese: 3 個帳號將無法再以此方式登入', async () => {
     vi.mocked(ElMessageBox.confirm).mockRejectedValue('cancel')
     const w = await page('zh-Hant')
-    await rowOf(w, 'hainanu-cas').find('.sso-cell__delete').trigger('click')
+    await rowOf(w, 'university-sso').find('.sso-cell__delete').trigger('click')
     await settle()
     expect(confirmCalls()[0][0]).toContain('3 個帳號將無法再以此方式登入')
     expect(core.to('POST', SSO.remove)).toHaveLength(0)
@@ -281,23 +281,23 @@ describe('deleting a provider', () => {
 describe('testing a provider', () => {
   it('reads its issuer as it is set up and shows endpoints, keys, problems and warnings', async () => {
     core.report = {
-      ...goodReport('https://adfs.polyu.edu.hk/adfs'),
+      ...goodReport('https://adfs.example.edu/adfs'),
       ok: false,
-      problems: ['the discovery document’s issuer is https://adfs.polyu.edu.hk/adfs/, not https://adfs.polyu.edu.hk/adfs'],
+      problems: ['the discovery document’s issuer is https://adfs.example.edu/adfs/, not https://adfs.example.edu/adfs'],
       warnings: ['the claim upn is not among claims_supported'],
     }
     const w = await page()
-    await rowOf(w, 'polyu-adfs').find('.sso-cell__test').trigger('click')
+    await rowOf(w, 'school-adfs').find('.sso-cell__test').trigger('click')
     await settle()
     const [get] = core.to('GET', SSO.test)
-    expect(get.url).toBe('/v1/sso/test?provider_id=polyu-adfs')
+    expect(get.url).toBe('/v1/sso/test?provider_id=school-adfs')
     const d = dialog()
-    expect(d.querySelector('.el-dialog__title')!.textContent).toBe('Test PolyU NetID')
+    expect(d.querySelector('.el-dialog__title')!.textContent).toBe('Test School NetID')
     expect(d.querySelector('.sso-report__verdict')!.textContent).toContain('Not ready')
     expect(d.querySelector('.sso-report__problems')!.textContent).toContain('adfs/, not')
     expect(d.querySelector('.sso-report__warnings')!.textContent).toContain('upn is not among claims_supported')
     expect(d.querySelector('.sso-report__endpoint-token')!.textContent).toContain(
-      'https://adfs.polyu.edu.hk/adfs/protocol/openid-connect/token',
+      'https://adfs.example.edu/adfs/protocol/openid-connect/token',
     )
     expect(d.querySelector('.sso-report__endpoint-endSession')!.textContent).toContain('None')
     expect(d.querySelector('.sso-report__key')!.textContent).toContain('RS256')
@@ -311,12 +311,12 @@ describe('testing a provider', () => {
 describe('the dialog from the list', () => {
   it('opens on the provider to edit, with the redirect URI and the key the list read', async () => {
     const w = await page()
-    await rowOf(w, 'hainanu-cas').find('.sso-cell__edit').trigger('click')
+    await rowOf(w, 'university-sso').find('.sso-cell__edit').trigger('click')
     await settle()
     const d = dialog()
-    expect(d.querySelector('.el-dialog__title')!.textContent).toBe('Edit 海大統一認證')
+    expect(d.querySelector('.el-dialog__title')!.textContent).toBe('Edit 大學統一認證')
     expect(d.querySelector('.redirect-uri__value')!.textContent).toBe(REDIRECT_URI)
-    expect(d.querySelector('.sso-form__id-fixed')!.textContent).toBe('hainanu-cas')
+    expect(d.querySelector('.sso-form__id-fixed')!.textContent).toBe('university-sso')
     expect(d.querySelector('.sso-form__secret-keep')!.textContent).toContain('Keep the current secret (…k3Qz)')
   })
 

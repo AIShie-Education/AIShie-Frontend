@@ -507,7 +507,7 @@ export default {
     providerHint: "This installation's name for the identity provider.",
     providerNotOffered: 'not offered now',
     subject: 'Account (UPN)',
-    subjectPlaceholder: "name{'@'}connect.polyu.hk",
+    subjectPlaceholder: "name{'@'}example.edu",
     subjectHint: 'For ADFS, the user principal name. Letter case does not matter.',
     subjectOf: 'Account ({claim})',
     subjectOfHint: "What {name} gives as its {claim} claim for this person. Letter case does not matter where it holds an {'@'}.",

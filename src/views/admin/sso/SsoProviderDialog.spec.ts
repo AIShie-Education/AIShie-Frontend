@@ -190,7 +190,7 @@ describe('adding a provider', () => {
   it('refuses an id taken already, and keeps openid among the scopes', async () => {
     await open()
     await fillNew(newSecret())
-    await fill('.sso-form__id', 'polyu-adfs')
+    await fill('.sso-form__id', 'school-adfs')
     await click('.sso-dialog__save')
     expect(fieldError('.sso-form__id')).toBe('A provider has this ID already')
     expect(core.to('POST', SSO.list)).toHaveLength(0)
@@ -305,23 +305,23 @@ describe('testing the issuer from the form', () => {
 
 describe('changing a provider', () => {
   it('shows its id as fixed and its secret as a hint, and sends only what changed, over the version read', async () => {
-    const w = await open(read('hainanu-cas'))
+    const w = await open(read('university-sso'))
     expect(q('.sso-form__id')).toBeNull()
-    expect(q('.sso-form__id-fixed')!.textContent).toBe('hainanu-cas')
+    expect(q('.sso-form__id-fixed')!.textContent).toBe('university-sso')
     expect(q('.sso-form__secret-keep')!.textContent).toContain('Keep the current secret (…k3Qz)')
     expect(q('.sso-form__secret')).toBeNull()
-    await fill('.sso-form__name', '海南大學統一認證')
+    await fill('.sso-form__name', '大學單一登入')
     await click('.sso-dialog__save')
     const [post] = core.to('POST', SSO.one)
-    expect(post.url).toBe('/v1/sso/providers/hainanu-cas')
-    expect(JSON.parse(post.body!)).toEqual({ version: 4, display_name: '海南大學統一認證' })
-    expect(lastMessage()!.message).toBe('海南大學統一認證 is saved. It takes effect at the next sign-in.')
+    expect(post.url).toBe('/v1/sso/providers/university-sso')
+    expect(JSON.parse(post.body!)).toEqual({ version: 4, display_name: '大學單一登入' })
+    expect(lastMessage()!.message).toBe('大學單一登入 is saved. It takes effect at the next sign-in.')
     expect(w.emitted('saved')).toHaveLength(1)
   })
 
   it('sends a new secret only when it replaces the one kept', async () => {
     const secret = newSecret()
-    await open(read('hainanu-cas'))
+    await open(read('university-sso'))
     await click('.sso-form__secret-new input')
     await fill('.sso-form__secret', secret)
     await click('.sso-dialog__save')
@@ -331,7 +331,7 @@ describe('changing a provider', () => {
   })
 
   it('closes without a word when nothing changed', async () => {
-    const w = await open(read('hainanu-cas'))
+    const w = await open(read('university-sso'))
     await click('.sso-dialog__save')
     expect(core.to('POST', SSO.one)).toHaveLength(0)
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([false])
@@ -339,8 +339,8 @@ describe('changing a provider', () => {
 
   it('asks for the secret again when the server’s keys no longer open it', async () => {
     const secret = newSecret()
-    core.find('hainanu-cas')!.status = 'secret_unavailable'
-    await open(read('hainanu-cas'))
+    core.find('university-sso')!.status = 'secret_unavailable'
+    await open(read('university-sso'))
     expect(q('.sso-form__secret-unavailable')!.textContent).toContain('give the secret again')
     expect(q('.sso-form__secret-mode')).toBeNull()
     await click('.sso-dialog__save')
@@ -351,18 +351,18 @@ describe('changing a provider', () => {
   })
 
   it('warns that accounts stay linked when the issuer changes', async () => {
-    await open(read('hainanu-cas'))
+    await open(read('university-sso'))
     expect(q('.sso-form__issuer-linked')).toBeNull()
-    await fill('.sso-form__issuer', 'https://sso.hainanu.edu.cn/oidc')
+    await fill('.sso-form__issuer', 'https://login.example.edu/oidc')
     expect(q('.sso-form__issuer-linked')!.textContent).toContain(
       '3 accounts are linked at it and stay linked: whoever the new issuer vouches for under the same subject signs in as them.',
     )
   })
 
   it('reads it again when it changed meanwhile, keeps what was changed here over it, and says so', async () => {
-    await open(read('hainanu-cas'))
+    await open(read('university-sso'))
     // Someone else renames it and changes its client id after the dialog read it.
-    const p = core.find('hainanu-cas')!
+    const p = core.find('university-sso')!
     Object.assign(p, { version: 5, client_id: 'aishie-2', display_name: 'Someone else’s name' })
     await fill('.sso-form__name', 'My name')
     await click('.sso-dialog__save')
@@ -376,8 +376,8 @@ describe('changing a provider', () => {
   })
 
   it('closes and says so when it was deleted meanwhile', async () => {
-    const w = await open(read('hainanu-cas'))
-    core.providers = core.providers.filter((p) => p.id !== 'hainanu-cas')
+    const w = await open(read('university-sso'))
+    core.providers = core.providers.filter((p) => p.id !== 'university-sso')
     await fill('.sso-form__name', 'Anything')
     await click('.sso-dialog__save')
     expect(lastMessage()).toMatchObject({
@@ -415,7 +415,7 @@ describe('the secret', () => {
 
   it('is forgotten when the secret kept is chosen again', async () => {
     const secret = newSecret()
-    const w = await open(read('hainanu-cas'))
+    const w = await open(read('university-sso'))
     await click('.sso-form__secret-new input')
     await fill('.sso-form__secret', secret)
     await click('.sso-form__secret-keep input')
@@ -426,7 +426,7 @@ describe('the secret', () => {
   })
 
   it('is never sent back as its hint, nor shown but as its hint', async () => {
-    await open(read('hainanu-cas'))
+    await open(read('university-sso'))
     await fill('.sso-form__client-id', 'aishie-new')
     await click('.sso-dialog__save')
     const body = core.lastBody('POST', SSO.one)

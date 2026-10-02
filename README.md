@@ -282,7 +282,7 @@ Built into the app at build time (see `.env.example`):
 |---|---|
 | `VITE_API_BASE` | Where Core is, when it is not this origin. Leave empty for a same-origin deployment (recommended). |
 | `VITE_SSO_ENABLED` | Only for a Core without `GET /v1/auth/methods` (it answers 404), or when Core cannot be asked: `true` shows the single sign-on button; Core must have `OIDC_ISSUER` set. |
-| `VITE_SSO_LABEL` | The button's provider name then, e.g. `PolyU NetID`. |
+| `VITE_SSO_LABEL` | The button's provider name then, e.g. `School NetID`. |
 
 The published image is built with none of them set: Core on the page's own origin, and single
 sign-on as Core says, or none from a Core too old to say

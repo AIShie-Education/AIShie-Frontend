@@ -26,7 +26,7 @@ function actor(display_name: string, over: Partial<ActorRow> = {}): ActorRow {
     id: `01a0d79f-13c6-70da-a7cc-${n}`,
     kind: 'human',
     display_name,
-    email: `someone${serial}@example.edu.hk`,
+    email: `someone${serial}@example.edu`,
     status: 'active',
     created_at: '2026-09-01T00:00:00Z',
     has_password: true,
@@ -36,7 +36,7 @@ function actor(display_name: string, over: Partial<ActorRow> = {}): ActorRow {
     ...over,
   }
 }
-/** A full page of those whose email holds "ed" (…@example.edu.hk), none named Ed. */
+/** A full page of those whose email holds "ed" (…@example.edu), none named Ed. */
 const fullPage = () => Array.from({ length: SAME_NAME_PAGE }, (_, i) => actor(`Student ${i}`))
 /** Pages in order, each with the cursor to the next but the last. */
 function pages(...list: ActorRow[][]) {

@@ -50,9 +50,9 @@ describe('draftArgs', () => {
   })
 
   it('sends a limit and domains when there are any, the domains as a copy', () => {
-    const d = { maxUses: 40, domains: ['hainanu.edu.cn', 'example.edu'] }
+    const d = { maxUses: 40, domains: ['campus.example.edu', 'example.edu'] }
     const args = draftArgs(d)
-    expect(args).toEqual({ max_uses: 40, allowed_email_domains: ['hainanu.edu.cn', 'example.edu'] })
+    expect(args).toEqual({ max_uses: 40, allowed_email_domains: ['campus.example.edu', 'example.edu'] })
     expect(args.allowed_email_domains).not.toBe(d.domains)
     expect('expires_at' in args).toBe(false)
   })

@@ -12,9 +12,6 @@ export { uuidPredecessor }
 /** A course as course.list gives it: the same shape as course.get. */
 export type CourseRow = ListItem<'course.list', 'courses'>
 
-/** The default identity provider name, as Core records it (OIDC_PROVIDER_NAME). */
-export const DEFAULT_SSO_PROVIDER = 'polyu-adfs'
-
 /**
  * One course, read as an administrator. course.get needs a seat in the
  * course; course.list does not, and pages in id order after a cursor, so
