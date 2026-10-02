@@ -430,12 +430,16 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 .course-tabs__caret {
   font-size: 12px;
 }
-/* Every tab and More, laid out as in the strip but unseen and taking no room: their widths. */
+/* Every tab and More, laid out as in the strip but unseen and taking no room, not even beyond the page's
+   edge (the box is empty, and clips what is in it): their widths. */
 .course-tabs__measure {
   position: absolute;
   top: 0;
   left: 0;
   display: flex;
+  width: 0;
+  height: 0;
+  overflow: hidden;
   visibility: hidden;
   pointer-events: none;
   white-space: nowrap;
