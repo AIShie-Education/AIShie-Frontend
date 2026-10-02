@@ -402,7 +402,11 @@ watch(
   },
   { flush: 'post' },
 )
-onMounted(() => void nextTick(toBottom))
+// A conversation opens on its newest message; a new one at its top, where
+// who it is with is said (and, the first time, who reads it).
+onMounted(() => {
+  if (conv) void nextTick(toBottom)
+})
 
 async function older() {
   if (!conv) return
