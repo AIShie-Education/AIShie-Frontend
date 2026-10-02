@@ -18,7 +18,7 @@ export default {
     backToHistory: '返回過往對話',
     backToAgents: '返回代理列表',
     pickTitle: '向代理提問',
-    pickHint: '你在 {course} 可以提問的代理：課程自己的代理，以及你的個人助理。',
+    pickHint: '你在 {course} 可以提問的代理：課程自己的代理，以及你的個人代理。',
     noCourses: '你的課程都不允許你向代理提問。',
   },
   history: {

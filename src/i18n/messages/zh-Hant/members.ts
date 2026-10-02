@@ -62,7 +62,7 @@ export default {
     instructor: '講師',
     tutor: '輔導（代理）',
     grader: '評分（代理）',
-    delegate: '個人助手（代理）',
+    delegate: '個人代理',
     course_tutor: '課程代理',
   },
   presetHelp: {

@@ -119,7 +119,7 @@ describe('AgentPicker', () => {
     expect(rows[0]!.find('.askable').text()).toBe('Paused')
     expect(rows[1]!.find('.askable').text()).toBe('Can be asked')
     expect(rows[0]!.text()).toContain('It answers other members too')
-    expect(rows[1]!.text()).toContain('Personal assistant')
+    expect(rows[1]!.text()).toContain('Personal agent')
     expect(rows[1]!.text()).toContain('Your agent')
     expect(rows[1]!.text()).not.toContain('It answers other members too')
   })

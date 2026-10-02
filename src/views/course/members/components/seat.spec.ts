@@ -160,7 +160,7 @@ describe('explainRefusal, above a seat’s ceiling', () => {
     const details = { reason: 'student_agent_by_proposal', permission: 'submission_write', ceiling: 'confirm_required' }
     const one = new ApiError({ status: 403, code: 'forbidden', message: 'the agent of someone …', details })
     expect(explainRefusal(one)).toBe(
-      'Write submissions can be at most “Needs approval” here, because the agent of someone who does not manage this course’s members does this only by proposal, as it goes beyond what the personal assistant preset gives.',
+      'Write submissions can be at most “Needs approval” here, because the agent of someone who does not manage this course’s members does this only by proposal, as it goes beyond what the personal agent preset gives.',
     )
     const bulk = new ApiError({
       status: 403,

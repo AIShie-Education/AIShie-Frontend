@@ -317,7 +317,7 @@ export default {
     theOwner: 'its owner',
     purpose: {
       course: 'A course agent: students may ask it about the course. It answers any student whose own seat reaches at least as far as it does, and reads only published material.',
-      personal: 'A personal assistant: it answers only {owner}, and reads the material and {owner}’s own work and grades.',
+      personal: 'A personal agent: it answers only {owner}, and reads the material and {owner}’s own work and grades.',
     },
     ownerSeat: '(whose seat caps it)',
     as: 'Seated as',

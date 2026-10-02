@@ -18,7 +18,7 @@ export default {
     backToHistory: 'Back to the history',
     backToAgents: 'Back to the agents',
     pickTitle: 'Ask an agent',
-    pickHint: 'The agents you can ask in {course}: the course’s own, and your personal assistant.',
+    pickHint: 'The agents you can ask in {course}: the course’s own, and your personal agent.',
     noCourses: 'None of your courses lets you ask agents questions.',
   },
   history: {
