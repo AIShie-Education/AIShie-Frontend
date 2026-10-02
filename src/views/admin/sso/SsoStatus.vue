@@ -67,7 +67,9 @@ const olderKey = computed(() => sealedByOlderKey(props.provider, props.secretsKe
         {{ t('ssoAdmin.list.olderKey') }}
       </el-tag>
     </div>
-    <span v-if="isOperator(provider)" class="sso-status__why">{{ t('ssoAdmin.list.operatorWhy') }}</span>
+    <span v-if="isOperator(provider)" class="sso-status__why"
+      >{{ t('ssoAdmin.list.operatorWhy') }}<OperatorDetail :text="t('ssoAdmin.flags.oidc')"
+    /></span>
     <span v-if="why" class="sso-status__why"
       >{{ why
       }}<OperatorDetail v-if="status === 'issuer_address_not_allowed'" :text="t('ssoAdmin.flags.privateIssuers')"

@@ -76,6 +76,9 @@ describe('the list of providers', () => {
     expect(op.find('.sso-status__operator').text()).toBe('Set by the server’s operator')
     expect(op.find('.sso-status__status').text()).toBe('Offered')
     expect(op.text()).toContain('read-only here')
+    // The settings it comes from are for the operator, in the tooltip beside the words.
+    expect(op.text()).not.toContain('OIDC')
+    expect(op.find('.sso-status .operator-detail').attributes('aria-label')).toContain('OIDC_ISSUER')
     expect(op.find('.sso-cell__always').text()).toBe('Always on')
     expect(op.find('.sso-cell__enabled').exists()).toBe(false)
     expect(op.find('.sso-cell__edit').exists()).toBe(false)

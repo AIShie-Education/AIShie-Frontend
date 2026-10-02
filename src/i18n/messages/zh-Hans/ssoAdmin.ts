@@ -51,7 +51,7 @@ export default {
     actions: '操作',
     test: '测试',
     operator: '由服务器运维者设置',
-    operatorWhy: '在服务器环境配置（OIDC_*）中设置，此处只读。',
+    operatorWhy: '由服务器运维者在服务器上设置，此处只读。',
     linksByEmail: '以邮箱关联',
     olderKey: '旧密钥',
     olderKeyWhy: '其密钥以服务器之前的密钥加密，服务器仍保留该密钥。服务器运维者可改以新密钥重新加密。',
@@ -220,7 +220,7 @@ export default {
 
   refusal: {
     secrets_key_missing: '服务器尚未设置用来加密客户端密钥的密钥：在运维者设置之前，无法添加提供者，也无法输入客户端密钥。',
-    set_by_operator: '这个提供者由服务器运维者设置（OIDC_*），此处无法修改。',
+    set_by_operator: '这个提供者由服务器运维者在服务器上设置，此处无法修改。',
     id_taken: '这个 ID 已被占用：运维者的提供者或另一个提供者已使用它。请另选一个。',
     version_mismatch: '其间已有人修改这个提供者。',
     provider_in_use: '有 {linked_accounts} 个账号关联到它。',
@@ -236,5 +236,6 @@ export default {
     secretsKey: '服务器环境配置中的 SECRETS_KEY（32 个随机字节的 base64）',
     rewrap: 'aishie-core secrets rewrap',
     privateIssuers: 'SSO_ALLOW_PRIVATE_ISSUERS',
+    oidc: '服务器环境配置中的 OIDC_ISSUER、OIDC_CLIENT_ID 等 OIDC_* 配置',
   },
 }

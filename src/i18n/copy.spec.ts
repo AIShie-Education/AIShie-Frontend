@@ -32,10 +32,15 @@ const FORBIDDEN: [string, RegExp][] = [
   // A tool's dotted name (actor.list, member.add) or a field of its answer (details.reason).
   [
     'a tool’s name',
-    /\b(?:action|actor|agent|assignment|component|conversation|course|department|details|document|grade|me|member|preset|rubric|service|sso|submission|term)\.[a-z_]+\b/,
+    /\b(?:action|actor|agent|assignment|component|conversation|course|department|details|document|event|grade|me|member|preset|rubric|service|sso|submission|term)\.[a-z_]+\b/,
   ],
-  // An environment flag or a setting of the server (OCR=off, ADMIN_ACTOR_IDS).
-  ['a server setting', /\b[A-Z][A-Z0-9]*=\w|\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)+\b/],
+  // A tool's name as an agent's client calls it, the dot an underscore (grade_submit, event_list).
+  [
+    'a tool’s client name',
+    /\b(?:action|actor|agent|assignment|component|conversation|course|department|document|event|grade|member|preset|rubric|service|sso|submission|term)_(?:[a-z]+)\b/,
+  ],
+  // An environment flag or a setting of the server (OCR=off, ADMIN_ACTOR_IDS), or a family of them (OIDC_*).
+  ['a server setting', /\b[A-Z][A-Z0-9]*=\w|\b[A-Z][A-Z0-9]+_(?:\*|[A-Z0-9])/],
 ]
 
 /**
@@ -47,9 +52,14 @@ const ALLOWED = [
   // Settings and commands, each named in the tooltip beside the words that say what they do (OperatorDetail).
   'runtimeAdmin.flags.',
   'ssoAdmin.flags.',
-  // Where the operator puts the agent service's credential on the server, after issuing one here by hand.
+  // The steps of a task only the server's operator does, issuing the agent service's credential by
+  // hand: where on the server to put it, inline, as what they follow (docs/CONVENTIONS.md, Text). The
+  // command that does it all (AgentRuntimeCard's ROTATE) is a parameter of these, and of the card's
+  // setup, none and revokeBody, so it is not scanned here.
   'runtimeAdmin.agentRuntime.where',
   'runtimeAdmin.agentRuntime.issueBody',
+  // Setting up an agent's MCP client, read by whoever connects it: the tool names it calls.
+  'admin.token.mcpNotes',
 ]
 const allowed = (key: string) => ALLOWED.some((a) => (a.endsWith('.') ? key.startsWith(a) : key === a))
 

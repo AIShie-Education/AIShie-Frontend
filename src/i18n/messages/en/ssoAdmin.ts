@@ -51,7 +51,7 @@ export default {
     actions: 'Actions',
     test: 'Test',
     operator: 'Set by the server’s operator',
-    operatorWhy: 'Set in the server’s environment (OIDC_*): read-only here.',
+    operatorWhy: 'Set on the server by its operator: read-only here.',
     linksByEmail: 'Links by email',
     olderKey: 'Older key',
     olderKeyWhy:
@@ -232,7 +232,7 @@ export default {
   refusal: {
     secrets_key_missing:
       'The server has no key to seal client secrets with: no provider can be added, and no client secret given, until its operator sets one.',
-    set_by_operator: 'This provider is set by the server’s operator (OIDC_*): it cannot be changed here.',
+    set_by_operator: 'This provider is set on the server by its operator: it cannot be changed here.',
     id_taken: 'That ID is taken: the operator’s provider or another provider has it. Choose another.',
     version_mismatch: 'Someone changed this provider meanwhile.',
     provider_in_use: '{linked_accounts} accounts are linked at it.',
@@ -249,5 +249,6 @@ export default {
     secretsKey: 'SECRETS_KEY in the server’s environment, the base64 of 32 random bytes.',
     rewrap: 'aishie-core secrets rewrap.',
     privateIssuers: 'SSO_ALLOW_PRIVATE_ISSUERS.',
+    oidc: 'OIDC_ISSUER, OIDC_CLIENT_ID and the other OIDC_* settings in the server’s environment.',
   },
 }

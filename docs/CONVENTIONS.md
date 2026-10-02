@@ -758,8 +758,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   "The server has turned this off; ask the server's operator" (「伺服器已停用此功能，請聯絡系統管理員」), "This
   server cannot … yet". What only the server's operator acts on (a setting, a command) goes in a tooltip beside
   the words: `<OperatorDetail :text>` (`src/views/admin/components`), its text in `runtimeAdmin.flags` or
-  `ssoAdmin.flags`. `src/i18n/copy.spec.ts` scans every message in every language for these words; a message
-  only an operator reads is let through there by its key, saying why.
+  `ssoAdmin.flags`. The one exception is a task only the operator does, whose steps are the command and the
+  path they follow (issuing the agent service's credential by hand, `AgentRuntimeCard`): those stay inline, in
+  `<code>`. `src/i18n/copy.spec.ts` scans every message in every language for these words (a dotted or an
+  underscored tool name, a setting or a family of them such as `OIDC_*`); a message only an operator reads, or
+  one that sets up an agent's MCP client, is let through there by its key, saying why.
 - Some vocabularies are keyed by Core's own dotted names (`enums.event`: `grade.posted`, …).
   vue-i18n splits a key path on dots, so look those up with a bracketed segment:
   ``t(`enums.event['${type}']`)``.

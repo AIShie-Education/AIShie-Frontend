@@ -51,7 +51,7 @@ export default {
     actions: '操作',
     test: '測試',
     operator: '由伺服器營運者設定',
-    operatorWhy: '在伺服器環境設定（OIDC_*）中設定，此處唯讀。',
+    operatorWhy: '由伺服器營運者在伺服器上設定，此處唯讀。',
     linksByEmail: '以電郵連結',
     olderKey: '舊金鑰',
     olderKeyWhy:
@@ -221,7 +221,7 @@ export default {
 
   refusal: {
     secrets_key_missing: '伺服器尚未設定用來加密用戶端密鑰的金鑰：在營運者設定之前，無法新增提供者，也無法輸入用戶端密鑰。',
-    set_by_operator: '這個提供者由伺服器營運者設定（OIDC_*），此處無法修改。',
+    set_by_operator: '這個提供者由伺服器營運者在伺服器上設定，此處無法修改。',
     id_taken: '這個 ID 已被佔用：營運者的提供者或另一個提供者已使用它。請另選一個。',
     version_mismatch: '其間已有人修改這個提供者。',
     provider_in_use: '有 {linked_accounts} 個帳號連結到它。',
@@ -237,5 +237,6 @@ export default {
     secretsKey: '伺服器環境設定中的 SECRETS_KEY（32 個隨機位元組的 base64）',
     rewrap: 'aishie-core secrets rewrap',
     privateIssuers: 'SSO_ALLOW_PRIVATE_ISSUERS',
+    oidc: '伺服器環境設定中的 OIDC_ISSUER、OIDC_CLIENT_ID 等 OIDC_* 設定',
   },
 }

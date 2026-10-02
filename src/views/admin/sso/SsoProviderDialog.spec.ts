@@ -589,7 +589,7 @@ describe('a provider the operator’s now has the id of', () => {
     await click('.sso-dialog__save')
     expect(lastMessage()).toMatchObject({
       type: 'warning',
-      message: 'This provider is set by the server’s operator (OIDC_*): it cannot be changed here.',
+      message: 'This provider is set on the server by its operator: it cannot be changed here.',
     })
     expect(w.emitted('changed')).toHaveLength(1)
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([false])
