@@ -19,11 +19,11 @@
 // The redirect URI to register at every provider heads the page and the
 // dialog. Without SECRETS_KEY on the server no provider can be added (nor a
 // secret given again), which is said, and the operator's still works.
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAsync } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -44,7 +44,11 @@ import {
 } from './sso/ssoAdmin'
 
 const { t } = useI18n()
-const narrow = useNarrow()
+// Every column where the providers' card has the 760 px they take; with less, a
+// provider's status, accounts and actions go under its name. By the card's own
+// width (its title's), not the window's: the side bar takes from it.
+const providersTitle = useTemplateRef<HTMLElement>('providersTitle')
+const narrow = useContainerNarrow(providersTitle, 759)
 
 const list = useAsync(listProviders, { keepData: true })
 const providers = computed(() => ordered(list.data.value?.providers))
@@ -230,7 +234,7 @@ function openTest(p: SsoProvider) {
         </section>
 
         <section class="app-card sso-admin__providers">
-          <h2 class="app-card__title">{{ t('ssoAdmin.list.title') }}</h2>
+          <h2 ref="providersTitle" class="app-card__title">{{ t('ssoAdmin.list.title') }}</h2>
           <p class="sso-admin__intro">{{ t('ssoAdmin.list.intro') }}</p>
 
           <el-alert

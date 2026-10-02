@@ -11,14 +11,14 @@
 // grades for the student.
 //
 // A student sees their own; staff pick a student, whose id goes in the path.
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { read, type ToolOut } from '@/api/http'
 import type { Decimal, GradeSummary, GradebookLine } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isUuid, shortId } from '@/utils/format'
@@ -45,7 +45,6 @@ const { t } = useI18n()
 const router = useRouter()
 const course = useCourseStore()
 const lookups = useGradeLookups(() => props.courseId)
-const narrow = useNarrow()
 
 const mine = computed(() => course.role === 'student')
 /** Whose gradebook: the one in the path, or a student's own. */
@@ -332,6 +331,12 @@ const spansAssignments = computed(() => course.membership?.assignment_scope !== 
 const grader = computed(
   () => !mine.value && !isOwn.value && spansAssignments.value && course.canAll(['grade_submit', 'grade_post']),
 )
+// Every column of the breakdown where its card has the 930 px they take (1060
+// with a grader's actions); with less, what they say goes under each line's
+// name. By the card's own width (its title's), not the window's: the side bar
+// takes from it.
+const breakdownTitle = useTemplateRef<HTMLElement>('breakdownTitle')
+const narrow = useContainerNarrow(breakdownTitle, () => (grader.value ? 1059 : 929))
 /** The words for a total, as its menu and dialogs name it. */
 function totalName(row: Row): string {
   return row.isRoot ? t('grades.courseTotal') : t('activity.subject.componentTotal', { name: row.name ?? '' })
@@ -584,7 +589,7 @@ watch(
         </section>
 
         <section class="app-card">
-          <h2 class="app-card__title">{{ t('grades.gradebook.breakdown') }}</h2>
+          <h2 ref="breakdownTitle" class="app-card__title">{{ t('grades.gradebook.breakdown') }}</h2>
           <el-table
             :data="tree"
             row-key="key"
@@ -614,7 +619,7 @@ watch(
                     <span v-else-if="row.name">{{ row.name }}</span>
                     <IdText v-else :id="row.id" />
                   </span>
-                  <!-- Phone width: what the other columns say, beneath the name -->
+                  <!-- Narrow: what the other columns say, beneath the name -->
                   <span v-if="narrow" class="gradebook__sub">
                     <span v-if="score(row) !== null" class="gradebook__num"
                       >{{ score(row) }} / {{ formatScore(row.points) }}</span

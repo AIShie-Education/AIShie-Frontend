@@ -3,14 +3,14 @@
 // what it is worth and where it counts. Students also see where their own
 // work stands on each; those who write assignments see which are not
 // published yet, and create new ones here.
-import { computed, ref } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { read } from '@/api/http'
 import type { AssignmentSummary, SubmissionSummary } from '@/api/types'
 import { useAsync, usePaged } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
@@ -36,8 +36,16 @@ const list = usePaged<AssignmentSummary>((after) =>
   })),
 )
 const scheme = useScheme(() => props.courseId)
-/** On a phone the table keeps two columns; the rest goes under the title. */
-const narrow = useNarrow()
+// A phone's layout, the title and the due date, the rest under the title,
+// where the page is as narrow as on a phone: 592 px or less, the width it has
+// in a window of 640 px without the side bar. By the page's own width (its
+// header's: the card's padding changes at that width too), not the window's:
+// the side bar takes from it.
+const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
+const narrow = useContainerNarrow(
+  computed(() => header.value?.$el as HTMLElement | undefined),
+  592,
+)
 
 // A student's own work: the newest attempt at each assignment, and which
 // assignments they have handed something in for (a later attempt may be a
@@ -126,7 +134,7 @@ function refresh() {
 
 <template>
   <div class="assignments-view">
-    <PageHeader :title="t('assignments.title')" :subtitle="t('assignments.subtitle')">
+    <PageHeader ref="header" :title="t('assignments.title')" :subtitle="t('assignments.subtitle')">
       <el-button :loading="list.loading.value" @click="refresh">
         <el-icon><Refresh /></el-icon>
         <span>{{ t('common.actions.refresh') }}</span>

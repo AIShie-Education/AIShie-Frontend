@@ -12,7 +12,7 @@ import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { usePhoneScreen } from '@/composables/useMediaQuery'
 import ChatPane from '@/components/chat/ChatPane.vue'
 import { stateOf } from '@/components/chat/chat'
 import { useConversationList } from '@/components/chat/useConversationList'
@@ -25,7 +25,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ 'update:modelValue': [open: boolean] }>()
 const { t } = useI18n()
-const narrow = useNarrow()
+const phone = usePhoneScreen()
 
 const open = computed({
   get: () => props.modelValue,
@@ -54,7 +54,7 @@ watch(open, (v) => {
   <el-drawer
     v-model="open"
     direction="rtl"
-    :size="narrow ? '100%' : '560px'"
+    :size="phone ? '100%' : '560px'"
     :title="agent ? t('courseAgents.log.title', { name: agent.display_name }) : ''"
     class="agent-log"
     body-class="agent-log__body"

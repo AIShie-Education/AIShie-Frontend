@@ -7,12 +7,12 @@
 // answers' model calls alone (the runtime's kind 'model_calls'), while the
 // whole school's ceiling in dollars counts the transcription of documents
 // too, so the card says so beside that ceiling.
-import { computed } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { runtimeAdmin } from '@/api/runtime'
 import type { OwnerPlanUse } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import DailyReset from '@/components/DailyReset.vue'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -20,7 +20,12 @@ import RuntimeAsync from './RuntimeAsync.vue'
 import { usdShown } from './runtimeAdmin'
 
 const { t } = useI18n()
-const narrow = useNarrow()
+// A phone's layout, an owner's model calls and cost under their name, where the
+// card is as narrow as on a phone: its title 542 px or less, the width it has
+// in a window of 640 px without the side bar. By the card's own width, not the
+// window's: the side bar takes from it.
+const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
+const narrow = useContainerNarrow(cardTitle, 542)
 
 const usage = useAsync(() => runtimeAdmin.usage().then((r) => r.data), { keepData: true })
 const data = computed(() => usage.data.value ?? null)
@@ -42,7 +47,7 @@ const schoolSpent = computed(() => {
 
 <template>
   <section class="app-card usage-card">
-    <h2 class="app-card__title">
+    <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.usage.title') }}</span>
       <el-button
         circle

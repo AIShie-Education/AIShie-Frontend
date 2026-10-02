@@ -8,12 +8,12 @@
 // names are asked of Core where the administrator may read them
 // (document.get of the version, once per version on the page), and it links
 // to the file's text version either way.
-import { computed, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import { runtimeAdmin } from '@/api/runtime'
 import type { TranscriptionJob, TranscriptionJobFilter } from '@/api/runtime-types'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { shortId } from '@/utils/format'
 import LoadMore from '@/components/LoadMore.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -23,7 +23,12 @@ import { usdShown } from './runtimeAdmin'
 import { JOB_STATUS_TAG } from './transcription'
 
 const { t, te, n } = useI18n()
-const narrow = useNarrow()
+// A phone's layout, a job's pages, cost and time under its document, where the
+// list is as narrow as on a phone: its head 542 px or less, the width it has in
+// a window of 640 px without the side bar. By its own width, not the window's:
+// the side bar takes from it.
+const head = useTemplateRef<HTMLElement>('head')
+const narrow = useContainerNarrow(head, 542)
 
 /** 'all', or a status the runtime lists by. */
 const FILTERS: ('all' | TranscriptionJobFilter)[] = ['all', 'done', 'failed', 'skipped', 'working']
@@ -117,7 +122,7 @@ const empty = computed(() => loaded.value && !jobs.value.length)
 
 <template>
   <div class="transcription-jobs">
-    <div class="transcription-jobs__head">
+    <div ref="head" class="transcription-jobs__head">
       <h3 class="transcription-jobs__title">{{ t('runtimeAdmin.transcription.jobs.title') }}</h3>
       <el-select
         v-model="status"

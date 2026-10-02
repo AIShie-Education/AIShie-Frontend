@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { fakeContainerWidths } from '@/composables/containerWidthFakes'
 import { setLocale } from '@/i18n'
 import PricingPanel from './PricingPanel.vue'
 import {
@@ -454,5 +455,54 @@ describe('what things cost', () => {
     const w = await panel()
     expect(w.find('.costs-card__tokens').text()).toBe('輸入 400,000 · 輸出 90,000')
     expect(w.find('.prices-card .app-card__title').text()).toContain('價目表')
+  })
+})
+
+// The window is wide (matchMedia says nothing matches): each card's own width decides, measured by its title.
+describe('each table, by its card’s width', () => {
+  const heads = (w: VueWrapper, card: string) => w.findAll(`${card} thead th`).map((th) => th.text())
+
+  it('folds the prices and actions under the model where the card has less than the 670 px their columns take', async () => {
+    const sizes = fakeContainerWidths({ '.prices-card .app-card__title': 670 })
+    const w = await panel()
+    expect(heads(w, '.prices-card')).toEqual(['Model', 'Input', 'Cache read', 'Cache write', 'Output', 'Actions'])
+    expect(w.find('.price-cell__all').exists()).toBe(false)
+
+    await sizes.resize('.prices-card .app-card__title', 669)
+    await flushPromises()
+    expect(heads(w, '.prices-card')).toEqual(['Model'])
+    const site = rowOf(w, '[data-price="site:gpt-4.1-mini-2026-09-01"]')
+    expect(site.findAll('.price-cell__price').map((p) => p.text())).toEqual([
+      'in $0.4',
+      'cache read $0.1',
+      'cache write $0.4',
+      'out $1.6',
+    ])
+    expect(site.find('.price-cell__edit').exists()).toBe(true)
+  })
+
+  it('folds a tenant’s quotas, the server’s beside them, under its name where the card has less than 690 px', async () => {
+    const sizes = fakeContainerWidths({ '.tenants-card .app-card__title': 690 })
+    const w = await panel()
+    expect(heads(w, '.tenants-card')).toEqual(['Person or tenant', 'Set by', 'Answers a day', 'Dollars a day', 'Actions'])
+
+    await sizes.resize('.tenants-card .app-card__title', 689)
+    await flushPromises()
+    expect(heads(w, '.tenants-card')).toEqual(['Person or tenant'])
+    const me = rowOf(w, `[data-tenant="ten_${ADMIN_ID}"]`)
+    expect(me.find('.tenant-cell__source--narrow').text()).toBe('Set here')
+    expect(me.find('.tenant-cell__server').text()).toBe('server: 200 · No limit')
+    expect(me.find('.tenant-cell__reset').exists()).toBe(true)
+  })
+
+  it('lays the costs out as on a phone where the card is as narrow as one’s, 542 px', async () => {
+    const sizes = fakeContainerWidths({ '.costs-card .app-card__title': 543 })
+    const w = await panel()
+    expect(heads(w, '.costs-card')).toEqual(['Day', 'Model calls', 'Tokens', 'Cost'])
+
+    await sizes.resize('.costs-card .app-card__title', 542)
+    await flushPromises()
+    expect(heads(w, '.costs-card')).toEqual(['Day', 'Cost'])
+    expect(w.find('.cost-cell .cost-cell__meta').text()).toBe('Model calls: 120')
   })
 })

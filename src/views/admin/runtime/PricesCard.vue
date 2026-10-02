@@ -8,12 +8,12 @@
 // priced by, so a change applies to calls from now on, and recorded costs
 // keep their price. The plan's models no row prices today are listed first,
 // each with "Add a price": a quota in dollars cannot hold them.
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, isVersionMismatch, runtimeAdmin } from '@/api/runtime'
 import type { PriceRow, PriceTable, ProviderOffer } from '@/api/runtime-types'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import PriceDialog from './PriceDialog.vue'
 import UnpricedNotice from './UnpricedNotice.vue'
@@ -31,7 +31,11 @@ const emit = defineEmits<{
   update: [table: PriceTable]
 }>()
 const { t } = useI18n()
-const narrow = useNarrow()
+// Every column where the card has the 670 px they take; with less, a row's four
+// prices and its actions go under its model. By the card's own width (its
+// title's), not the window's: the side bar takes from it.
+const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
+const narrow = useContainerNarrow(cardTitle, 669)
 
 /** By provider, then model and day: the site's before the file's of the same. */
 const rows = computed(() =>
@@ -106,7 +110,7 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
 
 <template>
   <section id="runtime-prices" class="app-card prices-card">
-    <h2 class="app-card__title">
+    <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.prices.title') }}</span>
       <span class="prices-card__head">
         <el-button
@@ -186,9 +190,9 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
             <span v-if="row.overridden" class="price-cell__replaced">{{ t('runtimeAdmin.prices.overridden') }}</span>
             <template v-if="narrow">
               <span class="price-cell__meta price-cell__all">
-                <template v-for="k in PRICE_KEYS" :key="k">
-                  {{ t(`runtimeAdmin.prices.short.${k}`) }} ${{ row.usd_per_mtok[k] }}
-                </template>
+                <span v-for="k in PRICE_KEYS" :key="k" class="price-cell__price"
+                  >{{ t(`runtimeAdmin.prices.short.${k}`) }} ${{ row.usd_per_mtok[k] }}</span
+                >
               </span>
               <div v-if="row.source === 'site'" class="price-cell__actions">
                 <el-button link type="primary" :disabled="!!busy" class="price-cell__edit" @click="openEdit(row)">
@@ -296,6 +300,10 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
 }
 .price-cell__meta code {
   word-break: break-all;
+}
+/* Narrow, the four prices on a line of their own, apart. */
+.price-cell__price + .price-cell__price {
+  margin-left: 8px;
 }
 .price-cell__num {
   font-variant-numeric: tabular-nums;

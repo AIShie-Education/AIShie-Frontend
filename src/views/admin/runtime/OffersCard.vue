@@ -8,12 +8,12 @@
 // others wait for their owners to choose again. A change names the version
 // read (If-Match); one made meanwhile elsewhere (412) reads the plan again
 // and says so.
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, isVersionMismatch, runtimeAdmin } from '@/api/runtime'
 import type { PlanOffer, ProviderOffer, SchoolPlan } from '@/api/runtime-types'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { providerLabel } from '@/views/account/components/agents/hosting'
 import OfferDialog from './OfferDialog.vue'
 import OfferKey from './OfferKey.vue'
@@ -34,7 +34,11 @@ const emit = defineEmits<{
   reloadProviders: []
 }>()
 const { t } = useI18n()
-const narrow = useNarrow()
+// Every column where the card has the 810 px they take; with less, an offer's
+// status, key, agents and actions go under its name. By the card's own width
+// (its title's), not the window's: the side bar takes from it.
+const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
+const narrow = useContainerNarrow(cardTitle, 809)
 
 const offers = computed(() => props.plan.offers ?? [])
 const rowKey = (o: PlanOffer) => `${o.source}:${o.id}`
@@ -155,7 +159,7 @@ function openEdit(o: PlanOffer) {
 
 <template>
   <section class="app-card offers-card">
-    <h2 class="app-card__title">
+    <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.offers.title') }}</span>
       <span class="offers-card__head">
         <el-button

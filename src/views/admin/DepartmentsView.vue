@@ -14,7 +14,6 @@ import { useI18n } from 'vue-i18n'
 import type { DepartmentNode } from '@/api/types'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
-import { useNarrow } from '@/composables/useMediaQuery'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -31,11 +30,13 @@ const session = useSessionStore()
 // administrator's presets, whatever the window (the side bar takes from the
 // page): with less, the IDs are left out, the presets go under the name, and
 // the rest close up. The card is measured by its toolbar, as wide as the tree.
-// On a phone the columns close up further, as they always have, so that a
-// row's courses stay in sight beside its menu.
+// Where the card is as narrow as on a phone (its toolbar 542 px or less, the
+// width it has in a window of 640 px without the side bar), the columns close
+// up further, as they always have, so that a row's courses stay in sight
+// beside its menu.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, () => (session.isAdmin ? 945 : 745))
-const phone = useNarrow()
+const phone = useContainerNarrow(toolbar, 542)
 const departments = useDepartmentTree({ immediate: false })
 // Read afresh on coming here: someone else may have changed the tree.
 onMounted(() => void departments.reload())

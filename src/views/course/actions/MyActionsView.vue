@@ -4,12 +4,12 @@
 // agent's operator — or anyone who proposed something — learns the outcome.
 // Core lists them oldest first; they are all loaded (up to a limit) and shown
 // newest first, or oldest first if the person prefers.
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { read, type ApiError } from '@/api/http'
 import { toApiError } from '@/composables/useAsync'
-import { useNarrow } from '@/composables/useMediaQuery'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -23,7 +23,12 @@ const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
 const router = useRouter()
 const session = useSessionStore()
-const narrow = useNarrow(767)
+// Status and when go under the action, and who decided is left out (it is on
+// the action's page), where the page is narrower than 720 px (the card's help
+// 669 px or less), by its own width, not the window's: the side bar takes from
+// it.
+const help = useTemplateRef<HTMLElement>('help')
+const narrow = useContainerNarrow(help, 669)
 
 const PAGE = 200
 /** Pages loaded in one go before asking the person whether to go on. */
@@ -128,7 +133,7 @@ function open(row: ActionRow) {
     </PageHeader>
 
     <div class="app-card">
-      <p class="my-actions__help">
+      <p ref="help" class="my-actions__help">
         {{ t('actions.mine.help') }}
         <template v-if="session.me?.kind === 'agent'">{{ t('actions.mine.helpAgent') }}</template>
       </p>
