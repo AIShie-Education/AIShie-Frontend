@@ -228,8 +228,7 @@ function tell(
     <div class="decide-panel__buttons">
       <template v-if="mode === 'decide'">
         <el-button
-          type="primary"
-          :plain="!!choice && choice !== 'approve'"
+          :type="!choice || choice === 'approve' ? 'primary' : undefined"
           :size="size"
           :class="{ 'is-chosen': choice === 'approve' }"
           :aria-pressed="choice === 'approve'"
@@ -263,8 +262,7 @@ function tell(
       </template>
       <template v-else>
         <el-button
-          type="primary"
-          :plain="!!choice && choice !== 'reviewed'"
+          :type="!choice || choice === 'reviewed' ? 'primary' : undefined"
           :size="size"
           :class="{ 'is-chosen': choice === 'reviewed' }"
           :aria-pressed="choice === 'reviewed'"
@@ -338,7 +336,9 @@ function tell(
   margin-left: 0;
 }
 /* The choice open below, while its form asks for a reason: its button stays
-   pressed in, and the form's own button is the one primary. */
+   pressed in, a 2 px indigo edge on the indigo's tint, in bold, and the
+   other choice is an ordinary secondary button beside it; the form's own
+   button is the one primary. */
 .decide-panel__buttons .el-button.is-chosen {
   --el-button-bg-color: var(--app-indigo-tint);
   --el-button-border-color: var(--app-indigo);
@@ -346,6 +346,11 @@ function tell(
   --el-button-hover-bg-color: var(--app-indigo-tint);
   --el-button-hover-border-color: var(--app-indigo);
   --el-button-hover-text-color: var(--app-indigo);
+  --el-button-active-bg-color: var(--app-indigo-tint);
+  --el-button-active-border-color: var(--app-indigo);
+  --el-button-active-text-color: var(--app-indigo);
+  box-shadow: inset 0 0 0 1px var(--app-indigo);
+  font-weight: 600;
 }
 .decide-panel__blocked {
   display: flex;
