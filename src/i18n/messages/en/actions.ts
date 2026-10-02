@@ -8,11 +8,12 @@ export default {
       proposed: 'Awaiting approval',
       review: 'Awaiting review',
     },
-    proposedHelp: 'Nothing here has happened yet. Approving carries it out now, as whoever proposed it, once the system has checked their permissions again.',
-    reviewHelp: 'These have already happened. Reviewing records that someone has looked; it undoes nothing. Escalating asks a second person to look.',
+    // {tab} is the tab's name (tabs.*), so each rule says which list it is about.
+    proposedHelp: '{tab}: nothing listed there has happened yet. Approving carries it out now, as whoever proposed it, once the system has checked their permissions again.',
+    reviewHelp: '{tab}: everything listed there has already happened. Reviewing records that someone has looked; it undoes nothing. Escalating asks a second person to look.',
     emptyProposed: 'Nothing is waiting for approval.',
     emptyReview: 'Nothing is waiting for review.',
-    oldestFirst: 'Oldest first',
+    oldestFirst: 'Both lists show the oldest first.',
     decisionsNeedApproval: 'Your decisions here also need approval',
     decisionsNeedApprovalHelp: 'Your seat decides at the "needs approval" level: each approval or rejection you make becomes a proposal itself, which someone else confirms.',
     recent: 'Decided just now',
@@ -23,9 +24,11 @@ export default {
     agentsSubtitle: 'What your agents proposed in this course, or did under review: yours to decide where you could have done it yourself.',
     rules: 'Rules',
     agentsProposedHelp:
-      'Nothing here has happened yet. Approving carries it out now, as your agent, once the system has checked its permissions again; withdrawing cancels it.',
+      '{tab}: nothing listed there has happened yet. Approving carries it out now, as your agent, once the system has checked its permissions again; withdrawing cancels it.',
     agentsReviewHelp:
-      'Your agent has already done these. Reviewing records that you have looked; it undoes nothing. Escalating asks someone else in the course to look.',
+      '{tab}: your agent has already done everything listed there. Reviewing records that you have looked; it undoes nothing. Escalating asks someone else in the course to look.',
+    // {link} is My actions (mine.title), linked.
+    agentsMine: 'What you did yourself in this course is under {link}.',
     agentsEmptyProposed: 'None of your agents’ proposals is waiting.',
     agentsEmptyReview: 'Nothing your agents did is waiting for review.',
   },

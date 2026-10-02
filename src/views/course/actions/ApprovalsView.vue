@@ -235,15 +235,30 @@ function toggleRules() {
     </PageHeader>
 
     <section v-show="rulesOpen" id="approvals-rules" class="approvals__rules" :aria-label="t('actions.approvals.rules')">
+      <!-- Said above both tabs, so each tab's rule starts with the tab's name. -->
       <ul class="approvals__rules-list">
-        <li>{{ agentsOnly ? t('actions.approvals.agentsProposedHelp') : t('actions.approvals.proposedHelp') }}</li>
-        <li>{{ agentsOnly ? t('actions.approvals.agentsReviewHelp') : t('actions.approvals.reviewHelp') }}</li>
+        <i18n-t
+          :keypath="agentsOnly ? 'actions.approvals.agentsProposedHelp' : 'actions.approvals.proposedHelp'"
+          tag="li"
+          scope="global"
+        >
+          <template #tab><strong>{{ t('actions.approvals.tabs.proposed') }}</strong></template>
+        </i18n-t>
+        <i18n-t
+          :keypath="agentsOnly ? 'actions.approvals.agentsReviewHelp' : 'actions.approvals.reviewHelp'"
+          tag="li"
+          scope="global"
+        >
+          <template #tab><strong>{{ t('actions.approvals.tabs.review') }}</strong></template>
+        </i18n-t>
         <li>{{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}</li>
         <li>{{ t('actions.approvals.oldestFirst') }}</li>
       </ul>
-      <router-link v-if="agentsOnly" :to="{ name: 'course-my-actions', params: { courseId } }">
-        {{ t('actions.mine.title') }}
-      </router-link>
+      <i18n-t v-if="agentsOnly" keypath="actions.approvals.agentsMine" tag="p" scope="global" class="approvals__rules-more">
+        <template #link>
+          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('actions.mine.title') }}</router-link>
+        </template>
+      </i18n-t>
     </section>
 
     <section v-if="recent.length" class="app-card approvals__recent">
@@ -352,6 +367,13 @@ function toggleRules() {
 }
 .approvals__rules-list li + li {
   margin-top: 4px;
+}
+.approvals__rules-list strong {
+  font-weight: 600;
+  color: var(--app-ink);
+}
+.approvals__rules-more {
+  margin: 8px 0 0;
 }
 .approvals__rules-toggle .el-icon {
   color: var(--app-ink-3);

@@ -423,7 +423,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   ("Reviewed by …"). The approvals page says its rules once, in a disclosure under its title
   (「規則」, with a chevron), open the first time it is shown in this browser and closed on each visit
   after that unless the person left it open (`aishie.approvalsRules`); where the browser keeps
-  nothing, closed. It is not said again over each tab.
+  nothing, closed. It is not said again over each tab, so a rule about one tab begins with that
+  tab's name ("Awaiting review: everything listed there has already happened…"), and every rule is
+  a whole sentence.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous

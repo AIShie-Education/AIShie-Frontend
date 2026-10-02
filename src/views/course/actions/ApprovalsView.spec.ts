@@ -88,7 +88,11 @@ function member(id: string, name: string, extra: Record<string, unknown> = {}) {
 }
 const DECIDES = { perms: { action_decide: 'autonomous' } }
 
-async function mountAsStudent(members?: ReturnType<typeof member>[]) {
+/** Mei, a student who owns an agent here and decides nothing. */
+const mountAsStudent = (members?: ReturnType<typeof member>[]) => mountAs('student', members)
+
+/** Mei as a student, or as an instructor whose seat decides. */
+async function mountAs(role: 'student' | 'instructor', members?: ReturnType<typeof member>[]) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({ me: { id: 'actor-mei', kind: 'human', display_name: 'Mei' } } as never)
@@ -96,15 +100,15 @@ async function mountAsStudent(members?: ReturnType<typeof member>[]) {
   course.$patch({
     courseId: COURSE,
     course: { id: COURSE, code: 'CS101', section: 'A', title: 'Programming', status: 'active' } as never,
-    membership: { member_id: 'm-mei', role: 'student' } as never,
+    membership: { member_id: 'm-mei', role } as never,
     perms: {
       document_read: 'autonomous',
       submission_write: 'autonomous',
-      action_decide: 'denied',
+      action_decide: role === 'instructor' ? 'autonomous' : 'denied',
       member_read: members ? 'autonomous' : 'denied',
     },
     permsSource: 'exact',
-    ownsAgentHere: true,
+    ownsAgentHere: role === 'student',
   } as never)
   if (members) {
     course.members = new Map(members.map((m) => [m.id, m])) as never
@@ -270,7 +274,6 @@ describe('ApprovalsView’s rules', () => {
     await mountAsStudent()
     expect(shown()).toBe(true)
     expect(toggle().getAttribute('aria-expanded')).toBe('true')
-    expect(rules().textContent).toContain('You decide what your agent did only where')
     for (const w of mounted.splice(0)) w.unmount()
 
     await mountAsStudent()
@@ -278,6 +281,70 @@ describe('ApprovalsView’s rules', () => {
     // What the toggle controls is still there, hidden.
     expect(toggle().getAttribute('aria-controls')).toBe('approvals-rules')
     expect(toggle().getAttribute('aria-expanded')).toBe('false')
+  })
+
+  /** Each rule, as read, with the tab it names in bold. */
+  const said = () =>
+    [...rules().querySelectorAll('li')].map((li) => ({
+      text: li.textContent!.trim(),
+      tab: li.querySelector('strong')?.textContent ?? null,
+    }))
+
+  it('name the tab each is about, for someone who decides', async () => {
+    answer([], [])
+    await mountAs('instructor')
+    expect(said()).toEqual([
+      {
+        text: 'Awaiting approval: nothing listed there has happened yet. Approving carries it out now, as whoever proposed it, once the system has checked their permissions again.',
+        tab: 'Awaiting approval',
+      },
+      {
+        text: 'Awaiting review: everything listed there has already happened. Reviewing records that someone has looked; it undoes nothing. Escalating asks a second person to look.',
+        tab: 'Awaiting review',
+      },
+      {
+        text: 'Nobody decides or reviews their own action — from any seat they have held, and not at one remove either.',
+        tab: null,
+      },
+      { text: 'Both lists show the oldest first.', tab: null },
+    ])
+    // Their own actions are not this page's to point to.
+    expect(rules().querySelector('a')).toBeNull()
+  })
+
+  it('name the tab each is about, for an agent’s owner, and say where her own actions are', async () => {
+    answer([])
+    await mountAsStudent()
+    const [proposedRule, reviewRule, ownerRule, order] = said()
+    expect(proposedRule).toEqual({
+      text: 'Awaiting approval: nothing listed there has happened yet. Approving carries it out now, as your agent, once the system has checked its permissions again; withdrawing cancels it.',
+      tab: 'Awaiting approval',
+    })
+    expect(reviewRule).toEqual({
+      text: 'Awaiting review: your agent has already done everything listed there. Reviewing records that you have looked; it undoes nothing. Escalating asks someone else in the course to look.',
+      tab: 'Awaiting review',
+    })
+    expect(ownerRule!.text).toBe(
+      'You decide what your agent did only where you could have done it yourself without anyone’s confirmation.',
+    )
+    expect(order!.text).toBe('Both lists show the oldest first.')
+    const more = rules().querySelector('.approvals__rules-more')!
+    expect(more.textContent!.trim()).toBe('What you did yourself in this course is under My actions.')
+    expect(more.querySelector('a')!.getAttribute('href')).toBe(`/courses/${COURSE}/my-actions`)
+  })
+
+  it('name the tabs in the reader’s language', async () => {
+    setLocale('zh-Hant')
+    answer([])
+    await mountAsStudent()
+    const [proposedRule, reviewRule] = said()
+    expect(proposedRule!.tab).toBe('待批准')
+    expect(proposedRule!.text).toMatch(/^待批准：其中的項目都尚未發生。/)
+    expect(reviewRule!.tab).toBe('待覆核')
+    expect(reviewRule!.text).toMatch(/^待覆核：其中都是你的代理已經做了的事。/)
+    expect(rules().querySelector('.approvals__rules-more')!.textContent!.trim()).toBe(
+      '你自己在本課程做過的事，可在「我的操作」查看。',
+    )
   })
 
   it('stay as the person left them', async () => {
