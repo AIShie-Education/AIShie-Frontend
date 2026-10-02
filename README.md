@@ -5,7 +5,7 @@ agent-centred LMS. Core has one tool surface that people (REST) and agents (MCP)
 is one more client of it, calling the same tools an agent calls, through the same pipeline — so a
 grade an agent proposes and a grade a person enters are the same action, approved in the same queue.
 
-Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (繁體中文 / English).
+Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (繁體中文 / 简体中文 / English).
 
 ## What is in it
 
@@ -107,7 +107,11 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   nothing but choose their own (`/change-password`), then go where they were going.
 - **People and agents in the loop** — what an agent (or a person) with `confirm_required` does
   becomes a proposal: it shows up under *Approvals*, and nothing happens until someone approves
-  it. `pending_review` work is reviewed after the fact in the same place. Everyone can see what
+  it. Whoever may reject it may send it back for changes instead, with a note of what to change,
+  which its proposer reads; the revision it proposes names the one sent back, and links to it.
+  An agent's answer in a conversation is not sent back yet, until the site's agent runtime can
+  revise one: it is rejected with a reason, which the agent answers again with.
+  `pending_review` work is reviewed after the fact in the same place. Everyone can see what
   became of their own actions under *My actions*. An agent decides only by proposal, and every
   permission editor offers only the levels a seat may hold, greying out the rest with why.
 - **An agent's owner decides what it did** where they could have done it themselves without
@@ -192,6 +196,20 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   in the fragment (`#token=…`), which reaches no server log. People have no API tokens: an agent with
   MCP access is given its tokens by its owner under *My agents*, or by an administrator; one hosted
   on AIshie, by Core to the runtime alone.
+- **Three languages** — Traditional Chinese (繁體中文), written for readers in Hong Kong and Taiwan;
+  Simplified Chinese (简体中文), written in the Mainland's own wording (保存, 创建, 智能体, where the
+  Traditional has 儲存, 建立, 代理), not a character conversion of the Traditional; and English. A
+  first visit is in the language the browser asks for: Chinese in the script its tag names
+  (`zh-Hant`, `zh-Hans`), or else in its region's — Traditional for Taiwan, Hong Kong and Macao,
+  Simplified for any other region and for a bare `zh` — and English for any other language. The
+  account menu's *Language* submenu changes it, as does the language select on the pages before one
+  is in (sign-in, an invitation's `/welcome`, an invite link's `/join/<token>`, changing a password);
+  this browser remembers the choice, which is not kept with the account. Dates, numbers, the names of
+  time zones, Element Plus's own words and the typefaces (IBM Plex Sans and Source Serif 4 for
+  English; Noto Sans and Noto Serif, TC or SC, for Chinese) follow the language. A refusal the app
+  has words for (by its reason) is said in the page's language; any other error shows Core's own
+  message, which is in English, mostly after a few words of the page's language saying what kind
+  of error it is.
 
 What a seat may do is Core's decision alone. The app offers what the seat's permissions suggest,
 says when something will need approval, and shows Core's refusal when it refuses.
@@ -425,7 +443,7 @@ src/utils/                formatting, files' kinds and names (files.ts), a versi
                           the print layout (printLayout.ts)…
 src/layouts/              the app frame, and the course frame with its sections
 src/views/                one directory per area
-src/i18n/messages/        one file per namespace and language
+src/i18n/messages/        one file per namespace and language (en, zh-Hant, zh-Hans)
 docs/CONVENTIONS.md       how the views are written
 docs/deploying.md         the image and its tags; setting a server up, deploying, rolling back over SSH
 ```

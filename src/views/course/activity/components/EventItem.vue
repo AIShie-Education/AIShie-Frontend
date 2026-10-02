@@ -182,6 +182,7 @@ function errorText(code: string): string {
 const BY_ACTION: Record<string, 'byDecision' | 'byReview' | 'byCancel'> = {
   'action.approved': 'byDecision',
   'action.rejected': 'byDecision',
+  'action.changes_requested': 'byDecision',
   'action.reviewed': 'byReview',
   'action.escalated': 'byReview',
   'action.cancelled': 'byCancel',
@@ -218,6 +219,21 @@ const facts = computed<Fact[]>(() => {
         kind: 'text',
         text: t('activity.fact.onTarget', { target: label('activity.target', target) ?? target }),
       })
+    }
+    // A proposal that revises one of its proposer's sent back for changes;
+    // that one opens for those who read the action log.
+    const revises = payloadString(e, 'revises_action_id')
+    if (type === 'action.proposed' && revises) {
+      out.push(
+        reach.value.decides && !props.compact
+          ? {
+              kind: 'link',
+              text: t('activity.fact.revises'),
+              id: revises,
+              to: { name: 'course-action', params: { courseId: props.courseId, actionId: revises } },
+            }
+          : { kind: 'text', text: t('activity.fact.revises') },
+      )
     }
     // The action this event records (the decision or review, with its
     // reason or note; or what cancelled a proposal). It is someone else's,

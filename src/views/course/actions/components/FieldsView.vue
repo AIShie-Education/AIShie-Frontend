@@ -17,7 +17,17 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import MaybeLink from './MaybeLink.vue'
 import VersionRef from './VersionRef.vue'
-import { exactDecimal, fieldLabel, isObject, presetOf, routeFor, str, typeLabel, type ActionRow } from './actionText'
+import {
+  decisionTag,
+  exactDecimal,
+  fieldLabel,
+  isObject,
+  presetOf,
+  routeFor,
+  str,
+  typeLabel,
+  type ActionRow,
+} from './actionText'
 import { useLookup, useSpecs } from './lookups'
 
 const props = defineProps<{
@@ -287,12 +297,8 @@ function json(v: unknown) {
           <MaybeLink :to="routeFor(courseId, 'component_id', obj[k] as string)">{{ componentName(obj[k]) ?? '' }}</MaybeLink>
           <IdText :id="obj[k] as string" />
         </span>
-        <el-tag
-          v-else-if="kindOf(k, obj[k]) === 'decision'"
-          size="small"
-          :type="obj[k] === 'approve' ? 'success' : 'danger'"
-        >
-          {{ obj[k] === 'approve' ? t('actions.decision.approveVerb') : obj[k] === 'reject' ? t('actions.decision.rejectVerb') : obj[k] }}
+        <el-tag v-else-if="kindOf(k, obj[k]) === 'decision'" size="small" :type="decisionTag(obj[k]).type">
+          {{ decisionTag(obj[k]).label }}
         </el-tag>
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'reviewState'" vocab="reviewState" :value="obj[k] as string" />
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'actionStatus'" vocab="actionStatus" :value="obj[k] as string" />

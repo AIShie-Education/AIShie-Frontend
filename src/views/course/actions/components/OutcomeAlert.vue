@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // What a decision or review came to, said plainly: carried out (and what it
-// made), failed (and Core's words why), rejected, cancelled (and why it could
-// no longer be carried out), or itself waiting for approval; a proposal taken
-// back; and, where the caller decided as the owner of the agent that proposed
-// it, that it was their own doing (by_owner).
+// made), failed (and Core's words why), rejected, sent back for changes,
+// cancelled (and why it could no longer be carried out), or itself waiting
+// for approval; a proposal taken back; and, where the caller decided as the
+// owner of the agent that proposed it, that it was their own doing
+// (by_owner).
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IdText from '@/components/IdText.vue'
@@ -17,6 +18,9 @@ const props = defineProps<{ courseId: string; done: Done; closable?: boolean }>(
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 
+/** What a decision may come to: the proposal's status after it. */
+const OUTCOMES = ['executed', 'failed', 'rejected', 'changes_requested', 'cancelled']
+
 const view = computed(() => {
   const d = props.done
   switch (d.kind) {
@@ -24,8 +28,15 @@ const view = computed(() => {
       const o = d.out.outcome
       // What finally happened: a decision about a decision ends in the outcome of the one beneath.
       const last = inner.value?.outcome ?? o
-      const type = last === 'executed' ? 'success' : last === 'failed' ? 'error' : last === 'cancelled' ? 'warning' : 'info'
-      return { type, title: t(`actions.outcome.${o === 'executed' || o === 'failed' || o === 'rejected' || o === 'cancelled' ? o : 'executed'}`) }
+      const type =
+        last === 'executed'
+          ? 'success'
+          : last === 'failed'
+            ? 'error'
+            : last === 'cancelled' || last === 'changes_requested'
+              ? 'warning'
+              : 'info'
+      return { type, title: t(`actions.outcome.${OUTCOMES.includes(o) ? o : 'executed'}`) }
     }
     case 'proposed':
       return { type: 'info', title: t('actions.outcome.proposed') }
@@ -39,7 +50,6 @@ const view = computed(() => {
 const error = computed(() => (props.done.kind === 'decided' ? (props.done.out.error ?? null) : null))
 const why = computed(() => reasonText(error.value))
 
-const OUTCOMES = ['executed', 'failed', 'rejected', 'cancelled']
 /**
  * A decision about a decision carries out that decision, whose own outcome
  * is in the result: approving a colleague's approval can still cancel the

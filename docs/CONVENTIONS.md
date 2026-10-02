@@ -9,9 +9,9 @@ about who may do what.
 ## Stack
 
 Vue 3 (`<script setup lang="ts">`, Composition API only), Vite, TypeScript (strict), Vue Router,
-Pinia (setup stores), vue-i18n (composition mode), Element Plus (registered globally, icons
-registered globally by their component names: `<el-icon><Edit /></el-icon>`), dayjs,
-markdown-it + DOMPurify.
+Pinia (setup stores), vue-i18n (composition mode; English, Traditional and Simplified Chinese: see
+[Text](#text)), Element Plus (registered globally, icons registered globally by their component
+names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
 
 ## Talking to Core
 
@@ -185,13 +185,22 @@ markdown-it + DOMPurify.
   (each file knows how to have a fresh URL, `document.file` or `conversation.attachment`, how to
   download itself, and, for material, instructions or a rubric, how to read its text version). The
   viewer (`FileViewer`, mounted once by `AppLayout`) is a large dialog, the whole screen on a phone,
-  with the previous and the next file (buttons, and the left and right arrow keys where nothing in
-  it takes them), the download under the file's name, and its close button; Escape closes it and the
-  focus goes back to the row. What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
+  upright or on its side (a window 480 px tall or less), with the previous and the next file
+  (buttons, and the left and right arrow keys where nothing in it takes them), the download under
+  the file's name, and its close button; Escape closes it and the focus goes back to the row.
+  What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
   the name's extension first, then the declared type): a PDF in the page with pdf.js (`PdfView`,
   loaded only when one is opened, the legacy build, its worker, character maps, WebAssembly decoders
   and two standard fonts all files of the build under `/assets/`: `pdfjs.ts`), pages one under the
-  other drawn as they come near the screen, page by page, zoom and fit to width, the text selectable;
+  other drawn as they come near the screen, page by page, zoom and fit to width (`pdfZoom.ts`), a
+  pinch of two fingers or a touchpad's zooming the pages and not the screen, the text selectable,
+  and one page control, none for a page alone; on a phone (640 px or less of the view's own width,
+  or 400 px or less of its own height) the page control and the zoom are one compact bar at the
+  bottom, within a thumb's reach, fitted to the width saying so rather than its per cent (zoomed by
+  hand, its per cent again; where the bar has no room, it measures and leaves out its per cent, then
+  its count of pages, never cutting a digit short), and the viewer's previous and next file two
+  arrows by its close button, their position said only to a screen reader, so that one count is
+  on the screen;
   an image as an `<img>` (an SVG too, never inline), zoomed or fitted; Markdown by `MarkdownView`,
   code highlighted as fenced code, plain text as it is, CSV as a table of its first thousand rows
   (`parseCsv`), text read as UTF-8 or the legacy encoding of the reader's script (`decodeText`);
@@ -408,6 +417,23 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   approving now would refuse), with the refusal it would meet (`details.refusal`) in the reader's
   words where the app has them, and Core's alone for a bare `forbidden`; `reasonText()` says either
   in the same words where a decision refused so is listed, as the failed action Core records.
+- **A proposal sent back for changes.** Wherever a proposal is decided (`DecidePanel`), *Request
+  changes* (要求修改) is offered beside Approve and Reject, under the same rules as Reject:
+  `action.decide` with `decision: 'request_changes'` and the note as `reason`. The note is
+  required, 1 to 2000 characters and not spaces alone: the confirm button stays off until there is
+  one, and Core's refusals of it (`note_required`, `note_too_long`) are worded under
+  `actions.decision.refusal`. The proposal ends in `changes_requested`, a final state that is no
+  failure: its tag is `warning`, as a proposal's that waits is, not a rejection's `danger`. Its
+  note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and
+  who asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal
+  it revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the
+  queue, *My actions* and the action's page, as the feed does from the revision's
+  `action.proposed`; the earlier one says nothing of it. `action.changes_requested` is listed in
+  the feed with its decision, as `action.rejected` is. An agent's answer in a conversation
+  (`conversation.answer`) is not offered for changes yet (`offersChanges`): only the site's agent
+  runtime answers in the site, and one that does not know of requests for changes leaves an
+  answer sent back waiting for good (Core's `docs/deploying.md`, Migration 0028). That condition
+  goes once the runtime that revises one runs wherever this front end does.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous
@@ -477,6 +503,29 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   irreversible actions with `ElMessageBox.confirm`.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
   mobile width in mind (`min-width` on columns, not fixed widths everywhere).
+- **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`
+  in `views/course/grades/components/`; a student, or a chosen student, has `GradebookView` as before)
+  is students by assignments, read from what the seat may read alone (every page of `grade.list`
+  and, where it reads them, `submission.list`, the assignments, the scheme and the member list) and
+  worked out in `classMatrix.ts`, which computes nothing Core computes: a cell is the posted grade
+  on the highest attempt that has one, or a newer draft, or work recorded missing or waiting to be
+  graded, and work handed in on a later attempt than any graded (a resubmission, late work after a
+  graded missing row) waits to be graded beside the grade shown; a total is the one written down at
+  posting, its override in its place. Of grade.list, mostly superseded totals with their working,
+  only what the matrix needs of the live grades is kept (`slimGrade`). Rows are the students within
+  the seat's student scope, removed ones (marked, and left out of the averages) when asked for; a
+  seat limited to listed assignments has no totals or components. A scheme that cannot be read is
+  an error, never every assignment shown as not counted. Drafts, missing work and work to grade are
+  said in words, never by colour alone. The search, the filter and the order are in the address
+  (`?q=`, `?show=`, `?sort=`), and `GradebookView` keeps the page alive (`KeepAlive`) while a
+  student's own gradebook is open, so that coming back finds it as it was, read again behind it.
+  It is not an `el-table`: `GradeMatrix` is a table in a box of its own, its header row and names
+  sticky, whose rows are all 44 px and of which only those near the screen are drawn (300 × 30
+  stays smooth), in a box as tall as the window has room for below where it begins; where its
+  toolbar is 542 px or less it is a list a student at a time (`StudentGradeList`). Its CSV
+  (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and CRLF lines, drafts, overrides,
+  waiting work and paused or removed students marked, and no text a spreadsheet would run as a
+  formula (`csvText`).
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,
@@ -762,9 +811,24 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 ## Text
 
 - No user-visible string in code. Every view uses `const { t } = useI18n()` and keys in its own
-  namespace: `src/i18n/messages/en/<ns>.ts` and `src/i18n/messages/zh-Hant/<ns>.ts`, both exporting
-  the same key tree (the file name is the namespace: `t('members.add.title')`). Traditional Chinese
-  is written for Hong Kong / Taiwan readers (繁體中文), not machine-literal.
+  namespace, in each of the three languages the app offers (`LOCALES` in `src/i18n/index.ts`):
+  `src/i18n/messages/en/<ns>.ts`, `src/i18n/messages/zh-Hant/<ns>.ts` and
+  `src/i18n/messages/zh-Hans/<ns>.ts`, all exporting the same key tree (the file name is the
+  namespace: `t('members.add.title')`); `npm run check:i18n` fails on a key or a placeholder one of
+  them lacks. Traditional Chinese is written for Hong Kong / Taiwan readers (繁體中文), not
+  machine-literal. Simplified Chinese (简体中文) is written in the Mainland's own wording, not
+  converted from the Traditional character by character: 保存, 创建, 搜索, 智能体, where the
+  Traditional has 儲存, 建立, 搜尋, 代理.
+- Which language a page is in is chosen by the reader (the account menu's *Language*, or the
+  select on the sign-in, `/welcome`, `/join/<token>` and change-password pages), remembered in this
+  browser (`aishie.locale`), and at first is the browser's (`localeForTag`: `zh-Hant` or `zh-Hans`
+  as its tag's script says, or else by its region, Traditional for TW, HK and MO and Simplified
+  otherwise; English for anything not Chinese). The language is `useUiStore().locale`: the menu and
+  the selects all set it, and code that changes the language sets it too, never calling `setLocale`
+  itself. The store's watcher calls `setLocale`, which switches vue-i18n, dayjs, Intl's numbers,
+  `<html lang>` and the typefaces it chooses (`styles/tokens.css`, `styles/fonts.ts`) and saves
+  `aishie.locale`. Element Plus follows the same `ui.locale` through `App.vue`'s
+  `<el-config-provider>` (`elementLocale` in `i18n/elementPlus.ts`), as does the menu's check mark.
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.

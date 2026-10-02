@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // One action in full (action.get): what was asked, who asked, at what level it
-// was authorized, what became of it, who decided or reviewed it, and when.
+// was authorized, what became of it, who decided or reviewed it, and when; and
+// the proposal it revises, if it revises one sent back for changes, with what
+// was asked of it where the caller may read that one.
 // action.get needs action_decide, or owning the agent that did it; anyone else
 // sees an action of their own from action.list_mine instead, which carries the
 // same fields. Whether it is the caller's to decide is what the queue says of
@@ -32,6 +34,7 @@ import DelegateGrant from './components/DelegateGrant.vue'
 import FieldsView from './components/FieldsView.vue'
 import MaybeLink from './components/MaybeLink.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
+import RevisesLine from './components/RevisesLine.vue'
 import SeatGrant from './components/SeatGrant.vue'
 import {
   invalidateAfter,
@@ -254,7 +257,17 @@ const errorDetails = computed(() => {
   const rest = Object.fromEntries(Object.entries(d).filter(([k]) => k !== 'reason' && k !== 'authz_reason'))
   return Object.keys(rest).length ? rest : null
 })
+/** A rejection's reason, or a request for changes' note. */
 const rejection = computed(() => (action.value ? storedDecision(action.value) : null))
+// A revision: the proposal it revises, sent back for changes, and what was
+// asked of it, for a decider (who reads any action).
+const revised = useLookup(() =>
+  action.value?.revises_action_id ? specs.action(props.courseId, action.value.revises_action_id) : null,
+)
+const revisedNote = computed(() => {
+  const a = revised.value?.value as ActionRow | undefined
+  return a ? (storedDecision(a)?.reason ?? null) : null
+})
 /** An executed decision's result is the proposal's outcome. */
 const decisionResult = computed<DecideResult | null>(() => {
   const a = action.value
@@ -398,6 +411,13 @@ const errorTitle = computed(() => {
                     <StatusTag v-if="action.review_state !== 'none'" vocab="reviewState" :value="action.review_state" />
                   </dd>
                 </div>
+                <div v-if="action.revises_action_id">
+                  <dt>{{ t('actions.fields.revises') }}</dt>
+                  <dd class="action-view__target">
+                    <RevisesLine :course-id="courseId" :action-id="action.revises_action_id" />
+                    <span v-if="revisedNote">{{ t('actions.revises.asked', { note: revisedNote }) }}</span>
+                  </dd>
+                </div>
                 <div>
                   <dt>{{ t('actions.fields.actionId') }}</dt>
                   <dd><IdText :id="action.id" full /></dd>
@@ -493,6 +513,26 @@ const errorTitle = computed(() => {
                         : t('actions.result.rejectedNoReason')
                     }}
                   </p>
+                  <p v-if="rejection?.byActionId" class="action-view__inline">
+                    {{ t('actions.outcome.decisionAction') }}
+                    <MaybeLink :to="actionRoute(rejection.byActionId)">
+                      <IdText :id="rejection.byActionId" />
+                    </MaybeLink>
+                  </p>
+                </div>
+              </el-alert>
+
+              <el-alert
+                v-else-if="action.status === 'changes_requested'"
+                type="warning"
+                :title="t('actions.outcome.changes_requested')"
+                :closable="false"
+                show-icon
+              >
+                <div class="action-view__error">
+                  <p v-if="rules.byOwner(action, 'decided')">{{ t('actions.result.changesRequestedByOwner') }}</p>
+                  <p v-if="rejection?.reason">{{ t('actions.outcome.changesLabel', { note: rejection.reason }) }}</p>
+                  <p>{{ t('actions.result.changesRequested') }}</p>
                   <p v-if="rejection?.byActionId" class="action-view__inline">
                     {{ t('actions.outcome.decisionAction') }}
                     <MaybeLink :to="actionRoute(rejection.byActionId)">
