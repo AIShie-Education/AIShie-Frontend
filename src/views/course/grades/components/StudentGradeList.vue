@@ -45,6 +45,10 @@ function totalOf(row: MatrixRow): string | null {
   return c && cell ? scoreText(cell, c) : null
 }
 const cellOf = (row: MatrixRow, col: MatrixColumn) => row.cells[col.key] ?? NO_CELL
+/** Paused or removed, said beside the name; nothing for a student who is simply in the class. */
+function statusOf(s: MatrixStudent): string | null {
+  return s.status === 'paused' || s.status === 'removed' ? t(`enums.memberStatus.${s.status}`) : null
+}
 const headId = (id: string) => `sgl-head-${id}`
 const bodyId = (id: string) => `sgl-body-${id}`
 </script>
@@ -61,7 +65,12 @@ const bodyId = (id: string) => `sgl-body-${id}`
         @click="toggle(r.student.id)"
       >
         <span class="sgl__who">
-          <span class="sgl__name">{{ nameOf(r.student) }}</span>
+          <span class="sgl__name"
+            >{{ nameOf(r.student)
+            }}<span v-if="statusOf(r.student)" class="sgl__status" :class="`is-${r.student.status}`">{{
+              statusOf(r.student)
+            }}</span></span
+          >
           <span v-if="r.student.loginId" class="sgl__login">{{ r.student.loginId }}</span>
           <span v-if="r.drafts || r.missing || r.toGrade" class="sgl__counts">
             <span v-if="r.drafts" class="sgl__flag is-draft">{{
@@ -121,6 +130,9 @@ const bodyId = (id: string) => `sgl-body-${id}`
                 >
                 <span v-if="cellOf(r, c).state === 'draft'" class="sgl__flag is-draft">{{
                   t('classbook.state.draft')
+                }}</span>
+                <span v-if="cellOf(r, c).waiting" class="sgl__flag is-wait" :title="t('classbook.waiting')">{{
+                  t('classbook.state.toGrade')
                 }}</span>
               </template>
               <span v-else-if="cellOf(r, c).state === 'missing'" class="sgl__flag is-missing">{{
@@ -182,6 +194,22 @@ const bodyId = (id: string) => `sgl-body-${id}`
 .sgl__name {
   font-weight: 500;
   word-break: break-word;
+}
+.sgl__status {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+  vertical-align: 1px;
+  border: 1px solid currentColor;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+}
+.sgl__status.is-removed {
+  border-style: dashed;
 }
 .sgl__login {
   font-size: 12px;

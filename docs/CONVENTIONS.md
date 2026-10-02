@@ -483,14 +483,23 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   and, where it reads them, `submission.list`, the assignments, the scheme and the member list) and
   worked out in `classMatrix.ts`, which computes nothing Core computes: a cell is the posted grade
   on the highest attempt that has one, or a newer draft, or work recorded missing or waiting to be
-  graded; a total is the one written down at posting, its override in its place. Rows are the
-  students within the seat's student scope; a seat limited to listed assignments has no totals or
-  components. Drafts, missing work and work to grade are said in words, never by colour alone.
+  graded, and work handed in on a later attempt than any graded (a resubmission, late work after a
+  graded missing row) waits to be graded beside the grade shown; a total is the one written down at
+  posting, its override in its place. Of grade.list, mostly superseded totals with their working,
+  only what the matrix needs of the live grades is kept (`slimGrade`). Rows are the students within
+  the seat's student scope, removed ones (marked, and left out of the averages) when asked for; a
+  seat limited to listed assignments has no totals or components. A scheme that cannot be read is
+  an error, never every assignment shown as not counted. Drafts, missing work and work to grade are
+  said in words, never by colour alone. The search, the filter and the order are in the address
+  (`?q=`, `?show=`, `?sort=`), and `GradebookView` keeps the page alive (`KeepAlive`) while a
+  student's own gradebook is open, so that coming back finds it as it was, read again behind it.
   It is not an `el-table`: `GradeMatrix` is a table in a box of its own, its header row and names
   sticky, whose rows are all 44 px and of which only those near the screen are drawn (300 × 30
-  stays smooth); where its toolbar is 542 px or less it is a list a student at a time
-  (`StudentGradeList`). Its CSV (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and
-  CRLF lines, drafts marked, and no text a spreadsheet would run as a formula (`csvText`).
+  stays smooth), in a box as tall as the window has room for below where it begins; where its
+  toolbar is 542 px or less it is a list a student at a time (`StudentGradeList`). Its CSV
+  (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and CRLF lines, drafts, overrides,
+  waiting work and paused or removed students marked, and no text a spreadsheet would run as a
+  formula (`csvText`).
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,

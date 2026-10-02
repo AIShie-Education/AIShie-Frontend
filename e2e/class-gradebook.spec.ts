@@ -3,11 +3,14 @@ import { expect, test, type Page } from '@playwright/test'
 import { call, demo, photograph, pickOption, registerPerson, root, signIn, type DemoActor } from './support'
 
 // The whole class's gradebook (AIShie-Frontend#80), in a course of the
-// test's own: four students, two homeworks in an Assignments bucket and a
+// test's own: five students, two homeworks in an Assignments bucket and a
 // midterm graded directly. Ada has a posted 9/10 on HW1, a posted midterm
 // and HW2 handed in and not graded; Ben a draft 7 on HW1; Cleo is recorded
-// missing on HW1 and has a posted 15/20 on HW2; Dev has nothing. A TA listed
-// to Ada and Ben sees those two alone.
+// missing on HW1 and has a posted 15/20 on HW2; Dev has nothing. Eve has
+// work waiting behind posted grades: HW1 graded 6, then handed in again
+// (and a third attempt opened as a draft); HW2 recorded missing and graded
+// 0, then handed in after all. A TA listed to Ada and Ben sees those two
+// alone.
 //
 // With E2E_SHOTS set to a directory, the page is photographed there, light
 // and dark, at 1280×800 and 390×844.
@@ -17,7 +20,8 @@ let courseId = ''
 let hw1 = ''
 let hw2 = ''
 let midterm = ''
-const people: Record<'ada' | 'ben' | 'cleo' | 'dev', DemoActor & { member_id: string; login_id: string }> = {} as never
+const people: Record<'ada' | 'ben' | 'cleo' | 'dev' | 'eve', DemoActor & { member_id: string; login_id: string }> =
+  {} as never
 const name = (k: keyof typeof people) => people[k].display_name
 
 function instructor(): DemoActor {
@@ -30,12 +34,17 @@ async function ok(token: string, method: 'GET' | 'POST', path: string, body?: un
   return out.body.result
 }
 
-async function handIn(who: { token: string }, assignment: string): Promise<string> {
+/** A new attempt, left a draft. */
+async function startAttempt(who: { token: string }, assignment: string): Promise<string> {
   const sub = await ok(who.token, 'POST', `/v1/courses/${courseId}/submissions`, {
     assignment_id: assignment,
     body: 'My work',
   })
-  const id = (sub.submission_id ?? sub.id) as string
+  return (sub.submission_id ?? sub.id) as string
+}
+
+async function handIn(who: { token: string }, assignment: string): Promise<string> {
+  const id = await startAttempt(who, assignment)
   await ok(who.token, 'POST', `/v1/courses/${courseId}/submissions/${id}/submit`, {})
   return id
 }
@@ -99,6 +108,7 @@ test.beforeAll(async () => {
     ['ben', 'Ben Okafor', '02'],
     ['cleo', 'Cleo Chan', '03'],
     ['dev', 'Dev Patel', '04'],
+    ['eve', 'Eve Santos', '05'],
   ] as const) {
     const login_id = `bk${STAMP}${n}`
     const who = await registerPerson(`${display} ${STAMP}`, { email: `${key}+${STAMP}@book.test`, login_id })
@@ -122,7 +132,20 @@ test.beforeAll(async () => {
     student_member_id: people.cleo.member_id,
   })
   const cleoHw2 = await grade({ submission_id: await handIn(people.cleo, hw2), score: 15 })
-  await ok(I, 'POST', `/v1/courses/${courseId}/grades/post`, { grade_ids: [adaHw1, adaMid, cleoHw2] })
+  const eveHw1 = await grade({ submission_id: await handIn(people.eve, hw1), score: 6 })
+  const eveMissing = await ok(I, 'POST', `/v1/courses/${courseId}/assignments/${hw2}/missing`, {
+    student_member_id: people.eve.member_id,
+  })
+  const eveHw2 = await grade({ submission_id: (eveMissing.submission_id ?? eveMissing.id) as string, score: 0 })
+  await ok(I, 'POST', `/v1/courses/${courseId}/grades/post`, {
+    grade_ids: [adaHw1, adaMid, cleoHw2, eveHw1, eveHw2],
+  })
+  // After the grades are posted, Eve hands HW1 in again and opens a third
+  // attempt as a draft; and hands HW2 in after all, which Core makes a new
+  // attempt beside the graded missing row.
+  await handIn(people.eve, hw1)
+  await startAttempt(people.eve, hw1)
+  await handIn(people.eve, hw2)
 })
 
 async function openClass(page: Page, who: DemoActor = instructor()) {
@@ -152,8 +175,8 @@ test.describe('the whole class’s gradebook', () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await openClass(page)
-    await expect(order(page)).resolves.toEqual(['Ada Lovelace', 'Ben Okafor', 'Cleo Chan', 'Dev Patel'])
-    await expect(page.locator('.classbook__count')).toHaveText('4 students')
+    await expect(order(page)).resolves.toEqual(['Ada Lovelace', 'Ben Okafor', 'Cleo Chan', 'Dev Patel', 'Eve Santos'])
+    await expect(page.locator('.classbook__count')).toHaveText('5 students')
 
     // The course total first, then the bucket's work and its total, then the midterm.
     const heads = (await matrix(page).locator('thead th .matrix__head-title').allInnerTexts()).map((s) => s.trim())
@@ -167,11 +190,15 @@ test.describe('the whole class’s gradebook', () => {
     await expect(await cell(page, 'cleo', 'HW1 Loops')).toHaveText('Missing')
     await expect(await cell(page, 'cleo', 'HW2 Lists')).toHaveText('15')
     await expect(await cell(page, 'dev', 'HW1 Loops')).toContainText('No grade')
+    // Work handed in after a posted grade waits beside it: a resubmission
+    // (with a draft attempt after it), and late work after a graded missing row.
+    await expect(await cell(page, 'eve', 'HW1 Loops')).toHaveText(/^6\s*To grade$/)
+    await expect(await cell(page, 'eve', 'HW2 Lists')).toHaveText(/^0\s*To grade$/)
     // Totals as written down at posting: Ada's course total is a percentage.
     await expect(await cell(page, 'ada', 'Course total')).toHaveText(/^\d+(\.\d+)?%$/)
     await expect(await cell(page, 'ben', 'Course total')).toContainText('No grade')
-    // The class's mean of what is posted: Ada's 9 alone on HW1, Ben's draft left out.
-    await expect(matrix(page).locator('tfoot td').nth(1)).toHaveText('9')
+    // The class's mean of what is posted: Ada's 9 and Eve's 6 on HW1, Ben's draft left out.
+    await expect(matrix(page).locator('tfoot td').nth(1)).toHaveText('7.5')
 
     // The header row and the names are held in place as the table scrolls.
     const stick = (sel: string) =>
@@ -193,16 +220,16 @@ test.describe('the whole class’s gradebook', () => {
     const hw1Head = matrix(page).getByRole('button', { name: 'Sort by HW1 Loops' })
     await hw1Head.click()
     // Highest first, those with nothing for it last.
-    await expect(order(page)).resolves.toEqual(['Ada Lovelace', 'Ben Okafor', 'Cleo Chan', 'Dev Patel'])
+    await expect(order(page)).resolves.toEqual(['Ada Lovelace', 'Ben Okafor', 'Eve Santos', 'Cleo Chan', 'Dev Patel'])
     await expect(matrix(page).locator('thead th').nth(2)).toHaveAttribute('aria-sort', 'descending')
     await hw1Head.click()
-    await expect(order(page)).resolves.toEqual(['Ben Okafor', 'Ada Lovelace', 'Cleo Chan', 'Dev Patel'])
+    await expect(order(page)).resolves.toEqual(['Eve Santos', 'Ben Okafor', 'Ada Lovelace', 'Cleo Chan', 'Dev Patel'])
     await expect(matrix(page).locator('thead th').nth(2)).toHaveAttribute('aria-sort', 'ascending')
 
     const search = page.getByPlaceholder('Search by name or number')
     await search.fill('cleo')
     await expect(order(page)).resolves.toEqual(['Cleo Chan'])
-    await expect(page.locator('.classbook__count')).toHaveText('1 of 4 students')
+    await expect(page.locator('.classbook__count')).toHaveText('1 of 5 students')
     await search.fill(people.dev.login_id)
     await expect(order(page)).resolves.toEqual(['Dev Patel'])
     await search.fill('')
@@ -212,6 +239,9 @@ test.describe('the whole class’s gradebook', () => {
     await expect(order(page)).resolves.toEqual(['Cleo Chan'])
     await pickOption(page, show, 'With draft grades')
     await expect(order(page)).resolves.toEqual(['Ben Okafor'])
+    await pickOption(page, show, 'With work to grade')
+    // Still by HW1, lowest first.
+    await expect(order(page)).resolves.toEqual(['Eve Santos', 'Ada Lovelace'])
   })
 
   test('exports what is shown as CSV, UTF-8 with a byte-order mark, drafts and missing work marked', async ({
@@ -228,14 +258,15 @@ test.describe('the whole class’s gradebook', () => {
     expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf])
     const lines = bytes.toString('utf8').slice(1).split('\r\n')
     expect(lines[0]).toBe(
-      'Student,Student number,Member ID,Course total (%),HW1 Loops (out of 10),HW2 Lists (out of 20),Assignments total (%),Midterm (out of 100)',
+      'Student,Student number,Member ID,Status,Course total (%),HW1 Loops (out of 10),HW2 Lists (out of 20),Assignments total (%),Midterm (out of 100)',
     )
     const line = (k: keyof typeof people) => lines.find((l) => l.startsWith(name(k)))!.split(',')
-    expect(line('ada').slice(1, 3)).toEqual([people.ada.login_id, people.ada.member_id])
-    expect(line('ada').slice(4)).toEqual(['9', 'To grade', expect.stringMatching(/^\d/), '85'])
-    expect(line('ben')[4]).toBe('7 (draft)')
-    expect(line('cleo').slice(4, 6)).toEqual(['Missing', '15'])
-    expect(line('dev').slice(3)).toEqual(['', '', '', '', ''])
+    expect(line('ada').slice(1, 4)).toEqual([people.ada.login_id, people.ada.member_id, ''])
+    expect(line('ada').slice(5)).toEqual(['9', 'To grade', expect.stringMatching(/^\d/), '85'])
+    expect(line('ben')[5]).toBe('7 (draft)')
+    expect(line('cleo').slice(5, 7)).toEqual(['Missing', '15'])
+    expect(line('dev').slice(3)).toEqual(['', '', '', '', '', ''])
+    expect(line('eve').slice(5, 7)).toEqual(['6 (newer work to grade)', '0 (newer work to grade)'])
   })
 
   test('opens a student’s own gradebook from their name, and comes back to the class', async ({ page }) => {
@@ -249,6 +280,38 @@ test.describe('the whole class’s gradebook', () => {
     await page.getByRole('link', { name: 'Whole class', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`/courses/${courseId}/gradebook$`))
     await expect(matrix(page)).toBeVisible()
+
+    // A search, a filter and an order are found again, by Back and by Whole class.
+    const search = page.getByPlaceholder('Search by name or number')
+    await search.fill('a')
+    await pickOption(page, page.locator('.classbook__filter').first(), 'With work to grade')
+    await matrix(page).getByRole('button', { name: 'Sort by HW1 Loops' }).click()
+    await expect(order(page)).resolves.toEqual(['Ada Lovelace', 'Eve Santos'])
+    await expect(page).toHaveURL(/[?&]q=a(&|$)/)
+    await expect(page).toHaveURL(/[?&]show=toGrade(&|$)/)
+    const kept = async () => {
+      await expect(matrix(page)).toBeVisible()
+      await expect(search).toHaveValue('a')
+      await expect(page.locator('.classbook__count')).toHaveText('2 of 5 students')
+      await expect(order(page)).resolves.toEqual(['Ada Lovelace', 'Eve Santos'])
+      await expect(matrix(page).locator('thead th').nth(2)).toHaveAttribute('aria-sort', 'descending')
+    }
+    await row(page, 'eve')
+      .getByRole('link', { name: name('eve') })
+      .click()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.goBack()
+    await kept()
+    await row(page, 'eve')
+      .getByRole('link', { name: name('eve') })
+      .click()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.getByRole('link', { name: 'Whole class', exact: true }).click()
+    await kept()
+    await expect(page).toHaveURL(/[?&]show=toGrade(&|$)/)
+    await search.fill('')
+    await pickOption(page, page.locator('.classbook__filter').first(), 'Every student')
+
     // An assignment's own grades are a click from its heading.
     await matrix(page).getByRole('link', { name: 'The grades for HW1 Loops' }).click()
     await expect(page).toHaveURL(new RegExp(`/grades\\?assignment=${hw1}`))
@@ -259,9 +322,10 @@ test.describe('the whole class’s gradebook', () => {
     await openClass(page)
     await expect(matrix(page)).toHaveCount(0)
     const items = page.locator('.sgl__item')
-    await expect(items).toHaveCount(4)
+    await expect(items).toHaveCount(5)
     const cleo = items.filter({ hasText: name('cleo') })
     await expect(cleo).toContainText('1 missing')
+    await expect(items.filter({ hasText: name('eve') })).toContainText('2 to grade')
     await photograph(page, 'class-gradebook-390-light')
     await page.emulateMedia({ colorScheme: 'dark' })
     await photograph(page, 'class-gradebook-390-dark')

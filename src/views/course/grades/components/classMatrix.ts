@@ -12,6 +12,47 @@
 import type { AssignmentSummary, Component, Decimal, GradeSummary, MemberSummary } from '@/api/types'
 import { plainDecimal } from './grading'
 
+/**
+ * What the matrix needs of a grade, kept while every page of grade.list is
+ * read: a term's grade.list is mostly superseded totals, each with its
+ * feedback and working, none of which the matrix shows.
+ */
+export type GradeLite = Pick<
+  GradeSummary,
+  | 'id'
+  | 'student_member_id'
+  | 'submission_id'
+  | 'component_id'
+  | 'assignment_id'
+  | 'origin'
+  | 'score'
+  | 'state'
+  | 'posted_at'
+  | 'superseded_by'
+  | 'created_at'
+  | 'no_total'
+> & { override?: Pick<NonNullable<GradeSummary['override']>, 'score'> | null }
+
+/** A grade as the matrix keeps it; null for a superseded one, which it never shows. */
+export function slimGrade(g: GradeSummary): GradeLite | null {
+  if (g.state === 'superseded' || g.superseded_by) return null
+  return {
+    id: g.id,
+    student_member_id: g.student_member_id,
+    submission_id: g.submission_id,
+    component_id: g.component_id,
+    assignment_id: g.assignment_id,
+    origin: g.origin,
+    score: g.score,
+    state: g.state,
+    posted_at: g.posted_at,
+    superseded_by: g.superseded_by,
+    created_at: g.created_at,
+    no_total: g.no_total,
+    override: g.override ? { score: g.override.score } : g.override,
+  }
+}
+
 /** What a submission says of where a student stands on an assignment. */
 export interface SubmissionLite {
   id: string
@@ -69,6 +110,12 @@ export interface MatrixCell {
   postedScore?: Decimal | null
   /** For a total, a person's override counts in place of what was worked out. */
   overridden?: boolean
+  /**
+   * For a grade on an assignment: work handed in on a later attempt than any
+   * graded waits to be graded (a resubmission, or work handed in late after
+   * a missing row was graded). The grade shown is still the one that counts.
+   */
+  waiting?: boolean
   /** What sorting goes by: the score, or the percentage. */
   value: number | null
 }
@@ -77,7 +124,7 @@ export interface MatrixRow {
   student: MatrixStudent
   /** By column key; a column with nothing for the student is left out (state none). */
   cells: Record<string, MatrixCell>
-  /** How many cells are drafts, missing or waiting to be graded, for filtering. */
+  /** How many cells are drafts, missing or have work waiting to be graded (beside a grade or not), for filtering. */
   drafts: number
   missing: number
   toGrade: number
@@ -128,7 +175,7 @@ export function visibleStudents(
 }
 
 /** Every student Core showed grades or work of, by id: the rows where the member list cannot be read. */
-export function studentsSeen(grades: readonly GradeSummary[], submissions: readonly SubmissionLite[] | null): string[] {
+export function studentsSeen(grades: readonly GradeLite[], submissions: readonly SubmissionLite[] | null): string[] {
   const ids = new Set<string>()
   for (const g of grades) ids.add(g.student_member_id)
   for (const s of submissions ?? []) ids.add(s.student_member_id)
@@ -258,10 +305,12 @@ function num(v: Decimal | null | undefined): number | null {
 }
 
 interface Live {
-  posted: GradeSummary | null
+  posted: GradeLite | null
   postedRank: number
-  draft: GradeSummary | null
+  draft: GradeLite | null
   draftRank: number
+  /** The highest attempt with a live grade on it, posted or draft. */
+  gradedAttempt: number
 }
 
 /**
@@ -269,38 +318,45 @@ interface Live {
  * higher attempt, as Core counts the highest attempt with a posted grade;
  * where the attempts are not known, the one made later.
  */
-function rank(g: GradeSummary, attempts: ReadonlyMap<string, number>): number {
-  const attempt = g.submission_id ? (attempts.get(g.submission_id) ?? 0) : 0
-  return attempt * 1e13 + (Date.parse(g.created_at) || 0)
+function attemptOf(g: GradeLite, attempts: ReadonlyMap<string, number>): number {
+  return g.submission_id ? (attempts.get(g.submission_id) ?? 0) : 0
+}
+function rank(g: GradeLite, attempts: ReadonlyMap<string, number>): number {
+  return attemptOf(g, attempts) * 1e13 + (Date.parse(g.created_at) || 0)
 }
 
 /**
  * The matrix: a row for each student, a cell for each column that has
  * something for them. An assignment's cell is the posted grade on the
  * highest attempt that has one (the one Core counts), or a newer draft
- * where there is one; failing a grade, what its latest submission says:
- * recorded missing, or handed in and waiting to be graded. A total is the
- * one written down at posting, with an override in its place; one written
- * with nothing beneath it (no_total) is none.
+ * where there is one; failing a grade, what its latest attempt handed in
+ * (a draft attempt is not) says: recorded missing, or handed in and waiting
+ * to be graded. Work handed in on a later attempt than any graded waits to
+ * be graded beside the grade shown (`waiting`): a resubmission, or late
+ * work after a missing row was graded, which Core makes a new attempt. A
+ * total is the one written down at posting, with an override in its place;
+ * one written with nothing beneath it (no_total) is none.
  */
 export function buildMatrix(input: {
   students: readonly MatrixStudent[]
   columns: readonly MatrixColumn[]
-  grades: readonly GradeSummary[]
+  grades: readonly GradeLite[]
   submissions?: readonly SubmissionLite[] | null
 }): MatrixRow[] {
   const attempts = new Map<string, number>()
-  // The latest attempt's state, by student and assignment.
+  // The latest attempt handed in (or recorded missing), by student and
+  // assignment: a draft attempt opened after it hands nothing in.
   const latest = new Map<string, SubmissionLite>()
   for (const s of input.submissions ?? []) {
     attempts.set(s.id, s.attempt)
+    if (s.state === 'draft') continue
     const k = `${s.student_member_id}|${s.assignment_id}`
     const was = latest.get(k)
     if (!was || s.attempt > was.attempt) latest.set(k, s)
   }
 
   const live = new Map<string, Live>()
-  const totals = new Map<string, GradeSummary>()
+  const totals = new Map<string, GradeLite>()
   for (const g of input.grades) {
     if (g.state === 'superseded' || g.superseded_by) continue
     if (g.origin === 'computed') {
@@ -313,13 +369,20 @@ export function buildMatrix(input: {
     const target = g.assignment_id ? `a:${g.assignment_id}` : g.component_id ? `c:${g.component_id}` : null
     if (!target) continue
     const k = `${g.student_member_id}|${target}`
-    const l = live.get(k) ?? { posted: null, postedRank: -Infinity, draft: null, draftRank: -Infinity }
+    const l = live.get(k) ?? {
+      posted: null,
+      postedRank: -Infinity,
+      draft: null,
+      draftRank: -Infinity,
+      gradedAttempt: -Infinity,
+    }
     const r = rank(g, attempts)
     if (g.state === 'posted') {
       if (r > l.postedRank) Object.assign(l, { posted: g, postedRank: r })
     } else if (g.state === 'draft') {
       if (r > l.draftRank) Object.assign(l, { draft: g, draftRank: r })
-    }
+    } else continue
+    l.gradedAttempt = Math.max(l.gradedAttempt, attemptOf(g, attempts))
     live.set(k, l)
   }
 
@@ -338,6 +401,8 @@ export function buildMatrix(input: {
         }
       } else {
         const l = live.get(`${student.id}|${col.key}`)
+        const s = col.kind === 'assignment' ? latest.get(`${student.id}|${col.id}`) : undefined
+        const handedIn = s?.state === 'submitted' || s?.state === 'late'
         if (l?.draft && (!l.posted || l.draftRank > l.postedRank)) {
           cell = {
             state: 'draft',
@@ -348,18 +413,15 @@ export function buildMatrix(input: {
           }
         } else if (l?.posted) {
           cell = { state: 'posted', score: l.posted.score, gradeId: l.posted.id, value: num(l.posted.score) }
-        } else if (col.kind === 'assignment') {
-          const s = latest.get(`${student.id}|${col.id}`)
-          if (s?.state === 'missing') cell = { state: 'missing', score: null, gradeId: null, value: null }
-          else if (s?.state === 'submitted' || s?.state === 'late')
-            cell = { state: 'submitted', score: null, gradeId: null, value: null }
-        }
+        } else if (s?.state === 'missing') cell = { state: 'missing', score: null, gradeId: null, value: null }
+        else if (handedIn) cell = { state: 'submitted', score: null, gradeId: null, value: null }
+        if (cell && l && handedIn && s!.attempt > l.gradedAttempt) cell.waiting = true
       }
       if (!cell) continue
       cells[col.key] = cell
       if (cell.state === 'draft') drafts++
       else if (cell.state === 'missing') missing++
-      else if (cell.state === 'submitted') toGrade++
+      if (cell.state === 'submitted' || cell.waiting) toGrade++
     }
     return { student, cells, drafts, missing, toGrade }
   })
@@ -373,7 +435,13 @@ export type RowFilter = 'all' | 'drafts' | 'missing' | 'toGrade'
 
 const fold = (s: string) => s.normalize('NFKC').toLocaleLowerCase()
 
-/** The rows whose student's name or login ID holds what was typed, and that have what the filter asks for. */
+/**
+ * The rows whose student's name or login ID holds what was typed, and that
+ * have what the filter asks for. A student is found by member ID only where
+ * the whole of it (or the short form a page shows) was typed, or, for a
+ * student with no name to show ("Student 1a2b3c4d"), by its start or end:
+ * every ID of a class begins alike, so a part of one would find them all.
+ */
 export function filterRows(rows: readonly MatrixRow[], query: string, filter: RowFilter = 'all'): MatrixRow[] {
   const q = fold(query.trim())
   return rows.filter((r) => {
@@ -381,12 +449,12 @@ export function filterRows(rows: readonly MatrixRow[], query: string, filter: Ro
     if (filter === 'missing' && !r.missing) return false
     if (filter === 'toGrade' && !r.toGrade) return false
     if (!q) return true
-    return (
-      (r.student.name !== null && fold(r.student.name).includes(q)) ||
-      (r.student.loginId !== null && fold(r.student.loginId).includes(q)) ||
-      r.student.id.toLowerCase().startsWith(q) ||
-      r.student.id.replace(/-/g, '').toLowerCase().endsWith(q)
-    )
+    if (r.student.name !== null && fold(r.student.name).includes(q)) return true
+    if (r.student.loginId !== null && fold(r.student.loginId).includes(q)) return true
+    const id = r.student.id.toLowerCase()
+    const bare = id.replace(/-/g, '')
+    if (r.student.name === null) return id.startsWith(q) || bare.endsWith(q)
+    return q === id || q === bare || q === bare.slice(-8)
   })
 }
 
@@ -441,14 +509,19 @@ export interface ColumnSummary {
   drafts: number
 }
 
-/** For each column, over the rows shown: the mean of what is posted, and how many are posted and drafts. */
+/**
+ * For each column, over the rows shown: the mean of what is posted, and how
+ * many are posted and drafts. Removed students, shown when asked for, are
+ * left out: they are no longer of the class.
+ */
 export function summarise(rows: readonly MatrixRow[], columns: readonly MatrixColumn[]): Map<string, ColumnSummary> {
   const out = new Map<string, ColumnSummary>()
+  const current = rows.filter((r) => r.student.status !== 'removed')
   for (const col of columns) {
     let sum = 0
     let posted = 0
     let drafts = 0
-    for (const r of rows) {
+    for (const r of current) {
       const c = r.cells[col.key]
       if (!c) continue
       if (c.state === 'posted' && c.value !== null) {
@@ -470,10 +543,18 @@ export interface CsvWords {
   student: string
   loginId: string
   memberId: string
+  /** The heading of the column that says a student is paused or removed. */
+  status: string
+  /** A student's status where it is not plain (paused, removed); '' otherwise. */
+  statusOf: (s: MatrixStudent) => string
   /** A column's heading. */
   column: (col: MatrixColumn) => string
   /** A draft score, marked as one ("7 (draft)"). */
   draft: (score: string) => string
+  /** An overridden total, marked as one ("95 (overridden)"), as the page stars it. */
+  overridden: (score: string) => string
+  /** A grade beside which later work waits to be graded ("6 (newer work to grade)"). */
+  waiting: (text: string) => string
   missing: string
   toGrade: string
   /** A student with no name to give (the member list cannot be read). */
@@ -496,21 +577,33 @@ export function csvText(s: string): string {
  * The rows shown as CSV, as a spreadsheet opens it: UTF-8 with a byte-order
  * mark (Excel reads Chinese names right only with one), lines ending CRLF.
  * Scores are written with every place Core holds, a total as its
- * percentage; a draft is marked as one, so that it is never read as posted.
+ * percentage; a draft is marked as one, so that it is never read as posted,
+ * and so are an overridden total, work waiting beside a grade, and a paused
+ * or removed student: what the page says in words, the export says too.
  */
 export function matrixCsv(columns: readonly MatrixColumn[], rows: readonly MatrixRow[], words: CsvWords): string {
   const lines: string[] = []
-  lines.push([words.student, words.loginId, words.memberId, ...columns.map(words.column)].map(csvText).join(','))
+  lines.push(
+    [words.student, words.loginId, words.memberId, words.status, ...columns.map(words.column)].map(csvText).join(','),
+  )
   for (const r of rows) {
-    const cells = [csvText(r.student.name ?? words.unnamed(r.student)), csvText(r.student.loginId ?? ''), r.student.id]
+    const cells = [
+      csvText(r.student.name ?? words.unnamed(r.student)),
+      csvText(r.student.loginId ?? ''),
+      r.student.id,
+      csvText(words.statusOf(r.student)),
+    ]
     for (const col of columns) {
       const c = r.cells[col.key]
       const score = plainDecimal(c?.score) ?? ''
-      if (!c || c.state === 'none') cells.push('')
-      else if (c.state === 'posted') cells.push(score)
-      else if (c.state === 'draft') cells.push(csvText(words.draft(score)))
-      else if (c.state === 'missing') cells.push(csvText(words.missing))
-      else cells.push(csvText(words.toGrade))
+      let text: string
+      if (!c || c.state === 'none') text = ''
+      else if (c.state === 'posted') text = c.overridden ? words.overridden(score) : score
+      else if (c.state === 'draft') text = words.draft(score)
+      else if (c.state === 'missing') text = words.missing
+      else text = words.toGrade
+      if (c?.waiting) text = words.waiting(text)
+      cells.push(text === score ? score : csvText(text))
     }
     lines.push(cells.join(','))
   }

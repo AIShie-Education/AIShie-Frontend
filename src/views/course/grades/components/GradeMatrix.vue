@@ -6,7 +6,7 @@
 // of hundreds has thousands of cells): the rows above and below are blank
 // space of their height, every row being the same height. A column's heading
 // sorts by it; a student's name opens their gradebook, a grade the grade.
-import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { formatNumber } from '@/utils/format'
@@ -18,8 +18,8 @@ const props = defineProps<{
   courseId: string
   columns: readonly MatrixColumn[]
   rows: readonly MatrixRow[]
-  /** Every student in the class, for the row count a screen reader is told. */
-  total: number
+  /** Changes where what the rows are changes (search, filter, order), not where they are read again: back to the top. */
+  resetKey: string
   sort: SortBy
   summaries: ReadonlyMap<string, ColumnSummary>
   nameOf: (s: MatrixStudent) => string
@@ -54,30 +54,67 @@ function onScroll() {
   if (typeof requestAnimationFrame === 'function') frame = requestAnimationFrame(update)
   else update()
 }
+
+// The box is as tall as the window has room for below where it begins, so
+// that its foot (the averages, and the bar that scrolls it sideways) is on
+// the screen with the page at its top; never less than 360 px.
+const BOTTOM_GAP = 16
+const MIN_HEIGHT = 360
+const maxHeight = ref<number | null>(null)
+function fit() {
+  const el = scroller.value
+  if (!el || typeof window === 'undefined') return
+  const top = el.getBoundingClientRect().top + window.scrollY
+  maxHeight.value = Math.max(MIN_HEIGHT, Math.floor(window.innerHeight - top - BOTTOM_GAP))
+}
+
 let observer: ResizeObserver | null = null
+let above: ResizeObserver | null = null
 onMounted(() => {
   const el = scroller.value
   if (!el) return
   viewport.value = el.clientHeight || viewport.value
+  fit()
+  window.addEventListener('resize', fit)
   if (typeof ResizeObserver === 'undefined') return
   observer = new ResizeObserver((entries) => {
     const h = entries.at(-1)?.contentRect.height
     if (h) viewport.value = h
   })
   observer.observe(el)
+  // What is above the box grows or shrinks (a toolbar wraps, a line of
+  // progress comes and goes): the page's height changes with it.
+  above = new ResizeObserver(() => fit())
+  above.observe(document.body)
 })
 onBeforeUnmount(() => {
   observer?.disconnect()
+  above?.disconnect()
+  window.removeEventListener('resize', fit)
   if (frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame)
 })
 // Rows filtered or sorted anew: back to the top, where the change is seen.
+// Read again, they stay where they were.
 watch(
-  () => props.rows,
+  () => props.resetKey,
   () => {
     if (scroller.value && scroller.value.scrollTop > 0) scroller.value.scrollTop = 0
     scrollTop.value = 0
   },
 )
+// Kept alive while a student's gradebook is open: back where it was left.
+let left = { top: 0, left: 0 }
+onDeactivated(() => {
+  left = { top: scroller.value?.scrollTop ?? 0, left: scroller.value?.scrollLeft ?? 0 }
+})
+onActivated(() => {
+  const el = scroller.value
+  if (!el) return
+  el.scrollTop = left.top
+  el.scrollLeft = left.left
+  scrollTop.value = el.scrollTop
+  fit()
+})
 
 const first = computed(() => Math.max(0, Math.floor(scrollTop.value / ROW) - OVERSCAN))
 const last = computed(() => Math.min(props.rows.length, Math.ceil((scrollTop.value + viewport.value) / ROW) + OVERSCAN))
@@ -122,18 +159,27 @@ function scoreText(cell: MatrixCell, col: MatrixColumn): string {
   return col.kind === 'total' ? formatPct(cell.score) : formatScore(cell.score)
 }
 function cellTitle(cell: MatrixCell, text: string): string {
+  const said: string[] = []
   if (cell.state === 'draft')
-    return cell.postedScore !== null && cell.postedScore !== undefined
-      ? t('classbook.draftOver', { score: formatScore(cell.postedScore) })
-      : t('classbook.draftOnly')
-  if (cell.overridden) return `${text} · ${t('classbook.state.overridden')}`
-  return ''
+    said.push(
+      cell.postedScore !== null && cell.postedScore !== undefined
+        ? t('classbook.draftOver', { score: formatScore(cell.postedScore) })
+        : t('classbook.draftOnly'),
+    )
+  else if (cell.overridden) said.push(`${text} · ${t('classbook.state.overridden')}`)
+  if (cell.waiting) said.push(t('classbook.waiting'))
+  return said.join(' ')
+}
+/** Paused or removed, said beside the name; nothing for a student who is simply in the class. */
+function statusOf(s: MatrixStudent): string | null {
+  return s.status === 'paused' || s.status === 'removed' ? t(`enums.memberStatus.${s.status}`) : null
 }
 const drawn = computed(() =>
   props.rows.slice(first.value, last.value).map((row, i) => ({
     row,
     index: first.value + i,
     name: props.nameOf(row.student),
+    status: statusOf(row.student),
     book: href(bookLink.value, row.student.id),
     bookTo: bookLink.value.fullPath.replace(ID, row.student.id),
     cells: props.columns.map<CellView>((col) => {
@@ -173,6 +219,7 @@ function meanHint(col: MatrixColumn): string {
   <div
     ref="scroller"
     class="matrix"
+    :style="maxHeight ? { maxHeight: `${maxHeight}px` } : undefined"
     role="region"
     tabindex="0"
     :aria-label="t('grades.gradebook.title')"
@@ -181,7 +228,7 @@ function meanHint(col: MatrixColumn): string {
     <table
       class="matrix__table"
       :style="{ width: `${tableWidth}px` }"
-      :aria-rowcount="total + 2"
+      :aria-rowcount="rows.length + 2"
       :aria-colcount="columns.length + 1"
       @click="onClick"
     >
@@ -249,7 +296,10 @@ function meanHint(col: MatrixColumn): string {
               class="matrix__student"
               :title="t('classbook.openGradebook', { name: d.name })"
             >
-              <span class="matrix__student-name">{{ d.name }}</span>
+              <span class="matrix__student-line">
+                <span class="matrix__student-name">{{ d.name }}</span>
+                <span v-if="d.status" class="matrix__status" :class="`is-${d.row.student.status}`">{{ d.status }}</span>
+              </span>
               <span v-if="d.row.student.loginId" class="matrix__login">{{ d.row.student.loginId }}</span>
             </a>
           </th>
@@ -285,6 +335,9 @@ function meanHint(col: MatrixColumn): string {
               <span aria-hidden="true">–</span>
               <span class="matrix__sr">{{ t('classbook.state.none') }}</span>
             </span>
+            <span v-if="v.cell.waiting" class="matrix__flag is-wait matrix__also" :title="t('classbook.waiting')">{{
+              t('classbook.state.toGrade')
+            }}</span>
           </td>
         </tr>
         <tr v-if="padBottom" class="matrix__pad" aria-hidden="true">
@@ -292,7 +345,7 @@ function meanHint(col: MatrixColumn): string {
         </tr>
       </tbody>
       <tfoot>
-        <tr :aria-rowindex="total + 2">
+        <tr :aria-rowindex="rows.length + 2">
           <th scope="row" class="matrix__name matrix__foot-label">{{ t('classbook.average') }}</th>
           <td
             v-for="c in columns"
@@ -321,7 +374,8 @@ function meanHint(col: MatrixColumn): string {
   width: fit-content;
   max-width: 100%;
   overflow: auto;
-  max-height: max(360px, calc(100dvh - 300px));
+  /* Until it is measured (fit): about what is above it in a window of 1280. */
+  max-height: max(360px, calc(100dvh - 440px));
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--app-radius-item);
   overscroll-behavior: contain;
@@ -487,6 +541,25 @@ function meanHint(col: MatrixColumn): string {
   color: var(--el-color-primary);
   text-decoration: underline;
 }
+.matrix__student-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.matrix__status {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  border: 1px solid currentColor;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+}
+.matrix__status.is-removed {
+  border-style: dashed;
+}
 .matrix__student-name,
 .matrix__login {
   overflow: hidden;
@@ -552,6 +625,10 @@ function meanHint(col: MatrixColumn): string {
   border-style: dotted;
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-light);
+}
+/* Work waiting beside a grade: after the grade's link, not part of it. */
+.matrix__also {
+  margin-left: 4px;
 }
 .matrix__none {
   color: var(--el-text-color-placeholder);

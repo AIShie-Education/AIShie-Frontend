@@ -83,7 +83,23 @@ function paged<T extends { id: string }>(items: T[], args: { after?: string; lim
 }
 
 let seat: Record<string, unknown> = {}
+/** The member list as Core gives it; a test may change it. */
+let roster = students
+/** component.tree's answer; a test may make it fail. */
+let scheme: () => unknown = () => ({
+  components: [
+    { id: 'root', name: 'Course', weight: 1, drop_lowest: 0, sort_order: 0, parent_id: null },
+    { id: 'bucket', name: 'Homework', weight: 1, drop_lowest: 0, sort_order: 1, parent_id: 'root' },
+  ],
+})
 beforeEach(() => {
+  roster = students
+  scheme = () => ({
+    components: [
+      { id: 'root', name: 'Course', weight: 1, drop_lowest: 0, sort_order: 0, parent_id: null },
+      { id: 'bucket', name: 'Homework', weight: 1, drop_lowest: 0, sort_order: 1, parent_id: 'root' },
+    ],
+  })
   vi.stubGlobal('matchMedia', (media: string) => ({
     matches: false,
     media,
@@ -100,18 +116,13 @@ beforeEach(() => {
   read.mockImplementation(async (tool: string, args: { after?: string; limit?: number }) => {
     switch (tool) {
       case 'member.list': {
-        const p = paged(students, args)
+        const p = paged(roster, args)
         return { members: p.items, next: p.next }
       }
       case 'assignment.list':
         return { assignments, next: null }
       case 'component.tree':
-        return {
-          components: [
-            { id: 'root', name: 'Course', weight: 1, drop_lowest: 0, sort_order: 0, parent_id: null },
-            { id: 'bucket', name: 'Homework', weight: 1, drop_lowest: 0, sort_order: 1, parent_id: 'root' },
-          ],
-        }
+        return scheme()
       case 'grade.list': {
         const p = paged(grades, args)
         return { grades: p.items, next: p.next }
@@ -130,7 +141,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountClass() {
+async function mountClass(opts: { query?: Record<string, string>; settle?: string } = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({ me: { id: 'actor-sato', kind: 'human', display_name: 'Sato' } } as never)
@@ -145,7 +156,7 @@ async function mountClass() {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: stub }] })
   for (const name of ['course-grade', 'course-grades', 'course-gradebook'])
     router.addRoute({ path: `/${name}/:courseId/:gradeId?/:studentMemberId?`, name, component: stub })
-  await router.push('/')
+  await router.push({ path: '/', query: opts.query ?? {} })
   const w = mount(ClassGradebook, {
     props: { courseId: COURSE },
     attachTo: document.body,
@@ -164,19 +175,19 @@ async function mountClass() {
   await vi.waitFor(
     async () => {
       await flushPromises()
-      expect(w.find('.classbook__count').exists()).toBe(true)
+      expect(w.find(opts.settle ?? '.classbook__count').exists()).toBe(true)
     },
     { timeout: 20_000 },
   )
   await flushPromises()
-  return w
+  return { w, router }
 }
 
 const rowNames = (w: VueWrapper) => w.findAll('.matrix__student-name').map((n) => n.text())
 
 describe('the whole class’s gradebook', () => {
   it('draws only the rows near the screen of a class of 300 by 30, and follows the scroll', async () => {
-    const w = await mountClass()
+    const { w } = await mountClass()
     expect(w.find('.classbook__count').text()).toBe('300 students')
     const table = w.find('.matrix__table')
     expect(table.attributes('aria-rowcount')).toBe('302')
@@ -202,7 +213,7 @@ describe('the whole class’s gradebook', () => {
   })
 
   it('sorts by a column’s heading, highest first, then the other way', async () => {
-    const w = await mountClass()
+    const { w } = await mountClass()
     await w.find('button[aria-label="Sort by Course total"]').trigger('click')
     await flushPromises()
     // Totals run 50 to 99: student 49 (and 99, 149…) at 99, first by name.
@@ -216,7 +227,7 @@ describe('the whole class’s gradebook', () => {
 
   it('is a list a student at a time where the toolbar is 542 px or less', async () => {
     const sizes = fakeContainerWidths({ '.classbook__toolbar': 543 })
-    const w = await mountClass()
+    const { w } = await mountClass()
     expect(w.find('.matrix__table').exists()).toBe(true)
     await sizes.resize('.classbook__toolbar', 542)
     await flushPromises()
@@ -229,9 +240,89 @@ describe('the whole class’s gradebook', () => {
     expect(first.findAll('.sgl__grade')).toHaveLength(A + 1)
   })
 
+  it('tells a screen reader the rows the table holds, filtered or not', async () => {
+    const { w } = await mountClass()
+    await w.find('input[aria-label="Search by name or number"]').setValue('Student 001')
+    await flushPromises()
+    expect(w.find('.classbook__count').text()).toBe('1 of 300 students')
+    const table = w.find('.matrix__table')
+    expect(table.attributes('aria-rowcount')).toBe('3')
+    expect(w.find('.matrix__row').attributes('aria-rowindex')).toBe('2')
+    expect(w.find('tfoot tr').attributes('aria-rowindex')).toBe('3')
+  })
+
+  it('keeps the search, the filter and the order in the address, and finds them there again', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { w, router } = await mountClass()
+      await w.find('input[aria-label="Search by name or number"]').setValue('Student 01')
+      await flushPromises()
+      // What is typed, once typing pauses.
+      expect(router.currentRoute.value.query).toEqual({})
+      vi.advanceTimersByTime(500)
+      await flushPromises()
+      expect(router.currentRoute.value.query).toEqual({ q: 'Student 01' })
+      await w.find('button[aria-label="Sort by Course total"]').trigger('click')
+      await flushPromises()
+      expect(router.currentRoute.value.query).toEqual({ q: 'Student 01', sort: '-t:root' })
+    } finally {
+      vi.useRealTimers()
+    }
+    const { w } = await mountClass({ query: { q: 'Student 01', sort: '-t:root' } })
+    expect((w.find('input[aria-label="Search by name or number"]').element as HTMLInputElement).value).toBe(
+      'Student 01',
+    )
+    expect(w.find('.classbook__count').text()).toBe('10 of 300 students')
+    expect(w.findAll('thead th')[1]!.attributes('aria-sort')).toBe('descending')
+    // Totals run 50 to 99 by student: 019 has the highest of 010 to 019.
+    expect(rowNames(w)[0]).toBe('Student 019')
+    const drafts = await mountClass({ query: { show: 'drafts' } })
+    // No student has a draft.
+    expect(drafts.w.text()).toContain('No student matches.')
+  })
+
+  it('says it could not read the scheme, rather than show every assignment as not counted', async () => {
+    scheme = () => {
+      throw new ApiError({ status: 503, code: 'unavailable', message: 'Core is busy' })
+    }
+    const { w } = await mountClass({ settle: '.el-result' })
+    expect(w.find('.matrix__table').exists()).toBe(false)
+    expect(w.text()).not.toContain('Not counted')
+    expect(w.find('.el-result').text()).toContain('Retry')
+    const exportButton = w.findAll('button').find((b) => b.text() === 'Export CSV')!
+    expect(exportButton.attributes('disabled')).toBeDefined()
+  })
+
+  it('marks removed students, when shown, and leaves them out of the averages', async () => {
+    roster = students.map((m, i) => (i === 0 ? { ...m, status: 'removed' } : i === 1 ? { ...m, status: 'paused' } : m))
+    const { w } = await mountClass()
+    expect(rowNames(w)[0]).toBe('Student 001')
+    expect(w.find('.matrix__row .matrix__status').text()).toBe('Paused')
+    const mean = () => w.findAll('tfoot td')[0]!.text()
+    const before = mean()
+    await w.find('.classbook__toolbar .el-checkbox input').setValue(true)
+    await flushPromises()
+    expect(rowNames(w)[0]).toBe('Student 000')
+    expect(w.find('.matrix__row .matrix__status').text()).toBe('Removed')
+    expect(w.find('.classbook__count').text()).toBe('300 students')
+    expect(mean()).toBe(before)
+    expect(w.text()).toContain('Removed students are marked as such')
+  })
+
+  it('does not keep, on the phone’s list, an order the phone cannot say', async () => {
+    const sizes = fakeContainerWidths({ '.classbook__toolbar': 900 })
+    const { w } = await mountClass()
+    await w.find('button[aria-label="Sort by HW1"]').trigger('click')
+    await flushPromises()
+    expect(rowNames(w)[0]).not.toBe('Student 000')
+    await sizes.resize('.classbook__toolbar', 400)
+    await flushPromises()
+    expect(w.find('.sgl__item .sgl__name').text()).toBe('Student 000')
+  })
+
   it('gives a seat listed to some assignments no totals: none is in its scope', async () => {
     seat = { ...seat, assignment_scope: 'listed' }
-    const w = await mountClass()
+    const { w } = await mountClass()
     const heads = w.findAll('thead .matrix__head-title').map((h) => h.text())
     expect(heads).not.toContain('Course total')
     expect(heads).not.toContain('Homework total')

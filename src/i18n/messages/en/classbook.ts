@@ -28,7 +28,7 @@ export default {
   outOf: '/ {n}',
   average: 'Class average',
   averageHint:
-    '{posted} posted, {drafts} draft. The mean of the posted grades of the students shown; drafts are left out.',
+    '{posted} posted, {drafts} draft. The mean of the posted grades of the students shown; drafts and removed students are left out.',
   sortBy: 'Sort by {name}',
   sort: {
     label: 'Sort by',
@@ -48,6 +48,7 @@ export default {
   },
   draftOver: 'A draft, not posted yet; {score} is posted.',
   draftOnly: 'A draft, not posted yet.',
+  waiting: 'Work handed in since this grade waits to be graded.',
   counts: {
     drafts: '{n} draft | {n} drafts',
     missing: '{n} missing',
@@ -57,15 +58,19 @@ export default {
     posted: 'A number alone is a posted grade: what the student sees.',
     draft: '“Draft” marks a grade not posted yet: the student does not see it, and it counts in no total.',
     missing:
-      '“Missing” is work recorded as handed in with nothing, “To grade” work handed in and not graded yet, and a dash nothing at all.',
+      '“Missing” is work recorded as handed in with nothing, “To grade” work handed in and not graded yet (beside a grade, work handed in since it), and a dash nothing at all.',
     totals:
       'Totals are those written down when grades were last posted, as the student was shown them; an asterisk marks one a person overrode. A student’s own gradebook works them out afresh.',
     scope: 'Only the students and assignments your seat reaches are shown.',
+    removed: 'Removed students are marked as such, and left out of the class averages.',
   },
   csv: {
     file: 'gradebook',
     column: '{name} (out of {n})',
     total: '{name} (%)',
     draft: '{score} (draft)',
+    overridden: '{score} (overridden)',
+    waiting: '{text} (newer work to grade)',
+    status: 'Status',
   },
 }

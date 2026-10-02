@@ -11,7 +11,8 @@
 // grades for the student.
 //
 // A student sees their own; staff pick a student, whose id goes in the path.
-// Before one is picked, staff see the whole class at once (ClassGradebook).
+// Before one is picked, staff see the whole class at once (ClassGradebook),
+// kept alive while a student's own is open.
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -405,8 +406,11 @@ watch(
 </script>
 
 <template>
-  <ClassGradebook v-if="classWide" :course-id="courseId" />
-  <div v-else class="gradebook">
+  <!-- Kept alive while a student's gradebook is open: back to the class finds it as it was left. -->
+  <KeepAlive>
+    <ClassGradebook v-if="classWide" :course-id="courseId" />
+  </KeepAlive>
+  <div v-if="!classWide" class="gradebook">
     <PageHeader
       :title="t('grades.gradebook.title')"
       :subtitle="isOwn ? t('grades.gradebook.subtitleOwn') : t('grades.gradebook.subtitle')"

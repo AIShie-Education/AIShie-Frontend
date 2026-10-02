@@ -14,10 +14,26 @@
 // (StudentGradeList); otherwise a table that draws only the rows near the
 // screen (GradeMatrix). A student's own gradebook, and an assignment's
 // grades, are a click away.
-import { computed, reactive, ref, useTemplateRef } from 'vue'
+//
+// The search, the filter and the order are kept in the address (?q=, ?show=,
+// ?sort=), so that Back finds them again; GradebookView keeps this page alive
+// while a student's own gradebook is open, so that coming back to the class
+// finds it as it was left, and reads it again behind what is shown.
+import {
+  computed,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  reactive,
+  ref,
+  shallowRef,
+  useTemplateRef,
+  watch,
+} from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { ApiError, read } from '@/api/http'
-import type { GradeSummary } from '@/api/types'
+import type { Component } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
@@ -32,6 +48,7 @@ import {
   buildMatrix,
   filterRows,
   matrixCsv,
+  slimGrade,
   sortRows,
   studentsSeen,
   summarise,
@@ -45,6 +62,8 @@ import {
 
 const props = defineProps<{ courseId: string }>()
 const { t, locale } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const course = useCourseStore()
 const lookups = useGradeLookups(() => props.courseId)
 void course.ensureMembers()
@@ -52,7 +71,22 @@ void course.ensureMembers()
 // A phone's layout where the toolbar is as narrow as in a window of 640 px
 // without the side bar: by the card's own width, not the window's.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const narrow = useContainerNarrow(toolbar, 542)
+const measuredNarrow = useContainerNarrow(toolbar, 542)
+
+/** Whether the page is shown: GradebookView keeps it alive, out of the page, while a student's gradebook is open. */
+const active = ref(true)
+onActivated(() => (active.value = true))
+onDeactivated(() => (active.value = false))
+// Out of the page the toolbar is 0 px wide: the layout it was left in is
+// kept for when it comes back, not the phone's.
+const narrow = ref(false)
+watch(
+  measuredNarrow,
+  (n) => {
+    if (active.value) narrow.value = n
+  },
+  { immediate: true },
+)
 
 /** Grades on components, and totals, are within a seat's scope only over the whole course. */
 const spansAssignments = computed(() => course.membership?.assignment_scope !== 'listed')
@@ -64,59 +98,91 @@ const spansAssignments = computed(() => course.membership?.assignment_scope !== 
 const PAGE = 200
 const progress = reactive({ grades: 0, submissions: 0 })
 
-async function readEvery<T>(
+/** Every page of a list, keeping of each item what keep makes of it (null: nothing); count is told how many were read. */
+async function readEvery<T, K>(
   page: (after?: string) => Promise<{ items: T[] | null | undefined; next?: string | null }>,
+  keep: (item: T) => K | null,
   count: (n: number) => void,
-): Promise<T[]> {
-  const out: T[] = []
+): Promise<K[]> {
+  const out: K[] = []
   let after: string | undefined
+  let n = 0
   for (;;) {
     const p = await page(after)
-    out.push(...(p.items ?? []))
-    count(out.length)
+    for (const item of p.items ?? []) {
+      const k = keep(item)
+      if (k !== null) out.push(k)
+    }
+    n += p.items?.length ?? 0
+    count(n)
     if (!p.next) return out
     after = p.next
   }
 }
 
-const data = useAsync(async () => {
-  progress.grades = 0
-  progress.submissions = 0
-  if (course.level('grade_read') === 'denied') {
-    throw new ApiError({ status: 403, code: 'forbidden', message: 'not permitted' })
-  }
-  const [grades, submissions] = await Promise.all([
-    readEvery<GradeSummary>(
-      (after) =>
-        read('grade.list', { course_id: props.courseId, limit: PAGE, after }).then((o) => ({
-          items: o.grades,
-          next: o.next,
-        })),
-      (n) => (progress.grades = n),
-    ),
-    // Without submissions, a cell without a grade says nothing of whether work was handed in.
-    course.can('submission_read')
-      ? readEvery<SubmissionLite>(
-          (after) =>
-            read('submission.list', { course_id: props.courseId, limit: PAGE, after }).then((o) => ({
-              items: (o.submissions ?? []).map((s) => ({
-                id: s.id,
-                assignment_id: s.assignment_id,
-                student_member_id: s.student_member_id,
-                attempt: s.attempt,
-                state: s.state,
+const data = useAsync(
+  async () => {
+    progress.grades = 0
+    progress.submissions = 0
+    if (course.level('grade_read') === 'denied') {
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'not permitted' })
+    }
+    const [grades, submissions] = await Promise.all([
+      // Most of a term's grade.list is superseded totals, each with its
+      // feedback and working: the little the matrix needs is kept of each
+      // live grade, and nothing of a superseded one.
+      readEvery(
+        (after) =>
+          read('grade.list', { course_id: props.courseId, limit: PAGE, after }).then((o) => ({
+            items: o.grades,
+            next: o.next,
+          })),
+        slimGrade,
+        (n) => (progress.grades = n),
+      ),
+      // Without submissions, a cell without a grade says nothing of whether work was handed in.
+      course.can('submission_read')
+        ? readEvery(
+            (after) =>
+              read('submission.list', { course_id: props.courseId, limit: PAGE, after }).then((o) => ({
+                items: o.submissions,
+                next: o.next,
               })),
-              next: o.next,
-            })),
-          (n) => (progress.submissions = n),
-        ).catch((e: unknown) => {
-          if (e instanceof ApiError && e.isForbidden) return null
-          throw e
-        })
-      : Promise.resolve(null),
-  ])
-  return { grades, submissions }
-})
+            (s): SubmissionLite => ({
+              id: s.id,
+              assignment_id: s.assignment_id,
+              student_member_id: s.student_member_id,
+              attempt: s.attempt,
+              state: s.state,
+            }),
+            (n) => (progress.submissions = n),
+          ).catch((e: unknown) => {
+            if (e instanceof ApiError && e.isForbidden) return null
+            throw e
+          })
+        : Promise.resolve(null),
+    ])
+    return { grades, submissions }
+  },
+  // What is shown stays while it is read again.
+  { keepData: true },
+)
+
+/**
+ * The scheme last read: kept while it is read again, so that a refresh does
+ * not take the columns away; never guessed where it could not be read.
+ */
+const scheme = shallowRef<readonly Component[] | null>(null)
+watch(
+  () => lookups.tree.data.value,
+  (v) => {
+    if (v) scheme.value = v.components ?? []
+  },
+  { immediate: true },
+)
+const failed = computed(() => data.error.value ?? lookups.tree.error.value)
+/** Everything the matrix is made of has been read. */
+const ready = computed(() => !!data.data.value && !!scheme.value && !failed.value)
 
 function reload() {
   course.invalidate('all')
@@ -126,10 +192,18 @@ function reload() {
   void data.reload()
 }
 
+/** Read again behind what is shown, as when coming back from a student's gradebook. */
+const quiet = ref(false)
+function refreshQuietly() {
+  if (data.loading.value) return
+  quiet.value = true
+  void Promise.all([data.reload(), lookups.tree.reload()]).finally(() => (quiet.value = false))
+}
+
 const loading = computed(
   () =>
-    data.loading.value ||
-    lookups.tree.loading.value ||
+    (data.loading.value && !quiet.value) ||
+    (lookups.tree.loading.value && !quiet.value) ||
     course.membersState === 'loading' ||
     course.assignmentsState === 'loading',
 )
@@ -167,7 +241,7 @@ const students = computed<MatrixStudent[]>(() => {
 })
 
 const columns = computed(() =>
-  buildColumns(lookups.tree.data.value?.components ?? [], course.assignments.values(), {
+  buildColumns(scheme.value ?? [], course.assignments.values(), {
     spansAssignments: spansAssignments.value,
   }),
 )
@@ -191,9 +265,66 @@ function titleOf(c: MatrixColumn): string {
 // Finding, filtering, sorting
 // ---------------------------------------------------------------------------
 
+// Kept in the address: ?q= what was typed, ?show= the filter, ?sort= a
+// column's key, after a minus sign for the other way (by name A to Z, and
+// every student, are said by leaving them out).
+const FILTERS: readonly RowFilter[] = ['all', 'drafts', 'missing', 'toGrade']
+const one = (v: unknown) => (typeof v === 'string' && v ? v : undefined)
+
 const query = ref('')
 const filter = ref<RowFilter>('all')
 const sort = ref<SortBy>({ key: 'name', dir: 'asc' })
+
+function fromAddress() {
+  query.value = one(route.query.q) ?? ''
+  const show = one(route.query.show) as RowFilter | undefined
+  filter.value = show && FILTERS.includes(show) ? show : 'all'
+  const by = one(route.query.sort)
+  sort.value = !by
+    ? { key: 'name', dir: 'asc' }
+    : by.startsWith('-')
+      ? { key: by.slice(1), dir: 'desc' }
+      : { key: by, dir: 'asc' }
+}
+fromAddress()
+
+let typing: ReturnType<typeof setTimeout> | undefined
+function toAddress() {
+  clearTimeout(typing)
+  if (!active.value) return
+  const want = {
+    q: query.value.trim() ? query.value : undefined,
+    show: filter.value === 'all' ? undefined : filter.value,
+    sort:
+      sort.value.key === 'name' && sort.value.dir === 'asc'
+        ? undefined
+        : `${sort.value.dir === 'desc' ? '-' : ''}${sort.value.key}`,
+  }
+  const q = route.query
+  if (want.q === one(q.q) && want.show === one(q.show) && want.sort === one(q.sort)) return
+  void router.replace({ query: { ...q, ...want } })
+}
+// What is typed goes into the address once typing pauses; the rest at once.
+watch(query, () => {
+  clearTimeout(typing)
+  typing = setTimeout(toAddress, 400)
+})
+watch([filter, sort], toAddress)
+onBeforeUnmount(() => clearTimeout(typing))
+
+let shownOnce = false
+onActivated(() => {
+  if (!shownOnce) {
+    shownOnce = true
+    return
+  }
+  // Back to the class: the address says how it was left, or (the Whole
+  // class button) says nothing, and is told.
+  const q = route.query
+  if (one(q.q) || one(q.show) || one(q.sort)) fromAddress()
+  else toAddress()
+  refreshQuietly()
+})
 
 const filtered = computed(() => filterRows(matrix.value, query.value, filter.value))
 const shown = computed(() => sortRows(filtered.value, sort.value, nameOf, locale.value))
@@ -213,6 +344,24 @@ const phoneSort = computed({
     else sort.value = { key: totalKey.value, dir: v === 'total-asc' ? 'asc' : 'desc' }
   },
 })
+// An order the phone cannot say (by an assignment, or by name Z to A, chosen
+// on the table) is not kept where the page narrows to the list: it would be
+// an order no one could see the reason for, under a choice saying "By name".
+watch(
+  [narrow, scheme],
+  ([isNarrow, known]) => {
+    if (!isNarrow || !known || !active.value) return
+    const { key, dir } = sort.value
+    if ((key === 'name' && dir === 'asc') || (key === totalKey.value && key !== null)) return
+    sort.value = { key: 'name', dir: 'asc' }
+  },
+  { immediate: true },
+)
+
+/** What, changed, brings the table back to its top, where the change is seen: not the rows read again. */
+const resetKey = computed(() =>
+  [query.value, filter.value, sort.value.key, sort.value.dir, includeRemoved.value].join('\u0000'),
+)
 
 const countText = computed(() =>
   shown.value.length === matrix.value.length
@@ -233,7 +382,11 @@ function exportCsv() {
       c.kind === 'total'
         ? t('classbook.csv.total', { name: titleOf(c) })
         : t('classbook.csv.column', { name: titleOf(c), n: formatScore(c.outOf) }),
+    status: t('classbook.csv.status'),
+    statusOf: (s) => (s.status === 'paused' || s.status === 'removed' ? t(`enums.memberStatus.${s.status}`) : ''),
     draft: (score) => t('classbook.csv.draft', { score }),
+    overridden: (score) => t('classbook.csv.overridden', { score }),
+    waiting: (text) => t('classbook.csv.waiting', { text }),
     missing: t('classbook.state.missing'),
     toGrade: t('classbook.state.toGrade'),
     unnamed: nameOf,
@@ -261,7 +414,7 @@ function exportCsv() {
           <span>{{ t('classbook.allGrades') }}</span>
         </el-button>
       </router-link>
-      <el-button :disabled="!shown.length" @click="exportCsv">
+      <el-button :disabled="!ready || !shown.length" @click="exportCsv">
         <el-icon><Download /></el-icon>
         <span>{{ t('classbook.export') }}</span>
       </el-button>
@@ -298,14 +451,14 @@ function exportCsv() {
         </el-select>
         <el-checkbox v-if="anyRemoved" v-model="includeRemoved">{{ t('classbook.removed') }}</el-checkbox>
         <span class="app-toolbar__spacer" />
-        <span v-if="data.data.value" class="app-muted classbook__count" aria-live="polite">{{ countText }}</span>
-        <el-button :loading="loading" @click="reload">
+        <span v-if="ready" class="app-muted classbook__count" aria-live="polite">{{ countText }}</span>
+        <el-button :loading="loading || quiet" @click="reload">
           <el-icon><Refresh /></el-icon>
           <span>{{ t('common.actions.refresh') }}</span>
         </el-button>
       </div>
 
-      <p v-if="data.loading.value" class="app-form-hint classbook__reading" role="status">
+      <p v-if="data.loading.value && !quiet" class="app-form-hint classbook__reading" role="status">
         {{
           t('classbook.reading', {
             grades: formatNumber(progress.grades, 0),
@@ -315,13 +468,13 @@ function exportCsv() {
       </p>
       <AsyncState
         :loading="loading"
-        :error="data.error.value"
-        :empty="!!data.data.value && !shown.length"
+        :error="failed"
+        :empty="ready && !shown.length"
         :empty-text="matrix.length ? t('classbook.emptyFiltered') : t('classbook.empty')"
-        :overlay="!!data.data.value"
+        :overlay="ready"
         @retry="reload"
       >
-        <template v-if="data.data.value && shown.length">
+        <template v-if="ready && shown.length">
           <StudentGradeList
             v-if="narrow"
             :course-id="courseId"
@@ -335,7 +488,7 @@ function exportCsv() {
             :course-id="courseId"
             :columns="columns"
             :rows="shown"
-            :total="matrix.length"
+            :reset-key="resetKey"
             :sort="sort"
             :summaries="summaries"
             :name-of="nameOf"
@@ -350,6 +503,7 @@ function exportCsv() {
         <li>{{ t('classbook.legend.draft') }}</li>
         <li>{{ t('classbook.legend.missing') }}</li>
         <li v-if="spansAssignments">{{ t('classbook.legend.totals') }}</li>
+        <li v-if="includeRemoved">{{ t('classbook.legend.removed') }}</li>
         <li>{{ t('classbook.legend.scope') }}</li>
       </ul>
     </section>

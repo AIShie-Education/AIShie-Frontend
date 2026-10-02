@@ -26,7 +26,7 @@ export default {
   practice: '不计分',
   outOf: '/ {n}',
   average: '全班平均',
-  averageHint: '已发布 {posted} 条，草稿 {drafts} 条。所显示学生已发布成绩的平均值；不计草稿。',
+  averageHint: '已发布 {posted} 条，草稿 {drafts} 条。所显示学生已发布成绩的平均值；不计草稿和已移除的学生。',
   sortBy: '按{name}排序',
   sort: {
     label: '排序',
@@ -46,6 +46,7 @@ export default {
   },
   draftOver: '草稿，尚未发布；已发布的是 {score}。',
   draftOnly: '草稿，尚未发布。',
+  waiting: '这项成绩之后提交的作业正在等待评分。',
   counts: {
     drafts: '{n} 条草稿',
     missing: '{n} 项缺交',
@@ -54,15 +55,20 @@ export default {
   legend: {
     posted: '只有数字的是已发布的成绩：学生看到的就是它。',
     draft: '标有“草稿”的成绩尚未发布：学生看不到，也不计入任何总分。',
-    missing: '“缺交”是记录为什么也没交的作业，“待评分”是已提交但还没评分的作业，短横线表示什么也没有。',
+    missing:
+      '“缺交”是记录为什么也没交的作业，“待评分”是已提交但还没评分的作业（在成绩旁边的，是该成绩之后又提交的作业），短横线表示什么也没有。',
     totals:
       '总分是上次发布成绩时记下的，也就是学生看到的数字；带星号的是有人手动覆写的。学生本人的成绩册会实时重新计算。',
     scope: '只显示你的席位能接触到的学生和作业。',
+    removed: '已移除的学生会标注出来，并且不计入全班平均。',
   },
   csv: {
     file: 'gradebook',
     column: '{name}（满分 {n}）',
     total: '{name}（%）',
     draft: '{score}（草稿）',
+    overridden: '{score}（已覆写）',
+    waiting: '{text}（有新作业待评分）',
+    status: '状态',
   },
 }

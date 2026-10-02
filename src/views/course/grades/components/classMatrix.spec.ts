@@ -7,6 +7,7 @@ import {
   csvText,
   filterRows,
   matrixCsv,
+  slimGrade,
   sortRows,
   studentsSeen,
   summarise,
@@ -184,6 +185,79 @@ describe('buildMatrix', () => {
     expect([mei.missing, mei.toGrade, mei.drafts]).toEqual([1, 1, 0])
   })
 
+  it('says work handed in after a posted grade waits to be graded, beside the grade that counts', () => {
+    // A resubmission: attempt 1 graded 6 and posted, attempt 2 handed in.
+    const { at, rows } = matrix([
+      grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-1', score: 6 }),
+    ])
+    expect(at('yuki', 'a:a1')).toMatchObject({ state: 'posted', score: 6, waiting: true })
+    expect(rows.find((r) => r.student.id === 'yuki')!.toGrade).toBe(1)
+    expect(filterRows(rows, '', 'toGrade').map((r) => r.student.id)).toContain('yuki')
+  })
+
+  it('says late work after a graded missing row waits to be graded, the missing row keeping its zero', () => {
+    const { at, rows } = matrix(
+      [grade({ student_member_id: 'mei', assignment_id: 'a1', submission_id: 's-mei-1', score: 0 })],
+      [
+        ...subs,
+        // Core makes the work a new attempt, the missing row keeping its grade.
+        { id: 's-mei-1b', assignment_id: 'a1', student_member_id: 'mei', attempt: 2, state: 'late' },
+      ],
+    )
+    expect(at('mei', 'a:a1')).toMatchObject({ state: 'posted', score: 0, waiting: true })
+    const mei = rows.find((r) => r.student.id === 'mei')!
+    // HW1 behind its zero, HW2 handed in and not graded.
+    expect([mei.missing, mei.toGrade]).toEqual([0, 2])
+  })
+
+  it('says nothing waits where the newest attempt handed in is the one graded, in whichever order it was graded', () => {
+    const { at, rows } = matrix([
+      grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-2', score: 8 }),
+      grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-1', score: 5 }),
+    ])
+    expect(at('yuki', 'a:a1')).toMatchObject({ state: 'posted', score: 8 })
+    expect(at('yuki', 'a:a1').waiting).toBeUndefined()
+    expect(rows.find((r) => r.student.id === 'yuki')!.toGrade).toBe(0)
+  })
+
+  it('counts a draft on the newest attempt as the grading of it, and work newer than a draft as waiting', () => {
+    const graded = matrix([
+      grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-1', score: 5 }),
+      grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-2', score: 7, state: 'draft' }),
+    ])
+    expect(graded.at('yuki', 'a:a1')).toMatchObject({ state: 'draft', score: 7 })
+    expect(graded.at('yuki', 'a:a1').waiting).toBeUndefined()
+    const behind = matrix([
+      grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-1', score: 7, state: 'draft' }),
+    ])
+    expect(behind.at('yuki', 'a:a1')).toMatchObject({ state: 'draft', score: 7, waiting: true })
+    expect(behind.rows.find((r) => r.student.id === 'yuki')).toMatchObject({ drafts: 1, toGrade: 1 })
+  })
+
+  it('looks past a draft attempt opened after work was handed in', () => {
+    const withDraft: SubmissionLite[] = [
+      ...subs,
+      { id: 's-ken-2', assignment_id: 'a1', student_member_id: 'ken', attempt: 2, state: 'draft' },
+      { id: 's-yuki-3', assignment_id: 'a1', student_member_id: 'yuki', attempt: 3, state: 'draft' },
+    ]
+    // Nothing graded: attempt 1 is handed in, whatever attempt 2 is.
+    const none = matrix([], withDraft)
+    expect(none.at('ken', 'a:a1').state).toBe('submitted')
+    expect(none.rows.find((r) => r.student.id === 'ken')!.toGrade).toBe(1)
+    // Attempt 1 graded, attempt 2 handed in, attempt 3 a draft: attempt 2 waits.
+    const graded = matrix(
+      [grade({ student_member_id: 'yuki', assignment_id: 'a1', submission_id: 's-yuki-1', score: 6 })],
+      withDraft,
+    )
+    expect(graded.at('yuki', 'a:a1')).toMatchObject({ state: 'posted', score: 6, waiting: true })
+    // Ken's attempt 1 graded, attempt 2 a draft: nothing waits.
+    const kenGraded = matrix(
+      [grade({ student_member_id: 'ken', assignment_id: 'a1', submission_id: 's-ken-1', score: 4 })],
+      withDraft,
+    )
+    expect(kenGraded.at('ken', 'a:a1').waiting).toBeUndefined()
+  })
+
   it('without submissions to read, a cell without a grade is none', () => {
     const { at } = matrix([], null)
     expect(at('mei', 'a:a1').state).toBe('none')
@@ -281,6 +355,27 @@ function growth(small: () => unknown, large: () => unknown): number {
   return ratios.sort((a, b) => a - b)[1]!
 }
 
+describe('slimGrade', () => {
+  it('keeps what the matrix needs of a live grade, and nothing of a superseded one', () => {
+    const g = grade({
+      student_member_id: 'yuki',
+      component_id: 'root',
+      origin: 'computed',
+      score: 80,
+      posted_at: PUB,
+      feedback: 'Long feedback',
+      breakdown: { lines: [1, 2, 3] },
+      override: { score: 85, at: PUB, reason: 'Make-up exam' },
+    } as Partial<GradeSummary> & Pick<GradeSummary, 'student_member_id' | 'score'>)
+    const kept = slimGrade(g)!
+    expect(kept).not.toHaveProperty('feedback')
+    expect(kept).not.toHaveProperty('breakdown')
+    expect(kept.override).toEqual({ score: 85 })
+    expect(slimGrade({ ...g, state: 'superseded' })).toBeNull()
+    expect(slimGrade({ ...g, superseded_by: 'g-next' })).toBeNull()
+  })
+})
+
 describe('who is a row', () => {
   const members = [
     member('yuki', 'Yuki Tanaka', { login_id: 's1001' }),
@@ -344,6 +439,28 @@ describe('filtering and sorting', () => {
     expect(filterRows(rows, '  ')).toHaveLength(3)
   })
 
+  it('finds a named student by member ID only where the whole of it, or its short form, is typed', () => {
+    const ID = '01a0d79f-1111-70da-a7cc-a4d5ab6d027c'
+    const byId = buildMatrix({
+      students: [
+        { id: ID, name: 'Ken Wong', loginId: null, status: 'active' },
+        { id: '01a0d79f-2222-70da-a7cc-f009b1efe423', name: null, loginId: null, status: 'unknown' },
+      ],
+      columns,
+      grades: [],
+    })
+    const found = (q: string) => filterRows(byId, q).map((r) => r.student.id)
+    // Every ID of a class begins alike; a part of one is no search.
+    expect(found('01')).toEqual(['01a0d79f-2222-70da-a7cc-f009b1efe423'])
+    expect(found('c')).toEqual([])
+    expect(found(ID)).toEqual([ID])
+    expect(found(ID.replace(/-/g, ''))).toEqual([ID])
+    expect(found('027c')).toEqual([])
+    expect(found('ab6d027c')).toEqual([ID])
+    // A student with no name to show is found by the start or the end of theirs.
+    expect(found('b1efe423')).toEqual(['01a0d79f-2222-70da-a7cc-f009b1efe423'])
+  })
+
   it('keeps those with drafts, missing work or work to grade', () => {
     expect(names(filterRows(rows, '', 'drafts'))).toEqual(['Ken Wong'])
     expect(names(filterRows(rows, '', 'missing'))).toEqual(['Mei Chan'])
@@ -379,6 +496,13 @@ describe('filtering and sorting', () => {
     expect(s.get('a:a1')).toEqual({ mean: 9, posted: 1, drafts: 1 })
     expect(s.get('c:mid')).toEqual({ mean: null, posted: 0, drafts: 0 })
   })
+
+  it('leaves removed students, shown when asked for, out of the averages', () => {
+    const withRemoved = rows.map((r) =>
+      r.student.id === 'mei' ? { ...r, student: { ...r.student, status: 'removed' } } : r,
+    )
+    expect(summarise(withRemoved, columns).get('t:root')).toEqual({ mean: 90, posted: 1, drafts: 0 })
+  })
 })
 
 describe('CSV', () => {
@@ -386,36 +510,55 @@ describe('CSV', () => {
     student: 'Student',
     loginId: 'Login ID',
     memberId: 'Member ID',
+    status: 'Status',
+    statusOf: (s) => (s.status === 'removed' ? 'Removed' : ''),
     column: (c) => (c.isRoot ? 'Course total (%)' : `${c.title} (${c.outOf ?? '%'})`),
     draft: (s) => `${s} (draft)`,
+    overridden: (s) => `${s} (overridden)`,
+    waiting: (s) => `${s} (newer work to grade)`,
     missing: 'Missing',
     toGrade: 'To grade',
     unnamed: (s) => `Student ${s.id}`,
   }
 
-  it('is UTF-8 with a byte-order mark and CRLF lines, drafts and missing work marked', () => {
+  it('is UTF-8 with a byte-order mark and CRLF lines, drafts, overrides, missing and waiting work marked', () => {
     const columns = buildColumns([ROOT, HW], [HW1], { spansAssignments: true })
     const rows = buildMatrix({
       students: [
         { id: 'm1', name: '陳大文', loginId: '20261234', status: 'active' },
         { id: 'm2', name: 'Ken "KW" Wong, Jr', loginId: null, status: 'active' },
         { id: 'm3', name: null, loginId: null, status: 'unknown' },
+        { id: 'm4', name: 'Ada', loginId: null, status: 'removed' },
       ],
       columns,
       grades: [
         grade({ student_member_id: 'm1', assignment_id: 'a1', score: '9.125' }),
         grade({ student_member_id: 'm1', component_id: 'root', origin: 'computed', score: '91.25', posted_at: PUB }),
         grade({ student_member_id: 'm2', assignment_id: 'a1', score: 7, state: 'draft' }),
+        grade({ student_member_id: 'm4', assignment_id: 'a1', submission_id: 's4', score: 6 }),
+        grade({
+          student_member_id: 'm4',
+          component_id: 'root',
+          origin: 'computed',
+          score: 60,
+          posted_at: PUB,
+          override: { score: 95, at: PUB },
+        }),
       ],
-      submissions: [{ id: 's', assignment_id: 'a1', student_member_id: 'm3', attempt: 1, state: 'missing' }],
+      submissions: [
+        { id: 's', assignment_id: 'a1', student_member_id: 'm3', attempt: 1, state: 'missing' },
+        { id: 's4', assignment_id: 'a1', student_member_id: 'm4', attempt: 1, state: 'submitted' },
+        { id: 's4b', assignment_id: 'a1', student_member_id: 'm4', attempt: 2, state: 'submitted' },
+      ],
     })
     const csv = matrixCsv(columns, rows, words)
     expect(csv.startsWith('﻿')).toBe(true)
     expect(csv.slice(1).split('\r\n')).toEqual([
-      'Student,Login ID,Member ID,Course total (%),HW1 (10),Assignments (%)',
-      '陳大文,20261234,m1,91.25,9.125,',
-      '"Ken ""KW"" Wong, Jr",,m2,,7 (draft),',
-      'Student m3,,m3,,Missing,',
+      'Student,Login ID,Member ID,Status,Course total (%),HW1 (10),Assignments (%)',
+      '陳大文,20261234,m1,,91.25,9.125,',
+      '"Ken ""KW"" Wong, Jr",,m2,,,7 (draft),',
+      'Student m3,,m3,,,Missing,',
+      'Ada,,m4,Removed,95 (overridden),6 (newer work to grade),',
       '',
     ])
   })
