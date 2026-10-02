@@ -19,14 +19,16 @@ import {
 // course materials each answer relied on: page 2 of a lecture's PDF, none at
 // all, or nothing said. Under each answer the student sees the line that names
 // the lecture (which opens the PDF in the viewer at page 2), the neutral pill,
-// and nothing. Both may read rubrics at first, and an answer that relied on
-// HW1's rubric and the lecture names the rubric first; once the student may no
-// longer read rubrics, the rubric is a course material she cannot open, with
-// no title and no link. Once the lecture has a new version, an answer that
-// read the old one leads to the lecture as it is now, and says it read an
-// earlier version. An answer waiting for approval says in the approval queue
-// how many course materials it names. Against a Core whose answers keep no
-// sources, there is nothing to show.
+// and nothing. On a phone, an answer that relied on the lecture's last page
+// opens it there, the viewer filling the screen with its one bar at the
+// bottom, as the phone's viewer is. Both may read rubrics at first, and an
+// answer that relied on HW1's rubric and the lecture names the rubric first;
+// once the student may no longer read rubrics, the rubric is a course material
+// she cannot open, with no title and no link. Once the lecture has a new
+// version, an answer that read the old one leads to the lecture as it is now,
+// and says it read an earlier version. An answer waiting for approval says in
+// the approval queue how many course materials it names. Against a Core whose
+// answers keep no sources, there is nothing to show.
 
 const STAMP = Date.now().toString(36)
 const TUTOR = `Sources tutor ${STAMP}`
@@ -266,6 +268,59 @@ test.describe.serial('what an answer relied on', () => {
       'href',
       `${coursePath(`documents/${w.lectureId}`)}?version=${w.lectureVersion}`,
     )
+  })
+
+  // A narrow, tall phone (a folded Galaxy Z Fold 5's cover screen), on which the lecture's
+  // last page, scrolled to the end, still lies below the top third of what is seen: the viewer
+  // reads it all the same, since it went there.
+  test.describe('on a narrow phone', () => {
+    const PHONE = { width: 344, height: 882 }
+    test.use({ viewport: PHONE, isMobile: true, hasTouch: true })
+
+    test('opens the PDF at the last page an answer read, filling the screen, with its one bar at the bottom', async ({
+      page,
+    }) => {
+      done(
+        await answer(6, await ask(6), [{ ...lecturePage2(), page: 3 }]),
+        'conversation.answer (the last page of the lecture)',
+      )
+      await signIn(page, w.student!)
+      const panel = await openConversation(page)
+      const line = answerIn(panel, 6).locator('.chat-sources')
+      await expect(line).toHaveText(`Based on: “${LECTURE}” · ${PDF_NAME} · page 3`)
+      await line.getByRole('button', { name: LECTURE }).click()
+
+      const viewer = page.getByRole('dialog', { name: PDF_NAME })
+      await expect
+        .poll(async () => {
+          const box = (await viewer.locator('.el-dialog').boundingBox())!
+          return [box.x, box.y, box.width, box.height].map(Math.round)
+        })
+        .toEqual([0, 0, PHONE.width, PHONE.height])
+      const last = viewer.locator('.pdf-page[data-page="3"]')
+      await expect(last.locator('.textLayer')).toContainText('Lists, page 3', { timeout: 20_000 })
+      // Fitted to the width, and the one bar of pages and zoom is at the bottom, reading the last page.
+      await expect(viewer.getByRole('button', { name: 'Fit width', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await expect(viewer.locator('.pdf-view__of')).toHaveText('of 3')
+      const toolbar = viewer.getByRole('toolbar', { name: 'Pages and zoom' })
+      await expect(toolbar).toHaveCount(1)
+      const bar = (await toolbar.boundingBox())!
+      expect(bar.y).toBeGreaterThan(PHONE.height * 0.8)
+      // Scrolled to the end, the last page clears the bar, and its number stays once the pages have settled.
+      await expect
+        .poll(async () => {
+          const r = (await last.boundingBox())!
+          return Math.round(r.y + r.height) <= Math.round(bar.y)
+        })
+        .toBe(true)
+      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+      await expect(viewer.getByRole('textbox', { name: 'Page number' })).toHaveValue('3')
+      await expect(viewer.getByRole('button', { name: 'Next page', exact: true })).toBeDisabled()
+      await photograph(page, 'answer-sources-phone')
+    })
   })
 
   test('says in the approval queue how many course materials an answer waiting there names', async ({ page }) => {
