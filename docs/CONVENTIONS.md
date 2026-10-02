@@ -494,6 +494,15 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
+- **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
+  approved), refused, failed or missing in red, waiting on someone in amber (proposed, late, not
+  published). A category is neutral, the ground's second shade under the third ink, told apart by
+  its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
+  of seat. What is new or unread, and a count of what waits for the reader's decision, is indigo. A
+  level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
+  `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
+  confirm_required a raised hand on the indigo's tint; pending_review an eye, outlined in ink;
+  autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.

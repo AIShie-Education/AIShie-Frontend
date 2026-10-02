@@ -9,10 +9,11 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { AgentFull, AgentRequest, AgentSeat, AutonomyLevel } from '@/api/types'
+import type { AgentFull, AgentRequest, AgentSeat } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { seatPurpose } from '@/utils/agents'
 import PermEditor from '@/components/PermEditor.vue'
+import LevelIcon from '@/components/LevelIcon.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { grantedPerms, toPermLevels } from './agents'
@@ -25,13 +26,6 @@ const seats = computed(() =>
   [...(props.agent.seats ?? [])].sort((a, b) => `${a.code}${a.section}`.localeCompare(`${b.code}${b.section}`)),
 )
 const requests = computed(() => props.agent.requests ?? [])
-
-const LEVEL_TAG: Record<AutonomyLevel, 'success' | 'primary' | 'warning' | 'danger'> = {
-  autonomous: 'success',
-  pending_review: 'primary',
-  confirm_required: 'warning',
-  denied: 'danger',
-}
 
 function courseName(s: { code: string; section: string }): string {
   return s.section ? `${s.code} · ${s.section}` : s.code
@@ -145,13 +139,12 @@ async function takeBack(r: AgentRequest) {
             <el-tag
               v-for="g in grantedPerms(s.perms)"
               :key="g.perm"
-              :type="LEVEL_TAG[g.level]"
-              effect="plain"
+              :class="['app-level-tag', `is-${g.level}`]"
               size="small"
               :title="t(`enums.level.${g.level}`)"
               disable-transitions
             >
-              {{ t(`enums.perm.${g.perm}`) }}
+              <LevelIcon :level="g.level" />{{ t(`enums.perm.${g.perm}`) }}
             </el-tag>
           </template>
           <span v-else class="app-muted">
