@@ -207,7 +207,7 @@ export function buildColumns(
           id: c.id,
           title: c.name,
           group,
-          outOf: c.points_possible,
+          outOf: c.points_possible ?? null,
           isRoot: false,
           counted: true,
         })

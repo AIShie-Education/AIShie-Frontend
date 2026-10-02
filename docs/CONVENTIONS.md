@@ -477,6 +477,20 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   irreversible actions with `ElMessageBox.confirm`.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
   mobile width in mind (`min-width` on columns, not fixed widths everywhere).
+- **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`
+  in `views/course/grades/components/`; a student, or a chosen student, has `GradebookView` as before)
+  is students by assignments, read from what the seat may read alone (every page of `grade.list`
+  and, where it reads them, `submission.list`, the assignments, the scheme and the member list) and
+  worked out in `classMatrix.ts`, which computes nothing Core computes: a cell is the posted grade
+  on the highest attempt that has one, or a newer draft, or work recorded missing or waiting to be
+  graded; a total is the one written down at posting, its override in its place. Rows are the
+  students within the seat's student scope; a seat limited to listed assignments has no totals or
+  components. Drafts, missing work and work to grade are said in words, never by colour alone.
+  It is not an `el-table`: `GradeMatrix` is a table in a box of its own, its header row and names
+  sticky, whose rows are all 44 px and of which only those near the screen are drawn (300 × 30
+  stays smooth); where its toolbar is 542 px or less it is a list a student at a time
+  (`StudentGradeList`). Its CSV (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and
+  CRLF lines, drafts marked, and no text a spreadsheet would run as a formula (`csvText`).
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,

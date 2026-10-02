@@ -1,0 +1,71 @@
+// The whole class's gradebook: students by assignments, with totals.
+export default {
+  subtitle:
+    'The whole class at once: each student’s grades on every assignment, and the totals written down at posting.',
+  allGrades: 'All grades',
+  wholeClass: 'Whole class',
+  export: 'Export CSV',
+  search: 'Search by name or number',
+  show: {
+    label: 'Show',
+    all: 'Every student',
+    drafts: 'With draft grades',
+    missing: 'With missing work',
+    toGrade: 'With work to grade',
+  },
+  removed: 'Removed students',
+  countAll: '{n} student | {n} students',
+  countSome: '{shown} of {n} students',
+  reading: 'Reading the class’s grades: {grades} grades and {submissions} submissions so far…',
+  empty: 'There are no students to show.',
+  emptyFiltered: 'No student matches.',
+  unnamed: 'Student {id}',
+  student: 'Student',
+  loginId: 'Student number',
+  memberId: 'Member ID',
+  componentTotal: '{name} total',
+  practice: 'Not counted',
+  outOf: '/ {n}',
+  average: 'Class average',
+  averageHint:
+    '{posted} posted, {drafts} draft. The mean of the posted grades of the students shown; drafts are left out.',
+  sortBy: 'Sort by {name}',
+  sort: {
+    label: 'Sort by',
+    name: 'By name',
+    totalDesc: 'By course total, highest first',
+    totalAsc: 'By course total, lowest first',
+  },
+  openGrades: 'The grades for {name}',
+  openGradebook: 'Open {name}’s gradebook',
+  openGrade: 'Open the grade',
+  state: {
+    draft: 'Draft',
+    missing: 'Missing',
+    toGrade: 'To grade',
+    none: 'No grade',
+    overridden: 'Overridden',
+  },
+  draftOver: 'A draft, not posted yet; {score} is posted.',
+  draftOnly: 'A draft, not posted yet.',
+  counts: {
+    drafts: '{n} draft | {n} drafts',
+    missing: '{n} missing',
+    toGrade: '{n} to grade',
+  },
+  legend: {
+    posted: 'A number alone is a posted grade: what the student sees.',
+    draft: '“Draft” marks a grade not posted yet: the student does not see it, and it counts in no total.',
+    missing:
+      '“Missing” is work recorded as handed in with nothing, “To grade” work handed in and not graded yet, and a dash nothing at all.',
+    totals:
+      'Totals are those written down when grades were last posted, as the student was shown them; an asterisk marks one a person overrode. A student’s own gradebook works them out afresh.',
+    scope: 'Only the students and assignments your seat reaches are shown.',
+  },
+  csv: {
+    file: 'gradebook',
+    column: '{name} (out of {n})',
+    total: '{name} (%)',
+    draft: '{score} (draft)',
+  },
+}
