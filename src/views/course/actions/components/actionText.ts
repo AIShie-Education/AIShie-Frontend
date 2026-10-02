@@ -74,13 +74,15 @@ export function storedError(a: Pick<ActionRow, 'status' | 'result'>): StoredErro
 }
 
 /**
- * A rejected proposal's result: {"decision": {decision, reason, by_action_id,
- * by_owner}}; by_owner when the owner of the agent that proposed it rejected it.
+ * A rejected proposal's result, or one sent back for changes: {"decision":
+ * {decision, reason, by_action_id, by_owner}}; by_owner when the owner of the
+ * agent that proposed it decided so. A request for changes always has its
+ * reason: the note of what to change.
  */
 export function storedDecision(
   a: Pick<ActionRow, 'status' | 'result'>,
 ): { reason?: string; byActionId?: string; byOwner?: boolean } | null {
-  if (a.status !== 'rejected') return null
+  if (a.status !== 'rejected' && a.status !== 'changes_requested') return null
   const r = a.result
   if (isObject(r) && isObject(r.decision)) {
     return {
@@ -178,6 +180,19 @@ export function invalidateAfter(type: string | null | undefined) {
   if (group === 'member') course.invalidate('members')
   else if (group === 'assignment') course.invalidate('assignments')
   else if (group === 'action') course.invalidate('all')
+}
+
+/** A decision (action.decide's decision) as a tag: its colour and its words; one the app does not know, as Core names it. */
+export function decisionTag(decision: unknown): { type: 'success' | 'warning' | 'danger'; label: string } {
+  switch (decision) {
+    case 'approve':
+      return { type: 'success', label: t('actions.decision.approveVerb') }
+    case 'request_changes':
+      return { type: 'warning', label: t('actions.decision.requestChangesVerb') }
+    case 'reject':
+      return { type: 'danger', label: t('actions.decision.rejectVerb') }
+  }
+  return { type: 'danger', label: String(decision ?? '—') }
 }
 
 /** A decision or review: an action about another action. */

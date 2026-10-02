@@ -18,7 +18,16 @@ vi.mock('@/api/http', async (orig) => {
 import { flushPromises } from '@vue/test-utils'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
-import { excerpt, reasonText, routeFor, storedError, useJudgeRules, type ActionRow } from './actionText'
+import {
+  decisionTag,
+  excerpt,
+  reasonText,
+  routeFor,
+  storedDecision,
+  storedError,
+  useJudgeRules,
+  type ActionRow,
+} from './actionText'
 import { forgetMyAgents } from './myAgents'
 
 const COURSE = 'c1'
@@ -211,6 +220,51 @@ describe('reasonText', () => {
       /^You decide what your agent did only where you could have done it yourself without anyone’s confirmation\./,
     )
     expect(reasonText(storedError(failed({ reason: 'some_new_reason' })))).toBe('some_new_reason')
+  })
+})
+
+describe('storedDecision', () => {
+  const decided = (status: string, decision: Record<string, unknown>) =>
+    ({ status, result: { decision: { by_action_id: 'd1', ...decision } } }) as unknown as ActionRow
+
+  it('reads a request for changes’ note where a rejection’s reason is', () => {
+    expect(
+      storedDecision(decided('changes_requested', { decision: 'request_changes', reason: 'Cite the rubric.' })),
+    ).toEqual({
+      reason: 'Cite the rubric.',
+      byActionId: 'd1',
+      byOwner: false,
+    })
+    expect(storedDecision(decided('rejected', { decision: 'reject', reason: 'No.', by_owner: true }))).toEqual({
+      reason: 'No.',
+      byActionId: 'd1',
+      byOwner: true,
+    })
+  })
+
+  it('reads nothing from an action that was not decided against', () => {
+    expect(storedDecision(decided('executed', { decision: 'approve' }))).toBeNull()
+    expect(storedDecision(decided('proposed', {}))).toBeNull()
+  })
+
+  it('tells a byOwner request for changes, as a rejection, from what it recorded', () => {
+    const rules = setup(seat('teacher'), [])
+    const sent = {
+      ...action('bot', 'actor-bot'),
+      status: 'changes_requested',
+      decided_by_member_id: 'x',
+      result: { decision: { decision: 'request_changes', reason: 'Shorter.', by_owner: true } },
+    } as ActionRow
+    expect(rules.byOwner(sent, 'decided')).toBe(true)
+  })
+})
+
+describe('decisionTag', () => {
+  it('words and colours each decision, a request for changes between approving and rejecting', () => {
+    expect(decisionTag('approve')).toEqual({ type: 'success', label: 'Approve' })
+    expect(decisionTag('request_changes')).toEqual({ type: 'warning', label: 'Request changes' })
+    expect(decisionTag('reject')).toEqual({ type: 'danger', label: 'Reject' })
+    expect(decisionTag('something_new')).toEqual({ type: 'danger', label: 'something_new' })
   })
 })
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // The file viewer (預覽): a large dialog over the page, the whole screen on a
-// phone, showing one file of those it was opened on (viewer.ts), with the
-// previous and the next, its download (under its name), "Download as PDF"
-// where it is text, and its close button. It works from the keyboard: Tab
-// stays in it, Escape closes it (focus goes back to what opened it), and the
+// phone (upright or on its side), showing one file of those it was opened on
+// (viewer.ts), with the previous and the next, its download (under its
+// name), "Download as PDF" where it is text, and its close button. It works
+// from the keyboard: Tab stays in it, Escape or back closes it (focus goes
+// back to what opened it), and the
 // left and right arrow keys go to the previous and the next file, except
 // where they move something of their own (a field, a player, a page or an
 // image wider than the window).
@@ -44,7 +45,8 @@ import PrintButton from '@/components/PrintButton.vue'
 import { toApiError } from '@/composables/useAsync'
 import { errorMessage, notifyError } from '@/composables/useErrors'
 import { announce } from '@/composables/useWrite'
-import { usePhoneScreen } from '@/composables/useMediaQuery'
+import { useBackCloses } from '@/composables/useBackCloses'
+import { useMediaQuery, usePhoneScreen } from '@/composables/useMediaQuery'
 import { useRuntime, type UseRuntime } from '@/composables/useRuntime'
 import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintLayout'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
@@ -86,7 +88,11 @@ const PdfView = defineAsyncComponent(() => import('./PdfView.vue'))
 
 const { t, locale } = useI18n()
 const state = previewState()
+// Back closes it, on a phone as on a desktop: it is laid over the page, which it never outlives.
+useBackCloses(() => state.open, closePreview)
 const phone = usePhoneScreen()
+/** A phone on its side: the whole screen too, its height being too little to leave any of. */
+const short = useMediaQuery('(max-height: 480px)')
 // Whether anything transcribes: a text waiting for a transcriber that is off is said to be none.
 // Asked of the runtime only once an Office file is shown (useRuntime asks it on first use), so that
 // a page where no such file is opened never asks whether there is a runtime.
@@ -523,8 +529,8 @@ function onClosed() {
 <template>
   <el-dialog
     :model-value="state.open"
-    :class="[dialogClass, { 'is-phone': phone }]"
-    :fullscreen="phone"
+    :class="[dialogClass, { 'is-phone': phone, 'is-full': phone || short }]"
+    :fullscreen="phone || short"
     width="min(1200px, calc(100vw - 48px))"
     top="3vh"
     :show-close="false"
@@ -631,6 +637,7 @@ function onClosed() {
         :key="`${file.key}/${generation}`"
         :data="view.data"
         :name="file.filename"
+        :page="state.page"
         @failed="onPdfFailed"
       />
       <ImageView
@@ -955,6 +962,30 @@ function onClosed() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/*
+ * The whole screen (a phone, upright or on its side): the previous and the
+ * next file two arrows by the close button, their position said only to a
+ * screen reader, so that the one count on the screen is the pages' (#82).
+ */
+.file-viewer.is-full .file-viewer__position {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.file-viewer.is-full .file-viewer__nav {
+  gap: 2px;
+}
+.file-viewer.is-full .file-viewer__nav .el-button {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
 /* A phone: the whole screen, the name and close on top, the rest of the head under them. */
 .file-viewer.is-phone .el-dialog__header {
   padding: 10px 8px 8px 12px;
@@ -970,13 +1001,7 @@ function onClosed() {
   flex: 1 1 0;
 }
 .file-viewer.is-phone .file-viewer__nav {
-  order: 3;
-  width: 100%;
-  justify-content: space-between;
   padding: 0;
-}
-.file-viewer.is-phone .file-viewer__close {
-  order: 2;
 }
 .file-viewer.is-phone .file-viewer__paper {
   padding: 18px 16px;

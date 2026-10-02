@@ -11,6 +11,8 @@
 // grades for the student.
 //
 // A student sees their own; staff pick a student, whose id goes in the path.
+// Before one is picked, staff see the whole class at once (ClassGradebook),
+// kept alive while a student's own is open.
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -29,6 +31,7 @@ import MemberSelect from '@/components/MemberSelect.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TimeText from '@/components/TimeText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
+import ClassGradebook from './components/ClassGradebook.vue'
 import TotalMenu from './components/TotalMenu.vue'
 import {
   formatPct,
@@ -50,6 +53,8 @@ const mine = computed(() => course.role === 'student')
 /** Whose gradebook: the one in the path, or a student's own. */
 const student = computed(() => props.studentMemberId || (mine.value ? (course.myMemberId ?? undefined) : undefined))
 const isOwn = computed(() => !!student.value && student.value === course.myMemberId)
+/** Staff with no student chosen: the whole class. */
+const classWide = computed(() => !mine.value && !props.studentMemberId)
 
 // ---------------------------------------------------------------------------
 // Choosing a student
@@ -80,7 +85,7 @@ const rosterUnreadable = computed(
 )
 const seenStudents = useAsync(
   async () => {
-    if (!rosterUnreadable.value) return []
+    if (!rosterUnreadable.value || classWide.value) return []
     const ids = new Set<string>()
     async function collect(page: (after?: string) => Promise<{ ids: string[]; next?: string | null }>) {
       let after: string | undefined
@@ -111,7 +116,7 @@ const seenStudents = useAsync(
     ])
     return [...ids]
   },
-  { watch: [rosterUnreadable] },
+  { watch: [rosterUnreadable, classWide] },
 )
 const studentOptions = computed(() => {
   const ids = new Set(seenStudents.data.value ?? [])
@@ -401,11 +406,22 @@ watch(
 </script>
 
 <template>
-  <div class="gradebook">
+  <!-- Kept alive while a student's gradebook is open: back to the class finds it as it was left. -->
+  <KeepAlive>
+    <ClassGradebook v-if="classWide" :course-id="courseId" />
+  </KeepAlive>
+  <div v-if="!classWide" class="gradebook">
     <PageHeader
       :title="t('grades.gradebook.title')"
       :subtitle="isOwn ? t('grades.gradebook.subtitleOwn') : t('grades.gradebook.subtitle')"
-    />
+    >
+      <router-link v-if="!mine" :to="{ name: 'course-gradebook', params: { courseId } }">
+        <el-button>
+          <el-icon><Grid /></el-icon>
+          <span>{{ t('classbook.wholeClass') }}</span>
+        </el-button>
+      </router-link>
+    </PageHeader>
 
     <section class="app-card gradebook__controls">
       <div v-if="!mine" class="gradebook__control">

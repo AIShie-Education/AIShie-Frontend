@@ -185,13 +185,22 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   (each file knows how to have a fresh URL, `document.file` or `conversation.attachment`, how to
   download itself, and, for material, instructions or a rubric, how to read its text version). The
   viewer (`FileViewer`, mounted once by `AppLayout`) is a large dialog, the whole screen on a phone,
-  with the previous and the next file (buttons, and the left and right arrow keys where nothing in
-  it takes them), the download under the file's name, and its close button; Escape closes it and the
-  focus goes back to the row. What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
+  upright or on its side (a window 480 px tall or less), with the previous and the next file
+  (buttons, and the left and right arrow keys where nothing in it takes them), the download under
+  the file's name, and its close button; Escape closes it and the focus goes back to the row.
+  What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
   the name's extension first, then the declared type): a PDF in the page with pdf.js (`PdfView`,
   loaded only when one is opened, the legacy build, its worker, character maps, WebAssembly decoders
   and two standard fonts all files of the build under `/assets/`: `pdfjs.ts`), pages one under the
-  other drawn as they come near the screen, page by page, zoom and fit to width, the text selectable;
+  other drawn as they come near the screen, page by page, zoom and fit to width (`pdfZoom.ts`), a
+  pinch of two fingers or a touchpad's zooming the pages and not the screen, the text selectable,
+  and one page control, none for a page alone; on a phone (640 px or less of the view's own width,
+  or 400 px or less of its own height) the page control and the zoom are one compact bar at the
+  bottom, within a thumb's reach, fitted to the width saying so rather than its per cent (zoomed by
+  hand, its per cent again; where the bar has no room, it measures and leaves out its per cent, then
+  its count of pages, never cutting a digit short), and the viewer's previous and next file two
+  arrows by its close button, their position said only to a screen reader, so that one count is
+  on the screen;
   an image as an `<img>` (an SVG too, never inline), zoomed or fitted; Markdown by `MarkdownView`,
   code highlighted as fenced code, plain text as it is, CSV as a table of its first thousand rows
   (`parseCsv`), text read as UTF-8 or the legacy encoding of the reader's script (`decodeText`);
@@ -408,6 +417,23 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   approving now would refuse), with the refusal it would meet (`details.refusal`) in the reader's
   words where the app has them, and Core's alone for a bare `forbidden`; `reasonText()` says either
   in the same words where a decision refused so is listed, as the failed action Core records.
+- **A proposal sent back for changes.** Wherever a proposal is decided (`DecidePanel`), *Request
+  changes* (要求修改) is offered beside Approve and Reject, under the same rules as Reject:
+  `action.decide` with `decision: 'request_changes'` and the note as `reason`. The note is
+  required, 1 to 2000 characters and not spaces alone: the confirm button stays off until there is
+  one, and Core's refusals of it (`note_required`, `note_too_long`) are worded under
+  `actions.decision.refusal`. The proposal ends in `changes_requested`, a final state that is no
+  failure: its tag is `warning`, as a proposal's that waits is, not a rejection's `danger`. Its
+  note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and
+  who asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal
+  it revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the
+  queue, *My actions* and the action's page, as the feed does from the revision's
+  `action.proposed`; the earlier one says nothing of it. `action.changes_requested` is listed in
+  the feed with its decision, as `action.rejected` is. An agent's answer in a conversation
+  (`conversation.answer`) is not offered for changes yet (`offersChanges`): only the site's agent
+  runtime answers in the site, and one that does not know of requests for changes leaves an
+  answer sent back waiting for good (Core's `docs/deploying.md`, Migration 0028). That condition
+  goes once the runtime that revises one runs wherever this front end does.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous
@@ -509,6 +535,29 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   irreversible actions with `ElMessageBox.confirm`.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
   mobile width in mind (`min-width` on columns, not fixed widths everywhere).
+- **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`
+  in `views/course/grades/components/`; a student, or a chosen student, has `GradebookView` as before)
+  is students by assignments, read from what the seat may read alone (every page of `grade.list`
+  and, where it reads them, `submission.list`, the assignments, the scheme and the member list) and
+  worked out in `classMatrix.ts`, which computes nothing Core computes: a cell is the posted grade
+  on the highest attempt that has one, or a newer draft, or work recorded missing or waiting to be
+  graded, and work handed in on a later attempt than any graded (a resubmission, late work after a
+  graded missing row) waits to be graded beside the grade shown; a total is the one written down at
+  posting, its override in its place. Of grade.list, mostly superseded totals with their working,
+  only what the matrix needs of the live grades is kept (`slimGrade`). Rows are the students within
+  the seat's student scope, removed ones (marked, and left out of the averages) when asked for; a
+  seat limited to listed assignments has no totals or components. A scheme that cannot be read is
+  an error, never every assignment shown as not counted. Drafts, missing work and work to grade are
+  said in words, never by colour alone. The search, the filter and the order are in the address
+  (`?q=`, `?show=`, `?sort=`), and `GradebookView` keeps the page alive (`KeepAlive`) while a
+  student's own gradebook is open, so that coming back finds it as it was, read again behind it.
+  It is not an `el-table`: `GradeMatrix` is a table in a box of its own, its header row and names
+  sticky, whose rows are all 44 px and of which only those near the screen are drawn (300 × 30
+  stays smooth), in a box as tall as the window has room for below where it begins; where its
+  toolbar is 542 px or less it is a list a student at a time (`StudentGradeList`). Its CSV
+  (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and CRLF lines, drafts, overrides,
+  waiting work and paused or removed students marked, and no text a spreadsheet would run as a
+  formula (`csvText`).
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,
@@ -521,6 +570,20 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   wide window. Only what belongs to the window asks it, with `@/composables/useMediaQuery`:
   `usePhoneScreen()` (640 px or narrower) for a dialog or a drawer laid over the page that fills a
   phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch.
+- Back closes what is laid over the page, as a phone's back gesture or button is expected to:
+  `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
+  component. Opening adds an entry to history at the page's own address, back closes the overlay
+  on top (one at a time, where one is open over another; a message box asked over them, ElMessageBox,
+  is dismissed first, as cancelled), and closed by its own means (its button, Escape, a click beside
+  it) it goes back over its entry, so that history is as it was. It is used by the file viewer, the
+  phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider screen stays open from
+  page to page, and back moves between them), the agent's conversation log, the invite link put up
+  full screen, and the administrators' drawers of a preset and of a department's administrators
+  (full width on a phone, `DRAWER_SIZE`), and who can read a conversation, the chat pane's dialog
+  opened over the sheet or the log; a new drawer or dialog that fills a phone's screen, or that opens
+  over one of these, uses it too. The router (`installBackCloses`) goes back over the overlays' entries before it adds a page's,
+  so that a link followed from one takes its place, and over those a page left before it was
+  reloaded; going back to a page's own entry leaves it where it was scrolled.
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
@@ -588,7 +651,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
   no activity bar: the header's menu button opens the views in a drawer, as tabs along its top (the
-  course the page is in with its tabs under it), and following a link in it closes it.
+  course the page is in with its tabs under it), and following a link in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
@@ -632,7 +695,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   what it showed; closed, on a new conversation in the course it asks in (the chat store's `close`);
   either way focus goes back to the round button. Files dropped anywhere on the window, its title bar
   too, go to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
-  screen, a modal dialog with no edge to drag, closed with its one button or Escape, keeping what it
+  screen, a modal dialog with no edge to drag, closed with its one button, Escape or back, keeping what it
   showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
   on a conversation (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a
   link to a conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`,
@@ -738,6 +801,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   every read of a Core that keeps drafts (`draft`, null for none) and, once one has carried it,
   waits naming the version held (`seen_draft_version`), so that each new version shows as soon as
   the agent writes it; the posted answer takes its place.
+- **What an answer relied on** (its `sources`, AIShie-Core#69, `MessageSource`) is under its words
+  and files (`ChatMessageSources`, each source a `ChatMessageSource`), as Core shows it to the reader
+  now: one named on a quiet line (「依據：《title》· 第 3 頁」), several summed up by the first with a
+  title and how many, the line opening to list them. A whole source opens the version read: with a
+  file, that file in the viewer among the version's (`document.get` with its `version_id`, read on
+  the click), at the page or slide named (`openPreview`'s `page`, which `PdfView` opens at, a
+  slide's in its PDF); without one, the document's page at `?version=`. `other_version` leads to the
+  document as it is now and says the answer read an earlier version; `restricted` is said to be a
+  course material the reader cannot open, with no title and no link. An empty list is the neutral
+  pill 「未引用課程教材」; no `sources` (or `null`) is an answer that did not say, and shows nothing.
+  A proposed answer keeps its sources by id alone: the queue and the action's page count them
+  (`AnswerSources`).
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

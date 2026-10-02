@@ -16,6 +16,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { read } from '@/api/http'
 import type { ActorLookup, Appointment, DepartmentNode } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
@@ -24,6 +25,8 @@ import { DRAWER_SIZE } from '../setup/presets'
 import PersonLookup from '../components/PersonLookup.vue'
 
 const open = defineModel<boolean>({ default: false })
+// Full width on a phone (DRAWER_SIZE): back closes it rather than leaving the page.
+useBackCloses(open, () => (open.value = false))
 const props = defineProps<{ dept: DepartmentNode | null }>()
 const emit = defineEmits<{ changed: [] }>()
 const { t } = useI18n()

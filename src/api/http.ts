@@ -18,7 +18,8 @@ import { RateMeter } from '../utils/transferRate'
 import { noteCoreDate } from './clock'
 import { TOOL_ROUTES, type ToolMap, type ToolName } from './generated/tools'
 
-export type ActionStatus = 'executed' | 'proposed' | 'denied' | 'failed' | 'rejected' | 'cancelled' | 'approved'
+export type ActionStatus =
+  'executed' | 'proposed' | 'denied' | 'failed' | 'rejected' | 'changes_requested' | 'cancelled' | 'approved'
 export type ReviewState = 'none' | 'pending' | 'reviewed' | 'escalated'
 
 export interface ApiErrorBody {

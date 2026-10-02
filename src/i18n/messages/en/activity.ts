@@ -81,6 +81,7 @@ export default {
     byDecision: 'The decision',
     byReview: 'The review',
     byCancel: 'What cancelled it',
+    revises: 'Revises an earlier proposal',
     complete: 'Everything graded',
     incomplete: 'Some work not yet graded',
     decidedByOwner: 'Decided by its agent’s owner',

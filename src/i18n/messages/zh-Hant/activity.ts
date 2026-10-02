@@ -81,6 +81,7 @@ export default {
     byDecision: '有關決定',
     byReview: '有關覆核',
     byCancel: '取消它的操作',
+    revises: '修訂先前的提案',
     complete: '已全部評分',
     incomplete: '仍有作業未評分',
     decidedByOwner: '由代理的擁有者決定',

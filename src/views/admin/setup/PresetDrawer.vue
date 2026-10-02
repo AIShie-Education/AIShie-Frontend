@@ -6,9 +6,12 @@ import { PERMS, type Preset } from '@/api/types'
 import IdText from '@/components/IdText.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { DRAWER_SIZE, allowedCount, isBuiltin, permLevels, presetDescription, presetLabel } from './presets'
 
 const open = defineModel<boolean>({ default: false })
+// Full width on a phone (DRAWER_SIZE): back closes it rather than leaving the page.
+useBackCloses(open, () => (open.value = false))
 const props = defineProps<{ preset: Preset | null; deptName: string | null; canEdit: boolean }>()
 const emit = defineEmits<{ edit: [preset: Preset]; copy: [preset: Preset] }>()
 const { t } = useI18n()
