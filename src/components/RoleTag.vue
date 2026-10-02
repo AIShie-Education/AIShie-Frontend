@@ -6,7 +6,8 @@
 // which kind of agent it is instead, a course agent or a personal agent
 // (seatPurpose). An agent in the role `assistant` that is nobody's delegate
 // (one the administration registered) shows a dash; one seated in another
-// role (a teaching assistant, say) keeps that role's tag.
+// role (a teaching assistant, say) keeps that role's tag. `hide-none`: no dash
+// either, among a page header's tags, where a dash would read as a separator.
 import { computed } from 'vue'
 import { seatPurpose } from '@/utils/agents'
 import StatusTag from './StatusTag.vue'
@@ -20,6 +21,7 @@ const props = defineProps<{
     preset_id?: string | null
   }
   size?: 'small' | 'default' | 'large'
+  hideNone?: boolean
 }>()
 
 const purpose = computed(() => {
@@ -32,7 +34,7 @@ const purpose = computed(() => {
 <template>
   <StatusTag v-if="purpose === undefined" vocab="role" :value="member.role" :size="size" />
   <StatusTag v-else-if="purpose" vocab="seatPurpose" :value="purpose" :size="size" />
-  <span v-else class="role-tag__none">—</span>
+  <span v-else-if="!hideNone" class="role-tag__none">—</span>
 </template>
 
 <style scoped>

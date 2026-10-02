@@ -4,8 +4,8 @@
 // (splitNameEnd), and so a last word, which does not break, so that the "AI"
 // never stands alone on a line of its own; the rest of the name breaks
 // wherever it must, a name with no spaces too, rather than running out of
-// its row. `ellipsis`: the name is cut short on one line instead, and the
-// "AI" stays whole after it. Whose agent it is, and how it runs, go after
+// its row. `ellipsis`: the name is cut short on one line instead (whole on
+// hover), and the "AI" stays whole after it. Whose agent it is, and how it runs, go after
 // this (AgentBadge with no-ai, HostingTag).
 import { computed } from 'vue'
 import { splitNameEnd } from '@/utils/initials'
@@ -17,7 +17,7 @@ const parts = computed(() => splitNameEnd(props.name))
 
 <template>
   <span v-if="ellipsis" class="agent-name is-ellipsis"
-    ><span class="agent-name__text">{{ name }}</span
+    ><span class="agent-name__text" :title="name ?? undefined">{{ name }}</span
     ><AiBadge class="agent-name__ai"
   /></span>
   <span v-else class="agent-name"

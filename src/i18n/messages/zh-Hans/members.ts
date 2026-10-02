@@ -123,8 +123,7 @@ export default {
     pickStudents: '选择学生',
     pickAssignments: '选择作业',
     listsItself: '学生席位的列表留空时，只涵盖该学生本人：他们只看到自己的作业。',
-    nobodyStudents:
-      '选了“仅限列表”但列表是空的，就不涵盖任何学生（空列表不等于全部）。请选择学生，或改为“所有学生”。',
+    nobodyStudents: '选了“仅限列表”但列表是空的，就不涵盖任何学生（空列表不等于全部）。请选择学生，或改为“所有学生”。',
     nobodyAssignments: '选了“仅限列表”但没有任何作业，就不涵盖任何作业。请选择作业，或改为“所有作业”。',
     expires: '席位到期',
     expiresNever: '从不',
@@ -187,7 +186,7 @@ export default {
     callerNotLive: '你自己的席位已暂停或到期，因此你在此的任何操作都不会被接受。',
     // Core 以原因（details.reason）拒绝更改席位时的说明。
     reason: {
-      delegate_seat: '这是以某人代表身份加入的智能体席位：角色永远是“助理”，不在名册上，不能更改。',
+      delegate_seat: '这是以某人代表身份加入的智能体席位：它的角色固定，不在名册上，不能更改。',
       not_your_principal: '智能体不能管理其所代表之人的席位，也不能管理该人其他智能体的席位。',
       // member.reset_password
       people_only: '重置密码的必须是人，由其转交密码：智能体永远不会获发密码。',
@@ -249,7 +248,7 @@ export default {
     done: '{name} 现在是{role}',
     unchanged: '{name} 本来就是{role}，没有任何改变。',
     blocked: {
-      delegateSeat: '以某人代表身份加入的智能体，角色永远是“助理”，不在名册上。',
+      delegateSeat: '以某人代表身份加入的智能体，角色固定，不在名册上。',
       agent: '智能体的席位不在名册上，不能在此更改角色。',
       notYourPrincipal: '这是你所代表之人的席位：智能体不能管理它。',
     },

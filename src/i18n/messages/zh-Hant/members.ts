@@ -187,7 +187,7 @@ export default {
     callerNotLive: '你自己的席位已暫停或到期，因此你在此的任何操作都不會被接受。',
     // Core 以原因（details.reason）拒絕更改席位時的說明。
     reason: {
-      delegate_seat: '這是以某人代表身份加入的代理席位：角色永遠是「助理」，不在名冊上，不能更改。',
+      delegate_seat: '這是以某人代表身份加入的代理席位：它的角色固定，不在名冊上，不能更改。',
       not_your_principal: '代理不能管理其所代表之人的席位，也不能管理該人其他代理的席位。',
       // member.reset_password
       people_only: '重設密碼的必須是人，由其轉交密碼：代理永遠不會獲發密碼。',
@@ -249,7 +249,7 @@ export default {
     done: '{name} 現在是{role}',
     unchanged: '{name} 本來就是{role}，沒有任何改變。',
     blocked: {
-      delegateSeat: '以某人代表身份加入的代理，角色永遠是「助理」，不在名冊上。',
+      delegateSeat: '以某人代表身份加入的代理，角色固定，不在名冊上。',
       agent: '代理的席位不在名冊上，不能在此更改角色。',
       notYourPrincipal: '這是你所代表之人的席位：代理不能管理它。',
     },

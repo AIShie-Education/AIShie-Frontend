@@ -66,6 +66,10 @@ const hint = computed(() => {
   border: 1px solid var(--app-line-strong);
   border-radius: 4px;
   color: var(--app-ink-2);
+  /* In a page's title too, as the tags beside it are (main.css). */
+  font-family: var(--app-font-sans);
+  font-weight: 400;
+  letter-spacing: normal;
   font-size: 12px;
   line-height: 18px;
   overflow: hidden;

@@ -389,7 +389,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         <template v-if="m">
           <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" size="default" />
           <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" :site-chat="m.site_chat" size="default" />
-          <RoleTag :member="m" size="default" />
+          <RoleTag :member="m" size="default" hide-none />
           <StatusTag vocab="memberStatus" :value="m.status" size="default" />
           <el-tag v-if="expired" type="info">{{ t('members.expired') }}</el-tag>
           <el-tag v-if="isSelf" type="primary" effect="plain">{{ t('common.labels.you') }}</el-tag>
