@@ -337,6 +337,10 @@ export default {
     older: '所回复的消息在对话较早的部分。',
     unreadable: '无法向你显示所回复的消息。',
     reply: '回复',
+    // The course materials the reply says it relied on, as the proposal keeps them: by id alone, so counted.
+    sources: '依据 {n} 项课程教材',
+    sourcesTip: '智能体以编号列出这些教材。批准回复时会再次检查每一项，每位读者看到的是他们各自可打开的部分。',
+    noSources: '未引用课程教材',
   },
   withdraw: {
     action: '撤回',

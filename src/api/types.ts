@@ -229,6 +229,15 @@ export type MessageRetraction = NonNullable<ConversationMessage['retracted']>
  * it is retracted): conversation.attachment gives a short-lived URL for it.
  */
 export type MessageAttachment = NonNullable<ConversationMessage['attachments']>[number]
+/**
+ * A course material an answer relied on, as the reader may read it now
+ * (AIShie-Core#69): whole (the document's title now, the version, and the
+ * file and page or slide where the answer named them), other_version (the
+ * document alone: the version read is one the reader may not open), or
+ * restricted (nothing else said). An answer's `sources` is absent where it
+ * did not say, and an empty list where it said it relied on none.
+ */
+export type MessageSource = NonNullable<ConversationMessage['sources']>[number]
 /** A file a message carries, with where to download it for a while (conversation.attachment). */
 export type ConversationAttachment = ToolOut<'conversation.attachment'>
 export type ConversationMessagesPage = ToolOut<'conversation.messages'>
