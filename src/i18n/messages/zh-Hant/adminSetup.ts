@@ -44,6 +44,7 @@ export default {
     presets: '權限預設',
     viewPresets: '查看',
     viewPresetsN: '查看（只有內建） | 查看（內建＋本部門 1 個） | 查看（內建＋本部門 {n} 個）',
+    presetsN: '權限預設：只有內建 | 權限預設：內建＋本部門 1 個 | 權限預設：內建＋本部門 {n} 個',
     create: {
       title: '建立部門',
       name: '名稱',

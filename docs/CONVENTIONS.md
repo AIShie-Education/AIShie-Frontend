@@ -468,11 +468,25 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   moves those at start, before anything reads a key, so nothing else reads the old names.
 - Views are responsive down to phone width, and work in light and dark (use Element Plus CSS
   variables, never hard-coded colours). `useNarrow()` / `useMediaQuery()` from
-  `@/composables/useMediaQuery` switch a wide table to cards on a phone.
+  `@/composables/useMediaQuery` switch a wide table to cards on a phone; a page that the side bar
+  can leave narrow on a wide window switches on its own width instead (below). The members, a
+  member's page and My actions still ask the window for 767 px (`useNarrow(767)`), and are yet to.
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
-  left less than about 420 px (the overview at 800 px of page, an assignment at 740). A dialog's
+  left less than about 420 px (the overview at 800 px of page, an assignment at 740, two cards of an
+  actor's page at 856). A course's tabs wrap onto two rows from 720 px of page, and scroll sideways
+  below. What the template itself switches follows the same width: `useContainerNarrow(el, max)`
+  from `@/composables/useContainerWidth` says whether an element is `max` px wide or less, as
+  `@container (max-width: …)` would, for el-descriptions' columns, which of a table's columns show,
+  or a table or a card per row (the administration's courses, departments, people and an actor's
+  page). Measure a part as wide as the card that no `el-table` changes the size of, its title or
+  its toolbar, never the card around an `el-table`, which lays itself out again from a
+  `ResizeObserver` of its own (the card would change height in that observer's callback, a loop the
+  browser reports). What the switch itself changes in the measured part is safe, a toolbar's row
+  that wraps, say: the switch is never made in an observer's callback, but a task later or on the
+  window's `resize`; the unit tests give elements widths with `fakeContainerWidths()`
+  (`@/composables/containerWidthFakes`), and without it jsdom shows the wide layout. A dialog's
   breakpoints, and a phone's (640 px and narrower), stay `@media` queries on the window. Columns of
   cards use the shared `.app-columns` (the grid) and `.app-column` (a stack of cards, 16 px apart)
   from `styles/main.css`: side by side, both columns are as tall as their row and the last card of

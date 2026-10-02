@@ -109,9 +109,10 @@ const adminWithoutSeat = computed(
 // The way to the course's administration page, for whoever administers it.
 const administers = useAdministersCourse()
 
-// Where the tabs do not fit (a phone), they scroll sideways: the active one
-// is kept in view, and each end fades while there is more beyond it. Wider
-// screens wrap them instead, so every tab is always in sight.
+// Where the tabs do not fit (a phone, or a page the side bar leaves narrow),
+// they scroll sideways: the active one is kept in view, and each end fades
+// while there is more beyond it. A wider page wraps them instead, so every tab
+// is always in sight.
 const nav = ref<HTMLElement | null>(null)
 const more = reactive({ start: false, end: false })
 function measure() {
@@ -243,6 +244,10 @@ onBeforeUnmount(() => observer?.disconnect())
 </template>
 
 <style scoped>
+/* The page's own width decides how the tabs are laid out, not the window's: the side bar takes from it. */
+.course-layout {
+  container-type: inline-size;
+}
 .course-layout__no-seat :deep(.el-result__subtitle) {
   max-width: 60ch;
   margin-left: auto;
@@ -311,8 +316,8 @@ onBeforeUnmount(() => observer?.disconnect())
   -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
   mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
 }
-/* With room beside the navigation, every tab shows: they wrap onto a second row. */
-@media (min-width: 900px) {
+/* With room for every tab in two rows, every tab shows: they wrap onto a second row. */
+@container (min-width: 720px) {
   .course-tabs {
     flex-wrap: wrap;
     overflow-x: visible;

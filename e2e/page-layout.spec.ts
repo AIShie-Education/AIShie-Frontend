@@ -1,6 +1,20 @@
 /// <reference lib="dom" />
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { activityBar, call, chatWindow, coursePath, demo, openChat, photograph, showSideView, signIn } from './support'
+import {
+  activityBar,
+  call,
+  chatWindow,
+  coursePath,
+  demo,
+  openChat,
+  photograph,
+  registerPerson,
+  root,
+  showSideView,
+  signIn,
+  signInAsRoot,
+  type CoreReply,
+} from './support'
 
 // A page's two columns follow the page's own width, not the window's: the
 // side bar open on the left takes 260 px from it, and the chat, a window
@@ -8,20 +22,48 @@ import { activityBar, call, chatWindow, coursePath, demo, openChat, photograph, 
 // its main one would be left less than about 420 px, and keeps them side by
 // side where there is room; side by side, the two columns of cards end on
 // one line. Opening, resizing or moving the chat's window changes nothing of
-// the page under it.
+// the page under it. What a page lays out in its template (a table or a card
+// per row, which columns a table shows, el-descriptions' columns) follows its
+// own width, or its card's, as its columns do; so do a course's tabs.
 
-/** The side bar open (or collapsed), and the chat's window open, in a window this size. */
-async function layout(page: Page, width: number, height: number, opts: { side: boolean }) {
+/** The side bar open on a view (or collapsed), and the chat's window open (unless not asked for), in a window this size. */
+async function layout(
+  page: Page,
+  width: number,
+  height: number,
+  opts: { side: boolean; view?: 'Courses' | 'Administration'; chat?: boolean },
+) {
   await page.setViewportSize({ width, height })
-  if (opts.side) await showSideView(page, 'Courses')
+  if (opts.side) await showSideView(page, opts.view ?? 'Courses')
   else {
     // The view shown, pressed again, collapses the side bar.
     const shown = activityBar(page).locator('button[aria-expanded="true"]')
     if (await shown.count()) await shown.click()
     await expect(page.locator('#side-bar')).toHaveCount(0)
   }
+  if (opts.chat === false) return
   const panel = await openChat(page)
   await expect(panel).toHaveClass(/is-window/)
+}
+
+function done(r: { status: number; body: CoreReply }, what: string) {
+  expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
+  return r.body.result
+}
+
+/** Whether nothing of the page scrolls sideways. */
+async function noSideways(page: Page) {
+  return page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
+}
+
+/** A table's column headings, in order. */
+async function headings(table: Locator) {
+  return (await table.locator('thead th').allInnerTexts()).map((h) => h.trim())
+}
+
+/** How many cells the first row of an el-descriptions holds: 2 for one column of facts, 4 for two. */
+async function cellsInFirstRow(desc: Locator) {
+  return desc.locator('tbody tr').first().locator('th, td').count()
 }
 
 async function box(l: Locator) {
@@ -248,5 +290,182 @@ test.describe('pages beside the side bar, under the chat’s window', () => {
     // Back in its corner, 400 px wide, with a double click on its title bar.
     await panel.locator('.chat-panel__titlebar .chat-panel__title').dblclick()
     await expect(edge).toHaveAttribute('aria-valuenow', '400')
+  })
+})
+
+test.describe('an administrator’s pages beside the side bar, under the chat’s window', () => {
+  // What a page switches by its own width is never switched in a ResizeObserver's callback
+  // (useContainerWidth): an el-table in it would lay itself out again in that same frame, and the browser
+  // report a loop of observers. None, on any page, however the window and the side bar change.
+  let loops: string[] = []
+  test.beforeEach(async ({ page }) => {
+    loops = []
+    await page.exposeFunction('reportResizeObserverLoop', (where: string, message: string) =>
+      loops.push(`${where}: ${message}`),
+    )
+    await page.addInitScript(() => {
+      window.addEventListener('error', (e) => {
+        if (String(e.message).includes('ResizeObserver loop')) {
+          const report = (window as unknown as { reportResizeObserverLoop: (w: string, m: string) => void })
+            .reportResizeObserverLoop
+          void report(location.pathname, e.message)
+        }
+      })
+    })
+  })
+  test.afterEach(() => {
+    expect(loops).toEqual([])
+  })
+
+  test('a department administrator’s pages and a course’s tabs are laid out for the page’s width, not the window’s', async ({
+    page,
+  }) => {
+    // Someone who administers a department of their own and teaches its one course: the administration's
+    // pages and the course's, with the chat offered.
+    const d = demo()
+    const stamp = Date.now().toString(36)
+    const R = root().token
+    const dept = done(await call(R, 'POST', '/v1/departments', { name: `Layout ${stamp}` }), 'department.create')
+    const who = await registerPerson(`Layout admin ${stamp}`, { email: `layout+${stamp}@e2e.test` })
+    done(await call(R, 'POST', `/v1/departments/${dept.id}/admins`, { actor_id: who.actor_id }), 'department.add_admin')
+    const course = done(
+      await call(R, 'POST', '/v1/courses', {
+        dept_id: dept.id,
+        term_id: d.course.term_id,
+        code: 'LAY101',
+        section: stamp,
+        title: `Layout course ${stamp}`,
+        description: 'A course to lay pages out in.',
+      }),
+      'course.create',
+    )
+    const courseId = course.course_id as string
+    done(await call(R, 'POST', `/v1/courses/${courseId}/activate`, {}), 'course.activate')
+    done(
+      await call(R, 'POST', `/v1/courses/${courseId}/instructors`, { actor_id: who.actor_id }),
+      'course.seat_instructor',
+    )
+    await signIn(page, who)
+
+    // The course's administration page. In a window of 1280 px with the side bar open, 924 px of page: its
+    // details and the instructor's seat one above the other, the details with room for two columns of facts.
+    await page.goto(`/admin/courses/${courseId}`)
+    const details = page.locator('.course-admin__desc')
+    const seat = page.locator('.course-admin__grid > .app-card').last()
+    await expect(details).toBeVisible()
+    await layout(page, 1280, 800, { side: true, view: 'Administration' })
+    expect(await pageWidth(page)).toBe(1280 - 48 - 260)
+    expect(await stacked(details, seat)).toBe(true)
+    await expect.poll(() => cellsInFirstRow(details)).toBe(4)
+    expect(await noSideways(page)).toBe(true)
+    await page.mouse.move(0, 400)
+    await photograph(page, 'layout-course-admin-1280')
+    // The same window with the side bar collapsed: room for both side by side.
+    await layout(page, 1280, 800, { side: false })
+    expect(await stacked(details, seat)).toBe(false)
+    await expect.poll(() => cellsInFirstRow(details)).toBe(4)
+
+    // The courses: their table's five columns where its card has 800 px, in 924 px of page…
+    await page.goto('/admin/courses')
+    const courses = page.locator('.courses__table')
+    await expect(courses.getByText(`Layout course ${stamp}`)).toBeVisible()
+    await layout(page, 1280, 800, { side: true, view: 'Administration' })
+    await expect.poll(() => headings(courses)).toEqual(['Course', 'Status', 'Term', 'Department', 'Created'])
+    await expect(courses.locator('.courses__meta')).toHaveCount(0)
+    // …and in 1100 px of window, 744 of page, the term and the department under the course, which a window
+    // of 1100 px alone would not have done.
+    await layout(page, 1100, 800, { side: true, view: 'Administration' })
+    await expect.poll(() => headings(courses)).toEqual(['Course', 'Status'])
+    await expect(courses.locator('.courses__meta')).toContainText(`Layout ${stamp}`)
+    expect(await noSideways(page)).toBe(true)
+    await page.mouse.move(0, 400)
+    await photograph(page, 'layout-courses-1100')
+
+    // The departments: every column of theirs where the card has 746 px, closed up where it has less.
+    await page.goto('/admin/departments')
+    const tree = page.locator('.dept-tree')
+    await expect(tree.getByText(`Layout ${stamp}`)).toBeVisible()
+    await layout(page, 1280, 800, { side: true, view: 'Administration' })
+    await expect.poll(() => headings(tree)).toContain('ID')
+    await layout(page, 1100, 800, { side: true, view: 'Administration' })
+    await expect.poll(() => headings(tree)).not.toContain('ID')
+    await expect.poll(() => headings(tree)).toContain('Courses')
+    expect(await noSideways(page)).toBe(true)
+    // The side bar collapsed and opened again in the same window: every column, then closed up again.
+    await layout(page, 1100, 800, { side: false })
+    await expect.poll(() => headings(tree)).toContain('ID')
+    await layout(page, 1100, 800, { side: true, view: 'Administration' })
+    await expect.poll(() => headings(tree)).not.toContain('ID')
+
+    // The course's tabs: wrapped onto two rows where the page has 720 px or more, as in a window of 1100 px
+    // with the side bar open; scrolled sideways, in one row, where it has less, as in one of 1000.
+    await page.goto(`/courses/${courseId}`)
+    const tabs = page.locator('.course-tabs')
+    await expect(tabs).toBeVisible()
+    const strip = () =>
+      tabs.evaluate((nav) => {
+        const tops = [...nav.querySelectorAll('.course-tabs__item')].map((t) =>
+          Math.round(t.getBoundingClientRect().top),
+        )
+        return { rows: new Set(tops).size, scrolls: nav.scrollWidth > nav.clientWidth }
+      })
+    await layout(page, 1100, 800, { side: true })
+    expect(await pageWidth(page)).toBe(1100 - 48 - 260)
+    expect(await strip()).toEqual({ rows: 2, scrolls: false })
+    await page.mouse.move(0, 400)
+    await photograph(page, 'layout-course-tabs-1100')
+    await layout(page, 1000, 800, { side: true })
+    await expect.poll(strip).toEqual({ rows: 1, scrolls: true })
+    // Collapsed, the side bar leaves the same window room to wrap them again.
+    await layout(page, 1000, 800, { side: false })
+    await expect.poll(strip).toEqual({ rows: 2, scrolls: false })
+  })
+
+  test('the people and an actor’s page are laid out for the page’s width, and for their cards’, not the window’s', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signInAsRoot(page)
+
+    // Everyone registered: a card each in a window of 1000 px with the side bar open (644 px of page), and the
+    // table in the same window with it collapsed.
+    await page.goto('/admin/actors')
+    await expect(page.locator('.actors__table, .actors__cards').first()).toBeVisible()
+    await layout(page, 1000, 800, { side: true, view: 'Administration', chat: false })
+    await expect(page.locator('.actors__cards')).toBeVisible()
+    await expect(page.locator('.actors__table')).toHaveCount(0)
+    expect(await noSideways(page)).toBe(true)
+    await photograph(page, 'layout-actors-1000')
+    await layout(page, 1000, 800, { side: false, chat: false })
+    await expect(page.locator('.actors__table')).toBeVisible()
+    await expect(page.locator('.actors__cards')).toHaveCount(0)
+
+    // A person's page: the invitation and single sign-on side by side in 924 px of page, each 420 px or more…
+    await page.goto(`/admin/actors/${d.actors.yuki.actor_id}`)
+    const invite = page.locator('.actor__grid > .app-card').first()
+    const sso = page.locator('.actor__grid > .app-card').nth(1)
+    await expect(sso).toBeVisible()
+    await layout(page, 1280, 800, { side: true, view: 'Administration', chat: false })
+    expect(await stacked(invite, sso)).toBe(false)
+    expect((await box(invite)).width).toBeGreaterThanOrEqual(420)
+    // …and one above the other in 744 px, where its registration's facts take one column too.
+    await layout(page, 1100, 800, { side: true, view: 'Administration', chat: false })
+    expect(await stacked(invite, sso)).toBe(true)
+    await expect.poll(() => cellsInFirstRow(page.locator('.actor__desc'))).toBe(2)
+    expect(await noSideways(page)).toBe(true)
+
+    // An agent's tokens: a card each where their card has less than the 1000 px a table of them wants, as in
+    // 1280 px of window with the side bar open, and the table in 1920.
+    await page.goto(`/admin/actors/${d.actors.grader.actor_id}`)
+    const creds = page.locator('.creds')
+    await expect(creds.locator('.creds-token, .creds__table').first()).toBeVisible()
+    await layout(page, 1280, 800, { side: true, view: 'Administration', chat: false })
+    await expect(creds.locator('.creds-token').first()).toBeVisible()
+    await expect(creds.locator('.creds__table')).toHaveCount(0)
+    await expect.poll(() => cellsInFirstRow(page.locator('.actor__desc'))).toBe(4)
+    await photograph(page, 'layout-actor-agent-1280')
+    await layout(page, 1920, 1080, { side: true, view: 'Administration', chat: false })
+    await expect(creds.locator('.creds__table')).toBeVisible()
+    await expect(creds.locator('.creds-token')).toHaveCount(0)
   })
 })

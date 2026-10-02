@@ -6,13 +6,13 @@
 // a seat in the course and an administrator usually has none; course.list
 // lists a department's administrator only the courses they administer, so
 // any other is not found here.
-import { computed, ref } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
+import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
-import { useNarrow } from '@/composables/useMediaQuery'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
@@ -30,7 +30,11 @@ const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
 const session = useSessionStore()
 const courseStore = useCourseStore()
-const narrow = useNarrow()
+// The details in two columns while their card has room for both, a label and
+// its value each, whatever the window: the side bar takes from it. The card is
+// measured by its title, as wide as what it holds.
+const details = useTemplateRef<HTMLElement>('details')
+const narrow = useContainerNarrow(details, 539)
 /** The course's id as Core writes it, whatever the address says. */
 const id = useCanonicalId(() => props.courseId, 'courseId')
 
@@ -111,7 +115,7 @@ function onSeated(_memberId: string, actorId: string) {
 </script>
 
 <template>
-  <div>
+  <div class="course-admin">
     <PageHeader
       :title="course?.title ?? t('admin.course.title')"
       :subtitle="codeLabel || undefined"
@@ -165,9 +169,9 @@ function onSeated(_memberId: string, actorId: string) {
           "
         />
 
-        <div class="course-admin__grid">
+        <div class="course-admin__grid app-columns">
           <section class="app-card">
-            <h2 class="app-card__title">
+            <h2 ref="details" class="app-card__title">
               <span>{{ t('admin.course.details') }}</span>
               <span class="course-admin__title-actions">
                 <el-button v-if="canMove" size="small" :disabled="archived" @click="moving = true">
@@ -230,19 +234,23 @@ function onSeated(_memberId: string, actorId: string) {
 .course-admin__alert {
   margin-bottom: 12px;
 }
+/* The page's own width decides its columns, not the window's: the side bar takes from it. */
+.course-admin {
+  container-type: inline-size;
+}
 .course-admin__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: 16px;
   margin-top: 4px;
 }
 .course-admin__grid > .app-card + .app-card {
   margin-top: 0;
 }
-@media (min-width: 1500px) {
+/* Two columns (3 : 2) while the details keep room for their own two (a card of 590 px). */
+@container (max-width: 999px) {
   .course-admin__grid {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 /* A label breaks between words, never inside one (課程編 / 號). */
