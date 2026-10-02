@@ -1,0 +1,387 @@
+/// <reference lib="dom" />
+import { expect, test, type Locator, type Page } from '@playwright/test'
+import {
+  call,
+  chatButton,
+  chatWindow,
+  coursePath,
+  demo,
+  hostOnRuntime,
+  openChat,
+  signIn,
+  signInAsRoot,
+  type CoreReply,
+  type FileSpec,
+} from './support'
+
+// On a phone, back (the gesture, or Android's button) closes what is laid
+// over the page instead of leaving it: the file viewer, the chat's sheet, the
+// menu, an administrator's drawer, the top one first where one is open over
+// another (a message box, or who can read a conversation, asked over the chat
+// or an agent's conversation log first of all; a menu left open in the log
+// goes with it). Closed by its own button, an overlay goes back over the
+// entry it added, so that back from there leaves the page, as it would have
+// before it opened; a link followed from the menu takes the menu's place in
+// history; and a page reloaded with an overlay open leaves none behind. On a
+// wider screen the chat is a window that stays open from page to page, and
+// back moves between them.
+
+const tag = Date.now().toString(36)
+
+/** The page's own entry is the one shown: no overlay's is left above it. */
+async function atPagesOwnEntry(page: Page) {
+  await expect
+    .poll(() => page.evaluate(() => !(history.state as { aishieOverlay?: unknown } | null)?.aishieOverlay))
+    .toBe(true)
+}
+
+/** Two pages, the second one shown: back from it, with nothing open, leads to the first. */
+async function twoPages(page: Page, first: string, second: string) {
+  await page.goto(first)
+  await expect(page.locator('.app-header')).toBeVisible()
+  await page.goto(second)
+  await expect(page.locator('.app-header')).toBeVisible()
+}
+
+function syllabusPath() {
+  return coursePath(`documents/${demo().course.documents.syllabus}`)
+}
+
+async function openSyllabus(page: Page) {
+  await page.locator('.version-file[data-file="syllabus.txt"] .version-file__open').click()
+  const viewer = page.getByRole('dialog', { name: 'syllabus.txt' })
+  await expect(viewer).toBeVisible()
+  return viewer
+}
+
+/** Who can read the conversation shown in `pane`, and where it goes, asked from its ⋯ menu. */
+async function openReaders(page: Page, pane: Locator) {
+  await pane.getByRole('button', { name: 'Conversation options' }).click()
+  await page.locator('.chat-pane__menu:visible').getByRole('menuitem', { name: 'Who can read this' }).click()
+  // With an agent, the notice also says where the conversation goes (chat.privacy.title).
+  const readers = page.getByRole('dialog', { name: /^(Who can read this conversation|Who reads this, and where it goes)$/ })
+  await expect(readers).toBeVisible()
+  return readers
+}
+
+function menuButton(page: Page) {
+  return page.getByRole('button', { name: 'Menu', exact: true })
+}
+
+test.describe('on a phone, back', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('closes the file viewer, and the viewer closed by its button leaves back to the page before', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await twoPages(page, coursePath(), syllabusPath())
+    const url = page.url()
+
+    const viewer = await openSyllabus(page)
+    await page.goBack()
+    await expect(viewer).toBeHidden()
+    expect(page.url()).toBe(url)
+    await expect(page.locator('.version-file[data-file="syllabus.txt"]')).toBeVisible()
+
+    await openSyllabus(page)
+    await viewer.getByRole('button', { name: 'Close the preview' }).click()
+    await expect(viewer).toBeHidden()
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
+  })
+
+  test('closes the chat’s sheet, keeping what it showed, and the sheet closed by its button leaves back to the page before', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.yuki)
+    await twoPages(page, '/', coursePath())
+    const url = page.url()
+
+    await chatButton(page).click()
+    await expect(chatWindow(page)).toBeVisible()
+    await page.goBack()
+    await expect(chatWindow(page)).toHaveCount(0)
+    await expect(chatButton(page)).toBeVisible()
+    expect(page.url()).toBe(url)
+
+    const panel = await openChat(page)
+    await panel.getByRole('button', { name: 'Close the chat' }).click()
+    await expect(chatWindow(page)).toHaveCount(0)
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+  })
+
+  test('closes the menu; a link followed from it takes its place in history; closed with Escape, back leaves the page', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await twoPages(page, '/', coursePath())
+    const url = page.url()
+    const menu = page.getByRole('dialog', { name: 'Menu' })
+    // Scrolled down the course's page, which stays where it was under the menu.
+    await expect(page.locator('.course-head')).toBeVisible()
+    await page.evaluate(() => window.scrollTo(0, 120))
+    const scrolled = await page.evaluate(() => window.scrollY)
+    expect(scrolled).toBeGreaterThan(0)
+
+    await menuButton(page).click()
+    await expect(menu).toBeVisible()
+    await page.goBack()
+    await expect(menu).toBeHidden()
+    expect(page.url()).toBe(url)
+    await atPagesOwnEntry(page)
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled)
+
+    // A link in it: the page it leads to comes after the course's, with no entry of the menu's between them.
+    await menuButton(page).click()
+    await menu.getByRole('tab', { name: 'Agents' }).click()
+    await menu.getByRole('link', { name: 'My agents' }).click()
+    await expect(page).toHaveURL(/\/account\/agents$/)
+    await expect(menu).toBeHidden()
+    await page.goBack()
+    await expect(page).toHaveURL(url)
+    await expect(page.locator('.course-head')).toBeVisible()
+    await page.goForward()
+    await expect(page).toHaveURL(/\/account\/agents$/)
+    await page.goBack()
+    await expect(page).toHaveURL(url)
+
+    await menuButton(page).click()
+    await expect(menu).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+  })
+
+  test('with the viewer open over the chat, closes the viewer, then the chat, then leaves the page', async ({
+    page,
+  }) => {
+    const d = demo()
+    const I = d.actors.instructor.token
+    const Y = d.actors.yuki.token
+    const C = `/v1/courses/${d.course.id}`
+    // A course agent of this run's, which Yuki asks with her notes attached.
+    const name = `Back tutor ${tag}`
+    const agent = (await done(I, '/v1/me/agents', { display_name: name, hosting: 'runtime' })).actor_id as string
+    try {
+      await done(I, `${C}/delegates`, { actor_id: agent, preset: 'course_tutor', answers_course: true })
+      await hostOnRuntime(agent)
+      const respondents = await call(Y, 'GET', `${C}/conversations/respondents`)
+      const tutor = (respondents.body.result.respondents as { member_id: string; display_name: string }[]).find(
+        (r) => r.display_name === name,
+      )!
+      const notes: FileSpec = {
+        name: `back-notes-${tag}.md`,
+        mimeType: 'text/markdown',
+        buffer: Buffer.from(`# Notes\n\nA **stack** unwinds from the top (${tag}).\n`),
+      }
+      const url = await call(
+        Y,
+        'GET',
+        `${C}/conversations/upload-url?content_type=${encodeURIComponent(notes.mimeType)}`,
+      )
+      expect(url.body.status, JSON.stringify(url.body.error)).toBe('executed')
+      const title = `Stacks (${tag})`
+      await done(Y, `${C}/conversations`, {
+        respondent_member_id: tutor.member_id,
+        title,
+        body: `${title}\nAre my notes right?`,
+        attachments: [{ upload_token: await put(url.body, notes), filename: notes.name }],
+      })
+
+      await signIn(page, d.actors.yuki)
+      await twoPages(page, '/', coursePath())
+      const course = page.url()
+      const panel = await openChat(page)
+      const history = panel.getByRole('button', { name: 'History', exact: true })
+      const row = panel.locator('.hist-row').filter({ hasText: title })
+      await expect(async () => {
+        if ((await history.getAttribute('aria-pressed')) !== 'true') await history.click()
+        await expect(row).toBeVisible({ timeout: 5_000 })
+      }).toPass({ timeout: 30_000 })
+      await row.click()
+      const card = panel.locator('.msg-file').filter({ hasText: notes.name })
+      await card.getByRole('button', { name: new RegExp(`^Preview “${notes.name}”`) }).click()
+      const viewer = page.getByRole('dialog', { name: notes.name })
+      await expect(viewer).toBeVisible()
+
+      await page.goBack()
+      await expect(viewer).toBeHidden()
+      await expect(card).toBeVisible()
+      expect(page.url()).toBe(course)
+
+      // A message box asked over the chat is on top of it: back dismisses the box alone.
+      const mine = panel.locator('.chat-msg').filter({ hasText: 'Are my notes right?' })
+      await mine.hover()
+      await mine.getByRole('button', { name: 'Withdraw' }).click()
+      const box = page.getByRole('dialog', { name: 'Withdraw this message?' })
+      await expect(box).toBeVisible()
+      await page.goBack()
+      await expect(box).toBeHidden()
+      await expect(card).toBeVisible()
+      expect(page.url()).toBe(course)
+
+      // So is who can read the conversation, asked from its ⋯ menu: back closes that alone too.
+      const readers = await openReaders(page, panel)
+      await page.goBack()
+      await expect(readers).toBeHidden()
+      await expect(card).toBeVisible()
+      expect(page.url()).toBe(course)
+
+      await page.goBack()
+      await expect(chatWindow(page)).toHaveCount(0)
+      expect(page.url()).toBe(course)
+
+      await page.goBack()
+      await expect(page).toHaveURL(/\/$/)
+    } finally {
+      // A person may have five agents at once: this run's is suspended, for the specs after it.
+      await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})
+    }
+  })
+
+  test('with who can read a conversation open over an agent’s conversation log, closes that, then the log, its ⋯ menu with it, then leaves the page', async ({
+    page,
+  }) => {
+    const d = demo()
+    const I = d.actors.instructor.token
+    const Y = d.actors.yuki.token
+    const C = `/v1/courses/${d.course.id}`
+    const name = `Log tutor ${tag}`
+    const agent = (await done(I, '/v1/me/agents', { display_name: name, hosting: 'runtime' })).actor_id as string
+    try {
+      await done(I, `${C}/delegates`, { actor_id: agent, preset: 'course_tutor', answers_course: true })
+      await hostOnRuntime(agent)
+      const respondents = await call(Y, 'GET', `${C}/conversations/respondents`)
+      const tutor = (respondents.body.result.respondents as { member_id: string; display_name: string }[]).find(
+        (r) => r.display_name === name,
+      )!
+      const title = `Queues (${tag})`
+      await done(Y, `${C}/conversations`, {
+        respondent_member_id: tutor.member_id,
+        title,
+        body: `${title}\nWhich end comes out first?`,
+      })
+
+      await signIn(page, d.actors.instructor)
+      await twoPages(page, '/', coursePath('agents'))
+      const agents = page.url()
+      await page
+        .locator('.agent-row')
+        .filter({ hasText: name })
+        .getByRole('button', { name: 'Conversation log' })
+        .click()
+      const log = page.locator('.agent-log')
+      await expect(log.getByText(`Conversation log: ${name}`)).toBeVisible()
+      await log.locator('.log-row').filter({ hasText: title }).click()
+      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+
+      const readers = await openReaders(page, log)
+      await page.goBack()
+      await expect(readers).toBeHidden()
+      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      expect(page.url()).toBe(agents)
+
+      await page.goBack()
+      await expect(log).toBeHidden()
+      await atPagesOwnEntry(page)
+      expect(page.url()).toBe(agents)
+      // Closed with the log, it does not come back over the page.
+      await expect(readers).toBeHidden()
+
+      // Opened again on the conversation, with its ⋯ menu open: back takes the menu with the log, leaving neither over the page.
+      await page
+        .locator('.agent-row')
+        .filter({ hasText: name })
+        .getByRole('button', { name: 'Conversation log' })
+        .click()
+      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      await log.getByRole('button', { name: 'Conversation options' }).click()
+      const menu = page.locator('.chat-pane__menu:visible')
+      await expect(menu.getByRole('menuitem', { name: 'Who can read this' })).toBeVisible()
+      await page.goBack()
+      await expect(log).toBeHidden()
+      await expect(menu).toHaveCount(0)
+      await atPagesOwnEntry(page)
+      expect(page.url()).toBe(agents)
+
+      await page.goBack()
+      await expect(page).toHaveURL(/\/$/)
+    } finally {
+      await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})
+    }
+  })
+
+  test('closes an administrator’s drawer, which fills a phone’s screen', async ({ page }) => {
+    await signInAsRoot(page)
+    await twoPages(page, '/', '/admin/presets')
+    const url = page.url()
+    await page.getByRole('button', { name: 'Details' }).first().click()
+    const drawer = page.locator('.preset-drawer')
+    await expect(drawer).toBeVisible()
+    await page.goBack()
+    await expect(drawer).toBeHidden()
+    expect(page.url()).toBe(url)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+  })
+
+  test('a page reloaded with the viewer open leaves no entry of it: back leaves the page', async ({ page }) => {
+    await signIn(page, demo().actors.instructor)
+    await twoPages(page, coursePath(), syllabusPath())
+    const viewer = await openSyllabus(page)
+    await page.reload()
+    await expect(page.locator('.version-file[data-file="syllabus.txt"]')).toBeVisible()
+    await expect(viewer).toBeHidden()
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
+  })
+})
+
+test.describe('on a wider screen, back', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+
+  test('closes the file viewer too, but moves between pages under the chat’s window, which stays open', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.yuki)
+    await twoPages(page, '/', syllabusPath())
+    const url = page.url()
+    const viewer = await openSyllabus(page)
+    await page.goBack()
+    await expect(viewer).toBeHidden()
+    expect(page.url()).toBe(url)
+
+    await openChat(page)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(chatWindow(page)).toBeVisible()
+    await chatWindow(page).locator('.chat-panel__minimize').click()
+    await expect(chatWindow(page)).toHaveCount(0)
+  })
+})
+
+/** A write through Core that must be carried out; its result. */
+async function done(token: string, path: string, body: unknown) {
+  const out = await call(token, 'POST', path, body)
+  expect(out.body.status, JSON.stringify(out.body.error)).toBe('executed')
+  return out.body.result
+}
+
+/** PUTs a file's bytes to the upload URL Core gave; its upload token. */
+async function put(reply: CoreReply, file: FileSpec): Promise<string> {
+  const url = new URL(reply.result.upload_url)
+  const res = await fetch(`${demo().core}${url.pathname}${url.search}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.mimeType, ...reply.result.headers },
+    body: new Uint8Array(file.buffer),
+  })
+  expect(res.ok).toBe(true)
+  return reply.result.upload_token as string
+}

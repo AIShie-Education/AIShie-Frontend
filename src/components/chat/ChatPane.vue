@@ -58,12 +58,13 @@
 // when, through the browser's print window (usePrintLayout).
 import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, type DropdownInstance } from 'element-plus'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { useNow } from '@/composables/useNow'
 import { useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
@@ -743,6 +744,16 @@ function suggest(text: string) {
 
 // --- The ⋯ menu: who can read it, how its answers arrive ---------------------------------
 
+/** The menu, closed as the pane goes off screen (an agent's log closed by back, say), rather than left over the page. */
+const menu = ref<DropdownInstance | null>(null)
+watch(
+  () => props.active,
+  (on) => {
+    if (!on) menu.value?.handleClose()
+  },
+)
+// Who reads it and where it goes, opened from the menu or "More": over the chat's sheet or an agent's log, back closes it first.
+useBackCloses(privacyOpen, () => (privacyOpen.value = false))
 function onMenu(command: string) {
   if (command === 'readers') privacyOpen.value = true
   else if (command === 'print') void printer.print(transcript)
@@ -914,7 +925,7 @@ const closedLine = computed(() => {
       </div>
       <div class="chat-pane__head-actions">
         <slot name="actions" />
-        <el-dropdown trigger="click" placement="bottom-end" popper-class="chat-pane__menu" @command="onMenu">
+        <el-dropdown ref="menu" trigger="click" placement="bottom-end" popper-class="chat-pane__menu" @command="onMenu">
           <el-button
             text
             size="small"

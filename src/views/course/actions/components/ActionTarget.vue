@@ -19,6 +19,7 @@ import ActionTarget from './ActionTarget.vue'
 import MaybeLink from './MaybeLink.vue'
 import VersionRef from './VersionRef.vue'
 import {
+  decisionTag,
   exactDecimal,
   excerpt,
   isObject,
@@ -339,13 +340,8 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       <el-tag v-if="type === 'action.withdraw'" size="small" type="info" effect="plain">
         {{ t('actions.summary.withdrawn') }}
       </el-tag>
-      <el-tag
-        v-else-if="type === 'action.decide'"
-        size="small"
-        :type="p.decision === 'approve' ? 'success' : 'danger'"
-        effect="plain"
-      >
-        {{ p.decision === 'approve' ? t('actions.decision.approveVerb') : t('actions.decision.rejectVerb') }}
+      <el-tag v-else-if="type === 'action.decide'" size="small" :type="decisionTag(p.decision).type" effect="plain">
+        {{ decisionTag(p.decision).label }}
       </el-tag>
       <StatusTag v-else vocab="reviewState" :value="str(p.outcome)" />
       <template v-if="aboutAction">

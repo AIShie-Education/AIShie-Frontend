@@ -3,10 +3,11 @@
 // full screen, where it offers one): the course, a QR code as large as the
 // screen allows, and how long the link has left, big enough to read from the
 // back of a room. When its time is up it says so, and offers a new one,
-// which is put up in its place. Escape, or the button, takes it down.
+// which is put up in its place. Escape, back, or the button, takes it down.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import QrCode from '@/components/QrCode.vue'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { useCountdown } from '@/composables/useCountdown'
 import { countdownParts } from '@/utils/countdown'
 
@@ -21,6 +22,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ close: []; renew: [] }>()
 const { t } = useI18n()
+// Up while it is mounted: back takes it down, leaving the dialog it came from.
+useBackCloses(true, () => emit('close'))
 
 const root = ref<HTMLElement>()
 const closeButton = ref<{ $el: HTMLElement }>()

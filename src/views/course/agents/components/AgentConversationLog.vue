@@ -5,6 +5,7 @@
 // respondent_member_id), the latest activity first, and each one read as
 // course staff read it: nothing written, nothing marked read, and a message
 // withdrawn where the seat decides actions for its opener (Core checks).
+// A drawer over the page (the whole screen on a phone), which back closes.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConversationView } from '@/api/types'
@@ -12,6 +13,7 @@ import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { usePhoneScreen } from '@/composables/useMediaQuery'
 import ChatPane from '@/components/chat/ChatPane.vue'
 import { stateOf } from '@/components/chat/chat'
@@ -31,6 +33,10 @@ const open = computed({
   get: () => props.modelValue,
   set: (v: boolean) => emit('update:modelValue', v),
 })
+useBackCloses(
+  () => props.modelValue,
+  () => (open.value = false),
+)
 const shown = ref<string | null>(null)
 watch(
   () => props.agent?.id,

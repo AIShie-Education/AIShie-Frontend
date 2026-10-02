@@ -16,9 +16,11 @@
 // is a dialog, not a modal one: the page is still there to use.
 //
 // On a phone (up to 899 px wide) it is a sheet over the whole screen, a modal
-// dialog, with no edge to drag, closed with its button or Escape, which
+// dialog, with no edge to drag, closed with its button, Escape or back, which
 // keeps what it showed, as minimizing the window does; following a link in
-// it closes it too.
+// it closes it too. The window on a wider screen is not closed by back: it
+// is no modal one, and stays open from page to page, which back moves
+// between.
 //
 // Under its title bar (on a phone, on top), the course asked in (one of the
 // caller's courses where they may ask: the page's own on a course page, else
@@ -44,6 +46,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { Respondent } from '@/api/types'
 import { dragHasFiles, filesFrom } from '@/composables/useFileDrop'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePolling } from '@/composables/usePolling'
 import { useChatStore } from '@/stores/chat'
@@ -217,6 +220,8 @@ function toggleFromKeyboard() {
   }
 }
 defineExpose({ focusPanel })
+// On a phone, back closes the sheet, keeping what it showed, as its button does.
+useBackCloses(() => chat.open, minimize, { when: sheet })
 
 function onKeydown(e: KeyboardEvent) {
   if (isPanelShortcut(e) && offered.value) {
