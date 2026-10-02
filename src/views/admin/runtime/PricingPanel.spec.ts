@@ -484,7 +484,13 @@ describe('each table, by its card’s width', () => {
   it('folds a tenant’s quotas, the server’s beside them, under its name where the card has less than 690 px', async () => {
     const sizes = fakeContainerWidths({ '.tenants-card .app-card__title': 690 })
     const w = await panel()
-    expect(heads(w, '.tenants-card')).toEqual(['Person or tenant', 'Set by', 'Answers a day', 'Dollars a day', 'Actions'])
+    expect(heads(w, '.tenants-card')).toEqual([
+      'Person or tenant',
+      'Set by',
+      'Answers a day',
+      'Dollars a day',
+      'Actions',
+    ])
 
     await sizes.resize('.tenants-card .app-card__title', 689)
     await flushPromises()
