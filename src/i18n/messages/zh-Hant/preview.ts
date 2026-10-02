@@ -93,7 +93,7 @@ export default {
   zoom: {
     in: '放大',
     out: '縮小',
-    actual: '縮放{n} %：以實際大小顯示',
+    actual: '縮放{n}：以實際大小顯示',
     actualTip: '實際大小',
     fitWidth: '符合寬度',
     fit: '符合視窗',

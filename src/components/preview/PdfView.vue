@@ -603,7 +603,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           type="button"
           class="pdf-view__percent"
           :disabled="!pageCount"
-          :aria-label="t('preview.zoom.actual', { n: percent })"
+          :aria-label="t('preview.zoom.actual', { n: formatPct(percent / 100) })"
           :title="t('preview.zoom.actualTip')"
           @click="actualSize"
         >

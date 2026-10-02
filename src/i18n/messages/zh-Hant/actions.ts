@@ -382,10 +382,10 @@ export default {
     approveHint: '會立即以提出者的身分執行。若對方已無權這樣做，或提案已過期，則會改為取消。',
     rejectHint: '不會執行任何事，提出者會收到通知。',
     requestChangesHint: '不會執行任何事。提出者會得知要修改甚麼，並可再次提出。',
-    noteRequired: '請說明需要修改甚麼：要求修改必須附上說明，最多 2000 字。',
+    noteRequired: '請說明需要修改甚麼：要求修改必須附上說明，最多2000字。',
     refusal: {
       note_required: '要求修改時，必須附上說明，指出需要修改甚麼。',
-      note_too_long: '說明太長：要求修改的說明最多 2000 字。',
+      note_too_long: '說明太長：要求修改的說明最多2000字。',
     },
     reviewedHint: '記錄你已看過。這不會撤銷任何事；如需更正（例如重新評分），請另行操作。',
     escalateHint: '保留在佇列中，交由另一位成員查看。',

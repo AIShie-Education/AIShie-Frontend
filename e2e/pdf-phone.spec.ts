@@ -318,7 +318,7 @@ test.describe('on a phone', () => {
     await expect(fit).toHaveAttribute('aria-pressed', 'false')
     await expect.poll(async () => (await first.boundingBox())!.width).toBeGreaterThan(area)
     // Zoomed by hand, it says its per cent again, which goes to the actual size.
-    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+ %/)
+    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+%$/)
     await expectOneBar(page, dialog, 'bottom')
     await photograph(page, 'phone-handout-zoomed')
     await fit.click()
@@ -429,7 +429,7 @@ test.describe('on a phone of 375 × 667', () => {
       'false',
     )
     // Its buttons a little smaller, there is room for its per cent and the whole count.
-    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+ %/)
+    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+%$/)
     await expectOneBar(page, dialog, 'bottom')
     await expect(dialog.locator('.pdf-view__of')).toHaveText('of 150')
     await photograph(page, 'mid-375-exercises-zoomed')
@@ -446,12 +446,12 @@ test.describe('on a phone, in Traditional Chinese', () => {
     const dialog = await open(page, EXERCISES)
     await firstPageDrawn(page, dialog, true)
     await expectNothingCut(dialog)
-    await expect(dialog.locator('.pdf-view__of')).toHaveText('/ 150 頁')
+    await expect(dialog.locator('.pdf-view__of')).toHaveText('/ 150頁')
     await dialog.getByRole('button', { name: '放大', exact: true }).click()
     await expect(dialog.getByRole('button', { name: '符合寬度', exact: true })).toHaveAttribute('aria-pressed', 'false')
-    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+ %/)
+    await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+%$/)
     await expectNothingCut(dialog)
-    await expect(dialog.locator('.pdf-view__of')).toHaveText('/ 150 頁')
+    await expect(dialog.locator('.pdf-view__of')).toHaveText('/ 150頁')
     await photograph(page, 'phone-exercises-zh-Hant-zoomed-light')
     await inDark(page, 'phone-exercises-zh-Hant-zoomed-dark')
   })
@@ -489,7 +489,7 @@ test.describe('on a desktop', () => {
       await expectFillsWidth(dialog, first, 16)
       await expectOneBar(page, dialog, 'top')
       await expect(dialog.locator('.pdf-view__percent')).toBeVisible()
-      await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+ %/)
+      await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+%$/)
       if (file !== HANDOUT) return
 
       // A touchpad's pinch, a wheel with Ctrl held, zooms the pages, not the page they are in.

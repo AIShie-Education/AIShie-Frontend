@@ -104,7 +104,7 @@ defineExpose({ zoomIn, zoomOut, toFit, actualSize, fit, zoom })
       <button
         type="button"
         class="image-view__percent"
-        :aria-label="t('preview.zoom.actual', { n: percent })"
+        :aria-label="t('preview.zoom.actual', { n: formatPct(percent / 100) })"
         :title="t('preview.zoom.actualTip')"
         @click="actualSize"
       >
