@@ -151,10 +151,11 @@ export type DocumentFile = NonNullable<NonNullable<DocumentFull['version']>['fil
 /** One file of a document, with a fresh URL to download it under its name (document.file). */
 export type DocumentFileFull = ToolOut<'document.file'>
 /**
- * A version's text version (文字版): its file transcribed into Markdown, or
- * written by staff (document.get's version.text, document.versions',
- * document.text). Its body is the whole text in document.get while it fits
- * one part, the part asked for in document.text, and never in the list.
+ * A file's text version (文字版): the file transcribed into Markdown, or
+ * written by staff (version.files[].text in document.get and
+ * document.versions, and document.text). Its body is the whole text in
+ * document.get while it fits one part, the part asked for in document.text,
+ * and never in the list.
  */
 export type TextVersion = ToolOut<'document.text'>['text']
 export type TextStatus = 'pending' | 'working' | 'done' | 'failed' | 'skipped'

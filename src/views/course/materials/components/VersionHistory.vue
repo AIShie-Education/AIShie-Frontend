@@ -103,7 +103,7 @@ function linkTo(v: DocumentVersion) {
             </template>
           </div>
           <ul v-if="filesOf(v).length" class="version-item__files">
-            <li v-for="f in filesOf(v).slice(0, NAMED)" :key="f.id || f.position" class="version-item__file" :title="f.filename">
+            <li v-for="f in filesOf(v).slice(0, NAMED)" :key="f.id" class="version-item__file" :title="f.filename">
               {{ f.filename }}
             </li>
             <li v-if="filesOf(v).length > NAMED" class="version-item__more">

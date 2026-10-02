@@ -48,10 +48,11 @@ end; the "works around it" notes say what the front end does meanwhile.
 11. **`event.list`'s `next_seq` does not move past invisible events**, although its description
     says it "moves even when the page is empty of events the caller may see": it is set only from
     returned rows (`internal/tools/event.go`). Harmless, but the description overstates it.
-12. **A grant that exceeds the granter is accepted as a proposal.** With `member_manage` at
-    `confirm_required`, a `member.add` / `update_perms` / `rescope` / `resume` beyond the granter's
-    own seat is queued; `withinGranter` runs only at execution, so it fails when someone approves
-    it. Checking at proposal time too would keep such proposals out of the queue.
+12. **A grant that exceeded the granter was accepted as a proposal** (resolved in AIShie-Core #60).
+    With `member_manage` at `confirm_required`, a `member.add` / `update_perms` / `rescope` /
+    `resume` beyond the granter's own seat was queued and failed only when someone approved it.
+    Each of them now checks the granter's seat before it is proposed, so such a grant is refused
+    and never reaches the queue.
 13. **Downloads had no file name** (resolved in AIShie-Core #49). No name was stored for an
     uploaded file, and downloads were served `Content-Disposition: attachment` without `filename`.
     Each file of a version is named now (`files[].filename`, or the name given at

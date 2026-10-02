@@ -120,9 +120,7 @@ async function download(f: DocumentFile) {
         :aria-busy="busy === f.id ? 'true' : undefined"
         @click="download(f)"
       >
-        <el-icon aria-hidden="true"
-          ><Loading v-if="busy === f.id" class="is-loading" /><Download v-else
-        /></el-icon>
+        <el-icon aria-hidden="true"><Loading v-if="busy === f.id" class="is-loading" /><Download v-else /></el-icon>
       </button>
       <span v-if="textChip(f) || (openText && f.text)" class="version-file__side">
         <el-tag v-if="textChip(f)" :type="textChip(f)!.type" size="small" disable-transitions class="version-file__status">
