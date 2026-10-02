@@ -161,6 +161,20 @@ describe('TranscriptionCard', () => {
     expect(find(w, 'enabled').classes()).toContain('is-disabled')
   })
 
+  it('turned off by the server, says in each language to ask its operator, as the ⓘ beside it does', async () => {
+    state.settings.transcription = transcriptionOff({ available: false, unavailable_reason: 'operator_off' })
+    for (const [locale, ask] of [
+      ['en', 'ask the server’s operator'],
+      ['zh-Hant', '請聯絡伺服器營運者'],
+      ['zh-Hans', '请联系服务器运维方'],
+    ] as const) {
+      setLocale(locale)
+      const w = await card()
+      expect(find(w, 'unavailable').find('.el-alert__title').text()).toContain(ask)
+      w.unmount()
+    }
+  })
+
   it('says quietly that an older runtime does not transcribe', async () => {
     state.settings = ocrSettings()
     const w = await card()

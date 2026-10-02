@@ -776,7 +776,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   an answer (`details.reason`) or a setting of the server (`OCR=off`, `SECRETS_KEY`, `runtime.yaml`): a teacher
   who has never heard of Core takes it for a second authority deciding behind the first. Say what happens: "the
   system checks the permissions again" (「系統會再檢查一次權限」), "the agent service" (「執行環境」, 「运行环境」),
-  "The server has turned this off; ask the server's operator" (「伺服器已停用此功能，請聯絡系統管理員」), "This
+  "The server has turned this off; ask the server's operator" (「伺服器已停用此功能，請聯絡伺服器營運者」), "This
   server cannot … yet". What only the server's operator acts on (a setting, a command) goes in a tooltip beside
   the words: `<OperatorDetail :text>` (`src/views/admin/components`), its text in `runtimeAdmin.flags` or
   `ssoAdmin.flags`. The one exception is a task only the operator does, whose steps are the command and the

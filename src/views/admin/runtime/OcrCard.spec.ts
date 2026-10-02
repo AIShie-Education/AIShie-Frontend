@@ -165,6 +165,20 @@ describe('OcrCard', () => {
     expect(w.find('.ocr-card__kept').text()).toBe('Kept for when OCR can run: 繁體中文, English')
   })
 
+  it('turned off by the server, says in each language to ask its operator, as the ⓘ beside it does', async () => {
+    state.settings = ocrSettings({ available: false, unavailable_reason: 'operator_off', available_languages: [] })
+    for (const [locale, ask] of [
+      ['en', 'ask the server’s operator'],
+      ['zh-Hant', '請聯絡伺服器營運者'],
+      ['zh-Hans', '请联系服务器运维方'],
+    ] as const) {
+      setLocale(locale)
+      const w = await card()
+      expect(w.find('.ocr-card__unavailable .el-alert__title').text()).toContain(ask)
+      w.unmount()
+    }
+  })
+
   it('may turn off, where OCR cannot run, what the site had on', async () => {
     state.settings = ocrSettings({
       available: false,
