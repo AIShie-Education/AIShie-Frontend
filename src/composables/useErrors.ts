@@ -33,7 +33,33 @@ const SHARED_REASONS = new Map<string, string>([
   // An agent's owner decides or reviews what it did only where they could
   // have done it themselves without anyone's confirmation.
   ['owner_not_autonomous', 'common.errors.ownerNotAutonomous'],
+  // owner_would_be_refused, an owner deciding their agent's proposal that
+  // approving now would refuse, is said with that refusal: ownerWouldBeRefused.
 ])
+
+const STATUS_OF: Record<string, number> = { forbidden: 403, not_found: 404, conflict: 409, failed_precondition: 422 }
+
+/**
+ * The refusal an owner's decision met (owner_would_be_refused): their agent's
+ * proposal, approved now, would be refused, as details.refusal says (Core's
+ * error, { code, message, details }). It is said in the app's words, with
+ * that refusal's own in the reader's language where the app has them, and
+ * Core's otherwise.
+ */
+function ownerWouldBeRefused(details: Record<string, unknown> | undefined): string {
+  const r = details?.refusal
+  const refusal = r && typeof r === 'object' ? (r as Record<string, unknown>) : null
+  const code = typeof refusal?.code === 'string' ? refusal.code : ''
+  const message = typeof refusal?.message === 'string' ? refusal.message : ''
+  const inner = refusal?.details && typeof refusal.details === 'object' ? (refusal.details as Record<string, unknown>) : undefined
+  if (!code || inner?.reason === 'owner_would_be_refused') return t('common.errors.ownerWouldBeRefused')
+  // Said as the refusal alone: it was not recorded, and no network was met.
+  const e = new ApiError({ status: STATUS_OF[code] ?? 400, code, message, details: inner })
+  // A bare forbidden is not the owner's want of a permission, which they
+  // hold: it is a rule approving would break, said in Core's words alone.
+  const why = code === 'forbidden' && !reasonMessage(e) ? message : errorMessage(e)
+  return why ? t('common.errors.ownerWouldBeRefusedWhy', { why }) : t('common.errors.ownerWouldBeRefused')
+}
 
 /** Where a page keeps words of its own for the refusals of what it does, by reason. */
 export interface ReasonScopes {
@@ -92,6 +118,7 @@ export function reasonMessage(e: ApiError, opts: ReasonScopes = {}): string | nu
   if (ceiling) return ceiling
   const shared = SHARED_REASONS.get(reason)
   if (shared) return t(shared)
+  if (reason === 'owner_would_be_refused') return ownerWouldBeRefused(e.details)
   if (reason === 'invite_not_allowed') {
     const why = e.details?.why
     const key = `deptAdmin.errors.inviteWhy.${why}`

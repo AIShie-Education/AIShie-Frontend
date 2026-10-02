@@ -387,7 +387,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   is offered to them as their agents' proposals. The queues mark each action `yours_to_decide`;
   `useJudgeRules()` (`isOwnAgent`, `byOwner`, `block`) says why one is not the caller's, and a
   queue Core will not show is simply empty. `owner_not_autonomous` is put in words by
-  `errorMessage()`.
+  `errorMessage()`, and so is `owner_would_be_refused` (a proposal of the owner's agent that
+  approving now would refuse), with the refusal it would meet (`details.refusal`) in the reader's
+  words where the app has them, and Core's alone for a bare `forbidden`; `reasonText()` says either
+  in the same words where a decision refused so is listed, as the failed action Core records.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous

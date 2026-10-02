@@ -2,7 +2,9 @@
 // error or decision stored in its result, where an id leads, and whether the
 // caller may decide or review it.
 import type { RouteLocationRaw } from 'vue-router'
+import { ApiError } from '@/api/http'
 import type { ActionFull, Decimal, Preset } from '@/api/types'
+import { reasonMessage } from '@/composables/useErrors'
 import { i18n } from '@/i18n'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
@@ -101,7 +103,10 @@ export function reasonText(e: StoredError | null | undefined): string | null {
   } else if (reason) {
     const k1 = `actions.cancelReason.${reason}`
     const k2 = `actions.denyReason.${reason}`
-    parts.push(te(k1) ? t(k1) : te(k2) ? t(k2) : reason)
+    // Otherwise in the words the app says the refusal in when it is met
+    // (owner_not_autonomous, owner_would_be_refused with the refusal approving
+    // would meet), and as Core names it where the app has none.
+    parts.push(te(k1) ? t(k1) : te(k2) ? t(k2) : (reasonMessage(new ApiError({ status: 400, ...e })) ?? reason))
   }
   // A cancellation may say more of why: on a record from before owners were
   // fixed, that the agent's owner changed while its request waited.
@@ -219,7 +224,8 @@ export type Block =
  * level for it autonomous, its target within their reach — and then as their
  * own doing of it, whatever they hold of action_decide (by_owner). The queues
  * say which are the caller's to decide (yours_to_decide); elsewhere Core's
- * refusal says it (owner_not_autonomous).
+ * refusal says it (owner_not_autonomous, or owner_would_be_refused where
+ * approving a proposal now would be refused).
  */
 export function useJudgeRules() {
   const course = useCourseStore()
