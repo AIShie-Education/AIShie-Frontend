@@ -81,6 +81,7 @@ export default {
     byDecision: '相关决定',
     byReview: '相关审核',
     byCancel: '取消它的操作',
+    revises: '修订先前的提议',
     complete: '已全部评分',
     incomplete: '仍有作业未评分',
     decidedByOwner: '由智能体的拥有者决定',
