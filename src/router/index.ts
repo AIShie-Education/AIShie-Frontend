@@ -6,6 +6,7 @@ import accountRoutes from './modules/account'
 import adminRoutes from './modules/admin'
 import courseRoutes from './modules/course'
 import { installTitle } from './title'
+import { installBackCloses, isSamePage } from '@/composables/useBackCloses'
 import { adminNeed, mayOpen } from './access'
 
 declare module 'vue-router' {
@@ -86,8 +87,13 @@ const routes: RouteRecordRaw[] = [
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
+  // Back from an overlay comes to the page's own entry, at the same address: it stays where it was scrolled.
+  scrollBehavior: (to, from, saved) => (isSamePage(to, from) ? false : (saved ?? { top: 0 })),
 })
+
+// Back closes the file viewer, the chat's sheet or the phone's menu, and a
+// link followed from one takes the place of its entry in history.
+installBackCloses(router)
 
 // First, so that the tab is named before the sign-in check waits for Core.
 installTitle(router)
