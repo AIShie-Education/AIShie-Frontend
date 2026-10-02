@@ -145,8 +145,10 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   Keycloak; the client secret is write-only, never shown again but as its last four characters; a new
   provider is added switched off; linking existing accounts by verified email is off unless turned on,
   and says the rules it holds to; deleting one says how many accounts would lose single sign-on.
-  Without `SECRETS_KEY` on Core's server nothing is added, and the page says so. The sign-in page shows
-  a button for each provider offered.
+  Without `SECRETS_KEY` on Core's server nothing is added, and the page says so. A Core that holds the
+  site's providers to public addresses refuses an issuer on this machine or a private network, or
+  reports one that resolves there, unless its operator sets `SSO_ALLOW_PRIVATE_ISSUERS`; the form and
+  the test say so in the reader's language. The sign-in page shows a button for each provider offered.
 - **Exporting conversations for audit** (root, admins and a department's administrators, under
   *匯出對話*) — the conversations of a course, of a department and those beneath it, or (root and
   admins alone) of the whole site; of one participant if chosen, the person who asked or the agent

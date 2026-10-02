@@ -50,7 +50,9 @@ markdown-it + DOMPurify.
   version read, in its body (Core takes it as `If-Match` too); `version_mismatch` reads the list, or
   the provider, again and says so, the dialog keeping what the administrator changed over what it
   reads. Refusals are worded by reason under `ssoAdmin.refusal` (`ssoErrorText`), and Core's refusal
-  of a field (`details.field`, `fieldOf`) on that field. A client secret is write-only: it lives in its
+  of a field (`details.field`, `fieldOf`) on that field. A problem of `sso.test`'s whose reason Core
+  names in brackets is worded under `ssoAdmin.test.reason` (`problemReason`), with Core's words after
+  it, and the test's verdict says how much of the issuer was read (`reportRead`). A client secret is write-only: it lives in its
   password field's ref alone, goes only in the body of the write that gives it (an edit sends it only
   when it is replaced, never its hint), and is cleared once saved, when the kept one is chosen again
   and whenever the dialog closes. Its write goes through `write()` under `writeKey()`, which keeps the

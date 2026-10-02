@@ -95,7 +95,13 @@ export default {
     again: '再测试',
     ok: '可以使用：登录可以通过这个颁发者完成。',
     notOk: '未能使用：按目前设置，登录无法完成。',
-    issuerTested: '已在 {issuer} 读取其发现文档及密钥。过程中没有任何人登录，也没有发送密钥。',
+    // 读取了颁发者的多少内容（reportRead）。
+    read: {
+      all: '已在 {issuer} 读取其发现文档及密钥。过程中没有任何人登录，也没有发送密钥。',
+      issuer: '没有从 {issuer} 读取任何内容：这个颁发者本身未被接受。过程中没有任何人登录，也没有发送密钥。',
+      document: '未能从 {issuer} 读取任何内容：其发现文档未被读取。过程中没有任何人登录，也没有发送密钥。',
+      keys: '已在 {issuer} 读取其发现文档，但未能读取其密钥。过程中没有任何人登录，也没有发送密钥。',
+    },
     problems: '问题 | 问题 | 问题（{n}）',
     warnings: '警告 | 警告 | 警告（{n}）',
     endpoints: '端点',
@@ -123,6 +129,11 @@ export default {
       pkce: 'PKCE 方法',
     },
     notSaid: '未注明',
+    // Core 注明原因的问题：以这里的文字说明，其后附上 Core 的原文（其中列出网址）。
+    reason: {
+      issuer_address_not_allowed:
+        '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+    },
   },
 
   form: {
@@ -140,7 +151,7 @@ export default {
     issuer: '颁发者 URL',
     issuerPlaceholder: 'https://login.example.edu/…',
     issuerHint:
-      '须与提供者的发现文档（…/.well-known/openid-configuration）所写的完全相同，结尾的 / 也要一致。“测试”会读取它，不会令任何人登录，也不会发送密钥。',
+      '须与提供者的发现文档（…/.well-known/openid-configuration）所写的完全相同，结尾的 / 也要一致。“测试”会读取它，不会令任何人登录，也不会发送密钥。位于本机或私有网络的颁发者，服务器可能会拒绝，除非其运维者允许。',
     test: '测试',
     issuerLinked:
       '没有账号关联到它。 | 有 1 个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以该账号登录。 | 有 {n} 个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以这些账号登录。',
@@ -187,7 +198,7 @@ export default {
       displayNameLong: '最多 64 个字符',
       printable: '只可使用可打印字符',
       issuer_url: '须为网址，不可含用户、查询字符串或片段',
-      issuer_https: '须为 https 网址（只有本机可用 http）',
+      issuer_https: '须为 https 网址（只有本机可用 http，且须服务器允许）',
       issuer_long: '最多 500 字节',
       ascii: '只可使用可打印的 ASCII 字符',
       long: '最多 500 字节',
@@ -212,5 +223,7 @@ export default {
     sso_provider_not_found: '这个提供者已不存在：其间已有人删除它。',
     sso_provider_unavailable: '这个提供者暂时无法使用：其密钥无法打开，或无法读取其发现文档。',
     platform_role_required: '只有 root 及平台管理员可以设置单点登录。',
+    issuer_address_not_allowed:
+      '这个颁发者位于本机，或位于私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
   },
 }
