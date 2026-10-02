@@ -96,7 +96,7 @@ export function coursePath(sub = '') {
   return `/courses/${d.course.id}${sub ? `/${sub}` : ''}`
 }
 
-/** A course's tab in its strip; one that does not fit, or is past the strip's seventh place, is under More. */
+/** A course's tab in its strip; one that does not fit is under More. */
 export function courseTab(page: Page, name: string | RegExp) {
   return page.getByRole('navigation', { name: 'Course sections' }).getByRole('link', { name })
 }

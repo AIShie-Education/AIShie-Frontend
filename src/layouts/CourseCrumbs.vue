@@ -3,7 +3,10 @@
 // to Programming › Materials", rather than the page's name again. The course
 // leads to its overview, the tab to its own page where the page shown is one
 // under it (a document, under Materials), and on the grades' pages the
-// grades' tab chosen follows. On a phone the course is its code alone.
+// grades' tab chosen follows. Only the last step is the page shown
+// (aria-current): on the overview, the course is a link to it all the same,
+// marked no more than on any other page. On a phone the course is its code
+// alone.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -27,14 +30,21 @@ const sub = computed(() =>
   <nav class="course-crumbs" :aria-label="t('layout.course.crumbs')">
     <ol>
       <li class="course-crumbs__course">
+        <!-- Its own anchor: vue-router's would mark it the page on the overview, where the step after it is. -->
         <router-link
+          v-slot="{ href, navigate }"
           :to="{ name: 'course-overview', params: { courseId: props.course.id } }"
-          :title="props.course.title"
+          custom
         >
-          <span class="course-crumbs__code">
-            {{ props.course.code }}<template v-if="props.course.section"> · {{ props.course.section }}</template>
-          </span>
-          <span class="course-crumbs__title">{{ props.course.title }}</span>
+          <a :href="href" :title="props.course.title" @click="navigate">
+            <span class="course-crumbs__code"
+              >{{ props.course.code
+              }}<template v-if="props.course.section"
+                ><span class="app-sep">·</span>{{ props.course.section }}</template
+              ></span
+            >
+            <span class="course-crumbs__title">{{ props.course.title }}</span>
+          </a>
         </router-link>
       </li>
       <li class="course-crumbs__page">

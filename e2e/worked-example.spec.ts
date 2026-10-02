@@ -47,7 +47,11 @@ test.describe.serial('the worked example', () => {
     const d = demo()
     await signIn(page, d.actors.yuki)
     await page.goto(coursePath('grades'))
-    await expect(page.getByRole('heading', { name: 'My grades' })).toBeVisible()
+    // The page is the Grades tab's My grades, as the grades' own tabs mark it: its title is left to screen readers.
+    await expect(
+      page.getByRole('navigation', { name: 'Grades sections' }).getByRole('link', { name: 'My grades' }),
+    ).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
     await expect(page.getByText('No grades have been posted to you yet')).toBeVisible()
     await page.goto(coursePath(`assignments/${d.course.assignments.hw1}`))
     const attempt = page.locator('.my-work__attempt').filter({ hasText: 'Attempt 1' })
@@ -82,7 +86,11 @@ test.describe.serial('the worked example', () => {
     await signIn(page, d.actors.yuki)
     await page.goto(coursePath())
     await openCourseTab(page, 'Grades')
-    await expect(page.getByRole('heading', { name: 'My grades' })).toBeVisible()
+    // The page is the Grades tab's My grades, as the grades' own tabs mark it: its title is left to screen readers.
+    await expect(
+      page.getByRole('navigation', { name: 'Grades sections' }).getByRole('link', { name: 'My grades' }),
+    ).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
     const row = page.locator('.el-table__row').filter({ hasText: 'HW1 — Temperature converter' })
     await expect(row).toHaveCount(1)
     await expect(row).toContainText('9.5')

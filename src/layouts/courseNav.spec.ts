@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { COURSE_TABS, fitTabs, MAX_TAB_PLACES } from './courseNav'
+import { COURSE_TABS, fitTabs } from './courseNav'
 
 describe('fitTabs', () => {
   const ten = Array.from({ length: 10 }, () => 100)
 
-  it('shows every tab where they all fit within the seven places', () => {
+  it('shows every tab where they all fit, however many there are', () => {
     expect(fitTabs([100, 100, 100], 80, 400, 2)).toBe(3)
     // Exactly as wide as the strip: 3 × 100 + 2 × 2.
     expect(fitTabs([100, 100, 100], 80, 304, 2)).toBe(3)
@@ -18,17 +18,12 @@ describe('fitTabs', () => {
     ).toBe(7)
   })
 
-  it('leaves the seventh place to More where there are more than seven tabs, however wide the strip', () => {
-    expect(MAX_TAB_PLACES).toBe(7)
-    expect(fitTabs(ten, 80, 5000, 2)).toBe(6)
-    expect(
-      fitTabs(
-        Array.from({ length: 8 }, () => 10),
-        80,
-        5000,
-        2,
-      ),
-    ).toBe(6)
+  it('hides no tab that fits behind More', () => {
+    // Ten tabs of 100 px and their nine gaps: 1018.
+    expect(fitTabs(ten, 80, 1018, 2)).toBe(10)
+    expect(fitTabs(ten, 80, 5000, 2)).toBe(10)
+    // One pixel short: the last goes under More, which is narrower, in its place.
+    expect(fitTabs(ten, 80, 1017, 2)).toBe(9)
   })
 
   it('shows as many as fit beside More', () => {

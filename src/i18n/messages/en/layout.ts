@@ -50,8 +50,10 @@ export default {
     // The strip's last place, a menu of the tabs that do not fit; with the tab chosen among them, it says which.
     more: 'More',
     moreCurrent: 'More (now: {tab})',
-    // The grades' own tabs, under the Grades tab: Grades (a student's own, My grades), the gradebook, the scheme.
+    // The grades' own tabs, under the Grades tab: All grades (a student's own, My grades), the gradebook, the scheme.
+    // Not "Grades" again, which the tab strip and the top bar already say.
     gradesNav: 'Grades sections',
+    allGrades: 'All grades',
     myGrades: 'My grades',
     overview: 'Overview',
     materials: 'Materials',

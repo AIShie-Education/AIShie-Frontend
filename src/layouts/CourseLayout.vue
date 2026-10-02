@@ -3,10 +3,11 @@
 // The course's name is a line of context, not a heading: the page's header
 // (PageHeader) holds the page's one h1, and the top bar the way back up
 // (CourseCrumbs). The tabs keep to one row at any width: those that do not
-// fit, and any past the strip's seventh place, are under More at its end, which
-// is marked as the tab chosen while the page is one of them. Where the page is
-// as narrow as a phone's, the strip scrolls sideways instead, and the
-// phone's menu lists the course's tabs too (SideCourses).
+// fit are under More at its end, each still a link, and More is marked as the
+// tab chosen while the page is one of them. On a phone, where the side bar is
+// the menu's drawer and the page is as narrow as a phone's, the strip scrolls
+// sideways instead, and the phone's menu lists the course's tabs too
+// (SideCourses).
 import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -14,6 +15,8 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useContainerWidth } from '@/composables/useContainerWidth'
+import { useMediaQuery } from '@/composables/useMediaQuery'
+import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
 import { findCourse } from '@/views/admin/components/adminShared'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -79,16 +82,20 @@ const administers = useAdministersCourse()
 // --- The tab strip -----------------------------------------------------------
 // Its own width decides, never the window's: the side bar takes from the page.
 // A copy of every tab and of More, laid out unseen, gives each one's width;
-// as many tabs show as fit beside More (fitTabs). Where the page is a phone's
-// (592 px of page, as in a window of 640 without the side bar), every tab is
-// in the strip, which scrolls sideways: the active one is kept in view, and
-// each end fades while there is more beyond it.
+// as many tabs show as fit beside More (fitTabs). On a phone, where the side
+// bar is the menu's drawer and the page is a phone's (592 px of page, as in a
+// window of 640), every tab is in the strip, which scrolls sideways: the
+// active one is kept in view, and each end fades while there is more beyond
+// it. Never beside the docked side bar, however narrow the page: there a
+// mouse with no wheel to turn sideways would never reach the strip's end, and
+// the side bar does not list the tabs.
 const PHONE_PAGE_MAX = 592
 const GAP = 2
 const nav = ref<HTMLElement | null>(null)
 const measurer = ref<HTMLElement | null>(null)
 const navWidth = useContainerWidth(nav)
-const scrolls = computed(() => navWidth.value !== null && navWidth.value <= PHONE_PAGE_MAX)
+const sideInDrawer = useMediaQuery(`(max-width: ${SIDEBAR_DRAWER_MAX_WIDTH}px)`)
+const scrolls = computed(() => sideInDrawer.value && navWidth.value !== null && navWidth.value <= PHONE_PAGE_MAX)
 const widths = ref<number[]>([])
 const moreWidth = ref(0)
 function measureTabs() {
@@ -114,7 +121,14 @@ const moreLabel = computed(() => {
   const current = moreTabs.value.find((tab) => tab.name === activeTab.value)
   return current ? t('layout.course.moreCurrent', { tab: t(current.label) }) : t('layout.course.more')
 })
-function openMore(name: string) {
+/**
+ * A tab chosen in More's menu, from the keyboard or by a click on its link.
+ * A click with a modifier key is the link's own (a new tab or window), and
+ * the page stays; any other opens the tab here.
+ */
+function openMore(name: string, _item: unknown, e?: Event) {
+  if (e instanceof MouseEvent && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) return
+  e?.preventDefault()
   void router.push({ name, params: { courseId: props.courseId } })
 }
 
@@ -184,10 +198,13 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
       <template v-if="ready && course.course">
         <!-- Which course this is: a line of context, not a heading. -->
         <header class="course-head">
-          <span class="course-head__code">
-            {{ course.course.code }}<template v-if="course.course.section"> · {{ course.course.section }}</template>
-          </span>
-          <span class="course-head__title">{{ course.course.title }}</span>
+          <span class="course-head__code"
+            >{{ course.course.code
+            }}<template v-if="course.course.section"
+              ><span class="app-sep">·</span>{{ course.course.section }}</template
+            ></span
+          >
+          <span class="course-head__title" :title="course.course.title">{{ course.course.title }}</span>
           <span class="course-head__tags">
             <StatusTag vocab="courseStatus" :value="course.course.status" />
             <StatusTag v-if="course.role" vocab="role" :value="course.role" />
@@ -259,6 +276,7 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
               </button>
               <template #dropdown>
                 <el-dropdown-menu>
+                  <!-- Each a link, as in the strip: its address, to open in a new tab or to copy. -->
                   <el-dropdown-item
                     v-for="tab in moreTabs"
                     :key="tab.name"
@@ -266,8 +284,12 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
                     :class="{ 'is-active': activeTab === tab.name }"
                     :aria-current="activeTab === tab.name ? 'page' : undefined"
                   >
-                    <el-icon aria-hidden="true"><component :is="tab.icon" /></el-icon>
-                    <span>{{ t(tab.label) }}</span>
+                    <router-link v-slot="{ href }" :to="{ name: tab.name, params: { courseId } }" custom>
+                      <a :href="href" class="course-tabs__menu-link" tabindex="-1">
+                        <el-icon aria-hidden="true"><component :is="tab.icon" /></el-icon>
+                        <span>{{ t(tab.label) }}</span>
+                      </a>
+                    </router-link>
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -312,17 +334,20 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   margin-right: auto;
   line-height: 1.6;
 }
-/* Which course: its code, its name in the sans, and its status, on one line where it fits. */
+/* Which course: its code, its name in the sans, and its status, on one line. A long name gives way, cut
+   short with an ellipsis (the top bar, its title and the side bar say it in full); the code and the status
+   never do. Only where the page is a phone's do they wrap, the name then on two lines at most. */
 .course-head {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   column-gap: 10px;
   row-gap: 2px;
   min-height: 28px;
   margin-bottom: 6px;
 }
 .course-head__code {
+  flex: none;
   font-size: 13px;
   font-weight: var(--app-weight-strong, 600);
   color: var(--app-indigo);
@@ -330,19 +355,39 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   white-space: nowrap;
 }
 .course-head__title {
+  flex: 0 1 auto;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--app-font-sans);
   font-size: 19px;
   line-height: 28px;
   font-weight: var(--app-weight-strong, 600);
   color: var(--app-ink);
-  word-break: break-word;
 }
 .course-head__tags {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+}
+@container (max-width: 592px) {
+  .course-head {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .course-head__title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    word-break: break-word;
+  }
+  .course-head__tags {
+    flex-wrap: wrap;
+  }
 }
 .course-head__admin {
   display: inline-flex;
@@ -370,7 +415,7 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   box-shadow: inset 0 -1px 0 var(--app-line);
   --fade: 16px;
 }
-/* A phone's page: every tab in the strip, which scrolls sideways. */
+/* A phone: every tab in the strip, which scrolls sideways (by touch: no bar). */
 .course-tabs.is-scrolling {
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -389,7 +434,13 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   mask-image: linear-gradient(to left, #000 calc(100% - var(--fade)), transparent);
 }
 .course-tabs.has-more-start.has-more-end {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--fade),
+    #000 calc(100% - var(--fade)),
+    transparent
+  );
   mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
 }
 .course-tabs__item {
@@ -447,9 +498,18 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 </style>
 
 <style>
-/* More's menu: the tab chosen, if it is one of them, marked as the strip marks it. */
+/* More's menu: each item a link filling it; the tab chosen, if it is one of them, marked as the strip marks it. */
 .course-tabs__menu .el-dropdown-menu__item {
+  padding: 0;
+}
+.course-tabs__menu-link {
+  display: flex;
+  flex: 1;
+  align-items: center;
   gap: 8px;
+  padding: 5px 16px;
+  color: inherit;
+  text-decoration: none;
 }
 .course-tabs__menu .el-dropdown-menu__item .el-icon {
   margin-right: 0;

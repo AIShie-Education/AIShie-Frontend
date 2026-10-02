@@ -410,10 +410,10 @@ test.describe('an administrator’s pages beside the side bar, under the chat’
     await layout(page, 1100, 800, { side: true, view: 'Administration' })
     await expect.poll(() => headings(tree)).not.toContain('ID')
 
-    // The course's tabs: one row at every width, never wrapped. As many as fit by the strip's own width, seven
-    // places at most, the rest under More: in a window of 1100 px with the side bar open, fewer than with it
-    // collapsed in one of 1000, where six and More fit. Where the page is a phone's, every tab is in the strip,
-    // which scrolls sideways.
+    // The course's tabs: one row at every width, never wrapped. As many as fit by the strip's own width, the rest
+    // under More, and only those: in a window of 1100 px with the side bar open, fewer than with it collapsed in
+    // one of 1000. Beside the docked side bar the strip never scrolls, however narrow the page; on a phone, where
+    // the side bar is the menu's drawer and the page is a phone's, every tab is in the strip, which scrolls.
     await page.goto(`/courses/${courseId}`)
     const tabs = page.locator('.course-tabs')
     await expect(tabs).toBeVisible()
@@ -432,11 +432,15 @@ test.describe('an administrator’s pages beside the side bar, under the chat’
     expect(await pageWidth(page)).toBe(1100 - 48 - 260)
     await expect.poll(strip).toMatchObject({ rows: 1, scrolls: false, more: true })
     const beside = (await strip()).places
-    expect(beside).toBeLessThanOrEqual(7)
     await page.mouse.move(0, 400)
     await photograph(page, 'layout-course-tabs-1100')
     await layout(page, 1000, 800, { side: false })
-    await expect.poll(strip).toEqual({ rows: 1, scrolls: false, places: 7, more: true })
+    await expect.poll(async () => (await strip()).places).toBeGreaterThan(beside)
+    expect(await strip()).toMatchObject({ rows: 1, scrolls: false })
+    // The side bar docked beside a page as narrow as a phone's (a window of 900 px): More, not a strip to scroll.
+    await layout(page, 900, 800, { side: true })
+    expect(await pageWidth(page)).toBe(900 - 48 - 260)
+    await expect.poll(strip).toMatchObject({ rows: 1, scrolls: false, more: true })
     // Narrower than the six tabs (a window of 700 px, its side bar a menu): fewer of them beside More, one row.
     await page.setViewportSize({ width: 700, height: 800 })
     await expect.poll(async () => (await strip()).places).toBeLessThan(7)

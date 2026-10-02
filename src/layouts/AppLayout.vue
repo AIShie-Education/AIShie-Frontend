@@ -115,7 +115,7 @@ const crumbsCourse = computed(() => {
       <el-header class="app-header" height="56px">
         <div class="app-header__left">
           <el-button v-if="narrow" text circle :aria-label="t('layout.menu')" @click="drawer = true">
-            <el-icon :size="20"><Menu /></el-icon>
+            <el-icon :size="20"><Expand /></el-icon>
           </el-button>
           <CourseCrumbs v-if="crumbsCourse" :course="crumbsCourse" class="app-header__crumbs" />
           <span v-else class="app-header__title">{{ pageTitle }}</span>

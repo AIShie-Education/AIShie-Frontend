@@ -38,6 +38,14 @@ const inDrawer = inject(SIDE_IN_DRAWER, false)
 const openCourse = useCourseStore()
 const courseNav = useCourseNav()
 const tabsOf = (id: string) => inDrawer && pageCourse.value === id && openCourse.courseId === id && !!openCourse.course
+/**
+ * How the course the page is in is marked: as the page itself on its
+ * overview, the page its link leads to; on any other of its pages, and
+ * wherever its tabs are listed under it (one of which is the page), as the
+ * course the page is in, not the page.
+ */
+const courseCurrent = (id: string) =>
+  pageCourse.value !== id ? undefined : route.name === 'course-overview' && !tabsOf(id) ? 'page' : 'true'
 /** The course whose administration page this is. */
 const adminCourse = computed(() =>
   route.name === 'admin-course' && typeof route.params.courseId === 'string' ? route.params.courseId : null,
@@ -112,7 +120,7 @@ const archivedCount = computed(
           :to="{ name: 'course-overview', params: { courseId: m.course_id } }"
           class="side-item side-course"
           :class="{ 'is-active': pageCourse === m.course_id }"
-          :aria-current="pageCourse === m.course_id ? 'page' : undefined"
+          :aria-current="courseCurrent(m.course_id)"
           :title="m.title"
         >
           <span class="side-course__top">
@@ -177,7 +185,7 @@ const archivedCount = computed(
     </div>
 
     <router-link :to="{ name: 'home' }" class="side-item side-link" :class="{ 'is-active': route.name === 'home' }">
-      <el-icon aria-hidden="true"><Grid /></el-icon>
+      <el-icon aria-hidden="true"><Collection /></el-icon>
       <span>{{ t('common.nav.home') }}</span>
     </router-link>
   </div>

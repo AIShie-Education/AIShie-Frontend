@@ -6,9 +6,8 @@
 // coursePage.ts) all read it here, so that they never disagree.
 //
 // Navigation's icons are outlined, never filled (docs/CONVENTIONS.md): a
-// filled glyph in a row of outlined ones reads as chosen, or as news. They
-// are imported, not named, so that the lint rule against *Filled icons in
-// navigation (eslint.config.js) sees them.
+// filled glyph in a row of outlined ones reads as chosen, or as news; the
+// lint rule against filled icons in navigation (eslint.config.js) sees these.
 import { computed, type Component } from 'vue'
 import { useRoute, type RouteLocationRaw } from 'vue-router'
 import {
@@ -42,9 +41,8 @@ export interface CourseTab {
 /** The grades' own tabs, each a page of its own, under the course's one Grades tab. */
 export const GRADES_PAGES = ['course-grades', 'course-gradebook', 'course-scheme'] as const
 
-// In the order most used: what does not fit, or is past the seventh place, is
-// under More at the strip's end, and on a phone the strip scrolls, so what is
-// at its end is furthest away.
+// In the order most used: what does not fit is under More at the strip's end,
+// and on a phone the strip scrolls, so what is at its end is furthest away.
 // prettier-ignore
 export const COURSE_TABS: CourseTab[] = [
   { name: 'course-overview', label: 'layout.course.overview', icon: House },
@@ -61,22 +59,19 @@ export const COURSE_TABS: CourseTab[] = [
   { name: 'course-my-actions', label: 'layout.course.myActions', icon: Clock, perms: ['document_read'] },
 ]
 
-/** The most places the strip has, More among them: past that, the rest are under More. */
-export const MAX_TAB_PLACES = 7
-
 /**
  * How many of the tabs show in the strip, in order; the rest are under More,
  * at the strip's end. `widths` are the tabs' own, `more` the More button's,
  * `room` the strip's width and `gap` the space between two of them. All of
- * them show where they all fit within `places`; otherwise as many as fit
- * beside More within `places` (at least one: More alone would say nothing of
- * where the page is).
+ * them show where they all fit; otherwise as many as fit beside More (at
+ * least one: More alone would say nothing of where the page is). More holds
+ * only what does not fit: a tab that fits is never hidden behind it.
  */
-export function fitTabs(widths: number[], more: number, room: number, gap: number, places = MAX_TAB_PLACES): number {
+export function fitTabs(widths: number[], more: number, room: number, gap: number): number {
   const n = widths.length
   const span = (k: number) => widths.slice(0, k).reduce((sum, w) => sum + w, 0) + gap * Math.max(0, k - 1)
-  if (n <= places && span(n) <= room) return n
-  let k = Math.min(n - 1, places - 1)
+  if (span(n) <= room) return n
+  let k = n - 1
   while (k > 1 && span(k) + gap + more > room) k--
   return Math.max(1, k)
 }
@@ -146,7 +141,8 @@ export function useCourseNav() {
     return [
       {
         name: 'course-grades',
-        label: mine ? 'layout.course.myGrades' : 'layout.course.grades',
+        // Not "Grades" again: the tab strip and the top bar say that already.
+        label: mine ? 'layout.course.myGrades' : 'layout.course.allGrades',
         icon: Notebook,
         to: { name: 'course-grades', params, query: student ? { student } : {} },
       },

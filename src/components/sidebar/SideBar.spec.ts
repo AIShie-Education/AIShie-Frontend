@@ -684,6 +684,15 @@ describe('on a course’s pages', () => {
     expect(last.get('[aria-current="page"]').text()).toBe('Materials')
   })
 
+  it('marks only the tab as the page on the overview, the course before it a link like any other', async () => {
+    const { w } = await mountAs('student', { path: '/courses/k1', openCourse: 'k1' })
+    const crumbs = w.get('.app-header nav.course-crumbs')
+    expect(crumbs.findAll('[aria-current]').map((el) => [el.text(), el.attributes('aria-current')])).toEqual([
+      ['Overview', 'page'],
+    ])
+    expect(crumbs.get('li a').attributes('href')).toBe('/courses/k1')
+  })
+
   it('follows Grades with the grades’ tab shown', async () => {
     const { w } = await mountAs('student', { path: '/courses/k1/scheme', openCourse: 'k1' })
     const steps = w.findAll('.course-crumbs li')
@@ -710,6 +719,9 @@ describe('on a course’s pages', () => {
     const items = [...tabs.querySelectorAll<HTMLAnchorElement>('a')]
     expect(items.map((a) => a.textContent?.trim())).toContain('Assignments')
     expect(tabs.querySelector('[aria-current="page"]')?.textContent?.trim()).toBe('Materials')
+    // The course over them is the one the page is in, not the page, which is the tab.
+    expect(drawer.querySelector('.side-course[href="/courses/k1"]')?.getAttribute('aria-current')).toBe('true')
+    expect(drawer.querySelectorAll('[aria-current="page"]')).toHaveLength(1)
 
     const overlay = drawer.closest<HTMLElement>('.el-overlay')!
     items.find((a) => a.textContent?.trim() === 'Assignments')!.click()
@@ -718,8 +730,10 @@ describe('on a course’s pages', () => {
     expect(overlay.style.display).toBe('none')
   })
 
-  it('lists no course’s tabs in the docked side bar', async () => {
+  it('lists no course’s tabs in the docked side bar, where the course is the page only on its overview', async () => {
     const { w } = await mountAs('student', { path: '/courses/k1/materials', openCourse: 'k1' })
-    expect(w.get('#side-bar').find('nav.side-course-tabs').exists()).toBe(false)
+    const side = w.get('#side-bar')
+    expect(side.find('nav.side-course-tabs').exists()).toBe(false)
+    expect(side.get('.side-course[href="/courses/k1"]').attributes('aria-current')).toBe('true')
   })
 })

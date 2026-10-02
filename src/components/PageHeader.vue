@@ -32,7 +32,7 @@ function filled(nodes: VNode[] | undefined): boolean {
 </script>
 
 <template>
-  <div class="page-header" :class="{ 'is-quiet': quiet }">
+  <div class="page-header" :class="{ 'is-quiet': quiet, 'in-course': !!coursePage }">
     <div class="page-header__main">
       <router-link
         v-if="back"
@@ -111,10 +111,13 @@ function filled(nodes: VNode[] | undefined): boolean {
   white-space: nowrap;
   border: 0;
 }
+/* Inside a course, under its line of context and its tabs, the page's content follows 12 px under its header. */
+.page-header.in-course {
+  margin-bottom: 12px;
+}
 /* Then the subtitle and the actions share one row, the actions at its end. */
 .page-header.is-quiet {
   align-items: center;
-  margin-bottom: 12px;
 }
 /* The line under it takes what the actions leave, down to 320 px, before the actions go under it. */
 .page-header.is-quiet .page-header__main {

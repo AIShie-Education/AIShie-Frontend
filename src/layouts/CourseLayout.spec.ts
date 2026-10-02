@@ -187,58 +187,132 @@ async function mountCourse(to: RouteLocationRaw, role: 'instructor' | 'student' 
 }
 const stripTabs = (w: VueWrapper) => w.findAll('.course-tabs a.course-tabs__item').map((a) => a.text())
 
+/** A strip of `width` px whose tabs, and More, are 100 px each, as a browser would lay them out. */
+function narrowStrip(width: number) {
+  fakeContainerWidths({ '.course-tabs': width })
+  const real = Element.prototype.getBoundingClientRect
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    return this.closest('.course-tabs__measure') ? ({ width: 100 } as DOMRect) : real.call(this)
+  })
+}
+
+/** A window as narrow as a phone's (or not), where the side bar is the menu's drawer. */
+function phoneWindow(phone: boolean) {
+  vi.stubGlobal('matchMedia', (media: string) => ({
+    matches: phone && /max-width/.test(media),
+    media,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }))
+}
+
 describe('CourseLayout, on a course’s pages', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
 
   it('names the course in a line of context, its code, its name and its status, and leaves the h1 to the page', async () => {
     const w = await mountCourse({ name: 'course-materials', params: { courseId: COURSE } })
     const head = w.find('.course-head')
-    expect(head.find('.course-head__code').text()).toBe('CS201 · A')
+    expect(head.find('.course-head__code').text()).toBe('CS201·A')
     expect(head.find('.course-head__title').text()).toBe('Data Structures')
+    // Cut short where it is long, and said in full on hover.
+    expect(head.find('.course-head__title').attributes('title')).toBe('Data Structures')
     expect(head.text()).toContain('Active')
     expect(head.find('h1').exists()).toBe(false)
     expect(w.findAll('h1').map((h1) => h1.text())).toEqual(['Materials'])
   })
 
-  it('offers a teacher six tabs and More, the seventh place, with the rest under it', async () => {
+  it('offers a teacher every one of their ten tabs where they fit, with no More', async () => {
     const w = await mountCourse({ name: 'course-materials', params: { courseId: COURSE } })
-    expect(stripTabs(w)).toEqual(TEACHER_TABS.slice(0, 6))
-    const more = w.find('.course-tabs .course-tabs__more')
-    expect(more.text()).toBe('More')
-    expect(more.classes()).not.toContain('is-active')
+    expect(stripTabs(w)).toEqual(TEACHER_TABS)
+    expect(w.find('.course-tabs .course-tabs__more').exists()).toBe(false)
     expect(w.find('.course-tabs a.is-active').text()).toBe('Materials')
     // The gradebook and the grading scheme are no tabs of their own: they are the Grades tab's.
     expect(w.text()).not.toContain('Gradebook')
   })
 
-  it('marks More as the tab chosen while the page is one of those under it, and says which', async () => {
-    const w = await mountCourse({ name: 'course-members', params: { courseId: COURSE } })
-    const more = w.find('.course-tabs .course-tabs__more')
-    expect(more.classes()).toContain('is-active')
-    expect(more.attributes('aria-label')).toBe('More (now: Members)')
-    expect(w.find('.course-tabs a.is-active').exists()).toBe(false)
-  })
-
-  it('shows as many tabs as fit beside More, by the strip’s own width', async () => {
-    fakeContainerWidths({ '.course-tabs': 700 })
-    const real = Element.prototype.getBoundingClientRect
-    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-      return this.closest('.course-tabs__measure') ? ({ width: 100 } as DOMRect) : real.call(this)
-    })
+  it('shows as many tabs as fit beside More, by the strip’s own width, and only the rest under it', async () => {
+    narrowStrip(700)
     const w = await mountCourse({ name: 'course-overview', params: { courseId: COURSE } })
     await new Promise((done) => setTimeout(done))
     // Five tabs of 100 px, More's 100 px, and the 2 px between each: 610 of 700. A sixth would need 712.
     expect(stripTabs(w)).toEqual(TEACHER_TABS.slice(0, 5))
-    expect(w.find('.course-tabs .course-tabs__more').exists()).toBe(true)
-    vi.restoreAllMocks()
+    const more = w.find('.course-tabs .course-tabs__more')
+    expect(more.text()).toBe('More')
+    expect(more.classes()).not.toContain('is-active')
   })
 
-  it('puts every tab in the strip, which scrolls, where the page is a phone’s', async () => {
+  it('lists the tabs under More as links, and marks More as the tab chosen while the page is one of them', async () => {
+    narrowStrip(700)
+    const w = await mountCourse({ name: 'course-members', params: { courseId: COURSE } })
+    await new Promise((done) => setTimeout(done))
+    const more = w.find('.course-tabs .course-tabs__more')
+    expect(more.classes()).toContain('is-active')
+    expect(more.attributes('aria-label')).toBe('More (now: Members)')
+    expect(w.find('.course-tabs a.is-active').exists()).toBe(false)
+    await more.trigger('click')
+    await flushPromises()
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('.course-tabs__menu [role="menuitem"] a')]
+    expect(links.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual(
+      TEACHER_TABS.slice(5).map((label) => [label, expect.stringMatching(new RegExp(`^/courses/${COURSE}`))]),
+    )
+    expect(links.find((a) => a.textContent?.trim() === 'Members')!.getAttribute('href')).toBe(
+      `/courses/${COURSE}/members`,
+    )
+  })
+
+  it('opens a tab chosen under More here, but leaves a click with a modifier key to the link', async () => {
+    narrowStrip(700)
+    const w = await mountCourse({ name: 'course-overview', params: { courseId: COURSE } })
+    await new Promise((done) => setTimeout(done))
+    const router = (w.vm as unknown as { $router: import('vue-router').Router }).$router
+    await w.find('.course-tabs .course-tabs__more').trigger('click')
+    await flushPromises()
+    const link = () =>
+      [...document.querySelectorAll<HTMLAnchorElement>('.course-tabs__menu a')].find(
+        (a) => a.textContent?.trim() === 'Activity',
+      )!
+    // What the menu made of it, seen last, before jsdom (which opens no new tab) would follow the link.
+    let leftToTheLink = false
+    document.addEventListener(
+      'click',
+      (e) => {
+        leftToTheLink = !e.defaultPrevented
+        e.preventDefault()
+      },
+      { once: true },
+    )
+    link().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, metaKey: true }))
+    await flushPromises()
+    expect(leftToTheLink).toBe(true)
+    expect(router.currentRoute.value.name).toBe('course-overview')
+    const here = new MouseEvent('click', { bubbles: true, cancelable: true })
+    link().dispatchEvent(here)
+    await flushPromises()
+    expect(here.defaultPrevented).toBe(true)
+    expect(router.currentRoute.value.name).toBe('course-activity')
+  })
+
+  it('puts every tab in the strip, which scrolls, on a phone, where the page is a phone’s', async () => {
+    phoneWindow(true)
     fakeContainerWidths({ '.course-tabs': 560 })
     const w = await mountCourse({ name: 'course-overview', params: { courseId: COURSE } })
     expect(stripTabs(w)).toEqual(TEACHER_TABS)
     expect(w.find('.course-tabs').classes()).toContain('is-scrolling')
     expect(w.find('.course-tabs .course-tabs__more').exists()).toBe(false)
+  })
+
+  it('never scrolls the strip beside the docked side bar, however narrow the page: More holds the rest', async () => {
+    phoneWindow(false)
+    narrowStrip(544)
+    const w = await mountCourse({ name: 'course-overview', params: { courseId: COURSE } })
+    await new Promise((done) => setTimeout(done))
+    expect(w.find('.course-tabs').classes()).not.toContain('is-scrolling')
+    // Four tabs, More, and their gaps: 508 of 544.
+    expect(stripTabs(w)).toEqual(TEACHER_TABS.slice(0, 4))
+    expect(w.find('.course-tabs .course-tabs__more').exists()).toBe(true)
   })
 
   it('offers a student every one of their seven tabs, with no More', async () => {
@@ -275,7 +349,8 @@ describe('CourseLayout, on a course’s pages', () => {
     const w = await mountCourse({ name: 'course-gradebook', params: { courseId: COURSE, studentMemberId: 'S1' } })
     expect(w.find('.course-tabs a.is-active').text()).toBe('Grades')
     const subs = w.findAll('.page-header .course-subtabs a')
-    expect(subs.map((a) => a.text())).toEqual(['Grades', 'Gradebook', 'Grading scheme'])
+    // The first is not "Grades" again: the tab strip and the top bar say that.
+    expect(subs.map((a) => a.text())).toEqual(['All grades', 'Gradebook', 'Grading scheme'])
     expect(subs[0]!.attributes('href')).toBe(`/courses/${COURSE}/grades?student=S1`)
     expect(subs[1]!.attributes('aria-current')).toBe('page')
     expect(w.find('.page-header h1').classes()).toContain('is-quiet')

@@ -50,8 +50,10 @@ export default {
     // The strip's last place, a menu of the tabs that do not fit; with the tab chosen among them, it says which.
     more: '更多',
     moreCurrent: '更多（当前：{tab}）',
-    // The grades' own tabs, under the Grades tab: Grades (a student's own, My grades), the gradebook, the scheme.
+    // The grades' own tabs, under the Grades tab: All grades (a student's own, My grades), the gradebook, the scheme.
+    // Not "Grades" again, which the tab strip and the top bar already say.
     gradesNav: '成绩栏目',
+    allGrades: '全部成绩',
     myGrades: '我的成绩',
     overview: '概览',
     materials: '教材',
