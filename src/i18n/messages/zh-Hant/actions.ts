@@ -337,6 +337,10 @@ export default {
     older: '所回覆的訊息在對話較早的部分。',
     unreadable: '無法向你顯示所回覆的訊息。',
     reply: '回覆',
+    // The course materials the reply says it relied on, as the proposal keeps them: by id alone, so counted.
+    sources: '依據{n}項課程教材',
+    sourcesTip: '代理以編號列出這些教材。批准回覆時會再次檢查每一項，每位讀者看到的是他們各自可開啟的部分。',
+    noSources: '未引用課程教材',
   },
   withdraw: {
     action: '撤回',

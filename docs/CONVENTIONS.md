@@ -804,6 +804,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   every read of a Core that keeps drafts (`draft`, null for none) and, once one has carried it,
   waits naming the version held (`seen_draft_version`), so that each new version shows as soon as
   the agent writes it; the posted answer takes its place.
+- **What an answer relied on** (its `sources`, AIShie-Core#69, `MessageSource`) is under its words
+  and files (`ChatMessageSources`, each source a `ChatMessageSource`), as Core shows it to the reader
+  now: one named on a quiet line (「依據：《title》· 第 3 頁」), several summed up by the first with a
+  title and how many, the line opening to list them. A whole source opens the version read: with a
+  file, that file in the viewer among the version's (`document.get` with its `version_id`, read on
+  the click), at the page or slide named (`openPreview`'s `page`, which `PdfView` opens at, a
+  slide's in its PDF); without one, the document's page at `?version=`. `other_version` leads to the
+  document as it is now and says the answer read an earlier version; `restricted` is said to be a
+  course material the reader cannot open, with no title and no link. An empty list is the neutral
+  pill 「未引用課程教材」; no `sources` (or `null`) is an answer that did not say, and shows nothing.
+  A proposed answer keeps its sources by id alone: the queue and the action's page count them
+  (`AnswerSources`).
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose
