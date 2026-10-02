@@ -1,6 +1,6 @@
 export default {
   appName: 'AIshie',
-  tagline: '为 AI 智能体时代而设计的学习管理系统',
+  tagline: '为 AI 智能体时代打造的学习管理系统',
   actions: {
     save: '保存',
     cancel: '取消',

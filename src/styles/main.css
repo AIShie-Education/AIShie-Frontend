@@ -80,8 +80,11 @@ summary:focus-visible,
   box-shadow: var(--app-shadow-raised);
 }
 .app-auth-page__wordmark {
-  height: 32px;
   margin-bottom: 16px;
+}
+/* Over the wordmark's own (scoped) 24 px height. */
+.app-auth-page .app-wordmark.app-auth-page__wordmark {
+  height: 32px;
 }
 @media (max-width: 480px) {
   .app-auth-page__card {

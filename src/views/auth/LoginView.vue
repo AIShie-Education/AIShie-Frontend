@@ -39,7 +39,8 @@ const serverDown = ref(false)
 // password form is behind "Use your student number and password instead".
 // The page waits a moment for Core to say (METHODS_WAIT), so as not to show
 // the form and then take it away; after that the form is offered, and a
-// provider Core names later does not take away a form already typed in.
+// provider Core names later does not take away a form already typed in, or
+// one the person has moved into.
 const ssoMethods = shallowRef<SsoMethod[]>([])
 const ssoLabel = (m: SsoMethod) => m.label || t('auth.ssoDefault')
 const METHODS_WAIT = 400
@@ -50,6 +51,15 @@ const ssoFirst = computed(() => ssoMethods.value.length > 0 && !passwordChosen.v
 function usePassword() {
   passwordChosen.value = true
   void nextTick(() => (document.querySelector('input[name="login"]') as HTMLInputElement | null)?.focus())
+}
+/** Back to single sign-on: focus goes to its first button, as the form it was in is hidden. */
+function useSso() {
+  passwordChosen.value = false
+  void nextTick(() => (document.querySelector('.login__sso') as HTMLElement | null)?.focus())
+}
+/** The person is in the password form: typing in it, or with focus in one of its fields. */
+function inForm(): boolean {
+  return touched.login || touched.password || !!document.activeElement?.closest('.login__form')
 }
 
 const next = computed(() => {
@@ -92,7 +102,7 @@ onMounted(async () => {
   const wait = setTimeout(() => (methodsSettled.value = true), METHODS_WAIT)
   void authMethods()
     .then((m) => {
-      if (methodsSettled.value && (touched.login || touched.password)) passwordChosen.value = true
+      if (methodsSettled.value && inForm()) passwordChosen.value = true
       ssoMethods.value = ssoButtons(m)
       byLoginId.value = acceptsLoginId(m)
     })
@@ -207,6 +217,7 @@ function sso(m: SsoMethod) {
         :rules="rules"
         :validate-on-rule-change="false"
         label-position="top"
+        class="login__form"
         @submit.prevent="signIn"
       >
         <el-form-item :label="byLoginId ? t('auth.loginOrEmail') : t('auth.email')" prop="login">
@@ -240,7 +251,7 @@ function sso(m: SsoMethod) {
           link
           type="primary"
           class="login__other login__use-sso"
-          @click="passwordChosen = false"
+          @click="useSso"
         >
           {{ t('auth.useSso') }}
         </el-button>
@@ -284,7 +295,8 @@ function sso(m: SsoMethod) {
   flex-direction: column;
   gap: 10px;
 }
-.login__sso-list .el-button + .el-button {
+/* The link below keeps its own margins: centred under the buttons, as it is under the password form. */
+.login__sso-list .el-button + .el-button:not(.login__other) {
   margin-left: 0;
 }
 /* A long name keeps to the card's width. */

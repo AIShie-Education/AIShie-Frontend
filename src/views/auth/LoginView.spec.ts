@@ -209,6 +209,42 @@ describe('single sign-on first', () => {
   })
 })
 
+describe('single sign-on first, from the keyboard', () => {
+  const START = '/v1/auth/sso/start'
+
+  it('keeps the form a person has moved into, before typing, when Core names a provider late', async () => {
+    vi.useFakeTimers()
+    try {
+      let answer!: (m: AuthMethods) => void
+      vi.mocked(authMethods).mockReturnValue(new Promise((resolve) => (answer = resolve)))
+      const w = await mountAt('/login', 'en')
+      await vi.advanceTimersByTimeAsync(400)
+      const input = w.find<HTMLInputElement>('input[name="login"]')
+      input.element.focus()
+      answer({ password: true, sso: { label: 'School NetID', start: START } })
+      await flushPromises()
+      expect(w.find('form.el-form').isVisible()).toBe(true)
+      expect(document.activeElement).toBe(input.element)
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('moves focus into the form and back to the first provider', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: 'School NetID', start: START } })
+    const w = await mountAt('/login', 'en')
+    await w.find('button.login__use-password').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.find('input[name="login"]').element)
+    await w.find('button.login__use-sso').trigger('click')
+    await flushPromises()
+    expect(w.find('form.el-form').isVisible()).toBe(false)
+    expect(document.activeElement).toBe(w.find('button.login__sso').element)
+    w.unmount()
+  })
+})
+
 describe('several identity providers on the sign-in page', () => {
   const PROVIDERS = [
     { id: 'school-adfs', label: 'School NetID', start: '/v1/auth/sso/start/school-adfs' },
