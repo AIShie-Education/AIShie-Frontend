@@ -23,7 +23,7 @@ import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAsync } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -49,6 +49,8 @@ const { t } = useI18n()
 // width (its title's), not the window's: the side bar takes from it.
 const providersTitle = useTemplateRef<HTMLElement>('providersTitle')
 const narrow = useContainerNarrow(providersTitle, 759)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const list = useAsync(listProviders, { keepData: true })
 const providers = computed(() => ordered(list.data.value?.providers))
@@ -247,7 +249,7 @@ function openTest(p: SsoProvider) {
           />
 
           <el-empty v-if="!providers.length" :description="t('ssoAdmin.list.empty')" class="sso-admin__empty" />
-          <el-table v-else :data="providers" row-key="id" class="sso-admin__table">
+          <el-table v-else ref="tableRef" :data="providers" row-key="id" class="sso-admin__table">
             <el-table-column :label="t('ssoAdmin.list.provider')" :min-width="narrow ? 220 : 240">
               <template #default="{ row }">
                 <div class="sso-cell" :data-provider="row.id">

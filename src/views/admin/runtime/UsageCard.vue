@@ -12,7 +12,7 @@ import { useI18n } from 'vue-i18n'
 import { runtimeAdmin } from '@/api/runtime'
 import type { OwnerPlanUse } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import DailyReset from '@/components/DailyReset.vue'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -26,6 +26,8 @@ const { t } = useI18n()
 // window's: the side bar takes from it.
 const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
 const narrow = useContainerNarrow(cardTitle, 542)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const usage = useAsync(() => runtimeAdmin.usage().then((r) => r.data), { keepData: true })
 const data = computed(() => usage.data.value ?? null)
@@ -106,7 +108,7 @@ const schoolSpent = computed(() => {
         </p>
 
         <el-empty v-if="!owners.length" :description="t('runtimeAdmin.usage.empty')" class="usage-card__empty" />
-        <el-table v-else :data="owners" row-key="tenant_id" class="usage-card__table">
+        <el-table v-else ref="tableRef" :data="owners" row-key="tenant_id" class="usage-card__table">
           <el-table-column :label="t('runtimeAdmin.usage.owner')" min-width="200">
             <template #default="{ row }">
               <div class="usage-owner">

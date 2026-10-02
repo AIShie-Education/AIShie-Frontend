@@ -10,7 +10,7 @@ import { read } from '@/api/http'
 import { isUuid } from '@/utils/format'
 import { ROLES, type Member, type MemberSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentBadge from '@/components/AgentBadge.vue'
@@ -38,6 +38,8 @@ const session = useSessionStore()
 // they do not all fit.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, 669)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 const presets = usePresets()
 
 const PAGE = 100
@@ -246,7 +248,14 @@ function rowClass({ row }: { row: MemberSummary }) {
         <template #empty>
           <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
         </template>
-        <el-table :data="rows" row-key="id" class="members__table" :row-class-name="rowClass" @row-click="open">
+        <el-table
+          ref="tableRef"
+          :data="rows"
+          row-key="id"
+          class="members__table"
+          :row-class-name="rowClass"
+          @row-click="open"
+        >
           <el-table-column
             prop="display_name"
             :label="t('members.columns.name')"

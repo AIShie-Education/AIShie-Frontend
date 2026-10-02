@@ -13,7 +13,7 @@ import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import { runtimeAdmin } from '@/api/runtime'
 import type { TranscriptionJob, TranscriptionJobFilter } from '@/api/runtime-types'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { shortId } from '@/utils/format'
 import LoadMore from '@/components/LoadMore.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -29,6 +29,8 @@ const { t, te, n } = useI18n()
 // the side bar takes from it.
 const head = useTemplateRef<HTMLElement>('head')
 const narrow = useContainerNarrow(head, 542)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 /** 'all', or a status the runtime lists by. */
 const FILTERS: ('all' | TranscriptionJobFilter)[] = ['all', 'done', 'failed', 'skipped', 'working']
@@ -157,7 +159,7 @@ const empty = computed(() => loaded.value && !jobs.value.length)
         :description="t('runtimeAdmin.transcription.jobs.empty')"
         class="transcription-jobs__empty"
       />
-      <el-table v-else :data="jobs" row-key="id" class="transcription-jobs__table">
+      <el-table v-else ref="tableRef" :data="jobs" row-key="id" class="transcription-jobs__table">
         <el-table-column :label="t('runtimeAdmin.transcription.jobs.document')" min-width="220">
           <template #default="{ row }">
             <div class="job-cell" :data-job="row.id">

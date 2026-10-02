@@ -10,7 +10,7 @@ import dayjs from 'dayjs'
 import { read } from '@/api/http'
 import type { AssignmentSummary, SubmissionSummary } from '@/api/types'
 import { useAsync, usePaged } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
@@ -46,6 +46,8 @@ const narrow = useContainerNarrow(
   computed(() => header.value?.$el as HTMLElement | undefined),
   592,
 )
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 // A student's own work: the newest attempt at each assignment, and which
 // assignments they have handed something in for (a later attempt may be a
@@ -192,6 +194,7 @@ function refresh() {
           </el-button>
         </template>
         <el-table
+          ref="tableRef"
           :data="rows"
           row-key="id"
           class="assignments-view__table"

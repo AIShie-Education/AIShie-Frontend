@@ -9,7 +9,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { read, type ApiError } from '@/api/http'
 import { toApiError } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -29,6 +29,8 @@ const session = useSessionStore()
 // it.
 const help = useTemplateRef<HTMLElement>('help')
 const narrow = useContainerNarrow(help, 669)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const PAGE = 200
 /** Pages loaded in one go before asking the person whether to go on. */
@@ -187,7 +189,7 @@ function open(row: ActionRow) {
         :empty-text="items.length ? t('actions.mine.emptyFiltered') : t('actions.mine.empty')"
         @retry="load(true)"
       >
-        <el-table :data="shown" row-key="id" class="my-actions__table" @row-click="open">
+        <el-table ref="tableRef" :data="shown" row-key="id" class="my-actions__table" @row-click="open">
           <el-table-column :label="t('actions.mine.columns.action')" min-width="260">
             <template #default="{ row }">
               <div class="my-actions__cell">

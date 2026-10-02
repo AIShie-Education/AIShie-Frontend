@@ -11,7 +11,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { TenantQuota } from '@/api/runtime-types'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import { problemsOf } from '@/views/account/components/agents/hosting'
@@ -33,6 +33,8 @@ const { t } = useI18n()
 // takes from it.
 const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
 const narrow = useContainerNarrow(cardTitle, 689)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const tenants = ref<TenantQuota[]>([])
 const next = ref<string | null>(null)
@@ -168,7 +170,7 @@ function serverText(q: TenantQuota): string {
     <p class="tenants-card__intro">{{ t('runtimeAdmin.tenants.intro') }}</p>
     <RuntimeAsync :loading="loading && !loaded" :error="loaded ? null : loadError" @retry="load()">
       <el-empty v-if="!tenants.length" :description="t('runtimeAdmin.tenants.empty')" class="tenants-card__empty" />
-      <el-table v-else :data="tenants" row-key="tenant_id" class="tenants-card__table">
+      <el-table v-else ref="tableRef" :data="tenants" row-key="tenant_id" class="tenants-card__table">
         <el-table-column :label="t('runtimeAdmin.tenants.tenant')" min-width="200">
           <template #default="{ row }">
             <div class="tenant-cell" :data-tenant="row.tenant_id">

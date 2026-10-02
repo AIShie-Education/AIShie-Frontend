@@ -11,7 +11,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
 import type { Term } from '@/api/types'
 import { useAsync, usePaged } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
@@ -33,6 +33,8 @@ const session = useSessionStore()
 // measured by its toolbar, as wide as the table.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, 799)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 // The filters live in the address, so that coming back to the list keeps them.
 function queryParam(name: string) {
@@ -196,7 +198,7 @@ function rowClick(row: CourseRow) {
             {{ t('admin.courses.create') }}
           </el-button>
         </template>
-        <el-table :data="list.items.value" row-key="id" class="courses__table" @row-click="rowClick">
+        <el-table ref="tableRef" :data="list.items.value" row-key="id" class="courses__table" @row-click="rowClick">
           <el-table-column :label="t('admin.courses.col.course')" :min-width="narrow ? 200 : 240">
             <template #default="{ row }">
               <div class="courses__course">

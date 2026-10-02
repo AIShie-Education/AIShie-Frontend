@@ -294,13 +294,20 @@ test.describe('pages beside the side bar, under the chat’s window', () => {
   })
 })
 
-test.describe('an administrator’s pages beside the side bar, under the chat’s window', () => {
-  // What a page switches by its own width is never switched in a ResizeObserver's callback
-  // (useContainerWidth): an el-table in it would lay itself out again in that same frame, and the browser
-  // report a loop of observers. None, on any page, however the window and the side bar change.
+/**
+ * Fails each test of the describe it is called in on a loop of ResizeObservers the browser reports. What a page
+ * switches by its own width is never switched in a ResizeObserver's callback (useContainerWidth), and a table whose
+ * columns follow the switch is laid out again in the same task (useTableRelayout): otherwise an el-table lays itself
+ * out again in its own observer's callback, in the frame that saw the change, and the browser reports a loop. None,
+ * on any page, however the window and the side bar change, but where a test excuses a page by its path (returned),
+ * saying why.
+ */
+function noResizeObserverLoops() {
   let loops: string[] = []
+  let excused: string[] = []
   test.beforeEach(async ({ page }) => {
     loops = []
+    excused = []
     await page.exposeFunction('reportResizeObserverLoop', (where: string, message: string) =>
       loops.push(`${where}: ${message}`),
     )
@@ -309,14 +316,19 @@ test.describe('an administrator’s pages beside the side bar, under the chat’
         if (String(e.message).includes('ResizeObserver loop')) {
           const report = (window as unknown as { reportResizeObserverLoop: (w: string, m: string) => void })
             .reportResizeObserverLoop
-          void report(location.pathname, e.message)
+          void report(`${location.pathname}${location.search} at ${innerWidth} px`, e.message)
         }
       })
     })
   })
   test.afterEach(() => {
-    expect(loops).toEqual([])
+    expect(loops.filter((l) => !excused.some((path) => l.startsWith(`${path} at `)))).toEqual([])
   })
+  return { excuse: (path: string) => void excused.push(path) }
+}
+
+test.describe('an administrator’s pages beside the side bar, under the chat’s window', () => {
+  noResizeObserverLoops()
 
   test('a department administrator’s pages and a course’s tabs are laid out for the page’s width, not the window’s', async ({
     page,
@@ -483,10 +495,7 @@ async function headingWidth(table: Locator, name: string) {
 }
 
 test.describe('a course’s tables beside the side bar, under the chat’s window', () => {
-  // No check here for a loop of ResizeObservers, as the administrator's pages above have: an el-table reports
-  // one of its own where a change of width wraps its rows anew (its observers and its scroll bar's), whatever laid
-  // the page out. The sign-in providers and the terms did so as the side bar opened and closed before they
-  // followed their own width.
+  noResizeObserverLoops()
 
   test('a course’s members, actions, assignments, grades and submissions are laid out for the page’s width, not the window’s', async ({
     page,
@@ -509,6 +518,12 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await photograph(page, 'layout-members-1000')
     await layout(page, 1000, 800, { side: false })
     await expect.poll(() => headingsOf(page, '.members__table')).toContain('Role')
+    // The side bar opened in 900 px of window (from 852 px of page to 544): folded at once, the table laid out
+    // once on its new columns.
+    await layout(page, 900, 800, { side: false })
+    await expect.poll(() => headingsOf(page, '.members__table')).toContain('Role')
+    await layout(page, 900, 800, { side: true })
+    await expect.poll(() => headingsOf(page, '.members__table')).toEqual(['Name', 'Reach'])
 
     // A member's page: the seat's facts in one column in 644 px of page, two with the side bar collapsed.
     await page.goto(coursePath(`members/${d.actors.yuki.member_id}`))
@@ -545,6 +560,8 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await expect.poll(() => headingsOf(page, '.assignments-view__table')).toContain('Points')
     await layout(page, 900, 800, { side: false })
     await expect.poll(() => headingsOf(page, '.assignments-view__table')).toContain('Points')
+    await layout(page, 900, 800, { side: true })
+    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due'])
 
     // The grades: a card each in 544 px of page.
     await page.goto(coursePath('grades'))
@@ -573,6 +590,31 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await layout(page, 1000, 800, { side: true })
     await expect(page.locator('.submissions-table')).toBeVisible()
     await expect(page.locator('.submission-cards')).toHaveCount(0)
+
+    // A grade's breakdown: a block per criterion in 544 px of page, a table in 644. The midterm's draft grade,
+    // given a breakdown as Core would return it.
+    const gradePath = `/v1/courses/${d.course.id}/grades/${d.course.midterm_draft_grade}`
+    await page.route(`**${gradePath}`, async (route) => {
+      const reply = await route.fetch()
+      const body = await reply.json()
+      const grade = body.result ?? body
+      grade.breakdown = [
+        { criterion: 'Recursion', points: '38', max: '50', comment: 'Revisit the base case.' },
+        { criterion: 'Data structures', points: '40', max: '50' },
+      ]
+      await route.fulfill({ response: reply, json: body })
+    })
+    await page.goto(coursePath(`grades/${d.course.midterm_draft_grade}`))
+    const breakdown = page.locator('.bd-table')
+    await expect(breakdown).toBeVisible()
+    await layout(page, 900, 800, { side: true })
+    await expect(breakdown.locator('.bd-list')).toBeVisible()
+    await expect(breakdown.locator('.el-table')).toHaveCount(0)
+    expect(await noSideways(page)).toBe(true)
+    await layout(page, 1000, 800, { side: true })
+    await expect(breakdown.locator('.el-table')).toBeVisible()
+    await expect(breakdown.locator('.bd-list')).toHaveCount(0)
+    await page.unroute(`**${gradePath}`)
 
     // A student's gradebook: every column where its card has the 1060 px they take with a grader's actions, as
     // with the side bar open in 1920 px of window, or collapsed in 1280; in 1280 with it open what they say goes
@@ -662,6 +704,25 @@ async function playRuntimeTables(page: Page) {
     lines: [calls],
   })
   const quotas = { per_owner_day: 100, per_asker_day: 20, per_day: null }
+  const job = (id: string, status: 'done' | 'failed') => ({
+    id,
+    version_id: '0192f3c1-0000-7000-8000-000000000001',
+    document_id: '0192f3c1-0000-7000-8000-000000000002',
+    course_id: '0192f3c1-0000-7000-8000-000000000003',
+    status,
+    reason: status === 'failed' ? 'provider_error' : null,
+    backfill: false,
+    content_type: 'application/pdf',
+    byte_size: 900_000,
+    pages: 12,
+    offer: 'standard',
+    model: 'gpt-4.1-mini',
+    cost_usd: '0.042000',
+    input_tokens: 12000,
+    output_tokens: 3000,
+    started_at: '2026-10-01T08:00:00Z',
+    finished_at: '2026-10-01T08:02:00Z',
+  })
   const answers: Record<string, unknown> = {
     '/info': {
       api: 'aishie-runtime',
@@ -723,6 +784,45 @@ async function playRuntimeTables(page: Page) {
       rows: [day('2026-09-29'), day('2026-09-28')],
       next: null,
     },
+    '/admin/settings': {
+      ocr: {
+        available: true,
+        unavailable_reason: null,
+        unavailable_detail: null,
+        enabled: true,
+        languages: ['eng'],
+        default_languages: ['eng'],
+        available_languages: ['eng'],
+        updated_at: null,
+        updated_by: null,
+      },
+      transcription: {
+        available: true,
+        unavailable_reason: null,
+        unavailable_detail: null,
+        enabled: true,
+        offer: 'standard',
+        offer_status: 'ok',
+        max_pages: 300,
+        per_day_pages: null,
+        concurrency: 2,
+        credential: {
+          status: 'none',
+          hint: null,
+          credential_id: null,
+          set_at: null,
+          set_by: null,
+          last_ok_at: null,
+          last_error: null,
+        },
+        state: 'running',
+        blocked_reason: null,
+        today: { pages: 24, documents: 2, failed: 1, skipped: 0, cost_usd: '0.084000' },
+        updated_at: null,
+        updated_by: null,
+      },
+    },
+    '/admin/transcription/jobs': { jobs: [job('job-1', 'done'), job('job-2', 'failed')], next: null },
     '/admin/school-plan/usage': {
       since: '2026-10-02T00:00:00Z',
       limits: { per_owner_day: 100, per_asker_day: 20, per_day: null },
@@ -759,10 +859,7 @@ async function playRuntimeTables(page: Page) {
 }
 
 test.describe('the platform’s settings beside the side bar', () => {
-  // No check here for a loop of ResizeObservers, as the administrator's pages above have: an el-table reports
-  // one of its own where a change of width wraps its rows anew (its observers and its scroll bar's), whatever laid
-  // the page out. The sign-in providers and the terms did so as the side bar opened and closed before they
-  // followed their own width.
+  const loops = noResizeObserverLoops()
 
   test('the terms, the sign-in providers and the departments are laid out for their cards’ width, not the window’s', async ({
     page,
@@ -808,7 +905,11 @@ test.describe('the platform’s settings beside the side bar', () => {
       await expect.poll(() => headingsOf(page, terms)).toContain('Starts')
 
       // Sign-in: every column where the providers' card has 760 px, as in 1280; in 1100 a provider's status,
-      // accounts and actions under its name.
+      // accounts and actions under its name. This page alone is excused a loop of observers. As the side bar opens
+      // in 1280 px of window, the table stays whole and goes from 1134 px of card to 874. The el-table then lays its
+      // columns out again in its own observer's callback, and a row comes out a pixel taller. Nothing of the page
+      // switches there, and main raises the same loop.
+      loops.excuse('/admin/sign-in')
       await page.goto('/admin/sign-in')
       const providers = '.sso-admin__table'
       await expect(page.locator(`[data-provider="${id}"]`)).toBeVisible()
@@ -833,6 +934,11 @@ test.describe('the platform’s settings beside the side bar', () => {
       expect(await noSideways(page)).toBe(true)
       await layout(page, 1000, 800, { side: true, view: 'Administration', chat: false })
       await expect.poll(() => headingWidth(tree, 'Administrators')).toBe(130)
+      // The side bar opened in 900 px of window: the columns close up at once, the tree laid out once.
+      await layout(page, 900, 800, { side: false, chat: false })
+      await expect.poll(() => headingWidth(tree, 'Administrators')).toBe(130)
+      await layout(page, 900, 800, { side: true, view: 'Administration', chat: false })
+      await expect.poll(() => headingWidth(tree, 'Administrators')).toBe(110)
     } finally {
       await call(R, 'POST', `/v1/sso/providers/${id}/delete`, { force: true })
       await idp.close()
@@ -874,6 +980,13 @@ test.describe('the platform’s settings beside the side bar', () => {
     expect(await noSideways(page)).toBe(true)
     await page.mouse.move(0, 400)
     await photograph(page, 'layout-runtime-pricing-1000')
+    // The side bar collapsed in 1000 px (952 px of page): every column again; opened, folded again.
+    await layout(page, 1000, 800, { side: false, chat: false })
+    await expect.poll(() => headingsOf(page, prices)).toContain('Input')
+    await expect.poll(() => headingsOf(page, tenants)).toContain('Set by')
+    await layout(page, 1000, 800, { side: true, view: 'Administration', chat: false })
+    await expect.poll(() => headingsOf(page, prices)).toEqual(['Model'])
+    await expect.poll(() => headingsOf(page, tenants)).toEqual(['Person or tenant'])
     await layout(page, 900, 800, { side: true, view: 'Administration', chat: false })
     await expect.poll(() => headingsOf(page, costs)).toEqual(['Day', 'Cost'])
     expect(await noSideways(page)).toBe(true)
@@ -886,5 +999,19 @@ test.describe('the platform’s settings beside the side bar', () => {
     await expect.poll(() => headingsOf(page, usage)).toEqual(['Owner', 'Answers'])
     await layout(page, 1000, 800, { side: true, view: 'Administration', chat: false })
     await expect.poll(() => headingsOf(page, usage)).toEqual(['Owner', 'Answers', 'Model calls', 'Cost'])
+
+    // What it transcribed: a job's pages, cost and time under its document in 900, columns of their own in 1000.
+    await page.goto('/admin/runtime?tab=documents')
+    const jobs = '.transcription-jobs__table'
+    await expect(page.locator(jobs)).toBeVisible()
+    await layout(page, 900, 800, { side: true, view: 'Administration', chat: false })
+    await expect.poll(() => headingsOf(page, jobs)).toEqual(['Document'])
+    expect(await noSideways(page)).toBe(true)
+    await layout(page, 1000, 800, { side: true, view: 'Administration', chat: false })
+    await expect.poll(() => headingsOf(page, jobs)).toContain('Finished')
+    await layout(page, 900, 800, { side: false, chat: false })
+    await expect.poll(() => headingsOf(page, jobs)).toContain('Finished')
+    await layout(page, 900, 800, { side: true, view: 'Administration', chat: false })
+    await expect.poll(() => headingsOf(page, jobs)).toEqual(['Document'])
   })
 })

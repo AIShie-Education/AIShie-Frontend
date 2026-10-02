@@ -18,7 +18,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { read, type ToolOut } from '@/api/http'
 import type { Decimal, GradeSummary, GradebookLine } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isUuid, shortId } from '@/utils/format'
@@ -337,6 +337,8 @@ const grader = computed(
 // takes from it.
 const breakdownTitle = useTemplateRef<HTMLElement>('breakdownTitle')
 const narrow = useContainerNarrow(breakdownTitle, () => (grader.value ? 1059 : 929))
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 /** The words for a total, as its menu and dialogs name it. */
 function totalName(row: Row): string {
   return row.isRoot ? t('grades.courseTotal') : t('activity.subject.componentTotal', { name: row.name ?? '' })
@@ -591,6 +593,7 @@ watch(
         <section class="app-card">
           <h2 ref="breakdownTitle" class="app-card__title">{{ t('grades.gradebook.breakdown') }}</h2>
           <el-table
+            ref="tableRef"
             :data="tree"
             row-key="key"
             default-expand-all

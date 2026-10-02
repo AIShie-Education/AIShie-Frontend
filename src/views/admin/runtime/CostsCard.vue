@@ -14,7 +14,7 @@ import dayjs from 'dayjs'
 import { runtimeAdmin } from '@/api/runtime'
 import type { CostGroup, CostGroupBy, CostLine, CostReport, CostSum, KeySource } from '@/api/runtime-types'
 import { COST_GROUPS } from '@/api/runtime-types'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import { formatNumber } from '@/utils/format'
@@ -28,6 +28,8 @@ const { t, te } = useI18n()
 // By the card's own width, not the window's: the side bar takes from it.
 const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
 const narrow = useContainerNarrow(cardTitle, 542)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const range = ref<[string, string]>(costRange(utcToday()))
 const group = ref<CostGroupBy>('day')
@@ -173,7 +175,7 @@ function toPrices() {
         </el-alert>
 
         <el-empty v-if="!rows.length" :description="t('runtimeAdmin.costs.empty')" class="costs-card__empty" />
-        <el-table v-else :data="rows" row-key="key" class="costs-card__table">
+        <el-table v-else ref="tableRef" :data="rows" row-key="key" class="costs-card__table">
           <el-table-column :label="t(`runtimeAdmin.costs.groupColumn.${report.group}`)" min-width="200">
             <template #default="{ row }">
               <div class="cost-cell" :data-key="row.key">

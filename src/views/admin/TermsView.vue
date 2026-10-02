@@ -8,7 +8,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { read } from '@/api/http'
 import type { Term } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
@@ -23,6 +23,8 @@ const session = useSessionStore()
 // from it.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, 779)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 const terms = useAsync(() => read('term.list', {}).then((o) => o.terms ?? []), { keepData: true })
 const filter = ref('')
@@ -146,7 +148,7 @@ async function save() {
         :empty-text="all.length ? t('adminSetup.terms.noMatch') : t('adminSetup.terms.empty')"
         @retry="terms.reload"
       >
-        <el-table :data="rows" row-key="id" :default-sort="{ prop: 'starts_on', order: 'descending' }">
+        <el-table ref="tableRef" :data="rows" row-key="id" :default-sort="{ prop: 'starts_on', order: 'descending' }">
           <el-table-column
             prop="name"
             :label="t('adminSetup.terms.name')"

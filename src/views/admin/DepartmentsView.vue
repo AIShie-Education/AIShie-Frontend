@@ -13,7 +13,7 @@ import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DepartmentNode } from '@/api/types'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -37,6 +37,8 @@ const session = useSessionStore()
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, () => (session.isAdmin ? 945 : 745))
 const phone = useContainerNarrow(toolbar, 542)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, [narrow, phone])
 const departments = useDepartmentTree({ immediate: false })
 // Read afresh on coming here: someone else may have changed the tree.
 onMounted(() => void departments.reload())
@@ -139,7 +141,7 @@ watch(
         "
         @retry="departments.reload"
       >
-        <el-table :data="rows" row-key="id" default-expand-all class="dept-tree" :indent="narrow ? 12 : 20">
+        <el-table ref="tableRef" :data="rows" row-key="id" default-expand-all class="dept-tree" :indent="narrow ? 12 : 20">
           <el-table-column :label="t('adminSetup.departments.name')" :min-width="narrow ? 200 : 280">
             <template #default="{ row }">
               <span class="dept-name">

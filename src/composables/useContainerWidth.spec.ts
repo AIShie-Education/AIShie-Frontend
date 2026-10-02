@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { effectScope, nextTick, ref } from 'vue'
+import { defineComponent, effectScope, h, nextTick, onMounted, ref } from 'vue'
+import { flushPromises, mount } from '@vue/test-utils'
 import { fakeContainerWidths } from './containerWidthFakes'
-import { useContainerNarrow, useContainerWidth } from './useContainerWidth'
+import { useContainerNarrow, useContainerWidth, useTableRelayout } from './useContainerWidth'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -130,5 +131,35 @@ describe('useContainerNarrow', () => {
     // The limit may move (it may depend on who is looking).
     limit.value = 599
     expect(out.value).toBe(false)
+  })
+})
+
+describe('useTableRelayout', () => {
+  it('lays the table out again once the switch is in the page, after the columns it added have mounted', async () => {
+    const narrow = ref(true)
+    const seen: string[] = []
+    // A column joins its table as it mounts, as an el-table-column does.
+    const Column = defineComponent({
+      setup() {
+        onMounted(() => seen.push('column'))
+        return () => null
+      },
+    })
+    const Page = defineComponent({
+      setup() {
+        const table = ref({ doLayout: () => seen.push('layout') })
+        useTableRelayout(table, narrow)
+        return () => (narrow.value ? null : h(Column))
+      },
+    })
+    const w = mount(Page)
+    expect(seen).toEqual([])
+    narrow.value = false
+    await flushPromises()
+    expect(seen).toEqual(['column', 'layout'])
+    narrow.value = true
+    await flushPromises()
+    expect(seen).toEqual(['column', 'layout', 'layout'])
+    w.unmount()
   })
 })

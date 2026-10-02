@@ -509,7 +509,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `ResizeObserver` of its own (the card would change height in that observer's callback, a loop the
   browser reports). What the switch itself changes in the measured part is safe, a toolbar's row
   that wraps, say: the switch is never made in an observer's callback, but a task later or on the
-  window's `resize`; the unit tests give elements widths with `fakeContainerWidths()`
+  window's `resize`. A table whose columns, or their widths, follow the switch is given it with
+  `useTableRelayout(table, narrow)` (the same module), which lays the table out again in that same
+  task: left to itself, an `el-table` lays a change of its columns out 50 ms later, the browser lays
+  its rows out on the old columns' widths in between, and where they then change height the table's
+  own observer lays it out again in its callback, a loop the browser reports (as the side bar opens
+  on the members, at 900 px of window). The unit tests give elements widths with
+  `fakeContainerWidths()`
   (`@/composables/containerWidthFakes`), and without it jsdom shows the wide layout. A dialog's
   breakpoints, and a phone's CSS (a card's padding, a filter taking the toolbar's whole row, at
   640 px and narrower), stay `@media` queries on the window. Columns of

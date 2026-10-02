@@ -13,7 +13,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, isVersionMismatch, runtimeAdmin } from '@/api/runtime'
 import type { PriceRow, PriceTable, ProviderOffer } from '@/api/runtime-types'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import PriceDialog from './PriceDialog.vue'
 import UnpricedNotice from './UnpricedNotice.vue'
@@ -36,6 +36,8 @@ const { t } = useI18n()
 // title's), not the window's: the side bar takes from it.
 const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
 const narrow = useContainerNarrow(cardTitle, 669)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, narrow)
 
 /** By provider, then model and day: the site's before the file's of the same. */
 const rows = computed(() =>
@@ -157,7 +159,7 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
     </el-alert>
 
     <el-empty v-if="!rows.length" :description="t('runtimeAdmin.prices.empty')" class="prices-card__empty" />
-    <el-table v-else :data="rows" :row-key="rowKey" class="prices-card__table">
+    <el-table v-else ref="tableRef" :data="rows" :row-key="rowKey" class="prices-card__table">
       <el-table-column :label="t('runtimeAdmin.prices.model')" min-width="230">
         <template #default="{ row }">
           <div class="price-cell" :data-price="rowKey(row)" :class="{ 'is-overridden': row.overridden }">
