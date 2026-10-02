@@ -538,6 +538,20 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   wide window. Only what belongs to the window asks it, with `@/composables/useMediaQuery`:
   `usePhoneScreen()` (640 px or narrower) for a dialog or a drawer laid over the page that fills a
   phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch.
+- Back closes what is laid over the page, as a phone's back gesture or button is expected to:
+  `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
+  component. Opening adds an entry to history at the page's own address, back closes the overlay
+  on top (one at a time, where one is open over another; a message box asked over them, ElMessageBox,
+  is dismissed first, as cancelled), and closed by its own means (its button, Escape, a click beside
+  it) it goes back over its entry, so that history is as it was. It is used by the file viewer, the
+  phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider screen stays open from
+  page to page, and back moves between them), the agent's conversation log, the invite link put up
+  full screen, and the administrators' drawers of a preset and of a department's administrators
+  (full width on a phone, `DRAWER_SIZE`), and who can read a conversation, the chat pane's dialog
+  opened over the sheet or the log; a new drawer or dialog that fills a phone's screen, or that opens
+  over one of these, uses it too. The router (`installBackCloses`) goes back over the overlays' entries before it adds a page's,
+  so that a link followed from one takes its place, and over those a page left before it was
+  reloaded; going back to a page's own entry leaves it where it was scrolled.
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
@@ -600,7 +614,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
   no activity bar: the header's menu button opens the views in a drawer, as tabs along its top, and
-  following a link in it closes it.
+  following a link in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
@@ -643,7 +657,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   what it showed; closed, on a new conversation in the course it asks in (the chat store's `close`);
   either way focus goes back to the round button. Files dropped anywhere on the window, its title bar
   too, go to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
-  screen, a modal dialog with no edge to drag, closed with its one button or Escape, keeping what it
+  screen, a modal dialog with no edge to drag, closed with its one button, Escape or back, keeping what it
   showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
   on a conversation (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a
   link to a conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`,
