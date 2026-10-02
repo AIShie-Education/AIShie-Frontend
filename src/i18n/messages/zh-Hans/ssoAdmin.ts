@@ -233,7 +233,7 @@ export default {
   },
   // 只有服务器运维方会处理的设置，放在文字旁的提示中（OperatorDetail）。
   flags: {
-    secretsKey: '服务器环境配置中的 SECRETS_KEY（32 个随机字节的 base64）',
+    secretsKey: '服务器环境配置中的 SECRETS_KEY（32个随机字节的 base64）',
     rewrap: 'aishie-core secrets rewrap',
     privateIssuers: 'SSO_ALLOW_PRIVATE_ISSUERS',
     oidc: '服务器环境配置中的 OIDC_ISSUER、OIDC_CLIENT_ID 等 OIDC_* 配置',
