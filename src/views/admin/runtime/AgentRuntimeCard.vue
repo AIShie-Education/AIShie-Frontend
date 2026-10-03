@@ -119,13 +119,11 @@ function forget() {
     </h2>
     <p class="agent-runtime-card__intro">{{ t('runtimeAdmin.agentRuntime.intro') }}</p>
     <AppNote class="agent-runtime-card__setup">
-      <template #title>
-        <i18n-t keypath="runtimeAdmin.agentRuntime.setup" tag="span" scope="global">
-          <template #command>
-            <code class="agent-runtime-card__command">{{ ROTATE }}</code>
-          </template>
-        </i18n-t>
-      </template>
+      <i18n-t keypath="runtimeAdmin.agentRuntime.setup" tag="span" scope="global">
+        <template #command>
+          <code class="agent-runtime-card__command">{{ ROTATE }}</code>
+        </template>
+      </i18n-t>
     </AppNote>
 
     <AsyncState
