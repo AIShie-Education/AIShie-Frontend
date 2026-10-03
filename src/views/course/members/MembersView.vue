@@ -220,10 +220,9 @@ function rowClass({ row }: { row: MemberSummary }) {
       closable
     >
       <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
-        {{ t('members.proposed.view') }}
-      </router-link>
-      ·
-      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        {{ t('members.proposed.view') }} </router-link
+      >{{ t('common.sep')
+      }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
         t('members.proposed.mine')
       }}</router-link>
     </AppNote>
@@ -348,7 +347,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                 <span class="members__date-label">{{ t('members.columns.added') }}</span>
                 <TimeText :value="row.created_at" relative />
                 <span class="members__date-label">{{ t('members.columns.expires') }}</span>
-                <TimeText v-if="row.expires_at" :value="row.expires_at" relative />
+                <TimeText v-if="row.expires_at" :value="row.expires_at" relative cutoff />
                 <span v-else class="app-muted">{{ t('members.detail.noExpiry') }}</span>
               </div>
             </template>
@@ -431,22 +430,22 @@ function rowClass({ row }: { row: MemberSummary }) {
 }
 .members__login-id {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 }
 .members__me {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   white-space: nowrap;
 }
 .members__dates {
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 8px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
 }
 .members__date-label {
   color: var(--el-text-color-secondary);

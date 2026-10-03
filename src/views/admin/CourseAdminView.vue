@@ -26,6 +26,7 @@ import EditCourseDialog from './components/EditCourseDialog.vue'
 import MoveCourseDialog from './components/MoveCourseDialog.vue'
 import SeatInstructorCard from './components/SeatInstructorCard.vue'
 import { findCourse, useCanonicalId } from './components/adminShared'
+import { courseCodeText } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -64,9 +65,7 @@ async function onMoved() {
 
 const seat = computed(() => session.membershipFor(id.value))
 const archived = computed(() => course.value?.status === 'archived')
-const codeLabel = computed(() =>
-  course.value ? `${course.value.code}${course.value.section ? ` · ${course.value.section}` : ''}` : '',
-)
+const codeLabel = computed(() => (course.value ? courseCodeText(course.value.code, course.value.section) : ''))
 
 const activateW = useWrite('course.activate')
 const archiveW = useWrite('course.archive')
@@ -260,7 +259,7 @@ function onSeated(_memberId: string, actorId: string) {
   white-space: nowrap;
 }
 .course-admin__small {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .course-admin__title-actions {
   display: inline-flex;
@@ -276,14 +275,14 @@ function onSeated(_memberId: string, actorId: string) {
 }
 .course-admin__subhead {
   margin: 18px 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .course-admin__description {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 </style>

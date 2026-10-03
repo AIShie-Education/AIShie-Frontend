@@ -491,7 +491,8 @@ const errorTitle = computed(() => {
                 <div class="action-view__error">
                   <p v-if="errorWhy">{{ errorWhy }}</p>
                   <p v-if="error">
-                    {{ t('actions.outcome.coreSays') }}: {{ error.message }} <code>{{ error.code }}</code>
+                    {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) }}
+                    <code>{{ error.code }}</code>
                   </p>
                   <FieldsView v-if="errorDetails" :course-id="courseId" :value="errorDetails" />
                 </div>
@@ -571,7 +572,7 @@ const errorTitle = computed(() => {
 }
 .action-view__code {
   font-family: var(--app-font-mono);
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   color: var(--el-text-color-placeholder);
 }
 .action-view__notice {
@@ -582,7 +583,7 @@ const errorTitle = computed(() => {
 }
 .action-view__rule {
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 /* The page's own width decides its columns, not the window's: the side bar takes from it. */
@@ -622,12 +623,12 @@ const errorTitle = computed(() => {
 }
 .action-view__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .action-view__facts dd {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 @media (max-width: 600px) {
@@ -649,8 +650,8 @@ const errorTitle = computed(() => {
 }
 .action-view__help {
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .action-view__about {
@@ -665,11 +666,11 @@ const errorTitle = computed(() => {
   border: 1px solid var(--el-border-color-lighter);
 }
 .action-view__about-label {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .action-view__about-type {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
 }
 .action-view__owner {
@@ -677,7 +678,7 @@ const errorTitle = computed(() => {
   align-items: center;
   gap: 6px;
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-primary);
 }
 .action-view__raw {
@@ -690,7 +691,7 @@ const errorTitle = computed(() => {
 }
 .action-view__error code {
   font-family: var(--app-font-mono);
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   opacity: 0.8;
 }
 </style>

@@ -258,7 +258,7 @@ async function revoke(c: Credential) {
               </span>
               <span v-if="c.kind === 'api_token' || c.kind === 'session' || c.kind === 'invite'">
                 <span class="creds-item__k">{{ t('account.credentials.expires') }}</span>
-                <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                <TimeText v-if="c.expires_at" :value="c.expires_at" cutoff />
                 <template v-else>{{ t('account.credentials.noExpiry') }}</template>
               </span>
               <span v-if="c.revoked_at">
@@ -345,7 +345,7 @@ async function revoke(c: Credential) {
   flex-wrap: wrap;
   gap: 4px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .creds-item__k {
@@ -354,7 +354,7 @@ async function revoke(c: Credential) {
 }
 .creds-item__code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 1px 5px;
@@ -370,7 +370,7 @@ async function revoke(c: Credential) {
 }
 .creds-item__agents-only {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-warning-dark-2);
 }
 .creds-item__actions {

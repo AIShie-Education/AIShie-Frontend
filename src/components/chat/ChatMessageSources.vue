@@ -93,8 +93,8 @@ const summary = computed(() => {
   max-width: 100%;
   margin-top: 6px;
   padding: 0 2px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--app-ink-3);
 }
 .chat-sources__line {
@@ -125,7 +125,7 @@ const summary = computed(() => {
 }
 .chat-sources__chevron {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   transition: transform 0.15s;
 }
 .chat-sources__chevron.is-open {

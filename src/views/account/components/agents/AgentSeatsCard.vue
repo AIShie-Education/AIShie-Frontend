@@ -19,6 +19,7 @@ import LevelIcon from '@/components/LevelIcon.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { grantedPerms, toPermLevels } from './agents'
+import { courseCodeText } from '@/utils/parts'
 
 const props = defineProps<{ agent: AgentFull }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -30,7 +31,7 @@ const seats = computed(() =>
 const requests = computed(() => props.agent.requests ?? [])
 
 function courseName(s: { code: string; section: string }): string {
-  return s.section ? `${s.code} · ${s.section}` : s.code
+  return courseCodeText(s.code, s.section)
 }
 
 /** A preset Core names that is not a built-in one is shown by its own name. */
@@ -133,7 +134,7 @@ async function takeBack(r: AgentRequest) {
           </span>
           <span>
             <span class="agent-seat__k">{{ t('agents.seats.ends') }}</span>
-            <TimeText v-if="s.expires_at" :value="s.expires_at" />
+            <TimeText v-if="s.expires_at" :value="s.expires_at" cutoff />
             <template v-else>{{ t('agents.seats.noEnd') }}</template>
           </span>
         </div>
@@ -225,8 +226,8 @@ async function takeBack(r: AgentRequest) {
 }
 .seats-card__subhead {
   margin: 20px 0 10px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .agent-seats,
 .agent-requests {
@@ -261,8 +262,8 @@ async function takeBack(r: AgentRequest) {
   color: var(--el-color-primary);
 }
 .agent-seat__code {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-color-primary);
 }
 .agent-seat__title {
@@ -282,7 +283,7 @@ async function takeBack(r: AgentRequest) {
   align-items: center;
   gap: 4px 16px;
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .agent-seat__perms {
@@ -294,7 +295,7 @@ async function takeBack(r: AgentRequest) {
 }
 .agent-seat__details {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .agent-seat__details summary {
   cursor: pointer;
@@ -332,7 +333,7 @@ async function takeBack(r: AgentRequest) {
   min-width: 0;
 }
 .agent-request__course {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
   word-break: break-word;
 }
@@ -341,7 +342,7 @@ async function takeBack(r: AgentRequest) {
   color: var(--el-text-color-regular);
 }
 .agent-request__meta {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>

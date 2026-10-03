@@ -118,7 +118,7 @@ function scopeText(which: 'student' | 'assignment'): string {
         <dt>{{ t('overview.seat.expires') }}</dt>
         <dd>
           <template v-if="m.expires_at">
-            <TimeText :value="m.expires_at" />
+            <TimeText :value="m.expires_at" cutoff />
             <AppTag v-if="expired" tone="danger" class="seat__expired">{{
               t('overview.seat.expired')
             }}</AppTag>
@@ -143,7 +143,7 @@ function scopeText(which: 'student' | 'assignment'): string {
   gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .seat__row:last-child {
   border-bottom: none;
@@ -154,7 +154,7 @@ function scopeText(which: 'student' | 'assignment'): string {
 }
 .seat__row dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .seat__row dd {
   margin: 0;
@@ -176,14 +176,14 @@ function scopeText(which: 'student' | 'assignment'): string {
 .seat__listed {
   margin: 6px 0 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .seat__expired {
   margin-left: 6px;
 }
 .seat__scope-help {
   margin: 10px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
 }
 </style>

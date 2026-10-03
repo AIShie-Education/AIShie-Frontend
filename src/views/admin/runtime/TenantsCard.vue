@@ -22,6 +22,7 @@ import { problemsOf } from '@/views/account/components/agents/hosting'
 import QuotaInputs from './QuotaInputs.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { adminErrorText, quotaFieldsOf, quotaFieldsProblems, quotaInputOf, type QuotaFields } from './runtimeAdmin'
+import { joinParts } from '@/utils/parts'
 
 const { t } = useI18n()
 // Every column where the card has the 690 px they take; with less, a
@@ -180,12 +181,12 @@ function serverText(q: TenantQuota): string {
                   {{ t(`runtimeAdmin.tenants.sources.${row.source}`) }}
                 </AppTag>
                 <span class="tenant-cell__meta">
-                  {{ answersText(row.per_day.answers) }} · {{ usdText(row.per_day.usd) }}
+                  {{ joinParts([answersText(row.per_day.answers), usdText(row.per_day.usd)]) }}
                 </span>
                 <span v-if="row.source === 'site' && row.config_per_day" class="tenant-cell__server">
                   {{
                     t('runtimeAdmin.tenants.server', {
-                      v: `${answersText(row.config_per_day.answers)} · ${usdText(row.config_per_day.usd)}`,
+                      v: joinParts([answersText(row.config_per_day.answers), usdText(row.config_per_day.usd)]),
                     })
                   }}
                 </span>
@@ -301,8 +302,8 @@ function serverText(q: TenantQuota): string {
 <style scoped>
 .tenants-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .tenant-cell {
@@ -314,7 +315,7 @@ function serverText(q: TenantQuota): string {
 }
 .tenant-cell__meta,
 .tenant-cell__server {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .tenant-cell__server {
@@ -336,16 +337,16 @@ function serverText(q: TenantQuota): string {
 }
 .tenant-dialog__intro {
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .tenant-dialog__heads {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 12px;
   margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
 }
 .tenant-dialog__problems {
   margin: 4px 0 0;

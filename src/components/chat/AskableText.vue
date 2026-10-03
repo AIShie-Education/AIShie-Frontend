@@ -62,7 +62,7 @@ const hint = computed(() =>
 
 <style scoped>
 .askable {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-2);
   white-space: nowrap;
 }

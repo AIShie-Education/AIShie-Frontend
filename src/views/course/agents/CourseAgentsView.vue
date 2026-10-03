@@ -162,10 +162,9 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
         closable
       >
         <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
-          {{ t('members.proposed.view') }}
-        </router-link>
-        ·
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+          {{ t('members.proposed.view') }} </router-link
+        >{{ t('common.sep')
+        }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
           t('members.proposed.mine')
         }}</router-link>
       </AppNote>
@@ -248,7 +247,7 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
 }
 .course-agents__notice :deep(.el-alert__description),
 .course-agents__notice :deep(.el-alert__content) {
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .course-agents__heading {
   display: inline-flex;
@@ -257,7 +256,7 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
 }
 .course-agents__count {
   font-weight: normal;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .course-agents__help {
   margin: -4px 0 8px;

@@ -76,7 +76,7 @@ function chip(f: DocumentFile) {
   background: var(--el-bg-color);
   color: var(--app-ink-2);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   cursor: pointer;
 }
 .text-file:hover {
@@ -90,7 +90,7 @@ function chip(f: DocumentFile) {
   font-weight: 500;
 }
 .text-file__n {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-variant-numeric: tabular-nums;
   color: var(--app-ink-3);
 }
@@ -106,7 +106,7 @@ function chip(f: DocumentFile) {
   align-items: center;
   gap: 6px;
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
 }

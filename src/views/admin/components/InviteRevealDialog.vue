@@ -99,14 +99,14 @@ function finish() {
           <dd class="reveal__email">
             <template v-if="issued.login_id">
               <code>{{ issued.login_id }}</code>
-              <template v-if="issued.email"> · {{ issued.email }}</template>
+              <template v-if="issued.email">{{ t('common.sep') }}{{ issued.email }}</template>
             </template>
             <template v-else>{{ issued.email }}</template>
           </dd>
         </div>
         <div>
           <dt>{{ t('admin.invite.expires') }}</dt>
-          <dd><TimeText :value="issued.expires_at" /></dd>
+          <dd><TimeText :value="issued.expires_at" cutoff /></dd>
         </div>
       </dl>
 
@@ -124,7 +124,7 @@ function finish() {
 }
 .reveal__label {
   display: block;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
   margin-bottom: 6px;
 }
@@ -139,7 +139,7 @@ function finish() {
 }
 .reveal__input :deep(textarea) {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   word-break: break-all;
 }
 .reveal__facts {
@@ -147,11 +147,11 @@ function finish() {
   flex-wrap: wrap;
   gap: 8px 24px;
   margin: 16px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .reveal__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .reveal__facts dd {
   margin: 2px 0 0;

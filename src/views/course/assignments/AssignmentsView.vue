@@ -255,7 +255,7 @@ function refresh() {
           >
             <template #default="{ row }">
               <div v-if="row.due_at" class="assignments-view__due">
-                <TimeText :value="row.due_at" relative />
+                <TimeText :value="row.due_at" relative cutoff />
                 <AppTag v-if="overdue(row)" tone="danger">
                   {{ t('assignments.state.overdue') }}
                 </AppTag>
@@ -342,7 +342,7 @@ function refresh() {
   color: var(--el-color-primary);
 }
 .assignments-view__sub {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin-top: 2px;
 }
 .assignments-view__meta {
@@ -351,7 +351,7 @@ function refresh() {
   gap: 6px;
   flex-wrap: wrap;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .assignments-view__due,
 .assignments-view__mine {

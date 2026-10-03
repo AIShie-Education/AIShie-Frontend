@@ -47,8 +47,8 @@ const { t } = useI18n()
   gap: 4px;
 }
 .offer-status__why {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }

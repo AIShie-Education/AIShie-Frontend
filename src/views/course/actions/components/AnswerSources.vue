@@ -52,7 +52,7 @@ const n = computed(() => {
 }
 p.answer-sources {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>

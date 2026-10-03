@@ -7,6 +7,7 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 import type { Membership, Perm } from '@/api/types'
 import { effectivePerms } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import { courseCodeText } from '@/utils/parts'
 
 export interface ChatSeat {
   /** The caller's member id in the course, or null when they have no seat there. */
@@ -51,9 +52,9 @@ export function askableCourses(memberships: readonly Membership[]): Membership[]
 /**
  * How a course is named beside an agent (history rows, a conversation's head):
  * its code, with its section when another of the caller's courses has the
- * same code.
+ * same code ("CS101 · A", 「CS101·A」).
  */
 export function courseLabel(m: Pick<Membership, 'course_id' | 'code' | 'section'>, all: readonly Membership[] = []) {
   const twin = all.some((o) => o.course_id !== m.course_id && o.code === m.code)
-  return twin && m.section ? `${m.code} (${m.section})` : m.code
+  return twin && m.section ? courseCodeText(m.code, m.section) : m.code
 }

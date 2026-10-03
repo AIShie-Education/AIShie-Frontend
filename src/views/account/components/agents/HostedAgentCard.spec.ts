@@ -158,7 +158,7 @@ describe('HostedAgentCard: what it says', () => {
     expect(w.text()).toContain('sk-…3f9a')
     expect(w.text()).not.toContain('ais_')
     expect(w.findAll('.hosted-card__facts dt').map((d) => d.text())).toEqual(['Model', 'Key', 'Today'])
-    expect(w.find('.hosted-card__today').text()).toBe('4 answers, $0.004213')
+    expect(w.find('.hosted-card__today').text()).toBe('4 answers, US$0.00421')
     expect(w.text()).toContain('2 answers wait for approval.')
     expect(w.text()).toContain(
       'Your delegate in CS101 · A: reads the course material and students’ work; answers only you.',

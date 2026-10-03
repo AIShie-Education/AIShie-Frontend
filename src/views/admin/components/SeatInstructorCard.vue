@@ -490,8 +490,8 @@ async function seat() {
 <style scoped>
 .seat__intro {
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .seat__alert {
   margin-bottom: 16px;
@@ -511,7 +511,7 @@ async function seat() {
 }
 .seat__label {
   display: block;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
   margin-bottom: 6px;
 }
@@ -544,7 +544,7 @@ async function seat() {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 /* The email or kind; StatusTag is a span before it, the ID a code after it. */
@@ -555,7 +555,7 @@ async function seat() {
 }
 .seat__option-id {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   color: var(--el-text-color-secondary);
 }
 .seat__empty {
@@ -563,12 +563,12 @@ async function seat() {
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .seat__error {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 .seat__found {
@@ -599,13 +599,13 @@ async function seat() {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .seat__person-icon {
   color: var(--el-text-color-secondary);
 }
 .seat__person-name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
   word-break: break-word;
   min-width: 0;

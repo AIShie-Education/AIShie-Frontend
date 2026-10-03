@@ -23,6 +23,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import CreateCourseDialog from './components/CreateCourseDialog.vue'
 import type { CourseRow } from './components/adminShared'
+import { joinParts } from '@/utils/parts'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -204,8 +205,12 @@ function rowClick(row: CourseRow) {
                 >
                 <span class="courses__title">{{ row.title }}</span>
                 <span v-if="narrow" class="courses__meta">
-                  {{ termById.get(row.term_id)?.name ?? t('admin.courses.unknown') }}
-                  · {{ deptName(row.dept_id) ?? t('admin.courses.unknown') }}
+                  {{
+                    joinParts([
+                      termById.get(row.term_id)?.name ?? t('admin.courses.unknown'),
+                      deptName(row.dept_id) ?? t('admin.courses.unknown'),
+                    ])
+                  }}
                 </span>
               </div>
             </template>
@@ -276,7 +281,7 @@ function rowClick(row: CourseRow) {
   float: right;
   margin-left: 12px;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .courses__table :deep(.el-table__row) {
   cursor: pointer;
@@ -288,8 +293,8 @@ function rowClick(row: CourseRow) {
   min-width: 0;
 }
 .courses__code {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-color-primary);
 }
 .courses__title {
@@ -297,7 +302,7 @@ function rowClick(row: CourseRow) {
   word-break: break-word;
 }
 .courses__meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }

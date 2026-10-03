@@ -46,7 +46,7 @@ export default {
     pointsHint: '已有成绩输入后，更改满分时会询问这些成绩应如何处理；更改满分或计分位置都会重新记录受影响的总分。',
     due: '截止时间',
     duePlaceholder: '不设截止时间',
-    dueHint: '截止时间之后提交的作业会被标记为迟交。',
+    dueHint: '时间按你的时区（{zone}）计算。截止时间之后提交的作业会被标记为迟交。',
     component: '计入',
     componentNone: '不计分 — 练习作业',
     componentHint: '此作业计入评分结构中的哪一部分。练习作业不计入成绩，请留空。',
@@ -110,7 +110,7 @@ export default {
   },
   detail: {
     title: '作业',
-    dueLine: '截止',
+    dueLine: '截止：{at}（{rel}）',
     pointsLine: '满分{n}分',
     unpublishedAlert: '此作业发布之前，学生看不到它。',
     instructionsUnpublished: '作业说明还没有已发布的版本。请先发布说明，否则学生只会看到一份没有内容可读的作业。',

@@ -112,7 +112,7 @@ async function confirm(title: string, paragraphs: string[], ok: string, danger =
     await ElMessageBox.confirm(
       h(
         'div',
-        all.map((p) => h('p', { style: 'margin: 0 0 8px; line-height: 1.6' }, p)),
+        all.map((p) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, p)),
       ),
       title,
       {
@@ -346,7 +346,7 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
   flex-wrap: wrap;
   gap: 2px 6px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .agent-row__meta a {
@@ -357,8 +357,8 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
 }
 .agent-row__not-askable {
   margin: 4px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-color-warning-dark-2);
 }
 .agent-row__replies {
@@ -368,7 +368,7 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
   flex-wrap: wrap;
 }
 .agent-row__label {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .agent-row__select {
@@ -387,7 +387,7 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
   white-space: normal;
 }
 .agent-row__option-help {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .agent-row__actions {

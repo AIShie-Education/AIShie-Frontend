@@ -58,7 +58,7 @@ const revoking = ref<string | null>(null)
 
 async function revoke(c: ServiceCredential) {
   const ok = await ElMessageBox.confirm(
-    h('p', { style: 'margin: 0; line-height: 1.6' }, t('runtimeAdmin.agentRuntime.revokeBody', { command: ROTATE })),
+    h('p', { style: 'margin: 0; line-height: var(--app-lh-text)' }, t('runtimeAdmin.agentRuntime.revokeBody', { command: ROTATE })),
     t('runtimeAdmin.agentRuntime.revokeTitle'),
     {
       type: 'warning',
@@ -186,7 +186,7 @@ function forget() {
               </span>
               <span v-if="c.expires_at">
                 <span class="agent-runtime-card__k">{{ t('runtimeAdmin.agentRuntime.expires') }}</span>
-                <TimeText :value="c.expires_at" />
+                <TimeText :value="c.expires_at" cutoff />
               </span>
               <span v-if="c.revoked_at">
                 <span class="agent-runtime-card__k">{{ t('runtimeAdmin.agentRuntime.revokedAt') }}</span>
@@ -288,8 +288,8 @@ function forget() {
 }
 .agent-runtime-card__intro {
   margin: -4px 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .agent-runtime-card__setup,
@@ -298,7 +298,7 @@ function forget() {
 }
 .agent-runtime-card__command {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 1px 5px;
@@ -351,7 +351,7 @@ function forget() {
   flex-wrap: wrap;
   gap: 4px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .agent-runtime-card__k {
@@ -360,14 +360,14 @@ function forget() {
 }
 .agent-runtime-card__code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .agent-runtime-card__revoke {
   flex-shrink: 0;
 }
 .agent-runtime-issue__body {
   margin: 0 0 12px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .agent-runtime-issue__token {

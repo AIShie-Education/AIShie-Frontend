@@ -96,24 +96,24 @@ const note = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
 }
 .rubric-panel__note {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .rubric-panel__note.is-warning {
   color: var(--el-color-warning);
 }
 .rubric-panel__body {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   overflow-wrap: anywhere;
 }
 .rubric-panel__body :deep(.markdown-body) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .rubric-panel__body :deep(.markdown-body h1),
 .rubric-panel__body :deep(.markdown-body h2) {

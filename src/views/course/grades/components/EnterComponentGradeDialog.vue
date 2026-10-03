@@ -302,7 +302,7 @@ async function submit() {
 .enter-grade__why {
   margin-right: 12px;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .enter-dialog__intro {
   margin: 0 0 12px;
@@ -310,7 +310,7 @@ async function submit() {
 .enter-dialog__meta {
   float: right;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin-left: 12px;
 }
 .enter-dialog__existing {

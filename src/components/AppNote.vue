@@ -44,7 +44,7 @@ const { t } = useI18n()
   border-radius: 0 var(--app-radius-control) var(--app-radius-control) 0;
   background: color-mix(in srgb, var(--app-indigo-tint) 50%, transparent);
   color: var(--app-ink-2);
-  font-size: var(--app-text-md, 14px);
+  font-size: var(--app-text-md);
   line-height: var(--app-line-height);
 }
 .app-note.is-plain {
@@ -58,7 +58,7 @@ const { t } = useI18n()
 .app-note__title {
   margin: 0;
   color: var(--app-ink);
-  font-weight: var(--app-weight-strong, 600);
+  font-weight: var(--app-weight-strong);
 }
 .app-note__title + .app-note__body {
   margin-top: 2px;

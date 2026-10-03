@@ -54,6 +54,7 @@ import {
   textStatus,
   type WholeText,
 } from './textVersion'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -193,7 +194,7 @@ function printSource(): PrintRequest {
     lines: [
       props.docTitle,
       courseLine(props.courseId),
-      `${t('materials.document.version', { seq: props.seq })} · ${when}`,
+      joinParts([t('materials.document.version', { seq: props.seq }), when]),
     ],
     body: { markdown: body.value },
     footer: t('preview.print.textVersionNote'),
@@ -606,7 +607,7 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
   flex-wrap: wrap;
   gap: 6px 8px;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .text-pane__dot {
@@ -646,7 +647,7 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
   border-radius: var(--app-radius-item);
 }
 .text-pane__queued-icon {
-  font-size: 22px;
+  font-size: var(--app-text-2xl);
   margin-top: 2px;
   color: var(--el-color-primary);
 }
@@ -665,11 +666,11 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
 }
 .text-pane__queued-text {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .text-pane__queued-after {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .text-pane__failed-hint {
   margin: 4px 0 0;
@@ -679,7 +680,7 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
 }
 .text-pane__progress {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .text-pane__editor-actions {
   display: flex;

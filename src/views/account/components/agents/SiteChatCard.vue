@@ -44,8 +44,8 @@ const label = computed(() => (state.value === 'on' ? t('common.agent.askable.on'
 }
 .site-chat__text {
   margin: 0 0 10px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .site-chat__text:last-child {

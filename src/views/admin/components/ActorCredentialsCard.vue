@@ -180,7 +180,7 @@ async function revoke(c: ActorCredential) {
         : t('admin.credentials.confirm.title')
   const message = h(
     'div',
-    confirmLines(c).map((l) => h('p', { style: `margin: 0 0 8px;${l.strong ? ' font-weight: 600;' : ''}` }, l.text)),
+    confirmLines(c).map((l) => h('p', { style: `margin: 0 0 8px;${l.strong ? ' font-weight: var(--app-weight-strong);' : ''}` }, l.text)),
   )
   const ok = await ElMessageBox.confirm(message, title, {
     type: 'warning',
@@ -288,7 +288,7 @@ defineExpose({ reload: () => list.reload() })
                 </span>
                 <span>
                   <span class="creds__k">{{ t('admin.credentials.col.expires') }}</span>
-                  <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                  <TimeText v-if="c.expires_at" :value="c.expires_at" cutoff />
                   <template v-else>{{ t('common.labels.never') }}</template>
                 </span>
                 <span>
@@ -355,7 +355,7 @@ defineExpose({ reload: () => list.reload() })
           </el-table-column>
           <el-table-column :label="t('admin.credentials.col.expires')" min-width="150">
             <template #default="{ row }">
-              <TimeText v-if="row.c.expires_at" :value="row.c.expires_at" />
+              <TimeText v-if="row.c.expires_at" :value="row.c.expires_at" cutoff />
               <span v-else class="app-muted">{{ t('common.labels.never') }}</span>
             </template>
           </el-table-column>
@@ -437,7 +437,7 @@ defineExpose({ reload: () => list.reload() })
                 </span>
                 <span v-if="c.expires_at">
                   <span class="creds__k">{{ t('admin.credentials.col.expires') }}</span>
-                  <TimeText :value="c.expires_at" />
+                  <TimeText :value="c.expires_at" cutoff />
                 </span>
                 <span v-if="c.revoked_at">
                   <span class="creds__k">{{ t('admin.credentials.revokedAt') }}</span>
@@ -480,8 +480,8 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__intro {
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .creds__alert {
   margin-bottom: 12px;
@@ -491,8 +491,8 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__subhead {
   margin: 4px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
   color: var(--el-text-color-regular);
 }
 .creds__subhead--others {
@@ -500,11 +500,11 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .creds__agents-only {
   margin: -4px 0 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-warning-dark-2);
 }
 .creds__table :deep(.el-table__row.is-inactive) {
@@ -516,7 +516,7 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 1px 5px;
@@ -527,7 +527,7 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__when {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .creds__list {
@@ -568,7 +568,7 @@ defineExpose({ reload: () => list.reload() })
   flex-wrap: wrap;
   gap: 2px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .creds__k {

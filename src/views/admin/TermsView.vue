@@ -157,8 +157,10 @@ async function save() {
               <div class="term-cell">
                 <span class="term-name">{{ row.name }}</span>
                 <span v-if="narrow" class="term-meta">
-                  <span class="term-day">{{ row.starts_on }} – {{ row.ends_on }}</span> ·
-                  <span class="term-length">{{ lengthOf(row) }}</span>
+                  <span class="term-day">{{
+                    t('admin.courses.termDates', { from: row.starts_on, to: row.ends_on })
+                  }}</span
+                  >{{ t('common.sep') }}<span class="term-length">{{ lengthOf(row) }}</span>
                 </span>
               </div>
             </template>
@@ -248,7 +250,7 @@ async function save() {
   max-width: 100%;
 }
 .setup-count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .term-cell {
   display: flex;
@@ -260,7 +262,7 @@ async function save() {
   word-break: break-word;
 }
 .term-meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }

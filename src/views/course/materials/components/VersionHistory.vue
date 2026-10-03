@@ -171,7 +171,7 @@ function linkTo(v: DocumentVersion) {
   flex-wrap: wrap;
 }
 .version-item__seq {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .version-item__meta {
@@ -179,7 +179,7 @@ function linkTo(v: DocumentVersion) {
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   min-width: 0;
 }
@@ -189,8 +189,8 @@ function linkTo(v: DocumentVersion) {
   padding: 0 0 0 18px;
   display: flex;
   flex-direction: column;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--app-ink-2);
   min-width: 0;
 }
@@ -209,7 +209,7 @@ function linkTo(v: DocumentVersion) {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   margin-top: 2px;
 }
 .version-item__showing {

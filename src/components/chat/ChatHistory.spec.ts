@@ -269,7 +269,7 @@ describe('ChatHistory', () => {
       mine[0]!.course.section = 'A'
       chat.historyScope = 'all'
       await flushPromises()
-      expect(w.findAll('.hist-row__course').map((c) => c.text())).toEqual(['CS101 (A)', 'CS101 (B)'])
+      expect(w.findAll('.hist-row__course').map((c) => c.text())).toEqual(['CS101 · A', 'CS101 · B'])
     } finally {
       COURSES.k2 = ['MA201', '']
     }

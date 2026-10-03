@@ -37,7 +37,7 @@ function outOf(p: ActionSummary): Decimal | null | undefined {
           <div class="pending-proposals__score">
             <span class="pending-proposals__value">{{ formatDecimal(proposedScore(p), 4) }}</span>
             <span v-if="outOf(p) !== undefined && outOf(p) !== null" class="app-muted">
-              / {{ formatDecimal(outOf(p), 4) }} · {{ formatPercent(proposedScore(p), outOf(p)) }}
+              / {{ formatDecimal(outOf(p), 4) }}{{ t('common.sep') }}{{ formatPercent(proposedScore(p), outOf(p)) }}
             </span>
           </div>
           <StatusTag vocab="actionStatus" :value="p.status" />
@@ -73,8 +73,8 @@ function outOf(p: ActionSummary): Decimal | null | undefined {
 }
 .pending-proposals__title {
   margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .pending-proposals__list {
   list-style: none;
@@ -106,14 +106,14 @@ function outOf(p: ActionSummary): Decimal | null | undefined {
   font-variant-numeric: tabular-nums;
 }
 .pending-proposals__value {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--app-text-xl);
+  font-weight: var(--app-weight-strong);
 }
 .pending-proposals__meta {
   display: flex;
   gap: 4px 14px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   flex: 1 1 260px;
   min-width: 0;
 }
@@ -130,8 +130,8 @@ function outOf(p: ActionSummary): Decimal | null | undefined {
   align-items: flex-start;
   gap: 6px;
   margin: 6px 2px 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .pending-proposals__fate .el-icon {

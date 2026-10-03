@@ -69,6 +69,7 @@ import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintL
 import type { DocumentFile } from '@/api/types'
 import TextFilePicker from './components/TextFilePicker.vue'
 import { textTabShown } from './components/textVersion'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string; documentId: string }>()
 const { t } = useI18n()
@@ -457,7 +458,7 @@ function noteSource(): PrintRequest {
   const v = shown.value!
   const when = dateLine(v.created_at)
   // An owned file has one version, which needs no number.
-  const version = courseLevel.value ? `${t('materials.document.version', { seq: v.seq })} · ${when}` : when
+  const version = courseLevel.value ? joinParts([t('materials.document.version', { seq: v.seq }), when]) : when
   return {
     title: d.title,
     lines: [courseLine(props.courseId), version],
@@ -851,14 +852,14 @@ function noteSource(): PrintRequest {
   border-radius: inherit;
   background: color-mix(in srgb, var(--app-indigo-tint) 88%, transparent);
   color: var(--el-color-primary);
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   font-weight: 500;
   text-align: center;
   padding: 16px;
   pointer-events: none;
 }
 .doc-content__drop-icon {
-  font-size: 32px;
+  font-size: var(--app-text-3xl);
 }
 .doc-content__meta {
   display: flex;
@@ -868,10 +869,10 @@ function noteSource(): PrintRequest {
   padding-bottom: 12px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .doc-content__seq {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .doc-content__by {
   display: inline-flex;
@@ -897,8 +898,8 @@ function noteSource(): PrintRequest {
 }
 .doc-side__hint {
   margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .doc-side__rules {
@@ -909,14 +910,14 @@ function noteSource(): PrintRequest {
   align-items: center;
   gap: 4px;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .doc-facts {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 8px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   align-items: center;
 }
 .doc-facts dt {

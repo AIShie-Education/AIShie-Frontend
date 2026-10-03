@@ -35,6 +35,7 @@ import {
   type SchemeNode,
 } from './components/schemeModel'
 import { formatDecimal, formatList } from '@/utils/format'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
@@ -256,7 +257,7 @@ function collapseAll() {
                 :key="s.key"
                 class="glance-bar__seg"
                 :style="{ flexGrow: s.share, background: s.color }"
-                :title="`${s.name} · ${pct(s.share)}`"
+                :title="joinParts([s.name, pct(s.share)])"
               />
             </div>
             <ul class="glance-legend">
@@ -408,7 +409,7 @@ function collapseAll() {
   flex-wrap: wrap;
 }
 .scheme-view__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
 }
 .scheme-view__tree-tools {
@@ -433,7 +434,7 @@ function collapseAll() {
   align-items: flex-start;
   gap: 6px;
   margin: 0 0 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 18px;
   color: var(--el-text-color-secondary);
 }
@@ -442,12 +443,12 @@ function collapseAll() {
   margin-top: 3px;
 }
 .scheme-view__retry {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   vertical-align: baseline;
 }
 .scheme-view__glance-empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .glance-bar {
   display: flex;
@@ -474,7 +475,7 @@ function collapseAll() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   min-width: 0;
 }
 .glance-legend__dot {
@@ -487,12 +488,12 @@ function collapseAll() {
   overflow-wrap: anywhere;
 }
 .glance-legend__pct {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .scheme-view__uncounted-help {
   margin: -4px 0 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .uncounted {
   list-style: none;
@@ -506,7 +507,7 @@ function collapseAll() {
   flex-wrap: wrap;
   padding: 8px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .uncounted li:last-child {
   border-bottom: none;

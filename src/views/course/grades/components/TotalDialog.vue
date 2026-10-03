@@ -186,7 +186,7 @@ async function submit() {
 <style scoped>
 .total-dialog__intro {
   margin: 0 0 14px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .total-dialog__score {
   max-width: 180px;

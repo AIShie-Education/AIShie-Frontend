@@ -78,6 +78,6 @@ function share(i: WorkingItem): string {
 }
 .working__share {
   margin-left: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

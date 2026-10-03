@@ -47,6 +47,7 @@ import {
   shares,
   useGradeLookups,
 } from './components/grading'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string; studentMemberId?: string }>()
 const { t } = useI18n()
@@ -360,7 +361,7 @@ function overrideDetail(g: GradeSummary | undefined): string {
   const parts: string[] = []
   if (o.by_member_id) parts.push(t('grades.override.by', { name: course.memberName(o.by_member_id) ?? '' }))
   if (o.reason) parts.push(t('grades.override.why', { reason: o.reason }))
-  return parts.join(' · ')
+  return joinParts(parts)
 }
 
 /** Undoing final grades (grade.undo_ungraded_as_zero) is posting's own undo: grade_post, over the whole course. */
@@ -487,7 +488,9 @@ watch(
           <div class="gradebook__total-main">
             <div class="gradebook__total-label">
               {{ t('grades.courseTotal') }}
-              <span v-if="!isOwn && !mine" class="gradebook__who"> · <MemberName :id="student" /></span>
+              <span v-if="!isOwn && !mine" class="gradebook__who"
+                >{{ t('common.sep') }}<MemberName :id="student"
+              /></span>
             </div>
             <div class="gradebook__total-value" :class="{ 'is-overridden': rootRow?.overridePercent }">
               {{ rootRow?.overridePercent ?? formatPct(root.percent) }}
@@ -642,8 +645,9 @@ watch(
                               n: formatScore(row.weight),
                             })
                           : formatScore(row.weight)
-                      }}
-                      <template v-if="shareText(row) !== null">({{ shareText(row) }})</template>
+                      }}<template v-if="shareText(row) !== null">{{
+                        t('common.bracketed', { text: shareText(row) })
+                      }}</template>
                     </span>
                     <AppTag v-if="row.dropped">{{ t('grades.working.dropped') }}</AppTag>
                     <template v-if="row.kind === 'component'">
@@ -822,7 +826,7 @@ watch(
 }
 .gradebook__control-label {
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   white-space: nowrap;
 }
 .gradebook__control .app-form-hint {
@@ -846,7 +850,7 @@ watch(
   flex: 0 0 auto;
 }
 .gradebook__total-label {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .gradebook__who {
@@ -855,8 +859,8 @@ watch(
   gap: 4px;
 }
 .gradebook__total-value {
-  font-size: 40px;
-  font-weight: 650;
+  font-size: var(--app-text-4xl);
+  font-weight: var(--app-heading-weight);
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
@@ -865,7 +869,7 @@ watch(
   color: var(--el-color-primary);
 }
 .gradebook__computed {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   display: inline-flex;
   align-items: center;
@@ -896,8 +900,8 @@ watch(
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
@@ -926,7 +930,7 @@ watch(
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .gradebook__name {
   display: inline-flex;
@@ -949,11 +953,11 @@ watch(
   font-variant-numeric: tabular-nums;
 }
 .gradebook__pct {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .gradebook__share {
   margin-left: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .gradebook__tags {
   display: inline-flex;
@@ -989,7 +993,7 @@ watch(
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .gradebook__table :deep(.is-dropped) {
   color: var(--el-text-color-secondary);
@@ -998,7 +1002,7 @@ watch(
   text-decoration: line-through;
 }
 .gradebook__table :deep(.is-root) {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .gradebook__legend {
   margin: 12px 0 0;

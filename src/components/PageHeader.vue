@@ -90,7 +90,7 @@ function filled(nodes: VNode[] | undefined): boolean {
 }
 .page-header__title {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--app-text-2xl);
   line-height: 32px;
   display: flex;
   align-items: center;
@@ -142,7 +142,7 @@ function filled(nodes: VNode[] | undefined): boolean {
 .page-header__subtitle {
   margin: 4px 0 0;
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .page-header__actions {
   display: flex;

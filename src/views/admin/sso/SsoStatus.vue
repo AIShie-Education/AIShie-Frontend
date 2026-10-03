@@ -76,8 +76,8 @@ const olderKey = computed(() => sealedByOlderKey(props.provider, props.secretsKe
   gap: 4px;
 }
 .sso-status__why {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }

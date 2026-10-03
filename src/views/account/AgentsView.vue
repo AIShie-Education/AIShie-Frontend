@@ -196,7 +196,7 @@ function onHosted(_: unknown, actorId: string) {
   margin-top: 16px;
 }
 .agents-list__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
@@ -238,7 +238,7 @@ function onHosted(_: unknown, actorId: string) {
   flex-wrap: wrap;
 }
 .agents-item__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
   min-width: 0;
 }
@@ -246,7 +246,7 @@ function onHosted(_: unknown, actorId: string) {
   text-decoration: underline;
 }
 .agents-item__off {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-wait-fg);
 }
 .agents-item__meta {
@@ -255,7 +255,7 @@ function onHosted(_: unknown, actorId: string) {
   flex-wrap: wrap;
   gap: 4px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .agents-item__created {

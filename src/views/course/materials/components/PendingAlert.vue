@@ -25,7 +25,7 @@ import AppNote from '@/components/AppNote.vue'
 }
 .pending-alert__text {
   margin: 2px 0 4px;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .pending-alert__link {
   font-weight: 500;

@@ -45,8 +45,8 @@ const assignments = computed(() => line('assignments', props.assignmentScope, pr
   grid-template-columns: auto 1fr;
   column-gap: 8px;
   row-gap: 1px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
 }
 .scope-summary__label {
   color: var(--el-text-color-secondary);

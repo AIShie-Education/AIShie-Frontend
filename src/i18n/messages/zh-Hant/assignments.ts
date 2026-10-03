@@ -46,7 +46,7 @@ export default {
     pointsHint: '已有成績輸入後，更改滿分時會詢問這些成績應如何處理；更改滿分或計分位置都會重新記錄受影響的總分。',
     due: '截止時間',
     duePlaceholder: '不設截止時間',
-    dueHint: '截止時間之後繳交的作業會被標示為遲交。',
+    dueHint: '時間以你的時區（{zone}）計算。截止時間之後繳交的作業會被標示為遲交。',
     component: '計入',
     componentNone: '不計分 — 練習作業',
     componentHint: '此作業計入評分結構中的哪一部分。練習作業不計入成績，請留空。',
@@ -110,7 +110,7 @@ export default {
   },
   detail: {
     title: '作業',
-    dueLine: '截止',
+    dueLine: '截止：{at}（{rel}）',
     pointsLine: '滿分{n}分',
     unpublishedAlert: '此作業發佈之前，學生看不到它。',
     instructionsUnpublished: '作業說明還沒有已發佈的版本。請先發佈說明，否則學生只會看到一份沒有內容可讀的作業。',

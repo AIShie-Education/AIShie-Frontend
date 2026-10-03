@@ -51,7 +51,7 @@ const hint = computed(() => {
 
 <style scoped>
 .presence {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-3);
   white-space: nowrap;
 }

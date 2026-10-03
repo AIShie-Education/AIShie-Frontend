@@ -342,8 +342,8 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 }
 .course-head__code {
   flex: none;
-  font-size: 13px;
-  font-weight: var(--app-weight-strong, 600);
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
   color: var(--app-indigo);
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -355,9 +355,9 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--app-font-sans);
-  font-size: 19px;
+  font-size: var(--app-text-xl);
   line-height: 28px;
-  font-weight: var(--app-weight-strong, 600);
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink);
 }
 .course-head__tags {
@@ -449,7 +449,7 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   background: none;
   color: var(--el-text-color-regular);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   line-height: 20px;
   text-decoration: none;
   white-space: nowrap;
@@ -480,7 +480,7 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   }
 }
 .course-tabs__caret {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 /* Every tab and More, laid out as in the strip but unseen and taking no room, not even beyond the page's
    edge (the box is empty, and clips what is in it): their widths. */

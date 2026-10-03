@@ -300,13 +300,13 @@ const removeWrite = useWrite('member.remove')
 
 // A confirmation in paragraphs, with an optional list of warnings under a heading.
 function body(paragraphs: string[], warnTitle?: string, warnings: string[] = []): VNode {
-  const kids: VNode[] = paragraphs.map((p) => h('p', { style: 'margin: 0 0 8px; line-height: 1.6' }, p))
+  const kids: VNode[] = paragraphs.map((p) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, p))
   if (warnings.length) {
-    kids.push(h('p', { style: 'margin: 8px 0 4px; font-weight: 600; color: var(--el-color-warning)' }, warnTitle))
+    kids.push(h('p', { style: 'margin: 8px 0 4px; font-weight: var(--app-weight-strong); color: var(--el-color-warning)' }, warnTitle))
     kids.push(
       h(
         'ul',
-        { style: 'margin: 0; padding-left: 18px; line-height: 1.6' },
+        { style: 'margin: 0; padding-left: 18px; line-height: var(--app-lh-text)' },
         warnings.map((w) => h('li', w)),
       ),
     )
@@ -455,10 +455,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           closable
         >
           <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
-            {{ t('members.proposed.view') }}
-          </router-link>
-          ·
-          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+            {{ t('members.proposed.view') }} </router-link
+          >{{ t('common.sep')
+          }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
             t('members.proposed.mine')
           }}</router-link>
         </AppNote>
@@ -564,10 +563,13 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               </div>
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.expires')">
-              <template v-if="m.expires_at">
-                <TimeText :value="m.expires_at" />
-                <span class="app-muted member__gap">(<TimeText :value="m.expires_at" relative />)</span>
-              </template>
+              <!-- A cut-off: the time with its zone, the exact UTC on hover. -->
+              <i18n-t v-if="m.expires_at" keypath="common.time.cutoff" tag="span" scope="global">
+                <template #at><TimeText :value="m.expires_at" cutoff /></template>
+                <template #rel
+                  ><span class="app-muted"><TimeText :value="m.expires_at" relative /></span
+                ></template>
+              </i18n-t>
               <span v-else>{{ t('members.detail.noExpiry') }}</span>
               <div v-if="m.expires_at && live" class="member__hint">{{ t('members.detail.expiresHelp') }}</div>
             </el-descriptions-item>
@@ -809,8 +811,8 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   margin-bottom: 16px;
 }
 .member__alert :deep(.el-alert__title) {
-  line-height: 1.5;
-  font-size: 14px;
+  line-height: var(--app-lh-ui);
+  font-size: var(--app-text-md);
 }
 .member__desc:not(.is-narrow) :deep(.el-descriptions__label) {
   width: 140px;
@@ -832,14 +834,14 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
 }
 .member__login-id {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .member__small-link {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .member__hint {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   margin-top: 4px;
 }
@@ -859,7 +861,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 16px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .member__scope-help {
   margin: -4px 0 12px;
@@ -878,16 +880,16 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
 }
 .member__scope-head {
   margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .member__scope-text {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
 }
 .member__scope-none {
   color: var(--el-color-danger);
@@ -902,7 +904,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
 .member__scope-list {
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 1.8;
 }
 .member__scope-list a {
@@ -926,7 +928,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   gap: 8px;
   flex-wrap: wrap;
   padding: 4px 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .member__delegates a {
   text-decoration: none;

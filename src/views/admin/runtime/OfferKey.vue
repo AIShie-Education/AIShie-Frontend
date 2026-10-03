@@ -39,12 +39,12 @@ const { t } = useI18n()
   min-width: 0;
 }
 .offer-key__hint {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .offer-key__why {
   flex-basis: 100%;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 </style>

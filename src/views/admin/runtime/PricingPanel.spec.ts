@@ -73,9 +73,9 @@ describe('the price table', () => {
     const keys = w.findAll('[data-price]').map((c) => c.attributes('data-price'))
     expect(keys).toEqual(['file:claude', 'site:gpt-4.1-mini-2026-09-01', 'file:0'])
     const site = rowOf(w, '[data-price="site:gpt-4.1-mini-2026-09-01"]')
-    expect(site.find('.price-cell__input').text()).toBe('$0.4')
-    expect(site.find('.price-cell__cache_read').text()).toBe('$0.1')
-    expect(site.find('.price-cell__output').text()).toBe('$1.6')
+    expect(site.find('.price-cell__input').text()).toBe('US$0.40')
+    expect(site.find('.price-cell__cache_read').text()).toBe('US$0.10')
+    expect(site.find('.price-cell__output').text()).toBe('US$1.60')
     expect(site.find('.price-cell__source-tag').text()).toBe('Site')
     expect(site.find('.price-cell__edit').exists()).toBe(true)
     const file = rowOf(w, '[data-price="file:0"]')
@@ -121,6 +121,26 @@ describe('the price table', () => {
     expect(lastMessage()?.message).toBe('The price of gpt-4.1-nano from 2026-09-30 is saved.')
     expect(s.to('GET', ADMIN.prices)).toHaveLength(2)
     expect(w.find('[data-price="site:gpt-4.1-nano-2026-09-30"]').exists()).toBe(true)
+  })
+
+  it.each([
+    ['Asia/Hong_Kong', '2026-10-03 08:00 (Hong Kong Standard Time)'],
+    // West of UTC, the day chosen begins on the evening before it.
+    ['America/New_York', '2026-10-02 20:00 (Eastern Daylight Time)'],
+  ])('says that a price’s day is UTC’s, and when it starts on the clock of a reader in %s', async (zone, start) => {
+    vi.stubEnv('TZ', zone)
+    const w = await panel()
+    await w.find('.prices-card__add').trigger('click')
+    await flushPromises()
+    const vm = w.findComponent({ name: 'PriceDialog' }).vm as unknown as { form: Record<string, string> }
+    vm.form.from = '2026-10-03'
+    await flushPromises()
+    const hint = dialog().querySelector('.price-form__from-hint')!
+    expect(hint.querySelector('.time-text--zoned')!.textContent!.trim()).toBe(start)
+    expect(hint.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+      `The price starts at ${start}, when the day chosen begins in UTC. It may be in the future.`,
+    )
+    vi.unstubAllEnvs()
   })
 
   it('says a price taken for the same model and day on the day', async () => {
@@ -391,7 +411,7 @@ describe('what things cost', () => {
     expect(w.find('.costs-card__tokens').text()).toBe('400,000 in · 90,000 out')
     expect(w.find('.costs-card__other').text()).toBe('Document transcription: 4 calls, US$0.10')
     expect(w.find('.costs-card__unpriced').text()).toContain(
-      '7 calls had no price when they were made, and are counted as US$0.',
+      '7 calls had no price when they were made, and are counted as US$0.00.',
     )
     expect(w.findAll('.cost-cell__day').map((d) => d.text())).toEqual(['2026-09-29'])
     await w.find('.costs-card .load-more button').trigger('click')
@@ -473,10 +493,10 @@ describe('each table, by its card’s width', () => {
     expect(heads(w, '.prices-card')).toEqual(['Model'])
     const site = rowOf(w, '[data-price="site:gpt-4.1-mini-2026-09-01"]')
     expect(site.findAll('.price-cell__price').map((p) => p.text())).toEqual([
-      'in $0.4',
-      'cache read $0.1',
-      'cache write $0.4',
-      'out $1.6',
+      'in US$0.40',
+      'cache read US$0.10',
+      'cache write US$0.40',
+      'out US$1.60',
     ])
     expect(site.find('.price-cell__edit').exists()).toBe(true)
   })

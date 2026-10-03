@@ -135,13 +135,15 @@ function shown(p: Perm): AutonomyLevel | undefined {
   gap: 6px;
 }
 .perm-editor__help {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
+/* In the third ink, not the placeholder's, which does not read at AA on a changed row (the waiting
+   pill's ground). */
 .perm-editor__key {
   font-family: var(--app-font-mono);
-  font-size: 11px;
-  color: var(--el-text-color-placeholder);
+  font-size: var(--app-text-mark);
+  color: var(--el-text-color-secondary);
 }
 .perm-editor__value {
   flex-shrink: 0;
@@ -156,7 +158,7 @@ function shown(p: Perm): AutonomyLevel | undefined {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-warning);
   margin-top: 2px;
 }
@@ -164,7 +166,7 @@ function shown(p: Perm): AutonomyLevel | undefined {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-danger);
   margin-top: 2px;
 }

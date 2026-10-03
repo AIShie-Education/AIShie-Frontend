@@ -199,7 +199,7 @@ function onSaved(savedDept: string | null) {
   margin-bottom: 16px;
 }
 .presets-toolbar__label {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
 }
 .presets-toolbar__select {
@@ -234,13 +234,13 @@ function onSaved(savedDept: string | null) {
   flex-wrap: wrap;
 }
 .preset-card__name {
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-lg);
   word-break: break-word;
 }
 .preset-card__key {
   font-family: var(--app-font-mono);
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-light);
   border-radius: 4px;
@@ -253,8 +253,8 @@ function onSaved(savedDept: string | null) {
 }
 .preset-card__desc {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   line-clamp: 3;
@@ -267,7 +267,7 @@ function onSaved(savedDept: string | null) {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 10px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-regular);
 }
 .preset-card__foot {
@@ -276,7 +276,7 @@ function onSaved(savedDept: string | null) {
   justify-content: space-between;
   gap: 8px;
   margin-top: auto;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .preset-card__actions {
   display: flex;

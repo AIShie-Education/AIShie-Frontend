@@ -56,8 +56,8 @@ const { t } = useI18n()
 }
 .agents-about__points p {
   margin: 4px 0 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .agents-about__icon {

@@ -35,6 +35,8 @@ import {
   seatSentences,
 } from './hosting'
 import type { AgentStanding } from './agents'
+import { joinParts } from '@/utils/parts'
+import { formatMoney } from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
@@ -91,7 +93,7 @@ const statusBody = computed(() => {
   return t(`hosting.status.${status.value}.body`)
 })
 const ownLine = computed(() =>
-  own.value ? `${providerLabel(props.offers, own.value.provider)} · ${own.value.model}` : '',
+  own.value ? joinParts([providerLabel(props.offers, own.value.provider), own.value.model]) : '',
 )
 const modelLine = computed(() => (school.value ? school.value.label : ownLine.value))
 /** The model's id beside the plan's label, unless the label says it already. */
@@ -113,7 +115,7 @@ const withdrawn = computed<'fallback' | 'none' | null>(() => {
 })
 const seats = computed(() => props.agent.seats ?? [])
 const cost = computed(() =>
-  own.value && !own.value.price_known ? t('hosting.card.costUnknown') : `$${props.agent.today.cost_usd}`,
+  own.value && !own.value.price_known ? t('hosting.card.costUnknown') : formatMoney(props.agent.today.cost_usd),
 )
 
 // --- Keeping it fresh ------------------------------------------------------------------
@@ -433,13 +435,13 @@ defineExpose({ onCommand })
 }
 .hosted-card__status {
   margin: -4px 0 8px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .hosted-card__problem {
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .hosted-card__problem summary {
   cursor: pointer;
@@ -451,14 +453,14 @@ defineExpose({ onCommand })
 }
 .hosted-card__since {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .hosted-card__facts {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 6px 16px;
   margin: 12px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .hosted-card__facts dt {
   color: var(--el-text-color-secondary);
@@ -470,11 +472,11 @@ defineExpose({ onCommand })
 }
 .hosted-card__facts code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .hosted-card__model-id {
   margin-left: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .hosted-card__school-use {
   display: flex;
@@ -482,24 +484,24 @@ defineExpose({ onCommand })
   gap: 2px;
 }
 .hosted-card__school-count {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .hosted-card__school-count.is-spent {
   color: var(--el-color-warning-dark-2);
 }
 .hosted-card__school-hint,
 .hosted-card__per-asker {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .hosted-card__proposals {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-warning-dark-2);
 }
 .hosted-card__h {
   margin: 16px 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .hosted-card__seats {
   list-style: none;
@@ -508,7 +510,7 @@ defineExpose({ onCommand })
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .hosted-card__seat {
   display: flex;

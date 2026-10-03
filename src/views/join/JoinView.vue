@@ -21,6 +21,8 @@ import AppWordmark from '@/components/AppWordmark.vue'
 import { emailDomainAllowed, tokenFromRoute } from '@/utils/joinLink'
 import JoinRegisterForm from './components/JoinRegisterForm.vue'
 import { closedReason, joinRefusal, type ClosedReason } from './join'
+import { courseCodeText } from '@/utils/parts'
+import { formatList } from '@/utils/format'
 
 const props = defineProps<{ token: string }>()
 const { t } = useI18n()
@@ -64,10 +66,13 @@ watch(token, () => void load(), { immediate: true })
 
 const courseLine = computed(() => {
   const c = preview.value?.course
-  return c ? [c.code, c.section].filter(Boolean).join(' · ') : ''
+  return c ? courseCodeText(c.code, c.section) : ''
 })
 const domains = computed(() => preview.value?.allowed_email_domains ?? [])
-const domainList = computed(() => domains.value.map((d) => `@${d}`).join(', '))
+const atDomains = computed(() => domains.value.map((d) => `@${d}`))
+// One of them, as the page's language says "or" (Intl's, which is not reactive: the language
+// is read here, so that the list is written again when it changes).
+const domainList = computed(() => (ui.locale, formatList(atDomains.value, 'or')))
 // How long the link has left. Once its time is up it is said to have
 // expired, as Core will say when asked again, which it is.
 const { text: timeLeft, ended: timeUp } = useCountdown(() =>
@@ -234,7 +239,7 @@ function goToCourse(courseId: string) {
   <div class="app-auth-page join">
     <div class="app-auth-page__lang">
       <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" />
+        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
       </el-select>
     </div>
     <main class="app-auth-page__card join__card" :aria-busy="loading || leaving">
@@ -406,7 +411,7 @@ function goToCourse(courseId: string) {
 }
 .join__lead {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .join__course {
@@ -416,21 +421,21 @@ function goToCourse(courseId: string) {
   background: var(--app-indigo-tint);
 }
 .join__code {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.02em;
   color: var(--el-color-primary);
   word-break: break-word;
 }
 .join__title {
   margin: 4px 0 0;
-  font-size: 22px;
+  font-size: var(--app-text-2xl);
   line-height: 1.3;
   word-break: break-word;
 }
 .join__what {
   margin: 0 0 12px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .join__time {
@@ -438,7 +443,7 @@ function goToCourse(courseId: string) {
   gap: 6px;
   align-items: center;
   margin: -4px 0 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-regular);
 }
@@ -447,8 +452,8 @@ function goToCourse(courseId: string) {
   gap: 6px;
   align-items: flex-start;
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-regular);
 }
 .join__domains .el-icon {
@@ -461,7 +466,7 @@ function goToCourse(courseId: string) {
   align-items: center;
   gap: 4px 8px;
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .join__email {
   color: var(--el-text-color-secondary);
@@ -487,11 +492,11 @@ function goToCourse(courseId: string) {
 }
 .join__subtitle {
   margin: 8px 0 12px;
-  font-size: 17px;
+  font-size: var(--app-text-lg);
 }
 .join__switch {
   margin: 14px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   text-align: center;
 }
@@ -506,7 +511,7 @@ function goToCourse(courseId: string) {
 }
 @media (max-width: 480px) {
   .join__title {
-    font-size: 20px;
+    font-size: var(--app-text-xl);
   }
 }
 </style>

@@ -314,7 +314,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
       <ul class="grades-view__result-list">
         <li v-for="r in postResult.posted.slice(0, 12)" :key="r.id">
           <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: r.id } }">
-            <MemberName :id="r.studentMemberId" /> · {{ r.label }}
+            <MemberName :id="r.studentMemberId" />{{ t('common.sep') }}{{ r.label }}
           </router-link>
           <ScoreText :score="r.score" :out-of="r.outOf" hide-percent />
         </li>
@@ -500,7 +500,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
               />
             </template>
           </el-table-column>
-          <el-table-column :label="t('grades.columns.score')" min-width="150">
+          <el-table-column :label="t('grades.columns.score')" min-width="150" align="right">
             <template #default="{ row }">
               <ScoreText :score="row.score" :out-of="lookups.outOf(row)" :as-percent="row.origin === 'computed'" />
             </template>
@@ -537,7 +537,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
               <IdText v-else :id="row.assignment_id ?? row.component_id" />
             </template>
           </el-table-column>
-          <el-table-column :label="t('grades.columns.score')" min-width="156">
+          <el-table-column :label="t('grades.columns.score')" min-width="156" align="right">
             <template #default="{ row }">
               <ScoreText :score="row.score" :out-of="lookups.outOf(row)" :as-percent="row.origin === 'computed'" />
             </template>
@@ -652,8 +652,8 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
 }
 .grades-view__undo-why {
   max-width: 280px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   white-space: normal;
 }
 .grades-view__table :deep(.el-table__row) {
@@ -723,11 +723,11 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .grades-list__time {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .grades-list__chev {
   flex-shrink: 0;

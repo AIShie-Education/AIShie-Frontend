@@ -237,14 +237,13 @@ function refresh() {
         <AppTag v-if="pastDue" size="default">{{ t('assignments.state.pastDue') }}</AppTag>
       </template>
       <template v-if="assignment" #subtitle>
-        <span v-if="assignment.due_at">
-          {{ t('assignments.detail.dueLine') }} <TimeText :value="assignment.due_at" /> (<TimeText
-            :value="assignment.due_at"
-            relative
-          />)
-        </span>
-        <span v-else>{{ t('common.time.noDue') }}</span>
-        · {{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
+        <!-- A cut-off: the time with its zone, the exact UTC on hover. -->
+        <i18n-t v-if="assignment.due_at" keypath="assignments.detail.dueLine" tag="span" scope="global">
+          <template #at><TimeText :value="assignment.due_at" cutoff /></template>
+          <template #rel><TimeText :value="assignment.due_at" relative /></template>
+        </i18n-t>
+        <span v-else>{{ t('common.time.noDue') }}</span
+        >{{ t('common.sep') }}{{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
       </template>
       <template v-if="assignment && writer">
         <el-button :disabled="!course.writable" @click="formOpen = true">
@@ -427,7 +426,7 @@ function refresh() {
                 <dt>{{ t('assignments.detail.due') }}</dt>
                 <dd>
                   <template v-if="assignment.due_at">
-                    <TimeText :value="assignment.due_at" />
+                    <TimeText :value="assignment.due_at" cutoff />
                     <div class="app-muted assignment-view__rel"><TimeText :value="assignment.due_at" relative /></div>
                   </template>
                   <span v-else class="app-muted">{{ t('common.time.noDue') }}</span>
@@ -533,14 +532,14 @@ function refresh() {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
   text-decoration: none;
   white-space: nowrap;
 }
 .assignment-view__none {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .assignment-view__file {
   display: flex;
@@ -550,18 +549,18 @@ function refresh() {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .assignment-view__facts {
   margin: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px 16px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .assignment-view__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .assignment-view__facts dd {
   margin: 0;
@@ -569,10 +568,10 @@ function refresh() {
 }
 .assignment-view__num {
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .assignment-view__rel {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin-top: 2px;
 }
 .assignment-view__links {

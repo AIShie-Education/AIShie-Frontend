@@ -132,7 +132,7 @@ defineExpose({ revokeById })
               </span>
               <span>
                 <span class="token__k">{{ t('agents.tokens.expires') }}</span>
-                <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                <TimeText v-if="c.expires_at" :value="c.expires_at" cutoff />
                 <template v-else>{{ t('agents.tokens.noExpiry') }}</template>
               </span>
               <span v-if="issuer(c)">
@@ -221,7 +221,7 @@ defineExpose({ revokeById })
   flex-wrap: wrap;
   gap: 4px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .token__k {
@@ -230,7 +230,7 @@ defineExpose({ revokeById })
 }
 .token__code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 1px 5px;

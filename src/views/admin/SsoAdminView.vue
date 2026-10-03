@@ -358,8 +358,8 @@ function openTest(p: SsoProvider) {
 }
 .sso-admin__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .sso-cell {
@@ -369,7 +369,7 @@ function openTest(p: SsoProvider) {
   min-width: 0;
 }
 .sso-cell__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
 }
 .sso-cell__name.is-unnamed {
@@ -377,11 +377,11 @@ function openTest(p: SsoProvider) {
   color: var(--el-text-color-secondary);
 }
 .sso-cell__id {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .sso-cell__issuer,
 .sso-cell__linked {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-all;
 }
@@ -397,6 +397,6 @@ function openTest(p: SsoProvider) {
   margin-left: 0;
 }
 .sso-cell__always {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

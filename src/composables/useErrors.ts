@@ -144,15 +144,17 @@ export function errorMessage(e: unknown, opts: ReasonScopes = {}): string {
     case 'idempotency_conflict':
       return t('common.errors.idempotency')
     case 'forbidden':
-      return e.message ? `${t('common.errors.forbiddenAction')} (${e.message})` : t('common.errors.forbiddenAction')
+      return e.message
+        ? t('common.aside', { text: t('common.errors.forbiddenAction'), aside: e.message })
+        : t('common.errors.forbiddenAction')
     case 'not_found':
       return e.message || t('common.errors.notFound')
     case 'conflict':
-      return `${t('common.errors.conflict')}: ${e.message}`
+      return t('common.pair', { label: t('common.errors.conflict'), value: e.message })
     case 'failed_precondition':
-      return `${t('common.errors.precondition')}: ${e.message}`
+      return t('common.pair', { label: t('common.errors.precondition'), value: e.message })
     case 'invalid_argument':
-      return `${t('common.errors.invalid')}: ${e.message}`
+      return t('common.pair', { label: t('common.errors.invalid'), value: e.message })
   }
   return e.message || t('common.errors.title')
 }
@@ -166,11 +168,16 @@ export function notifyError(e: unknown, title?: string, opts: ReasonScopes = {})
       title: title ?? t('common.outcome.failed'),
       message: h('div', [
         h('div', msg),
-        h('div', { class: 'app-muted', style: 'margin-top: 4px; font-size: 12px' }, t('common.errors.recordedAs', { id: shortId(e.actionId) })),
+        h('div', { class: 'app-muted', style: 'margin-top: 4px; font-size: var(--app-text-xs)' }, t('common.errors.recordedAs', { id: shortId(e.actionId) })),
       ]),
       duration: 8000,
     })
     return
   }
-  ElMessage({ type: 'error', message: title ? `${title}: ${msg}` : msg, duration: 6000, showClose: true })
+  ElMessage({
+    type: 'error',
+    message: title ? t('common.pair', { label: title, value: msg }) : msg,
+    duration: 6000,
+    showClose: true,
+  })
 }

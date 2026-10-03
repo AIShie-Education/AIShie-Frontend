@@ -769,7 +769,7 @@ function capToMine() {
 .add-member__intro {
   margin: 0 0 16px;
   color: var(--el-text-color-regular);
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .add-member__find {
   width: 100%;
@@ -793,7 +793,7 @@ function capToMine() {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .add-member__found-meta > span:last-of-type {
@@ -803,7 +803,7 @@ function capToMine() {
 }
 .add-member__found-id {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--app-text-mark);
 }
 .add-member__found-meta > span:last-child {
   min-width: 0;
@@ -812,7 +812,7 @@ function capToMine() {
 }
 .add-member__found-empty {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .add-member__email {
@@ -834,7 +834,7 @@ function capToMine() {
   gap: 6px;
   width: 100%;
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .add-member__actor-who {
   display: flex;
@@ -873,26 +873,26 @@ function capToMine() {
 .add-member__opt-meta {
   float: right;
   margin-left: 12px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .add-member__preset {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   padding: 8px 12px;
   border-radius: var(--app-radius-control);
   background: var(--el-fill-color-light);
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .add-member__gap {
   margin-bottom: 12px;
 }
 .add-member__section {
   margin: 8px 0 2px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .add-member__section-hint {
   margin: 0 0 10px;
@@ -908,7 +908,7 @@ function capToMine() {
   width: 100%;
 }
 .add-member__inline-alert :deep(.el-alert__title) {
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .add-member__stack {
   display: flex;
@@ -936,10 +936,10 @@ function capToMine() {
 }
 .add-member__rules :deep(.el-alert__description),
 .add-member__rules :deep(.el-alert__content) {
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .add-member__rules :deep(.el-alert__title) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .add-member__cap {
   margin-top: 8px;

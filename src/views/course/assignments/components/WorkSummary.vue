@@ -112,13 +112,13 @@ defineExpose({ reload: state.reload })
   background: var(--el-fill-color-light);
 }
 .work-summary__num {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-heading-weight);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
 .work-summary__label {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .work-summary__states {
@@ -141,6 +141,6 @@ defineExpose({ reload: state.reload })
 }
 .work-summary__empty {
   margin: 0 0 8px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 </style>

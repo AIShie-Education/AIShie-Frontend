@@ -392,8 +392,8 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
   flex-wrap: wrap;
   gap: 4px 8px;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
 }
 .action-target__part {
   display: inline-flex;
@@ -406,7 +406,7 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
   font-weight: 500;
 }
 .action-target__score {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-primary);
   background: var(--el-fill-color);

@@ -141,7 +141,7 @@ const canSave = computed(
 )
 /** The latest version's files, named, for the word that they are not carried over. */
 const baseFileNames = computed(() => {
-  const names = baseFiles.value.map((f) => `${f.filename} (${formatBytes(f.byte_size)})`)
+  const names = baseFiles.value.map((f) => t('common.aside', { text: f.filename, aside: formatBytes(f.byte_size) }))
   return formatList(
     names.length > 4 ? [...names.slice(0, 4), t('common.labels.andMore', { n: names.length - 4 })] : names,
   )
@@ -293,8 +293,8 @@ async function submit() {
 .version-dialog__intro {
   margin: 0 0 16px;
   color: var(--el-text-color-secondary);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .version-dialog__stack {
   display: flex;
@@ -319,7 +319,7 @@ async function submit() {
 }
 .version-dialog__why {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   text-align: left;
 }
 /* The buttons keep together at the right, under the reason where there is no room beside it. */

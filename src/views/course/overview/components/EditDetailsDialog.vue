@@ -162,8 +162,8 @@ async function submit() {
   align-items: center;
   gap: 6px;
   margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .details__facts {
   display: grid;
@@ -172,7 +172,7 @@ async function submit() {
   margin: 0;
 }
 .details__facts dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .details__facts dd {

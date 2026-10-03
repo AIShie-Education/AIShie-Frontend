@@ -119,12 +119,12 @@ async function copy() {
 <style scoped>
 .reset-dialog__p {
   margin: 0 0 10px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .reset-dialog__list {
   margin: 0 0 12px;
   padding-left: 20px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .reset-dialog__alert {
   margin-bottom: 16px;
@@ -137,7 +137,7 @@ async function copy() {
   margin: 0 0 12px;
 }
 .reset-dialog__facts dt {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .reset-dialog__facts dd {
@@ -153,7 +153,7 @@ async function copy() {
 .reset-dialog__password,
 .reset-dialog__login {
   font-family: var(--app-font-mono);
-  font-size: 18px;
+  font-size: var(--app-text-xl);
   letter-spacing: 0.04em;
   padding: 6px 10px;
   border-radius: var(--app-radius-control);
@@ -163,7 +163,7 @@ async function copy() {
   user-select: all;
 }
 .reset-dialog__login {
-  font-size: 15px;
+  font-size: var(--app-text-lg);
 }
 @media (max-width: 480px) {
   .reset-dialog__facts {

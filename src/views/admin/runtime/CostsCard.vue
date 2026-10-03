@@ -23,6 +23,7 @@ import RefreshButton from '@/components/RefreshButton.vue'
 import { formatList, formatMoney, formatNumber } from '@/utils/format'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { COST_SPAN_DAYS, costRange, utcToday } from './runtimeAdmin'
+import { joinParts } from '@/utils/parts'
 
 const { t, te } = useI18n()
 // A phone's layout, a group's model calls under it and its tokens left out (the
@@ -166,7 +167,7 @@ function toPrices() {
         </p>
         <el-alert v-if="unpricedTotal" type="warning" :closable="false" show-icon class="costs-card__unpriced">
           <template #title>
-            {{ t('runtimeAdmin.costs.unpriced', { n: n(unpricedTotal) }, unpricedTotal) }}
+            {{ t('runtimeAdmin.costs.unpriced', { n: n(unpricedTotal), zero: formatMoney(0) }, unpricedTotal) }}
           </template>
           <el-button size="small" class="costs-card__to-prices" @click="toPrices">
             {{ t('runtimeAdmin.costs.toPrices') }}
@@ -197,12 +198,14 @@ function toPrices() {
                   <code v-else-if="row.tenant_id" class="cost-cell__id">{{ row.tenant_id }}</code>
                 </template>
                 <template v-else-if="report.group === 'model'">
-                  <span class="cost-cell__model">{{ row.provider }} · {{ row.model }}</span>
+                  <span class="cost-cell__model">{{ joinParts([row.provider, row.model]) }}</span>
                   <span class="cost-cell__meta">
-                    {{ row.key_source ? t(`runtimeAdmin.costs.keySources.${row.key_source}`) : '' }}
-                    <template v-if="row.offers?.length">
-                      · {{ t('runtimeAdmin.costs.offers', { ids: formatList(row.offers) }) }}</template
-                    >
+                    {{
+                      joinParts([
+                        row.key_source && t(`runtimeAdmin.costs.keySources.${row.key_source}`),
+                        row.offers?.length && t('runtimeAdmin.costs.offers', { ids: formatList(row.offers) }),
+                      ])
+                    }}
                   </span>
                 </template>
                 <template v-else-if="report.group === 'key_source'">
@@ -260,8 +263,8 @@ function toPrices() {
 }
 .costs-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .costs-card__controls {
@@ -283,7 +286,7 @@ function toPrices() {
 }
 .costs-card__too-long {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 .costs-card__totals {
@@ -299,7 +302,7 @@ function toPrices() {
   min-width: 0;
 }
 .costs-card__total dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .costs-card__total dd {
@@ -309,16 +312,16 @@ function toPrices() {
 }
 .costs-card__cost,
 .costs-card__calls {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-heading-weight);
 }
 .costs-card__tokens {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   padding-top: 6px;
 }
 .costs-card__other {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .costs-card__unpriced {
   margin-bottom: 12px;
@@ -332,7 +335,7 @@ function toPrices() {
 }
 .cost-cell__meta,
 .cost-cell__other {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .cost-cell__other {

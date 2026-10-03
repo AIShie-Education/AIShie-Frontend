@@ -96,7 +96,7 @@ const closed = computed(() => c.value?.status === 'closed')
     <h3 class="answer-proposal__head">{{ t('actions.answer.question') }}</h3>
     <div v-if="question" class="answer-proposal__message">
       <div class="answer-proposal__meta">
-        {{ c?.opener.display_name }} · <TimeText :value="question.created_at" relative />
+        {{ c?.opener.display_name }}{{ t('common.sep') }}<TimeText :value="question.created_at" relative />
       </div>
       <p v-if="question.retracted" class="answer-proposal__muted">{{ t('actions.answer.retracted') }}</p>
       <MarkdownView v-else :source="question.body ?? ''" />
@@ -121,12 +121,12 @@ const closed = computed(() => c.value?.status === 'closed')
 }
 .answer-proposal__help {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .answer-proposal__alert :deep(.el-alert__title) {
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .answer-proposal__facts {
   margin: 0;
@@ -143,12 +143,12 @@ const closed = computed(() => c.value?.status === 'closed')
 }
 .answer-proposal__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .answer-proposal__facts dd {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .answer-proposal__inline {
@@ -162,8 +162,8 @@ const closed = computed(() => c.value?.status === 'closed')
 }
 .answer-proposal__head {
   margin: 8px 0 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .answer-proposal__message {
   max-height: 360px;
@@ -177,14 +177,14 @@ const closed = computed(() => c.value?.status === 'closed')
   border-left: 3px solid var(--el-color-primary);
 }
 .answer-proposal__meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
 .answer-proposal__muted {
   margin: 0;
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 @media (max-width: 600px) {
   .answer-proposal__facts > div {

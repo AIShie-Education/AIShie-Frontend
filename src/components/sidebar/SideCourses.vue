@@ -18,6 +18,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import { useCourseStore } from '@/stores/course'
 import { useCourseNav } from '@/layouts/courseNav'
 import { SIDE_IN_DRAWER } from './frame'
+import { courseCodeText } from '@/utils/parts'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -138,7 +139,7 @@ const archivedCount = computed(
         <nav
           v-if="tabsOf(m.course_id)"
           class="side-list side-course-tabs"
-          :aria-label="t('layout.side.courseTabs', { course: m.section ? `${m.code} · ${m.section}` : m.code })"
+          :aria-label="t('layout.side.courseTabs', { course: courseCodeText(m.code, m.section) })"
         >
           <router-link
             v-for="tab in courseNav.tabs.value"
@@ -228,8 +229,8 @@ const archivedCount = computed(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   color: var(--el-text-color-secondary);
 }

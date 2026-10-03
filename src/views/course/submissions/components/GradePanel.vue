@@ -518,14 +518,14 @@ async function submit() {
 .grade-panel__why {
   align-self: center;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .grade-panel__alert {
   margin-bottom: 12px;
 }
 .grade-panel__alert-text {
   margin: 0 0 4px;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .grade-panel__links {
   display: flex;
@@ -535,7 +535,7 @@ async function submit() {
 }
 .grade-panel__note {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .grade-panel__hint {
   margin: -4px 0 12px;
@@ -565,8 +565,8 @@ async function submit() {
 }
 .grade-panel__error {
   margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-color-danger);
 }
 .grade-panel__links a {
@@ -590,8 +590,8 @@ async function submit() {
   border-radius: var(--app-radius-control);
   border: 1px solid var(--el-color-warning-light-5);
   background: var(--el-color-warning-light-9);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
 }
 .grade-panel__draft-files-text {
   margin: 0;

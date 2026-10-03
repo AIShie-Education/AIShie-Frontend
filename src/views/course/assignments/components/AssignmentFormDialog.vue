@@ -17,7 +17,7 @@ import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE, uploadedPayload } from '@/utils/documentFiles'
-import { formatList, isDecimal } from '@/utils/format'
+import { formatList, isDecimal, timeZoneName } from '@/utils/format'
 import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
 import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
 import DocChoiceField from './DocChoiceField.vue'
@@ -30,7 +30,7 @@ const visible = defineModel<boolean>('visible', { default: false })
 const props = defineProps<{ courseId: string; assignment?: Assignment | null }>()
 const emit = defineEmits<{ saved: [result: { status: 'executed' | 'proposed'; id?: string }] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const course = useCourseStore()
 // Loaded when the dialog opens (init), not while it sits closed.
 const scheme = useScheme(() => props.courseId, { immediate: false })
@@ -54,6 +54,8 @@ const form = reactive<FormState>({
   instructions: emptyDocChoice('instructions'),
   rubric: emptyDocChoice('rubric'),
 })
+// The clock the date picker is on, the reader's, named: the zone as it is on the day chosen (summer time or not).
+const dueZone = computed(() => (locale.value, timeZoneName((form.due ?? new Date()).toISOString())))
 const formRef = ref<FormInstance>()
 /** Something the person should know about a document before saving again. */
 const docNotice = ref<string | null>(null)
@@ -513,7 +515,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
             :placeholder="t('assignments.form.duePlaceholder')"
             clearable
           />
-          <div class="app-form-hint">{{ t('assignments.form.dueHint') }}</div>
+          <div class="app-form-hint">{{ t('assignments.form.dueHint', { zone: dueZone }) }}</div>
         </el-form-item>
       </div>
 

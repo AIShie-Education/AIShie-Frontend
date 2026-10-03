@@ -45,7 +45,7 @@ const rows = computed(() =>
             <span>{{ t('account.seats.assignments', { scope: t(`enums.scope.${s.assignment_scope}`) }) }}</span>
             <span>
               <span class="seat__k">{{ t('account.seats.expires') }}</span>
-              <TimeText v-if="s.expires_at" :value="s.expires_at" />
+              <TimeText v-if="s.expires_at" :value="s.expires_at" cutoff />
               <template v-else>{{ t('account.seats.noExpiry') }}</template>
             </span>
             <!-- A seat's id is for those who manage a course, not on a student's seat. -->
@@ -62,7 +62,7 @@ const rows = computed(() =>
 
 <style scoped>
 .seats-card__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
@@ -107,8 +107,8 @@ const rows = computed(() =>
   color: var(--el-color-primary);
 }
 .seat__code {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-color-primary);
 }
 .seat__title {
@@ -128,7 +128,7 @@ const rows = computed(() =>
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .seat__k {

@@ -140,16 +140,16 @@ defineExpose({ refresh })
   min-width: 0;
 }
 .resp-row__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   overflow-wrap: anywhere;
 }
 .resp-row__note {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.4;
   color: var(--el-text-color-secondary);
 }
 .resp-row__warn {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.4;
   color: var(--el-color-warning-dark-2);
 }

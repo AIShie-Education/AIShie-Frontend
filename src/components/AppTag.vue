@@ -91,7 +91,7 @@ const EFFECT = { pill: 'light', outline: 'plain', count: 'dark' } as const
   color: var(--app-ink-3);
   /* In a page's title too, as a tag beside it is (main.css). */
   font-family: var(--app-font-sans);
-  font-size: var(--app-text-sm, 13px);
+  font-size: var(--app-text-sm);
   font-weight: normal;
   letter-spacing: normal;
   white-space: nowrap;

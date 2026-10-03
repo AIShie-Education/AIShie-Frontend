@@ -73,16 +73,16 @@ const line = computed(() =>
   gap: 8px;
   flex-wrap: wrap;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .tombstone__why {
   margin: 4px 0 0;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
   word-break: break-word;
 }
 .tombstone__gone {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>

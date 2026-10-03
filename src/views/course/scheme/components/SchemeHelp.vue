@@ -73,8 +73,8 @@ const items: { key: string; icon: string }[] = [
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--app-text-lg);
+  font-weight: var(--app-heading-weight);
 }
 .scheme-help__list {
   list-style: none;
@@ -88,8 +88,8 @@ const items: { key: string; icon: string }[] = [
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .scheme-help__icon {

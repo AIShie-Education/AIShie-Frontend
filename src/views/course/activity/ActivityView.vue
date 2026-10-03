@@ -42,6 +42,7 @@ import {
   type Run,
   type CourseEvent,
 } from './components/feed'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -266,7 +267,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           ? t('activity.today')
           : diff === 1
             ? t('activity.yesterday')
-            : `${d.format('LL')} · ${d.format('ddd')}`
+            : joinParts([d.format('LL'), d.format('ddd')])
       day = { key, label, events: [] }
       out.push(day)
     }
@@ -372,10 +373,12 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
                     expanded.has(run.key) ? t('activity.runLess') : t('activity.runMore', { n: run.events.length - 1 })
                   }}
                 </span>
-                <span v-if="!expanded.has(run.key)" class="activity__run-since app-muted">
-                  · {{ t('activity.runSince') }}
-                  <TimeText :value="run.events[run.events.length - 1].occurred_at" relative />
-                </span>
+                <span v-if="!expanded.has(run.key)" class="activity__run-since app-muted"
+                  >{{ t('common.sep')
+                  }}<i18n-t keypath="activity.runSince" scope="global"
+                    ><template #time
+                      ><TimeText :value="run.events[run.events.length - 1].occurred_at" relative /></template></i18n-t
+                ></span>
               </el-button>
             </div>
           </template>
@@ -398,7 +401,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   margin-bottom: 12px;
 }
 .activity__dot {
@@ -444,7 +447,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 }
 .activity__chip-count {
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   margin-left: 2px;
 }
@@ -458,7 +461,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   border-radius: var(--app-radius-item);
   background: var(--el-color-primary-light-9);
   color: var(--el-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .activity__day {
   margin-top: 8px;
@@ -469,8 +472,8 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   z-index: 1;
   margin: 8px 0 2px;
   padding: 6px 0;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.3px;
   text-transform: uppercase;
   color: var(--el-text-color-secondary);
@@ -485,12 +488,12 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 }
 .activity__end {
   text-align: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   margin: 16px 0 4px;
 }
 .activity__note {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin: 12px 4px 0;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 </style>

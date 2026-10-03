@@ -23,7 +23,6 @@ import TimeText from '@/components/TimeText.vue'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
-import { formatDateTime } from '@/utils/format'
 import {
   ROSTER_STATES,
   forStudent,
@@ -37,6 +36,7 @@ import {
   wasProposed,
   type RosterEntry,
 } from './roster'
+import { zonedText } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -122,8 +122,7 @@ async function markMissing(row: RosterEntry) {
   const title = course.assignmentTitle(assignmentId) ?? t('submissions.roster.confirm.thisAssignment')
   const lines = [t('submissions.roster.confirm.body', { name, assignment: title })]
   const due = assignment.value?.due_at
-  if (due && dayjs(due).isAfter(dayjs()))
-    lines.push(t('submissions.roster.confirm.notDue', { due: formatDateTime(due) }))
+  if (due && dayjs(due).isAfter(dayjs())) lines.push(t('submissions.roster.confirm.notDue', { due: zonedText(due) }))
   if (needsApproval.value) lines.push(t('submissions.roster.confirm.needsApproval'))
   // One paragraph a sentence: joined with spaces, Chinese would get a stray
   // one after each 。.
@@ -327,7 +326,7 @@ const emptyText = computed(() =>
   align-items: center;
   gap: 6px 14px;
   padding: 6px 0 10px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 /* Filtered to one student: no chips, and no room kept for them. */
@@ -400,7 +399,7 @@ const emptyText = computed(() =>
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 </style>

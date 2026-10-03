@@ -54,7 +54,7 @@ withDefaults(defineProps<{ title?: string; heading?: 'h2' | 'h3' | 'h4'; titleId
   border-radius: var(--app-radius-item);
   background: transparent;
   color: var(--app-ink-2);
-  font-size: var(--app-text-md, 14px);
+  font-size: var(--app-text-md);
   line-height: var(--app-line-height);
   text-align: start;
 }
@@ -75,7 +75,7 @@ withDefaults(defineProps<{ title?: string; heading?: 'h2' | 'h3' | 'h4'; titleId
   color: var(--app-ink);
   font-size: inherit;
   line-height: inherit;
-  font-weight: var(--app-weight-strong, 600);
+  font-weight: var(--app-weight-strong);
 }
 .data-flow__title + .data-flow__body {
   margin-top: 2px;

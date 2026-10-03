@@ -147,8 +147,8 @@ async function submit() {
 <style scoped>
 .sso__intro {
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .sso__alert {
   margin-bottom: 12px;
@@ -174,12 +174,12 @@ async function submit() {
 }
 .sso__provider-id {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .sso__provider-off {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .sso__actions {
   display: flex;

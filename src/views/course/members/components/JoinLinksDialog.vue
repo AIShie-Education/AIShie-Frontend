@@ -310,8 +310,8 @@ async function revoke(link: JoinLink) {
 }
 .join-links__heading {
   margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--app-text-lg);
+  font-weight: var(--app-heading-weight);
 }
 .join-links__notice {
   margin-bottom: 12px;

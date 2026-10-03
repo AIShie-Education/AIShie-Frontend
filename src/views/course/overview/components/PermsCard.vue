@@ -46,7 +46,7 @@ const presetText = computed(() =>
 /** What a permission covers, and for a scoped one that the seat's scope bounds it. */
 function permTip(p: Perm): string {
   const help = t(`enums.permHelp.${p}`)
-  return SCOPED_PERMS.includes(p) ? `${help} — ${t('common.labels.scopedHelp')}` : help
+  return SCOPED_PERMS.includes(p) ? t('common.labels.scopedTip', { help, scoped: t('common.labels.scopedHelp') }) : help
 }
 const open = ref<string[]>([])
 const ceilings = computed(() => ceilingsOf(course.membership))
@@ -99,8 +99,8 @@ const ceilings = computed(() => ceilingsOf(course.membership))
   align-items: flex-start;
   gap: 6px;
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-regular);
 }
 .perms__source .el-icon {
@@ -127,7 +127,7 @@ const ceilings = computed(() => ceilingsOf(course.membership))
   flex-wrap: wrap;
 }
 .perms__group-help {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .perms__names {
@@ -140,7 +140,7 @@ const ceilings = computed(() => ceilingsOf(course.membership))
 }
 .perms__name {
   display: inline-block;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   padding: 2px 8px;
   border-radius: var(--app-radius-pill);
   background: var(--el-fill-color-light);
@@ -149,7 +149,7 @@ const ceilings = computed(() => ceilingsOf(course.membership))
 }
 .perms__denied {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .perms__all {
   margin-top: 12px;

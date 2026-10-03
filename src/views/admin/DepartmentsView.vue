@@ -264,7 +264,7 @@ watch(
   max-width: 100%;
 }
 .setup-count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .dept-name {
   display: inline-flex;
@@ -279,7 +279,7 @@ watch(
 }
 .dept-name__above {
   display: block;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }
@@ -288,13 +288,13 @@ watch(
   align-items: center;
   gap: 4px;
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .dept-name__presets {
   display: flex;
   width: fit-content;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .dept-link:hover {
   text-decoration: underline;
@@ -305,7 +305,7 @@ watch(
 .dept-menu__why {
   display: block;
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 /* The tree's expand arrow sits beside the name; the name's own block wraps under it. */

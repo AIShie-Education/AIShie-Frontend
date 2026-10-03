@@ -243,8 +243,8 @@ async function remove(a: Appointment) {
 <style scoped>
 .admins-drawer__intro {
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .admins-drawer__switch {
   margin-bottom: 12px;
@@ -254,12 +254,12 @@ async function remove(a: Appointment) {
 }
 .admins-drawer__heading {
   margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .admins-drawer__none {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .admins-drawer__list {
   list-style: none;
@@ -290,7 +290,7 @@ async function remove(a: Appointment) {
   min-width: 0;
 }
 .admins-drawer__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
 }
 .admins-drawer__name .app-you {
@@ -298,7 +298,7 @@ async function remove(a: Appointment) {
 }
 .admins-drawer__meta {
   grid-column: 1;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .admins-drawer__remove {

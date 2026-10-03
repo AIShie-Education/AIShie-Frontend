@@ -29,7 +29,7 @@ export default {
   olderFailed: '無法載入較早的動態',
   runMore: '另有{n}則相同的動態',
   runLess: '收起',
-  runSince: '最早一則',
+  runSince: '最早一則{time}',
   today: '今天',
   yesterday: '昨天',
   viaAction: '相關操作',

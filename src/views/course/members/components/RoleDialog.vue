@@ -175,14 +175,14 @@ function goReach() {
   font-weight: 500;
 }
 .role-dialog__role-note {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .role-dialog__effect {
   margin-bottom: 12px;
 }
 .role-dialog__effect :deep(.el-alert__title) {
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .role-dialog__refusal {
   margin-top: 4px;

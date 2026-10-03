@@ -16,6 +16,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { isUuid, shortId } from '@/utils/format'
 import StatusTag from '@/components/StatusTag.vue'
 import { findCourse, type CourseRow } from '../components/adminShared'
+import { courseCodeText } from '@/utils/parts'
 
 const model = defineModel<string>({ required: true })
 /** The chosen course in words (its code, section and title), for what the page says of the export. */
@@ -58,7 +59,8 @@ const all = computed<CourseRow[]>(() => {
 /** The course in words: its code, section and title, and its term where it is known. */
 const words = (c: CourseRow) => {
   const term = termName(c)
-  return `${c.code}${c.section ? ` · ${c.section}` : ''} ${c.title}${term ? ` (${term})` : ''}`
+  const named = `${courseCodeText(c.code, c.section)} ${c.title}`
+  return term ? t('common.aside', { text: named, aside: term }) : named
 }
 
 /** Those that hold what is typed, by code and section, the newest first among the same. */
@@ -140,7 +142,9 @@ const deptName = (id: string) => tree.byId.value.get(id)?.name
       <el-option v-for="c in options" :key="c.id" :value="c.id" :label="words(c)">
         <div class="course-picker__option">
           <span class="course-picker__name">
-            <span class="course-picker__code">{{ c.code }}{{ c.section ? ` · ${c.section}` : '' }}</span>
+            <span class="course-picker__code"
+              >{{ c.code }}<template v-if="c.section"><span class="app-sep">·</span>{{ c.section }}</template></span
+            >
             <span class="course-picker__title">{{ c.title }}</span>
           </span>
           <span class="course-picker__meta">
@@ -198,7 +202,7 @@ const deptName = (id: string) => tree.byId.value.get(id)?.name
   white-space: nowrap;
 }
 .course-picker__code {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   flex: none;
 }
 .course-picker__title {
@@ -213,28 +217,28 @@ const deptName = (id: string) => tree.byId.value.get(id)?.name
   max-width: 45%;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .course-picker__id {
-  font-size: 11px;
+  font-size: var(--app-text-mark);
 }
 .course-picker__empty,
 .course-picker__more {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .course-picker__more {
   padding: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .course-picker__error {
   margin-top: 6px;
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 @media (max-width: 640px) {

@@ -466,6 +466,15 @@ async function withdraw() {
         <!-- Today -->
         <div class="transcription-card__today">
           <h3 class="transcription-card__subtitle">{{ t('runtimeAdmin.transcription.today.title') }}</h3>
+          <!-- The runtime's day, on the reader's clock: when it ends and the counts start again. -->
+          <i18n-t
+            keypath="runtimeAdmin.transcription.today.reset"
+            tag="p"
+            scope="global"
+            class="app-form-hint transcription-card__reset"
+          >
+            <template #reset><DailyReset /></template>
+          </i18n-t>
           <dl class="transcription-card__stats">
             <div>
               <dt>{{ t('runtimeAdmin.transcription.today.pages') }}</dt>
@@ -513,8 +522,8 @@ async function withdraw() {
 }
 .transcription-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .transcription-card__not-offered {
@@ -522,8 +531,8 @@ async function withdraw() {
   align-items: flex-start;
   gap: 8px;
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .transcription-card__not-offered .el-icon {
@@ -553,8 +562,8 @@ async function withdraw() {
   margin-bottom: 20px;
 }
 .transcription-card__switch-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
 }
 .transcription-card__switch .app-form-hint {
   margin: 2px 0 0;
@@ -572,7 +581,7 @@ async function withdraw() {
 }
 .transcription-card__option-model {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .transcription-card__numbers {
@@ -599,8 +608,8 @@ async function withdraw() {
 }
 .transcription-card__subtitle {
   margin: 20px 0 10px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .transcription-card__credential,
 .transcription-card__today {
@@ -612,10 +621,10 @@ async function withdraw() {
   flex-wrap: wrap;
   gap: 6px 10px;
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .transcription-card__hint {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-all;
 }
 .transcription-card__seen {
@@ -623,7 +632,7 @@ async function withdraw() {
 }
 .transcription-card__set {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .transcription-card__stats {
   display: grid;
@@ -632,22 +641,26 @@ async function withdraw() {
   margin: 0 0 8px;
 }
 .transcription-card__stats dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .transcription-card__stats dd {
   margin: 2px 0 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--app-text-xl);
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .transcription-card__of {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
 .transcription-card__changed {
   margin: 16px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
+}
+/* The line under Today saying when its counts start again. */
+.transcription-card__reset {
+  margin: -6px 0 10px;
 }
 </style>

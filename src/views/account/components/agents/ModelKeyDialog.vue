@@ -621,10 +621,10 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
   gap: 2px;
 }
 .model-form__plan-title {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .model-form__plan-hint {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
@@ -635,7 +635,7 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
 }
 .model-form__offer-model {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .model-form__limits {
   margin-top: 4px;
@@ -650,8 +650,8 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
 }
 .model-form__fallback-title {
   margin: 0 0 4px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .model-form__keymode {
   display: flex;
@@ -661,7 +661,7 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
 }
 .model-form__unpriced {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .model-form__advanced {
   margin-bottom: 8px;

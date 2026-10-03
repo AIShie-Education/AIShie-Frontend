@@ -91,11 +91,11 @@ const { t } = useI18n()
   display: flex;
   flex-direction: column;
   gap: 14px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .mcp-card__step::marker {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-secondary);
 }
 .mcp-card__step.is-done::marker {

@@ -644,7 +644,7 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
   width: 100%;
 }
 .offer-form__id-fixed {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .offer-form__switch {
   display: flex;
@@ -653,8 +653,8 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
   margin-bottom: 18px;
 }
 .offer-form__switch-label {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-md);
 }
 .offer-form__switch .app-form-hint {
   margin: 2px 0 0;
@@ -663,8 +663,8 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
   margin: 8px 0 12px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .offer-form__keymode {
   display: flex;
@@ -686,7 +686,7 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
 }
 .offer-form__unpriced {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .offer-form__advanced {
   margin: 12px 0 8px;
@@ -694,10 +694,10 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
 .offer-dialog__trial-text,
 .offer-dialog__trial-detail {
   margin: 4px 0 0;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .offer-dialog__trial-detail {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-word;
 }
 </style>

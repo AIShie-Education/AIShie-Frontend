@@ -183,7 +183,8 @@ export default {
       platform_role_required: '只有 AIshie 的平台管理员可以签发或撤销文件转写的凭证。',
     },
     today: {
-      title: '今日（UTC）',
+      title: '今日',
+      reset: '每天{reset}重新计算。',
       pages: '页数',
       of: '上限{n}',
       documents: '文件',
@@ -394,6 +395,8 @@ export default {
       cache_write: '缓存写入',
       output: '输出',
     },
+    // A price in a narrow row, after its kind's short name: "in US$0.40".
+    shortPrice: '{kind}{price}',
     source: '来源',
     sources: {
       site: '本站',
@@ -407,7 +410,7 @@ export default {
     providerPlaceholder: '选择或输入供应商',
     providerHint: '按运行环境的命名：小写字母、数字和 _，例如 openai 或 openai_compatible。',
     modelHint: '完整名称，或以 * 代表任何文字的模式，例如 gpt-4.1*。',
-    fromHint: '价格开始生效的日期（UTC），可以是将来的日期。',
+    fromHint: '价格从{start}起生效，即所选日期在 UTC 开始之时；可以是将来的日期。',
     perMTok: '每百万 token 美元',
     input: '输入',
     output: '输出',
@@ -520,7 +523,7 @@ export default {
     all: '全部',
     offers: '方案模型：{ids}',
     unpriced:
-      '所有调用都有价格。 | 有1次调用在进行时没有价格，以US$0计算。 | 有{n}次调用在进行时没有价格，以US$0计算。',
+      '所有调用都有价格。 | 有1次调用在进行时没有价格，以{zero}计算。 | 有{n}次调用在进行时没有价格，以{zero}计算。',
     unpricedShort: '{n}次未定价',
     toPrices: '前往价目表',
     empty: '这段日期没有任何记录。',

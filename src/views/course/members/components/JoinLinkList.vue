@@ -128,15 +128,15 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
           </div>
           <div>
             <dt>{{ t('join.links.list.createdBy') }}</dt>
-            <dd>{{ l.created_by_name || '—' }} · <TimeText :value="l.created_at" relative /></dd>
+            <dd>{{ l.created_by_name || '—' }}{{ t('common.sep') }}<TimeText :value="l.created_at" relative /></dd>
           </div>
           <div v-if="status === 'revoked' && l.revoked_at">
             <dt>{{ t('join.links.list.revokedBy') }}</dt>
-            <dd>{{ l.revoked_by_name || '—' }} · <TimeText :value="l.revoked_at" relative /></dd>
+            <dd>{{ l.revoked_by_name || '—' }}{{ t('common.sep') }}<TimeText :value="l.revoked_at" relative /></dd>
           </div>
           <div v-else-if="status === 'expired'">
             <dt>{{ t('join.links.list.ended') }}</dt>
-            <dd><TimeText :value="l.expires_at" relative /></dd>
+            <dd><TimeText :value="l.expires_at" relative cutoff /></dd>
           </div>
         </dl>
       </li>
@@ -176,14 +176,14 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .join-link__left-label {
   color: var(--el-text-color-secondary);
 }
 .join-link__clock {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
   color: var(--el-color-primary);
 }
@@ -198,11 +198,11 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 6px 16px;
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .join-link__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .join-link__facts dd {
   margin: 2px 0 0;

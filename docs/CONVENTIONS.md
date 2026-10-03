@@ -266,7 +266,15 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   `el-input-number` for scores (it rounds and floats).
 - **Timestamps** are RFC 3339 strings. Show with `<TimeText :value />` (absolute, relative on hover,
   or `relative`). Send with `dayjs(x).toISOString()`; date-only fields (term `starts_on`) as
-  `YYYY-MM-DD`.
+  `YYYY-MM-DD`. Every time is on one clock, the reader's (Core keeps no school's time zone); UTC is
+  said only on hover, but where a day someone picks is UTC's (a price's day), which the words say. A
+  **cut-off**, a time something stops being taken (an assignment's due date, when a seat, a join
+  link, an invitation, a token or an export ends), is `<TimeText :value cutoff />`: its time zone
+  named in the page's language ("2026-10-08 23:59 (Hong Kong Standard Time)", 「香港標準時間
+  2026-10-08 23:59」, `common.time.zoned`) and the exact instant in UTC on hover; shown `relative`,
+  the zoned time and the UTC are both on hover. In a sentence, a cut-off is `zonedText`
+  (`@/utils/parts`); where a time is picked for one (the assignment's due date), the hint names the
+  zone it is picked in.
 - Optional fields: omit them (`undefined`) rather than sending `null`, unless the tool says `null`
   means something. Some updates have explicit `clear_*` flags (`clear_due_at`, `clear_component`,
   `clear_points_possible`, `clear_expiry`): use those to unset.
@@ -357,7 +365,13 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   412 reads it again and keeps what the administrator changed over it. A key's trial that failed
   (`key_test_failed`) says what the provider answered (`keyTrialOf`). Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
-  cent at least, as US dollars (`formatMoney`, "US$0.0184") and typed as decimals (`usdProblem`), empty for no limit. A refusal
+  cent at least, as US dollars (`formatMoney`, "US$0.0184"; a price someone typed with every figure
+  it has, `formatMoney(v, { exact: true })`, "US$1.875") and typed as decimals (`usdProblem`), empty
+  for no limit. A price's day is a UTC day: its hint says so in words, and when that day begins on
+  the reader's clock (`<TimeText cutoff>` of its 00:00 UTC), never that it is when the day begins,
+  which is so only in UTC (east of it the price starts in the morning, west of it the evening
+  before). A count "today" is said by when it starts again (`<DailyReset>`), never as "(UTC)" in a
+  title. A refusal
   that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
   models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
   agents' lines. Costs are shown by `lines` kind: a document's transcription is a line of its own
@@ -539,9 +553,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   200 px of the window's top. Inside a course the page's header has 12 px under it, not 20. Known
   to miss it, by a line of their own: an assignment, a submission and a proposal, whose header has
   a back link, a title and a line of facts beside their actions (about 220 px), and the Submissions
-  and Grading scheme pages (205 and 215 px), whose subtitle takes a second line; in English, whose
-  subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a pixel or so
-  (201 px); do not add to them.
+  and Grading scheme pages (207 and 216 px in Chinese), whose subtitle takes a second line; in
+  English, whose subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a
+  pixel or so (201 px); do not add to them. Chinese's smaller steps are a size larger than English's,
+  so measure a page's header in both.
 - **Navigation's icons are outlined, never filled**: the activity bar, the side bar, the phone's
   header, a course's tabs and More's menu, the grades' tabs. A filled glyph among outlined ones
   reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
@@ -618,7 +633,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
   its icon's shape: as a tag (roles and platform roles, kinds of actor, of seat and of document,
   scopes, presets, how an agent runs) an outline in ink (Tags, above); as the activity feed's kinds
-  of event, the ground's second shade under the third ink. Whether an agent can be asked is neutral too, never
+  of event, in the neutral pill's colours (`--app-neutral-bg`, the ground's second shade in the light
+  theme, under `--app-neutral-fg`). Whether an agent can be asked is neutral too, never
   green as "online" is; only its not running, which wants its owner, is amber, and never by its hue
   alone: whether it can be asked is a dot's shape (AskableDot, below). What is new or
   unread, and a count of what waits for the reader's decision, is indigo. A
@@ -628,9 +644,56 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
   The 「需批准」 beside an action the caller's seat must have approved is that level too:
   `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
+- **Ink** comes in three steps, 1.5:1 or more apart: `--app-ink` for text, `--app-ink-2` for what is
+  secondary to it, `--app-ink-3` for the meta beside it (a time, a column's heading, a hint, a
+  permission's key); the placeholder's ink is quieter still, for a field's placeholder. The three
+  inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
+  fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
+  fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
+  may be drawn on one of those, as a key is on a changed row, takes the third ink; any other rule
+  that writes in the placeholder's is named in `PLACEHOLDER_INK`, with its grounds. Every colour in
+  `styles/tokens.css` has its dark value, is painted with somewhere, and reads at AA on the grounds it
+  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
+  (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
+  colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
+- **Type** is a scale (`styles/tokens.css`), and every `font-size` is a step of it:
+  `var(--app-text-xs)` (12 px: a time, a hint under a field, a unit, a tag, a tooltip), `-sm` (13: a
+  row's second line, a table's cells, a note), `-md` (14: the interface's text, Element Plus's base),
+  `-lg` (16: an item's title; a field's text on a touch screen), `-xl` (18: a card's, a dialog's, the
+  course's title), `-2xl` (24: a page's title, a figure that stands for a card), `-3xl` and `-4xl`
+  (32, 40: a figure that stands for a page, a score, a total, a countdown); `-prose` (15) for what is
+  read at length (rendered Markdown, a chat's messages), and `-mark` (11) for Latin letters and
+  figures alone in a mark of a fixed size ("AI", "PDF" on a file, an id, a key, a file's size), never
+  Chinese. In Chinese, either script, `xs` and `sm` are 13 and 14 px: a Han character at 12 px is a
+  blur on a laptop's screen, so 12 px is left to English and figures; check that a tag, a button or
+  a table's cell still holds its words in Chinese. An icon drawn on its own takes a step too; one in a
+  line of text, the text's. A size relative to the text around it (`em`) is a step's too, from 1em to
+  2em (a heading in rendered Markdown), never smaller: the text around may be Chinese at 13 px. Strong
+  text (a name, a label, a table's heading, a figure) is `var(--app-weight-strong)`, 600, and 500 in
+  Chinese, whose Noto Sans has no 600 and would set it at 700; a `<strong>`, a `<b>` or a `<th>` with
+  no rule of its own takes it too (`main.css`), not the browser's bold, except an author's emphasis in
+  rendered Markdown, which keeps a heading's weight; a heading, and a figure that stands for a card,
+  is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Leading is
+  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface, `--app-lh-text` (1.6; 1.75) for a
+  paragraph and `--app-lh-prose` (1.7; 1.85) for rendered Markdown. Element Plus's sizes are mapped
+  onto the same steps (`styles/element.css`): its six, its components' own variables, and every rule
+  of words it writes 12 or 13 px into (a small control's, a tooltip's, a date picker's days, months
+  and time panel, a switch's words inside it), its bold where it marks what is chosen or today the
+  strong weight. `src/styles/typeScale.spec.ts` refuses any other size or weight, wherever and
+  however it is written: a declaration in a style sheet or a string of CSS, in any case; a style
+  object's key in a template or a script (`fontSize: '12px'`, `'font-size': '12px'`); an element's
+  style (`el.style.fontSize`, `setProperty('font-size', …)`); a custom property that sizes or weighs
+  text (`--el-tag-font-size: 11px`); and the scale's own tokens, set in `tokens.css` alone. It also
+  fails on a small size of Element Plus's left unmapped, but for an icon's and a component the app
+  does not use (until it does). What it lets through (the print layout's points, pdf.js's text
+  layer, an agent's initials and glyph drawn to its square, code in rendered Markdown, a join code
+  projected full screen) is listed there, each with why. `e2e/type-scale.spec.ts` fails on any
+  Chinese a course's page shows under 13 px, on a laptop and on a phone, and in a date picker. Room
+  takes the steps `var(--app-space-xs)` to `-2xl` (4, 8, 12, 16, 24, 32 px) in a rule written or
+  rewritten.
 - Forms: `el-form` with `label-position="top"` and rules; a number field (`el-input-number`) has its
   steps at its right end (`controls-position="right"`) or none (`:controls="false"`), which lint
   checks; dialogs with `el-dialog` (`width="560px"`,
@@ -768,8 +831,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   stacked, nothing grows. Leave `align-items` off such a grid, or it wins over `.app-columns`.
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
-  `<IdText>` is quiet (12 px, the third ink, its copy button on hover): an id is for an administrator
-  to find or paste, beside a name, never a chip as heavy as an email. A student's seat shows no member
+  `<IdText>` is quiet (the smallest step, `--app-text-xs`, the third ink, its copy button on
+  hover): an id is for an administrator to find or paste, beside a name, never a chip as heavy as
+  an email. A student's seat shows no member
   ID (the course overview's seat card, their seats on Account), nor does their grade show the ids of a
   newer grade or of its rubric's version. What they may be asked to quote stays: the action that made
   a grade, an action's own page (its id, its actor's and its target's), and their account's ID on
@@ -1088,6 +1152,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<html lang>` and the typefaces it chooses (`styles/tokens.css`, `styles/fonts.ts`) and saves
   `aishie.locale`. Element Plus follows the same `ui.locale` through `App.vue`'s
   `<el-config-provider>` (`elementLocale` in `i18n/elementPlus.ts`), as does the menu's check mark.
+  Each option of the menu and the selects names its language in itself, and says which it is in
+  (`:lang="l.value"`), for a screen reader (`src/i18n/languageMenus.spec.ts`).
+- **Typefaces follow the script, not the page's language alone.** A page in Chinese sets Latin
+  letters, figures and their punctuation (Latin-1, the en dash, the bullet, the minus sign) in Plex
+  and Source Serif, as an English page does, through the stacks' first family, `'AIshie Latin'`
+  (`styles/fonts-latin.css`), and the rest in Noto TC or SC: Han and full-width punctuation, the
+  quotation marks, the ellipsis and the em dash, which Chinese doubles (「——」). A page in English
+  sets the Chinese it shows (a name, a course's title, what is typed into a field) in Noto TC, loaded
+  the first time it shows any (`styles/fonts.ts`); a language's own name marked with its `lang` does
+  not count. Buttons and fields take the stacks as the rest of the page does (`styles/main.css`), not
+  the browser's own face for them. No stack names PMingLiU or SimSun, which have no bold, and Noto
+  comes before any Chinese face of the system's (`src/styles/stacks.spec.ts`).
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
@@ -1114,14 +1190,30 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   underscored tool name, a setting or a family of them such as `OIDC_*`); a message only an operator reads, or
   one that sets up an agent's MCP client, is let through there by its key, saying why.
 - **No punctuation in templates.** What joins words is the language's, so it is in the messages:
-  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), a label and
-  its value `common.pair` ("Model calls: 380", 「模型呼叫：380」; `<i18n-t keypath="common.pair">`
-  where the value is a component). Numbers go through `@/utils/format`: a percentage through
-  `formatPct` (a fraction; the gradebook's `formatPct` for a percentage Core worked out), money
-  through `formatMoney` ("US$0.0184": a "$" alone reads as Hong Kong's), a list through
-  `formatList` ("a, b, and c", 「甲、乙和丙」), never `"%"` written after a number nor
-  `.join(', ')`. The dot between a course's code and its section is `<span class="app-sep">·</span>`
-  with no spaces, so that a Chinese typeface does not make it a full-width one.
+  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), "(optional)"
+  after a field's label `common.labels.optionalTag` (its English space inside the message, so that a
+  label reads "Email (optional)" aloud too), a label and its value `common.pair` ("Model calls: 380",
+  「模型呼叫：380」; `<i18n-t keypath="common.pair">` where the value is a component), a word about
+  something in brackets after it `common.aside` ("Week 1.pdf (2 MB)", 「Week 1.pdf（2 MB）」) or,
+  drawn apart from it, `common.bracketed`, and the parts of a line of facts `common.sep` ("PDF ·
+  1.2 MB": `{{ t('common.sep') }}` between them in a template, `joinParts` from `@/utils/parts` in
+  a string). A course's code and section is `<span class="app-sep">·</span>` with no spaces, so
+  that a Chinese typeface does not make it a full-width one, and `courseCodeText` where only a
+  string will do (a label read aloud, a QR code's name, an option). A dot that is an element of its
+  own, a divider drawn `aria-hidden`, is a drawing and may stay. Numbers go through
+  `@/utils/format`: a percentage through `formatPct` (a fraction; the gradebook's `formatPct` for a
+  percentage Core worked out), money through `formatMoney` ("US$0.0184": a "$" alone reads as Hong
+  Kong's), a count where it may pass a thousand through `formatCount` ("1,284"), a list through
+  `formatList` ("a, b, and c", 「甲、乙和丙」; `formatList(items, 'or')` for one of them, "@a.edu or
+  @b.edu"), never `"%"` written after a number, `"$"` before one, nor `.join(', ')`. A list's or a
+  number's words follow the language where they are worked out in a `computed`: Intl is not reactive,
+  so the computed reads `ui.locale` (`computed(() => (ui.locale, formatList(items, 'or')))`), as
+  `<TimeText>` does. `src/i18n/punctuation.spec.ts` reads every component and module, the code in
+  a template (`{{ }}`, a bound attribute, a directive) as well as its text and scripts, and refuses
+  these, whether written in a template literal (`${n} %`), added to a string (`n + ' %'`,
+  `a + ': ' + b`, `a + '·' + b`) or as an entity (`&middot;`); it reads the messages too, for a
+  `"%"` after a placeholder in any language and a half-width colon or brackets beside one in
+  Chinese.
 - **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
   never 「{owner} 的代理」, nor around a figure written in the message: 「1個學期 | {n}個學期」, never
   「1 個學期」 (`src/i18n/spacing.spec.ts` refuses both). The page puts the room between Han
