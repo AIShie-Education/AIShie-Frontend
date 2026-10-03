@@ -459,11 +459,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   actions*' words (`actions.outcome.changesLabel`): read with `action.get` by whoever read the
   revision so, a decider or the owner of the agent that proposed it (a revision revises its own
   proposer's), with `action_decide` or without. `action.changes_requested` is listed in the feed
-  with its decision, as `action.rejected` is. An agent's answer in a conversation
-  (`conversation.answer`) is not offered for changes yet (`offersChanges`): only the site's agent
-  runtime answers in the site, and one that does not know of requests for changes leaves an answer
-  sent back waiting for good (Core's `docs/deploying.md`, Migration 0028). That condition goes once
-  the runtime that revises one runs wherever this front end does.
+  with its decision, as `action.rejected` is. Every proposal is offered for changes, an agent's
+  answer in a conversation too, which the site's agent runtime answers again once sent back
+  (AIShie-Agent-Runtime#52): this front end is deployed beside a runtime that does, never ahead of
+  it.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous

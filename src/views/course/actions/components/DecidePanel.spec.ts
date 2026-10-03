@@ -332,16 +332,28 @@ describe('DecidePanel, asking for changes', () => {
     expect(off(confirmButton()!)).toBe(false)
   })
 
-  it('is not offered on an agent’s answer, which the runtime of today would leave waiting for good', async () => {
+  it('is offered on an agent’s answer in a conversation, as on any proposal, and sends it back with the note', async () => {
     mountAsTeacher(ANSWER)
     await flushPromises()
-    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['Approve', 'Reject'])
-    // Rejecting it, with a reason the agent answers again with, is as before.
-    button('Reject')!.click()
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['Approve', 'Request changes', 'Reject'])
+    button('Request changes')!.click()
     await flushPromises()
-    expect(document.body.querySelector('.decide-panel__form textarea')!.getAttribute('placeholder')).toBe(
-      'Why? (optional, but it helps whoever proposed it)',
+    await type('Show the working: 0 × 9/5 + 32.')
+    write.mockResolvedValueOnce({
+      status: 'executed',
+      actionId: 'd2',
+      reviewState: 'none',
+      replayed: false,
+      result: { action_id: 'p2', outcome: 'changes_requested' },
+    })
+    confirmButton()!.click()
+    await flushPromises()
+    expect(write).toHaveBeenCalledWith(
+      'action.decide',
+      { course_id: COURSE, action_id: 'p2', decision: 'request_changes', reason: 'Show the working: 0 × 9/5 + 32.' },
+      expect.anything(),
     )
+    expect(document.body.textContent).toContain('Sent back for changes')
   })
 
   it('sends the note, trimmed, as the reason of a request_changes decision, and says what became of it', async () => {

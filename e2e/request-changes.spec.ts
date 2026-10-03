@@ -21,8 +21,8 @@ import {
 // header); the queue and the revision's page link to the earlier one, which
 // stays on its line at a phone's width. A student who owns an agent, and
 // decides nothing else, reads beside its revision what she asked it to
-// change. A course agent's answer is not sent back yet: the site's runtime of
-// today would leave it waiting for good.
+// change. A course agent's answer in a conversation is sent back as any
+// proposal is, and its conversation waits for an answer again.
 
 const STAMP = Date.now().toString(36)
 const FEEDBACK = `First try (${STAMP}): the code runs.`
@@ -31,6 +31,8 @@ const REVISED = `Second try (${STAMP}): two edge cases fail, so 8.`
 const TUTOR = `Answers-on-approval tutor ${STAMP}`
 const QUESTION = `Is 0 °C 32 °F? (${STAMP})`
 const ANSWER = `Yes: 0 × 9/5 + 32 = 32 (${STAMP}).`
+const ANSWER_NOTE = `Show the working, step by step (${STAMP}).`
+const ANSWER_REVISED = `Yes. 0 × 9/5 = 0, and 0 + 32 = 32 (${STAMP}).`
 const DRAFTER = `Sam's drafter ${STAMP}`
 const DRAFT = `c_to_f drafted by Sam's agent (${STAMP})`
 const DRAFT_NOTE = `Handle negative temperatures too (${STAMP}).`
@@ -372,18 +374,26 @@ test.describe.serial('the owner of the agent that revises, who decides nothing e
   })
 })
 
-test.describe('a course agent’s answer, which the runtime of today does not revise', () => {
-  const w = { tutorId: '', tutorToken: '', answerId: '' }
+test.describe('a course agent’s answer in a conversation, sent back for changes as any proposal is', () => {
+  const w = { tutorId: '', tutorToken: '', answerId: '', revisionId: '' }
 
   test.afterAll(async () => {
     const d = demo()
-    // The answer, if it still waits, is taken back by the agent; the agent is
-    // suspended, as a person may have five agents at once, for the specs after it.
-    if (w.answerId) await call(w.tutorToken, 'POST', `/v1/courses/${d.course.id}/actions/${w.answerId}/withdraw`, {})
-    if (w.tutorId) await call(d.actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
+    const I = d.actors.instructor.token
+    // What still waits (the answer, if a test failed before it was sent back,
+    // or its revision) is taken back by the agent; the agent is suspended, as
+    // a person may have five agents at once, for the specs after it.
+    if (w.tutorToken) {
+      await withdrawIfWaiting(I, w.tutorToken, w.answerId)
+      await withdrawIfWaiting(I, w.tutorToken, w.revisionId)
+    }
+    if (w.tutorId) await call(I, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
-  test('is approved or rejected, and not sent back for changes', async ({ page }) => {
+  test('is sent back with a note, its conversation waits for an answer again, and the answer that revises it says so', async ({
+    page,
+  }) => {
+    await keepToasts(page)
     const d = demo()
     const c = d.course.id
     const I = d.actors.instructor.token
@@ -427,10 +437,38 @@ test.describe('a course agent’s answer, which the runtime of today does not re
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
     await courseTab(page, 'Approvals').click()
-    const card = page.locator('.action-card').filter({ hasText: TUTOR })
+    const card = page.locator('.action-card').filter({ hasText: ANSWER })
     await expect(card).toHaveCount(1)
-    await expect(card.getByRole('button', { name: 'Approve' })).toBeVisible()
-    await expect(card.getByRole('button', { name: 'Reject' })).toBeVisible()
-    await expect(card.getByRole('button', { name: 'Request changes' })).toHaveCount(0)
+    await expect(card).toContainText(TUTOR)
+    await expect(card.locator('.decide-panel__buttons button')).toHaveText(['Approve', 'Request changes', 'Reject'])
+    await card.getByRole('button', { name: 'Request changes' }).click()
+    await card.getByRole('textbox', { name: 'What to change' }).fill(ANSWER_NOTE)
+    await card.getByRole('button', { name: 'Send back for changes' }).click()
+    await expectToasted(page, /^Sent back for changes/)
+    await expect(card).toHaveCount(0)
+
+    // The answer ends there, with the note; nothing was posted, and the
+    // conversation waits for an answer again, in the agent's inbox.
+    const got = await call(I, 'GET', `/v1/courses/${c}/actions/${w.answerId}`)
+    expect(got.body.result?.status, JSON.stringify(got.body)).toBe('changes_requested')
+    expect(got.body.result?.result?.decision?.reason).toBe(ANSWER_NOTE)
+    const after = await call(d.actors.yuki.token, 'GET', `/v1/courses/${c}/conversations/${conv.conversation_id}`)
+    expect(after.body.result?.state, JSON.stringify(after.body)).toBe('awaiting_answer')
+    const inbox = await call(w.tutorToken, 'GET', `/v1/courses/${c}/conversations/inbox`)
+    expect((inbox.body.result?.conversations ?? []).map((x: { id: string }) => x.id)).toContain(conv.conversation_id)
+
+    // The agent answers again, naming the answer it revises, as the runtime does.
+    const again = await proposeRevising(
+      w.tutorToken,
+      `/v1/courses/${c}/conversations/${conv.conversation_id}/answer`,
+      { in_reply_to_message_id: conv.message_id, body: ANSWER_REVISED },
+      w.answerId,
+    )
+    expect(again.body.status, JSON.stringify(again.body)).toBe('proposed')
+    w.revisionId = again.body.action_id!
+    await page.reload()
+    const revision = page.locator('.action-card').filter({ hasText: ANSWER_REVISED })
+    await expect(revision).toHaveCount(1)
+    await expect(revision.getByRole('link', { name: 'Revises an earlier proposal that was sent back' })).toBeVisible()
   })
 })
