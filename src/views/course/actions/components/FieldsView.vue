@@ -384,21 +384,21 @@ function json(v: unknown) {
 }
 .fields-view__label {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .fields-view__value {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .fields-view__score {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .fields-view__muted {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: normal;
 }
 .fields-view__text {
@@ -410,7 +410,7 @@ function json(v: unknown) {
   border: 1px solid var(--el-border-color-lighter);
 }
 .fields-view__text :deep(.markdown-body) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .fields-view__table {
   width: 100%;
@@ -460,7 +460,7 @@ function json(v: unknown) {
 }
 .fields-view__json {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-all;
 }
 @media (max-width: 600px) {

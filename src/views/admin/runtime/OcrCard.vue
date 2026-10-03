@@ -223,8 +223,8 @@ function undo() {
 }
 .ocr-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .ocr-card__alert {
@@ -249,8 +249,8 @@ function undo() {
   margin-bottom: 20px;
 }
 .ocr-card__switch-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
 }
 .ocr-card__switch .app-form-hint {
   margin: 2px 0 0;
@@ -264,7 +264,7 @@ function undo() {
 .ocr-card__legend {
   padding: 0;
   margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .ocr-card__choices {
   display: grid;
@@ -284,16 +284,16 @@ function undo() {
   gap: 6px;
 }
 .ocr-card__code {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .ocr-card__order {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .ocr-card__problem {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-danger);
 }
 .ocr-card__actions {
@@ -307,6 +307,6 @@ function undo() {
 }
 .ocr-card__changed {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

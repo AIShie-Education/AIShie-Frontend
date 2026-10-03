@@ -163,7 +163,7 @@ function proceed() {
   <div class="app-auth-page welcome">
     <div class="app-auth-page__lang">
       <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" />
+        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
       </el-select>
     </div>
     <div class="app-auth-page__card welcome__card">
@@ -266,18 +266,18 @@ function proceed() {
 }
 .welcome__title {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--app-text-2xl);
   line-height: 1.3;
 }
 .welcome__tagline {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .welcome__intro {
   margin: 0 0 16px;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .welcome__alert {
@@ -291,7 +291,7 @@ function proceed() {
 }
 .welcome__done {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   word-break: break-word;
 }
 </style>

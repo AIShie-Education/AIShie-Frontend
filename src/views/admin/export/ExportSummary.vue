@@ -74,11 +74,11 @@ const span = computed(() => spanWords(props.record.from, props.record.before))
 <style scoped>
 .export-summary__about {
   margin: 0 0 12px;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
   overflow-wrap: anywhere;
 }
 .export-summary__scope {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .export-summary__counts {
   margin: 0;
@@ -91,23 +91,23 @@ const span = computed(() => spanWords(props.record.from, props.record.before))
   gap: 8px;
 }
 .export-summary__counts dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .export-summary__counts dd {
   margin: 2px 0 0;
 }
 .export-summary__n {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-heading-weight);
   font-variant-numeric: tabular-nums;
 }
 .is-compact .export-summary__n {
-  font-size: 16px;
+  font-size: var(--app-text-lg);
 }
 .export-summary__of {
   display: block;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
@@ -116,7 +116,7 @@ const span = computed(() => spanWords(props.record.from, props.record.before))
   display: flex;
   flex-wrap: wrap;
   gap: 4px 20px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>

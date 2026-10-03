@@ -84,8 +84,8 @@ const older = computed(() => !!version.value && !!latest.value && latest.value.s
   display: flex;
   align-items: flex-start;
   gap: 4px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-color-warning);
 }
 .version-ref__note .el-icon {

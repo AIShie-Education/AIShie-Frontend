@@ -320,8 +320,8 @@ function serverText(q: TenantQuota): string {
 <style scoped>
 .tenants-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .tenant-cell {
@@ -333,7 +333,7 @@ function serverText(q: TenantQuota): string {
 }
 .tenant-cell__meta,
 .tenant-cell__server {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .tenant-cell__server {
@@ -355,16 +355,16 @@ function serverText(q: TenantQuota): string {
 }
 .tenant-dialog__intro {
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .tenant-dialog__heads {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 12px;
   margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
 }
 .tenant-dialog__problems {
   margin: 4px 0 0;

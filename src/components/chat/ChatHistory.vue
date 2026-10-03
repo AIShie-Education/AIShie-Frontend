@@ -169,22 +169,22 @@ function more() {
   padding: 8px 12px 4px;
   background: var(--el-bg-color);
   font-family: var(--app-font-sans);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   color: var(--el-text-color-secondary);
 }
 .chat-history__none {
   margin: 16px 0;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .chat-history__hint {
   margin: 0;
   text-align: center;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .chat-history__list {
@@ -238,19 +238,19 @@ function more() {
   color: var(--el-text-color-placeholder);
 }
 .hist-row__course {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   color: var(--app-indigo);
 }
 .hist-row__agent {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
 }
 .hist-row__time {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .hist-row__sub {
@@ -258,7 +258,7 @@ function more() {
 }
 .hist-row__title {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -271,8 +271,8 @@ function more() {
 }
 .hist-row__unread {
   flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-color-danger);
 }
 </style>

@@ -211,19 +211,19 @@ watch(offersFilter, (on) => {
 }
 .home-unseated__title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--app-text-xl);
 }
 .home-unseated__explain {
   margin: 6px 0 16px;
   max-width: 72ch;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .home-unseated__more {
   display: inline-block;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .course-card--unseated {
   border-style: dashed;
@@ -259,8 +259,8 @@ watch(offersFilter, (on) => {
   gap: 8px;
 }
 .course-card__code {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
   color: var(--app-indigo);
   letter-spacing: 0.06em;
 }
@@ -271,7 +271,7 @@ watch(offersFilter, (on) => {
 .course-card__title {
   margin: 0;
   font-family: var(--app-font-serif);
-  font-size: 19px;
+  font-size: var(--app-text-xl);
   font-weight: var(--app-heading-weight);
   letter-spacing: var(--app-heading-tracking);
   line-height: 1.3;
@@ -280,7 +280,7 @@ watch(offersFilter, (on) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   flex-wrap: wrap;
 }
 .course-card__due {
@@ -288,7 +288,7 @@ watch(offersFilter, (on) => {
   align-items: center;
   gap: 6px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-2);
 }
 .course-card__due .el-icon {
@@ -305,7 +305,7 @@ watch(offersFilter, (on) => {
   border: 1px solid color-mix(in srgb, var(--app-wait-fg) 30%, transparent);
   background: var(--app-wait-bg);
   color: var(--app-ink);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .course-card__waiting-icon {
   display: inline-flex;
@@ -323,8 +323,8 @@ watch(offersFilter, (on) => {
   min-width: 0;
 }
 .course-card__waiting-count {
-  font-size: 16px;
-  font-weight: 650;
+  font-size: var(--app-text-lg);
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
   color: var(--app-wait-fg);
 }

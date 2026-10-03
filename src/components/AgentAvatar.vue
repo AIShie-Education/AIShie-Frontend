@@ -48,8 +48,10 @@ const initials = computed(() => agentInitials(props.name))
   color: var(--app-indigo);
   /* Plex in every language, so that the letters look alike; a Chinese character falls back to the language's font. */
   font-family: 'IBM Plex Sans', var(--app-font-sans);
-  font-size: 12px;
-  font-weight: var(--app-weight-strong, 600);
+  /* Drawn to the square, not to the type scale, and so the same in every language: 43% of its side (12 px of
+     28, 15 of 36), half of the small one's (10 of 20), which 43% would take under 9. */
+  font-size: calc(var(--agent-avatar-size) * 0.43);
+  font-weight: var(--app-weight-strong);
   line-height: 1;
   letter-spacing: 0;
   vertical-align: middle;
@@ -58,12 +60,11 @@ const initials = computed(() => agentInitials(props.name))
 .agent-avatar.is-small {
   --agent-avatar-size: 20px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: calc(var(--agent-avatar-size) / 2);
 }
 .agent-avatar.is-large {
   --agent-avatar-size: 36px;
   border-radius: 10px;
-  font-size: 15px;
 }
 .agent-avatar__initials::before {
   content: attr(data-initials);

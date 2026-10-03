@@ -172,7 +172,7 @@ defineExpose({ find, show, clear })
 <style scoped>
 .lookup__label {
   display: block;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
   margin-bottom: 6px;
 }
@@ -188,7 +188,7 @@ defineExpose({ find, show, clear })
 }
 .lookup__error {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 .lookup__missing {

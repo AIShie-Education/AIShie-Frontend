@@ -149,12 +149,12 @@ async function openFile() {
 }
 .chat-source__busy {
   margin-left: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   vertical-align: -1px;
 }
 .chat-source__lock {
   margin-right: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   vertical-align: -1px;
 }
 </style>

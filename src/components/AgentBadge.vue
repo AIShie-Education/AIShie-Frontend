@@ -70,7 +70,7 @@ const hint = computed(() => {
   font-family: var(--app-font-sans);
   font-weight: 400;
   letter-spacing: normal;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 18px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -80,7 +80,7 @@ const hint = computed(() => {
 .agent-badge.is-large .agent-badge__owner {
   height: 24px;
   padding: 0 9px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 22px;
 }
 </style>

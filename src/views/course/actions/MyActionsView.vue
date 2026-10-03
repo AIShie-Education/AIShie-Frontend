@@ -276,8 +276,8 @@ function open(row: ActionRow) {
 <style scoped>
 .my-actions__help {
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .my-actions__summary {
@@ -309,7 +309,7 @@ function open(row: ActionRow) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   margin: 0 0 8px;
 }
@@ -324,7 +324,7 @@ function open(row: ActionRow) {
   min-width: 0;
 }
 .my-actions__type {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
   text-decoration: none;
 }
@@ -333,7 +333,7 @@ function open(row: ActionRow) {
 }
 .my-actions__note {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-warning);
   word-break: break-word;
 }
@@ -355,7 +355,7 @@ function open(row: ActionRow) {
 }
 .my-actions__muted {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .my-actions__pager {
   display: flex;

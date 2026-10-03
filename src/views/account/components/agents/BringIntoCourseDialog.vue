@@ -275,13 +275,13 @@ async function submit() {
 <style scoped>
 .bring__intro {
   margin: 0 0 8px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .bring__step {
   margin: 16px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .bring__alert {
   margin-bottom: 10px;
@@ -313,7 +313,7 @@ async function submit() {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .bring__course-name {
   display: flex;
@@ -326,14 +326,14 @@ async function submit() {
 }
 .bring__course-note,
 .bring__purpose-help {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .bring__course-note.is-warning {
   color: var(--el-color-warning);
 }
 .bring__purpose-name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .bring__preview.is-loading {
   opacity: 0.6;
@@ -343,7 +343,7 @@ async function submit() {
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 6px 16px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .bring__facts dt {
   color: var(--el-text-color-secondary);
@@ -358,7 +358,7 @@ async function submit() {
 }
 .bring__details {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .bring__details summary {
   cursor: pointer;

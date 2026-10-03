@@ -32,8 +32,8 @@ async function copy() {
 <style scoped>
 .redirect-uri__label {
   margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
 }
 .redirect-uri__body {
   display: flex;
@@ -48,8 +48,8 @@ async function copy() {
   flex: 1;
   min-width: 0;
   font-family: var(--app-font-mono);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   word-break: break-all;
   user-select: all;
 }
@@ -58,8 +58,8 @@ async function copy() {
 }
 .redirect-uri__hint {
   margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .redirect-uri.is-compact .redirect-uri__hint {

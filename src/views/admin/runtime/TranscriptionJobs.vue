@@ -241,8 +241,8 @@ const empty = computed(() => loaded.value && !jobs.value.length)
 }
 .transcription-jobs__title {
   margin: 0 auto 0 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .transcription-jobs__filter {
   width: 140px;
@@ -261,15 +261,15 @@ const empty = computed(() => loaded.value && !jobs.value.length)
   gap: 6px;
 }
 .job-cell__file {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-2);
   overflow-wrap: anywhere;
 }
 .job-cell__reason {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .job-cell__meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .job-cell__num {

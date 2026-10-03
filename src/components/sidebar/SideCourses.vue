@@ -229,8 +229,8 @@ const archivedCount = computed(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   color: var(--el-text-color-secondary);
 }

@@ -182,7 +182,7 @@ const schoolSpent = computed(() => {
 }
 .usage-card__since {
   margin: -8px 0 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .usage-card__totals {
@@ -198,7 +198,7 @@ const schoolSpent = computed(() => {
   min-width: 0;
 }
 .usage-card__total dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .usage-card__total dd {
@@ -207,12 +207,12 @@ const schoolSpent = computed(() => {
 .usage-card__answers,
 .usage-card__calls,
 .usage-card__cost {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-heading-weight);
   font-variant-numeric: tabular-nums;
 }
 .usage-card__of {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .is-spent {
@@ -229,7 +229,7 @@ const schoolSpent = computed(() => {
   word-break: break-word;
 }
 .usage-owner__meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .usage-owner__answers,

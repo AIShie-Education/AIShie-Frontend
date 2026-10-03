@@ -109,11 +109,11 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
   flex-wrap: wrap;
 }
 .preset-drawer__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .preset-drawer__desc {
   margin: 12px 0 16px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   word-break: break-word;
 }
 .preset-drawer__facts {
@@ -121,7 +121,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
   grid-template-columns: max-content 1fr;
   gap: 8px 16px;
   margin: 0 0 16px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   align-items: center;
 }
 .preset-drawer__facts dt {
@@ -134,7 +134,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
 }
 .preset-drawer__key {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .preset-drawer__note {
   margin-bottom: 12px;
@@ -150,7 +150,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
 }
 .preset-drawer__heading {
   margin: 20px 0 4px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--app-text-lg);
+  font-weight: var(--app-heading-weight);
 }
 </style>

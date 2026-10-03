@@ -216,7 +216,7 @@ async function download(f: MessageAttachment) {
   border-radius: 8px;
   background: var(--app-ground-2);
   color: var(--app-ink-2);
-  font-size: 17px;
+  font-size: var(--app-text-xl);
 }
 .msg-file__icon.is-pdf {
   color: var(--el-color-danger);
@@ -242,7 +242,7 @@ async function download(f: MessageAttachment) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   color: var(--app-ink);
 }
@@ -250,7 +250,7 @@ async function download(f: MessageAttachment) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -261,8 +261,8 @@ async function download(f: MessageAttachment) {
   border: 1px solid var(--el-color-danger-light-5);
   border-radius: 4px;
   color: var(--el-color-danger);
-  font-size: 10px;
-  font-weight: 600;
+  font-size: var(--app-text-mark);
+  font-weight: var(--app-weight-strong);
   line-height: 15px;
   letter-spacing: 0.02em;
 }
@@ -280,7 +280,7 @@ async function download(f: MessageAttachment) {
   border-radius: 8px;
   background: transparent;
   color: var(--app-ink-3);
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   cursor: pointer;
 }
 .msg-file__get:hover {

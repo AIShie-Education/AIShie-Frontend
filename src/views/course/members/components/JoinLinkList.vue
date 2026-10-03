@@ -166,14 +166,14 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .join-link__left-label {
   color: var(--el-text-color-secondary);
 }
 .join-link__clock {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
   color: var(--el-color-primary);
 }
@@ -188,11 +188,11 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 6px 16px;
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .join-link__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .join-link__facts dd {
   margin: 2px 0 0;

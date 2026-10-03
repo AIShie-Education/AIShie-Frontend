@@ -35,17 +35,17 @@ const IDPS: { key: string; name: string; issuer: string }[] = [
 <style scoped>
 .idp-help__intro {
   margin: 0 0 6px;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .idp-help__list :deep(.el-collapse-item__header) {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .idp-help p {
   margin: 0 0 6px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   word-break: break-word;
 }
 .idp-help__issuer {
@@ -56,7 +56,7 @@ const IDPS: { key: string; name: string; issuer: string }[] = [
 }
 .idp-help__issuer code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-all;
 }
 .idp-help__note {

@@ -47,7 +47,7 @@ const { t } = useI18n()
   min-width: 0;
 }
 .dept-picker__why {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 </style>

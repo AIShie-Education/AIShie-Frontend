@@ -153,18 +153,18 @@ function pick(id: string | undefined) {
   max-width: 60%;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .owner-select__why {
   color: var(--el-color-warning);
 }
 .owner-select__id {
-  font-size: 11px;
+  font-size: var(--app-text-mark);
 }
 .owner-select__empty {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>

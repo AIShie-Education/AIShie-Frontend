@@ -202,7 +202,7 @@ const deptName = (id: string) => tree.byId.value.get(id)?.name
   white-space: nowrap;
 }
 .course-picker__code {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   flex: none;
 }
 .course-picker__title {
@@ -217,28 +217,28 @@ const deptName = (id: string) => tree.byId.value.get(id)?.name
   max-width: 45%;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .course-picker__id {
-  font-size: 11px;
+  font-size: var(--app-text-mark);
 }
 .course-picker__empty,
 .course-picker__more {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .course-picker__more {
   padding: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .course-picker__error {
   margin-top: 6px;
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 @media (max-width: 640px) {

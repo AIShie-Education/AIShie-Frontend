@@ -295,7 +295,7 @@ async function submit() {
 }
 .register__same {
   margin-top: 8px;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .register__same-list {
   margin: 4px 0 0;

@@ -265,8 +265,8 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
 }
 .prices-card__intro {
   margin: -8px 0 4px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .prices-card__version {
@@ -300,10 +300,10 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
   word-break: break-word;
 }
 .price-cell__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .price-cell__meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }
@@ -324,7 +324,7 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
   white-space: nowrap;
 }
 .price-cell__replaced {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.4;
   color: var(--el-text-color-secondary);
 }

@@ -63,11 +63,11 @@ const idle = computed(() => !text.value && !steps.value.some((s) => !stepDone(s)
   align-items: center;
   gap: 7px;
   margin: 0 2px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.4;
 }
 .chat-msg__author {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink-2);
 }
 .chat-draft__steps {
@@ -83,7 +83,7 @@ const idle = computed(() => !text.value && !steps.value.some((s) => !stepDone(s)
   align-items: center;
   gap: 6px;
   margin: 2px 2px 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>

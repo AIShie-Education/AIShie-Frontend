@@ -104,7 +104,7 @@ const forbidden = computed(() => props.forbidden || !!props.error?.isForbidden)
 
 <style scoped>
 .sub-grades__all {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
   text-decoration: none;
 }
@@ -113,7 +113,7 @@ const forbidden = computed(() => props.forbidden || !!props.error?.isForbidden)
 }
 .sub-grades__none {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .sub-grades {
   list-style: none;
@@ -148,14 +148,14 @@ const forbidden = computed(() => props.forbidden || !!props.error?.isForbidden)
   font-variant-numeric: tabular-nums;
 }
 .sub-grades__value {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--app-text-xl);
+  font-weight: var(--app-weight-strong);
 }
 .sub-grades__meta {
   display: flex;
   gap: 4px 14px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   /* Beside the score where there is room, on a line of its own where not. */
   flex: 1 1 260px;
   min-width: 0;

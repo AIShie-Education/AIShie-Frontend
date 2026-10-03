@@ -379,7 +379,7 @@ function onGraded() {
   }
 }
 .facts__item dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
@@ -392,7 +392,7 @@ function onGraded() {
   overflow-wrap: anywhere;
 }
 .facts__aside {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .facts a {
   text-decoration: none;
@@ -405,8 +405,8 @@ function onGraded() {
 }
 .submission-view__subhead {
   margin: 20px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .submission-view__files {
   list-style: none;
@@ -419,7 +419,7 @@ function onGraded() {
 
 .submission-view__none {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .attempts {
   list-style: none;
@@ -452,7 +452,7 @@ function onGraded() {
 }
 .attempts__current {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-primary);
 }
 </style>

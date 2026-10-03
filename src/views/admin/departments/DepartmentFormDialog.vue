@@ -134,11 +134,11 @@ async function save() {
   gap: 4px 10px;
   align-items: baseline;
   margin-bottom: 16px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .dept-form__where-label {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .dept-form__path {
   font-weight: 500;

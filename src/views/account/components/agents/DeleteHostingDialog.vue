@@ -115,7 +115,7 @@ async function submit() {
 <style scoped>
 .delete-hosting__body {
   margin: 0 0 12px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .delete-hosting__alert {

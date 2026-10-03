@@ -132,7 +132,7 @@ async function submit() {
 }
 .purge-dialog__p {
   margin: 0 0 10px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .purge-dialog__hint {
   width: 100%;

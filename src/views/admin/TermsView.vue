@@ -253,7 +253,7 @@ async function save() {
   max-width: 100%;
 }
 .setup-count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .term-cell {
   display: flex;
@@ -265,7 +265,7 @@ async function save() {
   word-break: break-word;
 }
 .term-meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }

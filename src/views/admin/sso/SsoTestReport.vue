@@ -129,8 +129,8 @@ const supported = computed(() =>
 }
 .sso-report__heading {
   margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-heading-weight);
 }
 .sso-report ul {
   margin: 0;
@@ -143,13 +143,13 @@ const supported = computed(() =>
   align-items: flex-start;
   gap: 6px;
   margin-bottom: 4px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   word-break: break-word;
 }
 .sso-report__core-words {
   display: block;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .sso-report__icon {
   flex-shrink: 0;
@@ -166,8 +166,8 @@ const supported = computed(() =>
   grid-template-columns: minmax(96px, max-content) minmax(0, 1fr);
   gap: 4px 12px;
   margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
 }
 .sso-report__list dt {
   color: var(--el-text-color-secondary);
@@ -180,14 +180,14 @@ const supported = computed(() =>
 .sso-report__list code,
 .sso-report__key code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .sso-report__key {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .sso-report__supported summary {
   cursor: pointer;

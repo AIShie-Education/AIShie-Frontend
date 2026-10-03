@@ -106,15 +106,15 @@ function revoke() {
 }
 .reveal__h {
   margin: 18px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .reveal__meta {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 6px 16px;
   margin: 16px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .reveal__meta dt {
   color: var(--el-text-color-secondary);

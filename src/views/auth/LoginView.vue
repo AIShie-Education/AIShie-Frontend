@@ -180,7 +180,7 @@ function sso(m: SsoMethod) {
   <div class="app-auth-page login">
     <div class="app-auth-page__lang">
       <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" />
+        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
       </el-select>
     </div>
     <main class="app-auth-page__card login__card">
@@ -273,12 +273,12 @@ function sso(m: SsoMethod) {
 }
 .login__tagline {
   margin: 0 0 20px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-3);
 }
 .login__title {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--app-text-2xl);
   line-height: 1.3;
 }
 .login__alert {

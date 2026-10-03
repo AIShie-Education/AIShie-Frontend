@@ -42,8 +42,8 @@ const { t } = useI18n()
 <style scoped>
 .recent-exports__note {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
 }
 .recent-exports__list {
   list-style: none;

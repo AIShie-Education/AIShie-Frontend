@@ -115,7 +115,7 @@ async function submit() {
 <style scoped>
 .invite-new__intro {
   margin: 0 0 16px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .invite-new__days {
   width: 160px;

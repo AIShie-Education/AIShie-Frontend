@@ -310,11 +310,11 @@ const emptyText = computed(() =>
   align-items: center;
   gap: 6px 14px;
   padding: 6px 0 10px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .roster-summary__total {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
 }
 .roster-summary__item {
@@ -391,7 +391,7 @@ const emptyText = computed(() =>
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 </style>

@@ -386,7 +386,7 @@ async function submit() {
   margin-top: 14px;
 }
 .create-dialog__label {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
 }
 .create-dialog__row {
@@ -422,7 +422,7 @@ async function submit() {
 }
 .create-dialog__why {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   text-align: left;
 }
 /* The buttons keep together at the right, under the reason where there is no room beside it. */

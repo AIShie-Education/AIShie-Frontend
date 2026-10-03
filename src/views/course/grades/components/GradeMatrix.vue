@@ -435,7 +435,7 @@ function meanHint(col: MatrixColumn): string {
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-variant-numeric: tabular-nums;
 }
 .matrix__table th,
@@ -495,7 +495,7 @@ function meanHint(col: MatrixColumn): string {
   border-top: 1px solid var(--el-border-color);
   border-bottom: 0;
   background: var(--el-fill-color-light);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .matrix__table tfoot th {
   z-index: 3;
@@ -505,7 +505,7 @@ function meanHint(col: MatrixColumn): string {
   text-align: right;
 }
 .matrix__group {
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -540,7 +540,7 @@ function meanHint(col: MatrixColumn): string {
   word-break: break-word;
 }
 .matrix__corner .matrix__head-title {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .matrix__arrow {
   flex-shrink: 0;
@@ -553,7 +553,7 @@ function meanHint(col: MatrixColumn): string {
   justify-content: space-between;
   gap: 4px;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   color: var(--el-text-color-secondary);
 }
 .matrix__open {
@@ -565,7 +565,7 @@ function meanHint(col: MatrixColumn): string {
   color: var(--el-color-primary);
 }
 .matrix__head.is-total .matrix__head-title {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 /* Totals stand apart from the work they add up: a tint, and a heavier figure. */
 .matrix__table .is-total:not(.matrix__foot) {
@@ -598,7 +598,7 @@ function meanHint(col: MatrixColumn): string {
   flex-shrink: 0;
   padding: 0 4px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   line-height: 16px;
   border: 1px solid currentColor;
   color: var(--el-text-color-secondary);
@@ -617,7 +617,7 @@ function meanHint(col: MatrixColumn): string {
   font-weight: 500;
 }
 .matrix__login {
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   color: var(--el-text-color-secondary);
 }
 .matrix__cell {
@@ -638,11 +638,11 @@ function meanHint(col: MatrixColumn): string {
   text-decoration: underline;
 }
 .matrix__cell.is-total .matrix__score {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .matrix__star {
   color: var(--el-color-primary);
-  font-weight: 700;
+  font-weight: var(--app-weight-strong);
 }
 /* A draft is set apart in words and in its figure, never by colour alone. */
 .matrix__cell.is-draft .matrix__score {
@@ -663,11 +663,18 @@ function meanHint(col: MatrixColumn): string {
 .matrix__flag {
   flex-shrink: 0;
 }
+/*
+ * A flag holds its words within its edge (clip, not hidden, which would set
+ * a flag alone in its cell on its bottom edge rather than on its words'
+ * line): a Chinese typeface's line is taller than the 13 to 17 px lines a
+ * flag is given here, and would otherwise reach out of a cell of three lines.
+ */
 .matrix__flag {
   display: inline-block;
+  overflow: clip;
   padding: 0 5px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   line-height: 17px;
   white-space: nowrap;
   border: 1px solid currentColor;
@@ -680,7 +687,7 @@ function meanHint(col: MatrixColumn): string {
 .matrix__flag.is-missing {
   color: var(--el-color-danger);
   background: var(--el-color-danger-light-9);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .matrix__flag.is-wait {
   border-style: dotted;
@@ -705,11 +712,13 @@ function meanHint(col: MatrixColumn): string {
 }
 /*
  * The posted grade under a draft, on a line of its own, as work waiting is.
- * Both under one score are three lines of 14 px, which fit the row's 44.
+ * Both under one score are three lines, of 15, 13 and 15 px (a flag's 13 px
+ * line, which holds a Chinese character at 13 px, and its edge), which fill
+ * the row's 44 within its line.
  */
 .matrix__posted {
   display: block;
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   line-height: 14px;
   color: var(--el-text-color-secondary);
 }
@@ -723,7 +732,7 @@ function meanHint(col: MatrixColumn): string {
   line-height: 14px;
 }
 .matrix__cell.has-posted.is-waiting .matrix__flag {
-  line-height: 12px;
+  line-height: 13px;
 }
 .matrix__cell.has-posted.is-waiting .matrix__posted {
   line-height: 13px;
@@ -743,6 +752,6 @@ function meanHint(col: MatrixColumn): string {
   white-space: nowrap;
 }
 .matrix__foot-label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 </style>

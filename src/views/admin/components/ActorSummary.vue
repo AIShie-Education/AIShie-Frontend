@@ -63,7 +63,7 @@ defineProps<{
   flex-shrink: 0;
   background: var(--el-fill-color-dark);
   color: var(--el-text-color-primary);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .actor-summary__body {
   display: flex;
@@ -79,7 +79,7 @@ defineProps<{
   flex-wrap: wrap;
 }
 .actor-summary__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
   min-width: 0;
 }
@@ -94,7 +94,7 @@ a.actor-summary__name:hover {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .actor-summary__email {
   color: var(--el-text-color-regular);

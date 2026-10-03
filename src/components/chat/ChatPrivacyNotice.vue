@@ -41,16 +41,16 @@ const { t } = useI18n()
   display: flex;
   flex-direction: column;
   gap: 14px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .chat-privacy section {
   min-width: 0;
 }
 .chat-privacy__heading {
   margin: 0 0 4px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
 }
 .chat-privacy ul {

@@ -126,7 +126,7 @@ async function submit() {
 <style scoped>
 .issue-intro {
   margin: 0 0 16px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .issue-alert {

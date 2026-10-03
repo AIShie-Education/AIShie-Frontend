@@ -377,7 +377,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
   container-type: inline-size;
   --st-cols: minmax(220px, 1fr) 76px 128px 80px 92px 72px 60px;
   --st-indent: 22px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .scheme-tree.has-actions {
   --st-cols: minmax(220px, 1fr) 76px 128px 80px 92px 72px 60px 44px;
@@ -399,21 +399,21 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
 }
 .st-row--head {
   min-height: 36px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-secondary);
   border-bottom-color: var(--el-border-color-light);
 }
 .st-row.is-root {
   background: var(--el-fill-color-light);
   border-radius: var(--app-radius-control);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .st-row.is-zero .st-title {
   color: var(--el-text-color-secondary);
 }
 .st-row--assignment {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   min-height: 36px;
 }
 .st-cell {
@@ -558,7 +558,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
 }
 .st-muted {
   color: var(--el-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .st-sr {
   position: absolute;
@@ -581,7 +581,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
   gap: 6px;
 }
 .st-menu__why {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   white-space: normal;
   padding-left: 20px;
@@ -622,7 +622,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
     flex-direction: row;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    font-size: var(--app-text-xs);
   }
   .st-num::before,
   .st-share::before {

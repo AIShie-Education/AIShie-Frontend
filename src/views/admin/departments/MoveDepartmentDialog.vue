@@ -76,7 +76,7 @@ async function save() {
 <style scoped>
 .move-dept__intro {
   margin: 0 0 16px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .move-dept__where {
   display: flex;
@@ -84,16 +84,16 @@ async function save() {
   gap: 4px 10px;
   align-items: baseline;
   margin-bottom: 16px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .move-dept__label {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .move-dept__to {
   display: block;
   margin-bottom: 6px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
 }
 </style>

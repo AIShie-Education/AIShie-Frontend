@@ -437,22 +437,22 @@ function rowClass({ row }: { row: MemberSummary }) {
 }
 .members__login-id {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 }
 .members__me {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   white-space: nowrap;
 }
 .members__dates {
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 8px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
 }
 .members__date-label {
   color: var(--el-text-color-secondary);

@@ -196,7 +196,7 @@ async function submit() {
 .md-help {
   margin: 0 0 12px;
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .md-option {
   display: flex;
@@ -211,7 +211,7 @@ async function submit() {
   gap: 6px;
 }
 .md-option__why {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   white-space: normal;
 }

@@ -400,8 +400,8 @@ const scopeOptions = computed(() =>
 }
 .export-form__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .export-form__pending {
   margin-bottom: 16px;
@@ -420,7 +420,7 @@ const scopeOptions = computed(() =>
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 .export-form__site {
@@ -441,7 +441,7 @@ const scopeOptions = computed(() =>
   margin: -8px 0 18px;
 }
 .export-form__span-words {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .export-form__sent {
   display: flex;
@@ -462,32 +462,32 @@ const scopeOptions = computed(() =>
 }
 .export-running__note {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .export-outcome__privacy {
   margin: 16px 0;
 }
 .export-outcome__privacy-body {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .export-outcome__record {
   margin: 12px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .export-refusal__text {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .export-refusal__narrow {
   margin: 8px 0 0;
   padding-left: 20px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .export-refusal__record {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 @media (max-width: 640px) {
   /* The three scopes on one line of a phone. */

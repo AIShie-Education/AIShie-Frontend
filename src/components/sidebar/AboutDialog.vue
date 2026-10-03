@@ -97,7 +97,7 @@ watch(open, async (v) => {
   gap: 6px;
   margin: 0;
   width: 100%;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .about__versions > div {
   display: flex;

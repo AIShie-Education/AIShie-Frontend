@@ -566,7 +566,7 @@ const backLink = computed(() => ({
 }
 .grade-view__override-line {
   margin: 6px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }
@@ -574,8 +574,8 @@ const backLink = computed(() => ({
   margin: 0 6px;
 }
 .grade-view__pct {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--app-text-xl);
+  font-weight: var(--app-weight-strong);
   color: var(--el-color-primary);
   font-variant-numeric: tabular-nums;
 }
@@ -593,7 +593,7 @@ const backLink = computed(() => ({
   margin: 0;
 }
 .grade-view__facts dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
@@ -613,10 +613,10 @@ const backLink = computed(() => ({
   grid-column: 1 / -1;
 }
 .grade-view__small-link {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .grade-view__kind {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .grade-view__replaced + .grade-view__replaced::before {
   content: '·';
@@ -630,8 +630,8 @@ const backLink = computed(() => ({
 }
 .grade-view__files-title {
   margin: 0 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .grade-view__files ul {
   margin: 0;
@@ -648,6 +648,6 @@ const backLink = computed(() => ({
   cursor: pointer;
 }
 .grade-view__history :deep(.is-current) {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 </style>

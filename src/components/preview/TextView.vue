@@ -88,15 +88,15 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
 .text-view__pre {
   padding: 20px 24px;
   font-family: var(--app-font-sans);
-  font-size: 14px;
-  line-height: var(--app-line-height-prose);
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-prose);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--app-ink);
 }
 .text-view__pre.is-code {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 1.6;
   white-space: pre;
   overflow-x: auto;
@@ -121,7 +121,7 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
 }
 .text-view__cut {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .text-view__table-wrap {
@@ -139,7 +139,7 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
 .text-view__table {
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-variant-numeric: tabular-nums;
 }
 .text-view__table th,
@@ -158,7 +158,7 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
   top: 0;
   z-index: 1;
   background: var(--el-fill-color-light);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink);
 }
 .text-view__rownum {

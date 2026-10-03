@@ -4,7 +4,8 @@
    its character: deep ink and indigo grounds, warm off-white text, a lighter
    indigo that reads on them, and the same warm light. Each pairing of text
    and ground below meets WCAG AA (4.5:1 for text, 3:1 for a control's edge
-   and the focus ring), in both themes. */
+   and the focus ring), in both themes; styles/contrast.spec.ts measures
+   them. */
 :root {
   /* Grounds and surfaces */
   --app-ground: #f6f3ec;
@@ -21,11 +22,15 @@
   --app-control-border: #8f887a;
   --app-control-border-hover: #6c665b;
 
-  /* Ink */
+  /* Ink, in three steps a reader tells apart: the text, what is secondary
+     to it, and the meta beside it (a time, a heading over a column, a hint),
+     each 1.5:1 or more from the next. The third reads at 4.5:1 on every
+     ground it is drawn on, the second shade and a hovered row's included.
+     The placeholder's is a step quieter, AA on a field, a card and the page. */
   --app-ink: #1b1d24;
   --app-ink-2: #4a4d58;
-  --app-ink-3: #5a5d68;
-  --app-ink-placeholder: #74767f;
+  --app-ink-3: #656872;
+  --app-ink-placeholder: #6b6e78;
   --app-ink-disabled: #a9a8a3;
 
   /* Indigo, the brand's colour, and what is written on it */
@@ -41,9 +46,9 @@
   --app-light-halo: #f0d8c0;
   --app-wordmark: #22407a;
 
-  /* Pills: planned, waiting, done, refused */
-  --app-planned-bg: #f3eac8;
-  --app-planned-fg: #5a4a00;
+  /* Pills: waiting, done, refused, each a hue of its own, and neutral, a
+     category's, whose text is a step darker than the third ink, to read on
+     its ground. */
   --app-wait-bg: #fbf0d9;
   --app-wait-fg: #8a5a00;
   --app-done-bg: #e1f2e8;
@@ -77,38 +82,100 @@
 
   /* Type: IBM Plex Sans for text, Source Serif 4 for headings (styles/fonts.ts
      loads them), each followed by the system's fonts while they load and for
-     what they do not cover. */
+     what they do not cover. Chinese in an English page (a name, a course's
+     title) is set in Noto Sans TC and Noto Serif TC, loaded once it shows
+     any, and named before the system's Chinese fonts; in the sans, after the
+     system's UI fonts, which have no Chinese but have the arrows and symbols
+     Plex lacks, drawn for Latin text as Noto's are not. No stack names
+     PMingLiU, which has no bold: a browser would make a false one of it
+     (src/styles/stacks.spec.ts reads the stacks as written). */
   --app-font-sans:
-    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC',
+    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei',
     'Helvetica Neue', Arial, sans-serif;
-  --app-font-serif: 'Source Serif 4', Georgia, 'Songti TC', 'PMingLiU', 'Noto Serif TC', serif;
+  --app-font-serif: 'Source Serif 4', Georgia, 'Noto Serif TC', 'Songti TC', serif;
   --app-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   --app-heading-weight: 600;
   --app-heading-tracking: -0.01em;
-  --app-line-height: 1.5;
-  --app-line-height-prose: 1.7;
+
+  /* Sizes: every font-size in the app is one of these (styles/typeScale.spec.ts
+     refuses any other; docs/CONVENTIONS.md, "Type"). In Chinese the two
+     smallest are a step larger (below): at 12 px a Han character's strokes run
+     together on a laptop's screen, so 12 px is left to English and figures.
+       xs   a time, a hint under a field, a unit, a tag, a tooltip
+       sm   a row's second line, a table's cells, a note, a small button
+       md   the interface's text (Element Plus's base)
+       lg   an item's title, and a field's text on a touch screen, below which
+            iOS zooms into the field
+       xl   a card's, a dialog's and the course's title
+       2xl  a page's title, and a figure that stands for a card
+       3xl, 4xl  a figure that stands for a page: a score, a total, a countdown
+     An icon drawn on its own takes a step too; one in a line of text, the
+     text's. */
+  --app-text-xs: 12px;
+  --app-text-sm: 13px;
+  --app-text-md: 14px;
+  --app-text-lg: 16px;
+  --app-text-xl: 18px;
+  --app-text-2xl: 24px;
+  --app-text-3xl: 32px;
+  --app-text-4xl: 40px;
+  /* Read at length, in every language: rendered Markdown, a chat's messages. */
+  --app-text-prose: 15px;
+  /* Latin letters and figures alone in a mark of a fixed size ("AI", "PDF" on
+     a file, an id, a key, a file's size): never Chinese, and the same in
+     every language. */
+  --app-text-mark: 11px;
+  /* Leading: the interface's lines, a paragraph's, and rendered Markdown's. */
+  --app-lh-ui: 1.5;
+  --app-lh-text: 1.6;
+  --app-lh-prose: 1.7;
+  /* What stands out in the interface's text: a name, a label, a table's
+     heading, a figure. A heading takes --app-heading-weight, as does a
+     figure that stands for a card. */
+  --app-weight-strong: 600;
+
+  /* Room: the steps a gap, a margin or a padding takes, 4 px apart up to 16
+     and 8 apart after. */
+  --app-space-xs: 4px;
+  --app-space-sm: 8px;
+  --app-space-md: 12px;
+  --app-space-lg: 16px;
+  --app-space-xl: 24px;
+  --app-space-2xl: 32px;
 }
 
 /* In Chinese, either script, headings bold and untracked, lines further
-   apart; <html lang> is set with the language (zh-Hans or zh-Hant). */
+   apart; <html lang> is set with the language (zh-Hans or zh-Hant). The two
+   smallest sizes are a step larger, and strong text is 500: Noto Sans,
+   loaded in 400, 500 and 700, has no 600, which falls to 700 and makes every
+   label and table heading bold. A heading stays 700. */
 html:lang(zh) {
   --app-heading-weight: 700;
   --app-heading-tracking: 0;
-  --app-line-height: 1.65;
-  --app-line-height-prose: 1.85;
+  --app-text-xs: 13px;
+  --app-text-sm: 14px;
+  --app-lh-ui: 1.6;
+  --app-lh-text: 1.75;
+  --app-lh-prose: 1.85;
+  --app-weight-strong: 500;
 }
 
 /* Traditional Chinese in Noto Sans TC and Noto Serif TC, */
 html:lang(zh-Hant) {
-  --app-font-sans: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-  --app-font-serif: 'Noto Serif TC', 'Source Serif 4', 'Songti TC', 'PMingLiU', serif;
+  --app-font-sans:
+    'AIshie Latin', 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --app-font-serif: 'AIshie Latin Serif', 'Noto Serif TC', 'Songti TC', serif;
 }
 
 /* and Simplified Chinese in Noto Sans SC and Noto Serif SC, whose glyphs take
-   the Mainland's forms. */
+   the Mainland's forms; SimSun, like PMingLiU, has no bold. In either script,
+   Latin letters, figures and their punctuation come first from Plex and
+   Source Serif ('AIshie Latin', styles/fonts-latin.css), as on an English
+   page; the rest, from Noto. */
 html:lang(zh-Hans) {
-  --app-font-sans: 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --app-font-serif: 'Noto Serif SC', 'Source Serif 4', 'Songti SC', 'SimSun', serif;
+  --app-font-sans:
+    'AIshie Latin', 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --app-font-serif: 'AIshie Latin Serif', 'Noto Serif SC', 'Songti SC', serif;
 }
 
 html.dark {
@@ -125,7 +192,7 @@ html.dark {
 
   --app-ink: #eeeae1;
   --app-ink-2: #c9c6bd;
-  --app-ink-3: #a9a7a0;
+  --app-ink-3: #a19f98;
   --app-ink-placeholder: #95938d;
   --app-ink-disabled: #62646d;
 
@@ -140,8 +207,6 @@ html.dark {
   --app-light-halo: #a8704f;
   --app-wordmark: #ffffff;
 
-  --app-planned-bg: #36311a;
-  --app-planned-fg: #e6d48a;
   --app-wait-bg: #3a2e14;
   --app-wait-fg: #edc06a;
   --app-done-bg: #163326;

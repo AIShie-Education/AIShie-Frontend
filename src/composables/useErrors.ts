@@ -168,7 +168,7 @@ export function notifyError(e: unknown, title?: string, opts: ReasonScopes = {})
       title: title ?? t('common.outcome.failed'),
       message: h('div', [
         h('div', msg),
-        h('div', { class: 'app-muted', style: 'margin-top: 4px; font-size: 12px' }, t('common.errors.recordedAs', { id: shortId(e.actionId) })),
+        h('div', { class: 'app-muted', style: 'margin-top: 4px; font-size: var(--app-text-xs)' }, t('common.errors.recordedAs', { id: shortId(e.actionId) })),
       ]),
       duration: 8000,
     })
