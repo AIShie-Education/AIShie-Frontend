@@ -216,6 +216,54 @@ test.describe('at phone width', () => {
     for (const h of await heights('.app-nav-drawer .side-item')) expect(h).toBeGreaterThanOrEqual(40)
   })
 
+  test('a filter’s chips, the way back and the top bar’s way up are big enough for a finger, and a number field is typed into', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+    const boxes = (selector: string) =>
+      page.locator(selector).evaluateAll((els) =>
+        els
+          .map((e) => ({ text: (e.textContent ?? '').trim(), r: e.getBoundingClientRect() }))
+          .filter(({ r }) => r.width > 0)
+          .map(({ text, r }) => ({ text, width: Math.round(r.width), height: Math.round(r.height) })),
+      )
+    // The activity's families (check tags of its own) and the members' filter (FilterChips): 40 px each, as
+    // a course's tabs are. The activity's were Element Plus's 28.
+    for (const path of ['activity', 'members']) {
+      await page.goto(coursePath(path))
+      await expect(page.locator('.el-check-tag').first()).toBeVisible()
+      const chips = await boxes('.el-check-tag')
+      expect(chips.length, path).toBeGreaterThan(1)
+      for (const c of chips) expect(c.height, `${path}: ${c.text}`).toBeGreaterThanOrEqual(40)
+    }
+    // An assignment's page: its way back, and the top bar's way up to the course and to Assignments.
+    await page.goto(coursePath(`assignments/${d.course.assignments.hw1}`))
+    await expect(page.locator('.page-header__back')).toBeVisible()
+    const [back] = await boxes('.page-header__back')
+    expect(back!.width).toBeGreaterThanOrEqual(40)
+    expect(back!.height).toBeGreaterThanOrEqual(40)
+    const steps = await boxes('nav.course-crumbs a')
+    expect(steps.map((s) => s.text)).toEqual([expect.stringContaining('CS101'), 'Assignments'])
+    for (const s of steps) expect(s.height, s.text).toBeGreaterThanOrEqual(44)
+    // A number field (a material's place in the order): its steps at its right end were two halves of 15 px.
+    // On a touch screen it has none, and is typed into.
+    await page.goto(coursePath('materials'))
+    await page.getByRole('button', { name: 'New material' }).click()
+    const dialog = page.getByRole('dialog', { name: 'New material' })
+    const field = dialog.locator('.el-input-number.is-controls-right').first()
+    await expect(field).toBeVisible()
+    await expect(field.locator('.el-input-number__increase')).toBeHidden()
+    await expect(field.locator('.el-input-number__decrease')).toBeHidden()
+    await field.locator('input').fill('7')
+    await field.locator('input').blur()
+    await expect(field.locator('input')).toHaveValue('7')
+    // Its value has the field's room, clear of the right edge the steps left.
+    const [outer, inner] = await Promise.all([field.boundingBox(), field.locator('input').boundingBox()])
+    expect(outer!.x + outer!.width - (inner!.x + inner!.width)).toBeLessThanOrEqual(20)
+  })
+
   test('on a phone narrower than the grades’ own tabs, their row scrolls on its own, and the page does not', async ({
     page,
   }) => {

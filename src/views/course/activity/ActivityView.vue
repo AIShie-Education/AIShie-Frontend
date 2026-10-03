@@ -445,9 +445,9 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   background-color: transparent;
   box-shadow: inset 0 0 0 1px var(--app-line-strong);
 }
+/* A count as every filter's chip has it (FilterChips): the chip's size and ink, set apart by its weight. */
 .activity__chip-count {
   font-variant-numeric: tabular-nums;
-  font-size: var(--app-text-xs);
   font-weight: 400;
   margin-left: 2px;
 }
