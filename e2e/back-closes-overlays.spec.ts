@@ -8,6 +8,7 @@ import {
   demo,
   hostOnRuntime,
   openChat,
+  openCourseTab,
   signIn,
   signInAsRoot,
   type CoreReply,
@@ -23,10 +24,13 @@ import {
 // own button, an overlay goes back over the entry it added, so that back from
 // there leaves the page, as it would have before it opened; a link followed
 // from the menu takes the menu's place in history; a search the page writes
-// to its address while the menu is open stays there once the menu closes; and
-// a page reloaded with an overlay open leaves none behind. On a wider screen
-// the chat is a window that stays open from page to page, and back moves
-// between them.
+// to its address while the menu is open stays there once the menu closes; an
+// overlay opened while the page a link leads to is still loading is closed by
+// back all the same, and the page shown stays, while one closed otherwise
+// lets that page land, and one still open when it lands comes after it in
+// history; and a page reloaded with an overlay open leaves none behind. On a
+// wider screen the chat is a window that stays open from page to page, and
+// back moves between them.
 
 const tag = Date.now().toString(36)
 
@@ -67,6 +71,30 @@ async function openReaders(page: Page, pane: Locator) {
 
 function menuButton(page: Page) {
   return page.getByRole('button', { name: 'Menu', exact: true })
+}
+
+/**
+ * Holds back the code of a view (`MembersView`), as a slow connection does on
+ * a first visit: a link to its page is on its way until `release` lets the
+ * code through, and resolves once it has come.
+ */
+async function holdCode(page: Page, view: string) {
+  const isIt = (url: URL) => new RegExp(`/${view}[.-]`).test(url.pathname)
+  let asked!: () => void
+  const requested = new Promise<void>((resolve) => (asked = resolve))
+  let open!: () => void
+  const released = new Promise<void>((resolve) => (open = resolve))
+  await page.route(isIt, async (route) => {
+    asked()
+    await released
+    await route.continue()
+  })
+  const release = async () => {
+    const arrived = page.waitForResponse((res) => isIt(new URL(res.url())))
+    open()
+    await arrived
+  }
+  return { requested, release }
 }
 
 test.describe('on a phone, back', () => {
@@ -155,6 +183,48 @@ test.describe('on a phone, back', () => {
     await page.keyboard.press('Escape')
     await expect(menu).toBeHidden()
     await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+  })
+
+  test('closes the menu opened while the page a link leads to is still loading, and the page shown stays; closed with Escape, that page lands', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await twoPages(page, '/', coursePath())
+    const url = page.url()
+    const menu = page.getByRole('dialog', { name: 'Menu' })
+    const members = await holdCode(page, 'MembersView')
+
+    // Members tapped, nothing seems to happen, and the menu is opened meanwhile.
+    await openCourseTab(page, 'Members')
+    await members.requested
+    await menuButton(page).click()
+    await expect(menu).toBeVisible()
+    await page.goBack()
+    await expect(menu).toBeHidden()
+    expect(page.url()).toBe(url)
+    await atPagesOwnEntry(page)
+    await expect(page.locator('.course-head')).toBeVisible()
+    // Back dropped the page on its way: its code come, it does not land.
+    await members.release()
+    await page.waitForTimeout(500)
+    expect(page.url()).toBe(url)
+
+    // Closed with Escape instead, the menu lets the page land, after the course's.
+    const activity = await holdCode(page, 'ActivityView')
+    await openCourseTab(page, 'Activity')
+    await activity.requested
+    await menuButton(page).click()
+    await expect(menu).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+    await activity.release()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('activity')}$`))
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(url)
+    // Back from the course leaves it, as it would have before the menu opened.
     await page.goBack()
     await expect(page).toHaveURL(/\/$/)
   })
@@ -458,6 +528,50 @@ test.describe('on a wider screen, back', () => {
     await expect(chatWindow(page)).toBeVisible()
     await chatWindow(page).locator('.chat-panel__minimize').click()
     await expect(chatWindow(page)).toHaveCount(0)
+  })
+
+  test('closes the file viewer opened while the page a link leads to is still loading, and the page shown stays; left open, the viewer comes after that page as it lands', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await twoPages(page, coursePath(), syllabusPath())
+    const url = page.url()
+    const members = await holdCode(page, 'MembersView')
+
+    await openCourseTab(page, 'Members')
+    await members.requested
+    const viewer = await openSyllabus(page)
+    await page.goBack()
+    await expect(viewer).toBeHidden()
+    expect(page.url()).toBe(url)
+    await atPagesOwnEntry(page)
+    await expect(page.locator('.version-file[data-file="syllabus.txt"]')).toBeVisible()
+    await members.release()
+    await page.waitForTimeout(500)
+    expect(page.url()).toBe(url)
+
+    // Left open, the viewer stays over the page that lands, with its entry after that page's.
+    const activity = await holdCode(page, 'ActivityView')
+    await openCourseTab(page, 'Activity')
+    await activity.requested
+    await openSyllabus(page)
+    await activity.release()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('activity')}$`))
+    await expect(viewer).toBeVisible()
+    await page.goBack()
+    await expect(viewer).toBeHidden()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('activity')}$`))
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(url)
+    // Forward reaches the page that landed.
+    await page.goForward()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('activity')}$`))
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(url)
+    await page.goBack()
+    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
   })
 })
 

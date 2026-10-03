@@ -1,5 +1,5 @@
-import { effectScope, ref } from 'vue'
-import { createRouter, createWebHistory, type Router } from 'vue-router'
+import { effectScope, ref, type Component } from 'vue'
+import { NavigationFailureType, createRouter, createWebHistory, isNavigationFailure, type Router } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ElMessageBox } from 'element-plus'
 import { STEP_TIMEOUT_MS, closeAllOverlays, installBackCloses, isSamePage, useBackCloses } from './useBackCloses'
@@ -262,6 +262,8 @@ describe('useBackCloses', () => {
 const routerStubs = () => ({
   options: { history: { listen: () => () => {} } },
   beforeEach: () => () => {},
+  beforeResolve: () => () => {},
+  resolve: (to: unknown) => ({ fullPath: String(to) }),
   currentRoute: { value: null },
 })
 
@@ -278,65 +280,6 @@ describe('installBackCloses', () => {
     }
     return { router: router as unknown as Router, pushed }
   }
-
-  /** A router whose pages take a while: each lands (its entry added) when `lands` says so. */
-  function slowRouter() {
-    const lands: (() => void)[] = []
-    const push = vi.fn(
-      (to: unknown) =>
-        new Promise<void>((resolve) =>
-          lands.push(() => {
-            history.pushState({ page: -1, to }, '')
-            resolve()
-          }),
-        ),
-    )
-    const router = { push, ...routerStubs() }
-    return { router: router as unknown as Router, push, lands }
-  }
-
-  it('an overlay opened while a page is on its way adds its entry once the page has landed, after the page’s', async () => {
-    const { router, lands } = slowRouter()
-    installBackCloses(router)
-    void router.push('/next')
-    const menu = overlay()
-    menu.open.value = true
-    await settles(() => expect(atPage()).toBe(true))
-
-    lands[0]!()
-    await settles(() => expect(depthHere()).toBe(1))
-    expect(history.state).toMatchObject({ page: -1, to: '/next' })
-    // Back closes it over the page landed on, and back again leaves that page: one step each.
-    history.back()
-    await settles(() => expect(menu.open.value).toBe(false))
-    expect(history.state).toEqual({ page: -1, to: '/next' })
-    history.back()
-    await settles(() => expect(atPage()).toBe(true))
-  })
-
-  it('an overlay closed while it waits for a page adds no entry; one waiting is closed by a link followed meanwhile', async () => {
-    const { router, push, lands } = slowRouter()
-    installBackCloses(router)
-    void router.push('/next')
-    const menu = overlay()
-    menu.open.value = true
-    // Closed by the page it leads to, say, before that page has landed.
-    menu.open.value = false
-    const chat = overlay()
-    chat.open.value = true
-    // Followed from the chat: it closes, and the page the link leads to is asked for at once.
-    void router.push('/other')
-    await settles(() => expect(chat.close).toHaveBeenCalledTimes(1))
-    expect(push).toHaveBeenCalledTimes(2)
-    lands[0]!()
-    lands[1]!()
-    await settles(() => expect(history.state).toEqual({ page: -1, to: '/other' }))
-    expect(menu.close).not.toHaveBeenCalled()
-    history.back()
-    await settles(() => expect(history.state).toEqual({ page: -1, to: '/next' }))
-    history.back()
-    await settles(() => expect(atPage()).toBe(true))
-  })
 
   it('a link followed while overlays are open closes them first, and the page takes their entries', async () => {
     const { router, pushed } = fakeRouter()
@@ -376,6 +319,138 @@ describe('installBackCloses', () => {
 })
 
 describe('installBackCloses, with the router', () => {
+  /**
+   * A router of its own at `/course`, come to from `/`, whose `/members` is
+   * on its way until `land` is called: a view whose code is still loading.
+   */
+  async function courseRouter() {
+    // From an entry with no state, as a page load starts.
+    history.replaceState(null, '', '/')
+    let land!: () => void
+    const members = new Promise<Component>((resolve) => (land = () => resolve({ render: () => null })))
+    const router = createRouter({
+      history: createWebHistory(),
+      routes: [
+        { path: '/members', component: () => members },
+        { path: '/:p(.*)*', component: { render: () => null } },
+      ],
+    })
+    installBackCloses(router)
+    await router.push('/')
+    await router.push('/course')
+    return { router, land }
+  }
+  const shown = (router: Router) => router.currentRoute.value.fullPath
+  const position = () => (history.state as { position?: number } | null)?.position
+
+  it('an overlay opened while a page is on its way adds its entry at once: back closes it, and the page shown stays, dropping the page on its way', async () => {
+    const { router, land } = await courseRouter()
+    try {
+      const length = history.length
+      const here = position()
+      const followed = router.push('/members')
+      const menu = overlay()
+      menu.open.value = true
+      await settles(() => expect(depthHere()).toBe(1))
+      expect(history.length).toBe(length + 1)
+
+      history.back()
+      await settles(() => expect(menu.open.value).toBe(false))
+      expect(menu.close).toHaveBeenCalledTimes(1)
+      expect(location.pathname).toBe('/course')
+      expect(depthHere()).toBe(0)
+      expect(position()).toBe(here)
+
+      // Back during a page's loading drops it: it does not land once it could.
+      land()
+      expect(isNavigationFailure(await followed, NavigationFailureType.cancelled)).toBe(true)
+      await settles(() => expect(location.pathname).toBe('/course'))
+      expect(shown(router)).toBe('/course')
+      expect(depthHere()).toBe(0)
+
+      // Back from the page leaves it, as it would have before the menu opened.
+      history.back()
+      await settles(() => expect(shown(router)).toBe('/'))
+      expect(location.pathname).toBe('/')
+    } finally {
+      land()
+      router.options.history.destroy()
+    }
+  })
+
+  it('an overlay opened and closed while a page is on its way lets it land; those still open as it lands have their entries after the page’s', async () => {
+    const { router, land } = await courseRouter()
+    try {
+      const length = history.length
+      const followed = router.push('/members')
+      // The menu, opened and closed again; the chat, and the viewer over it, left open.
+      const menu = overlay()
+      menu.open.value = true
+      await settles(() => expect(depthHere()).toBe(1))
+      menu.open.value = false
+      await settles(() => expect(depthHere()).toBe(0))
+      const chat = overlay()
+      const viewer = overlay()
+      chat.open.value = true
+      viewer.open.value = true
+      await settles(() => expect(depthHere()).toBe(2))
+
+      land()
+      await followed
+      await settles(() => expect(depthHere()).toBe(2))
+      expect(shown(router)).toBe('/members')
+      expect(location.pathname).toBe('/members')
+      // The course's entry, the members', then the chat's and the viewer's over the members'.
+      expect(history.length).toBe(length + 3)
+      expect(chat.open.value && viewer.open.value).toBe(true)
+      expect(chat.close).not.toHaveBeenCalled()
+      expect(viewer.close).not.toHaveBeenCalled()
+
+      // Back closes them over the page landed on, one at a time, then leaves that page: one step each.
+      history.back()
+      await settles(() => expect(viewer.open.value).toBe(false))
+      expect(chat.open.value).toBe(true)
+      history.back()
+      await settles(() => expect(chat.open.value).toBe(false))
+      expect(shown(router)).toBe('/members')
+      expect(depthHere()).toBe(0)
+      history.back()
+      await settles(() => expect(shown(router)).toBe('/course'))
+      // Forward reaches the page again.
+      history.forward()
+      await settles(() => expect(shown(router)).toBe('/members'))
+      expect(depthHere()).toBe(0)
+    } finally {
+      land()
+      router.options.history.destroy()
+    }
+  })
+
+  it('a link followed while an overlay opened on a page’s way is open closes it, and its page takes the place of both', async () => {
+    const { router, land } = await courseRouter()
+    try {
+      const length = history.length
+      const followed = router.push('/members')
+      const chat = overlay()
+      chat.open.value = true
+      await settles(() => expect(depthHere()).toBe(1))
+
+      // Followed from the chat: it closes, and the page the link leads to is gone to.
+      await router.push('/other')
+      expect(chat.close).toHaveBeenCalledTimes(1)
+      expect(shown(router)).toBe('/other')
+      land()
+      expect(isNavigationFailure(await followed, NavigationFailureType.cancelled)).toBe(true)
+      await settles(() => expect(location.pathname).toBe('/other'))
+      expect(history.length).toBe(length + 1)
+      history.back()
+      await settles(() => expect(shown(router)).toBe('/course'))
+    } finally {
+      land()
+      router.options.history.destroy()
+    }
+  })
+
   it('keeps the address the page wrote while an overlay was open, once the overlay closes, by its button or by back', async () => {
     // A router of its own, from an entry with no state, as a page load starts.
     history.replaceState(null, '', '/actors')

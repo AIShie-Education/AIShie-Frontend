@@ -639,7 +639,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   writes while an overlay is open (`router.replace`, a search as it is typed) is the one it keeps
   once the overlay closes, and the menu and the chat's sheet close as the page changes
   (`route.path`), not as it writes its own address. An overlay opened while a page a link leads to
-  is still on its way adds its entry once that page has landed.
+  is still on its way adds its entry at once, as any does: back closes it and the page shown stays
+  (the page on its way is dropped, as back drops one still loading), closed otherwise it lets that
+  page land, and still open as the page lands its entry makes way for the page's and comes after it.
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
