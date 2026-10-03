@@ -180,7 +180,7 @@ function sso(m: SsoMethod) {
   <div class="app-auth-page login">
     <div class="app-auth-page__lang">
       <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" />
+        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
       </el-select>
     </div>
     <main class="app-auth-page__card login__card">

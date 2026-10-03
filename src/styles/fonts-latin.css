@@ -1,0 +1,46 @@
+/* IBM Plex Sans and Source Serif 4 under names of their own, 'AIshie Latin'
+   and 'AIshie Latin Serif', for Latin letters, figures and their punctuation
+   only: Basic Latin and Latin-1 (which hold the dot of "CS101·A", U+00B7),
+   the en dash, the bullet and the minus sign. Named first in the Chinese
+   stacks (styles/tokens.css), they set a course's code, an email or "88.46%"
+   in the faces an English page sets them in, and the dot narrow. The rest of
+   a Chinese page, Han and its full-width punctuation, falls through to Noto:
+   the quotation marks, the ellipsis, and the em dash, which Chinese doubles
+   for its dash (「——」), one line in Noto and two with a gap in Plex.
+
+   The files are the Latin pieces styles/fonts.ts loads for the English
+   faces, the same URLs: a page that uses both names fetches each once.
+   Their weights are those faces' (Plex 400, 500 and 600; Source Serif 600):
+   a bolder weight asked for takes the boldest, with nothing synthesised. */
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+}
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+}
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+}
+@font-face {
+  font-family: 'AIshie Latin Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/source-serif-4/files/source-serif-4-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+}

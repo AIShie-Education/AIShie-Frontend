@@ -82,11 +82,17 @@
 
   /* Type: IBM Plex Sans for text, Source Serif 4 for headings (styles/fonts.ts
      loads them), each followed by the system's fonts while they load and for
-     what they do not cover. */
+     what they do not cover. Chinese in an English page (a name, a course's
+     title) is set in Noto Sans TC and Noto Serif TC, loaded once it shows
+     any, and named before the system's Chinese fonts; in the sans, after the
+     system's UI fonts, which have no Chinese but have the arrows and symbols
+     Plex lacks, drawn for Latin text as Noto's are not. No stack names
+     PMingLiU, which has no bold: a browser would make a false one of it
+     (src/styles/stacks.spec.ts reads the stacks as written). */
   --app-font-sans:
-    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC',
+    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei',
     'Helvetica Neue', Arial, sans-serif;
-  --app-font-serif: 'Source Serif 4', Georgia, 'Songti TC', 'PMingLiU', 'Noto Serif TC', serif;
+  --app-font-serif: 'Source Serif 4', Georgia, 'Noto Serif TC', 'Songti TC', serif;
   --app-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   --app-heading-weight: 600;
   --app-heading-tracking: -0.01em;
@@ -105,15 +111,20 @@ html:lang(zh) {
 
 /* Traditional Chinese in Noto Sans TC and Noto Serif TC, */
 html:lang(zh-Hant) {
-  --app-font-sans: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-  --app-font-serif: 'Noto Serif TC', 'Source Serif 4', 'Songti TC', 'PMingLiU', serif;
+  --app-font-sans:
+    'AIshie Latin', 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --app-font-serif: 'AIshie Latin Serif', 'Noto Serif TC', 'Songti TC', serif;
 }
 
 /* and Simplified Chinese in Noto Sans SC and Noto Serif SC, whose glyphs take
-   the Mainland's forms. */
+   the Mainland's forms; SimSun, like PMingLiU, has no bold. In either script,
+   Latin letters, figures and their punctuation come first from Plex and
+   Source Serif ('AIshie Latin', styles/fonts-latin.css), as on an English
+   page; the rest, from Noto. */
 html:lang(zh-Hans) {
-  --app-font-sans: 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --app-font-serif: 'Noto Serif SC', 'Source Serif 4', 'Songti SC', 'SimSun', serif;
+  --app-font-sans:
+    'AIshie Latin', 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --app-font-serif: 'AIshie Latin Serif', 'Noto Serif SC', 'Songti SC', serif;
 }
 
 html.dark {
