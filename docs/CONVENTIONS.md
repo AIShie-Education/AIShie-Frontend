@@ -589,6 +589,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   brand's line icon (an open book with the light over it, 48 px, stroke 1.75) over the words and a
   title where it has one. A state that is not a fault (no agent service beside the server, an
   administrator with no seat in a course) is one too; an `el-result` is left for what went wrong.
+  So is a text with nothing written in it: `<MarkdownView :source :empty>` says its `empty` as an
+  `AppEmpty`, never in a paragraph of its own.
 - **Tags** are `<AppTag :tone :variant>`, or `<StatusTag vocab="submissionState" :value="s.state" />`
   for Core's vocabularies (see `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`),
   drawn by what they say and never by an effect chosen on the page:
@@ -597,7 +599,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   - an **identity or an attribute** (a role, a kind, a scope, a preset, how an agent runs, "you",
     "this browser", a sign-in method, an overridden total) is an outline (`variant="outline"`): ink on
     a line and no ground, square-cornered as `AgentBadge`'s owner is, with its icon (`:icon`) unless
-    its row shows the icon already; it has no tone;
+    its row shows the icon already (`StatusTag`'s and `RoleTag`'s `no-icon`: the members' list, whose
+    rows start with a person's icon or an agent's avatar); it has no tone;
   - only a **count** is solid (`variant="count"`);
   - the **usual state** of a row (an active seat, course or actor, work submitted, a grade posted, a
     material published, a conversation open or answered) is quiet (`variant="quiet"`, as StatusTag
@@ -689,8 +692,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   no rule of its own takes it too (`main.css`), not the browser's bold, except an author's emphasis in
   rendered Markdown, which keeps a heading's weight; a heading, and a figure that stands for a card,
   is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Leading is
-  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface, `--app-lh-text` (1.6; 1.75) for a
-  paragraph and `--app-lh-prose` (1.7; 1.85) for rendered Markdown. Element Plus's sizes are mapped
+  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface (an empty place's line), `--app-lh-text`
+  (1.6; 1.75) for a paragraph (a note, where data goes) and `--app-lh-prose` (1.7; 1.85) for rendered
+  Markdown. A token read is a token set: `src/styles/customProperties.spec.ts` fails on a
+  `var(--app-…)` that no style sheet, component or script sets, which a browser would take for
+  nothing and leave the element to inherit. Element Plus's sizes are mapped
   onto the same steps (`styles/element.css`): its six, its components' own variables, and every rule
   of words it writes 12 or 13 px into (a small control's, a tooltip's, a date picker's days, months
   and time panel, a switch's words inside it), its bold where it marks what is chosen or today the
@@ -708,7 +714,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   rewritten.
 - Forms: `el-form` with `label-position="top"` and rules; a number field (`el-input-number`) has its
   steps at its right end (`controls-position="right"`) or none (`:controls="false"`), which lint
-  checks; dialogs with `el-dialog` (`width="560px"`,
+  checks; on a touch screen it has none, the steps at its right end being two halves of 15 px that
+  no finger hits, and is typed into (`styles/element.css`); dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
@@ -726,7 +733,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   mobile width in mind (`min-width` on columns, not fixed widths everywhere). A table has no ground of its own:
   it lies on its card (`styles/element.css`), white being a field's alone, and a column of figures is
   right-aligned, where its digits line up (`tabular-nums`; `data-num` elsewhere). `el-descriptions`
-  with `border` is drawn as rows parted by a thin line on the card, not a boxed grid.
+  with `border` is drawn as rows parted by a thin line on the card, not a boxed grid, and a collapse
+  (`el-collapse`: All permissions, an action's raw JSON) lies on its card, its header and what it
+  opens on without Element Plus's white band.
 - **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`
   in `views/course/grades/components/`; a student, or a chosen student, has `GradebookView` as before)
   is students by assignments, read from what the seat may read alone (every page of `grade.list`
@@ -778,7 +787,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   that sets the text size of a field one types into (`MarkdownEditor`'s 13 px monospace, the PDF
   viewer's page number) outweighs that rule, and so sets 16 px under `pointer: coarse` itself. A
   control of the app's own that is pressed often is at least 40 px there: a course's tabs (44), the
-  grades' own tabs (40) and the links of the phone's menu (44) among them. Never set `maximum-scale` or
+  grades' own tabs (40), the links of the phone's menu (44), a filter's chips (40, every
+  `el-check-tag`: FilterChips and the activity's families), a page's way back (`PageHeader`'s, 40)
+  and the top bar's way up (`CourseCrumbs`' links, 44) among them. Never set `maximum-scale` or
   `user-scalable` in the viewport: zooming is the reader's.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
@@ -1207,7 +1218,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   label reads "Email (optional)" aloud too), a label and its value `common.pair` ("Model calls: 380",
   「模型呼叫：380」; `<i18n-t keypath="common.pair">` where the value is a component), a word about
   something in brackets after it `common.aside` ("Week 1.pdf (2 MB)", 「Week 1.pdf（2 MB）」) or,
-  drawn apart from it, `common.bracketed`, and the parts of a line of facts `common.sep` ("PDF ·
+  drawn apart from it, `common.bracketed`, words quoted as someone wrote them `common.quoted`
+  (“How do loops end?”, 「迴圈怎樣結束？」: the language's own marks, and upright, as Chinese has no
+  italic but one a browser fakes), and the parts of a line of facts `common.sep` ("PDF ·
   1.2 MB": `{{ t('common.sep') }}` between them in a template, `joinParts` from `@/utils/parts` in
   a string). A course's code and section is `<span class="app-sep">·</span>` with no spaces, so
   that a Chinese typeface does not make it a full-width one, and `courseCodeText` where only a
@@ -1223,7 +1236,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<TimeText>` does. `src/i18n/punctuation.spec.ts` reads every component and module, the code in
   a template (`{{ }}`, a bound attribute, a directive) as well as its text and scripts, and refuses
   these, whether written in a template literal (`${n} %`), added to a string (`n + ' %'`,
-  `a + ': ' + b`, `a + '·' + b`) or as an entity (`&middot;`); it reads the messages too, for a
+  `a + ': ' + b`, `a + '·' + b`, `'“' + q + '”'`) or as an entity (`&middot;`), quotation marks
+  around a value too (`“{{ q }}”`, `「${q}」`); it reads the messages too, for a
   `"%"` after a placeholder in any language and a half-width colon or brackets beside one in
   Chinese.
 - **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
