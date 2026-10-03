@@ -40,7 +40,7 @@ const percent = computed(() => percentOf(props.score, props.outOf))
   font-variant-numeric: tabular-nums;
 }
 .score-text__score {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 /* A flex item's leading space collapses: the gap before the slash is a margin. */
 .score-text__of {
@@ -49,18 +49,18 @@ const percent = computed(() => percentOf(props.score, props.outOf))
 }
 .score-text__pct {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .score-text--large .score-text__score {
-  font-size: 32px;
+  font-size: var(--app-text-3xl);
   line-height: 1.1;
 }
 .score-text--large .score-text__of {
-  font-size: 18px;
+  font-size: var(--app-text-xl);
 }
 .score-text--large .score-text__pct {
-  font-size: 16px;
+  font-size: var(--app-text-lg);
   margin-left: 12px;
 }
 </style>

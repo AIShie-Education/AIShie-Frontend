@@ -99,10 +99,6 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       include: ['src/**/*.spec.ts'],
-      // A style sheet a test imports is empty, as the page's are not needed
-      // there, but one read as written (`?raw`) is its text: the font stacks
-      // are checked so (src/styles/stacks.spec.ts).
-      css: { include: [/\.css\?raw$/] },
       // A test waits on the clock for no more than a moment (past Element
       // Plus's 100 ms debounce of a field's error, or a frame): the wait
       // before a call is sent again, a poll's, a timer's of the page are
@@ -113,6 +109,11 @@ export default defineConfig(({ mode }) => {
       // cores). The limits are set for that, not for any wait.
       testTimeout: 30_000,
       hookTimeout: 30_000,
+      // A style sheet imported as text (`?raw`) is read as it is, for the
+      // guards that scan them (styles/typeScale.spec.ts, the font stacks'
+      // styles/stacks.spec.ts); any other is left out of the tests, as by
+      // default, as the page's are not needed there.
+      css: { include: [/\.css\?raw$/] },
     },
   }
 })

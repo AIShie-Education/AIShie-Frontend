@@ -152,7 +152,7 @@ const items = computed<Item[]>(() => {
   gap: 2px;
 }
 .action-timeline__text {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .action-timeline__line {
   display: inline;
@@ -165,7 +165,7 @@ const items = computed<Item[]>(() => {
   color: var(--el-color-warning);
 }
 .action-timeline__time {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 </style>

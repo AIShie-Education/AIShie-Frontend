@@ -1178,12 +1178,12 @@ const closedLine = computed(() => {
   border-radius: 12px;
   background: color-mix(in srgb, var(--el-bg-color) 86%, transparent);
   color: var(--el-color-primary);
-  font-size: 14px;
+  font-size: var(--app-text-md);
   font-weight: 500;
   pointer-events: none;
 }
 .chat-pane__drop .el-icon {
-  font-size: 26px;
+  font-size: var(--app-text-2xl);
 }
 /* One compact row, as an editor's agent chat has it. */
 .chat-pane__head {
@@ -1203,8 +1203,8 @@ const closedLine = computed(() => {
   white-space: nowrap;
 }
 .chat-pane__course {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   color: var(--app-indigo);
 }
@@ -1213,8 +1213,8 @@ const closedLine = computed(() => {
   min-width: 4em;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
 }
 /* The "AI" and whether it can be asked stay whole; a long name gives way first. */
 .chat-pane__ai,
@@ -1222,7 +1222,7 @@ const closedLine = computed(() => {
   flex-shrink: 0;
 }
 .chat-pane__presence :deep(.askable) {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .chat-pane__head-actions {
   display: flex;
@@ -1240,8 +1240,8 @@ const closedLine = computed(() => {
 /* What it says of a conversation, muted: that an agent that answers others may repeat what is written. */
 .chat-pane__shared {
   margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   text-align: center;
   color: var(--el-text-color-secondary);
 }
@@ -1251,8 +1251,8 @@ const closedLine = computed(() => {
 /* Under the composer: who else reads it and where it goes, with More for the whole notice. */
 .chat-pane__privacy {
   margin: 6px 2px 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
 }
@@ -1260,7 +1260,7 @@ const closedLine = computed(() => {
   height: auto;
   margin-left: 4px;
   padding: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   vertical-align: baseline;
 }
 /* The first time: its points on the new conversation, under who it is with. */
@@ -1271,8 +1271,8 @@ const closedLine = computed(() => {
   border: 1px solid var(--app-line);
   border-radius: 10px;
   background: var(--el-fill-color-light);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   text-align: left;
   color: var(--el-text-color-regular);
 }
@@ -1281,8 +1281,8 @@ const closedLine = computed(() => {
   align-items: center;
   gap: 6px;
   margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
 }
 .chat-pane__privacy-first ul {
@@ -1317,14 +1317,14 @@ const closedLine = computed(() => {
   margin-bottom: 8px;
 }
 .chat-pane__older-error {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-danger);
 }
 .chat-pane__empty,
 .chat-pane__intro {
   text-align: center;
   padding: 24px 8px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .chat-pane__intro p {
   margin: 0 0 8px;
@@ -1338,13 +1338,13 @@ const closedLine = computed(() => {
 }
 .chat-pane__start-mark {
   margin-bottom: 10px;
-  font-size: 26px;
+  font-size: var(--app-text-2xl);
   line-height: 1;
   color: var(--app-light);
 }
 .chat-pane__start-title {
   max-width: 34ch;
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   color: var(--app-ink-2);
 }
 .chat-pane__suggestions {
@@ -1357,8 +1357,8 @@ const closedLine = computed(() => {
 }
 .chat-pane__suggestions-title {
   margin: 0 0 2px !important;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   text-align: left;
   color: var(--el-text-color-secondary);
@@ -1370,7 +1370,7 @@ const closedLine = computed(() => {
   background: var(--el-bg-color);
   color: var(--app-ink);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   line-height: 1.4;
   text-align: left;
   cursor: pointer;
@@ -1416,14 +1416,14 @@ const closedLine = computed(() => {
 .chat-pane__held-text {
   margin: 0;
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .chat-pane__held-files {
   display: flex;
   align-items: center;
   gap: 4px;
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .chat-pane__held-note {
@@ -1432,7 +1432,7 @@ const closedLine = computed(() => {
   flex-wrap: wrap;
   gap: 4px;
   margin: 4px 4px 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 /* The working line (or the answer being written) follows the question closely. */
@@ -1446,15 +1446,15 @@ const closedLine = computed(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-danger);
   margin-bottom: 6px;
 }
 /* One muted line above the composer: whatever stops the caller writing, or an answer awaited. */
 .chat-pane__notice {
   margin: 0 2px 6px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .chat-pane__notice-sub {
@@ -1474,13 +1474,13 @@ const closedLine = computed(() => {
 .chat-pane__closed-text {
   margin: 0 2px;
   min-width: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
 }
 .chat-pane__closed-title {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .chat-pane__closed-reason {
   white-space: pre-wrap;
@@ -1490,7 +1490,7 @@ const closedLine = computed(() => {
 }
 .chat-pane__blocked {
   margin: 0 2px 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 </style>

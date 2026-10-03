@@ -608,7 +608,7 @@ const title = computed(() =>
   max-width: 220px;
 }
 .sso-form__id-fixed {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .sso-preview {
   display: flex;
@@ -619,7 +619,7 @@ const title = computed(() =>
   margin-top: 8px;
 }
 .sso-preview__caption {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 /* The sign-in page's button, as it will show there: not one to press here. */
@@ -635,7 +635,7 @@ const title = computed(() =>
   text-overflow: ellipsis;
 }
 .sso-preview__empty {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .sso-form__issuer-row {
   display: flex;
@@ -675,13 +675,13 @@ const title = computed(() =>
   margin-bottom: 6px;
 }
 .sso-form__switch-label {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-md);
 }
 .sso-form__by-email-rules {
   margin-bottom: 12px;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .sso-form__by-email-rules p {

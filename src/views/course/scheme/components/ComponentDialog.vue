@@ -534,7 +534,7 @@ const title = computed(() =>
   padding-bottom: 4px;
 }
 .cd-option__why {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   white-space: normal;
 }
@@ -563,7 +563,7 @@ const title = computed(() =>
   font-weight: 500;
 }
 .cd-type__help {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   font-weight: 400;
 }

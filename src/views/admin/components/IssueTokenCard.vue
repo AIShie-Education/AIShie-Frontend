@@ -148,8 +148,8 @@ function forget() {
 <style scoped>
 .token__intro {
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .token__expiry {
   display: flex;

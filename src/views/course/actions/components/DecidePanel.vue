@@ -428,16 +428,16 @@ function tell(
   --el-button-active-border-color: var(--app-indigo);
   --el-button-active-text-color: var(--app-indigo);
   box-shadow: inset 0 0 0 1px var(--app-indigo);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .decide-panel__blocked {
   display: flex;
   align-items: flex-start;
   gap: 6px;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .decide-panel__blocked .el-icon {
   margin-top: 2px;
@@ -454,8 +454,8 @@ function tell(
 }
 .decide-panel__hint {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .decide-panel__hint--owner {

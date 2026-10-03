@@ -85,13 +85,13 @@ function onSaved(row: PriceRow) {
   word-break: break-word;
 }
 .unpriced__label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .unpriced__model {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .unpriced__done {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-success);
 }
 </style>

@@ -626,8 +626,8 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink);
 }
 .chat-panel__titlebar .el-button + .el-button {
@@ -706,13 +706,13 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
 }
 .chat-panel__heading {
   margin: 0 0 4px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .chat-panel__hint {
   margin: 0 0 10px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .chat-panel__none {

@@ -72,7 +72,7 @@ function moreLabel(i: number): string {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   text-decoration: none;
 }
@@ -81,7 +81,7 @@ function moreLabel(i: number): string {
   flex-direction: column;
 }
 .recent__more {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .recent__list > * + * {
   border-top: 1px solid var(--el-border-color-lighter);

@@ -560,12 +560,12 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
      light theme; in the dark one a step above the card, from which the second
      shade, just below it, hardly stands out. */
   background: var(--app-neutral-bg);
-  font-size: 15px;
+  font-size: var(--app-text-lg);
 }
 .event-item.is-compact .event-item__icon {
   width: 28px;
   height: 28px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .event-item__body {
   flex: 1;
@@ -581,8 +581,8 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   flex-wrap: wrap;
 }
 .event-item__title {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-md);
   line-height: 1.4;
   word-break: break-word;
 }
@@ -591,7 +591,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .event-item__who {
@@ -599,7 +599,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-2);
   min-width: 0;
 }
@@ -622,7 +622,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 14px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
   min-width: 0;
 }
@@ -655,12 +655,12 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .event-item__action {
   display: inline-flex;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   text-decoration: none;
 }

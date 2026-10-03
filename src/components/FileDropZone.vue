@@ -520,12 +520,12 @@ defineExpose({ addFiles, choose, focus })
   background: var(--app-field);
 }
 .file-drop__icon {
-  font-size: 28px;
+  font-size: var(--app-text-3xl);
   color: var(--el-color-primary);
 }
 .file-drop__text {
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-ui);
 }
 .file-drop__choose {
   color: var(--el-color-primary);
@@ -538,9 +538,9 @@ defineExpose({ addFiles, choose, focus })
   flex-wrap: wrap;
   justify-content: center;
   gap: 4px 12px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-3);
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 /* One line, where the zone is not the main thing. */
 .is-compact .file-drop__zone {
@@ -552,7 +552,7 @@ defineExpose({ addFiles, choose, focus })
   text-align: left;
 }
 .is-compact .file-drop__icon {
-  font-size: 18px;
+  font-size: var(--app-text-xl);
 }
 .is-compact .file-drop__hint {
   justify-content: flex-start;
@@ -595,8 +595,8 @@ defineExpose({ addFiles, choose, focus })
   flex-shrink: 0;
   min-width: 1.4em;
   line-height: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink-3);
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -605,7 +605,7 @@ defineExpose({ addFiles, choose, focus })
   flex-shrink: 0;
   line-height: 20px;
   color: var(--app-ink-3);
-  font-size: 16px;
+  font-size: var(--app-text-lg);
 }
 .file-drop__state .is-ok {
   color: var(--el-color-success);
@@ -625,7 +625,7 @@ defineExpose({ addFiles, choose, focus })
   align-items: baseline;
   gap: 8px;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 20px;
 }
 .file-drop__name {
@@ -637,11 +637,11 @@ defineExpose({ addFiles, choose, focus })
 .file-drop__size {
   flex-shrink: 0;
   color: var(--app-ink-3);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-variant-numeric: tabular-nums;
 }
 .file-drop__status {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-3);
   line-height: 1.4;
   font-variant-numeric: tabular-nums;

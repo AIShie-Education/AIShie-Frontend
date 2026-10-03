@@ -195,12 +195,12 @@ const expiresAt = computed(() => str(p.value.expires_at))
 }
 .delegate-grant__help {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .delegate-grant__alert :deep(.el-alert__title) {
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .delegate-grant__facts {
   margin: 0;
@@ -217,12 +217,12 @@ const expiresAt = computed(() => str(p.value.expires_at))
 }
 .delegate-grant__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .delegate-grant__facts dd {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .delegate-grant__inline {
@@ -241,16 +241,16 @@ const expiresAt = computed(() => str(p.value.expires_at))
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .delegate-grant__muted {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: normal;
 }
 .delegate-grant__again {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 @media (max-width: 600px) {
   .delegate-grant__facts > div {

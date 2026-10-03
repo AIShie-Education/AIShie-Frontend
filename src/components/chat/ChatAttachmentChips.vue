@@ -155,7 +155,7 @@ watch(
   border: 1px solid var(--app-line);
   border-radius: 8px;
   background: var(--app-ground-2);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.3;
 }
 .chat-chip.is-failed {
@@ -168,7 +168,7 @@ watch(
 .chat-chip__icon {
   flex-shrink: 0;
   display: inline-flex;
-  font-size: 16px;
+  font-size: var(--app-text-lg);
   color: var(--app-ink-3);
 }
 .chat-chip__icon .is-bad {
@@ -187,9 +187,10 @@ watch(
   color: var(--app-ink);
   font-weight: 500;
 }
+/* A file's size, and words after it (已取消, Cancelled): the smallest step words take, not a mark's. */
 .chat-chip__meta {
   color: var(--app-ink-3);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -229,7 +230,7 @@ watch(
 }
 .chat-chips__error {
   margin: 6px 10px 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.4;
   color: var(--el-color-danger);
   overflow-wrap: anywhere;

@@ -539,14 +539,14 @@ function refresh() {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
   text-decoration: none;
   white-space: nowrap;
 }
 .assignment-view__none {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .assignment-view__file {
   display: flex;
@@ -556,18 +556,18 @@ function refresh() {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .assignment-view__facts {
   margin: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px 16px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .assignment-view__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .assignment-view__facts dd {
   margin: 0;
@@ -575,10 +575,10 @@ function refresh() {
 }
 .assignment-view__num {
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .assignment-view__rel {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin-top: 2px;
 }
 .assignment-view__links {

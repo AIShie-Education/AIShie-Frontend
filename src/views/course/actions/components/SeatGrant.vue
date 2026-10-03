@@ -142,8 +142,8 @@ const listsItself = computed(
 }
 .seat-grant__help {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .seat-grant__alert {
@@ -164,12 +164,12 @@ const listsItself = computed(
 }
 .seat-grant__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .seat-grant__facts dd {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .seat-grant__inline {
@@ -180,8 +180,8 @@ const listsItself = computed(
 }
 .seat-grant__title {
   margin: 8px 0 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -189,7 +189,7 @@ const listsItself = computed(
 }
 .seat-grant__muted {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: normal;
 }
 @media (max-width: 600px) {

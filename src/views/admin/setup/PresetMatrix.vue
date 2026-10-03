@@ -97,7 +97,7 @@ function rowClass({ row }: { row: Row }): string {
   text-align: left;
 }
 .matrix-label--meta {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
 }
 .matrix-label__name {
@@ -109,12 +109,12 @@ function rowClass({ row }: { row: Row }): string {
 }
 .matrix-label__scoped {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 /* In the third ink, not the placeholder's, which does not read at AA on a hovered row. */
 .matrix-label__key {
   font-family: var(--app-font-mono);
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   color: var(--el-text-color-secondary);
 }
 .matrix-head {
@@ -136,12 +136,12 @@ function rowClass({ row }: { row: Row }): string {
   background: var(--el-color-primary-light-9);
 }
 .matrix-head__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
   line-height: 1.3;
 }
 .matrix-head__where {
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
   line-height: 1.3;

@@ -187,12 +187,12 @@ const shortSum = (s: string) => {
   gap: 8px;
 }
 .export-file__size {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
 }
 .export-file__name {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
 }
@@ -209,7 +209,7 @@ const shortSum = (s: string) => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .export-files__countdown {

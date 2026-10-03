@@ -277,8 +277,8 @@ function toPrices() {
 }
 .costs-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .costs-card__controls {
@@ -300,7 +300,7 @@ function toPrices() {
 }
 .costs-card__too-long {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 .costs-card__totals {
@@ -316,7 +316,7 @@ function toPrices() {
   min-width: 0;
 }
 .costs-card__total dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .costs-card__total dd {
@@ -326,16 +326,16 @@ function toPrices() {
 }
 .costs-card__cost,
 .costs-card__calls {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-heading-weight);
 }
 .costs-card__tokens {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   padding-top: 6px;
 }
 .costs-card__other {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .costs-card__unpriced {
   margin-bottom: 12px;
@@ -349,7 +349,7 @@ function toPrices() {
 }
 .cost-cell__meta,
 .cost-cell__other {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .cost-cell__other {

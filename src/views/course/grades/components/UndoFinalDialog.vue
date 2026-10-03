@@ -114,7 +114,7 @@ async function submit() {
 <style scoped>
 .undo-final__intro {
   margin: 0 0 14px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .undo-final__who {
   display: flex;

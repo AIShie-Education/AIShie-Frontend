@@ -125,7 +125,7 @@ async function submit() {
   border-radius: 8px;
   background: var(--el-color-primary-light-9);
   color: var(--el-text-color-regular);
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .join-form__clock {
   margin-top: 4px;

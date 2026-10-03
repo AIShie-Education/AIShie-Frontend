@@ -132,8 +132,8 @@ watch(open, (v) => {
 }
 .agent-log__hint {
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .agent-log__pane {
@@ -173,7 +173,7 @@ watch(open, (v) => {
   min-width: 0;
 }
 .log-row__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -182,12 +182,12 @@ watch(open, (v) => {
 .log-row__time {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .log-row__title {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   overflow: hidden;
   text-overflow: ellipsis;

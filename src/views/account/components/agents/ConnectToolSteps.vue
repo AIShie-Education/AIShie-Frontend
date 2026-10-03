@@ -74,7 +74,7 @@ const claudeDesktop = computed(() => claudeDesktopConfig(MCP_ENDPOINT, props.tok
   margin: -4px 0 0;
 }
 .tool-steps__claude {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .tool-steps__claude summary {
   cursor: pointer;

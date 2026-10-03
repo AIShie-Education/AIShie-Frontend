@@ -192,11 +192,11 @@ async function copy() {
   gap: 7px;
   margin: 0 2px 4px;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.4;
 }
 .chat-msg__author {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -244,19 +244,19 @@ async function copy() {
 .chat-msg__text {
   margin: 0;
   white-space: pre-wrap;
-  line-height: 1.6;
-  font-size: 15px;
+  line-height: var(--app-lh-text);
+  font-size: var(--app-text-prose);
 }
 .chat-msg__retracted {
   display: flex;
   align-items: center;
   gap: 6px;
   font-style: italic;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .chat-msg__reason {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   white-space: pre-wrap;
 }
 /* Under the message: its time and what may be done with it. */
@@ -266,7 +266,7 @@ async function copy() {
   gap: 2px;
   min-height: 24px;
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .chat-msg.is-person .chat-msg__foot {
@@ -303,7 +303,7 @@ async function copy() {
 }
 .chat-msg__retract {
   margin: 0 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .chat-msg__announce {
   position: absolute;

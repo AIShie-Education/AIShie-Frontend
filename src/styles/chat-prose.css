@@ -5,8 +5,8 @@
    rules name both, to win over main.css's and markdown-rich.css's whatever
    order the build puts them in. */
 .markdown-body.chat-prose {
-  font-size: 15px;
-  line-height: var(--app-line-height-prose);
+  font-size: var(--app-text-prose);
+  line-height: var(--app-lh-prose);
 }
 .markdown-body.chat-prose > :first-child {
   margin-top: 0;
@@ -21,7 +21,7 @@
   margin: 1.1em 0 0.45em;
   line-height: 1.35;
   font-family: var(--app-font-sans);
-  font-weight: 600;
+  font-weight: var(--app-heading-weight);
   letter-spacing: 0;
   border: none;
   padding: 0;
@@ -87,8 +87,8 @@
   max-width: 100%;
   overflow-x: auto;
   border-collapse: collapse;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-ui);
 }
 .markdown-body.chat-prose th,
 .markdown-body.chat-prose td {
@@ -99,7 +99,7 @@
 }
 .markdown-body.chat-prose th {
   background: var(--app-ground-2);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   white-space: nowrap;
 }
 .markdown-body.chat-prose tbody tr:nth-child(even) td {

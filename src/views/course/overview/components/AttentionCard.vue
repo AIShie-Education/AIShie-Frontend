@@ -199,7 +199,7 @@ function reloadAll() {
   align-items: center;
   gap: 6px;
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-success);
 }
 .attention__rows {
@@ -249,19 +249,19 @@ function reloadAll() {
   gap: 2px;
 }
 .attention__label {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   font-weight: 500;
 }
 .attention__sub {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .attention__sub--error {
   color: var(--el-color-danger);
 }
 .attention__count {
-  font-size: 22px;
-  font-weight: 650;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-heading-weight);
   font-variant-numeric: tabular-nums;
   min-width: 2ch;
   text-align: right;

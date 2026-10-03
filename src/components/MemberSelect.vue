@@ -60,7 +60,7 @@ const free = computed(() => course.membersState === 'forbidden' || course.member
 .member-select__meta {
   float: right;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin-left: 12px;
 }
 </style>

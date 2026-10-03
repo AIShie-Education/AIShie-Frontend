@@ -311,8 +311,8 @@ const title = computed(() =>
 }
 .price-form__section {
   margin: 4px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .price-form__prices {
   display: grid;
@@ -320,7 +320,7 @@ const title = computed(() =>
   gap: 0 16px;
 }
 .price-form__id-fixed {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .price-dialog__problems {
   margin: 4px 0 0;

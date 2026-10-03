@@ -406,7 +406,7 @@ function goToCourse(courseId: string) {
 }
 .join__lead {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .join__course {
@@ -416,21 +416,21 @@ function goToCourse(courseId: string) {
   background: var(--app-indigo-tint);
 }
 .join__code {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.02em;
   color: var(--el-color-primary);
   word-break: break-word;
 }
 .join__title {
   margin: 4px 0 0;
-  font-size: 22px;
+  font-size: var(--app-text-2xl);
   line-height: 1.3;
   word-break: break-word;
 }
 .join__what {
   margin: 0 0 12px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .join__time {
@@ -438,7 +438,7 @@ function goToCourse(courseId: string) {
   gap: 6px;
   align-items: center;
   margin: -4px 0 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-regular);
 }
@@ -447,8 +447,8 @@ function goToCourse(courseId: string) {
   gap: 6px;
   align-items: flex-start;
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-regular);
 }
 .join__domains .el-icon {
@@ -461,7 +461,7 @@ function goToCourse(courseId: string) {
   align-items: center;
   gap: 4px 8px;
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .join__email {
   color: var(--el-text-color-secondary);
@@ -487,11 +487,11 @@ function goToCourse(courseId: string) {
 }
 .join__subtitle {
   margin: 8px 0 12px;
-  font-size: 17px;
+  font-size: var(--app-text-lg);
 }
 .join__switch {
   margin: 14px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   text-align: center;
 }
@@ -506,7 +506,7 @@ function goToCourse(courseId: string) {
 }
 @media (max-width: 480px) {
   .join__title {
-    font-size: 20px;
+    font-size: var(--app-text-xl);
   }
 }
 </style>

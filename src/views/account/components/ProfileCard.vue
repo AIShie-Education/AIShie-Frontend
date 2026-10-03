@@ -80,16 +80,16 @@ const { t } = useI18n()
 .profile-card__avatar {
   background: var(--app-indigo-tint);
   color: var(--app-indigo);
-  font-weight: 600;
-  font-size: 20px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-xl);
   flex-shrink: 0;
 }
 .profile-card__who {
   min-width: 0;
 }
 .profile-card__name {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--app-text-xl);
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
 }
 .profile-card__tags {
@@ -103,7 +103,7 @@ const { t } = useI18n()
   grid-template-columns: minmax(110px, max-content) 1fr;
   gap: 10px 16px;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .profile-card__list dt {
   color: var(--el-text-color-secondary);

@@ -128,8 +128,8 @@ function onTabKey(e: KeyboardEvent) {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--app-font-sans);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--app-ink-3);
@@ -163,7 +163,7 @@ function onTabKey(e: KeyboardEvent) {
   background: transparent;
   color: var(--app-ink-3);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   cursor: pointer;
 }
 .side-bar__tab span {
@@ -175,7 +175,7 @@ function onTabKey(e: KeyboardEvent) {
 .side-bar__tab.is-active {
   background: var(--app-indigo-tint);
   color: var(--app-indigo);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 @media print {
   .side-bar {
@@ -199,7 +199,7 @@ function onTabKey(e: KeyboardEvent) {
   border-radius: var(--app-radius-control);
   color: var(--el-text-color-regular);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   line-height: 1.4;
 }
 .side-bar .side-item:hover {
@@ -233,8 +233,8 @@ function onTabKey(e: KeyboardEvent) {
   margin: 0;
   padding: 0 10px 6px;
   font-family: var(--app-font-sans);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--app-ink-3);
@@ -246,14 +246,14 @@ html:lang(zh) .side-bar .side-heading {
 }
 .side-bar .side-note {
   margin: 4px 10px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .side-bar .side-more {
   display: inline-block;
   margin: 6px 10px 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .side-bar .side-loading {
   min-height: 64px;

@@ -35,7 +35,7 @@ async function copy() {
 <style scoped>
 .copy-block__label {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .copy-block__body {
@@ -53,7 +53,7 @@ async function copy() {
   margin: 0;
   padding-top: 3px;
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;

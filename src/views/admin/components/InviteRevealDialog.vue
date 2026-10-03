@@ -130,7 +130,7 @@ function finish() {
 }
 .reveal__label {
   display: block;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
   margin-bottom: 6px;
 }
@@ -145,7 +145,7 @@ function finish() {
 }
 .reveal__input :deep(textarea) {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   word-break: break-all;
 }
 .reveal__facts {
@@ -153,11 +153,11 @@ function finish() {
   flex-wrap: wrap;
   gap: 8px 24px;
   margin: 16px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .reveal__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .reveal__facts dd {
   margin: 2px 0 0;

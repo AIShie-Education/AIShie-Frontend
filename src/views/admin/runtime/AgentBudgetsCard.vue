@@ -218,8 +218,8 @@ async function reset() {
 }
 .budgets-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .budgets-card__grid {
@@ -232,8 +232,8 @@ async function reset() {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 12px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
 }
 .budgets-card__scope {
   display: flex;
@@ -242,14 +242,14 @@ async function reset() {
   padding-top: 6px;
 }
 .budgets-card__label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .budgets-card__source {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 8px;
   margin: 4px 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .budgets-card__note {
   margin: 0 0 16px;

@@ -62,7 +62,7 @@ const rows = computed(() =>
 
 <style scoped>
 .seats-card__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
@@ -107,8 +107,8 @@ const rows = computed(() =>
   color: var(--el-color-primary);
 }
 .seat__code {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-color-primary);
 }
 .seat__title {
@@ -128,7 +128,7 @@ const rows = computed(() =>
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .seat__k {

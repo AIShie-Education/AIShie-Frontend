@@ -43,13 +43,13 @@ const { available, dismiss, reload } = useNewVersion(props.options)
   background: var(--app-overlay);
   box-shadow: var(--app-shadow-pop);
   color: var(--app-ink);
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .new-version__icon {
   color: var(--app-indigo);
 }
 .new-version__text {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   white-space: nowrap;
 }
 .new-version .el-button + .el-button {

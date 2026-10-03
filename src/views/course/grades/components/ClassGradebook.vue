@@ -709,7 +709,7 @@ function exportCsv() {
   margin-right: 0;
 }
 .classbook__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .classbook__reading,
 .classbook__notice {

@@ -686,7 +686,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   padding: 4px 12px;
   border-bottom: 1px solid var(--app-line);
   background: var(--el-bg-color);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .pdf-view__group {
   display: inline-flex;
@@ -714,7 +714,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
 /* On a touch screen, 16 px, below which iOS zooms into a field it focuses. */
 @media (pointer: coarse) {
   .pdf-view__page-input {
-    font-size: 16px;
+    font-size: var(--app-text-lg);
   }
 }
 .pdf-view__page-input:focus-visible {
@@ -763,7 +763,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   display: flex;
   justify-content: center;
   padding: 48px 0;
-  font-size: 24px;
+  font-size: var(--app-text-2xl);
   color: var(--app-ink-3);
 }
 .pdf-page {
@@ -881,7 +881,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   border-radius: 999px;
   background: var(--el-bg-color-overlay);
   box-shadow: var(--el-box-shadow-light);
-  font-size: 15px;
+  font-size: var(--app-text-lg);
 }
 .pdf-view.is-compact .pdf-view__zoom {
   margin-left: 0;
@@ -896,11 +896,11 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   height: 40px;
   padding: 0;
   border-radius: 999px;
-  font-size: 18px;
+  font-size: var(--app-text-xl);
 }
 .pdf-view.is-compact .pdf-view__page-input {
   /* 16 px, or a phone's browser zooms the screen to it as it is focused. */
-  font-size: 16px;
+  font-size: var(--app-text-lg);
   /* As wide as the count's digits (tabular, each 1ch), and no narrower than a button. */
   box-sizing: border-box;
   width: calc(var(--digits, 2) * 1ch + 16px);
@@ -921,6 +921,11 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
 .pdf-view.is-compact .pdf-view__percent {
   min-width: 0;
   padding: 0 4px;
+}
+/* On a small phone, the count and the per cent a step smaller too: at the large step, a 320 px
+   phone's bar had no room for "of 1,200" beside the page field, and fitBar left the count out. */
+.pdf-view.is-tight .pdf-view__bar {
+  font-size: var(--app-text-sm);
 }
 .pdf-view.is-tight .pdf-view__bar .el-button {
   width: 36px;

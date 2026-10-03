@@ -362,11 +362,11 @@ async function submit() {
   margin-bottom: 16px;
 }
 .add-agent__explain :deep(.el-alert__title) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .add-agent__p {
   margin: 4px 0 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .add-agent__select {
   width: 100%;
@@ -389,14 +389,14 @@ async function submit() {
   text-overflow: ellipsis;
 }
 .add-agent__option-meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   flex-shrink: 0;
 }
 .add-agent__section {
   margin: 8px 0 2px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .add-agent__section-hint {
   margin: 0 0 8px;
@@ -414,11 +414,11 @@ async function submit() {
 }
 .add-agent__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .add-agent__facts dd {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   min-width: 0;
 }
 .add-agent__perms {

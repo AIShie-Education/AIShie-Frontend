@@ -181,8 +181,8 @@ const excerpt = computed(() => {
   min-width: 0;
 }
 .action-card__title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--app-text-lg);
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
   text-decoration: none;
 }
@@ -193,7 +193,7 @@ const excerpt = computed(() => {
   text-decoration: none;
 }
 .action-card__when {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   flex-shrink: 0;
 }
@@ -208,11 +208,11 @@ const excerpt = computed(() => {
   grid-template-columns: 88px minmax(0, 1fr);
   gap: 8px;
   align-items: baseline;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .action-card__fact dt {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .action-card__fact dd {
   margin: 0;
@@ -234,11 +234,11 @@ const excerpt = computed(() => {
   border-left: 3px solid var(--el-color-primary);
 }
 .action-card__message :deep(.markdown-body) {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .action-card__excerpt {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
   background: var(--el-fill-color-lighter);
   border-left: 3px solid var(--el-border-color);
@@ -271,7 +271,7 @@ const excerpt = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   text-decoration: none;
   white-space: nowrap;
   padding-top: 4px;

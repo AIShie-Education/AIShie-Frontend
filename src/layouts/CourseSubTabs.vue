@@ -54,7 +54,7 @@ const nav = useCourseNav()
   padding: 0 10px;
   border-radius: var(--app-radius-control);
   color: var(--el-text-color-regular);
-  font-size: 14px;
+  font-size: var(--app-text-md);
   text-decoration: none;
   white-space: nowrap;
 }

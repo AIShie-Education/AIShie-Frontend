@@ -22,7 +22,7 @@ const text = computed(() => {
   background: var(--el-fill-color-light);
   border-radius: var(--app-radius-control);
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.5;
   overflow: auto;
   white-space: pre-wrap;

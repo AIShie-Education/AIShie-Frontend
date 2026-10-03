@@ -334,7 +334,7 @@ function refresh() {
   color: var(--el-color-primary);
 }
 .assignments-view__sub {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin-top: 2px;
 }
 .assignments-view__meta {
@@ -343,7 +343,7 @@ function refresh() {
   gap: 6px;
   flex-wrap: wrap;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .assignments-view__due,
 .assignments-view__mine {

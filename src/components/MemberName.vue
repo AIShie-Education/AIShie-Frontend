@@ -54,7 +54,7 @@ const unnamable = computed(() => course.level('member_read') === 'denied' || cou
 }
 .member-name__me {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 /* The avatar and the "AI" stand a little apart from the name. */
 .member-name.is-agent {

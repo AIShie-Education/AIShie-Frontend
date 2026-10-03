@@ -282,8 +282,8 @@ function openEdit(o: PlanOffer) {
 }
 .offers-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .offers-card__error {
@@ -296,16 +296,16 @@ function openEdit(o: PlanOffer) {
   min-width: 0;
 }
 .offer-cell__label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
 }
 .offer-cell__model {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   word-break: break-word;
 }
 .offer-cell__meta,
 .offer-cell__agents {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }
@@ -322,6 +322,6 @@ function openEdit(o: PlanOffer) {
 }
 .offer-cell__always,
 .offer-cell__read-only {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

@@ -83,7 +83,7 @@ const locked = computed(() => props.ceiling === 'denied')
 }
 .level-select__help {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .level-select__lock {
   vertical-align: -2px;

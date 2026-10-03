@@ -79,12 +79,12 @@ const ICON: Record<AgentHosting, string> = { runtime: 'Monitor', mcp: 'Connectio
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
 }
 .hosting-choice__hint {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   font-weight: normal;
   color: var(--el-text-color-secondary);
 }
@@ -97,8 +97,8 @@ const ICON: Record<AgentHosting, string> = { runtime: 'Monitor', mcp: 'Connectio
   align-items: center;
   gap: 4px;
   margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-color-warning-dark-2);
 }
 </style>

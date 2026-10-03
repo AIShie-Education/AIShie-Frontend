@@ -13,7 +13,7 @@ export default {
     feedback: '文字回饋',
   },
   list: {
-    subtitle: '你權限範圍內的草稿、已發佈及已取代成績。學生只會看到已發佈的成績。',
+    subtitle: '你權限範圍內的草稿、已發佈及已取代成績。學生只看到已發佈的。',
     allAssignments: '所有作業',
     allStudents: '所有學生',
     allStates: '任何狀態',
