@@ -18,6 +18,7 @@
 // the administrator changed is kept over it, and they are told so.
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import { toneOf } from '@/components/tags'
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -581,13 +582,9 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
             </el-collapse-item>
           </el-collapse>
 
-          <el-alert
-            type="warning"
-            :closable="false"
-            show-icon
-            :title="t('runtimeAdmin.offer.warning', { provider: providerName })"
-            class="offer-dialog__alert"
-          />
+          <DataFlowNotice class="offer-dialog__alert offer-dialog__data-flow">
+            {{ t('runtimeAdmin.offer.warning', { provider: providerName }) }}
+          </DataFlowNotice>
         </template>
       </el-form>
 

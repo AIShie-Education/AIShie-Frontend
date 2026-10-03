@@ -26,6 +26,7 @@ import { shortId } from '@/utils/format'
 import { formatCountdown } from '@/utils/countdown'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import DepartmentPicker from './departments/DepartmentPicker.vue'
 import CoursePicker from './export/CoursePicker.vue'
@@ -345,19 +346,13 @@ const scopeOptions = computed(() =>
         <AppTag v-if="run.exported.replayed">{{ t('auditExport.outcome.replayed') }}</AppTag>
       </h2>
       <ExportSummary :record="outcome" />
-      <el-alert
-        class="export-outcome__privacy"
-        type="warning"
-        show-icon
-        :closable="false"
-        :title="t('auditExport.privacy.title')"
-      >
+      <DataFlowNotice class="export-outcome__privacy" :title="t('auditExport.privacy.title')">
         <i18n-t keypath="auditExport.privacy.body" tag="p" scope="global" class="export-outcome__privacy-body">
           <template #time
             ><strong>{{ dayjs(outcome.expires_at).format('LLL') }}</strong></template
           >
         </i18n-t>
-      </el-alert>
+      </DataFlowNotice>
       <ExportFiles
         :export-id="outcome.export_id"
         :files="outcome.files"

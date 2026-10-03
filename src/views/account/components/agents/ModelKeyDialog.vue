@@ -29,6 +29,7 @@ import type { AgentPatch, HostedAgent, KeyTestAnswer, ModelsAnswer, ProviderOffe
 import { REASONING_EFFORTS } from '@/api/runtime-types'
 import AppNote from '@/components/AppNote.vue'
 import DailyReset from '@/components/DailyReset.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import {
   FIELD_REASONS,
   MAX_OUTPUT_TOKENS,
@@ -411,7 +412,9 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
             </i18n-t>
             <div class="app-form-hint">{{ t('hosting.school.noKey') }}</div>
           </el-form-item>
-          <AppNote class="model-dialog__alert model-form__school-warning">{{ t('hosting.school.warning') }}</AppNote>
+          <DataFlowNotice class="model-dialog__alert model-form__school-warning">
+            {{ t('hosting.school.warning') }}
+          </DataFlowNotice>
           <div v-if="ownAvailable" class="model-form__fallback">
             <h4 class="model-form__fallback-title">{{ t('hosting.school.fallbackTitle') }}</h4>
             <el-checkbox v-model="fallback" class="model-form__fallback-on">{{ t('hosting.school.fallbackOn') }}</el-checkbox>
@@ -529,13 +532,9 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
             </el-collapse-item>
           </el-collapse>
 
-          <el-alert
-            type="warning"
-            :closable="false"
-            show-icon
-            :title="t('hosting.model.warning', { provider: providerName })"
-            class="model-dialog__alert"
-          />
+          <DataFlowNotice class="model-dialog__alert model-form__own-warning">
+            {{ t('hosting.model.warning', { provider: providerName }) }}
+          </DataFlowNotice>
         </template>
         </template>
       </el-form>
