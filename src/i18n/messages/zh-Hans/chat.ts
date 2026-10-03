@@ -18,7 +18,7 @@ export default {
     backToHistory: '返回过往对话',
     backToAgents: '返回智能体列表',
     pickTitle: '向智能体提问',
-    pickHint: '你在{course}可以提问的智能体：课程自己的智能体，以及你的个人助理。',
+    pickHint: '你在{course}可以提问的智能体：课程自己的智能体，以及你的个人智能体。',
     noCourses: '你的课程都不允许你向智能体提问。',
   },
   history: {

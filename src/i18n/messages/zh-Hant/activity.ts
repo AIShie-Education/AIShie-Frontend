@@ -18,6 +18,8 @@ export default {
     actions: '操作',
     course: '課程',
     other: '其他',
+    // What agents did: who acted is read from the action each event was done under (deciders, and owners of an agent seated here).
+    agents: '代理',
   },
   fresh: '新',
   freshBanner: '開啟此頁後有{n}則新動態',
@@ -33,6 +35,18 @@ export default {
   yesterday: '昨天',
   viaAction: '相關操作',
   note: '動態只記錄發生了甚麼、涉及甚麼，不含內容本身。點開即可在你的席位權限範圍內查看；你自己操作的結果一定看得到。',
+  // Who acted, for the action log's events (from the action they are about): the one who proposed or
+  // did it, then who decided or reviewed it. An agent with its avatar and "AI".
+  who: {
+    label: '行為者',
+    proposed: '{who}提出',
+    did: '{who}執行',
+    approved: '{who}批准',
+    rejected: '{who}駁回',
+    changesRequested: '{who}要求修改',
+    reviewed: '{who}覆核',
+    escalated: '{who}升級',
+  },
   subject: {
     assignment: '作業',
     submission: '提交',

@@ -33,6 +33,8 @@ import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AgentName from '@/components/AgentName.vue'
 import { probeActorList, useActorSearch } from '@/views/admin/components/actorSearch'
 import RefusalAlert from './RefusalAlert.vue'
 import {
@@ -541,9 +543,16 @@ function capToMine() {
           </span>
           <template v-else-if="actorInfo">
             <div class="add-member__actor-who">
-              <el-icon><Cpu v-if="actorInfo.kind === 'agent'" /><User v-else /></el-icon>
-              <strong>{{ actorInfo.display_name }}</strong>
-              <StatusTag vocab="actorKind" :value="actorInfo.kind" />
+              <!-- An agent as one: its avatar, and "AI" after its name; a person by the kind's icon and tag. -->
+              <template v-if="actorInfo.kind === 'agent'">
+                <AgentAvatar :name="actorInfo.display_name" size="small" />
+                <strong><AgentName :name="actorInfo.display_name" /></strong>
+              </template>
+              <template v-else>
+                <el-icon><User /></el-icon>
+                <strong>{{ actorInfo.display_name }}</strong>
+                <StatusTag vocab="actorKind" :value="actorInfo.kind" />
+              </template>
               <StatusTag v-if="actorInfo.status !== 'active'" vocab="actorStatus" :value="actorInfo.status" />
             </div>
             <el-alert

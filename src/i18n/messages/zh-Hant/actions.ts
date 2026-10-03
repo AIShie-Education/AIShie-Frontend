@@ -313,7 +313,7 @@ export default {
     theOwner: '其擁有者',
     purpose: {
       course: '課程代理：學生可以就課程向它提問。只要學生自己席位的範圍不小於它的範圍，它就會回答；它只閱讀已發佈的教材。',
-      personal: '個人助手：只回答{owner}，並閱讀教材及{owner}自己的作業與成績。',
+      personal: '個人代理：只回答{owner}，並閱讀教材及{owner}自己的作業與成績。',
     },
     ownerSeat: '（其席位是代理的上限）',
     as: '加入身份',

@@ -9,6 +9,7 @@ import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
 import { useSessionStore } from '@/stores/session'
 import PageHeader from '@/components/PageHeader.vue'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import ProfileCard from './components/ProfileCard.vue'
 import PasswordCard from './components/PasswordCard.vue'
 import SeatsCard from './components/SeatsCard.vue'
@@ -73,7 +74,7 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
     />
 
     <section v-if="ownsAgents" class="app-card account-view__section account-agents">
-      <el-icon :size="28" class="account-agents__icon" aria-hidden="true"><Cpu /></el-icon>
+      <el-icon :size="28" class="account-agents__icon" aria-hidden="true"><AgentSeatIcon /></el-icon>
       <div class="account-agents__text">
         <h2 class="account-agents__title">{{ t('agents.accountCard.title') }}</h2>
         <p class="app-form-hint account-agents__body">{{ t('agents.accountCard.body') }}</p>

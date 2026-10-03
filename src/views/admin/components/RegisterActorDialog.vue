@@ -21,6 +21,7 @@ import { loginIdProblem, MAX_LOGIN_ID } from '@/utils/loginId'
 import HostingChoice from '@/components/HostingChoice.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import { hasActorList } from './actorSearch'
 import { EMAIL_RE, type ActorRow, type RegisteredActor } from './adminShared'
 import { findSameName, sameText } from './sameName'
@@ -193,7 +194,7 @@ async function submit() {
             <el-icon><User /></el-icon> {{ t('enums.actorKind.human') }}
           </el-radio-button>
           <el-radio-button value="agent">
-            <el-icon><Cpu /></el-icon> {{ t('enums.actorKind.agent') }}
+            <el-icon><AgentSeatIcon /></el-icon> {{ t('enums.actorKind.agent') }}
           </el-radio-button>
         </el-radio-group>
         <div class="app-form-hint register__block">{{ t(`admin.register.kindHelp.${form.kind}`) }}</div>

@@ -313,7 +313,7 @@ export default {
     theOwner: '其拥有者',
     purpose: {
       course: '课程智能体：学生可以就课程向它提问。只要学生自己席位的范围不小于它的范围，它就会回答；它只阅读已发布的教材。',
-      personal: '个人助手：只回答{owner}，并阅读教材及{owner}自己的作业与成绩。',
+      personal: '个人智能体：只回答{owner}，并阅读教材及{owner}自己的作业与成绩。',
     },
     ownerSeat: '（其席位是智能体的上限）',
     as: '加入身份',

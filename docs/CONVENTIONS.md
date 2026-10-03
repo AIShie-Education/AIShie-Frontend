@@ -660,12 +660,55 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
-- Agents: `<AgentBadge :kind :owner-name :mine />` beside an actor's or member's name ("Agent",
-  "Your agent", "Yuki's agent"; nothing for a person); `<PresenceText :value="last_seen_at" />` for
-  whether an agent is connected (never / online within two minutes / last seen). `seatPurpose()`
-  (`@/utils/agents`) tells a course agent from a personal assistant by the seat's `answers_course`;
-  `delegateArgsFor()` gives `member.add_delegate` both the preset and `answers_course`, always said
-  outright. `<HostingTag>` says how an agent runs, beside it.
+- **An agent always looks like one, and never like a person or a machine.** Its shape says so, not a
+  hue of its own (no orange for agents: it would be taken for a waiting pill or the brand's light):
+  - One agent in particular is shown by `<AgentAvatar :name size>` (`@/components`): a rounded square
+    (radius 8 at 28 px; a person is always a circle) on `--app-indigo-tint`, its initials in
+    `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or Korean
+    character), with the brand's light at its top right corner. 28 px (`default`) where it heads a row
+    of a list of agents (the chat's list to ask, the course's agents), 20 px (`small`) inline in a line of
+    text (the chat's header and author line, a proposal's proposer or target, a name in a table, the
+    feed's who line, a draft's drafter), 36 px (`large`) heading an entry of a list of agents with their
+    details (My agents, the administration's card). It is decorative (`aria-hidden`); its initials are
+    drawn by CSS.
+  - Agents as a kind (a view of the activity bar, a course's tab, a kind to choose, a note about
+    agents) take `<AgentSeatIcon />`, the person-beside-a-seat line icon of aishie.app (stroke 1.8,
+    round caps; in an `<el-icon>`, or by component where icons are listed). Never the chip (`Cpu`).
+  - After an agent's name, wherever the name is shown, `<AiBadge />`: "AI" in every language
+    (`common.agent.ai`), 11 px, on the indigo tint, radius 4, its words on hover; it takes no focus.
+    It never parts from the name: `<AgentName :name />` keeps the name's last character (with any
+    punctuation after it) on the line of the "AI" when the name wraps, and nothing more, so a name with
+    no spaces (`cs101-introduction-to-programming-weekly-revision-tutor`) still breaks wherever it must
+    and never pushes the "AI" out of its row; a last word breaks no sooner than it would have. `<AgentName
+    :name ellipsis />` cuts the name short on one line and keeps the "AI" whole. `<AgentBadge :kind :owner-name :mine />` beside
+    an actor's or member's name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an
+    outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`.
+    `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI". Inside a
+    control (a row that is a button), `AgentBadge` and `AskableText` take `hint-id`: they take no focus,
+    and what their tooltips say goes in hidden elements of those ids, for the control's
+    `aria-describedby`.
+  - An agent seated as someone's delegate is in Core's role `assistant`, a person's word: `<RoleTag
+    :member />` shows which kind of agent it is (course agent, personal agent) in its place.
+  - An agent is never "online". To those who ask it (the chat's header and list of agents),
+    `<AskableText :who :name />` says "Can be asked" or "Paused" (可提問／暫停, 可提问／暂停) from
+    `availabilityOf`, and why on hover; in the chat's header, after whose agent it is (`whose`), which
+    the header has no room to show. To its owner and those who manage it,
+    `<PresenceText :value="last_seen_at" />` speaks of a program connecting (never connected /
+    connected within two minutes / last connected). Both in plain ink, with no dot of colour.
+  - What an agent made says so where it is shown: a draft grade names its drafter, and what its draft
+    filled into a form carries a 3 px `--app-indigo` line at its left (the indigo line is under 3:1)
+    until it is changed, and says so in its label to a screen reader (`GradePanel`). Each row of the
+    feed starts with who acted: who did it, or who proposed it and who decided it, read from the
+    action it was done under (`action_id`, or the action a log event is about), where the caller may
+    read that action (`actors.ts`). Those who decide actions read any (`action.get`); anyone else reads
+    their own (`action.list_mine`) and, owning an agent seated there, that agent's (`action.get`, as
+    its owner; asked only of events about their own work), and learns nothing of anyone else's, until
+    the feed itself says who acted. The *Agents* chip keeps what agents did, for those who decide
+    actions and those who own an agent there.
+
+  `seatPurpose()` (`@/utils/agents`) tells a course agent from a personal agent by the seat's
+  `answers_course`; `delegateArgsFor()` gives `member.add_delegate` both the preset and
+  `answers_course`, always said outright. `<HostingTag>` says how an agent runs, beside it.
 - People ask an agent on the site only while AIshie's runtime hosts it: one hosted on AIshie for which
   the runtime holds a live token (`site_chat: true`, which nobody declares or switches any more). One
   with MCP access never is, and has no chat box anywhere. Show `site_chat` as a status, never a switch
@@ -772,8 +815,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   browser keeps only the course the caller last asked in (`aishie.chatCourse.<actorId>`). Those
   who decide actions read each agent's conversations from the course's *Agents* page (its
   conversation log: `conversation.list` as overseer, with `respondent_member_id`). A conversation
-  (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent, whether
-  anything runs it (`PresenceText`) and, only once it is closed, its state, and a ⋯ menu for who can
+  (`ChatPane.vue`) is laid out as an editor's agent chat: one header row with the agent (its avatar, name
+  and "AI"; only the course and the name give way to a narrow panel), whether it can be asked now
+  (`AskableText`) and, only once it is closed, its state, and a ⋯ menu for who can
   read it, how its answers arrive, and to download it as a PDF, every message read back to the first
   (nothing ends a conversation from the chat); the messages; and
   the composer (`ChatComposer.vue`), one bordered box whose send button, small and icon-only, sits
@@ -894,6 +938,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
+- One word for an agent in each language, and one for each of its two kinds: 代理, 課程代理, 個人代理
+  (zh-Hant); 智能体, 课程智能体, 个人智能体 (zh-Hans); agent, course agent, personal agent (English).
+  Never 助手, 助理, 小幫手, assistant or helper for an agent: the role `assistant` (助理, Assistant) is
+  Core's name for a seat's role, which a person may hold too. The names people give their agents are
+  theirs, and are shown as given.
 - Examples in placeholders and hints name no real school: ids such as `school-adfs` or
   `university-sso`, emails such as `name@example.edu`, domains such as `example.edu`. Tests and
   their fixtures use the same, so that none is copied into the page from them.

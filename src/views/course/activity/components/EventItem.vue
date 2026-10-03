@@ -4,7 +4,10 @@
 // is (the student and the assignment it belongs to), and the few small facts
 // its payload carries. Events carry ids, never content: a document's title or
 // a grade's score is fetched by the view the link opens, which decides
-// whether the caller may see it.
+// whether the caller may see it. Its first line says who acted, where the
+// caller may read the action it was done under (actors.ts): who did it, or
+// who proposed it and who decided or reviewed it; an agent with its avatar
+// and "AI".
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatList } from '@/utils/format'
@@ -15,7 +18,9 @@ import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { typeLabel } from '@/views/course/actions/components/actionText'
+import { seatPurpose } from '@/utils/agents'
 import { CORE_ROOT_NAME } from '@/views/course/scheme/components/schemeModel'
+import { ensureEventWho, eventWho } from './actors'
 import { componentName, documentTitle, ensureComponentNames, ensureDocumentTitles } from './names'
 import {
   CATEGORY_ICON,
@@ -28,6 +33,7 @@ import {
   reachOf,
   subjectKind,
   subjectRoute,
+  whoReachOf,
   type CourseEvent,
 } from './feed'
 
@@ -77,9 +83,17 @@ const subjectLink = computed(() =>
 const componentId = computed(() =>
   kind.value === 'component' ? props.event.subject_id : payloadString(props.event, 'component_id'),
 )
+/**
+ * Who acted, once read (actors.ts): any event's, for a seat that decides
+ * actions; for any other, its own actions' and its own agents'.
+ */
+const whoReach = computed(() => whoReachOf(course))
+const who = computed(() => (props.compact ? [] : eventWho(props.courseId, props.event, whoReach.value)))
+
 onMounted(() => {
   if (kind.value === 'material') void ensureDocumentTitles(props.courseId)
   if (componentId.value) void ensureComponentNames(props.courseId)
+  if (!props.compact) ensureEventWho(props.courseId, props.event, whoReach.value)
 })
 const component = computed(() => componentName(componentId.value))
 
@@ -144,7 +158,7 @@ const showStudent = computed(
 )
 
 type Fact =
-  | { kind: 'tag'; vocab: 'actionStatus' | 'role' | 'submissionState'; value: string }
+  | { kind: 'tag'; vocab: 'actionStatus' | 'role' | 'seatPurpose' | 'submissionState'; value: string }
   | { kind: 'text'; text: string; tone?: 'danger' | 'warning' | 'success' | 'info'; tip?: string }
   | { kind: 'link'; text: string; to: RouteLocationRaw; id: string }
 
@@ -324,7 +338,20 @@ const facts = computed<Fact[]>(() => {
   }
   if (type === 'member.added') {
     const role = payloadString(e, 'role')
-    if (role) out.push({ kind: 'tag', vocab: 'role', value: role })
+    // An agent seated as someone's delegate is in the role `assistant`, a person's word: its
+    // avatar and "AI" say what it is, and the tag which kind of agent (RoleTag). The event
+    // says it was seated as a delegate (delegate, answers_course), which only an agent is, for
+    // those who cannot read the member list too; the member list says so for the rest.
+    const m = e.subject_id ? course.members.get(e.subject_id) : undefined
+    const delegate = payloadBool(e, 'delegate') === true
+    if (role === 'assistant' && (delegate || m?.kind === 'agent')) {
+      const purpose = delegate
+        ? seatPurpose({ answers_course: payloadBool(e, 'answers_course') ?? m?.answers_course })
+        : m?.principal_member_id
+          ? seatPurpose(m)
+          : null
+      if (purpose) out.push({ kind: 'tag', vocab: 'seatPurpose', value: purpose })
+    } else if (role) out.push({ kind: 'tag', vocab: 'role', value: role })
     // A person who took their seat through an invite link.
     if (payloadString(e, 'via') === 'join_link') out.push({ kind: 'text', text: t('join.via') })
   }
@@ -395,6 +422,15 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
       <el-icon><component :is="icon" /></el-icon>
     </span>
     <div class="event-item__body">
+      <!-- First, who acted: who did it, or who proposed it, then who decided or reviewed it. -->
+      <div v-if="who.length" class="event-item__who" :aria-label="t('activity.who.label')">
+        <template v-for="(w, i) in who" :key="w.key">
+          <span v-if="i" class="event-item__who-then" aria-hidden="true">→</span>
+          <i18n-t :keypath="w.key" tag="span" scope="global" class="event-item__who-part">
+            <template #who><MemberName :id="w.id" show-kind :agent="w.agent" class="event-item__who-name" /></template>
+          </i18n-t>
+        </template>
+      </div>
       <div class="event-item__head">
         <span class="event-item__title">{{ title }}</span>
         <el-tag v-if="fresh" size="small" type="primary" effect="dark" round disable-transitions>
@@ -527,6 +563,29 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   gap: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+.event-item__who {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--app-ink-2);
+  min-width: 0;
+}
+.event-item__who-part {
+  min-width: 0;
+}
+.event-item__who-name {
+  vertical-align: middle;
+  color: var(--app-ink);
+}
+/* In Chinese the verb has no space before it: the name stands a little apart by itself. */
+:lang(zh) .event-item__who-name {
+  margin-inline-end: 0.25em;
+}
+.event-item__who-then {
+  color: var(--app-ink-3);
 }
 .event-item__line {
   display: flex;

@@ -3,20 +3,22 @@
 // course's agents first, then their own personal assistant. Never a person:
 // conversations are with agents, and Core lists agents alone. Each says what
 // it is to the caller, how it runs (hosted on AIshie: only an agent the
-// site's runtime runs now is listed), whether anything is running it, and
+// site's runtime runs now is listed), whether it can be asked now, and
 // how its answers arrive when that is not at once. An agent with MCP access,
 // or one the runtime does not run just now, is not listed: Core leaves it
 // out, and its owner's page for it says why.
 import { useI18n } from 'vue-i18n'
 import type { Respondent } from '@/api/types'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
-import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNow } from '@/composables/useNow'
 import { agentPurpose, availabilityOf } from './chat'
 import { useRespondents } from './useConversationList'
+import AskableText from './AskableText.vue'
 
 const props = defineProps<{ courseId: string; enabled?: boolean }>()
 const emit = defineEmits<{ pick: [agent: Respondent] }>()
@@ -46,19 +48,33 @@ defineExpose({ refresh })
   >
     <ul class="resp-list">
       <li v-for="r in list.items.value" :key="r.member_id">
-        <button type="button" class="resp-row" @click="emit('pick', r)">
-          <span class="resp-row__icon" aria-hidden="true">
-            <el-icon :size="18"><Cpu /></el-icon>
-          </span>
+        <!--
+          The row is the one control: what it holds takes no focus of its own, and what their
+          tooltips say is the row's description (hidden elements of these ids).
+        -->
+        <button
+          type="button"
+          class="resp-row"
+          :aria-describedby="`resp-${r.member_id}-ask resp-${r.member_id}-whose`"
+          @click="emit('pick', r)"
+        >
+          <AgentAvatar :name="r.display_name" class="resp-row__avatar" />
           <span class="resp-row__main">
             <span class="resp-row__line">
-              <span class="resp-row__name">{{ r.display_name }}</span>
-              <AgentBadge :kind="r.kind" :owner-name="r.owner_name" :mine="r.is_my_delegate" />
+              <!-- The "AI" stays with the name's last word when the line wraps. -->
+              <AgentName :name="r.display_name" class="resp-row__name" />
+              <AgentBadge
+                :kind="r.kind"
+                :owner-name="r.owner_name"
+                :mine="r.is_my_delegate"
+                no-ai
+                :hint-id="`resp-${r.member_id}-whose`"
+              />
               <StatusTag vocab="seatPurpose" :value="agentPurpose(r)" />
               <HostingTag :hosting="r.hosting" />
             </span>
             <span class="resp-row__line resp-row__facts">
-              <PresenceText :value="r.last_seen_at" />
+              <AskableText :who="r" :name="r.display_name" :hint-id="`resp-${r.member_id}-ask`" />
               <StatusTag v-if="r.answer_level !== 'autonomous'" vocab="answerLevel" :value="r.answer_level" />
             </span>
             <span v-if="!r.is_my_delegate" class="resp-row__note">{{ t('chat.respondents.sharedHint') }}</span>
@@ -101,16 +117,14 @@ defineExpose({ refresh })
   border-color: var(--el-color-primary-light-5);
   background: var(--el-color-primary-light-9);
 }
-.resp-row__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: var(--el-fill-color);
-  color: var(--el-text-color-regular);
+.resp-row__avatar {
+  align-self: flex-start;
+  margin-top: 1px;
+}
+/* The light's ring follows the row's ground as it is hovered. */
+.resp-row:hover .resp-row__avatar,
+.resp-row:focus-visible .resp-row__avatar {
+  --agent-avatar-ring: var(--el-color-primary-light-9);
 }
 .resp-row__main {
   display: flex;

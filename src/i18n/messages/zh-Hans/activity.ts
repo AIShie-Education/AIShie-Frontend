@@ -18,6 +18,8 @@ export default {
     actions: '操作',
     course: '课程',
     other: '其他',
+    // What agents did: who acted is read from the action each event was done under (deciders, and owners of an agent seated here).
+    agents: '智能体',
   },
   fresh: '新',
   freshBanner: '打开此页后有{n}条新动态',
@@ -33,6 +35,18 @@ export default {
   yesterday: '昨天',
   viaAction: '相关操作',
   note: '动态只记录发生了什么、涉及什么，不含内容本身。点开即可在你的席位权限范围内查看；你自己操作的结果一定看得到。',
+  // Who acted, for the action log's events (from the action they are about): the one who proposed or
+  // did it, then who decided or reviewed it. An agent with its avatar and "AI".
+  who: {
+    label: '行为者',
+    proposed: '{who}提出',
+    did: '{who}执行',
+    approved: '{who}批准',
+    rejected: '{who}拒绝',
+    changesRequested: '{who}要求修改',
+    reviewed: '{who}审核',
+    escalated: '{who}升级',
+  },
   subject: {
     assignment: '作业',
     submission: '提交',

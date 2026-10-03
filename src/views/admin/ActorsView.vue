@@ -20,6 +20,8 @@ import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import HostingTag from '@/components/HostingTag.vue'
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AgentName from '@/components/AgentName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './components/ActorSummary.vue'
@@ -357,9 +359,9 @@ async function openById() {
           <el-table-column :label="t('admin.actors.col.name')" min-width="200">
             <template #default="{ row }">
               <div class="actors__name">
-                <el-icon class="actors__kind-icon" :class="{ 'is-agent': row.kind === 'agent' }">
-                  <Cpu v-if="row.kind === 'agent'" />
-                  <Setting v-else-if="row.kind === 'system'" />
+                <AgentAvatar v-if="row.kind === 'agent'" :name="row.display_name" size="small" />
+                <el-icon v-else class="actors__kind-icon">
+                  <Setting v-if="row.kind === 'system'" />
                   <User v-else />
                 </el-icon>
                 <div class="actors__name-text">
@@ -370,7 +372,9 @@ async function openById() {
                         :to="{ name: 'admin-actor', params: { actorId: row.id } }"
                         class="actors__link"
                         @click.stop
-                        >{{ row.display_name }}</router-link
+                        ><AgentName v-if="row.kind === 'agent'" :name="row.display_name" /><template v-else>{{
+                          row.display_name
+                        }}</template></router-link
                       ><span v-if="row.id === session.me?.id" class="app-muted app-you">{{
                         t('common.labels.youTag')
                       }}</span></span
@@ -558,13 +562,11 @@ async function openById() {
   gap: 8px;
   flex-wrap: wrap;
 }
-.actors__kind-icon.is-agent {
-  color: var(--el-color-primary);
-}
 .actors__link {
   font-weight: 600;
   text-decoration: none;
   word-break: break-word;
+  min-width: 0;
 }
 .actors__link:hover {
   text-decoration: underline;

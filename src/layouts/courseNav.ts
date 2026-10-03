@@ -8,12 +8,11 @@
 // Navigation's icons are outlined, never filled (docs/CONVENTIONS.md): a
 // filled glyph in a row of outlined ones reads as chosen, or as news; the
 // lint rule against filled icons in navigation (eslint.config.js) sees these.
-import { computed, type Component } from 'vue'
+import { computed, markRaw, type Component } from 'vue'
 import { useRoute, type RouteLocationRaw } from 'vue-router'
 import {
   Bell,
   Clock,
-  Cpu,
   DataBoard,
   DocumentChecked,
   EditPen,
@@ -25,6 +24,7 @@ import {
   User,
 } from '@element-plus/icons-vue'
 import type { Perm } from '@/api/types'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import { useCourseStore } from '@/stores/course'
 import { courseTabClaim } from '@/composables/useCourseTab'
 
@@ -54,7 +54,7 @@ export const COURSE_TABS: CourseTab[] = [
   { name: 'course-approvals', label: 'layout.course.approvals', icon: DocumentChecked, perms: ['action_decide'], also: ['course-action'] },
   { name: 'course-members', label: 'layout.course.members', icon: User, perms: ['member_read', 'member_invite'], also: ['course-member'] },
   // Those who manage the members manage the agents; those who decide actions oversee what they answered.
-  { name: 'course-agents', label: 'layout.course.agents', icon: Cpu, perms: ['member_manage', 'action_decide'] },
+  { name: 'course-agents', label: 'layout.course.agents', icon: markRaw(AgentSeatIcon), perms: ['member_manage', 'action_decide'] },
   { name: 'course-activity', label: 'layout.course.activity', icon: Bell, perms: ['document_read'] },
   { name: 'course-my-actions', label: 'layout.course.myActions', icon: Clock, perms: ['document_read'] },
 ]

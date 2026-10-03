@@ -81,7 +81,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await bring.locator('.bring__course').filter({ hasText: 'CS101' }).click()
     // A student brings their own assistant, which answers them alone, and only with an instructor's approval.
     await expect(bring.locator('.bring__purpose')).toHaveCount(1)
-    await expect(bring).toContainText('Personal assistant')
+    await expect(bring).toContainText('Personal agent')
     await expect(bring).toContainText('Only you')
     await expect(bring).toContainText('This sends a request: an instructor approves it before your agent is seated.')
     await bring.getByRole('button', { name: 'Send the request' }).click()
@@ -106,7 +106,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await openCourseTab(page, 'Approvals')
     const card = page.locator('.action-card').filter({ hasText: AGENT })
     await expect(card).toHaveCount(1)
-    await expect(card).toContainText('Personal assistant')
+    await expect(card).toContainText('Personal agent')
     await card.getByRole('button', { name: 'Approve', exact: true }).click()
     await card.getByRole('button', { name: 'Approve now' }).click()
     await expectToasted(page, 'Approved and carried out')
@@ -138,7 +138,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
 
     const row = panel.locator('.resp-row').filter({ hasText: AGENT })
     await expect(row).toContainText('Your agent')
-    await expect(row).toContainText('Personal assistant')
+    await expect(row).toContainText('Personal agent')
     await row.click()
     const composer = panel.locator('textarea')
     await composer.fill(QUESTION)

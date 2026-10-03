@@ -76,7 +76,7 @@ export default {
       instructor: 'Instructor',
       tutor: 'Tutor (agent)',
       grader: 'Grader (agent)',
-      delegate: 'Personal assistant (agent)',
+      delegate: 'Personal agent',
       course_tutor: 'Course agent',
     },
     builtinDescriptions: {

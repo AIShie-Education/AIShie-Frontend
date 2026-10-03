@@ -41,7 +41,11 @@ describe('fitTabs', () => {
 
 describe('the course’s tabs', () => {
   it('are drawn with outlined icons, never filled ones', () => {
-    const names = COURSE_TABS.map((tab) => tab.icon.name)
+    // Element Plus's icons by their names; the app's own (the agents' seat) by its file's.
+    const names = COURSE_TABS.map((tab) => {
+      const icon = tab.icon as { name?: string; __name?: string }
+      return icon.name ?? icon.__name
+    })
     expect(names).toEqual([
       'House',
       'Reading',
@@ -50,7 +54,7 @@ describe('the course’s tabs', () => {
       'Notebook',
       'DocumentChecked',
       'User',
-      'Cpu',
+      'AgentSeatIcon',
       'Bell',
       'Clock',
     ])

@@ -18,6 +18,7 @@ import type { RouteLocationRaw } from 'vue-router'
 import { read } from '@/api/http'
 import type { CourseEvent } from '@/api/types'
 import type { useCourseStore } from '@/stores/course'
+import type { WhoReach } from './actors'
 
 export type { CourseEvent }
 
@@ -372,6 +373,19 @@ export function reachOf(course: CourseStore): Reach {
   return {
     readsMembers: course.can('member_read'),
     decides: course.level('action_decide') !== null && course.can('action_decide'),
+  }
+}
+
+/**
+ * What the caller may read of who acted in an event (actors.ts): any action,
+ * for a seat that decides them; else its own, and its own agent's where it
+ * owns one seated here (which the course store asks of Core when it opens).
+ */
+export function whoReachOf(course: CourseStore): WhoReach {
+  return {
+    decides: reachOf(course).decides,
+    me: course.myMemberId,
+    ownsAgent: course.ownsAgentHere === true,
   }
 }
 

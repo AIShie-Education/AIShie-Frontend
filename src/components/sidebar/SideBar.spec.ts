@@ -502,7 +502,7 @@ describe('the agents view', () => {
     const items = body.findAll('.side-agent')
     expect(items.map((a) => a.attributes('href'))).toEqual(['/account/agents/ag1', '/account/agents/ag2'])
     expect(items[0]!.text()).toContain('Study buddy')
-    expect(items[0]!.text()).toContain('Online')
+    expect(items[0]!.text()).toContain('Connected')
     expect(items[1]!.text()).toContain('Never connected')
     expect(items[1]!.text()).toContain('Suspended by you')
     expect(items[1]!.classes()).toContain('is-active')

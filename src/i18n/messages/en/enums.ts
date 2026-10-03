@@ -48,7 +48,7 @@ export default {
       'Creating, listing and revoking the course’s invite links, through which anyone who has one joins as a student',
     action_decide: 'Approving proposals and reviewing after the fact',
     agent_delegate:
-      'Bringing an agent you own into the course as your assistant; it never holds more than your own seat',
+      'Bringing an agent you own into the course as your personal agent; it never holds more than your own seat',
     conversation_ask: 'Starting conversations with the course’s agents or your own, and writing in them',
     conversation_answer: 'Being asked questions, and answering them; the level is how the answers go out',
   },
@@ -57,7 +57,7 @@ export default {
     agent_never: 'an agent acting for someone brings in no agents of its own',
     agent_decides_by_proposal: 'an agent decides and reviews only by proposal, which a person then confirms',
     student_agent_by_proposal:
-      'the agent of someone who does not manage this course’s members does this only by proposal, as it goes beyond what the personal assistant preset gives',
+      'the agent of someone who does not manage this course’s members does this only by proposal, as it goes beyond what the personal agent preset gives',
     principal_level: 'an agent acting for someone never holds more than that person does',
     principal_level_conversation_answer: 'an agent acting for someone answers no more freely than that person may ask',
     conversations_are_with_agents: 'conversations are with agents, and a person answers none of them',
@@ -70,7 +70,7 @@ export default {
     instructor: 'Instructor',
     tutor: 'Tutor (agent)',
     grader: 'Grader (agent)',
-    delegate: 'Personal assistant (agent)',
+    delegate: 'Personal agent',
     course_tutor: 'Course agent',
   },
   presetHelp: {
@@ -87,7 +87,7 @@ export default {
   },
   // What an agent seated as someone's delegate is there for.
   seatPurpose: {
-    personal: 'Personal assistant',
+    personal: 'Personal agent',
     course: 'Course agent',
   },
   role: {

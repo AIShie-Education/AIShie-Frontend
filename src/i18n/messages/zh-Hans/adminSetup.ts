@@ -73,7 +73,7 @@ export default {
       instructor: '讲师',
       tutor: '辅导（智能体）',
       grader: '评分（智能体）',
-      delegate: '个人助手（智能体）',
+      delegate: '个人智能体',
       course_tutor: '课程智能体',
     },
     builtinDescriptions: {

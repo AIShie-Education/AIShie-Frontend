@@ -76,17 +76,27 @@ export default {
     themeDark: '深色',
     themeAuto: '跟隨系統',
   },
-  // When an agent was last seen (PresenceText): its last use of a token that still works.
+  // When an agent last connected (PresenceText): its last use of a token that still works. Said of a
+  // program, never as a person's "online". To those who ask it (the chat), whether it can be asked now
+  // (AskableText): askable, or paused.
   presence: {
     never: '從未連線',
     neverHelp: '這個代理的權杖從未被使用：可能沒有程式在運行它。',
-    online: '在線',
+    online: '已連線',
     onlineHelp: '過去幾分鐘內曾使用權杖。',
-    lastSeen: '最後上線：{time}',
+    lastSeen: '最後連線：{time}',
+    askable: '可提問',
+    askableHelp: '目前有程式在運行它：提問會得到回覆。',
+    paused: '暫停',
+    pausedSince: '最後連線：{time}。目前似乎沒有程式在運行它，回覆可能需要一段時間。',
+    // Whose agent it is, then why it can be asked or not (AskableText's tooltip, in the chat's header).
+    whose: '{whose}。{why}',
   },
   // An agent, and whose it is (AgentBadge).
   agent: {
-    agent: '代理',
+    // The "AI" after an agent's name (AiBadge), the same in every language; and its tooltip.
+    ai: 'AI',
+    aiHint: 'AI 代理，不是真人',
     yours: '你的代理',
     ownersAgent: '{owner}的代理',
     delegateOf: '代表{owner}行事，權限永不超過其席位',

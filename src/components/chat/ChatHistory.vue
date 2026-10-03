@@ -13,6 +13,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { MyConversation } from '@/api/types'
+import AiBadge from '@/components/AiBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -123,6 +124,8 @@ function more() {
                   ><span class="hist-row__course">{{ where(c) }}</span> ·
                   <span class="hist-row__agent">{{ c.respondent.display_name }}</span></span
                 >
+                <!-- Always an agent: the "AI" after its name, whole however short the name is cut. -->
+                <AiBadge />
                 <span class="hist-row__time"><TimeText :value="c.last_activity_at" relative /></span>
               </span>
               <span class="hist-row__line hist-row__sub">

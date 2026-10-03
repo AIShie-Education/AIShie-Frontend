@@ -803,7 +803,8 @@ test.describe.serial('the chat panel', () => {
     // The words each language has for what is checked.
     const words = {
       en: {
-        lastSeen: /^Last seen \d+ minutes ago$/,
+        // Nothing has run it for 37 minutes: it is paused, as its asker is told, never "last seen" as a person is.
+        presence: 'Paused',
         waiting: 'Thinking…',
         options: 'Conversation options',
         readers: 'Who can read this',
@@ -812,7 +813,7 @@ test.describe.serial('the chat panel', () => {
         tag: 'Closed',
       },
       'zh-Hant': {
-        lastSeen: /^最後上線：\d+ 分鐘前$/,
+        presence: '暫停',
         waiting: '思考中…',
         options: '對話選項',
         readers: '誰可以閱讀',
@@ -842,11 +843,12 @@ test.describe.serial('the chat panel', () => {
       const panel = panelOf(page)
       await panel.locator('button.resp-row').filter({ hasText: TUTOR }).click()
 
-      // A new conversation: one row on top, the agent and when it was last seen; no box saying
+      // A new conversation: one row on top, the agent and whether it can be asked; no box saying
       // so, no title to give; the composer one box, its send button inside it.
       const head = panel.locator('.chat-pane__head')
       await expect(head.locator('.chat-pane__name')).toHaveText(`CS101 · ${TUTOR}`)
-      await expect(head.locator('.chat-pane__presence')).toHaveText(w.lastSeen)
+      await expect(head.locator('.chat-pane__presence')).toHaveText(w.presence)
+      await expect(head.locator('.chat-pane__name-row .ai-badge')).toHaveText('AI')
       await expect(panel.locator('.chat-pane__notice')).toHaveCount(0)
       await expect(panel.locator('.el-alert')).toHaveCount(0)
       await expect(panel.locator('.chat-pane__foot input')).toHaveCount(0)
