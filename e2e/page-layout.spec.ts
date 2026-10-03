@@ -1054,3 +1054,36 @@ test.describe('the platform’s settings beside the side bar', () => {
     await expect.poll(() => headingsOf(page, jobs)).toEqual(['Document'])
   })
 })
+
+test.describe('what lies on a card is pressed and seen where it is drawn', () => {
+  // The approvals page's Refresh sits at the right end of the tabs' row, over the tabs' header, which runs the
+  // card's width: drawn under it, it took every click and tap meant for Refresh, at any width.
+  for (const size of [
+    { width: 1280, height: 800, touch: false },
+    { width: 390, height: 844, touch: true },
+  ])
+    test(`the approvals' Refresh reads both lists again when pressed, at ${size.width} px`, async ({ browser }) => {
+      const context = await browser.newContext({
+        viewport: { width: size.width, height: size.height },
+        isMobile: size.touch,
+        hasTouch: size.touch,
+        locale: 'en-US',
+      })
+      const page = await context.newPage()
+      try {
+        await signIn(page, demo().actors.instructor)
+        await page.goto(coursePath('approvals'))
+        const refresh = page.locator('.approvals__card .refresh-button')
+        await expect(refresh).toBeVisible()
+        await expect(refresh).not.toHaveClass(/is-loading/)
+        const proposed = page.waitForRequest((r) => /\/actions\/proposed\b/.test(r.url()))
+        const review = page.waitForRequest((r) => /\/actions\/pending-review\b/.test(r.url()))
+        // Pressed as a person presses it: Playwright refuses a press that something drawn over it would take.
+        if (size.touch) await refresh.tap({ timeout: 5000 })
+        else await refresh.click({ timeout: 5000 })
+        await Promise.all([proposed, review])
+      } finally {
+        await context.close()
+      }
+    })
+})

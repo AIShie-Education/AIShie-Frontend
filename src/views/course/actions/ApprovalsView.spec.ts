@@ -274,6 +274,9 @@ describe('ApprovalsView’s rules', () => {
     await mountAsStudent()
     expect(shown()).toBe(true)
     expect(toggle().getAttribute('aria-expanded')).toBe('true')
+    // An explanation, so a note (AppNote), as every other is: not a box drawn on its own.
+    expect(rules().classList).toContain('app-note')
+    expect(rules().getAttribute('aria-label')).toBe('Rules')
     for (const w of mounted.splice(0)) w.unmount()
 
     await mountAsStudent()
