@@ -152,8 +152,9 @@ function pairs(): Pair[] {
 
 describe.each(['light', 'dark'] as const)('the %s theme', (theme) => {
   it.each(pairs())('--%s on --%s reads at %s:1 or more', (fg, bg, min) => {
+    // Not rounded: 4.495:1 is under 4.5.
     const ratio = contrast(colour(theme, fg), colour(theme, bg))
-    expect(+ratio.toFixed(2), `${colour(theme, fg)} on ${colour(theme, bg)}`).toBeGreaterThanOrEqual(min)
+    expect(ratio, `${colour(theme, fg)} on ${colour(theme, bg)}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(min)
   })
 
   it('has three inks a reader tells apart: the third is a step below the second, as the second is below the first', () => {
