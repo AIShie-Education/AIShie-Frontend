@@ -6,7 +6,7 @@
 import { computed, reactive, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Link } from '@element-plus/icons-vue'
+import { Link, User } from '@element-plus/icons-vue'
 import { read } from '@/api/http'
 import { isUuid } from '@/utils/format'
 import { ROLES, type Member, type MemberSummary } from '@/api/types'
@@ -22,6 +22,7 @@ import AgentName from '@/components/AgentName.vue'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import AskableDot from '@/components/AskableDot.vue'
+import FilterChips from '@/components/FilterChips.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import RoleTag from '@/components/RoleTag.vue'
@@ -52,7 +53,7 @@ const presets = usePresets()
 const PAGE = 100
 const roleFilter = ref<string>('')
 const includeRemoved = ref(false)
-const kind = ref<'all' | 'human' | 'agent'>('all')
+const kind = ref<'' | 'human' | 'agent'>('')
 /** The invite link whose joiners alone are listed (?link=, from the invite links' list). */
 const linkFilter = computed(() => {
   const v = route.query.link
@@ -86,14 +87,14 @@ const counts = computed(() => {
 })
 const rows = computed(() =>
   list.items.value.filter(
-    (m) => kind.value === 'all' || (kind.value === 'agent' ? m.kind === 'agent' : m.kind !== 'agent'),
+    (m) => !kind.value || (kind.value === 'agent' ? m.kind === 'agent' : m.kind !== 'agent'),
   ),
 )
 // member.list has no kind filter, so People and Agents are picked out of the
 // pages loaded so far. Nobody of that kind among them says nothing about the
 // pages not yet loaded: then the empty state says so and offers the rest.
 const emptyText = computed(() => {
-  if (list.hasMore.value && kind.value !== 'all') {
+  if (list.hasMore.value && kind.value) {
     const n = list.items.value.length
     return kind.value === 'agent' ? t('members.emptyAgentsSoFar', { n }) : t('members.emptyPeopleSoFar', { n })
   }
@@ -103,6 +104,10 @@ const emptyText = computed(() => {
 function count(n: number): string {
   return list.hasMore.value ? `${n}+` : String(n)
 }
+const kindChips = computed(() => [
+  { value: 'human' as const, label: t('members.tabs.people'), count: count(counts.value.human), icon: User },
+  { value: 'agent' as const, label: t('members.tabs.agents'), count: count(counts.value.agent), icon: AgentSeatIcon },
+])
 
 // member.list does not carry the listed students and assignments; member.get
 // does. They are fetched for the listed seats on the page — the few that are
@@ -225,17 +230,12 @@ function rowClass({ row }: { row: MemberSummary }) {
 
     <div class="app-card">
       <div v-if="!list.error.value?.isForbidden" ref="toolbar" class="app-toolbar">
-        <el-radio-group v-model="kind" size="default">
-          <el-radio-button value="all">{{ t('members.tabs.all') }} · {{ count(counts.all) }}</el-radio-button>
-          <el-radio-button value="human">
-            <el-icon class="members__tab-icon"><User /></el-icon>{{ t('members.tabs.people') }} ·
-            {{ count(counts.human) }}
-          </el-radio-button>
-          <el-radio-button value="agent">
-            <el-icon class="members__tab-icon"><AgentSeatIcon /></el-icon>{{ t('members.tabs.agents') }} ·
-            {{ count(counts.agent) }}
-          </el-radio-button>
-        </el-radio-group>
+        <FilterChips
+          v-model="kind"
+          :options="kindChips"
+          :all-count="count(counts.all)"
+          :label="t('members.tabs.label')"
+        />
         <span class="app-toolbar__spacer" />
         <AppTag v-if="linkFilter" variant="outline" :icon="Link" size="large" closable @close="clearLinkFilter">
           {{ t('join.filtered') }}
@@ -355,7 +355,7 @@ function rowClass({ row }: { row: MemberSummary }) {
           </el-table-column>
         </el-table>
         <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
-        <p v-if="list.hasMore.value && kind !== 'all'" class="app-form-hint">{{ t('members.partialCounts') }}</p>
+        <p v-if="list.hasMore.value && kind" class="app-form-hint">{{ t('members.partialCounts') }}</p>
         <p v-if="kind === 'agent' && canManage" class="app-form-hint members__agents-link">
           {{ t('members.agentsHint') }}
           <router-link :to="{ name: 'course-agents', params: { courseId } }">{{ t('members.agentsPage') }}</router-link>

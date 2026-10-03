@@ -11,9 +11,11 @@ import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import type { ApiError } from '@/api/http'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import FilterChips from '@/components/FilterChips.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -48,7 +50,7 @@ const props = defineProps<{
   hasMore: boolean
 }>()
 const emit = defineEmits<{ more: []; retry: []; changed: [] }>()
-const { t } = useI18n()
+const { t, te } = useI18n()
 const router = useRouter()
 const course = useCourseStore()
 // A card per student where the roster is as narrow as on a phone: its summary
@@ -60,6 +62,22 @@ const narrow = useContainerNarrow(summaryLine, 566)
 
 const shown = computed(() => forStudent(props.rows, props.studentId))
 const summary = computed(() => countByState(props.rows))
+// The counts are a filter too: one state's students at a time, or all of them.
+const stateFilter = ref('')
+const stateChips = computed(() =>
+  summary.value.counts.map((c) => ({
+    value: c.state,
+    label: te(`enums.submissionState.${c.state}`) ? t(`enums.submissionState.${c.state}`) : c.state,
+    count: c.count,
+  })),
+)
+// A state none of them is in any more (after a refresh, say) filters nothing.
+watch(stateChips, (chips) => {
+  if (stateFilter.value && !chips.some((c) => c.value === stateFilter.value)) stateFilter.value = ''
+})
+const visible = computed(() =>
+  stateFilter.value ? shown.value.filter((r) => r.state === stateFilter.value) : shown.value,
+)
 
 // The student the page is filtered to may be on a page not read yet.
 watch(
@@ -169,18 +187,18 @@ const emptyText = computed(() =>
       @retry="emit('retry')"
     >
       <div ref="summaryLine" class="roster-summary">
-        <span class="roster-summary__total">
-          {{ t('submissions.roster.summary.total', { n: summary.total }, summary.total) }}
-        </span>
-        <span v-for="c in summary.counts" :key="c.state" class="roster-summary__item">
-          <StatusTag vocab="submissionState" :value="c.state" />
-          <span class="roster-summary__count">{{ c.count }}</span>
-        </span>
+        <FilterChips
+          v-model="stateFilter"
+          :options="stateChips"
+          :all-count="summary.total"
+          :label="t('submissions.roster.summary.label')"
+        />
         <span v-if="hasMore" class="roster-summary__partial">{{ t('submissions.roster.summary.partial') }}</span>
       </div>
+      <AppEmpty v-if="!visible.length" :text="t('submissions.roster.emptyState')" />
 
-      <ul v-if="narrow" class="roster-cards">
-        <li v-for="row in shown" :key="row.student_member_id">
+      <ul v-else-if="narrow" class="roster-cards">
+        <li v-for="row in visible" :key="row.student_member_id">
           <router-link
             v-if="row.submission_id"
             :to="submissionRoute(row)"
@@ -232,7 +250,7 @@ const emptyText = computed(() =>
       </ul>
       <el-table
         v-else
-        :data="shown"
+        :data="visible"
         row-key="student_member_id"
         class="roster-table"
         :row-class-name="rowClass"

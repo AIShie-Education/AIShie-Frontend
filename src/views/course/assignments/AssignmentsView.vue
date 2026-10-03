@@ -16,8 +16,10 @@ import { formatDecimal } from '@/utils/format'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import FilterChips from '@/components/FilterChips.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AssignmentFormDialog from './components/AssignmentFormDialog.vue'
@@ -77,14 +79,23 @@ function myLatest(a: AssignmentSummary): SubmissionSummary | undefined {
 
 // --- Filtering ------------------------------------------------------------------
 const query = ref('')
-const show = ref<'all' | 'published' | 'unpublished'>('all')
+const show = ref<'' | 'published' | 'unpublished'>('')
 const hasUnpublished = computed(() => list.items.value.some((a) => !a.published_at))
+const published = computed(() => list.items.value.filter((a) => !!a.published_at).length)
+const showChips = computed(() => [
+  { value: 'published' as const, label: t('assignments.list.show.published'), count: published.value },
+  {
+    value: 'unpublished' as const,
+    label: t('assignments.list.show.unpublished'),
+    count: list.items.value.length - published.value,
+  },
+])
 const rows = computed(() => {
   const q = query.value.trim().toLowerCase()
   return list.items.value.filter(
     (a) =>
       (!q || a.title.toLowerCase().includes(q)) &&
-      (show.value === 'all' || (show.value === 'published') === !!a.published_at),
+      (!show.value || (show.value === 'published') === !!a.published_at),
   )
 })
 
@@ -139,10 +150,6 @@ function refresh() {
 <template>
   <div class="assignments-view">
     <PageHeader ref="header" :title="t('assignments.title')" :subtitle="t('assignments.subtitle')">
-      <el-button :loading="list.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <template v-if="writer">
         <el-button type="primary" :disabled="!course.writable" @click="formOpen = true">
           <el-icon><Plus /></el-icon>
@@ -174,11 +181,14 @@ function refresh() {
             ><el-icon><Search /></el-icon
           ></template>
         </el-input>
-        <el-radio-group v-if="writer && hasUnpublished" v-model="show" size="small">
-          <el-radio-button value="all">{{ t('assignments.list.show.all') }}</el-radio-button>
-          <el-radio-button value="published">{{ t('assignments.list.show.published') }}</el-radio-button>
-          <el-radio-button value="unpublished">{{ t('assignments.list.show.unpublished') }}</el-radio-button>
-        </el-radio-group>
+        <FilterChips
+          v-if="writer && hasUnpublished"
+          v-model="show"
+          :options="showChips"
+          :all-count="list.items.value.length"
+          :label="t('assignments.list.show.label')"
+        />
+        <RefreshButton :loading="list.loading.value" @click="refresh" />
       </div>
 
       <AsyncState

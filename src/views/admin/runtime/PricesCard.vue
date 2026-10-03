@@ -10,6 +10,7 @@
 // each with "Add a price": a quota in dollars cannot hold them.
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -117,15 +118,7 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
     <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.prices.title') }}</span>
       <span class="prices-card__head">
-        <el-button
-          circle
-          :loading="refreshing"
-          :aria-label="t('common.actions.refresh')"
-          class="prices-card__refresh"
-          @click="emit('changed')"
-        >
-          <el-icon><Refresh /></el-icon>
-        </el-button>
+        <RefreshButton :loading="refreshing" class="prices-card__refresh" @click="emit('changed')" />
         <el-button type="primary" class="prices-card__add" @click="openCreate">
           <el-icon><Plus /></el-icon>
           <span>{{ t('runtimeAdmin.prices.add') }}</span>

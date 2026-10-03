@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import ElementPlus, { ElSelect } from 'element-plus'
+import ElementPlus from 'element-plus'
 import * as Icons from '@element-plus/icons-vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -154,11 +154,15 @@ describe('My actions, a proposal sent back for changes', () => {
   it('is a status the filter offers, with its count, and that the filter keeps alone', async () => {
     const w = await mountAsTa()
     expect(rows()).toHaveLength(2)
-    const status = w.findAllComponents(ElSelect)[0]!
-    const options = status.findAllComponents({ name: 'ElOption' }).map((o) => o.props('label'))
-    expect(options).toContain('Changes requested · 1')
-    status.vm.$emit('update:modelValue', 'changes_requested')
+    // A chip of the status filter, "All" first, each with its count.
+    const chips = w.findAll('.filter-chips .filter-chip')
+    expect(chips[0]!.text()).toBe('All 2')
+    const sent = chips.find((c) => c.attributes('data-value') === 'changes_requested')!
+    expect(sent.text()).toBe('Changes requested 1')
+    expect(sent.attributes('role')).toBe('radio')
+    await sent.trigger('click')
     await flushPromises()
+    expect(sent.attributes('aria-checked')).toBe('true')
     expect(rows()).toHaveLength(1)
     expect(rowOf(ACTIONS[1]!.id)).toBeDefined()
   })

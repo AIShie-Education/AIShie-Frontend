@@ -24,6 +24,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import EnterComponentGradeDialog from './components/EnterComponentGradeDialog.vue'
@@ -383,11 +384,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
           <el-option value="posted" :label="t('enums.gradeState.posted')" />
           <el-option value="superseded" :label="t('enums.gradeState.superseded')" />
         </el-select>
-        <span class="app-toolbar__spacer" />
-        <el-button :loading="paged.loading.value" @click="paged.reload()">
-          <el-icon><Refresh /></el-icon>
-          <span>{{ t('common.actions.refresh') }}</span>
-        </el-button>
+        <RefreshButton :loading="paged.loading.value" @click="paged.reload()" />
       </div>
 
       <div v-if="postBar" class="grades-view__post">

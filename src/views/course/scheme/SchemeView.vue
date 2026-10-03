@@ -15,6 +15,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -199,10 +200,6 @@ function collapseAll() {
 <template>
   <div class="scheme-view">
     <PageHeader :title="t('scheme.title')" :subtitle="t('scheme.subtitle')">
-      <el-button :loading="loading" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <el-tooltip
         v-if="canWrite && !error"
         :content="t('common.archivedCourse')"
@@ -285,6 +282,7 @@ function collapseAll() {
             <span class="scheme-view__tree-tools">
               <el-button text size="small" @click="expandAll">{{ t('scheme.actions.expandAll') }}</el-button>
               <el-button text size="small" @click="collapseAll">{{ t('scheme.actions.collapseAll') }}</el-button>
+              <RefreshButton :loading="loading" @click="refresh" />
             </span>
           </h2>
 

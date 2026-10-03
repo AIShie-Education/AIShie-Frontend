@@ -61,6 +61,7 @@ export default {
     filterStatus: 'Status',
     anyType: 'Any kind',
     sort: {
+      label: 'Order',
       newest: 'Newest first',
       oldest: 'Oldest first',
     },

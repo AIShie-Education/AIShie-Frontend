@@ -54,6 +54,7 @@ export default {
     filterStatus: '状态',
     anyType: '所有类型',
     sort: {
+      label: '排序',
       newest: '最新在前',
       oldest: '最旧在前',
     },

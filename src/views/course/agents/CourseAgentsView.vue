@@ -17,6 +17,7 @@ import { useSessionStore } from '@/stores/session'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -124,10 +125,6 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
 <template>
   <div class="course-agents">
     <PageHeader :title="t('courseAgents.title')" :subtitle="t('courseAgents.subtitle')">
-      <el-button :loading="members.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <template v-if="canManage && canAdd">
         <el-tooltip :content="t('common.archivedCourse')" :disabled="course.writable" placement="bottom">
           <el-button type="primary" :disabled="!course.writable" @click="addOpen = true">
@@ -198,6 +195,8 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
               {{ t(`courseAgents.groups.${g.group}.title`) }}
               <span class="app-muted course-agents__count">{{ g.rows.length }}</span>
             </span>
+            <!-- The agents are read once for every group: their first card says so. -->
+            <RefreshButton v-if="g === groups[0]" :loading="members.loading.value" @click="refresh" />
           </h2>
           <p class="app-form-hint course-agents__help">{{ t(`courseAgents.groups.${g.group}.help`) }}</p>
           <AgentList

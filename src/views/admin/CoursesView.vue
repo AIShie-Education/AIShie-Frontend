@@ -18,6 +18,7 @@ import { useSessionStore } from '@/stores/session'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import CreateCourseDialog from './components/CreateCourseDialog.vue'
@@ -179,11 +180,7 @@ function rowClick(row: CourseRow) {
           </el-option>
         </el-select>
         <el-checkbox v-if="deptId" v-model="within" :label="t('deptAdmin.courses.within')" class="courses__within" />
-        <span class="app-toolbar__spacer" />
-        <el-button :loading="list.loading.value" @click="list.reload()">
-          <el-icon><Refresh /></el-icon>
-          <span>{{ t('common.actions.refresh') }}</span>
-        </el-button>
+        <RefreshButton :loading="list.loading.value" @click="list.reload()" />
       </div>
 
       <AsyncState

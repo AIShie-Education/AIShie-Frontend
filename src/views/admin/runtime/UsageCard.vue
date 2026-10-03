@@ -17,6 +17,7 @@ import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import DailyReset from '@/components/DailyReset.vue'
 import IdText from '@/components/IdText.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import TimeText from '@/components/TimeText.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { formatMoney } from '@/utils/format'
@@ -53,15 +54,7 @@ const schoolSpent = computed(() => {
   <section class="app-card usage-card">
     <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.usage.title') }}</span>
-      <el-button
-        circle
-        :loading="usage.loading.value"
-        :aria-label="t('common.actions.refresh')"
-        class="usage-card__refresh"
-        @click="usage.reload"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="usage.loading.value" class="usage-card__refresh" @click="usage.reload" />
     </h2>
     <RuntimeAsync
       :loading="usage.loading.value && !data"

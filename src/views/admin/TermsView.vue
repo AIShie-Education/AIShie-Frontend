@@ -13,6 +13,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -135,14 +136,7 @@ async function save() {
         </el-input>
         <span class="app-toolbar__spacer" />
         <span v-if="all.length" class="app-muted setup-count">{{ t('adminSetup.terms.count', all.length) }}</span>
-        <el-button
-          :loading="terms.loading.value"
-          circle
-          :aria-label="t('common.actions.refresh')"
-          @click="terms.reload"
-        >
-          <el-icon><Refresh /></el-icon>
-        </el-button>
+        <RefreshButton :loading="terms.loading.value" @click="terms.reload" />
       </div>
       <AsyncState
         :loading="terms.loading.value && !terms.data.value"

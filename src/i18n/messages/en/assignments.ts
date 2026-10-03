@@ -5,6 +5,7 @@ export default {
     new: 'New assignment',
     filter: 'Filter by title',
     show: {
+      label: 'Which assignments',
       all: 'All',
       published: 'Published',
       unpublished: 'Not published',

@@ -17,6 +17,7 @@ import { useContainerNarrow, useTableRelayout } from '@/composables/useContainer
 import { formatMoney, shortId } from '@/utils/format'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { toneOf } from '@/components/tags'
 import LoadMore from '@/components/LoadMore.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -143,16 +144,7 @@ const empty = computed(() => loaded.value && !jobs.value.length)
           "
         />
       </el-select>
-      <el-button
-        circle
-        size="small"
-        :loading="loading"
-        :aria-label="t('common.actions.refresh')"
-        class="transcription-jobs__refresh"
-        @click="load()"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="loading" class="transcription-jobs__refresh" @click="load()" />
     </div>
     <RuntimeAsync :loading="loading && !loaded" :error="loaded ? null : error" @retry="load()">
       <AppEmpty v-if="empty" :text="t('runtimeAdmin.transcription.jobs.empty')" class="transcription-jobs__empty" />

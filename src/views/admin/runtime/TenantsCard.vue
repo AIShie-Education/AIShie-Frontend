@@ -16,6 +16,7 @@ import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { formatMoney } from '@/utils/format'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import QuotaInputs from './QuotaInputs.vue'
@@ -152,15 +153,7 @@ function serverText(q: TenantQuota): string {
   <section class="app-card tenants-card">
     <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.tenants.title') }}</span>
-      <el-button
-        circle
-        :loading="loading"
-        :aria-label="t('common.actions.refresh')"
-        class="tenants-card__refresh"
-        @click="load()"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="loading" class="tenants-card__refresh" @click="load()" />
     </h2>
     <p class="tenants-card__intro">{{ t('runtimeAdmin.tenants.intro') }}</p>
     <RuntimeAsync :loading="loading && !loaded" :error="loaded ? null : loadError" @retry="load()">

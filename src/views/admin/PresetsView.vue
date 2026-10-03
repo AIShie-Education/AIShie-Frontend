@@ -15,6 +15,7 @@ import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import PresetDrawer from './setup/PresetDrawer.vue'
 import PresetFormDialog from './setup/PresetFormDialog.vue'
@@ -110,15 +111,7 @@ function onSaved(savedDept: string | null) {
       >
         <el-option v-for="d in deptList" :key="d.id" :value="d.id" :label="d.name" />
       </el-select>
-      <span class="app-toolbar__spacer" />
-      <el-button
-        :loading="presets.loading.value"
-        circle
-        :aria-label="t('common.actions.refresh')"
-        @click="presets.reload"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="presets.loading.value" @click="presets.reload" />
     </div>
 
     <AsyncState

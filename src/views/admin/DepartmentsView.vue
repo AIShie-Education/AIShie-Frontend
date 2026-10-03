@@ -20,6 +20,7 @@ import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { deptActions, roomBeneath, treeRows, type DeptAction, type DeptTreeRow } from '@/utils/departmentTree'
 import { usePresetCounts } from './setup/presetCounts'
 import AdminsDrawer from './departments/AdminsDrawer.vue'
@@ -130,9 +131,7 @@ watch(
         </el-input>
         <span class="app-toolbar__spacer" />
         <span v-if="count" class="app-muted setup-count">{{ t('adminSetup.departments.count', count) }}</span>
-        <el-button :loading="departments.loading.value" circle :aria-label="t('common.actions.refresh')" @click="refresh">
-          <el-icon><Refresh /></el-icon>
-        </el-button>
+        <RefreshButton :loading="departments.loading.value" @click="refresh" />
       </div>
       <AsyncState
         :loading="departments.loading.value && !departments.loaded.value"

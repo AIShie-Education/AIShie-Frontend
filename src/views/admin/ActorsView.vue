@@ -23,6 +23,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentName from '@/components/AgentName.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './components/ActorSummary.vue'
@@ -315,11 +316,7 @@ async function openById() {
         >
           <el-option v-for="s in STATUSES" :key="s" :value="s" :label="t(`enums.actorStatus.${s}`)" />
         </el-select>
-        <span class="app-toolbar__spacer" />
-        <el-button :loading="list.loading.value" :aria-label="t('common.actions.refresh')" @click="list.reload()">
-          <el-icon><Refresh /></el-icon>
-          <span v-if="!narrow">{{ t('common.actions.refresh') }}</span>
-        </el-button>
+        <RefreshButton :loading="list.loading.value" @click="list.reload()" />
       </div>
 
       <div v-if="owner && !byId" class="actors__owner-filter">

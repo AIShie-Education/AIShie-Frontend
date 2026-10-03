@@ -19,6 +19,7 @@ import { formatDecimal } from '@/utils/format'
 import { versionFilesOf } from '@/utils/documentFiles'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import VersionFileList from '@/components/VersionFileList.vue'
@@ -245,10 +246,6 @@ function refresh() {
         <span v-else>{{ t('common.time.noDue') }}</span>
         · {{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
       </template>
-      <el-button :loading="state.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <template v-if="assignment && writer">
         <el-button :disabled="!course.writable" @click="formOpen = true">
           <el-icon><Edit /></el-icon>
@@ -420,7 +417,10 @@ function refresh() {
           <aside class="assignment-view__side app-column">
             <!-- Details -->
             <section class="app-card">
-              <h2 class="app-card__title">{{ t('assignments.detail.details') }}</h2>
+              <h2 class="app-card__title">
+                <span>{{ t('assignments.detail.details') }}</span>
+                <RefreshButton :loading="state.loading.value" @click="refresh" />
+              </h2>
               <dl class="assignment-view__facts">
                 <dt>{{ t('assignments.detail.points') }}</dt>
                 <dd class="assignment-view__num">{{ formatDecimal(assignment.points_possible) }}</dd>

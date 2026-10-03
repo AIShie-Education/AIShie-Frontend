@@ -25,6 +25,7 @@ import AsyncState from '@/components/AsyncState.vue'
 import LevelIcon from '@/components/LevelIcon.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import ActionCard from './components/ActionCard.vue'
 import ActionTarget from './components/ActionTarget.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
@@ -232,10 +233,6 @@ function toggleRules() {
           <ArrowDown />
         </el-icon>
       </el-button>
-      <el-button :loading="proposed.loading.value || review.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
     </PageHeader>
 
     <section v-show="rulesOpen" id="approvals-rules" class="approvals__rules" :aria-label="t('actions.approvals.rules')">
@@ -282,7 +279,11 @@ function toggleRules() {
       </div>
     </section>
 
-    <div class="app-card">
+    <div class="app-card approvals__card">
+      <!-- Refresh at the right end of the tabs' row: the card's toolbar is that row. -->
+      <div class="approvals__toolbar">
+        <RefreshButton :loading="proposed.loading.value || review.loading.value" @click="refresh" />
+      </div>
       <el-tabs v-model="tab" class="approvals__tabs">
         <el-tab-pane name="proposed">
           <template #label>
@@ -440,6 +441,26 @@ function toggleRules() {
   .approvals__tabs :deep(.el-tabs__item) {
     padding: 0 8px;
     font-size: 13px;
+  }
+}
+.approvals__card {
+  position: relative;
+}
+.approvals__toolbar {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+.approvals__tabs :deep(.el-tabs__header) {
+  padding-right: 136px;
+}
+@media (max-width: 600px) {
+  .approvals__toolbar {
+    top: 16px;
+    right: 16px;
+  }
+  .approvals__tabs :deep(.el-tabs__header) {
+    padding-right: 52px;
   }
 }
 </style>

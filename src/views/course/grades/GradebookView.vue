@@ -27,6 +27,7 @@ import { useCourseStore } from '@/stores/course'
 import { isUuid, shortId } from '@/utils/format'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -463,10 +464,7 @@ watch(
           </div>
         </div>
       </div>
-      <el-button :disabled="!student" :loading="book.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
+      <RefreshButton :loading="book.loading.value" :disabled="!student" @click="refresh" />
     </section>
 
     <section v-if="!student" class="app-card">

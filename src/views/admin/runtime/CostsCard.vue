@@ -19,6 +19,7 @@ import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { formatList, formatMoney, formatNumber } from '@/utils/format'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { COST_SPAN_DAYS, costRange, utcToday } from './runtimeAdmin'
@@ -97,15 +98,7 @@ function toPrices() {
   <section class="app-card costs-card">
     <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.costs.title') }}</span>
-      <el-button
-        circle
-        :loading="loading"
-        :aria-label="t('common.actions.refresh')"
-        class="costs-card__refresh"
-        @click="load()"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="loading" class="costs-card__refresh" @click="load()" />
     </h2>
     <p class="costs-card__intro">{{ t('runtimeAdmin.costs.intro') }}</p>
 
