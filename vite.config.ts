@@ -82,7 +82,8 @@ export default defineConfig(({ mode }) => {
             if (/node_modules\/(markdown-it|dompurify|katex|highlight\.js)\//.test(id)) return 'markdown'
             // A typeface goes where it is imported: each Chinese script's into
             // the chunk loaded only for a page in that script, Traditional's
-            // (fonts-zh-hant) or Simplified's (fonts-zh-hans), src/styles/fonts.ts.
+            // (fonts-zh-hant, which an English page loads too once it shows
+            // Chinese) or Simplified's (fonts-zh-hans), src/styles/fonts.ts.
             if (id.includes('node_modules/@fontsource/')) return undefined
             // pdf.js goes where it is imported, with the PDF view of the file viewer
             // (components/preview/PdfView.vue), which is loaded only when a PDF is opened: in the

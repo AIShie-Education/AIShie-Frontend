@@ -11,8 +11,11 @@
 // for Simplified, whose glyphs differ even where the code points are the
 // same. Their style sheets alone outweigh the rest of the app's, so each
 // script's load the first time the page is in it (setLocale), and never for
-// a reader who does not switch to it. Which stack applies is chosen by
-// <html lang> (styles/tokens.css).
+// a reader who does not switch to it. A page in English sets the Chinese it
+// shows (a name, a course's title) in TC's, Hong Kong's script: they load the
+// first time it shows any, so that a reader whose pages are all English
+// never fetches them. Which stack applies is chosen by <html lang>
+// (styles/tokens.css).
 import '@fontsource/ibm-plex-sans/400.css'
 import '@fontsource/ibm-plex-sans/500.css'
 import '@fontsource/ibm-plex-sans/600.css'
@@ -27,15 +30,79 @@ const CHINESE: Record<string, () => Promise<unknown>> = {
 
 const loading = new Map<string, Promise<unknown>>()
 
-/** Loads, once, the typefaces a page in this language needs beyond those above. */
-export function loadFontsFor(locale: string): void {
-  const load = CHINESE[locale]
-  if (!load || loading.has(locale)) return
+function load(script: string): void {
+  const faces = CHINESE[script]
+  if (!faces || loading.has(script)) return
   loading.set(
-    locale,
-    load().catch(() => {
+    script,
+    faces().catch(() => {
       // Until they come, the system's Chinese fonts stand in; the next change of language tries again.
-      loading.delete(locale)
+      loading.delete(script)
     }),
   )
+}
+
+const HAN = /\p{Script=Han}/u
+/**
+ * Text that is not the page's own: what is marked as in a language of its
+ * own (a language's name in the language menu, `lang="zh-Hans"`, and the
+ * menu's 文; the loading screen's Chinese, index.html), and what a browser
+ * that runs scripts never shows.
+ */
+const NOT_THE_PAGES = ':not(html)[lang], noscript, script, style'
+
+/** Whether a text node is Chinese the page shows. */
+function isHan(text: Node): boolean {
+  return HAN.test(text.nodeValue ?? '') && !text.parentElement?.closest(NOT_THE_PAGES)
+}
+
+/** Whether what was put in the page (an element and all it holds, or a text) shows any Chinese. */
+function showsHan(node: Node): boolean {
+  if (node.nodeType === Node.TEXT_NODE) return isHan(node)
+  if (node.nodeType !== Node.ELEMENT_NODE || !HAN.test(node.textContent ?? '')) return false
+  const texts = document.createTreeWalker(node, NodeFilter.SHOW_TEXT)
+  for (let t = texts.nextNode(); t; t = texts.nextNode()) if (isHan(t)) return true
+  return false
+}
+
+let watching: { observer: MutationObserver; timer: ReturnType<typeof setTimeout> } | null = null
+
+function stopWatching(): void {
+  if (!watching) return
+  watching.observer.disconnect()
+  clearTimeout(watching.timer)
+  watching = null
+}
+
+/**
+ * Calls found, once, when the page shows Chinese: what it shows now, once a
+ * change of language has redrawn the page's own words (after the tasks
+ * queued before this one), or anything put in it later.
+ */
+function watchForHan(found: () => void): void {
+  const body = typeof document === 'undefined' ? null : document.body
+  if (!body || typeof MutationObserver === 'undefined') return found()
+  const seen = () => {
+    stopWatching()
+    found()
+  }
+  const observer = new MutationObserver((records) => {
+    for (const r of records) {
+      if (r.type === 'characterData' ? isHan(r.target) : [...r.addedNodes].some(showsHan)) return seen()
+    }
+  })
+  observer.observe(body, { childList: true, subtree: true, characterData: true })
+  watching = {
+    observer,
+    timer: setTimeout(() => {
+      if (showsHan(body)) seen()
+    }),
+  }
+}
+
+/** Loads, once, the typefaces a page in this language needs beyond those above. */
+export function loadFontsFor(locale: string): void {
+  stopWatching()
+  if (locale !== 'en') load(locale)
+  else if (!loading.has('zh-Hant')) watchForHan(() => load('zh-Hant'))
 }
