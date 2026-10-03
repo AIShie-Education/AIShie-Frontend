@@ -3,7 +3,8 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import ElementPlus from 'element-plus'
 import * as Icons from '@element-plus/icons-vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { Comment, defineComponent, h, KeepAlive } from 'vue'
+import { createMemoryHistory, createRouter, useRoute } from 'vue-router'
 import { i18n, setLocale } from '@/i18n'
 import { ApiError } from '@/api/http'
 import { fakeContainerWidths } from '@/composables/containerWidthFakes'
@@ -162,7 +163,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountClass(opts: { query?: Record<string, string>; settle?: string } = {}) {
+async function mountClass(opts: { query?: Record<string, string>; settle?: string; keptAlive?: boolean } = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({ me: { id: 'actor-sato', kind: 'human', display_name: 'Sato' } } as never)
@@ -178,8 +179,16 @@ async function mountClass(opts: { query?: Record<string, string>; settle?: strin
   for (const name of ['course-grade', 'course-grades', 'course-gradebook'])
     router.addRoute({ path: `/${name}/:courseId/:gradeId?/:studentMemberId?`, name, component: stub })
   await router.push({ path: '/', query: opts.query ?? {} })
-  const w = mount(ClassGradebook, {
-    props: { courseId: COURSE },
+  // As GradebookView has it: kept alive, out of the page, while a student's gradebook is open.
+  const Kept = defineComponent({
+    setup() {
+      const route = useRoute()
+      return () =>
+        h('div', [h(KeepAlive, null, [route.path === '/' ? h(ClassGradebook, { courseId: COURSE }) : h(Comment)])])
+    },
+  })
+  const w = mount(opts.keptAlive ? Kept : ClassGradebook, {
+    props: opts.keptAlive ? {} : { courseId: COURSE },
     attachTo: document.body,
     global: {
       plugins: [
@@ -526,6 +535,59 @@ describe('the whole class’s gradebook', () => {
       router.back()
       await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/'))
       expect(router.currentRoute.value.query).toEqual({ q: 'Student 01', sort: '-t:root' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('leaves the address Back or Forward goes to as it is, a search typed just before or not', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { w, router } = await mountClass({ query: { sort: '-t:root' }, keptAlive: true })
+      /** Where the history is: the address the browser shows. */
+      const address = () => router.options.history.location
+      const student = (i: number) =>
+        router.resolve({ name: 'course-gradebook', params: { courseId: COURSE, studentMemberId: students[i]!.id } })
+          .fullPath
+      /** Arrived at a page, and it laid out. */
+      const at = async (fullPath: string) => {
+        for (let i = 0; i < 20 && router.currentRoute.value.fullPath !== fullPath; i++) await flushPromises()
+        expect(router.currentRoute.value.fullPath).toBe(fullPath)
+        await flushPromises()
+      }
+      const type = (text: string) => w.find('input[aria-label="Search by name or number"]').setValue(text)
+
+      // A student, Back to the class, typed, and Forward at once.
+      await router.push(student(10))
+      router.back()
+      await at('/?sort=-t:root')
+      await type('Student 01')
+      router.forward()
+      await at(student(10))
+      // The student's page, under its own address.
+      expect(address()).toBe(student(10))
+      // Nor written there once typing is taken as paused: the class is out of the page.
+      vi.advanceTimersByTime(500)
+      await flushPromises()
+      expect(address()).toBe(student(10))
+      // Neither entry lost: the class's as it was left, the student's after it.
+      router.back()
+      await at('/?sort=-t:root')
+      router.forward()
+      await at(student(10))
+
+      // The class again (Whole class), typed, and Back at once: the student's page, under its own address.
+      await router.push('/')
+      await at('/?sort=-t:root')
+      await type('Student 02')
+      router.back()
+      await at(student(10))
+      expect(address()).toBe(student(10))
+      vi.advanceTimersByTime(500)
+      await flushPromises()
+      expect(address()).toBe(student(10))
+      router.back()
+      await at('/?sort=-t:root')
     } finally {
       vi.useRealTimers()
     }

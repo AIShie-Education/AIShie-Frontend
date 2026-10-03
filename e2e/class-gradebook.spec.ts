@@ -689,6 +689,65 @@ test.describe('a class larger than the screen', () => {
     await expect(order(page)).resolves.toEqual(['Gus Ruiz'])
   })
 
+  test('shows a student’s page under its own address after Back or Forward, a search typed just before', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, instructor())
+    await page.goto(`/courses/${bigId}/gradebook`)
+    await expect(matrix(page)).toBeVisible()
+    // Fay: first by name, so on the screen.
+    const fay = new RegExp(`/courses/${bigId}/gradebook/${big.fay.member_id}$`)
+    const open = async () => {
+      await matrix(page)
+        .locator('tbody tr')
+        .filter({ hasText: big.fay.display_name })
+        .locator('.matrix__student')
+        .click()
+      await expect(page).toHaveURL(fay)
+      await expect(page.locator('.gradebook__total')).toBeVisible()
+    }
+    /** Typed, and Back or Forward pressed in the same task: well within the 400 ms the address waits for typing to pause. */
+    const typeAnd = (go: 'back' | 'forward') =>
+      page.evaluate((go) => {
+        const input = document.querySelector<HTMLInputElement>('.classbook__search input')!
+        input.value = 'Hal'
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+        if (go === 'back') history.back()
+        else history.forward()
+      }, go)
+
+    // A student, Back to the class, typed, and Forward.
+    await open()
+    await page.goBack()
+    await expect(matrix(page)).toBeVisible()
+    await typeAnd('forward')
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.waitForTimeout(600)
+    await expect(page).toHaveURL(fay)
+    // The student's entry kept: found again after Reload, and by Back then Forward.
+    await page.reload()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await expect(page).toHaveURL(fay)
+    await page.goBack()
+    await expect(matrix(page)).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`/courses/${bigId}/gradebook(\\?|$)`))
+    await page.goForward()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await expect(page).toHaveURL(fay)
+
+    // The class again by Whole class, typed, and Back.
+    await page.getByRole('link', { name: 'Whole class', exact: true }).click()
+    await expect(matrix(page)).toBeVisible()
+    await typeAnd('back')
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.waitForTimeout(600)
+    await expect(page).toHaveURL(fay)
+    await page.reload()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await expect(page).toHaveURL(fay)
+  })
+
   test('reads again only the students opened, coming back to the class from each', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await signIn(page, instructor())

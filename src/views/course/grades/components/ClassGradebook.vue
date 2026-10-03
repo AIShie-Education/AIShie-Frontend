@@ -474,6 +474,11 @@ watch([filter, sort], toAddress)
 // would, before the navigation adds its own after it.
 const stopLeaving = router.beforeEach((to, from) => {
   if (typing === undefined || !active.value || to.path === from.path) return
+  // Left by Back or Forward: the browser is at the entry it goes to already,
+  // whose address is that page's, not the class's to write. The search waits
+  // for typing to pause, as before, and is not written once the class is
+  // out of the page.
+  if (router.options.history.location !== from.fullPath) return
   clearTimeout(typing)
   typing = undefined
   const want = wanted()
