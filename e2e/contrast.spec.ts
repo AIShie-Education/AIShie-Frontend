@@ -1,6 +1,16 @@
 /// <reference lib="dom" />
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { coursePath, demo, openChat, photograph, pickOption, signIn, signInAsRoot } from './support'
+import {
+  coursePath,
+  demo,
+  openChat,
+  photograph,
+  pickOption,
+  signIn,
+  signInAsRoot,
+  wordsBelowAA,
+  type ContrastMiss as Miss,
+} from './support'
 
 // Every word on the pages a teacher spends the day in reads at WCAG AA,
 // 4.5:1 (3:1 at 24 px, or 18.66 px bold), against the ground it is drawn on,
@@ -14,114 +24,11 @@ import { coursePath, demo, openChat, photograph, pickOption, signIn, signInAsRoo
 // does not; nor is a separator (a dot, a dash), nor text kept for a screen
 // reader alone.
 
-interface Miss {
-  text: string
-  where: string
-  fg: string
-  bg: string
-  ratio: number
-}
-
-/** The words on the page that read at less than AA, with their colours. */
-function misses(page: Page): Promise<Miss[]> {
-  return page.evaluate(() => {
-    type Rgba = { r: number; g: number; b: number; a: number }
-    const parse = (s: string): Rgba | null => {
-      let m = /^rgba?\(([^)]+)\)$/.exec(s)
-      if (m) {
-        const p = m[1]
-          .split(/[\s,/]+/)
-          .filter(Boolean)
-          .map(Number)
-        return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }
-      }
-      m = /^color\(srgb ([^)]+)\)$/.exec(s)
-      if (m) {
-        const p = m[1]
-          .split(/[\s/]+/)
-          .filter(Boolean)
-          .map(Number)
-        return { r: p[0] * 255, g: p[1] * 255, b: p[2] * 255, a: p.length > 3 ? p[3] : 1 }
-      }
-      return null
-    }
-    const over = (top: Rgba, bottom: Rgba): Rgba => ({
-      r: top.r * top.a + bottom.r * (1 - top.a),
-      g: top.g * top.a + bottom.g * (1 - top.a),
-      b: top.b * top.a + bottom.b * (1 - top.a),
-      a: 1,
-    })
-    const luminance = ({ r, g, b }: Rgba) => {
-      const f = (v: number) => {
-        const c = v / 255
-        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-      }
-      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
-    }
-    const ratio = (x: Rgba, y: Rgba) => {
-      const [hi, lo] = [luminance(x), luminance(y)].sort((p, q) => q - p)
-      return (hi + 0.05) / (lo + 0.05)
-    }
-    const hex = ({ r, g, b }: Rgba) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
-    const page = parse(getComputedStyle(document.body).backgroundColor)!
-    /** The ground under an element: its own and its ancestors' backgrounds, laid one over another; null under an image. */
-    const groundOf = (el: Element): Rgba | null => {
-      const layers: Rgba[] = []
-      for (let e: Element | null = el; e; e = e.parentElement) {
-        const cs = getComputedStyle(e)
-        if (cs.backgroundImage !== 'none') return null
-        const bg = parse(cs.backgroundColor)
-        if (bg && bg.a > 0) {
-          layers.push(bg)
-          if (bg.a >= 1) break
-        }
-      }
-      let ground = layers.length && layers[layers.length - 1].a >= 1 ? layers.pop()! : page
-      while (layers.length) ground = over(layers.pop()!, ground)
-      return ground
-    }
-    const out: Miss[] = []
-    for (const el of document.querySelectorAll('body *')) {
-      const text = [...el.childNodes]
-        .filter((n) => n.nodeType === Node.TEXT_NODE)
-        .map((n) => n.textContent ?? '')
-        .join('')
-        .trim()
-      // Words only: a separator says nothing a reader could miss.
-      if (!/[\p{L}\p{N}]/u.test(text)) continue
-      const box = el.getBoundingClientRect()
-      if (box.width <= 1 || box.height <= 1) continue
-      const cs = getComputedStyle(el)
-      if (cs.visibility !== 'visible' || cs.clip !== 'auto') continue
-      if (el.closest('[aria-hidden="true"], .is-disabled, [disabled], [aria-disabled="true"]')) continue
-      let opacity = 1
-      for (let e: Element | null = el; e; e = e.parentElement) opacity *= Number(getComputedStyle(e).opacity)
-      if (opacity < 0.1) continue
-      const ink = parse(cs.color)
-      const ground = groundOf(el)
-      if (!ink || !ground) continue
-      const fg = over({ ...ink, a: ink.a * opacity }, ground)
-      const r = ratio(fg, ground)
-      const size = parseFloat(cs.fontSize)
-      const large = size >= 24 || (Number(cs.fontWeight) >= 700 && size >= 18.66)
-      if (r < (large ? 3 : 4.5))
-        out.push({
-          text: text.slice(0, 40),
-          where: `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`,
-          fg: hex(fg),
-          bg: hex(ground),
-          ratio: Math.round(r * 100) / 100,
-        })
-    }
-    return out
-  })
-}
-
 /** Reads the page once it has settled: past a tab's or a row's fade, or a hovered row's. */
 async function settled(page: Page): Promise<Miss[]> {
   await page.waitForLoadState('networkidle')
   await page.waitForTimeout(400)
-  return misses(page)
+  return wordsBelowAA(page)
 }
 
 /** Hovers a table's row, at its left edge, where nothing in it has a tooltip of its own. */

@@ -382,7 +382,12 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   whose upstream providers are listed from `runtimeAdmin.openRouterEndpoints` (asked as the model
   is typed, the request before aborted), and whose warnings (nothing may answer, no tools, prices
   above the price table's) are computed from that list, never claimed for data policy, which the
-  list does not tell. Who changed a setting is
+  list does not tell. A row says on itself, in words and in its switch's name, that a limit leaves
+  it out (never by fading it), and links its policies there, not in a tooltip; the order's buttons
+  are a finger's size on a touch screen, hand the focus on as one goes, and say the place taken
+  aloud. "Clear the upstream routing" sends none, and a server that does not take it yet
+  (`unknown_field` at `/openrouter`) is answered with "Save without upstream routing", done only
+  when asked. Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
   cent at least, as US dollars (`formatMoney`, "US$0.0184"; a price someone typed with every figure
   it has, `formatMoney(v, { exact: true })`, "US$1.875") and typed as decimals (`usdProblem`), empty

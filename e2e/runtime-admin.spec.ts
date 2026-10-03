@@ -1,5 +1,16 @@
-import { expect, test, type Page, type Route } from '@playwright/test'
-import { call, demo, expectToasted, keepToasts, photograph, root, showSideView, signIn, signInAsRoot } from './support'
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test'
+import {
+  call,
+  demo,
+  expectToasted,
+  keepToasts,
+  photograph,
+  root,
+  showSideView,
+  signIn,
+  signInAsRoot,
+  wordsBelowAA,
+} from './support'
 
 // The agent runtime's settings, AI and documents (/admin/runtime), for
 // platform administrators. The Core these tests run against has no runtime
@@ -11,7 +22,9 @@ import { call, demo, expectToasted, keepToasts, photograph, root, showSideView, 
 // giving it a credential the real Core issues, which the played runtime
 // receives and the page never shows, and revoking it again; and adds a
 // model of OpenRouter's with its upstream routing, chosen from the upstream
-// providers the played runtime lists (OpenRouter itself is never called).
+// providers the played runtime lists (OpenRouter itself is never called),
+// sets their order from the keyboard and on a phone, and adds one without it
+// on a runtime that does not take upstream routing yet.
 // What the page said of each write is checked from the messages it kept
 // (keepToasts), as a message closes itself after 3 s, which a busy machine
 // can let pass before the check.
@@ -88,10 +101,14 @@ const UPSTREAMS = {
       provider_name: 'DeepInfra',
       quantization: 'fp8',
       usd_per_mtok: { input: '0.100000', output: '0.320000', cache_read: null, cache_write: null },
+      discount: 0.2,
       max_output_tokens: 16384,
       zdr: false,
       uptime_30m: 98.85,
       uptime_1d: 98.48,
+      privacy_policy_url: 'https://deepinfra.com/privacy',
+      terms_of_service_url: 'https://deepinfra.com/terms',
+      status_page_url: 'https://status.deepinfra.com/',
     }),
     upstream({
       slug: 'cloudflare/fp8',
@@ -138,6 +155,8 @@ function playRuntime(page: Page) {
   const sent: { method: string; path: string; body: any; ifMatch?: string }[] = []
   /** A refusal the next offer's PATCH is answered with, once. */
   let refuseNextPatch: { status: number; code: string; reason: string; field: string } | null = null
+  /** A runtime from before upstream routing: no list of upstream providers, and an offer's routing an unknown member. */
+  let noRouting = false
   const offers: any[] = [
     {
       id: 'standard',
@@ -367,7 +386,7 @@ function playRuntime(page: Page) {
     }
     if (path === '/admin/transcription/jobs') return answer(route, 200, { jobs, next: null })
     // OpenRouter's upstream providers, for the one model it lists here; any other it has not.
-    if (path === '/admin/openrouter/endpoints') {
+    if (path === '/admin/openrouter/endpoints' && !noRouting) {
       const model = new URL(req.url()).searchParams.get('model')
       if (model === LLAMA) return answer(route, 200, UPSTREAMS)
       return answer(route, 404, {
@@ -378,6 +397,14 @@ function playRuntime(page: Page) {
         },
       })
     }
+    if (noRouting && path.startsWith('/admin/school-plan/offers') && body && 'openrouter' in body)
+      return answer(route, 400, {
+        error: {
+          code: 'invalid_argument',
+          message: 'unknown field "openrouter"',
+          details: { reason: 'unknown_field', field: '/openrouter' },
+        },
+      })
     if (path === '/admin/school-plan/offers' && method === 'POST') {
       const o = {
         ...offers[0],
@@ -416,6 +443,10 @@ function playRuntime(page: Page) {
     sent,
     refuseNextPatch(r: { status: number; code: string; reason: string; field: string }) {
       refuseNextPatch = r
+    },
+    /** Plays a runtime from before upstream routing. */
+    takeNoRouting() {
+      noRouting = true
     },
     async install() {
       await page.route('**/runtime/api/v1/**', handle)
@@ -673,6 +704,199 @@ test.describe('a model of OpenRouter’s, with an agent runtime', () => {
       { openrouter: { ...routing, max_price: { prompt: '0.6' } } },
       { openrouter: { ...routing, max_price: { prompt: '0.59' } } },
     ])
+  })
+})
+
+/**
+ * Opens the dialog that adds a model to the plan, as root, for a model of
+ * OpenRouter's with an ID and a name of its own, the model typed (its
+ * upstream providers listed, where the runtime lists them) and a key given.
+ */
+async function newOpenRouterOffer(page: Page, runtime: ReturnType<typeof playRuntime>, id: string, label: string) {
+  await runtime.install()
+  await keepToasts(page)
+  await signInAsRoot(page)
+  await page.goto('/admin/runtime')
+  await page.locator('.offers-card').getByRole('button', { name: 'Add a model' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Add a model to the school’s plan' })
+  await dialog.getByLabel('ID', { exact: true }).fill(id)
+  await dialog.getByLabel('Name shown to owners').fill(label)
+  await dialog.locator('.offer-form__provider').click()
+  await page.locator('.el-select-dropdown:visible .el-select-dropdown__item').filter({ hasText: 'OpenRouter' }).click()
+  await dialog.getByLabel('Model', { exact: true }).fill(LLAMA)
+  await dialog.getByLabel('The school’s API key').fill(`sk-or-e2e${STAMP}${'0'.repeat(24)}`)
+  return { dialog, section: dialog.locator('.or-routing') }
+}
+
+/** An upstream provider's row of the section's table, by slug. */
+const upstreamRow = (section: Locator, slug: string) =>
+  section.locator('.or-table .el-table__body tr').filter({ has: section.page().locator(`[data-slug="${slug}"]`) })
+
+/**
+ * Whether a row, and everything drawn in it, is at full strength: nothing
+ * faded, it or what it is in (a switch's own box, which it draws in its
+ * place, aside).
+ */
+const unfaded = (row: Locator) =>
+  row.evaluate((el) => {
+    const full = (e: Element) => getComputedStyle(e).opacity === '1'
+    for (let up: Element | null = el; up; up = up.parentElement) if (!full(up)) return false
+    return [...el.querySelectorAll('*')].filter((e) => !e.matches('.el-switch__input')).every(full)
+  })
+
+test.describe('a model of OpenRouter’s, with a runtime from before upstream routing', () => {
+  test('the dialog says the server does not take it yet, and adds the model without it when root asks', async ({
+    page,
+  }) => {
+    const runtime = playRuntime(page)
+    runtime.takeNoRouting()
+    const { dialog, section } = await newOpenRouterOffer(page, runtime, `old-${STAMP}`, 'School AI (Llama, older)')
+    await expect(section.locator('.or-state--not-offered')).toContainText(
+      'This server cannot list OpenRouter’s upstream providers yet.',
+    )
+    const posts = () => runtime.sent.filter((x) => x.method === 'POST' && x.path === '/admin/school-plan/offers')
+    await dialog.locator('footer').getByRole('button', { name: 'Add', exact: true }).click()
+    const error = dialog.locator('.offer-dialog__error')
+    await expect(error).toContainText(
+      'This server does not take upstream routing yet. Save without it, or ask the server’s operator to update.',
+    )
+    // Nothing is sent again by itself: the new offer's routing was sent, and refused.
+    expect(posts().map((x) => x.body.openrouter)).toEqual([
+      { allow_fallbacks: true, require_parameters: true, data_collection: 'deny' },
+    ])
+    await photograph(page, 'openrouter-routing-unsupported')
+    await error.getByRole('button', { name: 'Save without upstream routing' }).click()
+    await expectToasted(page, 'School AI (Llama, older) is on the school’s plan.')
+    await expect(dialog).toBeHidden()
+    expect(posts()).toHaveLength(2)
+    expect(posts()[1].body).not.toHaveProperty('openrouter')
+    expect(posts()[1].body).toMatchObject({ id: `old-${STAMP}`, provider: 'openrouter', model: LLAMA })
+  })
+})
+
+test.describe('a model of OpenRouter’s upstream routing, from the keyboard', () => {
+  test.use({ viewport: { width: 1280, height: 900 } })
+
+  test('root sets the order with the keyboard, told each place, and reads on each row why it is left out and its policies', async ({
+    page,
+  }) => {
+    const runtime = playRuntime(page)
+    const { section } = await newOpenRouterOffer(page, runtime, `keys-${STAMP}`, 'School AI (Llama, keys)')
+    await expect(section.locator('.or-table [data-slug]')).toHaveCount(5)
+    const said = section.locator('.or-announce')
+    await expect(said).toHaveAttribute('role', 'status')
+    const button = (name: string) => section.getByRole('button', { name, exact: true })
+
+    // Groq first, alone: its earlier and later cannot be pressed, and the focus goes to taking it back.
+    await button('Try first: Groq (groq)').focus()
+    await page.keyboard.press('Enter')
+    await expect(button('Do not try first: Groq (groq)')).toBeFocused()
+    await expect(said).toHaveText('Groq (groq) is tried first, No. 1 of 1.')
+    // DeepInfra second: it can be tried earlier.
+    await button('Try first: DeepInfra (deepinfra/turbo)').focus()
+    await page.keyboard.press(' ')
+    await expect(button('Try earlier: DeepInfra (deepinfra/turbo)')).toBeFocused()
+    await expect(said).toHaveText('DeepInfra (deepinfra/turbo) is tried first, No. 2 of 2.')
+    // Earlier, to No. 1, where it can go no earlier: the focus goes to later.
+    await page.keyboard.press('Enter')
+    await expect(upstreamRow(section, 'deepinfra/turbo').locator('.or-order__position')).toHaveText('No. 1')
+    await expect(button('Try later: DeepInfra (deepinfra/turbo)')).toBeFocused()
+    await expect(said).toHaveText('DeepInfra (deepinfra/turbo) is tried first, No. 1 of 2.')
+    // Taken back: the focus is on trying it first again.
+    await page.keyboard.press('Tab')
+    await expect(button('Do not try first: DeepInfra (deepinfra/turbo)')).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(button('Try first: DeepInfra (deepinfra/turbo)')).toBeFocused()
+    await expect(said).toHaveText('DeepInfra (deepinfra/turbo) is no longer tried first.')
+    // Each button is 24 px square at least.
+    for (const name of ['Try earlier: Groq (groq)', 'Try later: Groq (groq)', 'Do not try first: Groq (groq)']) {
+      const box = (await button(name).boundingBox())!
+      expect(Math.min(box.width, box.height), name).toBeGreaterThanOrEqual(24)
+    }
+
+    // Only ZDR endpoints: DeepInfra, on, is left out, which its row and its switch say, faded nowhere.
+    await section.locator('.or-zdr').click()
+    const deepinfra = upstreamRow(section, 'deepinfra/turbo')
+    await expect(deepinfra.locator('.or-excluded')).toHaveText('Left out by: Only zero-data-retention (ZDR) endpoints')
+    await expect(
+      section.getByRole('switch', {
+        name: 'Use DeepInfra (deepinfra/turbo), left out by: Only zero-data-retention (ZDR) endpoints',
+        exact: true,
+      }),
+    ).toBeChecked()
+    await expect(section.getByRole('switch', { name: 'Use Groq (groq)', exact: true })).toBeChecked()
+    expect(await unfaded(deepinfra)).toBe(true)
+    await photograph(page, 'openrouter-routing-left-out')
+
+    // Its policies are links on the row, one after another to the keyboard; then its price's discount, on focus.
+    await deepinfra.getByRole('link', { name: 'Privacy policy' }).focus()
+    await page.keyboard.press('Tab')
+    await expect(deepinfra.getByRole('link', { name: 'Terms of service' })).toBeFocused()
+    await expect(deepinfra.getByRole('link', { name: 'Terms of service' })).toHaveAttribute(
+      'href',
+      'https://deepinfra.com/terms',
+    )
+    await page.keyboard.press('Tab')
+    await expect(deepinfra.getByRole('link', { name: 'Service status' })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(deepinfra.locator('.or-price')).toBeFocused()
+    await expect(page.locator('.el-popper:visible').filter({ hasText: '20% off' })).toBeVisible()
+
+    // Every word of the section reads at AA, in both themes.
+    expect(await wordsBelowAA(page, '.or-routing')).toEqual([])
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await expect(page.locator('html')).toHaveClass(/\bdark\b/)
+    await page.waitForTimeout(400)
+    expect(await wordsBelowAA(page, '.or-routing')).toEqual([])
+    await photograph(page, 'openrouter-routing-left-out-dark')
+  })
+})
+
+test.describe('a model of OpenRouter’s upstream routing, on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('every control of the order is a finger’s size, and a card says why it is left out and links its policies', async ({
+    page,
+  }) => {
+    const runtime = playRuntime(page)
+    const { section } = await newOpenRouterOffer(page, runtime, `phone-${STAMP}`, 'School AI (Llama, phone)')
+    const cards = section.locator('.or-card')
+    await expect(cards).toHaveCount(5)
+    const groq = section.locator('.or-card[data-slug="groq"]')
+    const deepinfra = section.locator('.or-card[data-slug="deepinfra/turbo"]')
+    const finger = async (target: Locator, what: string) => {
+      const box = (await target.boundingBox())!
+      expect(Math.min(box.width, box.height), what).toBeGreaterThanOrEqual(44)
+      return box
+    }
+    await finger(groq.locator('.or-try-first'), 'Try first')
+    await groq.locator('.or-try-first').tap()
+    await deepinfra.locator('.or-try-first').tap()
+    await expect(deepinfra.locator('.or-order__position')).toHaveText('No. 2')
+    const boxes = []
+    for (const cls of ['.or-order__up', '.or-order__down', '.or-order__remove'])
+      boxes.push(await finger(deepinfra.locator(cls), cls))
+    // Side by side, none over the next.
+    for (let i = 1; i < boxes.length; i++)
+      expect(boxes[i].x).toBeGreaterThanOrEqual(boxes[i - 1].x + boxes[i - 1].width)
+    await deepinfra.locator('.or-order__up').tap()
+    await expect(deepinfra.locator('.or-order__position')).toHaveText('No. 1')
+    await expect(groq.locator('.or-order__position')).toHaveText('No. 2')
+
+    // Only ZDR endpoints: DeepInfra's card says it is left out, at full strength, and links its policies.
+    await section
+      .locator('.el-switch')
+      .filter({ has: page.locator('#or-zdr') })
+      .tap()
+    await expect(deepinfra.locator('.or-excluded')).toHaveText('Left out by: Only zero-data-retention (ZDR) endpoints')
+    expect(await unfaded(deepinfra)).toBe(true)
+    for (const name of ['Privacy policy', 'Terms of service', 'Service status'])
+      await finger(deepinfra.getByRole('link', { name }), name)
+    const card = (await deepinfra.boundingBox())!
+    expect(card.x + card.width).toBeLessThanOrEqual(390)
+    await deepinfra.scrollIntoViewIfNeeded()
+    await photograph(page, 'openrouter-routing-390')
+    expect(await wordsBelowAA(page, '.or-routing')).toEqual([])
   })
 })
 

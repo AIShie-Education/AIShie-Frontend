@@ -21,7 +21,9 @@
 // (OpenRouterRouting, openRouter.ts): a new one starts with no data kept,
 // every setting of a call taken and fallbacks allowed; one edited sends its
 // whole routing, canonical, only where it changed. The dialog is wider
-// while that section shows, for its table of upstream providers.
+// while that section shows, for its table of upstream providers. A server
+// that does not take the routing yet refuses it: the dialog says so, and
+// offers to save without it, which is done only when asked.
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import DataFlowNotice from '@/components/DataFlowNotice.vue'
@@ -115,6 +117,8 @@ const saving = ref(false)
 const error = shallowRef<unknown>(null)
 /** Words of the dialog's own for the error above the form, in place of the refusal's. */
 const errorWords = ref('')
+/** The server refused the routing as a member it does not know: it can be saved without it. */
+const routingUnsupported = ref(false)
 const trial = shallowRef<KeyTrial | null>(null)
 const fieldErrors = reactive<Partial<Record<OfferField, string>>>({})
 const notice = ref('')
@@ -145,6 +149,7 @@ function routingFor(p: string, read: PlanOffer | null): RoutingForm {
 function resetMessages() {
   error.value = null
   errorWords.value = ''
+  routingUnsupported.value = false
   for (const k of Object.keys(routingErrors)) delete routingErrors[k]
   trial.value = null
   notice.value = ''
@@ -325,6 +330,7 @@ function showRoutingError(e: unknown): boolean {
   if (e.reason === 'unknown_field' && field === '/openrouter') {
     error.value = e
     errorWords.value = t('runtimeAdmin.offer.routingUnsupported')
+    routingUnsupported.value = true
     return true
   }
   const at = routingErrorAt(field, routing)
@@ -451,6 +457,16 @@ async function save() {
   } finally {
     saving.value = false
   }
+}
+
+/**
+ * Saves with the routing as it was read, which is none on a new offer or one
+ * from a server that does not take routing: what the refusal of it offers.
+ * Only on the administrator's asking, never by itself (contract, 4.9).
+ */
+async function saveWithoutRouting() {
+  Object.assign(routing, { ...formFromRouting(routingRead), added: routing.added })
+  await save()
 }
 
 function done(o: PlanOffer, words: string) {
@@ -732,7 +748,13 @@ const errorText = computed(() =>
         show-icon
         :title="errorText"
         class="offer-dialog__alert offer-dialog__error"
-      />
+      >
+        <template v-if="routingUnsupported" #default>
+          <el-button size="small" :loading="saving" class="offer-dialog__without-routing" @click="saveWithoutRouting">{{
+            t('runtimeAdmin.offer.saveWithoutRouting')
+          }}</el-button>
+        </template>
+      </el-alert>
     </template>
 
     <template #footer>

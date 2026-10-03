@@ -16,7 +16,14 @@
 //
 // Refusals of the routing (errors, by where they are said) are the
 // dialog's, set on a save; each goes as its control changes.
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+//
+// What a row says is on the row, for a finger and a screen reader alike: an
+// upstream provider turned on that a limit leaves out says so under its name,
+// and in its switch's name, never by being faded; its policies are links
+// there. The order is set with buttons, which keep the keyboard's place: as
+// one goes, the focus moves to the one beside it that does the next thing,
+// and the place it took is said aloud. "Clear" sends no routing at all.
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowDown, ArrowUp, Close, Loading } from '@element-plus/icons-vue'
 import AppNote from '@/components/AppNote.vue'
@@ -37,6 +44,7 @@ import {
   PRICE_KEYS,
   QUANTIZATION_OPTIONS,
   candidates,
+  emptyRoutingForm,
   highestPrices,
   moveInOrder,
   routingFromForm,
@@ -76,6 +84,16 @@ const { t } = useI18n()
 
 // A phone's layout, a card per upstream provider, where the window is narrower than the table's 640 px.
 const phone = useMediaQuery('(max-width: 639px)')
+// On a touch screen the order's buttons are a finger's size, and their column wider for them.
+const touch = useMediaQuery('(pointer: coarse)')
+const root = useTemplateRef<HTMLElement>('root')
+
+/** What a screen reader is told of a change made here that moves nothing it reads (the order, a clearing). */
+const announcement = ref('')
+function announce(words: string) {
+  announcement.value = ''
+  void nextTick(() => (announcement.value = words))
+}
 
 // --- The upstream providers OpenRouter lists ------------------------------------------------------
 type ListState = 'needModel' | 'loading' | 'ready' | 'failed'
@@ -153,6 +171,10 @@ const highest = computed(() => highestPrices(all.value))
 const low = computed(() => tableBelow(answer.value?.price ?? null, highest.value))
 
 const name = (row: RoutingRow) => row.endpoint?.provider_name ?? row.slug
+/** Its name and slug, as a control of its row is named by: two endpoints may share a name. */
+const who = (row: RoutingRow) => t('runtimeAdmin.openrouter.who', { name: name(row), slug: row.slug })
+/** A control of the row's named for it, its own words first: "Try first: Groq (groq)". */
+const named = (key: string, row: RoutingRow) => t('common.pair', { label: t(key), value: who(row) })
 const excluded = (row: RoutingRow) => !!row.candidate && row.used && !row.candidate.allowed
 
 /** The words of the control that leaves out an upstream provider turned on. */
@@ -162,19 +184,33 @@ const EXCLUSION_LABEL: Record<Exclusion, string> = {
   maxPrice: 'runtimeAdmin.openrouter.maxPrice',
   maxOutput: 'hosting.model.maxOutputTokens',
 }
+const leftOutBy = (row: RoutingRow) => formatList(row.candidate!.excludedBy.map((x) => t(EXCLUSION_LABEL[x])))
 function reason(row: RoutingRow): string {
   if (!excluded(row)) return ''
-  return t('runtimeAdmin.openrouter.excludedBy', {
-    controls: formatList(row.candidate!.excludedBy.map((x) => t(EXCLUSION_LABEL[x]))),
-  })
+  return t('runtimeAdmin.openrouter.excludedBy', { controls: leftOutBy(row) })
 }
-function links(row: RoutingRow): { url: string; label: string }[] {
+/** Its switch's name, which says too when a limit leaves it out although it is on. */
+function useLabel(row: RoutingRow): string {
+  const words = { name: name(row), slug: row.slug }
+  return excluded(row)
+    ? t('runtimeAdmin.openrouter.useLeftOut', { ...words, controls: leftOutBy(row) })
+    : t('runtimeAdmin.openrouter.use', words)
+}
+/**
+ * Its policies and status page, as links on its row: a word each on one line
+ * ("Privacy · Terms · Status"), each named in full, with whose it is, for a
+ * screen reader's list of links.
+ */
+function links(row: RoutingRow): { url: string; text: string; name: string }[] {
   const e = row.endpoint
   if (!e) return []
-  const out: { url: string; label: string }[] = []
-  if (e.privacy_policy_url) out.push({ url: e.privacy_policy_url, label: 'runtimeAdmin.openrouter.privacy' })
-  if (e.terms_of_service_url) out.push({ url: e.terms_of_service_url, label: 'runtimeAdmin.openrouter.terms' })
-  if (e.status_page_url) out.push({ url: e.status_page_url, label: 'runtimeAdmin.openrouter.statusPage' })
+  const out: { url: string; text: string; name: string }[] = []
+  const add = (url: string | null, short: string, full: string) => {
+    if (url) out.push({ url, text: t(short), name: named(full, row) })
+  }
+  add(e.privacy_policy_url, 'runtimeAdmin.openrouter.privacyShort', 'runtimeAdmin.openrouter.privacy')
+  add(e.terms_of_service_url, 'runtimeAdmin.openrouter.termsShort', 'runtimeAdmin.openrouter.terms')
+  add(e.status_page_url, 'runtimeAdmin.openrouter.statusPageShort', 'runtimeAdmin.openrouter.statusPage')
   return out
 }
 /** Its precision, context, longest answer and home: the line under its name. */
@@ -220,6 +256,60 @@ const rowClass = ({ row }: { row: RoutingRow }) => (excluded(row) ? 'or-row is-e
 
 function onUse(row: RoutingRow, on: string | number | boolean) {
   setUsed(props.routing, row.slug, on === true)
+}
+
+// --- The order, from the keyboard as well -------------------------------------------------------------------
+const ORDER_CONTROL = {
+  first: '.or-try-first',
+  up: '.or-order__up',
+  down: '.or-order__down',
+  remove: '.or-order__remove',
+} as const
+type OrderControl = keyof typeof ORDER_CONTROL
+
+/**
+ * Once the row's order controls are drawn again, focuses the first of those
+ * asked for that it has and that can be pressed: the button pressed goes as
+ * it is pressed ("Try first", "Do not try first") or cannot be pressed again
+ * ("Try earlier" at No. 1), and the focus would fall to the page.
+ */
+async function focusOrder(slug: string, prefer: OrderControl[]) {
+  await nextTick()
+  const cell = [...(root.value?.querySelectorAll<HTMLElement>('.or-order-cell') ?? [])].find(
+    (el) => el.dataset.order === slug,
+  )
+  for (const c of prefer) {
+    const button = cell?.querySelector<HTMLButtonElement>(ORDER_CONTROL[c])
+    if (button && !button.disabled) {
+      button.focus()
+      return
+    }
+  }
+}
+/** Says the place a row has taken among those tried first. */
+function sayPlace(row: RoutingRow) {
+  announce(
+    t('runtimeAdmin.openrouter.ordered', {
+      who: who(row),
+      n: props.routing.order.indexOf(row.slug) + 1,
+      total: props.routing.order.length,
+    }),
+  )
+}
+function onTryFirst(row: RoutingRow) {
+  tryFirst(props.routing, row.slug)
+  sayPlace(row)
+  void focusOrder(row.slug, ['up', 'down', 'remove'])
+}
+function onMove(row: RoutingRow, by: -1 | 1) {
+  moveInOrder(props.routing, row.slug, by)
+  sayPlace(row)
+  void focusOrder(row.slug, by < 0 ? ['up', 'down', 'remove'] : ['down', 'up', 'remove'])
+}
+function onUnorder(row: RoutingRow) {
+  unorder(props.routing, row.slug)
+  announce(t('runtimeAdmin.openrouter.unordered', { who: who(row) }))
+  void focusOrder(row.slug, ['first'])
 }
 function onMode(mode: string | number | boolean | undefined) {
   setMode(props.routing, mode as RoutingMode)
@@ -273,6 +363,16 @@ function onSort(v: string) {
 /** What OpenRouter is sent with each call, as it is sent. */
 const canonical = computed(() => routingFromForm(props.routing))
 const preview = ref<string[]>([])
+
+/**
+ * Sends no routing: every setting back to OpenRouter's own, those it does not
+ * offer too, so that an offer can be saved with none (where a server does
+ * not take it yet, or to take it off). The slugs added by hand stay rows.
+ */
+function clearRouting() {
+  Object.assign(props.routing, { ...emptyRoutingForm(), added: props.routing.added })
+  announce(t('runtimeAdmin.openrouter.cleared'))
+}
 
 // --- Prices ------------------------------------------------------------------------------------------------------------
 const priceOpen = ref(false)
@@ -334,7 +434,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
 </script>
 
 <template>
-  <div class="or-routing">
+  <div ref="root" class="or-routing">
     <AppNote class="or-routing__intro">{{ t('runtimeAdmin.openrouter.intro') }}</AppNote>
     <el-alert
       v-if="errors.section"
@@ -440,23 +540,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
           :data-slug="row.slug"
         >
           <div class="or-name">
-            <el-tooltip :disabled="!reason(row) && !links(row).length" placement="top" popper-class="app-tip-wrap">
-              <template #content>
-                <span v-if="reason(row)" class="or-tip__line">{{ reason(row) }}</span>
-                <a
-                  v-for="l in links(row)"
-                  :key="l.url"
-                  :href="l.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="or-tip__link"
-                  >{{ t(l.label) }}</a
-                >
-              </template>
-              <strong class="or-name__provider" :tabindex="reason(row) || links(row).length ? 0 : undefined">{{
-                name(row)
-              }}</strong>
-            </el-tooltip>
+            <strong class="or-name__provider">{{ name(row) }}</strong>
             <code class="or-name__slug"
               ><template v-for="(part, i) in row.slug.split('/')" :key="i"
                 ><template v-if="i">/<wbr /></template>{{ part }}</template
@@ -477,10 +561,20 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
             {{
               joinParts([
                 t('common.pair', { label: t('runtimeAdmin.openrouter.colPrice'), value: price(row) }),
+                ...priceNotes(row),
                 t('common.pair', { label: t('runtimeAdmin.openrouter.colTools'), value: tools(row) }),
                 t('common.pair', { label: t('runtimeAdmin.openrouter.colUptime'), value: uptime(row) }),
               ])
             }}
+          </p>
+          <p v-if="excluded(row)" class="or-excluded">{{ reason(row) }}</p>
+          <p v-if="links(row).length" class="or-links">
+            <template v-for="(l, i) in links(row)" :key="l.url"
+              ><template v-if="i">{{ t('common.sep') }}</template
+              ><a :href="l.url" target="_blank" rel="noopener noreferrer" :aria-label="l.name" class="or-link">{{
+                l.text
+              }}</a></template
+            >
           </p>
           <div class="or-card__controls">
             <span v-if="row.coveredBy" class="or-covered">{{
@@ -489,44 +583,49 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
             <el-switch
               v-else
               :model-value="row.used"
-              :aria-label="t('runtimeAdmin.openrouter.use', { name: name(row), slug: row.slug })"
+              :aria-label="useLabel(row)"
               class="or-use"
               @update:model-value="onUse(row, $event)"
             />
-            <span v-if="row.position" class="or-order">
-              <span class="or-order__position">{{ t('runtimeAdmin.openrouter.position', { n: row.position }) }}</span>
+            <span class="or-order-cell" :data-order="row.slug">
+              <span v-if="row.position" class="or-order">
+                <span class="or-order__position">{{ t('runtimeAdmin.openrouter.position', { n: row.position }) }}</span>
+                <span class="or-order__buttons">
+                  <el-button
+                    link
+                    :icon="ArrowUp"
+                    :disabled="row.position === 1"
+                    :aria-label="named('runtimeAdmin.openrouter.moveUp', row)"
+                    class="or-order__up"
+                    @click="onMove(row, -1)"
+                  />
+                  <el-button
+                    link
+                    :icon="ArrowDown"
+                    :disabled="row.position === routing.order.length"
+                    :aria-label="named('runtimeAdmin.openrouter.moveDown', row)"
+                    class="or-order__down"
+                    @click="onMove(row, 1)"
+                  />
+                  <el-button
+                    link
+                    :icon="Close"
+                    :aria-label="named('runtimeAdmin.openrouter.unorder', row)"
+                    class="or-order__remove"
+                    @click="onUnorder(row)"
+                  />
+                </span>
+              </span>
               <el-button
+                v-else-if="row.used"
                 link
-                :icon="ArrowUp"
-                :disabled="row.position === 1"
-                :aria-label="t('runtimeAdmin.openrouter.moveUp')"
-                class="or-order__up"
-                @click="moveInOrder(routing, row.slug, -1)"
-              />
-              <el-button
-                link
-                :icon="ArrowDown"
-                :disabled="row.position === routing.order.length"
-                :aria-label="t('runtimeAdmin.openrouter.moveDown')"
-                class="or-order__down"
-                @click="moveInOrder(routing, row.slug, 1)"
-              />
-              <el-button
-                link
-                :icon="Close"
-                :aria-label="t('runtimeAdmin.openrouter.unorder')"
-                class="or-order__remove"
-                @click="unorder(routing, row.slug)"
-              />
+                type="primary"
+                :aria-label="named('runtimeAdmin.openrouter.tryFirst', row)"
+                class="or-try-first"
+                @click="onTryFirst(row)"
+                >{{ t('runtimeAdmin.openrouter.tryFirst') }}</el-button
+              >
             </span>
-            <el-button
-              v-else-if="row.used"
-              link
-              type="primary"
-              class="or-try-first"
-              @click="tryFirst(routing, row.slug)"
-              >{{ t('runtimeAdmin.openrouter.tryFirst') }}</el-button
-            >
           </div>
         </li>
       </ul>
@@ -535,23 +634,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
         <el-table-column :label="t('runtimeAdmin.openrouter.colProvider')" min-width="190">
           <template #default="{ row }">
             <div class="or-name" :data-slug="row.slug">
-              <el-tooltip :disabled="!reason(row) && !links(row).length" placement="top" popper-class="app-tip-wrap">
-                <template #content>
-                  <span v-if="reason(row)" class="or-tip__line">{{ reason(row) }}</span>
-                  <a
-                    v-for="l in links(row)"
-                    :key="l.url"
-                    :href="l.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="or-tip__link"
-                    >{{ t(l.label) }}</a
-                  >
-                </template>
-                <strong class="or-name__provider" :tabindex="reason(row) || links(row).length ? 0 : undefined">{{
-                  name(row)
-                }}</strong>
-              </el-tooltip>
+              <strong class="or-name__provider">{{ name(row) }}</strong>
               <code class="or-name__slug"
                 ><template v-for="(part, i) in row.slug.split('/')" :key="i"
                   ><template v-if="i">/<wbr /></template>{{ part }}</template
@@ -568,11 +651,25 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
               }}</AppTag>
             </div>
             <p v-if="facts(row)" class="or-facts">{{ facts(row) }}</p>
+            <p v-if="excluded(row)" class="or-excluded">{{ reason(row) }}</p>
+            <p v-if="links(row).length" class="or-links">
+              <template v-for="(l, i) in links(row)" :key="l.url"
+                ><template v-if="i">{{ t('common.sep') }}</template
+                ><a :href="l.url" target="_blank" rel="noopener noreferrer" :aria-label="l.name" class="or-link">{{
+                  l.text
+                }}</a></template
+              >
+            </p>
           </template>
         </el-table-column>
         <el-table-column :label="t('runtimeAdmin.openrouter.colPrice')" min-width="148" align="right">
           <template #default="{ row }">
-            <el-tooltip v-if="priceNotes(row).length" placement="top" popper-class="app-tip-wrap">
+            <el-tooltip
+              v-if="priceNotes(row).length"
+              :trigger="['hover', 'focus']"
+              placement="top"
+              popper-class="app-tip-wrap"
+            >
               <template #content>
                 <span v-for="n in priceNotes(row)" :key="n" class="or-tip__line">{{ n }}</span>
               </template>
@@ -599,48 +696,53 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
             <el-switch
               v-else
               :model-value="row.used"
-              :aria-label="t('runtimeAdmin.openrouter.use', { name: name(row), slug: row.slug })"
+              :aria-label="useLabel(row)"
               class="or-use"
               @update:model-value="onUse(row, $event)"
             />
           </template>
         </el-table-column>
-        <el-table-column :label="t('runtimeAdmin.openrouter.colOrder')" min-width="124">
+        <el-table-column :label="t('runtimeAdmin.openrouter.colOrder')" :min-width="touch ? 160 : 136">
           <template #default="{ row }">
-            <span v-if="row.position" class="or-order">
-              <span class="or-order__position">{{ t('runtimeAdmin.openrouter.position', { n: row.position }) }}</span>
+            <div class="or-order-cell" :data-order="row.slug">
+              <span v-if="row.position" class="or-order">
+                <span class="or-order__position">{{ t('runtimeAdmin.openrouter.position', { n: row.position }) }}</span>
+                <span class="or-order__buttons">
+                  <el-button
+                    link
+                    :icon="ArrowUp"
+                    :disabled="row.position === 1"
+                    :aria-label="named('runtimeAdmin.openrouter.moveUp', row)"
+                    class="or-order__up"
+                    @click="onMove(row, -1)"
+                  />
+                  <el-button
+                    link
+                    :icon="ArrowDown"
+                    :disabled="row.position === routing.order.length"
+                    :aria-label="named('runtimeAdmin.openrouter.moveDown', row)"
+                    class="or-order__down"
+                    @click="onMove(row, 1)"
+                  />
+                  <el-button
+                    link
+                    :icon="Close"
+                    :aria-label="named('runtimeAdmin.openrouter.unorder', row)"
+                    class="or-order__remove"
+                    @click="onUnorder(row)"
+                  />
+                </span>
+              </span>
               <el-button
+                v-else-if="row.used"
                 link
-                :icon="ArrowUp"
-                :disabled="row.position === 1"
-                :aria-label="t('runtimeAdmin.openrouter.moveUp')"
-                class="or-order__up"
-                @click="moveInOrder(routing, row.slug, -1)"
-              />
-              <el-button
-                link
-                :icon="ArrowDown"
-                :disabled="row.position === routing.order.length"
-                :aria-label="t('runtimeAdmin.openrouter.moveDown')"
-                class="or-order__down"
-                @click="moveInOrder(routing, row.slug, 1)"
-              />
-              <el-button
-                link
-                :icon="Close"
-                :aria-label="t('runtimeAdmin.openrouter.unorder')"
-                class="or-order__remove"
-                @click="unorder(routing, row.slug)"
-              />
-            </span>
-            <el-button
-              v-else-if="row.used"
-              link
-              type="primary"
-              class="or-try-first"
-              @click="tryFirst(routing, row.slug)"
-              >{{ t('runtimeAdmin.openrouter.tryFirst') }}</el-button
-            >
+                type="primary"
+                :aria-label="named('runtimeAdmin.openrouter.tryFirst', row)"
+                class="or-try-first"
+                @click="onTryFirst(row)"
+                >{{ t('runtimeAdmin.openrouter.tryFirst') }}</el-button
+              >
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -868,6 +970,11 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
         <AppNote v-else class="or-preview__empty">{{ t('runtimeAdmin.openrouter.previewEmpty') }}</AppNote>
       </el-collapse-item>
     </el-collapse>
+    <div class="or-clear">
+      <el-button class="or-clear__button" @click="clearRouting">{{ t('runtimeAdmin.openrouter.clear') }}</el-button>
+      <p class="app-form-hint or-clear__hint">{{ t('runtimeAdmin.openrouter.clearHint') }}</p>
+    </div>
+    <div class="or-announce" role="status" aria-live="polite">{{ announcement }}</div>
   </div>
 </template>
 
@@ -919,9 +1026,6 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
   font-size: var(--app-text-sm);
   color: var(--app-ink-2);
 }
-.or-table :deep(.or-row.is-excluded) {
-  opacity: 0.55;
-}
 .or-name {
   display: flex;
   flex-wrap: wrap;
@@ -951,25 +1055,52 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
   font-size: var(--app-text-xs);
   color: var(--app-ink-3);
 }
-.or-order {
+/* Left out although turned on: said in words, in the waiting amber, which reads at AA on the dialog in both themes. */
+.or-excluded {
+  margin: 2px 0 0;
+  font-size: var(--app-text-xs);
+  color: var(--app-wait-fg);
+}
+.or-links {
+  margin: 2px 0 0;
+  font-size: var(--app-text-xs);
+  color: var(--app-ink-3);
+}
+/* 24 px high at least (WCAG 2.5.8), a finger's on a touch screen. */
+.or-link {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  min-height: 24px;
+  white-space: nowrap;
+}
+/* The position, then its buttons, which go under it together where the column is narrow. */
+.or-order {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 4px;
+}
+.or-order__buttons {
+  display: inline-flex;
+  align-items: center;
 }
 .or-order .el-button + .el-button {
   margin-left: 0;
 }
 .or-order__position {
-  margin-right: 4px;
   font-variant-numeric: tabular-nums;
 }
-.or-tip__line,
-.or-tip__link {
-  display: block;
+/* An icon button of the order's is 24 px square at least, so that none is a slip away from the next (WCAG 2.5.8). */
+.or-order__buttons .el-button,
+.or-skipped__remove.el-button {
+  min-width: 24px;
+  min-height: 24px;
 }
-.or-tip__link {
-  color: inherit;
-  text-decoration: underline;
+.or-try-first.el-button {
+  min-height: 24px;
+}
+.or-tip__line {
+  display: block;
 }
 .or-cards {
   margin: 0;
@@ -983,9 +1114,6 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
   padding: 10px 12px;
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius-control);
-}
-.or-card.is-excluded {
-  opacity: 0.55;
 }
 .or-card__figures {
   margin: 4px 0 0;
@@ -1053,9 +1181,37 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
 .or-preview {
   margin: 16px 0 8px;
 }
+.or-clear {
+  margin: 8px 0;
+}
+.or-clear__hint {
+  margin: 4px 0 0;
+}
+.or-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 @media (max-width: 639px) {
   .or-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* On a touch screen, what is pressed here is a finger's size, as Element Plus's own controls are there. */
+@media (pointer: coarse) {
+  .or-order__buttons .el-button,
+  .or-skipped__remove.el-button,
+  .or-try-first.el-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .or-link {
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 </style>

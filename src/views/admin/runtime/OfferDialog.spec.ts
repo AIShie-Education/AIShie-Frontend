@@ -672,11 +672,110 @@ describe('a model of OpenRouter’s, and its upstream routing', () => {
     await flip(w, 'groq')
     expect(w.find('.or-warn-no-tools').exists()).toBe(false)
     expect(w.find('.or-note-no-tools').text()).toBe('Cloudflare cannot call tools, so agents’ calls skip them.')
-    // A limit that leaves Groq out: dimmed, and the warning back.
+    // A limit that leaves Groq out: said on its row, and the warning back.
     ;(w.vm as unknown as { routing: { zdr: boolean | null; quantizations: string[] } }).routing.quantizations = ['fp8']
     await flushPromises()
     expect(rowOf(w, 'groq').classes()).toContain('is-excluded')
+    expect(rowOf(w, 'groq').find('.or-excluded').text()).toBe('Left out by: Precision the model runs at')
     expect(w.find('.or-warn-no-tools').exists()).toBe(true)
+  })
+
+  it('says in words on its row, and in its switch’s name, which upstream provider turned on a limit leaves out', async () => {
+    const { w } = await openRouted(
+      llama({ openrouter: { ...DEFAULTS, max_price: { completion: '1' } } as PlanOffer['openrouter'] }),
+    )
+    await settle()
+    const switchName = (slug: string) => rowOf(w, slug).find('.or-use input').attributes('aria-label')
+    // Cloudflare charges more for output than is accepted.
+    expect(rowOf(w, 'cloudflare/fp8').find('.or-excluded').text()).toBe('Left out by: Highest price accepted')
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-excluded').exists()).toBe(false)
+    expect(switchName('deepinfra/turbo')).toBe('Use DeepInfra (deepinfra/turbo)')
+    await w.find('.or-zdr').trigger('click')
+    await flushPromises()
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-excluded').text()).toBe(
+      'Left out by: Only zero-data-retention (ZDR) endpoints',
+    )
+    expect(switchName('deepinfra/turbo')).toBe(
+      'Use DeepInfra (deepinfra/turbo), left out by: Only zero-data-retention (ZDR) endpoints',
+    )
+    expect(rowOf(w, 'cloudflare/fp8').find('.or-excluded').text()).toBe(
+      'Left out by: Only zero-data-retention (ZDR) endpoints and Highest price accepted',
+    )
+    // Groq keeps nothing and is cheap enough: nothing is said of it.
+    expect(rowOf(w, 'groq').find('.or-excluded').exists()).toBe(false)
+    expect(switchName('groq')).toBe('Use Groq (groq)')
+    // One turned off is not left out by a limit: it is not used at all.
+    await flip(w, 'deepinfra/turbo')
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-excluded').exists()).toBe(false)
+    expect(switchName('deepinfra/turbo')).toBe('Use DeepInfra (deepinfra/turbo)')
+  })
+
+  it('links an upstream provider’s policies and status on its row, in no tooltip', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    const links = rowOf(w, 'deepinfra/turbo').findAll('.or-links a')
+    expect(links.map((a) => [a.text(), a.attributes('aria-label'), a.attributes('href')])).toEqual([
+      ['Privacy', 'Privacy policy: DeepInfra (deepinfra/turbo)', 'https://deepinfra.com/privacy'],
+      ['Terms', 'Terms of service: DeepInfra (deepinfra/turbo)', 'https://deepinfra.com/terms'],
+      ['Status', 'Service status: DeepInfra (deepinfra/turbo)', 'https://status.deepinfra.com/'],
+    ])
+    for (const a of links) expect(a.attributes()).toMatchObject({ target: '_blank', rel: 'noopener noreferrer' })
+    // A word each, on one line.
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-links').text()).toBe('Privacy · Terms · Status')
+    // The name is no control: nothing waits behind it.
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-name__provider').attributes('tabindex')).toBeUndefined()
+    // One added by hand, which OpenRouter does not list, has none.
+    const input = w.find('.or-add__input input')
+    await input.setValue('together')
+    await w.find('.or-add__button').trigger('click')
+    await settle()
+    expect(rowOf(w, 'together').find('.or-links').exists()).toBe(false)
+  })
+
+  it('keeps the keyboard’s place as the order is set with its buttons, and says the place taken', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    const button = (slug: string, cls: string) => rowOf(w, slug).find(cls)
+    const focused = () => document.activeElement
+    const said = () => w.find('.or-announce').text()
+    expect(w.find('.or-announce').attributes()).toMatchObject({ role: 'status', 'aria-live': 'polite' })
+    expect(button('groq', '.or-try-first').attributes('aria-label')).toBe('Try first: Groq (groq)')
+
+    // Tried first alone: earlier and later cannot be pressed, and the focus is on taking it back.
+    ;(button('groq', '.or-try-first').element as HTMLElement).focus()
+    await button('groq', '.or-try-first').trigger('click')
+    await flushPromises()
+    expect(focused()).toBe(button('groq', '.or-order__remove').element)
+    expect(said()).toBe('Groq (groq) is tried first, No. 1 of 1.')
+    expect(button('groq', '.or-order__up').attributes('aria-label')).toBe('Try earlier: Groq (groq)')
+    expect(button('groq', '.or-order__down').attributes('aria-label')).toBe('Try later: Groq (groq)')
+    expect(button('groq', '.or-order__remove').attributes('aria-label')).toBe('Do not try first: Groq (groq)')
+
+    // A second: it can be tried earlier.
+    await button('deepinfra/turbo', '.or-try-first').trigger('click')
+    await flushPromises()
+    expect(focused()).toBe(button('deepinfra/turbo', '.or-order__up').element)
+    expect(said()).toBe('DeepInfra (deepinfra/turbo) is tried first, No. 2 of 2.')
+
+    // Earlier, to No. 1, where it can go no earlier: the focus goes to later.
+    await button('deepinfra/turbo', '.or-order__up').trigger('click')
+    await flushPromises()
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-order__position').text()).toBe('No. 1')
+    expect(focused()).toBe(button('deepinfra/turbo', '.or-order__down').element)
+    expect(said()).toBe('DeepInfra (deepinfra/turbo) is tried first, No. 1 of 2.')
+
+    // Later again, to the last place: the focus goes to earlier.
+    await button('deepinfra/turbo', '.or-order__down').trigger('click')
+    await flushPromises()
+    expect(focused()).toBe(button('deepinfra/turbo', '.or-order__up').element)
+    expect(said()).toBe('DeepInfra (deepinfra/turbo) is tried first, No. 2 of 2.')
+
+    // Taken back: the focus is on trying it first again.
+    await button('deepinfra/turbo', '.or-order__remove').trigger('click')
+    await flushPromises()
+    expect(focused()).toBe(button('deepinfra/turbo', '.or-try-first').element)
+    expect(said()).toBe('DeepInfra (deepinfra/turbo) is no longer tried first.')
+    expect(preview(w).provider.order).toEqual(['groq'])
   })
 
   it.each([
@@ -815,7 +914,7 @@ describe('a model of OpenRouter’s, and its upstream routing', () => {
     expect(w.find('.or-table__error').text()).toBe('cloudflare/fp8: This value is not accepted here.')
   })
 
-  it('says a server that does not take upstream routing yet, above the form', async () => {
+  it('says a server that does not take upstream routing yet, above the form, and adds it without when asked', async () => {
     const { w, vm } = await openRouted()
     vm.meta.id = 'llama'
     vm.meta.label = 'School AI (Llama)'
@@ -825,9 +924,89 @@ describe('a model of OpenRouter’s, and its upstream routing', () => {
     await flushPromises()
     s.once('POST', ADMIN.offers, () => refusal(400, 'invalid_argument', 'unknown_field', { field: '/openrouter' }))
     await save(w)
-    expect(w.find('.offer-dialog__error').text()).toBe(
+    expect(w.find('.offer-dialog__error .el-alert__title').text()).toBe(
       'This server does not take upstream routing yet. Save without it, or ask the server’s operator to update.',
     )
+    // Nothing is sent again by itself.
+    expect(s.to('POST', ADMIN.offers)).toHaveLength(1)
+    expect(w.emitted('saved')).toBeUndefined()
+    const without = w.find('.offer-dialog__error .offer-dialog__without-routing')
+    expect(without.text()).toBe('Save without upstream routing')
+    await without.trigger('click')
+    await settle()
+    const [first, second] = s.to('POST', ADMIN.offers).map((c) => JSON.parse(c.body!))
+    expect(first.openrouter).toEqual(DEFAULTS)
+    expect(second).not.toHaveProperty('openrouter')
+    expect(second).toMatchObject({ id: 'llama', provider: 'openrouter', model: OPENROUTER_MODEL })
+    expect(w.emitted('saved')).toHaveLength(1)
+    expect(lastMessage()?.message).toBe('School AI (Llama) is on the school’s plan.')
+  })
+
+  it('saves an edit without the routing changed, when a server that does not take it yet refuses it', async () => {
+    // An older server's offer has no routing to read.
+    const { w, vm } = await openRouted(llama({ openrouter: null }))
+    await settle()
+    expect(w.find('.or-preview__empty').exists()).toBe(true)
+    vm.meta.label = 'Llama'
+    // Turned off and on again: fallbacks are now said, and the routing is sent.
+    await w.find('.or-fallbacks').trigger('click')
+    await w.find('.or-fallbacks').trigger('click')
+    await flushPromises()
+    s.once('PATCH', ADMIN.offer, () => refusal(400, 'invalid_argument', 'unknown_field', { field: '/openrouter' }))
+    await save(w)
+    expect(w.find('.offer-dialog__without-routing').exists()).toBe(true)
+    await w.find('.offer-dialog__without-routing').trigger('click')
+    await settle()
+    expect(s.to('PATCH', ADMIN.offer).map((c) => JSON.parse(c.body!))).toEqual([
+      { label: 'Llama', openrouter: { allow_fallbacks: true } },
+      { label: 'Llama' },
+    ])
+    expect(lastMessage()?.message).toBe('Llama is saved.')
+  })
+
+  it('offers to save without the routing for no other refusal', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    await w.find('.or-zdr').trigger('click')
+    await flushPromises()
+    s.once('PATCH', ADMIN.offer, () => refusal(400, 'invalid_argument', 'unknown_field', { field: '/openrouter/zdr' }))
+    await save(w)
+    expect(w.find('.offer-dialog__without-routing').exists()).toBe(false)
+  })
+
+  it('clears the routing to none, saying so, so that an edit sends null and a new offer none', async () => {
+    let { w, vm } = await openRouted(llama())
+    await settle()
+    await rowOf(w, 'groq').find('.or-try-first').trigger('click')
+    await flushPromises()
+    await w.find('.or-clear__button').trigger('click')
+    await flushPromises()
+    expect(w.find('.or-preview__empty').text()).toBe('Nothing: OpenRouter routes each call as it does by default.')
+    expect(w.find('.or-announce').text()).toBe(
+      'The upstream routing is cleared: OpenRouter routes each call as it does by default.',
+    )
+    expect(w.find('.or-clear__hint').text()).toBe(
+      'Every setting above goes back to OpenRouter’s own, and nothing is sent with the calls.',
+    )
+    // The switches show OpenRouter's own: fallbacks allowed, nothing else.
+    expect(w.find('.or-deny-data').classes()).not.toContain('is-checked')
+    expect(w.find('.or-require-parameters').classes()).not.toContain('is-checked')
+    expect(w.find('.or-fallbacks').classes()).toContain('is-checked')
+    expect(rowOf(w, 'groq').find('.or-order__position').exists()).toBe(false)
+    await save(w)
+    expect(lastPatch()).toEqual({ openrouter: null })
+    w.unmount()
+
+    ;({ w, vm } = await openRouted())
+    vm.meta.id = 'llama2'
+    vm.meta.label = 'School AI (Llama 2)'
+    vm.onProvider('openrouter')
+    vm.form.model = OPENROUTER_MODEL
+    vm.key = newKey()
+    await flushPromises()
+    await w.find('.or-clear__button').trigger('click')
+    await save(w)
+    expect(JSON.parse(s.to('POST', ADMIN.offers)[0].body!)).not.toHaveProperty('openrouter')
   })
 
   it('sends the whole routing alone when only the routing changed, and nothing when it did not', async () => {
@@ -981,9 +1160,22 @@ describe('a model of OpenRouter’s, and its upstream routing', () => {
     expect(cards[0].find('.or-card__figures').text()).toBe(
       'Input / output, per million tokens: US$0.59 / US$0.79 · Calls tools: Yes · Uptime, 30 min / 1 day: 99.3% / 99.1%',
     )
+    expect(cards[1].findAll('.or-links a').map((a) => a.attributes('aria-label'))).toEqual([
+      'Privacy policy: DeepInfra (deepinfra/turbo)',
+      'Terms of service: DeepInfra (deepinfra/turbo)',
+      'Service status: DeepInfra (deepinfra/turbo)',
+    ])
     await cards[0].find('.or-try-first').trigger('click')
     await flushPromises()
     expect(w.find('.or-card .or-order__position').text()).toBe('No. 1')
+    expect(document.activeElement).toBe(w.find('.or-card .or-order__remove').element)
+    expect(w.find('.or-announce').text()).toBe('Groq (groq) is tried first, No. 1 of 1.')
+    // A limit that leaves one out is said on its card.
+    await w.find('.or-zdr').trigger('click')
+    await flushPromises()
+    expect(w.findAll('.or-card')[1].find('.or-excluded').text()).toBe(
+      'Left out by: Only zero-data-retention (ZDR) endpoints',
+    )
   })
 
   it('reads in Traditional Chinese, the words never saying how the server is built', async () => {

@@ -347,6 +347,7 @@ export default {
     },
     routingUnsupported:
       'This server does not take upstream routing yet. Save without it, or ask the server’s operator to update.',
+    saveWithoutRouting: 'Save without upstream routing',
   },
 
   // Amounts of money, and quotas in answers and dollars side by side.
@@ -666,11 +667,18 @@ export default {
     yes: 'Yes',
     no: 'No',
     use: 'Use {name} ({slug})',
+    // The same switch, turned on, of an upstream provider a limit leaves out.
+    useLeftOut: 'Use {name} ({slug}), left out by: {controls}',
+    // An upstream provider, as the buttons of its row are named for it and the order's changes are said.
+    who: '{name} ({slug})',
     tryFirst: 'Try first',
     position: 'No. {n}',
     moveUp: 'Try earlier',
     moveDown: 'Try later',
     unorder: 'Do not try first',
+    // Said to a screen reader as the order changes.
+    ordered: '{who} is tried first, No. {n} of {total}.',
+    unordered: '{who} is no longer tried first.',
     context: '{n} tokens of context',
     maxOutput: 'up to {n} out',
     based: 'Based in {country}',
@@ -683,6 +691,10 @@ export default {
     privacy: 'Privacy policy',
     terms: 'Terms of service',
     statusPage: 'Service status',
+    // The same, as a word each on an upstream provider's row, where the words above name them to a screen reader.
+    privacyShort: 'Privacy',
+    termsShort: 'Terms',
+    statusPageShort: 'Status',
     excludedBy: 'Left out by: {controls}',
     addSlug: 'Add by slug',
     addSlugPlaceholder: 'such as deepinfra/turbo or google-vertex',
@@ -745,6 +757,9 @@ export default {
     noteSomeNoTools: '{names} cannot call tools, so agents’ calls skip them.',
     preview: 'What is sent to OpenRouter',
     previewEmpty: 'Nothing: OpenRouter routes each call as it does by default.',
+    clear: 'Clear the upstream routing',
+    clearHint: 'Every setting above goes back to OpenRouter’s own, and nothing is sent with the calls.',
+    cleared: 'The upstream routing is cleared: OpenRouter routes each call as it does by default.',
     prices: 'Prices',
     pricesNote:
       'OpenRouter charges what the upstream provider that answered charges. Quotas in dollars and the costs report count every call at the price table’s price for this model, whichever upstream provider answered.',
