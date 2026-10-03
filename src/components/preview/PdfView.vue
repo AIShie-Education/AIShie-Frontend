@@ -922,6 +922,11 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   min-width: 0;
   padding: 0 4px;
 }
+/* On a small phone, the count and the per cent a step smaller too: at the large step, a 320 px
+   phone's bar had no room for "of 1,200" beside the page field, and fitBar left the count out. */
+.pdf-view.is-tight .pdf-view__bar {
+  font-size: var(--app-text-sm);
+}
 .pdf-view.is-tight .pdf-view__bar .el-button {
   width: 36px;
   height: 36px;
