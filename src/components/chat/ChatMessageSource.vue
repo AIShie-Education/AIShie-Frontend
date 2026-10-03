@@ -5,9 +5,12 @@
 // the page or slide the answer named (document.get with its version_id, read
 // on the click), or, with no file named, the document's page at that
 // version. In a version the reader may not open (other_version), it leads to
-// the document as it is now, and says the answer read an earlier one. One
-// the reader may not open at all (restricted) is said to be so, with no
-// title and no link: Core says nothing else of it.
+// the document as it is now, and says the answer read another version, and,
+// beside the link, that it opens the material as it is now: the version read
+// may be older than the one the reader may open, or newer (a draft, or one
+// published before an earlier one was published again), so it is never
+// called earlier. One the reader may not open at all (restricted) is said to
+// be so, with no title and no link: Core says nothing else of it.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
@@ -26,15 +29,15 @@ const { t } = useI18n()
 const router = useRouter()
 
 const s = computed(() => props.source)
-/** Whole, in a version the reader may not open (earlier), or not to be opened. */
-const shownAs = computed<'whole' | 'earlier' | 'restricted'>(() => {
+/** Whole, in a version the reader may not open (other), or not to be opened. */
+const shownAs = computed<'whole' | 'other' | 'restricted'>(() => {
   if (s.value.restricted || !s.value.document_id) return 'restricted'
-  return s.value.other_version || !s.value.version_id ? 'earlier' : 'whole'
+  return s.value.other_version || !s.value.version_id ? 'other' : 'whole'
 })
 const title = computed(() => t('chat.sources.quoted', { title: s.value.title ?? '' }))
 /** Where in it the answer read: the file, its page or slide, and the version where it is not the published one. */
 const where = computed(() => {
-  if (shownAs.value === 'earlier') return t('chat.sources.earlier')
+  if (shownAs.value === 'other') return t('chat.sources.other')
   const v = s.value
   return [
     v.file_id ? v.filename : null,
@@ -47,7 +50,7 @@ const where = computed(() => {
 const label = computed(() =>
   where.value ? t('chat.sources.entry', { title: title.value, where: where.value }) : title.value,
 )
-/** The document's page: at the version read, or, for an earlier one, as it is now. */
+/** The document's page: at the version read, or, for another one, as it is now. */
 const to = computed<RouteLocationRaw>(() => ({
   name: 'course-document',
   params: { courseId: props.courseId, documentId: s.value.document_id ?? '' },
@@ -101,12 +104,20 @@ async function openFile() {
       <el-icon v-if="opening" class="chat-source__busy is-loading" aria-hidden="true"><Loading /></el-icon>
     </button>
     <router-link
-      v-else-if="shownAs !== 'restricted'"
+      v-else-if="shownAs === 'whole'"
       :to="to"
       class="chat-source__link"
-      :title="shownAs === 'whole' ? t('chat.sources.openVersion') : t('chat.sources.earlierTip')"
+      :title="t('chat.sources.openVersion')"
       >{{ label }}</router-link
     >
+    <i18n-t v-else-if="shownAs === 'other'" keypath="chat.sources.otherLine" scope="global">
+      <template #link>
+        <router-link :to="to" class="chat-source__link" :title="t('chat.sources.otherTip')">{{ label }}</router-link>
+      </template>
+      <template #note>
+        <span class="chat-source__note">{{ t('chat.sources.otherNote') }}</span>
+      </template>
+    </i18n-t>
     <template v-else>
       <el-icon class="chat-source__lock" aria-hidden="true"><Lock /></el-icon>
       <span>{{ t('chat.sources.restricted') }}</span>
@@ -133,6 +144,9 @@ async function openFile() {
 .chat-source__link:hover {
   color: var(--el-color-primary);
   text-decoration-color: currentColor;
+}
+.chat-source__note {
+  color: var(--app-ink-3);
 }
 .chat-source__busy {
   margin-left: 4px;

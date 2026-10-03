@@ -281,16 +281,19 @@ export default {
     summaryNone: 'Based on: {n} course materials you cannot open',
     label: 'Course materials this answer relied on',
     quoted: '“{title}”',
-    // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
+    // A source, and where in it the answer read (its file, page or slide, version), or that it read another version.
     entry: '{title} · {where}',
     page: 'page {n}',
     slide: 'slide {n}',
     version: 'version {seq}',
     openFile: 'Open the file, where the answer read it',
     openVersion: 'Open this version of the material',
-    earlier: 'an earlier version',
-    earlierTip:
-      'The answer relied on an earlier version of this material, which you cannot open now: this opens the material as it is.',
+    // A version the reader may not open, older or newer than the one they may (other_version): said after its link, which opens the material as it is now.
+    other: 'another version',
+    otherLine: '{link} {note}',
+    otherNote: '(opens it as it is now)',
+    otherTip:
+      'The answer relied on another version of this material, one you cannot open: this opens the material as it is now.',
     restricted: 'a course material you cannot open',
     none: 'No course material cited',
     noneTip: 'The agent said this answer relied on no course material.',

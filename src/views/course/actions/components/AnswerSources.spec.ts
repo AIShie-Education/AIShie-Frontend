@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import ElementPlus from 'element-plus'
 import { i18n, setLocale } from '@/i18n'
@@ -12,11 +12,32 @@ afterEach(() => setLocale('en'))
 enableAutoUnmount(afterEach)
 
 describe('AnswerSources', () => {
-  it('counts the course materials a proposed answer names, by id alone, saying they are checked when it is approved', () => {
+  it('counts the course materials a proposed answer names, by id alone', () => {
     const w = render({ body: 'x', sources: [source, { ...source, document_id: 'd2' }] })
-    const line = w.get('p.answer-sources')
-    expect(line.text()).toBe('Based on 2 course materials')
-    expect(line.attributes('title')).toContain('checked again when the reply is approved')
+    expect(w.get('p.answer-sources').text()).toBe('Based on 2 course materials')
+  })
+
+  it('counts a material once however many of its pages, files or versions it names', () => {
+    const page = (n: number, over: Record<string, unknown> = {}) => ({ ...source, file_id: 'f1', page: n, ...over })
+    expect(
+      render({ body: 'x', sources: [page(2), page(3)] })
+        .get('p.answer-sources')
+        .text(),
+    ).toBe('Based on 1 course material')
+    expect(
+      render({ body: 'x', sources: [page(2), { ...source, document_id: 'd2' }, page(3, { version_id: 'v0' })] })
+        .get('p.answer-sources')
+        .text(),
+    ).toBe('Based on 2 course materials')
+  })
+
+  it('says that each is checked again when it is approved on focus, as a tap gives it, not only on hover', async () => {
+    const line = render({ body: 'x', sources: [source] }).get('p.answer-sources')
+    expect(line.attributes('tabindex')).toBe('0')
+    expect(line.attributes('title')).toBeUndefined()
+    expect(document.body.textContent).not.toContain('checked again when the reply is approved')
+    await line.trigger('focus')
+    await vi.waitFor(() => expect(document.body.textContent).toContain('checked again when the reply is approved'))
   })
 
   it.each([

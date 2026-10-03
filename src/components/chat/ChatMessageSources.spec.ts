@@ -56,7 +56,8 @@ const whole = (over: Partial<MessageSource> = {}): MessageSource => ({
   page: 3,
   ...over,
 })
-const earlier: MessageSource = { document_id: 'd1', kind: 'material', title: 'Week 1 — Setup', other_version: true }
+/** A version the reader may not open: older than the published one, or newer (a draft, or one published before an older one was again). */
+const other: MessageSource = { document_id: 'd1', kind: 'material', title: 'Week 1 — Setup', other_version: true }
 const restricted: MessageSource = { restricted: true }
 
 const pdf = (id: string, position: number, filename: string) => ({
@@ -144,7 +145,7 @@ describe('ChatMessageSources', () => {
   })
 
   it('sums several up by the first it names, and opens to list each as the reader may open it', async () => {
-    const w = sources([restricted, earlier, whole({ file_id: null, filename: null, page: null })])
+    const w = sources([restricted, other, whole({ file_id: null, filename: null, page: null })])
     const summary = w.get('button.chat-sources__summary')
     expect(summary.text()).toBe('Based on: “Week 1 — Setup” · 3 items')
     expect(summary.attributes('aria-expanded')).toBe('false')
@@ -158,16 +159,27 @@ describe('ChatMessageSources', () => {
     const items = list.findAll('li')
     expect(items.map((i) => i.text())).toEqual([
       'a course material you cannot open',
-      '“Week 1 — Setup” · an earlier version',
+      '“Week 1 — Setup” · another version (opens it as it is now)',
       '“Week 2 — Variables”',
     ])
     // Not to be opened: no link, nothing to click, no title.
     expect(items[0]!.find('a, button').exists()).toBe(false)
     expect(items[0]!.get('.chat-source').classes()).toContain('is-restricted')
-    // An earlier version: the document as it is now.
-    expect(items[1]!.get('a').attributes('href')).toBe('/courses/k1/documents/d1')
-    expect(items[1]!.get('a').attributes('title')).toContain('earlier version')
+    // Another version: the document as it is now, which is said beside the link, not only in its tooltip.
+    const link = items[1]!.get('a')
+    expect(link.attributes('href')).toBe('/courses/k1/documents/d1')
+    expect(link.text()).toBe('“Week 1 — Setup” · another version')
+    expect(link.attributes('title')).toBe(
+      'The answer relied on another version of this material, one you cannot open: this opens the material as it is now.',
+    )
+    expect(items[1]!.get('.chat-source__note').text()).toBe('(opens it as it is now)')
     expect(items[2]!.get('a').attributes('href')).toBe('/courses/k1/documents/d2?version=v2')
+  })
+
+  it('never calls a version the reader may not open earlier: it may be newer', () => {
+    const w = sources([other])
+    expect(w.get('.chat-sources').text()).toBe('Based on: “Week 1 — Setup” · another version (opens it as it is now)')
+    expect(w.text()).not.toMatch(/earlier/i)
   })
 
   it('says only how many it relied on where the reader may open none of them', () => {
@@ -194,25 +206,39 @@ describe('ChatMessageSources', () => {
     expect(w.find('.chat-sources__summary').exists()).toBe(false)
   })
 
+  it('says that the agent said it relied on none when the pill takes focus, as a tap gives it, not only on hover', async () => {
+    const w = sources([])
+    const pill = w.get('.chat-sources__none')
+    expect(pill.attributes('tabindex')).toBe('0')
+    expect(pill.attributes('title')).toBeUndefined()
+    const tip = 'The agent said this answer relied on no course material.'
+    expect(document.body.textContent).not.toContain(tip)
+    await pill.trigger('focus')
+    await vi.waitFor(() => expect(document.body.textContent).toContain(tip))
+    expect(pill.attributes('aria-describedby')).toBe(document.querySelector('.el-popper.app-tip-wrap')?.id)
+  })
+
   it.each([
     [
       'zh-Hant',
-      '依據：《Week 2 — Variables》· 2項',
+      '依據：《Week 2 — Variables》· 3項',
       '《Week 2 — Variables》· lecture2.pdf · 第3頁',
       '一份你無法開啟的課程教材',
+      '《Week 1 — Setup》· 另一個版本（開啟的是目前的版本）',
     ],
     [
       'zh-Hans',
-      '依据：《Week 2 — Variables》· 2项',
+      '依据：《Week 2 — Variables》· 3项',
       '《Week 2 — Variables》· lecture2.pdf · 第3页',
       '一份你无法打开的课程教材',
+      '《Week 1 — Setup》· 另一个版本（打开的是当前的版本）',
     ],
-  ] as const)('says what it relied on in %s', async (locale, line, first, second) => {
+  ] as const)('says what it relied on in %s', async (locale, line, first, second, third) => {
     setLocale(locale)
-    const w = sources([whole(), restricted])
+    const w = sources([whole(), restricted, other])
     const summary = w.get('.chat-sources__summary')
     expect(summary.text()).toBe(line)
     await summary.trigger('click')
-    expect(w.findAll('.chat-sources__item').map((i) => i.text())).toEqual([first, second])
+    expect(w.findAll('.chat-sources__item').map((i) => i.text())).toEqual([first, second, third])
   })
 })
