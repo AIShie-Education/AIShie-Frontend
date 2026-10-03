@@ -187,9 +187,10 @@ watch(
   color: var(--app-ink);
   font-weight: 500;
 }
+/* A file's size, and words after it (已取消, Cancelled): the smallest step words take, not a mark's. */
 .chat-chip__meta {
   color: var(--app-ink-3);
-  font-size: var(--app-text-mark);
+  font-size: var(--app-text-xs);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

@@ -38,6 +38,19 @@ h2,
 :is(h1, h2) :is(a, .el-tag, .app-muted, [class$='__count']) {
   font-weight: 500;
 }
+/* Strong text with no rule of its own (a <strong>, a table's heading) is the
+   strong weight, not the browser's bold: 500 in Chinese, rather than Noto
+   Sans's 700. An author's emphasis in rendered Markdown, read at length,
+   keeps a heading's weight (600; 700 in Chinese), so that it still stands
+   out of its paragraph. */
+b,
+strong,
+th {
+  font-weight: var(--app-weight-strong);
+}
+.markdown-body :is(b, strong) {
+  font-weight: var(--app-heading-weight);
+}
 #app {
   min-height: 100vh;
 }
@@ -304,7 +317,8 @@ summary:focus-visible,
 .markdown-body img {
   max-width: 100%;
 }
-/* An image from another site: a link to it, not the image (see utils/markdown.ts). */
+/* An image from another site: a link to it, not the image (see utils/markdown.ts). Its words
+   are the image's description, which may be Chinese: the size of the text around it, no smaller. */
 .markdown-body .md-image-link {
   display: inline-flex;
   align-items: center;
@@ -313,7 +327,6 @@ summary:focus-visible,
   padding: 0 6px;
   border: 1px dashed var(--app-indigo-line);
   border-radius: 4px;
-  font-size: 0.92em;
   overflow-wrap: anywhere;
 }
 .markdown-body .md-image-link::before {

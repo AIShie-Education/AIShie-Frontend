@@ -231,8 +231,9 @@ html.dark .el-card {
    what it draws takes the steps the app's own text takes, the two smallest a
    step larger in Chinese: its six sizes, then the components' own variables,
    then the sizes it writes into a rule of a component the app uses (a small
-   control's, a tooltip's, a field's error and count, a tag's). An icon's
-   size (a close button's, an alert's, a result's) stays its own. */
+   control's, a tooltip's, a field's error and count, a tag's, a date
+   picker's days, months and time panel, a switch's words inside it). An
+   icon's size (a close button's, an alert's, a result's) stays its own. */
 :root {
   --el-font-size-extra-small: var(--app-text-xs);
   --el-font-size-small: var(--app-text-sm);
@@ -313,18 +314,37 @@ html.dark .el-card {
 .el-switch--small .el-switch__label *,
 .el-dropdown-menu--small .el-dropdown-menu__item,
 .el-descriptions--small,
-.el-descriptions--small .el-descriptions__body .el-descriptions__table .el-descriptions__cell {
+.el-descriptions--small .el-descriptions__body .el-descriptions__table .el-descriptions__cell,
+.el-date-table,
+.el-month-table,
+.el-quarter-table,
+.el-year-table,
+.el-date-picker__time-header,
+.el-date-range-picker__time-header,
+.el-range-editor--small .el-range-input,
+.el-range-editor--small .el-range-separator,
+.el-picker-panel__btn,
+.el-time-panel__btn,
+.el-time-spinner__item,
+.el-switch__core .el-switch__inner-wrapper,
+.el-progress-bar__innerText {
   font-size: var(--app-text-xs);
 }
 .el-message__content {
   font-size: var(--app-text-md);
 }
-/* Its bold (700), where it marks what is chosen or a filter's chip, is the
-   app's strong text: in Chinese 500, not Noto Sans's 700. */
+/* Its bold (700, and a time panel's 800 on OK), where it marks what is
+   chosen, today or a filter's chip, is the app's strong text: in Chinese
+   500, not Noto Sans's 700. */
 .el-check-tag,
 .el-select-dropdown__item.is-selected,
 .el-pager li.is-active,
-.el-step__title.is-process {
+.el-step__title.is-process,
+.el-date-table td.today .el-date-table-cell__text,
+.el-month-table td.today .el-date-table-cell__text,
+.el-year-table td.today .el-date-table-cell__text,
+.el-time-spinner__item.is-active:not(.is-disabled),
+.el-time-panel__btn.confirm {
   font-weight: var(--app-weight-strong);
 }
 

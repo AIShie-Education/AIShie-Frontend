@@ -536,9 +536,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   200 px of the window's top. Inside a course the page's header has 12 px under it, not 20. Known
   to miss it, by a line of their own: an assignment, a submission and a proposal, whose header has
   a back link, a title and a line of facts beside their actions (about 220 px), and the Submissions
-  and Grading scheme pages (205 and 215 px), whose subtitle takes a second line; in English, whose
-  subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a pixel or so
-  (201 px); do not add to them.
+  and Grading scheme pages (207 and 216 px in Chinese), whose subtitle takes a second line; in
+  English, whose subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a
+  pixel or so (201 px); do not add to them. Chinese's smaller steps are a size larger than English's,
+  so measure a page's header in both.
 - **Navigation's icons are outlined, never filled**: the activity bar, the side bar, the phone's
   header, a course's tabs and More's menu, the grades' tabs. A filled glyph among outlined ones
   reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
@@ -582,18 +583,30 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   Chinese. In Chinese, either script, `xs` and `sm` are 13 and 14 px: a Han character at 12 px is a
   blur on a laptop's screen, so 12 px is left to English and figures; check that a tag, a button or
   a table's cell still holds its words in Chinese. An icon drawn on its own takes a step too; one in a
-  line of text, the text's. A size relative to the text around it (`em`) is a step's too. Strong text
-  (a name, a label, a table's heading, a figure) is `var(--app-weight-strong)`, 600, and 500 in
-  Chinese, whose Noto Sans has no 600 and would set it at 700; a heading, and a figure that stands for
-  a card, is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500.
-  Leading is `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface, `--app-lh-text` (1.6; 1.75)
-  for a paragraph and `--app-lh-prose` (1.7; 1.85) for rendered Markdown. Element Plus's sizes are
-  mapped onto the same steps (`styles/element.css`). `src/styles/typeScale.spec.ts` refuses any other
-  size or weight, wherever it is written (a style sheet, a component's style, an inline style in a
-  template or a script); what it lets through (the print layout's points, pdf.js's text layer, an
-  agent's initials drawn to its square, a join code projected full screen) is listed there, each
-  with why. Room takes the steps `var(--app-space-xs)` to `-2xl` (4, 8, 12, 16, 24, 32 px) in a
-  rule written or rewritten.
+  line of text, the text's. A size relative to the text around it (`em`) is a step's too, from 1em to
+  2em (a heading in rendered Markdown), never smaller: the text around may be Chinese at 13 px. Strong
+  text (a name, a label, a table's heading, a figure) is `var(--app-weight-strong)`, 600, and 500 in
+  Chinese, whose Noto Sans has no 600 and would set it at 700; a `<strong>`, a `<b>` or a `<th>` with
+  no rule of its own takes it too (`main.css`), not the browser's bold, except an author's emphasis in
+  rendered Markdown, which keeps a heading's weight; a heading, and a figure that stands for a card,
+  is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Leading is
+  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface, `--app-lh-text` (1.6; 1.75) for a
+  paragraph and `--app-lh-prose` (1.7; 1.85) for rendered Markdown. Element Plus's sizes are mapped
+  onto the same steps (`styles/element.css`): its six, its components' own variables, and every rule
+  of words it writes 12 or 13 px into (a small control's, a tooltip's, a date picker's days, months
+  and time panel, a switch's words inside it), its bold where it marks what is chosen or today the
+  strong weight. `src/styles/typeScale.spec.ts` refuses any other size or weight, wherever and
+  however it is written: a declaration in a style sheet or a string of CSS, in any case; a style
+  object's key in a template or a script (`fontSize: '12px'`, `'font-size': '12px'`); an element's
+  style (`el.style.fontSize`, `setProperty('font-size', …)`); a custom property that sizes or weighs
+  text (`--el-tag-font-size: 11px`); and the scale's own tokens, set in `tokens.css` alone. It also
+  fails on a small size of Element Plus's left unmapped, but for an icon's and a component the app
+  does not use (until it does). What it lets through (the print layout's points, pdf.js's text
+  layer, an agent's initials and glyph drawn to its square, code in rendered Markdown, a join code
+  projected full screen) is listed there, each with why. `e2e/type-scale.spec.ts` fails on any
+  Chinese a course's page shows under 13 px, on a laptop and on a phone, and in a date picker. Room
+  takes the steps `var(--app-space-xs)` to `-2xl` (4, 8, 12, 16, 24, 32 px) in a rule written or
+  rewritten.
 - Forms: `el-form` with `label-position="top"` and rules; dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
