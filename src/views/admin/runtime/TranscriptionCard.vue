@@ -291,7 +291,11 @@ async function withdraw() {
                   <span class="transcription-card__option-model">{{ o.model }}</span>
                 </el-option>
               </el-select>
-              <AppTag v-if="tr.offer_status && tr.offer_status !== 'ok' && form.offer === tr.offer" :tone="toneOf(OFFER_STATUS_TAG[tr.offer_status] ?? 'warning')" class="transcription-card__offer-status">
+              <AppTag
+                v-if="tr.offer_status && tr.offer_status !== 'ok' && form.offer === tr.offer"
+                :tone="toneOf(OFFER_STATUS_TAG[tr.offer_status] ?? 'warning')"
+                class="transcription-card__offer-status"
+              >
                 {{ t(`runtimeAdmin.transcription.offerStatus.${tr.offer_status}`) }}
               </AppTag>
             </div>
@@ -373,7 +377,10 @@ async function withdraw() {
         <div class="transcription-card__credential" :data-credential="tr.credential.status">
           <h3 class="transcription-card__subtitle">{{ t('runtimeAdmin.transcription.credential.title') }}</h3>
           <div class="transcription-card__credential-row">
-            <AppTag :tone="toneOf(CREDENTIAL_TAG[tr.credential.status] ?? 'info')" class="transcription-card__credential-status">
+            <AppTag
+              :tone="toneOf(CREDENTIAL_TAG[tr.credential.status] ?? 'info')"
+              class="transcription-card__credential-status"
+            >
               {{ t(`runtimeAdmin.transcription.credential.status.${tr.credential.status}`) }}
             </AppTag>
             <code v-if="tr.credential.hint" class="transcription-card__hint">{{ tr.credential.hint }}</code>

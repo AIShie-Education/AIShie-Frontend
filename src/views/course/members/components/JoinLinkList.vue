@@ -114,7 +114,14 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
             <dt>{{ t('join.links.list.domains') }}</dt>
             <dd class="join-link__domains">
               <template v-if="l.allowed_email_domains?.length">
-                <AppTag v-for="d in l.allowed_email_domains" :key="d" variant="outline" :icon="Message">@{{ d }}</AppTag>
+                <AppTag
+                  v-for="d in l.allowed_email_domains"
+                  :key="d"
+                  variant="outline"
+                  :icon="Message"
+                >
+                  @{{ d }}
+                </AppTag>
               </template>
               <span v-else>{{ t('join.links.anyEmail') }}</span>
             </dd>

@@ -505,7 +505,11 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
             <el-radio-group v-if="canKeep" v-model="keyMode" class="offer-form__keymode">
               <el-radio value="keep">
                 {{ t('runtimeAdmin.offer.keyKeep', { hint: base?.key_hint ?? '' }) }}
-                <AppTag v-if="base?.key_status" :tone="toneOf(base.key_status === 'tested' ? 'success' : 'warning')" class="offer-form__key-status">
+                <AppTag
+                  v-if="base?.key_status"
+                  :tone="toneOf(base.key_status === 'tested' ? 'success' : 'warning')"
+                  class="offer-form__key-status"
+                >
                   {{ t(`runtimeAdmin.offers.${base.key_status}`) }}
                 </AppTag>
               </el-radio>

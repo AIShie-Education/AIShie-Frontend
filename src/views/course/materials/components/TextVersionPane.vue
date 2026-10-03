@@ -385,7 +385,11 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
   <div class="text-pane" :data-status="status ?? 'none'" :data-file="fileName">
     <div class="text-pane__bar">
       <div class="text-pane__state">
-        <AppTag v-if="status && (shown !== 'none' || !isQueued(status))" :tone="toneOf(TEXT_STATUS_TAG[status])" class="text-pane__status">
+        <AppTag
+          v-if="status && (shown !== 'none' || !isQueued(status))"
+          :tone="toneOf(TEXT_STATUS_TAG[status])"
+          class="text-pane__status"
+        >
           {{ t(`enums.textStatus.${status}`) }}
         </AppTag>
         <span v-if="source === 'ai'" class="text-pane__source">

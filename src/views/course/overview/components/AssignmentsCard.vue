@@ -146,7 +146,10 @@ const groups = computed(() => [
                 {{ t('overview.assignments.unpublished') }}
               </AppTag>
               <StatusTag v-if="r.standing?.state" vocab="submissionState" :value="r.standing.state" />
-              <AppTag v-else-if="r.standing?.none" :tone="toneOf(r.standing.none === 'notHandedIn' ? 'danger' : 'info')">
+              <AppTag
+                v-else-if="r.standing?.none"
+                :tone="toneOf(r.standing.none === 'notHandedIn' ? 'danger' : 'info')"
+              >
                 {{ t(`overview.assignments.${r.standing.none}`) }}
               </AppTag>
             </span>

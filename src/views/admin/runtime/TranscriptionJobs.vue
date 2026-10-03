@@ -153,7 +153,10 @@ const empty = computed(() => loaded.value && !jobs.value.length)
           <template #default="{ row }">
             <div class="job-cell" :data-job="row.id">
               <div class="job-cell__head">
-                <AppTag :tone="toneOf(JOB_STATUS_TAG[row.status as TranscriptionJob['status']] ?? 'info')" class="job-cell__status">
+                <AppTag
+                  :tone="toneOf(JOB_STATUS_TAG[row.status as TranscriptionJob['status']] ?? 'info')"
+                  class="job-cell__status"
+                >
                   {{
                     te(`runtimeAdmin.transcription.jobs.status.${row.status}`)
                       ? t(`runtimeAdmin.transcription.jobs.status.${row.status}`)

@@ -514,7 +514,13 @@ const backLink = computed(() => ({
             </el-table-column>
             <el-table-column min-width="80">
               <template #default="{ row }">
-                <AppTag v-if="row.id === gradeId" variant="outline" :icon="Location">{{ t('grades.detail.thisOne') }}</AppTag>
+                <AppTag
+                  v-if="row.id === gradeId"
+                  variant="outline"
+                  :icon="Location"
+                >
+                  {{ t('grades.detail.thisOne') }}
+                </AppTag>
               </template>
             </el-table-column>
           </el-table>

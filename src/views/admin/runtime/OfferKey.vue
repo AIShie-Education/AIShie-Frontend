@@ -15,7 +15,11 @@ const { t } = useI18n()
   <div class="offer-key">
     <template v-if="offer.source === 'site'">
       <code v-if="offer.key_hint" class="offer-key__hint">{{ offer.key_hint }}</code>
-      <AppTag v-if="offer.key_status" :tone="toneOf(offer.key_status === 'tested' ? 'success' : 'warning')" class="offer-key__status">
+      <AppTag
+        v-if="offer.key_status"
+        :tone="toneOf(offer.key_status === 'tested' ? 'success' : 'warning')"
+        class="offer-key__status"
+      >
         {{ t(`runtimeAdmin.offers.${offer.key_status}`) }}
       </AppTag>
       <span v-if="offer.key_status === 'untested'" class="offer-key__why">{{
