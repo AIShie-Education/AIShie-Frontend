@@ -86,10 +86,10 @@ function choose(v: V | '') {
   background-color: transparent;
   box-shadow: inset 0 0 0 1px var(--app-line-strong);
 }
+/* Set apart from the words by weight alone: a count is read as they are, in the chip's own ink. */
 .filter-chip__count {
   margin-left: 2px;
   font-weight: normal;
-  opacity: 0.85;
 }
 /* A finger's size on a touch screen, as the course's tabs are. */
 @media (pointer: coarse) {
