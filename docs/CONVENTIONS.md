@@ -1015,9 +1015,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   and Source Serif, as an English page does, through the stacks' first family, `'AIshie Latin'`
   (`styles/fonts-latin.css`), and the rest in Noto TC or SC: Han and full-width punctuation, the
   quotation marks, the ellipsis and the em dash, which Chinese doubles (「——」). A page in English
-  sets the Chinese it shows (a name, a course's title) in Noto TC, loaded the first time it shows any
-  (`styles/fonts.ts`); a language's own name marked with its `lang` does not count. No stack names
-  PMingLiU or SimSun, which have no bold.
+  sets the Chinese it shows (a name, a course's title, what is typed into a field) in Noto TC, loaded
+  the first time it shows any (`styles/fonts.ts`); a language's own name marked with its `lang` does
+  not count. Buttons and fields take the stacks as the rest of the page does (`styles/main.css`), not
+  the browser's own face for them. No stack names PMingLiU or SimSun, which have no bold, and Noto
+  comes before any Chinese face of the system's (`src/styles/stacks.spec.ts`).
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.

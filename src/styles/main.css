@@ -18,6 +18,16 @@ body {
   color: var(--app-ink);
   -webkit-font-smoothing: antialiased;
 }
+/* Buttons and fields take the typefaces of what holds them, as the rest of
+   the page's text does. A browser gives them a face of its own (Arial, and
+   the system's Chinese face), and Element Plus names none for its buttons
+   (el-button) or its fields (el-input); their sizes and weights it sets. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
 /* The page's and its sections' titles, and every dialog's, are set in the
    serif, at the weight and tracking of the page's language; smaller headings
    stay in the sans. */

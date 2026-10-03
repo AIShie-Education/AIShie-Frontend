@@ -15,11 +15,15 @@ import {
 // Which typeface draws which letters (docs/CONVENTIONS.md, Text). A page in
 // Chinese sets Latin letters, figures and the dot of "CS101·A" in Plex and
 // Source Serif, as an English page does, and Han and its punctuation in Noto;
-// a page in English sets the Chinese it shows (a course's title, a name) in
-// Noto TC, whose style sheets it fetches only once it shows some, never in a
-// face of the system's (PingFang, Songti, PMingLiU). What draws an element's
-// text is the browser's own answer (CSS.getPlatformFontsForNode), with how
-// many glyphs each face drew.
+// a page in English sets the Chinese it shows (a course's title, a name, what
+// is typed into a field) in Noto TC, whose style sheets it fetches only once
+// it shows some, not in a face of the system's (PingFang, Songti). Buttons and
+// fields are set as the rest, not in the browser's own face for them (Arial).
+// What draws an element's text is the browser's own answer
+// (CSS.getPlatformFontsForNode), with how many glyphs each face drew. It
+// knows only the faces of the machine the tests run on, which has no PMingLiU
+// or SimSun: that no stack names them is checked as the stacks are written
+// (src/styles/stacks.spec.ts).
 
 const stamp = Date.now().toString(36)
 const TITLE = `程式設計入門 ${stamp}`
@@ -63,8 +67,9 @@ async function faces(target: Locator): Promise<Record<string, number>> {
     const { fonts } = await cdp.send('CSS.getPlatformFontsForNode', { nodeId })
     const out: Record<string, number> = {}
     for (const f of fonts) {
-      // A file names its family with its weight ("Noto Sans TC Thin", "Source Serif 4 SemiBold").
-      const family = f.familyName.replace(/ (?:Thin|ExtraLight|Light|Regular|Medium|SemiBold|Bold)$/, '')
+      // A file names its family with its weight ("Noto Sans TC Thin", "Noto Sans TC Thin Medium",
+      // "Source Serif 4 SemiBold").
+      const family = f.familyName.replace(/(?: (?:Thin|ExtraLight|Light|Regular|Medium|SemiBold|Bold))+$/, '')
       const name = f.isCustomFont ? family : `${family} (system)`
       out[name] = (out[name] ?? 0) + f.glyphCount
     }
@@ -139,6 +144,15 @@ test('a page in Traditional Chinese sets Latin letters, figures and the dot in P
   // In a heading, the serif's: Source Serif for the letters, figures and the dot, Noto Serif TC for Han.
   const serif = await probe(page.locator('.page-header'), 'h2', 'CS101·A 第二週')
   await expect.poll(() => faces(serif)).toEqual({ 'Source Serif 4': 'CS101·A '.length, 'Noto Serif TC': 3 })
+
+  // A button and a field as the rest of the page: a button's label in Noto Sans TC; in a field, letters,
+  // figures and spaces in Plex, Han in Noto.
+  const filter = page.locator('.side-courses .el-input__inner')
+  await filter.fill('林 Chan 88')
+  await expect.poll(() => faces(filter)).toEqual({ 'IBM Plex Sans': 8, 'Noto Sans TC': 1 })
+  await page.goto(coursePath('members'))
+  const add = page.locator('.el-button > span', { hasText: '新增成員' })
+  await expect.poll(() => faces(add)).toEqual({ 'Noto Sans TC': 4 })
 })
 
 test('a page in English fetches no Chinese face while it shows no Chinese, not for the language menu either', async ({
@@ -184,8 +198,26 @@ test('a page in English sets the Chinese it shows in Noto TC, fetched once it sh
   expect(await faces(page.locator('.course-card__code'))).toEqual({ 'IBM Plex Sans': `TYPE101·${stamp}`.length })
   const sans = await probe(page.locator('.page-header'), 'span', '程式設計入門 CS101')
   await expect.poll(() => faces(sans)).toEqual({ 'Noto Sans TC': 6, 'IBM Plex Sans': ' CS101'.length })
+  // The initial of the account's button, 陳, as well: a button's text is the page's.
+  await expect.poll(() => faces(page.locator('.account__button .account__avatar'))).toEqual({ 'Noto Sans TC': 1 })
 
   // Traditional Chinese's, never Simplified's.
+  expect(fetched).toContain('tc')
+  expect(fetched).not.toContain('sc')
+})
+
+test('a page in English sets Chinese typed into a field in Noto TC, fetched once it is typed', async ({ page }) => {
+  const fetched = chineseFetched(page)
+  await signIn(page, demo().actors.instructor)
+  await page.goto(coursePath())
+  await expect(page.locator('.course-head__title')).toHaveText('Introduction to Programming')
+  const filter = page.locator('.side-courses .el-input__inner')
+  await filter.fill('Chan 88')
+  await expect.poll(() => faces(filter)).toEqual({ 'IBM Plex Sans': 'Chan 88'.length })
+  expect(fetched).toEqual([])
+
+  await filter.fill('林 Chan 88')
+  await expect.poll(() => faces(filter)).toEqual({ 'IBM Plex Sans': 8, 'Noto Sans TC': 1 })
   expect(fetched).toContain('tc')
   expect(fetched).not.toContain('sc')
 })

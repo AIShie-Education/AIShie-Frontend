@@ -110,6 +110,38 @@ describe('a page in English', () => {
     expect(loaded).toEqual(['Noto TC'])
   })
 
+  it('loads them when the reader types Chinese into a field, not into a password’s', async () => {
+    const form = add('<input id="filter"><input id="secret" type="password">')
+    loadFontsFor('en')
+    await settle()
+    const type = (id: string, value: string) => {
+      const field = form.querySelector<HTMLInputElement>(`#${id}`)!
+      field.value = value
+      field.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+    type('secret', '密碼')
+    type('filter', 'Chan')
+    await settle()
+    expect(loaded).toEqual([])
+
+    type('filter', '林 Chan')
+    await settle()
+    expect(loaded).toEqual(['Noto TC'])
+  })
+
+  it('loads them when a field comes into it holding Chinese (a name to edit)', async () => {
+    loadFontsFor('en')
+    await settle()
+    // A field's value, which the page sets, is no text of the page's.
+    const name = document.createElement('textarea')
+    name.value = '林老師'
+    const form = document.createElement('form')
+    form.append(name)
+    document.body.append(form)
+    await settle()
+    expect(loaded).toEqual(['Noto TC'])
+  })
+
   it('turned English, loads them for the Chinese it still shows once its own words are redrawn, and not for those', async () => {
     const words = add('<nav>課程</nav>').firstChild as HTMLElement
     loadFontsFor('en')
