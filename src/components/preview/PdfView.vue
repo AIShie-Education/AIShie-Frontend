@@ -13,11 +13,13 @@
 // page, or at the one it is given (the page an answer relied on). The page
 // read is the first at the top, the last at the end, and otherwise the one
 // at the top third of the screen; a page gone to is read until the pages are
-// scrolled from there, by the reader (pdfPages.ts). Two fingers, anywhere on
-// it, the bar too, pinch the pages larger or smaller (a touchpad's pinch,
-// which comes as a wheel with Ctrl held, too), about the point between them,
-// and the browser does not zoom the screen as well; a pinch that ends near
-// the width fits it again.
+// scrolled from there, by the reader, and is gone to again as the viewer
+// fits the zoom to a new width. The previous and next page buttons move the
+// pages or are disabled: Next at the end, both where the pages do not scroll
+// (pdfPages.ts). Two fingers, anywhere on it, the bar too, pinch the pages
+// larger or smaller (a touchpad's pinch, which comes as a wheel with Ctrl
+// held, too), about the point between them, and the browser does not zoom
+// the screen as well; a pinch that ends near the width fits it again.
 //
 // Where the view is narrow (a phone, 640 px or less of its own width, as the
 // viewer is the whole screen up to a window that wide) or short (a phone on
@@ -35,7 +37,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch 
 import { useI18n } from 'vue-i18n'
 import { useContainerWidth } from '@/composables/useContainerWidth'
 import { formatPct } from '@/utils/format'
-import { atEnd, nextPage, pageAt, pageInView, prevPage, type PagesScrolled } from './pdfPages'
+import { atEnd, nextPage, pageAt, pageInView, prevPage, scrolls, type PagesScrolled } from './pdfPages'
 import { openPdf, TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from './pdfjs'
 import { clampZoom, CSS_UNITS, fitWidthOf, nearFit, pinchZoom, wheelZoom, zoomStep } from './pdfZoom'
 
@@ -93,8 +95,10 @@ const percent = computed(() => Math.round(zoom.value * 100))
 const give = ref(0)
 /** Scrolled to the end, which reads the last page: the next page button has nowhere to take the pages. */
 const end = ref(false)
-const canPrev = computed(() => current.value > 1)
-const canNext = computed(() => current.value < pageCount.value && !end.value)
+/** The pages do not scroll at all, all on the screen at once: neither page button has anywhere to take them. */
+const still = ref(false)
+const canPrev = computed(() => current.value > 1 && !still.value)
+const canNext = computed(() => current.value < pageCount.value && !end.value && !still.value)
 
 let loadingTask: ReturnType<typeof openPdf> | null = null
 let disposed = false
@@ -296,11 +300,11 @@ let tracking = 0
 /**
  * Where going to a page left the pages scrolled: a page near the end, which
  * cannot come to the top of the screen, is still the page read until they
- * are scrolled from there (and kept so as the viewer fits the zoom to the
- * width again: refit).
+ * are scrolled from there (and gone to again as the viewer fits the zoom to
+ * the width again: refit).
  */
 let heldAt: number | null = null
-/** Reads, at the next frame, where the pages are: the page read (pageInView), and whether they are at the end. */
+/** Reads, at the next frame, where the pages are: the page read (pageInView), whether they are at the end, and whether they scroll at all. */
 function onScroll() {
   if (tracking) return
   tracking = requestAnimationFrame(() => {
@@ -308,6 +312,7 @@ function onScroll() {
     const s = measured()
     if (!s) return
     end.value = atEnd(s)
+    still.value = !scrolls(s)
     if (heldAt !== null && Math.abs(s.scrollTop - heldAt) < 1) return
     heldAt = null
     const page = pageInView(s)
@@ -389,14 +394,20 @@ async function setZoom(next: number, at?: { x: number; y: number }) {
 }
 /**
  * Fits the zoom to the pages area's width again, as it changes size (a
- * window made narrower, a scroll bar come): the viewer's doing, not the
- * reader's, so a page gone to is still the page read.
+ * window made narrower, a phone turned on its side, a scroll bar come): the
+ * viewer's doing, not the reader's, so a page gone to is gone to again, where
+ * the pages now put it (at the end, for one that cannot come to the top), and
+ * is still the page read. Kept where the zoom left it instead, a page near the
+ * end would be read off the screen: the zoom keeps the top of the screen as
+ * far from the page's top, in its heights, and at the end that is pages above
+ * it.
  */
 async function refit() {
   const el = scroller.value
   const held = heldAt !== null && !!el && Math.abs(el.scrollTop - heldAt) < 1
+  const page = current.value
   await setZoom(widthZoom())
-  if (held && el) heldAt = el.scrollTop
+  if (held) goTo(page)
 }
 function zoomIn() {
   fitWidth.value = false

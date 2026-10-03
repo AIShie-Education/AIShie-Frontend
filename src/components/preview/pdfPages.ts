@@ -7,8 +7,11 @@
 // the last one's foot, and those whose top lies lower are all on the screen
 // at once, there, at the end. So the end is one stop: what is read there is
 // the last page, Next goes to it from before them, and Prev from it goes
-// back to the last page the pages move for. The previous and next page
-// buttons always move the pages, or are disabled.
+// back to the last page the pages move for. Pages that do not scroll at all
+// (a short document, or one zoomed out) are all on the screen at once, at
+// the top: one stop, where the first is read and neither button has anywhere
+// to take them. The previous and next page buttons always move the pages,
+// or are disabled.
 
 /** Where the pages lie and how far they are scrolled, in CSS pixels. */
 export interface PagesScrolled {
@@ -31,6 +34,11 @@ export function maxScroll(s: PagesScrolled): number {
   return Math.max(0, s.scrollHeight - s.clientHeight)
 }
 
+/** Whether the pages scroll at all: where they do not, they are all on the screen at once, and nothing moves them. */
+export function scrolls(s: PagesScrolled): boolean {
+  return maxScroll(s) >= 1
+}
+
 /** Scrolled to the top (or as good as: within a pixel). */
 export function atTop(s: PagesScrolled): boolean {
   return s.scrollTop < 1
@@ -38,8 +46,7 @@ export function atTop(s: PagesScrolled): boolean {
 
 /** Scrolled to the end, where the pages scroll no further. Pages that do not scroll at all have no end of their own. */
 export function atEnd(s: PagesScrolled): boolean {
-  const max = maxScroll(s)
-  return max >= 1 && s.scrollTop >= max - 1
+  return scrolls(s) && s.scrollTop >= maxScroll(s) - 1
 }
 
 /** The page at `mark` px down the pages: the last whose top is at or above it; the first above them all. */

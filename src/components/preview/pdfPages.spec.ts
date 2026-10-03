@@ -8,6 +8,7 @@ import {
   pageInView,
   prevPage,
   scrollFor,
+  scrolls,
   type PagesScrolled,
 } from './pdfPages'
 
@@ -56,6 +57,7 @@ const tallDeck = pages(Array(8).fill(210), { clientHeight: 902 })
 describe('where the pages are', () => {
   it('scroll at most to show the foot of the last page and the room under it', () => {
     expect(maxScroll(deck(0))).toBe(1130)
+    expect(scrolls(deck(0))).toBe(true)
     expect(atTop(deck(0))).toBe(true)
     expect(atTop(deck(1))).toBe(false)
     expect(atEnd(deck(1130))).toBe(true)
@@ -66,7 +68,11 @@ describe('where the pages are', () => {
   it('have no end of their own where they do not scroll at all', () => {
     const two = pages([200, 200], { clientHeight: 900 })
     expect(maxScroll(two(0))).toBe(0)
+    expect(scrolls(two(0))).toBe(false)
     expect(atEnd(two(0))).toBe(false)
+    // Within a pixel of fitting, as good as not scrolling.
+    expect(scrolls(pages([200, 200], { clientHeight: 500 - 0.5 })(0))).toBe(false)
+    expect(scrolls(pages([200, 200], { clientHeight: 500 - 1 })(0))).toBe(true)
   })
 
   it('goes to a page with its top a gutter below the top of the screen, as far as the pages scroll', () => {
@@ -140,12 +146,6 @@ describe('the previous page button', () => {
     // Gone to the seventh (kept as the page read there), the same.
     expect(prevPage(deck(1130), 7, GUTTER)).toBe(6)
   })
-
-  it('goes to the page before where nothing would move the pages, as they do not scroll', () => {
-    const two = pages([200, 200], { clientHeight: 900 })
-    expect(prevPage(two(0), 2, GUTTER)).toBe(1)
-    expect(prevPage(two(0), 1, GUTTER)).toBe(1)
-  })
 })
 
 describe('the next page button', () => {
@@ -160,9 +160,17 @@ describe('the next page button', () => {
     expect(pageInView(deck(scrollFor(deck(0), 8, GUTTER)))).toBe(8)
     expect(nextPage(deck(1130), 8, GUTTER)).toBe(8)
   })
+})
 
-  it('goes to the page after where the pages do not scroll', () => {
-    const two = pages([200, 200], { clientHeight: 900 })
-    expect(nextPage(two(0), 1, GUTTER)).toBe(2)
+describe('pages that do not scroll', () => {
+  // Two slides on a phone of 390 × 844, the whole of them on the screen at once.
+  const two = pages([210, 210], { clientHeight: 746 })
+
+  it('are one stop, at the top, where the first is read and going to no page would move them', () => {
+    expect(scrolls(two(0))).toBe(false)
+    expect(atTop(two(0))).toBe(true)
+    expect(pageInView(two(0))).toBe(1)
+    // So neither the previous nor the next page button has anywhere to take them: both are disabled (PdfView.vue).
+    for (const page of [1, 2]) expect(scrollFor(two(0), page, GUTTER)).toBe(0)
   })
 })

@@ -23,8 +23,10 @@ import {
 // larger, not the whole screen, wherever they start, the bar too. The page
 // read is the first at the top, even where the top third of the screen is on
 // the second, and the last at the end, where Next is disabled and Prev moves
-// the pages; a page gone to stays the page read as the viewer fits the zoom
-// to a new width.
+// the pages; a page gone to stays the page read, and on the screen, as the
+// viewer fits the zoom to a new width or the phone is turned on its side;
+// where the pages do not scroll at all (a deck of two slides), neither Prev
+// nor Next has anywhere to take them, and both are disabled.
 // Where the bar has no room for all it holds, it leaves something out, never
 // cutting a digit of the count short: a document of 150 pages zoomed by hand
 // on a phone, in English and in Traditional Chinese, and one of 1,200 pages
@@ -116,13 +118,19 @@ const EXERCISES: FileSpec = {
   ),
 }
 
+const PAIR: FileSpec = {
+  name: `sorting-pair-${tag}.pdf`,
+  mimeType: 'application/pdf',
+  buffer: pdfOf(960, 540, ['Recap', 'Next week'], 2),
+}
+
 let documentId = ''
 
 test.beforeAll(async () => {
   const d = demo()
   const I = d.actors.instructor.token
   const files = []
-  for (const f of [DECK, HANDOUT, NOTE, READER, EXERCISES]) {
+  for (const f of [DECK, HANDOUT, NOTE, READER, EXERCISES, PAIR]) {
     const q = `kind=material&content_type=${encodeURIComponent(f.mimeType)}&filename=${encodeURIComponent(f.name)}`
     const u = await call(I, 'GET', `/v1/courses/${d.course.id}/upload-url?${q}`)
     expect(u.body.status, JSON.stringify(u.body.error)).toBe('executed')
@@ -272,6 +280,34 @@ async function settled(page: Page) {
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
 }
 
+/**
+ * Where the pages are scrolled, and where slide `slide` lies on the screen:
+ * whether they are at the end, and its top and its foot from the top of the
+ * pages area, beside how much of the area is seen (above the compact bar).
+ */
+function placeOf(dialog: Locator, slide: string) {
+  return dialog.locator('.pdf-view__pages').evaluate((el, slide) => {
+    const area = el.getBoundingClientRect()
+    const page = el.querySelector<HTMLElement>(`.pdf-page[data-page="${slide}"]`)!.getBoundingClientRect()
+    return {
+      end: el.scrollTop >= el.scrollHeight - el.clientHeight - 1,
+      scrollTop: el.scrollTop,
+      top: page.top - area.top,
+      foot: page.bottom - area.top,
+      seen: el.clientHeight - (parseFloat(getComputedStyle(el).paddingBottom) || 0),
+    }
+  }, slide)
+}
+
+/** At the end of the pages, slide `slide` on the screen, its foot clear of the bar. */
+async function expectShownAtEnd(dialog: Locator, slide: string, what: string) {
+  const at = await placeOf(dialog, slide)
+  expect(at.end, `${what}: at the end`).toBe(true)
+  expect(at.top, `${what}: slide ${slide} not below the screen`).toBeLessThan(at.seen)
+  expect(at.foot, `${what}: slide ${slide} clear of the bar`).toBeLessThanOrEqual(at.seen + 0.5)
+  expect(at.foot, `${what}: slide ${slide} not above the screen`).toBeGreaterThan(0)
+}
+
 async function inDark(page: Page, name: string) {
   await page.locator('html').evaluate((h) => h.classList.add('dark'))
   await photograph(page, name)
@@ -355,8 +391,8 @@ test.describe('on a phone', () => {
     const bar = (await dialog.getByRole('toolbar', { name: 'Pages and zoom' }).boundingBox())!
     expect(last.y + last.height).toBeLessThanOrEqual(bar.y)
 
-    // A slide gone to that cannot come to the top stays the slide read as the viewer fits the zoom to a
-    // new width (a narrower window, a scroll bar come), and so does the last.
+    // A slide gone to that cannot come to the top stays the slide read, and on the screen at the end, as
+    // the viewer fits the zoom to a new width (a narrower window, a scroll bar come), and so does the last.
     for (const [slide, width] of [
       ['7', 360],
       ['8', 390],
@@ -366,7 +402,7 @@ test.describe('on a phone', () => {
       await settled(page)
       await expect(field).toHaveValue(slide)
       // At the end, where the pages go no further: Next would not move them.
-      expect(await pages.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThan(1)
+      await expectShownAtEnd(dialog, slide, `slide ${slide} gone to`)
       await expect(next).toBeDisabled()
       const before = (await first.boundingBox())!.width
       await page.setViewportSize({ width, height: 844 })
@@ -374,6 +410,8 @@ test.describe('on a phone', () => {
       await settled(page)
       await settled(page)
       await expect(field, `slide ${slide}, refitted to ${width} px`).toHaveValue(slide)
+      await expectShownAtEnd(dialog, slide, `slide ${slide}, refitted to ${width} px`)
+      await expect(next).toBeDisabled()
     }
     await expectFillsWidth(dialog, first, 8)
 
@@ -384,7 +422,7 @@ test.describe('on a phone', () => {
     const noteFirst = await firstPageDrawn(page, note, true)
     await expectFillsWidth(note, noteFirst, 8)
     // No count of pages: the file's place among the others is the one count on the screen.
-    await expectOneBar(page, note, 'bottom', false, '3 of 5')
+    await expectOneBar(page, note, 'bottom', false, '3 of 6')
     await photograph(page, 'phone-note-light')
   })
 
@@ -466,6 +504,109 @@ test.describe('on a phone', () => {
     await expect(fit).toHaveAttribute('aria-pressed', 'false')
     expect(await page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(1)
     await expect(dialog.getByRole('toolbar', { name: 'Pages and zoom' })).toBeInViewport({ ratio: 1 })
+  })
+
+  test('the last slide, gone to by Next, stays read and on the screen as the phone is turned on its side and back, and Prev moves the pages back', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await page.goto(coursePath(`documents/${documentId}`))
+    const dialog = await open(page, DECK)
+    const first = await firstPageDrawn(page, dialog, true)
+    const field = dialog.getByRole('textbox', { name: 'Page number' })
+    const prev = dialog.getByRole('button', { name: 'Previous page', exact: true })
+    const next = dialog.getByRole('button', { name: 'Next page', exact: true })
+    // Next, slide by slide, to the end, which reads the last.
+    for (let i = 0; i < 8 && (await next.isEnabled()); i++) {
+      await next.click()
+      await settled(page)
+    }
+    await expect(field).toHaveValue('8')
+    await expect(next).toBeDisabled()
+    await expectShownAtEnd(dialog, '8', 'Next to the end')
+
+    // Turned on its side, the slides fitted to the wider screen are taller than it: the last is still read,
+    // and shown, at the top of the screen, where going to it now puts it.
+    const upright = (await first.boundingBox())!.width
+    await page.setViewportSize({ width: 844, height: 390 })
+    await expect.poll(async () => (await first.boundingBox())!.width).toBeGreaterThan(upright * 1.5)
+    await settled(page)
+    await settled(page)
+    await expect(field).toHaveValue('8')
+    const last = await placeOf(dialog, '8')
+    expect(last.top, 'the last, turned on its side').toBeGreaterThanOrEqual(0)
+    expect(last.top, 'the last, turned on its side').toBeLessThanOrEqual(17)
+    await expect(next).toBeDisabled()
+    await photograph(page, 'landscape-deck-end-turned')
+
+    // Prev moves the pages back, to the seventh, at the top of the screen.
+    await prev.click()
+    await settled(page)
+    await expect(field).toHaveValue('7')
+    const seventh = await placeOf(dialog, '7')
+    expect(seventh.scrollTop).toBeLessThan(last.scrollTop - 1)
+    expect(seventh.top, 'the seventh, by Prev').toBeGreaterThanOrEqual(0)
+    expect(seventh.top, 'the seventh, by Prev').toBeLessThanOrEqual(17)
+    await expect(next).toBeEnabled()
+
+    // Upright again, the seventh cannot come to the top: it is still read, at the end with the last.
+    const turned = (await first.boundingBox())!.width
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect.poll(async () => (await first.boundingBox())!.width).toBeLessThan(turned / 1.5)
+    await settled(page)
+    await settled(page)
+    await expect(field).toHaveValue('7')
+    await expectShownAtEnd(dialog, '7', 'upright again')
+    await expect(next).toBeDisabled()
+  })
+
+  test('a deck of two slides, both on the screen, has Prev and Next disabled until it is zoomed in and scrolls', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await page.goto(coursePath(`documents/${documentId}`))
+    const dialog = await open(page, PAIR)
+    await firstPageDrawn(page, dialog, true)
+    const field = dialog.getByRole('textbox', { name: 'Page number' })
+    const prev = dialog.getByRole('button', { name: 'Previous page', exact: true })
+    const next = dialog.getByRole('button', { name: 'Next page', exact: true })
+    const pages = dialog.locator('.pdf-view__pages')
+    const room = () => pages.evaluate((el) => el.scrollHeight - el.clientHeight)
+    // Fitted to the width, both slides are on the screen, and the pages do not scroll: nothing to move them.
+    expect(await room()).toBeLessThan(1)
+    await expect(dialog.locator('.pdf-view__of')).toHaveText('of 2')
+    await expect(field).toHaveValue('1')
+    await expect(prev).toBeDisabled()
+    await expect(next).toBeDisabled()
+    await photograph(page, 'phone-pair-light')
+
+    // Zoomed in until they scroll, Next moves them to the second slide.
+    const zoomIn = dialog.getByRole('button', { name: 'Zoom in', exact: true })
+    for (let i = 0; i < 8 && (await room()) < 1; i++) {
+      await zoomIn.click()
+      await settled(page)
+    }
+    expect(await room()).toBeGreaterThanOrEqual(1)
+    await expect(next).toBeEnabled()
+    await next.click()
+    await settled(page)
+    await expect(field).toHaveValue('2')
+    expect(await pages.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+
+    // Fitted to the width again, they do not scroll: the first is read, at the top, and neither button moves them.
+    await dialog.getByRole('button', { name: 'Fit width', exact: true }).click()
+    await expect.poll(room).toBeLessThan(1)
+    await settled(page)
+    await expect(field).toHaveValue('1')
+    await expect(prev).toBeDisabled()
+    await expect(next).toBeDisabled()
+    // The second, typed: read as gone to, still with nothing to move the pages.
+    await field.fill('2')
+    await field.press('Enter')
+    await settled(page)
+    await expect(field).toHaveValue('2')
+    await expect(prev).toBeDisabled()
+    await expect(next).toBeDisabled()
   })
 })
 
