@@ -171,6 +171,33 @@ function onDone(a: ActionRow, d: Done, which: Tab) {
 function dismiss(key: number) {
   recent.value = recent.value.filter((r) => r.key !== key)
 }
+
+// The page's rules (what deciding does, who may decide what) are one
+// disclosure under its title: open the first time the page is shown in this
+// browser, closed after that unless the person left them open. Where the
+// browser keeps nothing, they start closed, so they never push the queue down
+// on every visit.
+const RULES_KEY = 'aishie.approvalsRules'
+function rulesAtFirst(): boolean {
+  try {
+    const was = localStorage.getItem(RULES_KEY)
+    if (was) return was === 'open'
+    // Seen now: the next visit starts closed.
+    localStorage.setItem(RULES_KEY, 'closed')
+    return true
+  } catch {
+    return false
+  }
+}
+const rulesOpen = ref(rulesAtFirst())
+function toggleRules() {
+  rulesOpen.value = !rulesOpen.value
+  try {
+    localStorage.setItem(RULES_KEY, rulesOpen.value ? 'open' : 'closed')
+  } catch {
+    // Not remembered: they start closed next time.
+  }
+}
 </script>
 
 <template>
@@ -188,17 +215,51 @@ function dismiss(key: number) {
           <el-tag type="warning" effect="plain">{{ t('actions.approvals.decisionsNeedApproval') }}</el-tag>
         </el-tooltip>
       </template>
+      <el-button
+        text
+        class="approvals__rules-toggle"
+        :aria-expanded="rulesOpen ? 'true' : 'false'"
+        aria-controls="approvals-rules"
+        @click="toggleRules"
+      >
+        <el-icon><InfoFilled /></el-icon>
+        <span>{{ t('actions.approvals.rules') }}</span>
+        <el-icon class="el-icon--right approvals__rules-chevron" :class="{ 'is-open': rulesOpen }" aria-hidden="true">
+          <ArrowDown />
+        </el-icon>
+      </el-button>
       <el-button :loading="proposed.loading.value || review.loading.value" @click="refresh">
         <el-icon><Refresh /></el-icon>
         <span>{{ t('common.actions.refresh') }}</span>
       </el-button>
     </PageHeader>
 
-    <el-alert v-if="agentsOnly" type="info" :closable="false" show-icon class="approvals__owner">
-      <template #title>{{ t('actions.approvals.agentsIntroTitle') }}</template>
-      <p class="approvals__owner-text">{{ t('actions.approvals.agentsIntro') }}</p>
-      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('actions.mine.title') }}</router-link>
-    </el-alert>
+    <section v-show="rulesOpen" id="approvals-rules" class="approvals__rules" :aria-label="t('actions.approvals.rules')">
+      <!-- Said above both tabs, so each tab's rule starts with the tab's name. -->
+      <ul class="approvals__rules-list">
+        <i18n-t
+          :keypath="agentsOnly ? 'actions.approvals.agentsProposedHelp' : 'actions.approvals.proposedHelp'"
+          tag="li"
+          scope="global"
+        >
+          <template #tab><strong>{{ t('actions.approvals.tabs.proposed') }}</strong></template>
+        </i18n-t>
+        <i18n-t
+          :keypath="agentsOnly ? 'actions.approvals.agentsReviewHelp' : 'actions.approvals.reviewHelp'"
+          tag="li"
+          scope="global"
+        >
+          <template #tab><strong>{{ t('actions.approvals.tabs.review') }}</strong></template>
+        </i18n-t>
+        <li>{{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}</li>
+        <li>{{ t('actions.approvals.oldestFirst') }}</li>
+      </ul>
+      <i18n-t v-if="agentsOnly" keypath="actions.approvals.agentsMine" tag="p" scope="global" class="approvals__rules-more">
+        <template #link>
+          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('actions.mine.title') }}</router-link>
+        </template>
+      </i18n-t>
+    </section>
 
     <section v-if="recent.length" class="app-card approvals__recent">
       <h2 class="app-card__title">
@@ -227,18 +288,11 @@ function dismiss(key: number) {
               <el-badge
                 v-if="proposed.items.value.length"
                 :value="count(proposed)"
-                type="warning"
+                type="primary"
                 class="approvals__badge"
               />
             </span>
           </template>
-          <p class="approvals__help">
-            {{ agentsOnly ? t('actions.approvals.agentsProposedHelp') : t('actions.approvals.proposedHelp') }}
-          </p>
-          <p class="approvals__help approvals__help--small">
-            <el-icon><Sort /></el-icon> {{ t('actions.approvals.oldestFirst') }} ·
-            {{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}
-          </p>
           <AsyncState
             :loading="proposed.loading.value && !proposed.items.value.length"
             :error="proposed.error.value"
@@ -269,13 +323,6 @@ function dismiss(key: number) {
               <el-badge v-if="review.items.value.length" :value="count(review)" type="primary" class="approvals__badge" />
             </span>
           </template>
-          <p class="approvals__help">
-            {{ agentsOnly ? t('actions.approvals.agentsReviewHelp') : t('actions.approvals.reviewHelp') }}
-          </p>
-          <p class="approvals__help approvals__help--small">
-            <el-icon><Sort /></el-icon> {{ t('actions.approvals.oldestFirst') }} ·
-            {{ agentsOnly ? t('actions.decision.ownerRuleNote') : t('actions.decision.ruleNote') }}
-          </p>
           <AsyncState
             :loading="review.loading.value && !review.items.value.length"
             :error="review.error.value"
@@ -304,12 +351,38 @@ function dismiss(key: number) {
 </template>
 
 <style scoped>
-.approvals__owner {
+.approvals__rules {
   margin-bottom: 16px;
-}
-.approvals__owner-text {
-  margin: 0 0 4px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--app-indigo-line);
+  border-radius: 0 var(--app-radius-item) var(--app-radius-item) 0;
+  background: color-mix(in srgb, var(--app-indigo-tint) 50%, transparent);
+  font-size: 14px;
   line-height: 1.6;
+  color: var(--app-ink-2);
+}
+.approvals__rules-list {
+  margin: 0 0 4px;
+  padding-left: 1.2em;
+}
+.approvals__rules-list li + li {
+  margin-top: 4px;
+}
+.approvals__rules-list strong {
+  font-weight: 600;
+  color: var(--app-ink);
+}
+.approvals__rules-more {
+  margin: 8px 0 0;
+}
+.approvals__rules-toggle .el-icon {
+  color: var(--app-ink-3);
+}
+.approvals__rules-chevron {
+  transition: transform 0.15s ease;
+}
+.approvals__rules-chevron.is-open {
+  transform: rotate(180deg);
 }
 .approvals__tab {
   display: inline-flex;
@@ -328,17 +401,6 @@ function dismiss(key: number) {
   font-size: 13px;
   line-height: 1.6;
   color: var(--el-text-color-secondary);
-}
-.approvals__help--small {
-  font-size: 12px;
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-  margin-bottom: 16px;
-}
-.approvals__help--small .el-icon {
-  margin-top: 3px;
-  flex-shrink: 0;
 }
 .approvals__list {
   display: flex;
@@ -366,6 +428,11 @@ function dismiss(key: number) {
   padding: 0 14px;
 }
 @media (max-width: 480px) {
+  /* Flush with the title above it, as the page's other text is. */
+  .approvals__rules-toggle {
+    padding-left: 0;
+    padding-right: 0;
+  }
   .approvals__tabs :deep(.el-tabs__item) {
     padding: 0 8px;
     font-size: 13px;

@@ -11,7 +11,7 @@ export default {
   openApprovals: 'Open approvals',
   intro: {
     title: 'An agent never does more than its owner',
-    body: 'An agent a person owns takes part only as that person’s delegate: it never holds more than its owner’s seat, reaches no further, is paused while they are, and leaves the course with them. A course agent is one that students may ask about the course; a personal assistant answers only its owner.',
+    body: 'An agent a person owns takes part only as that person’s delegate: it never holds more than its owner’s seat, reaches no further, is paused while they are, and leaves the course with them. A course agent is one that students may ask about the course; a personal agent answers only its owner.',
   },
   groups: {
     course: {
@@ -20,7 +20,7 @@ export default {
       empty: 'No course agent yet. Add one of your agents so that students can ask it about the course.',
     },
     personal: {
-      title: 'Personal assistants',
+      title: 'Personal agents',
       help: 'Agents people brought in for themselves. Each answers only its owner, and never holds more than its owner’s seat.',
       empty: 'Nobody has brought in an agent of their own.',
     },
@@ -85,12 +85,12 @@ export default {
       'The seat of the one current student will be set to “{what}”. | The seats of all {n} current students will be set to “{what}”.',
     future:
       'Students added later get what their preset gives instead (the built-in Student preset: agents need approval, and conversations are on).',
-    partialConfirm: 'Only some of the members could be counted here; Core changes every current student’s seat.',
+    partialConfirm: 'Only some of the members could be counted here; every current student’s seat is changed.',
     apply: 'Apply to all students',
     success: 'Changed for {n} student | Changed for {n} students',
     agents: {
       label: 'Students’ own agents',
-      help: 'A student may bring an agent they own into this course as their personal assistant. It reads the material and that student’s own work and grades, answers only that student, and never holds more than the student’s seat.',
+      help: 'A student may bring an agent they own into this course as their personal agent. It reads the material and that student’s own work and grades, answers only that student, and never holds more than the student’s seat.',
       options: {
         off: 'Off',
         approval: 'Needs approval',
@@ -101,7 +101,7 @@ export default {
         approval: 'Each request waits until someone who approves actions here approves it.',
         allowed: 'Students bring their agents in themselves, with no approval.',
       },
-      offKeeps: 'Agents already brought in stay. To take one out, pause or remove it under Personal assistants.',
+      offKeeps: 'Agents already brought in stay. To take one out, pause or remove it under Personal agents.',
       confirmTitle: 'Change students’ own agents?',
     },
     chat: {
@@ -109,7 +109,7 @@ export default {
       help: 'Whether students may start conversations: asking course agents, and their own agents, questions in the chat.',
       on: 'On',
       off: 'Off',
-      onHelp: 'Students can ask the course agents, and their own assistants, questions.',
+      onHelp: 'Students can ask the course agents, and their own personal agents, questions.',
       offHelp:
         'Students can no longer start conversations or write in the ones they have, and their own agents stop answering them. What was written stays readable.',
       confirmTitle: 'Change students’ conversations?',
@@ -138,7 +138,7 @@ export default {
       'Students ask a course agent on the site only when it is hosted on AIshie: one with MCP access is used from your own tools, and nobody can ask it here.',
     mcpPicked: 'Students cannot ask {name} on the site: it has MCP access, and is used from your own tools.',
     preview: 'What it will hold',
-    previewHelp: 'As Core would seat it now: the Course agent preset, cut down to what your own seat holds.',
+    previewHelp: 'As it would be seated now: the Course agent preset, cut down to what your own seat holds.',
     can: 'Permissions',
     work: 'Students’ work',
     readsNobody: 'Nobody’s: it reads no submissions or grades.',

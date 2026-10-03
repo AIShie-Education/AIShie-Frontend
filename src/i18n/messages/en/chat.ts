@@ -18,7 +18,7 @@ export default {
     backToHistory: 'Back to the history',
     backToAgents: 'Back to the agents',
     pickTitle: 'Ask an agent',
-    pickHint: 'The agents you can ask in {course}: the course’s own, and your personal assistant.',
+    pickHint: 'The agents you can ask in {course}: the course’s own, and your personal agent.',
     noCourses: 'None of your courses lets you ask agents questions.',
   },
   history: {
@@ -273,7 +273,7 @@ export default {
     firstTitle: 'Before you ask',
     gotIt: 'Got it',
     agentReaders:
-      'An agent that decides actions in the course can read this conversation too. Where it sends what it reads depends on how it is hosted: to its AI model through AIshie’s agent runtime, or to its owner’s own tools.',
+      'An agent that decides actions in the course can read this conversation too. Where it sends what it reads depends on how it is hosted: to its AI model through AIshie’s agent service, or to its owner’s own tools.',
     line: {
       model:
         'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} sends it to {provider} to answer.',
@@ -298,7 +298,7 @@ export default {
     },
     route: {
       hosted:
-        '{name} is hosted on AIshie. To answer, AIshie’s agent runtime sends the messages of this conversation, the files attached to them, and what {name} reads in the course to its AI model.',
+        '{name} is hosted on AIshie. To answer, AIshie’s agent service sends the messages of this conversation, the files attached to them, and what {name} reads in the course to its AI model.',
       school: 'That model is {model}, from {provider}, on the school’s plan.',
       own: 'That model is {model}, from {provider}, on your own API key.',
       fallback:
@@ -307,15 +307,15 @@ export default {
         'That is the model chosen for {name}, on the school’s plan or its owner’s own key, so it goes to that model’s provider. This page cannot show you which provider it is.',
       mcp: '{name} has MCP access: it is used from its owner’s own tools, which read this conversation from AIshie and answer it. Where they send what they read is up to its owner, and AIshie cannot tell.',
       unknown:
-        '{name} answers through an AI model: AIshie’s agent runtime, or its owner’s own tools, send what is written here to that model, and so to its provider. This page cannot show you which.',
+        '{name} answers through an AI model: AIshie’s agent service, or its owner’s own tools, send what is written here to that model, and so to its provider. This page cannot show you which.',
     },
     kept: {
       notDeleted: 'Conversations are never deleted. A closed one can still be read.',
       withdrawn:
         'A withdrawn message is hidden here, but kept: its text in the record of the action that wrote it and in exports for audit, and its files on the site, which exports list without their contents.',
       withdrawnModel:
-        'Once a message is withdrawn, AIshie’s agent runtime no longer sends it to {name}’s model; what was sent before cannot be taken back.',
-      ocr: 'Text that AIshie’s agent runtime reads from an attached image or scanned PDF is kept for up to 180 days, even after the message is withdrawn.',
+        'Once a message is withdrawn, AIshie’s agent service no longer sends it to {name}’s model; what was sent before cannot be taken back.',
+      ocr: 'Text that AIshie’s agent service reads from an attached image or scanned PDF is kept for up to 180 days, even after the message is withdrawn.',
     },
   },
   message: {
@@ -328,6 +328,27 @@ export default {
     retractedBy: '{name} withdrew this message.',
     retractedByStaff: 'Course staff withdrew this message.',
     reason: 'Reason: {reason}',
+  },
+  // Under an answer: the course materials it relied on (AIShie-Core#69), each as the reader may open it now.
+  sources: {
+    basedOn: 'Based on: {source}',
+    summary: 'Based on: {title} · {n} items',
+    summaryNone: 'Based on: {n} course materials you cannot open',
+    label: 'Course materials this answer relied on',
+    quoted: '“{title}”',
+    // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
+    entry: '{title} · {where}',
+    page: 'page {n}',
+    slide: 'slide {n}',
+    version: 'version {seq}',
+    openFile: 'Open the file, where the answer read it',
+    openVersion: 'Open this version of the material',
+    earlier: 'an earlier version',
+    earlierTip:
+      'The answer relied on an earlier version of this material, which you cannot open now: this opens the material as it is.',
+    restricted: 'a course material you cannot open',
+    none: 'No course material cited',
+    noneTip: 'The agent said this answer relied on no course material.',
   },
   reasonPlaceholder: 'Reason (optional)',
   reasonTooLong: 'At most {max} characters',

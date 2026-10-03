@@ -13,6 +13,7 @@ import type { DocumentSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
 import { usePageDrop } from '@/composables/useFileDrop'
 import { useCourseStore } from '@/stores/course'
+import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -95,9 +96,12 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
           <el-icon><Plus /></el-icon>
           <span>{{ t('materials.newMaterial') }}</span>
         </el-button>
-        <el-tag v-if="course.needsApproval('document_write')" type="warning" disable-transitions>
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag
+          v-if="course.needsApproval('document_write')"
+          vocab="level"
+          value="confirm_required"
+          size="default"
+        />
       </div>
     </PageHeader>
 

@@ -58,10 +58,24 @@ export async function signIn(
     } catch {}
   })
   await page.goto('/login')
+  await usePasswordForm(page)
   await page.fill('input[name=login]', who.email)
   await page.fill('input[name=password]', password)
   await page.click('button[type=submit]')
   await expect(page).not.toHaveURL(/\/login/)
+}
+
+/**
+ * Where single sign-on is offered, the sign-in page puts it first and the
+ * password form behind a link: this follows the link where there is one.
+ */
+export async function usePasswordForm(page: Page) {
+  const form = page.locator('input[name=login]')
+  const instead = page.locator('button.login__use-password')
+  // The form stays in the page while hidden behind the link: one of the two is shown.
+  await expect(page.locator('input[name=login]:visible, button.login__use-password:visible').first()).toBeVisible()
+  if (await instead.isVisible()) await instead.click()
+  await expect(form).toBeVisible()
 }
 
 /**
@@ -96,23 +110,45 @@ export function coursePath(sub = '') {
   return `/courses/${d.course.id}${sub ? `/${sub}` : ''}`
 }
 
-/** The course's section tabs. */
+/** A course's tab in its strip; one that does not fit is under More. */
 export function courseTab(page: Page, name: string | RegExp) {
   return page.getByRole('navigation', { name: 'Course sections' }).getByRole('link', { name })
 }
 
+/** The Grades tab's own tabs, in the header of each of its pages. */
+const GRADES_TABS = ['Grades', 'My grades', 'Gradebook', 'Grading scheme']
+
 /**
- * The chat's round button, floating at the bottom right of every page (on a
- * phone too) while the chat is closed or minimized, named with how many
- * answers are unread ("Chat with agents: 1 unread").
+ * Opens a course's tab as a person would: from the strip, from More's menu
+ * where it is under More, or, for the gradebook and the grading scheme, from
+ * the Grades tab's own tabs.
+ */
+export async function openCourseTab(page: Page, name: string) {
+  const strip = page.getByRole('navigation', { name: 'Course sections' })
+  await expect(strip).toBeVisible()
+  if (GRADES_TABS.includes(name) && name !== 'Grades') {
+    await openCourseTab(page, 'Grades')
+    await page.getByRole('navigation', { name: 'Grades sections' }).getByRole('link', { name, exact: true }).click()
+    return
+  }
+  const tab = courseTab(page, name)
+  if (await tab.count()) return tab.click()
+  await strip.getByRole('button', { name: /^More/ }).click()
+  await page.getByRole('menuitem', { name }).click()
+}
+
+/**
+ * The chat's button, named with how many answers are unread ("Chat with
+ * agents: 1 unread"): from 900 px up at the header's right end, always there;
+ * on a phone floating at the bottom right while the chat's sheet is closed.
  */
 export function chatButton(page: Page) {
-  return page.locator('.app-chat-fab').getByRole('button', { name: /^Chat with agents/ })
+  return page.locator('.app-chat-entry').getByRole('button', { name: /^Chat with agents/ })
 }
 
 /** The count of unread answers on the chat's button. */
 export function chatBadge(page: Page) {
-  return page.locator('.app-chat-fab .el-badge__content')
+  return page.locator('.app-chat-entry .el-badge__content')
 }
 
 /** The chat: a window floating over the page (on a phone, a sheet over the whole screen). */

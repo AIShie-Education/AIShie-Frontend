@@ -153,7 +153,7 @@ describe('single sign-on on the sign-in page', () => {
     expect(ssoButton(en)?.text()).toBe('Sign in with single sign-on')
     en.unmount()
     const zh = await mountAt('/login', 'zh-Hant')
-    expect(ssoButton(zh)?.text()).toBe('以 單一登入 登入')
+    expect(ssoButton(zh)?.text()).toBe('以單一登入登入')
     zh.unmount()
   })
 
@@ -162,11 +162,85 @@ describe('single sign-on on the sign-in page', () => {
     vi.mocked(authMethods).mockReturnValue(new Promise((resolve) => (answer = resolve)))
     const w = await mountAt('/login', 'en')
     expect(w.find('input[name="login"]').exists()).toBe(true)
-    expect(w.find('.login__version').text()).toBe('Server 1.0.0')
+    // Which version the server runs is not the sign-in page's business: it is in the account menu's About.
+    expect(w.text()).not.toContain('1.0.0')
     expect(ssoButton(w)).toBeUndefined()
     answer({ password: true, sso: { label: 'School NetID', start: START } })
     await flushPromises()
     expect(ssoButton(w)?.text()).toBe('Sign in with School NetID')
+    w.unmount()
+  })
+})
+
+describe('single sign-on first', () => {
+  const START = '/v1/auth/sso/start'
+
+  it('offers a student number and password behind a link, where Core takes one', async () => {
+    vi.mocked(authMethods).mockResolvedValue({
+      password: true,
+      passwordAccepts: ['login_id', 'email'],
+      sso: { label: 'School NetID', start: START },
+    })
+    const w = await mountAt('/login', 'zh-Hant')
+    expect(w.find('button.login__sso').classes()).toContain('el-button--primary')
+    expect(w.find('button.login__use-password').text()).toBe('改用學號／密碼登入')
+    expect(w.find('form.el-form').isVisible()).toBe(false)
+    w.unmount()
+  })
+
+  it('keeps a form already typed in when Core names a provider late', async () => {
+    vi.useFakeTimers()
+    try {
+      let answer!: (m: AuthMethods) => void
+      vi.mocked(authMethods).mockReturnValue(new Promise((resolve) => (answer = resolve)))
+      const w = await mountAt('/login', 'en')
+      await vi.advanceTimersByTimeAsync(400)
+      const form = w.find('form.el-form')
+      expect(form.isVisible()).toBe(true)
+      await w.find('input[name="login"]').setValue('someone@example.edu')
+      answer({ password: true, sso: { label: 'School NetID', start: START } })
+      await flushPromises()
+      expect(form.isVisible()).toBe(true)
+      expect(w.find('button.login__use-sso').text()).toBe('Sign in another way')
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('single sign-on first, from the keyboard', () => {
+  const START = '/v1/auth/sso/start'
+
+  it('keeps the form a person has moved into, before typing, when Core names a provider late', async () => {
+    vi.useFakeTimers()
+    try {
+      let answer!: (m: AuthMethods) => void
+      vi.mocked(authMethods).mockReturnValue(new Promise((resolve) => (answer = resolve)))
+      const w = await mountAt('/login', 'en')
+      await vi.advanceTimersByTimeAsync(400)
+      const input = w.find<HTMLInputElement>('input[name="login"]')
+      input.element.focus()
+      answer({ password: true, sso: { label: 'School NetID', start: START } })
+      await flushPromises()
+      expect(w.find('form.el-form').isVisible()).toBe(true)
+      expect(document.activeElement).toBe(input.element)
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('moves focus into the form and back to the first provider', async () => {
+    vi.mocked(authMethods).mockResolvedValue({ password: true, sso: { label: 'School NetID', start: START } })
+    const w = await mountAt('/login', 'en')
+    await w.find('button.login__use-password').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.find('input[name="login"]').element)
+    await w.find('button.login__use-sso').trigger('click')
+    await flushPromises()
+    expect(w.find('form.el-form').isVisible()).toBe(false)
+    expect(document.activeElement).toBe(w.find('button.login__sso').element)
     w.unmount()
   })
 })
@@ -191,10 +265,19 @@ describe('several identity providers on the sign-in page', () => {
       'Sign in with 大學統一認證',
       'Sign in with single sign-on',
     ])
-    // One "or" between the password and them all; the password form as it was.
-    expect(w.findAll('.el-divider')).toHaveLength(1)
+    // Single sign-on first, the first provider the page's one primary; the password behind a link.
+    expect(buttons(w).map((b) => b.classes().includes('el-button--primary'))).toEqual([true, false, false])
+    const form = w.find('form.el-form')
+    expect(form.isVisible()).toBe(false)
+    await w.find('button.login__use-password').trigger('click')
+    expect(w.find('button.login__use-password').exists()).toBe(false)
+    expect(form.isVisible()).toBe(true)
     expect(w.findAll('.login__card input').map((i) => i.attributes('name'))).toEqual(['login', 'password'])
     expect(w.find('button[type="submit"]').text()).toBe('Sign in')
+    // And back to the providers.
+    await w.find('button.login__use-sso').trigger('click')
+    expect(form.isVisible()).toBe(false)
+    expect(buttons(w)).toHaveLength(3)
     w.unmount()
   })
 
@@ -229,10 +312,10 @@ describe('several identity providers on the sign-in page', () => {
   it('names them in Chinese too', async () => {
     vi.mocked(authMethods).mockResolvedValue({ password: true, sso: null, ssoProviders: PROVIDERS })
     const zh = await mountAt('/login', 'zh-Hant')
-    expect(buttons(zh).map((b) => b.text())).toEqual(['以 School NetID 登入', '以 大學統一認證 登入', '以 單一登入 登入'])
+    expect(buttons(zh).map((b) => b.text())).toEqual(['以School NetID登入', '以大學統一認證登入', '以單一登入登入'])
     zh.unmount()
     const hans = await mountAt('/login', 'zh-Hans')
-    expect(buttons(hans).at(-1)!.text()).toBe('以 单点登录 登录')
+    expect(buttons(hans).at(-1)!.text()).toBe('以单点登录登录')
     hans.unmount()
   })
 })

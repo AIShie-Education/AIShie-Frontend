@@ -22,11 +22,13 @@ import type { RuntimeSettingsPatch, TranscriptionSettings } from '@/api/runtime-
 import { useAsync } from '@/composables/useAsync'
 import DailyReset from '@/components/DailyReset.vue'
 import TimeText from '@/components/TimeText.vue'
+import OperatorDetail from '../components/OperatorDetail.vue'
 import ActorLink from './ActorLink.vue'
 import ChangedBy from './ChangedBy.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
 import TranscriptionJobs from './TranscriptionJobs.vue'
-import { adminErrorText, usdShown } from './runtimeAdmin'
+import { adminErrorText } from './runtimeAdmin'
+import { formatMoney } from '@/utils/format'
 import {
   CONCURRENCY_LIMIT,
   CREDENTIAL_TAG,
@@ -243,6 +245,10 @@ async function withdraw() {
           :title="t(`runtimeAdmin.transcription.unavailable.${tr.unavailable_reason ?? 'operator_off'}`)"
           class="transcription-card__alert transcription-card__unavailable"
         >
+          <OperatorDetail
+            v-if="(tr.unavailable_reason ?? 'operator_off') === 'operator_off'"
+            :text="t('runtimeAdmin.flags.transcribeOff')"
+          />
           <details v-if="tr.unavailable_detail" class="transcription-card__details">
             <summary>{{ t('runtimeAdmin.ocr.details') }}</summary>
             <code>{{ tr.unavailable_detail }}</code>
@@ -486,7 +492,7 @@ async function withdraw() {
             </div>
             <div>
               <dt>{{ t('runtimeAdmin.transcription.today.cost') }}</dt>
-              <dd class="transcription-card__cost">${{ usdShown(tr.today.cost_usd) }}</dd>
+              <dd class="transcription-card__cost">{{ formatMoney(tr.today.cost_usd) }}</dd>
             </div>
           </dl>
         </div>

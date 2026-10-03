@@ -4,7 +4,7 @@ import {
   call,
   chatBadge,
   chatButton,
-  courseTab,
+  openCourseTab,
   coursePath,
   demo,
   dropFiles,
@@ -20,13 +20,14 @@ import {
 } from './support'
 
 // The chat is a window floating over every page, as a chat on a web page is:
-// opened from a round button at the bottom right (never from the header, and
-// with no rail along the window's right edge any more), in the button's
-// corner, 400 x 600 px, over the page, which keeps its width and is left to
-// use. It is moved by its title bar and resized from its top left, never past
-// the viewport, and this browser keeps where it was left; minimized, it opens
-// again on what it showed. On a phone it is a sheet over the whole screen,
-// opened from the same button. Told through a course
+// opened from a button at the header's right end (with no rail along the
+// window's right edge any more, and nothing floating over the page), in the
+// bottom right corner, 400 x 600 px, over the page, which keeps its width and
+// is left to use. It is moved by its title bar and resized from its top left,
+// never past the viewport, and this browser keeps where it was left;
+// minimized, it opens again on what it showed. On a phone it is a sheet over
+// the whole screen, opened from a round button floating at the bottom right,
+// which goes out of the way while the page is scrolled down. Told through a course
 // agent made for this run, hosted on AIshie (the test plays the runtime), and
 // Yuki, a student, who asks it. The window stays open, on what it shows, while
 // she moves between pages, and where and as big as she left it; an answer that
@@ -226,8 +227,9 @@ async function expectInCorner(page: Page) {
 }
 
 /**
- * On each page, scrolled to the end, the lowest thing on it (a long list's
- * last item, its pages, a button) ends above the chat's round button: the
+ * On each page of a phone, scrolled to the end, the lowest thing on it (a
+ * long list's last item, its pages, a button) ends above where the chat's
+ * round button floats while the page is not scrolled down: the
  * page keeps room below it for the button. At least one of them is longer
  * than the screen, so that it is a long list's end that is looked at.
  */
@@ -248,7 +250,11 @@ async function expectClearOfChatButton(page: Page, paths: string[]) {
         if (!r.width || !r.height || getComputedStyle(el).position === 'fixed') continue
         if (r.bottom > lowest) [lowest, what] = [r.bottom, `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`]
       }
-      const button = document.querySelector('.app-chat-fab button')!.getBoundingClientRect()
+      // Where the button is while the page is not scrolled down: scrolled to its end, it is tucked away below.
+      const fab = document.querySelector<HTMLElement>('.app-chat-fab')!
+      fab.style.transition = 'none'
+      fab.classList.remove('is-tucked')
+      const button = fab.querySelector('button')!.getBoundingClientRect()
       return { gap: button.top - lowest, what, scrollY: window.scrollY }
     })
     if (at.scrollY > 200) scrolled++
@@ -262,28 +268,33 @@ async function expectClearOfChatButton(page: Page, paths: string[]) {
 
 /**
  * On one signed-in page, the chat is closed with nothing at the right edge
- * and no button in the header; it opens from its round button, 16 px from the
- * corner, over the page, which keeps its width; and minimized, the button is
- * back, with focus.
+ * and nothing floating over the page; it opens from its button at the
+ * header's right end, in the corner, over the page, which keeps its width;
+ * the button stays, saying the chat is open; and minimized, focus is back on
+ * it.
  */
 async function opensFromItsButton(page: Page, path: string, what: string) {
   await page.goto(path)
   await expect(page.locator('.app-main').first()).toBeVisible()
-  // Closed: no rail, nothing at the right edge, the header across the whole width, and no chat button in it.
+  // Closed: no rail, nothing at the right edge, the header across the whole width, and nothing floating.
   await expectNothingAtRightEdge(page, what)
-  await expect(page.locator('.app-header [aria-controls="chat-panel"]'), what).toHaveCount(0)
+  await expect(page.locator('.app-chat-fab'), what).toHaveCount(0)
   const button = chatButton(page)
   await expect(button, what).toBeVisible()
-  const at = (await button.boundingBox())!
+  // In the header, at its right end.
+  const at = await box_(button)
+  const header = await box_(page.locator('.app-header'))
   const win = await inner(page)
-  expect([Math.round(win.width - at.x - at.width), Math.round(win.height - at.y - at.height)], what).toEqual([16, 16])
+  expect(at.y >= header.y && at.y + at.height <= header.y + header.height, what).toBe(true)
+  expect(win.width - at.x - at.width, what).toBeLessThanOrEqual(24)
+  await expect(button, what).toHaveAttribute('aria-expanded', 'false')
   const pageWidth = (await box_(page.locator('.app-main'))).width
   await button.click()
   await expect(panelOf(page), what).toBeVisible()
-  // In the button's corner, over the page, which keeps its width; the button is gone while it is open.
+  // In its corner, over the page, which keeps its width; the button stays, saying so.
   await expectInCorner(page)
   await expectWindow(page, pageWidth)
-  await expect(chatButton(page), what).toHaveCount(0)
+  await expect(button, what).toHaveAttribute('aria-expanded', 'true')
   await expect(panelOf(page).getByRole('heading', { name: 'Chat', exact: true })).toBeVisible()
   if (path === '/') {
     await page.mouse.move(0, 400)
@@ -295,6 +306,7 @@ async function opensFromItsButton(page: Page, path: string, what: string) {
   await minimizeChat(page)
   await expect(button, what).toBeVisible()
   await expect(button, what).toBeFocused()
+  await expect(button, what).toHaveAttribute('aria-expanded', 'false')
   await expectNothingAtRightEdge(page, `${what}, minimized`)
   if (path === '/') {
     await page.mouse.move(0, 400)
@@ -328,7 +340,7 @@ test.describe.serial('the chat panel', () => {
   // one test of them all held thirteen pages' time, and on a busy machine,
   // every page slower alike, ran out of its 60 s. Each is a test of its own
   // line, so that a report or a rerun by file:line names one.
-  test('is opened from its round button on the home page and the course’s overview, materials and assignments, over the page, and never from the header', async ({
+  test('is opened from its button in the header on the home page and the course’s overview, materials and assignments, over the page', async ({
     page,
   }) => {
     await signIn(page, demo().actors.instructor)
@@ -338,7 +350,7 @@ test.describe.serial('the chat panel', () => {
     await opensFromItsButton(page, coursePath('assignments'), 'assignments')
   })
 
-  test('is opened from its round button on an assignment and the course’s submissions, grades and members, over the page, and never from the header', async ({
+  test('is opened from its button in the header on an assignment and the course’s submissions, grades and members, over the page', async ({
     page,
   }) => {
     await signIn(page, demo().actors.instructor)
@@ -348,7 +360,7 @@ test.describe.serial('the chat panel', () => {
     await opensFromItsButton(page, coursePath('members'), 'members')
   })
 
-  test('is opened from its round button on the course’s approvals, activity and agents, and the account’s pages, over the page, and never from the header', async ({
+  test('is opened from its button in the header on the course’s approvals, activity and agents, and the account’s pages, over the page', async ({
     page,
   }) => {
     await signIn(page, demo().actors.instructor)
@@ -381,7 +393,7 @@ test.describe.serial('the chat panel', () => {
     // Escape, from within it, minimizes it; from the page it is the page's.
     await page.keyboard.press('Control+j')
     await expect(panelOf(page)).toBeVisible()
-    await page.locator('.course-head h1').first().click()
+    await page.locator('.course-head__title').first().click()
     await page.keyboard.press('Escape')
     await expect(panelOf(page)).toBeVisible()
     await panelOf(page).getByRole('button', { name: 'History', exact: true }).focus()
@@ -447,10 +459,10 @@ test.describe.serial('the chat panel', () => {
     await photograph(page, 'chat-panel-conversation')
 
     // Moving around the course, and out of it: the panel stays, on the conversation.
-    await courseTab(page, 'Materials').click()
+    await openCourseTab(page, 'Materials')
     await expect(page).toHaveURL(new RegExp(`${coursePath('materials')}$`))
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await courseTab(page, 'Assignments').click()
+    await openCourseTab(page, 'Assignments')
     await expect(page).toHaveURL(new RegExp(`${coursePath('assignments')}$`))
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
     await (await showSideView(page, 'Courses')).getByRole('link', { name: 'My courses' }).click()
@@ -644,7 +656,7 @@ test.describe.serial('the chat panel', () => {
     await drag(page, 'left', -80, 0)
     expect(await placed(page)).toMatchObject({ width: 400, height: 460, right: 0, bottom: 0 })
     // The page behind it is still there to use: the course's tabs lead on.
-    await courseTab(page, 'Materials').click()
+    await openCourseTab(page, 'Materials')
     await expect(page).toHaveURL(new RegExp(`${coursePath('materials')}$`))
     await expect(panelOf(page)).toBeVisible()
 
@@ -681,7 +693,7 @@ test.describe.serial('the chat panel', () => {
     await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
     await expect(panelOf(page).locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
     await expectInCorner(page)
-    await expect(chatButton(page)).toHaveCount(0)
+    await expect(chatButton(page)).toHaveAttribute('aria-expanded', 'true')
     await minimizeChat(page)
     await expect(chatButton(page)).toBeVisible()
     // And a link to the course's conversations: the window, on a new conversation in the course.
@@ -791,7 +803,8 @@ test.describe.serial('the chat panel', () => {
     // The words each language has for what is checked.
     const words = {
       en: {
-        lastSeen: /^Last seen \d+ minutes ago$/,
+        // Nothing has run it for 37 minutes: it is paused, as its asker is told, never "last seen" as a person is.
+        presence: 'Paused',
         waiting: 'Thinking…',
         options: 'Conversation options',
         readers: 'Who can read this',
@@ -800,7 +813,7 @@ test.describe.serial('the chat panel', () => {
         tag: 'Closed',
       },
       'zh-Hant': {
-        lastSeen: /^最後上線：\d+ 分鐘前$/,
+        presence: '暫停',
         waiting: '思考中…',
         options: '對話選項',
         readers: '誰可以閱讀',
@@ -830,11 +843,12 @@ test.describe.serial('the chat panel', () => {
       const panel = panelOf(page)
       await panel.locator('button.resp-row').filter({ hasText: TUTOR }).click()
 
-      // A new conversation: one row on top, the agent and when it was last seen; no box saying
+      // A new conversation: one row on top, the agent and whether it can be asked; no box saying
       // so, no title to give; the composer one box, its send button inside it.
       const head = panel.locator('.chat-pane__head')
       await expect(head.locator('.chat-pane__name')).toHaveText(`CS101 · ${TUTOR}`)
-      await expect(head.locator('.chat-pane__presence')).toHaveText(w.lastSeen)
+      await expect(head.locator('.chat-pane__presence')).toHaveText(w.presence)
+      await expect(head.locator('.chat-pane__name-row .ai-badge')).toHaveText('AI')
       await expect(panel.locator('.chat-pane__notice')).toHaveCount(0)
       await expect(panel.locator('.el-alert')).toHaveCount(0)
       await expect(panel.locator('.chat-pane__foot input')).toHaveCount(0)
@@ -921,11 +935,57 @@ test.describe.serial('the chat panel', () => {
     await expect(item).toBeVisible()
   })
 
-  test('its round button never covers the last thing on a page on a desktop either', async ({ page }) => {
+  test('leaves nothing floating over a page on a desktop, nor room kept for it: its button is in the header', async ({
+    page,
+  }) => {
     const d = demo()
     await page.setViewportSize({ width: 1440, height: 900 })
     await signIn(page, d.actors.instructor)
-    await expectClearOfChatButton(page, [coursePath('members'), coursePath('activity'), coursePath('grades')])
+    for (const path of [coursePath('members'), coursePath('activity'), coursePath('grades')]) {
+      await page.goto(path)
+      await expect(page.locator('.page-header').first()).toBeVisible()
+      await expect(page.locator('.app-header').getByRole('button', { name: /^Chat with agents/ })).toBeVisible()
+      await expect(page.locator('.app-chat-fab')).toHaveCount(0)
+      await expect(page.locator('.app-main')).not.toHaveClass(/has-chat-fab/)
+    }
+  })
+
+  test('keeps its count of unread answers within the window, however many there are', async ({ page }) => {
+    const d = demo()
+    await page.setViewportSize({ width: 1280, height: 800 })
+    // Core's list of her conversations, with as many more unread ones with an agent as the step asks for.
+    let extra = 0
+    await page.route(/\/v1\/me\/conversations(\?|$)/, async (route) => {
+      const res = await route.fetch()
+      const body = await res.json()
+      const real = (body.result?.conversations ?? []) as Record<string, unknown>[]
+      const fake = Array.from({ length: extra }, (_, i) => ({
+        ...(real[0] ?? {}),
+        conversation_id: `00000000-0000-7000-8000-${String(i).padStart(12, '0')}`,
+        respondent: { kind: 'agent' },
+        unread: true,
+      }))
+      await route.fulfill({
+        response: res,
+        json: { ...body, result: { ...body.result, conversations: [...fake, ...real] } },
+      })
+    })
+    await signIn(page, d.actors.yuki)
+    for (const [n, shown] of [
+      [12, '12'],
+      [120, '99+'],
+    ] as const) {
+      extra = n
+      await page.goto(coursePath())
+      await expect(chatBadge(page)).toHaveText(shown, { timeout: 40_000 })
+      const fit = await page.evaluate(() => ({
+        scroll: document.scrollingElement!.scrollWidth,
+        width: document.documentElement.clientWidth,
+        badge: document.querySelector('.app-header .el-badge__content')!.getBoundingClientRect().right,
+      }))
+      expect(fit.scroll, `${shown}: the page is no wider than the window`).toBeLessThanOrEqual(fit.width)
+      expect(fit.badge, `${shown}: the count is within the window`).toBeLessThanOrEqual(fit.width)
+    }
   })
 
   test.describe('at phone width', () => {
@@ -981,6 +1041,35 @@ test.describe.serial('the chat panel', () => {
       await expect(panelOf(page)).toHaveCount(0)
       await expect(page.locator('.course-head')).toBeVisible()
       await expect(chatButton(page)).toBeFocused()
+    })
+
+    test('its floating button leaves the grades’ posting toolbar, its ⋯ menu at the right end, clear', async ({
+      page,
+    }) => {
+      const d = demo()
+      await signIn(page, d.actors.instructor)
+      await page.goto(coursePath('grades'))
+      const more = page.getByRole('button', { name: 'More posting actions' })
+      await expect(more).toBeVisible()
+      await expect(chatButton(page)).toBeVisible()
+      // As the page opens, the ⋯ is not in the button's column, and where it is on the screen it is the ⋯ a tap finds.
+      const at = await more.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const fab = document.querySelector('.app-chat-fab__button')!.getBoundingClientRect()
+        const hit = (x: number, y: number) => {
+          const found = document.elementFromPoint(x, y)
+          return !!found && el.contains(found)
+        }
+        const y = r.top + r.height / 2
+        const shown = y >= 0 && y <= window.innerHeight
+        return {
+          clear: r.right <= fab.left,
+          centre: !shown || hit(r.left + r.width / 2, y),
+          right: !shown || hit(r.right - 2, y),
+        }
+      })
+      expect(at).toEqual({ clear: true, centre: true, right: true })
+      await photograph(page, 'grades-toolbar-phone')
     })
 
     test('its floating button stays under the side menu and its dimmed layer', async ({ page }) => {

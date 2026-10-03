@@ -243,13 +243,13 @@ describe('quotas per person', () => {
     expect(me.find('.tenant-cell__name').attributes('href')).toBe(`/admin/actors/${ADMIN_ID}`)
     expect(me.find('.tenant-cell__source').text()).toBe('Set here')
     expect(me.find('.tenant-cell__answers').text()).toBe('300')
-    expect(me.find('.tenant-cell__usd').text()).toBe('$5.00')
+    expect(me.find('.tenant-cell__usd').text()).toBe('US$5.00')
     expect(me.text()).toContain('server: 200')
     expect(me.text()).toContain('server: No limit')
     expect(me.find('.tenant-cell__reset').exists()).toBe(true)
     const ops = tenantRow(w, 't_ops')
     expect(ops.find('.tenant-cell__id').text()).toBe('t_ops')
-    expect(ops.find('.tenant-cell__source').text()).toBe('runtime.yaml')
+    expect(ops.find('.tenant-cell__source').text()).toBe('Server settings')
     expect(ops.find('.tenant-cell__reset').exists()).toBe(false)
     // Two a page here: the third comes with the next.
     expect(w.find('[data-tenant^="ten_0192f3c1-1111"]').exists()).toBe(false)
@@ -278,7 +278,7 @@ describe('quotas per person', () => {
     expect(JSON.parse(put.body!)).toEqual({ per_day: { answers: null, usd: '3.5' } })
     expect(lastMessage()?.message).toBe('The quota for Chan Tai Man is saved.')
     const chan = tenantRow(w, 'ten_0192f3c1-1111-7c3a-9b1f-2a4c6e8f0a1b')
-    expect(chan.find('.tenant-cell__usd').text()).toBe('$3.50')
+    expect(chan.find('.tenant-cell__usd').text()).toBe('US$3.50')
     expect(chan.find('.tenant-cell__source').text()).toBe('Set here')
   })
 
@@ -302,10 +302,10 @@ describe('quotas per person', () => {
     await tenantRow(w, `ten_${ADMIN_ID}`).find('.tenant-cell__reset').trigger('click')
     await flushPromises()
     expect(vi.mocked(ElMessageBox.confirm).mock.calls[0][0]).toBe(
-      'The quota set here is removed. runtime.yaml’s: 200 a day, and No limit.',
+      'The quota set here is removed. The server’s settings: 200 a day, and No limit.',
     )
     expect(s.to('DELETE', ADMIN.tenant)).toHaveLength(1)
-    expect(tenantRow(w, `ten_${ADMIN_ID}`).find('.tenant-cell__source').text()).toBe('runtime.yaml')
+    expect(tenantRow(w, `ten_${ADMIN_ID}`).find('.tenant-cell__source').text()).toBe('Server settings')
   })
 })
 
@@ -318,11 +318,11 @@ describe('agents’ daily budgets', () => {
     expect(input(w, 'per_agent_day', 'answers').value).toBe('500')
     expect(input(w, 'per_agent_day', 'usd').value).toBe('10')
     expect(input(w, 'per_asker_day', 'usd').value).toBe('')
-    expect(w.find('.budgets-card__per_asker_day').text()).toContain('Server: $1.50')
+    expect(w.find('.budgets-card__per_asker_day').text()).toContain('Server: US$1.50')
     expect(w.find('.budgets-card__source').text()).toMatch(
       /^Set here, in place of the server’s defaults.\s*Changed by Ada Admin/,
     )
-    expect(w.text()).toContain('The server’s own configured agents keep the budgets runtime.yaml gives them.')
+    expect(w.text()).toContain('The server’s own configured agents keep the budgets its settings give them.')
     expect(w.find('.budgets-card__save').attributes('disabled')).toBeDefined()
   })
 
@@ -374,7 +374,7 @@ describe('agents’ daily budgets', () => {
     expect(s.to('DELETE', ADMIN.budgets)).toHaveLength(1)
     expect(input(w, 'per_agent_day', 'answers').value).toBe('400')
     expect(w.find('.budgets-card__source').text()).toBe(
-      'The server’s defaults (runtime.yaml), as its operator set them.',
+      'The server’s defaults, as its operator set them.',
     )
     expect(w.find('.budgets-card__reset').exists()).toBe(false)
   })
@@ -386,12 +386,12 @@ describe('what things cost', () => {
   it('reads the thirty days to today by day, with the total, other kinds and calls without a price', async () => {
     const w = await panel()
     expect(costs()).toEqual(['/runtime/api/v1/admin/costs?since=2026-09-01&until=2026-09-30&group=day'])
-    expect(w.find('.costs-card__cost').text()).toBe('$3.50')
+    expect(w.find('.costs-card__cost').text()).toBe('US$3.50')
     expect(w.find('.costs-card__calls').text()).toBe('300')
     expect(w.find('.costs-card__tokens').text()).toBe('400,000 in · 90,000 out')
-    expect(w.find('.costs-card__other').text()).toBe('Document transcription: 4 calls, $0.10')
+    expect(w.find('.costs-card__other').text()).toBe('Document transcription: 4 calls, US$0.10')
     expect(w.find('.costs-card__unpriced').text()).toContain(
-      '7 calls had no price when they were made, and are counted as $0.',
+      '7 calls had no price when they were made, and are counted as US$0.',
     )
     expect(w.findAll('.cost-cell__day').map((d) => d.text())).toEqual(['2026-09-29'])
     await w.find('.costs-card .load-more button').trigger('click')
@@ -453,7 +453,7 @@ describe('what things cost', () => {
   it('reads in Traditional Chinese', async () => {
     setLocale('zh-Hant')
     const w = await panel()
-    expect(w.find('.costs-card__tokens').text()).toBe('輸入 400,000 · 輸出 90,000')
+    expect(w.find('.costs-card__tokens').text()).toBe('輸入400,000 · 輸出90,000')
     expect(w.find('.prices-card .app-card__title').text()).toContain('價目表')
   })
 })

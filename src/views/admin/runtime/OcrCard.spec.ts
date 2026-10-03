@@ -66,10 +66,10 @@ describe('OcrCard', () => {
       { text: 'English', code: 'eng', checked: true, serverDefault: true },
       { text: '日本語', code: 'jpn', checked: false, serverDefault: false },
     ])
-    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 繁體中文, English')
+    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 繁體中文 and English')
     // Not the server's default: it may be put back.
     expect(w.find('.ocr-card__use-default').exists()).toBe(true)
-    expect(w.text()).toContain('The server’s languages: 简体中文, 繁體中文, English.')
+    expect(w.text()).toContain('The server’s languages: 简体中文, 繁體中文, and English.')
     const changed = w.find('.ocr-card__changed')
     expect(changed.text()).toMatch(/^Changed by Ada Admin, /)
     expect(changed.find('a').attributes('href')).toBe(`/admin/actors/${ADMIN_ID}`)
@@ -94,16 +94,16 @@ describe('OcrCard', () => {
     const [sim, , eng] = w.findAll('.ocr-card__choice input')
     await eng.setValue(false)
     await sim.setValue(true)
-    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 繁體中文, 简体中文')
+    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 繁體中文 and 简体中文')
     await w.find('.ocr-card__undo').trigger('click')
-    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 繁體中文, English')
+    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 繁體中文 and English')
 
     await w.findAll('.ocr-card__choice input')[3].setValue(true)
     await w.find('.ocr-card__save').trigger('click')
     await flushPromises()
     expect(patches()).toEqual([{ ocr: { languages: ['chi_tra', 'eng', 'jpn'] } }])
     expect(vi.mocked(ElMessage).mock.calls.at(-1)?.[0]).toMatchObject({
-      message: 'OCR reads in 繁體中文, English, 日本語.',
+      message: 'OCR reads in 繁體中文, English, and 日本語.',
     })
     expect(w.find('.ocr-card__save').exists()).toBe(false)
   })
@@ -114,7 +114,7 @@ describe('OcrCard', () => {
     await w.find('.ocr-card__enabled').trigger('click')
     await flushPromises()
     expect(patches()).toEqual([{ ocr: { enabled: false } }])
-    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 繁體中文, English, 日本語')
+    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 繁體中文, English, and 日本語')
     expect(w.find('.ocr-card__save').exists()).toBe(true)
   })
 
@@ -134,14 +134,14 @@ describe('OcrCard', () => {
     await w.find('.ocr-card__use-default').trigger('click')
     await flushPromises()
     expect(patches()).toEqual([{ ocr: { languages: null } }])
-    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 简体中文, 繁體中文, English')
+    expect(w.find('.ocr-card__order').text()).toBe('Read in this order: 简体中文, 繁體中文, and English')
     expect(w.find('.ocr-card__use-default').exists()).toBe(false)
   })
 
   it.each([
     [
       'operator_off',
-      'The server’s operator has turned OCR off (OCR=off), so it never runs, whatever is set here. What you set is kept for when it is turned on.',
+      'The server has turned this off, so it never runs, whatever is set here. What you set is kept for when it is turned on; ask the server’s operator.',
     ],
     [
       'not_installed',
@@ -162,7 +162,21 @@ describe('OcrCard', () => {
     // Off, and cannot be turned on.
     expect(w.find('.ocr-card__enabled').classes()).toContain('is-disabled')
     expect(w.find('.ocr-card__choices').exists()).toBe(false)
-    expect(w.find('.ocr-card__kept').text()).toBe('Kept for when OCR can run: 繁體中文, English')
+    expect(w.find('.ocr-card__kept').text()).toBe('Kept for when OCR can run: 繁體中文 and English')
+  })
+
+  it('turned off by the server, says in each language to ask its operator, as the ⓘ beside it does', async () => {
+    state.settings = ocrSettings({ available: false, unavailable_reason: 'operator_off', available_languages: [] })
+    for (const [locale, ask] of [
+      ['en', 'ask the server’s operator'],
+      ['zh-Hant', '請聯絡伺服器營運者'],
+      ['zh-Hans', '请联系服务器运维方'],
+    ] as const) {
+      setLocale(locale)
+      const w = await card()
+      expect(w.find('.ocr-card__unavailable .el-alert__title').text()).toContain(ask)
+      w.unmount()
+    }
   })
 
   it('may turn off, where OCR cannot run, what the site had on', async () => {
@@ -194,7 +208,7 @@ describe('OcrCard', () => {
     s.on('GET', ADMIN.settings, () => noRoute())
     const w = await card()
     expect(w.find('.runtime-async__not-offered').text()).toBe(
-      'This runtime does not offer this yet: it comes with a newer version of the agent runtime.',
+      'This agent service does not offer this yet: it comes with a newer version of the agent service.',
     )
     expect(w.find('.el-alert--error').exists()).toBe(false)
   })
@@ -210,7 +224,7 @@ describe('OcrCard', () => {
     setLocale('zh-Hant')
     const w = await card()
     expect(w.find('.ocr-card__state').text()).toBe('已開啟')
-    expect(w.find('.ocr-card__order').text()).toBe('辨識次序：繁體中文, English')
-    expect(w.find('.ocr-card__changed').text()).toMatch(/^由 Ada Admin 於 .+ 更改$/)
+    expect(w.find('.ocr-card__order').text()).toBe('辨識次序：繁體中文和English')
+    expect(w.find('.ocr-card__changed').text()).toMatch(/^由Ada Admin於.+更改$/)
   })
 })

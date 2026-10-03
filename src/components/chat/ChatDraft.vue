@@ -9,6 +9,8 @@
 // question. The posted message takes its place.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AgentAvatar from '@/components/AgentAvatar.vue'
+import AiBadge from '@/components/AiBadge.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import '@/styles/chat-prose.css'
 import ChatDraftSteps from './ChatDraftSteps.vue'
@@ -33,8 +35,9 @@ const idle = computed(() => !text.value && !steps.value.some((s) => !stepDone(s)
 <template>
   <article class="chat-msg is-agent chat-draft" :aria-label="authorName" aria-busy="true">
     <header class="chat-msg__head">
-      <span class="chat-msg__mark" aria-hidden="true" />
+      <AgentAvatar :name="authorName" size="small" />
       <span class="chat-msg__author">{{ authorName }}</span>
+      <AiBadge />
     </header>
     <ChatDraftSteps v-if="steps.length" :steps="steps" :collapsed="!!text" class="chat-draft__steps" />
     <div v-if="text" class="chat-draft__text">
@@ -62,12 +65,6 @@ const idle = computed(() => !text.value && !steps.value.some((s) => !stepDone(s)
   margin: 0 2px;
   font-size: 12px;
   line-height: 1.4;
-}
-.chat-msg__mark {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--app-light);
 }
 .chat-msg__author {
   font-weight: 600;

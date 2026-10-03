@@ -4,7 +4,7 @@ export default {
   subtitle: '单点登录：除密码之外，用户可通过这些身份提供者登录',
   add: '添加提供者',
   noSecretsKey:
-    '需由服务器运维者在环境配置中加入 SECRETS_KEY（32 个随机字节的 base64）并重启；提供者的客户端密钥会用它加密保存。运维者在环境配置中设置的提供者不受影响。',
+    '需由服务器运维者为服务器设置一把用来加密客户端密钥的密钥，并重启。运维者在服务器上设置的提供者不受影响。',
 
   redirect: {
     label: '重定向 URI',
@@ -35,7 +35,7 @@ export default {
     keycloak: {
       where:
         '在管理控制台选择 realm，然后 Clients → Create client，类型 OpenID Connect，并开启 Client authentication。粘贴到 Valid redirect URIs。客户端 ID 是你所起的名称；密钥在其 Credentials 标签页。',
-      note: 'Keycloak 17 之前的版本，路径以 /auth 开头：…/auth/realms/<realm>。',
+      note: 'Keycloak 17之前的版本，路径以 /auth 开头：…/auth/realms/<realm>。',
     },
   },
 
@@ -51,30 +51,30 @@ export default {
     actions: '操作',
     test: '测试',
     operator: '由服务器运维者设置',
-    operatorWhy: '在服务器环境配置（OIDC_*）中设置，此处只读。',
+    operatorWhy: '由服务器运维者在服务器上设置，此处只读。',
     linksByEmail: '以邮箱关联',
     olderKey: '旧密钥',
-    olderKeyWhy: '其密钥以之前的 SECRETS_KEY 加密，服务器仍保留该密钥。运维者执行 aishie-core secrets rewrap 即可改以新密钥重新加密。',
+    olderKeyWhy: '其密钥以服务器之前的密钥加密，服务器仍保留该密钥。服务器运维者可改以新密钥重新加密。',
     unnamed: '未命名：按钮显示“单点登录”',
     always: '始终启用',
-    enabledLabel: '在登录页提供 {name}',
-    linkedCount: '没有已关联的账号 | 已关联 1 个账号 | 已关联 {n} 个账号',
+    enabledLabel: '在登录页提供{name}',
+    linkedCount: '没有已关联的账号 | 已关联1个账号 | 已关联{n}个账号',
     changedMeanwhile: '其间已有人修改，列表已显示最新状态。如仍需要，请再试一次。',
-    turnOffTitle: '停用 {name}？',
+    turnOffTitle: '停用{name}？',
     turnOff:
-      '没有账号关联到它。 | 有 1 个账号通过它登录：停用后，在重新启用之前都无法通过它登录。不会解除任何关联。 | 有 {n} 个账号通过它登录：停用后，在重新启用之前都无法通过它登录。不会解除任何关联。',
+      '没有账号关联到它。 | 有1个账号通过它登录：停用后，在重新启用之前都无法通过它登录。不会解除任何关联。 | 有{n}个账号通过它登录：停用后，在重新启用之前都无法通过它登录。不会解除任何关联。',
     turnOffConfirm: '停用',
-    turnedOn: '已启用 {name}：一分钟内其按钮会出现在登录页。',
-    turnedOnNobody: '已启用 {name}：一分钟内其按钮会出现在登录页。目前没有账号关联到它，在关联账号之前没有人能通过它登录。',
-    turnedOnNotOffered: '已启用 {name}，但其按钮不会出现在登录页（{status}）：原因见列表中的状态。',
-    turnedOff: '已停用 {name}：一分钟内其按钮会从登录页消失。不会解除任何关联。',
-    turnedOffNotOffered: '已停用 {name}。不会解除任何关联。',
-    deleteTitle: '删除 {name}？',
+    turnedOn: '已启用{name}：一分钟内其按钮会出现在登录页。',
+    turnedOnNobody: '已启用{name}：一分钟内其按钮会出现在登录页。目前没有账号关联到它，在关联账号之前没有人能通过它登录。',
+    turnedOnNotOffered: '已启用{name}，但其按钮不会出现在登录页（{status}）：原因见列表中的状态。',
+    turnedOff: '已停用{name}：一分钟内其按钮会从登录页消失。不会解除任何关联。',
+    turnedOffNotOffered: '已停用{name}。不会解除任何关联。',
+    deleteTitle: '删除{name}？',
     deleteNone: '它会被移除，其按钮也会从登录页消失。目前没有账号关联到它。日后以同一 ID 重新创建，也不会自动恢复任何关联。',
     deleteLinked:
-      '不会有账号失去单点登录。 | 1 个账号将无法再以此方式登录：其关联会被解除，之后只能以密码登录或无法登录。如要保留关联，请改为停用。 | {n} 个账号将无法再以此方式登录：其关联会被解除，之后只能以密码登录或无法登录。如要保留关联，请改为停用。',
-    deleteForce: '删除 | 删除并解除 1 个账号的关联 | 删除并解除 {n} 个账号的关联',
-    deleted: '已删除 {name}。 | 已删除 {name}，并解除了 1 个账号的关联。 | 已删除 {name}，并解除了 {n} 个账号的关联。',
+      '不会有账号失去单点登录。 | 1个账号将无法再以此方式登录：其关联会被解除，之后只能以密码登录或无法登录。如要保留关联，请改为停用。 | {n}个账号将无法再以此方式登录：其关联会被解除，之后只能以密码登录或无法登录。如要保留关联，请改为停用。',
+    deleteForce: '删除 | 删除并解除1个账号的关联 | 删除并解除{n}个账号的关联',
+    deleted: '已删除{name}。 | 已删除{name}，并解除了1个账号的关联。 | 已删除{name}，并解除了{n}个账号的关联。',
   },
 
   status: {
@@ -89,23 +89,23 @@ export default {
     id_taken:
       '服务器运维者设置了一个同一 ID 的提供者，并以它取代此项。此项不会提供；在运维者的提供者使用这个 ID 期间，此处也无法修改或删除它。',
     secret_unavailable:
-      '服务器的密钥无法打开其客户端密钥（SECRETS_KEY 被移除，或更换时没有保留旧密钥），因此不会提供。请编辑并重新输入密钥。',
+      '服务器的密钥无法打开其客户端密钥（密钥被移除，或更换时没有保留旧密钥），因此不会提供。请编辑并重新输入密钥。',
     issuer_address_not_allowed:
-      '其颁发者位于本机，或位于私有、链路本地或其他非公开地址；除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则服务器不会连接它，因此不会提供，通过它登录也会被拒绝。请编辑以更换颁发者，或联系服务器运维者。',
+      '其颁发者位于本机，或位于私有、链路本地或其他非公开地址；除非服务器运维者允许，否则服务器不会连接它，因此不会提供，通过它登录也会被拒绝。请编辑以更换颁发者，或联系服务器运维者。',
   },
 
   test: {
-    title: '测试 {name}',
+    title: '测试{name}',
     testing: '测试中…',
     again: '再测试',
     ok: '可以使用：登录可以通过这个颁发者完成。',
     notOk: '未能使用：按目前设置，登录无法完成。',
     // 读取了颁发者的多少内容（reportRead）。
     read: {
-      all: '已在 {issuer} 读取其发现文档及密钥。过程中没有任何人登录，也没有发送密钥。',
-      issuer: '没有从 {issuer} 读取任何内容：这个颁发者本身未被接受。过程中没有任何人登录，也没有发送密钥。',
-      document: '未能从 {issuer} 读取任何内容：其发现文档未被读取。过程中没有任何人登录，也没有发送密钥。',
-      keys: '已在 {issuer} 读取其发现文档，但未能读取其密钥。过程中没有任何人登录，也没有发送密钥。',
+      all: '已在{issuer}读取其发现文档及密钥。过程中没有任何人登录，也没有发送密钥。',
+      issuer: '没有从{issuer}读取任何内容：这个颁发者本身未被接受。过程中没有任何人登录，也没有发送密钥。',
+      document: '未能从{issuer}读取任何内容：其发现文档未被读取。过程中没有任何人登录，也没有发送密钥。',
+      keys: '已在{issuer}读取其发现文档，但未能读取其密钥。过程中没有任何人登录，也没有发送密钥。',
     },
     problems: '问题 | 问题 | 问题（{n}）',
     warnings: '警告 | 警告 | 警告（{n}）',
@@ -121,7 +121,7 @@ export default {
     none: '没有',
     keys: '没有签名密钥 | 签名密钥 | 签名密钥（{n}）',
     kid: '密钥 ID {kid}',
-    use: '用途 {use}',
+    use: '用途{use}',
     supported: '其声称支持的项目',
     support: {
       signingAlgorithms: '签名算法',
@@ -137,13 +137,13 @@ export default {
     // Core 注明原因的问题：以这里的文字说明，其后附上 Core 的原文（其中列出网址）。
     reason: {
       issuer_address_not_allowed:
-        '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+        '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者允许，否则本服务器不会连接位于这些地址、在此设置的提供者。',
     },
   },
 
   form: {
     createTitle: '添加单点登录提供者',
-    editTitle: '编辑 {name}',
+    editTitle: '编辑{name}',
     id: 'ID',
     idPlaceholder: '例如 school-adfs',
     idHint: '小写英文字母、数字及连字符。账号以这个 ID 关联到提供者，添加后永不更改。',
@@ -159,7 +159,7 @@ export default {
       '须与提供者的发现文档（…/.well-known/openid-configuration）所写的完全相同，结尾的 / 也要一致。“测试”会读取它，不会令任何人登录，也不会发送密钥。位于本机或私有网络的颁发者，服务器可能会拒绝，除非其运维者允许。',
     test: '测试',
     issuerLinked:
-      '没有账号关联到它。 | 有 1 个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以该账号登录。 | 有 {n} 个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以这些账号登录。',
+      '没有账号关联到它。 | 有1个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以该账号登录。 | 有{n}个账号关联到它，并会保持关联：新颁发者以同一主体担保的人，会以这些账号登录。',
     clientId: '客户端 ID',
     clientSecret: '客户端密钥',
     secretKeep: '保留现有密钥（{hint}）',
@@ -176,7 +176,7 @@ export default {
     emailClaimHint: '载有用户邮箱的声明，只在以邮箱关联时读取。',
     position: '在登录页的位置',
     positionLast: '排在其他之后',
-    positionHint: '数字小的排前，0 至 10000。运维者的提供者一定排第一。',
+    positionHint: '数字小的排前，0至10000。运维者的提供者一定排第一。',
     linkByEmail: '允许以已验证邮箱自动关联现有账号',
     byEmail: {
       intro: '关闭时，只有已关联的账号可以通过它登录。开启后，首次通过它登录、身份尚未关联任何账号的人，在以下各项全部成立时，会关联到现有账号：',
@@ -192,43 +192,50 @@ export default {
     domainsPlaceholder: '例如 example.edu',
     domainsHint: '输入域名后按 Enter。邮箱只会与其域名完全相符。',
     add: '添加提供者',
-    created: '已添加 {name}，目前为停用：请先测试，关联账号或开启以邮箱关联，然后在列表中启用。',
-    saved: '已保存 {name}，下次登录时生效。',
+    created: '已添加{name}，目前为停用：请先测试，关联账号或开启以邮箱关联，然后在列表中启用。',
+    saved: '已保存{name}，下次登录时生效。',
     changedMeanwhile: '其间已有人修改这个提供者。表单已显示对方的修改，并保留了你的修改：请检查后再保存。',
     refusedField: '未被接受：{message}',
     invalid: {
       required: '必填',
-      id: '小写英文字母、数字及连字符，以字母或数字开头及结尾，最多 64 个字符',
+      id: '小写英文字母、数字及连字符，以字母或数字开头及结尾，最多64个字符',
       idTaken: '已有提供者使用这个 ID',
-      displayNameLong: '最多 64 个字符',
+      displayNameLong: '最多64个字符',
       printable: '只可使用可打印字符',
       issuer_url: '须为网址，不可含用户、查询字符串或片段',
       issuer_https: '须为 https 网址（只有本机可用 http，且须服务器允许）',
-      issuer_long: '最多 500 字节',
+      issuer_long: '最多500字节',
       ascii: '只可使用可打印的 ASCII 字符',
-      long: '最多 500 字节',
+      long: '最多500字节',
       openid: '范围必须包括 openid',
-      scopesMany: '最多 20 个范围',
+      scopesMany: '最多20个范围',
       scope: '范围不可含空格、引号或反斜杠',
       claim: '声明名称，不可含空格',
       domainsRequired: '以邮箱关联须列出允许的邮箱域名',
-      domainsMany: '最多 50 个域名',
+      domainsMany: '最多50个域名',
       domain: '例如 example.edu 的域名',
-      position: '0 至 10000 的整数',
+      position: '0至10000的整数',
     },
   },
 
   refusal: {
-    secrets_key_missing: '管理员需先在服务器设置 SECRETS_KEY：在运维者设置之前，无法添加提供者，也无法输入客户端密钥。',
-    set_by_operator: '这个提供者由服务器运维者设置（OIDC_*），此处无法修改。',
+    secrets_key_missing: '服务器尚未设置用来加密客户端密钥的密钥：在运维者设置之前，无法添加提供者，也无法输入客户端密钥。',
+    set_by_operator: '这个提供者由服务器运维者在服务器上设置，此处无法修改。',
     id_taken: '这个 ID 已被占用：运维者的提供者或另一个提供者已使用它。请另选一个。',
     version_mismatch: '其间已有人修改这个提供者。',
-    provider_in_use: '有 {linked_accounts} 个账号关联到它。',
+    provider_in_use: '有{linked_accounts}个账号关联到它。',
     secret_unavailable: '服务器的密钥无法打开其客户端密钥，因此无法启用：请编辑并重新输入密钥。',
     sso_provider_not_found: '这个提供者已不存在：其间已有人删除它。',
     sso_provider_unavailable: '这个提供者暂时无法使用：其密钥无法打开，或无法读取其发现文档。',
     platform_role_required: '只有 root 及平台管理员可以设置单点登录。',
     issuer_address_not_allowed:
-      '这个颁发者位于本机，或位于私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+      '这个颁发者位于本机，或位于私有、链路本地或保留地址：除非服务器运维者允许，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+  },
+  // 只有服务器运维方会处理的设置，放在文字旁的提示中（OperatorDetail）。
+  flags: {
+    secretsKey: '服务器环境配置中的 SECRETS_KEY（32个随机字节的 base64）',
+    rewrap: 'aishie-core secrets rewrap',
+    privateIssuers: 'SSO_ALLOW_PRIVATE_ISSUERS',
+    oidc: '服务器环境配置中的 OIDC_ISSUER、OIDC_CLIENT_ID 等 OIDC_* 配置',
   },
 }

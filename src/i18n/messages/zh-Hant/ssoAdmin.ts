@@ -4,7 +4,7 @@ export default {
   subtitle: '單一登入：除密碼之外，用戶可經由這些身分提供者登入',
   add: '新增提供者',
   noSecretsKey:
-    '需由伺服器營運者在環境設定中加入 SECRETS_KEY（32 個隨機位元組的 base64）並重新啟動；提供者的用戶端密鑰會以它加密保存。營運者在環境設定中設定的提供者不受影響。',
+    '需由伺服器營運者為伺服器設定一把用來加密用戶端密鑰的金鑰，並重新啟動。營運者在伺服器上設定的提供者不受影響。',
 
   redirect: {
     label: '重新導向 URI',
@@ -35,7 +35,7 @@ export default {
     keycloak: {
       where:
         '在管理主控台選擇 realm，然後 Clients → Create client，類型 OpenID Connect，並開啟 Client authentication。貼到 Valid redirect URIs。用戶端 ID 是你所起的名稱；密鑰在其 Credentials 分頁。',
-      note: 'Keycloak 17 之前的版本，路徑以 /auth 開頭：…/auth/realms/<realm>。',
+      note: 'Keycloak 17之前的版本，路徑以 /auth 開頭：…/auth/realms/<realm>。',
     },
   },
 
@@ -51,31 +51,31 @@ export default {
     actions: '操作',
     test: '測試',
     operator: '由伺服器營運者設定',
-    operatorWhy: '在伺服器環境設定（OIDC_*）中設定，此處唯讀。',
+    operatorWhy: '由伺服器營運者在伺服器上設定，此處唯讀。',
     linksByEmail: '以電郵連結',
     olderKey: '舊金鑰',
     olderKeyWhy:
-      '其密鑰以先前的 SECRETS_KEY 加密，伺服器仍保留該金鑰。營運者執行 aishie-core secrets rewrap 即可改以新金鑰重新加密。',
+      '其密鑰以伺服器先前的金鑰加密，伺服器仍保留該金鑰。伺服器營運者可改以新金鑰重新加密。',
     unnamed: '未命名：按鈕顯示「單一登入」',
     always: '一直啟用',
-    enabledLabel: '在登入頁提供 {name}',
-    linkedCount: '沒有已連結的帳號 | 已連結 1 個帳號 | 已連結 {n} 個帳號',
+    enabledLabel: '在登入頁提供{name}',
+    linkedCount: '沒有已連結的帳號 | 已連結1個帳號 | 已連結{n}個帳號',
     changedMeanwhile: '其間已有人修改，清單已顯示最新狀態。如仍需要，請再試一次。',
-    turnOffTitle: '停用 {name}？',
+    turnOffTitle: '停用{name}？',
     turnOff:
-      '沒有帳號連結到它。 | 有 1 個帳號經它登入：停用後，在重新啟用之前都無法經它登入。不會解除任何連結。 | 有 {n} 個帳號經它登入：停用後，在重新啟用之前都無法經它登入。不會解除任何連結。',
+      '沒有帳號連結到它。 | 有1個帳號經它登入：停用後，在重新啟用之前都無法經它登入。不會解除任何連結。 | 有{n}個帳號經它登入：停用後，在重新啟用之前都無法經它登入。不會解除任何連結。',
     turnOffConfirm: '停用',
-    turnedOn: '已啟用 {name}：一分鐘內其按鈕會出現在登入頁。',
-    turnedOnNobody: '已啟用 {name}：一分鐘內其按鈕會出現在登入頁。目前沒有帳號連結到它，在連結帳號之前沒有人能經它登入。',
-    turnedOnNotOffered: '已啟用 {name}，但其按鈕不會出現在登入頁（{status}）：原因見清單中的狀態。',
-    turnedOff: '已停用 {name}：一分鐘內其按鈕會從登入頁消失。不會解除任何連結。',
-    turnedOffNotOffered: '已停用 {name}。不會解除任何連結。',
-    deleteTitle: '刪除 {name}？',
+    turnedOn: '已啟用{name}：一分鐘內其按鈕會出現在登入頁。',
+    turnedOnNobody: '已啟用{name}：一分鐘內其按鈕會出現在登入頁。目前沒有帳號連結到它，在連結帳號之前沒有人能經它登入。',
+    turnedOnNotOffered: '已啟用{name}，但其按鈕不會出現在登入頁（{status}）：原因見清單中的狀態。',
+    turnedOff: '已停用{name}：一分鐘內其按鈕會從登入頁消失。不會解除任何連結。',
+    turnedOffNotOffered: '已停用{name}。不會解除任何連結。',
+    deleteTitle: '刪除{name}？',
     deleteNone: '它會被移除，其按鈕也會從登入頁消失。目前沒有帳號連結到它。日後以同一 ID 重新建立，也不會自動恢復任何連結。',
     deleteLinked:
-      '不會有帳號失去單一登入。 | 1 個帳號將無法再以此方式登入：其連結會被解除，之後只能以密碼登入或無法登入。如要保留連結，請改為停用。 | {n} 個帳號將無法再以此方式登入：其連結會被解除，之後只能以密碼登入或無法登入。如要保留連結，請改為停用。',
-    deleteForce: '刪除 | 刪除並解除 1 個帳號的連結 | 刪除並解除 {n} 個帳號的連結',
-    deleted: '已刪除 {name}。 | 已刪除 {name}，並解除了 1 個帳號的連結。 | 已刪除 {name}，並解除了 {n} 個帳號的連結。',
+      '不會有帳號失去單一登入。 | 1個帳號將無法再以此方式登入：其連結會被解除，之後只能以密碼登入或無法登入。如要保留連結，請改為停用。 | {n}個帳號將無法再以此方式登入：其連結會被解除，之後只能以密碼登入或無法登入。如要保留連結，請改為停用。',
+    deleteForce: '刪除 | 刪除並解除1個帳號的連結 | 刪除並解除{n}個帳號的連結',
+    deleted: '已刪除{name}。 | 已刪除{name}，並解除了1個帳號的連結。 | 已刪除{name}，並解除了{n}個帳號的連結。',
   },
 
   status: {
@@ -90,23 +90,23 @@ export default {
     id_taken:
       '伺服器營運者設定了一個同一 ID 的提供者，並以它取代此項。此項不會提供；在營運者的提供者使用這個 ID 期間，此處也無法修改或刪除它。',
     secret_unavailable:
-      '伺服器的金鑰無法開啟其用戶端密鑰（SECRETS_KEY 被移除，或更換時沒有保留舊金鑰），因此不會提供。請編輯並重新輸入密鑰。',
+      '伺服器的金鑰無法開啟其用戶端密鑰（金鑰被移除，或更換時沒有保留舊金鑰），因此不會提供。請編輯並重新輸入密鑰。',
     issuer_address_not_allowed:
-      '其簽發者位於本機，或位於私人、鏈路本地或其他非公開位址；除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則伺服器不會連往它，因此不會提供，經它登入也會被拒絕。請編輯以更換簽發者，或聯絡伺服器營運者。',
+      '其簽發者位於本機，或位於私人、鏈路本地或其他非公開位址；除非伺服器營運者允許，否則伺服器不會連往它，因此不會提供，經它登入也會被拒絕。請編輯以更換簽發者，或聯絡伺服器營運者。',
   },
 
   test: {
-    title: '測試 {name}',
+    title: '測試{name}',
     testing: '測試中…',
     again: '再測試',
     ok: '可以使用：登入可以經這個簽發者完成。',
     notOk: '未能使用：按目前設定，登入無法完成。',
     // 讀取了簽發者的多少內容（reportRead）。
     read: {
-      all: '已在 {issuer} 讀取其探索文件及金鑰。過程中沒有任何人登入，也沒有送出密鑰。',
-      issuer: '沒有從 {issuer} 讀取任何內容：這個簽發者本身未被接受。過程中沒有任何人登入，也沒有送出密鑰。',
-      document: '未能從 {issuer} 讀取任何內容：其探索文件未被讀取。過程中沒有任何人登入，也沒有送出密鑰。',
-      keys: '已在 {issuer} 讀取其探索文件，但未能讀取其金鑰。過程中沒有任何人登入，也沒有送出密鑰。',
+      all: '已在{issuer}讀取其探索文件及金鑰。過程中沒有任何人登入，也沒有送出密鑰。',
+      issuer: '沒有從{issuer}讀取任何內容：這個簽發者本身未被接受。過程中沒有任何人登入，也沒有送出密鑰。',
+      document: '未能從{issuer}讀取任何內容：其探索文件未被讀取。過程中沒有任何人登入，也沒有送出密鑰。',
+      keys: '已在{issuer}讀取其探索文件，但未能讀取其金鑰。過程中沒有任何人登入，也沒有送出密鑰。',
     },
     problems: '問題 | 問題 | 問題（{n}）',
     warnings: '警告 | 警告 | 警告（{n}）',
@@ -122,7 +122,7 @@ export default {
     none: '沒有',
     keys: '沒有簽署金鑰 | 簽署金鑰 | 簽署金鑰（{n}）',
     kid: '金鑰 ID {kid}',
-    use: '用途 {use}',
+    use: '用途{use}',
     supported: '其宣稱支援的項目',
     support: {
       signingAlgorithms: '簽署演算法',
@@ -138,13 +138,13 @@ export default {
     // Core 註明原因的問題：以這裡的文字說明，其後附上 Core 的原文（其中列出網址）。
     reason: {
       issuer_address_not_allowed:
-        '這裡有位址位於本機，或屬私人、鏈路本地或保留位址：除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
+        '這裡有位址位於本機，或屬私人、鏈路本地或保留位址：除非伺服器營運者允許，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
     },
   },
 
   form: {
     createTitle: '新增單一登入提供者',
-    editTitle: '編輯 {name}',
+    editTitle: '編輯{name}',
     id: 'ID',
     idPlaceholder: '例如 school-adfs',
     idHint: '小寫英文字母、數字及連字號。帳號以這個 ID 連結到提供者，新增後永不更改。',
@@ -160,7 +160,7 @@ export default {
       '須與提供者的探索文件（…/.well-known/openid-configuration）所寫的完全相同，結尾的 / 也要一致。「測試」會讀取它，不會令任何人登入，也不會送出密鑰。位於本機或私人網絡的簽發者，伺服器可能會拒絕，除非其營運者允許。',
     test: '測試',
     issuerLinked:
-      '沒有帳號連結到它。 | 有 1 個帳號連結到它，並會保持連結：新簽發者以同一主體擔保的人，會以該帳號登入。 | 有 {n} 個帳號連結到它，並會保持連結：新簽發者以同一主體擔保的人，會以這些帳號登入。',
+      '沒有帳號連結到它。 | 有1個帳號連結到它，並會保持連結：新簽發者以同一主體擔保的人，會以該帳號登入。 | 有{n}個帳號連結到它，並會保持連結：新簽發者以同一主體擔保的人，會以這些帳號登入。',
     clientId: '用戶端 ID',
     clientSecret: '用戶端密鑰',
     secretKeep: '保留現有密鑰（{hint}）',
@@ -177,7 +177,7 @@ export default {
     emailClaimHint: '載有用戶電郵的聲明，只在以電郵連結時讀取。',
     position: '在登入頁的位置',
     positionLast: '排在其他之後',
-    positionHint: '數字小的排前，0 至 10000。營運者的提供者一定排第一。',
+    positionHint: '數字小的排前，0至10000。營運者的提供者一定排第一。',
     linkByEmail: '允許以已驗證電郵自動連結現有帳號',
     byEmail: {
       intro: '關閉時，只有已連結的帳號可以經它登入。開啟後，首次經它登入、身分尚未連結任何帳號的人，在以下各項全部成立時，會連結到現有帳號：',
@@ -193,43 +193,50 @@ export default {
     domainsPlaceholder: '例如 example.edu',
     domainsHint: '輸入網域後按 Enter。電郵只會與其網域完全相符。',
     add: '新增提供者',
-    created: '已新增 {name}，目前為停用：請先測試，連結帳號或開啟以電郵連結，然後在清單中啟用。',
-    saved: '已儲存 {name}，下次登入時生效。',
+    created: '已新增{name}，目前為停用：請先測試，連結帳號或開啟以電郵連結，然後在清單中啟用。',
+    saved: '已儲存{name}，下次登入時生效。',
     changedMeanwhile: '其間已有人修改這個提供者。表單已顯示對方的修改，並保留了你的修改：請檢查後再儲存。',
     refusedField: '未被接受：{message}',
     invalid: {
       required: '必填',
-      id: '小寫英文字母、數字及連字號，以字母或數字開頭及結尾，最多 64 個字元',
+      id: '小寫英文字母、數字及連字號，以字母或數字開頭及結尾，最多64個字元',
       idTaken: '已有提供者使用這個 ID',
-      displayNameLong: '最多 64 個字元',
+      displayNameLong: '最多64個字元',
       printable: '只可使用可列印字元',
       issuer_url: '須為網址，不可含用戶、查詢字串或片段',
       issuer_https: '須為 https 網址（只有本機可用 http，且須伺服器允許）',
-      issuer_long: '最多 500 位元組',
+      issuer_long: '最多500位元組',
       ascii: '只可使用可列印的 ASCII 字元',
-      long: '最多 500 位元組',
+      long: '最多500位元組',
       openid: '範圍必須包括 openid',
-      scopesMany: '最多 20 個範圍',
+      scopesMany: '最多20個範圍',
       scope: '範圍不可含空格、引號或反斜線',
       claim: '聲明名稱，不可含空格',
       domainsRequired: '以電郵連結須列出允許的電郵網域',
-      domainsMany: '最多 50 個網域',
+      domainsMany: '最多50個網域',
       domain: '例如 example.edu 的網域',
-      position: '0 至 10000 的整數',
+      position: '0至10000的整數',
     },
   },
 
   refusal: {
-    secrets_key_missing: '管理員需先在伺服器設定 SECRETS_KEY：在營運者設定之前，無法新增提供者，也無法輸入用戶端密鑰。',
-    set_by_operator: '這個提供者由伺服器營運者設定（OIDC_*），此處無法修改。',
+    secrets_key_missing: '伺服器尚未設定用來加密用戶端密鑰的金鑰：在營運者設定之前，無法新增提供者，也無法輸入用戶端密鑰。',
+    set_by_operator: '這個提供者由伺服器營運者在伺服器上設定，此處無法修改。',
     id_taken: '這個 ID 已被佔用：營運者的提供者或另一個提供者已使用它。請另選一個。',
     version_mismatch: '其間已有人修改這個提供者。',
-    provider_in_use: '有 {linked_accounts} 個帳號連結到它。',
+    provider_in_use: '有{linked_accounts}個帳號連結到它。',
     secret_unavailable: '伺服器的金鑰無法開啟其用戶端密鑰，因此無法啟用：請編輯並重新輸入密鑰。',
     sso_provider_not_found: '這個提供者已不存在：其間已有人刪除它。',
     sso_provider_unavailable: '這個提供者暫時無法使用：其密鑰無法開啟，或無法讀取其探索文件。',
     platform_role_required: '只有 root 及平台管理員可以設定單一登入。',
     issuer_address_not_allowed:
-      '這個簽發者位於本機，或位於私人、鏈路本地或保留位址：除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
+      '這個簽發者位於本機，或位於私人、鏈路本地或保留位址：除非伺服器營運者允許，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
+  },
+  // 只有伺服器營運者會處理的設定，放在文字旁的提示中（OperatorDetail）。
+  flags: {
+    secretsKey: '伺服器環境設定中的 SECRETS_KEY（32個隨機位元組的 base64）',
+    rewrap: 'aishie-core secrets rewrap',
+    privateIssuers: 'SSO_ALLOW_PRIVATE_ISSUERS',
+    oidc: '伺服器環境設定中的 OIDC_ISSUER、OIDC_CLIENT_ID 等 OIDC_* 設定',
   },
 }

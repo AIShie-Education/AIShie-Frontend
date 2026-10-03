@@ -30,6 +30,7 @@ import { notifyError } from '@/composables/useErrors'
 import { usePolling } from '@/composables/usePolling'
 import { announce, useWrite } from '@/composables/useWrite'
 import { pageHeadings } from '@/utils/markdown'
+import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
@@ -480,9 +481,7 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
             <el-icon><MagicStick /></el-icon>
             <span>{{ t('materials.document.text.actions.transcribe') }}</span>
           </el-button>
-          <el-tag v-if="needsApproval" type="warning" size="small" disable-transitions>
-            {{ t('enums.level.confirm_required') }}
-          </el-tag>
+          <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
         </template>
       </div>
     </div>

@@ -77,7 +77,7 @@ function linkTo(v: DocumentVersion) {
         <div class="version-item__meta">
           <!-- Names come from the member list; without it only one's own name is known. -->
           <template v-if="course.can('member_read') || v.author_member_id === course.myMemberId">
-            <MemberName :id="v.author_member_id" />
+            <MemberName :id="v.author_member_id" show-kind />
             <span class="version-item__dot">·</span>
           </template>
           <TimeText :value="v.created_at" relative />

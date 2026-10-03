@@ -26,6 +26,7 @@ import { runtime } from '@/api/runtime'
 import { useAsync } from '@/composables/useAsync'
 import { useRuntime } from '@/composables/useRuntime'
 import PageHeader from '@/components/PageHeader.vue'
+import OperatorDetail from './components/OperatorDetail.vue'
 import AgentRuntimeCard from './runtime/AgentRuntimeCard.vue'
 import DocumentsPanel from './runtime/DocumentsPanel.vue'
 import PricingPanel from './runtime/PricingPanel.vue'
@@ -92,7 +93,9 @@ watch(
         icon="warning"
         :title="t('runtimeAdmin.state.notAdminTitle')"
         :sub-title="t('runtimeAdmin.state.notAdmin')"
-      />
+      >
+        <template #extra><OperatorDetail :text="t('runtimeAdmin.flags.adminActorIds')" /></template>
+      </el-result>
     </section>
     <el-tabs v-else v-model="tab" class="runtime-admin__tabs">
       <el-tab-pane v-for="x in TABS" :key="x.name" :name="x.name" :label="t(x.label)" lazy>

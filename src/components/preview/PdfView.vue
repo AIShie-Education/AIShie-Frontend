@@ -9,10 +9,12 @@
 // The bar says which page is read and goes to another (the previous, the
 // next, or one typed), where there is more than one, and zooms: in and out by
 // steps, and to the width of the pages, which is how it opens and which it
-// keeps as they change until it is zoomed by hand. Two fingers pinch the
-// pages larger or smaller (a touchpad's pinch, which comes as a wheel with
-// Ctrl held, too), about the point between them, and the browser does not
-// zoom the screen as well; a pinch that ends near the width fits it again.
+// keeps as they change until it is zoomed by hand. It opens at its first
+// page, or at the one it is given (the page an answer relied on). Two fingers
+// pinch the pages larger or smaller (a touchpad's pinch, which comes as a
+// wheel with Ctrl held, too), about the point between them, and the browser
+// does not zoom the screen as well; a pinch that ends near the width fits it
+// again.
 //
 // Where the view is narrow (a phone, 640 px or less of its own width, as the
 // viewer is the whole screen up to a window that wide) or short (a phone on
@@ -29,6 +31,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useContainerWidth } from '@/composables/useContainerWidth'
+import { formatPct } from '@/utils/format'
 import { openPdf, TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from './pdfjs'
 import { clampZoom, CSS_UNITS, fitWidthOf, nearFit, pinchZoom, wheelZoom, zoomStep } from './pdfZoom'
 
@@ -37,6 +40,8 @@ const props = defineProps<{
   data: Uint8Array
   /** The file's name, which names the pages to a screen reader. */
   name: string
+  /** The page to open at, from 1; past the last, the last. */
+  page?: number | null
 }>()
 const emit = defineEmits<{
   /** It cannot be shown: protected by a password, or not a PDF this can read. */
@@ -519,6 +524,7 @@ onMounted(async () => {
   zoom.value = widthZoom()
   loading.value = false
   await nextTick()
+  if (props.page && props.page > 1) goTo(props.page)
   observe()
   if (scroller.value && typeof ResizeObserver !== 'undefined') {
     resizer = new ResizeObserver(() => {
@@ -602,11 +608,11 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           type="button"
           class="pdf-view__percent"
           :disabled="!pageCount"
-          :aria-label="t('preview.zoom.actual', { n: percent })"
+          :aria-label="t('preview.zoom.actual', { n: formatPct(percent / 100) })"
           :title="t('preview.zoom.actualTip')"
           @click="actualSize"
         >
-          {{ percent }} %
+          {{ formatPct(percent / 100) }}
         </button>
         <el-button
           text
@@ -704,6 +710,12 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   font: inherit;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+/* On a touch screen, 16 px, below which iOS zooms into a field it focuses. */
+@media (pointer: coarse) {
+  .pdf-view__page-input {
+    font-size: 16px;
+  }
 }
 .pdf-view__page-input:focus-visible {
   outline: 2px solid var(--app-focus);

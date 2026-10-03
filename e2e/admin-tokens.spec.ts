@@ -173,7 +173,7 @@ test('on a Core without the list, the page says so and still issues tokens', asy
   )
   await signInAsRoot(page)
   await page.goto(`/admin/actors/${agentId}`)
-  await expect(page.getByText('This Core cannot list an actor’s tokens and sign-ins yet')).toBeVisible()
+  await expect(page.getByText('This server cannot list an actor’s tokens and sign-ins yet')).toBeVisible()
   await expect(credentialsCard(page)).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Issue token' })).toBeVisible()
 })

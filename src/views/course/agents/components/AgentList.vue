@@ -16,7 +16,9 @@ import type { AutonomyLevel, Preset } from '@/api/types'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import MemberName from '@/components/MemberName.vue'
 import PresenceText from '@/components/PresenceText.vue'
@@ -24,14 +26,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import { aboveCeiling, ceilingNote, ceilingsOf } from '@/utils/ceilings'
 import RefusalAlert from '@/views/course/members/components/RefusalAlert.vue'
 import { presetLabel } from '@/views/course/members/components/seat'
-import {
-  levelRank,
-  notAskable,
-  presenceFor,
-  REPLY_LEVELS,
-  type AgentGroup,
-  type CourseAgentRow,
-} from './courseAgents'
+import { levelRank, notAskable, presenceFor, REPLY_LEVELS, type AgentGroup, type CourseAgentRow } from './courseAgents'
 
 const props = defineProps<{
   courseId: string
@@ -158,139 +153,142 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
 
 <template>
   <ul class="agent-list">
+    <!-- The avatar, then one column: every line of the row starts at the name's left edge. -->
     <li v-for="r in rows" :key="r.member.id" class="agent-row" :class="{ 'is-gone': !r.live }">
-      <div class="agent-row__main">
-        <div class="agent-row__name">
-          <el-icon class="agent-row__icon"><Cpu /></el-icon>
-          <router-link :to="{ name: 'course-member', params: { courseId, memberId: r.member.id } }">
-            {{ r.member.display_name }}
-          </router-link>
-          <AgentBadge v-if="r.member.owner_name || isMine(r)" :owner-name="r.member.owner_name" :mine="isMine(r)" />
-          <StatusTag v-if="r.member.status !== 'active'" vocab="memberStatus" :value="r.member.status" />
-          <el-tag v-else-if="!r.live" size="small" type="info">{{ t('members.expired') }}</el-tag>
-          <HostingTag :hosting="r.member.hosting" :site-chat="r.member.site_chat" />
-        </div>
-        <div class="agent-row__meta">
-          <span v-if="presetText(r)">{{ presetText(r) }}</span>
-          <template v-if="r.principal || r.member.principal_member_id">
+      <AgentAvatar :name="r.member.display_name" class="agent-row__avatar" />
+      <div class="agent-row__body">
+        <div class="agent-row__main">
+          <div class="agent-row__name">
+            <router-link :to="{ name: 'course-member', params: { courseId, memberId: r.member.id } }">
+              <AgentName :name="r.member.display_name" />
+            </router-link>
+            <AgentBadge :owner-name="r.member.owner_name" :mine="isMine(r)" no-ai />
+            <StatusTag v-if="r.member.status !== 'active'" vocab="memberStatus" :value="r.member.status" />
+            <el-tag v-else-if="!r.live" size="small" type="info">{{ t('members.expired') }}</el-tag>
+            <HostingTag :hosting="r.member.hosting" :site-chat="r.member.site_chat" />
+          </div>
+          <div class="agent-row__meta">
+            <span v-if="presetText(r)">{{ presetText(r) }}</span>
+            <template v-if="r.principal || r.member.principal_member_id">
+              <span class="agent-row__dot" aria-hidden="true">·</span>
+              <span>
+                {{ t('courseAgents.row.actsFor') }}
+                <router-link
+                  :to="{ name: 'course-member', params: { courseId, memberId: r.member.principal_member_id } }"
+                >
+                  <MemberName :id="r.member.principal_member_id" />
+                </router-link>
+              </span>
+            </template>
             <span class="agent-row__dot" aria-hidden="true">·</span>
-            <span>
-              {{ t('courseAgents.row.actsFor') }}
-              <router-link
-                :to="{ name: 'course-member', params: { courseId, memberId: r.member.principal_member_id } }"
+            <PresenceText v-if="presence(r).known" :value="presence(r).value" />
+            <el-tooltip v-else :content="t('courseAgents.row.presenceUnknownHelp')" placement="top">
+              <span class="app-muted">{{ t('courseAgents.row.presenceUnknown') }}</span>
+            </el-tooltip>
+          </div>
+          <p v-if="group === 'course' && r.live && notAskable(r.member)" class="agent-row__not-askable">
+            {{ t(`courseAgents.row.notAskable.${notAskable(r.member)}`) }}
+          </p>
+        </div>
+
+        <div
+          v-if="r.live && r.member.status !== 'removed' && (group === 'course' || r.answer !== 'denied')"
+          class="agent-row__replies"
+        >
+          <span class="agent-row__label">{{ t('courseAgents.replies.label') }}</span>
+          <el-select
+            v-if="group === 'course' && canManage"
+            :model-value="r.ownAnswer"
+            size="small"
+            class="agent-row__select"
+            :loading="replyBusy === r.member.id"
+            :disabled="!!replyBusy"
+            :aria-label="t('courseAgents.replies.label')"
+            popper-class="agent-reply-popper"
+            @update:model-value="(v: AutonomyLevel) => setReplies(r, v)"
+          >
+            <el-option
+              v-for="l in REPLY_LEVELS"
+              :key="l"
+              :value="l"
+              :label="t(`courseAgents.replies.options.${l}`)"
+              :disabled="aboveMine(l) || aboveCap(r, l)"
+            >
+              <el-tooltip
+                :disabled="!aboveCap(r, l)"
+                :content="capNote(r)"
+                placement="left"
+                popper-class="app-tip-wrap"
+                :show-after="150"
               >
-                <MemberName :id="r.member.principal_member_id" />
-              </router-link>
-            </span>
-          </template>
-          <span class="agent-row__dot" aria-hidden="true">·</span>
-          <PresenceText v-if="presence(r).known" :value="presence(r).value" />
-          <el-tooltip v-else :content="t('courseAgents.row.presenceUnknownHelp')" placement="top">
-            <span class="app-muted">{{ t('courseAgents.row.presenceUnknown') }}</span>
+                <div class="agent-row__option">
+                  <span>
+                    <el-icon v-if="aboveCap(r, l)" class="agent-row__lock"><Lock /></el-icon>
+                    {{ t(`courseAgents.replies.options.${l}`) }}
+                  </span>
+                  <span class="agent-row__option-help">{{ t(`courseAgents.replies.optionHelp.${l}`) }}</span>
+                </div>
+              </el-tooltip>
+            </el-option>
+          </el-select>
+          <StatusTag v-else vocab="answerLevel" :value="r.answer" />
+          <el-tooltip v-if="r.answerCapped" :content="t('courseAgents.replies.cappedHelp')" placement="top">
+            <el-tag size="small" type="warning" effect="plain">
+              {{ t('courseAgents.replies.capped', { level: t(`courseAgents.replies.options.${r.answer}`) }) }}
+            </el-tag>
           </el-tooltip>
         </div>
-        <p v-if="group === 'course' && r.live && notAskable(r.member)" class="agent-row__not-askable">
-          {{ t(`courseAgents.row.notAskable.${notAskable(r.member)}`) }}
-        </p>
-      </div>
 
-      <div
-        v-if="r.live && r.member.status !== 'removed' && (group === 'course' || r.answer !== 'denied')"
-        class="agent-row__replies"
-      >
-        <span class="agent-row__label">{{ t('courseAgents.replies.label') }}</span>
-        <el-select
-          v-if="group === 'course' && canManage"
-          :model-value="r.ownAnswer"
-          size="small"
-          class="agent-row__select"
-          :loading="replyBusy === r.member.id"
-          :disabled="!!replyBusy"
-          :aria-label="t('courseAgents.replies.label')"
-          popper-class="agent-reply-popper"
-          @update:model-value="(v: AutonomyLevel) => setReplies(r, v)"
+        <div
+          v-if="(canOversee && answers(r)) || (canManage && r.live && r.member.status !== 'removed')"
+          class="agent-row__actions"
         >
-          <el-option
-            v-for="l in REPLY_LEVELS"
-            :key="l"
-            :value="l"
-            :label="t(`courseAgents.replies.options.${l}`)"
-            :disabled="aboveMine(l) || aboveCap(r, l)"
+          <el-button
+            v-if="canOversee && answers(r)"
+            size="small"
+            class="agent-row__log"
+            @click="emit('log', { id: r.member.id, display_name: r.member.display_name })"
           >
-            <el-tooltip
-              :disabled="!aboveCap(r, l)"
-              :content="capNote(r)"
-              placement="left"
-              popper-class="app-tip-wrap"
-              :show-after="150"
-            >
-              <div class="agent-row__option">
-                <span>
-                  <el-icon v-if="aboveCap(r, l)" class="agent-row__lock"><Lock /></el-icon>
-                  {{ t(`courseAgents.replies.options.${l}`) }}
-                </span>
-                <span class="agent-row__option-help">{{ t(`courseAgents.replies.optionHelp.${l}`) }}</span>
-              </div>
-            </el-tooltip>
-          </el-option>
-        </el-select>
-        <StatusTag v-else vocab="answerLevel" :value="r.answer" />
-        <el-tooltip v-if="r.answerCapped" :content="t('courseAgents.replies.cappedHelp')" placement="top">
-          <el-tag size="small" type="warning" effect="plain">
-            {{ t('courseAgents.replies.capped', { level: t(`courseAgents.replies.options.${r.answer}`) }) }}
-          </el-tag>
-        </el-tooltip>
-      </div>
-
-      <div
-        v-if="(canOversee && answers(r)) || (canManage && r.live && r.member.status !== 'removed')"
-        class="agent-row__actions"
-      >
-        <el-button
-          v-if="canOversee && answers(r)"
-          size="small"
-          class="agent-row__log"
-          @click="emit('log', { id: r.member.id, display_name: r.member.display_name })"
-        >
-          <el-icon aria-hidden="true"><ChatLineSquare /></el-icon>
-          <span>{{ t('courseAgents.log.open') }}</span>
-        </el-button>
-        <el-dropdown
-          v-if="canManage && r.live && r.member.status !== 'removed'"
-          trigger="click"
-          @command="(c: 'pause' | 'resume' | 'remove') => onCommand(r, c)"
-        >
-          <el-button size="small" :loading="busy === r.member.id" :aria-label="t('courseAgents.row.more')">
-            <el-icon><MoreFilled /></el-icon>
+            <el-icon aria-hidden="true"><ChatLineSquare /></el-icon>
+            <span>{{ t('courseAgents.log.open') }}</span>
           </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item v-if="r.member.status === 'active'" command="pause">
-                <el-icon><VideoPause /></el-icon>{{ t('members.detail.pause.action') }}
-              </el-dropdown-item>
-              <el-dropdown-item v-if="r.member.status === 'paused'" command="resume">
-                <el-icon><VideoPlay /></el-icon>{{ t('members.detail.resume.action') }}
-              </el-dropdown-item>
-              <el-dropdown-item command="remove" divided>
-                <el-icon><Delete /></el-icon>{{ t('members.detail.remove.action') }}
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </div>
+          <el-dropdown
+            v-if="canManage && r.live && r.member.status !== 'removed'"
+            trigger="click"
+            @command="(c: 'pause' | 'resume' | 'remove') => onCommand(r, c)"
+          >
+            <el-button size="small" :loading="busy === r.member.id" :aria-label="t('courseAgents.row.more')">
+              <el-icon><MoreFilled /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-if="r.member.status === 'active'" command="pause">
+                  <el-icon><VideoPause /></el-icon>{{ t('members.detail.pause.action') }}
+                </el-dropdown-item>
+                <el-dropdown-item v-if="r.member.status === 'paused'" command="resume">
+                  <el-icon><VideoPlay /></el-icon>{{ t('members.detail.resume.action') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="remove" divided>
+                  <el-icon><Delete /></el-icon>{{ t('members.detail.remove.action') }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
 
-      <RefusalAlert
-        v-if="replyError?.id === r.member.id"
-        :error="replyError.error"
-        class="agent-row__error"
-        @close="replyError = null"
-      />
-      <RefusalAlert
-        v-if="rowError?.id === r.member.id"
-        :error="rowError.error"
-        class="agent-row__error"
-        @close="rowError = null"
-      />
+        <RefusalAlert
+          v-if="replyError?.id === r.member.id"
+          :error="replyError.error"
+          class="agent-row__error"
+          @close="replyError = null"
+        />
+        <RefusalAlert
+          v-if="rowError?.id === r.member.id"
+          :error="rowError.error"
+          class="agent-row__error"
+          @close="rowError = null"
+        />
+      </div>
     </li>
   </ul>
 </template>
@@ -303,11 +301,21 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
 }
 .agent-row {
   display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+.agent-row__avatar {
+  margin-top: -2px;
+}
+.agent-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 .agent-row:last-child {
   border-bottom: none;
@@ -330,10 +338,6 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
 .agent-row__name a {
   text-decoration: none;
   overflow-wrap: anywhere;
-}
-.agent-row__icon {
-  color: var(--el-color-primary);
-  flex-shrink: 0;
 }
 .agent-row__meta {
   display: flex;

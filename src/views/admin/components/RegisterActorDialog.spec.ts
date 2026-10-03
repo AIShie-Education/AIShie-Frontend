@@ -92,7 +92,7 @@ describe('RegisterActorDialog: an agent', () => {
     const w = await open()
     await asAgent(w, 'lab-runner')
     await w.findAll('.hosting-choice__option input').at(0)!.setValue(true)
-    expect(w.text()).toContain('The site’s agent runtime alone is issued its token')
+    expect(w.text()).toContain('The site’s agent service alone is issued its token')
     await submit(w)
     expect(writes).toEqual([
       { tool: 'actor.register', args: { kind: 'agent', display_name: 'lab-runner', hosting: 'runtime' } },

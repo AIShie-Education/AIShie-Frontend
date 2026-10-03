@@ -71,19 +71,19 @@ describe('HostedAgentCard: what it says', () => {
       'Choose a model',
       'Your agent is hosted, but it has no model yet. Choose a provider and model and give your API key to start it.',
     ],
-    starting: ['Starting', 'The runtime is starting your agent with its latest settings. This takes a few seconds.'],
-    running: ['Running', 'Your agent runs on the school’s runtime and answers in its courses.'],
+    starting: ['Starting', 'The agent service is starting your agent with its latest settings. This takes a few seconds.'],
+    running: ['Running', 'Your agent runs on the school’s agent service and answers in its courses.'],
     paused: [
       'Paused',
       'Your agent answers nobody, makes no calls and cannot be asked on the site: its token was revoked in AIshie. Resume it to start again with a new one. (This is not Suspend: the agent stays active in AIshie.)',
     ],
     needs_token: [
       'Needs a new token',
-      'The token the runtime held for your agent was revoked in AIshie, by you or an administrator. Connect it again to have the runtime issued a new one; you never see it.',
+      'The token the agent service held for your agent was revoked in AIshie, by you or an administrator. Connect it again to have the agent service issued a new one; you never see it.',
     ],
     stopped: [
       'Restarting',
-      'The runtime stopped your agent while it restarts or hands it to another worker. It starts again by itself.',
+      'The agent service stopped your agent while it restarts or hands it to another worker. It starts again by itself.',
     ],
   }
 
@@ -94,18 +94,18 @@ describe('HostedAgentCard: what it says', () => {
   })
 
   const PROBLEMS: Record<ProblemReason, string> = {
-    token_refused: 'AIshie revoked the token the runtime held for it.',
+    token_refused: 'AIshie revoked the token the agent service held for it.',
     settings_rejected: 'Its settings do not work here: model: unknown. Change the model or key.',
-    runtime_misconfigured: 'The school’s runtime is not set up to run hosted agents. Tell your administrator.',
+    runtime_misconfigured: 'The school’s agent service is not set up to run hosted agents. Tell your administrator.',
     operator_agent: 'The school’s operator already runs this agent, so this copy does not run.',
     actor_in_use: 'Another agent here already uses this agent’s identity.',
-    token_other_agent: 'The token the runtime held belongs to another agent. Connect it again.',
-    owner_changed: 'AIshie does not count this agent as yours, so the runtime stopped it. Delete it here.',
+    token_other_agent: 'The token the agent service held belongs to another agent. Connect it again.',
+    owner_changed: 'AIshie does not count this agent as yours, so the agent service stopped it. Delete it here.',
     core_too_old: 'This AIshie server cannot say who owns an agent. Tell your administrator.',
     agent_suspended: 'The agent is suspended in AIshie. Reactivate it and it starts again by itself.',
     owner_suspended: 'Its owner is suspended in AIshie. It starts again by itself once they are reactivated.',
     mcp_agent:
-      'AIshie says this agent has MCP access: it is used from its owner’s own tools, so the runtime cannot host it. Delete it here.',
+      'AIshie says this agent has MCP access: it is used from its owner’s own tools, so the agent service cannot host it. Delete it here.',
     agent_not_found: 'AIshie has no such agent any more. Delete it here.',
     failing: 'It could not start and will try again shortly: model: unknown.',
     offer_withdrawn:
@@ -221,7 +221,7 @@ describe('HostedAgentCard: what the owner can do', () => {
     expect(w.emitted('changed')).toBeTruthy()
     expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({
       type: 'success',
-      message: 'The runtime is being issued a new token for Study helper.',
+      message: 'The agent service is being issued a new token for Study helper.',
     })
   })
 
@@ -237,7 +237,7 @@ describe('HostedAgentCard: what the owner can do', () => {
     ['needs_token', { canRenew: false }],
     ['needs_model', { canChooseModel: false }],
     ['running', { canChooseModel: false }],
-  ] as const)('%s: offers no primary action the runtime does not take (%o)', async (status, props) => {
+  ] as const)('%s: offers no primary action the agent service does not take (%o)', async (status, props) => {
     const w = await card(hostedAgent({ status }), props)
     expect(w.find('.hosted-card__primary').exists()).toBe(false)
     expect(w.find('.hosted-card__off').exists()).toBe(true)
@@ -247,7 +247,7 @@ describe('HostedAgentCard: what the owner can do', () => {
     const w = await card(hostedAgent())
     ;(w.vm as unknown as { onCommand: (c: string) => void }).onCommand('replace')
     const items = Array.from(document.body.querySelectorAll('.el-dropdown-menu__item'), (e) => e.textContent?.trim())
-    expect(items).toEqual(['Delete from the school’s runtime'])
+    expect(items).toEqual(['Delete from the school’s agent service'])
     expect(w.find('.delete-hosting').exists()).toBe(false)
   })
 
@@ -330,7 +330,7 @@ describe('HostedAgentCard: what the owner can do', () => {
     await flushPromises()
     expect(w.emitted('deleted')).toBeTruthy()
     expect(vi.mocked(ElMessage).mock.calls[0][0]).toMatchObject({
-      message: 'This agent is no longer on the school’s runtime.',
+      message: 'This agent is no longer on the school’s agent service.',
     })
   })
 })
@@ -394,7 +394,7 @@ describe('HostedAgentCard: deleting', () => {
     const w = await deleteDialog(hostedAgent({ proposals_waiting: 3 }))
     const text = w.find('.delete-hosting').text()
     expect(text).toContain(
-      'The runtime stops this agent and forgets its settings and your key, and its token is revoked in AIshie: nobody can ask it on the site until you host it again. The agent stays in AIshie.',
+      'The agent service stops this agent and forgets its settings and your key, and its token is revoked in AIshie: nobody can ask it on the site until you host it again. The agent stays in AIshie.',
     )
     expect(text).toContain('3 answers still waiting for approval stay in AIshie.')
     expect(w.find('.delete-hosting input[type="checkbox"]').exists()).toBe(false)
@@ -411,7 +411,7 @@ describe('HostedAgentCard: deleting', () => {
     expect(s.to('GET', CORE.credentials)).toHaveLength(0)
     expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({
       type: 'success',
-      message: 'Study helper is no longer on the school’s runtime',
+      message: 'Study helper is no longer on the school’s agent service',
     })
     expect(ElNotification).not.toHaveBeenCalled()
     expect(w.emitted('deleted')).toBeTruthy()
@@ -419,7 +419,7 @@ describe('HostedAgentCard: deleting', () => {
 
   it.each([
     ['core_unavailable', 'AIshie could not be reached'],
-    ['runtime_misconfigured', 'the school’s runtime is not set up to'],
+    ['runtime_misconfigured', 'the school’s agent service is not set up to'],
     ['core_too_old', 'this AIshie server is too old'],
   ])('tells the owner people may still be offered to ask it when its token could not be revoked (%s)', async (problem, why) => {
     s.on('DELETE', RUNTIME.agent, () => answer('failed', problem))
@@ -428,7 +428,7 @@ describe('HostedAgentCard: deleting', () => {
     expect(w.emitted('deleted')).toBeTruthy()
     expect(vi.mocked(ElNotification).mock.calls[0][0]).toMatchObject({
       type: 'warning',
-      title: 'Study helper is no longer on the school’s runtime',
+      title: 'Study helper is no longer on the school’s agent service',
       message: `Its token could not be revoked in AIshie (${why}), so people may still be offered to ask it on the site. Suspend the agent to stop that.`,
     })
     expect(s.revoked).toEqual([])
@@ -476,7 +476,7 @@ describe('HostedAgentCard: deleting', () => {
     await submit(w)
     expect(w.emitted('deleted')).toBeTruthy()
     expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({
-      message: 'This agent is no longer on the school’s runtime.',
+      message: 'This agent is no longer on the school’s agent service.',
     })
   })
 
@@ -549,7 +549,7 @@ describe('HostedAgentCard: on the school’s plan', () => {
     setLocale('zh-Hant')
     const zh = await card(today(onSchoolPlan(false)))
     expect(zh.find('.hosted-card__school-hint').text()).toBe(
-      '學校方案，你所有的代理合計；每天香港標準時間 00:00 重新計算。',
+      '學校方案，你所有的代理合計；每天香港標準時間 00:00重新計算。',
     )
   })
 
@@ -622,8 +622,8 @@ describe('HostedAgentCard: on the school’s plan', () => {
     setLocale('zh-Hant')
     const w = await card(onSchoolPlan(false), { canChooseSchool: true })
     expect(w.find('.hosted-card__plan').text()).toBe('學校方案（由學校付費）')
-    expect(w.find('.hosted-card__school-count').text()).toBe('今日 12 / 100 次')
-    expect(w.find('.hosted-card__per-asker').text()).toBe('每位提問者每天最多 20 次')
+    expect(w.find('.hosted-card__school-count').text()).toBe('今日12 / 100次')
+    expect(w.find('.hosted-card__per-asker').text()).toBe('每位提問者每天最多20次')
   })
 
   it('offers choosing a model where only the school’s plan is offered, and asks for one on it', async () => {

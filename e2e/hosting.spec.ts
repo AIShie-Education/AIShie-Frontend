@@ -428,7 +428,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
 
     await signIn(page, hana())
     await page.goto(`/account/agents/${w.rtId}`)
-    await expect(page.locator('.hosting-offer')).toContainText('AIshie’s agent runtime is not available on this server')
+    await expect(page.locator('.hosting-offer')).toContainText('AIshie’s agent service is not available on this server')
     await expect(page.locator('.site-chat .el-tag')).toHaveText('Not running')
     await expect(page.getByRole('button', { name: 'New token' })).toHaveCount(0)
     await expect(page.locator('.tokens-card')).toHaveCount(0)
@@ -453,7 +453,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     const host = page.getByRole('dialog', { name: 'Host an agent on AIshie' })
     await expect(host.locator('.host-dialog__select')).toContainText(RT_AGENT)
     await expect(host.locator('.host-dialog__seats')).toHaveText('It is in one course.')
-    await expect(host).toContainText('The runtime is issued the agent’s token itself: you never see one.')
+    await expect(host).toContainText('The agent service is issued the agent’s token itself: you never see one.')
     await photograph(page, 'hosting-host-dialog')
     await host.locator('.host-dialog__submit').click()
     await expect(page).toHaveURL(new RegExp(`/account/agents/${w.rtId}$`))

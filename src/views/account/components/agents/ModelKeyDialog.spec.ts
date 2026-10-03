@@ -191,7 +191,7 @@ describe('ModelKeyDialog', () => {
     await fill(vm)
     answerTest('key_refused', 401)
     await click(w, '.model-dialog__test-button')
-    expect(w.find('.model-dialog__test').text()).toBe('OpenAI 拒絕了這個金鑰。')
+    expect(w.find('.model-dialog__test').text()).toBe('OpenAI拒絕了這個金鑰。')
   })
 
   it('saves at the version it read, without asking, once the key passed a test of exactly these inputs', async () => {
@@ -326,7 +326,7 @@ describe('ModelKeyDialog', () => {
     const { w, vm } = await open()
     await fill(vm, newToken().token)
     await click(w, '.model-dialog__test-button')
-    expect(w.text()).toContain('這是 AIshie 的權杖（你的或代理的），不是 OpenAI 的 API 金鑰。')
+    expect(w.text()).toContain('這是 AIshie 的權杖（你的或代理的），不是OpenAI的 API 金鑰。')
   })
 
   it('puts a field’s refusal on its field', async () => {
@@ -348,7 +348,7 @@ describe('ModelKeyDialog', () => {
     [422, 'failed_precondition', 'own_key_provider_mismatch', 'Your saved key is for another provider. Enter a key for OpenAI.'],
     [422, 'failed_precondition', 'school_key_not_offered', 'The school’s plan is not offered here.'],
     [400, 'invalid_argument', 'key_malformed', 'That does not look like an API key from OpenAI.'],
-    [400, 'invalid_argument', 'unknown_field', 'The school’s runtime did not take this request: it has no field “/model/Own”.'],
+    [400, 'invalid_argument', 'unknown_field', 'The school’s agent service did not take this request: it has no field “/model/Own”.'],
   ] as const)('says a refusal to save in words: %s', async (status, code, reason, words) => {
     const { w, vm } = await open()
     await fill(vm)
@@ -370,7 +370,7 @@ describe('ModelKeyDialog', () => {
     )
     await click(w, '.model-dialog__save')
     const e = w.find('.model-dialog__error')
-    expect(e.text()).toContain('The runtime cannot run these settings.')
+    expect(e.text()).toContain('The agent service cannot run these settings.')
     expect(e.find('details').text()).toContain('max_output_tokens: too large')
     expect(e.find('details').text()).toContain('model: unknown')
   })
@@ -381,7 +381,7 @@ describe('ModelKeyDialog', () => {
     s.on('POST', RUNTIME.keyTest, () => json(503, { error: { code: 'unavailable', message: 'down', details: { reason: 'store_unavailable' } } }))
     await click(w, '.model-dialog__test-button')
     expect(s.to('POST', RUNTIME.keyTest)).toHaveLength(1)
-    expect(w.text()).toContain('The school’s runtime is not available right now. Try again in a minute.')
+    expect(w.text()).toContain('The school’s agent service is not available right now. Try again in a minute.')
 
     vi.mocked(ElMessageBox.confirm).mockResolvedValue('confirm' as never)
     s.on('PATCH', RUNTIME.agent, () => json(503, { error: { code: 'unavailable', message: 'down', details: { reason: 'store_unavailable' } } }))
@@ -527,7 +527,7 @@ describe('ModelKeyDialog: the school’s plan', () => {
     const { w } = await open({ schoolKey: true })
     expect(w.findAll('.model-form__plan-title').map((p) => p.text())).toEqual(['學校方案', '你自己的金鑰'])
     expect(w.find('.model-form__limits').text()).toBe(
-      '你所有的代理合計每天最多回答 100 次，每位提問者每天最多 20 次。每天香港標準時間 08:00 重新計算。',
+      '你所有的代理合計每天最多回答100次，每位提問者每天最多20次。每天香港標準時間 08:00重新計算。',
     )
   })
 

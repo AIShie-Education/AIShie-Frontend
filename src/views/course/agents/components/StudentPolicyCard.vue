@@ -7,6 +7,7 @@
 import { computed, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
+import StatusTag from '@/components/StatusTag.vue'
 import type { AutonomyLevel, MemberSummary, Perm } from '@/api/types'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -155,7 +156,7 @@ async function chooseChat(v: string | number | boolean) {
   <section class="app-card student-policy">
     <h2 class="app-card__title">
       <span>{{ t('courseAgents.policy.title') }}</span>
-      <el-tag v-if="approval" type="warning" effect="plain">{{ t('enums.level.confirm_required') }}</el-tag>
+      <StatusTag v-if="approval" vocab="level" value="confirm_required" size="default" />
     </h2>
     <p class="app-form-hint student-policy__help">{{ t('courseAgents.policy.help') }}</p>
     <el-alert

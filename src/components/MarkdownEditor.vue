@@ -43,6 +43,14 @@ const tab = ref<'write' | 'preview'>('write')
   font-family: var(--app-font-mono);
   font-size: 13px;
 }
+/* 16 px on a touch screen, as every field is there (styles/element.css), or
+   iOS zooms the page into the editor as it is focused: this rule outweighs
+   the global one, so it says so itself. */
+@media (pointer: coarse) {
+  .md-editor__input :deep(textarea) {
+    font-size: 16px;
+  }
+}
 .md-editor__preview {
   border: 1px solid var(--el-border-color);
   border-radius: 4px;

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, coursePath, courseTab, demo, expectToasted, keepToasts, signIn } from './support'
+import { call, coursePath, openCourseTab, demo, expectToasted, keepToasts, signIn } from './support'
 
 // A publication made by mistake can be taken back while nobody has started
 // on the assignment; once a student has a draft, it stays published.
@@ -33,7 +33,7 @@ async function publish(page: Page) {
 /** The run's course, as a student: the Assignments tab once it has loaded. */
 async function studentAssignments(page: Page) {
   await page.goto(coursePath())
-  await courseTab(page, 'Assignments').click()
+  await openCourseTab(page, 'Assignments')
   await expect(page.locator('.el-table__row').filter({ hasText: 'HW1 — Temperature converter' })).toBeVisible()
   return page.locator('.el-table__row').filter({ hasText: TITLE })
 }
@@ -44,7 +44,7 @@ test.describe.serial('unpublishing an assignment nobody has started', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Assignments').click()
+    await openCourseTab(page, 'Assignments')
     await page.getByRole('button', { name: 'New assignment' }).click()
     const dialog = page.getByRole('dialog', { name: 'New assignment' })
     await dialog.getByLabel('Title', { exact: true }).fill(TITLE)
@@ -75,7 +75,7 @@ test.describe.serial('unpublishing an assignment nobody has started', () => {
     await expect(page.getByText('Students cannot see this assignment until it is published.')).toBeVisible()
 
     // The assignment list says so too.
-    await courseTab(page, 'Assignments').click()
+    await openCourseTab(page, 'Assignments')
     await expect(page.locator('.el-table__row').filter({ hasText: TITLE })).toContainText('Not published')
 
     // The feed keeps both: it was published, and then it was not.

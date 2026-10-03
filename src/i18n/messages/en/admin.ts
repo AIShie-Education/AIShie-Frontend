@@ -126,10 +126,10 @@ export default {
     placeholderId: 'Paste an actor ID',
     noMatch: 'No one matches.',
     pasteId: 'Paste the whole actor ID.',
-    noSearch: 'This Core cannot search by name or email yet (it needs updating): paste the actor ID instead.',
-    suspended: 'They are suspended, and Core does not seat anyone suspended. Reactivate them first.',
+    noSearch: 'This server cannot search by name or email yet (it needs updating): paste the actor ID instead.',
+    suspended: 'They are suspended, and nobody suspended can be seated. Reactivate them first.',
     system: 'The system account runs background jobs and is never seated in a course.',
-    alreadySeated: 'You have a seat in this course already, and Core does not seat anyone twice.',
+    alreadySeated: 'You have a seat in this course already, and nobody is seated twice.',
     agent: 'This is an agent. Seated as instructor, it holds every permission of the instructor preset.',
     submit: 'Seat as instructor',
     done: '{name} is seated as instructor',
@@ -172,8 +172,8 @@ export default {
     byId: 'Found by ID. Press Enter to open their page.',
     notFound: 'No person or agent has this ID.',
     noList: {
-      title: 'This Core cannot list people and agents yet',
-      body: 'Browsing and searching them needs a newer AIshie Core, one with actor.list. Until the server is updated, open a person or agent by their actor ID, or register someone new.',
+      title: 'This server cannot list people and agents yet',
+      body: 'Browsing and searching them needs a newer version of AIshie on the server. Until it is updated, open a person or agent by their actor ID, or register someone new.',
     },
     openById: {
       title: 'Open a person or agent by ID',
@@ -212,7 +212,7 @@ export default {
       seat: 'Have a course instructor seat it (Members → Add) with a preset such as grader or tutor, scoped to the students or assignments it serves.',
       connect: 'Point its MCP client at {endpoint}, with the token as a bearer token.',
       runtime:
-        'No token is issued for it here: the site’s agent runtime runs it once the runtime’s operator names it by this ID, and is issued its token itself.',
+        'No token is issued for it here: the site’s agent service runs it once the agent service’s operator names it by this ID, and is issued its token itself.',
     },
     ownedAgent: {
       owner:
@@ -233,7 +233,7 @@ export default {
       human: 'Signs in with a password they choose from an invitation link, or with single sign-on.',
       agent: 'Hosted on AIshie, or reached over MCP with API tokens, as chosen below. No endpoint, model or prompt is stored here.',
     },
-    hostingRuntime: 'The site’s agent runtime alone is issued its token: nobody is issued one here.',
+    hostingRuntime: 'The site’s agent service alone is issued its token: nobody is issued one here.',
     hostingMcp: 'Issue it API tokens on its page once it is registered, for whatever reaches it over MCP.',
     displayName: 'Display name',
     namePlaceholder: {
@@ -310,7 +310,7 @@ export default {
     noOwnerFixed: 'Registered without one, so it stays nobody’s: an owner is given only when an agent is registered.',
     hostingFixed: {
       runtime:
-        'Chosen when it was registered, and never changed: the site’s agent runtime alone is issued its token, and nobody is issued one here.',
+        'Chosen when it was registered, and never changed: the site’s agent service alone is issued its token, and nobody is issued one here.',
       mcp: 'Chosen when it was registered, and never changed: its tokens are issued here, for whatever reaches it over MCP.',
     },
     ownedAgents: 'Agents they own',
@@ -330,7 +330,7 @@ export default {
     placeholderId: 'Paste a person’s actor ID',
     noMatch: 'No active person matches.',
     pasteId: 'Paste the whole actor ID.',
-    noSearch: 'This Core cannot search by name or email yet (it needs updating): paste the actor ID instead.',
+    noSearch: 'This server cannot search by name or email yet (it needs updating): paste the actor ID instead.',
     blocked: {
       notHuman: 'Not a person',
       suspended: 'Suspended',
@@ -341,7 +341,7 @@ export default {
   token: {
     title: 'API token',
     intro:
-      'Issue a token so they can call Core: this is how an agent gets its first credential, since it cannot sign in to ask for one. The token is shown once; Core keeps only its hash.',
+      'Issue a token so the agent can connect to AIshie: this is how an agent gets its first credential, since it cannot sign in to ask for one. The token is shown once; only its hash is kept.',
     label: 'Label',
     labelPlaceholder: 'grader for CS101, autumn term',
     labelHint: 'What the token is for, so it can be recognised later.',
@@ -355,9 +355,9 @@ export default {
     submit: 'Issue token',
     suspendedNote: 'They are suspended: a token issued now is refused until they are reactivated.',
     runtimeAgent:
-      'None is issued here: this agent is hosted on AIshie, and the site’s agent runtime alone is issued its one token, by the agent’s ID, when it hosts it. Revoking that token below stops people asking it on the site until the runtime is issued another.',
+      'None is issued here: this agent is hosted on AIshie, and the site’s agent service alone is issued its one token, by the agent’s ID, when it hosts it. Revoking that token below stops people asking it on the site until the agent service is issued another.',
     revealTitle: 'Copy the token now',
-    once: 'This is the only time the token is shown. Core keeps only its hash: if it is lost, issue a new one.',
+    once: 'This is the only time the token is shown. Only its hash is kept: if it is lost, issue a new one.',
     replayed:
       'This repeated an earlier request, so the token is not shown again. If it was not copied, issue a new one.',
     token: 'Token',
@@ -379,7 +379,7 @@ export default {
   credentials: {
     title: 'Tokens and sign-ins',
     introAgent:
-      'The API tokens this agent calls Core with. Revoking one stops that token from its next call without suspending the agent: its other tokens and its seats are kept.',
+      'The API tokens this agent connects to AIshie with. Revoking one stops that token from its next call without suspending the agent: its other tokens and its seats are kept.',
     introHuman:
       'Every way into this account: browser sessions, a password, single sign-on and an invitation link. Revoke one without suspending them: their other credentials and their seats are kept.',
     // Above the API tokens a person still holds: only agents are given them.
@@ -402,7 +402,7 @@ export default {
     },
     unlabelled: 'No label',
     selfIssued: 'Self-issued',
-    issuedToRuntime: 'The site’s agent runtime',
+    issuedToRuntime: 'The site’s agent service',
     issuerUnknown: 'Not recorded',
     neverUsed: 'Never used',
     revokedAt: 'Revoked',
@@ -428,7 +428,7 @@ export default {
     revoked: 'Revoked',
     signedOut: 'Signed out',
     missing:
-      'This Core cannot list an actor’s tokens and sign-ins yet (it needs updating). Until it is, a leaked token can be stopped only by suspending them.',
+      'This server cannot list an actor’s tokens and sign-ins yet (it needs updating). Until it is, a leaked token can be stopped only by suspending them.',
     confirm: {
       titleToken: 'Revoke the token “{label}”?',
       titleSession: 'Sign out this browser session?',

@@ -1,6 +1,8 @@
 export default {
   greeting: 'Hello, {name}',
-  subtitle: 'The courses you are seated in',
+  subtitle: 'Your courses this term',
+  // The next published assignment due in a course, on its card: its title, and when (relative).
+  nextDue: 'Next due: {title}, {when}',
   noCourses: 'You are not seated in any course yet.',
   noCoursesAdmin: 'You are not seated in any course. As an administrator you can create courses and seat instructors.',
   goAdmin: 'Go to administration',

@@ -140,7 +140,7 @@ describe('FileDropZone', () => {
       attempt: 1,
     })
     await flushPromises()
-    expect(w.find('.file-drop__item').text()).toContain('50 % · 50 B of 100 B · 2 KB/s · about 3 s left')
+    expect(w.find('.file-drop__item').text()).toContain('50% · 50 B of 100 B · 2 KB/s · about 3 s left')
 
     calls[0]!.resolve(done(calls[0]!))
     calls[1]!.resolve(done(calls[1]!))

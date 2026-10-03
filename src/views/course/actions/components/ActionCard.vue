@@ -14,6 +14,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActionActor from './ActionActor.vue'
 import ActionTarget from './ActionTarget.vue'
+import AnswerSources from './AnswerSources.vue'
 import DecidePanel from './DecidePanel.vue'
 import RevisesLine from './RevisesLine.vue'
 import { payloadOf, str, typeLabel, useJudgeRules, type ActionRow } from './actionText'
@@ -103,7 +104,7 @@ const excerpt = computed(() => {
     <dl class="action-card__facts">
       <div class="action-card__fact">
         <dt>{{ t('actions.fields.actor') }}</dt>
-        <dd><ActionActor :member-id="action.member_id" :actor-id="action.actor_id" show-kind /></dd>
+        <dd><ActionActor :member-id="action.member_id" :actor-id="action.actor_id" /></dd>
       </div>
       <div class="action-card__fact">
         <dt>{{ t('actions.fields.target') }}</dt>
@@ -124,6 +125,7 @@ const excerpt = computed(() => {
 
     <div v-if="message" class="action-card__message"><MarkdownView :source="message" /></div>
     <p v-else-if="excerpt" class="action-card__excerpt">{{ excerpt }}</p>
+    <AnswerSources v-if="message && action.action_type === 'conversation.answer'" :payload="p" />
 
     <footer class="action-card__foot">
       <DecidePanel

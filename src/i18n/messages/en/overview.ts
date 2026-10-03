@@ -55,10 +55,10 @@ export default {
     title: 'What you may do',
     exact: 'These are your seat’s own settings.',
     preset:
-      'Guessed from the built-in preset “{preset}”, because your seat may not read the member list. Your seat may have been set differently: Core decides at every call.',
-    refused: 'Core refused this when your own seat was read, so it counts as not permitted.',
+      'Guessed from the built-in preset “{preset}”, because your seat may not read the member list. Your seat may have been set differently: the system checks every time you act.',
+    refused: 'Reading your own seat was refused, so this counts as not permitted.',
     unknown:
-      'Your seat may not read the member list, so its permissions are not visible to you. Everything is offered, and Core refuses what you may not do.',
+      'Your seat may not read the member list, so its permissions are not visible to you. Everything is offered, and what you may not do is refused when you try it.',
     nothing: 'Your seat may do nothing here at the moment.',
     deniedCount: 'Not permitted: {n} of {total}.',
     showAll: 'Every permission',

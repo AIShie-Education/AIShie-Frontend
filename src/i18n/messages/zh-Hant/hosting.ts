@@ -22,7 +22,7 @@ export default {
   host: {
     open: '把代理交給 AIshie 託管',
     title: '把代理交給 AIshie 託管',
-    titleNamed: '把 {name} 交給 AIshie 託管',
+    titleNamed: '把{name}交給 AIshie 託管',
     steps: {
       agent: '代理',
       model: '模型與金鑰',
@@ -34,12 +34,12 @@ export default {
     agentPlaceholder: '選擇你的其中一個代理',
     none: '你沒有等待託管的代理。只有建立時選擇「站內託管」的代理才能託管：MCP 存取的代理由你自己的工具使用。',
     checking: '正向 AIshie 查詢…',
-    seats: '它還未加入任何課程：託管後，在你把它帶入課程之前，它沒有任何問題要回答。 | 它在 1 個課程中。 | 它在 {n} 個課程中。',
+    seats: '它還未加入任何課程：託管後，在你把它帶入課程之前，它沒有任何問題要回答。 | 它在1個課程中。 | 它在{n}個課程中。',
     already: '它已經由 AIshie 託管。',
     openIt: '前往它的頁面',
     takesOver: '其他人先前留下的託管會被取代。',
     submit: '託管',
-    done: '{name} 已由 AIshie 託管',
+    done: '{name}已由 AIshie 託管',
   },
 
   // What became of its token in AIshie when its hosting ended (pausing, deleting).
@@ -58,7 +58,7 @@ export default {
 
   // The model and the owner's own key (F3).
   model: {
-    title: '{name} 的模型與金鑰',
+    title: '{name}的模型與金鑰',
     provider: '供應商',
     providerPlaceholder: '選擇供應商',
     adapter: 'API 形式',
@@ -71,20 +71,20 @@ export default {
     },
     endpoint: '端點',
     resource: 'Azure 資源名稱',
-    resourceHint: '你的 Azure OpenAI 資源名稱，例如 {example}。',
+    resourceHint: '你的 Azure OpenAI 資源名稱，例如{example}。',
     region: 'AWS 區域',
     model: '模型',
     modelPlaceholder: '選擇或輸入模型',
     priceUnknown: '價格不明',
     key: 'API 金鑰',
-    keyKeep: '保留已儲存的金鑰 {hint}',
+    keyKeep: '保留已儲存的金鑰{hint}',
     keyNew: '輸入新的金鑰',
-    keyPlaceholder: '你在 {provider} 的 API 金鑰',
-    keyPlaceholderPrefix: '你在 {provider} 的 API 金鑰（{prefix}…）',
+    keyPlaceholder: '你在{provider}的 API 金鑰',
+    keyPlaceholderPrefix: '你在{provider}的 API 金鑰（{prefix}…）',
     keyNotStored: '金鑰會交給學校的執行環境，為這個代理加密保存。本頁不會保留它，也不會再顯示它。',
     advanced: '進階',
     maxOutputTokens: '每個回答的輸出 token 上限',
-    maxOutputTokensHint: '256 至 32000。留空則使用執行環境的預設值。',
+    maxOutputTokensHint: '256至32000。留空則使用執行環境的預設值。',
     reasoningEffort: '推理強度',
     reasoningDefault: '模型預設',
     effort: {
@@ -94,7 +94,7 @@ export default {
       high: '高',
     },
     warning:
-      '你的提問，以及你的代理讀取的課程資料和作業，都會以你的金鑰、按照 {provider} 的條款傳送給 {provider}。只有你自己的代理會使用這個金鑰。',
+      '你的提問，以及你的代理讀取的課程資料和作業，都會以你的金鑰、按照{provider}的條款傳送給{provider}。只有你自己的代理會使用這個金鑰。',
     noProviders: '學校的執行環境沒有提供可使用你自己金鑰的供應商。',
     test: '測試金鑰',
     later: '稍後',
@@ -105,10 +105,10 @@ export default {
     changedElsewhere: '這個代理已在另一個分頁或視窗中被更改；請檢查後再儲存一次。',
     invalid: {
       required: '必填',
-      model: '模型名稱只可包含字母、數字及 . _ : / @ + -，最多 128 個字元。',
+      model: '模型名稱只可包含字母、數字及 . _ : / @ + -，最多128個字元。',
       resource: '只可包含小寫字母、數字和連字號，與 Azure 的資源命名方式相同。',
       region: 'AWS 區域，例如 us-east-1。',
-      maxOutputTokens: '256 至 32000 之間的整數。',
+      maxOutputTokens: '256至32000之間的整數。',
     },
   },
 
@@ -119,7 +119,7 @@ export default {
     own: '你自己的金鑰',
     ownHint: '自選供應商與模型，使用你自己的 API 金鑰。',
     offer: '模型',
-    limits: '你所有的代理合計每天最多回答 {owner} 次，每位提問者每天最多 {asker} 次。每天{reset} 重新計算。',
+    limits: '你所有的代理合計每天最多回答{owner}次，每位提問者每天最多{asker}次。每天{reset}重新計算。',
     noKey: '學校的金鑰只保存在學校的伺服器上，任何人（包括你）都看不到。',
     warning: '你的提問，以及代理讀到的課程資料與作業，會依學校與模型供應商的協議送到該供應商。',
     fallbackTitle: '備用：你自己的金鑰',
@@ -130,11 +130,11 @@ export default {
 
   // One token's test of a key (POST /keys/test).
   keyTest: {
-    ok: '這個金鑰可以使用 {model}。',
-    key_refused: '{provider} 拒絕了這個金鑰。',
-    model_not_found: '金鑰有效，但 {provider} 沒有 {model} 這個模型。',
+    ok: '這個金鑰可以使用{model}。',
+    key_refused: '{provider}拒絕了這個金鑰。',
+    model_not_found: '金鑰有效，但{provider}沒有{model}這個模型。',
     key_accepted: '金鑰已被接受，但測試呼叫失敗（HTTP {status}）。你仍可儲存。',
-    unreachable: '無法連接 {provider}。請再試一次。',
+    unreachable: '無法連接{provider}。請再試一次。',
     short: {
       ok: '可以使用',
       key_refused: '金鑰被拒絕',
@@ -199,9 +199,9 @@ export default {
 
   // A seat, in sentences from the runtime's facts.
   seat: {
-    delegate: '在 {course} 作為你的代表：讀取{reads}；只回答你。',
-    tutor: '{course} 的導修代理：回答所有學生；讀取{reads}。',
-    member: '{course} 的成員：讀取{reads}。',
+    delegate: '在{course}作為你的代表：讀取{reads}；只回答你。',
+    tutor: '{course}的導修代理：回答所有學生；讀取{reads}。',
+    member: '{course}的成員：讀取{reads}。',
     reads: {
       both: '課程資料和學生作業',
       material: '課程資料',
@@ -227,9 +227,9 @@ export default {
     noModel: '尚未選擇',
     key: '金鑰',
     today: '今日',
-    answers: '沒有回答 | 1 個回答 | {n} 個回答',
+    answers: '沒有回答 | 1個回答 | {n}個回答',
     costUnknown: '費用不明',
-    proposals: '1 個回答正等待批准。 | {n} 個回答正等待批准。',
+    proposals: '1個回答正等待批准。 | {n}個回答正等待批准。',
     seats: '課程',
     primary: {
       chooseModel: '選擇模型',
@@ -243,7 +243,7 @@ export default {
     resumed: '已在學校的執行環境上恢復',
     more: '更多',
     delete: '從學校的執行環境刪除',
-    renewed: '執行環境正為 {name} 取得新的權杖。',
+    renewed: '執行環境正為{name}取得新的權杖。',
     ownKeyOff: '學校的執行環境暫時不接受你自己的模型與金鑰，所以無法在這裡更改。',
     renewOff: '學校的執行環境目前無法按 ID 託管代理，所以無法在這裡重新連接它。',
     plan: '方案',
@@ -251,23 +251,23 @@ export default {
     fallback: '備用',
     fallbackNone: '無：額度用完後暫停回答，明天再開始',
     schoolAllowance: '學校額度',
-    todaySchool: '今日 {used} / {limit} 次',
-    todaySchoolHint: '學校方案，你所有的代理合計；每天{reset} 重新計算。',
-    perAsker: '每位提問者每天最多 {n} 次',
+    todaySchool: '今日{used} / {limit}次',
+    todaySchoolHint: '學校方案，你所有的代理合計；每天{reset}重新計算。',
+    perAsker: '每位提問者每天最多{n}次',
     thisAgent: '這個代理今日',
-    spentFallback: '今天的學校額度已用完：在{reset} 之前改用你自己的金鑰回答。',
-    spentNone: '今天的學校額度已用完：在{reset} 之前，代理會請提問者明天再試。',
+    spentFallback: '今天的學校額度已用完：在{reset}之前改用你自己的金鑰回答。',
+    spentNone: '今天的學校額度已用完：在{reset}之前，代理會請提問者明天再試。',
     offerWithdrawn: '學校已不再提供這個方案。請選擇其他方案，或改用你自己的金鑰。',
     offerWithdrawnFallback: '學校已不再提供這個方案：在你改選之前，代理會以你自己的模型和金鑰回答。',
   },
 
   // Deleting it from the runtime.
   delete: {
-    title: '從學校的執行環境刪除 {name}？',
+    title: '從學校的執行環境刪除{name}？',
     body: '執行環境會停止這個代理，刪除它的設定和你的金鑰，並在 AIshie 中撤銷它的權杖：在你再次託管它之前，站內無法向它提問。代理會保留在 AIshie 中。',
-    proposals: '1 個仍在等待批准的回答會保留在 AIshie 中。 | {n} 個仍在等待批准的回答會保留在 AIshie 中。',
+    proposals: '1個仍在等待批准的回答會保留在 AIshie 中。 | {n}個仍在等待批准的回答會保留在 AIshie 中。',
     submit: '刪除',
-    done: '{name} 已不在學校的執行環境上',
+    done: '{name}已不在學校的執行環境上',
   },
 
   // The runtime's errors, by reason (§9.5).
@@ -277,7 +277,7 @@ export default {
     unavailable: '學校的執行環境現時無法使用。請一分鐘後再試。',
     network: '無法連接學校的執行環境。請檢查網絡連線後再試。',
     core_unavailable: '執行環境無法連接 AIshie。請一分鐘後再試。',
-    rate_limited: '嘗試次數太多。請等候 {seconds} 秒。',
+    rate_limited: '嘗試次數太多。請等候{seconds}秒。',
     runtime_misconfigured: '學校的執行環境尚未設定為可託管代理。請通知你的管理員。',
     mcp_agent: '這個代理是 MCP 存取：它由你自己的工具使用，永遠不會在這裡託管。',
     agent_suspended: '這個代理在 AIshie 中已停用。請先重新啟用它。',
@@ -291,13 +291,13 @@ export default {
     changedMeanwhile: '這個代理剛在另一個分頁或視窗中被更改。這裡顯示的是它現在的狀態：請檢查後再試一次。',
     school_key_not_offered: '這裡沒有提供學校方案。',
     unknown_offer: '學校已不再提供這個模型。請選擇其他模型。',
-    own_key_required: '請輸入你在 {provider} 的 API 金鑰。',
-    own_key_provider_mismatch: '你已儲存的金鑰屬於另一個供應商。請輸入 {provider} 的金鑰。',
+    own_key_required: '請輸入你在{provider}的 API 金鑰。',
+    own_key_provider_mismatch: '你已儲存的金鑰屬於另一個供應商。請輸入{provider}的金鑰。',
     model_denied: '學校不允許使用這個模型。請選擇另一個。',
     settings_rejected: '執行環境無法使用這些設定運行。',
-    key_malformed: '這看起來不像 {provider} 的 API 金鑰。請按 {provider} 給你的原樣貼上金鑰，不要加入空格。',
+    key_malformed: '這看起來不像{provider}的 API 金鑰。請按{provider}給你的原樣貼上金鑰，不要加入空格。',
     key_is_aishie_token:
-      '這是 AIshie 的權杖（你的或代理的），不是 {provider} 的 API 金鑰。AIshie 權杖絕不會傳送給供應商：請貼上 {provider} 給你的金鑰。',
+      '這是 AIshie 的權杖（你的或代理的），不是{provider}的 API 金鑰。AIshie 權杖絕不會傳送給供應商：請貼上{provider}給你的金鑰。',
     unknown_provider: '請從提供的供應商中選擇。',
     adapter_not_offered: '請從提供的 API 形式中選擇。',
     unknown_endpoint: '請從提供的端點中選擇。',

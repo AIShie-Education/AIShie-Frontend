@@ -24,7 +24,7 @@ test.describe('without an agent runtime', () => {
     await expect(side.getByRole('link', { name: 'AI and documents' })).toHaveCount(0)
     await page.goto('/admin/runtime')
     await expect(page.getByRole('heading', { name: 'AI and documents', level: 1 })).toBeVisible()
-    await expect(page.getByText('This server has no agent runtime')).toBeVisible()
+    await expect(page.getByText('This server has no agent service')).toBeVisible()
     await expect(page.getByRole('tab')).toHaveCount(0)
   })
 
@@ -381,15 +381,15 @@ test.describe('with an agent runtime', () => {
     await page.getByRole('tab', { name: 'Documents' }).click()
     await expect(page).toHaveURL(/tab=documents/)
     const ocr = page.locator('.ocr-card')
-    await expect(ocr.getByText('Read in this order: 繁體中文, English')).toBeVisible()
+    await expect(ocr.getByText('Read in this order: 繁體中文 and English')).toBeVisible()
     const japanese = ocr.getByRole('checkbox', { name: /日本語/ })
     await expect(japanese).not.toBeChecked()
     await ocr.getByText('日本語').click()
     await expect(japanese).toBeChecked()
     await ocr.getByRole('button', { name: 'Save languages' }).click()
-    await expectToasted(page, 'OCR reads in 繁體中文, English, 日本語.')
+    await expectToasted(page, 'OCR reads in 繁體中文, English, and 日本語.')
     await ocr.getByRole('button', { name: 'Use the server’s default' }).click()
-    await expect(ocr.getByText('Read in this order: 简体中文, 繁體中文, English')).toBeVisible()
+    await expect(ocr.getByText('Read in this order: 简体中文, 繁體中文, and English')).toBeVisible()
     expect(runtime.sent.filter((x) => x.path === '/admin/settings' && x.method === 'PATCH').map((x) => x.body)).toEqual(
       [{ ocr: { languages: ['chi_tra', 'eng', 'jpn'] } }, { ocr: { languages: null } }],
     )
@@ -436,8 +436,8 @@ test.describe('the transcriber, with an agent runtime', () => {
     ])
 
     // One button: Core issues the service a credential, and the runtime is given it.
-    await card.getByRole('button', { name: 'Issue and give to the runtime' }).click()
-    await expectToasted(page, 'The runtime has a new credential.')
+    await card.getByRole('button', { name: 'Issue and give to the agent service' }).click()
+    await expectToasted(page, 'The agent service has a new credential.')
     await expect(card.locator('.transcription-card__state')).toHaveText('Running')
     await expect(card.locator('.transcription-card__credential-status')).toHaveText('Accepted')
     const put = runtime.sent.filter((x) => x.method === 'PUT' && x.path === '/admin/transcription/credential')
@@ -488,13 +488,13 @@ test.describe('the agent runtime’s own credential, with an agent runtime', () 
     await page.getByRole('tab', { name: 'Agent hosting' }).click()
     await expect(page).toHaveURL(/tab=hosting/)
     const card = page.locator('.agent-runtime-card')
-    await expect(card.getByRole('heading', { name: 'The agent runtime’s credential for AIshie' })).toBeVisible()
+    await expect(card.getByRole('heading', { name: 'The agent service’s credential for AIshie' })).toBeVisible()
     // Setup makes it, and the server's command rotates it.
     await expect(card.locator('.agent-runtime-card__setup')).toContainText('aishie runtime-credential')
 
     // Issued here, without revoking the others: the runs' own runtime credential (support's) goes on working.
     await card.getByRole('button', { name: 'Issue a credential' }).click()
-    await expect(page.getByRole('dialog', { name: 'Issue a credential for the agent runtime' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Issue a credential for the agent service' })).toBeVisible()
     // The same dialog, its title saying what to do once it is issued.
     const dialog = page.locator('.agent-runtime-issue')
     await dialog.locator('.agent-runtime-issue__label input').fill(LABEL)

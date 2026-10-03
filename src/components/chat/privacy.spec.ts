@@ -129,7 +129,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(w.line).toBe(
       'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Lab tutor sends it to its AI model’s provider to answer.',
     )
-    expect(w.route).toContain('AIshie’s agent runtime sends the messages of this conversation')
+    expect(w.route).toContain('AIshie’s agent service sends the messages of this conversation')
     expect(w.route).toContain('This page cannot show you which provider it is.')
     for (const p of Object.values(LABELS)) expect(`${w.line} ${w.route}`).not.toContain(p)
     expect(w.kept).toContain('no longer sends it to Lab tutor’s model')
@@ -144,7 +144,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
       'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Ken’s notes answers from its owner’s own tools.',
     )
     expect(w.route).toContain('it is used from its owner’s own tools')
-    expect(w.route).not.toContain('agent runtime sends')
+    expect(w.route).not.toContain('agent service sends')
     // The runtime does not send it, so nothing is said of what the runtime stops sending.
     expect(w.kept).not.toContain('runtime')
     expect(w.kept).not.toContain('180 days')

@@ -30,14 +30,37 @@ const error = computed(() =>
 )
 /** Core takes a login ID as well as an email: the field says so, and the name goes as `login`. */
 const byLoginId = ref(false)
-const version = ref<string | null>(null)
 const serverDown = ref(false)
 
 // Single sign-on as Core offers it (authMethods): a button for each identity
 // provider offered, in Core's order (or the one a Core from before several
-// offers), once Core has said; nothing else on the page waits for that.
+// offers). Where there is one, it is how the school's people sign in: the
+// buttons come first, the first of them the page's one primary, and the
+// password form is behind "Use your student number and password instead".
+// The page waits a moment for Core to say (METHODS_WAIT), so as not to show
+// the form and then take it away; after that the form is offered, and a
+// provider Core names later does not take away a form already typed in, or
+// one the person has moved into.
 const ssoMethods = shallowRef<SsoMethod[]>([])
 const ssoLabel = (m: SsoMethod) => m.label || t('auth.ssoDefault')
+const METHODS_WAIT = 400
+const methodsSettled = ref(false)
+/** The person chose to sign in with a password where single sign-on is offered. */
+const passwordChosen = ref(false)
+const ssoFirst = computed(() => ssoMethods.value.length > 0 && !passwordChosen.value)
+function usePassword() {
+  passwordChosen.value = true
+  void nextTick(() => (document.querySelector('input[name="login"]') as HTMLInputElement | null)?.focus())
+}
+/** Back to single sign-on: focus goes to its first button, as the form it was in is hidden. */
+function useSso() {
+  passwordChosen.value = false
+  void nextTick(() => (document.querySelector('.login__sso') as HTMLElement | null)?.focus())
+}
+/** The person is in the password form: typing in it, or with focus in one of its fields. */
+function inForm(): boolean {
+  return touched.login || touched.password || !!document.activeElement?.closest('.login__form')
+}
 
 const next = computed(() => {
   const n = route.query.next
@@ -76,13 +99,21 @@ watch(
 )
 
 onMounted(async () => {
-  void authMethods().then((m) => {
-    ssoMethods.value = ssoButtons(m)
-    byLoginId.value = acceptsLoginId(m)
-  })
+  const wait = setTimeout(() => (methodsSettled.value = true), METHODS_WAIT)
+  void authMethods()
+    .then((m) => {
+      if (methodsSettled.value && inForm()) passwordChosen.value = true
+      ssoMethods.value = ssoButtons(m)
+      byLoginId.value = acceptsLoginId(m)
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      clearTimeout(wait)
+      methodsSettled.value = true
+    })
   try {
+    // Whether it answers; which version it runs is in the account menu's About, once signed in.
     const h = await health()
-    version.value = h?.version ?? null
     serverDown.value = !h || h.status !== 'ok'
   } catch {
     serverDown.value = true
@@ -146,28 +177,47 @@ function sso(m: SsoMethod) {
 </script>
 
 <template>
-  <div class="login">
-    <div class="login__lang">
-      <el-select v-model="ui.locale" size="small" style="width: 120px">
+  <div class="app-auth-page login">
+    <div class="app-auth-page__lang">
+      <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
         <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" />
       </el-select>
     </div>
-    <div class="login__card">
+    <main class="app-auth-page__card login__card">
       <div class="login__brand">
-        <AppWordmark class="login__wordmark" decorative />
-        <h1 class="login__title">{{ t('auth.welcome') }}</h1>
+        <AppWordmark class="app-auth-page__wordmark login__wordmark" />
         <p class="login__tagline">{{ t('common.tagline') }}</p>
+        <h1 class="login__title">{{ t('auth.title') }}</h1>
       </div>
 
       <el-alert v-if="serverDown" type="warning" :title="t('auth.serverDown')" :closable="false" show-icon class="login__alert" />
       <el-alert v-if="error" type="error" :title="error" :closable="false" show-icon class="login__alert" />
 
+      <div v-if="!methodsSettled" class="login__waiting" aria-hidden="true" />
+      <div v-else-if="ssoFirst" class="login__sso-list">
+        <el-button
+          v-for="(m, i) in ssoMethods"
+          :key="m.start"
+          :type="i === 0 ? 'primary' : undefined"
+          size="large"
+          class="login__submit login__sso"
+          @click="sso(m)"
+        >
+          {{ t('auth.sso', { provider: ssoLabel(m) }) }}
+        </el-button>
+        <el-button link type="primary" class="login__other login__use-password" @click="usePassword">
+          {{ byLoginId ? t('auth.usePassword') : t('auth.useEmailPassword') }}
+        </el-button>
+      </div>
+
       <el-form
+        v-show="methodsSettled && !ssoFirst"
         ref="formRef"
         :model="form"
         :rules="rules"
         :validate-on-rule-change="false"
         label-position="top"
+        class="login__form"
         @submit.prevent="signIn"
       >
         <el-form-item :label="byLoginId ? t('auth.loginOrEmail') : t('auth.email')" prop="login">
@@ -196,78 +246,46 @@ function sso(m: SsoMethod) {
         <el-button type="primary" size="large" native-type="submit" :loading="busy" class="login__submit">
           {{ t('auth.signIn') }}
         </el-button>
+        <el-button
+          v-if="ssoMethods.length"
+          link
+          type="primary"
+          class="login__other login__use-sso"
+          @click="useSso"
+        >
+          {{ t('auth.useSso') }}
+        </el-button>
       </el-form>
-
-      <template v-if="ssoMethods.length">
-        <el-divider>{{ t('auth.or') }}</el-divider>
-        <div class="login__sso-list">
-          <el-button
-            v-for="m in ssoMethods"
-            :key="m.start"
-            size="large"
-            class="login__submit login__sso"
-            @click="sso(m)"
-          >
-            {{ t('auth.sso', { provider: ssoLabel(m) }) }}
-          </el-button>
-        </div>
-      </template>
-
-      <p v-if="version" class="login__version">{{ t('auth.serverVersion', { version }) }}</p>
-    </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
-.login {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
-  background:
-    radial-gradient(1200px 600px at 10% -10%, var(--app-indigo-tint), transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, var(--app-light) 16%, transparent), transparent 60%),
-    var(--app-ground);
-  position: relative;
-}
-.login__lang {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-}
-.login__card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--app-card);
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-card);
-  padding: 32px 28px 20px;
-  box-shadow: var(--app-shadow-raised);
-}
 .login__brand {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 2px;
   margin-bottom: 24px;
 }
 .login__wordmark {
-  height: 34px;
-  margin-bottom: 18px;
+  margin-bottom: 4px;
+}
+.login__tagline {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--app-ink-3);
 }
 .login__title {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.3;
-}
-.login__tagline {
-  margin: 0;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
 }
 .login__alert {
   margin-bottom: 16px;
+}
+.login__waiting {
+  min-height: 96px;
 }
 .login__submit {
   width: 100%;
@@ -277,7 +295,8 @@ function sso(m: SsoMethod) {
   flex-direction: column;
   gap: 10px;
 }
-.login__sso-list .el-button + .el-button {
+/* The link below keeps its own margins: centred under the buttons, as it is under the password form. */
+.login__sso-list .el-button + .el-button:not(.login__other) {
   margin-left: 0;
 }
 /* A long name keeps to the card's width. */
@@ -286,10 +305,9 @@ function sso(m: SsoMethod) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.login__version {
-  margin: 20px 0 0;
-  text-align: center;
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
+.login__other {
+  display: flex;
+  width: fit-content;
+  margin: 16px auto 0;
 }
 </style>

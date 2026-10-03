@@ -79,7 +79,7 @@ describe('AgentPicker', () => {
     const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     const offered = w.findAll('button.resp-row')
-    expect(offered.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutor'])
+    expect(offered.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutorAI'])
     expect(offered[0]!.find('.hosting-tag').text()).toBe('Hosted on AIshie')
     // The caller's own agents Core does not offer (MCP access, or not running) are not looked for.
     expect(w.find('.resp-row.is-elsewhere').exists()).toBe(false)
@@ -96,21 +96,57 @@ describe('AgentPicker', () => {
     expect(none.text()).toContain('No agent here answers your questions yet.')
   })
 
-  it('says what each agent is to the caller, and whether it is running', async () => {
+  it('says what each agent is to the caller, that it is one, and whether it can be asked now', async () => {
     respondents = [
       { ...tutor, last_seen_at: null },
-      { ...tutor, member_id: 'mine', display_name: 'My helper', is_my_delegate: true, answers_course: false },
+      {
+        ...tutor,
+        member_id: 'mine',
+        display_name: 'My helper',
+        is_my_delegate: true,
+        answers_course: false,
+        last_seen_at: new Date().toISOString(),
+      },
     ]
     const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     const rows = w.findAll('button.resp-row')
-    expect(rows.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutor', 'My helper'])
+    // The "AI" right after the name, held to its last letter, so that it never stands alone on a line.
+    expect(rows.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutorAI', 'My helperAI'])
+    expect(rows[0]!.find('.agent-name__end').text()).toBe('rAI')
     expect(rows[0]!.text()).toContain('Course agent')
-    expect(rows[0]!.text()).toContain('Never connected')
+    expect(rows[0]!.find('.ai-badge').text()).toBe('AI')
+    expect(rows[0]!.find('.agent-avatar').exists()).toBe(true)
+    // Not "online", as a person would be: whether it can be asked, in plain words.
+    expect(rows[0]!.find('.askable').text()).toBe('Paused')
+    expect(rows[1]!.find('.askable').text()).toBe('Can be asked')
     expect(rows[0]!.text()).toContain('It answers other members too')
-    expect(rows[1]!.text()).toContain('Personal assistant')
+    expect(rows[1]!.text()).toContain('Personal agent')
     expect(rows[1]!.text()).toContain('Your agent')
     expect(rows[1]!.text()).not.toContain('It answers other members too')
+  })
+
+  it('makes each row one control: nothing in it takes focus, and what the tooltips say describes it', async () => {
+    respondents = [
+      { ...tutor, last_seen_at: null },
+      { ...tutor, member_id: 'mine', display_name: 'My helper', is_my_delegate: true, answers_course: false },
+    ]
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global, attachTo: document.body })
+    await flushPromises()
+    for (const row of w.findAll('button.resp-row')) {
+      // Only the hosting tag, as before: not whose agent it is, nor whether it can be asked.
+      const focusable = row.findAll('[tabindex]').filter((e) => !e.element.closest('.hosting-tag'))
+      expect(focusable.map((e) => e.html())).toEqual([])
+      const ids = row.attributes('aria-describedby')!.split(' ')
+      const said = ids.map((id) => document.getElementById(id)?.textContent ?? '').join(' ')
+      expect(said).toMatch(/^(No token of this agent|Last connected|Something runs it now)/)
+    }
+    const mine = w.findAll('button.resp-row')[1]!
+    const said = mine
+      .attributes('aria-describedby')!
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+    expect(said.join(' ')).toContain('Acts for you')
   })
 
   it('says nobody may be asked in Traditional Chinese', async () => {

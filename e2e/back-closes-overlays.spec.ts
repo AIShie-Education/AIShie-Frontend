@@ -158,6 +158,42 @@ test.describe('on a phone, back', () => {
     await expect(page).toHaveURL(/\/$/)
   })
 
+  test('with About open over the menu, closes About, then the menu, then leaves the page', async ({ page }) => {
+    await signIn(page, demo().actors.yuki)
+    await twoPages(page, '/', coursePath())
+    const url = page.url()
+    const menu = page.getByRole('dialog', { name: 'Menu' })
+    const about = page.locator('.about-dialog')
+
+    await menuButton(page).click()
+    await expect(menu).toBeVisible()
+    await menu.locator('#account-button-drawer').click()
+    await menu.locator('#account-menu-drawer').getByRole('menuitem', { name: 'About AIshie' }).click()
+    await expect(about).toBeVisible()
+    await page.goBack()
+    await expect(about).toBeHidden()
+    await expect(menu).toBeVisible()
+    expect(page.url()).toBe(url)
+    await page.goBack()
+    await expect(menu).toBeHidden()
+    expect(page.url()).toBe(url)
+    await atPagesOwnEntry(page)
+
+    // Closed by its own button, it goes back over its entry: back closes the menu under it.
+    await menuButton(page).click()
+    await menu.locator('#account-button-drawer').click()
+    await menu.locator('#account-menu-drawer').getByRole('menuitem', { name: 'About AIshie' }).click()
+    await expect(about).toBeVisible()
+    await about.getByRole('button', { name: 'Close this dialog' }).click()
+    await expect(about).toBeHidden()
+    await expect(menu).toBeVisible()
+    await page.goBack()
+    await expect(menu).toBeHidden()
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+  })
+
   test('with the viewer open over the chat, closes the viewer, then the chat, then leaves the page', async ({
     page,
   }) => {

@@ -8,11 +8,12 @@ export default {
       proposed: 'Awaiting approval',
       review: 'Awaiting review',
     },
-    proposedHelp: 'Nothing here has happened yet. Approving carries it out now, as the person or agent who proposed it, once Core has checked they may still do it.',
-    reviewHelp: 'These have already happened. Reviewing records that someone has looked; it undoes nothing. Escalating asks a second person to look.',
+    // {tab} is the tab's name (tabs.*), so each rule says which list it is about.
+    proposedHelp: '{tab}: nothing listed there has happened yet. Approving carries it out now, as whoever proposed it, once the system has checked their permissions again.',
+    reviewHelp: '{tab}: everything listed there has already happened. Reviewing records that someone has looked; it undoes nothing. Escalating asks a second person to look.',
     emptyProposed: 'Nothing is waiting for approval.',
     emptyReview: 'Nothing is waiting for review.',
-    oldestFirst: 'Oldest first',
+    oldestFirst: 'Both lists show the oldest first.',
     decisionsNeedApproval: 'Your decisions here also need approval',
     decisionsNeedApprovalHelp: 'Your seat decides at the "needs approval" level: each approval or rejection you make becomes a proposal itself, which someone else confirms.',
     recent: 'Decided just now',
@@ -21,20 +22,20 @@ export default {
     stale: 'Someone else has dealt with this in the meantime. The list has been refreshed.',
     agentsTitle: 'Your agents’ proposals',
     agentsSubtitle: 'What your agents proposed in this course, or did under review: yours to decide where you could have done it yourself.',
-    agentsIntroTitle: 'You decide what your own agents do here, where you could have done it yourself',
-    agentsIntro:
-      'Your agents act only for you. What one of them proposes, you approve or reject here wherever you could have done it without anyone’s confirmation: it is then carried out at once, as your own doing. Anything else is for someone else in the course to decide, and says why. You may withdraw any of its proposals while it waits.',
+    rules: 'Rules',
     agentsProposedHelp:
-      'Nothing here has happened yet. Approving carries it out now, as your agent, once Core has checked it may still do it; withdrawing cancels it.',
+      '{tab}: nothing listed there has happened yet. Approving carries it out now, as your agent, once the system has checked its permissions again; withdrawing cancels it.',
     agentsReviewHelp:
-      'Your agent has already done these. Reviewing records that you have looked; it undoes nothing. Escalating asks someone else in the course to look.',
+      '{tab}: your agent has already done everything listed there. Reviewing records that you have looked; it undoes nothing. Escalating asks someone else in the course to look.',
+    // {link} is My actions (mine.title), linked.
+    agentsMine: 'What you did yourself in this course is under {link}.',
     agentsEmptyProposed: 'None of your agents’ proposals is waiting.',
     agentsEmptyReview: 'Nothing your agents did is waiting for review.',
   },
   detail: {
     title: 'Action',
     what: 'What was asked',
-    whatHelp: 'The arguments as Core stored them. For a proposal this includes what was fixed when it was made, such as the rubric version or the points the score is out of.',
+    whatHelp: 'The details as they were recorded. For a proposal this includes what was fixed when it was made, such as the rubric version or the points the score is out of.',
     raw: 'Raw payload (JSON)',
     rawResult: 'Raw result (JSON)',
     result: 'What came of it',
@@ -54,7 +55,7 @@ export default {
     title: 'My actions',
     subtitle: 'Everything you have done or tried to do in this course, and what became of it.',
     help: 'Proposals appear here as soon as they are made, and change once someone decides.',
-    helpAgent: 'The agent reads the same list with the action.list_mine tool.',
+    helpAgent: 'Your agents see this same list.',
     empty: 'You have not done anything in this course yet.',
     emptyFiltered: 'None of your actions match this filter.',
     filterStatus: 'Status',
@@ -64,7 +65,7 @@ export default {
       oldest: 'Oldest first',
     },
     loadingAll: 'Loading your actions… {n} so far',
-    capped: 'Showing your first {n} actions. Core lists them oldest first, so newer ones are still to load.',
+    capped: 'Showing your first {n} actions. They are listed oldest first, so newer ones are still to load.',
     loadRest: 'Load newer',
     showChat: 'Include chat messages',
     waiting: '{n} waiting for a decision',
@@ -318,7 +319,7 @@ export default {
     theOwner: 'its owner',
     purpose: {
       course: 'A course agent: students may ask it about the course. It answers any student whose own seat reaches at least as far as it does, and reads only published material.',
-      personal: 'A personal assistant: it answers only {owner}, and reads the material and {owner}’s own work and grades.',
+      personal: 'A personal agent: it answers only {owner}, and reads the material and {owner}’s own work and grades.',
     },
     ownerSeat: '(whose seat caps it)',
     as: 'Seated as',
@@ -329,7 +330,7 @@ export default {
     can: 'May',
     clipped: '{n} set lower than the preset | {n} set lower than the preset',
     checkedAgain:
-      'Core works the seat out again when this is approved: if {owner} may no longer bring agents in, or now holds less, what is carried out is no wider than that, or it is refused.',
+      'The seat is worked out again when this is approved: if {owner} may no longer bring agents in, or now holds less, what is carried out is no wider than that, or it is refused.',
   },
   answer: {
     title: 'The reply',
@@ -344,6 +345,11 @@ export default {
     older: 'The message it answers is further back in the conversation.',
     unreadable: 'The message it answers cannot be shown to you.',
     reply: 'The reply',
+    // The course materials the reply says it relied on, as the proposal keeps them: by id alone, so counted.
+    sources: 'Based on {n} course material | Based on {n} course materials',
+    sourcesTip:
+      'The agent names them by id. Each is checked again when the reply is approved, and every reader is shown them as they may open them.',
+    noSources: 'No course material cited',
   },
   withdraw: {
     action: 'Withdraw',
@@ -357,8 +363,8 @@ export default {
   },
   grant: {
     title: 'What approving grants',
-    help: 'The seat approving would make: the preset as it stands now (Core copies it when the proposal is carried out), with this proposal’s own settings laid over it.',
-    presetMissing: 'The preset this names could not be found. If it no longer exists, Core will not carry this out.',
+    help: 'The seat approving would make: the preset as it stands now (copied when the proposal is carried out), with this proposal’s own settings laid over it.',
+    presetMissing: 'The preset this names could not be found. If it no longer exists, this will not be carried out.',
     deptPreset: 'Department preset',
     listsItself: 'Themselves',
     nobody: 'Nobody',
@@ -408,13 +414,14 @@ export default {
       closesOwnEscalation: 'Approving this would close an escalation you raised, which is for someone else to do. You can still reject it.',
       ownAgent:
         'This was done by your own party — the person whose agent you are, or another of their agents — and a person and their agents count as one, so someone else deals with it.',
-      ownAgentLevel:
-        'Your agent did this, and it is not yours to decide: you could not have done it yourself without someone’s confirmation (your own level for it is lower than autonomous, or it is beyond your reach), or, for a proposal, approving it now would be refused. So someone else in the course decides it.',
+      ownAgentLevel: 'Decided by {who}: you could not do this yourself without someone’s confirmation, or approving it now would be refused.',
+      ownAgentLevelReview: 'Reviewed by {who}: you could not have done this yourself without someone’s confirmation.',
     },
     ruleNote: 'Nobody decides or reviews their own action — from any seat they have held, and not at one remove either.',
     proposedNotice: 'Your decision is waiting for approval',
     viewDecision: 'View your decision',
     ownerRuleNote: 'You decide what your agent did only where you could have done it yourself without anyone’s confirmation.',
+    teachingStaff: 'the course’s teaching staff',
     asOwner: 'You decide this as its owner: it is carried out at once, as your own doing.',
   },
   outcome: {
@@ -428,7 +435,7 @@ export default {
     escalated: 'Escalated for a second reviewer',
     reasonLabel: 'Why: {reason}',
     changesLabel: 'What to change: {note}',
-    coreSays: 'Core says',
+    coreSays: 'The server says',
     decisionAction: 'Decision recorded as',
     inner: 'The proposal it decided: {what}',
     executedByOwner: 'Approved and carried out, as your own doing',

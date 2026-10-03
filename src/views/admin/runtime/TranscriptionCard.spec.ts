@@ -71,12 +71,12 @@ describe('TranscriptionCard', () => {
     expect((find(w, 'concurrency').find('input').element as HTMLInputElement).value).toBe('2')
     expect(find(w, 'credential-status').text()).toBe('Accepted')
     expect(find(w, 'hint').text()).toBe('aissvc_held00000000…')
-    expect(find(w, 'seen').text()).toContain('Last accepted by Core')
+    expect(find(w, 'seen').text()).toContain('Last accepted by AIshie')
     expect(find(w, 'issue').text()).toBe('Replace')
     expect(find(w, 'withdraw').exists()).toBe(true)
     expect(find(w, 'pages').text()).toBe('120')
     expect(find(w, 'documents').text()).toBe('9')
-    expect(find(w, 'cost').text()).toBe('$0.0312')
+    expect(find(w, 'cost').text()).toBe('US$0.0312')
     // Nothing to save until something is changed.
     expect(find(w, 'save').exists()).toBe(false)
   })
@@ -89,7 +89,7 @@ describe('TranscriptionCard', () => {
     )
     setLocale('zh-Hant')
     await flushPromises()
-    expect(find(w, 'numbers-hint').text()).toContain('當日頁數用完後至香港標準時間 08:00 重新計算前')
+    expect(find(w, 'numbers-hint').text()).toContain('當日頁數用完後至香港標準時間 08:00重新計算前')
   })
 
   it('turns it off and on at once, with the switch', async () => {
@@ -110,7 +110,7 @@ describe('TranscriptionCard', () => {
     const w = await card()
     expect(find(w, 'state').text()).toBe('Blocked: no credential')
     expect(find(w, 'credential-status').text()).toBe('None')
-    expect(find(w, 'issue').text()).toBe('Issue and give to the runtime')
+    expect(find(w, 'issue').text()).toBe('Issue and give to the agent service')
     expect(find(w, 'withdraw').exists()).toBe(false)
   })
 
@@ -161,10 +161,24 @@ describe('TranscriptionCard', () => {
     expect(find(w, 'enabled').classes()).toContain('is-disabled')
   })
 
+  it('turned off by the server, says in each language to ask its operator, as the ⓘ beside it does', async () => {
+    state.settings.transcription = transcriptionOff({ available: false, unavailable_reason: 'operator_off' })
+    for (const [locale, ask] of [
+      ['en', 'ask the server’s operator'],
+      ['zh-Hant', '請聯絡伺服器營運者'],
+      ['zh-Hans', '请联系服务器运维方'],
+    ] as const) {
+      setLocale(locale)
+      const w = await card()
+      expect(find(w, 'unavailable').find('.el-alert__title').text()).toContain(ask)
+      w.unmount()
+    }
+  })
+
   it('says quietly that an older runtime does not transcribe', async () => {
     state.settings = ocrSettings()
     const w = await card()
-    expect(find(w, 'not-offered').text()).toContain('This runtime does not offer this yet')
+    expect(find(w, 'not-offered').text()).toContain('This agent service does not offer this yet')
   })
 
   it('issues a credential and gives it to the runtime, which the page never shows', async () => {
@@ -179,7 +193,7 @@ describe('TranscriptionCard', () => {
     expect(live()).not.toContain('cred-stray')
     expect(find(w, 'credential-status').text()).toBe('Accepted')
     expect(find(w, 'state').text()).toBe('Running')
-    expect(lastMessage()).toMatchObject({ type: 'success', message: 'The runtime has a new credential.' })
+    expect(lastMessage()).toMatchObject({ type: 'success', message: 'The agent service has a new credential.' })
     expect(document.body.innerHTML).not.toContain(token)
     expect(document.body.innerHTML).not.toContain(token.slice(-43))
   })
@@ -189,7 +203,7 @@ describe('TranscriptionCard', () => {
     const w = await card()
     await find(w, 'issue').trigger('click')
     await flushPromises()
-    expect(find(w, 'credential-error').text()).toContain('Core did not accept the credential when the runtime tried it')
+    expect(find(w, 'credential-error').text()).toContain('AIshie did not accept the credential when the agent service tried it')
     expect(live()).toEqual(['cred-held'])
     expect(document.body.innerHTML).not.toContain(state.service.issued[0])
   })
@@ -239,7 +253,7 @@ describe('TranscriptionCard', () => {
     expect(rows[0].find('.job-cell__file').exists()).toBe(false)
     expect(rows[1].find('.job-cell__file').text()).toBe('week3-handout.pdf')
     expect(rows[1].find('.job-cell__doc').attributes('href')).toContain('&tab=text&file=file-2')
-    expect(w.findAll('.job-cell__cost').map((c) => c.text())).toEqual(['$0.0041', 'No price'])
+    expect(w.findAll('.job-cell__cost').map((c) => c.text())).toEqual(['US$0.0041', 'No price'])
 
     await w.find('.load-more button').trigger('click')
     await flushPromises()
@@ -268,7 +282,7 @@ describe('TranscriptionCard', () => {
     })
     const w = await card()
     expect(find(w, 'state').text()).toBe('受阻：沒有憑證')
-    expect(find(w, 'issue').text()).toBe('發放並交給 runtime')
+    expect(find(w, 'issue').text()).toBe('發放並交給執行環境')
     expect(find(w, 'credential-status').text()).toBe('未設定')
   })
 })
@@ -286,6 +300,6 @@ describe('the jobs, by their own width', () => {
     expect(heads()).toEqual(['Document'])
     const meta = w.findAll('.job-cell')[0].findAll('.job-cell__meta').at(-1)!
     // Its time, relative to now, last.
-    expect(meta.text().replace(/\s+/g, ' ')).toMatch(/^12 pages · \$0\.0041 · \S/)
+    expect(meta.text().replace(/\s+/g, ' ')).toMatch(/^12 pages · US\$0\.0041 · \S/)
   })
 })

@@ -105,7 +105,7 @@ async function download(f: MessageAttachment) {
         type="button"
         class="msg-file__open"
         :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)}${hasPdf(f) ? ' · PDF' : ''})`"
-        :title="`${t('preview.openTip')}: ${f.filename}`"
+        :title="t('common.pair', { label: t('preview.openTip'), value: f.filename })"
         @click="preview(f)"
       >
         <img
@@ -133,7 +133,7 @@ async function download(f: MessageAttachment) {
         type="button"
         class="msg-file__get"
         :aria-label="t('chat.attach.download', { name: f.filename })"
-        :title="`${t('chat.attach.downloadTip')}: ${f.filename}`"
+        :title="t('common.pair', { label: t('chat.attach.downloadTip'), value: f.filename })"
         :aria-busy="busy === f.id ? 'true' : undefined"
         @click="download(f)"
       >

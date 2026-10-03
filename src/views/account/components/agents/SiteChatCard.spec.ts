@@ -34,7 +34,7 @@ describe('SiteChatCard', () => {
     expect(w.find('.app-card__title').text()).toBe('Questions on the site')
     expect(w.find('.el-tag').text()).toBe('Can be asked on the site')
     expect(w.findAll('.site-chat__text').map((p) => p.text())).toEqual([
-      'People in its courses can ask it on the site: AIshie’s runtime runs it now.',
+      'People in its courses can ask it on the site: AIshie’s agent service runs it now.',
       'To stop people asking it, pause its hosting, or suspend it.',
     ])
     expect(w.find('button').exists()).toBe(false)
@@ -43,7 +43,7 @@ describe('SiteChatCard', () => {
   it('says nobody can ask one hosted on AIshie that the runtime does not run now', () => {
     const w = card()
     expect(w.find('.el-tag').text()).toBe('Not running')
-    expect(w.find('.site-chat__text').text()).toContain('AIshie’s runtime is not running it')
+    expect(w.find('.site-chat__text').text()).toContain('AIshie’s agent service is not running it')
     expect(w.find('button').exists()).toBe(false)
   })
 

@@ -7,7 +7,7 @@ export default {
   // The link from the Account page.
   accountCard: {
     title: 'My agents',
-    body: 'AI assistants and other programs you own, that work in your courses as your delegates.',
+    body: 'Agents you own, AI or other programs, that work in your courses as your delegates.',
     open: 'Manage my agents',
   },
 
@@ -58,7 +58,7 @@ export default {
     intro:
       'Give it a name, and choose how it runs. No model, prompt or key is kept with it here: only who it is, how it runs and the courses you bring it into.',
     name: 'Name',
-    namePlaceholder: 'e.g. Study helper',
+    namePlaceholder: 'e.g. Revision agent',
     nameHint: 'What it is called wherever it appears: member lists, conversations, approvals. It can be changed later.',
     nameRequired: 'A name is required',
     next: {
@@ -79,8 +79,8 @@ export default {
   // Whether people can ask it on the site (agent.get's site_chat), as its hosting decides.
   siteChat: {
     title: 'Questions on the site',
-    on: 'People in its courses can ask it on the site: AIshie’s runtime runs it now.',
-    off: 'Nobody can ask it on the site just now: AIshie’s runtime is not running it. Host it, or resume it, on this page.',
+    on: 'People in its courses can ask it on the site: AIshie’s agent service runs it now.',
+    off: 'Nobody can ask it on the site just now: AIshie’s agent service is not running it. Host it, or resume it, on this page.',
     suspended: 'Nobody can ask it on the site while it is suspended.',
     mcp: 'Nobody can ask it on the site: it has MCP access, and is used from your own tools. An agent people ask here is one created as hosted on AIshie.',
     stop: 'To stop people asking it, pause its hosting, or suspend it.',
@@ -267,7 +267,7 @@ export default {
     purposeCourse: 'Course agent for students',
     purposeHelp: {
       personal:
-        'Your own assistant: it reads what you can read (your own work and grades, if you are a student) and answers only you.',
+        'Your personal agent: it reads what you can read (your own work and grades, if you are a student) and answers only you.',
       course:
         'A course agent: every student may ask it about the course material, and it may repeat to one what another told it. It reads nobody’s work. Offered because you manage this course’s members.',
     },
@@ -304,7 +304,7 @@ export default {
       'Clipped to your own seat. Someone who manages the course’s members can change its permissions later, never beyond yours.',
     adjust: 'All permissions, and naming other levels',
     adjustHelp:
-      'Leave a permission empty for what it gets anyway. Levels it may not hold here are greyed out, each saying why; for a student, what goes beyond a personal assistant — drafting your submission, say — it does only by proposal, which you then confirm.',
+      'Leave a permission empty for what it gets anyway. Levels it may not hold here are greyed out, each saying why; for a student, what goes beyond a personal agent — drafting your submission, say — it does only by proposal, which you then confirm.',
     changed: '{n} set differently',
     submit: 'Bring it in',
     submitRequest: 'Send the request',

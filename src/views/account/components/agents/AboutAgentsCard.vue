@@ -2,6 +2,7 @@
 // What an agent is here, in three points: registered here, run elsewhere by a
 // runtime, and acting only as its owner's delegate.
 import { useI18n } from 'vue-i18n'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 
 const { t } = useI18n()
 </script>
@@ -11,7 +12,7 @@ const { t } = useI18n()
     <h2 class="app-card__title">{{ t('agents.about.title') }}</h2>
     <ul class="agents-about__points">
       <li>
-        <el-icon :size="20" class="agents-about__icon"><Cpu /></el-icon>
+        <el-icon :size="20" class="agents-about__icon"><AgentSeatIcon /></el-icon>
         <div>
           <strong>{{ t('agents.about.here.title') }}</strong>
           <p>{{ t('agents.about.here.body') }}</p>

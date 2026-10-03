@@ -25,9 +25,17 @@ vi.mock('@/api/http', async (orig) => {
 vi.mock('./PdfView.vue', () => ({
   __esModule: true,
   default: defineComponent({
-    props: { data: { type: Object, required: true }, name: { type: String, required: true } },
+    props: {
+      data: { type: Object, required: true },
+      name: { type: String, required: true },
+      page: { type: Number, default: null },
+    },
     setup: (props) => () =>
-      h('div', { class: 'pdf-stub' }, `${props.name}: ${(props.data as Uint8Array).length} bytes`),
+      h(
+        'div',
+        { class: 'pdf-stub' },
+        `${props.name}: ${(props.data as Uint8Array).length} bytes${props.page ? `, at page ${props.page}` : ''}`,
+      ),
   }),
 }))
 // Whether the runtime's transcriber is on, as GET /info says.
@@ -55,7 +63,7 @@ vi.mock('@/utils/printLayout', async (orig) => {
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { default: FileViewer } = await import('./FileViewer.vue')
-const { closePreview, openPreview, previewState } = await import('./viewer')
+const { closePreview, openPreview, previewState, showPreviewAt } = await import('./viewer')
 const { ApiError } = await import('@/api/http')
 type PreviewFile = import('./viewer').PreviewFile
 
@@ -124,7 +132,7 @@ function viewer() {
 const $ = (sel: string) => document.body.querySelector<HTMLElement>(sel)
 const $$ = (sel: string) => [...document.body.querySelectorAll<HTMLElement>(sel)]
 
-async function open(files: PreviewFile[], index = 0, extra: { title?: string; courseId?: string } = {}) {
+async function open(files: PreviewFile[], index = 0, extra: { title?: string; courseId?: string; page?: number } = {}) {
   const w = viewer()
   openPreview({ files, index, ...extra })
   await flushPromises()
@@ -246,6 +254,21 @@ describe('FileViewer', () => {
     expect($('.pdf-stub')!.textContent).toBe('slides.pdf: 13 bytes')
     // Not shown from an object URL.
     expect(made).toBe(0)
+  })
+
+  it('opens a PDF at the page it is opened at, and the file shown after it at its first', async () => {
+    const files = [
+      file('lecture.pdf', 'application/pdf', '%PDF-1.4 tiny'),
+      file('notes.pdf', 'application/pdf', '%PDF'),
+    ]
+    await open(files, 0, { page: 3 })
+    expect($('.pdf-stub')!.textContent).toBe('lecture.pdf: 13 bytes, at page 3')
+    showPreviewAt(1)
+    await flushPromises()
+    expect($('.pdf-stub')!.textContent).toBe('notes.pdf: 4 bytes')
+    showPreviewAt(0)
+    await flushPromises()
+    expect($('.pdf-stub')!.textContent).toBe('lecture.pdf: 13 bytes')
   })
 
   it('shows an image from an object URL of its bytes, typed as an image, an SVG as an <img> alone', async () => {
@@ -613,7 +636,7 @@ describe('FileViewer: an Office file shown as its PDF rendition', () => {
     setLocale('zh-Hans')
     await open([office([doneRendition])])
     expect($('.file-viewer__download-pdf')!.textContent!.trim()).toBe('下载 PDF')
-    expect($('.file-viewer__meta')!.textContent).toContain('PDF，共 12 页')
+    expect($('.file-viewer__meta')!.textContent).toContain('PDF，共12页')
   })
 
   it('sends one that failed back where the caller may, says it waits again, and shows the PDF once it is done', async () => {

@@ -24,7 +24,6 @@ import TimeText from '@/components/TimeText.vue'
 import DeleteHostingDialog from './DeleteHostingDialog.vue'
 import {
   STATUS_TAG,
-  courseLabel,
   hostingErrorText,
   isTransitional,
   pollInterval,
@@ -353,7 +352,8 @@ defineExpose({ onCommand })
     <ul v-if="seats.length" class="hosted-card__seats">
       <li v-for="s in seats" :key="s.course_id" class="hosted-card__seat">
         <span class="hosted-card__course"
-          >{{ courseLabel(s) }} <span class="app-muted">{{ s.course_title }}</span></span
+          >{{ s.course_code }}<template v-if="s.section"><span class="app-sep">·</span>{{ s.section }}</template>
+          <span class="app-muted">{{ s.course_title }}</span></span
         >
         <span v-for="(line, i) in seatSentences(s, t)" :key="i" class="hosted-card__line">{{ line }}</span>
       </li>

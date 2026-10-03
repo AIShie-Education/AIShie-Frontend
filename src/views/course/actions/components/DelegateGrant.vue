@@ -10,6 +10,7 @@ import { PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/typ
 import { useCourseStore } from '@/stores/course'
 import { seatPurpose } from '@/utils/agents'
 import { presetDescription, presetLabel } from '@/views/course/members/components/seat'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -100,6 +101,7 @@ const expiresAt = computed(() => str(p.value.expires_at))
       <div>
         <dt>{{ t('actions.fields.agent_display_name') }}</dt>
         <dd class="delegate-grant__inline">
+          <AgentAvatar v-if="agentName" :name="agentName" size="small" />
           <strong v-if="agentName">{{ agentName }}</strong>
           <IdText v-else :id="str(p.actor_id) ?? action.target_id" />
           <AgentBadge :owner-name="ownerName" />

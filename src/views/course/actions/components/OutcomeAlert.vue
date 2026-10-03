@@ -8,6 +8,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IdText from '@/components/IdText.vue'
+import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import MaybeLink from './MaybeLink.vue'
 import ResultIds from './ResultIds.vue'
 import { isObject, reasonText, routeFor } from './actionText'
@@ -83,7 +84,7 @@ const asOwner = computed(() => {
   >
     <div class="outcome-alert__body">
       <p v-if="asOwner" class="outcome-alert__line outcome-alert__owner">
-        <el-icon><Cpu /></el-icon>
+        <el-icon><AgentSeatIcon /></el-icon>
         {{
           done.kind === 'withdrawn'
             ? t('actions.outcome.withdrawnAsOwner')

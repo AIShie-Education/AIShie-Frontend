@@ -10,6 +10,14 @@ export default {
     button: 'Account: {name}',
     settings: 'Account settings',
   },
+  // About AIshie, from the account menu (AboutDialog): which versions are running.
+  about: {
+    item: 'About AIshie',
+    title: 'About',
+    web: 'Web app',
+    server: 'Server',
+    unknown: 'Not known',
+  },
   // A newer build deployed since this tab loaded the app (NewVersionNotice): load it, or later.
   newVersion: {
     available: 'A new version is available',
@@ -24,6 +32,8 @@ export default {
     showArchived: 'Show archived ({n})',
     noCourses: 'You are not seated in any course yet.',
     noMatch: 'No course matches.',
+    // In the phone's menu, the tabs of the course the page is in, listed under it.
+    courseTabs: 'Sections of {course}',
     // Courses an administrator administers without a seat in them, which open on their administration page.
     unseated: 'Administered, without a seat',
     unseatedMore: 'All of them ({n}), in Administration',
@@ -43,6 +53,16 @@ export default {
   },
   course: {
     nav: 'Course sections',
+    // The top bar's way back up on a course's pages: the course, then the tab (CourseCrumbs).
+    crumbs: 'Where you are',
+    // The strip's last place, a menu of the tabs that do not fit; with the tab chosen among them, it says which.
+    more: 'More',
+    moreCurrent: 'More (now: {tab})',
+    // The grades' own tabs, under the Grades tab: All grades (a student's own, My grades), the gradebook, the scheme.
+    // Not "Grades" again, which the tab strip and the top bar already say.
+    gradesNav: 'Grades sections',
+    allGrades: 'All grades',
+    myGrades: 'My grades',
     overview: 'Overview',
     materials: 'Materials',
     assignments: 'Assignments',

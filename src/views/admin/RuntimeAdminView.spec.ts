@@ -113,7 +113,7 @@ describe('RuntimeAdminView', () => {
     found.info = null
     found.error = new RuntimeError({ status: 404, code: 'not_found', message: 'no route', reason: 'not_found' })
     const { w } = await page()
-    expect(w.find('.runtime-admin__none .el-result__title').text()).toBe('This server has no agent runtime')
+    expect(w.find('.runtime-admin__none .el-result__title').text()).toBe('This server has no agent service')
     expect(w.find('.runtime-admin__retry').exists()).toBe(false)
     expect(w.find('.el-tabs').exists()).toBe(false)
     expect(s.calls.filter((c) => c.url.startsWith('/runtime/'))).toHaveLength(0)
@@ -128,7 +128,7 @@ describe('RuntimeAdminView', () => {
       reason: 'runtime_unavailable',
     })
     const { w } = await page()
-    expect(w.find('.runtime-admin__none .el-result__title').text()).toBe('The agent runtime cannot be reached')
+    expect(w.find('.runtime-admin__none .el-result__title').text()).toBe('The agent service cannot be reached')
     Object.assign(found, { info: INFO_FOR_TESTS, error: null })
     await w.find('.runtime-admin__retry').trigger('click')
     await flushPromises()
@@ -140,7 +140,7 @@ describe('RuntimeAdminView', () => {
     state.isAdmin = false
     const { w } = await page()
     expect(w.find('.runtime-admin__not-admin .el-result__title').text()).toBe(
-      'You are not one of this runtime’s administrators',
+      'You are not one of this agent service’s administrators',
     )
     expect(w.find('.el-tabs').exists()).toBe(false)
     expect(s.to('GET', ADMIN.plan)).toHaveLength(0)

@@ -46,7 +46,7 @@ export default {
     member_manage: '新增、移除成員及調整範圍',
     member_invite: '建立、查看及撤銷課程的邀請連結；任何持有連結的人都能透過它以學生身分加入',
     action_decide: '批准提案與事後覆核',
-    agent_delegate: '把自己擁有的代理帶入課程當你的助手；它的權限永遠不會超過你自己的席位',
+    agent_delegate: '把自己擁有的代理帶入課程當你的個人代理；它的權限永遠不會超過你自己的席位',
     conversation_ask: '與課程代理或自己的代理開始對話，並在對話中發言',
     conversation_answer: '接受提問並作答；等級決定答覆如何送出',
   },
@@ -55,7 +55,7 @@ export default {
     agent_never: '代表他人行事的代理不會帶入自己的代理',
     agent_decides_by_proposal: '代理只能以提案的方式作出決定與覆核，並須由人確認',
     student_agent_by_proposal:
-      '不管理本課程成員的人，其代理做這件事只能以提案的方式進行，因為這超出了「個人助手」預設所給的權限',
+      '不管理本課程成員的人，其代理做這件事只能以提案的方式進行，因為這超出了「個人代理」預設所給的權限',
     principal_level: '代表他人行事的代理，權限永不超過該人',
     principal_level_conversation_answer: '代表他人行事的代理，回答的自主程度不會超過該人提問的權限',
     conversations_are_with_agents: '對話只與代理進行，真人不回答任何對話',
@@ -68,7 +68,7 @@ export default {
     instructor: '講師',
     tutor: '輔導（代理）',
     grader: '評分（代理）',
-    delegate: '個人助手（代理）',
+    delegate: '個人代理',
     course_tutor: '課程代理',
   },
   presetHelp: {
@@ -83,7 +83,7 @@ export default {
   },
   // What an agent seated as someone's delegate is there for.
   seatPurpose: {
-    personal: '個人助手',
+    personal: '個人代理',
     course: '課程代理',
   },
   role: {

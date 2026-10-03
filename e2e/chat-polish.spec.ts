@@ -161,7 +161,7 @@ test.describe.serial('the chat, as an agent chat', () => {
     await expect(composer).toHaveValue(`${TITLE}\n${QUESTION}`)
     await expect(panel.locator('.chat-msg.is-retracted')).toContainText('你已撤回這則訊息')
     await expect(panel.locator('.chat-pane__typing')).toHaveCount(0)
-    await expect(panel.locator('.chat-pane__notice')).toHaveText(`你撤回了問題，${TUTOR} 不會回答它。`)
+    await expect(panel.locator('.chat-pane__notice')).toHaveText(`你撤回了問題，${TUTOR}不會回答它。`)
     // The agent's inbox leaves it out.
     const inbox = await call(w.tutorToken, 'GET', `/v1/courses/${demo().course.id}/conversations/inbox`)
     expect(inbox.body.result?.conversations ?? []).toEqual([])

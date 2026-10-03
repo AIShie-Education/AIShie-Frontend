@@ -6,6 +6,7 @@
 // so; anything else is an error in the runtime's words, with a retry.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import OperatorDetail from '../components/OperatorDetail.vue'
 import { adminErrorText, isNotAdmin, isNotOffered } from './runtimeAdmin'
 
 const props = defineProps<{ loading?: boolean; error?: unknown }>()
@@ -29,7 +30,9 @@ const notAdmin = computed(() => !!props.error && isNotAdmin(props.error))
       :title="t('runtimeAdmin.state.notAdminTitle')"
       :sub-title="t('runtimeAdmin.state.notAdmin')"
       class="runtime-async__not-admin"
-    />
+    >
+      <template #extra><OperatorDetail :text="t('runtimeAdmin.flags.adminActorIds')" /></template>
+    </el-result>
     <el-alert
       v-else-if="error"
       type="error"

@@ -5,6 +5,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
+import StatusTag from '@/components/StatusTag.vue'
 import type { Submission } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -45,9 +46,7 @@ async function change() {
       <el-icon><Timer /></el-icon>
       <span>{{ to === 'late' ? t('submissions.lateness.markLate') : t('submissions.lateness.markOnTime') }}</span>
     </el-button>
-    <el-tag v-if="course.needsApproval('grade_submit')" type="warning" size="small" disable-transitions>
-      {{ t('enums.level.confirm_required') }}
-    </el-tag>
+    <StatusTag v-if="course.needsApproval('grade_submit')" vocab="level" value="confirm_required" size="small" />
   </div>
 </template>
 

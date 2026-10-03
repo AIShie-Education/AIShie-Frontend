@@ -120,7 +120,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(first.getByRole('heading', { name: '提问之前' })).toBeVisible()
     await first.getByRole('button', { name: '知道了' }).click()
     await expect(panel.locator('.chat-pane__privacy-text')).toHaveText(
-      `课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员，都可以阅读这段对话。${TUTOR} 会把内容发送给其 AI 模型的供应商来生成回答。`,
+      `课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员，都可以阅读这段对话。${TUTOR}会把内容发送给其 AI 模型的供应商来生成回答。`,
     )
     await panel.locator('.chat-pane__privacy').getByRole('button', { name: /^详情/ }).click()
     await expect(page.getByRole('dialog', { name: '谁会阅读，内容会发送到哪里' })).toContainText('对话永远不会被删除。')

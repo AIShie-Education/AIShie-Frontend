@@ -15,13 +15,16 @@ import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
+import AgentName from '@/components/AgentName.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PermEditor from '@/components/PermEditor.vue'
+import RoleTag from '@/components/RoleTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { ceilingsOf } from '@/utils/ceilings'
@@ -386,7 +389,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         <template v-if="m">
           <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" size="default" />
           <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" :site-chat="m.site_chat" size="default" />
-          <StatusTag vocab="role" :value="m.role" size="default" />
+          <RoleTag :member="m" size="default" hide-none />
           <StatusTag vocab="memberStatus" :value="m.status" size="default" />
           <el-tag v-if="expired" type="info">{{ t('members.expired') }}</el-tag>
           <el-tag v-if="isSelf" type="primary" effect="plain">{{ t('common.labels.you') }}</el-tag>
@@ -433,7 +436,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             >
               <el-icon><Delete /></el-icon><span>{{ t('members.detail.remove.action') }}</span>
             </el-button>
-            <el-tag v-if="approval" type="warning" effect="plain">{{ t('enums.level.confirm_required') }}</el-tag>
+            <StatusTag v-if="approval" vocab="level" value="confirm_required" size="default" />
           </div>
         </el-tooltip>
       </template>
@@ -517,11 +520,11 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           >
             <el-descriptions-item :label="t('members.detail.actor')">
               <span class="member__actor">
-                <el-icon :class="{ member__agent: m.kind === 'agent' }"
-                  ><Cpu v-if="m.kind === 'agent'" /><User v-else
-                /></el-icon>
-                <span>{{ m.display_name }}</span>
-                <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" />
+                <AgentAvatar v-if="m.kind === 'agent'" :name="m.display_name" size="small" />
+                <el-icon v-else><User /></el-icon>
+                <AgentName v-if="m.kind === 'agent'" :name="m.display_name" />
+                <span v-else>{{ m.display_name }}</span>
+                <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" no-ai />
                 <StatusTag v-else vocab="actorKind" :value="m.kind" />
                 <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" />
               </span>
@@ -547,7 +550,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.role')">
               <span class="member__role">
-                <StatusTag vocab="role" :value="m.role" />
+                <RoleTag :member="m" />
                 <el-tooltip v-if="roleOffered" :content="disabledReason" :disabled="!disabledReason" placement="top">
                   <span>
                     <el-button link type="primary" size="small" :disabled="!manageable" @click="roleOpen = true">
@@ -636,9 +639,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           <p class="app-form-hint member__scope-help">{{ t('members.detail.delegate.theirAgentsHelp') }}</p>
           <ul class="member__delegates">
             <li v-for="d in delegates" :key="d.id">
-              <el-icon class="member__agent"><Cpu /></el-icon>
+              <AgentAvatar :name="d.display_name" size="small" />
               <router-link :to="{ name: 'course-member', params: { courseId, memberId: d.id } }">
-                {{ d.display_name }}
+                <AgentName :name="d.display_name" />
               </router-link>
               <span v-if="presetName(d.preset_id)" class="app-muted">{{ presetName(d.preset_id) }}</span>
               <StatusTag v-if="d.status !== 'active'" vocab="memberStatus" :value="d.status" />
@@ -773,7 +776,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                     : t('members.detail.perms.unchanged')
                 }}
               </span>
-              <el-tag v-if="approval" type="warning" effect="plain">{{ t('enums.level.confirm_required') }}</el-tag>
+              <StatusTag v-if="approval" vocab="level" value="confirm_required" size="default" />
               <span class="app-toolbar__spacer" />
               <el-button @click="cancelEdit">{{ t('common.actions.cancel') }}</el-button>
               <el-button
@@ -814,9 +817,6 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
 }
 .member__actions .el-button + .el-button {
   margin-left: 0;
-}
-.member__agent {
-  color: var(--el-color-primary);
 }
 .member__alert {
   margin-bottom: 16px;

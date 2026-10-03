@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { coursePath, courseTab, demo, expectToasted, keepToasts, signIn } from './support'
+import { coursePath, openCourseTab, demo, expectToasted, keepToasts, signIn } from './support'
 
 const ANSWER = [
   '```python',
@@ -17,7 +17,7 @@ test.describe.serial('a student hands in work', () => {
     const d = demo()
     await signIn(page, d.actors.mei)
     await page.goto(coursePath())
-    await courseTab(page, 'Assignments').click()
+    await openCourseTab(page, 'Assignments')
     const hw1Row = page.locator('.el-table__row').filter({ hasText: 'HW1 — Temperature converter' })
     await expect(hw1Row).toContainText('Not started')
     await hw1Row.getByRole('link', { name: 'HW1 — Temperature converter' }).click()
@@ -76,7 +76,7 @@ test.describe.serial('a student hands in work', () => {
     await expect(page.getByText('A first try.')).toHaveCount(0)
 
     // The assignment list says so too.
-    await courseTab(page, 'Assignments').click()
+    await openCourseTab(page, 'Assignments')
     await expect(hw1Row).toContainText('Submitted')
     await expect(hw1Row).toContainText('attempt 1')
   })
@@ -85,7 +85,7 @@ test.describe.serial('a student hands in work', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Submissions').click()
+    await openCourseTab(page, 'Submissions')
     const row = page.locator('.el-table__row').filter({ hasText: 'Mei Chan' }).filter({ hasText: 'HW1' })
     await expect(row).toHaveCount(1)
     await expect(row).toContainText('Submitted')

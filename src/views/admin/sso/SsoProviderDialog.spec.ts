@@ -218,15 +218,15 @@ describe('adding a provider', () => {
   it.each([
     [
       'en',
-      'The issuer is on this machine, or at a private, link-local or reserved address: this server reaches no provider of the site’s there unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS.',
+      'The issuer is on this machine, or at a private, link-local or reserved address: this server reaches no provider of the site’s there unless its operator allows it.',
     ],
     [
       'zh-Hant',
-      '這個簽發者位於本機，或位於私人、鏈路本地或保留位址：除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
+      '這個簽發者位於本機，或位於私人、鏈路本地或保留位址：除非伺服器營運者允許，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
     ],
     [
       'zh-Hans',
-      '这个颁发者位于本机，或位于私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+      '这个颁发者位于本机，或位于私有、链路本地或保留地址：除非服务器运维者允许，否则本服务器不会连接位于这些地址、在此设置的提供者。',
     ],
   ] as const)('says on the issuer, in %s, that the server does not reach a provider at a private address', async (locale, words) => {
     await open(null, { locale })
@@ -251,7 +251,7 @@ describe('adding a provider', () => {
       failed(422, 'failed_precondition', 'this server has no secrets key', { reason: 'secrets_key_missing' }),
     )
     await click('.sso-dialog__save')
-    expect(q('.sso-dialog__error')!.textContent).toContain('管理員需先在伺服器設定 SECRETS_KEY')
+    expect(q('.sso-dialog__error')!.textContent).toContain('伺服器尚未設定用來加密用戶端密鑰的金鑰')
   })
 
   it('links by email only with domains, reading the email claim, and sends them as Core keeps them', async () => {
@@ -345,18 +345,18 @@ describe('testing the issuer from the form', () => {
   it.each([
     [
       'en',
-      'An address here is on this machine, or private, link-local or reserved: this server reaches no provider of the site’s there unless its operator sets SSO_ALLOW_PRIVATE_ISSUERS.',
+      'An address here is on this machine, or private, link-local or reserved: this server reaches no provider of the site’s there unless its operator allows it.',
       `Nothing was read from ${localIssuer}: the issuer itself is refused.`,
     ],
     [
       'zh-Hant',
-      '這裡有位址位於本機，或屬私人、鏈路本地或保留位址：除非伺服器營運者設定 SSO_ALLOW_PRIVATE_ISSUERS，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
-      `沒有從 ${localIssuer} 讀取任何內容：這個簽發者本身未被接受。`,
+      '這裡有位址位於本機，或屬私人、鏈路本地或保留位址：除非伺服器營運者允許，否則本伺服器不會連往位於這些位址、在此設定的提供者。',
+      `沒有從${localIssuer}讀取任何內容：這個簽發者本身未被接受。`,
     ],
     [
       'zh-Hans',
-      '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者设置 SSO_ALLOW_PRIVATE_ISSUERS，否则本服务器不会连接位于这些地址、在此设置的提供者。',
-      `没有从 ${localIssuer} 读取任何内容：这个颁发者本身未被接受。`,
+      '这里有地址位于本机，或属私有、链路本地或保留地址：除非服务器运维者允许，否则本服务器不会连接位于这些地址、在此设置的提供者。',
+      `没有从${localIssuer}读取任何内容：这个颁发者本身未被接受。`,
     ],
   ] as const)(
     'leaves an issuer on this machine to the server, which may refuse it, and says why in %s',
@@ -388,8 +388,8 @@ describe('testing the issuer from the form', () => {
   // One language a test, so that each opens the dialog once.
   it.each([
     ['en', `Nothing could be read from ${namedIssuer}: its discovery document was not read.`],
-    ['zh-Hant', `未能從 ${namedIssuer} 讀取任何內容：其探索文件未被讀取。`],
-    ['zh-Hans', `未能从 ${namedIssuer} 读取任何内容：其发现文档未被读取。`],
+    ['zh-Hant', `未能從${namedIssuer}讀取任何內容：其探索文件未被讀取。`],
+    ['zh-Hans', `未能从${namedIssuer}读取任何内容：其发现文档未被读取。`],
   ] as const)(
     'says nothing was read when the issuer’s name leads to an address the server does not reach, in %s',
     async (locale, notRead) => {
@@ -589,7 +589,7 @@ describe('a provider the operator’s now has the id of', () => {
     await click('.sso-dialog__save')
     expect(lastMessage()).toMatchObject({
       type: 'warning',
-      message: 'This provider is set by the server’s operator (OIDC_*): it cannot be changed here.',
+      message: 'This provider is set on the server by its operator: it cannot be changed here.',
     })
     expect(w.emitted('changed')).toHaveLength(1)
     expect(w.emitted('update:modelValue')?.at(-1)).toEqual([false])

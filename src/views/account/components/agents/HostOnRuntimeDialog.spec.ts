@@ -68,7 +68,7 @@ describe('HostOnRuntimeDialog: an agent of its page', () => {
     const w = await open()
     expect(w.text()).toContain('Host Study helper on AIshie')
     expect(w.findAll('.el-step').map((x) => x.text())).toEqual(['Agent', 'Model and key'])
-    expect(w.text()).toContain('The runtime is issued the agent’s token itself: you never see one.')
+    expect(w.text()).toContain('The agent service is issued the agent’s token itself: you never see one.')
     expect(w.find('.host-dialog__seats').text()).toBe('It is in 2 courses.')
     const [asked] = s.to('POST', RUNTIME.inspect)
     expect(JSON.parse(asked.body!)).toEqual({ agent_id: ACTOR })
@@ -100,7 +100,7 @@ describe('HostOnRuntimeDialog: an agent of its page', () => {
     ['agent_suspended', 'This agent is suspended in AIshie. Reactivate it first.'],
     ['owner_suspended', 'Its owner is suspended in AIshie, so it cannot be hosted. Ask an administrator.'],
     ['operator_agent', 'The school’s operator already runs this agent.'],
-  ])('says why the runtime will not host it (%s), and offers nothing', async (reason, words) => {
+  ])('says why the agent service will not host it (%s), and offers nothing', async (reason, words) => {
     s.on('POST', RUNTIME.inspect, () => json(200, inspected({ hostable: false, reason: reason as never })))
     const w = await open()
     expect(w.find('.host-dialog__refusal').text()).toBe(words)
@@ -152,20 +152,20 @@ describe('HostOnRuntimeDialog: an agent of its page', () => {
     await vi.advanceTimersByTimeAsync(1_000)
     await flushPromises()
     expect(s.to('POST', RUNTIME.inspect)).toHaveLength(3)
-    expect(w.text()).toContain('The school’s runtime is not set up to host agents. Tell your administrator.')
+    expect(w.text()).toContain('The school’s agent service is not set up to host agents. Tell your administrator.')
   })
 
   it('says so in Traditional and Simplified Chinese', async () => {
     s.on('POST', RUNTIME.inspect, () => json(200, inspected({ live_seats: 1 })))
     setLocale('zh-Hant')
     let w = await open()
-    expect(w.text()).toContain('把 Study helper 交給 AIshie 託管')
-    expect(w.find('.host-dialog__seats').text()).toBe('它在 1 個課程中。')
+    expect(w.text()).toContain('把Study helper交給 AIshie 託管')
+    expect(w.find('.host-dialog__seats').text()).toBe('它在1個課程中。')
     w.unmount()
     setLocale('zh-Hans')
     w = await open()
-    expect(w.text()).toContain('把 Study helper 交给 AIshie 托管')
-    expect(w.find('.host-dialog__seats').text()).toBe('它在 1 门课程中。')
+    expect(w.text()).toContain('把Study helper交给 AIshie 托管')
+    expect(w.find('.host-dialog__seats').text()).toBe('它在1门课程中。')
   })
 })
 

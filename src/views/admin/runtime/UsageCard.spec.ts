@@ -45,12 +45,12 @@ describe('UsageCard', () => {
     expect(w.find('.usage-card__answers').text()).toBe('262')
     expect(w.find('.usage-card__of').text()).toBe('of 5000 a day')
     expect(w.find('.usage-card__calls').text()).toBe('700')
-    expect(w.find('.usage-card__cost').text()).toBe('$2.118200')
+    expect(w.find('.usage-card__cost').text()).toBe('US$2.12')
     expect(w.find('.usage-card__limits').text()).toBe('Up to 150 a day per owner, and 20 per person asking.')
     expect(rows(w)).toEqual([
-      ['Ada Admin', '150 / 150 Used up for today', '380', '$1.020000'],
-      ['Chan Tai Man', '96 / 150', '301', '$0.998100'],
-      ['The operator’s agents ten_operator', '16', '19', '$0.100100'],
+      ['Ada Admin', '150 / 150 Used up for today', '380', 'US$1.02'],
+      ['Chan Tai Man', '96 / 150', '301', 'US$0.998'],
+      ['The operator’s agents ten_operator', '16', '19', 'US$0.10'],
     ])
     const link = w.find('.usage-owner__name')
     expect(link.attributes('href')).toBe(`/admin/actors/${ADMIN_ID}`)
@@ -72,7 +72,7 @@ describe('UsageCard', () => {
     })
     const w = await card()
     expect(w.find('.usage-card__of').text()).toBe('no ceiling for the school')
-    expect(w.find('.usage-owner__unknown').text()).toContain('Someone the runtime has not seen yet')
+    expect(w.find('.usage-owner__unknown').text()).toContain('Someone the agent service has not seen yet')
   })
 
   it('says the quotas in dollars in force, where there are any', async () => {
@@ -88,9 +88,9 @@ describe('UsageCard', () => {
     })
     const w = await card()
     expect(w.find('.usage-card__limits').text()).toBe(
-      'Up to 150 a day per owner, and 20 per person asking. In dollars: $2.50 per owner, No limit per person asking, and $100.00 for the whole school. This cost leaves out the transcription of documents, which the whole school’s ceiling in dollars counts too.',
+      'Up to 150 a day per owner, and 20 per person asking. In dollars: US$2.50 per owner, No limit per person asking, and US$100.00 for the whole school. This cost leaves out the transcription of documents, which the whole school’s ceiling in dollars counts too.',
     )
-    expect(w.find('.usage-card__of-usd').text()).toBe('of $100.00 a day')
+    expect(w.find('.usage-card__of-usd').text()).toBe('of US$100.00 a day')
   })
 
   it('says since when, and when the counts start again, in the reader’s time, from the runtime’s day', async () => {
@@ -131,7 +131,7 @@ describe('UsageCard', () => {
   it('reads in Traditional Chinese', async () => {
     setLocale('zh-Hant')
     const w = await card()
-    expect(w.find('.usage-card__of').text()).toBe('每日上限 5000')
+    expect(w.find('.usage-card__of').text()).toBe('每日上限5000')
     expect(rows(w)[0][1]).toBe('150 / 150 今日已用完')
   })
 })
@@ -141,10 +141,10 @@ describe('UsageCard, by its own width', () => {
     // The window is wide (matchMedia says nothing matches): the card decides, measured by its title.
     const sizes = fakeContainerWidths({ '.usage-card .app-card__title': 543 })
     const w = await card()
-    expect(rows(w)[0]).toEqual(['Ada Admin', '150 / 150 Used up for today', '380', '$1.020000'])
+    expect(rows(w)[0]).toEqual(['Ada Admin', '150 / 150 Used up for today', '380', 'US$1.02'])
 
     await sizes.resize('.usage-card .app-card__title', 542)
     await flushPromises()
-    expect(rows(w)[0]).toEqual(['Ada Admin Model calls: 380 · $1.020000', '150 / 150 Used up for today'])
+    expect(rows(w)[0]).toEqual(['Ada Admin Model calls: 380 · US$1.02', '150 / 150 Used up for today'])
   })
 })
