@@ -41,7 +41,7 @@ withDefaults(defineProps<{ text: string; page?: boolean; title?: string }>(), { 
 }
 .app-empty__text {
   margin: 0;
-  line-height: var(--app-line-height);
+  line-height: var(--app-lh-ui);
 }
 .app-empty--inline {
   padding: 8px 0;

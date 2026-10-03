@@ -55,7 +55,7 @@ withDefaults(defineProps<{ title?: string; heading?: 'h2' | 'h3' | 'h4'; titleId
   background: transparent;
   color: var(--app-ink-2);
   font-size: var(--app-text-md);
-  line-height: var(--app-line-height);
+  line-height: var(--app-lh-text);
   text-align: start;
 }
 .data-flow__icon {

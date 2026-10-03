@@ -45,7 +45,7 @@ const { t } = useI18n()
   background: color-mix(in srgb, var(--app-indigo-tint) 50%, transparent);
   color: var(--app-ink-2);
   font-size: var(--app-text-md);
-  line-height: var(--app-line-height);
+  line-height: var(--app-lh-text);
 }
 .app-note.is-plain {
   background: transparent;
