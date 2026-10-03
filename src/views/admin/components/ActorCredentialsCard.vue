@@ -19,6 +19,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
@@ -224,16 +225,9 @@ defineExpose({ reload: () => list.reload() })
     <p v-if="listable" class="app-muted creds__intro">
       {{ actor.kind === 'human' ? t('admin.credentials.introHuman') : t('admin.credentials.introAgent') }}
     </p>
-    <el-alert
-      v-if="isSelf"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('admin.credentials.self')"
-      class="creds__alert"
-    >
+    <AppNote v-if="isSelf" :title="t('admin.credentials.self')" class="creds__alert">
       <router-link :to="{ name: 'account' }">{{ t('admin.credentials.selfLink') }}</router-link>
-    </el-alert>
+    </AppNote>
     <p v-else-if="blockedReason" class="app-form-hint creds__blocked">{{ blockedReason }}</p>
 
     <AsyncState

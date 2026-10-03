@@ -91,6 +91,7 @@ async function save() {
   // A tool outside any course is never proposed: there is no ladder there.
   if (out.status === 'executed') emit('done', out.result.id)
 }
+import AppNote from '@/components/AppNote.vue'
 </script>
 
 <template>
@@ -110,13 +111,7 @@ async function save() {
           @keyup.enter="save"
         />
       </el-form-item>
-      <el-alert
-        v-if="mode === 'create'"
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('adminSetup.departments.create.permanent')"
-      />
+      <AppNote v-if="mode === 'create'">{{ t('adminSetup.departments.create.permanent') }}</AppNote>
     </el-form>
     <template #footer>
       <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>

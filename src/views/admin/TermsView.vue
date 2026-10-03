@@ -11,6 +11,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
@@ -237,7 +238,7 @@ async function save() {
             />
           </el-form-item>
         </div>
-        <el-alert type="info" :closable="false" show-icon :title="t('adminSetup.terms.create.permanent')" />
+        <AppNote>{{ t('adminSetup.terms.create.permanent') }}</AppNote>
       </el-form>
       <template #footer>
         <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>

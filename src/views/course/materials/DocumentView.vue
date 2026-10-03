@@ -48,6 +48,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { versionFilesOf } from '@/utils/documentFiles'
 import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
@@ -544,14 +545,9 @@ function noteSource(): PrintRequest {
     >
       <template v-if="doc">
         <Tombstone v-if="docPurge" :purge="docPurge" of="document" class="doc-view__alert" />
-        <el-alert
-          v-else-if="doc.status !== 'active' && courseLevel"
-          type="info"
-          :closable="false"
-          show-icon
-          class="doc-view__alert"
-          :title="t('materials.document.archivedAlert')"
-        />
+        <AppNote v-else-if="doc.status !== 'active' && courseLevel" class="doc-view__alert">
+          {{ t('materials.document.archivedAlert') }}
+        </AppNote>
         <el-alert v-if="viewingOther && shown" type="warning" :closable="false" show-icon class="doc-view__alert">
           <template #title>
             <span class="doc-view__alert-line">

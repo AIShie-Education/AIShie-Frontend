@@ -369,6 +369,7 @@ const title = computed(() =>
     ? t('scheme.form.createTitle')
     : t('scheme.form.editTitle', { name: props.target ? nameOf(props.target) : '' }),
 )
+import AppNote from '@/components/AppNote.vue'
 </script>
 
 <template>
@@ -380,14 +381,7 @@ const title = computed(() =>
     :close-on-click-modal="!pending"
     append-to-body
   >
-    <el-alert
-      v-if="needsApproval"
-      type="warning"
-      :closable="false"
-      show-icon
-      :title="t('scheme.form.needsApproval')"
-      class="cd-alert"
-    />
+    <AppNote v-if="needsApproval" class="cd-alert">{{ t('scheme.form.needsApproval') }}</AppNote>
     <el-form
       ref="formRef"
       :model="form"
@@ -497,13 +491,9 @@ const title = computed(() =>
         </el-form-item>
       </div>
 
-      <el-alert
-        v-if="mode === 'edit' && !askExisting"
-        type="info"
-        :closable="false"
-        :title="t('scheme.form.notRewritten')"
-        class="cd-alert cd-alert--bottom"
-      />
+      <AppNote v-if="mode === 'edit' && !askExisting" class="cd-alert cd-alert--bottom">
+        {{ t('scheme.form.notRewritten') }}
+      </AppNote>
     </el-form>
     <template #footer>
       <el-button :disabled="pending" @click="visible = false">{{ t('common.actions.cancel') }}</el-button>

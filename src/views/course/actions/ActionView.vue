@@ -18,6 +18,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { uuidPredecessor } from '@/views/admin/components/adminShared'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import JsonView from '@/components/JsonView.vue'
@@ -337,18 +338,12 @@ const errorTitle = computed(() => {
           </el-button>
         </PageHeader>
 
-        <el-alert v-if="fromMine" type="info" show-icon :closable="false" class="action-view__notice">
+        <AppNote v-if="fromMine" class="action-view__notice">
           {{ t('actions.detail.fromMine') }}
-        </el-alert>
-        <el-alert
-          v-else-if="ownersAgent && !course.can('action_decide')"
-          type="info"
-          show-icon
-          :closable="false"
-          class="action-view__notice"
-        >
+        </AppNote>
+        <AppNote v-else-if="ownersAgent && !course.can('action_decide')" class="action-view__notice">
           {{ t('actions.detail.yourAgent') }}
-        </el-alert>
+        </AppNote>
 
         <OutcomeAlert
           v-if="lastDone"
@@ -502,13 +497,7 @@ const errorTitle = computed(() => {
                 </div>
               </el-alert>
 
-              <el-alert
-                v-else-if="action.status === 'rejected'"
-                type="info"
-                :title="t('actions.outcome.rejected')"
-                :closable="false"
-                show-icon
-              >
+              <AppNote v-else-if="action.status === 'rejected'" :title="t('actions.outcome.rejected')">
                 <div class="action-view__error">
                   <p v-if="rules.byOwner(action, 'decided')">{{ t('actions.result.rejectedByOwner') }}</p>
                   <p>
@@ -525,7 +514,7 @@ const errorTitle = computed(() => {
                     </MaybeLink>
                   </p>
                 </div>
-              </el-alert>
+              </AppNote>
 
               <el-alert
                 v-else-if="action.status === 'changes_requested'"

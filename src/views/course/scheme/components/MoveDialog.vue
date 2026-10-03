@@ -7,6 +7,7 @@
 // place that may hold assignments the caller cannot see is offered with a
 // caution.
 import { Location } from '@element-plus/icons-vue'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -119,14 +120,7 @@ async function submit() {
     :close-on-click-modal="!pending"
     append-to-body
   >
-    <el-alert
-      v-if="needsApproval"
-      type="warning"
-      :closable="false"
-      show-icon
-      :title="t('scheme.form.needsApproval')"
-      class="md-alert"
-    />
+    <AppNote v-if="needsApproval" class="md-alert">{{ t('scheme.form.needsApproval') }}</AppNote>
     <el-alert
       v-if="graded"
       type="warning"
@@ -135,14 +129,7 @@ async function submit() {
       :title="t('scheme.move.graded')"
       class="md-alert"
     />
-    <el-alert
-      v-if="!anywhere"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('scheme.move.noTarget')"
-      class="md-alert"
-    />
+    <AppNote v-if="!anywhere" class="md-alert">{{ t('scheme.move.noTarget') }}</AppNote>
     <p class="md-help">{{ t('scheme.move.help') }}</p>
     <el-form label-position="top" :disabled="pending" @submit.prevent="submit">
       <el-form-item :label="t('scheme.move.newParent')" required>

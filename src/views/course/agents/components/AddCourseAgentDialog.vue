@@ -16,6 +16,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { delegateArgsFor, hostingOf } from '@/utils/agents'
+import AppNote from '@/components/AppNote.vue'
 import HostingChoice from '@/components/HostingChoice.vue'
 import AgentName from '@/components/AgentName.vue'
 import PresenceText from '@/components/PresenceText.vue'
@@ -180,11 +181,11 @@ async function submit() {
     append-to-body
     class="add-agent"
   >
-    <el-alert type="info" :closable="false" class="add-agent__explain">
+    <AppNote class="add-agent__explain">
       <template #title>{{ t('courseAgents.addDialog.explainTitle') }}</template>
       <p class="add-agent__p">{{ t('courseAgents.addDialog.explain') }}</p>
       <p class="add-agent__p">{{ t('courseAgents.addDialog.explainBound') }}</p>
-    </el-alert>
+    </AppNote>
 
     <el-form label-position="top" @submit.prevent="submit">
       <el-form-item :label="t('courseAgents.addDialog.source')">
@@ -313,22 +314,10 @@ async function submit() {
       </dl>
     </div>
 
-    <el-alert
-      v-if="needsApproval"
-      type="warning"
-      :closable="false"
-      show-icon
-      class="add-agent__alert"
-      :title="t('courseAgents.addDialog.needsApproval')"
-    />
-    <el-alert
-      v-else-if="level === 'pending_review'"
-      type="info"
-      :closable="false"
-      show-icon
-      class="add-agent__alert"
-      :title="t('courseAgents.addDialog.reviewedAfter')"
-    />
+    <AppNote v-if="needsApproval" class="add-agent__alert">{{ t('courseAgents.addDialog.needsApproval') }}</AppNote>
+    <AppNote v-else-if="level === 'pending_review'" class="add-agent__alert">
+      {{ t('courseAgents.addDialog.reviewedAfter') }}
+    </AppNote>
     <el-alert
       v-if="created"
       type="success"

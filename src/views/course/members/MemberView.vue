@@ -16,6 +16,7 @@ import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
@@ -446,13 +447,12 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
     <AsyncState :loading="state.loading.value && !m" :error="state.error.value" @retry="state.reload">
       <template v-if="m">
         <RefusalAlert :error="pageError" @close="pageError = null" />
-        <el-alert
+        <AppNote
           v-if="proposedAction"
-          type="info"
-          show-icon
-          class="member__alert"
           :title="t('members.proposed.change')"
+          class="member__alert"
           @close="proposedAction = null"
+          closable
         >
           <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
             {{ t('members.proposed.view') }}
@@ -461,7 +461,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
             t('members.proposed.mine')
           }}</router-link>
-        </el-alert>
+        </AppNote>
         <el-alert
           v-if="removedResult !== null"
           type="success"
@@ -476,22 +476,8 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         >
           {{ t('members.detail.remove.fresh') }}
         </el-alert>
-        <el-alert
-          v-if="isSelf && live"
-          type="info"
-          :closable="false"
-          show-icon
-          class="member__alert"
-          :title="t('members.detail.self')"
-        />
-        <el-alert
-          v-if="m.status === 'removed'"
-          type="info"
-          :closable="false"
-          show-icon
-          class="member__alert"
-          :title="t('members.detail.removed')"
-        />
+        <AppNote v-if="isSelf && live" class="member__alert">{{ t('members.detail.self') }}</AppNote>
+        <AppNote v-if="m.status === 'removed'" class="member__alert">{{ t('members.detail.removed') }}</AppNote>
         <el-alert
           v-else-if="expired"
           type="warning"
@@ -747,10 +733,10 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           </p>
 
           <template v-if="editing">
-            <el-alert type="info" :closable="false" class="member__alert">
+            <AppNote class="member__alert">
               <template #title>{{ t('members.grant.rulesTitle') }}</template>
               {{ t('members.detail.perms.editHelp') }}
-            </el-alert>
+            </AppNote>
             <PermEditor v-model="draft" size="small" :changed="changedPerms" :warn="rowWarnings" :ceilings="ceilings" />
             <el-alert
               v-if="permProblems.length"

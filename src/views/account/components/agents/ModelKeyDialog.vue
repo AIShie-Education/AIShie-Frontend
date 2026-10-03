@@ -27,6 +27,7 @@ import { ApiError } from '@/api/http'
 import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { AgentPatch, HostedAgent, KeyTestAnswer, ModelsAnswer, ProviderOffer, SchoolOffer } from '@/api/runtime-types'
 import { REASONING_EFFORTS } from '@/api/runtime-types'
+import AppNote from '@/components/AppNote.vue'
 import DailyReset from '@/components/DailyReset.vue'
 import {
   FIELD_REASONS,
@@ -367,13 +368,7 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
     >
       <el-button size="small" @click="load">{{ t('common.actions.retry') }}</el-button>
     </el-alert>
-    <el-alert
-      v-else-if="nothingOffered"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('hosting.model.noProviders')"
-    />
+    <AppNote v-else-if="nothingOffered">{{ t('hosting.model.noProviders') }}</AppNote>
     <template v-else>
       <el-alert
         v-if="notice"
@@ -416,13 +411,7 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
             </i18n-t>
             <div class="app-form-hint">{{ t('hosting.school.noKey') }}</div>
           </el-form-item>
-          <el-alert
-            type="info"
-            :closable="false"
-            show-icon
-            :title="t('hosting.school.warning')"
-            class="model-dialog__alert model-form__school-warning"
-          />
+          <AppNote class="model-dialog__alert model-form__school-warning">{{ t('hosting.school.warning') }}</AppNote>
           <div v-if="ownAvailable" class="model-form__fallback">
             <h4 class="model-form__fallback-title">{{ t('hosting.school.fallbackTitle') }}</h4>
             <el-checkbox v-model="fallback" class="model-form__fallback-on">{{ t('hosting.school.fallbackOn') }}</el-checkbox>

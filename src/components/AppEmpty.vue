@@ -37,6 +37,7 @@ withDefaults(defineProps<{ text: string; page?: boolean; title?: string }>(), { 
 <style scoped>
 .app-empty {
   color: var(--app-ink-2);
+  font-size: var(--app-text-md, 14px);
 }
 .app-empty__text {
   margin: 0;

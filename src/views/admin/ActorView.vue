@@ -22,6 +22,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import HostingTag from '@/components/HostingTag.vue'
@@ -269,22 +270,10 @@ async function reactivate() {
           :description="suspension === 'owner' ? t('admin.actor.suspendedByOwnerBanner') : undefined"
           class="actor__alert"
         />
-        <el-alert
-          v-if="isSelf"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="t('admin.actor.you')"
-          class="actor__alert"
-        />
-        <el-alert
-          v-if="isSystem || (roleBlocked && !isSelf)"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="isSystem ? t('admin.actor.cannot.system') : t('admin.actor.cannot.role')"
-          class="actor__alert"
-        />
+        <AppNote v-if="isSelf" class="actor__alert">{{ t('admin.actor.you') }}</AppNote>
+        <AppNote v-if="isSystem || (roleBlocked && !isSelf)" class="actor__alert">
+          {{ isSystem ? t('admin.actor.cannot.system') : t('admin.actor.cannot.role') }}
+        </AppNote>
 
         <section class="app-card">
           <h2 ref="registration" class="app-card__title">{{ t('admin.actor.registration') }}</h2>

@@ -13,6 +13,7 @@ import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
@@ -222,14 +223,12 @@ function collapseAll() {
       </el-tooltip>
     </PageHeader>
 
-    <el-alert v-if="proposed" type="info" show-icon class="scheme-view__notice" @close="proposed = false">
-      <template #title>
-        {{ t('scheme.outcome.proposed') }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
-          t('scheme.outcome.viewMine')
-        }}</router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="proposed" class="scheme-view__notice" @close="proposed = false" closable>
+      {{ t('scheme.outcome.proposed') }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('scheme.outcome.viewMine')
+      }}</router-link>
+    </AppNote>
 
     <AsyncState
       :loading="loading"

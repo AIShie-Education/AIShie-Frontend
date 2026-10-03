@@ -443,6 +443,19 @@ html.dark .el-card {
   --el-alert-border-radius-base: var(--app-radius-item);
   --el-alert-padding: 10px 16px;
 }
+/* An alert is a warning or an error (an explanation is an AppNote): its
+   small icon on its title's line, never the large one beside a title and its
+   description, and its title no larger with a description than without. */
+.el-alert {
+  --el-alert-icon-large-size: var(--el-alert-icon-size);
+  --el-alert-title-with-description-font-size: var(--el-alert-title-font-size);
+  align-items: flex-start;
+}
+.el-alert .el-alert__icon,
+.el-alert .el-alert__icon.is-big {
+  margin-top: 4px;
+  margin-right: 8px;
+}
 .el-popover.el-popper {
   --el-popover-border-radius: var(--app-radius-item);
 }

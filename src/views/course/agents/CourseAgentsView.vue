@@ -16,6 +16,7 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -151,18 +152,17 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
     />
 
     <template v-else>
-      <el-alert type="info" show-icon :closable="false" class="course-agents__notice">
+      <AppNote class="course-agents__notice">
         <template #title>{{ t('courseAgents.intro.title') }}</template>
         {{ t('courseAgents.intro.body') }}
-      </el-alert>
+      </AppNote>
 
-      <el-alert
+      <AppNote
         v-if="proposedAction"
-        type="info"
-        show-icon
-        class="course-agents__notice"
         :title="t('courseAgents.proposed')"
+        class="course-agents__notice"
         @close="proposedAction = null"
+        closable
       >
         <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
           {{ t('members.proposed.view') }}
@@ -171,7 +171,7 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
         <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
           t('members.proposed.mine')
         }}</router-link>
-      </el-alert>
+      </AppNote>
 
       <el-alert
         v-if="requests.data.value"

@@ -20,6 +20,7 @@ import { usePaged } from '@/composables/useAsync'
 import { announce, useWrite } from '@/composables/useWrite'
 import { errorMessage, notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import { joinLinkUrl } from '@/utils/joinLink'
@@ -251,18 +252,17 @@ async function revoke(link: JoinLink) {
     <!-- The links created so far -->
     <section class="join-links__list">
       <h3 class="join-links__heading">{{ t('join.links.list.title') }}</h3>
-      <el-alert
+      <AppNote
         v-if="proposedAction"
-        type="info"
-        show-icon
-        class="join-links__notice"
         :title="t('join.links.proposed')"
+        class="join-links__notice"
         @close="proposedAction = null"
+        closable
       >
         <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }" @click="open = false">
           {{ t('members.proposed.view') }}
         </router-link>
-      </el-alert>
+      </AppNote>
       <AsyncState
         :loading="list.loading.value && !list.items.value.length"
         :error="list.error.value"

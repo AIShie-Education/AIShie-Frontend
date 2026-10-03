@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import type { ToolOut } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
 import TimeText from '@/components/TimeText.vue'
 import { invitationLink } from '@/utils/invitation'
 
@@ -70,14 +71,7 @@ function finish() {
         :title="t('admin.invite.once')"
         class="reveal__alert"
       />
-      <el-alert
-        v-else
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('admin.invite.replayed')"
-        class="reveal__alert"
-      />
+      <AppNote v-else class="reveal__alert">{{ t('admin.invite.replayed') }}</AppNote>
 
       <div v-if="token">
         <label class="reveal__label" for="reveal-invite-link">{{ t('admin.invite.link') }}</label>

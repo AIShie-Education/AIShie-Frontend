@@ -26,6 +26,18 @@ describe('the element-look lint rule', () => {
     expect(await problems('<el-empty />', 'src/components/AsyncState.vue')).toHaveLength(1)
   })
 
+  it('refuses an explanation in an el-alert, of type info or none, and points to AppNote; lets a warning or an error be one', async () => {
+    for (const alert of ['<el-alert type="info" title="x" />', '<el-alert title="x" :closable="false" show-icon />'])
+      expect(await problems(alert)).toEqual([expect.stringContaining('AppNote')])
+    for (const alert of [
+      '<el-alert type="warning" title="x" />',
+      '<el-alert type="error" title="x" />',
+      '<el-alert type="success" title="x" />',
+      '<el-alert :type="ok ? \'success\' : \'error\'" title="x" />',
+    ])
+      expect(await problems(alert)).toEqual([])
+  })
+
   it('lets AppTag, which draws every tag, use one', async () => {
     expect(await problems('<el-tag>x</el-tag>', 'src/components/AppTag.vue')).toEqual([])
     expect(await problems('<AppTag tone="wait">x</AppTag>')).toEqual([])

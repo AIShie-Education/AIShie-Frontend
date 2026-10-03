@@ -28,6 +28,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE, filesPayload, versionFilesRefused } from '@/utils/documentFiles'
 import { formatBytes, titleFromFileName } from '@/utils/format'
+import AppNote from '@/components/AppNote.vue'
 import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
@@ -212,14 +213,9 @@ async function submit() {
     destroy-on-close
     :close-on-click-modal="false"
   >
-    <el-alert
-      v-if="course.needsApproval('document_write')"
-      type="warning"
-      :closable="false"
-      show-icon
-      class="create-dialog__approval"
-      :title="t('materials.create.approvalNote')"
-    />
+    <AppNote v-if="course.needsApproval('document_write')" class="create-dialog__approval">
+      {{ t('materials.create.approvalNote') }}
+    </AppNote>
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <!-- Files first. Kept while text is written, so that files dropped then come here. -->
       <div v-show="mode === 'upload'" class="create-dialog__upload">
@@ -240,14 +236,7 @@ async function submit() {
         <p v-if="leftOut" class="app-form-hint create-dialog__left-out">
           {{ t('materials.create.leftOut', { n: leftOut }, leftOut) }}
         </p>
-        <el-alert
-          v-if="againNote"
-          type="info"
-          :closable="false"
-          show-icon
-          class="create-dialog__again"
-          :title="t('common.upload.uploadingAgain')"
-        />
+        <AppNote v-if="againNote" class="create-dialog__again">{{ t('common.upload.uploadingAgain') }}</AppNote>
         <!-- The material's title, once there is a file: the first file's name until it is written. -->
         <div v-if="kept.length && mode === 'upload'" class="create-dialog__title-upload">
           <label class="create-dialog__label" for="create-dialog-title">{{ t('materials.create.name') }}</label>
@@ -337,13 +326,9 @@ async function submit() {
         </div>
       </el-form-item>
 
-      <el-alert
-        v-if="mode === 'text' && !hasText"
-        type="info"
-        :closable="false"
-        :title="t('materials.create.emptyNote')"
-        class="create-dialog__empty"
-      />
+      <AppNote v-if="mode === 'text' && !hasText" class="create-dialog__empty">
+        {{ t('materials.create.emptyNote') }}
+      </AppNote>
     </el-form>
     <template #footer>
       <div class="create-dialog__footer">

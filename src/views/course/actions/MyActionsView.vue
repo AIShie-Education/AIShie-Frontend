@@ -13,6 +13,7 @@ import { read, type ApiError } from '@/api/http'
 import { toApiError } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -189,10 +190,10 @@ function open(row: ActionRow) {
         </el-radio-group>
       </div>
 
-      <el-alert v-if="more && !loading" type="info" show-icon :closable="false" class="my-actions__capped">
+      <AppNote v-if="more && !loading" class="my-actions__capped">
         <span>{{ t('actions.mine.capped', { n: items.length }) }}</span>
         <el-button link type="primary" @click="load(false)">{{ t('actions.mine.loadRest') }}</el-button>
-      </el-alert>
+      </AppNote>
       <p v-if="loading && items.length" class="my-actions__loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         {{ t('actions.mine.loadingAll', { n: items.length }) }}

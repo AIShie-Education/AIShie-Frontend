@@ -16,6 +16,7 @@
 // An edit sends only what changed from the offer as read, at its version
 // (If-Match). When it has changed meanwhile (412), it is read again, what
 // the administrator changed is kept over it, and they are told so.
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
@@ -397,14 +398,9 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
     >
       <el-button size="small" @click="emit('reloadProviders')">{{ t('common.actions.retry') }}</el-button>
     </el-alert>
-    <el-alert
-      v-else-if="!providers.length"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('runtimeAdmin.offer.noProviders')"
-      class="offer-dialog__alert offer-dialog__no-providers"
-    />
+    <AppNote v-else-if="!providers.length" class="offer-dialog__alert offer-dialog__no-providers">
+      {{ t('runtimeAdmin.offer.noProviders') }}
+    </AppNote>
     <template v-else>
       <el-alert
         v-if="notice"
@@ -547,14 +543,9 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
               />
             </template>
           </el-form-item>
-          <el-alert
-            v-if="retests"
-            type="info"
-            :closable="false"
-            show-icon
-            :title="t('runtimeAdmin.offer.retests')"
-            class="offer-dialog__alert offer-form__retests"
-          />
+          <AppNote v-if="retests" class="offer-dialog__alert offer-form__retests">
+            {{ t('runtimeAdmin.offer.retests') }}
+          </AppNote>
 
           <el-collapse v-model="advanced" class="offer-form__advanced">
             <el-collapse-item name="advanced" :title="t('hosting.model.advanced')">

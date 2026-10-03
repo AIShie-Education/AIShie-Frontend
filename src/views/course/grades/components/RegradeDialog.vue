@@ -13,6 +13,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isDecimal } from '@/utils/format'
+import AppNote from '@/components/AppNote.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import BreakdownEditor, { type BreakdownRow } from '@/views/course/submissions/components/BreakdownEditor.vue'
@@ -203,9 +204,9 @@ async function submit() {
         <FinalOption v-model="form.final" :disabled="pending" />
       </el-form-item>
 
-      <el-alert v-if="needsApproval" type="info" :closable="false" show-icon>
+      <AppNote v-if="needsApproval">
         {{ t('grades.regrade.proposalNote') }}
-      </el-alert>
+      </AppNote>
     </el-form>
 
     <template #footer>

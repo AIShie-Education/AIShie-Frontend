@@ -11,6 +11,7 @@ import { PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/typ
 import { useCourseStore } from '@/stores/course'
 import { seatPurpose } from '@/utils/agents'
 import { presetDescription, presetLabel } from '@/views/course/members/components/seat'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
@@ -91,13 +92,16 @@ const expiresAt = computed(() => str(p.value.expires_at))
   <div class="delegate-grant">
     <p class="delegate-grant__help">{{ t('actions.delegate.help', { owner: ownerText }) }}</p>
     <el-alert
-      v-if="purpose"
-      :type="purpose === 'course' ? 'warning' : 'info'"
+      v-if="purpose === 'course'"
+      type="warning"
       :closable="false"
       show-icon
       class="delegate-grant__alert"
-      :title="t(`actions.delegate.purpose.${purpose}`, { owner: ownerText })"
+      :title="t('actions.delegate.purpose.course', { owner: ownerText })"
     />
+    <AppNote v-else-if="purpose" class="delegate-grant__alert">
+      {{ t(`actions.delegate.purpose.${purpose}`, { owner: ownerText }) }}
+    </AppNote>
 
     <dl class="delegate-grant__facts">
       <div>

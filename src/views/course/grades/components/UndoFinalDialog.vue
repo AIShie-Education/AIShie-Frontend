@@ -10,6 +10,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 
 const open = defineModel<boolean>({ required: true })
@@ -95,13 +96,7 @@ async function submit() {
         />
       </el-form-item>
     </el-form>
-    <el-alert
-      v-if="needsApproval"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('grades.undoFinal.approvalNote')"
-    />
+    <AppNote v-if="needsApproval">{{ t('grades.undoFinal.approvalNote') }}</AppNote>
     <template #footer>
       <el-button :disabled="pending" @click="open = false">{{ t('common.actions.cancel') }}</el-button>
       <el-button type="primary" :loading="pending" :disabled="!course.writable" @click="submit">

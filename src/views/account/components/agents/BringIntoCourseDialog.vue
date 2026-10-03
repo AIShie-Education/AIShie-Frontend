@@ -21,6 +21,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { delegateArgsFor, presetForPurpose, type SeatPurpose } from '@/utils/agents'
 import { aboveCeiling, capToCeilings, ceilingsOf } from '@/utils/ceilings'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -158,14 +159,7 @@ async function submit() {
       @retry="seats.reload"
     >
       <h3 class="bring__step">{{ t('agents.bring.course') }}</h3>
-      <el-alert
-        v-if="!available.length"
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('agents.bring.noneAvailable')"
-        class="bring__alert"
-      />
+      <AppNote v-if="!available.length" class="bring__alert">{{ t('agents.bring.noneAvailable') }}</AppNote>
       <el-radio-group v-model="courseId" class="bring__courses">
         <el-radio
           v-for="c in choices"

@@ -12,6 +12,7 @@ import type { ToolOut, WriteOutcome } from '@/api/http'
 import type { Decimal } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import { formatPct, plainDecimal } from './grading'
 
@@ -172,7 +173,7 @@ async function submit() {
         <MarkdownEditor v-model="form.feedback" :rows="6" />
       </el-form-item>
     </el-form>
-    <el-alert v-if="needsApproval" type="info" :closable="false" show-icon :title="t('grades.override.approvalNote')" />
+    <AppNote v-if="needsApproval">{{ t('grades.override.approvalNote') }}</AppNote>
     <template #footer>
       <el-button :disabled="pending" @click="open = false">{{ t('common.actions.cancel') }}</el-button>
       <el-button type="primary" :loading="pending" :disabled="!course.writable" @click="submit">

@@ -6,6 +6,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import TimeText from '@/components/TimeText.vue'
 import EditDetailsDialog from './EditDetailsDialog.vue'
@@ -40,14 +41,7 @@ const expanded = ref(false)
         </span>
       </el-tooltip>
     </h2>
-    <el-alert
-      v-if="course.course?.status === 'draft'"
-      type="info"
-      :closable="false"
-      show-icon
-      class="about__draft"
-      :title="t('common.draftCourse')"
-    />
+    <AppNote v-if="course.course?.status === 'draft'" class="about__draft">{{ t('common.draftCourse') }}</AppNote>
     <div class="about__desc" :class="{ 'is-folded': long && !expanded }">
       <MarkdownView :source="description" :empty="t('overview.about.noDescription')" />
     </div>

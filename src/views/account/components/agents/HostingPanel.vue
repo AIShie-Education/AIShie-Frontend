@@ -19,6 +19,7 @@
 // hosted yet needs host_by_id and a way to give it a model, own_key or
 // school_key, since a hosted agent without a model never runs. An agent
 // hosted already shows as hosted whatever the features say.
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -192,14 +193,9 @@ watch(
           {{ t(canChooseSchool ? 'hosting.offer.bodySchool' : 'hosting.offer.body') }}
         </p>
         <div v-if="!listed" v-loading="true" class="hosting-offer__loading" />
-        <el-alert
-          v-else-if="accountRefused"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="t('hosting.unavailable.account')"
-          class="hosting-offer__unavailable"
-        />
+        <AppNote v-else-if="accountRefused" class="hosting-offer__unavailable">
+          {{ t('hosting.unavailable.account') }}
+        </AppNote>
         <el-alert
           v-else-if="loadError"
           type="error"

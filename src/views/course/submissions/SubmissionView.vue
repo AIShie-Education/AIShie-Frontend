@@ -7,6 +7,7 @@ import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { ActionSummary, GradeSummary, SubmissionSummary } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
@@ -187,25 +188,23 @@ function onGraded() {
           </router-link>
         </PageHeader>
 
+        <AppNote v-if="s.state === 'draft'" class="submission-view__notice">
+          {{ own ? t('submissions.detail.notice.draftOwn') : t('submissions.detail.notice.draftStaff') }}
+        </AppNote>
         <el-alert
-          v-if="s.state === 'draft' || s.state === 'missing'"
-          :type="s.state === 'missing' ? 'warning' : 'info'"
+          v-else-if="s.state === 'missing'"
+          type="warning"
           :closable="false"
           show-icon
           class="submission-view__notice"
-        >
-          {{
-            s.state === 'draft'
-              ? own
-                ? t('submissions.detail.notice.draftOwn')
-                : t('submissions.detail.notice.draftStaff')
-              : own
-                ? t('submissions.detail.notice.missingOwn')
-                : gradeList.length
-                  ? t('submissions.detail.notice.missingGraded')
-                  : t('submissions.detail.notice.missingStaff')
-          }}
-        </el-alert>
+          :title="
+            own
+              ? t('submissions.detail.notice.missingOwn')
+              : gradeList.length
+                ? t('submissions.detail.notice.missingGraded')
+                : t('submissions.detail.notice.missingStaff')
+          "
+        />
 
         <section class="app-card">
           <dl class="facts">

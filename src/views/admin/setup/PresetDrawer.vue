@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Box, OfficeBuilding } from '@element-plus/icons-vue'
 import { PERMS, type Preset } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -71,14 +72,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
         <dd><IdText :id="preset.id" /></dd>
       </dl>
 
-      <el-alert
-        v-if="builtin"
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('adminSetup.presets.drawer.builtinNote')"
-        class="preset-drawer__note"
-      />
+      <AppNote v-if="builtin" class="preset-drawer__note">{{ t('adminSetup.presets.drawer.builtinNote') }}</AppNote>
 
       <div v-if="canEdit" class="preset-drawer__actions">
         <el-button v-if="builtin" @click="emit('copy', preset)">

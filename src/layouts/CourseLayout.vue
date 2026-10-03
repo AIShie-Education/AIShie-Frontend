@@ -17,6 +17,7 @@ import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useContainerWidth } from '@/composables/useContainerWidth'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
 import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
 import { findCourse } from '@/views/admin/components/adminShared'
 import AsyncState from '@/components/AsyncState.vue'
@@ -224,9 +225,9 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
           </span>
         </header>
 
-        <el-alert v-if="course.archived" type="info" :closable="false" show-icon class="course-banner">
+        <AppNote v-if="course.archived" class="course-banner">
           {{ t('common.archivedCourse') }}
-        </el-alert>
+        </AppNote>
         <el-alert
           v-else-if="course.membership?.status === 'paused'"
           type="warning"

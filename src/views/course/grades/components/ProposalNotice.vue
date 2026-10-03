@@ -6,15 +6,16 @@ import { useI18n } from 'vue-i18n'
 defineProps<{ courseId: string; title: string; body?: string }>()
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
+import AppNote from '@/components/AppNote.vue'
 </script>
 
 <template>
-  <el-alert type="info" show-icon :title="title" class="proposal-notice" @close="emit('close')">
+  <AppNote :title="title" class="proposal-notice" @close="emit('close')" closable>
     <p v-if="body" class="proposal-notice__body">{{ body }}</p>
     <router-link :to="{ name: 'course-my-actions', params: { courseId } }" class="proposal-notice__link">
       {{ t('grades.proposal.link') }}
     </router-link>
-  </el-alert>
+  </AppNote>
 </template>
 
 <style scoped>

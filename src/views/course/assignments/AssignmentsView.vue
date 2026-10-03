@@ -13,6 +13,7 @@ import { useAsync, usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -150,14 +151,12 @@ function refresh() {
       </template>
     </PageHeader>
 
-    <el-alert v-if="proposed" type="info" show-icon class="assignments-view__alert" @close="proposed = false">
-      <template #title>
-        {{ t('assignments.list.proposed') }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
-          t('assignments.list.viewMyActions')
-        }}</router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="proposed" class="assignments-view__alert" @close="proposed = false" closable>
+      {{ t('assignments.list.proposed') }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('assignments.list.viewMyActions')
+      }}</router-link>
+    </AppNote>
     <div v-if="writer && course.needsApproval('assignment_write')" class="app-form-hint assignments-view__approval">
       <StatusTag vocab="level" value="confirm_required" size="small" />
       {{ t('assignments.list.approvalHint') }}
@@ -303,9 +302,6 @@ function refresh() {
 }
 .assignments-view__alert a {
   margin-left: 6px;
-}
-.assignments-view__alert:deep(.el-alert__content) {
-  padding-right: 24px;
 }
 .assignments-view__approval {
   display: flex;

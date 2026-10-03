@@ -12,6 +12,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isDecimal } from '@/utils/format'
+import AppNote from '@/components/AppNote.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
@@ -193,15 +194,9 @@ async function submit() {
       </template>
     </el-alert>
 
-    <el-alert
-      v-else-if="!componentsLoading && !components.length"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('grades.enter.noComponents')"
-    >
+    <AppNote v-else-if="!componentsLoading && !components.length" :title="t('grades.enter.noComponents')">
       <router-link :to="{ name: 'course-scheme', params: { courseId } }">{{ t('grades.enter.toScheme') }}</router-link>
-    </el-alert>
+    </AppNote>
 
     <el-form v-else ref="formRef" :model="form" :rules="rules" label-position="top" :disabled="pending">
       <el-form-item :label="t('grades.enter.component')" prop="componentId">
@@ -229,13 +224,11 @@ async function submit() {
           {{ t('grades.enter.openToRegrade') }}
         </router-link>
       </el-alert>
-      <el-alert v-else-if="existingDraft" type="info" :closable="false" show-icon class="enter-dialog__existing">
-        <template #title>
-          {{ t('grades.enter.hasDraft') }}
-          <ScoreText :score="existingDraft.score" :out-of="outOf" hide-percent />
-          <StatusTag vocab="gradeState" value="draft" />
-        </template>
-      </el-alert>
+      <AppNote v-else-if="existingDraft" class="enter-dialog__existing">
+        {{ t('grades.enter.hasDraft') }}
+        <ScoreText :score="existingDraft.score" :out-of="outOf" hide-percent />
+        <StatusTag vocab="gradeState" value="draft" />
+      </AppNote>
 
       <!-- No draft over a posted grade: it could never be posted. -->
       <template v-if="!blocked">
@@ -284,9 +277,9 @@ async function submit() {
           />
         </el-form-item>
 
-        <el-alert v-if="needsApproval" type="info" :closable="false" show-icon>
+        <AppNote v-if="needsApproval">
           {{ t('grades.enter.proposalNote') }}
-        </el-alert>
+        </AppNote>
       </template>
     </el-form>
 

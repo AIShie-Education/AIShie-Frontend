@@ -11,6 +11,7 @@ import { read } from '@/api/http'
 import { PERMS, type Preset } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -94,13 +95,7 @@ function onSaved(savedDept: string | null) {
       </el-button>
     </PageHeader>
 
-    <el-alert
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('adminSetup.presets.explain')"
-      class="presets-explain"
-    />
+    <AppNote class="presets-explain">{{ t('adminSetup.presets.explain') }}</AppNote>
 
     <div class="app-toolbar presets-toolbar">
       <label class="presets-toolbar__label" for="presets-dept">{{ t('adminSetup.presets.department') }}</label>

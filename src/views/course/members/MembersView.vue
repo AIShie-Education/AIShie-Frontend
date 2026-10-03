@@ -14,6 +14,7 @@ import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
@@ -206,13 +207,12 @@ function rowClass({ row }: { row: MemberSummary }) {
       </div>
     </PageHeader>
 
-    <el-alert
+    <AppNote
       v-if="proposedAction"
-      type="info"
-      show-icon
-      class="members__notice"
       :title="t('members.proposed.add')"
+      class="members__notice"
       @close="proposedAction = null"
+      closable
     >
       <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
         {{ t('members.proposed.view') }}
@@ -221,7 +221,7 @@ function rowClass({ row }: { row: MemberSummary }) {
       <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
         t('members.proposed.mine')
       }}</router-link>
-    </el-alert>
+    </AppNote>
 
     <div class="app-card">
       <div v-if="!list.error.value?.isForbidden" ref="toolbar" class="app-toolbar">

@@ -17,6 +17,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import { versionFilesOf } from '@/utils/documentFiles'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
@@ -304,25 +305,18 @@ function refresh() {
       </template>
     </PageHeader>
 
-    <el-alert v-if="pendingNote" type="info" show-icon class="assignment-view__alert" @close="pendingNote = null">
-      <template #title>
-        {{ pendingNote }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
-          {{ t('assignments.list.viewMyActions') }}
-        </router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="pendingNote" class="assignment-view__alert" @close="pendingNote = null" closable>
+      {{ pendingNote }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
+        {{ t('assignments.list.viewMyActions') }}
+      </router-link>
+    </AppNote>
 
     <AsyncState :loading="state.loading.value && !assignment" :error="state.error.value" @retry="state.reload">
       <template v-if="assignment">
-        <el-alert
-          v-if="writer && !assignment.published_at"
-          type="info"
-          :closable="false"
-          show-icon
-          class="assignment-view__alert"
-          :title="t('assignments.detail.unpublishedAlert')"
-        />
+        <AppNote v-if="writer && !assignment.published_at" class="assignment-view__alert">
+          {{ t('assignments.detail.unpublishedAlert') }}
+        </AppNote>
         <el-alert
           v-if="writer && !assignment.published_at && instructionsUnpublished"
           type="warning"
@@ -373,17 +367,16 @@ function refresh() {
                 @retry="instructions.reload"
               >
                 <template v-if="instructionsDoc">
-                  <el-alert
+                  <AppNote
                     v-if="instructionsDoc.version && !instructionsDoc.version.published"
-                    type="info"
-                    :closable="false"
                     class="assignment-view__alert"
-                    :title="
+                  >
+                    {{
                       instructionsDoc.published_version_id
                         ? t('assignments.detail.draftVersion', { seq: instructionsDoc.version.seq })
                         : t('assignments.detail.draftVersionNone', { seq: instructionsDoc.version.seq })
-                    "
-                  />
+                    }}
+                  </AppNote>
                   <Tombstone
                     v-if="instructionsDoc.version?.purged"
                     :purge="instructionsDoc.version.purged"

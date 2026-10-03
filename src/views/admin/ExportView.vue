@@ -24,6 +24,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import { formatCountdown } from '@/utils/countdown'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import DepartmentPicker from './departments/DepartmentPicker.vue'
@@ -207,13 +208,10 @@ const scopeOptions = computed(() =>
       <h2 id="export-form-title" class="app-card__title">{{ t('auditExport.form.title') }}</h2>
       <p class="app-muted export-form__intro">{{ t('auditExport.form.intro') }}</p>
 
-      <el-alert
+      <AppNote
         v-if="pending"
-        class="export-form__pending"
-        type="info"
-        show-icon
-        :closable="false"
         :title="t('auditExport.pending.title', { time: dayjs(pending.at).format('HH:mm') })"
+        class="export-form__pending"
       >
         <div class="export-form__pending-body">
           <span>{{ t('auditExport.pending.body') }}</span>
@@ -221,7 +219,7 @@ const scopeOptions = computed(() =>
             t('auditExport.pending.discard')
           }}</el-button>
         </div>
-      </el-alert>
+      </AppNote>
 
       <el-form label-position="top" :disabled="running" @submit.prevent>
         <el-form-item :label="t('auditExport.form.scope')" class="export-form__scope">

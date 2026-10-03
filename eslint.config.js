@@ -48,6 +48,16 @@ const ELEMENT_LOOK = {
     message:
       'A tag is an AppTag (a state, an identity, a count, or the usual state, quiet) or a StatusTag for Core’s vocabularies, never an el-tag with an effect of its own (docs/CONVENTIONS.md, "Tags").',
   },
+  // An explanation (an el-alert of type info, Element Plus's default) is an AppNote: an alert is a warning or an error.
+  'el-alert': {
+    allowedIn: [],
+    when: (node) => {
+      const type = attributeOf(node, 'type')
+      return !type || (!type.directive && (type.value?.value ?? '') === 'info')
+    },
+    message:
+      'An explanation is an AppNote (no icon, the indigo line at its left); an el-alert is a warning, an error or an outcome, and says its type (docs/CONVENTIONS.md, "Notes and alerts").',
+  },
   'el-empty': {
     allowedIn: [],
     message:

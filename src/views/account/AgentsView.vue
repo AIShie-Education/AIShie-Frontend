@@ -19,6 +19,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useRuntime } from '@/composables/useRuntime'
 import { useSessionStore } from '@/stores/session'
 import { hostingOf } from '@/utils/agents'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
@@ -106,27 +107,17 @@ function onHosted(_: unknown, actorId: string) {
       </el-tooltip>
     </PageHeader>
 
-    <el-alert
-      v-if="!isHuman"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('agents.notHuman')"
-      class="agents-view__alert"
-    />
+    <AppNote v-if="!isHuman" class="agents-view__alert">{{ t('agents.notHuman') }}</AppNote>
 
     <el-alert
-      v-else-if="blocked"
-      :type="blocked === 'atLimit' ? 'warning' : 'info'"
+      v-else-if="blocked === 'atLimit'"
+      type="warning"
       :closable="false"
       show-icon
-      :title="
-        blocked === 'atLimit'
-          ? t('agents.limit.reached', { limit: knownAgentLimit ?? 0 })
-          : t('agents.limit.noSelfService')
-      "
+      :title="t('agents.limit.reached', { limit: knownAgentLimit ?? 0 })"
       class="agents-view__alert"
     />
+    <AppNote v-else-if="blocked" class="agents-view__alert">{{ t('agents.limit.noSelfService') }}</AppNote>
 
     <AboutAgentsCard v-if="isHuman && list.data.value && !agents.length" />
 

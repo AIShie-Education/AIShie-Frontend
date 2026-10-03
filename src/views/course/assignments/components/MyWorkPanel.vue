@@ -29,6 +29,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { formatDecimal } from '@/utils/format'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
@@ -396,14 +397,12 @@ defineExpose({ reload })
     </h2>
 
     <el-alert v-if="warning" type="warning" show-icon class="my-work__alert" :title="warning" @close="warning = null" />
-    <el-alert v-if="notice" type="info" show-icon class="my-work__alert" @close="notice = null">
-      <template #title>
-        {{ notice }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
-          t('assignments.list.viewMyActions')
-        }}</router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="notice" class="my-work__alert" @close="notice = null" closable>
+      {{ notice }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('assignments.list.viewMyActions')
+      }}</router-link>
+    </AppNote>
 
     <AsyncState
       :loading="attempts.loading.value && !attempts.data.value"
@@ -422,20 +421,12 @@ defineExpose({ reload })
         <el-alert v-if="pastDue" type="warning" :closable="false" show-icon class="my-work__alert">
           {{ t('assignments.work.pastDue') }}
         </el-alert>
-        <el-alert
-          v-if="handInProposed || proposedBody !== null"
-          type="info"
-          :closable="false"
-          show-icon
-          class="my-work__alert"
-        >
-          <template #title>
-            {{ handInProposed ? t('assignments.work.handInProposed') : t('assignments.work.savePending') }}
-            <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
-              {{ t('assignments.list.viewMyActions') }}
-            </router-link>
-          </template>
-        </el-alert>
+        <AppNote v-if="handInProposed || proposedBody !== null" class="my-work__alert">
+          {{ handInProposed ? t('assignments.work.handInProposed') : t('assignments.work.savePending') }}
+          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
+            {{ t('assignments.list.viewMyActions') }}
+          </router-link>
+        </AppNote>
 
         <AsyncState
           :loading="draftFull.loading.value && !current"

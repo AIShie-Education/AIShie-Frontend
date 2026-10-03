@@ -10,6 +10,7 @@
 // used one (Core notices a token's use, last_seen_at, and nothing else), and
 // whether it is seated.
 import { useI18n } from 'vue-i18n'
+import AppNote from '@/components/AppNote.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import ConnectToolSteps from './ConnectToolSteps.vue'
 import type { SetupProgress } from './agents'
@@ -32,14 +33,7 @@ const { t } = useI18n()
     <h2 class="app-card__title mcp-card__title">
       <span>{{ t('agents.mcp.title') }}</span>
     </h2>
-    <el-alert
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('agents.mcp.notOnSite')"
-      :description="t('agents.mcp.notOnSiteBody')"
-      class="mcp-card__note"
-    />
+    <AppNote :title="t('agents.mcp.notOnSite')" class="mcp-card__note">{{ t('agents.mcp.notOnSiteBody') }}</AppNote>
 
     <ol class="mcp-card__steps">
       <li class="mcp-card__step mcp-card__token" :class="`is-${progress.token}`">

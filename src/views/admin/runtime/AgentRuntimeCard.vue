@@ -20,6 +20,7 @@ import { read } from '@/api/http'
 import type { ListItem, ToolOut } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
@@ -117,7 +118,7 @@ function forget() {
       </el-button>
     </h2>
     <p class="agent-runtime-card__intro">{{ t('runtimeAdmin.agentRuntime.intro') }}</p>
-    <el-alert type="info" :closable="false" show-icon class="agent-runtime-card__setup">
+    <AppNote class="agent-runtime-card__setup">
       <template #title>
         <i18n-t keypath="runtimeAdmin.agentRuntime.setup" tag="span" scope="global">
           <template #command>
@@ -125,7 +126,7 @@ function forget() {
           </template>
         </i18n-t>
       </template>
-    </el-alert>
+    </AppNote>
 
     <AsyncState
       :loading="list.loading.value && !list.data.value"
@@ -221,11 +222,13 @@ function forget() {
     >
       <template v-if="issued">
         <el-alert
-          :type="issued.token ? 'warning' : 'info'"
+          v-if="issued.token"
+          type="warning"
           :closable="false"
           show-icon
-          :title="issued.token ? t('runtimeAdmin.agentRuntime.once') : t('runtimeAdmin.agentRuntime.replayed')"
+          :title="t('runtimeAdmin.agentRuntime.once')"
         />
+        <AppNote v-else>{{ t('runtimeAdmin.agentRuntime.replayed') }}</AppNote>
         <CopyBlock
           v-if="issued.token"
           :text="issued.token"

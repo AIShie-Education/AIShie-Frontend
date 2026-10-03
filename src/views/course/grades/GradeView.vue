@@ -17,6 +17,7 @@ import { read, type ToolOut, type WriteOutcome } from '@/api/http'
 import type { Grade, GradeSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
@@ -279,18 +280,16 @@ const backLink = computed(() => ({
           @close="proposal = null"
         />
 
-        <el-alert v-if="g.state === 'superseded'" type="info" :closable="false" show-icon class="grade-view__banner">
-          <template #title>
-            {{ t('grades.detail.supersededBanner') }}
-            <router-link
-              v-if="g.superseded_by"
-              :to="{ name: 'course-grade', params: { courseId, gradeId: g.superseded_by } }"
-              class="grade-view__banner-link"
-            >
-              {{ t('grades.detail.openNewer') }}
-            </router-link>
-          </template>
-        </el-alert>
+        <AppNote v-if="g.state === 'superseded'" class="grade-view__banner">
+          {{ t('grades.detail.supersededBanner') }}
+          <router-link
+            v-if="g.superseded_by"
+            :to="{ name: 'course-grade', params: { courseId, gradeId: g.superseded_by } }"
+            class="grade-view__banner-link"
+          >
+            {{ t('grades.detail.openNewer') }}
+          </router-link>
+        </AppNote>
         <el-alert
           v-else-if="g.state === 'draft'"
           type="warning"

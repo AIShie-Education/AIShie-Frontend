@@ -26,6 +26,7 @@ import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentName from '@/components/AgentName.vue'
+import AppNote from '@/components/AppNote.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ActorSummary from './ActorSummary.vue'
@@ -295,14 +296,7 @@ async function seat() {
       }}
     </p>
 
-    <el-alert
-      v-if="disabled"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('admin.seat.archived')"
-      class="seat__alert"
-    />
+    <AppNote v-if="disabled" class="seat__alert">{{ t('admin.seat.archived') }}</AppNote>
 
     <el-alert v-if="seated" type="success" show-icon class="seat__alert" @close="seated = null">
       <template #title>{{ t('admin.seat.done', { name: seated.name }) }}</template>
@@ -399,14 +393,7 @@ async function seat() {
         </template>
         <template #default="{ person: p }">
           <el-alert v-if="blocker" type="warning" :closable="false" show-icon :title="blocker" class="seat__warn" />
-          <el-alert
-            v-else-if="p.kind === 'agent'"
-            type="info"
-            :closable="false"
-            show-icon
-            :title="t('admin.seat.agent')"
-            class="seat__warn"
-          />
+          <AppNote v-else-if="p.kind === 'agent'" class="seat__warn">{{ t('admin.seat.agent') }}</AppNote>
           <div v-if="p.invitable && !p.can_sign_in" class="seat__again">
             <span class="app-form-hint seat__again-hint">{{ t('deptAdmin.invite.againHint') }}</span>
             <el-button size="small" :loading="inviteW.pending.value" :disabled="disabled" @click="inviteAgain(p)">
@@ -479,14 +466,7 @@ async function seat() {
       <div v-if="found" class="seat__found">
         <ActorSummary :actor="found" link />
         <el-alert v-if="blocker" type="warning" :closable="false" show-icon :title="blocker" class="seat__warn" />
-        <el-alert
-          v-else-if="found.kind === 'agent'"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="t('admin.seat.agent')"
-          class="seat__warn"
-        />
+        <AppNote v-else-if="found.kind === 'agent'" class="seat__warn">{{ t('admin.seat.agent') }}</AppNote>
         <div class="seat__actions">
           <el-button v-if="hasMembers" @click="formOpen = false">{{ t('common.actions.cancel') }}</el-button>
           <el-button type="primary" :loading="pending" :disabled="disabled || !!blocker" @click="seat">

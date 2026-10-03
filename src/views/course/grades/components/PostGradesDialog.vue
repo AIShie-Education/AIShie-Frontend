@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import type { ToolOut, WriteOutcome } from '@/api/http'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import MemberName from '@/components/MemberName.vue'
 import FinalOption from './FinalOption.vue'
 import ScoreText from './ScoreText.vue'
@@ -90,9 +91,9 @@ async function submit() {
 
     <FinalOption v-model="final" :disabled="pending" />
 
-    <el-alert v-if="needsApproval" type="info" :closable="false" show-icon class="post-dialog__approval">
+    <AppNote v-if="needsApproval" class="post-dialog__approval">
       {{ mode === 'assignment' ? t('grades.post.proposalAssignment') : t('grades.post.proposalIds') }}
-    </el-alert>
+    </AppNote>
 
     <template #footer>
       <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>

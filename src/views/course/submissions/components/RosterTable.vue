@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import type { ApiError } from '@/api/http'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -159,14 +160,7 @@ const emptyText = computed(() =>
 
 <template>
   <div class="roster">
-    <el-alert
-      v-if="published === false"
-      class="roster__notice"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('submissions.roster.unpublished')"
-    />
+    <AppNote v-if="published === false" class="roster__notice">{{ t('submissions.roster.unpublished') }}</AppNote>
     <AsyncState
       :loading="loading && !shown.length"
       :error="error"

@@ -187,6 +187,7 @@ async function save() {
 const title = computed(() =>
   props.row ? t('runtimeAdmin.prices.editTitle', { model: props.row.model }) : t('runtimeAdmin.prices.createTitle'),
 )
+import AppNote from '@/components/AppNote.vue'
 </script>
 
 <template>
@@ -274,7 +275,7 @@ const title = computed(() =>
       <el-form-item v-else :label="t('runtimeAdmin.prices.id')">
         <code class="price-form__id-fixed">{{ row?.id }}</code>
       </el-form-item>
-      <el-alert type="info" :closable="false" show-icon :title="t('runtimeAdmin.prices.fromNowOn')" />
+      <AppNote>{{ t('runtimeAdmin.prices.fromNowOn') }}</AppNote>
     </el-form>
     <el-alert
       v-if="error"
