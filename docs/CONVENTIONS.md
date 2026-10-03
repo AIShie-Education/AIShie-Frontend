@@ -1066,8 +1066,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   @b.edu"), never `"%"` written after a number, `"$"` before one, nor `.join(', ')`. A list's or a
   number's words follow the language where they are worked out in a `computed`: Intl is not reactive,
   so the computed reads `ui.locale` (`computed(() => (ui.locale, formatList(items, 'or')))`), as
-  `<TimeText>` does. `src/i18n/punctuation.spec.ts` reads every component and module and refuses
-  these.
+  `<TimeText>` does. `src/i18n/punctuation.spec.ts` reads every component and module, the code in
+  a template (`{{ }}`, a bound attribute, a directive) as well as its text and scripts, and refuses
+  these, whether written in a template literal (`${n} %`), added to a string (`n + ' %'`,
+  `a + ': ' + b`, `a + '·' + b`) or as an entity (`&middot;`); it reads the messages too, for a
+  `"%"` after a placeholder in any language and a half-width colon or brackets beside one in
+  Chinese.
 - **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
   never 「{owner} 的代理」, nor around a figure written in the message: 「1個學期 | {n}個學期」, never
   「1 個學期」 (`src/i18n/spacing.spec.ts` refuses both). The page puts the room between Han
