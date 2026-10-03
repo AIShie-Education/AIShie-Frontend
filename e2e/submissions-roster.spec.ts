@@ -11,6 +11,7 @@ const stamp = Date.now().toString(36)
 const TITLE = `Roster check ${stamp}`
 let courseId = ''
 let assignmentId = ''
+let yukiMemberId = ''
 
 async function ok(token: string, method: 'GET' | 'POST', path: string, body?: unknown) {
   const out = await call(token, method, path, body)
@@ -35,7 +36,11 @@ test.beforeAll(async () => {
   await ok(token, 'POST', `/v1/courses/${courseId}/instructors`, { actor_id: d.actors.instructor.actor_id })
   const teacher = d.actors.instructor.token
   for (const who of [d.actors.yuki, d.actors.ken]) {
-    await ok(teacher, 'POST', `/v1/courses/${courseId}/members`, { actor_id: who.actor_id, preset: 'student' })
+    const seated = await ok(teacher, 'POST', `/v1/courses/${courseId}/members`, {
+      actor_id: who.actor_id,
+      preset: 'student',
+    })
+    if (who === d.actors.yuki) yukiMemberId = seated.member_id
   }
 
   // A published assignment.
@@ -82,6 +87,14 @@ test('the instructor sees who has not started on an assignment, and marks them m
   await expect(page.locator('.roster-table .el-table__row')).toContainText('Yuki Tanaka')
   await summary.getByRole('radio', { name: 'Submitted 1' }).click()
   await expect(page.locator('.roster-table .el-table__row')).toHaveCount(2)
+  // Filtered to one student, there is nothing left to filter: no counts that would hold students the
+  // roster does not show.
+  await page.goto(`/courses/${courseId}/submissions?assignment=${assignmentId}&student=${yukiMemberId}`)
+  await expect(page.locator('.roster-table .el-table__row')).toHaveCount(1)
+  await expect(page.locator('.roster-table .el-table__row')).toContainText('Yuki Tanaka')
+  await expect(summary.getByRole('radio')).toHaveCount(0)
+  await page.goto(`/courses/${courseId}/submissions?assignment=${assignmentId}`)
+  await expect(summary.getByRole('radio', { name: 'All 2' })).toBeVisible()
 
   const yuki = page.locator('.roster-table .el-table__row').filter({ hasText: 'Yuki Tanaka' })
   const ken = page.locator('.roster-table .el-table__row').filter({ hasText: 'Ken Wong' })

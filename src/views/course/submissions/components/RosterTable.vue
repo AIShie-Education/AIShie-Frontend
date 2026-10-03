@@ -26,13 +26,13 @@ import { useCourseStore } from '@/stores/course'
 import { formatDateTime } from '@/utils/format'
 import {
   ROSTER_STATES,
-  countByState,
   forStudent,
   mayMarkMissing,
   needsMoreFor,
   proposalKey,
   rememberProposal,
   rosterName,
+  rosterView,
   showsSeatStatus,
   wasProposed,
   type RosterEntry,
@@ -61,11 +61,14 @@ const summaryLine = useTemplateRef<HTMLElement>('summaryLine')
 const narrow = useContainerNarrow(summaryLine, 566)
 
 const shown = computed(() => forStudent(props.rows, props.studentId))
-const summary = computed(() => countByState(props.rows))
 // The counts are a filter too: one state's students at a time, or all of them.
+// They count the rows they filter; where the page is filtered to one student
+// there is nothing left to filter, and there are none (rosterView).
 const stateFilter = ref('')
+const view = computed(() => rosterView(props.rows, props.studentId, stateFilter.value))
+const summary = computed(() => view.value.summary)
 const stateChips = computed(() =>
-  summary.value.counts.map((c) => ({
+  (summary.value?.counts ?? []).map((c) => ({
     value: c.state,
     label: te(`enums.submissionState.${c.state}`) ? t(`enums.submissionState.${c.state}`) : c.state,
     count: c.count,
@@ -73,11 +76,9 @@ const stateChips = computed(() =>
 )
 // A state none of them is in any more (after a refresh, say) filters nothing.
 watch(stateChips, (chips) => {
-  if (stateFilter.value && !chips.some((c) => c.value === stateFilter.value)) stateFilter.value = ''
+  if (summary.value && stateFilter.value && !chips.some((c) => c.value === stateFilter.value)) stateFilter.value = ''
 })
-const visible = computed(() =>
-  stateFilter.value ? shown.value.filter((r) => r.state === stateFilter.value) : shown.value,
-)
+const visible = computed(() => view.value.visible)
 
 // The student the page is filtered to may be on a page not read yet.
 watch(
@@ -187,13 +188,15 @@ const emptyText = computed(() =>
       @retry="emit('retry')"
     >
       <div ref="summaryLine" class="roster-summary">
-        <FilterChips
-          v-model="stateFilter"
-          :options="stateChips"
-          :all-count="summary.total"
-          :label="t('submissions.roster.summary.label')"
-        />
-        <span v-if="hasMore" class="roster-summary__partial">{{ t('submissions.roster.summary.partial') }}</span>
+        <template v-if="summary">
+          <FilterChips
+            v-model="stateFilter"
+            :options="stateChips"
+            :all-count="summary.total"
+            :label="t('submissions.roster.summary.label')"
+          />
+          <span v-if="hasMore" class="roster-summary__partial">{{ t('submissions.roster.summary.partial') }}</span>
+        </template>
       </div>
       <AppEmpty v-if="!visible.length" :text="t('submissions.roster.emptyState')" />
 
@@ -327,17 +330,9 @@ const emptyText = computed(() =>
   font-size: 13px;
   color: var(--el-text-color-regular);
 }
-.roster-summary__total {
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-.roster-summary__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.roster-summary__count {
-  font-variant-numeric: tabular-nums;
+/* Filtered to one student: no chips, and no room kept for them. */
+.roster-summary:empty {
+  padding: 0;
 }
 .roster-summary__partial {
   color: var(--el-text-color-secondary);

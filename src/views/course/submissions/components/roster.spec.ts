@@ -9,6 +9,7 @@ import {
   proposalKey,
   rememberProposal,
   rosterName,
+  rosterView,
   showsSeatStatus,
   wasProposed,
   type MarkContext,
@@ -82,6 +83,38 @@ describe('forStudent', () => {
   })
   it('finds nobody for a student not on the roster', () => {
     expect(forStudent(rows, 'z')).toEqual([])
+  })
+})
+
+describe('rosterView', () => {
+  const rows = [row('a', 'draft'), row('b', 'not_started'), row('c', 'draft'), row('d', 'submitted')]
+  const ids = (v: { visible: RosterEntry[] }) => v.visible.map((r) => r.student_member_id)
+
+  it('counts every row by state, and shows those of the state chosen, or all', () => {
+    const all = rosterView(rows, undefined, '')
+    expect(all.summary).toEqual({
+      total: 4,
+      counts: [
+        { state: 'not_started', count: 1 },
+        { state: 'draft', count: 2 },
+        { state: 'submitted', count: 1 },
+      ],
+    })
+    expect(ids(all)).toEqual(['a', 'b', 'c', 'd'])
+    expect(ids(rosterView(rows, undefined, 'draft'))).toEqual(['a', 'c'])
+  })
+
+  it('each count holds the rows it says: none counts a student the rows do not show', () => {
+    for (const { state, count } of rosterView(rows, undefined, '').summary!.counts)
+      expect(rosterView(rows, undefined, state).visible, state).toHaveLength(count)
+  })
+
+  it('with one student chosen has nothing to filter: no counts, and that student, whatever state was chosen', () => {
+    // Counted from every row, the chips read 'All 4 · Not started 1 · Draft 2' over a's one row, and
+    // Not started 1 then showed nobody.
+    expect(rosterView(rows, 'a', '')).toEqual({ summary: null, visible: [rows[0]] })
+    expect(rosterView(rows, 'a', 'not_started')).toEqual({ summary: null, visible: [rows[0]] })
+    expect(rosterView(rows, 'z', '')).toEqual({ summary: null, visible: [] })
   })
 })
 
