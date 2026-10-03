@@ -338,9 +338,11 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       <span v-if="str(p.respondent_member_id)" class="action-target__part">
         → <MemberName :id="str(p.respondent_member_id)" show-kind :agent="respondentAgent" />
       </span>
-      <span v-if="quote && excerpt(p.body)" class="action-target__quote">“{{ excerpt(p.body) }}”</span>
+      <span v-if="quote && excerpt(p.body)" class="action-target__quote">{{
+        t('common.quoted', { text: excerpt(p.body) })
+      }}</span>
       <span v-else-if="quote && type === 'conversation.close' && str(p.reason)" class="action-target__quote">
-        “{{ excerpt(p.reason) }}”
+        {{ t('common.quoted', { text: excerpt(p.reason) }) }}
       </span>
       <!-- The files a question or an answer carries: how many, their names on hover (never their upload tokens). -->
       <span v-if="messageFiles.length" class="action-target__muted" :title="formatList(messageFiles)">
@@ -429,9 +431,9 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
 .action-target__by span.action-target__name {
   color: var(--el-text-color-primary);
 }
+/* Set apart by its quotation marks, the language's: no slant, which Chinese has none of and a browser would fake. */
 .action-target__quote {
   color: var(--el-text-color-secondary);
-  font-style: italic;
   min-width: 0;
   overflow-wrap: anywhere;
 }

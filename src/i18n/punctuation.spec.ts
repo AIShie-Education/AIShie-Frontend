@@ -17,7 +17,9 @@ import { describe, expect, it } from 'vitest'
 //   n + ' %'), or a "$" before one: formatPct, formatMoney;
 // - brackets or a colon written around a value ("({{ x }})", `${a} (${b})`,
 //   a + ' (' + b + ')', `${a}: ${b}`, a + ': ' + b): common.aside,
-//   common.bracketed, common.pair.
+//   common.bracketed, common.pair;
+// - quotation marks written around a value ("“{{ x }}”", `「${a}」`,
+//   '“' + a + '”'): common.quoted, 「」 in Hong Kong's Chinese.
 //
 // The formatters themselves and the tests are not read. The messages are read
 // for what is theirs to get right: no "%" after a placeholder or a figure in
@@ -94,6 +96,7 @@ const IN_TEMPLATE: [string, RegExp][] = [
   ['a "$" before a number, or beside a field of dollars: formatMoney, USD_SIGN', /\$\s*\{\{|>\s*\$\s*</],
   ['brackets around a value: common.bracketed or common.aside', /\(\s*\{\{|\}\}\s*\)|\(\s*<[A-Za-z]|\/>\s*\)/],
   ['a colon between values: common.pair', /\}\}\s*:\s*(\{\{|<[A-Za-z])/],
+  ['quotation marks around a value: common.quoted', /[“‘「『"]\s*\{\{|\}\}\s*[”’」』"]/],
 ]
 
 /** A quote of any kind, as the start of a string the code writes. */
@@ -151,6 +154,11 @@ const IN_CODE: [string, RegExp][] = [
     'brackets around a value: common.aside',
     // `${a} (${b})`, `(${b})`, never a call drawn in CSS (`rgb(${c})`); or a + ' (' + b + ')'.
     new RegExp(`${NOT_WORDS}.*(?:(?<![\\w$-])[(（]\\$\\{[^}]+\\}[)）]|${Q}(?:${IN_Q}*\\s)?[(（]\\1${ADDS})`),
+  ],
+  [
+    'quotation marks around a value: common.quoted',
+    // `“${a}”`, `「${a}」`, '“' + a + '”'; a string's own quotes are not words, and are let be.
+    new RegExp(`[“‘「『]\\$\\{|\\}[”’」』]|${Q}[“‘「『]\\1${ADDS}|${ADDED}${Q}[”’」』]`),
   ],
   [
     'a colon between values: common.pair',
@@ -260,6 +268,11 @@ describe('punctuation between values', () => {
     '<el-option :label="`${code} (${section})`" />',
     '<button @click="copy(a + \': \' + b)">x</button>',
     '<span\n  :title="\n    names.join(\', \')\n  "\n>x</span>',
+    // What main's ActionTarget wrote around a question, and its like.
+    '<span class="q">“{{ excerpt(p.body) }}”</span>',
+    '<span>\n  “{{ reason }}”\n</span>',
+    '<span>「{{ reason }}」</span>',
+    '<span>"{{ reason }}"</span>',
   ])('catches %s in a template', (template) => {
     expect(vue(template)).not.toEqual([])
   })
@@ -295,6 +308,9 @@ describe('punctuation between values', () => {
     'const s = `${label}：${value}`',
     "const s = label + ': ' + value",
     "const s = label + '：' + value",
+    'const s = `“${q}”`',
+    'const s = `「${q}」`',
+    "const s = '“' + q + '”'",
   ])('catches %s in code', (script) => {
     expect(vue('', script)).not.toEqual([])
     expect(offences('/src/x.ts', script)).not.toEqual([])
@@ -326,6 +342,9 @@ describe('punctuation between values', () => {
     expect(vue('', "const ext = { 'text/x-c++src': 'cpp' }")).toEqual([])
     expect(vue('', 'const n = more ? `${count}+` : count')).toEqual([])
     expect(vue('', 'const kept = problem.includes(`(${reason})`)')).toEqual([])
+    expect(vue("<span>{{ t('common.quoted', { text: q }) }}</span>")).toEqual([])
+    expect(vue('<span :class="{ on }">{{ q }}</span>')).toEqual([])
+    expect(vue('', 'const s = "it\'s" + q')).toEqual([])
   })
 
   it.each([

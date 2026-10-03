@@ -41,6 +41,9 @@ export default {
   // The same word alone, in its brackets, after something drawn apart: " (30%)", with the space before it
   // that the language puts there (none before 「（30%）」).
   bracketed: '（{text}）',
+  // Words quoted as someone wrote them (a question, a reason given): “…” in English and on the Mainland, 「…」 in
+  // Hong Kong and Taiwan.
+  quoted: '“{text}”',
   // A course's code and its section where only a string will do (a label read out, a QR code's name, an
   // option in a list); a page draws them with span.app-sep instead.
   courseCode: '{code}·{section}',
