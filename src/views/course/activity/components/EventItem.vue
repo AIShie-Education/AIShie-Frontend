@@ -142,10 +142,14 @@ const subjectText = computed(() => {
       // The root, still under the name Core gave it, in the reader's words.
       return c.root && c.name === CORE_ROOT_NAME ? t('activity.subject.courseTotal') : c.name
     }
+    case 'conversation':
+      return t('activity.subject.conversation')
     case 'course':
       return ''
   }
-  return e.subject_type
+  // A kind of subject this app has no words for is left unsaid, rather than
+  // shown as Core's own name for it ("course_join_link"): the event's title says what happened.
+  return ''
 })
 
 // The assignment is shown on its own only when it is not the subject itself.

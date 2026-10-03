@@ -720,3 +720,72 @@ describe('EventItem, an agent seated as someone’s delegate', () => {
     w.unmount()
   })
 })
+
+describe('EventItem, a chat’s news', () => {
+  const chat = (type: string): CourseEvent => ({
+    seq: 50,
+    type,
+    occurred_at: '2026-10-01T10:00:00Z',
+    subject_type: 'conversation',
+    subject_id: 'cv-1',
+    action_id: 'act-ask',
+    payload: { conversation_id: 'cv-1', opener_member_id: 'm-yuki', respondent_member_id: 'm-tutor' },
+  })
+
+  // A link that says where it goes.
+  const LinkStub = defineComponent({
+    name: 'RouterLink',
+    props: { to: { type: Object, default: null } },
+    setup:
+      (p, { slots }) =>
+      () =>
+        h('a', { 'data-to': JSON.stringify(p.to) }, slots.default?.()),
+  })
+
+  it('says it is about a conversation, in words, and opens it, never Core’s name for it', async () => {
+    for (const [locale, words] of [
+      ['en', 'Conversation'],
+      ['zh-Hant', '對話'],
+      ['zh-Hans', '对话'],
+    ] as const) {
+      setLocale(locale)
+      for (const type of ['conversation.message_posted', 'conversation.opened']) {
+        setActivePinia(createPinia())
+        for (const compact of [false, true]) {
+          const w = mount(EventItem, {
+            props: { event: chat(type), courseId: COURSE, compact },
+            global: {
+              plugins: [i18n, ElementPlus],
+              stubs: { ElTooltip: TooltipStub, RouterLink: LinkStub, MemberName: true, TimeText: true },
+            },
+          })
+          await flushPromises()
+          const subject = w.find('.event-item__subject')
+          expect(subject.text()).toBe(words)
+          // In the chat, on this conversation (feed.spec.ts), in the activity and the overview's short list alike.
+          expect(JSON.parse(subject.attributes('data-to')!)).toEqual({
+            name: 'course-conversations',
+            params: { courseId: COURSE, conversationId: 'cv-1' },
+          })
+          expect(w.text()).not.toMatch(/\bconversation\b/)
+          w.unmount()
+        }
+      }
+    }
+  })
+
+  it('leaves unsaid a kind of subject it has no words for, rather than Core’s own name for it', async () => {
+    const w = mountItem({
+      seq: 51,
+      type: 'course.join_link_created',
+      occurred_at: '2026-10-01T10:00:00Z',
+      subject_type: 'course_join_link',
+      subject_id: 'l-1',
+      payload: {},
+    })
+    await flushPromises()
+    expect(w.text()).not.toContain('course_join_link')
+    expect(w.find('.event-item__subject').exists()).toBe(false)
+    w.unmount()
+  })
+})

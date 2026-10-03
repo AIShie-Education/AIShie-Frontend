@@ -60,6 +60,7 @@ export default {
     action: '操作',
     component: '评分结构',
     gradebook: '成绩册',
+    conversation: '对话',
   },
   target: {
     submission: '一份提交',

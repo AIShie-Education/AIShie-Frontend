@@ -60,6 +60,7 @@ export default {
     action: 'Action',
     component: 'Grading scheme',
     gradebook: 'Gradebook',
+    conversation: 'Conversation',
   },
   target: {
     submission: 'a submission',

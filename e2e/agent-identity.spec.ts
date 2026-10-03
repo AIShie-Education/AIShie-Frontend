@@ -30,6 +30,7 @@ const w = {
   submission: '',
   proposal: '',
   tutorId: '',
+  tutorSeat: '',
   hyphenId: '',
   helperId: '',
   botId: '',
@@ -41,6 +42,9 @@ const LONG = `Introduction to Programming weekly revision and practice tutor ${S
 const HYPHEN = `cs101-introduction-to-programming-weekly-revision-tutor-${STAMP}`
 // A student's own agent, which drafts his HW1.
 const HELPER = `Ben’s revision helper ${STAMP}`
+// The conversation he opens with the course agent of the long name.
+const LOOPS = `Loops ${STAMP}`
+const LOOPS_ASKED = `How does a while loop end? (${STAMP})`
 // An agent nobody owns, which the course seats itself to tutor him: a course agent, though nobody's delegate.
 const BOT = `Course Q&A bot ${STAMP}`
 let ada: Awaited<ReturnType<typeof registerPerson>>
@@ -87,14 +91,14 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       await call(I, 'POST', '/v1/me/agents', { display_name: LONG, hosting: 'runtime' }),
       'agent.create',
     ).actor_id
-    done(
+    w.tutorSeat = done(
       await call(I, 'POST', `/v1/courses/${c}/delegates`, {
         actor_id: w.tutorId,
         preset: 'course_tutor',
         answers_course: true,
       }),
       'member.add_delegate',
-    )
+    ).member_id
     await hostOnRuntime(w.tutorId)
     // Its course agent with a long name and no spaces, for the chat's list of agents and the course's Agents.
     w.hyphenId = done(
@@ -164,6 +168,16 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       'action.decide (hand-in)',
     )
     expect(handedIn.outcome, JSON.stringify(handedIn)).toBe('executed')
+
+    // He asks the course agent of the long name, in a conversation he names.
+    done(
+      await call(ben.token, 'POST', `/v1/courses/${c}/conversations`, {
+        respondent_member_id: w.tutorSeat,
+        title: LOOPS,
+        body: LOOPS_ASKED,
+      }),
+      'conversation.open',
+    )
 
     // The course seats an agent nobody owns to tutor him, hosted on AIshie: nobody's delegate, so Core
     // says it answers no course (answers_course is a delegate's), though it is the course's.
@@ -314,6 +328,33 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     await expect(row.locator('.action-target')).toContainText(HELPER)
     await expect(row).toContainText('Someone in the course')
     await expect(row.locator('.id-text')).toHaveCount(0)
+  })
+
+  test('a chat’s news says it is about a conversation, in words, and opens it', async ({ page }) => {
+    await signIn(page, ben)
+    await inTraditionalChinese(page)
+    await page.goto(coursePath('activity'))
+    for (const title of ['開始對話', '新訊息']) {
+      const ev = page
+        .locator('.event-item')
+        .filter({ has: page.locator('.event-item__title', { hasText: title }) })
+        .first()
+      await expect(ev.locator('.event-item__subject')).toHaveText('對話')
+      await expect(ev).not.toContainText('conversation')
+    }
+    // The course's overview's recent activity says the same.
+    await page.goto(coursePath())
+    const recent = page
+      .locator('.event-item')
+      .filter({ has: page.locator('.event-item__title', { hasText: '新訊息' }) })
+      .first()
+    await expect(recent.locator('.event-item__subject')).toHaveText('對話')
+    // It opens the chat on that conversation, beside the page.
+    await recent.locator('.event-item__subject').click()
+    const panel = page.locator('#chat-panel')
+    await expect(panel).toBeVisible()
+    await expect(panel).toContainText(LOOPS_ASKED)
+    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
   })
 
   test('the chat calls an agent the course seated itself a course agent, which answers others too', async ({
