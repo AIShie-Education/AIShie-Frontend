@@ -251,8 +251,9 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     await signIn(page, ben)
     await page.goto(coursePath('activity'))
     const who = page.locator('.event-item__who').filter({ hasText: HELPER }).first()
+    // 「(you)」 is the language's, written right after the name (common.labels.youTag).
     await expect(who).toContainText(
-      new RegExp(`${HELPER}\\s*AI\\s*proposed\\s*→\\s*Ben ${STAMP}\\s*\\(You\\)\\s*approved`),
+      new RegExp(`${HELPER}\\s*AI\\s*proposed\\s*→\\s*Ben ${STAMP}\\(you\\)\\s*approved`),
     )
     await expect(who.locator('.agent-avatar')).toHaveCount(1)
     const chip = page.locator('.activity__chip--agents')
