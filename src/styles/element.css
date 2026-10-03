@@ -696,3 +696,11 @@ html.dark .el-card {
 .el-descriptions__body .el-descriptions__table.is-bordered .el-descriptions__cell.is-vertical-content {
   padding-top: 2px;
 }
+
+/* A collapse (All permissions, the raw JSON of an action, a dialog's
+   advanced settings): its header and what it opens on lie on the card, as a
+   table does, between its lines; Element Plus gives both a white band. */
+.el-collapse {
+  --el-collapse-header-bg-color: transparent;
+  --el-collapse-content-bg-color: transparent;
+}

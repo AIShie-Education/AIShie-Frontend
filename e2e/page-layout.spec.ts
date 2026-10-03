@@ -1086,4 +1086,26 @@ test.describe('what lies on a card is pressed and seen where it is drawn', () =>
         await context.close()
       }
     })
+
+  test('a collapse lies on its card, as a table does, with no white band: white is a field’s alone', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    const grounds = (selector: string) =>
+      page.locator(selector).evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor))
+    // The overview's "All permissions", closed and open.
+    await page.goto(coursePath())
+    const all = page.locator('.perms__all .el-collapse-item__header')
+    await expect(all).toBeVisible()
+    await all.click()
+    await expect(page.locator('.perms__all .el-collapse-item__wrap')).toBeVisible()
+    for (const g of await grounds('.perms__all :is(.el-collapse-item__header, .el-collapse-item__wrap)'))
+      expect(g).toBe('rgba(0, 0, 0, 0)')
+    // An action's raw arguments.
+    await page.goto(coursePath(`actions/${d.course.proposed_grade_action}`))
+    await expect(page.locator('.el-collapse-item__header').first()).toBeVisible()
+    for (const g of await grounds('.el-collapse-item__header, .el-collapse-item__wrap'))
+      expect(g).toBe('rgba(0, 0, 0, 0)')
+  })
 })
