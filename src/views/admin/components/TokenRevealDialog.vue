@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { MCP_ENDPOINT } from '@/api/http'
 import type { ToolOut } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
 
@@ -75,7 +76,7 @@ function finish() {
         :title="t('admin.token.once')"
         class="reveal__alert"
       />
-      <el-alert v-else type="info" :closable="false" show-icon :title="t('admin.token.replayed')" class="reveal__alert" />
+      <AppNote v-else class="reveal__alert">{{ t('admin.token.replayed') }}</AppNote>
 
       <div v-if="token" class="reveal__token">
         <label class="reveal__label" for="reveal-token">{{ t('admin.token.token') }}</label>
@@ -100,7 +101,7 @@ function finish() {
         <div>
           <dt>{{ t('admin.token.expires') }}</dt>
           <dd>
-            <TimeText v-if="issued.expires_at" :value="issued.expires_at" />
+            <TimeText v-if="issued.expires_at" :value="issued.expires_at" cutoff />
             <span v-else>{{ t('admin.token.noExpiry') }}</span>
           </dd>
         </div>
@@ -139,7 +140,7 @@ function finish() {
 }
 .reveal__label {
   display: block;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
   margin-bottom: 6px;
 }
@@ -153,26 +154,26 @@ function finish() {
 }
 .reveal__input :deep(input) {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .reveal__facts {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 24px;
   margin: 16px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .reveal__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .reveal__facts dd {
   margin: 2px 0 0;
 }
 .reveal__subhead {
   margin: 20px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .reveal__snippet {
   background: var(--el-fill-color-light);
@@ -180,7 +181,7 @@ function finish() {
   padding: 10px 12px;
 }
 .reveal__snippet-label {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .reveal__snippet-label + .reveal__code {
@@ -194,7 +195,7 @@ function finish() {
 }
 .reveal__code code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-all;
   min-width: 0;
 }

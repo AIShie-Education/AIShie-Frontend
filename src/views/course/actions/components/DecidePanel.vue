@@ -19,6 +19,7 @@ import type { ApiError, WriteOutcome } from '@/api/http'
 import { isAboutAction, reasonText, useJudgeRules, type ActionRow } from './actionText'
 import type { Decision, Done } from './decide'
 import { useLookup, useSpecs } from './lookups'
+import { formatList } from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
@@ -70,11 +71,8 @@ const deciders = computed(() => {
     )
     .map((m) => m.display_name)
   if (!names.length || names.length > MAX_NAMED) return t('actions.decision.teachingStaff')
-  try {
-    return new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(names)
-  } catch {
-    return names.join(', ')
-  }
+  // Read again when the language changes: the list's "and" is the language's.
+  return (locale.value, formatList(names))
 })
 const blockedText = computed(() => {
   const b = blocked.value ?? approveBlocked.value
@@ -272,7 +270,7 @@ function tell(
       ElNotification({
         type: 'error',
         title: t('actions.outcome.failed'),
-        message: error ? `${t('actions.outcome.coreSays')}: ${error.message}` : '',
+        message: error ? t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) : '',
         duration: 8000,
       })
       break
@@ -428,16 +426,16 @@ function tell(
   --el-button-active-border-color: var(--app-indigo);
   --el-button-active-text-color: var(--app-indigo);
   box-shadow: inset 0 0 0 1px var(--app-indigo);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .decide-panel__blocked {
   display: flex;
   align-items: flex-start;
   gap: 6px;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .decide-panel__blocked .el-icon {
   margin-top: 2px;
@@ -454,8 +452,8 @@ function tell(
 }
 .decide-panel__hint {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .decide-panel__hint--owner {

@@ -6,6 +6,8 @@
 // no result was left out, and the rest re-normalised.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Document, Folder } from '@element-plus/icons-vue'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import { formatScore, fractionPercent, shares, type WorkingItem } from './grading'
 
@@ -27,9 +29,9 @@ function share(i: WorkingItem): string {
           <span v-if="name(row)">{{ name(row) }}</span>
           <IdText v-else :id="row.id" />
         </span>
-        <el-tag size="small" effect="plain" type="info" class="working__kind">
+        <AppTag variant="outline" :icon="row.kind === 'assignment' ? Document : Folder" class="working__kind">
           {{ row.kind === 'assignment' ? t('grades.working.kindAssignment') : t('grades.working.kindComponent') }}
-        </el-tag>
+        </AppTag>
       </template>
     </el-table-column>
     <el-table-column :label="t('grades.working.fraction')" min-width="110" align="right">
@@ -54,7 +56,7 @@ function share(i: WorkingItem): string {
     </el-table-column>
     <el-table-column min-width="100">
       <template #default="{ row }">
-        <el-tag v-if="row.dropped" size="small" type="info">{{ t('grades.working.dropped') }}</el-tag>
+        <AppTag v-if="row.dropped">{{ t('grades.working.dropped') }}</AppTag>
       </template>
     </el-table-column>
   </el-table>
@@ -76,6 +78,6 @@ function share(i: WorkingItem): string {
 }
 .working__share {
   margin-left: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

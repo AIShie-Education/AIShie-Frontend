@@ -113,7 +113,7 @@ describe('RuntimeAdminView', () => {
     found.info = null
     found.error = new RuntimeError({ status: 404, code: 'not_found', message: 'no route', reason: 'not_found' })
     const { w } = await page()
-    expect(w.find('.runtime-admin__none .el-result__title').text()).toBe('This server has no agent service')
+    expect(w.find('.runtime-admin__none .app-empty__title').text()).toBe('This server has no agent service')
     expect(w.find('.runtime-admin__retry').exists()).toBe(false)
     expect(w.find('.el-tabs').exists()).toBe(false)
     expect(s.calls.filter((c) => c.url.startsWith('/runtime/'))).toHaveLength(0)

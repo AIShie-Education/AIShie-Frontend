@@ -108,8 +108,8 @@ const sub = computed(() =>
 }
 .course-crumbs__code {
   flex: 0 0 auto;
-  font-size: 13px;
-  font-weight: var(--app-weight-strong, 600);
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   color: var(--app-indigo);
 }
@@ -119,7 +119,7 @@ const sub = computed(() =>
   text-overflow: ellipsis;
 }
 .course-crumbs [aria-current='page'] {
-  font-weight: var(--app-weight-strong, 600);
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink);
 }
 /* On a phone: the course's code alone, then the tab. Where they do not all fit (a long code, a narrow phone),

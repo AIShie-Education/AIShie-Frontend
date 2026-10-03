@@ -7,6 +7,7 @@ import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { ActionSummary, GradeSummary, SubmissionSummary } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
@@ -187,25 +188,23 @@ function onGraded() {
           </router-link>
         </PageHeader>
 
+        <AppNote v-if="s.state === 'draft'" class="submission-view__notice">
+          {{ own ? t('submissions.detail.notice.draftOwn') : t('submissions.detail.notice.draftStaff') }}
+        </AppNote>
         <el-alert
-          v-if="s.state === 'draft' || s.state === 'missing'"
-          :type="s.state === 'missing' ? 'warning' : 'info'"
+          v-else-if="s.state === 'missing'"
+          type="warning"
           :closable="false"
           show-icon
           class="submission-view__notice"
-        >
-          {{
-            s.state === 'draft'
-              ? own
-                ? t('submissions.detail.notice.draftOwn')
-                : t('submissions.detail.notice.draftStaff')
-              : own
-                ? t('submissions.detail.notice.missingOwn')
-                : gradeList.length
-                  ? t('submissions.detail.notice.missingGraded')
-                  : t('submissions.detail.notice.missingStaff')
-          }}
-        </el-alert>
+          :title="
+            own
+              ? t('submissions.detail.notice.missingOwn')
+              : gradeList.length
+                ? t('submissions.detail.notice.missingGraded')
+                : t('submissions.detail.notice.missingStaff')
+          "
+        />
 
         <section class="app-card">
           <dl class="facts">
@@ -251,7 +250,7 @@ function onGraded() {
             <div class="facts__item">
               <dt>{{ t('submissions.detail.facts.dueAt') }}</dt>
               <dd>
-                <TimeText v-if="a?.due_at" :value="a.due_at" />
+                <TimeText v-if="a?.due_at" :value="a.due_at" cutoff />
                 <span v-else class="app-muted">{{ a ? t('submissions.detail.noDue') : '—' }}</span>
               </dd>
             </div>
@@ -379,7 +378,7 @@ function onGraded() {
   }
 }
 .facts__item dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
@@ -392,7 +391,7 @@ function onGraded() {
   overflow-wrap: anywhere;
 }
 .facts__aside {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .facts a {
   text-decoration: none;
@@ -405,8 +404,8 @@ function onGraded() {
 }
 .submission-view__subhead {
   margin: 20px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .submission-view__files {
   list-style: none;
@@ -419,7 +418,7 @@ function onGraded() {
 
 .submission-view__none {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .attempts {
   list-style: none;
@@ -452,7 +451,7 @@ function onGraded() {
 }
 .attempts__current {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-primary);
 }
 </style>

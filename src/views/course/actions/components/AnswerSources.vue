@@ -8,6 +8,7 @@
 // the line says on hover, focus or a tap. An empty list says it relied on
 // none (a neutral pill, as the chat shows); without one the answer does not
 // say, and nothing is shown.
+import AppTag from '@/components/AppTag.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -40,9 +41,9 @@ const n = computed(() => {
       {{ t('actions.answer.sources', { n }, n) }}
     </p>
   </el-tooltip>
-  <el-tag v-else-if="n === 0" type="info" size="small" disable-transitions class="answer-sources">
+  <AppTag v-else-if="n === 0" class="answer-sources">
     {{ t('actions.answer.noSources') }}
-  </el-tag>
+  </AppTag>
 </template>
 
 <style scoped>
@@ -51,7 +52,7 @@ const n = computed(() => {
 }
 p.answer-sources {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>

@@ -27,7 +27,7 @@ const glyph = computed(() => FRAMES[frame.value])
   flex-shrink: 0;
   width: 1em;
   text-align: center;
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   line-height: 1;
   color: var(--app-light);
 }

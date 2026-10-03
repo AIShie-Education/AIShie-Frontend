@@ -15,6 +15,9 @@ import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -122,10 +125,6 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
 <template>
   <div class="course-agents">
     <PageHeader :title="t('courseAgents.title')" :subtitle="t('courseAgents.subtitle')">
-      <el-button :loading="members.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <template v-if="canManage && canAdd">
         <el-tooltip :content="t('common.archivedCourse')" :disabled="course.writable" placement="bottom">
           <el-button type="primary" :disabled="!course.writable" @click="addOpen = true">
@@ -150,27 +149,25 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
     />
 
     <template v-else>
-      <el-alert type="info" show-icon :closable="false" class="course-agents__notice">
+      <AppNote class="course-agents__notice">
         <template #title>{{ t('courseAgents.intro.title') }}</template>
         {{ t('courseAgents.intro.body') }}
-      </el-alert>
+      </AppNote>
 
-      <el-alert
+      <AppNote
         v-if="proposedAction"
-        type="info"
-        show-icon
-        class="course-agents__notice"
         :title="t('courseAgents.proposed')"
+        class="course-agents__notice"
         @close="proposedAction = null"
+        closable
       >
         <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
-          {{ t('members.proposed.view') }}
-        </router-link>
-        ·
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+          {{ t('members.proposed.view') }} </router-link
+        >{{ t('common.sep')
+        }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
           t('members.proposed.mine')
         }}</router-link>
-      </el-alert>
+      </AppNote>
 
       <el-alert
         v-if="requests.data.value"
@@ -197,6 +194,8 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
               {{ t(`courseAgents.groups.${g.group}.title`) }}
               <span class="app-muted course-agents__count">{{ g.rows.length }}</span>
             </span>
+            <!-- The agents are read once for every group: their first card says so. -->
+            <RefreshButton v-if="g === groups[0]" :loading="members.loading.value" @click="refresh" />
           </h2>
           <p class="app-form-hint course-agents__help">{{ t(`courseAgents.groups.${g.group}.help`) }}</p>
           <AgentList
@@ -210,11 +209,11 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
             @changed="onChanged"
             @log="openLog"
           />
-          <el-empty v-else :image-size="64" :description="t(`courseAgents.groups.${g.group}.empty`)">
+          <AppEmpty v-else :text="t(`courseAgents.groups.${g.group}.empty`)">
             <el-button v-if="canManage && canAdd && course.writable" type="primary" plain @click="addOpen = true">
               {{ t('courseAgents.add') }}
             </el-button>
-          </el-empty>
+          </AppEmpty>
           <p v-if="g.group === 'course' && g.rows.length" class="app-form-hint course-agents__foot">
             {{ t('courseAgents.replies.help') }}
           </p>
@@ -248,7 +247,7 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
 }
 .course-agents__notice :deep(.el-alert__description),
 .course-agents__notice :deep(.el-alert__content) {
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .course-agents__heading {
   display: inline-flex;
@@ -257,7 +256,7 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
 }
 .course-agents__count {
   font-weight: normal;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .course-agents__help {
   margin: -4px 0 8px;

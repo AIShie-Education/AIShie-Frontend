@@ -102,7 +102,15 @@ async function submit() {
             <el-radio value="never">{{ t('agents.issue.never') }}</el-radio>
           </el-radio-group>
           <div v-if="form.expiry === 'days'" class="issue-days">
-            <el-input-number v-model="form.days" :min="1" :max="3650" :step="1" :precision="0" step-strictly />
+            <el-input-number
+              v-model="form.days"
+              :min="1"
+              :max="3650"
+              :step="1"
+              :precision="0"
+              step-strictly
+              controls-position="right"
+            />
             <span>{{ t('agents.issue.days') }}</span>
           </div>
           <el-alert
@@ -126,7 +134,7 @@ async function submit() {
 <style scoped>
 .issue-intro {
   margin: 0 0 16px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .issue-alert {

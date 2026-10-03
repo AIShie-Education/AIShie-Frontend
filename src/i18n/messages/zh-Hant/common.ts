@@ -34,10 +34,22 @@ export default {
   },
   // A label and its value, as the language writes them: "Model calls: 380", 「模型呼叫：380」.
   pair: '{label}：{value}',
+  // What goes between the parts of a line of facts about one thing: "PDF · 1.2 MB", "Yuki · Homework 1".
+  sep: ' · ',
+  // A word about something, after it in brackets: "Due 2026-10-08 23:59 (in 5 days)".
+  aside: '{text}（{aside}）',
+  // The same word alone, in its brackets, after something drawn apart: " (30%)", with the space before it
+  // that the language puts there (none before 「（30%）」).
+  bracketed: '（{text}）',
+  // A course's code and its section where only a string will do (a label read out, a QR code's name, an
+  // option in a list); a page draws them with span.app-sep instead.
+  courseCode: '{code}·{section}',
   labels: {
     id: 'ID',
     scoped: '受範圍限制',
     scopedHelp: '只限於席位範圍內的學生與作業',
+    // What a scoped permission covers, then that the seat's scope bounds it.
+    scopedTip: '{help}——{scoped}',
     pasteMemberId: '貼上成員 ID',
     changed: '已更改',
     name: '名稱',
@@ -54,6 +66,8 @@ export default {
     yes: '是',
     no: '否',
     optional: '選填',
+    // After a field's label, its own word, with the space the language puts before it: "Email (optional)".
+    optionalTag: '（選填）',
     loading: '載入中…',
     empty: '尚無內容',
     all: '全部',
@@ -188,7 +202,9 @@ export default {
     ago: '{t}前',
     due: '截止{t}',
     noDue: '無截止日期',
-    dailyReset: '{zone} {time}',
+    zoned: '{zone} {time}',
+    // A cut-off with its zone, and how far off it is: "2026-10-08 23:59 (Hong Kong Standard Time), in 5 days".
+    cutoff: '{at}（{rel}）',
   },
   pagination: {
     loadMore: '載入更多',
@@ -211,7 +227,6 @@ export default {
     limitVersion: '最多{files}個檔案，每個最大{size}，合共最大{total}',
     list: '上傳中的檔案',
     progressOf: '「{name}」的上傳進度',
-    percent: '{n}%',
     of: '{loaded}／{total}',
     speed: '{speed}/秒',
     left: {
@@ -255,7 +270,7 @@ export default {
     },
     announce: {
       added: '已加入{n}個檔案。',
-      progress: '「{name}」已上傳{percent}%。',
+      progress: '「{name}」已上傳{percent}。',
       done: '「{name}」已上傳。',
       failed: '「{name}」未能上傳：{reason}',
       cancelled: '已取消上傳「{name}」。',

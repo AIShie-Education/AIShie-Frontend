@@ -19,6 +19,8 @@
 // hosted yet needs host_by_id and a way to give it a model, own_key or
 // school_key, since a hosted agent without a model never runs. An agent
 // hosted already shows as hosted whatever the features say.
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -174,9 +176,9 @@ watch(
     <section v-else class="app-card hosting-offer">
       <h2 class="app-card__title hosting-offer__title">
         <span>{{ t('hosting.offer.title') }}</span>
-        <el-tag type="warning" effect="plain" disable-transitions class="hosting-offer__tag">
+        <AppTag tone="wait" size="default" class="hosting-offer__tag">
           {{ t('hosting.offer.notHosted') }}
-        </el-tag>
+        </AppTag>
       </h2>
       <el-alert
         v-if="!rt.available.value"
@@ -191,14 +193,9 @@ watch(
           {{ t(canChooseSchool ? 'hosting.offer.bodySchool' : 'hosting.offer.body') }}
         </p>
         <div v-if="!listed" v-loading="true" class="hosting-offer__loading" />
-        <el-alert
-          v-else-if="accountRefused"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="t('hosting.unavailable.account')"
-          class="hosting-offer__unavailable"
-        />
+        <AppNote v-else-if="accountRefused" class="hosting-offer__unavailable">
+          {{ t('hosting.unavailable.account') }}
+        </AppNote>
         <el-alert
           v-else-if="loadError"
           type="error"
@@ -270,8 +267,8 @@ watch(
 }
 .hosting-offer__intro {
   margin: -4px 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .hosting-offer__loading {
@@ -291,7 +288,7 @@ watch(
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 </style>

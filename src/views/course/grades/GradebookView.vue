@@ -17,6 +17,7 @@ import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { EditPen, MagicStick, SortDown } from '@element-plus/icons-vue'
 import { read, type ToolOut } from '@/api/http'
 import type { Decimal, GradeSummary, GradebookLine } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
@@ -24,6 +25,9 @@ import { useContainerNarrow, useTableRelayout } from '@/composables/useContainer
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isUuid, shortId } from '@/utils/format'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -43,6 +47,7 @@ import {
   shares,
   useGradeLookups,
 } from './components/grading'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string; studentMemberId?: string }>()
 const { t } = useI18n()
@@ -356,7 +361,7 @@ function overrideDetail(g: GradeSummary | undefined): string {
   const parts: string[] = []
   if (o.by_member_id) parts.push(t('grades.override.by', { name: course.memberName(o.by_member_id) ?? '' }))
   if (o.reason) parts.push(t('grades.override.why', { reason: o.reason }))
-  return parts.join(' · ')
+  return joinParts(parts)
 }
 
 /** Undoing final grades (grade.undo_ungraded_as_zero) is posting's own undo: grade_post, over the whole course. */
@@ -460,14 +465,11 @@ watch(
           </div>
         </div>
       </div>
-      <el-button :disabled="!student" :loading="book.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
+      <RefreshButton :loading="book.loading.value" :disabled="!student" @click="refresh" />
     </section>
 
     <section v-if="!student" class="app-card">
-      <el-empty :description="t('grades.gradebook.pickFirst')" />
+      <AppEmpty :text="t('grades.gradebook.pickFirst')" page />
     </section>
 
     <!-- Reloading the same student's figures keeps them under a spinner; another student's are not shown. -->
@@ -486,7 +488,9 @@ watch(
           <div class="gradebook__total-main">
             <div class="gradebook__total-label">
               {{ t('grades.courseTotal') }}
-              <span v-if="!isOwn && !mine" class="gradebook__who"> · <MemberName :id="student" /></span>
+              <span v-if="!isOwn && !mine" class="gradebook__who"
+                >{{ t('common.sep') }}<MemberName :id="student"
+              /></span>
             </div>
             <div class="gradebook__total-value" :class="{ 'is-overridden': rootRow?.overridePercent }">
               {{ rootRow?.overridePercent ?? formatPct(root.percent) }}
@@ -495,21 +499,23 @@ watch(
               {{ t('grades.override.computed', { value: formatPct(root.percent) }) }}
             </div>
             <div class="gradebook__total-tags">
-              <el-tag v-if="root.fraction === null || root.fraction === undefined" type="info">
+              <AppTag v-if="root.fraction === null || root.fraction === undefined" size="default">
                 {{ t('grades.gradebook.nothingYet') }}
-              </el-tag>
-              <el-tag v-else-if="!root.complete" type="warning">{{ t('grades.gradebook.soFar') }}</el-tag>
-              <el-tag v-else type="success">{{ t('grades.gradebook.complete') }}</el-tag>
-              <el-tag v-if="shownWhatIf" type="danger" effect="plain">{{ t('grades.gradebook.whatIfTag') }}</el-tag>
+              </AppTag>
+              <AppTag v-else-if="!root.complete" tone="wait" size="default">{{ t('grades.gradebook.soFar') }}</AppTag>
+              <AppTag v-else tone="done" size="default">{{ t('grades.gradebook.complete') }}</AppTag>
+              <AppTag v-if="shownWhatIf" variant="outline" :icon="MagicStick" size="default">{{
+                t('grades.gradebook.whatIfTag')
+              }}</AppTag>
               <el-tooltip
                 v-if="rootRow?.overridePercent"
                 :content="overrideDetail(rootSnapshot)"
                 :disabled="!overrideDetail(rootSnapshot)"
                 placement="top"
               >
-                <el-tag type="primary" effect="dark" class="gradebook__overridden" tabindex="0">
+                <AppTag variant="outline" :icon="EditPen" size="default" class="gradebook__overridden" tabindex="0">
                   {{ t('grades.override.overridden') }}
-                </el-tag>
+                </AppTag>
               </el-tooltip>
             </div>
             <div v-if="grader && rootRow" class="gradebook__total-actions">
@@ -639,26 +645,22 @@ watch(
                               n: formatScore(row.weight),
                             })
                           : formatScore(row.weight)
-                      }}
-                      <template v-if="shareText(row) !== null">({{ shareText(row) }})</template>
+                      }}<template v-if="shareText(row) !== null">{{
+                        t('common.bracketed', { text: shareText(row) })
+                      }}</template>
                     </span>
-                    <el-tag v-if="row.dropped" size="small" type="info">{{ t('grades.working.dropped') }}</el-tag>
+                    <AppTag v-if="row.dropped">{{ t('grades.working.dropped') }}</AppTag>
                     <template v-if="row.kind === 'component'">
-                      <el-tag
-                        v-if="row.fraction === null || row.fraction === undefined"
-                        size="small"
-                        type="info"
-                        effect="plain"
-                      >
+                      <AppTag v-if="row.fraction === null || row.fraction === undefined">
                         {{ t('grades.gradebook.nothingYet') }}
-                      </el-tag>
-                      <el-tag v-else-if="!row.complete" size="small" type="warning" effect="plain">
+                      </AppTag>
+                      <AppTag v-else-if="!row.complete" tone="wait">
                         {{ t('grades.gradebook.incomplete') }}
-                      </el-tag>
+                      </AppTag>
                     </template>
-                    <el-tag v-if="row.dropLowest > 0" size="small" effect="plain">{{
+                    <AppTag v-if="row.dropLowest > 0" variant="outline" :icon="SortDown">{{
                       t('grades.gradebook.dropLowest', { n: row.dropLowest })
-                    }}</el-tag>
+                    }}</AppTag>
                     <TotalMenu
                       v-if="grader && row.kind === 'component' && !row.isRoot"
                       :course-id="courseId"
@@ -698,9 +700,9 @@ watch(
                     </span>
                   </el-tooltip>
                   <div class="gradebook__computed">
-                    <el-tag size="small" type="primary" effect="plain" disable-transitions>
+                    <AppTag variant="outline" :icon="EditPen">
                       {{ t('grades.override.overridden') }}
-                    </el-tag>
+                    </AppTag>
                     {{ t('grades.override.computed', { value: row.percent ?? '—' }) }}
                   </div>
                 </template>
@@ -748,22 +750,17 @@ watch(
             <el-table-column v-if="!narrow" :label="t('grades.gradebook.status')" min-width="190">
               <template #default="{ row }">
                 <span class="gradebook__tags">
-                  <el-tag v-if="row.dropped" size="small" type="info">{{ t('grades.working.dropped') }}</el-tag>
+                  <AppTag v-if="row.dropped">{{ t('grades.working.dropped') }}</AppTag>
                   <template v-if="row.kind === 'component'">
-                    <el-tag
-                      v-if="row.fraction === null || row.fraction === undefined"
-                      size="small"
-                      type="info"
-                      effect="plain"
-                    >
+                    <AppTag v-if="row.fraction === null || row.fraction === undefined">
                       {{ t('grades.gradebook.nothingYet') }}
-                    </el-tag>
-                    <el-tag v-else-if="!row.complete" size="small" type="warning" effect="plain">
+                    </AppTag>
+                    <AppTag v-else-if="!row.complete" tone="wait">
                       {{ t('grades.gradebook.incomplete') }}
-                    </el-tag>
-                    <el-tag v-if="row.dropLowest > 0" size="small" effect="plain">
+                    </AppTag>
+                    <AppTag v-if="row.dropLowest > 0" variant="outline" :icon="SortDown">
                       {{ t('grades.gradebook.dropLowest', { n: row.dropLowest }) }}
-                    </el-tag>
+                    </AppTag>
                   </template>
                 </span>
               </template>
@@ -829,7 +826,7 @@ watch(
 }
 .gradebook__control-label {
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   white-space: nowrap;
 }
 .gradebook__control .app-form-hint {
@@ -853,7 +850,7 @@ watch(
   flex: 0 0 auto;
 }
 .gradebook__total-label {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .gradebook__who {
@@ -862,8 +859,8 @@ watch(
   gap: 4px;
 }
 .gradebook__total-value {
-  font-size: 40px;
-  font-weight: 650;
+  font-size: var(--app-text-4xl);
+  font-weight: var(--app-heading-weight);
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
@@ -872,7 +869,7 @@ watch(
   color: var(--el-color-primary);
 }
 .gradebook__computed {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   display: inline-flex;
   align-items: center;
@@ -903,8 +900,8 @@ watch(
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
@@ -933,7 +930,7 @@ watch(
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .gradebook__name {
   display: inline-flex;
@@ -956,11 +953,11 @@ watch(
   font-variant-numeric: tabular-nums;
 }
 .gradebook__pct {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .gradebook__share {
   margin-left: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .gradebook__tags {
   display: inline-flex;
@@ -996,7 +993,7 @@ watch(
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .gradebook__table :deep(.is-dropped) {
   color: var(--el-text-color-secondary);
@@ -1005,7 +1002,7 @@ watch(
   text-decoration: line-through;
 }
 .gradebook__table :deep(.is-root) {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .gradebook__legend {
   margin: 12px 0 0;

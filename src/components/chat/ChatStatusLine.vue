@@ -43,7 +43,7 @@ const elapsed = computed(() => {
     <ChatSpinner class="chat-status__glyph" />
     <span class="chat-status__label">{{ label }}</span>
     <span v-if="elapsed" class="chat-status__time" aria-hidden="true">{{ elapsed }}</span>
-    <span v-if="sub" class="chat-status__sub">· {{ sub }}</span>
+    <span v-if="sub" class="chat-status__sub">{{ t('common.sep').trimStart() }}{{ sub }}</span>
   </div>
 </template>
 
@@ -55,8 +55,8 @@ const elapsed = computed(() => {
   gap: 2px 7px;
   min-height: 24px;
   padding: 2px 2px;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-ui);
   color: var(--app-ink-3);
 }
 /* The words, with a light passing over them, as an agent chat's working line. */
@@ -80,7 +80,7 @@ const elapsed = computed(() => {
   color: var(--el-text-color-secondary);
 }
 .chat-status__sub {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 @keyframes chat-status-shine {

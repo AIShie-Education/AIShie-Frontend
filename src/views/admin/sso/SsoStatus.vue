@@ -6,6 +6,9 @@
 // to public ones (issuer_address_not_allowed); whether it is the operator's,
 // whether it links by email, and whether its secret waits to be sealed again
 // under the server's newer key.
+import { Message } from '@element-plus/icons-vue'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import OperatorDetail from '../components/OperatorDetail.vue'
@@ -34,38 +37,18 @@ const olderKey = computed(() => sealedByOlderKey(props.provider, props.secretsKe
 <template>
   <div class="sso-status">
     <div class="sso-status__tags">
-      <el-tag
-        :type="TAG[status] ?? 'info'"
-        size="small"
-        disable-transitions
-        class="sso-status__status"
-        :data-status="status"
-      >
+      <AppTag :tone="toneOf(TAG[status] ?? 'info')" class="sso-status__status" :data-status="status">
         {{ statusText }}
-      </el-tag>
-      <el-tag
-        v-if="isOperator(provider)"
-        type="info"
-        effect="plain"
-        size="small"
-        disable-transitions
-        class="sso-status__operator"
-      >
+      </AppTag>
+      <AppTag v-if="isOperator(provider)" variant="outline" class="sso-status__operator">
         {{ t('ssoAdmin.list.operator') }}
-      </el-tag>
-      <el-tag
-        v-if="provider.link_by_email"
-        type="primary"
-        effect="plain"
-        size="small"
-        disable-transitions
-        class="sso-status__by-email"
-      >
+      </AppTag>
+      <AppTag v-if="provider.link_by_email" variant="outline" :icon="Message" class="sso-status__by-email">
         {{ t('ssoAdmin.list.linksByEmail') }}
-      </el-tag>
-      <el-tag v-if="olderKey" type="warning" effect="plain" size="small" disable-transitions class="sso-status__older-key">
+      </AppTag>
+      <AppTag v-if="olderKey" tone="wait" class="sso-status__older-key">
         {{ t('ssoAdmin.list.olderKey') }}
-      </el-tag>
+      </AppTag>
     </div>
     <span v-if="isOperator(provider)" class="sso-status__why"
       >{{ t('ssoAdmin.list.operatorWhy') }}<OperatorDetail :text="t('ssoAdmin.flags.oidc')"
@@ -93,8 +76,8 @@ const olderKey = computed(() => sealedByOlderKey(props.provider, props.secretsKe
   gap: 4px;
 }
 .sso-status__why {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }

@@ -20,6 +20,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { RuntimeSettingsPatch, TranscriptionSettings } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import DailyReset from '@/components/DailyReset.vue'
 import TimeText from '@/components/TimeText.vue'
 import OperatorDetail from '../components/OperatorDetail.vue'
@@ -221,9 +223,9 @@ async function withdraw() {
   <section class="app-card transcription-card">
     <h2 class="app-card__title transcription-card__title">
       <span>{{ t('runtimeAdmin.transcription.title') }}</span>
-      <el-tag v-if="tr" :type="STATE_TAG[tr.state] ?? 'info'" disable-transitions class="transcription-card__state">
+      <AppTag v-if="tr" size="default" :tone="toneOf(STATE_TAG[tr.state] ?? 'info')" class="transcription-card__state">
         {{ stateText }}
-      </el-tag>
+      </AppTag>
     </h2>
     <p class="transcription-card__intro">{{ t('runtimeAdmin.transcription.intro') }}</p>
 
@@ -289,15 +291,13 @@ async function withdraw() {
                   <span class="transcription-card__option-model">{{ o.model }}</span>
                 </el-option>
               </el-select>
-              <el-tag
+              <AppTag
                 v-if="tr.offer_status && tr.offer_status !== 'ok' && form.offer === tr.offer"
-                :type="OFFER_STATUS_TAG[tr.offer_status] ?? 'warning'"
-                size="small"
-                disable-transitions
+                :tone="toneOf(OFFER_STATUS_TAG[tr.offer_status] ?? 'warning')"
                 class="transcription-card__offer-status"
               >
                 {{ t(`runtimeAdmin.transcription.offerStatus.${tr.offer_status}`) }}
-              </el-tag>
+              </AppTag>
             </div>
             <p class="app-form-hint">{{ t('runtimeAdmin.transcription.offerHint') }}</p>
           </el-form-item>
@@ -377,14 +377,12 @@ async function withdraw() {
         <div class="transcription-card__credential" :data-credential="tr.credential.status">
           <h3 class="transcription-card__subtitle">{{ t('runtimeAdmin.transcription.credential.title') }}</h3>
           <div class="transcription-card__credential-row">
-            <el-tag
-              :type="CREDENTIAL_TAG[tr.credential.status] ?? 'info'"
-              size="small"
-              disable-transitions
+            <AppTag
+              :tone="toneOf(CREDENTIAL_TAG[tr.credential.status] ?? 'info')"
               class="transcription-card__credential-status"
             >
               {{ t(`runtimeAdmin.transcription.credential.status.${tr.credential.status}`) }}
-            </el-tag>
+            </AppTag>
             <code v-if="tr.credential.hint" class="transcription-card__hint">{{ tr.credential.hint }}</code>
             <span v-if="tr.credential.status !== 'none'" class="transcription-card__seen">
               <template v-if="tr.credential.last_ok_at">
@@ -468,6 +466,15 @@ async function withdraw() {
         <!-- Today -->
         <div class="transcription-card__today">
           <h3 class="transcription-card__subtitle">{{ t('runtimeAdmin.transcription.today.title') }}</h3>
+          <!-- The runtime's day, on the reader's clock: when it ends and the counts start again. -->
+          <i18n-t
+            keypath="runtimeAdmin.transcription.today.reset"
+            tag="p"
+            scope="global"
+            class="app-form-hint transcription-card__reset"
+          >
+            <template #reset><DailyReset /></template>
+          </i18n-t>
           <dl class="transcription-card__stats">
             <div>
               <dt>{{ t('runtimeAdmin.transcription.today.pages') }}</dt>
@@ -515,8 +522,8 @@ async function withdraw() {
 }
 .transcription-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .transcription-card__not-offered {
@@ -524,8 +531,8 @@ async function withdraw() {
   align-items: flex-start;
   gap: 8px;
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .transcription-card__not-offered .el-icon {
@@ -555,8 +562,8 @@ async function withdraw() {
   margin-bottom: 20px;
 }
 .transcription-card__switch-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
 }
 .transcription-card__switch .app-form-hint {
   margin: 2px 0 0;
@@ -574,7 +581,7 @@ async function withdraw() {
 }
 .transcription-card__option-model {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .transcription-card__numbers {
@@ -601,8 +608,8 @@ async function withdraw() {
 }
 .transcription-card__subtitle {
   margin: 20px 0 10px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .transcription-card__credential,
 .transcription-card__today {
@@ -614,10 +621,10 @@ async function withdraw() {
   flex-wrap: wrap;
   gap: 6px 10px;
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .transcription-card__hint {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-all;
 }
 .transcription-card__seen {
@@ -625,7 +632,7 @@ async function withdraw() {
 }
 .transcription-card__set {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .transcription-card__stats {
   display: grid;
@@ -634,22 +641,26 @@ async function withdraw() {
   margin: 0 0 8px;
 }
 .transcription-card__stats dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .transcription-card__stats dd {
   margin: 2px 0 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--app-text-xl);
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .transcription-card__of {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
 .transcription-card__changed {
   margin: 16px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
+}
+/* The line under Today saying when its counts start again. */
+.transcription-card__reset {
+  margin: -6px 0 10px;
 }
 </style>

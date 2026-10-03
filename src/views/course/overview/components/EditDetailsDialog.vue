@@ -12,6 +12,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 
 const open = defineModel<boolean>({ required: true })
@@ -137,14 +138,7 @@ async function submit() {
       </p>
     </section>
 
-    <el-alert
-      v-if="needsApproval"
-      type="info"
-      :closable="false"
-      show-icon
-      class="details__approval"
-      :title="t('overview.details.approvalNote')"
-    />
+    <AppNote v-if="needsApproval" class="details__approval">{{ t('overview.details.approvalNote') }}</AppNote>
 
     <template #footer>
       <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>
@@ -168,8 +162,8 @@ async function submit() {
   align-items: center;
   gap: 6px;
   margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .details__facts {
   display: grid;
@@ -178,7 +172,7 @@ async function submit() {
   margin: 0;
 }
 .details__facts dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .details__facts dd {

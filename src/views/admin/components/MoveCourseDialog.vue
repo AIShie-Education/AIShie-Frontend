@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { useWrite } from '@/composables/useWrite'
 import DepartmentPicker from '../departments/DepartmentPicker.vue'
+import { courseCodeText } from '@/utils/parts'
 
 const open = defineModel<boolean>({ required: true })
 const props = defineProps<{ course: { id: string; dept_id: string; code: string; section: string } }>()
@@ -20,7 +21,7 @@ watch(open, (v) => {
   if (v) to.value = ''
 })
 const options = computed(() => departments.courseDestinations(props.course.dept_id))
-const code = computed(() => `${props.course.code}${props.course.section ? ` · ${props.course.section}` : ''}`)
+const code = computed(() => courseCodeText(props.course.code, props.course.section))
 const where = computed(() => departments.pathLabel(props.course.dept_id))
 
 async function save() {
@@ -59,7 +60,7 @@ async function save() {
 <style scoped>
 .move-course__intro {
   margin: 0 0 16px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .move-course__where {
   display: flex;
@@ -67,16 +68,16 @@ async function save() {
   gap: 4px 10px;
   align-items: baseline;
   margin-bottom: 16px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .move-course__label {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .move-course__to {
   display: block;
   margin-bottom: 6px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
 }
 </style>

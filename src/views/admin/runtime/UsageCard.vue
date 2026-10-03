@@ -13,11 +13,15 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { OwnerPlanUse } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppTag from '@/components/AppTag.vue'
 import DailyReset from '@/components/DailyReset.vue'
 import IdText from '@/components/IdText.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import TimeText from '@/components/TimeText.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
-import { formatMoney } from '@/utils/format'
+import { formatCount, formatMoney } from '@/utils/format'
+import { joinParts } from '@/utils/parts'
 
 const { t } = useI18n()
 // A phone's layout, an owner's model calls and cost under their name, where the
@@ -51,15 +55,7 @@ const schoolSpent = computed(() => {
   <section class="app-card usage-card">
     <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.usage.title') }}</span>
-      <el-button
-        circle
-        :loading="usage.loading.value"
-        :aria-label="t('common.actions.refresh')"
-        class="usage-card__refresh"
-        @click="usage.reload"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="usage.loading.value" class="usage-card__refresh" @click="usage.reload" />
     </h2>
     <RuntimeAsync
       :loading="usage.loading.value && !data"
@@ -76,18 +72,20 @@ const schoolSpent = computed(() => {
         <dl class="usage-card__totals">
           <div class="usage-card__total">
             <dt>{{ t('runtimeAdmin.usage.answers') }}</dt>
-            <dd class="usage-card__answers" :class="{ 'is-spent': schoolSpent }">{{ data.total.answers }}</dd>
+            <dd class="usage-card__answers" :class="{ 'is-spent': schoolSpent }">
+              {{ formatCount(data.total.answers) }}
+            </dd>
             <dd class="usage-card__of">
               {{
                 data.limits.per_day !== null
-                  ? t('runtimeAdmin.usage.ofDay', { n: data.limits.per_day })
+                  ? t('runtimeAdmin.usage.ofDay', { n: formatCount(data.limits.per_day) })
                   : t('runtimeAdmin.usage.noCeiling')
               }}
             </dd>
           </div>
           <div class="usage-card__total">
             <dt>{{ t('runtimeAdmin.usage.modelCalls') }}</dt>
-            <dd class="usage-card__calls">{{ data.total.model_calls }}</dd>
+            <dd class="usage-card__calls">{{ formatCount(data.total.model_calls) }}</dd>
           </div>
           <div class="usage-card__total">
             <dt>{{ t('runtimeAdmin.usage.cost') }}</dt>
@@ -98,7 +96,12 @@ const schoolSpent = computed(() => {
           </div>
         </dl>
         <p class="app-form-hint usage-card__limits">
-          {{ t('runtimeAdmin.usage.limits', { owner: data.limits.per_owner_day, asker: data.limits.per_asker_day }) }}
+          {{
+            t('runtimeAdmin.usage.limits', {
+              owner: formatCount(data.limits.per_owner_day),
+              asker: formatCount(data.limits.per_asker_day),
+            })
+          }}
           <template v-if="usdLimits">
             {{ t('runtimeAdmin.usage.limitsUsd', usdLimits) }}
             <span v-if="data.limits.per_day_usd != null" class="usage-card__no-transcription">{{
@@ -107,7 +110,7 @@ const schoolSpent = computed(() => {
           </template>
         </p>
 
-        <el-empty v-if="!owners.length" :description="t('runtimeAdmin.usage.empty')" class="usage-card__empty" />
+        <AppEmpty v-if="!owners.length" :text="t('runtimeAdmin.usage.empty')" class="usage-card__empty" />
         <el-table v-else ref="tableRef" :data="owners" row-key="tenant_id" class="usage-card__table">
           <el-table-column :label="t('runtimeAdmin.usage.owner')" min-width="200">
             <template #default="{ row }">
@@ -125,8 +128,15 @@ const schoolSpent = computed(() => {
                   {{ t('runtimeAdmin.usage.operator') }} <code class="app-muted">{{ row.tenant_id }}</code>
                 </span>
                 <span v-if="narrow" class="usage-owner__meta">
-                  {{ t('common.pair', { label: t('runtimeAdmin.usage.modelCalls'), value: row.model_calls }) }} ·
-                  {{ formatMoney(row.cost_usd) }}
+                  {{
+                    joinParts([
+                      t('common.pair', {
+                        label: t('runtimeAdmin.usage.modelCalls'),
+                        value: formatCount(row.model_calls),
+                      }),
+                      formatMoney(row.cost_usd),
+                    ])
+                  }}
                 </span>
               </div>
             </template>
@@ -134,17 +144,19 @@ const schoolSpent = computed(() => {
           <el-table-column :label="t('runtimeAdmin.usage.answers')" min-width="120" align="right">
             <template #default="{ row }">
               <span class="usage-owner__answers" :class="{ 'is-spent': spent(row) }">
-                {{ row.answers
-                }}<span v-if="row.owner_actor_id" class="app-muted"> / {{ data.limits.per_owner_day }}</span>
+                {{ formatCount(row.answers)
+                }}<span v-if="row.owner_actor_id" class="app-muted">
+                  / {{ formatCount(data.limits.per_owner_day) }}</span
+                >
               </span>
-              <el-tag v-if="spent(row)" type="warning" size="small" disable-transitions class="usage-owner__spent">
+              <AppTag v-if="spent(row)" tone="wait" class="usage-owner__spent">
                 {{ t('runtimeAdmin.usage.spent') }}
-              </el-tag>
+              </AppTag>
             </template>
           </el-table-column>
           <el-table-column v-if="!narrow" :label="t('runtimeAdmin.usage.modelCalls')" min-width="110" align="right">
             <template #default="{ row }"
-              ><span class="usage-owner__num">{{ row.model_calls }}</span></template
+              ><span class="usage-owner__num">{{ formatCount(row.model_calls) }}</span></template
             >
           </el-table-column>
           <el-table-column v-if="!narrow" :label="t('runtimeAdmin.usage.cost')" min-width="110" align="right">
@@ -165,7 +177,7 @@ const schoolSpent = computed(() => {
 }
 .usage-card__since {
   margin: -8px 0 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .usage-card__totals {
@@ -181,7 +193,7 @@ const schoolSpent = computed(() => {
   min-width: 0;
 }
 .usage-card__total dt {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .usage-card__total dd {
@@ -190,12 +202,12 @@ const schoolSpent = computed(() => {
 .usage-card__answers,
 .usage-card__calls,
 .usage-card__cost {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-heading-weight);
   font-variant-numeric: tabular-nums;
 }
 .usage-card__of {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .is-spent {
@@ -212,7 +224,7 @@ const schoolSpent = computed(() => {
   word-break: break-word;
 }
 .usage-owner__meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .usage-owner__answers,

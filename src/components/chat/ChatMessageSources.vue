@@ -16,6 +16,7 @@
 // "COMP1001_Lecture04_Lists_Tuples_and_Dictionaries") breaks wherever it
 // must, on the line and in the summary alike: nothing in the chat scrolls
 // sideways, on a phone or in the chat's window.
+import AppTag from '@/components/AppTag.vue'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { MessageSource } from '@/api/types'
@@ -49,9 +50,9 @@ const summary = computed(() => {
       placement="top"
       popper-class="app-tip-wrap"
     >
-      <el-tag type="info" size="small" disable-transitions class="chat-sources__none" tabindex="0">
+      <AppTag class="chat-sources__none" tabindex="0">
         {{ t('chat.sources.none') }}
-      </el-tag>
+      </AppTag>
     </el-tooltip>
     <i18n-t
       v-else-if="sources.length === 1"
@@ -92,8 +93,8 @@ const summary = computed(() => {
   max-width: 100%;
   margin-top: 6px;
   padding: 0 2px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--app-ink-3);
 }
 .chat-sources__line {
@@ -124,7 +125,7 @@ const summary = computed(() => {
 }
 .chat-sources__chevron {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   transition: transform 0.15s;
 }
 .chat-sources__chevron.is-open {

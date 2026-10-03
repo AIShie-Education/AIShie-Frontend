@@ -177,13 +177,13 @@ async function save() {
 }
 .password-card__text p {
   margin: 0 0 4px;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .password-card__since {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .password-card__error {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   word-break: break-word;
 }
 .password-card__actions {

@@ -122,7 +122,9 @@ const meta = computed(() => {
   const pages = shownRendition.value?.page_count
   const facts = [t(`common.fileKind.${iconKind.value}`), formatBytes(f.byteSize)]
   if (pdfReady.value && pages) facts.push(t('preview.rendition.pages', { n: pages }, pages))
-  return facts.map((fact) => fact.replace(/ /g, '\u00a0')).join(' ·\u00a0')
+  // The language's separator, the space after its dot unbreakable, so that the dot stays with what follows it.
+  const sep = t('common.sep').replace(/ $/, '\u00a0')
+  return facts.map((fact) => fact.replace(/ /g, '\u00a0')).join(sep)
 })
 const many = computed(() => state.files.length > 1)
 
@@ -784,7 +786,7 @@ function onClosed() {
   border-radius: 9px;
   background: var(--app-ground-2);
   color: var(--app-ink-2);
-  font-size: 19px;
+  font-size: var(--app-text-xl);
 }
 .file-viewer__icon.is-pdf,
 .file-viewer__note-icon.is-pdf {
@@ -813,7 +815,7 @@ function onClosed() {
 }
 .file-viewer .file-viewer__name {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--app-text-xl);
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -825,7 +827,7 @@ function onClosed() {
   align-items: center;
   gap: 0 6px;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   font-variant-numeric: tabular-nums;
   min-width: 0;
@@ -856,7 +858,7 @@ function onClosed() {
   align-items: center;
   gap: 6px;
   padding-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-2);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -866,7 +868,7 @@ function onClosed() {
 }
 .file-viewer__close {
   flex-shrink: 0;
-  font-size: 18px;
+  font-size: var(--app-text-xl);
 }
 .file-viewer__body {
   flex: 1;
@@ -886,10 +888,10 @@ function onClosed() {
   align-items: center;
   gap: 10px;
   color: var(--el-text-color-secondary);
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .file-viewer__loading .el-icon {
-  font-size: 20px;
+  font-size: var(--app-text-xl);
 }
 .file-viewer__media {
   margin: auto;
@@ -920,7 +922,7 @@ function onClosed() {
   border-radius: 8px;
   background: var(--el-color-info-light-9);
   color: var(--app-ink-2);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 1.55;
 }
 .file-viewer__text-note .el-icon {
@@ -950,7 +952,7 @@ function onClosed() {
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  font-size: 28px;
+  font-size: var(--app-text-2xl);
   background: var(--el-bg-color);
   margin-bottom: 4px;
 }
@@ -965,14 +967,14 @@ function onClosed() {
 }
 .file-viewer__note-title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--app-text-lg);
+  font-weight: var(--app-heading-weight);
   color: var(--app-ink);
 }
 .file-viewer__note-text {
   margin: 0 0 8px;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-text);
   color: var(--app-ink-2);
 }
 .file-viewer__note-actions {
@@ -1013,7 +1015,7 @@ function onClosed() {
 .file-viewer.is-full .file-viewer__nav .el-button {
   width: 32px;
   height: 32px;
-  font-size: 16px;
+  font-size: var(--app-text-lg);
 }
 /* A phone: the whole screen, the name and close on top, the rest of the head under them. */
 .file-viewer.is-phone .el-dialog__header {

@@ -71,7 +71,7 @@ async function submit() {
       </el-form-item>
       <el-form-item prop="description">
         <template #label>
-          {{ t('admin.course.description') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.course.description') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <el-input v-model="form.description" type="textarea" :rows="5" maxlength="5000" />
       </el-form-item>

@@ -11,6 +11,7 @@ import { ElMessage } from 'element-plus'
 import type { Member } from '@/api/types'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import RefusalAlert from './RefusalAlert.vue'
 import { ROSTER_ROLES, roleChangeEffect, type RosterRole } from './roles'
@@ -74,7 +75,7 @@ function goReach() {
       <StatusTag vocab="role" :value="current" />
     </p>
 
-    <el-alert type="info" :closable="false" show-icon class="role-dialog__only">
+    <AppNote class="role-dialog__only">
       <template #title>{{ t('members.role.onlyRoleTitle') }}</template>
       <p class="role-dialog__p">{{ t('members.role.onlyRole', { name }) }}</p>
       <div class="role-dialog__links">
@@ -85,7 +86,7 @@ function goReach() {
           <el-icon><Aim /></el-icon><span>{{ t('members.detail.scope.change') }}</span>
         </el-button>
       </div>
-    </el-alert>
+    </AppNote>
 
     <el-form label-position="top" @submit.prevent="submit">
       <el-form-item :label="t('members.role.newRole')">
@@ -106,21 +107,15 @@ function goReach() {
     </el-form>
 
     <el-alert
-      v-if="effect"
-      :type="effect === 'leavesRoster' ? 'warning' : 'info'"
+      v-if="effect === 'leavesRoster'"
+      type="warning"
       :closable="false"
       show-icon
       class="role-dialog__effect"
-      :title="t(`members.role.effect.${effect}`, { name })"
+      :title="t('members.role.effect.leavesRoster', { name })"
     />
-    <el-alert
-      v-if="needsApproval"
-      type="info"
-      :closable="false"
-      show-icon
-      class="role-dialog__effect"
-      :title="t('members.detail.approvalNote')"
-    />
+    <AppNote v-else-if="effect" class="role-dialog__effect">{{ t(`members.role.effect.${effect}`, { name }) }}</AppNote>
+    <AppNote v-if="needsApproval" class="role-dialog__effect">{{ t('members.detail.approvalNote') }}</AppNote>
     <RefusalAlert :error="write.lastError.value" class="role-dialog__refusal" @close="write.lastError.value = null" />
 
     <template #footer>
@@ -180,14 +175,14 @@ function goReach() {
   font-weight: 500;
 }
 .role-dialog__role-note {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .role-dialog__effect {
   margin-bottom: 12px;
 }
 .role-dialog__effect :deep(.el-alert__title) {
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .role-dialog__refusal {
   margin-top: 4px;

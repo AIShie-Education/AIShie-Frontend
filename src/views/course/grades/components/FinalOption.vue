@@ -39,6 +39,6 @@ const { t } = useI18n()
 .final-option__list {
   margin: 4px 0 0;
   padding-left: 18px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 </style>

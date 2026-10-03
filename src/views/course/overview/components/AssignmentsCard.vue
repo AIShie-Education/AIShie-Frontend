@@ -10,6 +10,8 @@ import type { AssignmentSummary, SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -134,24 +136,22 @@ const groups = computed(() => [
               <span class="assignments__meta">
                 <el-icon><Clock /></el-icon>
                 <span>{{ t('overview.assignments.due') }}</span>
-                <TimeText :value="r.a.due_at" relative />
+                <TimeText :value="r.a.due_at" relative cutoff />
                 <span class="assignments__dot">·</span>
                 <span>{{ t('overview.assignments.points', { n: formatDecimal(r.a.points_possible) }) }}</span>
               </span>
             </span>
             <span class="assignments__tags">
-              <el-tag v-if="!r.a.published_at" type="info" size="small" effect="plain">
+              <AppTag v-if="!r.a.published_at" tone="wait">
                 {{ t('overview.assignments.unpublished') }}
-              </el-tag>
+              </AppTag>
               <StatusTag v-if="r.standing?.state" vocab="submissionState" :value="r.standing.state" />
-              <el-tag
+              <AppTag
                 v-else-if="r.standing?.none"
-                :type="r.standing.none === 'notHandedIn' ? 'danger' : 'info'"
-                size="small"
-                effect="plain"
+                :tone="toneOf(r.standing.none === 'notHandedIn' ? 'danger' : 'info')"
               >
                 {{ t(`overview.assignments.${r.standing.none}`) }}
-              </el-tag>
+              </AppTag>
             </span>
           </router-link>
         </div>
@@ -171,7 +171,7 @@ const groups = computed(() => [
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   text-decoration: none;
 }
@@ -180,15 +180,15 @@ const groups = computed(() => [
 }
 .assignments__group-title {
   margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.3px;
   text-transform: uppercase;
   color: var(--el-text-color-secondary);
 }
 .assignments__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .assignments__row {
   display: flex;
@@ -221,7 +221,7 @@ const groups = computed(() => [
 }
 .assignments__name {
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   overflow-wrap: anywhere;
 }
 .assignments__meta {
@@ -229,7 +229,7 @@ const groups = computed(() => [
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .assignments__dot {
@@ -245,6 +245,6 @@ const groups = computed(() => [
   gap: 12px;
   flex-wrap: wrap;
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

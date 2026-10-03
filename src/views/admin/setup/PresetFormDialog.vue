@@ -16,6 +16,7 @@ import {
   type Scope,
 } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
+import AppTag from '@/components/AppTag.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import { bodyOf, fullPerms, isBuiltin, presetDescription, presetLabel } from './presets'
 
@@ -33,7 +34,6 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: [deptId: string | null] }>()
 const { t } = useI18n()
 // As PermEditor marks a changed row.
-const CHANGED_TAG = { size: 'small', type: 'warning', effect: 'light', round: true, disableTransitions: true } as const
 
 const formRef = ref<FormInstance>()
 const form = reactive({
@@ -234,7 +234,7 @@ async function save() {
       <el-form-item>
         <template #label>
           {{ t('adminSetup.presets.form.description') }}
-          <el-tag v-if="changed.description" v-bind="CHANGED_TAG">{{ t('common.labels.changed') }}</el-tag>
+          <AppTag v-if="changed.description" tone="wait">{{ t('common.labels.changed') }}</AppTag>
         </template>
         <el-input
           v-model="form.description"
@@ -248,7 +248,7 @@ async function save() {
       <el-form-item prop="role">
         <template #label>
           {{ t('adminSetup.presets.form.role') }}
-          <el-tag v-if="changed.role" v-bind="CHANGED_TAG">{{ t('common.labels.changed') }}</el-tag>
+          <AppTag v-if="changed.role" tone="wait">{{ t('common.labels.changed') }}</AppTag>
         </template>
         <el-select v-model="form.role">
           <el-option v-for="r in ROLES" :key="r" :value="r" :label="t(`enums.role.${r}`)" />
@@ -260,7 +260,7 @@ async function save() {
         <el-form-item>
           <template #label>
             {{ t('adminSetup.presets.form.studentScope') }}
-            <el-tag v-if="changed.student_scope" v-bind="CHANGED_TAG">{{ t('common.labels.changed') }}</el-tag>
+            <AppTag v-if="changed.student_scope" tone="wait">{{ t('common.labels.changed') }}</AppTag>
           </template>
           <el-radio-group v-model="form.student_scope">
             <el-radio-button value="all">{{ t('enums.scope.all') }}</el-radio-button>
@@ -270,7 +270,7 @@ async function save() {
         <el-form-item>
           <template #label>
             {{ t('adminSetup.presets.form.assignmentScope') }}
-            <el-tag v-if="changed.assignment_scope" v-bind="CHANGED_TAG">{{ t('common.labels.changed') }}</el-tag>
+            <AppTag v-if="changed.assignment_scope" tone="wait">{{ t('common.labels.changed') }}</AppTag>
           </template>
           <el-radio-group v-model="form.assignment_scope">
             <el-radio-button value="all">{{ t('enums.scope.all') }}</el-radio-button>
@@ -306,7 +306,7 @@ async function save() {
 .preset-form__option-key {
   margin-left: 8px;
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .preset-form__alert {
@@ -321,7 +321,7 @@ async function save() {
   background: var(--el-fill-color-light);
 }
 .preset-form__fixed-k {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .preset-form__fixed-v {
@@ -349,7 +349,7 @@ async function save() {
   margin-bottom: 4px;
 }
 .preset-form__perms-title {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   font-weight: 500;
   color: var(--el-text-color-regular);
 }

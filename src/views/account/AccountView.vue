@@ -130,7 +130,7 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
 }
 .account-agents__title {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--app-text-xl);
 }
 .account-agents__body {
   margin: 4px 0 0;

@@ -19,8 +19,11 @@ import { useAsync } from '@/composables/useAsync'
 import { useRuntime } from '@/composables/useRuntime'
 import { useSessionStore } from '@/stores/session'
 import { hostingOf } from '@/utils/agents'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
-import HostingTag from '@/components/HostingTag.vue'
+import AskableDot from '@/components/AskableDot.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentName from '@/components/AgentName.vue'
@@ -66,6 +69,12 @@ function open(a: AgentSummary) {
 }
 
 const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByAdmin: 'danger' } as const
+/**
+ * Hosted on AIshie, which does not run it now: its dot is an amber ring, and
+ * its owner, who must see to it, is told so in words beside it too.
+ */
+const notRunning = (a: AgentSummary) =>
+  agentStanding(a) === 'active' && hostingOf(a.hosting) === 'runtime' && a.site_chat === false
 
 // --- Hosting one of them on AIshie ----------------------------------------------------
 const rt = useRuntime()
@@ -104,27 +113,17 @@ function onHosted(_: unknown, actorId: string) {
       </el-tooltip>
     </PageHeader>
 
-    <el-alert
-      v-if="!isHuman"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('agents.notHuman')"
-      class="agents-view__alert"
-    />
+    <AppNote v-if="!isHuman" class="agents-view__alert">{{ t('agents.notHuman') }}</AppNote>
 
     <el-alert
-      v-else-if="blocked"
-      :type="blocked === 'atLimit' ? 'warning' : 'info'"
+      v-else-if="blocked === 'atLimit'"
+      type="warning"
       :closable="false"
       show-icon
-      :title="
-        blocked === 'atLimit'
-          ? t('agents.limit.reached', { limit: knownAgentLimit ?? 0 })
-          : t('agents.limit.noSelfService')
-      "
+      :title="t('agents.limit.reached', { limit: knownAgentLimit ?? 0 })"
       class="agents-view__alert"
     />
+    <AppNote v-else-if="blocked" class="agents-view__alert">{{ t('agents.limit.noSelfService') }}</AppNote>
 
     <AboutAgentsCard v-if="isHuman && list.data.value && !agents.length" />
 
@@ -146,6 +145,7 @@ function onHosted(_: unknown, actorId: string) {
             <AgentAvatar :name="a.display_name" size="large" class="agents-item__avatar" />
             <div class="agents-item__main">
               <div class="agents-item__head">
+                <AskableDot v-if="agentStanding(a) === 'active'" :hosting="a.hosting" :site-chat="a.site_chat" />
                 <router-link
                   :to="{ name: 'account-agent', params: { actorId: a.actor_id } }"
                   class="agents-item__name"
@@ -153,19 +153,13 @@ function onHosted(_: unknown, actorId: string) {
                 >
                   <AgentName :name="a.display_name" />
                 </router-link>
-                <el-tag
-                  v-if="agentStanding(a) !== 'active'"
-                  :type="STANDING_TAG[agentStanding(a)]"
-                  size="small"
-                  disable-transitions
-                >
+                <span v-if="notRunning(a)" class="agents-item__off">{{ t('common.agent.askable.off') }}</span>
+                <AppTag v-if="agentStanding(a) !== 'active'" :tone="toneOf(STANDING_TAG[agentStanding(a)])">
                   {{ t(`agents.standing.${agentStanding(a)}`) }}
-                </el-tag>
-                <HostingTag v-if="agentStanding(a) === 'active'" :hosting="a.hosting" :site-chat="a.site_chat" />
-                <HostingTag v-else :hosting="a.hosting" />
-                <el-tag v-if="a.pending_requests" type="warning" effect="plain" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-if="a.pending_requests" tone="wait">
                   {{ t('agents.list.requests', { n: a.pending_requests }, a.pending_requests) }}
-                </el-tag>
+                </AppTag>
               </div>
               <div class="agents-item__meta">
                 <PresenceText :value="a.last_seen_at" />
@@ -202,7 +196,7 @@ function onHosted(_: unknown, actorId: string) {
   margin-top: 16px;
 }
 .agents-list__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
@@ -244,12 +238,16 @@ function onHosted(_: unknown, actorId: string) {
   flex-wrap: wrap;
 }
 .agents-item__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
   min-width: 0;
 }
 .agents-item__name:hover {
   text-decoration: underline;
+}
+.agents-item__off {
+  font-size: var(--app-text-sm);
+  color: var(--app-wait-fg);
 }
 .agents-item__meta {
   display: flex;
@@ -257,7 +255,7 @@ function onHosted(_: unknown, actorId: string) {
   flex-wrap: wrap;
   gap: 4px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .agents-item__created {

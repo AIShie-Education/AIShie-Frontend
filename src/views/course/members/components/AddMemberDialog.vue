@@ -28,6 +28,8 @@ import { useSessionStore } from '@/stores/session'
 import { capToCeilings, newSeatCeilings } from '@/utils/ceilings'
 import { isUuid, shortId } from '@/utils/format'
 import { isLoginId } from '@/utils/loginId'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -508,14 +510,9 @@ function capToMine() {
           :title="t('members.add.emailNobody')"
           class="add-member__inline-alert add-member__email-alert"
         />
-        <el-alert
-          v-else-if="emailState === 'partial'"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="t('members.add.emailPartial')"
-          class="add-member__inline-alert add-member__email-alert"
-        />
+        <AppNote v-else-if="emailState === 'partial'" class="add-member__inline-alert add-member__email-alert">
+          {{ t('members.add.emailPartial') }}
+        </AppNote>
         <el-alert
           v-else-if="emailState && emailState !== 'finding'"
           type="error"
@@ -657,14 +654,7 @@ function capToMine() {
             clearable
             :placeholder="t('members.add.pickStudents')"
           />
-          <el-alert
-            v-if="listsItself"
-            type="info"
-            :closable="false"
-            show-icon
-            :title="t('members.add.listsItself')"
-            class="add-member__inline-alert"
-          />
+          <AppNote v-if="listsItself" class="add-member__inline-alert">{{ t('members.add.listsItself') }}</AppNote>
           <el-alert
             v-else-if="!form.students.length"
             type="warning"
@@ -722,9 +712,9 @@ function capToMine() {
           <template #title>
             <span class="add-member__perms-title">
               {{ t('members.add.perms') }}
-              <el-tag v-if="changedCount" size="small" type="warning" round>
+              <AppTag v-if="changedCount" tone="wait">
                 {{ t('members.add.permsChanged', { n: changedCount }) }}
-              </el-tag>
+              </AppTag>
               <span v-else class="app-muted">{{ t('members.add.permsAsPreset') }}</span>
             </span>
           </template>
@@ -742,10 +732,10 @@ function capToMine() {
       </el-collapse>
     </el-form>
 
-    <el-alert type="info" :closable="false" class="add-member__rules">
+    <AppNote class="add-member__rules">
       <template #title>{{ t('members.grant.rulesTitle') }}</template>
       {{ t('members.grant.rules') }}
-    </el-alert>
+    </AppNote>
     <el-alert v-if="problems.length" type="warning" :closable="false" show-icon class="add-member__rules">
       <template #title>{{ t('members.grant.willRefuse') }}</template>
       <ul class="add-member__problems">
@@ -779,7 +769,7 @@ function capToMine() {
 .add-member__intro {
   margin: 0 0 16px;
   color: var(--el-text-color-regular);
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .add-member__find {
   width: 100%;
@@ -803,7 +793,7 @@ function capToMine() {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .add-member__found-meta > span:last-of-type {
@@ -813,7 +803,7 @@ function capToMine() {
 }
 .add-member__found-id {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--app-text-mark);
 }
 .add-member__found-meta > span:last-child {
   min-width: 0;
@@ -822,7 +812,7 @@ function capToMine() {
 }
 .add-member__found-empty {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .add-member__email {
@@ -844,7 +834,7 @@ function capToMine() {
   gap: 6px;
   width: 100%;
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .add-member__actor-who {
   display: flex;
@@ -883,26 +873,26 @@ function capToMine() {
 .add-member__opt-meta {
   float: right;
   margin-left: 12px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .add-member__preset {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   padding: 8px 12px;
   border-radius: var(--app-radius-control);
   background: var(--el-fill-color-light);
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .add-member__gap {
   margin-bottom: 12px;
 }
 .add-member__section {
   margin: 8px 0 2px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .add-member__section-hint {
   margin: 0 0 10px;
@@ -918,7 +908,7 @@ function capToMine() {
   width: 100%;
 }
 .add-member__inline-alert :deep(.el-alert__title) {
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .add-member__stack {
   display: flex;
@@ -946,10 +936,10 @@ function capToMine() {
 }
 .add-member__rules :deep(.el-alert__description),
 .add-member__rules :deep(.el-alert__content) {
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .add-member__rules :deep(.el-alert__title) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .add-member__cap {
   margin-top: 8px;

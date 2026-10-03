@@ -6,12 +6,16 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import { Box, OfficeBuilding } from '@element-plus/icons-vue'
 import { read } from '@/api/http'
 import { PERMS, type Preset } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import PresetDrawer from './setup/PresetDrawer.vue'
 import PresetFormDialog from './setup/PresetFormDialog.vue'
@@ -92,13 +96,7 @@ function onSaved(savedDept: string | null) {
       </el-button>
     </PageHeader>
 
-    <el-alert
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('adminSetup.presets.explain')"
-      class="presets-explain"
-    />
+    <AppNote class="presets-explain">{{ t('adminSetup.presets.explain') }}</AppNote>
 
     <div class="app-toolbar presets-toolbar">
       <label class="presets-toolbar__label" for="presets-dept">{{ t('adminSetup.presets.department') }}</label>
@@ -113,15 +111,7 @@ function onSaved(savedDept: string | null) {
       >
         <el-option v-for="d in deptList" :key="d.id" :value="d.id" :label="d.name" />
       </el-select>
-      <span class="app-toolbar__spacer" />
-      <el-button
-        :loading="presets.loading.value"
-        circle
-        :aria-label="t('common.actions.refresh')"
-        @click="presets.reload"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="presets.loading.value" @click="presets.reload" />
     </div>
 
     <AsyncState
@@ -143,12 +133,12 @@ function onSaved(savedDept: string | null) {
             <header class="preset-card__head">
               <span class="preset-card__name">{{ presetLabel(p) }}</span>
               <code v-if="hasOwnLabel(p)" class="preset-card__key">{{ p.name }}</code>
-              <el-tag v-if="isBuiltin(p)" type="info" size="small" disable-transitions>
+              <AppTag v-if="isBuiltin(p)" variant="outline" :icon="Box">
                 {{ t('adminSetup.presets.builtin') }}
-              </el-tag>
-              <el-tag v-else type="primary" size="small" disable-transitions class="preset-card__dept">
+              </AppTag>
+              <AppTag v-else variant="outline" :icon="OfficeBuilding" class="preset-card__dept">
                 {{ deptName(p.dept_id) ?? t('adminSetup.presets.own') }}
-              </el-tag>
+              </AppTag>
             </header>
             <p class="preset-card__desc" :class="{ 'app-muted': !presetDescription(p) }">
               {{ presetDescription(p) || t('adminSetup.presets.noDescription') }}
@@ -209,7 +199,7 @@ function onSaved(savedDept: string | null) {
   margin-bottom: 16px;
 }
 .presets-toolbar__label {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
 }
 .presets-toolbar__select {
@@ -244,13 +234,13 @@ function onSaved(savedDept: string | null) {
   flex-wrap: wrap;
 }
 .preset-card__name {
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-lg);
   word-break: break-word;
 }
 .preset-card__key {
   font-family: var(--app-font-mono);
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-light);
   border-radius: 4px;
@@ -263,8 +253,8 @@ function onSaved(savedDept: string | null) {
 }
 .preset-card__desc {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   line-clamp: 3;
@@ -277,7 +267,7 @@ function onSaved(savedDept: string | null) {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 10px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-regular);
 }
 .preset-card__foot {
@@ -286,7 +276,7 @@ function onSaved(savedDept: string | null) {
   justify-content: space-between;
   gap: 8px;
   margin-top: auto;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .preset-card__actions {
   display: flex;

@@ -16,6 +16,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { delegateArgsFor, hostingOf } from '@/utils/agents'
+import AppNote from '@/components/AppNote.vue'
 import HostingChoice from '@/components/HostingChoice.vue'
 import AgentName from '@/components/AgentName.vue'
 import PresenceText from '@/components/PresenceText.vue'
@@ -180,11 +181,11 @@ async function submit() {
     append-to-body
     class="add-agent"
   >
-    <el-alert type="info" :closable="false" class="add-agent__explain">
+    <AppNote class="add-agent__explain">
       <template #title>{{ t('courseAgents.addDialog.explainTitle') }}</template>
       <p class="add-agent__p">{{ t('courseAgents.addDialog.explain') }}</p>
       <p class="add-agent__p">{{ t('courseAgents.addDialog.explainBound') }}</p>
-    </el-alert>
+    </AppNote>
 
     <el-form label-position="top" @submit.prevent="submit">
       <el-form-item :label="t('courseAgents.addDialog.source')">
@@ -306,29 +307,17 @@ async function submit() {
         <div>
           <dt>{{ t('members.columns.expires') }}</dt>
           <dd>
-            <TimeText v-if="defaults.data.value.expires_at" :value="defaults.data.value.expires_at" />
+            <TimeText v-if="defaults.data.value.expires_at" :value="defaults.data.value.expires_at" cutoff />
             <span v-else>{{ t('courseAgents.addDialog.noEnd') }}</span>
           </dd>
         </div>
       </dl>
     </div>
 
-    <el-alert
-      v-if="needsApproval"
-      type="warning"
-      :closable="false"
-      show-icon
-      class="add-agent__alert"
-      :title="t('courseAgents.addDialog.needsApproval')"
-    />
-    <el-alert
-      v-else-if="level === 'pending_review'"
-      type="info"
-      :closable="false"
-      show-icon
-      class="add-agent__alert"
-      :title="t('courseAgents.addDialog.reviewedAfter')"
-    />
+    <AppNote v-if="needsApproval" class="add-agent__alert">{{ t('courseAgents.addDialog.needsApproval') }}</AppNote>
+    <AppNote v-else-if="level === 'pending_review'" class="add-agent__alert">
+      {{ t('courseAgents.addDialog.reviewedAfter') }}
+    </AppNote>
     <el-alert
       v-if="created"
       type="success"
@@ -362,11 +351,11 @@ async function submit() {
   margin-bottom: 16px;
 }
 .add-agent__explain :deep(.el-alert__title) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .add-agent__p {
   margin: 4px 0 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .add-agent__select {
   width: 100%;
@@ -389,14 +378,14 @@ async function submit() {
   text-overflow: ellipsis;
 }
 .add-agent__option-meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   flex-shrink: 0;
 }
 .add-agent__section {
   margin: 8px 0 2px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .add-agent__section-hint {
   margin: 0 0 8px;
@@ -414,11 +403,11 @@ async function submit() {
 }
 .add-agent__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .add-agent__facts dd {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   min-width: 0;
 }
 .add-agent__perms {

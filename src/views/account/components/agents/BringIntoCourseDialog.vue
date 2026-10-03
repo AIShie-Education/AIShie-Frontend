@@ -21,10 +21,13 @@ import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { delegateArgsFor, presetForPurpose, type SeatPurpose } from '@/utils/agents'
 import { aboveCeiling, capToCeilings, ceilingsOf } from '@/utils/ceilings'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import TimeText from '@/components/TimeText.vue'
 import { assignmentReach, courseChoices, grantedPerms, studentReach, toPermLevels } from './agents'
+import { courseCodeText } from '@/utils/parts'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ agent: AgentFull }>()
@@ -112,7 +115,7 @@ function assignmentsText(): string {
 }
 
 function courseName(m: { code: string; section: string }): string {
-  return m.section ? `${m.code} · ${m.section}` : m.code
+  return courseCodeText(m.code, m.section)
 }
 
 // --- Bringing it in ---------------------------------------------------------------------
@@ -157,14 +160,7 @@ async function submit() {
       @retry="seats.reload"
     >
       <h3 class="bring__step">{{ t('agents.bring.course') }}</h3>
-      <el-alert
-        v-if="!available.length"
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('agents.bring.noneAvailable')"
-        class="bring__alert"
-      />
+      <AppNote v-if="!available.length" class="bring__alert">{{ t('agents.bring.noneAvailable') }}</AppNote>
       <el-radio-group v-model="courseId" class="bring__courses">
         <el-radio
           v-for="c in choices"
@@ -201,14 +197,16 @@ async function submit() {
         <h3 class="bring__step">{{ t('agents.bring.preview') }}</h3>
         <AsyncState :loading="preview.loading.value && !defaults" :error="preview.error.value" @retry="preview.reload">
           <div v-if="defaults" class="bring__preview" :class="{ 'is-loading': preview.loading.value }">
+            <!-- What bringing it in will do is a note, a request for approval too (never amber); a seat that may not, an error. -->
             <el-alert
-              v-if="level"
-              :type="level === 'confirm_required' ? 'warning' : level === 'denied' ? 'error' : 'success'"
+              v-if="level === 'denied'"
+              type="error"
               :closable="false"
               show-icon
-              :title="t(`agents.bring.level.${level}`)"
+              :title="t('agents.bring.level.denied')"
               class="bring__alert"
             />
+            <AppNote v-else-if="level" class="bring__alert">{{ t(`agents.bring.level.${level}`) }}</AppNote>
             <dl class="bring__facts">
               <dt>{{ t('agents.bring.answers') }}</dt>
               <dd>{{ purpose === 'course' ? t('agents.bring.answersCourse') : t('agents.bring.answersYou') }}</dd>
@@ -218,23 +216,15 @@ async function submit() {
               <dd>{{ assignmentsText() }}</dd>
               <dt>{{ t('agents.bring.ends') }}</dt>
               <dd>
-                <TimeText v-if="defaults.expires_at" :value="defaults.expires_at" />
+                <TimeText v-if="defaults.expires_at" :value="defaults.expires_at" cutoff />
                 <template v-else>{{ t('agents.bring.noEnd') }}</template>
               </dd>
               <dt>{{ t('agents.bring.may') }}</dt>
               <dd class="bring__perms">
                 <template v-if="granted.length">
-                  <el-tag
-                    v-for="g in granted"
-                    :key="g.perm"
-                    type="info"
-                    effect="plain"
-                    size="small"
-                    :title="t(`enums.level.${g.level}`)"
-                    disable-transitions
-                  >
+                  <AppTag v-for="g in granted" :key="g.perm" variant="outline" :title="t(`enums.level.${g.level}`)">
                     {{ t(`enums.perm.${g.perm}`) }}
-                  </el-tag>
+                  </AppTag>
                 </template>
                 <span v-else class="app-muted">{{ t('agents.seats.nothing') }}</span>
               </dd>
@@ -242,9 +232,9 @@ async function submit() {
             <details class="bring__details">
               <summary>
                 {{ t('agents.bring.adjust') }}
-                <el-tag v-if="changedPerms.length" size="small" type="warning" round class="bring__changed">
+                <AppTag v-if="changedPerms.length" tone="wait" class="bring__changed">
                   {{ t('agents.bring.changed', { n: changedPerms.length }) }}
-                </el-tag>
+                </AppTag>
               </summary>
               <p class="app-form-hint bring__hint">{{ t('agents.bring.adjustHelp') }}</p>
               <PermEditor
@@ -274,13 +264,13 @@ async function submit() {
 <style scoped>
 .bring__intro {
   margin: 0 0 8px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .bring__step {
   margin: 16px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .bring__alert {
   margin-bottom: 10px;
@@ -312,7 +302,7 @@ async function submit() {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .bring__course-name {
   display: flex;
@@ -325,14 +315,14 @@ async function submit() {
 }
 .bring__course-note,
 .bring__purpose-help {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .bring__course-note.is-warning {
   color: var(--el-color-warning);
 }
 .bring__purpose-name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .bring__preview.is-loading {
   opacity: 0.6;
@@ -342,7 +332,7 @@ async function submit() {
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 6px 16px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .bring__facts dt {
   color: var(--el-text-color-secondary);
@@ -357,7 +347,7 @@ async function submit() {
 }
 .bring__details {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .bring__details summary {
   cursor: pointer;

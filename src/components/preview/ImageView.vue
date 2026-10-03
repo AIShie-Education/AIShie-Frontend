@@ -164,7 +164,7 @@ defineExpose({ zoomIn, zoomOut, toFit, actualSize, fit, zoom })
   padding: 4px 12px;
   border-bottom: 1px solid var(--app-line);
   background: var(--el-bg-color);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .image-view__bar .el-button + .el-button {
   margin-left: 0;

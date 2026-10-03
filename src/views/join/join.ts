@@ -6,6 +6,7 @@ import { i18n } from '@/i18n'
 import { emailDomainAllowed } from '@/utils/joinLink'
 import { loginIdProblem as loginIdIssue, MAX_LOGIN_ID } from '@/utils/loginId'
 import { passwordProblem } from '@/utils/password'
+import { formatList } from '@/utils/format'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
 const te = (key: string): boolean => (i18n.global as unknown as { te: (k: string) => boolean }).te(key)
@@ -41,7 +42,7 @@ export function joinRefusal(e: unknown, scope: 'join.errors' | 'join.links.error
   if (reason === 'email_domain_not_allowed' && scope === 'join.errors') {
     const d = e.details?.allowed_email_domains
     if (Array.isArray(d) && d.length && d.every((x) => typeof x === 'string'))
-      return t('join.errors.email_domain_not_allowed_at', { domains: d.map((x) => `@${x}`).join(', ') })
+      return t('join.errors.email_domain_not_allowed_at', { domains: formatList(d.map((x) => `@${x}`), 'or') })
   }
   const key = `${scope}.${reason}`
   return te(key) ? t(key) : null
@@ -94,7 +95,7 @@ export function emailProblem(email: string, domains: readonly string[], opts: { 
   if (!e) return opts.optional ? null : { key: 'common.errors.required' }
   if (!EMAIL.test(e)) return { key: 'join.page.badEmail' }
   if (!emailDomainAllowed(e, domains))
-    return { key: 'join.page.emailWrongDomain', args: { domains: domains.map((d) => `@${d}`).join(', ') } }
+    return { key: 'join.page.emailWrongDomain', args: { domains: formatList(domains.map((d) => `@${d}`), 'or') } }
   return null
 }
 

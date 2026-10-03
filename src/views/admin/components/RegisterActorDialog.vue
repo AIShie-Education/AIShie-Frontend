@@ -18,6 +18,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { formatDate } from '@/utils/format'
 import { loginIdProblem, MAX_LOGIN_ID } from '@/utils/loginId'
+import AppNote from '@/components/AppNote.vue'
 import HostingChoice from '@/components/HostingChoice.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -231,14 +232,14 @@ async function submit() {
       </el-form-item>
       <el-form-item v-if="form.kind === 'human'" prop="email">
         <template #label>
-          {{ t('admin.register.email') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.register.email') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <el-input v-model="form.email" type="email" maxlength="320" autocomplete="off" />
         <div class="app-form-hint register__block">{{ t('admin.register.emailHint') }}</div>
       </el-form-item>
       <el-form-item v-if="form.kind === 'human'" prop="login_id">
         <template #label>
-          {{ t('admin.loginId.label') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.loginId.label') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <el-input
           v-model="form.login_id"
@@ -258,7 +259,7 @@ async function submit() {
       </el-form-item>
       <el-form-item v-if="form.kind === 'agent'">
         <template #label>
-          {{ t('admin.register.owner') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.register.owner') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <OwnerSelect v-model="form.owner" @picked="(a) => (owner = a)" />
         <div class="app-form-hint register__block">
@@ -277,7 +278,7 @@ async function submit() {
           }}
         </div>
       </el-form-item>
-      <el-alert type="info" :closable="false" show-icon :title="t('admin.register.permanent')" />
+      <AppNote>{{ t('admin.register.permanent') }}</AppNote>
     </el-form>
     <template #footer>
       <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>
@@ -295,7 +296,7 @@ async function submit() {
 }
 .register__same {
   margin-top: 8px;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .register__same-list {
   margin: 4px 0 0;

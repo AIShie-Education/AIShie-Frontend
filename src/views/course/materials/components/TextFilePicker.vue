@@ -4,6 +4,8 @@
 // type and its name, saying where its text version stands (done, waiting,
 // being transcribed, failed); the one shown is pressed. A version of one
 // file names it alone.
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import { useI18n } from 'vue-i18n'
 import type { DocumentFile } from '@/api/types'
 import { FILE_ICON, fileKind } from '@/utils/files'
@@ -43,9 +45,9 @@ function chip(f: DocumentFile) {
       <span class="text-file__n" aria-hidden="true">{{ i + 1 }}</span>
       <el-icon aria-hidden="true"><component :is="icon(f)" /></el-icon>
       <span class="text-file__name">{{ f.filename }}</span>
-      <el-tag v-if="chip(f)" :type="chip(f)!.type" size="small" disable-transitions class="text-file__status">
+      <AppTag v-if="chip(f)" :tone="toneOf(chip(f)!.type)" class="text-file__status">
         {{ chip(f)!.label }}
-      </el-tag>
+      </AppTag>
     </button>
   </div>
   <p v-else-if="selected" class="text-files__one">
@@ -74,7 +76,7 @@ function chip(f: DocumentFile) {
   background: var(--el-bg-color);
   color: var(--app-ink-2);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   cursor: pointer;
 }
 .text-file:hover {
@@ -88,7 +90,7 @@ function chip(f: DocumentFile) {
   font-weight: 500;
 }
 .text-file__n {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-variant-numeric: tabular-nums;
   color: var(--app-ink-3);
 }
@@ -104,7 +106,7 @@ function chip(f: DocumentFile) {
   align-items: center;
   gap: 6px;
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
 }

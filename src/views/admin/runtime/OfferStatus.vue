@@ -3,6 +3,8 @@
 // offered: turned off, shadowed by runtime.yaml's offer of the same id, or
 // its model no longer allowed; whether it is the operator's (runtime.yaml,
 // read-only here), and whether the runtime's price table prices its model.
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import { useI18n } from 'vue-i18n'
 import type { PlanOffer } from '@/api/runtime-types'
 import { OFFER_STATUS_TAG } from './runtimeAdmin'
@@ -14,29 +16,15 @@ const { t } = useI18n()
 <template>
   <div class="offer-status">
     <div class="offer-status__tags">
-      <el-tag :type="OFFER_STATUS_TAG[offer.status]" size="small" disable-transitions class="offer-status__status">
+      <AppTag :tone="toneOf(OFFER_STATUS_TAG[offer.status])" class="offer-status__status">
         {{ t(`runtimeAdmin.offers.statuses.${offer.status}`) }}
-      </el-tag>
-      <el-tag
-        v-if="offer.source === 'config'"
-        type="info"
-        effect="plain"
-        size="small"
-        disable-transitions
-        class="offer-status__config"
-      >
+      </AppTag>
+      <AppTag v-if="offer.source === 'config'" variant="outline" class="offer-status__config">
         {{ t('runtimeAdmin.offers.config') }}
-      </el-tag>
-      <el-tag
-        v-if="!offer.priced"
-        type="warning"
-        effect="plain"
-        size="small"
-        disable-transitions
-        class="offer-status__unpriced"
-      >
+      </AppTag>
+      <AppTag v-if="!offer.priced" tone="wait" class="offer-status__unpriced">
         {{ t('runtimeAdmin.offers.unpriced') }}
-      </el-tag>
+      </AppTag>
     </div>
     <span v-if="offer.source === 'config'" class="offer-status__why">{{ t('runtimeAdmin.offers.why.config') }}</span>
     <span v-if="offer.status !== 'offered'" class="offer-status__why">
@@ -59,8 +47,8 @@ const { t } = useI18n()
   gap: 4px;
 }
 .offer-status__why {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }

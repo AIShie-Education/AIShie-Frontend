@@ -24,6 +24,9 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import { formatCountdown } from '@/utils/countdown'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import DepartmentPicker from './departments/DepartmentPicker.vue'
 import CoursePicker from './export/CoursePicker.vue'
@@ -56,6 +59,7 @@ import {
   type RememberedExport,
   type ScopeKind,
 } from './export/conversationExport'
+import { zonedText } from '@/utils/parts'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -206,13 +210,10 @@ const scopeOptions = computed(() =>
       <h2 id="export-form-title" class="app-card__title">{{ t('auditExport.form.title') }}</h2>
       <p class="app-muted export-form__intro">{{ t('auditExport.form.intro') }}</p>
 
-      <el-alert
+      <AppNote
         v-if="pending"
-        class="export-form__pending"
-        type="info"
-        show-icon
-        :closable="false"
         :title="t('auditExport.pending.title', { time: dayjs(pending.at).format('HH:mm') })"
+        class="export-form__pending"
       >
         <div class="export-form__pending-body">
           <span>{{ t('auditExport.pending.body') }}</span>
@@ -220,7 +221,7 @@ const scopeOptions = computed(() =>
             t('auditExport.pending.discard')
           }}</el-button>
         </div>
-      </el-alert>
+      </AppNote>
 
       <el-form label-position="top" :disabled="running" @submit.prevent>
         <el-form-item :label="t('auditExport.form.scope')" class="export-form__scope">
@@ -343,22 +344,16 @@ const scopeOptions = computed(() =>
     >
       <h2 id="export-outcome-title" class="app-card__title">
         <span>{{ t('auditExport.outcome.title') }}</span>
-        <el-tag v-if="run.exported.replayed" size="small" type="info">{{ t('auditExport.outcome.replayed') }}</el-tag>
+        <AppTag v-if="run.exported.replayed">{{ t('auditExport.outcome.replayed') }}</AppTag>
       </h2>
       <ExportSummary :record="outcome" />
-      <el-alert
-        class="export-outcome__privacy"
-        type="warning"
-        show-icon
-        :closable="false"
-        :title="t('auditExport.privacy.title')"
-      >
+      <DataFlowNotice class="export-outcome__privacy" :title="t('auditExport.privacy.title')">
         <i18n-t keypath="auditExport.privacy.body" tag="p" scope="global" class="export-outcome__privacy-body">
           <template #time
-            ><strong>{{ dayjs(outcome.expires_at).format('LLL') }}</strong></template
+            ><strong>{{ zonedText(outcome.expires_at) }}</strong></template
           >
         </i18n-t>
-      </el-alert>
+      </DataFlowNotice>
       <ExportFiles
         :export-id="outcome.export_id"
         :files="outcome.files"
@@ -399,8 +394,8 @@ const scopeOptions = computed(() =>
 }
 .export-form__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .export-form__pending {
   margin-bottom: 16px;
@@ -419,7 +414,7 @@ const scopeOptions = computed(() =>
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 .export-form__site {
@@ -440,7 +435,7 @@ const scopeOptions = computed(() =>
   margin: -8px 0 18px;
 }
 .export-form__span-words {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .export-form__sent {
   display: flex;
@@ -461,32 +456,32 @@ const scopeOptions = computed(() =>
 }
 .export-running__note {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .export-outcome__privacy {
   margin: 16px 0;
 }
 .export-outcome__privacy-body {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .export-outcome__record {
   margin: 12px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .export-refusal__text {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .export-refusal__narrow {
   margin: 8px 0 0;
   padding-left: 20px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .export-refusal__record {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 @media (max-width: 640px) {
   /* The three scopes on one line of a phone. */

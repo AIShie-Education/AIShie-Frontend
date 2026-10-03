@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 import type { Actor, ToolOut } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import TimeText from '@/components/TimeText.vue'
 import InviteRevealDialog from './InviteRevealDialog.vue'
 import { DEFAULT_INVITE_DAYS, INVITE_DAYS, inviteBlocker, inviteMode, signInState } from './signIn'
@@ -66,7 +67,7 @@ function closed() {
     <h2 class="app-card__title">{{ t('admin.invite.title') }}</h2>
     <p class="app-muted invite__intro">{{ t('admin.invite.intro') }}</p>
 
-    <el-alert v-if="blockedText" type="info" :closable="false" show-icon :title="blockedText">
+    <AppNote v-if="blockedText" :title="blockedText">
       <div v-if="blocker === 'self'" class="invite__blocked-action">
         <router-link :to="{ name: 'account' }">{{ t('admin.invite.blocked.selfLink') }}</router-link>
       </div>
@@ -76,7 +77,7 @@ function closed() {
           <span>{{ t('admin.invite.blocked.giveEmail') }}</span>
         </el-button>
       </div>
-    </el-alert>
+    </AppNote>
 
     <template v-else>
       <ul v-if="state && (state.invite !== 'none' || actor.has_password)" class="invite__facts">
@@ -113,8 +114,8 @@ function closed() {
 <style scoped>
 .invite__intro {
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .invite__blocked-action {
   margin-top: 6px;
@@ -122,7 +123,7 @@ function closed() {
 .invite__facts {
   margin: 0 0 16px;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 1.7;
 }
 .invite__form {
@@ -138,7 +139,7 @@ function closed() {
   gap: 6px;
 }
 .invite__label {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
 }
 .invite__days-select {

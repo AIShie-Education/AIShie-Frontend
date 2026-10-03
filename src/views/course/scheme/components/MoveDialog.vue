@@ -6,6 +6,9 @@
 // posted total it changes, which the dialog says, and how many it wrote. A
 // place that may hold assignments the caller cannot see is offered with a
 // caution.
+import { Location } from '@element-plus/icons-vue'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
@@ -117,14 +120,7 @@ async function submit() {
     :close-on-click-modal="!pending"
     append-to-body
   >
-    <el-alert
-      v-if="needsApproval"
-      type="warning"
-      :closable="false"
-      show-icon
-      :title="t('scheme.form.needsApproval')"
-      class="md-alert"
-    />
+    <AppNote v-if="needsApproval" class="md-alert">{{ t('scheme.form.needsApproval') }}</AppNote>
     <el-alert
       v-if="graded"
       type="warning"
@@ -133,14 +129,7 @@ async function submit() {
       :title="t('scheme.move.graded')"
       class="md-alert"
     />
-    <el-alert
-      v-if="!anywhere"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('scheme.move.noTarget')"
-      class="md-alert"
-    />
+    <AppNote v-if="!anywhere" class="md-alert">{{ t('scheme.move.noTarget') }}</AppNote>
     <p class="md-help">{{ t('scheme.move.help') }}</p>
     <el-form label-position="top" :disabled="pending" @submit.prevent="submit">
       <el-form-item :label="t('scheme.move.newParent')" required>
@@ -156,9 +145,7 @@ async function submit() {
             <div class="md-option" :style="{ paddingLeft: `${o.node.depth * 14}px` }">
               <span class="md-option__name">
                 {{ nameOf(o.node) }}
-                <el-tag v-if="o.current" size="small" type="info" disable-transitions>{{
-                  t('scheme.move.current')
-                }}</el-tag>
+                <AppTag v-if="o.current" variant="outline" :icon="Location">{{ t('scheme.move.current') }}</AppTag>
               </span>
               <span v-if="o.why && !o.current" class="md-option__why">{{ o.why }}</span>
             </div>
@@ -196,7 +183,7 @@ async function submit() {
 .md-help {
   margin: 0 0 12px;
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .md-option {
   display: flex;
@@ -211,7 +198,7 @@ async function submit() {
   gap: 6px;
 }
 .md-option__why {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   white-space: normal;
 }

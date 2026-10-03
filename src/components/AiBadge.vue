@@ -29,8 +29,8 @@ const { t } = useI18n()
   background: var(--app-indigo-tint);
   color: var(--app-indigo);
   font-family: 'IBM Plex Sans', var(--app-font-sans);
-  font-size: 11px;
-  font-weight: var(--app-weight-strong, 600);
+  font-size: var(--app-text-mark);
+  font-weight: var(--app-weight-strong);
   line-height: 1;
   letter-spacing: 0.02em;
   white-space: nowrap;

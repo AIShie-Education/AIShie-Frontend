@@ -28,6 +28,8 @@ import {
   type PriceField,
   type PriceForm,
 } from './runtimeAdmin'
+import TimeText from '@/components/TimeText.vue'
+import { USD_SIGN } from '@/utils/format'
 
 const open = defineModel<boolean>({ default: false })
 const props = withDefaults(
@@ -49,6 +51,8 @@ const emit = defineEmits<{
   changed: []
 }>()
 const { t } = useI18n()
+/** When the day chosen starts: the runtime's days are UTC days. */
+const dayStart = computed(() => (/^\d{4}-\d\d-\d\d$/.test(form.from) ? `${form.from}T00:00:00Z` : null))
 
 const creating = computed(() => !props.row)
 const base = shallowRef<PriceRow | null>(null)
@@ -187,6 +191,7 @@ async function save() {
 const title = computed(() =>
   props.row ? t('runtimeAdmin.prices.editTitle', { model: props.row.model }) : t('runtimeAdmin.prices.createTitle'),
 )
+import AppNote from '@/components/AppNote.vue'
 </script>
 
 <template>
@@ -221,7 +226,7 @@ const title = computed(() =>
             v-for="p in providers ?? []"
             :key="p.provider"
             :value="p.provider"
-            :label="`${p.label} (${p.provider})`"
+            :label="t('common.aside', { text: p.label, aside: p.provider })"
           />
         </el-select>
         <div class="app-form-hint">{{ t('runtimeAdmin.prices.providerHint') }}</div>
@@ -239,7 +244,16 @@ const title = computed(() =>
           :clearable="false"
           class="price-form__from"
         />
-        <div class="app-form-hint">{{ t('runtimeAdmin.prices.fromHint') }}</div>
+        <!-- The runtime's days are UTC days, and the hint says so: when the day chosen begins in UTC, on
+             the reader's clock (not when their own day begins, east or west of UTC), the UTC on hover. -->
+        <i18n-t
+          keypath="runtimeAdmin.prices.fromHint"
+          tag="div"
+          scope="global"
+          class="app-form-hint price-form__from-hint"
+        >
+          <template #start><TimeText :value="dayStart" cutoff /></template>
+        </i18n-t>
       </el-form-item>
 
       <h3 class="price-form__section">{{ t('runtimeAdmin.prices.perMTok') }}</h3>
@@ -256,7 +270,7 @@ const title = computed(() =>
             inputmode="decimal"
             :placeholder="p.required ? '' : t('runtimeAdmin.prices.sameAsInput')"
           >
-            <template #prepend>$</template>
+            <template #prepend>{{ USD_SIGN }}</template>
           </el-input>
         </el-form-item>
       </div>
@@ -274,7 +288,7 @@ const title = computed(() =>
       <el-form-item v-else :label="t('runtimeAdmin.prices.id')">
         <code class="price-form__id-fixed">{{ row?.id }}</code>
       </el-form-item>
-      <el-alert type="info" :closable="false" show-icon :title="t('runtimeAdmin.prices.fromNowOn')" />
+      <AppNote>{{ t('runtimeAdmin.prices.fromNowOn') }}</AppNote>
     </el-form>
     <el-alert
       v-if="error"
@@ -311,8 +325,8 @@ const title = computed(() =>
 }
 .price-form__section {
   margin: 4px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .price-form__prices {
   display: grid;
@@ -320,7 +334,7 @@ const title = computed(() =>
   gap: 0 16px;
 }
 .price-form__id-fixed {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .price-dialog__problems {
   margin: 4px 0 0;

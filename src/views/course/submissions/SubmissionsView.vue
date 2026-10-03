@@ -23,6 +23,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { usePaged } from '@/composables/useAsync'
@@ -179,11 +180,7 @@ function open(row: SubmissionSummary) {
         clearable
         :placeholder="t('submissions.filters.student')"
       />
-      <span class="app-toolbar__spacer" />
-      <el-button :loading="active.loading.value" @click="active.reload">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
+      <RefreshButton :loading="active.loading.value" @click="active.reload" />
     </div>
 
     <p v-if="!isStudent && !list.error.value?.isForbidden && (!assignment || !hasRoster)" class="submissions-hint">
@@ -308,8 +305,8 @@ function open(row: SubmissionSummary) {
   align-items: flex-start;
   gap: 6px;
   margin: -4px 0 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .submissions-hint .el-icon {
@@ -354,7 +351,7 @@ function open(row: SubmissionSummary) {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 </style>

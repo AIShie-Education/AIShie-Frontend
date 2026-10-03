@@ -5,6 +5,10 @@
 // address: Core keeps only its token's hash.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Message } from '@element-plus/icons-vue'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import TimeText from '@/components/TimeText.vue'
 import { formatNumber } from '@/utils/format'
 import { formatCountdown, remainingMs } from '@/utils/countdown'
@@ -56,10 +60,9 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
     <div v-if="endedCount" class="join-list__toolbar">
       <el-switch v-model="showEnded" :active-text="t('join.links.list.showEnded', { n: endedCount })" />
     </div>
-    <el-empty
+    <AppEmpty
       v-if="!shown.length"
-      :image-size="64"
-      :description="links.length ? t('join.links.list.noneLive') : t('join.links.list.empty')"
+      :text="links.length ? t('join.links.list.noneLive') : t('join.links.list.empty')"
     />
     <ul v-else class="join-list__items">
       <li
@@ -70,11 +73,11 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
         :data-link-id="l.id"
       >
         <div class="join-link__head">
-          <el-tag :type="JOIN_LINK_STATUS_TAG[status]" size="small" effect="light">
+          <AppTag :tone="toneOf(JOIN_LINK_STATUS_TAG[status])">
             {{ t(`join.links.status.${status}`) }}
-          </el-tag>
-          <el-tag v-if="stopped(l, status)" type="warning" size="small" effect="plain">{{ stopped(l, status) }}</el-tag>
-          <el-tag v-if="l.id === currentId" size="small" effect="plain">{{ t('join.links.list.shownAbove') }}</el-tag>
+          </AppTag>
+          <AppTag v-if="stopped(l, status)" tone="wait">{{ stopped(l, status) }}</AppTag>
+          <AppTag v-if="l.id === currentId" variant="outline">{{ t('join.links.list.shownAbove') }}</AppTag>
           <span v-if="status === 'live'" class="join-link__left">
             <el-icon><Timer /></el-icon>
             <span class="join-link__left-label">{{ t('join.links.list.timeLeft') }}</span>
@@ -111,22 +114,29 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
             <dt>{{ t('join.links.list.domains') }}</dt>
             <dd class="join-link__domains">
               <template v-if="l.allowed_email_domains?.length">
-                <el-tag v-for="d in l.allowed_email_domains" :key="d" size="small" type="info">@{{ d }}</el-tag>
+                <AppTag
+                  v-for="d in l.allowed_email_domains"
+                  :key="d"
+                  variant="outline"
+                  :icon="Message"
+                >
+                  @{{ d }}
+                </AppTag>
               </template>
               <span v-else>{{ t('join.links.anyEmail') }}</span>
             </dd>
           </div>
           <div>
             <dt>{{ t('join.links.list.createdBy') }}</dt>
-            <dd>{{ l.created_by_name || '—' }} · <TimeText :value="l.created_at" relative /></dd>
+            <dd>{{ l.created_by_name || '—' }}{{ t('common.sep') }}<TimeText :value="l.created_at" relative /></dd>
           </div>
           <div v-if="status === 'revoked' && l.revoked_at">
             <dt>{{ t('join.links.list.revokedBy') }}</dt>
-            <dd>{{ l.revoked_by_name || '—' }} · <TimeText :value="l.revoked_at" relative /></dd>
+            <dd>{{ l.revoked_by_name || '—' }}{{ t('common.sep') }}<TimeText :value="l.revoked_at" relative /></dd>
           </div>
           <div v-else-if="status === 'expired'">
             <dt>{{ t('join.links.list.ended') }}</dt>
-            <dd><TimeText :value="l.expires_at" relative /></dd>
+            <dd><TimeText :value="l.expires_at" relative cutoff /></dd>
           </div>
         </dl>
       </li>
@@ -166,14 +176,14 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .join-link__left-label {
   color: var(--el-text-color-secondary);
 }
 .join-link__clock {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
   color: var(--el-color-primary);
 }
@@ -188,11 +198,11 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 6px 16px;
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .join-link__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .join-link__facts dd {
   margin: 2px 0 0;

@@ -8,10 +8,13 @@ import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Monitor } from '@element-plus/icons-vue'
 import type { ApiError } from '@/api/http'
 import type { Credential } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -215,12 +218,12 @@ async function revoke(c: Credential) {
             <div class="creds-item__head">
               <span class="creds-item__title">{{ title(c) }}</span>
               <StatusTag vocab="credentialKind" :value="c.kind" />
-              <el-tag v-if="state !== 'active'" :type="STATE_TAG[state]" size="small" disable-transitions>
+              <AppTag v-if="state !== 'active'" :tone="toneOf(STATE_TAG[state])">
                 {{ t(`account.credentials.state.${state}`) }}
-              </el-tag>
-              <el-tag v-if="current" type="warning" effect="dark" size="small" disable-transitions>
+              </AppTag>
+              <AppTag v-if="current" variant="outline" :icon="Monitor">
                 {{ t('account.credentials.thisBrowser') }}
-              </el-tag>
+              </AppTag>
             </div>
             <div class="creds-item__meta">
               <span v-if="c.kind === 'api_token' && c.token_prefix">
@@ -255,7 +258,7 @@ async function revoke(c: Credential) {
               </span>
               <span v-if="c.kind === 'api_token' || c.kind === 'session' || c.kind === 'invite'">
                 <span class="creds-item__k">{{ t('account.credentials.expires') }}</span>
-                <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                <TimeText v-if="c.expires_at" :value="c.expires_at" cutoff />
                 <template v-else>{{ t('account.credentials.noExpiry') }}</template>
               </span>
               <span v-if="c.revoked_at">
@@ -342,7 +345,7 @@ async function revoke(c: Credential) {
   flex-wrap: wrap;
   gap: 4px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .creds-item__k {
@@ -351,7 +354,7 @@ async function revoke(c: Credential) {
 }
 .creds-item__code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 1px 5px;
@@ -367,7 +370,7 @@ async function revoke(c: Credential) {
 }
 .creds-item__agents-only {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-warning-dark-2);
 }
 .creds-item__actions {

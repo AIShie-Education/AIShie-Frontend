@@ -7,7 +7,8 @@ import { toValue, type MaybeRefOrGetter } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { errorMessage, type ReasonScopes } from '@/composables/useErrors'
 import type { UploadItem } from '@/composables/useUploadQueue'
-import { formatBytes } from '@/utils/format'
+import { formatBytes, formatPct } from '@/utils/format'
+import { joinParts } from '@/utils/parts'
 
 export interface UploadTextOptions extends ReasonScopes {
   /** The largest file Core takes, where known, for a file refused as too large without saying. */
@@ -22,6 +23,8 @@ export function useUploadText(opts: UploadTextOptions = {}) {
   const { t } = useI18n()
 
   const percent = (item: UploadItem) => Math.floor(item.fraction * 100)
+  /** How much of it is sent, as the language writes a percentage: "47%". */
+  const percentText = (item: UploadItem) => formatPct(percent(item) / 100, 0)
 
   function leftText(s: number): string {
     if (s < 60) return t('common.upload.left.seconds', { n: Math.max(1, s) })
@@ -67,13 +70,13 @@ export function useUploadText(opts: UploadTextOptions = {}) {
         if (item.phase === 'preparing') return t('common.upload.status.preparing')
         if (item.phase === 'finishing') return t('common.upload.status.finishing')
         const parts = [
-          t('common.upload.percent', { n: percent(item) }),
+          percentText(item),
           t('common.upload.of', { loaded: formatBytes(item.loaded), total: formatBytes(item.size) }),
         ]
         if (item.bytesPerSecond !== null)
           parts.push(t('common.upload.speed', { speed: formatBytes(item.bytesPerSecond) }))
         if (item.secondsLeft !== null) parts.push(leftText(item.secondsLeft))
-        return parts.join(' · ')
+        return joinParts(parts)
       }
       case 'done':
         return t('common.upload.status.done')
@@ -84,5 +87,5 @@ export function useUploadText(opts: UploadTextOptions = {}) {
     }
   }
 
-  return { percent, statusText, failText }
+  return { percent, percentText, statusText, failText }
 }

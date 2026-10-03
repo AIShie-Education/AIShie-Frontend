@@ -10,6 +10,7 @@ import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { Actor, ToolOut } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
+import AppNote from '@/components/AppNote.vue'
 import TokenRevealDialog from './TokenRevealDialog.vue'
 
 const props = defineProps<{ actor: Actor; blockedReason?: string | null }>()
@@ -80,15 +81,8 @@ function forget() {
   <section class="app-card">
     <h2 class="app-card__title">{{ t('admin.token.title') }}</h2>
     <p v-if="actor.hosting !== 'runtime'" class="app-muted token__intro">{{ t('admin.token.intro') }}</p>
-    <el-alert
-      v-if="actor.hosting === 'runtime'"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('admin.token.runtimeAgent')"
-      class="token__runtime"
-    />
-    <el-alert v-else-if="blockedReason" type="info" :closable="false" show-icon :title="blockedReason" />
+    <AppNote v-if="actor.hosting === 'runtime'" class="token__runtime">{{ t('admin.token.runtimeAgent') }}</AppNote>
+    <AppNote v-else-if="blockedReason">{{ blockedReason }}</AppNote>
     <el-form v-else ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="submit">
       <el-alert
         v-if="actor.status !== 'active'"
@@ -148,8 +142,8 @@ function forget() {
 <style scoped>
 .token__intro {
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .token__expiry {
   display: flex;

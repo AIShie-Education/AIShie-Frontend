@@ -20,9 +20,12 @@ import { ApiError, read } from '@/api/http'
 import { usePaged } from '@/composables/useAsync'
 import { usePageTitle } from '@/router/title'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import LevelIcon from '@/components/LevelIcon.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import ActionCard from './components/ActionCard.vue'
 import ActionTarget from './components/ActionTarget.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
@@ -212,7 +215,9 @@ function toggleRules() {
           :content="t('actions.approvals.decisionsNeedApprovalHelp')"
           placement="bottom"
         >
-          <el-tag type="warning" effect="plain">{{ t('actions.approvals.decisionsNeedApproval') }}</el-tag>
+          <AppTag size="default" class="app-level-tag is-confirm_required" tabindex="0">
+            <LevelIcon level="confirm_required" />{{ t('actions.approvals.decisionsNeedApproval') }}
+          </AppTag>
         </el-tooltip>
       </template>
       <el-button
@@ -227,10 +232,6 @@ function toggleRules() {
         <el-icon class="el-icon--right approvals__rules-chevron" :class="{ 'is-open': rulesOpen }" aria-hidden="true">
           <ArrowDown />
         </el-icon>
-      </el-button>
-      <el-button :loading="proposed.loading.value || review.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
       </el-button>
     </PageHeader>
 
@@ -278,7 +279,11 @@ function toggleRules() {
       </div>
     </section>
 
-    <div class="app-card">
+    <div class="app-card approvals__card">
+      <!-- Refresh at the right end of the tabs' row: the card's toolbar is that row. -->
+      <div class="approvals__toolbar">
+        <RefreshButton :loading="proposed.loading.value || review.loading.value" @click="refresh" />
+      </div>
       <el-tabs v-model="tab" class="approvals__tabs">
         <el-tab-pane name="proposed">
           <template #label>
@@ -357,8 +362,8 @@ function toggleRules() {
   border-left: 3px solid var(--app-indigo-line);
   border-radius: 0 var(--app-radius-item) var(--app-radius-item) 0;
   background: color-mix(in srgb, var(--app-indigo-tint) 50%, transparent);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-text);
   color: var(--app-ink-2);
 }
 .approvals__rules-list {
@@ -369,7 +374,7 @@ function toggleRules() {
   margin-top: 4px;
 }
 .approvals__rules-list strong {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink);
 }
 .approvals__rules-more {
@@ -398,8 +403,8 @@ function toggleRules() {
 }
 .approvals__help {
   margin: 0 0 8px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .approvals__list {
@@ -421,7 +426,7 @@ function toggleRules() {
   flex-wrap: wrap;
 }
 .approvals__recent-type {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
 }
 .approvals__tabs :deep(.el-tabs__item) {
@@ -435,7 +440,27 @@ function toggleRules() {
   }
   .approvals__tabs :deep(.el-tabs__item) {
     padding: 0 8px;
-    font-size: 13px;
+    font-size: var(--app-text-sm);
+  }
+}
+.approvals__card {
+  position: relative;
+}
+.approvals__toolbar {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+.approvals__tabs :deep(.el-tabs__header) {
+  padding-right: 136px;
+}
+@media (max-width: 600px) {
+  .approvals__toolbar {
+    top: 16px;
+    right: 16px;
+  }
+  .approvals__tabs :deep(.el-tabs__header) {
+    padding-right: 52px;
   }
 }
 </style>

@@ -15,10 +15,13 @@ import { isRuntimeError, isVersionMismatch, runtimeAdmin } from '@/api/runtime'
 import type { PlanOffer, ProviderOffer, SchoolPlan } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { providerLabel } from '@/views/account/components/agents/hosting'
+import AppEmpty from '@/components/AppEmpty.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import OfferDialog from './OfferDialog.vue'
 import OfferKey from './OfferKey.vue'
 import OfferStatus from './OfferStatus.vue'
 import { adminErrorText } from './runtimeAdmin'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   plan: SchoolPlan
@@ -164,15 +167,7 @@ function openEdit(o: PlanOffer) {
     <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.offers.title') }}</span>
       <span class="offers-card__head">
-        <el-button
-          circle
-          :loading="refreshing"
-          :aria-label="t('common.actions.refresh')"
-          class="offers-card__refresh"
-          @click="emit('changed')"
-        >
-          <el-icon><Refresh /></el-icon>
-        </el-button>
+        <RefreshButton :loading="refreshing" class="offers-card__refresh" @click="emit('changed')" />
         <el-button type="primary" class="offers-card__add" @click="openCreate">
           <el-icon><Plus /></el-icon>
           <span>{{ t('runtimeAdmin.offers.add') }}</span>
@@ -190,16 +185,16 @@ function openEdit(o: PlanOffer) {
       @close="error = null"
     />
 
-    <el-empty v-if="!offers.length" :description="t('runtimeAdmin.offers.empty')" class="offers-card__empty" />
+    <AppEmpty v-if="!offers.length" :text="t('runtimeAdmin.offers.empty')" class="offers-card__empty" />
     <el-table v-else ref="tableRef" :data="offers" :row-key="rowKey" class="offers-card__table">
       <el-table-column :label="t('runtimeAdmin.offers.model')" :min-width="narrow ? 240 : 230">
         <template #default="{ row }">
           <div class="offer-cell" :data-offer="rowKey(row)">
             <span class="offer-cell__label">{{ row.label }}</span>
-            <span class="offer-cell__model">{{ providerName(row.provider) }} · {{ row.model }}</span>
+            <span class="offer-cell__model">{{ joinParts([providerName(row.provider), row.model]) }}</span>
             <span class="offer-cell__meta">
               <code class="offer-cell__id">{{ row.id }}</code>
-              <template v-if="where(row)"> · {{ where(row) }}</template>
+              <template v-if="where(row)">{{ t('common.sep') }}{{ where(row) }}</template>
             </span>
             <template v-if="narrow">
               <OfferStatus :offer="row" />
@@ -282,8 +277,8 @@ function openEdit(o: PlanOffer) {
 }
 .offers-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .offers-card__error {
@@ -296,16 +291,16 @@ function openEdit(o: PlanOffer) {
   min-width: 0;
 }
 .offer-cell__label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
 }
 .offer-cell__model {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   word-break: break-word;
 }
 .offer-cell__meta,
 .offer-cell__agents {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-word;
 }
@@ -322,6 +317,6 @@ function openEdit(o: PlanOffer) {
 }
 .offer-cell__always,
 .offer-cell__read-only {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

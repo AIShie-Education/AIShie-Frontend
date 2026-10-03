@@ -10,6 +10,8 @@ import { PERMS, type Perm } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal, formatPercent, isUuid, shortId } from '@/utils/format'
 import { presetLabel } from '@/views/course/members/components/seat'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import IdText from '@/components/IdText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -243,8 +245,12 @@ function json(v: unknown) {
           <span class="fields-view__score">
             {{ exactDecimal(obj[k] as number | string) }}
             <template v-if="k === 'score' && obj.out_of !== undefined && obj.out_of !== null">
-              / {{ exactDecimal(obj.out_of as number | string) }}
-              <span class="fields-view__muted">({{ formatPercent(obj.score as number | string, obj.out_of as number | string) }})</span>
+              / {{ exactDecimal(obj.out_of as number | string)
+              }}<span class="fields-view__muted">{{
+                t('common.bracketed', {
+                  text: formatPercent(obj.score as number | string, obj.out_of as number | string),
+                })
+              }}</span>
             </template>
           </span>
         </template>
@@ -277,8 +283,10 @@ function json(v: unknown) {
         </div>
         <ul v-else-if="kindOf(k, obj[k]) === 'feedbackFiles'" class="fields-view__list">
           <li v-for="(f, i) in files(obj[k])" :key="i">
-            <el-icon><Paperclip /></el-icon> {{ f.title }}
-            <span v-if="f.filename && f.filename !== f.title" class="fields-view__muted">({{ f.filename }})</span>
+            <el-icon><Paperclip /></el-icon> {{ f.title
+            }}<span v-if="f.filename && f.filename !== f.title" class="fields-view__muted">{{
+              t('common.bracketed', { text: f.filename })
+            }}</span>
           </li>
         </ul>
         <ol v-else-if="kindOf(k, obj[k]) === 'versionFiles'" class="fields-view__list fields-view__files">
@@ -313,9 +321,9 @@ function json(v: unknown) {
           <MaybeLink :to="routeFor(courseId, 'component_id', obj[k] as string)">{{ componentName(obj[k]) ?? '' }}</MaybeLink>
           <IdText :id="obj[k] as string" />
         </span>
-        <el-tag v-else-if="kindOf(k, obj[k]) === 'decision'" size="small" :type="decisionTag(obj[k]).type">
+        <AppTag v-else-if="kindOf(k, obj[k]) === 'decision'" :tone="toneOf(decisionTag(obj[k]).type)">
           {{ decisionTag(obj[k]).label }}
-        </el-tag>
+        </AppTag>
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'reviewState'" vocab="reviewState" :value="obj[k] as string" />
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'actionStatus'" vocab="actionStatus" :value="obj[k] as string" />
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'state'" vocab="submissionState" :value="obj[k] as string" />
@@ -378,21 +386,21 @@ function json(v: unknown) {
 }
 .fields-view__label {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .fields-view__value {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .fields-view__score {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .fields-view__muted {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: normal;
 }
 .fields-view__text {
@@ -404,7 +412,7 @@ function json(v: unknown) {
   border: 1px solid var(--el-border-color-lighter);
 }
 .fields-view__text :deep(.markdown-body) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .fields-view__table {
   width: 100%;
@@ -454,7 +462,7 @@ function json(v: unknown) {
 }
 .fields-view__json {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-all;
 }
 @media (max-width: 600px) {

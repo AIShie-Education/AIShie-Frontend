@@ -33,8 +33,8 @@ const { t } = useI18n()
   gap: 6px;
   max-width: 100%;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 /* Centred on the first line: (1.5em - 1em) / 2 above it. */

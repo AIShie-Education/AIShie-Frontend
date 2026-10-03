@@ -16,6 +16,10 @@
 // An edit sends only what changed from the offer as read, at its version
 // (If-Match). When it has changed meanwhile (412), it is read again, what
 // the administrator changed is kept over it, and they are told so.
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
+import { toneOf } from '@/components/tags'
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
@@ -395,14 +399,9 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
     >
       <el-button size="small" @click="emit('reloadProviders')">{{ t('common.actions.retry') }}</el-button>
     </el-alert>
-    <el-alert
-      v-else-if="!providers.length"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('runtimeAdmin.offer.noProviders')"
-      class="offer-dialog__alert offer-dialog__no-providers"
-    />
+    <AppNote v-else-if="!providers.length" class="offer-dialog__alert offer-dialog__no-providers">
+      {{ t('runtimeAdmin.offer.noProviders') }}
+    </AppNote>
     <template v-else>
       <el-alert
         v-if="notice"
@@ -506,16 +505,13 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
             <el-radio-group v-if="canKeep" v-model="keyMode" class="offer-form__keymode">
               <el-radio value="keep">
                 {{ t('runtimeAdmin.offer.keyKeep', { hint: base?.key_hint ?? '' }) }}
-                <el-tag
+                <AppTag
                   v-if="base?.key_status"
-                  :type="base.key_status === 'tested' ? 'success' : 'warning'"
-                  effect="plain"
-                  size="small"
-                  disable-transitions
+                  :tone="toneOf(base.key_status === 'tested' ? 'success' : 'warning')"
                   class="offer-form__key-status"
                 >
                   {{ t(`runtimeAdmin.offers.${base.key_status}`) }}
-                </el-tag>
+                </AppTag>
               </el-radio>
               <el-radio value="new">{{ t('runtimeAdmin.offer.keyNew') }}</el-radio>
             </el-radio-group>
@@ -552,14 +548,9 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
               />
             </template>
           </el-form-item>
-          <el-alert
-            v-if="retests"
-            type="info"
-            :closable="false"
-            show-icon
-            :title="t('runtimeAdmin.offer.retests')"
-            class="offer-dialog__alert offer-form__retests"
-          />
+          <AppNote v-if="retests" class="offer-dialog__alert offer-form__retests">
+            {{ t('runtimeAdmin.offer.retests') }}
+          </AppNote>
 
           <el-collapse v-model="advanced" class="offer-form__advanced">
             <el-collapse-item name="advanced" :title="t('hosting.model.advanced')">
@@ -595,13 +586,9 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
             </el-collapse-item>
           </el-collapse>
 
-          <el-alert
-            type="warning"
-            :closable="false"
-            show-icon
-            :title="t('runtimeAdmin.offer.warning', { provider: providerName })"
-            class="offer-dialog__alert"
-          />
+          <DataFlowNotice class="offer-dialog__alert offer-dialog__data-flow">
+            {{ t('runtimeAdmin.offer.warning', { provider: providerName }) }}
+          </DataFlowNotice>
         </template>
       </el-form>
 
@@ -657,7 +644,7 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
   width: 100%;
 }
 .offer-form__id-fixed {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .offer-form__switch {
   display: flex;
@@ -666,8 +653,8 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
   margin-bottom: 18px;
 }
 .offer-form__switch-label {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-md);
 }
 .offer-form__switch .app-form-hint {
   margin: 2px 0 0;
@@ -676,8 +663,8 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
   margin: 8px 0 12px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .offer-form__keymode {
   display: flex;
@@ -699,7 +686,7 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
 }
 .offer-form__unpriced {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .offer-form__advanced {
   margin: 12px 0 8px;
@@ -707,10 +694,10 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
 .offer-dialog__trial-text,
 .offer-dialog__trial-detail {
   margin: 4px 0 0;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .offer-dialog__trial-detail {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-word;
 }
 </style>

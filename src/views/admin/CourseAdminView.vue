@@ -16,6 +16,7 @@ import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -25,6 +26,7 @@ import EditCourseDialog from './components/EditCourseDialog.vue'
 import MoveCourseDialog from './components/MoveCourseDialog.vue'
 import SeatInstructorCard from './components/SeatInstructorCard.vue'
 import { findCourse, useCanonicalId } from './components/adminShared'
+import { courseCodeText } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -63,9 +65,7 @@ async function onMoved() {
 
 const seat = computed(() => session.membershipFor(id.value))
 const archived = computed(() => course.value?.status === 'archived')
-const codeLabel = computed(() =>
-  course.value ? `${course.value.code}${course.value.section ? ` · ${course.value.section}` : ''}` : '',
-)
+const codeLabel = computed(() => (course.value ? courseCodeText(course.value.code, course.value.section) : ''))
 
 const activateW = useWrite('course.activate')
 const archiveW = useWrite('course.archive')
@@ -152,24 +152,23 @@ function onSeated(_memberId: string, actorId: string) {
     <AsyncState :loading="state.loading.value && !course" :error="course ? null : state.error.value" @retry="state.reload">
       <template v-if="course">
         <el-alert
-          :type="course.status === 'archived' ? 'warning' : course.status === 'draft' ? 'info' : 'success'"
-          :title="t(`admin.course.statusHelp.${course.status}`)"
+          v-if="course.status === 'archived'"
+          type="warning"
+          :title="t('admin.course.statusHelp.archived')"
           :closable="false"
           show-icon
           class="course-admin__alert"
         />
-        <el-alert
-          :type="seat ? 'success' : 'info'"
-          :closable="false"
-          class="course-admin__alert"
-          :title="
+        <AppNote v-else class="course-admin__alert">{{ t(`admin.course.statusHelp.${course.status}`) }}</AppNote>
+        <AppNote class="course-admin__alert">
+          {{
             seat
               ? t('admin.course.seatedAs', { role: t(`enums.role.${seat.role}`) })
               : session.isAdmin
                 ? t('admin.course.notSeated')
                 : t('deptAdmin.course.notSeated')
-          "
-        />
+          }}
+        </AppNote>
 
         <div class="course-admin__grid app-columns">
           <section class="app-card">
@@ -260,7 +259,7 @@ function onSeated(_memberId: string, actorId: string) {
   white-space: nowrap;
 }
 .course-admin__small {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .course-admin__title-actions {
   display: inline-flex;
@@ -276,14 +275,14 @@ function onSeated(_memberId: string, actorId: string) {
 }
 .course-admin__subhead {
   margin: 18px 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .course-admin__description {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 </style>

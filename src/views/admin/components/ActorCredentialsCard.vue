@@ -19,6 +19,9 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -177,7 +180,7 @@ async function revoke(c: ActorCredential) {
         : t('admin.credentials.confirm.title')
   const message = h(
     'div',
-    confirmLines(c).map((l) => h('p', { style: `margin: 0 0 8px;${l.strong ? ' font-weight: 600;' : ''}` }, l.text)),
+    confirmLines(c).map((l) => h('p', { style: `margin: 0 0 8px;${l.strong ? ' font-weight: var(--app-weight-strong);' : ''}` }, l.text)),
   )
   const ok = await ElMessageBox.confirm(message, title, {
     type: 'warning',
@@ -222,16 +225,9 @@ defineExpose({ reload: () => list.reload() })
     <p v-if="listable" class="app-muted creds__intro">
       {{ actor.kind === 'human' ? t('admin.credentials.introHuman') : t('admin.credentials.introAgent') }}
     </p>
-    <el-alert
-      v-if="isSelf"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('admin.credentials.self')"
-      class="creds__alert"
-    >
+    <AppNote v-if="isSelf" :title="t('admin.credentials.self')" class="creds__alert">
       <router-link :to="{ name: 'account' }">{{ t('admin.credentials.selfLink') }}</router-link>
-    </el-alert>
+    </AppNote>
     <p v-else-if="blockedReason" class="app-form-hint creds__blocked">{{ blockedReason }}</p>
 
     <AsyncState
@@ -261,9 +257,9 @@ defineExpose({ reload: () => list.reload() })
             <div class="creds__main">
               <div class="creds__head">
                 <span class="creds__name" :class="{ 'app-muted': !c.label?.trim() }">{{ tokenLabel(c) }}</span>
-                <el-tag :type="STATE_TAG[state]" size="small" disable-transitions>
+                <AppTag :variant="state === 'active' ? 'quiet' : 'pill'" :tone="toneOf(STATE_TAG[state])">
                   {{ t(`admin.credentials.state.${state}`) }}
-                </el-tag>
+                </AppTag>
               </div>
               <div class="creds__meta">
                 <span>
@@ -292,7 +288,7 @@ defineExpose({ reload: () => list.reload() })
                 </span>
                 <span>
                   <span class="creds__k">{{ t('admin.credentials.col.expires') }}</span>
-                  <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                  <TimeText v-if="c.expires_at" :value="c.expires_at" cutoff />
                   <template v-else>{{ t('common.labels.never') }}</template>
                 </span>
                 <span>
@@ -319,9 +315,12 @@ defineExpose({ reload: () => list.reload() })
             <template #default="{ row }">
               <div class="creds__head">
                 <span class="creds__name" :class="{ 'app-muted': !row.c.label?.trim() }">{{ tokenLabel(row.c) }}</span>
-                <el-tag :type="STATE_TAG[row.state as CredentialState]" size="small" disable-transitions>
+                <AppTag
+                  :variant="row.state === 'active' ? 'quiet' : 'pill'"
+                  :tone="toneOf(STATE_TAG[row.state as CredentialState])"
+                >
                   {{ t(`admin.credentials.state.${row.state}`) }}
-                </el-tag>
+                </AppTag>
               </div>
               <div v-if="row.c.revoked_at" class="creds__when">
                 <span class="creds__k">{{ t('admin.credentials.revokedAt') }}</span>
@@ -356,7 +355,7 @@ defineExpose({ reload: () => list.reload() })
           </el-table-column>
           <el-table-column :label="t('admin.credentials.col.expires')" min-width="150">
             <template #default="{ row }">
-              <TimeText v-if="row.c.expires_at" :value="row.c.expires_at" />
+              <TimeText v-if="row.c.expires_at" :value="row.c.expires_at" cutoff />
               <span v-else class="app-muted">{{ t('common.labels.never') }}</span>
             </template>
           </el-table-column>
@@ -402,12 +401,12 @@ defineExpose({ reload: () => list.reload() })
               <div class="creds__head">
                 <span class="creds__name">{{ otherTitle(c) }}</span>
                 <StatusTag v-if="showKind(c)" vocab="credentialKind" :value="c.kind" />
-                <el-tag v-if="state !== 'active'" :type="STATE_TAG[state]" size="small" disable-transitions>
+                <AppTag v-if="state !== 'active'" :tone="toneOf(STATE_TAG[state])">
                   {{ t(`admin.credentials.state.${state}`) }}
-                </el-tag>
-                <el-tag v-else-if="temporary(c)" type="warning" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-else-if="temporary(c)" tone="wait">
                   {{ t('admin.credentials.temporary') }}
-                </el-tag>
+                </AppTag>
               </div>
               <div class="creds__meta">
                 <span v-if="temporary(c) && c.issued_by_name">
@@ -438,7 +437,7 @@ defineExpose({ reload: () => list.reload() })
                 </span>
                 <span v-if="c.expires_at">
                   <span class="creds__k">{{ t('admin.credentials.col.expires') }}</span>
-                  <TimeText :value="c.expires_at" />
+                  <TimeText :value="c.expires_at" cutoff />
                 </span>
                 <span v-if="c.revoked_at">
                   <span class="creds__k">{{ t('admin.credentials.revokedAt') }}</span>
@@ -481,8 +480,8 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__intro {
   margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .creds__alert {
   margin-bottom: 12px;
@@ -492,8 +491,8 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__subhead {
   margin: 4px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
   color: var(--el-text-color-regular);
 }
 .creds__subhead--others {
@@ -501,11 +500,11 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .creds__agents-only {
   margin: -4px 0 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-warning-dark-2);
 }
 .creds__table :deep(.el-table__row.is-inactive) {
@@ -517,7 +516,7 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 1px 5px;
@@ -528,7 +527,7 @@ defineExpose({ reload: () => list.reload() })
 }
 .creds__when {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .creds__list {
@@ -569,7 +568,7 @@ defineExpose({ reload: () => list.reload() })
   flex-wrap: wrap;
   gap: 2px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .creds__k {

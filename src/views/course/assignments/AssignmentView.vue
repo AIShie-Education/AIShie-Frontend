@@ -17,6 +17,9 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import { versionFilesOf } from '@/utils/documentFiles'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import VersionFileList from '@/components/VersionFileList.vue'
@@ -228,25 +231,20 @@ function refresh() {
       :back="{ name: 'course-assignments', params: { courseId } }"
     >
       <template v-if="assignment" #tags>
-        <el-tag v-if="!assignment.published_at" type="warning" disable-transitions>
+        <AppTag v-if="!assignment.published_at" tone="wait" size="default">
           {{ t('assignments.state.unpublished') }}
-        </el-tag>
-        <el-tag v-if="pastDue" type="info" disable-transitions>{{ t('assignments.state.pastDue') }}</el-tag>
+        </AppTag>
+        <AppTag v-if="pastDue" size="default">{{ t('assignments.state.pastDue') }}</AppTag>
       </template>
       <template v-if="assignment" #subtitle>
-        <span v-if="assignment.due_at">
-          {{ t('assignments.detail.dueLine') }} <TimeText :value="assignment.due_at" /> (<TimeText
-            :value="assignment.due_at"
-            relative
-          />)
-        </span>
-        <span v-else>{{ t('common.time.noDue') }}</span>
-        · {{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
+        <!-- A cut-off: the time with its zone, the exact UTC on hover. -->
+        <i18n-t v-if="assignment.due_at" keypath="assignments.detail.dueLine" tag="span" scope="global">
+          <template #at><TimeText :value="assignment.due_at" cutoff /></template>
+          <template #rel><TimeText :value="assignment.due_at" relative /></template>
+        </i18n-t>
+        <span v-else>{{ t('common.time.noDue') }}</span
+        >{{ t('common.sep') }}{{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
       </template>
-      <el-button :loading="state.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <template v-if="assignment && writer">
         <el-button :disabled="!course.writable" @click="formOpen = true">
           <el-icon><Edit /></el-icon>
@@ -303,25 +301,18 @@ function refresh() {
       </template>
     </PageHeader>
 
-    <el-alert v-if="pendingNote" type="info" show-icon class="assignment-view__alert" @close="pendingNote = null">
-      <template #title>
-        {{ pendingNote }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
-          {{ t('assignments.list.viewMyActions') }}
-        </router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="pendingNote" class="assignment-view__alert" @close="pendingNote = null" closable>
+      {{ pendingNote }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
+        {{ t('assignments.list.viewMyActions') }}
+      </router-link>
+    </AppNote>
 
     <AsyncState :loading="state.loading.value && !assignment" :error="state.error.value" @retry="state.reload">
       <template v-if="assignment">
-        <el-alert
-          v-if="writer && !assignment.published_at"
-          type="info"
-          :closable="false"
-          show-icon
-          class="assignment-view__alert"
-          :title="t('assignments.detail.unpublishedAlert')"
-        />
+        <AppNote v-if="writer && !assignment.published_at" class="assignment-view__alert">
+          {{ t('assignments.detail.unpublishedAlert') }}
+        </AppNote>
         <el-alert
           v-if="writer && !assignment.published_at && instructionsUnpublished"
           type="warning"
@@ -372,17 +363,16 @@ function refresh() {
                 @retry="instructions.reload"
               >
                 <template v-if="instructionsDoc">
-                  <el-alert
+                  <AppNote
                     v-if="instructionsDoc.version && !instructionsDoc.version.published"
-                    type="info"
-                    :closable="false"
                     class="assignment-view__alert"
-                    :title="
+                  >
+                    {{
                       instructionsDoc.published_version_id
                         ? t('assignments.detail.draftVersion', { seq: instructionsDoc.version.seq })
                         : t('assignments.detail.draftVersionNone', { seq: instructionsDoc.version.seq })
-                    "
-                  />
+                    }}
+                  </AppNote>
                   <Tombstone
                     v-if="instructionsDoc.version?.purged"
                     :purge="instructionsDoc.version.purged"
@@ -426,14 +416,17 @@ function refresh() {
           <aside class="assignment-view__side app-column">
             <!-- Details -->
             <section class="app-card">
-              <h2 class="app-card__title">{{ t('assignments.detail.details') }}</h2>
+              <h2 class="app-card__title">
+                <span>{{ t('assignments.detail.details') }}</span>
+                <RefreshButton :loading="state.loading.value" @click="refresh" />
+              </h2>
               <dl class="assignment-view__facts">
                 <dt>{{ t('assignments.detail.points') }}</dt>
                 <dd class="assignment-view__num">{{ formatDecimal(assignment.points_possible) }}</dd>
                 <dt>{{ t('assignments.detail.due') }}</dt>
                 <dd>
                   <template v-if="assignment.due_at">
-                    <TimeText :value="assignment.due_at" />
+                    <TimeText :value="assignment.due_at" cutoff />
                     <div class="app-muted assignment-view__rel"><TimeText :value="assignment.due_at" relative /></div>
                   </template>
                   <span v-else class="app-muted">{{ t('common.time.noDue') }}</span>
@@ -539,14 +532,14 @@ function refresh() {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
   text-decoration: none;
   white-space: nowrap;
 }
 .assignment-view__none {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .assignment-view__file {
   display: flex;
@@ -556,18 +549,18 @@ function refresh() {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .assignment-view__facts {
   margin: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px 16px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .assignment-view__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .assignment-view__facts dd {
   margin: 0;
@@ -575,10 +568,10 @@ function refresh() {
 }
 .assignment-view__num {
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .assignment-view__rel {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin-top: 2px;
 }
 .assignment-view__links {

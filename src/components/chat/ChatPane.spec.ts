@@ -560,7 +560,7 @@ describe('ChatPane', () => {
     const html = src.body.html as string
     // Who wrote each, in order; the person's words as they are, escaped; the agent's as Markdown.
     const who = [...html.matchAll(/print-entry__who">([^<]*)</g)].map((m) => m[1])
-    expect(who).toEqual(['You ', 'Course tutor ', 'You '])
+    expect(who).toEqual(['You', 'Course tutor', 'You'])
     expect(html).toContain('What is &lt;b&gt;recursion&lt;/b&gt;?')
     expect(html).toContain('<strong>A function</strong> that calls itself.')
     expect(html).toContain('Files: notes.pdf')
@@ -1057,11 +1057,18 @@ describe('ChatPane: who reads it, and where it goes', () => {
     await flushPromises()
     expect(runtimeCalls).toEqual(['list', 'models'])
     expect(w.find('.chat-pane__privacy').text()).toContain('My helper sends it to Anthropic to answer.')
+    // Where it goes is said as everywhere: the shield, here before the one line.
+    expect(w.find('.chat-pane__privacy .data-flow.is-compact .data-flow__icon').exists()).toBe(true)
     await w.find('.chat-pane__privacy-more').trigger('click')
     await flushPromises()
     expect(document.body.querySelector('.chat-pane__readers')?.textContent).toContain(
       'That model is claude-sonnet, from Anthropic, on your own API key.',
     )
+    // In the notice, where it goes to be answered is a DataFlowNotice under its heading, the shield before it.
+    const route = document.body.querySelector('.chat-pane__readers .chat-privacy__route')!
+    expect(route.classList).toContain('data-flow')
+    expect(route.querySelector('h3.data-flow__title')?.textContent).toBe('Where it goes to be answered')
+    expect(route.textContent).toContain('My helper is hosted on AIshie.')
   })
 
   it('shows no line to staff reading a conversation', async () => {
@@ -1078,6 +1085,9 @@ describe('ChatPane: who reads it, and where it goes', () => {
     await flushPromises()
     const first = w.find('.chat-pane__privacy-first')
     expect(first.find('h3').text()).toBe('Before you ask')
+    // Said as where data goes is said to administrators and owners: the shield on the indigo's outline, named by its title.
+    expect(first.find('.data-flow:not(.is-compact) .data-flow__icon').exists()).toBe(true)
+    expect(first.attributes('aria-labelledby')).toBe(first.find('h3').attributes('id'))
     expect(first.findAll('li').map((l) => l.text())).toEqual([
       'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
       'Course tutor sends what you write here to its AI model’s provider to answer it.',

@@ -1,7 +1,6 @@
 export default {
   title: '动态',
   subtitle: '这门课发生过、而你的席位可以知道的一切，最新的排最前',
-  refresh: '立即检查',
   live: '页面打开期间每{n}秒检查一次新动态',
   paused: '页面在后台时暂停检查',
   archived: '这门课已归档，之后不会再有新动态。',
@@ -30,7 +29,7 @@ export default {
   olderFailed: '无法加载较早的动态',
   runMore: '另有{n}条相同的动态',
   runLess: '收起',
-  runSince: '最早一条',
+  runSince: '最早一条{time}',
   today: '今天',
   yesterday: '昨天',
   viaAction: '相关操作',

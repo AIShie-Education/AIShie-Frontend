@@ -48,14 +48,19 @@ export function formatFraction(f: Decimal | null | undefined): string {
   return formatPct(n)
 }
 
+/** The sign of the US dollar, beside a field of dollars too: "$" alone reads as Hong Kong's in Hong Kong. */
+export const USD_SIGN = 'US$'
+
 /**
  * US dollars as the page's language writes them, always "US$" (a "$" alone
  * reads as Hong Kong's in Hong Kong): to the cent from a dollar up, and below
  * it to three significant figures (US$0.0184 a call, not US$0.02 nor
- * US$0.018400). Core's decimals ("0.018400") are taken as they come; "—"
- * for none.
+ * US$0.018400). Core's and the runtime's decimals ("0.018400") are taken as
+ * they come; "—" for none. A price someone typed (exact) keeps every figure
+ * it has, to the six places the runtime keeps, and at least the cents:
+ * US$1.875, US$0.075, US$3.00, never rounded to look like another price.
  */
-export function formatMoney(usd: Decimal | null | undefined): string {
+export function formatMoney(usd: Decimal | null | undefined, opts: { exact?: boolean } = {}): string {
   if (usd === null || usd === undefined || usd === '') return '—'
   const n = Number(usd)
   if (!Number.isFinite(n)) return String(usd)
@@ -64,26 +69,36 @@ export function formatMoney(usd: Decimal | null | undefined): string {
     style: 'currency',
     currency: 'USD',
     currencyDisplay: 'code',
-    ...(cents
-      ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-      : { minimumSignificantDigits: 2, maximumSignificantDigits: 3 }),
+    ...(opts.exact
+      ? { minimumFractionDigits: 2, maximumFractionDigits: 6 }
+      : cents
+        ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+        : { minimumSignificantDigits: 2, maximumSignificantDigits: 3 }),
   }
   return new Intl.NumberFormat(numberLocale, options)
     .formatToParts(n)
-    .map((p) => (p.type === 'currency' ? 'US$' : p.type === 'literal' && /^\s+$/.test(p.value) ? '' : p.value))
+    .map((p) => (p.type === 'currency' ? USD_SIGN : p.type === 'literal' && /^\s+$/.test(p.value) ? '' : p.value))
     .join('')
 }
 
 /**
  * Items as a list in the page's language: "a, b, and c" in English,
- * 「甲、乙和丙」 in Chinese, never items joined by a comma written here.
+ * 「甲、乙和丙」 in Chinese, never items joined by a comma written here; with
+ * 'or', the choice of one of them: "a, b, or c", 「甲、乙或丙」.
  */
-export function formatList(items: readonly string[]): string {
+export function formatList(items: readonly string[], type: 'and' | 'or' = 'and'): string {
   try {
-    return new Intl.ListFormat(numberLocale, { type: 'conjunction' }).format(items)
+    return new Intl.ListFormat(numberLocale, { type: type === 'or' ? 'disjunction' : 'conjunction' }).format(items)
   } catch {
-    return items.join(', ')
+    // An engine without Intl.ListFormat (none this app runs on): the items, one after another.
+    return items.join(type === 'or' ? ' / ' : ', ')
   }
+}
+
+/** A count in the page's language: 1,284 people, never 1284. */
+export function formatCount(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return '—'
+  return formatNumber(n, 0)
 }
 
 export function formatDateTime(v: string | null | undefined): string {

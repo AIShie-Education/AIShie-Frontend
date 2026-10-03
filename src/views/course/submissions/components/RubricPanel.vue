@@ -4,6 +4,8 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import MarkdownView from '@/components/MarkdownView.vue'
 import VersionFileList from '@/components/VersionFileList.vue'
 import { versionFilesOf } from '@/utils/documentFiles'
@@ -46,9 +48,9 @@ const note = computed(() => {
         <el-icon><Memo /></el-icon>
         {{ doc?.title ?? t('submissions.rubric.title') }}
       </span>
-      <el-tag v-if="version" size="small" :type="version.published ? 'success' : 'warning'" disable-transitions>
+      <AppTag v-if="version" :tone="toneOf(version.published ? 'success' : 'warning')">
         {{ t('submissions.rubric.version', { n: version.seq }) }}
-      </el-tag>
+      </AppTag>
     </div>
     <p v-if="note" class="rubric-panel__note" :class="{ 'is-warning': state?.status === 'unpublished' || !!error }">
       {{ note }}
@@ -94,24 +96,24 @@ const note = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
 }
 .rubric-panel__note {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .rubric-panel__note.is-warning {
   color: var(--el-color-warning);
 }
 .rubric-panel__body {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   overflow-wrap: anywhere;
 }
 .rubric-panel__body :deep(.markdown-body) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .rubric-panel__body :deep(.markdown-body h1),
 .rubric-panel__body :deep(.markdown-body h2) {

@@ -55,7 +55,8 @@ describe('SiteChatCard', () => {
 
   it('says one with MCP access is never asked on the site, and what is', () => {
     const w = card({ hosting: 'mcp' })
-    expect(w.find('.el-tag').text()).toBe('MCP access')
+    // How it runs is among the page's facts: no tag says it again here.
+    expect(w.find('.el-tag').exists()).toBe(false)
     expect(w.find('.site-chat__text').text()).toBe(
       'Nobody can ask it on the site: it has MCP access, and is used from your own tools. An agent people ask here is one created as hosted on AIshie.',
     )

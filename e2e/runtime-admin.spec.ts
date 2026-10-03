@@ -396,6 +396,39 @@ test.describe('with an agent runtime', () => {
   })
 })
 
+test.describe('a price’s day, with an agent runtime, read west of UTC', () => {
+  const ZONE = 'America/New_York'
+  test.use({ timezoneId: ZONE })
+
+  test('the price dialog says the day chosen is UTC’s, and when it begins on the reader’s clock', async ({ page }) => {
+    const runtime = playRuntime(page)
+    await runtime.install()
+    await signInAsRoot(page)
+    await page.goto('/admin/runtime?tab=pricing')
+    await page.locator('.prices-card').getByRole('button', { name: 'Add a price' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Add a price' })
+    // The day chosen is today's in UTC, which begins on the evening before it in New York.
+    const today = new Date().toISOString().slice(0, 10)
+    await expect(dialog.locator('.price-form__from input')).toHaveValue(today)
+    const at = new Date(`${today}T00:00:00Z`)
+    const part = (lang: string, opts: Intl.DateTimeFormatOptions, type: Intl.DateTimeFormatPartTypes) =>
+      new Intl.DateTimeFormat(lang, { timeZone: ZONE, ...opts }).formatToParts(at).find((p) => p.type === type)!.value
+    const day = ['year', 'month', 'day'].map((t) =>
+      part('en', { year: 'numeric', month: '2-digit', day: '2-digit' }, t as Intl.DateTimeFormatPartTypes),
+    )
+    const clock = new Intl.DateTimeFormat('en-GB', { timeZone: ZONE, hour: '2-digit', minute: '2-digit' }).format(at)
+    const start = `${day.join('-')} ${clock}`
+    expect(start < `${today} 00:00`, 'the day begins in New York on the evening before').toBe(true)
+    const zone = part('en', { timeZoneName: 'long' }, 'timeZoneName')
+    const hint = dialog.locator('.price-form__from-hint')
+    await expect(hint).toHaveText(
+      `The price starts at ${start} (${zone}), when the day chosen begins in UTC. It may be in the future.`,
+    )
+    await hint.locator('time').hover()
+    await expect(page.getByRole('tooltip').filter({ hasText: 'UTC' })).toContainText(`${today} 00:00 UTC`)
+  })
+})
+
 /** The transcription service's live credentials in Core, as root lists them. */
 async function liveServiceCredentials(): Promise<{ id: string; token_prefix: string }[]> {
   const out = await call(root().token, 'GET', '/v1/services/document_text/credentials')

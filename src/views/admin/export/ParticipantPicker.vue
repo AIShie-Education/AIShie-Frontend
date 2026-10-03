@@ -94,7 +94,9 @@ async function find() {
 function choose(who: NonNullable<typeof found.value>) {
   found.value = who
   model.value = who.id
-  label.value = who.name ? `${who.name} (${who.by})` : t('auditExport.participant.byId', { id: who.id })
+  label.value = who.name
+    ? t('common.aside', { text: who.name, aside: who.by })
+    : t('auditExport.participant.byId', { id: who.id })
   typed.value = ''
 }
 
@@ -231,15 +233,15 @@ defineExpose({ clear })
   max-width: 55%;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .participant-picker__id {
-  font-size: 11px;
+  font-size: var(--app-text-mark);
 }
 .participant-picker__empty {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .participant-picker__find {
@@ -274,7 +276,7 @@ defineExpose({ clear })
 }
 .participant-picker__error {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 @media (max-width: 640px) {

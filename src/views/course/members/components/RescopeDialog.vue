@@ -7,10 +7,13 @@
 import { computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
+import { User } from '@element-plus/icons-vue'
 import type { ToolIn } from '@/api/http'
 import type { Member, PermLevels } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -202,9 +205,9 @@ async function submit() {
             :title="t('members.rescope.staleStudents', { n: staleStudents.length }, staleStudents.length)"
           >
             <div class="rescope__stale">
-              <el-tag v-for="id in staleStudents" :key="id" type="info" size="small" disable-transitions>
+              <AppTag v-for="id in staleStudents" :key="id" variant="outline" :icon="User">
                 <MemberName :id="id" />
-              </el-tag>
+              </AppTag>
             </div>
             <el-button size="small" class="rescope__drop" @click="dropStale">
               {{ t('members.rescope.dropStale') }}
@@ -239,7 +242,7 @@ async function submit() {
         <div class="rescope__expiry">
           <div class="rescope__now">
             <span class="app-muted">{{ t('members.rescope.currently') }}</span>
-            <TimeText v-if="member.expires_at" :value="member.expires_at" />
+            <TimeText v-if="member.expires_at" :value="member.expires_at" cutoff />
             <span v-else>{{ t('members.detail.noExpiry') }}</span>
           </div>
           <el-radio-group v-model="form.expiry">
@@ -260,9 +263,7 @@ async function submit() {
       </el-form-item>
     </el-form>
 
-    <el-alert v-if="isGrant" type="info" :closable="false" show-icon class="rescope__alert">
-      <template #title>{{ t('members.rescope.isGrant') }}</template>
-    </el-alert>
+    <AppNote v-if="isGrant" class="rescope__alert">{{ t('members.rescope.isGrant') }}</AppNote>
     <el-alert v-if="problems.length" type="warning" :closable="false" show-icon class="rescope__alert">
       <template #title>{{ t('members.grant.willRefuse') }}</template>
       <ul class="rescope__problems">
@@ -293,7 +294,7 @@ async function submit() {
 <style scoped>
 .rescope__intro {
   margin: 0 0 16px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .rescope__list {
@@ -315,7 +316,7 @@ async function submit() {
 .rescope__now {
   display: flex;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   flex-wrap: wrap;
 }
 .rescope__date {
@@ -323,14 +324,14 @@ async function submit() {
 }
 .rescope__error {
   color: var(--el-color-danger);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .rescope__alert {
   margin-bottom: 12px;
 }
 .rescope__alert :deep(.el-alert__title) {
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-ui);
 }
 .rescope__problems {
   margin: 4px 0 0;
@@ -352,6 +353,6 @@ async function submit() {
   flex-wrap: wrap;
 }
 .rescope__nothing {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

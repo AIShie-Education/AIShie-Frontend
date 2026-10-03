@@ -56,7 +56,7 @@ export function usePageTitle(routeName: string, key: MaybeRefOrGetter<string | n
 
 /** What the tab says for a page titled by `key`: "Assignments · AIshie", or the app's name alone. */
 export function documentTitle(key: string | undefined, t: (key: string) => string = (k) => i18n.global.t(k)): string {
-  return key ? `${t(key)} · ${APP_NAME}` : APP_NAME
+  return key ? [t(key), APP_NAME].join(i18n.global.t('common.sep')) : APP_NAME
 }
 
 /**

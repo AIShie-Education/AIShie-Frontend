@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// How an agent runs, beside its name wherever it is shown in detail (its
-// page, a member list, the agents one may ask): hosted on AIshie (runtime) or
+// How an agent runs, among the facts of its own page (its member page, its
+// owner's page, the administration's page): hosted on AIshie (runtime) or
 // MCP access (mcp), with a line on what that means in its tooltip. For an
 // agent hosted on AIshie, given whether people can ask it now (Core's
 // site_chat), a second tag says so: it can be asked on the site, or it is not
@@ -9,10 +9,14 @@
 // kind, and whether it can be asked is not an outcome: both are neutral, as
 // categories are (docs/CONVENTIONS.md, "Colour"), and an agent is never shown
 // "online" in green. Only "not running", which wants someone to see to it,
-// takes the amber of what waits for a person.
+// takes the amber of what waits for a person. How it runs is said once, on
+// the agent's own page, among its facts (docs/CONVENTIONS.md, "Tags"): a
+// list of agents says whether each can be asked by a dot (AskableDot).
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Connection, Monitor } from '@element-plus/icons-vue'
 import { hostingOf } from '@/utils/agents'
+import AppTag from './AppTag.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -35,30 +39,26 @@ const askable = computed<'on' | 'off' | null>(() =>
 <template>
   <span v-if="mode" class="hosting-tag" :class="`is-${mode}`">
     <el-tooltip :content="t(`common.agent.hosting.${mode}Help`)" placement="top">
-      <el-tag
-        type="info"
-        effect="plain"
+      <AppTag
+        variant="outline"
+        :icon="mode === 'runtime' ? Monitor : Connection"
         :size="size ?? 'small'"
         class="hosting-tag__mode"
-        disable-transitions
         tabindex="0"
       >
-        <el-icon aria-hidden="true"><Monitor v-if="mode === 'runtime'" /><Connection v-else /></el-icon>
         <span>{{ t(`common.agent.hosting.${mode}`) }}</span>
-      </el-tag>
+      </AppTag>
     </el-tooltip>
     <el-tooltip v-if="askable" :content="t(`common.agent.askable.${askable}Help`)" placement="top">
-      <el-tag
-        :type="askable === 'on' ? 'info' : 'warning'"
-        :effect="askable === 'on' ? 'light' : 'plain'"
+      <AppTag
+        :tone="askable === 'on' ? 'neutral' : 'wait'"
         :size="size ?? 'small'"
         class="hosting-tag__askable"
         :class="`is-${askable}`"
-        disable-transitions
         tabindex="0"
       >
         {{ t(`common.agent.askable.${askable}`) }}
-      </el-tag>
+      </AppTag>
     </el-tooltip>
   </span>
 </template>
@@ -71,10 +71,5 @@ const askable = computed<'on' | 'off' | null>(() =>
   gap: 4px;
   max-width: 100%;
   vertical-align: middle;
-}
-.hosting-tag__mode :deep(.el-tag__content) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 </style>

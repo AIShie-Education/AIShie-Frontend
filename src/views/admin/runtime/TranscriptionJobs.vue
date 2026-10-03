@@ -15,11 +15,16 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { TranscriptionJob, TranscriptionJobFilter } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { formatMoney, shortId } from '@/utils/format'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
+import { toneOf } from '@/components/tags'
 import LoadMore from '@/components/LoadMore.vue'
 import TimeText from '@/components/TimeText.vue'
 import { textReasonText } from '@/views/course/materials/components/textVersion'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { JOB_STATUS_TAG } from './transcription'
+import { joinParts } from '@/utils/parts'
 
 const { t, te, n } = useI18n()
 // A phone's layout, a job's pages, cost and time under its document, where the
@@ -140,33 +145,17 @@ const empty = computed(() => loaded.value && !jobs.value.length)
           "
         />
       </el-select>
-      <el-button
-        circle
-        size="small"
-        :loading="loading"
-        :aria-label="t('common.actions.refresh')"
-        class="transcription-jobs__refresh"
-        @click="load()"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="loading" class="transcription-jobs__refresh" @click="load()" />
     </div>
     <RuntimeAsync :loading="loading && !loaded" :error="loaded ? null : error" @retry="load()">
-      <el-empty
-        v-if="empty"
-        :image-size="64"
-        :description="t('runtimeAdmin.transcription.jobs.empty')"
-        class="transcription-jobs__empty"
-      />
+      <AppEmpty v-if="empty" :text="t('runtimeAdmin.transcription.jobs.empty')" class="transcription-jobs__empty" />
       <el-table v-else ref="tableRef" :data="jobs" row-key="id" class="transcription-jobs__table">
         <el-table-column :label="t('runtimeAdmin.transcription.jobs.document')" min-width="220">
           <template #default="{ row }">
             <div class="job-cell" :data-job="row.id">
               <div class="job-cell__head">
-                <el-tag
-                  :type="JOB_STATUS_TAG[row.status as TranscriptionJob['status']] ?? 'info'"
-                  size="small"
-                  disable-transitions
+                <AppTag
+                  :tone="toneOf(JOB_STATUS_TAG[row.status as TranscriptionJob['status']] ?? 'info')"
                   class="job-cell__status"
                 >
                   {{
@@ -174,25 +163,26 @@ const empty = computed(() => loaded.value && !jobs.value.length)
                       ? t(`runtimeAdmin.transcription.jobs.status.${row.status}`)
                       : row.status
                   }}
-                </el-tag>
+                </AppTag>
                 <router-link :to="linkTo(row)" class="job-cell__doc">
                   {{ titleOf(row) || shortId(row.document_id) }}
                 </router-link>
                 <span v-if="fileOf(row)" class="job-cell__file">{{ fileOf(row) }}</span>
-                <el-tag v-if="row.backfill" size="small" type="info" effect="plain" disable-transitions>
+                <AppTag v-if="row.backfill" variant="outline">
                   {{ t('runtimeAdmin.transcription.jobs.backfill') }}
-                </el-tag>
+                </AppTag>
               </div>
               <span v-if="reasonOf(row)" class="job-cell__reason">{{ reasonOf(row) }}</span>
               <span class="job-cell__meta">
-                {{ row.content_type }}<template v-if="row.model"> · {{ row.model }}</template>
+                {{ joinParts([row.content_type, row.model]) }}
               </span>
               <span v-if="narrow" class="job-cell__meta">
-                <template v-if="row.pages !== null">
-                  {{ t('runtimeAdmin.transcription.jobs.pagesN', { n: n(row.pages) }, row.pages) }} ·
-                </template>
-                {{ costOf(row) }} ·
-                <TimeText :value="row.finished_at ?? row.started_at" relative />
+                {{
+                  joinParts([
+                    row.pages !== null && t('runtimeAdmin.transcription.jobs.pagesN', { n: n(row.pages) }, row.pages),
+                    costOf(row),
+                  ])
+                }}{{ t('common.sep') }}<TimeText :value="row.finished_at ?? row.started_at" relative />
               </span>
             </div>
           </template>
@@ -239,8 +229,8 @@ const empty = computed(() => loaded.value && !jobs.value.length)
 }
 .transcription-jobs__title {
   margin: 0 auto 0 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .transcription-jobs__filter {
   width: 140px;
@@ -259,15 +249,15 @@ const empty = computed(() => loaded.value && !jobs.value.length)
   gap: 6px;
 }
 .job-cell__file {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-2);
   overflow-wrap: anywhere;
 }
 .job-cell__reason {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .job-cell__meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .job-cell__num {

@@ -12,6 +12,7 @@ import type { RouteLocationRaw } from 'vue-router'
 import { ApiError, read } from '@/api/http'
 import { toApiError, useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import RefreshButton from '@/components/RefreshButton.vue'
 import TimeText from '@/components/TimeText.vue'
 import { QUEUE_PAGE } from '../waiting'
 
@@ -149,9 +150,7 @@ function reloadAll() {
   <section v-if="rows.length" class="app-card attention">
     <h2 class="app-card__title">
       <span>{{ t('overview.attention.title') }}</span>
-      <el-button link :loading="loading" :aria-label="t('common.actions.refresh')" @click="reloadAll">
-        <el-icon v-if="!loading"><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="loading" @click="reloadAll" />
     </h2>
     <p v-if="allClear" class="attention__clear">
       <el-icon><CircleCheck /></el-icon>
@@ -199,7 +198,7 @@ function reloadAll() {
   align-items: center;
   gap: 6px;
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-success);
 }
 .attention__rows {
@@ -249,19 +248,19 @@ function reloadAll() {
   gap: 2px;
 }
 .attention__label {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   font-weight: 500;
 }
 .attention__sub {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .attention__sub--error {
   color: var(--el-color-danger);
 }
 .attention__count {
-  font-size: 22px;
-  font-weight: 650;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-heading-weight);
   font-variant-numeric: tabular-nums;
   min-width: 2ch;
   text-align: right;

@@ -43,6 +43,7 @@ import { useCourseStore } from '@/stores/course'
 import { formatNumber, shortId } from '@/utils/format'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import GradeMatrix from './GradeMatrix.vue'
 import StudentGradeList from './StudentGradeList.vue'
 import { formatScore, useGradeLookups } from './grading'
@@ -626,10 +627,7 @@ function exportCsv() {
         <el-checkbox v-if="anyRemoved" v-model="includeRemoved">{{ t('classbook.removed') }}</el-checkbox>
         <span class="app-toolbar__spacer" />
         <span v-if="ready" class="app-muted classbook__count" aria-live="polite">{{ countText }}</span>
-        <el-button :loading="loading || quiet || rereading" @click="reload">
-          <el-icon><Refresh /></el-icon>
-          <span>{{ t('common.actions.refresh') }}</span>
-        </el-button>
+        <RefreshButton :loading="loading || quiet || rereading" @click="reload" />
       </div>
 
       <p v-if="data.loading.value && !quiet" class="app-form-hint classbook__reading" role="status">
@@ -709,7 +707,7 @@ function exportCsv() {
   margin-right: 0;
 }
 .classbook__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .classbook__reading,
 .classbook__notice {

@@ -13,10 +13,20 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--app-font-sans);
-  line-height: var(--app-line-height);
+  line-height: var(--app-lh-ui);
   background: var(--app-ground);
   color: var(--app-ink);
   -webkit-font-smoothing: antialiased;
+}
+/* Buttons and fields take the typefaces of what holds them, as the rest of
+   the page's text does. A browser gives them a face of its own (Arial, and
+   the system's Chinese face), and Element Plus names none for its buttons
+   (el-button) or its fields (el-input); their sizes and weights it sets. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 /* The page's and its sections' titles, and every dialog's, are set in the
    serif, at the weight and tracking of the page's language; smaller headings
@@ -38,18 +48,31 @@ h2,
 :is(h1, h2) :is(a, .el-tag, .app-muted, [class$='__count']) {
   font-weight: 500;
 }
+/* Strong text with no rule of its own (a <strong>, a table's heading) is the
+   strong weight, not the browser's bold: 500 in Chinese, rather than Noto
+   Sans's 700. An author's emphasis in rendered Markdown, read at length,
+   keeps a heading's weight (600; 700 in Chinese), so that it still stands
+   out of its paragraph. */
+b,
+strong,
+th {
+  font-weight: var(--app-weight-strong);
+}
+.markdown-body :is(b, strong) {
+  font-weight: var(--app-heading-weight);
+}
 #app {
   min-height: 100vh;
 }
 /* Chinese, either script: the browser puts a little room between Han and
    Latin letters or figures ("第3次" reads 第 3 次), so that the messages
-   need no spaces of their own around a name or a number; and a paragraph
-   leaves no single character alone on its last line, nor a heading two
-   lines of very different lengths. */
+   need no spaces of their own around a name or a number; and a paragraph,
+   or an item of a list, leaves no single character alone on its last line,
+   nor a heading two lines of very different lengths. */
 html:lang(zh) {
   text-autospace: normal;
 }
-html:lang(zh) :is(p, .page-header__subtitle, .app-form-hint, .el-alert__description) {
+html:lang(zh) :is(p, li, .page-header__subtitle, .app-form-hint, .el-alert__description) {
   text-wrap: pretty;
 }
 html:lang(zh) :is(h1, h2, h3, .app-card__title) {
@@ -166,13 +189,13 @@ summary:focus-visible,
   flex-grow: 1;
 }
 .app-card__title {
-  margin: 0 0 16px;
-  font-size: 18px;
+  margin: 0 0 var(--app-space-lg);
+  font-size: var(--app-text-xl);
   line-height: 1.35;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 .app-muted {
   color: var(--app-ink-3);
@@ -192,14 +215,34 @@ summary:focus-visible,
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
+/* A row of a list that is not published (a material, an assignment): a 3 px
+   line in the amber of what waits, at its left, beside its pill, so that the
+   one among published rows is found at a glance (docs/CONVENTIONS.md, "Tags").
+   A table's row (row-class-name) draws it on its first cell. */
+.app-row-unpublished:not(tr) {
+  position: relative;
+}
+.app-row-unpublished:not(tr)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--app-wait-fg);
+}
+tr.app-row-unpublished > td:first-child {
+  box-shadow: inset 3px 0 0 var(--app-wait-fg);
+}
 .app-mono {
   font-family: var(--app-font-mono);
 }
 .app-form-hint {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-3);
-  line-height: 1.5;
-  margin-top: 4px;
+  line-height: var(--app-lh-ui);
+  margin-top: var(--app-space-xs);
 }
 .el-table .cell {
   word-break: normal;
@@ -210,7 +253,7 @@ summary:focus-visible,
 /* A tooltip that says a sentence (why a level is out of reach) wraps, and fits a phone. */
 .el-popper.app-tip-wrap {
   max-width: min(360px, calc(100vw - 24px));
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 /* A dialog never runs off a phone's screen, whatever width it asks for. */
 .el-dialog {
@@ -232,8 +275,8 @@ summary:focus-visible,
 
 /* Rendered Markdown (course material, submissions, feedback). */
 .markdown-body {
-  line-height: var(--app-line-height-prose);
-  font-size: 15px;
+  line-height: var(--app-lh-prose);
+  font-size: var(--app-text-prose);
   word-wrap: break-word;
 }
 .markdown-body > :first-child {
@@ -248,10 +291,6 @@ summary:focus-visible,
 .markdown-body h4 {
   margin: 1.4em 0 0.6em;
   line-height: 1.3;
-  font-weight: 600;
-}
-.markdown-body h1,
-.markdown-body h2 {
   font-weight: var(--app-heading-weight);
 }
 .markdown-body h1 {
@@ -308,7 +347,8 @@ summary:focus-visible,
 .markdown-body img {
   max-width: 100%;
 }
-/* An image from another site: a link to it, not the image (see utils/markdown.ts). */
+/* An image from another site: a link to it, not the image (see utils/markdown.ts). Its words
+   are the image's description, which may be Chinese: the size of the text around it, no smaller. */
 .markdown-body .md-image-link {
   display: inline-flex;
   align-items: center;
@@ -317,7 +357,6 @@ summary:focus-visible,
   padding: 0 6px;
   border: 1px dashed var(--app-indigo-line);
   border-radius: 4px;
-  font-size: 0.92em;
   overflow-wrap: anywhere;
 }
 .markdown-body .md-image-link::before {
@@ -354,10 +393,10 @@ summary:focus-visible,
   --el-tag-bg-color: transparent;
   --el-tag-border-color: var(--app-ink-2);
   --el-tag-text-color: var(--app-ink);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .el-tag.app-level-tag.is-autonomous {
   --el-tag-bg-color: var(--app-ink);
   --el-tag-text-color: var(--app-ground);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }

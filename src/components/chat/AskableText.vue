@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// Whether an agent can be asked now, to those who ask it (the chat's header
-// and its list of agents): "Can be asked" while something runs it, "Paused"
+// Whether an agent can be asked now, to those who ask it, in the chat's
+// header (its list of agents says it by a dot, AskableDot, with these
+// words): "Can be asked" while something runs it, "Paused"
 // otherwise, in plain ink, with no dot of colour. An agent is not a person
 // who is online: what it does is answer, or not just now. The tooltip says
 // why, in the words the rest of the chat uses: paused or no longer in the
@@ -61,7 +62,7 @@ const hint = computed(() =>
 
 <style scoped>
 .askable {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-2);
   white-space: nowrap;
 }

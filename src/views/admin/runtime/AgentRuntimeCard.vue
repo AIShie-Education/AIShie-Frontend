@@ -20,6 +20,9 @@ import { read } from '@/api/http'
 import type { ListItem, ToolOut } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import TimeText from '@/components/TimeText.vue'
 import CopyBlock from '@/views/account/components/agents/CopyBlock.vue'
@@ -55,7 +58,7 @@ const revoking = ref<string | null>(null)
 
 async function revoke(c: ServiceCredential) {
   const ok = await ElMessageBox.confirm(
-    h('p', { style: 'margin: 0; line-height: 1.6' }, t('runtimeAdmin.agentRuntime.revokeBody', { command: ROTATE })),
+    h('p', { style: 'margin: 0; line-height: var(--app-lh-text)' }, t('runtimeAdmin.agentRuntime.revokeBody', { command: ROTATE })),
     t('runtimeAdmin.agentRuntime.revokeTitle'),
     {
       type: 'warning',
@@ -115,15 +118,13 @@ function forget() {
       </el-button>
     </h2>
     <p class="agent-runtime-card__intro">{{ t('runtimeAdmin.agentRuntime.intro') }}</p>
-    <el-alert type="info" :closable="false" show-icon class="agent-runtime-card__setup">
-      <template #title>
-        <i18n-t keypath="runtimeAdmin.agentRuntime.setup" tag="span" scope="global">
-          <template #command>
-            <code class="agent-runtime-card__command">{{ ROTATE }}</code>
-          </template>
-        </i18n-t>
-      </template>
-    </el-alert>
+    <AppNote class="agent-runtime-card__setup">
+      <i18n-t keypath="runtimeAdmin.agentRuntime.setup" tag="span" scope="global">
+        <template #command>
+          <code class="agent-runtime-card__command">{{ ROTATE }}</code>
+        </template>
+      </i18n-t>
+    </AppNote>
 
     <AsyncState
       :loading="list.loading.value && !list.data.value"
@@ -163,9 +164,9 @@ function forget() {
           <div class="agent-runtime-card__main">
             <div class="agent-runtime-card__head">
               <span class="agent-runtime-card__label">{{ c.label?.trim() || t('admin.credentials.unlabelled') }}</span>
-              <el-tag :type="STATE_TAG[stateOf(c)]" size="small" disable-transitions>
+              <AppTag :tone="toneOf(STATE_TAG[stateOf(c)])">
                 {{ t(`runtimeAdmin.agentRuntime.state.${stateOf(c)}`) }}
-              </el-tag>
+              </AppTag>
             </div>
             <div class="agent-runtime-card__meta">
               <code class="agent-runtime-card__code">{{ masked(c.token_prefix) }}</code>
@@ -185,7 +186,7 @@ function forget() {
               </span>
               <span v-if="c.expires_at">
                 <span class="agent-runtime-card__k">{{ t('runtimeAdmin.agentRuntime.expires') }}</span>
-                <TimeText :value="c.expires_at" />
+                <TimeText :value="c.expires_at" cutoff />
               </span>
               <span v-if="c.revoked_at">
                 <span class="agent-runtime-card__k">{{ t('runtimeAdmin.agentRuntime.revokedAt') }}</span>
@@ -219,11 +220,13 @@ function forget() {
     >
       <template v-if="issued">
         <el-alert
-          :type="issued.token ? 'warning' : 'info'"
+          v-if="issued.token"
+          type="warning"
           :closable="false"
           show-icon
-          :title="issued.token ? t('runtimeAdmin.agentRuntime.once') : t('runtimeAdmin.agentRuntime.replayed')"
+          :title="t('runtimeAdmin.agentRuntime.once')"
         />
+        <AppNote v-else>{{ t('runtimeAdmin.agentRuntime.replayed') }}</AppNote>
         <CopyBlock
           v-if="issued.token"
           :text="issued.token"
@@ -285,8 +288,8 @@ function forget() {
 }
 .agent-runtime-card__intro {
   margin: -4px 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .agent-runtime-card__setup,
@@ -295,7 +298,7 @@ function forget() {
 }
 .agent-runtime-card__command {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 1px 5px;
@@ -348,7 +351,7 @@ function forget() {
   flex-wrap: wrap;
   gap: 4px 16px;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .agent-runtime-card__k {
@@ -357,14 +360,14 @@ function forget() {
 }
 .agent-runtime-card__code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .agent-runtime-card__revoke {
   flex-shrink: 0;
 }
 .agent-runtime-issue__body {
   margin: 0 0 12px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .agent-runtime-issue__token {

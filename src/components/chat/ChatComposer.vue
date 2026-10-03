@@ -36,6 +36,7 @@ import { attachmentRefusalText, type ChatAttachments } from './attachments'
 import ChatAttachmentChips from './ChatAttachmentChips.vue'
 import { BODY_MAX, bodyProblem, charCount, isSendKey } from './chat'
 import { matchMentions, triggerAt, type ComposerTrigger, type Mention } from './mentions'
+import { joinParts } from '@/utils/parts'
 
 export interface ComposerCommand {
   /** What is typed after the slash. */
@@ -309,7 +310,7 @@ const hint = computed(() => {
   const parts: string[] = []
   if (props.commands?.length) parts.push(t('chat.composer.hintCommands'))
   if (props.loadMentions) parts.push(t('chat.composer.hintMentions'))
-  return parts.join(' · ')
+  return joinParts(parts)
 })
 
 defineExpose({ focus: () => input.value?.focus() })
@@ -485,7 +486,7 @@ defineExpose({ focus: () => input.value?.focus() })
   border: none;
   box-shadow: none;
   background: transparent;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .chat-composer__input :deep(.el-textarea__inner:focus),
 .chat-composer__input :deep(.el-textarea__inner:hover) {
@@ -514,7 +515,7 @@ defineExpose({ focus: () => input.value?.focus() })
   padding: 0;
   border-radius: 8px;
   color: var(--app-ink-3);
-  font-size: 16px;
+  font-size: var(--app-text-lg);
 }
 .chat-composer__attach.el-button:hover:not(.is-disabled) {
   color: var(--app-ink);
@@ -522,7 +523,7 @@ defineExpose({ focus: () => input.value?.focus() })
 /* Under the chips: a line asked for, the files on their way, or why some were not taken. */
 .chat-composer__file-line {
   margin: 6px 12px 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.45;
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
@@ -542,12 +543,12 @@ defineExpose({ focus: () => input.value?.focus() })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-placeholder);
 }
 .chat-composer__count {
   margin-right: auto;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-placeholder);
 }
@@ -607,7 +608,7 @@ defineExpose({ focus: () => input.value?.focus() })
   min-height: 32px;
   padding: 5px 10px;
   border-radius: 7px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   cursor: pointer;
 }
 .chat-suggest__item.is-active {
@@ -618,8 +619,8 @@ defineExpose({ focus: () => input.value?.focus() })
   flex-shrink: 0;
   min-width: 76px;
   font-family: var(--app-font-mono);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
 }
 .chat-suggest__icon {
   flex-shrink: 0;
@@ -637,7 +638,7 @@ defineExpose({ focus: () => input.value?.focus() })
 }
 .chat-suggest__kind {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .chat-suggest__item.is-active .chat-suggest__kind {
@@ -645,7 +646,7 @@ defineExpose({ focus: () => input.value?.focus() })
 }
 .chat-suggest__note {
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>

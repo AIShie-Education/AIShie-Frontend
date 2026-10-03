@@ -7,6 +7,8 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -48,7 +50,7 @@ function scopeText(which: 'student' | 'assignment'): string {
   <section class="app-card seat">
     <h2 class="app-card__title">{{ t('overview.seat.title') }}</h2>
 
-    <el-empty v-if="!m" :image-size="64" :description="t('overview.seat.none')" />
+    <AppEmpty v-if="!m" :text="t('overview.seat.none')" />
 
     <dl v-else class="seat__list">
       <div class="seat__row">
@@ -116,10 +118,10 @@ function scopeText(which: 'student' | 'assignment'): string {
         <dt>{{ t('overview.seat.expires') }}</dt>
         <dd>
           <template v-if="m.expires_at">
-            <TimeText :value="m.expires_at" />
-            <el-tag v-if="expired" type="danger" size="small" class="seat__expired">{{
+            <TimeText :value="m.expires_at" cutoff />
+            <AppTag v-if="expired" tone="danger" class="seat__expired">{{
               t('overview.seat.expired')
-            }}</el-tag>
+            }}</AppTag>
           </template>
           <span v-else>{{ t('common.labels.never') }}</span>
         </dd>
@@ -141,7 +143,7 @@ function scopeText(which: 'student' | 'assignment'): string {
   gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .seat__row:last-child {
   border-bottom: none;
@@ -152,7 +154,7 @@ function scopeText(which: 'student' | 'assignment'): string {
 }
 .seat__row dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .seat__row dd {
   margin: 0;
@@ -174,14 +176,14 @@ function scopeText(which: 'student' | 'assignment'): string {
 .seat__listed {
   margin: 6px 0 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .seat__expired {
   margin-left: 6px;
 }
 .seat__scope-help {
   margin: 10px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
 }
 </style>

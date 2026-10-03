@@ -25,8 +25,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import OperatorDetail from './components/OperatorDetail.vue'
 import RedirectUri from './sso/RedirectUri.vue'
 import SsoProviderDialog from './sso/SsoProviderDialog.vue'
@@ -216,15 +218,7 @@ function openTest(p: SsoProvider) {
 <template>
   <div class="sso-admin">
     <PageHeader :title="t('ssoAdmin.title')" :subtitle="t('ssoAdmin.subtitle')">
-      <el-button
-        circle
-        :loading="list.loading.value"
-        :aria-label="t('common.actions.refresh')"
-        class="sso-admin__refresh"
-        @click="list.reload"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="list.loading.value" class="sso-admin__refresh" @click="list.reload" />
       <el-button
         v-if="list.data.value"
         type="primary"
@@ -271,7 +265,7 @@ function openTest(p: SsoProvider) {
             @close="error = null"
           />
 
-          <el-empty v-if="!providers.length" :description="t('ssoAdmin.list.empty')" class="sso-admin__empty" />
+          <AppEmpty v-if="!providers.length" :text="t('ssoAdmin.list.empty')" class="sso-admin__empty" />
           <el-table v-else ref="tableRef" :data="providers" row-key="id" class="sso-admin__table">
             <el-table-column :label="t('ssoAdmin.list.provider')" :min-width="narrow ? 220 : 240">
               <template #default="{ row }">
@@ -364,8 +358,8 @@ function openTest(p: SsoProvider) {
 }
 .sso-admin__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .sso-cell {
@@ -375,7 +369,7 @@ function openTest(p: SsoProvider) {
   min-width: 0;
 }
 .sso-cell__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
 }
 .sso-cell__name.is-unnamed {
@@ -383,11 +377,11 @@ function openTest(p: SsoProvider) {
   color: var(--el-text-color-secondary);
 }
 .sso-cell__id {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .sso-cell__issuer,
 .sso-cell__linked {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-all;
 }
@@ -403,6 +397,6 @@ function openTest(p: SsoProvider) {
   margin-left: 0;
 }
 .sso-cell__always {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

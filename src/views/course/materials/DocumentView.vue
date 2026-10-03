@@ -47,6 +47,9 @@ import { useRuntime } from '@/composables/useRuntime'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { versionFilesOf } from '@/utils/documentFiles'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -66,6 +69,7 @@ import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintL
 import type { DocumentFile } from '@/api/types'
 import TextFilePicker from './components/TextFilePicker.vue'
 import { textTabShown } from './components/textVersion'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string; documentId: string }>()
 const { t } = useI18n()
@@ -193,21 +197,20 @@ function showCurrent() {
   void router.replace({ name: 'course-document', params: { courseId: props.courseId, documentId: props.documentId } })
 }
 
-// What everyone else reads, told to those who see more than that.
+// What everyone else reads, told to those who see more than that: a note
+// (docs/CONVENTIONS.md, "Notes and alerts"), as what explains is; a warning
+// only where nothing is published, so that nobody else reads it at all.
 const readersNote = computed(() => {
   const d = doc.value
   const v = shown.value
   if (!d || !v || !showVersions.value || !active.value) return null
   if (unreleased.value) {
-    return {
-      type: 'info' as const,
-      text: t(`materials.document.readers.unreleased.${d.kind as 'instructions' | 'rubric'}`),
-    }
+    return { warn: false, text: t(`materials.document.readers.unreleased.${d.kind as 'instructions' | 'rubric'}`) }
   }
-  if (!d.published_version_id) return { type: 'warning' as const, text: t('materials.document.readers.none') }
-  if (v.published) return { type: 'success' as const, text: t('materials.document.readers.this') }
+  if (!d.published_version_id) return { warn: true, text: t('materials.document.readers.none') }
+  if (v.published) return { warn: false, text: t('materials.document.readers.this') }
   return {
-    type: 'info' as const,
+    warn: false,
     text: publishedVersion.value
       ? t('materials.document.readers.other', { seq: publishedVersion.value.seq })
       : t('materials.document.readers.otherUnknown'),
@@ -455,7 +458,7 @@ function noteSource(): PrintRequest {
   const v = shown.value!
   const when = dateLine(v.created_at)
   // An owned file has one version, which needs no number.
-  const version = courseLevel.value ? `${t('materials.document.version', { seq: v.seq })} · ${when}` : when
+  const version = courseLevel.value ? joinParts([t('materials.document.version', { seq: v.seq }), when]) : when
   return {
     title: d.title,
     lines: [courseLine(props.courseId), version],
@@ -470,9 +473,9 @@ function noteSource(): PrintRequest {
       <template v-if="doc" #tags>
         <StatusTag vocab="documentKind" :value="doc.kind" />
         <StatusTag v-if="doc.status !== 'active'" vocab="documentStatus" :value="doc.status" />
-        <el-tag v-else-if="courseLevel && !doc.published_version_id" type="warning" size="small" disable-transitions>
+        <AppTag v-else-if="courseLevel && !doc.published_version_id" tone="wait">
           {{ t('materials.document.notPublished') }}
-        </el-tag>
+        </AppTag>
       </template>
       <template v-if="doc && (canWrite || canPurge)" #default>
         <template v-if="canWrite && active">
@@ -542,14 +545,9 @@ function noteSource(): PrintRequest {
     >
       <template v-if="doc">
         <Tombstone v-if="docPurge" :purge="docPurge" of="document" class="doc-view__alert" />
-        <el-alert
-          v-else-if="doc.status !== 'active' && courseLevel"
-          type="info"
-          :closable="false"
-          show-icon
-          class="doc-view__alert"
-          :title="t('materials.document.archivedAlert')"
-        />
+        <AppNote v-else-if="doc.status !== 'active' && courseLevel" class="doc-view__alert">
+          {{ t('materials.document.archivedAlert') }}
+        </AppNote>
         <el-alert v-if="viewingOther && shown" type="warning" :closable="false" show-icon class="doc-view__alert">
           <template #title>
             <span class="doc-view__alert-line">
@@ -563,13 +561,14 @@ function noteSource(): PrintRequest {
           </template>
         </el-alert>
         <el-alert
-          v-else-if="readersNote"
-          :type="readersNote.type"
+          v-else-if="readersNote?.warn"
+          type="warning"
           :closable="false"
           show-icon
           class="doc-view__alert"
           :title="readersNote.text"
         />
+        <AppNote v-else-if="readersNote" class="doc-view__alert">{{ readersNote.text }}</AppNote>
 
         <div class="doc-layout app-columns">
           <main class="doc-layout__main app-column">
@@ -584,18 +583,18 @@ function noteSource(): PrintRequest {
                   <!-- An owned file has exactly one version, and nothing to publish. -->
                   <template v-if="courseLevel">
                     <span class="doc-content__seq">{{ t('materials.document.version', { seq: shown.seq }) }}</span>
-                    <el-tag v-if="shown.purged" type="danger" size="small" effect="dark" disable-transitions>
+                    <AppTag v-if="shown.purged" tone="danger">
                       {{ t('materials.document.tombstone.tag') }}
-                    </el-tag>
-                    <el-tag v-if="shown.published" type="success" size="small" disable-transitions>
+                    </AppTag>
+                    <AppTag v-if="shown.published" tone="done">
                       {{ t('materials.document.published') }}
-                    </el-tag>
-                    <el-tag v-else-if="showVersions" type="warning" size="small" disable-transitions>
+                    </AppTag>
+                    <AppTag v-else-if="showVersions" tone="wait">
                       {{ t('materials.document.notPublished') }}
-                    </el-tag>
-                    <el-tag v-if="latest && latest.id === shown.id" size="small" effect="plain" disable-transitions>
+                    </AppTag>
+                    <AppTag v-if="latest && latest.id === shown.id" variant="outline">
                       {{ t('materials.document.latest') }}
-                    </el-tag>
+                    </AppTag>
                   </template>
                   <el-button
                     v-if="canPurge && courseLevel && !shown.purged"
@@ -686,14 +685,14 @@ function noteSource(): PrintRequest {
                   />
                 </div>
               </template>
-              <el-empty
+              <AppEmpty
                 v-else
-                :description="showVersions ? t('materials.document.emptyDoc') : t('materials.document.noVersion')"
+                :text="showVersions ? t('materials.document.emptyDoc') : t('materials.document.noVersion')"
               >
                 <el-button v-if="canWrite && active" type="primary" :disabled="writeDisabled" @click="openVersion()">
                   {{ t('materials.document.addFirst') }}
                 </el-button>
-              </el-empty>
+              </AppEmpty>
             </section>
           </main>
 
@@ -742,9 +741,9 @@ function noteSource(): PrintRequest {
                         >
                       </template>
                     </i18n-t>
-                    <el-tag v-if="owner && !owner.published_at" size="small" type="info" class="doc-facts__tag">
+                    <AppTag v-if="owner && !owner.published_at" tone="wait" class="doc-facts__tag">
                       {{ t('materials.document.unpublishedAssignment') }}
-                    </el-tag>
+                    </AppTag>
                     <span v-if="!owner" class="app-muted">{{ t('materials.document.notUsed') }}</span>
                   </dd>
                 </template>
@@ -853,14 +852,14 @@ function noteSource(): PrintRequest {
   border-radius: inherit;
   background: color-mix(in srgb, var(--app-indigo-tint) 88%, transparent);
   color: var(--el-color-primary);
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   font-weight: 500;
   text-align: center;
   padding: 16px;
   pointer-events: none;
 }
 .doc-content__drop-icon {
-  font-size: 32px;
+  font-size: var(--app-text-3xl);
 }
 .doc-content__meta {
   display: flex;
@@ -870,10 +869,10 @@ function noteSource(): PrintRequest {
   padding-bottom: 12px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .doc-content__seq {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .doc-content__by {
   display: inline-flex;
@@ -899,8 +898,8 @@ function noteSource(): PrintRequest {
 }
 .doc-side__hint {
   margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .doc-side__rules {
@@ -911,14 +910,14 @@ function noteSource(): PrintRequest {
   align-items: center;
   gap: 4px;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .doc-facts {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 8px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   align-items: center;
 }
 .doc-facts dt {

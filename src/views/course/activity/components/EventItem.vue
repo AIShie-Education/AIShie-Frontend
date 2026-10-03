@@ -13,6 +13,8 @@ import { useI18n } from 'vue-i18n'
 import { formatList } from '@/utils/format'
 import type { RouteLocationRaw } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -458,9 +460,9 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
       </div>
       <div class="event-item__head">
         <span class="event-item__title">{{ title }}</span>
-        <el-tag v-if="fresh" size="small" type="primary" effect="dark" round disable-transitions>
+        <AppTag v-if="fresh" tone="indigo">
           {{ t('activity.fresh') }}
-        </el-tag>
+        </AppTag>
         <span class="event-item__time">
           <el-tooltip v-if="actionTo" :content="t('activity.viaAction')" placement="top">
             <router-link :to="actionTo" class="event-item__action" :aria-label="t('activity.viaAction')">
@@ -502,19 +504,13 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
         <template v-for="(f, i) in facts" :key="i">
           <StatusTag v-if="f.kind === 'tag'" :vocab="f.vocab" :value="f.value" />
           <el-tooltip v-else-if="f.kind === 'text' && f.tip" :content="f.tip" placement="top">
-            <el-tag :type="f.tone ?? 'info'" size="small" effect="plain" disable-transitions tabindex="0">
+            <AppTag :tone="toneOf(f.tone ?? 'info')" tabindex="0">
               {{ f.text }}
-            </el-tag>
+            </AppTag>
           </el-tooltip>
-          <el-tag
-            v-else-if="f.kind === 'text'"
-            :type="f.tone ?? 'info'"
-            size="small"
-            effect="plain"
-            disable-transitions
-          >
+          <AppTag v-else-if="f.kind === 'text'" :tone="toneOf(f.tone ?? 'info')">
             {{ f.text }}
-          </el-tag>
+          </AppTag>
           <span v-else-if="f.kind === 'link'" class="event-item__fact-link">
             <router-link :to="f.to">{{ f.text }}</router-link>
             <IdText :id="f.id" />
@@ -556,13 +552,16 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   justify-content: center;
   color: var(--event-accent);
-  background: var(--app-ground-2);
-  font-size: 15px;
+  /* A category's ground, the neutral pill's: the ground's second shade in the
+     light theme; in the dark one a step above the card, from which the second
+     shade, just below it, hardly stands out. */
+  background: var(--app-neutral-bg);
+  font-size: var(--app-text-lg);
 }
 .event-item.is-compact .event-item__icon {
   width: 28px;
   height: 28px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .event-item__body {
   flex: 1;
@@ -578,8 +577,8 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   flex-wrap: wrap;
 }
 .event-item__title {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-md);
   line-height: 1.4;
   word-break: break-word;
 }
@@ -588,7 +587,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .event-item__who {
@@ -596,7 +595,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-2);
   min-width: 0;
 }
@@ -619,7 +618,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 14px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
   min-width: 0;
 }
@@ -652,12 +651,12 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .event-item__action {
   display: inline-flex;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   text-decoration: none;
 }

@@ -66,8 +66,8 @@ const label = computed(() =>
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
 }
 .doc-text__line :deep(.el-button + .el-button) {
   margin-left: 0;

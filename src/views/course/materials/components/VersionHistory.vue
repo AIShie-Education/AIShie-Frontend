@@ -11,6 +11,7 @@ import type { DocumentVersion } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { versionFilesOf } from '@/utils/documentFiles'
 import { formatBytes } from '@/utils/format'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import MemberName from '@/components/MemberName.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -64,15 +65,15 @@ function linkTo(v: DocumentVersion) {
       <li v-for="v in ordered" :key="v.id" class="version-item" :class="{ 'is-shown': v.id === shownId }">
         <div class="version-item__head">
           <span class="version-item__seq">{{ t('materials.document.versionShort', { seq: v.seq }) }}</span>
-          <el-tag v-if="v.published" type="success" size="small" disable-transitions>
+          <AppTag v-if="v.published" tone="done">
             {{ t('materials.document.published') }}
-          </el-tag>
-          <el-tag v-if="v.id === latestId" size="small" effect="plain" disable-transitions>
+          </AppTag>
+          <AppTag v-if="v.id === latestId" variant="outline">
             {{ t('materials.document.latest') }}
-          </el-tag>
-          <el-tag v-if="v.purged_at" type="danger" size="small" effect="dark" disable-transitions>
+          </AppTag>
+          <AppTag v-if="v.purged_at" tone="danger">
             {{ t('materials.document.tombstone.tag') }}
-          </el-tag>
+          </AppTag>
         </div>
         <div class="version-item__meta">
           <!-- Names come from the member list; without it only one's own name is known. -->
@@ -170,7 +171,7 @@ function linkTo(v: DocumentVersion) {
   flex-wrap: wrap;
 }
 .version-item__seq {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .version-item__meta {
@@ -178,7 +179,7 @@ function linkTo(v: DocumentVersion) {
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   min-width: 0;
 }
@@ -188,8 +189,8 @@ function linkTo(v: DocumentVersion) {
   padding: 0 0 0 18px;
   display: flex;
   flex-direction: column;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--app-ink-2);
   min-width: 0;
 }
@@ -208,7 +209,7 @@ function linkTo(v: DocumentVersion) {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   margin-top: 2px;
 }
 .version-item__showing {

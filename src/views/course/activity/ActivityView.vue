@@ -19,9 +19,11 @@ import { notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useUiStore } from '@/stores/ui'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import TimeText from '@/components/TimeText.vue'
 import EventItem from './components/EventItem.vue'
 import { ensureEventWho, eventActor } from './components/actors'
@@ -40,6 +42,7 @@ import {
   type Run,
   type CourseEvent,
 } from './components/feed'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -264,7 +267,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           ? t('activity.today')
           : diff === 1
             ? t('activity.yesterday')
-            : `${d.format('LL')} · ${d.format('ddd')}`
+            : joinParts([d.format('LL'), d.format('ddd')])
       day = { key, label, events: [] }
       out.push(day)
     }
@@ -276,12 +279,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 
 <template>
   <div class="activity">
-    <PageHeader :title="t('activity.title')" :subtitle="t('activity.subtitle')">
-      <el-button :loading="checking || (loading && !loaded)" @click="refresh">
-        <el-icon v-if="!(checking || (loading && !loaded))"><Refresh /></el-icon>
-        <span>{{ t('activity.refresh') }}</span>
-      </el-button>
-    </PageHeader>
+    <PageHeader :title="t('activity.title')" :subtitle="t('activity.subtitle')" />
 
     <AsyncState :loading="loading && !loaded" :error="error" @retry="load">
       <div class="app-card activity__card">
@@ -298,10 +296,19 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           <span v-if="lastChecked" class="activity__checked app-muted">
             {{ t('activity.lastChecked') }} <TimeText :value="lastChecked" relative />
           </span>
+          <RefreshButton :loading="checking || (loading && !loaded)" @click="refresh" />
         </div>
 
         <div class="activity__chips" role="group" :aria-label="t('activity.filterLabel')">
-          <el-check-tag :checked="selected.length === 0 && !byAgents" class="activity__chip" @change="showAll">
+          <el-check-tag
+            :checked="selected.length === 0 && !byAgents"
+            class="activity__chip"
+            role="checkbox"
+            :aria-checked="selected.length === 0 && !byAgents ? 'true' : 'false'"
+            tabindex="0"
+            @change="showAll"
+            @keydown.enter.space.prevent="showAll"
+          >
             {{ t('activity.filter.all') }}
             <span class="activity__chip-count">{{ events.length }}</span>
           </el-check-tag>
@@ -311,7 +318,11 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
             :checked="selected.includes(c)"
             class="activity__chip"
             :class="{ 'is-zero': !counts[c] }"
+            role="checkbox"
+            :aria-checked="selected.includes(c) ? 'true' : 'false'"
+            tabindex="0"
             @change="toggle(c)"
+            @keydown.enter.space.prevent="toggle(c)"
           >
             <el-icon><component :is="CATEGORY_ICON[c]" /></el-icon>
             {{ t(`activity.filter.${c}`) }}
@@ -323,7 +334,11 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
             :checked="byAgents"
             class="activity__chip activity__chip--agents"
             :class="{ 'is-zero': !agentCount }"
+            role="checkbox"
+            :aria-checked="byAgents ? 'true' : 'false'"
+            tabindex="0"
             @change="byAgents = !byAgents"
+            @keydown.enter.space.prevent="byAgents = !byAgents"
           >
             <el-icon><AgentSeatIcon /></el-icon>
             {{ t('activity.filter.agents') }}
@@ -337,8 +352,8 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           <el-button link type="primary" @click="markSeen">{{ t('activity.markSeen') }}</el-button>
         </div>
 
-        <el-empty v-if="!events.length" :description="t('activity.empty')" />
-        <el-empty v-else-if="!shown.length" :description="t('activity.emptyFiltered')" :image-size="80" />
+        <AppEmpty v-if="!events.length" :text="t('activity.empty')" />
+        <AppEmpty v-else-if="!shown.length" :text="t('activity.emptyFiltered')" />
 
         <section v-for="day in days" :key="day.key" class="activity__day">
           <h3 class="activity__day-title">{{ day.label }}</h3>
@@ -358,10 +373,12 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
                     expanded.has(run.key) ? t('activity.runLess') : t('activity.runMore', { n: run.events.length - 1 })
                   }}
                 </span>
-                <span v-if="!expanded.has(run.key)" class="activity__run-since app-muted">
-                  · {{ t('activity.runSince') }}
-                  <TimeText :value="run.events[run.events.length - 1].occurred_at" relative />
-                </span>
+                <span v-if="!expanded.has(run.key)" class="activity__run-since app-muted"
+                  >{{ t('common.sep')
+                  }}<i18n-t keypath="activity.runSince" scope="global"
+                    ><template #time
+                      ><TimeText :value="run.events[run.events.length - 1].occurred_at" relative /></template></i18n-t
+                ></span>
               </el-button>
             </div>
           </template>
@@ -384,7 +401,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   margin-bottom: 12px;
 }
 .activity__dot {
@@ -430,7 +447,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 }
 .activity__chip-count {
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   margin-left: 2px;
 }
@@ -444,7 +461,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   border-radius: var(--app-radius-item);
   background: var(--el-color-primary-light-9);
   color: var(--el-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .activity__day {
   margin-top: 8px;
@@ -455,8 +472,8 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   z-index: 1;
   margin: 8px 0 2px;
   padding: 6px 0;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.3px;
   text-transform: uppercase;
   color: var(--el-text-color-secondary);
@@ -471,12 +488,12 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 }
 .activity__end {
   text-align: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   margin: 16px 0 4px;
 }
 .activity__note {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   margin: 12px 4px 0;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 </style>

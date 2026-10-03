@@ -63,8 +63,8 @@ function say(step: DraftStep) {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--app-ink-3);
 }
 .chat-steps__list {
@@ -90,11 +90,11 @@ function say(step: DraftStep) {
 .chat-steps__tick {
   flex-shrink: 0;
   width: 1em;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-done-fg);
 }
 .chat-steps__glyph {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .chat-steps__text {
   min-width: 0;
@@ -131,7 +131,7 @@ function say(step: DraftStep) {
   color: var(--app-ink);
 }
 .chat-steps__chevron {
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   transition: transform 0.15s;
 }
 .chat-steps__chevron.is-open {

@@ -63,6 +63,7 @@ import type { ConversationMessage, ConversationView, Respondent } from '@/api/ty
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AiBadge from '@/components/AiBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useBackCloses } from '@/composables/useBackCloses'
 import { useNow } from '@/composables/useNow'
@@ -112,6 +113,7 @@ import ChatPrivacyNotice from './ChatPrivacyNotice.vue'
 import { notePrivacySeen, privacyNotice, privacySeen, type AnswerHosting } from './privacy'
 import { useAnswerModels } from './useAnswerModels'
 import { attachmentsFor, rememberSent, sentFilesOf } from './attachments'
+import { joinParts } from '@/utils/parts'
 
 const props = withDefaults(
   defineProps<{
@@ -793,7 +795,7 @@ async function transcript(): Promise<PrintRequest> {
     lines: [
       v?.title ? t('preview.print.conversationWith', { name }) : null,
       courseLine(props.courseId),
-      `${dateLine(list[0]?.created_at ?? v?.created_at)} · ${t('preview.print.messages', { n }, n)}`,
+      joinParts([dateLine(list[0]?.created_at ?? v?.created_at), t('preview.print.messages', { n }, n)]),
       complete ? null : t('preview.print.partial'),
     ],
     body: {
@@ -924,8 +926,9 @@ const closedLine = computed(() => {
         <AgentAvatar v-if="other?.kind === 'agent' && role !== 'overseer'" :name="other.name" size="small" />
         <span class="chat-pane__name">
           <template v-if="courseLabel"
-            ><span class="chat-pane__course">{{ courseLabel }}</span> ·
-          </template>
+            ><span class="chat-pane__course">{{ courseLabel }}</span
+            >{{ t('common.sep') }}</template
+          >
           <template v-if="role === 'overseer' && view">
             {{ t('chat.between', { opener: view.opener.display_name, respondent: view.respondent.display_name }) }}
           </template>
@@ -1067,18 +1070,17 @@ const closedLine = computed(() => {
             class="chat-pane__privacy-first"
             aria-labelledby="chat-pane-privacy-first"
           >
-            <h3 id="chat-pane-privacy-first" class="chat-pane__privacy-first-title">
-              <el-icon aria-hidden="true"><Lock /></el-icon>{{ t('chat.privacy.firstTitle') }}
-            </h3>
-            <ul>
-              <li v-for="p in privacy.points" :key="p.key">{{ t(`chat.privacy.${p.key}`, p.params) }}</li>
-            </ul>
-            <div class="chat-pane__privacy-first-actions">
-              <el-button link type="primary" size="small" @click="privacyOpen = true">
-                {{ t('chat.privacy.more') }}
-              </el-button>
-              <el-button size="small" @click="gotPrivacy">{{ t('chat.privacy.gotIt') }}</el-button>
-            </div>
+            <DataFlowNotice heading="h3" title-id="chat-pane-privacy-first" :title="t('chat.privacy.firstTitle')">
+              <ul>
+                <li v-for="p in privacy.points" :key="p.key">{{ t(`chat.privacy.${p.key}`, p.params) }}</li>
+              </ul>
+              <div class="chat-pane__privacy-first-actions">
+                <el-button link type="primary" size="small" @click="privacyOpen = true">
+                  {{ t('chat.privacy.more') }}
+                </el-button>
+                <el-button size="small" @click="gotPrivacy">{{ t('chat.privacy.gotIt') }}</el-button>
+              </div>
+            </DataFlowNotice>
           </section>
           <div
             v-if="!writeBlocked"
@@ -1140,17 +1142,21 @@ const closedLine = computed(() => {
           @stop="stop"
           @command="onCommand"
         />
-        <p v-if="showsPrivacyLine" class="chat-pane__privacy">
-          <span class="chat-pane__privacy-text">{{ t(`chat.privacy.${privacy.line.key}`, privacy.line.params) }}</span>
-          <el-button
-            link
-            size="small"
-            class="chat-pane__privacy-more"
-            :aria-label="t('chat.privacy.moreLabel')"
-            @click="privacyOpen = true"
-            >{{ t('chat.privacy.more') }}</el-button
-          >
-        </p>
+        <div v-if="showsPrivacyLine" class="chat-pane__privacy">
+          <DataFlowNotice compact>
+            <span class="chat-pane__privacy-text">{{
+              t(`chat.privacy.${privacy.line.key}`, privacy.line.params)
+            }}</span>
+            <el-button
+              link
+              size="small"
+              class="chat-pane__privacy-more"
+              :aria-label="t('chat.privacy.moreLabel')"
+              @click="privacyOpen = true"
+              >{{ t('chat.privacy.more') }}</el-button
+            >
+          </DataFlowNotice>
+        </div>
       </template>
     </footer>
   </div>
@@ -1178,12 +1184,12 @@ const closedLine = computed(() => {
   border-radius: 12px;
   background: color-mix(in srgb, var(--el-bg-color) 86%, transparent);
   color: var(--el-color-primary);
-  font-size: 14px;
+  font-size: var(--app-text-md);
   font-weight: 500;
   pointer-events: none;
 }
 .chat-pane__drop .el-icon {
-  font-size: 26px;
+  font-size: var(--app-text-2xl);
 }
 /* One compact row, as an editor's agent chat has it. */
 .chat-pane__head {
@@ -1203,8 +1209,8 @@ const closedLine = computed(() => {
   white-space: nowrap;
 }
 .chat-pane__course {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   color: var(--app-indigo);
 }
@@ -1213,8 +1219,8 @@ const closedLine = computed(() => {
   min-width: 4em;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
 }
 /* The "AI" and whether it can be asked stay whole; a long name gives way first. */
 .chat-pane__ai,
@@ -1222,7 +1228,7 @@ const closedLine = computed(() => {
   flex-shrink: 0;
 }
 .chat-pane__presence :deep(.askable) {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .chat-pane__head-actions {
   display: flex;
@@ -1240,19 +1246,19 @@ const closedLine = computed(() => {
 /* What it says of a conversation, muted: that an agent that answers others may repeat what is written. */
 .chat-pane__shared {
   margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   text-align: center;
   color: var(--el-text-color-secondary);
 }
 .chat-pane__intro .chat-pane__shared {
   margin-top: 8px;
 }
-/* Under the composer: who else reads it and where it goes, with More for the whole notice. */
+/* Under the composer: who else reads it and where it goes, with More for the whole notice, after the shield. */
 .chat-pane__privacy {
   margin: 6px 2px 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
 }
@@ -1260,33 +1266,25 @@ const closedLine = computed(() => {
   height: auto;
   margin-left: 4px;
   padding: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   vertical-align: baseline;
 }
-/* The first time: its points on the new conversation, under who it is with. */
+/*
+ * The first time: its points on the new conversation, under who it is with, said
+ * where data goes as everywhere (DataFlowNotice), the shield on the indigo's outline.
+ */
 .chat-pane__privacy-first {
   width: min(100%, 360px);
   margin-top: 14px;
-  padding: 10px 12px;
-  border: 1px solid var(--app-line);
-  border-radius: 10px;
-  background: var(--el-fill-color-light);
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: left;
-  color: var(--el-text-color-regular);
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
 }
-.chat-pane__privacy-first-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+.chat-pane__privacy-first .data-flow {
+  font-size: inherit;
+  line-height: inherit;
 }
 .chat-pane__privacy-first ul {
-  margin: 0;
+  margin: 4px 0 0;
   padding-left: 18px;
 }
 .chat-pane__privacy-first li + li {
@@ -1317,14 +1315,14 @@ const closedLine = computed(() => {
   margin-bottom: 8px;
 }
 .chat-pane__older-error {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-danger);
 }
 .chat-pane__empty,
 .chat-pane__intro {
   text-align: center;
   padding: 24px 8px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .chat-pane__intro p {
   margin: 0 0 8px;
@@ -1338,13 +1336,13 @@ const closedLine = computed(() => {
 }
 .chat-pane__start-mark {
   margin-bottom: 10px;
-  font-size: 26px;
+  font-size: var(--app-text-2xl);
   line-height: 1;
   color: var(--app-light);
 }
 .chat-pane__start-title {
   max-width: 34ch;
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   color: var(--app-ink-2);
 }
 .chat-pane__suggestions {
@@ -1357,8 +1355,8 @@ const closedLine = computed(() => {
 }
 .chat-pane__suggestions-title {
   margin: 0 0 2px !important;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.04em;
   text-align: left;
   color: var(--el-text-color-secondary);
@@ -1370,7 +1368,7 @@ const closedLine = computed(() => {
   background: var(--el-bg-color);
   color: var(--app-ink);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   line-height: 1.4;
   text-align: left;
   cursor: pointer;
@@ -1416,14 +1414,14 @@ const closedLine = computed(() => {
 .chat-pane__held-text {
   margin: 0;
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .chat-pane__held-files {
   display: flex;
   align-items: center;
   gap: 4px;
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .chat-pane__held-note {
@@ -1432,7 +1430,7 @@ const closedLine = computed(() => {
   flex-wrap: wrap;
   gap: 4px;
   margin: 4px 4px 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 /* The working line (or the answer being written) follows the question closely. */
@@ -1446,15 +1444,15 @@ const closedLine = computed(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-danger);
   margin-bottom: 6px;
 }
 /* One muted line above the composer: whatever stops the caller writing, or an answer awaited. */
 .chat-pane__notice {
   margin: 0 2px 6px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .chat-pane__notice-sub {
@@ -1474,13 +1472,13 @@ const closedLine = computed(() => {
 .chat-pane__closed-text {
   margin: 0 2px;
   min-width: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
 }
 .chat-pane__closed-title {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .chat-pane__closed-reason {
   white-space: pre-wrap;
@@ -1490,7 +1488,7 @@ const closedLine = computed(() => {
 }
 .chat-pane__blocked {
   margin: 0 2px 6px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 </style>

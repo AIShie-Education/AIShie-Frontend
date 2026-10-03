@@ -278,7 +278,15 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   `el-input-number` for scores (it rounds and floats).
 - **Timestamps** are RFC 3339 strings. Show with `<TimeText :value />` (absolute, relative on hover,
   or `relative`). Send with `dayjs(x).toISOString()`; date-only fields (term `starts_on`) as
-  `YYYY-MM-DD`.
+  `YYYY-MM-DD`. Every time is on one clock, the reader's (Core keeps no school's time zone); UTC is
+  said only on hover, but where a day someone picks is UTC's (a price's day), which the words say. A
+  **cut-off**, a time something stops being taken (an assignment's due date, when a seat, a join
+  link, an invitation, a token or an export ends), is `<TimeText :value cutoff />`: its time zone
+  named in the page's language ("2026-10-08 23:59 (Hong Kong Standard Time)", 「香港標準時間
+  2026-10-08 23:59」, `common.time.zoned`) and the exact instant in UTC on hover; shown `relative`,
+  the zoned time and the UTC are both on hover. In a sentence, a cut-off is `zonedText`
+  (`@/utils/parts`); where a time is picked for one (the assignment's due date), the hint names the
+  zone it is picked in.
 - Optional fields: omit them (`undefined`) rather than sending `null`, unless the tool says `null`
   means something. Some updates have explicit `clear_*` flags (`clear_due_at`, `clear_component`,
   `clear_points_possible`, `clear_expiry`): use those to unset.
@@ -294,9 +302,12 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   which its owner's own tools use with tokens the owner issues (`agent.issue_token`), and which
   nobody asks on the site. Every place an agent is made asks for it with `<HostingChoice v-model>`
   (no default; it says it is for good) and sends it: `agent.create`, `actor.register` for an agent,
-  and a new course agent. Nothing offers to change it (Core refuses: `hosting_fixed`). Show it,
-  wherever an agent is shown in detail, with `<HostingTag :hosting :site-chat>`, which for one hosted
-  on AIshie says whether it can be asked now (`site_chat`) where that is known. An agent with MCP
+  and a new course agent. Nothing offers to change it (Core refuses: `hosting_fixed`). Show it once,
+  among the facts of the agent's own page (its member page, its owner's page, the administration's
+  page), with `<HostingTag :hosting :site-chat>`, which for one hosted on AIshie says whether it can
+  be asked now (`site_chat`) where that is known: not again in that page's header or on its cards,
+  and not in a list of agents, which says whether each can be asked by `<AskableDot>` before its name
+  (see [Tags](#building-a-view)). An agent with MCP
   access has no hosting anywhere (its page shows `McpAccessCard`: its tokens, Core's MCP endpoint,
   the header and Claude Desktop's configuration); one hosted on AIshie has no token anywhere for its
   owner (Core refuses one: `hosted_by_runtime`), and its page shows `HostingPanel`.
@@ -366,7 +377,13 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   412 reads it again and keeps what the administrator changed over it. A key's trial that failed
   (`key_test_failed`) says what the provider answered (`keyTrialOf`). Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
-  cent at least, as US dollars (`formatMoney`, "US$0.0184") and typed as decimals (`usdProblem`), empty for no limit. A refusal
+  cent at least, as US dollars (`formatMoney`, "US$0.0184"; a price someone typed with every figure
+  it has, `formatMoney(v, { exact: true })`, "US$1.875") and typed as decimals (`usdProblem`), empty
+  for no limit. A price's day is a UTC day: its hint says so in words, and when that day begins on
+  the reader's clock (`<TimeText cutoff>` of its 00:00 UTC), never that it is when the day begins,
+  which is so only in UTC (east of it the price starts in the morning, west of it the evening
+  before). A count "today" is said by when it starts again (`<DailyReset>`), never as "(UTC)" in a
+  title. A refusal
   that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
   models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
   agents' lines. Costs are shown by `lines` kind: a document's transcription is a line of its own
@@ -548,9 +565,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   200 px of the window's top. Inside a course the page's header has 12 px under it, not 20. Known
   to miss it, by a line of their own: an assignment, a submission and a proposal, whose header has
   a back link, a title and a line of facts beside their actions (about 220 px), and the Submissions
-  and Grading scheme pages (205 and 215 px), whose subtitle takes a second line; in English, whose
-  subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a pixel or so
-  (201 px); do not add to them.
+  and Grading scheme pages (207 and 216 px in Chinese), whose subtitle takes a second line; in
+  English, whose subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a
+  pixel or so (201 px); do not add to them. Chinese's smaller steps are a size larger than English's,
+  so measure a page's header in both.
 - **Navigation's icons are outlined, never filled**: the activity bar, the side bar, the phone's
   header, a course's tabs and More's menu, the grades' tabs. A filled glyph among outlined ones
   reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
@@ -565,14 +583,72 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `usePageTitle(routeName, () => key)` (`@/router/title`): the approval queue, for someone who decides
   nothing there, is their agents' proposals.
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
-- Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
-  `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
+- **Empty places** say so with `<AppEmpty :text>` (AsyncState's `empty-text` is one), never Element
+  Plus's grey box: inside a card, one line in the second ink, with what to do about it in its slot (an
+  action, a hint); where nothing fills the page or the chat (`page`, AsyncState's `empty-page`), the
+  brand's line icon (an open book with the light over it, 48 px, stroke 1.75) over the words and a
+  title where it has one. A state that is not a fault (no agent service beside the server, an
+  administrator with no seat in a course) is one too; an `el-result` is left for what went wrong.
+- **Tags** are `<AppTag :tone :variant>`, or `<StatusTag vocab="submissionState" :value="s.state" />`
+  for Core's vocabularies (see `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`),
+  drawn by what they say and never by an effect chosen on the page:
+  - a **state** is a pill (`variant="pill"`, the default), tinted in its tone's pill colours: `done`,
+    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below);
+  - an **identity or an attribute** (a role, a kind, a scope, a preset, how an agent runs, "you",
+    "this browser", a sign-in method, an overridden total) is an outline (`variant="outline"`): ink on
+    a line and no ground, square-cornered as `AgentBadge`'s owner is, with its icon (`:icon`) unless
+    its row shows the icon already; it has no tone;
+  - only a **count** is solid (`variant="count"`);
+  - the **usual state** of a row (an active seat, course or actor, work submitted, a grade posted, a
+    material published, a conversation open or answered) is quiet (`variant="quiet"`, as StatusTag
+    draws those values): words in the third ink, no pill, or nothing where the row says it otherwise,
+    so that only what departs from it is coloured. A row that is not published (a material, an
+    assignment) also has the 3 px amber line at its left (`.app-row-unpublished`; on a table, its
+    `row-class-name`).
+
+  A row holds two chips at most. Whether an agent can be asked is a dot before its name
+  (`AskableDot`), not a chip; how it runs is said once, on its own page (HostingTag, above).
+  `npm run lint` refuses an `el-tag` anywhere but in `AppTag`, however a template names it (`<el-tag>`,
+  `<ElTag>`, `<component is="el-tag">`), as it does each of Element Plus's looks below
+  (`eslint.config.js`, `app/element-look`, with `src/lint/elementLook.spec.ts`).
+- **Notes and alerts.** What explains (what a page does, what will happen, that a change waits for
+  approval, a proposal just made) is `<AppNote>`: no icon, a 3 px indigo line at its left, the
+  indigo's tint at half strength under it (`plain`: none), its words in the second ink under a title
+  in the ink where it has one, `closable` where it says what was just done. An `el-alert` is a
+  warning or an error, or an outcome reported in green, and says which in its template, where lint
+  reads it: `type="warning"`, `"error"` or `"success"`, or a choice among them (`:type="ok ?
+  'success' : 'error'"`). Lint refuses `info`, `primary` (drawn as info is), none, and a type only the
+  script knows. An outcome of no colour (a rejection, a decision that itself waits for approval, a
+  proposal taken back: `OutcomeAlert`) and what a version's readers read are notes. It has Element Plus's small icon on its title's line, never the large one
+  beside a title and a description (`styles/element.css`). Where data leaves the site (to a model's
+  provider, under the school's key or an owner's own; into files someone downloads) is said by
+  `<DataFlowNotice>`, a shield on an outline in the indigo's line, the same to administrators,
+  owners and those who ask: in the chat, the first time's points, "Where it goes to be answered" in
+  the whole notice, and, `compact`, the one line under the composer, the shield before it and no
+  outline (`DataFlowNotice.spec.ts` checks each place that says so).
+- **Refresh** is `<RefreshButton :loading @click>`, at the right end of the toolbar of the card that
+  holds what it reads again (`.app-toolbar`; the card's title row, or the tabs' row, where it has
+  none): a secondary button with "Refresh", on a phone's screen (600 px or narrower) a round icon
+  button with its words in its tooltip. A page's header holds what creates or goes elsewhere, never
+  Refresh.
+- **Filters** over a list are `<FilterChips v-model :options :all-count :label>`: Element Plus's check
+  tags, "All N" first, then each choice with its count (a lower bound, "12+", while there is more to
+  load), one at a time, radios to the keyboard and a screen reader; counts a list shows by state are
+  these chips too, never a row of tags that cannot be pressed. A chip counts the rows it filters, no
+  others: where a select has already narrowed the list to one (a student on the submissions page),
+  there is nothing left to filter and there are no chips. A count is in the chip's own ink, set apart
+  by its weight, never faded below the contrast text keeps. A choice of many (an assignment, a
+  student, a type) stays a select. A segmented control (`el-radio-group` of buttons) is for a view's
+  mode, newest or oldest first, by owner or by model, never a filter.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
-  for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
-  its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
-  of seat, how an agent runs (`HostingTag`). Whether an agent can be asked is neutral too, never
-  green as "online" is; only its not running, which wants its owner, is amber. What is new or
+  for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
+  its icon's shape: as a tag (roles and platform roles, kinds of actor, of seat and of document,
+  scopes, presets, how an agent runs) an outline in ink (Tags, above); as the activity feed's kinds
+  of event, in the neutral pill's colours (`--app-neutral-bg`, the ground's second shade in the light
+  theme, under `--app-neutral-fg`). Whether an agent can be asked is neutral too, never
+  green as "online" is; only its not running, which wants its owner, is amber, and never by its hue
+  alone: whether it can be asked is a dot's shape (AskableDot, below). What is new or
   unread, and a count of what waits for the reader's decision, is indigo. A
   level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
   `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
@@ -580,10 +656,59 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
   The 「需批准」 beside an action the caller's seat must have approved is that level too:
   `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
+- **Ink** comes in three steps, 1.5:1 or more apart: `--app-ink` for text, `--app-ink-2` for what is
+  secondary to it, `--app-ink-3` for the meta beside it (a time, a column's heading, a hint, a
+  permission's key); the placeholder's ink is quieter still, for a field's placeholder. The three
+  inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
+  fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
+  fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
+  may be drawn on one of those, as a key is on a changed row, takes the third ink; any other rule
+  that writes in the placeholder's is named in `PLACEHOLDER_INK`, with its grounds. Every colour in
+  `styles/tokens.css` has its dark value, is painted with somewhere, and reads at AA on the grounds it
+  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
+  (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
+  colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
-- Forms: `el-form` with `label-position="top"` and rules; dialogs with `el-dialog` (`width="560px"`,
+- **Type** is a scale (`styles/tokens.css`), and every `font-size` is a step of it:
+  `var(--app-text-xs)` (12 px: a time, a hint under a field, a unit, a tag, a tooltip), `-sm` (13: a
+  row's second line, a table's cells, a note), `-md` (14: the interface's text, Element Plus's base),
+  `-lg` (16: an item's title; a field's text on a touch screen), `-xl` (18: a card's, a dialog's, the
+  course's title), `-2xl` (24: a page's title, a figure that stands for a card), `-3xl` and `-4xl`
+  (32, 40: a figure that stands for a page, a score, a total, a countdown); `-prose` (15) for what is
+  read at length (rendered Markdown, a chat's messages), and `-mark` (11) for Latin letters and
+  figures alone in a mark of a fixed size ("AI", "PDF" on a file, an id, a key, a file's size), never
+  Chinese. In Chinese, either script, `xs` and `sm` are 13 and 14 px: a Han character at 12 px is a
+  blur on a laptop's screen, so 12 px is left to English and figures; check that a tag, a button or
+  a table's cell still holds its words in Chinese. An icon drawn on its own takes a step too; one in a
+  line of text, the text's. A size relative to the text around it (`em`) is a step's too, from 1em to
+  2em (a heading in rendered Markdown), never smaller: the text around may be Chinese at 13 px. Strong
+  text (a name, a label, a table's heading, a figure) is `var(--app-weight-strong)`, 600, and 500 in
+  Chinese, whose Noto Sans has no 600 and would set it at 700; a `<strong>`, a `<b>` or a `<th>` with
+  no rule of its own takes it too (`main.css`), not the browser's bold, except an author's emphasis in
+  rendered Markdown, which keeps a heading's weight; a heading, and a figure that stands for a card,
+  is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Leading is
+  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface, `--app-lh-text` (1.6; 1.75) for a
+  paragraph and `--app-lh-prose` (1.7; 1.85) for rendered Markdown. Element Plus's sizes are mapped
+  onto the same steps (`styles/element.css`): its six, its components' own variables, and every rule
+  of words it writes 12 or 13 px into (a small control's, a tooltip's, a date picker's days, months
+  and time panel, a switch's words inside it), its bold where it marks what is chosen or today the
+  strong weight. `src/styles/typeScale.spec.ts` refuses any other size or weight, wherever and
+  however it is written: a declaration in a style sheet or a string of CSS, in any case; a style
+  object's key in a template or a script (`fontSize: '12px'`, `'font-size': '12px'`); an element's
+  style (`el.style.fontSize`, `setProperty('font-size', …)`); a custom property that sizes or weighs
+  text (`--el-tag-font-size: 11px`); and the scale's own tokens, set in `tokens.css` alone. It also
+  fails on a small size of Element Plus's left unmapped, but for an icon's and a component the app
+  does not use (until it does). What it lets through (the print layout's points, pdf.js's text
+  layer, an agent's initials and glyph drawn to its square, code in rendered Markdown, a join code
+  projected full screen) is listed there, each with why. `e2e/type-scale.spec.ts` fails on any
+  Chinese a course's page shows under 13 px, on a laptop and on a phone, and in a date picker. Room
+  takes the steps `var(--app-space-xs)` to `-2xl` (4, 8, 12, 16, 24, 32 px) in a rule written or
+  rewritten.
+- Forms: `el-form` with `label-position="top"` and rules; a number field (`el-input-number`) has its
+  steps at its right end (`controls-position="right"`) or none (`:controls="false"`), which lint
+  checks; dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
@@ -718,8 +843,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   stacked, nothing grows. Leave `align-items` off such a grid, or it wins over `.app-columns`.
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
-  `<IdText>` is quiet (12 px, the third ink, its copy button on hover): an id is for an administrator
-  to find or paste, beside a name, never a chip as heavy as an email. A student's seat shows no member
+  `<IdText>` is quiet (the smallest step, `--app-text-xs`, the third ink, its copy button on
+  hover): an id is for an administrator to find or paste, beside a name, never a chip as heavy as
+  an email. A student's seat shows no member
   ID (the course overview's seat card, their seats on Account), nor does their grade show the ids of a
   newer grade or of its rubric's version. What they may be asked to quote stays: the action that made
   a grade, an action's own page (its id, its actor's and its target's), and their account's ID on
@@ -758,17 +884,22 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
     an actor's or member's name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an
     outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`.
     `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI". Inside a
-    control (a row that is a button), `AgentBadge` and `AskableText` take `hint-id`: they take no focus,
+    control (a row that is a button), `AgentBadge`, `AskableText` and `AskableDot` take `hint-id`: they take no focus,
     and what their tooltips say goes in hidden elements of those ids, for the control's
     `aria-describedby`.
   - An agent seated as someone's delegate is in Core's role `assistant`, a person's word: `<RoleTag
     :member />` shows which kind of agent it is (course agent, personal agent) in its place.
-  - An agent is never "online". To those who ask it (the chat's header and list of agents),
-    `<AskableText :who :name />` says "Can be asked" or "Paused" (可提問／暫停, 可提问／暂停) from
-    `availabilityOf`, and why on hover; in the chat's header, after whose agent it is (`whose`), which
-    the header has no room to show. To its owner and those who manage it,
+  - An agent is never "online". To those who ask it, in the chat's header, `<AskableText :who :name />`
+    says "Can be asked" or "Paused" (可提問／暫停, 可提问／暂停) from `availabilityOf`, and why on hover,
+    after whose agent it is (`whose`), which the header has no room to show. In a list of agents (the
+    chat's list to ask, the course's agents, the members, My agents) it is `<AskableDot>` before the
+    name, with those words as its name and in its tooltip. Its shape says whether it can be asked, so
+    that no hue need: a solid dot in the ink while it can, a ring while it cannot, in the third ink while
+    it is paused, and in amber, a little heavier, for one hosted on AIshie that AIshie does not run,
+    which wants its owner (My agents, its owner's list, says "Not running" beside its name too); never
+    green. To its owner and those who manage it,
     `<PresenceText :value="last_seen_at" />` speaks of a program connecting (never connected /
-    connected within two minutes / last connected). Both in plain ink, with no dot of colour.
+    connected within two minutes / last connected), in plain ink.
   - What an agent made says so where it is shown: a draft grade names its drafter, and what its draft
     filled into a form carries a 3 px `--app-indigo` line at its left (the indigo line is under 3:1)
     until it is changed, and says so in its label to a screen reader (`GradePanel`). Each row of the
@@ -782,7 +913,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 
   `seatPurpose()` (`@/utils/agents`) tells a course agent from a personal agent by the seat's
   `answers_course`; `delegateArgsFor()` gives `member.add_delegate` both the preset and
-  `answers_course`, always said outright. `<HostingTag>` says how an agent runs, beside it.
+  `answers_course`, always said outright. `<HostingTag>` says how an agent runs, once, among the facts
+  of its own page.
 - People ask an agent on the site only while AIshie's runtime hosts it: one hosted on AIshie for which
   the runtime holds a live token (`site_chat: true`, which nobody declares or switches any more). One
   with MCP access never is, and has no chat box anywhere. Show `site_chat` as a status, never a switch
@@ -953,7 +1085,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   quoted, for the agent to find; their list works from the keyboard and never takes the Enter an
   input method uses. Whatever stops the caller writing (an agent paused, gone, not answering or
   operated elsewhere, a closed conversation, one waiting for approval) is one muted line above the
-  composer, never an alert box. Under the composer, for the one asking, one muted line says who
+  composer, never an alert box. Under the composer, for the one asking, one muted line, after the
+  shield where data goes is said (`DataFlowNotice compact`, "Notes and alerts"), says who
   else reads the conversation and where the agent sends it, with "More" for the whole notice
   (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read this" opens too: who reads
   it is Core's `visible_to`; where it goes follows how the agent is hosted, a provider named only
@@ -961,7 +1094,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   fallback's provider too where it is another; and nothing in it is deleted, a withdrawn message
   kept (its files listed in an export, never held there). A new conversation opens at its foot,
   the first time on the points, scrolled until More and Got it show. The first time a person
-  starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points are on
+  starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points, in a
+  `DataFlowNotice` as the notice's "Where it goes to be answered" is, are on
   the new conversation instead, until "Got it" or the first question. A new conversation has no
   title field: it is titled by the first line of its first message (`titleFrom`), and it offers a
   few ways to begin, which fill the box.
@@ -1030,6 +1164,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<html lang>` and the typefaces it chooses (`styles/tokens.css`, `styles/fonts.ts`) and saves
   `aishie.locale`. Element Plus follows the same `ui.locale` through `App.vue`'s
   `<el-config-provider>` (`elementLocale` in `i18n/elementPlus.ts`), as does the menu's check mark.
+  Each option of the menu and the selects names its language in itself, and says which it is in
+  (`:lang="l.value"`), for a screen reader (`src/i18n/languageMenus.spec.ts`).
+- **Typefaces follow the script, not the page's language alone.** A page in Chinese sets Latin
+  letters, figures and their punctuation (Latin-1, the en dash, the bullet, the minus sign) in Plex
+  and Source Serif, as an English page does, through the stacks' first family, `'AIshie Latin'`
+  (`styles/fonts-latin.css`), and the rest in Noto TC or SC: Han and full-width punctuation, the
+  quotation marks, the ellipsis and the em dash, which Chinese doubles (「——」). A page in English
+  sets the Chinese it shows (a name, a course's title, what is typed into a field) in Noto TC, loaded
+  the first time it shows any (`styles/fonts.ts`); a language's own name marked with its `lang` does
+  not count. Buttons and fields take the stacks as the rest of the page does (`styles/main.css`), not
+  the browser's own face for them. No stack names PMingLiU or SimSun, which have no bold, and Noto
+  comes before any Chinese face of the system's (`src/styles/stacks.spec.ts`).
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
@@ -1056,14 +1202,30 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   underscored tool name, a setting or a family of them such as `OIDC_*`); a message only an operator reads, or
   one that sets up an agent's MCP client, is let through there by its key, saying why.
 - **No punctuation in templates.** What joins words is the language's, so it is in the messages:
-  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), a label and
-  its value `common.pair` ("Model calls: 380", 「模型呼叫：380」; `<i18n-t keypath="common.pair">`
-  where the value is a component). Numbers go through `@/utils/format`: a percentage through
-  `formatPct` (a fraction; the gradebook's `formatPct` for a percentage Core worked out), money
-  through `formatMoney` ("US$0.0184": a "$" alone reads as Hong Kong's), a list through
-  `formatList` ("a, b, and c", 「甲、乙和丙」), never `"%"` written after a number nor
-  `.join(', ')`. The dot between a course's code and its section is `<span class="app-sep">·</span>`
-  with no spaces, so that a Chinese typeface does not make it a full-width one.
+  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), "(optional)"
+  after a field's label `common.labels.optionalTag` (its English space inside the message, so that a
+  label reads "Email (optional)" aloud too), a label and its value `common.pair` ("Model calls: 380",
+  「模型呼叫：380」; `<i18n-t keypath="common.pair">` where the value is a component), a word about
+  something in brackets after it `common.aside` ("Week 1.pdf (2 MB)", 「Week 1.pdf（2 MB）」) or,
+  drawn apart from it, `common.bracketed`, and the parts of a line of facts `common.sep` ("PDF ·
+  1.2 MB": `{{ t('common.sep') }}` between them in a template, `joinParts` from `@/utils/parts` in
+  a string). A course's code and section is `<span class="app-sep">·</span>` with no spaces, so
+  that a Chinese typeface does not make it a full-width one, and `courseCodeText` where only a
+  string will do (a label read aloud, a QR code's name, an option). A dot that is an element of its
+  own, a divider drawn `aria-hidden`, is a drawing and may stay. Numbers go through
+  `@/utils/format`: a percentage through `formatPct` (a fraction; the gradebook's `formatPct` for a
+  percentage Core worked out), money through `formatMoney` ("US$0.0184": a "$" alone reads as Hong
+  Kong's), a count where it may pass a thousand through `formatCount` ("1,284"), a list through
+  `formatList` ("a, b, and c", 「甲、乙和丙」; `formatList(items, 'or')` for one of them, "@a.edu or
+  @b.edu"), never `"%"` written after a number, `"$"` before one, nor `.join(', ')`. A list's or a
+  number's words follow the language where they are worked out in a `computed`: Intl is not reactive,
+  so the computed reads `ui.locale` (`computed(() => (ui.locale, formatList(items, 'or')))`), as
+  `<TimeText>` does. `src/i18n/punctuation.spec.ts` reads every component and module, the code in
+  a template (`{{ }}`, a bound attribute, a directive) as well as its text and scripts, and refuses
+  these, whether written in a template literal (`${n} %`), added to a string (`n + ' %'`,
+  `a + ': ' + b`, `a + '·' + b`) or as an entity (`&middot;`); it reads the messages too, for a
+  `"%"` after a placeholder in any language and a half-width colon or brackets beside one in
+  Chinese.
 - **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
   never 「{owner} 的代理」, nor around a figure written in the message: 「1個學期 | {n}個學期」, never
   「1 個學期」 (`src/i18n/spacing.spec.ts` refuses both). The page puts the room between Han

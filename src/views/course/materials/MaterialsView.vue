@@ -13,6 +13,7 @@ import type { DocumentSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
 import { usePageDrop } from '@/composables/useFileDrop'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -132,7 +133,10 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
             <router-link
               :to="{ name: 'course-document', params: { courseId, documentId: d.id } }"
               class="material-row"
-              :class="{ 'is-archived': d.status === 'archived' }"
+              :class="{
+                'is-archived': d.status === 'archived',
+                'app-row-unpublished': readsDrafts && !d.published_version_id && !d.purged_at && d.status !== 'archived',
+              }"
             >
               <el-tooltip :content="t('materials.sortOrder')" placement="top">
                 <span class="material-row__order">{{ d.sort_order }}</span>
@@ -145,24 +149,19 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
                 </span>
               </div>
               <div class="material-row__tags">
-                <el-tag v-if="d.purged_at" type="danger" size="small" disable-transitions>
+                <AppTag v-if="d.purged_at" tone="danger">
                   {{ t('materials.purged') }}
-                </el-tag>
-                <el-tag v-else-if="d.status === 'archived'" type="info" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-else-if="d.status === 'archived'">
                   {{ t('enums.documentStatus.archived') }}
-                </el-tag>
+                </AppTag>
                 <!-- Only those who read drafts see anything that is not published. -->
-                <el-tag
-                  v-else-if="d.published_version_id && readsDrafts"
-                  type="success"
-                  size="small"
-                  disable-transitions
-                >
+                <AppTag v-else-if="d.published_version_id && readsDrafts" variant="quiet">
                   {{ t('materials.published') }}
-                </el-tag>
-                <el-tag v-else-if="!d.published_version_id" type="warning" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-else-if="!d.published_version_id" tone="wait">
                   {{ t('materials.unpublished') }}
-                </el-tag>
+                </AppTag>
               </div>
               <el-icon class="material-row__chevron"><ArrowRight /></el-icon>
             </router-link>
@@ -210,19 +209,19 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
   border-radius: inherit;
   background: color-mix(in srgb, var(--app-indigo-tint) 88%, transparent);
   color: var(--el-color-primary);
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   font-weight: 500;
   pointer-events: none;
 }
 .materials__drop-icon {
-  font-size: 32px;
+  font-size: var(--app-text-3xl);
 }
 .is-drop-target .materials__card {
   min-height: 176px;
 }
 .materials__drop-hint {
   margin: 8px 12px 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-3);
 }
 /* Nothing is dragged on a phone. */
@@ -266,8 +265,8 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
   border-radius: var(--app-radius-control);
   background: var(--el-fill-color);
   color: var(--el-text-color-secondary);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .material-row__main {
@@ -278,13 +277,13 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
   gap: 2px;
 }
 .material-row__title {
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   font-weight: 500;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
 .material-row__meta {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   display: inline-flex;
   gap: 4px;

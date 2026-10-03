@@ -6,6 +6,7 @@
 // typed themselves, registering through a join link, is marked unverified,
 // and one set here is vouched for. The kind and the platform role never
 // change.
+import AppTag from '@/components/AppTag.vue'
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
@@ -132,19 +133,19 @@ async function submit() {
       </el-form-item>
       <el-form-item v-if="hasEmailField" prop="email">
         <template #label>
-          {{ t('admin.edit.email') }}
-          <span v-if="!actor.email" class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.edit.email')
+          }}<span v-if="!actor.email" class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <el-input v-model="form.email" name="email" type="email" maxlength="320" autocomplete="off" />
         <div class="app-form-hint edit-actor__block">{{ t('admin.edit.emailHint') }}</div>
       </el-form-item>
       <el-form-item v-if="hasLoginIdField" prop="login_id">
         <template #label>
-          {{ t('admin.loginId.label') }}
-          <span v-if="!actor.login_id" class="app-muted">({{ t('common.labels.optional') }})</span>
-          <el-tag v-if="vouchesLoginId" size="small" type="warning" effect="plain" class="edit-actor__tag">
+          {{ t('admin.loginId.label')
+          }}<span v-if="!actor.login_id" class="app-muted">{{ t('common.labels.optionalTag') }}</span>
+          <AppTag v-if="vouchesLoginId" tone="wait" class="edit-actor__tag">
             {{ t('admin.loginId.unverified') }}
-          </el-tag>
+          </AppTag>
         </template>
         <el-input
           v-model="form.login_id"

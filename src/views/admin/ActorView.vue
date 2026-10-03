@@ -22,6 +22,8 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import { isUuid } from '@/utils/format'
@@ -194,7 +196,6 @@ async function reactivate() {
           <!-- An agent, owned or not, is marked "AI" (and whose it is); a person or the system by kind. -->
           <AgentBadge v-if="actor.kind === 'agent'" :owner-name="actor.owner_name ?? undefined" size="default" />
           <StatusTag v-else vocab="actorKind" :value="actor.kind" size="default" />
-          <HostingTag v-if="actor.kind === 'agent'" :hosting="actor.hosting" size="default" />
           <StatusTag vocab="actorStatus" :value="actor.status" size="default" />
           <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" size="default" />
         </template>
@@ -269,22 +270,10 @@ async function reactivate() {
           :description="suspension === 'owner' ? t('admin.actor.suspendedByOwnerBanner') : undefined"
           class="actor__alert"
         />
-        <el-alert
-          v-if="isSelf"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="t('admin.actor.you')"
-          class="actor__alert"
-        />
-        <el-alert
-          v-if="isSystem || (roleBlocked && !isSelf)"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="isSystem ? t('admin.actor.cannot.system') : t('admin.actor.cannot.role')"
-          class="actor__alert"
-        />
+        <AppNote v-if="isSelf" class="actor__alert">{{ t('admin.actor.you') }}</AppNote>
+        <AppNote v-if="isSystem || (roleBlocked && !isSelf)" class="actor__alert">
+          {{ isSystem ? t('admin.actor.cannot.system') : t('admin.actor.cannot.role') }}
+        </AppNote>
 
         <section class="app-card">
           <h2 ref="registration" class="app-card__title">{{ t('admin.actor.registration') }}</h2>
@@ -307,9 +296,9 @@ async function reactivate() {
                 :content="t('admin.loginId.unverifiedHint')"
                 placement="top"
               >
-                <el-tag size="small" type="warning" effect="plain" class="actor__unverified" tabindex="0">
+                <AppTag tone="wait" class="actor__unverified" tabindex="0">
                   {{ t('admin.loginId.unverified') }}
-                </el-tag>
+                </AppTag>
               </el-tooltip>
             </el-descriptions-item>
             <el-descriptions-item :label="t('admin.actor.status')">
@@ -321,7 +310,7 @@ async function reactivate() {
                   <span v-if="actor.owner_name">{{ actor.owner_name }}</span>
                   <IdText v-else :id="actor.owner_actor_id" />
                 </router-link>
-                <span class="app-muted"> ({{ t('admin.actor.itsOwner') }})</span>
+                <span class="app-muted">{{ t('common.bracketed', { text: t('admin.actor.itsOwner') }) }}</span>
               </template>
               <template v-else-if="suspension === 'admin' && actor.suspended_by_actor_id">
                 <router-link :to="{ name: 'admin-actor', params: { actorId: actor.suspended_by_actor_id } }">

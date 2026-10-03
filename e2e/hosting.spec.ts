@@ -270,7 +270,9 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await expectToasted(page, `${MCP_AGENT} is created`)
     await expect(page).toHaveURL(/\/account\/agents\/[0-9a-f-]{36}$/)
     w.mcpId = page.url().split('/').pop()!
-    await expect(page.locator('.page-header .hosting-tag__mode')).toHaveText('MCP access')
+    // Said once, among its facts, not again in its header.
+    await expect(page.locator('.agent-view__desc .hosting-tag__mode')).toHaveText('MCP access')
+    await expect(page.locator('.page-header .hosting-tag')).toHaveCount(0)
 
     // Hosted on AIshie.
     const again = await newAgent(page, RT_AGENT)
@@ -279,9 +281,11 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await expectToasted(page, `${RT_AGENT} is created`)
     await expect(page).toHaveURL(/\/account\/agents\/[0-9a-f-]{36}$/)
     w.rtId = page.url().split('/').pop()!
-    await expect(page.locator('.page-header .hosting-tag__mode')).toHaveText('Hosted on AIshie')
+    await expect(page.locator('.agent-view__desc .hosting-tag__mode')).toHaveText('Hosted on AIshie')
 
-    // Core holds each as chosen; My agents shows how each runs.
+    // Core holds each as chosen. My agents says whether each can be asked, by a dot before its name, and
+    // leaves how each runs to its page: the one hosted on AIshie, not running yet, has an amber ring, and
+    // says so in words beside its name, to its owner, who must see to it.
     const mine = done(await call(hana().token, 'GET', '/v1/me/agents'), 'agent.list').agents as {
       actor_id: string
       hosting: string
@@ -291,8 +295,15 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
       [w.rtId]: 'runtime',
     })
     await page.goto('/account/agents')
-    await expect(page.locator('.agents-item').filter({ hasText: MCP_AGENT })).toContainText('MCP access')
-    await expect(page.locator('.agents-item').filter({ hasText: RT_AGENT })).toContainText('Hosted on AIshie')
+    const mcpItem = page.locator('.agents-item').filter({ hasText: MCP_AGENT })
+    const rtItem = page.locator('.agents-item').filter({ hasText: RT_AGENT })
+    await expect(mcpItem).not.toContainText('MCP access')
+    await expect(mcpItem.locator('.askable-dot')).toHaveCount(0)
+    await expect(rtItem).not.toContainText('Hosted on AIshie')
+    await expect(rtItem.locator('.askable-dot')).toHaveAttribute('aria-label', 'Not running')
+    await expect(rtItem.locator('.askable-dot')).toHaveClass(/is-off/)
+    await expect(rtItem.locator('.agents-item__off')).toHaveText('Not running')
+    await expect(mcpItem.locator('.agents-item__off')).toHaveCount(0)
   })
 
   test('how it runs is never changed: its page offers no way, and Core refuses one', async ({ page }) => {
@@ -342,7 +353,10 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await expect(card.locator('.tool-steps__header')).toContainText('Authorization: Bearer <token>')
     await card.locator('.tool-steps__claude summary').click()
     await expect(card.locator('.tool-steps__claude-config')).toContainText('mcp-remote')
-    await expect(page.locator('.site-chat .el-tag')).toHaveText('MCP access')
+    // How it runs is among its facts; its card of questions on the site says no more of it.
+    await expect(page.locator('.agent-view__desc .hosting-tag__mode')).toHaveText('MCP access')
+    await expect(page.locator('.site-chat .el-tag')).toHaveCount(0)
+    await expect(page.locator('.mcp-card .el-tag')).toHaveCount(0)
     await photograph(page, 'hosting-mcp-page')
 
     // A token, issued for one tool, and shown once with how to use it.
@@ -524,12 +538,15 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
       if (hosting === 'mcp') await photograph(page, 'hosting-admin-register')
       await dialog.getByRole('button', { name: 'Register' }).click()
       await expectToasted(page, `${name} is registered`)
-      // The directory says how it runs.
       await page.getByPlaceholder('Search by name, email or student/staff number, or paste an ID').fill(name)
       const row = page.locator('.actors__table .el-table__body tr').filter({ hasText: name })
-      await expect(row.locator('.hosting-tag__mode')).toHaveText(hosting === 'mcp' ? 'MCP access' : 'Hosted on AIshie')
+      // The directory leaves how it runs to its page, which says so once, among its facts.
+      await expect(row.locator('.hosting-tag')).toHaveCount(0)
       await row.getByRole('link', { name }).click()
       await expect(page.locator('.page-header')).toContainText(name)
+      await expect(page.locator('.actor__desc .hosting-tag__mode')).toHaveText(
+        hosting === 'mcp' ? 'MCP access' : 'Hosted on AIshie',
+      )
       if (hosting === 'mcp') {
         await expect(page.getByRole('button', { name: 'Issue token' })).toBeVisible()
         await expect(page.locator('.token__runtime')).toHaveCount(0)
@@ -557,10 +574,14 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     )
     await expect(create.locator('.hosting-choice__fixed')).toHaveText('建立後不能更改')
     await photograph(page, 'hosting-create-zh-Hant')
-    // Each agent says how it runs in the list, too.
+    // The list leaves how each runs to its page, and says by a dot, in words a screen reader reads, whether the
+    // one hosted on AIshie can be asked.
     await create.getByRole('button', { name: '取消' }).click()
-    await expect(page.locator('.agents-item').filter({ hasText: MCP_AGENT })).toContainText('MCP 存取')
-    await expect(page.locator('.agents-item').filter({ hasText: RT_AGENT })).toContainText('站內託管')
+    await expect(page.locator('.agents-item').filter({ hasText: MCP_AGENT })).not.toContainText('MCP 存取')
+    await expect(page.locator('.agents-item').filter({ hasText: RT_AGENT }).locator('.askable-dot')).toHaveAttribute(
+      'aria-label',
+      /^(可在站內提問|未在執行)$/,
+    )
   })
 
   // A person may have five agents at once: Hana's are suspended when they are done with.

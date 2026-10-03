@@ -6,8 +6,10 @@
 // go and why, and offers nothing above it: a level above is greyed out, and a
 // permission capped at denied is locked.
 import { useI18n } from 'vue-i18n'
+import { Filter, Lock } from '@element-plus/icons-vue'
 import { PERMS, SCOPED_PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/types'
 import { aboveCeiling, ceilingNote, ceilingOf, type Ceilings } from '@/utils/ceilings'
+import AppTag from './AppTag.vue'
 import LevelSelect from './LevelSelect.vue'
 import StatusTag from './StatusTag.vue'
 
@@ -53,32 +55,28 @@ function shown(p: Perm): AutonomyLevel | undefined {
       <div class="perm-editor__label">
         <span class="perm-editor__name">
           {{ t(`enums.perm.${p}`) }}
-          <el-tag
+          <AppTag
             v-if="SCOPED_PERMS.includes(p)"
-            size="small"
-            type="info"
-            effect="plain"
-            round
+            variant="outline"
+            :icon="Filter"
             :title="t('common.labels.scopedHelp')"
-            >{{ t('common.labels.scoped') }}</el-tag
           >
-          <el-tag v-if="changed?.includes(p)" size="small" type="warning" effect="light" round>{{
-            t('common.labels.changed')
-          }}</el-tag>
+            {{ t('common.labels.scoped') }}
+          </AppTag>
+          <AppTag v-if="changed?.includes(p)" tone="wait">{{ t('common.labels.changed') }}</AppTag>
           <el-tooltip
             v-if="ceilingOf(ceilings, p)"
             :content="ceilingNote(ceilings, p) ?? ''"
             placement="top"
             popper-class="app-tip-wrap"
           >
-            <el-tag size="small" type="info" effect="plain" round class="perm-editor__ceiling" tabindex="0">
-              <el-icon><Lock /></el-icon>
+            <AppTag variant="outline" :icon="Lock" class="perm-editor__ceiling" tabindex="0">
               {{
                 ceilingOf(ceilings, p) === 'denied'
                   ? t('common.ceiling.locked')
                   : t('common.ceiling.tag', { level: t(`enums.level.${ceilingOf(ceilings, p)}`) })
               }}
-            </el-tag>
+            </AppTag>
           </el-tooltip>
         </span>
         <span class="perm-editor__help">{{ t(`enums.permHelp.${p}`) }}</span>
@@ -137,13 +135,15 @@ function shown(p: Perm): AutonomyLevel | undefined {
   gap: 6px;
 }
 .perm-editor__help {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
+/* In the third ink, not the placeholder's, which does not read at AA on a changed row (the waiting
+   pill's ground). */
 .perm-editor__key {
   font-family: var(--app-font-mono);
-  font-size: 11px;
-  color: var(--el-text-color-placeholder);
+  font-size: var(--app-text-mark);
+  color: var(--el-text-color-secondary);
 }
 .perm-editor__value {
   flex-shrink: 0;
@@ -154,15 +154,11 @@ function shown(p: Perm): AutonomyLevel | undefined {
   padding-left: 8px;
   padding-right: 8px;
 }
-.perm-editor__ceiling .el-icon {
-  vertical-align: -2px;
-  margin-right: 2px;
-}
 .perm-editor__over {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-warning);
   margin-top: 2px;
 }
@@ -170,7 +166,7 @@ function shown(p: Perm): AutonomyLevel | undefined {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-danger);
   margin-top: 2px;
 }

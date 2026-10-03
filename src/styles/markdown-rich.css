@@ -119,7 +119,7 @@ html.dark {
 }
 .markdown-body .hljs-section,
 .markdown-body .hljs-strong {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .markdown-body .hljs-emphasis {
   font-style: italic;
@@ -163,7 +163,7 @@ html.dark {
   border-bottom: 1px solid var(--md-code-line);
   background: var(--md-code-bar);
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1;
   color: var(--app-ink-3);
 }
@@ -181,7 +181,7 @@ html.dark {
   background: transparent;
   color: var(--app-ink-3);
   font-family: var(--app-font-sans);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 1.2;
   cursor: pointer;
 }
@@ -203,7 +203,7 @@ html.dark {
   overflow-x: auto;
   white-space: pre;
   word-wrap: normal;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 1.55;
   tab-size: 4;
 }

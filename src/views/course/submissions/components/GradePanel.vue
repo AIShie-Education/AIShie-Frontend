@@ -13,6 +13,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
 import { read, type UploadedFile } from '@/api/http'
 import type { ActionSummary, Assignment, GradeSummary, Submission } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
@@ -327,13 +328,12 @@ async function submit() {
         </router-link>
       </div>
     </el-alert>
-    <el-alert
+    <AppNote
       v-else-if="outcome?.status === 'proposed'"
-      type="info"
       :title="t('submissions.grade.proposedTitle')"
-      show-icon
       class="grade-panel__alert"
       @close="outcome = null"
+      closable
     >
       <p class="grade-panel__alert-text">{{ t('submissions.grade.proposedBody') }}</p>
       <div class="grade-panel__links">
@@ -341,29 +341,29 @@ async function submit() {
           {{ t('submissions.grade.myActions') }}
         </router-link>
       </div>
-    </el-alert>
+    </AppNote>
 
     <p v-if="!course.writable" class="app-muted grade-panel__note">{{ t('submissions.grade.archived') }}</p>
     <p v-else-if="submission.state === 'draft'" class="app-muted grade-panel__note">
       {{ t('submissions.grade.notYet') }}
     </p>
-    <el-alert v-else-if="livePosted" type="info" :closable="false" show-icon>
+    <AppNote v-else-if="livePosted">
       <p class="grade-panel__alert-text">{{ t('submissions.grade.postedExists') }}</p>
       <div class="grade-panel__links">
         <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: livePosted.id } }">
           {{ t('submissions.grade.openPosted') }}
         </router-link>
       </div>
-    </el-alert>
+    </AppNote>
 
     <template v-else>
       <p v-if="needsApproval" class="app-form-hint grade-panel__hint">{{ t('submissions.grade.needsApprovalHint') }}</p>
       <p v-else-if="course.permsSource === 'unknown'" class="app-form-hint grade-panel__hint">
         {{ t('common.permissionUnknown') }}
       </p>
-      <el-alert v-if="gradesHidden" type="info" :closable="false" show-icon class="grade-panel__alert">
+      <AppNote v-if="gradesHidden" class="grade-panel__alert">
         {{ t('submissions.grade.gradesHidden') }}
-      </el-alert>
+      </AppNote>
       <el-alert
         v-if="proposedHint && outcome?.status !== 'proposed'"
         type="warning"
@@ -376,7 +376,7 @@ async function submit() {
       <el-alert v-if="missing" type="warning" :closable="false" show-icon class="grade-panel__alert">
         {{ t('submissions.grade.forMissing') }}
       </el-alert>
-      <el-alert v-if="liveDraft" type="info" :closable="false" show-icon class="grade-panel__alert">
+      <AppNote v-if="liveDraft" class="grade-panel__alert">
         <p v-if="drafter" class="grade-panel__alert-text grade-panel__drafter">
           <i18n-t keypath="submissions.grade.draftBy" tag="span" scope="global">
             <template #name><MemberName :id="drafter.id" show-kind class="grade-panel__drafter-name" /></template>
@@ -397,7 +397,7 @@ async function submit() {
             {{ t('submissions.grade.openDraft') }}
           </router-link>
         </div>
-      </el-alert>
+      </AppNote>
 
       <div class="grade-panel__grid">
         <el-form
@@ -518,14 +518,14 @@ async function submit() {
 .grade-panel__why {
   align-self: center;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .grade-panel__alert {
   margin-bottom: 12px;
 }
 .grade-panel__alert-text {
   margin: 0 0 4px;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .grade-panel__links {
   display: flex;
@@ -535,7 +535,7 @@ async function submit() {
 }
 .grade-panel__note {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .grade-panel__hint {
   margin: -4px 0 12px;
@@ -565,8 +565,8 @@ async function submit() {
 }
 .grade-panel__error {
   margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-color-danger);
 }
 .grade-panel__links a {
@@ -590,8 +590,8 @@ async function submit() {
   border-radius: var(--app-radius-control);
   border: 1px solid var(--el-color-warning-light-5);
   background: var(--el-color-warning-light-9);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
 }
 .grade-panel__draft-files-text {
   margin: 0;

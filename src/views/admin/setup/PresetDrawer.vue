@@ -2,7 +2,10 @@
 // One preset in full: what a member seated from it starts with.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Box, OfficeBuilding } from '@element-plus/icons-vue'
 import { PERMS, type Preset } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -34,12 +37,12 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
   >
     <template v-if="preset">
       <div class="preset-drawer__tags">
-        <el-tag v-if="builtin" type="info" effect="dark" size="small" disable-transitions>
+        <AppTag v-if="builtin" variant="outline" :icon="Box">
           {{ t('adminSetup.presets.builtin') }}
-        </el-tag>
-        <el-tag v-else type="primary" size="small" disable-transitions>
+        </AppTag>
+        <AppTag v-else variant="outline" :icon="OfficeBuilding">
           {{ deptName ?? t('adminSetup.presets.own') }}
-        </el-tag>
+        </AppTag>
         <span class="app-muted preset-drawer__count">{{
           t('adminSetup.presets.allowed', { n: allowedCount(preset), total: PERMS.length })
         }}</span>
@@ -69,14 +72,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
         <dd><IdText :id="preset.id" /></dd>
       </dl>
 
-      <el-alert
-        v-if="builtin"
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('adminSetup.presets.drawer.builtinNote')"
-        class="preset-drawer__note"
-      />
+      <AppNote v-if="builtin" class="preset-drawer__note">{{ t('adminSetup.presets.drawer.builtinNote') }}</AppNote>
 
       <div v-if="canEdit" class="preset-drawer__actions">
         <el-button v-if="builtin" @click="emit('copy', preset)">
@@ -109,11 +105,11 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
   flex-wrap: wrap;
 }
 .preset-drawer__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .preset-drawer__desc {
   margin: 12px 0 16px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   word-break: break-word;
 }
 .preset-drawer__facts {
@@ -121,7 +117,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
   grid-template-columns: max-content 1fr;
   gap: 8px 16px;
   margin: 0 0 16px;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   align-items: center;
 }
 .preset-drawer__facts dt {
@@ -134,7 +130,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
 }
 .preset-drawer__key {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .preset-drawer__note {
   margin-bottom: 12px;
@@ -150,7 +146,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
 }
 .preset-drawer__heading {
   margin: 20px 0 4px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--app-text-lg);
+  font-weight: var(--app-heading-weight);
 }
 </style>

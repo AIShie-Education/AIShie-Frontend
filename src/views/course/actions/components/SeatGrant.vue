@@ -7,9 +7,11 @@
 // instructor's.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { OfficeBuilding } from '@element-plus/icons-vue'
 import { PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { presetLabel } from '@/views/course/members/components/seat'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -75,9 +77,9 @@ const listsItself = computed(
         <dd class="seat-grant__inline">
           <template v-if="preset">
             <strong>{{ presetLabel(preset) }}</strong>
-            <el-tag v-if="preset.dept_id" size="small" type="info" effect="plain">{{
+            <AppTag v-if="preset.dept_id" variant="outline" :icon="OfficeBuilding">{{
               t('actions.grant.deptPreset')
-            }}</el-tag>
+            }}</AppTag>
           </template>
           <span v-else-if="str(p.preset)">{{ str(p.preset) }}</span>
           <IdText v-else-if="str(p.preset_id)" :id="str(p.preset_id)" />
@@ -88,9 +90,9 @@ const listsItself = computed(
         <dd class="seat-grant__inline">
           <StatusTag v-if="role" vocab="role" :value="role" />
           <span v-else>—</span>
-          <el-tag v-if="roleChanged" size="small" type="warning" effect="light" round>{{
+          <AppTag v-if="roleChanged" tone="wait">{{
             t('common.labels.changed')
-          }}</el-tag>
+          }}</AppTag>
         </dd>
       </div>
       <div>
@@ -117,7 +119,7 @@ const listsItself = computed(
       <div>
         <dt>{{ t('actions.fields.expires_at') }}</dt>
         <dd>
-          <TimeText v-if="expiresAt" :value="expiresAt" />
+          <TimeText v-if="expiresAt" :value="expiresAt" cutoff />
           <span v-else class="seat-grant__muted">{{ t('actions.grant.noExpiry') }}</span>
         </dd>
       </div>
@@ -142,8 +144,8 @@ const listsItself = computed(
 }
 .seat-grant__help {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .seat-grant__alert {
@@ -164,12 +166,12 @@ const listsItself = computed(
 }
 .seat-grant__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .seat-grant__facts dd {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .seat-grant__inline {
@@ -180,8 +182,8 @@ const listsItself = computed(
 }
 .seat-grant__title {
   margin: 8px 0 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -189,7 +191,7 @@ const listsItself = computed(
 }
 .seat-grant__muted {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: normal;
 }
 @media (max-width: 600px) {

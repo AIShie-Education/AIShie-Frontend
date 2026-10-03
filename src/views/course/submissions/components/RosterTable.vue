@@ -11,7 +11,11 @@ import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import type { ApiError } from '@/api/http'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import FilterChips from '@/components/FilterChips.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -19,20 +23,20 @@ import TimeText from '@/components/TimeText.vue'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
-import { formatDateTime } from '@/utils/format'
 import {
   ROSTER_STATES,
-  countByState,
   forStudent,
   mayMarkMissing,
   needsMoreFor,
   proposalKey,
   rememberProposal,
   rosterName,
+  rosterView,
   showsSeatStatus,
   wasProposed,
   type RosterEntry,
 } from './roster'
+import { zonedText } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -46,7 +50,7 @@ const props = defineProps<{
   hasMore: boolean
 }>()
 const emit = defineEmits<{ more: []; retry: []; changed: [] }>()
-const { t } = useI18n()
+const { t, te } = useI18n()
 const router = useRouter()
 const course = useCourseStore()
 // A card per student where the roster is as narrow as on a phone: its summary
@@ -57,7 +61,24 @@ const summaryLine = useTemplateRef<HTMLElement>('summaryLine')
 const narrow = useContainerNarrow(summaryLine, 566)
 
 const shown = computed(() => forStudent(props.rows, props.studentId))
-const summary = computed(() => countByState(props.rows))
+// The counts are a filter too: one state's students at a time, or all of them.
+// They count the rows they filter; where the page is filtered to one student
+// there is nothing left to filter, and there are none (rosterView).
+const stateFilter = ref('')
+const view = computed(() => rosterView(props.rows, props.studentId, stateFilter.value))
+const summary = computed(() => view.value.summary)
+const stateChips = computed(() =>
+  (summary.value?.counts ?? []).map((c) => ({
+    value: c.state,
+    label: te(`enums.submissionState.${c.state}`) ? t(`enums.submissionState.${c.state}`) : c.state,
+    count: c.count,
+  })),
+)
+// A state none of them is in any more (after a refresh, say) filters nothing.
+watch(stateChips, (chips) => {
+  if (summary.value && stateFilter.value && !chips.some((c) => c.value === stateFilter.value)) stateFilter.value = ''
+})
+const visible = computed(() => view.value.visible)
 
 // The student the page is filtered to may be on a page not read yet.
 watch(
@@ -101,8 +122,7 @@ async function markMissing(row: RosterEntry) {
   const title = course.assignmentTitle(assignmentId) ?? t('submissions.roster.confirm.thisAssignment')
   const lines = [t('submissions.roster.confirm.body', { name, assignment: title })]
   const due = assignment.value?.due_at
-  if (due && dayjs(due).isAfter(dayjs()))
-    lines.push(t('submissions.roster.confirm.notDue', { due: formatDateTime(due) }))
+  if (due && dayjs(due).isAfter(dayjs())) lines.push(t('submissions.roster.confirm.notDue', { due: zonedText(due) }))
   if (needsApproval.value) lines.push(t('submissions.roster.confirm.needsApproval'))
   // One paragraph a sentence: joined with spaces, Chinese would get a stray
   // one after each 。.
@@ -158,14 +178,7 @@ const emptyText = computed(() =>
 
 <template>
   <div class="roster">
-    <el-alert
-      v-if="published === false"
-      class="roster__notice"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('submissions.roster.unpublished')"
-    />
+    <AppNote v-if="published === false" class="roster__notice">{{ t('submissions.roster.unpublished') }}</AppNote>
     <AsyncState
       :loading="loading && !shown.length"
       :error="error"
@@ -174,18 +187,20 @@ const emptyText = computed(() =>
       @retry="emit('retry')"
     >
       <div ref="summaryLine" class="roster-summary">
-        <span class="roster-summary__total">
-          {{ t('submissions.roster.summary.total', { n: summary.total }, summary.total) }}
-        </span>
-        <span v-for="c in summary.counts" :key="c.state" class="roster-summary__item">
-          <StatusTag vocab="submissionState" :value="c.state" />
-          <span class="roster-summary__count">{{ c.count }}</span>
-        </span>
-        <span v-if="hasMore" class="roster-summary__partial">{{ t('submissions.roster.summary.partial') }}</span>
+        <template v-if="summary">
+          <FilterChips
+            v-model="stateFilter"
+            :options="stateChips"
+            :all-count="summary.total"
+            :label="t('submissions.roster.summary.label')"
+          />
+          <span v-if="hasMore" class="roster-summary__partial">{{ t('submissions.roster.summary.partial') }}</span>
+        </template>
       </div>
+      <AppEmpty v-if="!visible.length" :text="t('submissions.roster.emptyState')" />
 
-      <ul v-if="narrow" class="roster-cards">
-        <li v-for="row in shown" :key="row.student_member_id">
+      <ul v-else-if="narrow" class="roster-cards">
+        <li v-for="row in visible" :key="row.student_member_id">
           <router-link
             v-if="row.submission_id"
             :to="submissionRoute(row)"
@@ -227,7 +242,7 @@ const emptyText = computed(() =>
               <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
             </div>
             <div v-else-if="isProposed(row)" class="roster-action">
-              <el-tag type="warning" size="small" disable-transitions>{{ t('enums.actionStatus.proposed') }}</el-tag>
+              <AppTag tone="wait">{{ t('enums.actionStatus.proposed') }}</AppTag>
               <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
                 {{ t('submissions.roster.myActions') }}
               </router-link>
@@ -237,7 +252,7 @@ const emptyText = computed(() =>
       </ul>
       <el-table
         v-else
-        :data="shown"
+        :data="visible"
         row-key="student_member_id"
         class="roster-table"
         :row-class-name="rowClass"
@@ -287,7 +302,7 @@ const emptyText = computed(() =>
               </el-button>
             </div>
             <div v-else-if="isProposed(row)" class="roster-action roster-action--end">
-              <el-tag type="warning" size="small" disable-transitions>{{ t('enums.actionStatus.proposed') }}</el-tag>
+              <AppTag tone="wait">{{ t('enums.actionStatus.proposed') }}</AppTag>
               <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
                 {{ t('submissions.roster.myActions') }}
               </router-link>
@@ -311,20 +326,12 @@ const emptyText = computed(() =>
   align-items: center;
   gap: 6px 14px;
   padding: 6px 0 10px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
-.roster-summary__total {
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-.roster-summary__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.roster-summary__count {
-  font-variant-numeric: tabular-nums;
+/* Filtered to one student: no chips, and no room kept for them. */
+.roster-summary:empty {
+  padding: 0;
 }
 .roster-summary__partial {
   color: var(--el-text-color-secondary);
@@ -392,7 +399,7 @@ const emptyText = computed(() =>
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 </style>

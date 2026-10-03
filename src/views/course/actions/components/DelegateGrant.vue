@@ -6,10 +6,13 @@
 // again when it is approved: anything that would then be wider is refused.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { OfficeBuilding } from '@element-plus/icons-vue'
 import { PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { seatPurpose } from '@/utils/agents'
 import { presetDescription, presetLabel } from '@/views/course/members/components/seat'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import IdText from '@/components/IdText.vue'
@@ -89,13 +92,16 @@ const expiresAt = computed(() => str(p.value.expires_at))
   <div class="delegate-grant">
     <p class="delegate-grant__help">{{ t('actions.delegate.help', { owner: ownerText }) }}</p>
     <el-alert
-      v-if="purpose"
-      :type="purpose === 'course' ? 'warning' : 'info'"
+      v-if="purpose === 'course'"
+      type="warning"
       :closable="false"
       show-icon
       class="delegate-grant__alert"
-      :title="t(`actions.delegate.purpose.${purpose}`, { owner: ownerText })"
+      :title="t('actions.delegate.purpose.course', { owner: ownerText })"
     />
+    <AppNote v-else-if="purpose" class="delegate-grant__alert">
+      {{ t(`actions.delegate.purpose.${purpose}`, { owner: ownerText }) }}
+    </AppNote>
 
     <dl class="delegate-grant__facts">
       <div>
@@ -122,9 +128,9 @@ const expiresAt = computed(() => str(p.value.expires_at))
             <StatusTag v-if="purpose" vocab="seatPurpose" :value="purpose" />
             <strong v-if="preset && presetSaysMore">{{ presetLabel(preset) }}</strong>
             <IdText v-else-if="!preset && !purpose && str(p.preset_id)" :id="str(p.preset_id)" />
-            <el-tag v-if="preset?.dept_id" size="small" type="info" effect="plain">{{
+            <AppTag v-if="preset?.dept_id" variant="outline" :icon="OfficeBuilding">{{
               t('actions.grant.deptPreset')
-            }}</el-tag>
+            }}</AppTag>
           </div>
           <div v-if="preset && presetDescription(preset)" class="delegate-grant__muted">
             {{ presetDescription(preset) }}
@@ -153,7 +159,7 @@ const expiresAt = computed(() => str(p.value.expires_at))
       <div>
         <dt>{{ t('actions.fields.expires_at') }}</dt>
         <dd>
-          <TimeText v-if="expiresAt" :value="expiresAt" />
+          <TimeText v-if="expiresAt" :value="expiresAt" cutoff />
           <span v-else class="delegate-grant__muted">{{ t('actions.delegate.noExpiry', { owner: ownerText }) }}</span>
         </dd>
       </div>
@@ -195,12 +201,12 @@ const expiresAt = computed(() => str(p.value.expires_at))
 }
 .delegate-grant__help {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .delegate-grant__alert :deep(.el-alert__title) {
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
 }
 .delegate-grant__facts {
   margin: 0;
@@ -217,12 +223,12 @@ const expiresAt = computed(() => str(p.value.expires_at))
 }
 .delegate-grant__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .delegate-grant__facts dd {
   margin: 0;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .delegate-grant__inline {
@@ -241,16 +247,16 @@ const expiresAt = computed(() => str(p.value.expires_at))
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .delegate-grant__muted {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: normal;
 }
 .delegate-grant__again {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 @media (max-width: 600px) {
   .delegate-grant__facts > div {

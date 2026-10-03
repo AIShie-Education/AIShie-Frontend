@@ -5,7 +5,7 @@ export default {
     new: 'New assignment',
     filter: 'Filter by title',
     show: {
-      all: 'All',
+      label: 'Which assignments',
       published: 'Published',
       unpublished: 'Not published',
     },
@@ -47,7 +47,7 @@ export default {
       'Once grades have been entered, a change of points asks what becomes of them, and a change of either writes the totals it changes again.',
     due: 'Due',
     duePlaceholder: 'No due date',
-    dueHint: 'Work handed in after the due date is marked late.',
+    dueHint: 'On your clock, in {zone}. Work handed in after the due date is marked late.',
     component: 'Counts toward',
     componentNone: 'Nothing — practice work',
     componentHint:
@@ -116,7 +116,7 @@ export default {
   },
   detail: {
     title: 'Assignment',
-    dueLine: 'Due',
+    dueLine: 'Due {at}, {rel}',
     pointsLine: '{n} points',
     unpublishedAlert: 'Students cannot see this assignment until it is published.',
     instructionsUnpublished:

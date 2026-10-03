@@ -50,6 +50,7 @@ import { useBackCloses } from '@/composables/useBackCloses'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePolling } from '@/composables/usePolling'
 import { useChatStore } from '@/stores/chat'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AgentPicker from './AgentPicker.vue'
 import ChatHistory from './ChatHistory.vue'
 import ChatPane from './ChatPane.vue'
@@ -70,6 +71,7 @@ import {
   type WindowBox,
 } from './panel'
 import { courseLabel } from './seat'
+import { joinParts } from '@/utils/parts'
 
 const { t } = useI18n()
 const chat = useChatStore()
@@ -416,7 +418,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
           v-for="m in chat.courses"
           :key="m.course_id"
           :value="m.course_id"
-          :label="`${courseLabel(m, chat.courses)} · ${m.title}`"
+          :label="joinParts([courseLabel(m, chat.courses), m.title])"
         />
       </el-select>
       <span v-else class="chat-panel__spacer" />
@@ -492,7 +494,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         @open="(courseId: string, id: string) => chat.showConversation(courseId, id)"
       />
 
-      <el-empty v-else-if="!chat.courses.length" class="chat-panel__none" :description="t('chat.panel.noCourses')" />
+      <AppEmpty v-else-if="!chat.courses.length" class="chat-panel__none" :text="t('chat.panel.noCourses')" page />
 
       <ChatPane
         v-else-if="chat.draft"
@@ -626,8 +628,8 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
   color: var(--app-ink);
 }
 .chat-panel__titlebar .el-button + .el-button {
@@ -706,13 +708,13 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
 }
 .chat-panel__heading {
   margin: 0 0 4px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .chat-panel__hint {
   margin: 0 0 10px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .chat-panel__none {

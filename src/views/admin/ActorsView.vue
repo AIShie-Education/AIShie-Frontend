@@ -9,19 +9,21 @@
 import { computed, onScopeDispose, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { User } from '@element-plus/icons-vue'
 import { isApiError, MCP_ENDPOINT, read } from '@/api/http'
 import { useAsync, usePaged } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { formatDate, isUuid } from '@/utils/format'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import HostingTag from '@/components/HostingTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentName from '@/components/AgentName.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './components/ActorSummary.vue'
@@ -314,21 +316,17 @@ async function openById() {
         >
           <el-option v-for="s in STATUSES" :key="s" :value="s" :label="t(`enums.actorStatus.${s}`)" />
         </el-select>
-        <span class="app-toolbar__spacer" />
-        <el-button :loading="list.loading.value" :aria-label="t('common.actions.refresh')" @click="list.reload()">
-          <el-icon><Refresh /></el-icon>
-          <span v-if="!narrow">{{ t('common.actions.refresh') }}</span>
-        </el-button>
+        <RefreshButton :loading="list.loading.value" @click="list.reload()" />
       </div>
 
       <div v-if="owner && !byId" class="actors__owner-filter">
-        <el-tag closable type="primary" effect="plain" disable-transitions @close="clearOwner">
+        <AppTag variant="outline" :icon="User" size="default" closable @close="clearOwner">
           {{
             t('admin.actors.ownedBy', {
               owner: ownerActor.data.value?.display_name ?? t('admin.actor.ownerUnnamed'),
             })
           }}
-        </el-tag>
+        </AppTag>
       </div>
       <p v-if="byId && list.items.value.length" class="app-form-hint actors__by-id">{{ t('admin.actors.byId') }}</p>
 
@@ -345,7 +343,6 @@ async function openById() {
               <template #meta>
                 <span class="actors__card-meta">
                   <SignInTags v-if="a.kind === 'human'" :actor="a" />
-                  <HostingTag v-if="a.kind === 'agent'" :hosting="a.hosting" />
                   <span v-if="a.owner_actor_id">
                     {{ t('admin.actors.ownerIs', { owner: a.owner_name ?? t('admin.actor.ownerUnnamed') }) }}
                   </span>
@@ -386,11 +383,10 @@ async function openById() {
               </div>
             </template>
           </el-table-column>
-          <el-table-column :label="t('admin.actors.col.kind')" :width="kind === 'human' ? 100 : 150">
+          <el-table-column :label="t('admin.actors.col.kind')" :width="110">
             <template #default="{ row }">
               <div class="actors__kind">
                 <StatusTag vocab="actorKind" :value="row.kind" />
-                <HostingTag v-if="row.kind === 'agent'" :hosting="row.hosting" />
               </div>
             </template>
           </el-table-column>
@@ -415,9 +411,9 @@ async function openById() {
               <span v-else-if="!row.login_id" class="app-muted">—</span>
               <div v-if="row.login_id" class="actors__login-id">
                 <code>{{ row.login_id }}</code>
-                <el-tag v-if="row.login_id_verified === false" size="small" type="warning" effect="plain">
+                <AppTag v-if="row.login_id_verified === false" tone="wait">
                   {{ t('admin.loginId.unverified') }}
-                </el-tag>
+                </AppTag>
               </div>
             </template>
           </el-table-column>
@@ -465,18 +461,18 @@ async function openById() {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .actors__subhead {
   margin: 16px 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .actors__steps {
   margin: 0;
   padding-left: 20px;
   line-height: 1.7;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .actors__new-actions {
@@ -488,7 +484,7 @@ async function openById() {
   margin-bottom: 16px;
 }
 .actors__no-list :deep(.el-alert__description) {
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .actors__open {
   display: flex;
@@ -503,7 +499,7 @@ async function openById() {
 }
 .actors__open-error {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 .actors__open-hint {
@@ -563,7 +559,7 @@ async function openById() {
   flex-wrap: wrap;
 }
 .actors__link {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
   word-break: break-word;
   min-width: 0;
@@ -576,7 +572,7 @@ async function openById() {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .actors__login-id code {
   font-family: var(--app-font-mono);

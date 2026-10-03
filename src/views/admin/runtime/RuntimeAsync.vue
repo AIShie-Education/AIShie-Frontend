@@ -56,8 +56,8 @@ const notAdmin = computed(() => !!props.error && isNotAdmin(props.error))
   align-items: flex-start;
   gap: 8px;
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
 }
 .runtime-async__not-offered .el-icon {

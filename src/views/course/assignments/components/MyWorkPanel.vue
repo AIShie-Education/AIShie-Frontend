@@ -29,6 +29,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { formatDecimal } from '@/utils/format'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
@@ -396,14 +397,12 @@ defineExpose({ reload })
     </h2>
 
     <el-alert v-if="warning" type="warning" show-icon class="my-work__alert" :title="warning" @close="warning = null" />
-    <el-alert v-if="notice" type="info" show-icon class="my-work__alert" @close="notice = null">
-      <template #title>
-        {{ notice }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
-          t('assignments.list.viewMyActions')
-        }}</router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="notice" class="my-work__alert" @close="notice = null" closable>
+      {{ notice }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('assignments.list.viewMyActions')
+      }}</router-link>
+    </AppNote>
 
     <AsyncState
       :loading="attempts.loading.value && !attempts.data.value"
@@ -422,20 +421,12 @@ defineExpose({ reload })
         <el-alert v-if="pastDue" type="warning" :closable="false" show-icon class="my-work__alert">
           {{ t('assignments.work.pastDue') }}
         </el-alert>
-        <el-alert
-          v-if="handInProposed || proposedBody !== null"
-          type="info"
-          :closable="false"
-          show-icon
-          class="my-work__alert"
-        >
-          <template #title>
-            {{ handInProposed ? t('assignments.work.handInProposed') : t('assignments.work.savePending') }}
-            <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
-              {{ t('assignments.list.viewMyActions') }}
-            </router-link>
-          </template>
-        </el-alert>
+        <AppNote v-if="handInProposed || proposedBody !== null" class="my-work__alert">
+          {{ handInProposed ? t('assignments.work.handInProposed') : t('assignments.work.savePending') }}
+          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
+            {{ t('assignments.list.viewMyActions') }}
+          </router-link>
+        </AppNote>
 
         <AsyncState
           :loading="draftFull.loading.value && !current"
@@ -611,10 +602,10 @@ defineExpose({ reload })
   margin-bottom: 12px;
 }
 .my-work__started {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .my-work__label {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   color: var(--el-text-color-regular);
   margin-bottom: 4px;
@@ -641,7 +632,7 @@ defineExpose({ reload })
 }
 .my-work__nofiles {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .my-work__actions {
   display: flex;
@@ -656,12 +647,12 @@ defineExpose({ reload })
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .my-work__start-text {
   margin: 0 0 12px;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-text);
 }
 .my-work__start-actions {
   display: flex;
@@ -674,8 +665,8 @@ defineExpose({ reload })
 }
 .my-work__subtitle {
   margin: 20px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .my-work__attempts {
   list-style: none;
@@ -690,7 +681,7 @@ defineExpose({ reload })
   flex-wrap: wrap;
   padding: 10px 0;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .my-work__attempt-main,
 .my-work__attempt-side {
@@ -706,7 +697,7 @@ defineExpose({ reload })
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 </style>

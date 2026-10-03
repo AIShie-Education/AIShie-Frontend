@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 import type { PriceRow, ProviderOffer } from '@/api/runtime-types'
 import PriceDialog from './PriceDialog.vue'
 import type { PriceForm, UnpricedItem } from './runtimeAdmin'
+import { joinParts } from '@/utils/parts'
 
 defineProps<{
   items: UnpricedItem[]
@@ -42,7 +43,7 @@ function onSaved(row: PriceRow) {
       <li v-for="item in items" :key="item.id" class="unpriced__item" :data-offer="item.id">
         <span class="unpriced__what">
           <span v-if="item.label" class="unpriced__label">{{ item.label }}</span>
-          <code class="unpriced__model">{{ item.provider }} · {{ item.model }}</code>
+          <code class="unpriced__model">{{ joinParts([item.provider, item.model]) }}</code>
         </span>
         <span v-if="priced.has(item.id)" class="unpriced__done">{{ t('runtimeAdmin.prices.priced') }}</span>
         <el-button v-else size="small" class="unpriced__add" @click="add(item)">
@@ -85,13 +86,13 @@ function onSaved(row: PriceRow) {
   word-break: break-word;
 }
 .unpriced__label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .unpriced__model {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .unpriced__done {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-success);
 }
 </style>

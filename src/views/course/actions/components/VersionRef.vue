@@ -5,6 +5,7 @@
 // reads back to it, which the approver must see before saying yes.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import { useLookup, useSpecs } from './lookups'
 
@@ -40,15 +41,15 @@ const older = computed(() => !!version.value && !!latest.value && latest.value.s
       <span v-if="version" class="version-ref__seq">{{ t('actions.summary.version', { seq: version.seq }) }}</span>
       <IdText v-if="!version || explain" :id="versionId" />
       <template v-if="check && version">
-        <el-tag v-if="isPublished" size="small" type="info" effect="plain">{{
+        <AppTag v-if="isPublished" variant="outline">{{
           t('actions.summary.publishedNow')
-        }}</el-tag>
-        <el-tag v-if="rollsBack" size="small" type="warning" effect="light">
+        }}</AppTag>
+        <AppTag v-if="rollsBack" tone="wait">
           {{ t('actions.summary.rollsBack', { seq: published!.seq }) }}
-        </el-tag>
-        <el-tag v-else-if="older" size="small" type="warning" effect="plain">
+        </AppTag>
+        <AppTag v-else-if="older" tone="wait">
           {{ t('actions.summary.olderThan', { seq: latest!.seq }) }}
-        </el-tag>
+        </AppTag>
       </template>
     </span>
     <span v-if="check && explain && version && (rollsBack || older)" class="version-ref__note">
@@ -84,8 +85,8 @@ const older = computed(() => !!version.value && !!latest.value && latest.value.s
   display: flex;
   align-items: flex-start;
   gap: 4px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   color: var(--el-color-warning);
 }
 .version-ref__note .el-icon {

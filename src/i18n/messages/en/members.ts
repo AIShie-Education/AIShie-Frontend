@@ -15,7 +15,7 @@ export default {
   noLoginId: 'None',
   loginIdHelp: 'What they sign in with, as well as an email; only an administrator changes it.',
   tabs: {
-    all: 'All',
+    label: 'People or agents',
     people: 'People',
     agents: 'Agents',
   },

@@ -13,6 +13,9 @@ import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -32,6 +35,7 @@ import {
   type SchemeNode,
 } from './components/schemeModel'
 import { formatDecimal, formatList } from '@/utils/format'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
@@ -197,10 +201,6 @@ function collapseAll() {
 <template>
   <div class="scheme-view">
     <PageHeader :title="t('scheme.title')" :subtitle="t('scheme.subtitle')">
-      <el-button :loading="loading" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <el-tooltip
         v-if="canWrite && !error"
         :content="t('common.archivedCourse')"
@@ -221,14 +221,12 @@ function collapseAll() {
       </el-tooltip>
     </PageHeader>
 
-    <el-alert v-if="proposed" type="info" show-icon class="scheme-view__notice" @close="proposed = false">
-      <template #title>
-        {{ t('scheme.outcome.proposed') }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
-          t('scheme.outcome.viewMine')
-        }}</router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="proposed" class="scheme-view__notice" @close="proposed = false" closable>
+      {{ t('scheme.outcome.proposed') }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('scheme.outcome.viewMine')
+      }}</router-link>
+    </AppNote>
 
     <AsyncState
       :loading="loading"
@@ -259,7 +257,7 @@ function collapseAll() {
                 :key="s.key"
                 class="glance-bar__seg"
                 :style="{ flexGrow: s.share, background: s.color }"
-                :title="`${s.name} · ${pct(s.share)}`"
+                :title="joinParts([s.name, pct(s.share)])"
               />
             </div>
             <ul class="glance-legend">
@@ -285,6 +283,7 @@ function collapseAll() {
             <span class="scheme-view__tree-tools">
               <el-button text size="small" @click="expandAll">{{ t('scheme.actions.expandAll') }}</el-button>
               <el-button text size="small" @click="collapseAll">{{ t('scheme.actions.collapseAll') }}</el-button>
+              <RefreshButton :loading="loading" @click="refresh" />
             </span>
           </h2>
 
@@ -351,9 +350,7 @@ function collapseAll() {
               >
                 {{ a.title }}
               </router-link>
-              <el-tag v-if="!a.published_at" type="info" size="small" disable-transitions>{{
-                t('scheme.tree.unpublished')
-              }}</el-tag>
+              <AppTag v-if="!a.published_at" tone="wait">{{ t('scheme.tree.unpublished') }}</AppTag>
               <span class="uncounted__points">{{
                 t(
                   'scheme.uncounted.points',
@@ -412,7 +409,7 @@ function collapseAll() {
   flex-wrap: wrap;
 }
 .scheme-view__count {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 400;
 }
 .scheme-view__tree-tools {
@@ -437,7 +434,7 @@ function collapseAll() {
   align-items: flex-start;
   gap: 6px;
   margin: 0 0 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   line-height: 18px;
   color: var(--el-text-color-secondary);
 }
@@ -446,12 +443,12 @@ function collapseAll() {
   margin-top: 3px;
 }
 .scheme-view__retry {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   vertical-align: baseline;
 }
 .scheme-view__glance-empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .glance-bar {
   display: flex;
@@ -478,7 +475,7 @@ function collapseAll() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   min-width: 0;
 }
 .glance-legend__dot {
@@ -491,12 +488,12 @@ function collapseAll() {
   overflow-wrap: anywhere;
 }
 .glance-legend__pct {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 .scheme-view__uncounted-help {
   margin: -4px 0 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .uncounted {
   list-style: none;
@@ -510,7 +507,7 @@ function collapseAll() {
   flex-wrap: wrap;
   padding: 8px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .uncounted li:last-child {
   border-bottom: none;

@@ -64,8 +64,10 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await panel.locator('button.resp-row').filter({ hasText: TUTOR }).click()
 
     // The first time: its points, before anything is asked.
+    // Said as where data goes is said to administrators and owners (DataFlowNotice): the shield on its outline.
     const first = panel.locator('.chat-pane__privacy-first')
     await expect(first.getByRole('heading', { name: 'Before you ask' })).toBeVisible()
+    await expect(first.locator('.data-flow__icon')).toBeVisible()
     await expect(first.locator('li')).toHaveText([
       'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
       `${TUTOR} sends what you write here to its AI model’s provider to answer it.`,
@@ -79,6 +81,9 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     const notice = noticeOf(page)
     await expect(notice).toBeVisible()
     await expect(notice.getByRole('heading', { name: 'Who can read this conversation' })).toBeVisible()
+    await expect(
+      notice.locator('.data-flow').getByRole('heading', { name: 'Where it goes to be answered' }),
+    ).toBeVisible()
     await expect(notice).toContainText('The two taking part')
     await expect(notice).toContainText('who may export it for audit, withdrawn messages included')
     await expect(notice).toContainText(`${TUTOR} is hosted on AIshie.`)
@@ -93,6 +98,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(first).toHaveCount(0)
     const line = panel.locator('.chat-pane__privacy')
     await expect(line.locator('.chat-pane__privacy-text')).toHaveText(LINE)
+    await expect(line.locator('.data-flow__icon')).toBeVisible()
     await photograph(page, 'privacy-line-new')
 
     // In the conversation, where they ask again.

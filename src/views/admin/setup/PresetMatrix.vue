@@ -30,7 +30,7 @@ function metaLabel(key: string): string {
 /** What a permission covers, and for a scoped one that a seat's scope bounds it (the marker's meaning). */
 function permTip(p: Perm): string {
   const help = t(`enums.permHelp.${p}`)
-  return SCOPED_PERMS.includes(p) ? `${help} — ${t('common.labels.scopedHelp')}` : help
+  return SCOPED_PERMS.includes(p) ? t('common.labels.scopedTip', { help, scoped: t('common.labels.scopedHelp') }) : help
 }
 
 function rowClass({ row }: { row: Row }): string {
@@ -73,8 +73,8 @@ function rowClass({ row }: { row: Row }): string {
           <span class="matrix-head__name">{{ presetLabel(p) }}</span>
           <span class="matrix-head__where">
             {{ isBuiltin(p) ? t('adminSetup.presets.builtin') : (deptName(p.dept_id) ?? t('adminSetup.presets.own')) }}
-            <template v-if="hasOwnLabel(p)">
-              · <code class="matrix-head__key">{{ p.name }}</code></template
+            <template v-if="hasOwnLabel(p)"
+              >{{ t('common.sep') }}<code class="matrix-head__key">{{ p.name }}</code></template
             >
           </span>
         </button>
@@ -97,7 +97,7 @@ function rowClass({ row }: { row: Row }): string {
   text-align: left;
 }
 .matrix-label--meta {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
 }
 .matrix-label__name {
@@ -109,12 +109,13 @@ function rowClass({ row }: { row: Row }): string {
 }
 .matrix-label__scoped {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
+/* In the third ink, not the placeholder's, which does not read at AA on a hovered row. */
 .matrix-label__key {
   font-family: var(--app-font-mono);
-  font-size: 11px;
-  color: var(--el-text-color-placeholder);
+  font-size: var(--app-text-mark);
+  color: var(--el-text-color-secondary);
 }
 .matrix-head {
   display: inline-flex;
@@ -135,12 +136,12 @@ function rowClass({ row }: { row: Row }): string {
   background: var(--el-color-primary-light-9);
 }
 .matrix-head__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   word-break: break-word;
   line-height: 1.3;
 }
 .matrix-head__where {
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
   line-height: 1.3;

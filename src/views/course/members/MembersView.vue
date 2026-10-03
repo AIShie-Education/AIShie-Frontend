@@ -6,6 +6,7 @@
 import { computed, reactive, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import { Link, User } from '@element-plus/icons-vue'
 import { read } from '@/api/http'
 import { isUuid } from '@/utils/format'
 import { ROLES, type Member, type MemberSummary } from '@/api/types'
@@ -13,12 +14,15 @@ import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AgentName from '@/components/AgentName.vue'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
-import HostingTag from '@/components/HostingTag.vue'
+import AskableDot from '@/components/AskableDot.vue'
+import FilterChips from '@/components/FilterChips.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import RoleTag from '@/components/RoleTag.vue'
@@ -49,7 +53,7 @@ const presets = usePresets()
 const PAGE = 100
 const roleFilter = ref<string>('')
 const includeRemoved = ref(false)
-const kind = ref<'all' | 'human' | 'agent'>('all')
+const kind = ref<'' | 'human' | 'agent'>('')
 /** The invite link whose joiners alone are listed (?link=, from the invite links' list). */
 const linkFilter = computed(() => {
   const v = route.query.link
@@ -83,14 +87,14 @@ const counts = computed(() => {
 })
 const rows = computed(() =>
   list.items.value.filter(
-    (m) => kind.value === 'all' || (kind.value === 'agent' ? m.kind === 'agent' : m.kind !== 'agent'),
+    (m) => !kind.value || (kind.value === 'agent' ? m.kind === 'agent' : m.kind !== 'agent'),
   ),
 )
 // member.list has no kind filter, so People and Agents are picked out of the
 // pages loaded so far. Nobody of that kind among them says nothing about the
 // pages not yet loaded: then the empty state says so and offers the rest.
 const emptyText = computed(() => {
-  if (list.hasMore.value && kind.value !== 'all') {
+  if (list.hasMore.value && kind.value) {
     const n = list.items.value.length
     return kind.value === 'agent' ? t('members.emptyAgentsSoFar', { n }) : t('members.emptyPeopleSoFar', { n })
   }
@@ -100,6 +104,10 @@ const emptyText = computed(() => {
 function count(n: number): string {
   return list.hasMore.value ? `${n}+` : String(n)
 }
+const kindChips = computed(() => [
+  { value: 'human' as const, label: t('members.tabs.people'), count: count(counts.value.human), icon: User },
+  { value: 'agent' as const, label: t('members.tabs.agents'), count: count(counts.value.agent), icon: AgentSeatIcon },
+])
 
 // member.list does not carry the listed students and assignments; member.get
 // does. They are fetched for the listed seats on the page — the few that are
@@ -204,40 +212,33 @@ function rowClass({ row }: { row: MemberSummary }) {
       </div>
     </PageHeader>
 
-    <el-alert
+    <AppNote
       v-if="proposedAction"
-      type="info"
-      show-icon
-      class="members__notice"
       :title="t('members.proposed.add')"
+      class="members__notice"
       @close="proposedAction = null"
+      closable
     >
       <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
-        {{ t('members.proposed.view') }}
-      </router-link>
-      ·
-      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        {{ t('members.proposed.view') }} </router-link
+      >{{ t('common.sep')
+      }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
         t('members.proposed.mine')
       }}</router-link>
-    </el-alert>
+    </AppNote>
 
     <div class="app-card">
       <div v-if="!list.error.value?.isForbidden" ref="toolbar" class="app-toolbar">
-        <el-radio-group v-model="kind" size="default">
-          <el-radio-button value="all">{{ t('members.tabs.all') }} · {{ count(counts.all) }}</el-radio-button>
-          <el-radio-button value="human">
-            <el-icon class="members__tab-icon"><User /></el-icon>{{ t('members.tabs.people') }} ·
-            {{ count(counts.human) }}
-          </el-radio-button>
-          <el-radio-button value="agent">
-            <el-icon class="members__tab-icon"><AgentSeatIcon /></el-icon>{{ t('members.tabs.agents') }} ·
-            {{ count(counts.agent) }}
-          </el-radio-button>
-        </el-radio-group>
+        <FilterChips
+          v-model="kind"
+          :options="kindChips"
+          :all-count="count(counts.all)"
+          :label="t('members.tabs.label')"
+        />
         <span class="app-toolbar__spacer" />
-        <el-tag v-if="linkFilter" closable type="primary" effect="plain" size="large" @close="clearLinkFilter">
-          <el-icon class="members__tab-icon"><Link /></el-icon>{{ t('join.filtered') }}
-        </el-tag>
+        <AppTag v-if="linkFilter" variant="outline" :icon="Link" size="large" closable @close="clearLinkFilter">
+          {{ t('join.filtered') }}
+        </AppTag>
         <el-select v-model="roleFilter" class="members__role" :placeholder="t('members.filters.anyRole')" clearable>
           <el-option value="" :label="t('members.filters.anyRole')" />
           <el-option v-for="r in ROLES" :key="r" :value="r" :label="t(`enums.role.${r}`)" />
@@ -273,6 +274,7 @@ function rowClass({ row }: { row: MemberSummary }) {
               <div class="members__name">
                 <!-- The avatar, the name and its "AI" never part: the name is cut short instead. -->
                 <span v-if="row.kind === 'agent'" class="members__agent">
+                  <AskableDot :hosting="row.hosting" :site-chat="row.site_chat" />
                   <AgentAvatar :name="row.display_name" size="small" />
                   <AgentName :name="row.display_name" ellipsis class="members__name-text" />
                 </span>
@@ -290,19 +292,16 @@ function rowClass({ row }: { row: MemberSummary }) {
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
                 </el-tooltip>
                 <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" no-ai />
-                <HostingTag v-if="row.kind === 'agent'" :hosting="row.hosting" :site-chat="row.site_chat" />
                 <el-tooltip v-if="row.join_link_id" :content="t('join.viaHint')" placement="top">
-                  <el-tag size="small" type="info" effect="plain" class="members__via" tabindex="0">
-                    <el-icon><Link /></el-icon>{{ t('join.via') }}
-                  </el-tag>
+                  <AppTag variant="outline" :icon="Link" class="members__via" tabindex="0">{{ t('join.via') }}</AppTag>
                 </el-tooltip>
               </div>
               <div v-if="narrow" class="members__stack">
                 <RoleTag :member="row" />
                 <StatusTag v-if="row.status !== 'active'" vocab="memberStatus" :value="row.status" />
-                <el-tag v-if="row.status !== 'removed' && isExpired(row.expires_at)" size="small" type="info">
+                <AppTag v-if="row.status !== 'removed' && isExpired(row.expires_at)">
                   {{ t('members.expired') }}
-                </el-tag>
+                </AppTag>
               </div>
             </template>
           </el-table-column>
@@ -313,9 +312,9 @@ function rowClass({ row }: { row: MemberSummary }) {
             <template #default="{ row }">
               <div class="members__tags">
                 <StatusTag vocab="memberStatus" :value="row.status" />
-                <el-tag v-if="row.status !== 'removed' && isExpired(row.expires_at)" size="small" type="info">
+                <AppTag v-if="row.status !== 'removed' && isExpired(row.expires_at)">
                   {{ t('members.expired') }}
-                </el-tag>
+                </AppTag>
               </div>
             </template>
           </el-table-column>
@@ -348,14 +347,14 @@ function rowClass({ row }: { row: MemberSummary }) {
                 <span class="members__date-label">{{ t('members.columns.added') }}</span>
                 <TimeText :value="row.created_at" relative />
                 <span class="members__date-label">{{ t('members.columns.expires') }}</span>
-                <TimeText v-if="row.expires_at" :value="row.expires_at" relative />
+                <TimeText v-if="row.expires_at" :value="row.expires_at" relative cutoff />
                 <span v-else class="app-muted">{{ t('members.detail.noExpiry') }}</span>
               </div>
             </template>
           </el-table-column>
         </el-table>
         <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
-        <p v-if="list.hasMore.value && kind !== 'all'" class="app-form-hint">{{ t('members.partialCounts') }}</p>
+        <p v-if="list.hasMore.value && kind" class="app-form-hint">{{ t('members.partialCounts') }}</p>
         <p v-if="kind === 'agent' && canManage" class="app-form-hint members__agents-link">
           {{ t('members.agentsHint') }}
           <router-link :to="{ name: 'course-agents', params: { courseId } }">{{ t('members.agentsPage') }}</router-link>
@@ -429,29 +428,24 @@ function rowClass({ row }: { row: MemberSummary }) {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
 }
-.members__via :deep(.el-tag__content) {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
 .members__login-id {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 }
 .members__me {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   white-space: nowrap;
 }
 .members__dates {
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 8px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
 }
 .members__date-label {
   color: var(--el-text-color-secondary);

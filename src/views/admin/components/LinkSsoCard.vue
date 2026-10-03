@@ -14,6 +14,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { read } from '@/api/http'
 import type { Actor } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
+import AppNote from '@/components/AppNote.vue'
 import IdText from '@/components/IdText.vue'
 import { ordered, type SsoProvider } from '../sso/ssoAdmin'
 
@@ -76,14 +77,8 @@ async function submit() {
   <section class="app-card">
     <h2 class="app-card__title">{{ t('admin.sso.title') }}</h2>
     <p class="app-muted sso__intro">{{ t('admin.sso.intro') }}</p>
-    <el-alert v-if="blockedReason" type="info" :closable="false" show-icon :title="blockedReason" />
-    <el-alert
-      v-else-if="actor.kind === 'agent'"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('admin.sso.agent')"
-    />
+    <AppNote v-if="blockedReason">{{ blockedReason }}</AppNote>
+    <AppNote v-else-if="actor.kind === 'agent'">{{ t('admin.sso.agent') }}</AppNote>
     <template v-else>
       <el-alert v-if="linked" type="success" show-icon class="sso__alert" @close="linked = null">
         <template #title>{{ t('admin.sso.linkedAs', { subject: linked.subject }) }}</template>
@@ -152,8 +147,8 @@ async function submit() {
 <style scoped>
 .sso__intro {
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .sso__alert {
   margin-bottom: 12px;
@@ -179,12 +174,12 @@ async function submit() {
 }
 .sso__provider-id {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .sso__provider-off {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .sso__actions {
   display: flex;

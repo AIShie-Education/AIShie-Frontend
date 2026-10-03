@@ -1,7 +1,6 @@
 export default {
   title: '動態',
   subtitle: '這門課發生過、而你的席位可以知道的一切，最新的排最前',
-  refresh: '立即檢查',
   live: '頁面開啟期間每{n}秒檢查一次新動態',
   paused: '頁面在背景時暫停檢查',
   archived: '這門課已封存，之後不會再有新動態。',
@@ -30,7 +29,7 @@ export default {
   olderFailed: '無法載入較早的動態',
   runMore: '另有{n}則相同的動態',
   runLess: '收起',
-  runSince: '最早一則',
+  runSince: '最早一則{time}',
   today: '今天',
   yesterday: '昨天',
   viaAction: '相關操作',

@@ -18,7 +18,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { PlanQuotas, ProviderOffer, QuotasPut, SchoolPlan } from '@/api/runtime-types'
 import DailyReset from '@/components/DailyReset.vue'
-import { formatMoney } from '@/utils/format'
+import { formatMoney, USD_SIGN } from '@/utils/format'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import OperatorDetail from '../components/OperatorDetail.vue'
 import ChangedBy from './ChangedBy.vue'
@@ -265,7 +265,7 @@ function undo() {
             :aria-label="t('runtimeAdmin.money.usdOf', { what: t(s.label) })"
             class="quotas-card__input"
           >
-            <template #prepend>$</template>
+            <template #prepend>{{ USD_SIGN }}</template>
           </el-input>
           <div class="app-form-hint quotas-card__default">{{ defaultUsd(s.usd) }}</div>
         </el-form-item>
@@ -343,8 +343,8 @@ function undo() {
 }
 .quotas-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .quotas-card__heads,
@@ -360,8 +360,8 @@ function undo() {
 }
 .quotas-card__heads {
   margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
 }
 .quotas-card__scope {
   display: flex;
@@ -371,7 +371,7 @@ function undo() {
   margin-bottom: 8px;
 }
 .quotas-card__label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .quotas-card__input {
   width: 100%;
@@ -384,7 +384,7 @@ function undo() {
   flex-wrap: wrap;
   gap: 4px 8px;
   margin: 0 0 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .quotas-card__dollars {
   margin: 0 0 16px;

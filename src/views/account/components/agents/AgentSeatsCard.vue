@@ -9,14 +9,17 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Collection } from '@element-plus/icons-vue'
 import type { AgentFull, AgentRequest, AgentSeat } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { seatPurpose } from '@/utils/agents'
+import AppTag from '@/components/AppTag.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import LevelIcon from '@/components/LevelIcon.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { grantedPerms, toPermLevels } from './agents'
+import { courseCodeText } from '@/utils/parts'
 
 const props = defineProps<{ agent: AgentFull }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -28,7 +31,7 @@ const seats = computed(() =>
 const requests = computed(() => props.agent.requests ?? [])
 
 function courseName(s: { code: string; section: string }): string {
-  return s.section ? `${s.code} · ${s.section}` : s.code
+  return courseCodeText(s.code, s.section)
 }
 
 /** A preset Core names that is not a built-in one is shown by its own name. */
@@ -114,7 +117,7 @@ async function takeBack(r: AgentRequest) {
             <StatusTag v-if="seatPurpose(s)" vocab="seatPurpose" :value="seatPurpose(s)" />
             <template v-if="s.preset && seatPurpose({ preset: s.preset }) !== seatPurpose(s)">
               <StatusTag v-if="isBuiltinPreset(s.preset)" vocab="preset" :value="s.preset" />
-              <el-tag v-else type="info" size="small" disable-transitions>{{ s.preset }}</el-tag>
+              <AppTag v-else variant="outline" :icon="Collection">{{ s.preset }}</AppTag>
             </template>
             <StatusTag v-if="s.status !== 'active'" vocab="memberStatus" :value="s.status" />
             <StatusTag v-if="s.course_status !== 'active'" vocab="courseStatus" :value="s.course_status" />
@@ -131,23 +134,21 @@ async function takeBack(r: AgentRequest) {
           </span>
           <span>
             <span class="agent-seat__k">{{ t('agents.seats.ends') }}</span>
-            <TimeText v-if="s.expires_at" :value="s.expires_at" />
+            <TimeText v-if="s.expires_at" :value="s.expires_at" cutoff />
             <template v-else>{{ t('agents.seats.noEnd') }}</template>
           </span>
         </div>
         <div class="agent-seat__perms">
           <span class="agent-seat__k">{{ t('agents.seats.mayNow') }}</span>
           <template v-if="grantedPerms(s.perms).length">
-            <el-tag
+            <AppTag
               v-for="g in grantedPerms(s.perms)"
               :key="g.perm"
               :class="['app-level-tag', `is-${g.level}`]"
-              size="small"
               :title="t(`enums.level.${g.level}`)"
-              disable-transitions
             >
               <LevelIcon :level="g.level" />{{ t(`enums.perm.${g.perm}`) }}
-            </el-tag>
+            </AppTag>
           </template>
           <span v-else class="app-muted">
             {{
@@ -225,8 +226,8 @@ async function takeBack(r: AgentRequest) {
 }
 .seats-card__subhead {
   margin: 20px 0 10px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .agent-seats,
 .agent-requests {
@@ -261,8 +262,8 @@ async function takeBack(r: AgentRequest) {
   color: var(--el-color-primary);
 }
 .agent-seat__code {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   color: var(--el-color-primary);
 }
 .agent-seat__title {
@@ -282,7 +283,7 @@ async function takeBack(r: AgentRequest) {
   align-items: center;
   gap: 4px 16px;
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .agent-seat__perms {
@@ -294,7 +295,7 @@ async function takeBack(r: AgentRequest) {
 }
 .agent-seat__details {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .agent-seat__details summary {
   cursor: pointer;
@@ -332,7 +333,7 @@ async function takeBack(r: AgentRequest) {
   min-width: 0;
 }
 .agent-request__course {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
   word-break: break-word;
 }
@@ -341,7 +342,7 @@ async function takeBack(r: AgentRequest) {
   color: var(--el-text-color-regular);
 }
 .agent-request__meta {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 </style>
