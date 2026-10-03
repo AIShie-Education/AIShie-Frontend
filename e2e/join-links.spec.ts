@@ -6,6 +6,7 @@ import {
   expectSignedInAs,
   expectToasted,
   keepToasts,
+  pickOption,
   registerPerson,
   signIn,
   type CoreReply,
@@ -289,6 +290,30 @@ test.describe.serial('invite links', () => {
     })
     expect(refused.status, JSON.stringify(refused.body)).toBe(422)
     expect(refused.body.error.details.reason).toBe('email_domain_not_allowed')
+  })
+
+  test('a link kept to two domains names them, one or the other, in the language chosen on the page', async ({
+    browser,
+  }) => {
+    const link = await createLink({ allowed_email_domains: ['campus.example.edu', 'example.edu'] })
+    const { context, page } = await stranger(browser)
+    await page.goto(`/join/${link.token}`)
+    const line = page.locator('.join__domains')
+    await expect(line).toHaveText(
+      'Only people with an email at @campus.example.edu or @example.edu can join through this link.',
+    )
+    await page.getByRole('button', { name: 'Create an account' }).click()
+    const hint = page.locator('form.join-register .app-form-hint').filter({ hasText: '@example.edu' })
+    await expect(hint).toHaveText('Use your email at @campus.example.edu or @example.edu.')
+    // The page's own language select, as someone signed out has it; no reload.
+    await pickOption(
+      page,
+      page.locator('.el-select').filter({ has: page.getByRole('combobox', { name: 'Language' }) }),
+      '繁體中文',
+    )
+    await expect(line).toHaveText('只有電子郵件屬於@campus.example.edu或@example.edu的人，才能透過此連結加入。')
+    await expect(hint).toHaveText('請使用你在@campus.example.edu或@example.edu的電子郵件。')
+    await context.close()
   })
 
   test('an expired link says it was only ever for a few minutes', async ({ browser }) => {

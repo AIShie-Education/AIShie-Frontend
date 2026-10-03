@@ -21,6 +21,7 @@ import ActionActor from './components/ActionActor.vue'
 import ActionTarget from './components/ActionTarget.vue'
 import RevisesLine from './components/RevisesLine.vue'
 import { reasonText, storedDecision, storedError, typeLabel, type ActionRow } from './components/actionText'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -127,7 +128,7 @@ const shown = computed(() => filtered.value.slice((page.value - 1) * PER_PAGE, p
 /** A line saying why it did not happen, where it did not. */
 function outcomeNote(a: ActionRow): string | null {
   const e = storedError(a)
-  if (e) return reasonText(e) ?? `${t('actions.outcome.coreSays')}: ${e.message}`
+  if (e) return reasonText(e) ?? t('common.pair', { label: t('actions.outcome.coreSays'), value: e.message })
   const d = storedDecision(a)
   if (!d?.reason) return null
   return a.status === 'changes_requested'
@@ -168,12 +169,12 @@ function open(row: ActionRow) {
 
       <div v-if="!error" class="app-toolbar my-actions__toolbar">
         <el-select v-model="status" class="my-actions__filter" :placeholder="t('actions.mine.filterStatus')" clearable>
-          <el-option value="" :label="`${t('common.labels.all')} · ${items.length}`" />
+          <el-option value="" :label="joinParts([t('common.labels.all'), String(items.length)])" />
           <el-option
             v-for="s in statusCounts"
             :key="s.value"
             :value="s.value"
-            :label="`${t(`enums.actionStatus.${s.value}`)} · ${s.n}`"
+            :label="joinParts([t(`enums.actionStatus.${s.value}`), String(s.n)])"
           />
         </el-select>
         <el-select v-model="type" class="my-actions__filter" :placeholder="t('actions.mine.anyType')" clearable filterable>

@@ -19,6 +19,7 @@ import type { ApiError, WriteOutcome } from '@/api/http'
 import { isAboutAction, reasonText, useJudgeRules, type ActionRow } from './actionText'
 import type { Decision, Done } from './decide'
 import { useLookup, useSpecs } from './lookups'
+import { formatList } from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
@@ -70,11 +71,8 @@ const deciders = computed(() => {
     )
     .map((m) => m.display_name)
   if (!names.length || names.length > MAX_NAMED) return t('actions.decision.teachingStaff')
-  try {
-    return new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(names)
-  } catch {
-    return names.join(', ')
-  }
+  // Read again when the language changes: the list's "and" is the language's.
+  return (locale.value, formatList(names))
 })
 const blockedText = computed(() => {
   const b = blocked.value ?? approveBlocked.value
@@ -272,7 +270,7 @@ function tell(
       ElNotification({
         type: 'error',
         title: t('actions.outcome.failed'),
-        message: error ? `${t('actions.outcome.coreSays')}: ${error.message}` : '',
+        message: error ? t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) : '',
         duration: 8000,
       })
       break

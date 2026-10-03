@@ -121,8 +121,8 @@ function more() {
               <span class="hist-row__line">
                 <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__dot" aria-hidden="true" />
                 <span class="hist-row__where"
-                  ><span class="hist-row__course">{{ where(c) }}</span> ·
-                  <span class="hist-row__agent">{{ c.respondent.display_name }}</span></span
+                  ><span class="hist-row__course">{{ where(c) }}</span
+                  >{{ t('common.sep') }}<span class="hist-row__agent">{{ c.respondent.display_name }}</span></span
                 >
                 <!-- Always an agent: the "AI" after its name, whole however short the name is cut. -->
                 <AiBadge />

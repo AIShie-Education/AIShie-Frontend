@@ -234,14 +234,13 @@ function refresh() {
         <el-tag v-if="pastDue" type="info" disable-transitions>{{ t('assignments.state.pastDue') }}</el-tag>
       </template>
       <template v-if="assignment" #subtitle>
-        <span v-if="assignment.due_at">
-          {{ t('assignments.detail.dueLine') }} <TimeText :value="assignment.due_at" /> (<TimeText
-            :value="assignment.due_at"
-            relative
-          />)
-        </span>
-        <span v-else>{{ t('common.time.noDue') }}</span>
-        · {{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
+        <!-- A cut-off: the time with its zone, the exact UTC on hover. -->
+        <i18n-t v-if="assignment.due_at" keypath="assignments.detail.dueLine" tag="span" scope="global">
+          <template #at><TimeText :value="assignment.due_at" cutoff /></template>
+          <template #rel><TimeText :value="assignment.due_at" relative /></template>
+        </i18n-t>
+        <span v-else>{{ t('common.time.noDue') }}</span
+        >{{ t('common.sep') }}{{ t('assignments.detail.pointsLine', { n: formatDecimal(assignment.points_possible) }) }}
       </template>
       <el-button :loading="state.loading.value" @click="refresh">
         <el-icon><Refresh /></el-icon>
@@ -433,7 +432,7 @@ function refresh() {
                 <dt>{{ t('assignments.detail.due') }}</dt>
                 <dd>
                   <template v-if="assignment.due_at">
-                    <TimeText :value="assignment.due_at" />
+                    <TimeText :value="assignment.due_at" cutoff />
                     <div class="app-muted assignment-view__rel"><TimeText :value="assignment.due_at" relative /></div>
                   </template>
                   <span v-else class="app-muted">{{ t('common.time.noDue') }}</span>

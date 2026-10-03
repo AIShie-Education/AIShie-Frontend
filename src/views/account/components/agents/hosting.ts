@@ -22,6 +22,7 @@ import type {
 } from '@/api/runtime-types'
 import { REASONING_EFFORTS } from '@/api/runtime-types'
 import { errorMessage } from '@/composables/useErrors'
+import { courseCodeText } from '@/utils/parts'
 
 type T = (key: string, params?: Record<string, unknown>) => string
 
@@ -173,7 +174,7 @@ export function pollInterval(status: HostedStatus, transitionalForMs: number): n
 
 /** A course as a seat names it: its code, and its section when there is one. */
 export function courseLabel(s: Pick<Seat, 'course_code' | 'section'>): string {
-  return s.section ? `${s.course_code} · ${s.section}` : s.course_code
+  return courseCodeText(s.course_code, s.section)
 }
 
 export type Reads = 'both' | 'material' | 'work' | 'nothing'

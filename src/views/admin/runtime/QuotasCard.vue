@@ -18,7 +18,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { PlanQuotas, ProviderOffer, QuotasPut, SchoolPlan } from '@/api/runtime-types'
 import DailyReset from '@/components/DailyReset.vue'
-import { formatMoney } from '@/utils/format'
+import { formatMoney, USD_SIGN } from '@/utils/format'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import OperatorDetail from '../components/OperatorDetail.vue'
 import ChangedBy from './ChangedBy.vue'
@@ -265,7 +265,7 @@ function undo() {
             :aria-label="t('runtimeAdmin.money.usdOf', { what: t(s.label) })"
             class="quotas-card__input"
           >
-            <template #prepend>$</template>
+            <template #prepend>{{ USD_SIGN }}</template>
           </el-input>
           <div class="app-form-hint quotas-card__default">{{ defaultUsd(s.usd) }}</div>
         </el-form-item>

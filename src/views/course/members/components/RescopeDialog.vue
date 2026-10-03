@@ -239,7 +239,7 @@ async function submit() {
         <div class="rescope__expiry">
           <div class="rescope__now">
             <span class="app-muted">{{ t('members.rescope.currently') }}</span>
-            <TimeText v-if="member.expires_at" :value="member.expires_at" />
+            <TimeText v-if="member.expires_at" :value="member.expires_at" cutoff />
             <span v-else>{{ t('members.detail.noExpiry') }}</span>
           </div>
           <el-radio-group v-model="form.expiry">

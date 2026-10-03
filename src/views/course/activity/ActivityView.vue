@@ -40,6 +40,7 @@ import {
   type Run,
   type CourseEvent,
 } from './components/feed'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -264,7 +265,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           ? t('activity.today')
           : diff === 1
             ? t('activity.yesterday')
-            : `${d.format('LL')} · ${d.format('ddd')}`
+            : joinParts([d.format('LL'), d.format('ddd')])
       day = { key, label, events: [] }
       out.push(day)
     }
@@ -358,10 +359,12 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
                     expanded.has(run.key) ? t('activity.runLess') : t('activity.runMore', { n: run.events.length - 1 })
                   }}
                 </span>
-                <span v-if="!expanded.has(run.key)" class="activity__run-since app-muted">
-                  · {{ t('activity.runSince') }}
-                  <TimeText :value="run.events[run.events.length - 1].occurred_at" relative />
-                </span>
+                <span v-if="!expanded.has(run.key)" class="activity__run-since app-muted"
+                  >{{ t('common.sep')
+                  }}<i18n-t keypath="activity.runSince" scope="global"
+                    ><template #time
+                      ><TimeText :value="run.events[run.events.length - 1].occurred_at" relative /></template></i18n-t
+                ></span>
               </el-button>
             </div>
           </template>

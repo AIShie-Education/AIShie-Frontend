@@ -18,6 +18,7 @@ import { FILE_ICON, fileKind } from '@/utils/files'
 import { formatBytes } from '@/utils/format'
 import { renditionStage } from '@/utils/rendition'
 import { TEXT_STATUS_TAG, textShown, textStatus } from '@/views/course/materials/components/textVersion'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -42,7 +43,7 @@ const emit = defineEmits<{ text: [file: DocumentFile] }>()
 const { t } = useI18n()
 
 const kindOf = (f: DocumentFile) => fileKind(f.content_type, f.filename)
-const meta = (f: DocumentFile) => `${t(`common.fileKind.${kindOf(f)}`)} · ${formatBytes(f.byte_size)}`
+const meta = (f: DocumentFile) => joinParts([t(`common.fileKind.${kindOf(f)}`), formatBytes(f.byte_size)])
 /** "sha256:44c38a…" shown as "sha256 44c38a1b2c3d", on hover. */
 function checksum(f: DocumentFile): string | undefined {
   const c = f.checksum
@@ -96,8 +97,8 @@ async function download(f: DocumentFile) {
       <button
         type="button"
         class="version-file__open"
-        :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)}${hasPdf(f) ? ' · PDF' : ''})`"
-        :title="t('common.pair', { label: t('preview.openTip'), value: f.filename }) + (checksum(f) ? ` · ${checksum(f)}` : '')"
+        :aria-label="t('common.aside', { text: t('preview.open', { name: f.filename }), aside: joinParts([meta(f), hasPdf(f) && 'PDF']) })"
+        :title="joinParts([t('common.pair', { label: t('preview.openTip'), value: f.filename }), checksum(f)])"
         @click="preview(f)"
       >
         <span class="version-file__icon" :class="`is-${kindOf(f)}`" aria-hidden="true">

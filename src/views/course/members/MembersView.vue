@@ -213,10 +213,9 @@ function rowClass({ row }: { row: MemberSummary }) {
       @close="proposedAction = null"
     >
       <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
-        {{ t('members.proposed.view') }}
-      </router-link>
-      ·
-      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        {{ t('members.proposed.view') }} </router-link
+      >{{ t('common.sep')
+      }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
         t('members.proposed.mine')
       }}</router-link>
     </el-alert>
@@ -224,14 +223,16 @@ function rowClass({ row }: { row: MemberSummary }) {
     <div class="app-card">
       <div v-if="!list.error.value?.isForbidden" ref="toolbar" class="app-toolbar">
         <el-radio-group v-model="kind" size="default">
-          <el-radio-button value="all">{{ t('members.tabs.all') }} · {{ count(counts.all) }}</el-radio-button>
+          <el-radio-button value="all"
+            >{{ t('members.tabs.all') }}{{ t('common.sep') }}{{ count(counts.all) }}</el-radio-button
+          >
           <el-radio-button value="human">
-            <el-icon class="members__tab-icon"><User /></el-icon>{{ t('members.tabs.people') }} ·
-            {{ count(counts.human) }}
+            <el-icon class="members__tab-icon"><User /></el-icon>{{ t('members.tabs.people') }}{{ t('common.sep')
+            }}{{ count(counts.human) }}
           </el-radio-button>
           <el-radio-button value="agent">
-            <el-icon class="members__tab-icon"><AgentSeatIcon /></el-icon>{{ t('members.tabs.agents') }} ·
-            {{ count(counts.agent) }}
+            <el-icon class="members__tab-icon"><AgentSeatIcon /></el-icon>{{ t('members.tabs.agents')
+            }}{{ t('common.sep') }}{{ count(counts.agent) }}
           </el-radio-button>
         </el-radio-group>
         <span class="app-toolbar__spacer" />
@@ -348,7 +349,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                 <span class="members__date-label">{{ t('members.columns.added') }}</span>
                 <TimeText :value="row.created_at" relative />
                 <span class="members__date-label">{{ t('members.columns.expires') }}</span>
-                <TimeText v-if="row.expires_at" :value="row.expires_at" relative />
+                <TimeText v-if="row.expires_at" :value="row.expires_at" relative cutoff />
                 <span v-else class="app-muted">{{ t('members.detail.noExpiry') }}</span>
               </div>
             </template>

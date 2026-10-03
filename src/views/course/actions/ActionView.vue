@@ -496,7 +496,8 @@ const errorTitle = computed(() => {
                 <div class="action-view__error">
                   <p v-if="errorWhy">{{ errorWhy }}</p>
                   <p v-if="error">
-                    {{ t('actions.outcome.coreSays') }}: {{ error.message }} <code>{{ error.code }}</code>
+                    {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) }}
+                    <code>{{ error.code }}</code>
                   </p>
                   <FieldsView v-if="errorDetails" :course-id="courseId" :value="errorDetails" />
                 </div>

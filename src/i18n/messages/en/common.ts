@@ -34,10 +34,22 @@ export default {
   },
   // A label and its value, as the language writes them: "Model calls: 380", 「模型呼叫：380」.
   pair: '{label}: {value}',
+  // What goes between the parts of a line of facts about one thing: "PDF · 1.2 MB", "Yuki · Homework 1".
+  sep: ' · ',
+  // A word about something, after it in brackets: "Due 2026-10-08 23:59 (in 5 days)".
+  aside: '{text} ({aside})',
+  // The same word alone, in its brackets, after something drawn apart: " (30%)", with the space before it
+  // that the language puts there (none before 「（30%）」).
+  bracketed: ' ({text})',
+  // A course's code and its section where only a string will do (a label read out, a QR code's name, an
+  // option in a list); a page draws them with span.app-sep instead.
+  courseCode: '{code} · {section}',
   labels: {
     id: 'ID',
     scoped: 'scoped',
     scopedHelp: 'Only for the students and assignments within the seat’s scope',
+    // What a scoped permission covers, then that the seat's scope bounds it.
+    scopedTip: '{help} — {scoped}',
     pasteMemberId: 'Paste a member ID',
     changed: 'changed',
     name: 'Name',
@@ -54,6 +66,8 @@ export default {
     yes: 'Yes',
     no: 'No',
     optional: 'optional',
+    // After a field's label, its own word, with the space the language puts before it: "Email (optional)".
+    optionalTag: ' (optional)',
     loading: 'Loading…',
     empty: 'Nothing here yet',
     all: 'All',
@@ -191,8 +205,11 @@ export default {
     ago: '{t} ago',
     due: 'Due {t}',
     noDue: 'No due date',
-    // When the agent runtime's daily counts start again, on the reader's clock.
-    dailyReset: '{time} ({zone})',
+    // A time on the reader's clock with its time zone named: a cut-off (a due date, an expiry), or when
+    // the agent runtime's daily counts start again.
+    zoned: '{time} ({zone})',
+    // A cut-off with its zone, and how far off it is: "2026-10-08 23:59 (Hong Kong Standard Time), in 5 days".
+    cutoff: '{at}, {rel}',
   },
   pagination: {
     loadMore: 'Load more',
@@ -215,7 +232,6 @@ export default {
     limitVersion: 'One file, up to {size} | Up to {files} files, {size} each, {total} in all',
     list: 'Files being uploaded',
     progressOf: 'Upload of “{name}”',
-    percent: '{n}%',
     of: '{loaded} of {total}',
     speed: '{speed}/s',
     left: {
@@ -263,7 +279,7 @@ export default {
     },
     announce: {
       added: 'One file added. | {n} files added.',
-      progress: '“{name}”: {percent}% uploaded.',
+      progress: '“{name}”: {percent} uploaded.',
       done: '“{name}” uploaded.',
       failed: '“{name}” was not uploaded: {reason}',
       cancelled: 'Uploading “{name}” was cancelled.',

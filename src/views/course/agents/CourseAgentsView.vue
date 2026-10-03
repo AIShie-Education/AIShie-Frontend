@@ -164,10 +164,9 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
         @close="proposedAction = null"
       >
         <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
-          {{ t('members.proposed.view') }}
-        </router-link>
-        ·
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+          {{ t('members.proposed.view') }} </router-link
+        >{{ t('common.sep')
+        }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
           t('members.proposed.mine')
         }}</router-link>
       </el-alert>

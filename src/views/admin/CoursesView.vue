@@ -22,6 +22,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import CreateCourseDialog from './components/CreateCourseDialog.vue'
 import type { CourseRow } from './components/adminShared'
+import { joinParts } from '@/utils/parts'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -207,8 +208,12 @@ function rowClick(row: CourseRow) {
                 >
                 <span class="courses__title">{{ row.title }}</span>
                 <span v-if="narrow" class="courses__meta">
-                  {{ termById.get(row.term_id)?.name ?? t('admin.courses.unknown') }}
-                  · {{ deptName(row.dept_id) ?? t('admin.courses.unknown') }}
+                  {{
+                    joinParts([
+                      termById.get(row.term_id)?.name ?? t('admin.courses.unknown'),
+                      deptName(row.dept_id) ?? t('admin.courses.unknown'),
+                    ])
+                  }}
                 </span>
               </div>
             </template>

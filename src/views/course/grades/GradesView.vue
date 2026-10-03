@@ -312,7 +312,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
       <ul class="grades-view__result-list">
         <li v-for="r in postResult.posted.slice(0, 12)" :key="r.id">
           <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: r.id } }">
-            <MemberName :id="r.studentMemberId" /> · {{ r.label }}
+            <MemberName :id="r.studentMemberId" />{{ t('common.sep') }}{{ r.label }}
           </router-link>
           <ScoreText :score="r.score" :out-of="r.outOf" hide-percent />
         </li>
@@ -502,7 +502,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
               />
             </template>
           </el-table-column>
-          <el-table-column :label="t('grades.columns.score')" min-width="150">
+          <el-table-column :label="t('grades.columns.score')" min-width="150" align="right">
             <template #default="{ row }">
               <ScoreText :score="row.score" :out-of="lookups.outOf(row)" :as-percent="row.origin === 'computed'" />
             </template>
@@ -539,7 +539,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
               <IdText v-else :id="row.assignment_id ?? row.component_id" />
             </template>
           </el-table-column>
-          <el-table-column :label="t('grades.columns.score')" min-width="156">
+          <el-table-column :label="t('grades.columns.score')" min-width="156" align="right">
             <template #default="{ row }">
               <ScoreText :score="row.score" :out-of="lookups.outOf(row)" :as-percent="row.origin === 'computed'" />
             </template>

@@ -321,7 +321,7 @@ async function reactivate() {
                   <span v-if="actor.owner_name">{{ actor.owner_name }}</span>
                   <IdText v-else :id="actor.owner_actor_id" />
                 </router-link>
-                <span class="app-muted"> ({{ t('admin.actor.itsOwner') }})</span>
+                <span class="app-muted">{{ t('common.bracketed', { text: t('admin.actor.itsOwner') }) }}</span>
               </template>
               <template v-else-if="suspension === 'admin' && actor.suspended_by_actor_id">
                 <router-link :to="{ name: 'admin-actor', params: { actorId: actor.suspended_by_actor_id } }">

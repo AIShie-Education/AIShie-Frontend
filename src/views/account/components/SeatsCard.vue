@@ -45,7 +45,7 @@ const rows = computed(() =>
             <span>{{ t('account.seats.assignments', { scope: t(`enums.scope.${s.assignment_scope}`) }) }}</span>
             <span>
               <span class="seat__k">{{ t('account.seats.expires') }}</span>
-              <TimeText v-if="s.expires_at" :value="s.expires_at" />
+              <TimeText v-if="s.expires_at" :value="s.expires_at" cutoff />
               <template v-else>{{ t('account.seats.noExpiry') }}</template>
             </span>
             <!-- A seat's id is for those who manage a course, not on a student's seat. -->

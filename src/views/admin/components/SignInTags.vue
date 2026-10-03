@@ -6,7 +6,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Actor } from '@/api/types'
 import { useUiStore } from '@/stores/ui'
-import { formatDate, formatDateTime } from '@/utils/format'
+import { formatDate } from '@/utils/format'
+import { zonedText } from '@/utils/parts'
 import { signInState } from './signIn'
 
 const props = defineProps<{
@@ -18,7 +19,7 @@ const ui = useUiStore()
 const state = computed(() => signInState(props.actor))
 // Recomputed when the language changes, as TimeText is.
 const until = computed(() => (ui.locale, formatDate(state.value?.inviteExpiresAt)))
-const untilFull = computed(() => (ui.locale, formatDateTime(state.value?.inviteExpiresAt)))
+const untilFull = computed(() => (ui.locale, zonedText(state.value?.inviteExpiresAt)))
 </script>
 
 <template>

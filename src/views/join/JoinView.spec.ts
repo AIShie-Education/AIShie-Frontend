@@ -7,6 +7,7 @@ import { i18n, setLocale } from '@/i18n'
 import { ApiError, type JoinPreview } from '@/api/http'
 import type { Me } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
+import { useUiStore } from '@/stores/ui'
 import JoinView from './JoinView.vue'
 
 let preview: () => Promise<JoinPreview>
@@ -120,6 +121,29 @@ describe('the join page', () => {
     await flushPromises()
     expect(w.find('input[name="email"]').exists()).toBe(true)
     expect(w.text()).toContain('Use your email at @campus.example.edu')
+    w.unmount()
+  })
+
+  it('says the link’s domains, one or another, in the language chosen on the page', async () => {
+    preview = async () => ({ ...open, allowed_email_domains: ['campus.example.edu', 'example.edu'] })
+    const { w } = await mountJoin()
+    await w.findAll('button').find((b) => b.text() === 'Create an account')!.trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('Only people with an email at @campus.example.edu or @example.edu can join')
+    expect(w.text()).toContain('Use your email at @campus.example.edu or @example.edu.')
+    // As the page's own language select does.
+    useUiStore().locale = 'zh-Hant'
+    await flushPromises()
+    expect(w.text()).toContain('只有電子郵件屬於@campus.example.edu或@example.edu的人')
+    expect(w.text()).toContain('請使用你在@campus.example.edu或@example.edu的電子郵件。')
+    expect(w.text()).not.toContain(' or ')
+    useUiStore().locale = 'zh-Hans'
+    await flushPromises()
+    expect(w.text()).toContain('@campus.example.edu或@example.edu')
+    useUiStore().locale = 'en'
+    await flushPromises()
+    expect(w.text()).toContain('Only people with an email at @campus.example.edu or @example.edu can join')
+    expect(w.text()).toContain('Use your email at @campus.example.edu or @example.edu.')
     w.unmount()
   })
 

@@ -292,7 +292,7 @@ defineExpose({ reload: () => list.reload() })
                 </span>
                 <span>
                   <span class="creds__k">{{ t('admin.credentials.col.expires') }}</span>
-                  <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                  <TimeText v-if="c.expires_at" :value="c.expires_at" cutoff />
                   <template v-else>{{ t('common.labels.never') }}</template>
                 </span>
                 <span>
@@ -356,7 +356,7 @@ defineExpose({ reload: () => list.reload() })
           </el-table-column>
           <el-table-column :label="t('admin.credentials.col.expires')" min-width="150">
             <template #default="{ row }">
-              <TimeText v-if="row.c.expires_at" :value="row.c.expires_at" />
+              <TimeText v-if="row.c.expires_at" :value="row.c.expires_at" cutoff />
               <span v-else class="app-muted">{{ t('common.labels.never') }}</span>
             </template>
           </el-table-column>
@@ -438,7 +438,7 @@ defineExpose({ reload: () => list.reload() })
                 </span>
                 <span v-if="c.expires_at">
                   <span class="creds__k">{{ t('admin.credentials.col.expires') }}</span>
-                  <TimeText :value="c.expires_at" />
+                  <TimeText :value="c.expires_at" cutoff />
                 </span>
                 <span v-if="c.revoked_at">
                   <span class="creds__k">{{ t('admin.credentials.revokedAt') }}</span>

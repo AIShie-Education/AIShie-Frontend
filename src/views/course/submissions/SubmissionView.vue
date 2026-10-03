@@ -251,7 +251,7 @@ function onGraded() {
             <div class="facts__item">
               <dt>{{ t('submissions.detail.facts.dueAt') }}</dt>
               <dd>
-                <TimeText v-if="a?.due_at" :value="a.due_at" />
+                <TimeText v-if="a?.due_at" :value="a.due_at" cutoff />
                 <span v-else class="app-muted">{{ a ? t('submissions.detail.noDue') : '—' }}</span>
               </dd>
             </div>

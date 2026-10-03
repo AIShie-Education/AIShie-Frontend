@@ -160,7 +160,7 @@ test.describe.serial('exporting conversations for audit', () => {
       await page.locator('.export-form__submit').click()
       await expect(page.locator('.el-form-item__error')).toHaveText('Choose a course.')
 
-      await chooseCourse(page, d.tag, /CS101 · A/)
+      await chooseCourse(page, d.tag, /CS101·A/)
       await expect(page.locator('.el-form-item__error')).toHaveCount(0)
 
       // Each course says its term: a course's code and section come again term after term.
@@ -280,7 +280,7 @@ test.describe.serial('exporting conversations for audit', () => {
       await signInAsRoot(page)
       await page.goto('/admin/conversation-exports')
       await expect(page.locator('.export-form')).toBeVisible()
-      await chooseCourse(page, d.tag, /CS101 · A/)
+      await chooseCourse(page, d.tag, /CS101·A/)
       await page.locator('.export-form__submit').click()
       const outcome = page.locator('.export-outcome')
       await expect(outcome).toBeVisible({ timeout: 60_000 })

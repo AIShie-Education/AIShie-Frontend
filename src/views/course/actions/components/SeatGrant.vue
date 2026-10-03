@@ -117,7 +117,7 @@ const listsItself = computed(
       <div>
         <dt>{{ t('actions.fields.expires_at') }}</dt>
         <dd>
-          <TimeText v-if="expiresAt" :value="expiresAt" />
+          <TimeText v-if="expiresAt" :value="expiresAt" cutoff />
           <span v-else class="seat-grant__muted">{{ t('actions.grant.noExpiry') }}</span>
         </dd>
       </div>

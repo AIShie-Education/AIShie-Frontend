@@ -13,6 +13,7 @@ import { formatNumber, formatPct as fractionPct } from '@/utils/format'
 import { classFigure, formatScore } from './grading'
 import type { ColumnSummary, MatrixCell, MatrixColumn, MatrixRow, MatrixStudent, SortBy } from './classMatrix'
 import { NO_CELL } from './classMatrix'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -196,7 +197,7 @@ function cellTitle(cell: MatrixCell, shown: { text: string; full: string | null 
         ? t('classbook.draftOver', { score: formatScore(cell.postedScore) })
         : t('classbook.draftOnly'),
     )
-  } else if (cell.overridden) said.push(`${shown.full ?? shown.text} · ${t('classbook.state.overridden')}`)
+  } else if (cell.overridden) said.push(joinParts([shown.full ?? shown.text, t('classbook.state.overridden')]))
   else if (shown.full) said.push(shown.full)
   if (cell.waiting) said.push(t('classbook.waiting'))
   return said.join(' ')

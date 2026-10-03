@@ -32,6 +32,7 @@ import {
   type SchemeNode,
 } from './components/schemeModel'
 import { formatDecimal, formatList } from '@/utils/format'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const course = useCourseStore()
@@ -259,7 +260,7 @@ function collapseAll() {
                 :key="s.key"
                 class="glance-bar__seg"
                 :style="{ flexGrow: s.share, background: s.color }"
-                :title="`${s.name} · ${pct(s.share)}`"
+                :title="joinParts([s.name, pct(s.share)])"
               />
             </div>
             <ul class="glance-legend">

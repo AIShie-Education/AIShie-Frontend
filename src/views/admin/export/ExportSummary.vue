@@ -26,10 +26,10 @@ const span = computed(() => spanWords(props.record.from, props.record.before))
   <div class="export-summary" :class="{ 'is-compact': compact }">
     <p class="export-summary__about">
       <span class="export-summary__scope">{{ scopeWords }}</span>
-      <span v-if="record.participant_label" class="export-summary__participant">
-        · {{ t('auditExport.summary.participant', { who: record.participant_label }) }}
-      </span>
-      <span class="export-summary__span"> · {{ span }}</span>
+      <span v-if="record.participant_label" class="export-summary__participant"
+        >{{ t('common.sep') }}{{ t('auditExport.summary.participant', { who: record.participant_label }) }}</span
+      >
+      <span class="export-summary__span">{{ t('common.sep') }}{{ span }}</span>
     </p>
     <dl class="export-summary__counts">
       <div>
@@ -65,7 +65,7 @@ const span = computed(() => spanWords(props.record.from, props.record.before))
       </span>
       <span>
         {{ t('auditExport.summary.expiresAt') }}
-        <TimeText :value="record.expires_at" />
+        <TimeText :value="record.expires_at" cutoff />
       </span>
     </p>
   </div>

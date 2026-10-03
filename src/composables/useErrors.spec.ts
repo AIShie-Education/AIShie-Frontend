@@ -55,11 +55,11 @@ describe('errorMessage, to an agent’s owner whose approval would be refused', 
     )
     setLocale('zh-Hant')
     expect(errorMessage(e)).toBe(
-      '你的代理的這項提案現在不由你決定：若現在批准，它會被拒絕。你可以撤回它，或由課程中的其他人駁回。被拒絕的原因：與目前狀態衝突: the document is published already',
+      '你的代理的這項提案現在不由你決定：若現在批准，它會被拒絕。你可以撤回它，或由課程中的其他人駁回。被拒絕的原因：與目前狀態衝突：the document is published already',
     )
     setLocale('zh-Hans')
     expect(errorMessage(e)).toBe(
-      '你的智能体的这项提议现在不由你决定：若现在批准，它会被拒绝。你可以撤回它，或由课程中的其他人拒绝。被拒绝的原因：与当前状态冲突: the document is published already',
+      '你的智能体的这项提议现在不由你决定：若现在批准，它会被拒绝。你可以撤回它，或由课程中的其他人拒绝。被拒绝的原因：与当前状态冲突：the document is published already',
     )
   })
   it('puts the refusal in the app’s own words where it has them', () => {

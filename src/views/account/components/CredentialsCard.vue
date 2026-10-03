@@ -255,7 +255,7 @@ async function revoke(c: Credential) {
               </span>
               <span v-if="c.kind === 'api_token' || c.kind === 'session' || c.kind === 'invite'">
                 <span class="creds-item__k">{{ t('account.credentials.expires') }}</span>
-                <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                <TimeText v-if="c.expires_at" :value="c.expires_at" cutoff />
                 <template v-else>{{ t('account.credentials.noExpiry') }}</template>
               </span>
               <span v-if="c.revoked_at">

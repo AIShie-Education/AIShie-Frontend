@@ -20,6 +20,7 @@ import TimeText from '@/components/TimeText.vue'
 import { textReasonText } from '@/views/course/materials/components/textVersion'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { JOB_STATUS_TAG } from './transcription'
+import { joinParts } from '@/utils/parts'
 
 const { t, te, n } = useI18n()
 // A phone's layout, a job's pages, cost and time under its document, where the
@@ -185,14 +186,15 @@ const empty = computed(() => loaded.value && !jobs.value.length)
               </div>
               <span v-if="reasonOf(row)" class="job-cell__reason">{{ reasonOf(row) }}</span>
               <span class="job-cell__meta">
-                {{ row.content_type }}<template v-if="row.model"> · {{ row.model }}</template>
+                {{ joinParts([row.content_type, row.model]) }}
               </span>
               <span v-if="narrow" class="job-cell__meta">
-                <template v-if="row.pages !== null">
-                  {{ t('runtimeAdmin.transcription.jobs.pagesN', { n: n(row.pages) }, row.pages) }} ·
-                </template>
-                {{ costOf(row) }} ·
-                <TimeText :value="row.finished_at ?? row.started_at" relative />
+                {{
+                  joinParts([
+                    row.pages !== null && t('runtimeAdmin.transcription.jobs.pagesN', { n: n(row.pages) }, row.pages),
+                    costOf(row),
+                  ])
+                }}{{ t('common.sep') }}<TimeText :value="row.finished_at ?? row.started_at" relative />
               </span>
             </div>
           </template>

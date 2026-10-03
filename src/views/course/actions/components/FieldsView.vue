@@ -243,8 +243,12 @@ function json(v: unknown) {
           <span class="fields-view__score">
             {{ exactDecimal(obj[k] as number | string) }}
             <template v-if="k === 'score' && obj.out_of !== undefined && obj.out_of !== null">
-              / {{ exactDecimal(obj.out_of as number | string) }}
-              <span class="fields-view__muted">({{ formatPercent(obj.score as number | string, obj.out_of as number | string) }})</span>
+              / {{ exactDecimal(obj.out_of as number | string)
+              }}<span class="fields-view__muted">{{
+                t('common.bracketed', {
+                  text: formatPercent(obj.score as number | string, obj.out_of as number | string),
+                })
+              }}</span>
             </template>
           </span>
         </template>
@@ -277,8 +281,10 @@ function json(v: unknown) {
         </div>
         <ul v-else-if="kindOf(k, obj[k]) === 'feedbackFiles'" class="fields-view__list">
           <li v-for="(f, i) in files(obj[k])" :key="i">
-            <el-icon><Paperclip /></el-icon> {{ f.title }}
-            <span v-if="f.filename && f.filename !== f.title" class="fields-view__muted">({{ f.filename }})</span>
+            <el-icon><Paperclip /></el-icon> {{ f.title
+            }}<span v-if="f.filename && f.filename !== f.title" class="fields-view__muted">{{
+              t('common.bracketed', { text: f.filename })
+            }}</span>
           </li>
         </ul>
         <ol v-else-if="kindOf(k, obj[k]) === 'versionFiles'" class="fields-view__list fields-view__files">

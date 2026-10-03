@@ -468,6 +468,15 @@ async function withdraw() {
         <!-- Today -->
         <div class="transcription-card__today">
           <h3 class="transcription-card__subtitle">{{ t('runtimeAdmin.transcription.today.title') }}</h3>
+          <!-- The runtime's day, on the reader's clock: when it ends and the counts start again. -->
+          <i18n-t
+            keypath="runtimeAdmin.transcription.today.reset"
+            tag="p"
+            scope="global"
+            class="app-form-hint transcription-card__reset"
+          >
+            <template #reset><DailyReset /></template>
+          </i18n-t>
           <dl class="transcription-card__stats">
             <div>
               <dt>{{ t('runtimeAdmin.transcription.today.pages') }}</dt>
@@ -651,5 +660,9 @@ async function withdraw() {
 .transcription-card__changed {
   margin: 16px 0 0;
   font-size: var(--app-text-xs);
+}
+/* The line under Today saying when its counts start again. */
+.transcription-card__reset {
+  margin: -6px 0 10px;
 }
 </style>

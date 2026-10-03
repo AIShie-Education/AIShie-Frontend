@@ -33,6 +33,8 @@ import {
   seatSentences,
 } from './hosting'
 import type { AgentStanding } from './agents'
+import { joinParts } from '@/utils/parts'
+import { formatMoney } from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
@@ -89,7 +91,7 @@ const statusBody = computed(() => {
   return t(`hosting.status.${status.value}.body`)
 })
 const ownLine = computed(() =>
-  own.value ? `${providerLabel(props.offers, own.value.provider)} · ${own.value.model}` : '',
+  own.value ? joinParts([providerLabel(props.offers, own.value.provider), own.value.model]) : '',
 )
 const modelLine = computed(() => (school.value ? school.value.label : ownLine.value))
 /** The model's id beside the plan's label, unless the label says it already. */
@@ -111,7 +113,7 @@ const withdrawn = computed<'fallback' | 'none' | null>(() => {
 })
 const seats = computed(() => props.agent.seats ?? [])
 const cost = computed(() =>
-  own.value && !own.value.price_known ? t('hosting.card.costUnknown') : `$${props.agent.today.cost_usd}`,
+  own.value && !own.value.price_known ? t('hosting.card.costUnknown') : formatMoney(props.agent.today.cost_usd),
 )
 
 // --- Keeping it fresh ------------------------------------------------------------------

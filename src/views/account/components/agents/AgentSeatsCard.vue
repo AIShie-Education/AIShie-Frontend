@@ -17,6 +17,7 @@ import LevelIcon from '@/components/LevelIcon.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { grantedPerms, toPermLevels } from './agents'
+import { courseCodeText } from '@/utils/parts'
 
 const props = defineProps<{ agent: AgentFull }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -28,7 +29,7 @@ const seats = computed(() =>
 const requests = computed(() => props.agent.requests ?? [])
 
 function courseName(s: { code: string; section: string }): string {
-  return s.section ? `${s.code} · ${s.section}` : s.code
+  return courseCodeText(s.code, s.section)
 }
 
 /** A preset Core names that is not a built-in one is shown by its own name. */
@@ -131,7 +132,7 @@ async function takeBack(r: AgentRequest) {
           </span>
           <span>
             <span class="agent-seat__k">{{ t('agents.seats.ends') }}</span>
-            <TimeText v-if="s.expires_at" :value="s.expires_at" />
+            <TimeText v-if="s.expires_at" :value="s.expires_at" cutoff />
             <template v-else>{{ t('agents.seats.noEnd') }}</template>
           </span>
         </div>

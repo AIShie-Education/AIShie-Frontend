@@ -10,6 +10,7 @@ import QrCode from '@/components/QrCode.vue'
 import { useBackCloses } from '@/composables/useBackCloses'
 import { useCountdown } from '@/composables/useCountdown'
 import { countdownParts } from '@/utils/countdown'
+import { courseCodeText } from '@/utils/parts'
 
 const props = defineProps<{
   url: string
@@ -32,7 +33,7 @@ const spoken = computed(() => {
   const { minutes, seconds } = countdownParts(remaining.value)
   return t('join.links.created.timeLeftSpoken', { m: minutes, s: seconds })
 })
-const courseLabel = computed(() => [props.code, props.section].filter(Boolean).join(' · '))
+const courseLabel = computed(() => courseCodeText(props.code, props.section))
 
 // The code is as large as the screen leaves room for, beside the words above
 // and below it.

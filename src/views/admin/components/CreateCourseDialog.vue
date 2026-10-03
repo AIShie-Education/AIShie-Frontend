@@ -97,7 +97,7 @@ async function submit() {
         </el-form-item>
         <el-form-item prop="section" class="create-course__half">
           <template #label>
-            {{ t('admin.create.section') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+            {{ t('admin.create.section') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
           </template>
           <el-input v-model="form.section" :placeholder="t('admin.create.sectionPlaceholder')" maxlength="40" />
         </el-form-item>
@@ -108,7 +108,7 @@ async function submit() {
       </el-form-item>
       <el-form-item prop="description">
         <template #label>
-          {{ t('admin.create.description') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.create.description') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <el-input v-model="form.description" type="textarea" :rows="4" maxlength="5000" />
       </el-form-item>
