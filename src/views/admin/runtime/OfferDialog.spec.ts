@@ -656,6 +656,25 @@ describe('a model of OpenRouter’s, and its upstream routing', () => {
     expect(rowOf(w, 'google-vertex/us-central1').find('.or-use').classes()).toContain('is-checked')
   })
 
+  it('shows a base slug the routing names as serving, and an endpoint skipped beside only as off, by its own switch', async () => {
+    // As an offer made through the API, or runtime.yaml's docs, may name them: deepinfra, but not its turbo.
+    const { w } = await openRouted(
+      llama({ openrouter: { only: ['groq', 'deepinfra'], ignore: ['deepinfra/turbo'] } as PlanOffer['openrouter'] }),
+    )
+    await settle()
+    expect(w.find('.or-skipped').text()).toContain('deepinfra/turbo')
+    // deepinfra names deepinfra/turbo, which OpenRouter lists: it is not said to serve nothing.
+    expect(rowOf(w, 'deepinfra').find('.or-not-listed').exists()).toBe(false)
+    expect(rowOf(w, 'deepinfra').find('.or-use').classes()).toContain('is-checked')
+    // Skipped, its own switch is off, and is not hidden behind "Included in deepinfra".
+    const turbo = rowOf(w, 'deepinfra/turbo')
+    expect(turbo.find('.or-covered').exists()).toBe(false)
+    expect(turbo.find('.or-use').classes()).not.toContain('is-checked')
+    await flip(w, 'deepinfra/turbo')
+    expect(preview(w).provider).toEqual({ only: ['groq', 'deepinfra', 'deepinfra/turbo'] })
+    expect(w.find('.or-skipped').exists()).toBe(false)
+  })
+
   it('warns when nothing may answer, when none of those that may calls tools, and names those that do not', async () => {
     const { w } = await openRouted(llama())
     await settle()

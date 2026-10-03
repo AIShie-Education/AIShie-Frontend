@@ -504,8 +504,17 @@ export interface RoutingRow {
   candidate: Candidate | null
   /** Turned on. */
   used: boolean
-  /** The base slug whose switch turns this row on or off, shown in place of its own. */
+  /**
+   * The base slug whose switch turns this row on or off, shown in place of its
+   * own; null where the row's own switch says what it is, as it does for a row
+   * skipped beside only those turned on, whichever base slug only names.
+   */
   coveredBy: string | null
+  /**
+   * A slug that names nothing OpenRouter serves the model at now: neither an
+   * endpoint it lists nor a base slug of one (deepinfra, of deepinfra/turbo).
+   */
+  notListed: boolean
   /** Its place among those tried first, from 1; 0 when it is not. */
   position: number
 }
@@ -513,7 +522,9 @@ export interface RoutingRow {
 /**
  * The table's rows: the upstream providers OpenRouter lists, in its order;
  * then the slugs the routing names that it does not list, and those added by
- * hand, each once.
+ * hand, each once. A base slug among them (a provider's slug, with no "/")
+ * names every endpoint of that provider, so it is not "not listed" while
+ * OpenRouter lists one.
  */
 export function routingRows(
   endpoints: readonly OpenRouterEndpoint[] | null,
@@ -531,14 +542,21 @@ export function routingRows(
     }
   }
   const list = f.mode === 'only' ? f.only : f.ignore
-  const row = (slug: string, candidate: Candidate | null): RoutingRow => ({
-    slug,
-    endpoint: candidate?.endpoint ?? null,
-    candidate,
-    used: isUsed(f, slug),
-    coveredBy: list.includes(slug) ? null : (list.find((e) => e !== slug && covers(e, slug)) ?? null),
-    position: f.order.indexOf(slug) + 1,
-  })
+  const row = (slug: string, candidate: Candidate | null): RoutingRow => {
+    const used = isUsed(f, slug)
+    // Beside only those turned on, a row an entry of ignore skips is off,
+    // whatever base slug only names: its own switch says so, and turns it on.
+    const own = list.includes(slug) || (f.mode === 'only' && !used)
+    return {
+      slug,
+      endpoint: candidate?.endpoint ?? null,
+      candidate,
+      used,
+      coveredBy: own ? null : (list.find((e) => e !== slug && covers(e, slug)) ?? null),
+      notListed: !candidate && !listed.some((e) => covers(slug, e.slug)),
+      position: f.order.indexOf(slug) + 1,
+    }
+  }
   return [...all.map((c) => row(c.endpoint.slug, c)), ...extra.map((s) => row(s, null))]
 }
 

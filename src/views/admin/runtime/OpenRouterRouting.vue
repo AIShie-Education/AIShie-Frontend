@@ -580,7 +580,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
                 ><template v-if="i">/<wbr /></template>{{ part }}</template
               ></code
             >
-            <AppTag v-if="!row.endpoint && answer" tone="wait" class="or-name__tag or-not-listed">{{
+            <AppTag v-if="row.notListed && answer" tone="wait" class="or-name__tag or-not-listed">{{
               t('runtimeAdmin.openrouter.notListed')
             }}</AppTag>
             <AppTag v-if="row.endpoint?.zdr === true" variant="outline" class="or-name__tag or-zdr-tag">{{
@@ -676,7 +676,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
                   ><template v-if="i">/<wbr /></template>{{ part }}</template
                 ></code
               >
-              <AppTag v-if="!row.endpoint && answer" tone="wait" class="or-name__tag or-not-listed">{{
+              <AppTag v-if="row.notListed && answer" tone="wait" class="or-name__tag or-not-listed">{{
                 t('runtimeAdmin.openrouter.notListed')
               }}</AppTag>
               <AppTag v-if="row.endpoint?.zdr === true" variant="outline" class="or-name__tag or-zdr-tag">{{

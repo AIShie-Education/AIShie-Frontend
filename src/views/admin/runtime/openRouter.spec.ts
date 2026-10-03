@@ -439,6 +439,37 @@ describe('the table’s rows and controls', () => {
     })
   })
 
+  it('says a slug is not listed only where it names no endpoint listed: a base slug of one is listed', () => {
+    // deepinfra names deepinfra/turbo, which OpenRouter lists; together and parasail name nothing it lists.
+    const f = form({ only: ['groq', 'deepinfra', 'together'] })
+    f.added = ['parasail']
+    const rows = routingRows(endpoints, f, null)
+    expect(rows.filter((r) => !r.endpoint).map((r) => [r.slug, r.notListed])).toEqual([
+      ['deepinfra', false],
+      ['together', true],
+      ['parasail', true],
+    ])
+    expect(rows.filter((r) => r.endpoint).every((r) => !r.notListed)).toBe(true)
+    expect(rows.find((r) => r.slug === 'deepinfra/turbo')).toMatchObject({ used: true, coveredBy: 'deepinfra' })
+  })
+
+  it('shows a row skipped beside only those turned on by its own switch, off, whatever base slug only names', () => {
+    // As an offer made through the API, or runtime.yaml, may have it: only deepinfra, but not its turbo.
+    const f = form({ only: ['groq', 'deepinfra'], ignore: ['deepinfra/turbo'] })
+    expect(f.mode).toBe('only')
+    expect(routingRows(endpoints, f, null).find((r) => r.slug === 'deepinfra/turbo')).toMatchObject({
+      used: false,
+      coveredBy: null,
+    })
+    setUsed(f, 'deepinfra/turbo', true)
+    expect(f.only).toEqual(['groq', 'deepinfra', 'deepinfra/turbo'])
+    expect(f.ignore).toEqual([])
+    expect(routingRows(endpoints, f, null).find((r) => r.slug === 'deepinfra/turbo')).toMatchObject({
+      used: true,
+      coveredBy: null,
+    })
+  })
+
   it('turns a row off by skipping it, which takes it out of those tried first, and on again', () => {
     const f = form({ order: ['google-vertex/us-central1', 'groq'] })
     setUsed(f, 'google-vertex', false)
