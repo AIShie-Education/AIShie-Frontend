@@ -581,18 +581,24 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 
   A row holds two chips at most. Whether an agent can be asked is a dot before its name
   (`AskableDot`), not a chip; how it runs is said once, on its own page (HostingTag, above).
-  `npm run lint` refuses an `el-tag` anywhere but in `AppTag` (`eslint.config.js`, `app/element-look`,
-  with `src/lint/elementLook.spec.ts`).
+  `npm run lint` refuses an `el-tag` anywhere but in `AppTag`, however a template names it (`<el-tag>`,
+  `<ElTag>`, `<component is="el-tag">`), as it does each of Element Plus's looks below
+  (`eslint.config.js`, `app/element-look`, with `src/lint/elementLook.spec.ts`).
 - **Notes and alerts.** What explains (what a page does, what will happen, that a change waits for
   approval, a proposal just made) is `<AppNote>`: no icon, a 3 px indigo line at its left, the
   indigo's tint at half strength under it (`plain`: none), its words in the second ink under a title
   in the ink where it has one, `closable` where it says what was just done. An `el-alert` is a
-  warning or an error, or an outcome reported in green, and always says its `type`: lint refuses one
-  of type `info` or none. It has Element Plus's small icon on its title's line, never the large one
+  warning or an error, or an outcome reported in green, and says which in its template, where lint
+  reads it: `type="warning"`, `"error"` or `"success"`, or a choice among them (`:type="ok ?
+  'success' : 'error'"`). Lint refuses `info`, `primary` (drawn as info is), none, and a type only the
+  script knows. An outcome of no colour (a rejection, a decision that itself waits for approval, a
+  proposal taken back: `OutcomeAlert`) and what a version's readers read are notes. It has Element Plus's small icon on its title's line, never the large one
   beside a title and a description (`styles/element.css`). Where data leaves the site (to a model's
   provider, under the school's key or an owner's own; into files someone downloads) is said by
   `<DataFlowNotice>`, a shield on an outline in the indigo's line, the same to administrators,
-  owners and those who ask (`DataFlowNotice.spec.ts` checks each place that says so).
+  owners and those who ask: in the chat, the first time's points, "Where it goes to be answered" in
+  the whole notice, and, `compact`, the one line under the composer, the shield before it and no
+  outline (`DataFlowNotice.spec.ts` checks each place that says so).
 - **Refresh** is `<RefreshButton :loading @click>`, at the right end of the toolbar of the card that
   holds what it reads again (`.app-toolbar`; the card's title row, or the tabs' row, where it has
   none): a secondary button with "Refresh", on a phone's screen (600 px or narrower) a round icon
@@ -601,7 +607,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - **Filters** over a list are `<FilterChips v-model :options :all-count :label>`: Element Plus's check
   tags, "All N" first, then each choice with its count (a lower bound, "12+", while there is more to
   load), one at a time, radios to the keyboard and a screen reader; counts a list shows by state are
-  these chips too, never a row of tags that cannot be pressed. A choice of many (an assignment, a
+  these chips too, never a row of tags that cannot be pressed. A chip counts the rows it filters, no
+  others: where a select has already narrowed the list to one (a student on the submissions page),
+  there is nothing left to filter and there are no chips. A count is in the chip's own ink, set apart
+  by its weight, never faded below the contrast text keeps. A choice of many (an assignment, a
   student, a type) stays a select. A segmented control (`el-radio-group` of buttons) is for a view's
   mode, newest or oldest first, by owner or by model, never a filter.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
@@ -610,7 +619,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   its icon's shape: as a tag (roles and platform roles, kinds of actor, of seat and of document,
   scopes, presets, how an agent runs) an outline in ink (Tags, above); as the activity feed's kinds
   of event, the ground's second shade under the third ink. Whether an agent can be asked is neutral too, never
-  green as "online" is; only its not running, which wants its owner, is amber. What is new or
+  green as "online" is; only its not running, which wants its owner, is amber, and never by its hue
+  alone: whether it can be asked is a dot's shape (AskableDot, below). What is new or
   unread, and a count of what waits for the reader's decision, is indigo. A
   level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
   `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
@@ -807,9 +817,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
     says "Can be asked" or "Paused" (可提問／暫停, 可提问／暂停) from `availabilityOf`, and why on hover,
     after whose agent it is (`whose`), which the header has no room to show. In a list of agents (the
     chat's list to ask, the course's agents, the members, My agents) it is `<AskableDot>` before the
-    name, with those words as its name and in its tooltip: solid ink while it can be asked, a ring in
-    the third ink while it is paused, and amber only for one hosted on AIshie that AIshie does not run,
-    which wants its owner; never green. To its owner and those who manage it,
+    name, with those words as its name and in its tooltip. Its shape says whether it can be asked, so
+    that no hue need: a solid dot in the ink while it can, a ring while it cannot, in the third ink while
+    it is paused, and in amber, a little heavier, for one hosted on AIshie that AIshie does not run,
+    which wants its owner (My agents, its owner's list, says "Not running" beside its name too); never
+    green. To its owner and those who manage it,
     `<PresenceText :value="last_seen_at" />` speaks of a program connecting (never connected /
     connected within two minutes / last connected), in plain ink.
   - What an agent made says so where it is shown: a draft grade names its drafter, and what its draft
@@ -997,7 +1009,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   quoted, for the agent to find; their list works from the keyboard and never takes the Enter an
   input method uses. Whatever stops the caller writing (an agent paused, gone, not answering or
   operated elsewhere, a closed conversation, one waiting for approval) is one muted line above the
-  composer, never an alert box. Under the composer, for the one asking, one muted line says who
+  composer, never an alert box. Under the composer, for the one asking, one muted line, after the
+  shield where data goes is said (`DataFlowNotice compact`, "Notes and alerts"), says who
   else reads the conversation and where the agent sends it, with "More" for the whole notice
   (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read this" opens too: who reads
   it is Core's `visible_to`; where it goes follows how the agent is hosted, a provider named only
@@ -1005,7 +1018,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   fallback's provider too where it is another; and nothing in it is deleted, a withdrawn message
   kept (its files listed in an export, never held there). A new conversation opens at its foot,
   the first time on the points, scrolled until More and Got it show. The first time a person
-  starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points are on
+  starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points, in a
+  `DataFlowNotice` as the notice's "Where it goes to be answered" is, are on
   the new conversation instead, until "Got it" or the first question. A new conversation has no
   title field: it is titled by the first line of its first message (`titleFrom`), and it offers a
   few ways to begin, which fill the box.
