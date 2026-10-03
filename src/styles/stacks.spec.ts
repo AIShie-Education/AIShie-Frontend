@@ -32,8 +32,19 @@ const sources = [
 const tokens = sources.find(([path]) => path === 'src/styles/tokens.css')![1]
 const latin = sources.find(([path]) => path === 'src/styles/fonts-latin.css')![1]
 
-/** Without its comments, which may name what a stack must not. */
-const uncommented = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '')
+/**
+ * Without its comments, which may name what a stack must not. Removed again
+ * until none is left, so that a comment taken out cannot leave the halves of
+ * another that join into a new one.
+ */
+function uncommented(text: string): string {
+  let out = text
+  for (let before = ''; before !== out; ) {
+    before = out
+    out = out.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '')
+  }
+  return out
+}
 
 /**
  * Every font declaration in a text, with its value: `font-family`, the
