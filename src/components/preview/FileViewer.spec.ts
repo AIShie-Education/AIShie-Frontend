@@ -3,7 +3,7 @@ import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
-import { defineComponent, h, nextTick } from 'vue'
+import { defineComponent, h, nextTick, onMounted } from 'vue'
 import type { TextVersion } from '@/api/types'
 
 // Each file's bytes, by the URL the viewer is handed for it.
@@ -21,7 +21,9 @@ vi.mock('@/api/http', async (orig) => {
     }),
   }
 })
-// pdf.js is not run here: the PDF view stands in, saying what it was handed.
+// pdf.js is not run here: the PDF view stands in, saying what it was handed,
+// and its count of pages once it has come (by the file's name; 2 by default).
+const pageCounts = new Map<string, number>()
 vi.mock('./PdfView.vue', () => ({
   __esModule: true,
   default: defineComponent({
@@ -30,12 +32,16 @@ vi.mock('./PdfView.vue', () => ({
       name: { type: String, required: true },
       page: { type: Number, default: null },
     },
-    setup: (props) => () =>
-      h(
-        'div',
-        { class: 'pdf-stub' },
-        `${props.name}: ${(props.data as Uint8Array).length} bytes${props.page ? `, at page ${props.page}` : ''}`,
-      ),
+    emits: ['failed', 'pages'],
+    setup: (props, { emit }) => {
+      onMounted(() => emit('pages', pageCounts.get(props.name) ?? 2))
+      return () =>
+        h(
+          'div',
+          { class: 'pdf-stub' },
+          `${props.name}: ${(props.data as Uint8Array).length} bytes${props.page ? `, at page ${props.page}` : ''}`,
+        )
+    },
   }),
 }))
 // Whether the runtime's transcriber is on, as GET /info says.
@@ -74,6 +80,7 @@ beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
   bytes.clear()
+  pageCounts.clear()
   transcription = true
   runtimeAsked = 0
   fetched.length = 0
@@ -149,7 +156,11 @@ describe('FileViewer', () => {
     const title = $('.file-viewer__name')!
     expect(title.textContent!.trim()).toBe('notes.txt')
     expect(dialog.getAttribute('aria-labelledby')).toBe(title.id)
-    expect($('.file-viewer__meta')!.textContent).toMatch(/Text · 18 B\s*·\s*Week 3 — Loops/)
+    expect($('.file-viewer__meta')!.textContent).toMatch(/Text ·\s18\sB\s*·\s*Week 3 — Loops/)
+    // Each fact kept whole on its line, and each dot kept with what follows it, so that a line never ends in one.
+    expect($('.file-viewer__facts')!.textContent).toBe('Text ·\u00a018\u00a0B')
+    expect($('.file-viewer__of')!.textContent!.trim()).toBe('·Week 3 — Loops')
+    expect($('.file-viewer__of .file-viewer__dot')!.getAttribute('aria-hidden')).toBe('true')
     const download = $('.file-viewer__download')!
     expect(download.getAttribute('aria-label')).toBe('Download “notes.txt”')
     download.click()
@@ -309,6 +320,79 @@ describe('FileViewer', () => {
     closePreview()
     await flushPromises()
     expect(revoked).toEqual(['blob:local/1', 'blob:local/2', 'blob:local/3'])
+  })
+
+  it('on a phone, says a file’s place among the others only to a screen reader where a PDF’s bar counts its pages, and shows it for any other', async () => {
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(max-width: 640px)',
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as unknown as typeof window.matchMedia
+    pageCounts.set('slides.pdf', 8)
+    pageCounts.set('note.pdf', 1)
+    await open([
+      file('photo.png', 'image/png', 'png'),
+      file('slides.pdf', 'application/pdf', '%PDF-1.4 tiny'),
+      file('note.pdf', 'application/pdf', '%PDF'),
+      file('notes.txt', 'text/plain', 'Line one\n'),
+    ])
+    const dialog = $('.el-dialog.file-viewer')!
+    const position = () => $('.file-viewer__position')!.textContent!.trim()
+    const step = async (i: number) => {
+      showPreviewAt(i)
+      await flushPromises()
+      await flushPromises()
+    }
+    expect(dialog.classList).toContain('is-full')
+    // An image: its place among the others is the one count there is.
+    expect($('.image-view__img')).not.toBeNull()
+    expect(dialog.classList).not.toContain('is-paged')
+    expect(position()).toBe('1 of 4')
+    // A PDF of eight pages: its bar's count is the one on the screen, and its place is said to a screen reader.
+    await step(1)
+    expect($('.pdf-stub')).not.toBeNull()
+    expect(dialog.classList).toContain('is-paged')
+    expect(position()).toBe('2 of 4')
+    // A PDF of one page has no count of pages: its place is shown.
+    await step(2)
+    expect($('.pdf-stub')!.textContent).toBe('note.pdf: 4 bytes')
+    expect(dialog.classList).not.toContain('is-paged')
+    expect(position()).toBe('3 of 4')
+    // Text, and back to the PDF of eight pages.
+    await step(3)
+    expect(dialog.classList).not.toContain('is-paged')
+    await step(1)
+    expect(dialog.classList).toContain('is-paged')
+  })
+
+  it('on a phone, keeps a file’s place said only to a screen reader while a PDF loads, not to show it and take it away', async () => {
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(max-width: 640px)',
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as unknown as typeof window.matchMedia
+    let arrive = () => {}
+    const later = file('later.pdf', 'application/pdf', '%PDF-1.4 tiny', {
+      url: vi.fn(() => new Promise<string>((resolve) => (arrive = () => resolve(`https://store.test/${'later.pdf'}`)))),
+    })
+    await open([file('photo.png', 'image/png', 'png'), later])
+    const dialog = $('.el-dialog.file-viewer')!
+    expect(dialog.classList).not.toContain('is-paged')
+    showPreviewAt(1)
+    await flushPromises()
+    expect($('.file-viewer__loading')).not.toBeNull()
+    expect(dialog.classList).toContain('is-paged')
+    arrive()
+    await flushPromises()
+    await flushPromises()
+    expect($('.pdf-stub')!.textContent).toBe('later.pdf: 13 bytes')
+    expect(dialog.classList).toContain('is-paged')
+    // An image loads with its place shown.
+    showPreviewAt(0)
+    await nextTick()
+    expect(dialog.classList).not.toContain('is-paged')
   })
 
   it('goes to the previous and the next file by the arrow keys, but not from a field', async () => {
@@ -492,7 +576,9 @@ describe('FileViewer: an Office file shown as its PDF rendition', () => {
     expect(fetched).toEqual([PDF_URL])
     expect($('.pdf-stub')!.textContent).toBe('essay.docx: 13 bytes')
     expect($('.file-viewer__body')!.dataset.rendition).toBe('done')
-    expect($('.file-viewer__meta')!.textContent).toContain('Document · 11 B · PDF of 12 pages')
+    expect($('.file-viewer__meta')!.textContent).toContain(
+      'Document ·\u00a011\u00a0B ·\u00a0PDF\u00a0of\u00a012\u00a0pages',
+    )
     expect($('.file-viewer__download')!.getAttribute('aria-label')).toBe('Download “essay.docx”')
     const pdf = $('.file-viewer__download-pdf')!
     expect(pdf.textContent!.trim()).toBe('Download PDF')

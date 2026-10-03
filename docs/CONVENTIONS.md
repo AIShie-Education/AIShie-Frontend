@@ -193,21 +193,28 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   download itself, and, for material, instructions or a rubric, how to read its text version). The
   viewer (`FileViewer`, mounted once by `AppLayout`) is a large dialog, the whole screen on a phone,
   upright or on its side (a window 480 px tall or less), with the previous and the next file
-  (buttons, and the left and right arrow keys where nothing in it takes them), the download under
-  the file's name, and its close button; Escape closes it and the focus goes back to the row.
+  (buttons, and the left and right arrow keys where nothing in it takes them), what the file is,
+  its size and what it is of under its name (a line that wraps before a dot, never after one), the
+  download under them, and its close button; Escape closes it and the focus goes back to the row.
   What a file is shown as is `previewKind(type, name)` (`@/utils/preview`,
   the name's extension first, then the declared type): a PDF in the page with pdf.js (`PdfView`,
   loaded only when one is opened, the legacy build, its worker, character maps, WebAssembly decoders
   and two standard fonts all files of the build under `/assets/`: `pdfjs.ts`), pages one under the
   other drawn as they come near the screen, page by page, zoom and fit to width (`pdfZoom.ts`), a
-  pinch of two fingers or a touchpad's zooming the pages and not the screen, the text selectable,
-  and one page control, none for a page alone; on a phone (640 px or less of the view's own width,
-  or 400 px or less of its own height) the page control and the zoom are one compact bar at the
-  bottom, within a thumb's reach, fitted to the width saying so rather than its per cent (zoomed by
-  hand, its per cent again; where the bar has no room, it measures and leaves out its per cent, then
-  its count of pages, never cutting a digit short), and the viewer's previous and next file two
-  arrows by its close button, their position said only to a screen reader, so that one count is
-  on the screen;
+  pinch of two fingers (begun anywhere on the view, its bar too) or a touchpad's zooming the pages
+  and not the screen, the text selectable, and one page control, none for a page alone. The page it
+  reads is the first at the top, the last at the end, and otherwise the one at the top third of what
+  is seen; a page gone to is read while the pages stay there, and as the viewer fits the zoom to a
+  new width. Its previous and next page buttons always move the pages or are disabled: the last
+  pages, which cannot come to the top, are one stop, the end, which Next goes to and is disabled at,
+  and Prev goes back from to the last page that moves them (`pdfPages.ts`). On a phone (640 px or
+  less of the view's own width, or 400 px or less of its own height) the page control and the zoom
+  are one compact bar at the bottom, within a thumb's reach, its buttons and its per cent 36 px tall
+  or more, fitted to the width saying so rather than its per cent (zoomed by hand, its per cent
+  again; where the bar has no room, it measures and leaves out its per cent, then its count of
+  pages, never cutting a digit short), and the viewer's previous and next file two arrows by its
+  close button, their position ("2 of 3") said only to a screen reader while a PDF's bar counts its
+  pages, so that one count is on the screen;
   an image as an `<img>` (an SVG too, never inline), zoomed or fitted; Markdown by `MarkdownView`,
   code highlighted as fenced code, plain text as it is, CSV as a table of its first thousand rows
   (`parseCsv`), text read as UTF-8 or the legacy encoding of the reader's script (`decodeText`);

@@ -10,11 +10,14 @@
 // next, or one typed), where there is more than one, and zooms: in and out by
 // steps, and to the width of the pages, which is how it opens and which it
 // keeps as they change until it is zoomed by hand. It opens at its first
-// page, or at the one it is given (the page an answer relied on). Two fingers
-// pinch the pages larger or smaller (a touchpad's pinch, which comes as a
-// wheel with Ctrl held, too), about the point between them, and the browser
-// does not zoom the screen as well; a pinch that ends near the width fits it
-// again.
+// page, or at the one it is given (the page an answer relied on). The page
+// read is the first at the top, the last at the end, and otherwise the one
+// at the top third of the screen; a page gone to is read until the pages are
+// scrolled from there, by the reader (pdfPages.ts). Two fingers, anywhere on
+// it, the bar too, pinch the pages larger or smaller (a touchpad's pinch,
+// which comes as a wheel with Ctrl held, too), about the point between them,
+// and the browser does not zoom the screen as well; a pinch that ends near
+// the width fits it again.
 //
 // Where the view is narrow (a phone, 640 px or less of its own width, as the
 // viewer is the whole screen up to a window that wide) or short (a phone on
@@ -32,6 +35,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch 
 import { useI18n } from 'vue-i18n'
 import { useContainerWidth } from '@/composables/useContainerWidth'
 import { formatPct } from '@/utils/format'
+import { atEnd, nextPage, pageAt, pageInView, prevPage, type PagesScrolled } from './pdfPages'
 import { openPdf, TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from './pdfjs'
 import { clampZoom, CSS_UNITS, fitWidthOf, nearFit, pinchZoom, wheelZoom, zoomStep } from './pdfZoom'
 
@@ -46,6 +50,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   /** It cannot be shown: protected by a password, or not a PDF this can read. */
   failed: [reason: 'password' | 'invalid']
+  /** Its count of pages, once it is read: the bar counts them where there is more than one. */
+  pages: [count: number]
 }>()
 const { t, n, locale } = useI18n()
 
@@ -85,8 +91,10 @@ const percent = computed(() => Math.round(zoom.value * 100))
  * the count of pages as well.
  */
 const give = ref(0)
+/** Scrolled to the end, which reads the last page: the next page button has nowhere to take the pages. */
+const end = ref(false)
 const canPrev = computed(() => current.value > 1)
-const canNext = computed(() => current.value < pageCount.value)
+const canNext = computed(() => current.value < pageCount.value && !end.value)
 
 let loadingTask: ReturnType<typeof openPdf> | null = null
 let disposed = false
@@ -158,6 +166,8 @@ async function draw(page: number) {
   if (s && (Math.abs(s.w - w) > 0.5 || Math.abs(s.h - h) > 0.5)) {
     sizes.value[page - 1] = { w, h }
     await nextTick()
+    // The pages have moved, and where they end with them.
+    onScroll()
     if (drawn.get(page) !== entry || disposed) return
   }
   const ratio = outputScale(viewport.width, viewport.height)
@@ -264,52 +274,58 @@ function observe() {
 
 // --- Where it is read --------------------------------------------------------------------
 
-/** The page at `mark` px down the pages. */
-function pageAt(mark: number): number {
-  const el = scroller.value
-  if (!el) return 1
-  const slots = el.querySelectorAll<HTMLElement>('.pdf-page')
-  let lo = 0
-  let hi = slots.length - 1
-  let found = 0
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1
-    if (slots[mid]!.offsetTop <= mark) {
-      found = mid
-      lo = mid + 1
-    } else hi = mid - 1
-  }
-  return found + 1
-}
 /**
- * The page at the top third of what is seen of the pages: on a phone, above
- * the bar laid over their foot (the room they leave it). At the top, the first.
+ * Where the pages lie and how far they are scrolled, as laid out now (each
+ * page's top read only as it is asked for): on a phone, with the room they
+ * leave the bar laid over their foot, which is not read.
  */
-function pageInView(): number {
+function measured(): PagesScrolled | null {
   const el = scroller.value
-  if (!el || el.scrollTop < 1) return 1
-  const under = compact.value ? parseFloat(getComputedStyle(el).paddingBottom) || 0 : 0
-  return pageAt(el.scrollTop + Math.max(0, el.clientHeight - under) / 3)
+  if (!el) return null
+  const slots = el.querySelectorAll<HTMLElement>('.pdf-page')
+  return {
+    count: slots.length,
+    topOf: (page) => slots[page - 1]?.offsetTop ?? 0,
+    scrollTop: el.scrollTop,
+    clientHeight: el.clientHeight,
+    scrollHeight: el.scrollHeight,
+    under: compact.value ? parseFloat(getComputedStyle(el).paddingBottom) || 0 : 0,
+  }
 }
 let tracking = 0
 /**
  * Where going to a page left the pages scrolled: a page near the end, which
  * cannot come to the top of the screen, is still the page read until they
- * are scrolled from there.
+ * are scrolled from there (and kept so as the viewer fits the zoom to the
+ * width again: refit).
  */
 let heldAt: number | null = null
+/** Reads, at the next frame, where the pages are: the page read (pageInView), and whether they are at the end. */
 function onScroll() {
   if (tracking) return
   tracking = requestAnimationFrame(() => {
     tracking = 0
-    const el = scroller.value
-    if (heldAt !== null && el && Math.abs(el.scrollTop - heldAt) < 1) return
+    const s = measured()
+    if (!s) return
+    end.value = atEnd(s)
+    if (heldAt !== null && Math.abs(s.scrollTop - heldAt) < 1) return
     heldAt = null
-    const page = pageInView()
+    const page = pageInView(s)
     if (page !== current.value) current.value = page
   })
 }
 watch(current, (page) => (pageInput.value = String(page)))
+
+/** The previous page: one the pages move for (pdfPages.ts). */
+function goToPrev() {
+  const s = measured()
+  goTo(s ? prevPage(s, current.value, GUTTER) : current.value - 1)
+}
+/** The next page, or, where that lies at the end with the pages after it, the last. */
+function goToNext() {
+  const s = measured()
+  goTo(s ? nextPage(s, current.value, GUTTER) : current.value + 1)
+}
 
 /** Goes to a page, its top at the top of the screen. */
 function goTo(page: number) {
@@ -353,7 +369,8 @@ async function setZoom(next: number, at?: { x: number; y: number }) {
   const box = at ? el.getBoundingClientRect() : null
   const ax = at && box ? at.x - box.left - el.clientLeft : 0
   const ay = at && box ? at.y - box.top - el.clientTop : 0
-  const page = at ? pageAt(el.scrollTop + ay) : current.value
+  const s = at ? measured() : null
+  const page = s ? pageAt(s, el.scrollTop + ay) : current.value
   const slot = slotOf(page)
   const down = slot ? (el.scrollTop + ay - slot.offsetTop) / Math.max(1, slot.offsetHeight) : 0
   const across = slot && at ? (el.scrollLeft + ax - slot.offsetLeft) / Math.max(1, slot.offsetWidth) : null
@@ -365,8 +382,21 @@ async function setZoom(next: number, at?: { x: number; y: number }) {
     el.scrollTop = after.offsetTop + down * after.offsetHeight - ay
     if (across !== null) el.scrollLeft = after.offsetLeft + across * after.offsetWidth - ax
   }
+  // Where the pages end has moved, scrolled or not.
+  onScroll()
   clearTimeout(redraw)
   redraw = window.setTimeout(schedule, 150)
+}
+/**
+ * Fits the zoom to the pages area's width again, as it changes size (a
+ * window made narrower, a scroll bar come): the viewer's doing, not the
+ * reader's, so a page gone to is still the page read.
+ */
+async function refit() {
+  const el = scroller.value
+  const held = heldAt !== null && !!el && Math.abs(el.scrollTop - heldAt) < 1
+  await setZoom(widthZoom())
+  if (held && el) heldAt = el.scrollTop
 }
 function zoomIn() {
   fitWidth.value = false
@@ -489,14 +519,14 @@ onMounted(async () => {
   void document.fonts?.ready.then(() => {
     if (!disposed) void fitBar()
   })
-  const area = scroller.value
-  if (area) {
+  if (box) {
+    // On all of it, the bar as well as the pages, so that a pinch begun on the bar zooms them too.
     // Not passive: a pinch's moves, and a touchpad's, are kept from the browser.
-    area.addEventListener('touchstart', onTouchStart, { passive: true })
-    area.addEventListener('touchmove', onTouchMove, { passive: false })
-    area.addEventListener('touchend', onTouchEnd)
-    area.addEventListener('touchcancel', onTouchEnd)
-    area.addEventListener('wheel', onWheel, { passive: false })
+    box.addEventListener('touchstart', onTouchStart, { passive: true })
+    box.addEventListener('touchmove', onTouchMove, { passive: false })
+    box.addEventListener('touchend', onTouchEnd)
+    box.addEventListener('touchcancel', onTouchEnd)
+    box.addEventListener('wheel', onWheel, { passive: false })
   }
   loadingTask = openPdf(props.data)
   let pdf: PDFDocumentProxy
@@ -521,6 +551,7 @@ onMounted(async () => {
   if (disposed) return
   sizes.value = Array.from({ length: pdf.numPages }, () => ({ ...first }))
   pageCount.value = pdf.numPages
+  emit('pages', pdf.numPages)
   zoom.value = widthZoom()
   loading.value = false
   await nextTick()
@@ -528,7 +559,9 @@ onMounted(async () => {
   observe()
   if (scroller.value && typeof ResizeObserver !== 'undefined') {
     resizer = new ResizeObserver(() => {
-      if (fitWidth.value) void setZoom(widthZoom())
+      if (fitWidth.value) void refit()
+      // Taller or shorter, the pages end elsewhere on the screen.
+      onScroll()
     })
     resizer.observe(scroller.value)
   }
@@ -564,7 +597,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           :aria-label="t('preview.pdf.prevPage')"
           :title="t('preview.pdf.prevPage')"
           class="pdf-view__prev"
-          @click="goTo(current - 1)"
+          @click="goToPrev"
         >
           <el-icon><ArrowUp /></el-icon>
         </el-button>
@@ -587,7 +620,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           :aria-label="t('preview.pdf.nextPage')"
           :title="t('preview.pdf.nextPage')"
           class="pdf-view__next"
-          @click="goTo(current + 1)"
+          @click="goToNext"
         >
           <el-icon><ArrowDown /></el-icon>
         </el-button>
@@ -687,6 +720,8 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   border-bottom: 1px solid var(--app-line);
   background: var(--el-bg-color);
   font-size: 13px;
+  /* Nothing to scroll here, and two fingers zoom the pages (onTouchMove, on all of the view), not the screen. */
+  touch-action: none;
 }
 .pdf-view__group {
   display: inline-flex;
@@ -918,12 +953,19 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
 .pdf-view.is-compact .pdf-view__percent {
   flex-shrink: 0;
 }
+/* As tall as the buttons beside it, and no narrower, to be touched as easily. */
 .pdf-view.is-compact .pdf-view__percent {
-  min-width: 0;
+  min-width: 40px;
+  height: 40px;
   padding: 0 4px;
+  border-radius: 999px;
 }
 .pdf-view.is-tight .pdf-view__bar .el-button {
   width: 36px;
+  height: 36px;
+}
+.pdf-view.is-tight .pdf-view__percent {
+  min-width: 36px;
   height: 36px;
 }
 .pdf-view.is-tight .pdf-view__group {

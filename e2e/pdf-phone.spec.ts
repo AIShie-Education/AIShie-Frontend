@@ -1,15 +1,30 @@
 /// <reference lib="dom" />
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { call, coursePath, demo, inTraditionalChinese, photograph, signIn, type FileSpec } from './support'
+import {
+  call,
+  coursePath,
+  demo,
+  expectNoLineEndsInADot,
+  inTraditionalChinese,
+  photograph,
+  signIn,
+  type FileSpec,
+} from './support'
 
 // The PDF viewer on a phone, and on a desktop as before, with the real Core:
 // material of a slide deck (eight wide pages), a long handout (twelve A4
 // pages) and a note of one page. On a phone, upright or on its side, the
 // viewer fills the screen; the first page fills the width; the pages and the
 // zoom are one bar at the bottom, within a thumb's reach, which the last page
-// scrolls clear of; the files are two arrows by the close button, so that
-// the only count on the screen is the pages'; a PDF of one page has no page
-// control; and two fingers pinch the pages larger, not the whole screen.
+// scrolls clear of, its buttons and its per cent big enough to touch; the
+// files are two arrows by the close button, so that the only count on the
+// screen is the pages'; a PDF of one page has no page control, and shows the
+// file's place among the others instead; and two fingers pinch the pages
+// larger, not the whole screen, wherever they start, the bar too. The page
+// read is the first at the top, even where the top third of the screen is on
+// the second, and the last at the end, where Next is disabled and Prev moves
+// the pages; a page gone to stays the page read as the viewer fits the zoom
+// to a new width.
 // Where the bar has no room for all it holds, it leaves something out, never
 // cutting a digit of the count short: a document of 150 pages zoomed by hand
 // on a phone, in English and in Traditional Chinese, and one of 1,200 pages
@@ -185,9 +200,10 @@ function countsShown(dialog: Locator) {
 /**
  * The one page control there is, and the zoom: each button wholly on the
  * screen and within the bar, in its lower part on a phone, where the files
- * are only arrows and the pages' count is the only one on the screen.
+ * are only arrows and the pages' count is the only one on the screen (with
+ * no page control, the file's place, `place`, is).
  */
-async function expectOneBar(page: Page, dialog: Locator, where: 'top' | 'bottom', pages = true) {
+async function expectOneBar(page: Page, dialog: Locator, where: 'top' | 'bottom', pages = true, place?: string) {
   const { width, height } = page.viewportSize()!
   const toolbar = dialog.getByRole('toolbar', { name: 'Pages and zoom' })
   await expect(toolbar).toHaveCount(1)
@@ -215,9 +231,22 @@ async function expectOneBar(page: Page, dialog: Locator, where: 'top' | 'bottom'
   await expectNothingCut(dialog)
   if (where === 'bottom') {
     const counts = await countsShown(dialog)
-    expect(counts.length, counts.join(' | ')).toBe(pages ? 1 : 0)
+    expect(counts, counts.join(' | ')).toHaveLength(1)
     if (pages) await expect(dialog.locator('.pdf-view__of')).toHaveText(counts[0]!)
+    else expect(counts[0]).toBe(place)
+    await expectPercentTall(dialog)
   }
+}
+
+/** The per cent, where the compact bar shows it, is as tall as the buttons beside it, and as easy to touch. */
+async function expectPercentTall(dialog: Locator) {
+  const percent = dialog.locator('.pdf-view__percent')
+  if (!(await percent.isVisible())) return
+  const r = (await percent.boundingBox())!
+  const button = (await dialog.locator('.pdf-view__zoom .el-button').first().boundingBox())!
+  expect(r.height).toBeGreaterThanOrEqual(36)
+  expect(r.width).toBeGreaterThanOrEqual(36)
+  expect(Math.abs(r.height - button.height)).toBeLessThanOrEqual(0.5)
 }
 
 /**
@@ -264,6 +293,8 @@ test.describe('on a phone', () => {
     await expectFillsWidth(dialog, first, 8)
     await expectOneBar(page, dialog, 'bottom')
     await expect(dialog.locator('.pdf-view__of')).toHaveText('of 8')
+    // Beside the arrows, what the file is and what it is of wrap, the dot before each kept with it.
+    expect(await expectNoLineEndsInADot(dialog)).toHaveLength(2)
     // Fitted to the width, it says so, not as a per cent of the page's printed size.
     await expect(dialog.getByRole('button', { name: 'Fit width', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(dialog.locator('.pdf-view__percent')).toBeHidden()
@@ -277,8 +308,41 @@ test.describe('on a phone', () => {
     await settled(page)
     await expect(field).toHaveValue('1')
     // The next slide, from the bar.
-    await dialog.getByRole('button', { name: 'Next page', exact: true }).click()
+    const prev = dialog.getByRole('button', { name: 'Previous page', exact: true })
+    const next = dialog.getByRole('button', { name: 'Next page', exact: true })
+    await next.click()
     await expect(field).toHaveValue('2')
+
+    // Scrolled by hand from the top to the end, a little at a time: there, slides 6, 7 and 8 are on the
+    // screen, and 7 and 8 never come to its top; the last is read, and Next has nowhere to go.
+    const scrolled = () => pages.evaluate((el) => el.scrollTop)
+    await pages.evaluate((el) => (el.scrollTop = 0))
+    await settled(page)
+    await expect(field).toHaveValue('1')
+    const max = await pages.evaluate((el) => el.scrollHeight - el.clientHeight)
+    for (let y = 100; y < max; y += 100) {
+      await pages.evaluate((el, y) => (el.scrollTop = y), y)
+      await settled(page)
+    }
+    await pages.evaluate((el) => (el.scrollTop = el.scrollHeight))
+    await settled(page)
+    expect(await scrolled()).toBeGreaterThan(max - 1)
+    await expect(field).toHaveValue('8')
+    await expect(next).toBeDisabled()
+    await photograph(page, 'phone-deck-end-light')
+    await inDark(page, 'phone-deck-end-dark')
+    // Prev moves the pages, back to the last slide they move for, and Next back to the end, which reads the last.
+    await prev.click()
+    await settled(page)
+    expect(await scrolled()).toBeLessThan(max - 1)
+    await expect(field).toHaveValue('6')
+    await expect(next).toBeEnabled()
+    await next.click()
+    await settled(page)
+    expect(await scrolled()).toBeGreaterThan(max - 1)
+    await expect(field).toHaveValue('8')
+    await expect(next).toBeDisabled()
+
     // The last one, by its number: scrolled to the end, it clears the bar.
     await field.fill('8')
     await field.press('Enter')
@@ -291,13 +355,36 @@ test.describe('on a phone', () => {
     const bar = (await dialog.getByRole('toolbar', { name: 'Pages and zoom' }).boundingBox())!
     expect(last.y + last.height).toBeLessThanOrEqual(bar.y)
 
+    // A slide gone to that cannot come to the top stays the slide read as the viewer fits the zoom to a
+    // new width (a narrower window, a scroll bar come), and so does the last.
+    for (const [slide, width] of [
+      ['7', 360],
+      ['8', 390],
+    ] as const) {
+      await field.fill(slide)
+      await field.press('Enter')
+      await settled(page)
+      await expect(field).toHaveValue(slide)
+      // At the end, where the pages go no further: Next would not move them.
+      expect(await pages.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThan(1)
+      await expect(next).toBeDisabled()
+      const before = (await first.boundingBox())!.width
+      await page.setViewportSize({ width, height: 844 })
+      await expect.poll(async () => (await first.boundingBox())!.width).not.toBe(before)
+      await settled(page)
+      await settled(page)
+      await expect(field, `slide ${slide}, refitted to ${width} px`).toHaveValue(slide)
+    }
+    await expectFillsWidth(dialog, first, 8)
+
     // The note, of one page: nothing to page through.
     await dialog.getByRole('button', { name: 'Next file' }).click()
     await page.getByRole('dialog', { name: HANDOUT.name }).getByRole('button', { name: 'Next file' }).click()
     const note = page.getByRole('dialog', { name: NOTE.name })
     const noteFirst = await firstPageDrawn(page, note, true)
     await expectFillsWidth(note, noteFirst, 8)
-    await expectOneBar(page, note, 'bottom', false)
+    // No count of pages: the file's place among the others is the one count on the screen.
+    await expectOneBar(page, note, 'bottom', false, '3 of 5')
     await photograph(page, 'phone-note-light')
   })
 
@@ -342,11 +429,10 @@ test.describe('on a phone', () => {
     const before = (await first.boundingBox())!.width
 
     const cdp = await page.context().newCDPSession(page)
-    const pinch = async (from: number, to: number) => {
-      const y = 420
+    const pinch = async (from: number, to: number, { x, y } = { x: 195, y: 420 }) => {
       const at = (d: number) => [
-        { x: 195 - d / 2, y, id: 1 },
-        { x: 195 + d / 2, y, id: 2 },
+        { x: x - d / 2, y, id: 1 },
+        { x: x + d / 2, y, id: 2 },
       ]
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(from) })
       for (let i = 1; i <= 10; i++)
@@ -371,6 +457,44 @@ test.describe('on a phone', () => {
     await expect(fit).toHaveAttribute('aria-pressed', 'true')
     await expectFillsWidth(dialog, first, 8)
     expect(await page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(1)
+
+    // Begun on the bar, a pinch zooms the pages too, and not the screen.
+    const bar = (await dialog.getByRole('toolbar', { name: 'Pages and zoom' }).boundingBox())!
+    const fitted = (await first.boundingBox())!.width
+    await pinch(40, 80, { x: bar.x + bar.width / 2, y: bar.y + bar.height / 2 })
+    await expect.poll(async () => (await first.boundingBox())!.width).toBeGreaterThan(fitted * 1.6)
+    await expect(fit).toHaveAttribute('aria-pressed', 'false')
+    expect(await page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(1)
+    await expect(dialog.getByRole('toolbar', { name: 'Pages and zoom' })).toBeInViewport({ ratio: 1 })
+  })
+})
+
+test.describe('on a tall phone (390 × 1000)', () => {
+  test.use({ viewport: { width: 390, height: 1000 }, isMobile: true, hasTouch: true })
+
+  test('the first slide is read at the top, where the top third of the screen falls on the second', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await page.goto(coursePath(`documents/${documentId}`))
+    const dialog = await open(page, DECK)
+    await firstPageDrawn(page, dialog, true)
+    const field = dialog.getByRole('textbox', { name: 'Page number' })
+    const pages = dialog.locator('.pdf-view__pages')
+    // The top third of what is seen above the bar is below the second slide's top.
+    const mark = await pages.evaluate((el) => (el.clientHeight - parseFloat(getComputedStyle(el).paddingBottom)) / 3)
+    const second = await dialog.locator('.pdf-page[data-page="2"]').evaluate((el: HTMLElement) => el.offsetTop)
+    expect(mark).toBeGreaterThan(second)
+    // Scrolled a little and back to the top: the first is read, and Next goes to the second.
+    await pages.evaluate((el) => (el.scrollTop = 5))
+    await settled(page)
+    await expect(field).toHaveValue('2')
+    await pages.evaluate((el) => (el.scrollTop = 0))
+    await settled(page)
+    await expect(field).toHaveValue('1')
+    await expect(dialog.getByRole('button', { name: 'Previous page', exact: true })).toBeDisabled()
+    await dialog.getByRole('button', { name: 'Next page', exact: true }).click()
+    await expect(field).toHaveValue('2')
   })
 })
 
@@ -451,6 +575,7 @@ test.describe('on a phone, in Traditional Chinese', () => {
     await expect(dialog.getByRole('button', { name: '符合寬度', exact: true })).toHaveAttribute('aria-pressed', 'false')
     await expect(dialog.locator('.pdf-view__percent')).toHaveText(/^\d+%$/)
     await expectNothingCut(dialog)
+    await expectPercentTall(dialog)
     await expect(dialog.locator('.pdf-view__of')).toHaveText('/ 150頁')
     await photograph(page, 'phone-exercises-zh-Hant-zoomed-light')
     await inDark(page, 'phone-exercises-zh-Hant-zoomed-dark')
