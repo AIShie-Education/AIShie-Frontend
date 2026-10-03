@@ -63,6 +63,7 @@ import type { ConversationMessage, ConversationView, Respondent } from '@/api/ty
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AiBadge from '@/components/AiBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useBackCloses } from '@/composables/useBackCloses'
 import { useNow } from '@/composables/useNow'
@@ -1067,18 +1068,17 @@ const closedLine = computed(() => {
             class="chat-pane__privacy-first"
             aria-labelledby="chat-pane-privacy-first"
           >
-            <h3 id="chat-pane-privacy-first" class="chat-pane__privacy-first-title">
-              <el-icon aria-hidden="true"><Lock /></el-icon>{{ t('chat.privacy.firstTitle') }}
-            </h3>
-            <ul>
-              <li v-for="p in privacy.points" :key="p.key">{{ t(`chat.privacy.${p.key}`, p.params) }}</li>
-            </ul>
-            <div class="chat-pane__privacy-first-actions">
-              <el-button link type="primary" size="small" @click="privacyOpen = true">
-                {{ t('chat.privacy.more') }}
-              </el-button>
-              <el-button size="small" @click="gotPrivacy">{{ t('chat.privacy.gotIt') }}</el-button>
-            </div>
+            <DataFlowNotice heading="h3" title-id="chat-pane-privacy-first" :title="t('chat.privacy.firstTitle')">
+              <ul>
+                <li v-for="p in privacy.points" :key="p.key">{{ t(`chat.privacy.${p.key}`, p.params) }}</li>
+              </ul>
+              <div class="chat-pane__privacy-first-actions">
+                <el-button link type="primary" size="small" @click="privacyOpen = true">
+                  {{ t('chat.privacy.more') }}
+                </el-button>
+                <el-button size="small" @click="gotPrivacy">{{ t('chat.privacy.gotIt') }}</el-button>
+              </div>
+            </DataFlowNotice>
           </section>
           <div
             v-if="!writeBlocked"
@@ -1140,17 +1140,21 @@ const closedLine = computed(() => {
           @stop="stop"
           @command="onCommand"
         />
-        <p v-if="showsPrivacyLine" class="chat-pane__privacy">
-          <span class="chat-pane__privacy-text">{{ t(`chat.privacy.${privacy.line.key}`, privacy.line.params) }}</span>
-          <el-button
-            link
-            size="small"
-            class="chat-pane__privacy-more"
-            :aria-label="t('chat.privacy.moreLabel')"
-            @click="privacyOpen = true"
-            >{{ t('chat.privacy.more') }}</el-button
-          >
-        </p>
+        <div v-if="showsPrivacyLine" class="chat-pane__privacy">
+          <DataFlowNotice compact>
+            <span class="chat-pane__privacy-text">{{
+              t(`chat.privacy.${privacy.line.key}`, privacy.line.params)
+            }}</span>
+            <el-button
+              link
+              size="small"
+              class="chat-pane__privacy-more"
+              :aria-label="t('chat.privacy.moreLabel')"
+              @click="privacyOpen = true"
+              >{{ t('chat.privacy.more') }}</el-button
+            >
+          </DataFlowNotice>
+        </div>
       </template>
     </footer>
   </div>
@@ -1248,7 +1252,7 @@ const closedLine = computed(() => {
 .chat-pane__intro .chat-pane__shared {
   margin-top: 8px;
 }
-/* Under the composer: who else reads it and where it goes, with More for the whole notice. */
+/* Under the composer: who else reads it and where it goes, with More for the whole notice, after the shield. */
 .chat-pane__privacy {
   margin: 6px 2px 0;
   font-size: 12px;
@@ -1263,30 +1267,22 @@ const closedLine = computed(() => {
   font-size: 12px;
   vertical-align: baseline;
 }
-/* The first time: its points on the new conversation, under who it is with. */
+/*
+ * The first time: its points on the new conversation, under who it is with, said
+ * where data goes as everywhere (DataFlowNotice), the shield on the indigo's outline.
+ */
 .chat-pane__privacy-first {
   width: min(100%, 360px);
   margin-top: 14px;
-  padding: 10px 12px;
-  border: 1px solid var(--app-line);
-  border-radius: 10px;
-  background: var(--el-fill-color-light);
   font-size: 13px;
   line-height: 1.5;
-  text-align: left;
-  color: var(--el-text-color-regular);
 }
-.chat-pane__privacy-first-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+.chat-pane__privacy-first .data-flow {
+  font-size: inherit;
+  line-height: inherit;
 }
 .chat-pane__privacy-first ul {
-  margin: 0;
+  margin: 4px 0 0;
   padding-left: 18px;
 }
 .chat-pane__privacy-first li + li {
