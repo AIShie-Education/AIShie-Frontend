@@ -515,7 +515,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     { width: 1280, height: 800 },
     { width: 390, height: 844 },
   ])
-    test(`the members’ list shows an agent’s name whole beside its dot and avatar, its “AI” with it, at ${size.width} px`, async ({
+    test(`the members’ list shows an agent’s name whole beside its dot and avatar, its “AI” with it, and every tag whole, at ${size.width} px`, async ({
       page,
     }) => {
       await page.setViewportSize(size)
@@ -544,27 +544,42 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
             .map((e) => e.className),
         )
         expect(hidden, n).toEqual([])
-        const cell = agent.locator('xpath=ancestor::div[contains(@class, "cell")][1]')
-        const [c, a, ai] = await Promise.all([
-          cell.boundingBox(),
-          agent.boundingBox(),
-          agent.locator('.ai-badge').boundingBox(),
-        ])
-        expect(a!.x + a!.width, n).toBeLessThanOrEqual(c!.x + c!.width + 0.5)
-        expect(ai!.x + ai!.width, n).toBeLessThanOrEqual(c!.x + c!.width + 0.5)
+        // Within its cell is within the cell's padding, where its content ends, as for the tags below.
+        const c = await agent.evaluate((el) => {
+          const cell = el.closest('.cell')!
+          return {
+            end: cell.getBoundingClientRect().right - parseFloat(getComputedStyle(cell).paddingRight),
+            scroll: cell.scrollWidth,
+            client: cell.clientWidth,
+          }
+        })
+        const [a, ai] = await Promise.all([agent.boundingBox(), agent.locator('.ai-badge').boundingBox()])
+        expect(a!.x + a!.width, n).toBeLessThanOrEqual(c.end + 0.5)
+        expect(ai!.x + ai!.width, n).toBeLessThanOrEqual(c.end + 0.5)
+        expect(c.scroll, n).toBeLessThanOrEqual(c.client)
       }
-      // Each role's tag whole in its cell: "Teaching assistant", with the person's icon the row shows already,
-      // overran the column and was cut short.
-      const cut = await page.locator('.members__table td .app-tag').evaluateAll((tags) =>
-        tags
-          .filter((t) => {
-            const cell = t.closest('.cell')!.getBoundingClientRect()
-            const r = t.getBoundingClientRect()
-            return r.width > 0 && r.right > cell.right + 0.5
-          })
-          .map((t) => t.textContent!.trim()),
+      // Each role's tag whole in its cell. A cell of the table (el-table's `.cell`) is cut with an ellipsis,
+      // and its content ends inside its padding of 12 px: what runs past that is followed by a "…", which
+      // the padding clips to a dot. With the person's icon the row shows already, "Teaching assistant"
+      // was 133 px in the Role column's 126 px of content, at 1280 px in English: whole, but with a dot
+      // after it, and still inside the cell's outer edge. So each tag is measured against where the cell's
+      // content ends, and the cell must hold all it has, padding and all, with nothing to scroll.
+      const tags = await page.locator('.members__table td .app-tag').evaluateAll((all) =>
+        all
+          .filter((t) => t.getBoundingClientRect().width > 0)
+          .map((t) => {
+            const cell = t.closest('.cell')!
+            const end = cell.getBoundingClientRect().right - parseFloat(getComputedStyle(cell).paddingRight)
+            return {
+              tag: t.textContent!.trim(),
+              past: t.getBoundingClientRect().right - end,
+              cell: `${cell.scrollWidth} px of content and padding in ${cell.clientWidth}`,
+              scrolls: cell.scrollWidth > cell.clientWidth,
+            }
+          }),
       )
-      expect(cut).toEqual([])
+      expect(tags.map((t) => t.tag)).toContain('Teaching assistant')
+      expect(tags.filter((t) => t.past > 0.5 || t.scrolls)).toEqual([])
     })
 
   test('in Chinese, the “AI” stays “AI”, and a personal agent is called one', async ({ page }) => {

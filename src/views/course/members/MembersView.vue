@@ -309,7 +309,8 @@ function rowClass({ row }: { row: MemberSummary }) {
           </el-table-column>
           <el-table-column v-if="!narrow" prop="role" :label="t('members.columns.role')" min-width="150" sortable>
             <!-- Without the person's or the seat's icon, which the name before it shows: "Teaching assistant" with
-                 it overran the column's 150 px in English and was cut short. -->
+                 it, 133 px in English, ran past the 126 px of content the column's 150 have inside the cell's
+                 padding, and the cell's ellipsis stood after it as a clipped dot. -->
             <template #default="{ row }"><RoleTag :member="row" no-icon /></template>
           </el-table-column>
           <el-table-column v-if="!narrow" prop="status" :label="t('members.columns.status')" min-width="100">
