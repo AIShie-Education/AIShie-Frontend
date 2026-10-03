@@ -47,7 +47,16 @@ export type Vocabulary =
   | 'conversationStatus'
   | 'answerLevel'
 
-const props = defineProps<{ vocab: Vocabulary; value: string | null | undefined; size?: 'small' | 'default' | 'large' }>()
+const props = defineProps<{
+  vocab: Vocabulary
+  value: string | null | undefined
+  size?: 'small' | 'default' | 'large'
+  /**
+   * A category's outline without its icon, where its row shows that icon already (docs/CONVENTIONS.md,
+   * "Tags"): the members' list, whose rows start with a person's icon or an agent's avatar.
+   */
+  noIcon?: boolean
+}>()
 const { t, te } = useI18n()
 
 /** What each value of a state says, wherever it is a state. */
@@ -130,6 +139,8 @@ const tone = computed<TagTone>(() => {
     <LevelIcon :level="level" />{{ label }}
   </AppTag>
   <AppTag v-else-if="quiet" variant="quiet" :class="`is-${value}`">{{ label }}</AppTag>
-  <AppTag v-else-if="icon" variant="outline" :icon="icon" :size="size ?? 'small'">{{ label }}</AppTag>
+  <AppTag v-else-if="icon" variant="outline" :icon="noIcon ? undefined : icon" :size="size ?? 'small'">{{
+    label
+  }}</AppTag>
   <AppTag v-else :tone="tone" :size="size ?? 'small'">{{ label }}</AppTag>
 </template>

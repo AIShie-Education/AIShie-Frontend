@@ -511,6 +511,62 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     expect(await sideways()).toBeLessThanOrEqual(0)
   })
 
+  for (const size of [
+    { width: 1280, height: 800 },
+    { width: 390, height: 844 },
+  ])
+    test(`the members’ list shows an agent’s name whole beside its dot and avatar, its “AI” with it, at ${size.width} px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(size)
+      await signIn(page, demo().actors.instructor)
+      await page.goto(coursePath('members'))
+      const rows = page.locator('.members__table .el-table__row')
+      // Long names, one with no spaces, hosted on AIshie (a dot before them says whether they can be asked)
+      // or reached over MCP (no dot); with the dot and the avatar before it, a name as short as
+      // "CS101 課程代理" was cut short too, at "CS101 課…".
+      for (const [n, dot] of [
+        [LONG, true],
+        [HYPHEN, true],
+        [BOT, true],
+        [HELPER, false],
+        ['grader-v2', false],
+      ] as const) {
+        const agent = rows.filter({ hasText: n }).first().locator('.members__agent')
+        await expect(agent).toBeVisible()
+        await expect(agent.locator('.askable-dot')).toHaveCount(dot ? 1 : 0)
+        await expect(agent.locator('.agent-avatar')).toBeVisible()
+        await expect(agent.locator('.ai-badge')).toBeVisible()
+        // Nothing of the name hidden, and all of it within its cell, the "AI" too.
+        const hidden = await agent.evaluate((el) =>
+          [el, ...el.querySelectorAll('.agent-name, .agent-name *')]
+            .filter((e) => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === 'ellipsis')
+            .map((e) => e.className),
+        )
+        expect(hidden, n).toEqual([])
+        const cell = agent.locator('xpath=ancestor::div[contains(@class, "cell")][1]')
+        const [c, a, ai] = await Promise.all([
+          cell.boundingBox(),
+          agent.boundingBox(),
+          agent.locator('.ai-badge').boundingBox(),
+        ])
+        expect(a!.x + a!.width, n).toBeLessThanOrEqual(c!.x + c!.width + 0.5)
+        expect(ai!.x + ai!.width, n).toBeLessThanOrEqual(c!.x + c!.width + 0.5)
+      }
+      // Each role's tag whole in its cell: "Teaching assistant", with the person's icon the row shows already,
+      // overran the column and was cut short.
+      const cut = await page.locator('.members__table td .app-tag').evaluateAll((tags) =>
+        tags
+          .filter((t) => {
+            const cell = t.closest('.cell')!.getBoundingClientRect()
+            const r = t.getBoundingClientRect()
+            return r.width > 0 && r.right > cell.right + 0.5
+          })
+          .map((t) => t.textContent!.trim()),
+      )
+      expect(cut).toEqual([])
+    })
+
   test('in Chinese, the “AI” stays “AI”, and a personal agent is called one', async ({ page }) => {
     await signIn(page, demo().actors.instructor)
     await inTraditionalChinese(page)

@@ -272,11 +272,13 @@ function rowClass({ row }: { row: MemberSummary }) {
           >
             <template #default="{ row }">
               <div class="members__name">
-                <!-- The avatar, the name and its "AI" never part: the name is cut short instead. -->
+                <!-- The dot, the avatar and the name never part, and the name is shown whole: it wraps beside
+                     them, its last word with its "AI". Cut short, the dot and the avatar before it left a name
+                     as short as 「CS101 課程代理」 at 「CS101 課…」, at any width. -->
                 <span v-if="row.kind === 'agent'" class="members__agent">
                   <AskableDot :hosting="row.hosting" :site-chat="row.site_chat" />
                   <AgentAvatar :name="row.display_name" size="small" />
-                  <AgentName :name="row.display_name" ellipsis class="members__name-text" />
+                  <AgentName :name="row.display_name" class="members__agent-name" />
                 </span>
                 <template v-else>
                   <el-icon class="members__kind-icon"><User /></el-icon>
@@ -297,7 +299,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                 </el-tooltip>
               </div>
               <div v-if="narrow" class="members__stack">
-                <RoleTag :member="row" />
+                <RoleTag :member="row" no-icon />
                 <StatusTag v-if="row.status !== 'active'" vocab="memberStatus" :value="row.status" />
                 <AppTag v-if="row.status !== 'removed' && isExpired(row.expires_at)">
                   {{ t('members.expired') }}
@@ -306,7 +308,9 @@ function rowClass({ row }: { row: MemberSummary }) {
             </template>
           </el-table-column>
           <el-table-column v-if="!narrow" prop="role" :label="t('members.columns.role')" min-width="150" sortable>
-            <template #default="{ row }"><RoleTag :member="row" /></template>
+            <!-- Without the person's or the seat's icon, which the name before it shows: "Teaching assistant" with
+                 it overran the column's 150 px in English and was cut short. -->
+            <template #default="{ row }"><RoleTag :member="row" no-icon /></template>
           </el-table-column>
           <el-table-column v-if="!narrow" prop="status" :label="t('members.columns.status')" min-width="100">
             <template #default="{ row }">
@@ -411,6 +415,11 @@ function rowClass({ row }: { row: MemberSummary }) {
   gap: 6px;
   min-width: 0;
   max-width: 100%;
+}
+/* Where it wraps, in lines of about the same length, not one word or character left on the last with its "AI". */
+.members__agent-name {
+  font-weight: 500;
+  text-wrap: balance;
 }
 /* The name and 「（你）」 after it, with no gap between them: the name is cut short first. */
 .members__who {
