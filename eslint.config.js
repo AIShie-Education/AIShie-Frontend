@@ -58,6 +58,19 @@ const ELEMENT_LOOK = {
     message:
       'An explanation is an AppNote (no icon, the indigo line at its left); an el-alert is a warning, an error or an outcome, and says its type (docs/CONVENTIONS.md, "Notes and alerts").',
   },
+  // A number is typed, its steps at its right end: never Element Plus's − and + on either side.
+  'el-input-number': {
+    allowedIn: [],
+    when: (node) => {
+      const position = attributeOf(node, 'controls-position')
+      const controls = attributeOf(node, 'controls')
+      const right = position && !position.directive && position.value?.value === 'right'
+      const none = controls?.directive && controls.value?.expression?.type === 'Literal' && controls.value.expression.value === false
+      return !right && !none
+    },
+    message:
+      'A number field has its steps at its right end (controls-position="right") or none (:controls="false"), never − and + on either side (docs/CONVENTIONS.md, "Forms").',
+  },
   'el-empty': {
     allowedIn: [],
     message:

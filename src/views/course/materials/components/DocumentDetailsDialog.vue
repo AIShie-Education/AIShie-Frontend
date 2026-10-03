@@ -91,7 +91,15 @@ import AppNote from '@/components/AppNote.vue'
         <el-input v-model="form.title" name="title" maxlength="300" />
       </el-form-item>
       <el-form-item v-if="isMaterial" :label="t('materials.document.details.sortOrder')">
-        <el-input-number v-model="form.sortOrder" :min="-100000" :max="100000" :step="1" :precision="0" step-strictly />
+        <el-input-number
+          v-model="form.sortOrder"
+          :min="-100000"
+          :max="100000"
+          :step="1"
+          :precision="0"
+          step-strictly
+          controls-position="right"
+        />
         <div class="app-form-hint doc-details__hint">{{ t('materials.document.details.sortOrderHint') }}</div>
       </el-form-item>
     </el-form>

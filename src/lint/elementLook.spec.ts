@@ -38,6 +38,12 @@ describe('the element-look lint rule', () => {
       expect(await problems(alert)).toEqual([])
   })
 
+  it('refuses a number field with a step on either side, and lets one with its steps at its right end or none', async () => {
+    expect(await problems('<el-input-number v-model="n" :min="0" />')).toEqual([expect.stringContaining('controls-position')])
+    expect(await problems('<el-input-number v-model="n" controls-position="right" />')).toEqual([])
+    expect(await problems('<el-input-number v-model="n" :controls="false" />')).toEqual([])
+  })
+
   it('lets AppTag, which draws every tag, use one', async () => {
     expect(await problems('<el-tag>x</el-tag>', 'src/components/AppTag.vue')).toEqual([])
     expect(await problems('<AppTag tone="wait">x</AppTag>')).toEqual([])

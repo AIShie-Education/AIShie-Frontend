@@ -474,7 +474,15 @@ import AppNote from '@/components/AppNote.vue'
 
       <div v-if="showDrop || !isRoot" class="cd-row">
         <el-form-item v-if="showDrop" :label="t('scheme.form.dropLowest')" class="cd-row__item">
-          <el-input-number v-model="form.dropLowest" :min="0" :max="1000" :step="1" :precision="0" step-strictly />
+          <el-input-number
+            v-model="form.dropLowest"
+            :min="0"
+            :max="1000"
+            :step="1"
+            :precision="0"
+            step-strictly
+            controls-position="right"
+          />
           <div class="app-form-hint cd-hint">{{ t('scheme.form.dropLowestHelp') }}</div>
         </el-form-item>
         <el-form-item v-if="!isRoot" :label="t('scheme.form.sortOrder')" class="cd-row__item">
@@ -485,6 +493,7 @@ import AppNote from '@/components/AppNote.vue'
             :step="1"
             :precision="0"
             step-strictly
+            controls-position="right"
             @change="sortTouched = true"
           />
           <div class="app-form-hint cd-hint">{{ t('scheme.form.sortOrderHelp') }}</div>
