@@ -611,10 +611,10 @@ defineExpose({ reload })
   margin-bottom: 12px;
 }
 .my-work__started {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .my-work__label {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   color: var(--el-text-color-regular);
   margin-bottom: 4px;
@@ -641,7 +641,7 @@ defineExpose({ reload })
 }
 .my-work__nofiles {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .my-work__actions {
   display: flex;
@@ -656,12 +656,12 @@ defineExpose({ reload })
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .my-work__start-text {
   margin: 0 0 12px;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-text);
 }
 .my-work__start-actions {
   display: flex;
@@ -674,8 +674,8 @@ defineExpose({ reload })
 }
 .my-work__subtitle {
   margin: 20px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .my-work__attempts {
   list-style: none;
@@ -690,7 +690,7 @@ defineExpose({ reload })
   flex-wrap: wrap;
   padding: 10px 0;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .my-work__attempt-main,
 .my-work__attempt-side {
@@ -706,7 +706,7 @@ defineExpose({ reload })
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
 }
 </style>

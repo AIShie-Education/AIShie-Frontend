@@ -293,7 +293,7 @@ async function submit() {
 <style scoped>
 .rescope__intro {
   margin: 0 0 16px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .rescope__list {
@@ -315,7 +315,7 @@ async function submit() {
 .rescope__now {
   display: flex;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   flex-wrap: wrap;
 }
 .rescope__date {
@@ -323,14 +323,14 @@ async function submit() {
 }
 .rescope__error {
   color: var(--el-color-danger);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .rescope__alert {
   margin-bottom: 12px;
 }
 .rescope__alert :deep(.el-alert__title) {
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-ui);
 }
 .rescope__problems {
   margin: 4px 0 0;
@@ -352,6 +352,6 @@ async function submit() {
   flex-wrap: wrap;
 }
 .rescope__nothing {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

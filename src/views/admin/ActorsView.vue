@@ -465,18 +465,18 @@ async function openById() {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .actors__subhead {
   margin: 16px 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .actors__steps {
   margin: 0;
   padding-left: 20px;
   line-height: 1.7;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   word-break: break-word;
 }
 .actors__new-actions {
@@ -488,7 +488,7 @@ async function openById() {
   margin-bottom: 16px;
 }
 .actors__no-list :deep(.el-alert__description) {
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .actors__open {
   display: flex;
@@ -503,7 +503,7 @@ async function openById() {
 }
 .actors__open-error {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
 .actors__open-hint {
@@ -563,7 +563,7 @@ async function openById() {
   flex-wrap: wrap;
 }
 .actors__link {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   text-decoration: none;
   word-break: break-word;
   min-width: 0;
@@ -576,7 +576,7 @@ async function openById() {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .actors__login-id code {
   font-family: var(--app-font-mono);

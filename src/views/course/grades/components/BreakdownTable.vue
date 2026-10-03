@@ -109,7 +109,7 @@ const differs = computed(
 }
 .bd-list__comment {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .bd-table__total {
@@ -118,6 +118,6 @@ const differs = computed(
   align-items: baseline;
   gap: 8px;
   padding: 10px 12px 0;
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 </style>

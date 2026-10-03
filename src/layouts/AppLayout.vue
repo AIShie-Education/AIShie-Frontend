@@ -335,7 +335,7 @@ const crumbsCourse = computed(() => {
   }
 }
 .app-header__title {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

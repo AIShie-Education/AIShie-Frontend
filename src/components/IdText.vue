@@ -37,10 +37,10 @@ async function copy(id: string) {
   gap: 4px;
   white-space: nowrap;
 }
-/* An id is there to be found or pasted, not read: quiet, 12px, in the third ink, never a chip. */
+/* An id is there to be found or pasted, not read: quiet, the smallest step, in the third ink, never a chip. */
 .id-text__code {
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-3);
   user-select: all;
 }

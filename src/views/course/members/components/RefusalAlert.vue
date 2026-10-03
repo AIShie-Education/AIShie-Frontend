@@ -59,11 +59,11 @@ const raw = computed(() => (props.error && explained.value ? props.error.message
   align-items: flex-start;
 }
 .refusal :deep(.el-alert__title) {
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .refusal__title {
   font-weight: 500;
-  line-height: 1.5;
+  line-height: var(--app-lh-ui);
   white-space: normal;
 }
 .refusal__body {
@@ -73,7 +73,7 @@ const raw = computed(() => (props.error && explained.value ? props.error.message
   margin-top: 4px;
 }
 .refusal__core {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   word-break: break-word;
 }
 .refusal__core code {
@@ -83,7 +83,7 @@ const raw = computed(() => (props.error && explained.value ? props.error.message
   margin-right: 4px;
 }
 .refusal__recorded {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   opacity: 0.8;
 }
 </style>

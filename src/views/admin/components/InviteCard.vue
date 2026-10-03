@@ -113,8 +113,8 @@ function closed() {
 <style scoped>
 .invite__intro {
   margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
 }
 .invite__blocked-action {
   margin-top: 6px;
@@ -122,7 +122,7 @@ function closed() {
 .invite__facts {
   margin: 0 0 16px;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 1.7;
 }
 .invite__form {
@@ -138,7 +138,7 @@ function closed() {
   gap: 6px;
 }
 .invite__label {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   color: var(--el-text-color-regular);
 }
 .invite__days-select {

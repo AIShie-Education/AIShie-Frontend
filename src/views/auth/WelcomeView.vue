@@ -266,18 +266,18 @@ function proceed() {
 }
 .welcome__title {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--app-text-2xl);
   line-height: 1.3;
 }
 .welcome__tagline {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .welcome__intro {
   margin: 0 0 16px;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .welcome__alert {
@@ -291,7 +291,7 @@ function proceed() {
 }
 .welcome__done {
   margin: 0;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   word-break: break-word;
 }
 </style>

@@ -654,8 +654,8 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
 }
 .grades-view__undo-why {
   max-width: 280px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--app-text-xs);
+  line-height: var(--app-lh-ui);
   white-space: normal;
 }
 .grades-view__table :deep(.el-table__row) {
@@ -725,11 +725,11 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .grades-list__time {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .grades-list__chev {
   flex-shrink: 0;

@@ -116,7 +116,7 @@ async function submit() {
 <style scoped>
 .create-agent__intro {
   margin: 0 0 16px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .create-agent__alert {
@@ -125,7 +125,7 @@ async function submit() {
 .create-agent__next {
   margin: 4px 0 0;
   padding-left: 20px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 1.7;
   color: var(--el-text-color-secondary);
 }

@@ -108,6 +108,10 @@ export default defineConfig(({ mode }) => {
       // cores). The limits are set for that, not for any wait.
       testTimeout: 30_000,
       hookTimeout: 30_000,
+      // A style sheet imported as text (`?raw`) is read as it is, for the
+      // guards that scan them (styles/typeScale.spec.ts); any other is left
+      // out of the tests, as by default.
+      css: { include: [/\.css\?raw$/] },
     },
   }
 })

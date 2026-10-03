@@ -94,6 +94,6 @@ const expanded = ref(false)
 }
 .about__meta {
   margin: 12px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

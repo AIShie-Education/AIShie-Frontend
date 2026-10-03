@@ -90,7 +90,7 @@ const chatText = computed(() =>
 function paragraphs(ps: string[]) {
   return h(
     'div',
-    ps.map((p) => h('p', { style: 'margin: 0 0 8px; line-height: 1.6' }, p)),
+    ps.map((p) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, p)),
   )
 }
 
@@ -245,18 +245,18 @@ async function chooseChat(v: string | number | boolean) {
 }
 .student-policy__label {
   margin: 0 0 4px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
 }
 .student-policy__desc {
   margin: 0 0 6px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .student-policy__now {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .student-policy__control {

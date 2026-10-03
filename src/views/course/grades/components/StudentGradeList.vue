@@ -226,7 +226,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   margin-left: 6px;
   padding: 0 4px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   line-height: 16px;
   vertical-align: 1px;
@@ -238,7 +238,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   border-style: dashed;
 }
 .sgl__login {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .sgl__counts {
@@ -255,12 +255,12 @@ const bodyId = (id: string) => `sgl-body-${id}`
   font-variant-numeric: tabular-nums;
 }
 .sgl__total-label {
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .sgl__total-value {
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: var(--app-weight-strong);
+  font-size: var(--app-text-lg);
 }
 .sgl__chev {
   flex-shrink: 0;
@@ -289,11 +289,11 @@ const bodyId = (id: string) => `sgl-body-${id}`
   justify-content: space-between;
   gap: 12px;
   padding: 6px 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   border-top: 1px dashed var(--el-border-color-extra-light);
 }
 .sgl__grade.is-total {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .sgl__what {
   flex: 1 1 0;
@@ -303,7 +303,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   word-break: break-word;
 }
 .sgl__group {
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
@@ -332,7 +332,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
 }
 .sgl__posted {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .sgl__score.is-draft {
@@ -342,7 +342,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   display: inline-block;
   padding: 0 5px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   line-height: 17px;
   font-weight: 400;
   border: 1px solid currentColor;
@@ -355,7 +355,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
 .sgl__flag.is-missing {
   color: var(--el-color-danger);
   background: var(--el-color-danger-light-9);
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .sgl__flag.is-wait {
   border-style: dotted;
@@ -364,14 +364,14 @@ const bodyId = (id: string) => `sgl-body-${id}`
 }
 .sgl__none {
   color: var(--el-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .sgl__book {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .sgl__sr {
   position: absolute;

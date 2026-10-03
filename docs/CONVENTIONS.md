@@ -571,6 +571,29 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
+- **Type** is a scale (`styles/tokens.css`), and every `font-size` is a step of it:
+  `var(--app-text-xs)` (12 px: a time, a hint under a field, a unit, a tag, a tooltip), `-sm` (13: a
+  row's second line, a table's cells, a note), `-md` (14: the interface's text, Element Plus's base),
+  `-lg` (16: an item's title; a field's text on a touch screen), `-xl` (18: a card's, a dialog's, the
+  course's title), `-2xl` (24: a page's title, a figure that stands for a card), `-3xl` and `-4xl`
+  (32, 40: a figure that stands for a page, a score, a total, a countdown); `-prose` (15) for what is
+  read at length (rendered Markdown, a chat's messages), and `-mark` (11) for Latin letters and
+  figures alone in a mark of a fixed size ("AI", "PDF" on a file, an id, a key, a file's size), never
+  Chinese. In Chinese, either script, `xs` and `sm` are 13 and 14 px: a Han character at 12 px is a
+  blur on a laptop's screen, so 12 px is left to English and figures; check that a tag, a button or
+  a table's cell still holds its words in Chinese. An icon drawn on its own takes a step too; one in a
+  line of text, the text's. A size relative to the text around it (`em`) is a step's too. Strong text
+  (a name, a label, a table's heading, a figure) is `var(--app-weight-strong)`, 600, and 500 in
+  Chinese, whose Noto Sans has no 600 and would set it at 700; a heading, and a figure that stands for
+  a card, is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500.
+  Leading is `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface, `--app-lh-text` (1.6; 1.75)
+  for a paragraph and `--app-lh-prose` (1.7; 1.85) for rendered Markdown. Element Plus's sizes are
+  mapped onto the same steps (`styles/element.css`). `src/styles/typeScale.spec.ts` refuses any other
+  size or weight, wherever it is written (a style sheet, a component's style, an inline style in a
+  template or a script); what it lets through (the print layout's points, pdf.js's text layer, an
+  agent's initials drawn to its square, a join code projected full screen) is listed there, each
+  with why. Room takes the steps `var(--app-space-xs)` to `-2xl` (4, 8, 12, 16, 24, 32 px) in a
+  rule written or rewritten.
 - Forms: `el-form` with `label-position="top"` and rules; dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
@@ -706,8 +729,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   stacked, nothing grows. Leave `align-items` off such a grid, or it wins over `.app-columns`.
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
-  `<IdText>` is quiet (12 px, the third ink, its copy button on hover): an id is for an administrator
-  to find or paste, beside a name, never a chip as heavy as an email. A student's seat shows no member
+  `<IdText>` is quiet (the smallest step, `--app-text-xs`, the third ink, its copy button on
+  hover): an id is for an administrator to find or paste, beside a name, never a chip as heavy as
+  an email. A student's seat shows no member
   ID (the course overview's seat card, their seats on Account), nor does their grade show the ids of a
   newer grade or of its rubric's version. What they may be asked to quote stays: the action that made
   a grade, an action's own page (its id, its actor's and its target's), and their account's ID on

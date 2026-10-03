@@ -270,8 +270,8 @@ watch(
 }
 .hosting-offer__intro {
   margin: -4px 0 12px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .hosting-offer__loading {
@@ -291,7 +291,7 @@ watch(
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 </style>

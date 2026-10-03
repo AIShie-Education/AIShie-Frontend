@@ -306,7 +306,7 @@ async function save() {
 .preset-form__option-key {
   margin-left: 8px;
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .preset-form__alert {
@@ -321,7 +321,7 @@ async function save() {
   background: var(--el-fill-color-light);
 }
 .preset-form__fixed-k {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .preset-form__fixed-v {
@@ -349,7 +349,7 @@ async function save() {
   margin-bottom: 4px;
 }
 .preset-form__perms-title {
-  font-size: 14px;
+  font-size: var(--app-text-md);
   font-weight: 500;
   color: var(--el-text-color-regular);
 }

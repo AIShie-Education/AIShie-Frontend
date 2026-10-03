@@ -111,7 +111,7 @@ async function submit() {
 <style scoped>
 .post-dialog__intro {
   margin: 0 0 12px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
 }
 .post-dialog__what {
   background: var(--el-fill-color-light);
@@ -120,7 +120,7 @@ async function submit() {
   margin-bottom: 16px;
 }
 .post-dialog__what-title {
-  font-weight: 600;
+  font-weight: var(--app-heading-weight);
 }
 .post-dialog__rows {
   list-style: none;
@@ -135,7 +135,7 @@ async function submit() {
   gap: 8px;
   flex-wrap: wrap;
   padding: 3px 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .post-dialog__label {
   color: var(--el-text-color-secondary);

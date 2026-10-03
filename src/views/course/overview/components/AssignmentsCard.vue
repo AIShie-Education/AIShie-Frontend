@@ -171,7 +171,7 @@ const groups = computed(() => [
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   text-decoration: none;
 }
@@ -180,15 +180,15 @@ const groups = computed(() => [
 }
 .assignments__group-title {
   margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--app-text-xs);
+  font-weight: var(--app-weight-strong);
   letter-spacing: 0.3px;
   text-transform: uppercase;
   color: var(--el-text-color-secondary);
 }
 .assignments__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .assignments__row {
   display: flex;
@@ -221,7 +221,7 @@ const groups = computed(() => [
 }
 .assignments__name {
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   overflow-wrap: anywhere;
 }
 .assignments__meta {
@@ -229,7 +229,7 @@ const groups = computed(() => [
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .assignments__dot {
@@ -245,6 +245,6 @@ const groups = computed(() => [
   gap: 12px;
   flex-wrap: wrap;
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

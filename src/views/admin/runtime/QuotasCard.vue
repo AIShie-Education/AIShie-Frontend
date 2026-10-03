@@ -343,8 +343,8 @@ function undo() {
 }
 .quotas-card__intro {
   margin: -8px 0 16px;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .quotas-card__heads,
@@ -360,8 +360,8 @@ function undo() {
 }
 .quotas-card__heads {
   margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-sm);
+  font-weight: var(--app-weight-strong);
 }
 .quotas-card__scope {
   display: flex;
@@ -371,7 +371,7 @@ function undo() {
   margin-bottom: 8px;
 }
 .quotas-card__label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .quotas-card__input {
   width: 100%;
@@ -384,7 +384,7 @@ function undo() {
   flex-wrap: wrap;
   gap: 4px 8px;
   margin: 0 0 4px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .quotas-card__dollars {
   margin: 0 0 16px;

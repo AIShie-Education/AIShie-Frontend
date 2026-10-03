@@ -308,8 +308,8 @@ function open(row: SubmissionSummary) {
   align-items: flex-start;
   gap: 6px;
   margin: -4px 0 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
 .submissions-hint .el-icon {
@@ -354,7 +354,7 @@ function open(row: SubmissionSummary) {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 </style>

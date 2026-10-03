@@ -85,17 +85,68 @@
   --app-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   --app-heading-weight: 600;
   --app-heading-tracking: -0.01em;
-  --app-line-height: 1.5;
-  --app-line-height-prose: 1.7;
+
+  /* Sizes: every font-size in the app is one of these (styles/typeScale.spec.ts
+     refuses any other; docs/CONVENTIONS.md, "Type"). In Chinese the two
+     smallest are a step larger (below): at 12 px a Han character's strokes run
+     together on a laptop's screen, so 12 px is left to English and figures.
+       xs   a time, a hint under a field, a unit, a tag, a tooltip
+       sm   a row's second line, a table's cells, a note, a small button
+       md   the interface's text (Element Plus's base)
+       lg   an item's title, and a field's text on a touch screen, below which
+            iOS zooms into the field
+       xl   a card's, a dialog's and the course's title
+       2xl  a page's title, and a figure that stands for a card
+       3xl, 4xl  a figure that stands for a page: a score, a total, a countdown
+     An icon drawn on its own takes a step too; one in a line of text, the
+     text's. */
+  --app-text-xs: 12px;
+  --app-text-sm: 13px;
+  --app-text-md: 14px;
+  --app-text-lg: 16px;
+  --app-text-xl: 18px;
+  --app-text-2xl: 24px;
+  --app-text-3xl: 32px;
+  --app-text-4xl: 40px;
+  /* Read at length, in every language: rendered Markdown, a chat's messages. */
+  --app-text-prose: 15px;
+  /* Latin letters and figures alone in a mark of a fixed size ("AI", "PDF" on
+     a file, an id, a key, a file's size): never Chinese, and the same in
+     every language. */
+  --app-text-mark: 11px;
+  /* Leading: the interface's lines, a paragraph's, and rendered Markdown's. */
+  --app-lh-ui: 1.5;
+  --app-lh-text: 1.6;
+  --app-lh-prose: 1.7;
+  /* What stands out in the interface's text: a name, a label, a table's
+     heading, a figure. A heading takes --app-heading-weight, as does a
+     figure that stands for a card. */
+  --app-weight-strong: 600;
+
+  /* Room: the steps a gap, a margin or a padding takes, 4 px apart up to 16
+     and 8 apart after. */
+  --app-space-xs: 4px;
+  --app-space-sm: 8px;
+  --app-space-md: 12px;
+  --app-space-lg: 16px;
+  --app-space-xl: 24px;
+  --app-space-2xl: 32px;
 }
 
 /* In Chinese, either script, headings bold and untracked, lines further
-   apart; <html lang> is set with the language (zh-Hans or zh-Hant). */
+   apart; <html lang> is set with the language (zh-Hans or zh-Hant). The two
+   smallest sizes are a step larger, and strong text is 500: Noto Sans,
+   loaded in 400, 500 and 700, has no 600, which falls to 700 and makes every
+   label and table heading bold. A heading stays 700. */
 html:lang(zh) {
   --app-heading-weight: 700;
   --app-heading-tracking: 0;
-  --app-line-height: 1.65;
-  --app-line-height-prose: 1.85;
+  --app-text-xs: 13px;
+  --app-text-sm: 14px;
+  --app-lh-ui: 1.6;
+  --app-lh-text: 1.75;
+  --app-lh-prose: 1.85;
+  --app-weight-strong: 500;
 }
 
 /* Traditional Chinese in Noto Sans TC and Noto Serif TC, */

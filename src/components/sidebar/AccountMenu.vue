@@ -454,14 +454,14 @@ defineExpose({ show, hide })
   background: var(--app-indigo-tint);
   color: var(--app-indigo);
   box-shadow: inset 0 0 0 1px var(--app-indigo-line);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
   line-height: 1;
 }
 .account__avatar.is-large {
   width: 34px;
   height: 34px;
-  font-size: 15px;
+  font-size: var(--app-text-lg);
 }
 /* On a phone, a row along the side menu's bottom: the initial, the name and what they sign in with. */
 .account__row {
@@ -494,11 +494,11 @@ defineExpose({ show, hide })
   white-space: nowrap;
 }
 .account__name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-weight-strong);
 }
 .account__email {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-3);
 }
 .account__chevron {
@@ -520,7 +520,7 @@ defineExpose({ show, hide })
   background: var(--app-overlay);
   box-shadow: var(--app-shadow-pop);
   color: var(--app-ink);
-  font-size: 14px;
+  font-size: var(--app-text-md);
 }
 .account-menu.is-drawer {
   position: absolute;
@@ -543,13 +543,13 @@ defineExpose({ show, hide })
   flex: 1;
 }
 .account-menu__name {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .account-menu__email {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-3);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -604,7 +604,7 @@ defineExpose({ show, hide })
   justify-content: center;
   flex-shrink: 0;
   width: 1em;
-  font-size: 14px;
+  font-size: var(--app-text-md);
   line-height: 1;
   color: var(--app-ink-3);
 }
@@ -617,11 +617,11 @@ defineExpose({ show, hide })
 }
 .account-menu__value {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--app-ink-3);
 }
 .account-menu__item[aria-checked='true'] {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .account-menu__item[aria-checked='true'] .account-menu__check {
   color: var(--app-indigo);

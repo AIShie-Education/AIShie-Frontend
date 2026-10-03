@@ -154,6 +154,6 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
   gap: 4px 8px;
 }
 .side-agent__meta :deep(.presence) {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 </style>

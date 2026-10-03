@@ -214,13 +214,13 @@ async function signOut() {
 }
 .change-pw__title {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--app-text-2xl);
   line-height: 1.3;
 }
 .change-pw__lead {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .change-pw__alert {
@@ -232,7 +232,7 @@ async function signOut() {
 .change-pw__out {
   margin: 16px 0 0;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
 .change-pw__hidden {

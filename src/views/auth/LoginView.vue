@@ -273,12 +273,12 @@ function sso(m: SsoMethod) {
 }
 .login__tagline {
   margin: 0 0 20px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-3);
 }
 .login__title {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--app-text-2xl);
   line-height: 1.3;
 }
 .login__alert {

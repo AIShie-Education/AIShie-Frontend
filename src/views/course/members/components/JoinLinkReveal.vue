@@ -179,15 +179,15 @@ async function download() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--app-text-2xl);
+  font-weight: var(--app-weight-strong);
   color: var(--el-text-color-primary);
 }
 .join-reveal__caption {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   line-height: 1.4;
   text-align: center;
   max-width: 280px;
@@ -207,13 +207,13 @@ async function download() {
   gap: 2px;
 }
 .join-reveal__timer-label {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .join-reveal__clock {
-  font-size: 40px;
+  font-size: var(--app-text-4xl);
   line-height: 1.1;
-  font-weight: 600;
+  font-weight: var(--app-heading-weight);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: var(--el-color-primary);
@@ -231,10 +231,10 @@ async function download() {
 }
 .join-reveal__ended span {
   color: var(--el-text-color-regular);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .join-reveal__label {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }
 .join-reveal__url-row {
@@ -248,7 +248,7 @@ async function download() {
 }
 .join-reveal__url :deep(input) {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .join-reveal__actions {
   display: flex;
@@ -263,12 +263,12 @@ async function download() {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px 16px;
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   width: 100%;
 }
 .join-reveal__facts dt {
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-xs);
 }
 .join-reveal__facts dd {
   margin: 2px 0 0;

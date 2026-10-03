@@ -151,13 +151,13 @@ export function forgetDocumentFiles() {
   align-items: center;
   gap: 6px;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
 .doc-files__count {
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }
 .doc-files__text {
@@ -169,7 +169,7 @@ export function forgetDocumentFiles() {
 }
 .doc-files__error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-color-danger);
 }
 </style>

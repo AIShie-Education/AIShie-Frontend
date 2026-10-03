@@ -145,7 +145,7 @@ const asOwner = computed(() => {
 }
 .outcome-alert__core code {
   font-family: var(--app-font-mono);
-  font-size: 11px;
+  font-size: var(--app-text-mark);
   opacity: 0.8;
 }
 </style>

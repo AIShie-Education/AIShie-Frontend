@@ -161,7 +161,7 @@ onBeforeUnmount(() => {
 }
 .join-fs__code {
   font-size: clamp(24px, 4vw, 44px);
-  font-weight: 700;
+  font-weight: var(--app-heading-weight);
   letter-spacing: 0.02em;
   color: var(--el-color-primary);
 }
@@ -185,12 +185,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   font-size: clamp(28px, 5vw, 56px);
-  font-weight: 700;
+  font-weight: var(--app-heading-weight);
   color: #303133;
 }
 .join-fs__scan {
   font-size: clamp(18px, 2.6vw, 30px);
-  font-weight: 600;
+  font-weight: var(--app-heading-weight);
 }
 .join-fs__clock {
   display: flex;
@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
   gap: 12px;
   font-size: clamp(36px, 6vw, 72px);
   line-height: 1;
-  font-weight: 700;
+  font-weight: var(--app-heading-weight);
   font-variant-numeric: tabular-nums;
 }
 .join-fs__blocked {
@@ -209,7 +209,7 @@ onBeforeUnmount(() => {
 }
 .join-fs__url {
   font-family: var(--app-font-mono);
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
   word-break: break-all;
   text-align: center;

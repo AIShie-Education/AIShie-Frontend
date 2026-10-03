@@ -115,12 +115,12 @@ function blockText(o: ExistingGrades): string | null {
   flex-shrink: 0;
 }
 .existing-grades__title {
-  font-weight: 600;
+  font-weight: var(--app-heading-weight);
   line-height: 1.4;
 }
 .existing-grades__question {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-ui);
   color: var(--el-text-color-regular);
 }
 .existing-grades__options {
@@ -148,15 +148,15 @@ function blockText(o: ExistingGrades): string | null {
   line-height: 1.45;
 }
 .existing-grades__label {
-  font-weight: 600;
+  font-weight: var(--app-weight-strong);
 }
 .existing-grades__help {
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   font-weight: 400;
 }
 .existing-grades__example {
-  font-size: 13px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-primary);
@@ -165,7 +165,7 @@ function blockText(o: ExistingGrades): string | null {
   display: flex;
   align-items: flex-start;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--el-color-warning-dark-2);
 }

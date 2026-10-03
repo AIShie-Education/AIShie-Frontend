@@ -258,7 +258,7 @@ async function go() {
 }
 .host-dialog__body {
   margin: 0 0 12px;
-  line-height: 1.6;
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .host-dialog__stack {
@@ -275,12 +275,12 @@ async function go() {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-text-sm);
 }
 .host-dialog__seats {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
   color: var(--el-text-color-regular);
 }
 .host-dialog__takes-over {
