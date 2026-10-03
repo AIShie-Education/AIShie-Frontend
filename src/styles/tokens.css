@@ -4,7 +4,8 @@
    its character: deep ink and indigo grounds, warm off-white text, a lighter
    indigo that reads on them, and the same warm light. Each pairing of text
    and ground below meets WCAG AA (4.5:1 for text, 3:1 for a control's edge
-   and the focus ring), in both themes. */
+   and the focus ring), in both themes; styles/contrast.spec.ts measures
+   them. */
 :root {
   /* Grounds and surfaces */
   --app-ground: #f6f3ec;
@@ -21,11 +22,15 @@
   --app-control-border: #8f887a;
   --app-control-border-hover: #6c665b;
 
-  /* Ink */
+  /* Ink, in three steps a reader tells apart: the text, what is secondary
+     to it, and the meta beside it (a time, a heading over a column, a hint),
+     each 1.5:1 or more from the next. The third reads at 4.5:1 on every
+     ground it is drawn on, the second shade and a hovered row's included.
+     The placeholder's is a step quieter, AA on a field, a card and the page. */
   --app-ink: #1b1d24;
   --app-ink-2: #4a4d58;
-  --app-ink-3: #5a5d68;
-  --app-ink-placeholder: #74767f;
+  --app-ink-3: #656872;
+  --app-ink-placeholder: #6b6e78;
   --app-ink-disabled: #a9a8a3;
 
   /* Indigo, the brand's colour, and what is written on it */
@@ -41,9 +46,9 @@
   --app-light-halo: #f0d8c0;
   --app-wordmark: #22407a;
 
-  /* Pills: planned, waiting, done, refused */
-  --app-planned-bg: #f3eac8;
-  --app-planned-fg: #5a4a00;
+  /* Pills: waiting, done, refused, each a hue of its own, and neutral, a
+     category's, whose text is a step darker than the third ink, to read on
+     its ground. */
   --app-wait-bg: #fbf0d9;
   --app-wait-fg: #8a5a00;
   --app-done-bg: #e1f2e8;
@@ -125,7 +130,7 @@ html.dark {
 
   --app-ink: #eeeae1;
   --app-ink-2: #c9c6bd;
-  --app-ink-3: #a9a7a0;
+  --app-ink-3: #a19f98;
   --app-ink-placeholder: #95938d;
   --app-ink-disabled: #62646d;
 
@@ -140,8 +145,6 @@ html.dark {
   --app-light-halo: #a8704f;
   --app-wordmark: #ffffff;
 
-  --app-planned-bg: #36311a;
-  --app-planned-fg: #e6d48a;
   --app-wait-bg: #3a2e14;
   --app-wait-fg: #edc06a;
   --app-done-bg: #163326;
