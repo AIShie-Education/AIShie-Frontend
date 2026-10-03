@@ -1,7 +1,6 @@
 export default {
   title: 'Activity',
   subtitle: 'Everything that has happened in this course that your seat may know about, newest first',
-  refresh: 'Check now',
   live: 'Checks for new activity every {n} seconds while this page is open',
   paused: 'Paused while this page is in the background',
   archived: 'This course is archived: nothing new will happen in it.',

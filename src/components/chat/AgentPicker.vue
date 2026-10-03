@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // The agents the caller may ask in a course (conversation.respondents): the
 // course's agents first, then their own personal assistant. Never a person:
-// conversations are with agents, and Core lists agents alone. Each says what
-// it is to the caller, how it runs (hosted on AIshie: only an agent the
-// site's runtime runs now is listed), whether it can be asked now, and
-// how its answers arrive when that is not at once. An agent with MCP access,
+// conversations are with agents, and Core lists agents alone. Each says
+// whether it can be asked now (a dot before its name, AskableDot), whose it
+// is and what it is to the caller (two chips at most: docs/CONVENTIONS.md,
+// "Tags"; how it runs is its owner's concern, said on its own page), and how
+// its answers arrive when that is not at once. An agent with MCP access,
 // or one the runtime does not run just now, is not listed: Core leaves it
 // out, and its owner's page for it says why.
 import { useI18n } from 'vue-i18n'
@@ -12,13 +13,12 @@ import type { Respondent } from '@/api/types'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AgentName from '@/components/AgentName.vue'
+import AskableDot from '@/components/AskableDot.vue'
 import AsyncState from '@/components/AsyncState.vue'
-import HostingTag from '@/components/HostingTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNow } from '@/composables/useNow'
 import { agentPurpose, availabilityOf } from './chat'
 import { useRespondents } from './useConversationList'
-import AskableText from './AskableText.vue'
 
 const props = defineProps<{ courseId: string; enabled?: boolean }>()
 const emit = defineEmits<{ pick: [agent: Respondent] }>()
@@ -61,6 +61,7 @@ defineExpose({ refresh })
           <AgentAvatar :name="r.display_name" class="resp-row__avatar" />
           <span class="resp-row__main">
             <span class="resp-row__line">
+              <AskableDot :who="r" :name="r.display_name" :hint-id="`resp-${r.member_id}-ask`" />
               <!-- The "AI" stays with the name's last word when the line wraps. -->
               <AgentName :name="r.display_name" class="resp-row__name" />
               <AgentBadge
@@ -71,11 +72,9 @@ defineExpose({ refresh })
                 :hint-id="`resp-${r.member_id}-whose`"
               />
               <StatusTag vocab="seatPurpose" :value="agentPurpose(r)" />
-              <HostingTag :hosting="r.hosting" />
             </span>
-            <span class="resp-row__line resp-row__facts">
-              <AskableText :who="r" :name="r.display_name" :hint-id="`resp-${r.member_id}-ask`" />
-              <StatusTag v-if="r.answer_level !== 'autonomous'" vocab="answerLevel" :value="r.answer_level" />
+            <span v-if="r.answer_level !== 'autonomous'" class="resp-row__line resp-row__facts">
+              <StatusTag vocab="answerLevel" :value="r.answer_level" />
             </span>
             <span v-if="agentPurpose(r) === 'course'" class="resp-row__note">{{ t('chat.respondents.sharedHint') }}</span>
             <span v-if="offline(r)" class="resp-row__warn">

@@ -12,8 +12,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { TenantQuota } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { formatMoney } from '@/utils/format'
 import { problemsOf } from '@/views/account/components/agents/hosting'
 import QuotaInputs from './QuotaInputs.vue'
@@ -58,7 +61,6 @@ function replace(q: TenantQuota) {
   tenants.value = tenants.value.map((x) => (x.tenant_id === q.tenant_id ? q : x))
 }
 
-const SOURCE_TAG = { site: 'primary', config: 'info', none: 'info' } as const
 
 // --- Editing ----------------------------------------------------------------------------
 const editing = shallowRef<TenantQuota | null>(null)
@@ -152,19 +154,11 @@ function serverText(q: TenantQuota): string {
   <section class="app-card tenants-card">
     <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.tenants.title') }}</span>
-      <el-button
-        circle
-        :loading="loading"
-        :aria-label="t('common.actions.refresh')"
-        class="tenants-card__refresh"
-        @click="load()"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="loading" class="tenants-card__refresh" @click="load()" />
     </h2>
     <p class="tenants-card__intro">{{ t('runtimeAdmin.tenants.intro') }}</p>
     <RuntimeAsync :loading="loading && !loaded" :error="loaded ? null : loadError" @retry="load()">
-      <el-empty v-if="!tenants.length" :description="t('runtimeAdmin.tenants.empty')" class="tenants-card__empty" />
+      <AppEmpty v-if="!tenants.length" :text="t('runtimeAdmin.tenants.empty')" class="tenants-card__empty" />
       <el-table v-else ref="tableRef" :data="tenants" row-key="tenant_id" class="tenants-card__table">
         <el-table-column :label="t('runtimeAdmin.tenants.tenant')" min-width="200">
           <template #default="{ row }">
@@ -183,15 +177,9 @@ function serverText(q: TenantQuota): string {
                 t('runtimeAdmin.tenants.agents', { n: row.agents }, row.agents)
               }}</span>
               <template v-if="narrow">
-                <el-tag
-                  :type="SOURCE_TAG[row.source as 'site']"
-                  effect="plain"
-                  size="small"
-                  disable-transitions
-                  class="tenant-cell__source tenant-cell__source--narrow"
-                >
+                <AppTag variant="outline" class="tenant-cell__source tenant-cell__source--narrow">
                   {{ t(`runtimeAdmin.tenants.sources.${row.source}`) }}
-                </el-tag>
+                </AppTag>
                 <span class="tenant-cell__meta">
                   {{ joinParts([answersText(row.per_day.answers), usdText(row.per_day.usd)]) }}
                 </span>
@@ -223,15 +211,9 @@ function serverText(q: TenantQuota): string {
         </el-table-column>
         <el-table-column v-if="!narrow" :label="t('runtimeAdmin.tenants.source')" min-width="120">
           <template #default="{ row }">
-            <el-tag
-              :type="SOURCE_TAG[row.source as 'site']"
-              effect="plain"
-              size="small"
-              disable-transitions
-              class="tenant-cell__source"
-            >
+            <AppTag variant="outline" class="tenant-cell__source">
               {{ t(`runtimeAdmin.tenants.sources.${row.source}`) }}
-            </el-tag>
+            </AppTag>
           </template>
         </el-table-column>
         <el-table-column v-if="!narrow" :label="t('runtimeAdmin.money.answersDay')" min-width="120" align="right">

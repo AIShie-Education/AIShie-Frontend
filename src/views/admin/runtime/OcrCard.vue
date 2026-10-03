@@ -7,6 +7,8 @@
 // or languages missing), the card says why, and offers only what the runtime
 // takes then (turning it off, the server's languages again), which is kept
 // for when it can. The switch saves at once; the languages when saved.
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatList } from '@/utils/format'
@@ -98,9 +100,9 @@ function undo() {
   <section class="app-card ocr-card">
     <h2 class="app-card__title ocr-card__title">
       <span>{{ t('runtimeAdmin.ocr.title') }}</span>
-      <el-tag v-if="state" :type="state.tone" disable-transitions class="ocr-card__state">
+      <AppTag v-if="state" size="default" :tone="toneOf(state.tone)" class="ocr-card__state">
         {{ t(`runtimeAdmin.ocr.state.${state.key}`) }}
-      </el-tag>
+      </AppTag>
     </h2>
     <p class="ocr-card__intro">{{ t('runtimeAdmin.ocr.intro') }}</p>
 
@@ -147,16 +149,9 @@ function undo() {
               <el-checkbox v-for="code in ocr.available_languages" :key="code" :value="code" class="ocr-card__choice">
                 <span class="ocr-card__name">{{ languageName(code, t) }}</span>
                 <code class="ocr-card__code">{{ code }}</code>
-                <el-tag
-                  v-if="ocr.default_languages.includes(code)"
-                  size="small"
-                  type="info"
-                  effect="plain"
-                  disable-transitions
-                  class="ocr-card__default"
-                >
+                <AppTag v-if="ocr.default_languages.includes(code)" variant="outline" class="ocr-card__default">
                   {{ t('runtimeAdmin.ocr.serverDefault') }}
-                </el-tag>
+                </AppTag>
               </el-checkbox>
             </el-checkbox-group>
             <p class="app-form-hint">{{ t('runtimeAdmin.ocr.languagesHint') }}</p>

@@ -7,10 +7,13 @@
 import { computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
+import { User } from '@element-plus/icons-vue'
 import type { ToolIn } from '@/api/http'
 import type { Member, PermLevels } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -202,9 +205,9 @@ async function submit() {
             :title="t('members.rescope.staleStudents', { n: staleStudents.length }, staleStudents.length)"
           >
             <div class="rescope__stale">
-              <el-tag v-for="id in staleStudents" :key="id" type="info" size="small" disable-transitions>
+              <AppTag v-for="id in staleStudents" :key="id" variant="outline" :icon="User">
                 <MemberName :id="id" />
-              </el-tag>
+              </AppTag>
             </div>
             <el-button size="small" class="rescope__drop" @click="dropStale">
               {{ t('members.rescope.dropStale') }}
@@ -260,9 +263,7 @@ async function submit() {
       </el-form-item>
     </el-form>
 
-    <el-alert v-if="isGrant" type="info" :closable="false" show-icon class="rescope__alert">
-      <template #title>{{ t('members.rescope.isGrant') }}</template>
-    </el-alert>
+    <AppNote v-if="isGrant" class="rescope__alert">{{ t('members.rescope.isGrant') }}</AppNote>
     <el-alert v-if="problems.length" type="warning" :closable="false" show-icon class="rescope__alert">
       <template #title>{{ t('members.grant.willRefuse') }}</template>
       <ul class="rescope__problems">

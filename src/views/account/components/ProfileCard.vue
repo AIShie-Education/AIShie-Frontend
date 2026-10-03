@@ -4,6 +4,7 @@
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
 import type { Me } from '@/api/types'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -40,9 +41,9 @@ const { t } = useI18n()
             <dd>
               <code v-if="me.login_id" class="profile-card__login-id">{{ me.login_id }}</code>
               <span v-else class="app-muted">{{ t('account.profile.noLoginId') }}</span>
-              <el-tag v-if="me.login_id && me.login_id_verified === false" size="small" type="warning" effect="plain">
+              <AppTag v-if="me.login_id && me.login_id_verified === false" tone="wait">
                 {{ t('account.profile.unverified') }}
-              </el-tag>
+              </AppTag>
               <div class="app-form-hint">{{ t('account.profile.loginIdNote') }}</div>
             </dd>
           </template>

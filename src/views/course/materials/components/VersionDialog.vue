@@ -30,6 +30,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE, filesPayload, versionFilesOf, versionFilesRefused } from '@/utils/documentFiles'
 import { formatBytes, formatList, formatNumber } from '@/utils/format'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
@@ -193,14 +194,9 @@ async function submit() {
     :close-on-click-modal="false"
   >
     <AsyncState :loading="baseLoading" :error="baseError" @retry="loadBase">
-      <el-alert
-        v-if="course.needsApproval('document_write')"
-        type="warning"
-        :closable="false"
-        show-icon
-        class="version-dialog__alert"
-        :title="t('materials.document.approvalNote')"
-      />
+      <AppNote v-if="course.needsApproval('document_write')" class="version-dialog__alert">
+        {{ t('materials.document.approvalNote') }}
+      </AppNote>
       <p class="version-dialog__intro">
         {{
           base
@@ -208,20 +204,15 @@ async function submit() {
             : t('materials.document.addVersion.introEmpty')
         }}
       </p>
-      <el-alert
-        v-if="baseHasFile && base && !hasFiles"
-        type="info"
-        :closable="false"
-        show-icon
-        class="version-dialog__alert"
-        :title="
+      <AppNote v-if="baseHasFile && base && !hasFiles" class="version-dialog__alert">
+        {{
           t(
             'materials.document.addVersion.fileNotCarried',
             { seq: base.seq, n: baseFiles.length, names: baseFileNames },
             baseFiles.length,
           )
-        "
-      />
+        }}
+      </AppNote>
       <el-form label-position="top" @submit.prevent="submit">
         <!-- The file first, and the text under it. -->
         <el-form-item :label="t('materials.document.addVersion.file')">
@@ -239,14 +230,7 @@ async function submit() {
             <p v-if="queue.items.length > 1" class="app-form-hint version-dialog__files-hint">
               {{ t('materials.document.addVersion.filesHint') }}
             </p>
-            <el-alert
-              v-if="againNote"
-              type="info"
-              :closable="false"
-              show-icon
-              class="version-dialog__again"
-              :title="t('common.upload.uploadingAgain')"
-            />
+            <AppNote v-if="againNote" class="version-dialog__again">{{ t('common.upload.uploadingAgain') }}</AppNote>
             <DocumentTextField
               v-model="form.body"
               v-model:open="textOpen"

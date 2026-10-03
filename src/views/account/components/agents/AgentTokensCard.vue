@@ -10,6 +10,8 @@ import type { ApiError } from '@/api/http'
 import type { AgentCredential } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import TimeText from '@/components/TimeText.vue'
 import { credentialState, maskedToken, type CredentialState } from '../credentials'
@@ -111,9 +113,9 @@ defineExpose({ revokeById })
           <div class="token__main">
             <div class="token__head">
               <span class="token__label">{{ c.label?.trim() || t('agents.tokens.unlabelled') }}</span>
-              <el-tag v-if="state !== 'active'" :type="STATE_TAG[state]" size="small" disable-transitions>
+              <AppTag v-if="state !== 'active'" :tone="toneOf(STATE_TAG[state])">
                 {{ t(`agents.tokens.state.${state}`) }}
-              </el-tag>
+              </AppTag>
             </div>
             <div class="token__meta">
               <span>

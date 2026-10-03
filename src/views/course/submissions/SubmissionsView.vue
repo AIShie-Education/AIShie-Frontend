@@ -23,6 +23,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { usePaged } from '@/composables/useAsync'
@@ -179,11 +180,7 @@ function open(row: SubmissionSummary) {
         clearable
         :placeholder="t('submissions.filters.student')"
       />
-      <span class="app-toolbar__spacer" />
-      <el-button :loading="active.loading.value" @click="active.reload">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
+      <RefreshButton :loading="active.loading.value" @click="active.reload" />
     </div>
 
     <p v-if="!isStudent && !list.error.value?.isForbidden && (!assignment || !hasRoster)" class="submissions-hint">

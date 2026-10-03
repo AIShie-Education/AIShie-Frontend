@@ -12,10 +12,13 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { EditPen, Location } from '@element-plus/icons-vue'
 import { read, type ToolOut, type WriteOutcome } from '@/api/http'
 import type { Grade, GradeSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import IdText from '@/components/IdText.vue'
@@ -277,18 +280,16 @@ const backLink = computed(() => ({
           @close="proposal = null"
         />
 
-        <el-alert v-if="g.state === 'superseded'" type="info" :closable="false" show-icon class="grade-view__banner">
-          <template #title>
-            {{ t('grades.detail.supersededBanner') }}
-            <router-link
-              v-if="g.superseded_by"
-              :to="{ name: 'course-grade', params: { courseId, gradeId: g.superseded_by } }"
-              class="grade-view__banner-link"
-            >
-              {{ t('grades.detail.openNewer') }}
-            </router-link>
-          </template>
-        </el-alert>
+        <AppNote v-if="g.state === 'superseded'" class="grade-view__banner">
+          {{ t('grades.detail.supersededBanner') }}
+          <router-link
+            v-if="g.superseded_by"
+            :to="{ name: 'course-grade', params: { courseId, gradeId: g.superseded_by } }"
+            class="grade-view__banner-link"
+          >
+            {{ t('grades.detail.openNewer') }}
+          </router-link>
+        </AppNote>
         <el-alert
           v-else-if="g.state === 'draft'"
           type="warning"
@@ -302,7 +303,7 @@ const backLink = computed(() => ({
           <div v-if="override" class="grade-view__override">
             <div class="grade-view__score">
               <ScoreText :score="override.score" :out-of="null" as-percent size="large" hide-percent />
-              <el-tag type="primary" effect="dark" disable-transitions>{{ t('grades.override.overridden') }}</el-tag>
+              <AppTag variant="outline" :icon="EditPen" size="default">{{ t('grades.override.overridden') }}</AppTag>
             </div>
             <p class="grade-view__override-line">
               {{ t('grades.override.computed', { value: formatPct(g.score) }) }}
@@ -323,12 +324,12 @@ const backLink = computed(() => ({
           <p v-if="isComputed" class="app-muted grade-view__score-note">
             {{ t('grades.detail.computedNote') }}
             <template v-if="working">
-              <el-tag v-if="!working.complete" size="small" type="warning">{{
+              <AppTag v-if="!working.complete" tone="wait">{{
                 t('grades.gradebook.incomplete')
-              }}</el-tag>
-              <el-tag v-if="working.ungradedAsZero" size="small" type="danger" effect="plain">{{
+              }}</AppTag>
+              <AppTag v-if="working.ungradedAsZero" tone="danger">{{
                 t('grades.detail.final')
-              }}</el-tag>
+              }}</AppTag>
             </template>
           </p>
         </section>
@@ -513,7 +514,13 @@ const backLink = computed(() => ({
             </el-table-column>
             <el-table-column min-width="80">
               <template #default="{ row }">
-                <el-tag v-if="row.id === gradeId" size="small" effect="plain">{{ t('grades.detail.thisOne') }}</el-tag>
+                <AppTag
+                  v-if="row.id === gradeId"
+                  variant="outline"
+                  :icon="Location"
+                >
+                  {{ t('grades.detail.thisOne') }}
+                </AppTag>
               </template>
             </el-table-column>
           </el-table>

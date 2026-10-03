@@ -13,9 +13,13 @@ import { useAsync, usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import FilterChips from '@/components/FilterChips.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AssignmentFormDialog from './components/AssignmentFormDialog.vue'
@@ -75,14 +79,23 @@ function myLatest(a: AssignmentSummary): SubmissionSummary | undefined {
 
 // --- Filtering ------------------------------------------------------------------
 const query = ref('')
-const show = ref<'all' | 'published' | 'unpublished'>('all')
+const show = ref<'' | 'published' | 'unpublished'>('')
 const hasUnpublished = computed(() => list.items.value.some((a) => !a.published_at))
+const published = computed(() => list.items.value.filter((a) => !!a.published_at).length)
+const showChips = computed(() => [
+  { value: 'published' as const, label: t('assignments.list.show.published'), count: published.value },
+  {
+    value: 'unpublished' as const,
+    label: t('assignments.list.show.unpublished'),
+    count: list.items.value.length - published.value,
+  },
+])
 const rows = computed(() => {
   const q = query.value.trim().toLowerCase()
   return list.items.value.filter(
     (a) =>
       (!q || a.title.toLowerCase().includes(q)) &&
-      (show.value === 'all' || (show.value === 'published') === !!a.published_at),
+      (!show.value || (show.value === 'published') === !!a.published_at),
   )
 })
 
@@ -137,10 +150,6 @@ function refresh() {
 <template>
   <div class="assignments-view">
     <PageHeader ref="header" :title="t('assignments.title')" :subtitle="t('assignments.subtitle')">
-      <el-button :loading="list.loading.value" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <template v-if="writer">
         <el-button type="primary" :disabled="!course.writable" @click="formOpen = true">
           <el-icon><Plus /></el-icon>
@@ -149,14 +158,12 @@ function refresh() {
       </template>
     </PageHeader>
 
-    <el-alert v-if="proposed" type="info" show-icon class="assignments-view__alert" @close="proposed = false">
-      <template #title>
-        {{ t('assignments.list.proposed') }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
-          t('assignments.list.viewMyActions')
-        }}</router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="proposed" class="assignments-view__alert" @close="proposed = false" closable>
+      {{ t('assignments.list.proposed') }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('assignments.list.viewMyActions')
+      }}</router-link>
+    </AppNote>
     <div v-if="writer && course.needsApproval('assignment_write')" class="app-form-hint assignments-view__approval">
       <StatusTag vocab="level" value="confirm_required" size="small" />
       {{ t('assignments.list.approvalHint') }}
@@ -174,11 +181,14 @@ function refresh() {
             ><el-icon><Search /></el-icon
           ></template>
         </el-input>
-        <el-radio-group v-if="writer && hasUnpublished" v-model="show" size="small">
-          <el-radio-button value="all">{{ t('assignments.list.show.all') }}</el-radio-button>
-          <el-radio-button value="published">{{ t('assignments.list.show.published') }}</el-radio-button>
-          <el-radio-button value="unpublished">{{ t('assignments.list.show.unpublished') }}</el-radio-button>
-        </el-radio-group>
+        <FilterChips
+          v-if="writer && hasUnpublished"
+          v-model="show"
+          :options="showChips"
+          :all-count="list.items.value.length"
+          :label="t('assignments.list.show.label')"
+        />
+        <RefreshButton :loading="list.loading.value" @click="refresh" />
       </div>
 
       <AsyncState
@@ -200,6 +210,7 @@ function refresh() {
           class="assignments-view__table"
           :empty-text="t('assignments.list.noMatch')"
           :default-sort="{ prop: 'due_at', order: 'ascending' }"
+          :row-class-name="({ row }: { row: AssignmentSummary }) => (row.published_at ? '' : 'app-row-unpublished')"
           @row-click="open"
         >
           <el-table-column
@@ -217,9 +228,9 @@ function refresh() {
                 >
                   {{ row.title }}
                 </router-link>
-                <el-tag v-if="!row.published_at" type="warning" size="small" effect="plain" disable-transitions>
+                <AppTag v-if="!row.published_at" tone="wait">
                   {{ t('assignments.state.unpublished') }}
-                </el-tag>
+                </AppTag>
               </div>
               <div class="assignments-view__sub app-muted">{{ componentLabel(row) }}</div>
               <div v-if="narrow" class="assignments-view__meta">
@@ -245,12 +256,12 @@ function refresh() {
             <template #default="{ row }">
               <div v-if="row.due_at" class="assignments-view__due">
                 <TimeText :value="row.due_at" relative cutoff />
-                <el-tag v-if="overdue(row)" type="danger" size="small" disable-transitions>
+                <AppTag v-if="overdue(row)" tone="danger">
                   {{ t('assignments.state.overdue') }}
-                </el-tag>
-                <el-tag v-else-if="isPast(row.due_at)" type="info" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-else-if="isPast(row.due_at)">
                   {{ t('assignments.state.pastDue') }}
-                </el-tag>
+                </AppTag>
               </div>
               <span v-else class="app-muted">{{ t('common.time.noDue') }}</span>
             </template>
@@ -301,9 +312,6 @@ function refresh() {
 }
 .assignments-view__alert a {
   margin-left: 6px;
-}
-.assignments-view__alert:deep(.el-alert__content) {
-  padding-right: 24px;
 }
 .assignments-view__approval {
   display: flex;

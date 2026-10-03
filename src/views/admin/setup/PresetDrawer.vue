@@ -2,7 +2,10 @@
 // One preset in full: what a member seated from it starts with.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Box, OfficeBuilding } from '@element-plus/icons-vue'
 import { PERMS, type Preset } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -34,12 +37,12 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
   >
     <template v-if="preset">
       <div class="preset-drawer__tags">
-        <el-tag v-if="builtin" type="info" effect="dark" size="small" disable-transitions>
+        <AppTag v-if="builtin" variant="outline" :icon="Box">
           {{ t('adminSetup.presets.builtin') }}
-        </el-tag>
-        <el-tag v-else type="primary" size="small" disable-transitions>
+        </AppTag>
+        <AppTag v-else variant="outline" :icon="OfficeBuilding">
           {{ deptName ?? t('adminSetup.presets.own') }}
-        </el-tag>
+        </AppTag>
         <span class="app-muted preset-drawer__count">{{
           t('adminSetup.presets.allowed', { n: allowedCount(preset), total: PERMS.length })
         }}</span>
@@ -69,14 +72,7 @@ const description = computed(() => (props.preset ? presetDescription(props.prese
         <dd><IdText :id="preset.id" /></dd>
       </dl>
 
-      <el-alert
-        v-if="builtin"
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('adminSetup.presets.drawer.builtinNote')"
-        class="preset-drawer__note"
-      />
+      <AppNote v-if="builtin" class="preset-drawer__note">{{ t('adminSetup.presets.drawer.builtinNote') }}</AppNote>
 
       <div v-if="canEdit" class="preset-drawer__actions">
         <el-button v-if="builtin" @click="emit('copy', preset)">

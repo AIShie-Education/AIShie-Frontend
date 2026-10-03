@@ -18,6 +18,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { formatDate } from '@/utils/format'
 import { loginIdProblem, MAX_LOGIN_ID } from '@/utils/loginId'
+import AppNote from '@/components/AppNote.vue'
 import HostingChoice from '@/components/HostingChoice.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -277,7 +278,7 @@ async function submit() {
           }}
         </div>
       </el-form-item>
-      <el-alert type="info" :closable="false" show-icon :title="t('admin.register.permanent')" />
+      <AppNote>{{ t('admin.register.permanent') }}</AppNote>
     </el-form>
     <template #footer>
       <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>

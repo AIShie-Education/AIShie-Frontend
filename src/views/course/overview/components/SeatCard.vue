@@ -7,6 +7,8 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -48,7 +50,7 @@ function scopeText(which: 'student' | 'assignment'): string {
   <section class="app-card seat">
     <h2 class="app-card__title">{{ t('overview.seat.title') }}</h2>
 
-    <el-empty v-if="!m" :image-size="64" :description="t('overview.seat.none')" />
+    <AppEmpty v-if="!m" :text="t('overview.seat.none')" />
 
     <dl v-else class="seat__list">
       <div class="seat__row">
@@ -117,9 +119,9 @@ function scopeText(which: 'student' | 'assignment'): string {
         <dd>
           <template v-if="m.expires_at">
             <TimeText :value="m.expires_at" cutoff />
-            <el-tag v-if="expired" type="danger" size="small" class="seat__expired">{{
+            <AppTag v-if="expired" tone="danger" class="seat__expired">{{
               t('overview.seat.expired')
-            }}</el-tag>
+            }}</AppTag>
           </template>
           <span v-else>{{ t('common.labels.never') }}</span>
         </dd>

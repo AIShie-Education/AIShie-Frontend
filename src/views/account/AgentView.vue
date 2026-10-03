@@ -26,6 +26,7 @@ import { usePolling } from '@/composables/usePolling'
 import { useWrite } from '@/composables/useWrite'
 import { hostingOf } from '@/utils/agents'
 import { isUuid } from '@/utils/format'
+import AppTag from '@/components/AppTag.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import HostingTag from '@/components/HostingTag.vue'
@@ -181,10 +182,9 @@ function onBrought() {
       <template #tags>
         <template v-if="agent">
           <AgentBadge mine size="default" />
-          <HostingTag :hosting="agent.hosting" size="default" />
-          <el-tag v-if="suspended" :type="standing === 'suspendedByMe' ? 'warning' : 'danger'" disable-transitions>
+          <AppTag v-if="suspended" size="default" :tone="standing === 'suspendedByMe' ? 'wait' : 'danger'">
             {{ t(`agents.standing.${standing}`) }}
-          </el-tag>
+          </AppTag>
         </template>
       </template>
       <template v-if="agent">

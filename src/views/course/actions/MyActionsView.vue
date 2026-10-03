@@ -9,19 +9,23 @@
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { View } from '@element-plus/icons-vue'
 import { read, type ApiError } from '@/api/http'
 import { toApiError } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import FilterChips from '@/components/FilterChips.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActionActor from './components/ActionActor.vue'
 import ActionTarget from './components/ActionTarget.vue'
 import RevisesLine from './components/RevisesLine.vue'
 import { reasonText, storedDecision, storedError, typeLabel, type ActionRow } from './components/actionText'
-import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -110,11 +114,13 @@ const statusCounts = computed(() => {
   for (const a of items.value) m.set(a.status, (m.get(a.status) ?? 0) + 1)
   return STATUS_ORDER.filter((s) => m.has(s)).map((s) => ({ value: s, n: m.get(s)! }))
 })
+const statusChips = computed(() =>
+  statusCounts.value.map((s) => ({ value: s.value, label: t(`enums.actionStatus.${s.value}`), count: s.n })),
+)
 const types = computed(() => {
   const set = new Set(items.value.map((a) => a.action_type))
   return [...set].map((v) => ({ value: v, label: typeLabel(v) })).sort((a, b) => a.label.localeCompare(b.label))
 })
-const waitingCount = computed(() => items.value.filter((a) => a.status === 'proposed').length)
 const reviewCount = computed(
   () => items.value.filter((a) => a.review_state === 'pending' || a.review_state === 'escalated').length,
 )
@@ -143,12 +149,7 @@ function open(row: ActionRow) {
 
 <template>
   <div class="my-actions">
-    <PageHeader :title="t('actions.mine.title')" :subtitle="t('actions.mine.subtitle')">
-      <el-button :loading="loading" @click="load(true)">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
-    </PageHeader>
+    <PageHeader :title="t('actions.mine.title')" :subtitle="t('actions.mine.subtitle')" />
 
     <div class="app-card">
       <p ref="help" class="my-actions__help">
@@ -156,43 +157,36 @@ function open(row: ActionRow) {
         <template v-if="session.me?.kind === 'agent'">{{ t('actions.mine.helpAgent') }}</template>
       </p>
 
-      <div v-if="waitingCount || reviewCount" class="my-actions__summary">
-        <el-tag v-if="waitingCount" type="warning" effect="light" class="my-actions__chip" @click="status = 'proposed'">
-          <el-icon><Clock /></el-icon>
-          {{ t('actions.mine.waiting', { n: waitingCount }) }}
-        </el-tag>
-        <el-tag v-if="reviewCount" type="primary" effect="light">
-          <el-icon><View /></el-icon>
+      <div v-if="!error && items.length" class="my-actions__summary">
+        <FilterChips
+          v-model="status"
+          :options="statusChips"
+          :all-count="items.length"
+          :label="t('actions.mine.filterStatus')"
+        />
+        <AppTag v-if="reviewCount" tone="indigo" :icon="View">
           {{ t('actions.mine.awaitingReview', { n: reviewCount }) }}
-        </el-tag>
+        </AppTag>
       </div>
 
       <div v-if="!error" class="app-toolbar my-actions__toolbar">
-        <el-select v-model="status" class="my-actions__filter" :placeholder="t('actions.mine.filterStatus')" clearable>
-          <el-option value="" :label="joinParts([t('common.labels.all'), String(items.length)])" />
-          <el-option
-            v-for="s in statusCounts"
-            :key="s.value"
-            :value="s.value"
-            :label="joinParts([t(`enums.actionStatus.${s.value}`), String(s.n)])"
-          />
-        </el-select>
         <el-select v-model="type" class="my-actions__filter" :placeholder="t('actions.mine.anyType')" clearable filterable>
           <el-option value="" :label="t('actions.mine.anyType')" />
           <el-option v-for="ty in types" :key="ty.value" :value="ty.value" :label="ty.label" />
         </el-select>
         <el-checkbox v-model="showChat" :label="t('actions.mine.showChat')" border />
         <span class="app-toolbar__spacer" />
-        <el-radio-group v-model="order" size="default">
+        <el-radio-group v-model="order" size="default" :aria-label="t('actions.mine.sort.label')">
           <el-radio-button value="newest">{{ t('actions.mine.sort.newest') }}</el-radio-button>
           <el-radio-button value="oldest">{{ t('actions.mine.sort.oldest') }}</el-radio-button>
         </el-radio-group>
+        <RefreshButton :loading="loading" @click="load(true)" />
       </div>
 
-      <el-alert v-if="more && !loading" type="info" show-icon :closable="false" class="my-actions__capped">
+      <AppNote v-if="more && !loading" class="my-actions__capped">
         <span>{{ t('actions.mine.capped', { n: items.length }) }}</span>
         <el-button link type="primary" @click="load(false)">{{ t('actions.mine.loadRest') }}</el-button>
-      </el-alert>
+      </AppNote>
       <p v-if="loading && items.length" class="my-actions__loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         {{ t('actions.mine.loadingAll', { n: items.length }) }}
@@ -282,17 +276,10 @@ function open(row: ActionRow) {
 }
 .my-actions__summary {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 8px 12px;
   flex-wrap: wrap;
   margin-bottom: 12px;
-}
-.my-actions__summary .el-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.my-actions__chip {
-  cursor: pointer;
 }
 .my-actions__filter {
   width: 200px;

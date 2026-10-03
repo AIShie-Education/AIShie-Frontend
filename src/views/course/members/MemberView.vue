@@ -8,6 +8,7 @@
 import { computed, h, ref, useTemplateRef, watch, type VNode } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
+import { User } from '@element-plus/icons-vue'
 import { ApiError, read } from '@/api/http'
 import { DELEGATE_NEVER_PERMS, PERMS, type AutonomyLevel, type Member, type Perm, type PermLevels } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
@@ -15,6 +16,8 @@ import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AgentName from '@/components/AgentName.vue'
@@ -388,11 +391,10 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
       <template #tags>
         <template v-if="m">
           <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" size="default" />
-          <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" :site-chat="m.site_chat" size="default" />
           <RoleTag :member="m" size="default" hide-none />
           <StatusTag vocab="memberStatus" :value="m.status" size="default" />
-          <el-tag v-if="expired" type="info">{{ t('members.expired') }}</el-tag>
-          <el-tag v-if="isSelf" type="primary" effect="plain">{{ t('common.labels.you') }}</el-tag>
+          <AppTag v-if="expired" size="default">{{ t('members.expired') }}</AppTag>
+          <AppTag v-if="isSelf" variant="outline" :icon="User" size="default">{{ t('common.labels.you') }}</AppTag>
         </template>
       </template>
       <template v-if="m && showManage">
@@ -445,13 +447,12 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
     <AsyncState :loading="state.loading.value && !m" :error="state.error.value" @retry="state.reload">
       <template v-if="m">
         <RefusalAlert :error="pageError" @close="pageError = null" />
-        <el-alert
+        <AppNote
           v-if="proposedAction"
-          type="info"
-          show-icon
-          class="member__alert"
           :title="t('members.proposed.change')"
+          class="member__alert"
           @close="proposedAction = null"
+          closable
         >
           <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
             {{ t('members.proposed.view') }} </router-link
@@ -459,7 +460,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
             t('members.proposed.mine')
           }}</router-link>
-        </el-alert>
+        </AppNote>
         <el-alert
           v-if="removedResult !== null"
           type="success"
@@ -474,22 +475,8 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         >
           {{ t('members.detail.remove.fresh') }}
         </el-alert>
-        <el-alert
-          v-if="isSelf && live"
-          type="info"
-          :closable="false"
-          show-icon
-          class="member__alert"
-          :title="t('members.detail.self')"
-        />
-        <el-alert
-          v-if="m.status === 'removed'"
-          type="info"
-          :closable="false"
-          show-icon
-          class="member__alert"
-          :title="t('members.detail.removed')"
-        />
+        <AppNote v-if="isSelf && live" class="member__alert">{{ t('members.detail.self') }}</AppNote>
+        <AppNote v-if="m.status === 'removed'" class="member__alert">{{ t('members.detail.removed') }}</AppNote>
         <el-alert
           v-else-if="expired"
           type="warning"
@@ -525,7 +512,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                 <span v-else>{{ m.display_name }}</span>
                 <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" no-ai />
                 <StatusTag v-else vocab="actorKind" :value="m.kind" />
-                <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" />
+                <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" :site-chat="m.site_chat" />
               </span>
             </el-descriptions-item>
             <el-descriptions-item v-if="m.kind === 'human'" :label="t('members.loginId')">
@@ -545,7 +532,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.status')">
               <StatusTag vocab="memberStatus" :value="m.status" />
-              <el-tag v-if="expired" size="small" type="info" class="member__gap">{{ t('members.expired') }}</el-tag>
+              <AppTag v-if="expired" class="member__gap">{{ t('members.expired') }}</AppTag>
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.role')">
               <span class="member__role">
@@ -748,10 +735,10 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           </p>
 
           <template v-if="editing">
-            <el-alert type="info" :closable="false" class="member__alert">
+            <AppNote class="member__alert">
               <template #title>{{ t('members.grant.rulesTitle') }}</template>
               {{ t('members.detail.perms.editHelp') }}
-            </el-alert>
+            </AppNote>
             <PermEditor v-model="draft" size="small" :changed="changedPerms" :warn="rowWarnings" :ceilings="ceilings" />
             <el-alert
               v-if="permProblems.length"

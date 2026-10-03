@@ -11,6 +11,7 @@ import type { DepartmentNode } from '@/api/types'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { useWrite } from '@/composables/useWrite'
 import { TOP, type Destination } from '@/utils/departmentTree'
+import AppNote from '@/components/AppNote.vue'
 import DepartmentPicker from './DepartmentPicker.vue'
 
 const open = defineModel<boolean>({ required: true })
@@ -60,7 +61,7 @@ async function save() {
       <span v-if="where">{{ where }}</span>
       <span v-else class="app-muted">{{ t('deptAdmin.tree.atTop') }}</span>
     </div>
-    <el-alert v-if="!anywhere" type="info" :closable="false" show-icon :title="t('deptAdmin.tree.moveNone')" />
+    <AppNote v-if="!anywhere">{{ t('deptAdmin.tree.moveNone') }}</AppNote>
     <div v-else>
       <label class="move-dept__label move-dept__to" for="move-dept-to">{{ t('deptAdmin.tree.moveTo') }}</label>
       <DepartmentPicker id="move-dept-to" v-model="to" :data="options" />

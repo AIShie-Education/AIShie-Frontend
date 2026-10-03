@@ -69,6 +69,23 @@ export function forStudent<T extends Pick<RosterEntry, 'student_member_id'>>(
 }
 
 /**
+ * What the roster shows, and the counts by state that filter it: the rows
+ * of the student the page is filtered to, or all of them, and of those the
+ * ones in the chosen state. The counts count the rows they filter, so that
+ * each chip holds the rows it says; with one student chosen there is nothing
+ * left to filter, and no counts (null), whatever state was chosen before.
+ */
+export function rosterView<T extends Pick<RosterEntry, 'student_member_id' | 'state'>>(
+  rows: readonly T[],
+  studentId: string | null | undefined,
+  state: string,
+): { summary: { total: number; counts: StateCount[] } | null; visible: T[] } {
+  const shown = forStudent(rows, studentId)
+  if (studentId) return { summary: null, visible: shown }
+  return { summary: countByState(shown), visible: state ? shown.filter((r) => r.state === state) : shown }
+}
+
+/**
  * Whether more pages must be read to find the one student the page is
  * filtered to: the roster pages by student, not by name, so they may be on a
  * page not loaded yet.

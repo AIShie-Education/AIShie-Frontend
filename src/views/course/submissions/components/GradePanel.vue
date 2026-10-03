@@ -13,6 +13,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
 import { read, type UploadedFile } from '@/api/http'
 import type { ActionSummary, Assignment, GradeSummary, Submission } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
@@ -327,13 +328,12 @@ async function submit() {
         </router-link>
       </div>
     </el-alert>
-    <el-alert
+    <AppNote
       v-else-if="outcome?.status === 'proposed'"
-      type="info"
       :title="t('submissions.grade.proposedTitle')"
-      show-icon
       class="grade-panel__alert"
       @close="outcome = null"
+      closable
     >
       <p class="grade-panel__alert-text">{{ t('submissions.grade.proposedBody') }}</p>
       <div class="grade-panel__links">
@@ -341,29 +341,29 @@ async function submit() {
           {{ t('submissions.grade.myActions') }}
         </router-link>
       </div>
-    </el-alert>
+    </AppNote>
 
     <p v-if="!course.writable" class="app-muted grade-panel__note">{{ t('submissions.grade.archived') }}</p>
     <p v-else-if="submission.state === 'draft'" class="app-muted grade-panel__note">
       {{ t('submissions.grade.notYet') }}
     </p>
-    <el-alert v-else-if="livePosted" type="info" :closable="false" show-icon>
+    <AppNote v-else-if="livePosted">
       <p class="grade-panel__alert-text">{{ t('submissions.grade.postedExists') }}</p>
       <div class="grade-panel__links">
         <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: livePosted.id } }">
           {{ t('submissions.grade.openPosted') }}
         </router-link>
       </div>
-    </el-alert>
+    </AppNote>
 
     <template v-else>
       <p v-if="needsApproval" class="app-form-hint grade-panel__hint">{{ t('submissions.grade.needsApprovalHint') }}</p>
       <p v-else-if="course.permsSource === 'unknown'" class="app-form-hint grade-panel__hint">
         {{ t('common.permissionUnknown') }}
       </p>
-      <el-alert v-if="gradesHidden" type="info" :closable="false" show-icon class="grade-panel__alert">
+      <AppNote v-if="gradesHidden" class="grade-panel__alert">
         {{ t('submissions.grade.gradesHidden') }}
-      </el-alert>
+      </AppNote>
       <el-alert
         v-if="proposedHint && outcome?.status !== 'proposed'"
         type="warning"
@@ -376,7 +376,7 @@ async function submit() {
       <el-alert v-if="missing" type="warning" :closable="false" show-icon class="grade-panel__alert">
         {{ t('submissions.grade.forMissing') }}
       </el-alert>
-      <el-alert v-if="liveDraft" type="info" :closable="false" show-icon class="grade-panel__alert">
+      <AppNote v-if="liveDraft" class="grade-panel__alert">
         <p v-if="drafter" class="grade-panel__alert-text grade-panel__drafter">
           <i18n-t keypath="submissions.grade.draftBy" tag="span" scope="global">
             <template #name><MemberName :id="drafter.id" show-kind class="grade-panel__drafter-name" /></template>
@@ -397,7 +397,7 @@ async function submit() {
             {{ t('submissions.grade.openDraft') }}
           </router-link>
         </div>
-      </el-alert>
+      </AppNote>
 
       <div class="grade-panel__grid">
         <el-form

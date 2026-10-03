@@ -30,6 +30,10 @@ import { notifyError } from '@/composables/useErrors'
 import { usePolling } from '@/composables/usePolling'
 import { announce, useWrite } from '@/composables/useWrite'
 import { pageHeadings } from '@/utils/markdown'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
@@ -382,15 +386,13 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
   <div class="text-pane" :data-status="status ?? 'none'" :data-file="fileName">
     <div class="text-pane__bar">
       <div class="text-pane__state">
-        <el-tag
+        <AppTag
           v-if="status && (shown !== 'none' || !isQueued(status))"
-          :type="TEXT_STATUS_TAG[status]"
-          size="small"
-          disable-transitions
+          :tone="toneOf(TEXT_STATUS_TAG[status])"
           class="text-pane__status"
         >
           {{ t(`enums.textStatus.${status}`) }}
-        </el-tag>
+        </AppTag>
         <span v-if="source === 'ai'" class="text-pane__source">
           {{
             current?.model
@@ -505,19 +507,18 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
           {{ t('materials.document.text.editor.reload') }}
         </el-button>
       </el-alert>
-      <el-alert
+      <AppNote
         v-else-if="reloadedOver"
-        type="info"
-        show-icon
-        class="text-pane__conflict"
         :title="t('materials.document.text.editor.reloaded')"
+        class="text-pane__conflict"
         @close="reloadedOver = false"
+        closable
       >
         <details v-if="body" class="text-pane__latest">
           <summary>{{ t('materials.document.text.editor.latest') }}</summary>
           <MarkdownView :source="body" class="text-pane__latest-body" />
         </details>
-      </el-alert>
+      </AppNote>
       <p class="app-form-hint text-pane__hint">{{ t('materials.document.text.editor.hint') }}</p>
       <MarkdownEditor v-model="draft" :rows="18" :disabled="updater.pending.value" />
       <div class="text-pane__editor-actions">
@@ -573,11 +574,10 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
             }}
           </p>
         </el-alert>
-        <el-empty
+        <AppEmpty
           v-else
-          :image-size="64"
           class="text-pane__none"
-          :description="
+          :text="
             !canWrite
               ? t('materials.document.text.none.reader')
               : !transcriptionOn

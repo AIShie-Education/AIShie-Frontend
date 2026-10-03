@@ -2,6 +2,7 @@
 // What is left of something an administrator purged (document.purge): who
 // purged it, when and why, and that its text and file are gone. Shown in place
 // of the content and the download, to everyone who reads it.
+import AppTag from '@/components/AppTag.vue'
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
@@ -35,9 +36,9 @@ const line = computed(() =>
     <el-icon class="tombstone__icon"><Delete /></el-icon>
     <div class="tombstone__body">
       <p class="tombstone__line">
-        <el-tag type="danger" size="small" effect="dark" disable-transitions>{{
+        <AppTag tone="danger">{{
           t('materials.document.tombstone.tag')
-        }}</el-tag>
+        }}</AppTag>
         <span>{{ line }}</span>
       </p>
       <p class="tombstone__why">{{ t('materials.document.tombstone.why', { reason: purge.reason }) }}</p>

@@ -68,6 +68,7 @@ async function submit() {
   open.value = false
   emit('done', out.status)
 }
+import AppNote from '@/components/AppNote.vue'
 </script>
 
 <template>
@@ -90,18 +91,20 @@ async function submit() {
         <el-input v-model="form.title" name="title" maxlength="300" />
       </el-form-item>
       <el-form-item v-if="isMaterial" :label="t('materials.document.details.sortOrder')">
-        <el-input-number v-model="form.sortOrder" :min="-100000" :max="100000" :step="1" :precision="0" step-strictly />
+        <el-input-number
+          v-model="form.sortOrder"
+          :min="-100000"
+          :max="100000"
+          :step="1"
+          :precision="0"
+          step-strictly
+          controls-position="right"
+        />
         <div class="app-form-hint doc-details__hint">{{ t('materials.document.details.sortOrderHint') }}</div>
       </el-form-item>
     </el-form>
     <p class="app-form-hint">{{ t('materials.document.details.versionsKept') }}</p>
-    <el-alert
-      v-if="needsApproval"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('materials.document.approvalNote')"
-    />
+    <AppNote v-if="needsApproval">{{ t('materials.document.approvalNote') }}</AppNote>
     <template #footer>
       <el-button :disabled="pending" @click="open = false">{{ t('common.actions.cancel') }}</el-button>
       <el-button type="primary" :loading="pending" :disabled="!course.writable" @click="submit">

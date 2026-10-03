@@ -13,6 +13,8 @@ import { useI18n } from 'vue-i18n'
 import { formatList } from '@/utils/format'
 import type { RouteLocationRaw } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -458,9 +460,9 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
       </div>
       <div class="event-item__head">
         <span class="event-item__title">{{ title }}</span>
-        <el-tag v-if="fresh" size="small" type="primary" effect="dark" round disable-transitions>
+        <AppTag v-if="fresh" tone="indigo">
           {{ t('activity.fresh') }}
-        </el-tag>
+        </AppTag>
         <span class="event-item__time">
           <el-tooltip v-if="actionTo" :content="t('activity.viaAction')" placement="top">
             <router-link :to="actionTo" class="event-item__action" :aria-label="t('activity.viaAction')">
@@ -502,19 +504,13 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
         <template v-for="(f, i) in facts" :key="i">
           <StatusTag v-if="f.kind === 'tag'" :vocab="f.vocab" :value="f.value" />
           <el-tooltip v-else-if="f.kind === 'text' && f.tip" :content="f.tip" placement="top">
-            <el-tag :type="f.tone ?? 'info'" size="small" effect="plain" disable-transitions tabindex="0">
+            <AppTag :tone="toneOf(f.tone ?? 'info')" tabindex="0">
               {{ f.text }}
-            </el-tag>
+            </AppTag>
           </el-tooltip>
-          <el-tag
-            v-else-if="f.kind === 'text'"
-            :type="f.tone ?? 'info'"
-            size="small"
-            effect="plain"
-            disable-transitions
-          >
+          <AppTag v-else-if="f.kind === 'text'" :tone="toneOf(f.tone ?? 'info')">
             {{ f.text }}
-          </el-tag>
+          </AppTag>
           <span v-else-if="f.kind === 'link'" class="event-item__fact-link">
             <router-link :to="f.to">{{ f.text }}</router-link>
             <IdText :id="f.id" />

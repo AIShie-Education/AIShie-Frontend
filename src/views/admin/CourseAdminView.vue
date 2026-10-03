@@ -16,6 +16,7 @@ import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -151,24 +152,23 @@ function onSeated(_memberId: string, actorId: string) {
     <AsyncState :loading="state.loading.value && !course" :error="course ? null : state.error.value" @retry="state.reload">
       <template v-if="course">
         <el-alert
-          :type="course.status === 'archived' ? 'warning' : course.status === 'draft' ? 'info' : 'success'"
-          :title="t(`admin.course.statusHelp.${course.status}`)"
+          v-if="course.status === 'archived'"
+          type="warning"
+          :title="t('admin.course.statusHelp.archived')"
           :closable="false"
           show-icon
           class="course-admin__alert"
         />
-        <el-alert
-          :type="seat ? 'success' : 'info'"
-          :closable="false"
-          class="course-admin__alert"
-          :title="
+        <AppNote v-else class="course-admin__alert">{{ t(`admin.course.statusHelp.${course.status}`) }}</AppNote>
+        <AppNote class="course-admin__alert">
+          {{
             seat
               ? t('admin.course.seatedAs', { role: t(`enums.role.${seat.role}`) })
               : session.isAdmin
                 ? t('admin.course.notSeated')
                 : t('deptAdmin.course.notSeated')
-          "
-        />
+          }}
+        </AppNote>
 
         <div class="course-admin__grid app-columns">
           <section class="app-card">

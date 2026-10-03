@@ -5,7 +5,7 @@ export default {
     new: '添加作业',
     filter: '按标题筛选',
     show: {
-      all: '全部',
+      label: '显示哪些作业',
       published: '已发布',
       unpublished: '未发布',
     },

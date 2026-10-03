@@ -14,6 +14,8 @@ import { read } from '@/api/http'
 import type { AgentSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { usePolling } from '@/composables/usePolling'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AgentName from '@/components/AgentName.vue'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import PresenceText from '@/components/PresenceText.vue'
@@ -100,14 +102,9 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
         <AgentName :name="a.display_name" ellipsis class="side-agent__name" />
         <span class="side-agent__meta">
           <PresenceText :value="a.last_seen_at" />
-          <el-tag
-            v-if="agentStanding(a) !== 'active'"
-            :type="STANDING_TAG[agentStanding(a)]"
-            size="small"
-            disable-transitions
-          >
+          <AppTag v-if="agentStanding(a) !== 'active'" :tone="toneOf(STANDING_TAG[agentStanding(a)])">
             {{ t(`agents.standing.${agentStanding(a)}`) }}
-          </el-tag>
+          </AppTag>
         </span>
       </router-link>
     </nav>

@@ -102,6 +102,7 @@ watch(offersFilter, (on) => {
       :error="session.memberships.length ? null : state.error.value"
       :empty="!courses.length && !unseated.length"
       :empty-text="session.canAdminister ? t('home.noCoursesAdmin') : t('home.noCourses')"
+      empty-page
       @retry="state.reload"
     >
       <template #empty>

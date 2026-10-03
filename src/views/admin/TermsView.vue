@@ -11,6 +11,10 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -36,9 +40,9 @@ function stateOf(x: Term): TermState {
   if (x.ends_on < today) return 'ended'
   return 'current'
 }
-const STATE_TAG: Record<TermState, 'success' | 'primary' | 'info'> = {
+const STATE_TAG: Record<TermState, 'success' | 'info'> = {
   current: 'success',
-  upcoming: 'primary',
+  upcoming: 'info',
   ended: 'info',
 }
 
@@ -132,14 +136,7 @@ async function save() {
         </el-input>
         <span class="app-toolbar__spacer" />
         <span v-if="all.length" class="app-muted setup-count">{{ t('adminSetup.terms.count', all.length) }}</span>
-        <el-button
-          :loading="terms.loading.value"
-          circle
-          :aria-label="t('common.actions.refresh')"
-          @click="terms.reload"
-        >
-          <el-icon><Refresh /></el-icon>
-        </el-button>
+        <RefreshButton :loading="terms.loading.value" @click="terms.reload" />
       </div>
       <AsyncState
         :loading="terms.loading.value && !terms.data.value"
@@ -170,9 +167,9 @@ async function save() {
           </el-table-column>
           <el-table-column :label="t('common.labels.status')" :min-width="narrow ? 90 : 110">
             <template #default="{ row }">
-              <el-tag :type="STATE_TAG[stateOf(row)]" size="small" disable-transitions>
+              <AppTag :tone="toneOf(STATE_TAG[stateOf(row)])">
                 {{ t(`adminSetup.terms.state.${stateOf(row)}`) }}
-              </el-tag>
+              </AppTag>
             </template>
           </el-table-column>
           <el-table-column
@@ -237,7 +234,7 @@ async function save() {
             />
           </el-form-item>
         </div>
-        <el-alert type="info" :closable="false" show-icon :title="t('adminSetup.terms.create.permanent')" />
+        <AppNote>{{ t('adminSetup.terms.create.permanent') }}</AppNote>
       </el-form>
       <template #footer>
         <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>

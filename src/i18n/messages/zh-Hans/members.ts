@@ -14,7 +14,7 @@ export default {
   noLoginId: '没有',
   loginIdHelp: '除邮箱外，也可以用它登录；只有管理员可以更改。',
   tabs: {
-    all: '全部',
+    label: '人员或智能体',
     people: '人员',
     agents: '智能体',
   },

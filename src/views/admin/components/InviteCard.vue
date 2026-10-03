@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 import type { Actor, ToolOut } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import TimeText from '@/components/TimeText.vue'
 import InviteRevealDialog from './InviteRevealDialog.vue'
 import { DEFAULT_INVITE_DAYS, INVITE_DAYS, inviteBlocker, inviteMode, signInState } from './signIn'
@@ -66,7 +67,7 @@ function closed() {
     <h2 class="app-card__title">{{ t('admin.invite.title') }}</h2>
     <p class="app-muted invite__intro">{{ t('admin.invite.intro') }}</p>
 
-    <el-alert v-if="blockedText" type="info" :closable="false" show-icon :title="blockedText">
+    <AppNote v-if="blockedText" :title="blockedText">
       <div v-if="blocker === 'self'" class="invite__blocked-action">
         <router-link :to="{ name: 'account' }">{{ t('admin.invite.blocked.selfLink') }}</router-link>
       </div>
@@ -76,7 +77,7 @@ function closed() {
           <span>{{ t('admin.invite.blocked.giveEmail') }}</span>
         </el-button>
       </div>
-    </el-alert>
+    </AppNote>
 
     <template v-else>
       <ul v-if="state && (state.invite !== 'none' || actor.has_password)" class="invite__facts">

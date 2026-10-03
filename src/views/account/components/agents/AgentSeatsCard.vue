@@ -9,9 +9,11 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Collection } from '@element-plus/icons-vue'
 import type { AgentFull, AgentRequest, AgentSeat } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { seatPurpose } from '@/utils/agents'
+import AppTag from '@/components/AppTag.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import LevelIcon from '@/components/LevelIcon.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -115,7 +117,7 @@ async function takeBack(r: AgentRequest) {
             <StatusTag v-if="seatPurpose(s)" vocab="seatPurpose" :value="seatPurpose(s)" />
             <template v-if="s.preset && seatPurpose({ preset: s.preset }) !== seatPurpose(s)">
               <StatusTag v-if="isBuiltinPreset(s.preset)" vocab="preset" :value="s.preset" />
-              <el-tag v-else type="info" size="small" disable-transitions>{{ s.preset }}</el-tag>
+              <AppTag v-else variant="outline" :icon="Collection">{{ s.preset }}</AppTag>
             </template>
             <StatusTag v-if="s.status !== 'active'" vocab="memberStatus" :value="s.status" />
             <StatusTag v-if="s.course_status !== 'active'" vocab="courseStatus" :value="s.course_status" />
@@ -139,16 +141,14 @@ async function takeBack(r: AgentRequest) {
         <div class="agent-seat__perms">
           <span class="agent-seat__k">{{ t('agents.seats.mayNow') }}</span>
           <template v-if="grantedPerms(s.perms).length">
-            <el-tag
+            <AppTag
               v-for="g in grantedPerms(s.perms)"
               :key="g.perm"
               :class="['app-level-tag', `is-${g.level}`]"
-              size="small"
               :title="t(`enums.level.${g.level}`)"
-              disable-transitions
             >
               <LevelIcon :level="g.level" />{{ t(`enums.perm.${g.perm}`) }}
-            </el-tag>
+            </AppTag>
           </template>
           <span v-else class="app-muted">
             {{

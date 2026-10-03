@@ -27,7 +27,9 @@ import { ApiError } from '@/api/http'
 import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { AgentPatch, HostedAgent, KeyTestAnswer, ModelsAnswer, ProviderOffer, SchoolOffer } from '@/api/runtime-types'
 import { REASONING_EFFORTS } from '@/api/runtime-types'
+import AppNote from '@/components/AppNote.vue'
 import DailyReset from '@/components/DailyReset.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import {
   FIELD_REASONS,
   MAX_OUTPUT_TOKENS,
@@ -239,7 +241,6 @@ async function test() {
   }
 }
 
-const TEST_TONE = { ok: 'success', key_refused: 'error', model_not_found: 'warning', key_accepted: 'warning', unreachable: 'warning' } as const
 const testText = computed(() => {
   const r = lastTest.value
   if (!r) return ''
@@ -367,13 +368,7 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
     >
       <el-button size="small" @click="load">{{ t('common.actions.retry') }}</el-button>
     </el-alert>
-    <el-alert
-      v-else-if="nothingOffered"
-      type="info"
-      :closable="false"
-      show-icon
-      :title="t('hosting.model.noProviders')"
-    />
+    <AppNote v-else-if="nothingOffered">{{ t('hosting.model.noProviders') }}</AppNote>
     <template v-else>
       <el-alert
         v-if="notice"
@@ -416,13 +411,9 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
             </i18n-t>
             <div class="app-form-hint">{{ t('hosting.school.noKey') }}</div>
           </el-form-item>
-          <el-alert
-            type="info"
-            :closable="false"
-            show-icon
-            :title="t('hosting.school.warning')"
-            class="model-dialog__alert model-form__school-warning"
-          />
+          <DataFlowNotice class="model-dialog__alert model-form__school-warning">
+            {{ t('hosting.school.warning') }}
+          </DataFlowNotice>
           <div v-if="ownAvailable" class="model-form__fallback">
             <h4 class="model-form__fallback-title">{{ t('hosting.school.fallbackTitle') }}</h4>
             <el-checkbox v-model="fallback" class="model-form__fallback-on">{{ t('hosting.school.fallbackOn') }}</el-checkbox>
@@ -540,20 +531,17 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
             </el-collapse-item>
           </el-collapse>
 
-          <el-alert
-            type="warning"
-            :closable="false"
-            show-icon
-            :title="t('hosting.model.warning', { provider: providerName })"
-            class="model-dialog__alert"
-          />
+          <DataFlowNotice class="model-dialog__alert model-form__own-warning">
+            {{ t('hosting.model.warning', { provider: providerName }) }}
+          </DataFlowNotice>
         </template>
         </template>
       </el-form>
 
+      <!-- Its type in the template, where lint reads it: a key that works is green, a refused one red, the rest amber. -->
       <el-alert
         v-if="lastTest"
-        :type="TEST_TONE[lastTest.result]"
+        :type="lastTest.result === 'ok' ? 'success' : lastTest.result === 'key_refused' ? 'error' : 'warning'"
         :closable="false"
         show-icon
         :title="testText"

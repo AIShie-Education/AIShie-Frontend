@@ -290,9 +290,12 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   which its owner's own tools use with tokens the owner issues (`agent.issue_token`), and which
   nobody asks on the site. Every place an agent is made asks for it with `<HostingChoice v-model>`
   (no default; it says it is for good) and sends it: `agent.create`, `actor.register` for an agent,
-  and a new course agent. Nothing offers to change it (Core refuses: `hosting_fixed`). Show it,
-  wherever an agent is shown in detail, with `<HostingTag :hosting :site-chat>`, which for one hosted
-  on AIshie says whether it can be asked now (`site_chat`) where that is known. An agent with MCP
+  and a new course agent. Nothing offers to change it (Core refuses: `hosting_fixed`). Show it once,
+  among the facts of the agent's own page (its member page, its owner's page, the administration's
+  page), with `<HostingTag :hosting :site-chat>`, which for one hosted on AIshie says whether it can
+  be asked now (`site_chat`) where that is known: not again in that page's header or on its cards,
+  and not in a list of agents, which says whether each can be asked by `<AskableDot>` before its name
+  (see [Tags](#building-a-view)). An agent with MCP
   access has no hosting anywhere (its page shows `McpAccessCard`: its tokens, Core's MCP endpoint,
   the header and Claude Desktop's configuration); one hosted on AIshie has no token anywhere for its
   owner (Core refuses one: `hosted_by_runtime`), and its page shows `HostingPanel`.
@@ -568,15 +571,72 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `usePageTitle(routeName, () => key)` (`@/router/title`): the approval queue, for someone who decides
   nothing there, is their agents' proposals.
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
-- Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
-  `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
+- **Empty places** say so with `<AppEmpty :text>` (AsyncState's `empty-text` is one), never Element
+  Plus's grey box: inside a card, one line in the second ink, with what to do about it in its slot (an
+  action, a hint); where nothing fills the page or the chat (`page`, AsyncState's `empty-page`), the
+  brand's line icon (an open book with the light over it, 48 px, stroke 1.75) over the words and a
+  title where it has one. A state that is not a fault (no agent service beside the server, an
+  administrator with no seat in a course) is one too; an `el-result` is left for what went wrong.
+- **Tags** are `<AppTag :tone :variant>`, or `<StatusTag vocab="submissionState" :value="s.state" />`
+  for Core's vocabularies (see `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`),
+  drawn by what they say and never by an effect chosen on the page:
+  - a **state** is a pill (`variant="pill"`, the default), tinted in its tone's pill colours: `done`,
+    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below);
+  - an **identity or an attribute** (a role, a kind, a scope, a preset, how an agent runs, "you",
+    "this browser", a sign-in method, an overridden total) is an outline (`variant="outline"`): ink on
+    a line and no ground, square-cornered as `AgentBadge`'s owner is, with its icon (`:icon`) unless
+    its row shows the icon already; it has no tone;
+  - only a **count** is solid (`variant="count"`);
+  - the **usual state** of a row (an active seat, course or actor, work submitted, a grade posted, a
+    material published, a conversation open or answered) is quiet (`variant="quiet"`, as StatusTag
+    draws those values): words in the third ink, no pill, or nothing where the row says it otherwise,
+    so that only what departs from it is coloured. A row that is not published (a material, an
+    assignment) also has the 3 px amber line at its left (`.app-row-unpublished`; on a table, its
+    `row-class-name`).
+
+  A row holds two chips at most. Whether an agent can be asked is a dot before its name
+  (`AskableDot`), not a chip; how it runs is said once, on its own page (HostingTag, above).
+  `npm run lint` refuses an `el-tag` anywhere but in `AppTag`, however a template names it (`<el-tag>`,
+  `<ElTag>`, `<component is="el-tag">`), as it does each of Element Plus's looks below
+  (`eslint.config.js`, `app/element-look`, with `src/lint/elementLook.spec.ts`).
+- **Notes and alerts.** What explains (what a page does, what will happen, that a change waits for
+  approval, a proposal just made) is `<AppNote>`: no icon, a 3 px indigo line at its left, the
+  indigo's tint at half strength under it (`plain`: none), its words in the second ink under a title
+  in the ink where it has one, `closable` where it says what was just done. An `el-alert` is a
+  warning or an error, or an outcome reported in green, and says which in its template, where lint
+  reads it: `type="warning"`, `"error"` or `"success"`, or a choice among them (`:type="ok ?
+  'success' : 'error'"`). Lint refuses `info`, `primary` (drawn as info is), none, and a type only the
+  script knows. An outcome of no colour (a rejection, a decision that itself waits for approval, a
+  proposal taken back: `OutcomeAlert`) and what a version's readers read are notes. It has Element Plus's small icon on its title's line, never the large one
+  beside a title and a description (`styles/element.css`). Where data leaves the site (to a model's
+  provider, under the school's key or an owner's own; into files someone downloads) is said by
+  `<DataFlowNotice>`, a shield on an outline in the indigo's line, the same to administrators,
+  owners and those who ask: in the chat, the first time's points, "Where it goes to be answered" in
+  the whole notice, and, `compact`, the one line under the composer, the shield before it and no
+  outline (`DataFlowNotice.spec.ts` checks each place that says so).
+- **Refresh** is `<RefreshButton :loading @click>`, at the right end of the toolbar of the card that
+  holds what it reads again (`.app-toolbar`; the card's title row, or the tabs' row, where it has
+  none): a secondary button with "Refresh", on a phone's screen (600 px or narrower) a round icon
+  button with its words in its tooltip. A page's header holds what creates or goes elsewhere, never
+  Refresh.
+- **Filters** over a list are `<FilterChips v-model :options :all-count :label>`: Element Plus's check
+  tags, "All N" first, then each choice with its count (a lower bound, "12+", while there is more to
+  load), one at a time, radios to the keyboard and a screen reader; counts a list shows by state are
+  these chips too, never a row of tags that cannot be pressed. A chip counts the rows it filters, no
+  others: where a select has already narrowed the list to one (a student on the submissions page),
+  there is nothing left to filter and there are no chips. A count is in the chip's own ink, set apart
+  by its weight, never faded below the contrast text keeps. A choice of many (an assignment, a
+  student, a type) stays a select. A segmented control (`el-radio-group` of buttons) is for a view's
+  mode, newest or oldest first, by owner or by model, never a filter.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
-  for changes, late, not published). A category is neutral, in the neutral pill's colours
-  (`--app-neutral-bg`, the ground's second shade in the light theme, under `--app-neutral-fg`), told apart by
-  its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
-  of seat, how an agent runs (`HostingTag`). Whether an agent can be asked is neutral too, never
-  green as "online" is; only its not running, which wants its owner, is amber. What is new or
+  for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
+  its icon's shape: as a tag (roles and platform roles, kinds of actor, of seat and of document,
+  scopes, presets, how an agent runs) an outline in ink (Tags, above); as the activity feed's kinds
+  of event, in the neutral pill's colours (`--app-neutral-bg`, the ground's second shade in the light
+  theme, under `--app-neutral-fg`). Whether an agent can be asked is neutral too, never
+  green as "online" is; only its not running, which wants its owner, is amber, and never by its hue
+  alone: whether it can be asked is a dot's shape (AskableDot, below). What is new or
   unread, and a count of what waits for the reader's decision, is indigo. A
   level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
   `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
@@ -634,7 +694,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   Chinese a course's page shows under 13 px, on a laptop and on a phone, and in a date picker. Room
   takes the steps `var(--app-space-xs)` to `-2xl` (4, 8, 12, 16, 24, 32 px) in a rule written or
   rewritten.
-- Forms: `el-form` with `label-position="top"` and rules; dialogs with `el-dialog` (`width="560px"`,
+- Forms: `el-form` with `label-position="top"` and rules; a number field (`el-input-number`) has its
+  steps at its right end (`controls-position="right"`) or none (`:controls="false"`), which lint
+  checks; dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
@@ -810,17 +872,22 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
     an actor's or member's name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an
     outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`.
     `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI". Inside a
-    control (a row that is a button), `AgentBadge` and `AskableText` take `hint-id`: they take no focus,
+    control (a row that is a button), `AgentBadge`, `AskableText` and `AskableDot` take `hint-id`: they take no focus,
     and what their tooltips say goes in hidden elements of those ids, for the control's
     `aria-describedby`.
   - An agent seated as someone's delegate is in Core's role `assistant`, a person's word: `<RoleTag
     :member />` shows which kind of agent it is (course agent, personal agent) in its place.
-  - An agent is never "online". To those who ask it (the chat's header and list of agents),
-    `<AskableText :who :name />` says "Can be asked" or "Paused" (可提問／暫停, 可提问／暂停) from
-    `availabilityOf`, and why on hover; in the chat's header, after whose agent it is (`whose`), which
-    the header has no room to show. To its owner and those who manage it,
+  - An agent is never "online". To those who ask it, in the chat's header, `<AskableText :who :name />`
+    says "Can be asked" or "Paused" (可提問／暫停, 可提问／暂停) from `availabilityOf`, and why on hover,
+    after whose agent it is (`whose`), which the header has no room to show. In a list of agents (the
+    chat's list to ask, the course's agents, the members, My agents) it is `<AskableDot>` before the
+    name, with those words as its name and in its tooltip. Its shape says whether it can be asked, so
+    that no hue need: a solid dot in the ink while it can, a ring while it cannot, in the third ink while
+    it is paused, and in amber, a little heavier, for one hosted on AIshie that AIshie does not run,
+    which wants its owner (My agents, its owner's list, says "Not running" beside its name too); never
+    green. To its owner and those who manage it,
     `<PresenceText :value="last_seen_at" />` speaks of a program connecting (never connected /
-    connected within two minutes / last connected). Both in plain ink, with no dot of colour.
+    connected within two minutes / last connected), in plain ink.
   - What an agent made says so where it is shown: a draft grade names its drafter, and what its draft
     filled into a form carries a 3 px `--app-indigo` line at its left (the indigo line is under 3:1)
     until it is changed, and says so in its label to a screen reader (`GradePanel`). Each row of the
@@ -834,7 +901,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 
   `seatPurpose()` (`@/utils/agents`) tells a course agent from a personal agent by the seat's
   `answers_course`; `delegateArgsFor()` gives `member.add_delegate` both the preset and
-  `answers_course`, always said outright. `<HostingTag>` says how an agent runs, beside it.
+  `answers_course`, always said outright. `<HostingTag>` says how an agent runs, once, among the facts
+  of its own page.
 - People ask an agent on the site only while AIshie's runtime hosts it: one hosted on AIshie for which
   the runtime holds a live token (`site_chat: true`, which nobody declares or switches any more). One
   with MCP access never is, and has no chat box anywhere. Show `site_chat` as a status, never a switch
@@ -1005,7 +1073,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   quoted, for the agent to find; their list works from the keyboard and never takes the Enter an
   input method uses. Whatever stops the caller writing (an agent paused, gone, not answering or
   operated elsewhere, a closed conversation, one waiting for approval) is one muted line above the
-  composer, never an alert box. Under the composer, for the one asking, one muted line says who
+  composer, never an alert box. Under the composer, for the one asking, one muted line, after the
+  shield where data goes is said (`DataFlowNotice compact`, "Notes and alerts"), says who
   else reads the conversation and where the agent sends it, with "More" for the whole notice
   (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read this" opens too: who reads
   it is Core's `visible_to`; where it goes follows how the agent is hosted, a provider named only
@@ -1013,7 +1082,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   fallback's provider too where it is another; and nothing in it is deleted, a withdrawn message
   kept (its files listed in an export, never held there). A new conversation opens at its foot,
   the first time on the points, scrolled until More and Got it show. The first time a person
-  starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points are on
+  starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points, in a
+  `DataFlowNotice` as the notice's "Where it goes to be answered" is, are on
   the new conversation instead, until "Got it" or the first question. A new conversation has no
   title field: it is titled by the first line of its first message (`titleFrom`), and it offers a
   few ways to begin, which fill the box.

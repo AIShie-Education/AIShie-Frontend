@@ -6,6 +6,9 @@
 // revoked); one with MCP access, used from its owner's own tools, never.
 // Nothing here switches it: hosting or pausing it does (its hosting card),
 // and so does suspending it. Only the state, and what changes it, is said.
+import { ChatLineRound, Connection } from '@element-plus/icons-vue'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AgentFull } from '@/api/types'
@@ -18,25 +21,17 @@ const state = computed(() => siteChatState(props.agent))
 // Neutral while it can be asked, as the chat and the course's agents say it: an agent is never shown
 // "online" in green (docs/CONVENTIONS.md). Not running, which wants its owner, is the amber of what waits.
 const TAG = { on: 'info', off: 'warning', suspended: 'info', mcp: 'info' } as const
-const label = computed(() => {
-  switch (state.value) {
-    case 'on':
-      return t('common.agent.askable.on')
-    case 'mcp':
-      return t('common.agent.hosting.mcp')
-  }
-  return t('common.agent.askable.off')
-})
+const label = computed(() => (state.value === 'on' ? t('common.agent.askable.on') : t('common.agent.askable.off')))
 </script>
 
 <template>
   <section class="app-card site-chat" :data-state="state">
     <h2 class="app-card__title">{{ t('agents.siteChat.title') }}</h2>
-    <div class="site-chat__state">
-      <el-tag :type="TAG[state]" effect="plain" disable-transitions>
-        <el-icon aria-hidden="true"><ChatLineRound v-if="state === 'on'" /><Connection v-else /></el-icon>
-        <span>{{ label }}</span>
-      </el-tag>
+    <!-- How it runs is said once, among its facts: an agent with MCP access has no state here. -->
+    <div v-if="state !== 'mcp'" class="site-chat__state">
+      <AppTag size="default" :tone="toneOf(TAG[state])" :icon="state === 'on' ? ChatLineRound : Connection">
+        {{ label }}
+      </AppTag>
     </div>
     <p class="site-chat__text">{{ t(`agents.siteChat.${state}`) }}</p>
     <p v-if="state === 'on'" class="site-chat__text">{{ t('agents.siteChat.stop') }}</p>
@@ -46,11 +41,6 @@ const label = computed(() => {
 <style scoped>
 .site-chat__state {
   margin-bottom: 10px;
-}
-.site-chat__state :deep(.el-tag__content) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 .site-chat__text {
   margin: 0 0 10px;

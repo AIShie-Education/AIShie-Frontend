@@ -4,6 +4,8 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import MarkdownView from '@/components/MarkdownView.vue'
 import VersionFileList from '@/components/VersionFileList.vue'
 import { versionFilesOf } from '@/utils/documentFiles'
@@ -46,9 +48,9 @@ const note = computed(() => {
         <el-icon><Memo /></el-icon>
         {{ doc?.title ?? t('submissions.rubric.title') }}
       </span>
-      <el-tag v-if="version" size="small" :type="version.published ? 'success' : 'warning'" disable-transitions>
+      <AppTag v-if="version" :tone="toneOf(version.published ? 'success' : 'warning')">
         {{ t('submissions.rubric.version', { n: version.seq }) }}
-      </el-tag>
+      </AppTag>
     </div>
     <p v-if="note" class="rubric-panel__note" :class="{ 'is-warning': state?.status === 'unpublished' || !!error }">
       {{ note }}

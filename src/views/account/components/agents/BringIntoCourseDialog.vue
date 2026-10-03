@@ -21,6 +21,8 @@ import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { delegateArgsFor, presetForPurpose, type SeatPurpose } from '@/utils/agents'
 import { aboveCeiling, capToCeilings, ceilingsOf } from '@/utils/ceilings'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -158,14 +160,7 @@ async function submit() {
       @retry="seats.reload"
     >
       <h3 class="bring__step">{{ t('agents.bring.course') }}</h3>
-      <el-alert
-        v-if="!available.length"
-        type="info"
-        :closable="false"
-        show-icon
-        :title="t('agents.bring.noneAvailable')"
-        class="bring__alert"
-      />
+      <AppNote v-if="!available.length" class="bring__alert">{{ t('agents.bring.noneAvailable') }}</AppNote>
       <el-radio-group v-model="courseId" class="bring__courses">
         <el-radio
           v-for="c in choices"
@@ -202,14 +197,16 @@ async function submit() {
         <h3 class="bring__step">{{ t('agents.bring.preview') }}</h3>
         <AsyncState :loading="preview.loading.value && !defaults" :error="preview.error.value" @retry="preview.reload">
           <div v-if="defaults" class="bring__preview" :class="{ 'is-loading': preview.loading.value }">
+            <!-- What bringing it in will do is a note, a request for approval too (never amber); a seat that may not, an error. -->
             <el-alert
-              v-if="level"
-              :type="level === 'confirm_required' ? 'warning' : level === 'denied' ? 'error' : 'success'"
+              v-if="level === 'denied'"
+              type="error"
               :closable="false"
               show-icon
-              :title="t(`agents.bring.level.${level}`)"
+              :title="t('agents.bring.level.denied')"
               class="bring__alert"
             />
+            <AppNote v-else-if="level" class="bring__alert">{{ t(`agents.bring.level.${level}`) }}</AppNote>
             <dl class="bring__facts">
               <dt>{{ t('agents.bring.answers') }}</dt>
               <dd>{{ purpose === 'course' ? t('agents.bring.answersCourse') : t('agents.bring.answersYou') }}</dd>
@@ -225,17 +222,9 @@ async function submit() {
               <dt>{{ t('agents.bring.may') }}</dt>
               <dd class="bring__perms">
                 <template v-if="granted.length">
-                  <el-tag
-                    v-for="g in granted"
-                    :key="g.perm"
-                    type="info"
-                    effect="plain"
-                    size="small"
-                    :title="t(`enums.level.${g.level}`)"
-                    disable-transitions
-                  >
+                  <AppTag v-for="g in granted" :key="g.perm" variant="outline" :title="t(`enums.level.${g.level}`)">
                     {{ t(`enums.perm.${g.perm}`) }}
-                  </el-tag>
+                  </AppTag>
                 </template>
                 <span v-else class="app-muted">{{ t('agents.seats.nothing') }}</span>
               </dd>
@@ -243,9 +232,9 @@ async function submit() {
             <details class="bring__details">
               <summary>
                 {{ t('agents.bring.adjust') }}
-                <el-tag v-if="changedPerms.length" size="small" type="warning" round class="bring__changed">
+                <AppTag v-if="changedPerms.length" tone="wait" class="bring__changed">
                   {{ t('agents.bring.changed', { n: changedPerms.length }) }}
-                </el-tag>
+                </AppTag>
               </summary>
               <p class="app-form-hint bring__hint">{{ t('agents.bring.adjustHelp') }}</p>
               <PermEditor

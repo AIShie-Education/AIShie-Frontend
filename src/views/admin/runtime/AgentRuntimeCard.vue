@@ -20,6 +20,9 @@ import { read } from '@/api/http'
 import type { ListItem, ToolOut } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import TimeText from '@/components/TimeText.vue'
 import CopyBlock from '@/views/account/components/agents/CopyBlock.vue'
@@ -115,15 +118,13 @@ function forget() {
       </el-button>
     </h2>
     <p class="agent-runtime-card__intro">{{ t('runtimeAdmin.agentRuntime.intro') }}</p>
-    <el-alert type="info" :closable="false" show-icon class="agent-runtime-card__setup">
-      <template #title>
-        <i18n-t keypath="runtimeAdmin.agentRuntime.setup" tag="span" scope="global">
-          <template #command>
-            <code class="agent-runtime-card__command">{{ ROTATE }}</code>
-          </template>
-        </i18n-t>
-      </template>
-    </el-alert>
+    <AppNote class="agent-runtime-card__setup">
+      <i18n-t keypath="runtimeAdmin.agentRuntime.setup" tag="span" scope="global">
+        <template #command>
+          <code class="agent-runtime-card__command">{{ ROTATE }}</code>
+        </template>
+      </i18n-t>
+    </AppNote>
 
     <AsyncState
       :loading="list.loading.value && !list.data.value"
@@ -163,9 +164,9 @@ function forget() {
           <div class="agent-runtime-card__main">
             <div class="agent-runtime-card__head">
               <span class="agent-runtime-card__label">{{ c.label?.trim() || t('admin.credentials.unlabelled') }}</span>
-              <el-tag :type="STATE_TAG[stateOf(c)]" size="small" disable-transitions>
+              <AppTag :tone="toneOf(STATE_TAG[stateOf(c)])">
                 {{ t(`runtimeAdmin.agentRuntime.state.${stateOf(c)}`) }}
-              </el-tag>
+              </AppTag>
             </div>
             <div class="agent-runtime-card__meta">
               <code class="agent-runtime-card__code">{{ masked(c.token_prefix) }}</code>
@@ -219,11 +220,13 @@ function forget() {
     >
       <template v-if="issued">
         <el-alert
-          :type="issued.token ? 'warning' : 'info'"
+          v-if="issued.token"
+          type="warning"
           :closable="false"
           show-icon
-          :title="issued.token ? t('runtimeAdmin.agentRuntime.once') : t('runtimeAdmin.agentRuntime.replayed')"
+          :title="t('runtimeAdmin.agentRuntime.once')"
         />
+        <AppNote v-else>{{ t('runtimeAdmin.agentRuntime.replayed') }}</AppNote>
         <CopyBlock
           v-if="issued.token"
           :text="issued.token"

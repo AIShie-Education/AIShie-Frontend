@@ -50,6 +50,7 @@ import { useBackCloses } from '@/composables/useBackCloses'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePolling } from '@/composables/usePolling'
 import { useChatStore } from '@/stores/chat'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AgentPicker from './AgentPicker.vue'
 import ChatHistory from './ChatHistory.vue'
 import ChatPane from './ChatPane.vue'
@@ -493,7 +494,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         @open="(courseId: string, id: string) => chat.showConversation(courseId, id)"
       />
 
-      <el-empty v-else-if="!chat.courses.length" class="chat-panel__none" :description="t('chat.panel.noCourses')" />
+      <AppEmpty v-else-if="!chat.courses.length" class="chat-panel__none" :text="t('chat.panel.noCourses')" page />
 
       <ChatPane
         v-else-if="chat.draft"

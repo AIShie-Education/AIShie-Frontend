@@ -15,8 +15,11 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { CostGroup, CostGroupBy, CostLine, CostReport, CostSum, KeySource } from '@/api/runtime-types'
 import { COST_GROUPS } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppEmpty from '@/components/AppEmpty.vue'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { formatList, formatMoney, formatNumber } from '@/utils/format'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { COST_SPAN_DAYS, costRange, utcToday } from './runtimeAdmin'
@@ -96,15 +99,7 @@ function toPrices() {
   <section class="app-card costs-card">
     <h2 ref="cardTitle" class="app-card__title">
       <span>{{ t('runtimeAdmin.costs.title') }}</span>
-      <el-button
-        circle
-        :loading="loading"
-        :aria-label="t('common.actions.refresh')"
-        class="costs-card__refresh"
-        @click="load()"
-      >
-        <el-icon><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="loading" class="costs-card__refresh" @click="load()" />
     </h2>
     <p class="costs-card__intro">{{ t('runtimeAdmin.costs.intro') }}</p>
 
@@ -179,7 +174,7 @@ function toPrices() {
           </el-button>
         </el-alert>
 
-        <el-empty v-if="!rows.length" :description="t('runtimeAdmin.costs.empty')" class="costs-card__empty" />
+        <AppEmpty v-if="!rows.length" :text="t('runtimeAdmin.costs.empty')" class="costs-card__empty" />
         <el-table v-else ref="tableRef" :data="rows" row-key="key" class="costs-card__table">
           <el-table-column :label="t(`runtimeAdmin.costs.groupColumn.${report.group}`)" min-width="200">
             <template #default="{ row }">
@@ -226,15 +221,9 @@ function toPrices() {
           <el-table-column v-if="!narrow" :label="t('runtimeAdmin.usage.modelCalls')" min-width="110" align="right">
             <template #default="{ row }">
               <span class="cost-cell__num">{{ n(callsOf(row)?.calls) }}</span>
-              <el-tag
-                v-if="callsOf(row)?.unpriced_calls"
-                type="warning"
-                size="small"
-                disable-transitions
-                class="cost-cell__unpriced"
-              >
+              <AppTag v-if="callsOf(row)?.unpriced_calls" tone="wait" class="cost-cell__unpriced">
                 {{ t('runtimeAdmin.costs.unpricedShort', { n: n(callsOf(row)?.unpriced_calls) }) }}
-              </el-tag>
+              </AppTag>
             </template>
           </el-table-column>
           <el-table-column v-if="!narrow" :label="t('runtimeAdmin.costs.tokens')" min-width="160" align="right">
@@ -255,15 +244,9 @@ function toPrices() {
               <span v-for="l in otherLines(row)" :key="l.kind" class="cost-cell__other">
                 {{ t('common.pair', { label: kindName(l.kind), value: formatMoney(l.cost_usd) }) }}
               </span>
-              <el-tag
-                v-if="narrow && callsOf(row)?.unpriced_calls"
-                type="warning"
-                size="small"
-                disable-transitions
-                class="cost-cell__unpriced"
-              >
+              <AppTag v-if="narrow && callsOf(row)?.unpriced_calls" tone="wait" class="cost-cell__unpriced">
                 {{ t('runtimeAdmin.costs.unpricedShort', { n: n(callsOf(row)?.unpriced_calls) }) }}
-              </el-tag>
+              </AppTag>
             </template>
           </el-table-column>
         </el-table>

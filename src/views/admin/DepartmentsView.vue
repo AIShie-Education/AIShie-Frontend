@@ -11,13 +11,16 @@
 // department: whoever is above it does.
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { User } from '@element-plus/icons-vue'
 import type { DepartmentNode } from '@/api/types'
 import { useDepartmentTree } from '@/composables/useDepartmentTree'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import { deptActions, roomBeneath, treeRows, type DeptAction, type DeptTreeRow } from '@/utils/departmentTree'
 import { usePresetCounts } from './setup/presetCounts'
 import AdminsDrawer from './departments/AdminsDrawer.vue'
@@ -128,9 +131,7 @@ watch(
         </el-input>
         <span class="app-toolbar__spacer" />
         <span v-if="count" class="app-muted setup-count">{{ t('adminSetup.departments.count', count) }}</span>
-        <el-button :loading="departments.loading.value" circle :aria-label="t('common.actions.refresh')" @click="refresh">
-          <el-icon><Refresh /></el-icon>
-        </el-button>
+        <RefreshButton :loading="departments.loading.value" @click="refresh" />
       </div>
       <AsyncState
         :loading="departments.loading.value && !departments.loaded.value"
@@ -146,9 +147,9 @@ watch(
             <template #default="{ row }">
               <span class="dept-name">
                 <span class="dept-name__text">{{ row.name }}</span>
-                <el-tag v-if="row.appointed" type="primary" size="small" disable-transitions class="dept-name__yours">
+                <AppTag v-if="row.appointed" variant="outline" :icon="User" class="dept-name__yours">
                   {{ t('deptAdmin.tree.yours') }}
-                </el-tag>
+                </AppTag>
               </span>
               <span v-if="above(row)" class="dept-name__above">{{ t('deptAdmin.tree.inPath', { path: above(row) }) }}</span>
               <router-link

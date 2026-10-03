@@ -7,21 +7,16 @@ import { useI18n } from 'vue-i18n'
 defineProps<{ courseId: string; message: string }>()
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
+import AppNote from '@/components/AppNote.vue'
 </script>
 
 <template>
-  <el-alert
-    type="warning"
-    show-icon
-    :title="t('common.outcome.proposedTitle')"
-    class="pending-alert"
-    @close="emit('close')"
-  >
+  <AppNote :title="t('common.outcome.proposedTitle')" class="pending-alert" @close="emit('close')" closable>
     <p class="pending-alert__text">{{ message }}</p>
     <router-link :to="{ name: 'course-my-actions', params: { courseId } }" class="pending-alert__link">
       {{ t('materials.pendingLink') }}
     </router-link>
-  </el-alert>
+  </AppNote>
 </template>
 
 <style scoped>

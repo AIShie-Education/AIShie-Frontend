@@ -6,9 +6,11 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
+import { Clock } from '@element-plus/icons-vue'
 import { announce, useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -91,9 +93,7 @@ const excerpt = computed(() => {
           :to="{ name: 'course-action', params: { courseId, actionId: waiting } }"
           class="action-card__waiting"
         >
-          <el-tag type="info" size="small" effect="plain">
-            <el-icon><Clock /></el-icon> {{ t('actions.decision.proposedNotice') }}
-          </el-tag>
+          <AppTag tone="wait" :icon="Clock">{{ t('actions.decision.proposedNotice') }}</AppTag>
         </router-link>
       </div>
       <span class="action-card__when"><TimeText :value="action.created_at" relative /></span>

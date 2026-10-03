@@ -19,9 +19,11 @@ import { notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useUiStore } from '@/stores/ui'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import TimeText from '@/components/TimeText.vue'
 import EventItem from './components/EventItem.vue'
 import { ensureEventWho, eventActor } from './components/actors'
@@ -277,12 +279,7 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 
 <template>
   <div class="activity">
-    <PageHeader :title="t('activity.title')" :subtitle="t('activity.subtitle')">
-      <el-button :loading="checking || (loading && !loaded)" @click="refresh">
-        <el-icon v-if="!(checking || (loading && !loaded))"><Refresh /></el-icon>
-        <span>{{ t('activity.refresh') }}</span>
-      </el-button>
-    </PageHeader>
+    <PageHeader :title="t('activity.title')" :subtitle="t('activity.subtitle')" />
 
     <AsyncState :loading="loading && !loaded" :error="error" @retry="load">
       <div class="app-card activity__card">
@@ -299,10 +296,19 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           <span v-if="lastChecked" class="activity__checked app-muted">
             {{ t('activity.lastChecked') }} <TimeText :value="lastChecked" relative />
           </span>
+          <RefreshButton :loading="checking || (loading && !loaded)" @click="refresh" />
         </div>
 
         <div class="activity__chips" role="group" :aria-label="t('activity.filterLabel')">
-          <el-check-tag :checked="selected.length === 0 && !byAgents" class="activity__chip" @change="showAll">
+          <el-check-tag
+            :checked="selected.length === 0 && !byAgents"
+            class="activity__chip"
+            role="checkbox"
+            :aria-checked="selected.length === 0 && !byAgents ? 'true' : 'false'"
+            tabindex="0"
+            @change="showAll"
+            @keydown.enter.space.prevent="showAll"
+          >
             {{ t('activity.filter.all') }}
             <span class="activity__chip-count">{{ events.length }}</span>
           </el-check-tag>
@@ -312,7 +318,11 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
             :checked="selected.includes(c)"
             class="activity__chip"
             :class="{ 'is-zero': !counts[c] }"
+            role="checkbox"
+            :aria-checked="selected.includes(c) ? 'true' : 'false'"
+            tabindex="0"
             @change="toggle(c)"
+            @keydown.enter.space.prevent="toggle(c)"
           >
             <el-icon><component :is="CATEGORY_ICON[c]" /></el-icon>
             {{ t(`activity.filter.${c}`) }}
@@ -324,7 +334,11 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
             :checked="byAgents"
             class="activity__chip activity__chip--agents"
             :class="{ 'is-zero': !agentCount }"
+            role="checkbox"
+            :aria-checked="byAgents ? 'true' : 'false'"
+            tabindex="0"
             @change="byAgents = !byAgents"
+            @keydown.enter.space.prevent="byAgents = !byAgents"
           >
             <el-icon><AgentSeatIcon /></el-icon>
             {{ t('activity.filter.agents') }}
@@ -338,8 +352,8 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           <el-button link type="primary" @click="markSeen">{{ t('activity.markSeen') }}</el-button>
         </div>
 
-        <el-empty v-if="!events.length" :description="t('activity.empty')" />
-        <el-empty v-else-if="!shown.length" :description="t('activity.emptyFiltered')" :image-size="80" />
+        <AppEmpty v-if="!events.length" :text="t('activity.empty')" />
+        <AppEmpty v-else-if="!shown.length" :text="t('activity.emptyFiltered')" />
 
         <section v-for="day in days" :key="day.key" class="activity__day">
           <h3 class="activity__day-title">{{ day.label }}</h3>

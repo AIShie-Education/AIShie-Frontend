@@ -24,6 +24,9 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import { formatCountdown } from '@/utils/countdown'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import DepartmentPicker from './departments/DepartmentPicker.vue'
 import CoursePicker from './export/CoursePicker.vue'
@@ -207,13 +210,10 @@ const scopeOptions = computed(() =>
       <h2 id="export-form-title" class="app-card__title">{{ t('auditExport.form.title') }}</h2>
       <p class="app-muted export-form__intro">{{ t('auditExport.form.intro') }}</p>
 
-      <el-alert
+      <AppNote
         v-if="pending"
-        class="export-form__pending"
-        type="info"
-        show-icon
-        :closable="false"
         :title="t('auditExport.pending.title', { time: dayjs(pending.at).format('HH:mm') })"
+        class="export-form__pending"
       >
         <div class="export-form__pending-body">
           <span>{{ t('auditExport.pending.body') }}</span>
@@ -221,7 +221,7 @@ const scopeOptions = computed(() =>
             t('auditExport.pending.discard')
           }}</el-button>
         </div>
-      </el-alert>
+      </AppNote>
 
       <el-form label-position="top" :disabled="running" @submit.prevent>
         <el-form-item :label="t('auditExport.form.scope')" class="export-form__scope">
@@ -344,22 +344,16 @@ const scopeOptions = computed(() =>
     >
       <h2 id="export-outcome-title" class="app-card__title">
         <span>{{ t('auditExport.outcome.title') }}</span>
-        <el-tag v-if="run.exported.replayed" size="small" type="info">{{ t('auditExport.outcome.replayed') }}</el-tag>
+        <AppTag v-if="run.exported.replayed">{{ t('auditExport.outcome.replayed') }}</AppTag>
       </h2>
       <ExportSummary :record="outcome" />
-      <el-alert
-        class="export-outcome__privacy"
-        type="warning"
-        show-icon
-        :closable="false"
-        :title="t('auditExport.privacy.title')"
-      >
+      <DataFlowNotice class="export-outcome__privacy" :title="t('auditExport.privacy.title')">
         <i18n-t keypath="auditExport.privacy.body" tag="p" scope="global" class="export-outcome__privacy-body">
           <template #time
             ><strong>{{ zonedText(outcome.expires_at) }}</strong></template
           >
         </i18n-t>
-      </el-alert>
+      </DataFlowNotice>
       <ExportFiles
         :export-id="outcome.export_id"
         :files="outcome.files"

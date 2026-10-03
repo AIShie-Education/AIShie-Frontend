@@ -3,6 +3,7 @@
 // share among its siblings and of the course total, drop lowest, points and
 // order, and under each bucket the assignments that count toward it. On a
 // narrow screen each row folds into a name line and a line of labelled facts.
+import AppTag from '@/components/AppTag.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDecimal } from '@/utils/format'
@@ -72,14 +73,6 @@ const ICONS: Record<string, string> = {
   direct: 'EditPen',
   empty: 'Folder',
   unseen: 'Folder',
-}
-const TAGS: Record<string, 'primary' | 'success' | 'warning' | 'info'> = {
-  root: 'primary',
-  group: 'primary',
-  bucket: 'success',
-  direct: 'warning',
-  empty: 'info',
-  unseen: 'info',
 }
 const kindOf = (n: SchemeNode) => (n.isRoot ? 'root' : n.kind)
 
@@ -181,9 +174,9 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
           <span class="st-label">
             <span class="st-title">{{ nameOf(row.node) }}</span>
             <el-tooltip :content="t(`scheme.tree.kindHelp.${kindOf(row.node)}`)" placement="top">
-              <el-tag :type="TAGS[kindOf(row.node)]" size="small" effect="plain" disable-transitions class="st-kind">
+              <AppTag variant="outline" class="st-kind">
                 {{ t(`scheme.tree.kind.${kindOf(row.node)}`) }}
-              </el-tag>
+              </AppTag>
             </el-tooltip>
             <el-tooltip v-if="gradedText(row.node)" :content="gradedText(row.node)!" placement="top">
               <el-icon class="st-lock" :aria-label="gradedText(row.node)!"><Warning /></el-icon>
@@ -317,9 +310,9 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
               {{ row.item.a.title }}
             </router-link>
             <el-tooltip v-if="!row.item.a.published_at" :content="t('scheme.tree.unpublishedHelp')" placement="top">
-              <el-tag type="info" size="small" disable-transitions class="st-kind">
+              <AppTag tone="wait" class="st-kind">
                 {{ t('scheme.tree.unpublished') }}
-              </el-tag>
+              </AppTag>
             </el-tooltip>
             <el-tooltip
               v-if="row.item.share === null && row.host.kind !== 'bucket'"
@@ -508,18 +501,6 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
 .st-icon {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
-}
-.st-icon--root {
-  color: var(--el-color-primary);
-}
-.st-icon--group {
-  color: var(--el-color-primary);
-}
-.st-icon--bucket {
-  color: var(--el-color-success);
-}
-.st-icon--direct {
-  color: var(--el-color-warning);
 }
 .st-label {
   display: flex;

@@ -6,6 +6,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import { Message } from '@element-plus/icons-vue'
+import AppTag from '@/components/AppTag.vue'
 import QrCode from '@/components/QrCode.vue'
 import { useCountdown } from '@/composables/useCountdown'
 import { countdownParts } from '@/utils/countdown'
@@ -136,7 +138,7 @@ async function download() {
           <dt>{{ t('join.links.list.domains') }}</dt>
           <dd>
             <template v-if="domains?.length">
-              <el-tag v-for="d in domains" :key="d" size="small" type="info">@{{ d }}</el-tag>
+              <AppTag v-for="d in domains" :key="d" variant="outline" :icon="Message">@{{ d }}</AppTag>
             </template>
             <span v-else>{{ t('join.links.anyEmail') }}</span>
           </dd>

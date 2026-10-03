@@ -19,6 +19,8 @@ import { useAsync } from '@/composables/useAsync'
 import { useBackCloses } from '@/composables/useBackCloses'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import TimeText from '@/components/TimeText.vue'
 import { DRAWER_SIZE } from '../setup/presets'
@@ -166,7 +168,7 @@ async function remove(a: Appointment) {
                     t('common.labels.youTag')
                   }}</span></span
                 >
-                <el-tag v-if="a.removed_at" type="info" size="small" disable-transitions>{{ t('deptAdmin.admins.ended') }}</el-tag>
+                <AppTag v-if="a.removed_at">{{ t('deptAdmin.admins.ended') }}</AppTag>
               </div>
               <div class="admins-drawer__meta">
                 <i18n-t keypath="deptAdmin.admins.appointedBy" tag="div" scope="global">
@@ -216,13 +218,9 @@ async function remove(a: Appointment) {
 
       <section class="admins-drawer__add" aria-labelledby="admins-add">
         <h3 id="admins-add" class="admins-drawer__heading">{{ t('deptAdmin.admins.add') }}</h3>
-        <el-alert
-          v-if="!staffs"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="dept.parent_id ? t('deptAdmin.admins.cannotHere') : t('deptAdmin.admins.cannotTop')"
-        />
+        <AppNote v-if="!staffs">
+          {{ dept.parent_id ? t('deptAdmin.admins.cannotHere') : t('deptAdmin.admins.cannotTop') }}
+        </AppNote>
         <template v-else>
           <p class="app-form-hint admins-drawer__add-hint">{{ t('deptAdmin.admins.addHint') }}</p>
           <PersonLookup ref="finder" @found="(p) => (person = p)" @missing="person = null" @cleared="person = null">

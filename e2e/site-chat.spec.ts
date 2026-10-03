@@ -160,10 +160,10 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
 
     // His agent's page says how it runs, that nobody asks it here, and switches nothing.
     await page.goto(`/account/agents/${w.helperId}`)
-    await expect(page.locator('.page-header')).toContainText('MCP access')
+    await expect(page.locator('.agent-view__desc')).toContainText('MCP access')
     const card = siteChatCard(page)
     await expect(card.getByRole('heading', { name: 'Questions on the site' })).toBeVisible()
-    await expect(card.locator('.el-tag')).toHaveText('MCP access')
+    await expect(card.locator('.el-tag')).toHaveCount(0)
     await expect(card).toContainText(MCP_NOTE)
     await expect(card.getByRole('button')).toHaveCount(0)
     await expect(page.locator('.mcp-card')).toContainText('People cannot ask this agent on the site')
@@ -175,7 +175,7 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(`/account/agents/${w.tutorId}`)
-    await expect(page.locator('.page-header')).toContainText('Hosted on AIshie')
+    await expect(page.locator('.agent-view__desc')).toContainText('Hosted on AIshie')
     const card = siteChatCard(page)
     await expect(card.locator('.el-tag')).toHaveText('Not running')
     await expect(card).toContainText('AIshie’s agent service is not running it')
@@ -184,8 +184,9 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     // Staff see which of the course's agents nobody can ask here, and why.
     await page.goto(coursePath('agents'))
     const row = page.locator('.agent-row').filter({ hasText: TUTOR })
-    await expect(row.locator('.hosting-tag__mode')).toHaveText('Hosted on AIshie')
-    await expect(row.locator('.hosting-tag__askable')).toHaveText('Not running')
+    // Whether it can be asked is a dot before its name, amber, saying so; how it runs is left to its page.
+    await expect(row.locator('.askable-dot')).toHaveAttribute('aria-label', 'Not running')
+    await expect(row.locator('.hosting-tag')).toHaveCount(0)
     await expect(row.locator('.agent-row__not-askable')).toHaveText(
       'Students cannot ask it on the site until AIshie runs it again: its owner hosts it from My agents.',
     )
@@ -211,7 +212,9 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     const panel = await openChat(page)
     const row = panel.locator('button.resp-row').filter({ hasText: TUTOR })
     await expect(row).toContainText('Course agent')
-    await expect(row.locator('.hosting-tag__mode')).toHaveText('Hosted on AIshie')
+    // Whether it can be asked, by a dot before its name; how it runs is its owner's concern.
+    await expect(row.locator('.askable-dot')).toHaveAttribute('aria-label', 'Can be asked')
+    await expect(row.locator('.hosting-tag')).toHaveCount(0)
     await photograph(page, 'hosting-respondents')
     await row.click()
     const composer = panel.locator('.chat-pane textarea')

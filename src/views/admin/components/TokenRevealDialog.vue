@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { MCP_ENDPOINT } from '@/api/http'
 import type { ToolOut } from '@/api/types'
+import AppNote from '@/components/AppNote.vue'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
 
@@ -75,7 +76,7 @@ function finish() {
         :title="t('admin.token.once')"
         class="reveal__alert"
       />
-      <el-alert v-else type="info" :closable="false" show-icon :title="t('admin.token.replayed')" class="reveal__alert" />
+      <AppNote v-else class="reveal__alert">{{ t('admin.token.replayed') }}</AppNote>
 
       <div v-if="token" class="reveal__token">
         <label class="reveal__label" for="reveal-token">{{ t('admin.token.token') }}</label>

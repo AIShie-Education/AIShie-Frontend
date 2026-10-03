@@ -5,7 +5,7 @@ export default {
     new: '新增作業',
     filter: '按標題篩選',
     show: {
-      all: '全部',
+      label: '顯示哪些作業',
       published: '已發佈',
       unpublished: '未發佈',
     },

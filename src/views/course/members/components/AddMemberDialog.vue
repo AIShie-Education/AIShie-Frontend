@@ -28,6 +28,8 @@ import { useSessionStore } from '@/stores/session'
 import { capToCeilings, newSeatCeilings } from '@/utils/ceilings'
 import { isUuid, shortId } from '@/utils/format'
 import { isLoginId } from '@/utils/loginId'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -508,14 +510,9 @@ function capToMine() {
           :title="t('members.add.emailNobody')"
           class="add-member__inline-alert add-member__email-alert"
         />
-        <el-alert
-          v-else-if="emailState === 'partial'"
-          type="info"
-          :closable="false"
-          show-icon
-          :title="t('members.add.emailPartial')"
-          class="add-member__inline-alert add-member__email-alert"
-        />
+        <AppNote v-else-if="emailState === 'partial'" class="add-member__inline-alert add-member__email-alert">
+          {{ t('members.add.emailPartial') }}
+        </AppNote>
         <el-alert
           v-else-if="emailState && emailState !== 'finding'"
           type="error"
@@ -657,14 +654,7 @@ function capToMine() {
             clearable
             :placeholder="t('members.add.pickStudents')"
           />
-          <el-alert
-            v-if="listsItself"
-            type="info"
-            :closable="false"
-            show-icon
-            :title="t('members.add.listsItself')"
-            class="add-member__inline-alert"
-          />
+          <AppNote v-if="listsItself" class="add-member__inline-alert">{{ t('members.add.listsItself') }}</AppNote>
           <el-alert
             v-else-if="!form.students.length"
             type="warning"
@@ -722,9 +712,9 @@ function capToMine() {
           <template #title>
             <span class="add-member__perms-title">
               {{ t('members.add.perms') }}
-              <el-tag v-if="changedCount" size="small" type="warning" round>
+              <AppTag v-if="changedCount" tone="wait">
                 {{ t('members.add.permsChanged', { n: changedCount }) }}
-              </el-tag>
+              </AppTag>
               <span v-else class="app-muted">{{ t('members.add.permsAsPreset') }}</span>
             </span>
           </template>
@@ -742,10 +732,10 @@ function capToMine() {
       </el-collapse>
     </el-form>
 
-    <el-alert type="info" :closable="false" class="add-member__rules">
+    <AppNote class="add-member__rules">
       <template #title>{{ t('members.grant.rulesTitle') }}</template>
       {{ t('members.grant.rules') }}
-    </el-alert>
+    </AppNote>
     <el-alert v-if="problems.length" type="warning" :closable="false" show-icon class="add-member__rules">
       <template #title>{{ t('members.grant.willRefuse') }}</template>
       <ul class="add-member__problems">

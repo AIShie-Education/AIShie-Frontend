@@ -13,6 +13,7 @@ import type { ToolOut } from '@/api/http'
 import type { Member } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import RefusalAlert from './RefusalAlert.vue'
 
 const open = defineModel<boolean>({ required: true })
@@ -96,7 +97,7 @@ async function copy() {
           </el-button>
         </dd>
       </dl>
-      <el-alert v-else type="info" :closable="false" show-icon :title="t('members.reset.replayed')" />
+      <AppNote v-else>{{ t('members.reset.replayed') }}</AppNote>
       <p class="app-form-hint reset-dialog__p">
         {{ t('members.reset.ended', { n: result.sessions_ended }, result.sessions_ended) }}
         {{ t('members.reset.next', { name }) }}

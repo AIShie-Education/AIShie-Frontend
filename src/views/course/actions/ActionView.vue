@@ -18,10 +18,12 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { uuidPredecessor } from '@/views/admin/components/adminShared'
+import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import JsonView from '@/components/JsonView.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
@@ -331,24 +333,14 @@ const errorTitle = computed(() => {
             <el-icon><RefreshLeft /></el-icon>
             <span>{{ t('actions.withdraw.action') }}</span>
           </el-button>
-          <el-button :loading="state.loading.value" @click="reloadPage">
-            <el-icon><Refresh /></el-icon>
-            <span>{{ t('common.actions.refresh') }}</span>
-          </el-button>
         </PageHeader>
 
-        <el-alert v-if="fromMine" type="info" show-icon :closable="false" class="action-view__notice">
+        <AppNote v-if="fromMine" class="action-view__notice">
           {{ t('actions.detail.fromMine') }}
-        </el-alert>
-        <el-alert
-          v-else-if="ownersAgent && !course.can('action_decide')"
-          type="info"
-          show-icon
-          :closable="false"
-          class="action-view__notice"
-        >
+        </AppNote>
+        <AppNote v-else-if="ownersAgent && !course.can('action_decide')" class="action-view__notice">
           {{ t('actions.detail.yourAgent') }}
-        </el-alert>
+        </AppNote>
 
         <OutcomeAlert
           v-if="lastDone"
@@ -379,7 +371,10 @@ const errorTitle = computed(() => {
         <div class="action-view__grid app-columns">
           <div class="action-view__main app-column">
             <section class="app-card">
-              <h2 class="app-card__title">{{ t('actions.detail.facts') }}</h2>
+              <h2 class="app-card__title">
+                <span>{{ t('actions.detail.facts') }}</span>
+                <RefreshButton :loading="state.loading.value" @click="reloadPage" />
+              </h2>
               <dl class="action-view__facts">
                 <div>
                   <dt>{{ t('actions.fields.type') }}</dt>
@@ -503,13 +498,7 @@ const errorTitle = computed(() => {
                 </div>
               </el-alert>
 
-              <el-alert
-                v-else-if="action.status === 'rejected'"
-                type="info"
-                :title="t('actions.outcome.rejected')"
-                :closable="false"
-                show-icon
-              >
+              <AppNote v-else-if="action.status === 'rejected'" :title="t('actions.outcome.rejected')">
                 <div class="action-view__error">
                   <p v-if="rules.byOwner(action, 'decided')">{{ t('actions.result.rejectedByOwner') }}</p>
                   <p>
@@ -526,7 +515,7 @@ const errorTitle = computed(() => {
                     </MaybeLink>
                   </p>
                 </div>
-              </el-alert>
+              </AppNote>
 
               <el-alert
                 v-else-if="action.status === 'changes_requested'"

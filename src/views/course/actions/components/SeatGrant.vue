@@ -7,9 +7,11 @@
 // instructor's.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { OfficeBuilding } from '@element-plus/icons-vue'
 import { PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { presetLabel } from '@/views/course/members/components/seat'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -75,9 +77,9 @@ const listsItself = computed(
         <dd class="seat-grant__inline">
           <template v-if="preset">
             <strong>{{ presetLabel(preset) }}</strong>
-            <el-tag v-if="preset.dept_id" size="small" type="info" effect="plain">{{
+            <AppTag v-if="preset.dept_id" variant="outline" :icon="OfficeBuilding">{{
               t('actions.grant.deptPreset')
-            }}</el-tag>
+            }}</AppTag>
           </template>
           <span v-else-if="str(p.preset)">{{ str(p.preset) }}</span>
           <IdText v-else-if="str(p.preset_id)" :id="str(p.preset_id)" />
@@ -88,9 +90,9 @@ const listsItself = computed(
         <dd class="seat-grant__inline">
           <StatusTag v-if="role" vocab="role" :value="role" />
           <span v-else>—</span>
-          <el-tag v-if="roleChanged" size="small" type="warning" effect="light" round>{{
+          <AppTag v-if="roleChanged" tone="wait">{{
             t('common.labels.changed')
-          }}</el-tag>
+          }}</AppTag>
         </dd>
       </div>
       <div>

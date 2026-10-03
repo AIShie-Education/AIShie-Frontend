@@ -9,6 +9,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import { ElMessage, ElNotification, type FormInstance, type FormItemRule } from 'element-plus'
+import AppNote from '@/components/AppNote.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import type { ToolIn, WriteOutcome } from '@/api/http'
 import type { Assignment, DocumentSummary } from '@/api/types'
@@ -484,14 +485,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
     <el-alert v-if="docNotice" type="warning" :closable="false" show-icon class="assignment-form__alert">
       {{ docNotice }}
     </el-alert>
-    <el-alert
-      v-else-if="!editing"
-      type="info"
-      :closable="false"
-      show-icon
-      class="assignment-form__alert"
-      :title="t('assignments.form.unpublishedNote')"
-    />
+    <AppNote v-else-if="!editing" class="assignment-form__alert">{{ t('assignments.form.unpublishedNote') }}</AppNote>
     <el-form
       ref="formRef"
       :model="form"

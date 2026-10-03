@@ -16,6 +16,7 @@ import type { GradeSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -23,6 +24,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import EnterComponentGradeDialog from './components/EnterComponentGradeDialog.vue'
@@ -333,7 +335,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
 
     <!-- A seat that enters grades without reading them: its grades are on each submission and in My actions. -->
     <section v-if="!readsGrades" class="app-card">
-      <el-empty :description="t('grades.noRead.title')">
+      <AppEmpty :text="t('grades.noRead.title')" page>
         <p v-if="course.can('grade_submit')" class="app-form-hint grades-view__no-read">
           {{ t('grades.noRead.submit') }}
         </p>
@@ -351,7 +353,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
             </el-button>
           </router-link>
         </div>
-      </el-empty>
+      </AppEmpty>
     </section>
 
     <section v-else class="app-card">
@@ -382,11 +384,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
           <el-option value="posted" :label="t('enums.gradeState.posted')" />
           <el-option value="superseded" :label="t('enums.gradeState.superseded')" />
         </el-select>
-        <span class="app-toolbar__spacer" />
-        <el-button :loading="paged.loading.value" @click="paged.reload()">
-          <el-icon><Refresh /></el-icon>
-          <span>{{ t('common.actions.refresh') }}</span>
-        </el-button>
+        <RefreshButton :loading="paged.loading.value" @click="paged.reload()" />
       </div>
 
       <div v-if="postBar" class="grades-view__post">

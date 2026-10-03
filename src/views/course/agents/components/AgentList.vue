@@ -16,10 +16,11 @@ import type { AutonomyLevel, Preset } from '@/api/types'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AgentName from '@/components/AgentName.vue'
-import HostingTag from '@/components/HostingTag.vue'
+import AskableDot from '@/components/AskableDot.vue'
 import MemberName from '@/components/MemberName.vue'
 import PresenceText from '@/components/PresenceText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -159,13 +160,13 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
       <div class="agent-row__body">
         <div class="agent-row__main">
           <div class="agent-row__name">
+            <AskableDot :hosting="r.member.hosting" :site-chat="r.member.site_chat" />
             <router-link :to="{ name: 'course-member', params: { courseId, memberId: r.member.id } }">
               <AgentName :name="r.member.display_name" />
             </router-link>
             <AgentBadge :owner-name="r.member.owner_name" :mine="isMine(r)" no-ai />
             <StatusTag v-if="r.member.status !== 'active'" vocab="memberStatus" :value="r.member.status" />
-            <el-tag v-else-if="!r.live" size="small" type="info">{{ t('members.expired') }}</el-tag>
-            <HostingTag :hosting="r.member.hosting" :site-chat="r.member.site_chat" />
+            <AppTag v-else-if="!r.live">{{ t('members.expired') }}</AppTag>
           </div>
           <div class="agent-row__meta">
             <span v-if="presetText(r)">{{ presetText(r) }}</span>
@@ -233,9 +234,9 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
           </el-select>
           <StatusTag v-else vocab="answerLevel" :value="r.answer" />
           <el-tooltip v-if="r.answerCapped" :content="t('courseAgents.replies.cappedHelp')" placement="top">
-            <el-tag size="small" type="warning" effect="plain">
+            <AppTag tone="wait">
               {{ t('courseAgents.replies.capped', { level: t(`courseAgents.replies.options.${r.answer}`) }) }}
-            </el-tag>
+            </AppTag>
           </el-tooltip>
         </div>
 

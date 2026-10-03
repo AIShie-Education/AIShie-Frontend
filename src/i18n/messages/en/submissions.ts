@@ -26,9 +26,10 @@ export default {
     unavailable:
       'This server cannot list the students who have not started, so only the work that exists is shown here.',
     summary: {
-      total: '{n} student | {n} students',
+      label: 'Where each student stands',
       partial: 'The counts cover the students loaded so far.',
     },
+    emptyState: 'None of these students is at this stage. Choose All to see every one.',
     empty: 'There are no current students on this assignment that you can see.',
     emptyStudent:
       'This student is not among the current students you can see on this assignment. Clear the assignment filter to see all of their work, including from before they left the course.',

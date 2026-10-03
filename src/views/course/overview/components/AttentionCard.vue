@@ -12,6 +12,7 @@ import type { RouteLocationRaw } from 'vue-router'
 import { ApiError, read } from '@/api/http'
 import { toApiError, useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import RefreshButton from '@/components/RefreshButton.vue'
 import TimeText from '@/components/TimeText.vue'
 import { QUEUE_PAGE } from '../waiting'
 
@@ -149,9 +150,7 @@ function reloadAll() {
   <section v-if="rows.length" class="app-card attention">
     <h2 class="app-card__title">
       <span>{{ t('overview.attention.title') }}</span>
-      <el-button link :loading="loading" :aria-label="t('common.actions.refresh')" @click="reloadAll">
-        <el-icon v-if="!loading"><Refresh /></el-icon>
-      </el-button>
+      <RefreshButton :loading="loading" @click="reloadAll" />
     </h2>
     <p v-if="allClear" class="attention__clear">
       <el-icon><CircleCheck /></el-icon>

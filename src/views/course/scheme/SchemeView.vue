@@ -13,6 +13,9 @@ import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
+import AppTag from '@/components/AppTag.vue'
+import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -198,10 +201,6 @@ function collapseAll() {
 <template>
   <div class="scheme-view">
     <PageHeader :title="t('scheme.title')" :subtitle="t('scheme.subtitle')">
-      <el-button :loading="loading" @click="refresh">
-        <el-icon><Refresh /></el-icon>
-        <span>{{ t('common.actions.refresh') }}</span>
-      </el-button>
       <el-tooltip
         v-if="canWrite && !error"
         :content="t('common.archivedCourse')"
@@ -222,14 +221,12 @@ function collapseAll() {
       </el-tooltip>
     </PageHeader>
 
-    <el-alert v-if="proposed" type="info" show-icon class="scheme-view__notice" @close="proposed = false">
-      <template #title>
-        {{ t('scheme.outcome.proposed') }}
-        <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
-          t('scheme.outcome.viewMine')
-        }}</router-link>
-      </template>
-    </el-alert>
+    <AppNote v-if="proposed" class="scheme-view__notice" @close="proposed = false" closable>
+      {{ t('scheme.outcome.proposed') }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('scheme.outcome.viewMine')
+      }}</router-link>
+    </AppNote>
 
     <AsyncState
       :loading="loading"
@@ -286,6 +283,7 @@ function collapseAll() {
             <span class="scheme-view__tree-tools">
               <el-button text size="small" @click="expandAll">{{ t('scheme.actions.expandAll') }}</el-button>
               <el-button text size="small" @click="collapseAll">{{ t('scheme.actions.collapseAll') }}</el-button>
+              <RefreshButton :loading="loading" @click="refresh" />
             </span>
           </h2>
 
@@ -352,9 +350,7 @@ function collapseAll() {
               >
                 {{ a.title }}
               </router-link>
-              <el-tag v-if="!a.published_at" type="info" size="small" disable-transitions>{{
-                t('scheme.tree.unpublished')
-              }}</el-tag>
+              <AppTag v-if="!a.published_at" tone="wait">{{ t('scheme.tree.unpublished') }}</AppTag>
               <span class="uncounted__points">{{
                 t(
                   'scheme.uncounted.points',

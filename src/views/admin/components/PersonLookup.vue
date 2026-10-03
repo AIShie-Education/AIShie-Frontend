@@ -14,6 +14,7 @@ import { ApiError, read } from '@/api/http'
 import type { ActorLookup } from '@/api/types'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
+import AppNote from '@/components/AppNote.vue'
 import TimeText from '@/components/TimeText.vue'
 import ActorSummary from './ActorSummary.vue'
 import { isLoginId } from '@/utils/loginId'
@@ -129,14 +130,11 @@ defineExpose({ find, show, clear })
     </form>
 
     <div v-if="missing && !stale" class="lookup__missing">
-      <el-alert
-        type="info"
-        :closable="false"
-        show-icon
-        :title="
+      <AppNote>
+        {{
           lookedUpEmail ? (missingText ?? t('deptAdmin.lookup.notFoundPlain')) : t('deptAdmin.lookup.notFoundLoginId')
-        "
-      />
+        }}
+      </AppNote>
       <slot name="missing" :email="lookedUpEmail ? lookedUp : ''" />
     </div>
 
@@ -198,7 +196,7 @@ defineExpose({ find, show, clear })
   gap: 12px;
   align-items: flex-start;
 }
-.lookup__missing :deep(.el-alert) {
+.lookup__missing :deep(.app-note) {
   width: 100%;
 }
 .lookup__found {

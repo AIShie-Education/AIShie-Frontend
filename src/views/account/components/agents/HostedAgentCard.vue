@@ -19,6 +19,8 @@ import { ElMessage, ElNotification } from 'element-plus'
 import { isRuntimeError, isVersionMismatch, runtime } from '@/api/runtime'
 import type { HostedAgent, ProviderOffer } from '@/api/runtime-types'
 import { usePolling } from '@/composables/usePolling'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import DailyReset from '@/components/DailyReset.vue'
 import TimeText from '@/components/TimeText.vue'
 import DeleteHostingDialog from './DeleteHostingDialog.vue'
@@ -255,7 +257,7 @@ defineExpose({ onCommand })
   <section class="app-card hosted-card" :class="`is-${status}`">
     <h2 class="app-card__title hosted-card__title">
       <span>{{ t('hosting.card.title') }}</span>
-      <el-tag :type="STATUS_TAG[status]" disable-transitions class="hosted-card__tag">{{ statusTitle }}</el-tag>
+      <AppTag size="default" :tone="toneOf(STATUS_TAG[status])" class="hosted-card__tag">{{ statusTitle }}</AppTag>
     </h2>
 
     <p class="hosted-card__status">{{ statusBody }}</p>
