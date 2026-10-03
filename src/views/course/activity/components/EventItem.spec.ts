@@ -7,6 +7,8 @@ import { i18n, setLocale } from '@/i18n'
 import { read } from '@/api/http'
 import EventItem from './EventItem.vue'
 import { useCourseStore } from '@/stores/course'
+import { useSessionStore } from '@/stores/session'
+import { forgetMyAgents } from '@/views/course/actions/components/myAgents'
 import { ensureEventWho, forgetActionWho } from './actors'
 import { whoReachOf, type CourseEvent } from './feed'
 
@@ -786,6 +788,78 @@ describe('EventItem, a chat’s news', () => {
     await flushPromises()
     expect(w.text()).not.toContain('course_join_link')
     expect(w.find('.event-item__subject').exists()).toBe(false)
+    w.unmount()
+  })
+})
+
+describe('EventItem, a student’s own agent brought in', () => {
+  const STUDENT = { member_read: 'denied', action_decide: 'denied', document_read: 'autonomous' }
+  const seated = (principal: string): CourseEvent => ({
+    seq: 60,
+    type: 'member.added',
+    occurred_at: '2026-10-01T10:00:00Z',
+    subject_type: 'course_member',
+    subject_id: 'm-helper',
+    action_id: 'act-seat',
+    payload: {
+      actor_id: 'a-helper',
+      role: 'assistant',
+      delegate: true,
+      principal_member_id: principal,
+      answers_course: false,
+    },
+  })
+  let asked: string[] = []
+  beforeEach(() => {
+    forgetActionWho()
+    forgetMyAgents()
+    asked = []
+    vi.mocked(read).mockImplementation((async (name: string) => {
+      asked.push(name)
+      if (name === 'agent.list') return { agents: [{ actor_id: 'a-helper', display_name: 'Yuki revision helper' }] }
+      if (name === 'action.list_mine') return { actions: [] }
+      throw new Error('forbidden')
+    }) as unknown as typeof read)
+  })
+  function mountAsYuki(e: CourseEvent) {
+    setActivePinia(createPinia())
+    const session = useSessionStore()
+    session.me = { id: 'a-yuki', kind: 'human', display_name: 'Yuki Tanaka' } as never
+    const course = useCourseStore()
+    course.courseId = COURSE
+    course.permsSource = 'exact'
+    course.perms = STUDENT as never
+    course.membership = { member_id: 'm-yuki' } as never
+    // MemberName itself, not a stub: what she reads.
+    return mount(EventItem, {
+      props: { event: e, courseId: COURSE },
+      global: { plugins: [i18n, ElementPlus], stubs: { ElTooltip: TooltipStub, RouterLink: true, TimeText: true } },
+    })
+  }
+
+  it('names it by the name she gave it, not as someone in the course', async () => {
+    for (const [locale, kind] of [
+      ['en', 'Personal agent'],
+      ['zh-Hant', '個人代理'],
+    ] as const) {
+      setLocale(locale)
+      const w = mountAsYuki(seated('m-yuki'))
+      await flushPromises()
+      const subject = w.find('.event-item__subject')
+      expect(subject.text()).toContain('Yuki revision helper')
+      expect(subject.find('.ai-badge').exists()).toBe(true)
+      expect(subject.text()).not.toContain(i18n.global.t('common.labels.someMember'))
+      expect(w.find('.event-item__facts').text()).toBe(kind)
+      w.unmount()
+    }
+    expect(asked.filter((n) => n === 'agent.list')).toEqual(['agent.list'])
+  })
+
+  it('asks nothing of her agents for a seat that is not hers, and names nobody it cannot', async () => {
+    const w = mountAsYuki(seated('m-ken'))
+    await flushPromises()
+    expect(asked).not.toContain('agent.list')
+    expect(w.find('.event-item__subject').text()).toBe('Someone in the course')
     w.unmount()
   })
 })

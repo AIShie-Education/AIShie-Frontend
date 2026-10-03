@@ -54,8 +54,11 @@ describe('MemberName', () => {
     expect(w.find('.id-text').exists()).toBe(false)
     expect(w.text()).toBe('Someone in the course')
     expect(w.text()).not.toContain('430c5829')
-    // The id on hover alone, for her to quote.
-    expect(w.find('.is-unnamed').attributes('title')).toBe(ID)
+    // Not in a tooltip either: a touch screen or a keyboard cannot reach one, and a screen reader
+    // would read the whole id out as the name's description. She quotes the action instead.
+    expect(w.html()).not.toContain(ID)
+    expect(w.find('.is-unnamed').attributes('title')).toBeUndefined()
+    expect(w.find('[tabindex]').exists()).toBe(false)
     setLocale('zh-Hant')
     await flushPromises()
     expect(w.text()).toBe('一位成員')

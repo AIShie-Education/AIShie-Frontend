@@ -551,7 +551,7 @@ const errorTitle = computed(() => {
                   <el-icon><AgentSeatIcon /></el-icon>{{ t('actions.result.approvedByOwner') }}
                 </p>
                 <p class="action-view__help">{{ t('actions.result.made') }}</p>
-                <FieldsView v-if="hasResult" :course-id="courseId" :value="action.result" />
+                <FieldsView v-if="hasResult" :course-id="courseId" :value="action.result" :result-of="action" />
                 <p v-else class="action-view__help">{{ t('actions.result.none') }}</p>
               </template>
 

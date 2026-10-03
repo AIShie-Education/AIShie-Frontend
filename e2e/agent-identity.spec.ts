@@ -33,6 +33,7 @@ const w = {
   tutorSeat: '',
   hyphenId: '',
   helperId: '',
+  seatAction: '',
   botId: '',
   botSeat: '',
 }
@@ -136,6 +137,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       perms: { submission_write: 'confirm_required' },
     })
     expect(asked.body.status, JSON.stringify(asked.body)).toBe('proposed')
+    w.seatAction = asked.body.action_id!
     done(
       await call(I, 'POST', `/v1/courses/${c}/actions/${asked.body.action_id}/decide`, { decision: 'approve' }),
       'action.decide (seating)',
@@ -322,12 +324,32 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     )
     await expect(page.locator('.event-item__who .id-text')).toHaveCount(0)
 
+    // His agent, the member it added, by the name he gave it: not someone in the course, who approved it.
+    const added = page.locator('.event-item').filter({ has: seating }).filter({ hasText: 'Member added' })
+    await expect(added.locator('.event-item__subject')).toContainText(new RegExp(`${HELPER}\\s*AI`))
+    await expect(added.locator('.event-item__subject')).not.toContainText('Someone in the course')
+    await expect(added.locator('.event-item__facts')).toHaveText('Personal agent')
+    // And no hover-only id behind anyone he cannot name: the line holds no member id at all.
+    await expect(page.locator('.member-name.is-unnamed[title]')).toHaveCount(0)
+
     // His own actions: his agent brought in, by the name its avatar is drawn from, and who decided it.
     await page.goto(coursePath('my-actions'))
     const row = page.locator('tr').filter({ hasText: 'Bring in an agent' }).filter({ hasText: HELPER }).first()
     await expect(row.locator('.action-target')).toContainText(HELPER)
     await expect(row).toContainText('Someone in the course')
     await expect(row.locator('.id-text')).toHaveCount(0)
+    // The conversation he started, with the agent he asked by name.
+    const started = page.locator('tr').filter({ hasText: 'Start a conversation' }).filter({ hasText: LOOPS }).first()
+    await expect(started.locator('.action-target')).toContainText(new RegExp(`→\\s*${LONG}\\s*AI`))
+    await expect(started.locator('.action-target')).not.toContainText('Someone in the course')
+
+    // What came of bringing it in names the seat it made as the request named the agent.
+    await page.goto(coursePath(`actions/${w.seatAction}`))
+    const made = page
+      .locator('.fields-view')
+      .filter({ has: page.locator('dt', { hasText: /^Member$/ }) })
+      .last()
+    await expect(made.locator('dd')).toHaveText(HELPER)
   })
 
   test('a chat’s news says it is about a conversation, in words, and opens it', async ({ page }) => {

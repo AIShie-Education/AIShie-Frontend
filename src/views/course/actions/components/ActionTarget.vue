@@ -81,6 +81,17 @@ const conversation = useLookup(() =>
 )
 const conversationTitle = computed(() => conversation.value?.value?.title ?? undefined)
 /**
+ * The agent a conversation is with, by the name the conversation gives it
+ * (conversation.get, which its participants read), where the member list
+ * cannot name it: a student opened it with an agent she chose by name.
+ */
+const respondentAgent = computed(() => {
+  const r = conversation.value?.value?.respondent
+  return r && r.kind === 'agent' && r.member_id === str(p.value.respondent_member_id)
+    ? { name: r.display_name }
+    : undefined
+})
+/**
  * The names of the files the action writes: those a message carries
  * (attachments), or a document version's (files), each an upload token and
  * a name.
@@ -323,7 +334,7 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       </MaybeLink>
       <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
       <span v-if="str(p.respondent_member_id)" class="action-target__part">
-        → <MemberName :id="str(p.respondent_member_id)" show-kind />
+        → <MemberName :id="str(p.respondent_member_id)" show-kind :agent="respondentAgent" />
       </span>
       <span v-if="quote && excerpt(p.body)" class="action-target__quote">“{{ excerpt(p.body) }}”</span>
       <span v-else-if="quote && type === 'conversation.close' && str(p.reason)" class="action-target__quote">
