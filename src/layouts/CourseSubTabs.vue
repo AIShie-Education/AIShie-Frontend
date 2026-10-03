@@ -26,11 +26,24 @@ const nav = useCourseNav()
 </template>
 
 <style scoped>
-/* A row of quiet links, the one shown tinted, as the side bar marks the page it is on. */
+/* A row of quiet links, the one shown tinted, as the side bar marks the page it is on. One row, as the
+   course's tabs are: a tab alone on a second row reads as a fault. Where the page is too narrow for them
+   with their icons (a phone, in English), the icons go; narrower still, the row scrolls sideways. */
 .course-subtabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.course-subtabs::-webkit-scrollbar {
+  display: none;
+}
+@container (max-width: 480px) {
+  .course-subtabs__item .el-icon {
+    display: none;
+  }
 }
 .course-subtabs__item {
   display: inline-flex;
@@ -55,5 +68,11 @@ const nav = useCourseNav()
 }
 .course-subtabs__item:focus-visible {
   outline-offset: -2px;
+}
+/* On a touch screen, pressed often: 40 px (docs/CONVENTIONS.md). */
+@media (pointer: coarse) {
+  .course-subtabs__item {
+    height: 40px;
+  }
 }
 </style>

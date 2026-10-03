@@ -618,7 +618,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   48 large) and its fields' text 16 px, below which iOS zooms into a field it focuses; a component
   that sets the text size of a field one types into (`MarkdownEditor`'s 13 px monospace, the PDF
   viewer's page number) outweighs that rule, and so sets 16 px under `pointer: coarse` itself. A
-  control of the app's own that is pressed often is at least 40 px there. Never set `maximum-scale` or
+  control of the app's own that is pressed often is at least 40 px there: a course's tabs (44), the
+  grades' own tabs (40) and the links of the phone's menu (44) among them. Never set `maximum-scale` or
   `user-scalable` in the viewport: zooming is the reader's.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's

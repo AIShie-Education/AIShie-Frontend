@@ -183,6 +183,36 @@ test.describe('at phone width', () => {
     }
   })
 
+  test('a course’s tabs, the grades’ own tabs and the menu’s are big enough for a finger, the grades’ on one row', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath('grades'))
+    const grades = page.getByRole('navigation', { name: 'Grades sections' })
+    await expect(grades.getByRole('link')).toHaveText(['All grades', 'Gradebook', 'Grading scheme'])
+    await expect(courseTab(page, 'Grades')).toHaveAttribute('aria-current', 'page')
+    const heights = (selector: string) =>
+      page.locator(selector).evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+    // At least 40 px each (docs/CONVENTIONS.md, touch), as Element Plus's controls are there.
+    const strip = await heights('nav.course-tabs > .course-tabs__item')
+    expect(strip.length).toBeGreaterThan(5)
+    for (const h of strip) expect(h).toBeGreaterThanOrEqual(40)
+    for (const h of await heights('.course-subtabs__item')) expect(h).toBeGreaterThanOrEqual(40)
+    // One row, as the course's tabs are: no tab alone on a second.
+    const tops = await grades
+      .getByRole('link')
+      .evaluateAll((els) => [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))])
+    expect(tops).toHaveLength(1)
+    await expectWithinViewport(page, '.course-subtabs')
+
+    await page.getByRole('button', { name: 'Menu' }).click()
+    const sections = page.getByRole('navigation', { name: /^Sections of / })
+    await expect(sections.getByRole('link', { name: 'Grades' })).toHaveAttribute('aria-current', 'page')
+    for (const h of await heights('.app-nav-drawer .side-item')) expect(h).toBeGreaterThanOrEqual(40)
+  })
+
   test('the top bar’s way up cuts the course’s code short, rather than run it under the tab, on a narrow phone', async ({
     page,
   }) => {
