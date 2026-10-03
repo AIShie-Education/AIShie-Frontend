@@ -20,6 +20,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { RuntimeSettingsPatch, TranscriptionSettings } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import DailyReset from '@/components/DailyReset.vue'
 import TimeText from '@/components/TimeText.vue'
 import OperatorDetail from '../components/OperatorDetail.vue'
@@ -221,9 +223,9 @@ async function withdraw() {
   <section class="app-card transcription-card">
     <h2 class="app-card__title transcription-card__title">
       <span>{{ t('runtimeAdmin.transcription.title') }}</span>
-      <el-tag v-if="tr" :type="STATE_TAG[tr.state] ?? 'info'" disable-transitions class="transcription-card__state">
+      <AppTag v-if="tr" size="default" :tone="toneOf(STATE_TAG[tr.state] ?? 'info')" class="transcription-card__state">
         {{ stateText }}
-      </el-tag>
+      </AppTag>
     </h2>
     <p class="transcription-card__intro">{{ t('runtimeAdmin.transcription.intro') }}</p>
 
@@ -289,15 +291,9 @@ async function withdraw() {
                   <span class="transcription-card__option-model">{{ o.model }}</span>
                 </el-option>
               </el-select>
-              <el-tag
-                v-if="tr.offer_status && tr.offer_status !== 'ok' && form.offer === tr.offer"
-                :type="OFFER_STATUS_TAG[tr.offer_status] ?? 'warning'"
-                size="small"
-                disable-transitions
-                class="transcription-card__offer-status"
-              >
+              <AppTag v-if="tr.offer_status && tr.offer_status !== 'ok' && form.offer === tr.offer" :tone="toneOf(OFFER_STATUS_TAG[tr.offer_status] ?? 'warning')" class="transcription-card__offer-status">
                 {{ t(`runtimeAdmin.transcription.offerStatus.${tr.offer_status}`) }}
-              </el-tag>
+              </AppTag>
             </div>
             <p class="app-form-hint">{{ t('runtimeAdmin.transcription.offerHint') }}</p>
           </el-form-item>
@@ -377,14 +373,9 @@ async function withdraw() {
         <div class="transcription-card__credential" :data-credential="tr.credential.status">
           <h3 class="transcription-card__subtitle">{{ t('runtimeAdmin.transcription.credential.title') }}</h3>
           <div class="transcription-card__credential-row">
-            <el-tag
-              :type="CREDENTIAL_TAG[tr.credential.status] ?? 'info'"
-              size="small"
-              disable-transitions
-              class="transcription-card__credential-status"
-            >
+            <AppTag :tone="toneOf(CREDENTIAL_TAG[tr.credential.status] ?? 'info')" class="transcription-card__credential-status">
               {{ t(`runtimeAdmin.transcription.credential.status.${tr.credential.status}`) }}
-            </el-tag>
+            </AppTag>
             <code v-if="tr.credential.hint" class="transcription-card__hint">{{ tr.credential.hint }}</code>
             <span v-if="tr.credential.status !== 'none'" class="transcription-card__seen">
               <template v-if="tr.credential.last_ok_at">

@@ -13,6 +13,7 @@ import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -351,9 +352,7 @@ function collapseAll() {
               >
                 {{ a.title }}
               </router-link>
-              <el-tag v-if="!a.published_at" type="info" size="small" disable-transitions>{{
-                t('scheme.tree.unpublished')
-              }}</el-tag>
+              <AppTag v-if="!a.published_at" tone="wait">{{ t('scheme.tree.unpublished') }}</AppTag>
               <span class="uncounted__points">{{
                 t(
                   'scheme.uncounted.points',

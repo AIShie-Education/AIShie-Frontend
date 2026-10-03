@@ -7,10 +7,12 @@
 import { computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
+import { User } from '@element-plus/icons-vue'
 import type { ToolIn } from '@/api/http'
 import type { Member, PermLevels } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -202,9 +204,9 @@ async function submit() {
             :title="t('members.rescope.staleStudents', { n: staleStudents.length }, staleStudents.length)"
           >
             <div class="rescope__stale">
-              <el-tag v-for="id in staleStudents" :key="id" type="info" size="small" disable-transitions>
+              <AppTag v-for="id in staleStudents" :key="id" variant="outline" :icon="User">
                 <MemberName :id="id" />
-              </el-tag>
+              </AppTag>
             </div>
             <el-button size="small" class="rescope__drop" @click="dropStale">
               {{ t('members.rescope.dropStale') }}

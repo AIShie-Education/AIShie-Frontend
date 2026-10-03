@@ -6,10 +6,12 @@
 // again when it is approved: anything that would then be wider is refused.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { OfficeBuilding } from '@element-plus/icons-vue'
 import { PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { seatPurpose } from '@/utils/agents'
 import { presetDescription, presetLabel } from '@/views/course/members/components/seat'
+import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import IdText from '@/components/IdText.vue'
@@ -122,9 +124,9 @@ const expiresAt = computed(() => str(p.value.expires_at))
             <StatusTag v-if="purpose" vocab="seatPurpose" :value="purpose" />
             <strong v-if="preset && presetSaysMore">{{ presetLabel(preset) }}</strong>
             <IdText v-else-if="!preset && !purpose && str(p.preset_id)" :id="str(p.preset_id)" />
-            <el-tag v-if="preset?.dept_id" size="small" type="info" effect="plain">{{
+            <AppTag v-if="preset?.dept_id" variant="outline" :icon="OfficeBuilding">{{
               t('actions.grant.deptPreset')
-            }}</el-tag>
+            }}</AppTag>
           </div>
           <div v-if="preset && presetDescription(preset)" class="delegate-grant__muted">
             {{ presetDescription(preset) }}

@@ -21,6 +21,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
 import { delegateArgsFor, presetForPurpose, type SeatPurpose } from '@/utils/agents'
 import { aboveCeiling, capToCeilings, ceilingsOf } from '@/utils/ceilings'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -224,17 +225,9 @@ async function submit() {
               <dt>{{ t('agents.bring.may') }}</dt>
               <dd class="bring__perms">
                 <template v-if="granted.length">
-                  <el-tag
-                    v-for="g in granted"
-                    :key="g.perm"
-                    type="info"
-                    effect="plain"
-                    size="small"
-                    :title="t(`enums.level.${g.level}`)"
-                    disable-transitions
-                  >
+                  <AppTag v-for="g in granted" :key="g.perm" variant="outline" :title="t(`enums.level.${g.level}`)">
                     {{ t(`enums.perm.${g.perm}`) }}
-                  </el-tag>
+                  </AppTag>
                 </template>
                 <span v-else class="app-muted">{{ t('agents.seats.nothing') }}</span>
               </dd>
@@ -242,9 +235,9 @@ async function submit() {
             <details class="bring__details">
               <summary>
                 {{ t('agents.bring.adjust') }}
-                <el-tag v-if="changedPerms.length" size="small" type="warning" round class="bring__changed">
+                <AppTag v-if="changedPerms.length" tone="wait" class="bring__changed">
                   {{ t('agents.bring.changed', { n: changedPerms.length }) }}
-                </el-tag>
+                </AppTag>
               </summary>
               <p class="app-form-hint bring__hint">{{ t('agents.bring.adjustHelp') }}</p>
               <PermEditor

@@ -13,9 +13,7 @@
 //   active): plain text in the third ink, no pill, so that only what departs
 //   from it is coloured.
 import type { Component } from 'vue'
-
-export type TagTone = 'neutral' | 'done' | 'wait' | 'danger' | 'indigo'
-export type TagVariant = 'pill' | 'outline' | 'count' | 'quiet'
+import type { TagTone, TagVariant } from './tags'
 
 const props = withDefaults(
   defineProps<{
@@ -85,12 +83,17 @@ const EFFECT = { pill: 'light', outline: 'plain', count: 'dark' } as const
 .el-tag.app-tag--count {
   font-variant-numeric: tabular-nums;
 }
-/* The usual state: words in the third ink, as the text around them is set. */
+/* The usual state: words in the third ink, a step smaller than the text around them, as a tag's are. */
 .app-tag--quiet {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: var(--app-ink-3);
+  /* In a page's title too, as a tag beside it is (main.css). */
+  font-family: var(--app-font-sans);
+  font-size: var(--app-text-sm, 13px);
+  font-weight: normal;
+  letter-spacing: normal;
   white-space: nowrap;
 }
 </style>

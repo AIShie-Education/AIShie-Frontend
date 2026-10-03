@@ -192,6 +192,26 @@ summary:focus-visible,
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
+/* A row of a list that is not published (a material, an assignment): a 3 px
+   line in the amber of what waits, at its left, beside its pill, so that the
+   one among published rows is found at a glance (docs/CONVENTIONS.md, "Tags").
+   A table's row (row-class-name) draws it on its first cell. */
+.app-row-unpublished:not(tr) {
+  position: relative;
+}
+.app-row-unpublished:not(tr)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--app-wait-fg);
+}
+tr.app-row-unpublished > td:first-child {
+  box-shadow: inset 3px 0 0 var(--app-wait-fg);
+}
 .app-mono {
   font-family: var(--app-font-mono);
 }

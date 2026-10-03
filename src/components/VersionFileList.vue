@@ -12,6 +12,8 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DocumentFile } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import { documentPreviewFiles, openPreview } from '@/components/preview/viewer'
 import { downloadDocumentFile, FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { FILE_ICON, fileKind } from '@/utils/files'
@@ -123,9 +125,9 @@ async function download(f: DocumentFile) {
         <el-icon aria-hidden="true"><Loading v-if="busy === f.id" class="is-loading" /><Download v-else /></el-icon>
       </button>
       <span v-if="textChip(f) || (openText && f.text)" class="version-file__side">
-        <el-tag v-if="textChip(f)" :type="textChip(f)!.type" size="small" disable-transitions class="version-file__status">
+        <AppTag v-if="textChip(f)" :tone="toneOf(textChip(f)!.type)" class="version-file__status">
           {{ textChip(f)!.label }}
-        </el-tag>
+        </AppTag>
         <el-button
           v-if="openText && f.text"
           link

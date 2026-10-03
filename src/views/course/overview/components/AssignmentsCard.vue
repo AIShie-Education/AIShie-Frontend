@@ -10,6 +10,8 @@ import type { AssignmentSummary, SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -140,18 +142,13 @@ const groups = computed(() => [
               </span>
             </span>
             <span class="assignments__tags">
-              <el-tag v-if="!r.a.published_at" type="info" size="small" effect="plain">
+              <AppTag v-if="!r.a.published_at" tone="wait">
                 {{ t('overview.assignments.unpublished') }}
-              </el-tag>
+              </AppTag>
               <StatusTag v-if="r.standing?.state" vocab="submissionState" :value="r.standing.state" />
-              <el-tag
-                v-else-if="r.standing?.none"
-                :type="r.standing.none === 'notHandedIn' ? 'danger' : 'info'"
-                size="small"
-                effect="plain"
-              >
+              <AppTag v-else-if="r.standing?.none" :tone="toneOf(r.standing.none === 'notHandedIn' ? 'danger' : 'info')">
                 {{ t(`overview.assignments.${r.standing.none}`) }}
-              </el-tag>
+              </AppTag>
             </span>
           </router-link>
         </div>

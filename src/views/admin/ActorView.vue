@@ -22,6 +22,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import HostingTag from '@/components/HostingTag.vue'
 import { isUuid } from '@/utils/format'
@@ -194,7 +195,6 @@ async function reactivate() {
           <!-- An agent, owned or not, is marked "AI" (and whose it is); a person or the system by kind. -->
           <AgentBadge v-if="actor.kind === 'agent'" :owner-name="actor.owner_name ?? undefined" size="default" />
           <StatusTag v-else vocab="actorKind" :value="actor.kind" size="default" />
-          <HostingTag v-if="actor.kind === 'agent'" :hosting="actor.hosting" size="default" />
           <StatusTag vocab="actorStatus" :value="actor.status" size="default" />
           <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" size="default" />
         </template>
@@ -307,9 +307,9 @@ async function reactivate() {
                 :content="t('admin.loginId.unverifiedHint')"
                 placement="top"
               >
-                <el-tag size="small" type="warning" effect="plain" class="actor__unverified" tabindex="0">
+                <AppTag tone="wait" class="actor__unverified" tabindex="0">
                   {{ t('admin.loginId.unverified') }}
-                </el-tag>
+                </AppTag>
               </el-tooltip>
             </el-descriptions-item>
             <el-descriptions-item :label="t('admin.actor.status')">

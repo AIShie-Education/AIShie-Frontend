@@ -13,6 +13,7 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { OwnerPlanUse } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppTag from '@/components/AppTag.vue'
 import DailyReset from '@/components/DailyReset.vue'
 import IdText from '@/components/IdText.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -137,9 +138,9 @@ const schoolSpent = computed(() => {
                 {{ row.answers
                 }}<span v-if="row.owner_actor_id" class="app-muted"> / {{ data.limits.per_owner_day }}</span>
               </span>
-              <el-tag v-if="spent(row)" type="warning" size="small" disable-transitions class="usage-owner__spent">
+              <AppTag v-if="spent(row)" tone="wait" class="usage-owner__spent">
                 {{ t('runtimeAdmin.usage.spent') }}
-              </el-tag>
+              </AppTag>
             </template>
           </el-table-column>
           <el-table-column v-if="!narrow" :label="t('runtimeAdmin.usage.modelCalls')" min-width="110" align="right">

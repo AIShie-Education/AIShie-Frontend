@@ -19,8 +19,10 @@ import { useAsync } from '@/composables/useAsync'
 import { useRuntime } from '@/composables/useRuntime'
 import { useSessionStore } from '@/stores/session'
 import { hostingOf } from '@/utils/agents'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
-import HostingTag from '@/components/HostingTag.vue'
+import AskableDot from '@/components/AskableDot.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentName from '@/components/AgentName.vue'
@@ -146,6 +148,7 @@ function onHosted(_: unknown, actorId: string) {
             <AgentAvatar :name="a.display_name" size="large" class="agents-item__avatar" />
             <div class="agents-item__main">
               <div class="agents-item__head">
+                <AskableDot v-if="agentStanding(a) === 'active'" :hosting="a.hosting" :site-chat="a.site_chat" />
                 <router-link
                   :to="{ name: 'account-agent', params: { actorId: a.actor_id } }"
                   class="agents-item__name"
@@ -153,19 +156,12 @@ function onHosted(_: unknown, actorId: string) {
                 >
                   <AgentName :name="a.display_name" />
                 </router-link>
-                <el-tag
-                  v-if="agentStanding(a) !== 'active'"
-                  :type="STANDING_TAG[agentStanding(a)]"
-                  size="small"
-                  disable-transitions
-                >
+                <AppTag v-if="agentStanding(a) !== 'active'" :tone="toneOf(STANDING_TAG[agentStanding(a)])">
                   {{ t(`agents.standing.${agentStanding(a)}`) }}
-                </el-tag>
-                <HostingTag v-if="agentStanding(a) === 'active'" :hosting="a.hosting" :site-chat="a.site_chat" />
-                <HostingTag v-else :hosting="a.hosting" />
-                <el-tag v-if="a.pending_requests" type="warning" effect="plain" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-if="a.pending_requests" tone="wait">
                   {{ t('agents.list.requests', { n: a.pending_requests }, a.pending_requests) }}
-                </el-tag>
+                </AppTag>
               </div>
               <div class="agents-item__meta">
                 <PresenceText :value="a.last_seen_at" />

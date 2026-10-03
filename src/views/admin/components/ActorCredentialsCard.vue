@@ -19,6 +19,8 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -261,9 +263,9 @@ defineExpose({ reload: () => list.reload() })
             <div class="creds__main">
               <div class="creds__head">
                 <span class="creds__name" :class="{ 'app-muted': !c.label?.trim() }">{{ tokenLabel(c) }}</span>
-                <el-tag :type="STATE_TAG[state]" size="small" disable-transitions>
+                <AppTag :variant="state === 'active' ? 'quiet' : 'pill'" :tone="toneOf(STATE_TAG[state])">
                   {{ t(`admin.credentials.state.${state}`) }}
-                </el-tag>
+                </AppTag>
               </div>
               <div class="creds__meta">
                 <span>
@@ -319,9 +321,12 @@ defineExpose({ reload: () => list.reload() })
             <template #default="{ row }">
               <div class="creds__head">
                 <span class="creds__name" :class="{ 'app-muted': !row.c.label?.trim() }">{{ tokenLabel(row.c) }}</span>
-                <el-tag :type="STATE_TAG[row.state as CredentialState]" size="small" disable-transitions>
+                <AppTag
+                  :variant="row.state === 'active' ? 'quiet' : 'pill'"
+                  :tone="toneOf(STATE_TAG[row.state as CredentialState])"
+                >
                   {{ t(`admin.credentials.state.${row.state}`) }}
-                </el-tag>
+                </AppTag>
               </div>
               <div v-if="row.c.revoked_at" class="creds__when">
                 <span class="creds__k">{{ t('admin.credentials.revokedAt') }}</span>
@@ -402,12 +407,12 @@ defineExpose({ reload: () => list.reload() })
               <div class="creds__head">
                 <span class="creds__name">{{ otherTitle(c) }}</span>
                 <StatusTag v-if="showKind(c)" vocab="credentialKind" :value="c.kind" />
-                <el-tag v-if="state !== 'active'" :type="STATE_TAG[state]" size="small" disable-transitions>
+                <AppTag v-if="state !== 'active'" :tone="toneOf(STATE_TAG[state])">
                   {{ t(`admin.credentials.state.${state}`) }}
-                </el-tag>
-                <el-tag v-else-if="temporary(c)" type="warning" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-else-if="temporary(c)" tone="wait">
                   {{ t('admin.credentials.temporary') }}
-                </el-tag>
+                </AppTag>
               </div>
               <div class="creds__meta">
                 <span v-if="temporary(c) && c.issued_by_name">

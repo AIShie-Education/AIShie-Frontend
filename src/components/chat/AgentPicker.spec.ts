@@ -75,12 +75,13 @@ beforeEach(() => {
 enableAutoUnmount(afterEach)
 
 describe('AgentPicker', () => {
-  it('offers the agents Core lists, each saying it is hosted on AIshie, and nothing else', async () => {
+  it('offers the agents Core lists and nothing else, without saying how each runs: its page says so', async () => {
     const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     const offered = w.findAll('button.resp-row')
     expect(offered.map((b) => b.find('.resp-row__name').text())).toEqual(['Course tutorAI'])
-    expect(offered[0]!.find('.hosting-tag').text()).toBe('Hosted on AIshie')
+    expect(offered[0]!.find('.hosting-tag').exists()).toBe(false)
+    expect(offered[0]!.text()).not.toContain('Hosted on AIshie')
     // The caller's own agents Core does not offer (MCP access, or not running) are not looked for.
     expect(w.find('.resp-row.is-elsewhere').exists()).toBe(false)
     expect(reads).toEqual(['conversation.respondents'])
@@ -117,9 +118,15 @@ describe('AgentPicker', () => {
     expect(rows[0]!.text()).toContain('Course agent')
     expect(rows[0]!.find('.ai-badge').text()).toBe('AI')
     expect(rows[0]!.find('.agent-avatar').exists()).toBe(true)
-    // Not "online", as a person would be: whether it can be asked, in plain words.
-    expect(rows[0]!.find('.askable').text()).toBe('Paused')
-    expect(rows[1]!.find('.askable').text()).toBe('Can be asked')
+    // Not "online", as a person would be: whether it can be asked, by a dot before its name in no green,
+    // named in words for a screen reader.
+    const dot = (i: number) => rows[i]!.find('.resp-row__line .askable-dot')
+    expect(dot(0).attributes('aria-label')).toBe('Paused')
+    expect(dot(0).classes()).toContain('is-paused')
+    expect(dot(1).attributes('aria-label')).toBe('Can be asked')
+    expect(dot(1).classes()).toContain('is-on')
+    // Two chips at most: whose it is and what it is to the caller.
+    expect(rows[1]!.findAll('.resp-row__line .el-tag, .agent-badge__owner')).toHaveLength(2)
     expect(rows[0]!.text()).toContain('It answers other members too')
     expect(rows[1]!.text()).toContain('Personal agent')
     expect(rows[1]!.text()).toContain('Your agent')
@@ -161,8 +168,8 @@ describe('AgentPicker', () => {
     const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global, attachTo: document.body })
     await flushPromises()
     for (const row of w.findAll('button.resp-row')) {
-      // Only the hosting tag, as before: not whose agent it is, nor whether it can be asked.
-      const focusable = row.findAll('[tabindex]').filter((e) => !e.element.closest('.hosting-tag'))
+      // Neither whose agent it is nor whether it can be asked.
+      const focusable = row.findAll('[tabindex]')
       expect(focusable.map((e) => e.html())).toEqual([])
       const ids = row.attributes('aria-describedby')!.split(' ')
       const said = ids.map((id) => document.getElementById(id)?.textContent ?? '').join(' ')

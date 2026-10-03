@@ -13,6 +13,7 @@ import type { DocumentSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
 import { usePageDrop } from '@/composables/useFileDrop'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -132,7 +133,10 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
             <router-link
               :to="{ name: 'course-document', params: { courseId, documentId: d.id } }"
               class="material-row"
-              :class="{ 'is-archived': d.status === 'archived' }"
+              :class="{
+                'is-archived': d.status === 'archived',
+                'app-row-unpublished': readsDrafts && !d.published_version_id && !d.purged_at && d.status !== 'archived',
+              }"
             >
               <el-tooltip :content="t('materials.sortOrder')" placement="top">
                 <span class="material-row__order">{{ d.sort_order }}</span>
@@ -145,24 +149,19 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
                 </span>
               </div>
               <div class="material-row__tags">
-                <el-tag v-if="d.purged_at" type="danger" size="small" disable-transitions>
+                <AppTag v-if="d.purged_at" tone="danger">
                   {{ t('materials.purged') }}
-                </el-tag>
-                <el-tag v-else-if="d.status === 'archived'" type="info" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-else-if="d.status === 'archived'">
                   {{ t('enums.documentStatus.archived') }}
-                </el-tag>
+                </AppTag>
                 <!-- Only those who read drafts see anything that is not published. -->
-                <el-tag
-                  v-else-if="d.published_version_id && readsDrafts"
-                  type="success"
-                  size="small"
-                  disable-transitions
-                >
+                <AppTag v-else-if="d.published_version_id && readsDrafts" variant="quiet">
                   {{ t('materials.published') }}
-                </el-tag>
-                <el-tag v-else-if="!d.published_version_id" type="warning" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-else-if="!d.published_version_id" tone="wait">
                   {{ t('materials.unpublished') }}
-                </el-tag>
+                </AppTag>
               </div>
               <el-icon class="material-row__chevron"><ArrowRight /></el-icon>
             </router-link>

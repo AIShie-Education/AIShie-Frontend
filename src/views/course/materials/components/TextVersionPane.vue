@@ -30,6 +30,8 @@ import { notifyError } from '@/composables/useErrors'
 import { usePolling } from '@/composables/usePolling'
 import { announce, useWrite } from '@/composables/useWrite'
 import { pageHeadings } from '@/utils/markdown'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
@@ -381,15 +383,9 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
   <div class="text-pane" :data-status="status ?? 'none'" :data-file="fileName">
     <div class="text-pane__bar">
       <div class="text-pane__state">
-        <el-tag
-          v-if="status && (shown !== 'none' || !isQueued(status))"
-          :type="TEXT_STATUS_TAG[status]"
-          size="small"
-          disable-transitions
-          class="text-pane__status"
-        >
+        <AppTag v-if="status && (shown !== 'none' || !isQueued(status))" :tone="toneOf(TEXT_STATUS_TAG[status])" class="text-pane__status">
           {{ t(`enums.textStatus.${status}`) }}
-        </el-tag>
+        </AppTag>
         <span v-if="source === 'ai'" class="text-pane__source">
           {{
             current?.model

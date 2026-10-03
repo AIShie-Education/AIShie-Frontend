@@ -6,10 +6,12 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import { Box, OfficeBuilding } from '@element-plus/icons-vue'
 import { read } from '@/api/http'
 import { PERMS, type Preset } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -143,12 +145,12 @@ function onSaved(savedDept: string | null) {
             <header class="preset-card__head">
               <span class="preset-card__name">{{ presetLabel(p) }}</span>
               <code v-if="hasOwnLabel(p)" class="preset-card__key">{{ p.name }}</code>
-              <el-tag v-if="isBuiltin(p)" type="info" size="small" disable-transitions>
+              <AppTag v-if="isBuiltin(p)" variant="outline" :icon="Box">
                 {{ t('adminSetup.presets.builtin') }}
-              </el-tag>
-              <el-tag v-else type="primary" size="small" disable-transitions class="preset-card__dept">
+              </AppTag>
+              <AppTag v-else variant="outline" :icon="OfficeBuilding" class="preset-card__dept">
                 {{ deptName(p.dept_id) ?? t('adminSetup.presets.own') }}
-              </el-tag>
+              </AppTag>
             </header>
             <p class="preset-card__desc" :class="{ 'app-muted': !presetDescription(p) }">
               {{ presetDescription(p) || t('adminSetup.presets.noDescription') }}

@@ -17,6 +17,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import { versionFilesOf } from '@/utils/documentFiles'
+import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import VersionFileList from '@/components/VersionFileList.vue'
@@ -228,10 +229,10 @@ function refresh() {
       :back="{ name: 'course-assignments', params: { courseId } }"
     >
       <template v-if="assignment" #tags>
-        <el-tag v-if="!assignment.published_at" type="warning" disable-transitions>
+        <AppTag v-if="!assignment.published_at" tone="wait" size="default">
           {{ t('assignments.state.unpublished') }}
-        </el-tag>
-        <el-tag v-if="pastDue" type="info" disable-transitions>{{ t('assignments.state.pastDue') }}</el-tag>
+        </AppTag>
+        <AppTag v-if="pastDue" size="default">{{ t('assignments.state.pastDue') }}</AppTag>
       </template>
       <template v-if="assignment" #subtitle>
         <span v-if="assignment.due_at">

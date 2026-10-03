@@ -31,10 +31,6 @@ const { t } = useI18n()
   <section class="app-card mcp-card">
     <h2 class="app-card__title mcp-card__title">
       <span>{{ t('agents.mcp.title') }}</span>
-      <el-tag type="info" effect="plain" disable-transitions class="mcp-card__tag">
-        <el-icon aria-hidden="true"><Connection /></el-icon>
-        <span>{{ t('common.agent.hosting.mcp') }}</span>
-      </el-tag>
     </h2>
     <el-alert
       type="info"
@@ -91,11 +87,6 @@ const { t } = useI18n()
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-.mcp-card__tag :deep(.el-tag__content) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 .mcp-card__note {
   margin-bottom: 14px;

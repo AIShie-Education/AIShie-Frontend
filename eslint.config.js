@@ -36,12 +36,54 @@ const solidIconInTemplate = {
   },
 }
 
+/**
+ * Element Plus's own look, which the app draws through its shared components
+ * instead (docs/CONVENTIONS.md, "Tags", "Notes and alerts"): a template that
+ * writes one of these is refused, wherever it is but in the component that
+ * draws it.
+ */
+const ELEMENT_LOOK = {
+  'el-tag': {
+    allowedIn: ['src/components/AppTag.vue'],
+    message:
+      'A tag is an AppTag (a state, an identity, a count, or the usual state, quiet) or a StatusTag for Core’s vocabularies, never an el-tag with an effect of its own (docs/CONVENTIONS.md, "Tags").',
+  },
+}
+/** An element's attribute as a template writes it, bound or not: `type="info"`, `:type="t"`. */
+const attributeOf = (node, name) =>
+  node.startTag.attributes.find(
+    (a) =>
+      (!a.directive && a.key.name === name) ||
+      (a.directive && a.key.name?.name === 'bind' && a.key.argument?.name === name),
+  )
+const elementLook = {
+  meta: { type: 'problem', schema: [] },
+  create(context) {
+    const services = context.sourceCode.parserServices
+    if (!services?.defineTemplateBodyVisitor) return {}
+    const file = context.filename.replaceAll('\\', '/')
+    return services.defineTemplateBodyVisitor({
+      VElement(node) {
+        const rule = ELEMENT_LOOK[node.rawName]
+        if (!rule || rule.allowedIn.some((f) => file.endsWith(f))) return
+        if (rule.when && !rule.when(node)) return
+        context.report({ node: node.startTag, message: rule.message })
+      },
+    })
+  },
+}
+
 export default [
   { ignores: ['dist/**', 'coverage/**', 'src/api/generated/**'] },
   { files: ['**/*.{ts,mts}'], languageOptions: { parser: tseslint.parser } },
   {
     files: ['**/*.vue'],
     languageOptions: { parser: vueParser, parserOptions: { parser: tseslint.parser, extraFileExtensions: ['.vue'] } },
+  },
+  {
+    files: ['src/**/*.vue'],
+    plugins: { app: { rules: { 'element-look': elementLook } } },
+    rules: { 'app/element-look': 'error' },
   },
   {
     files: NAVIGATION,

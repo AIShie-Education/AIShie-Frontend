@@ -8,6 +8,7 @@
 // priced by, so a change applies to calls from now on, and recorded costs
 // keep their price. The plan's models no row prices today are listed first,
 // each with "Add a price": a quota in dollars cannot hold them.
+import AppTag from '@/components/AppTag.vue'
 import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -165,25 +166,12 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
           <div class="price-cell" :data-price="rowKey(row)" :class="{ 'is-overridden': row.overridden }">
             <span class="price-cell__model">
               <span class="price-cell__name">{{ row.model }}</span>
-              <el-tag
-                v-if="row.glob"
-                size="small"
-                type="info"
-                effect="plain"
-                disable-transitions
-                class="price-cell__glob"
-              >
+              <AppTag v-if="row.glob" variant="outline" class="price-cell__glob">
                 {{ t('runtimeAdmin.prices.pattern') }}
-              </el-tag>
-              <el-tag
-                :type="row.source === 'site' ? 'primary' : 'info'"
-                effect="plain"
-                size="small"
-                disable-transitions
-                class="price-cell__source-tag"
-              >
+              </AppTag>
+              <AppTag variant="outline" class="price-cell__source-tag">
                 {{ t(`runtimeAdmin.prices.sources.${row.source}`) }}
-              </el-tag>
+              </AppTag>
             </span>
             <span class="price-cell__meta">
               {{ row.provider }} · <code>{{ row.id }}</code> ·

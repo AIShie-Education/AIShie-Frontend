@@ -16,6 +16,8 @@
 // An edit sends only what changed from the offer as read, at its version
 // (If-Match). When it has changed meanwhile (412), it is read again, what
 // the administrator changed is kept over it, and they are told so.
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
@@ -506,16 +508,9 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
             <el-radio-group v-if="canKeep" v-model="keyMode" class="offer-form__keymode">
               <el-radio value="keep">
                 {{ t('runtimeAdmin.offer.keyKeep', { hint: base?.key_hint ?? '' }) }}
-                <el-tag
-                  v-if="base?.key_status"
-                  :type="base.key_status === 'tested' ? 'success' : 'warning'"
-                  effect="plain"
-                  size="small"
-                  disable-transitions
-                  class="offer-form__key-status"
-                >
+                <AppTag v-if="base?.key_status" :tone="toneOf(base.key_status === 'tested' ? 'success' : 'warning')" class="offer-form__key-status">
                   {{ t(`runtimeAdmin.offers.${base.key_status}`) }}
-                </el-tag>
+                </AppTag>
               </el-radio>
               <el-radio value="new">{{ t('runtimeAdmin.offer.keyNew') }}</el-radio>
             </el-radio-group>

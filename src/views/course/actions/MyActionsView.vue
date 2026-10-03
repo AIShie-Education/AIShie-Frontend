@@ -13,6 +13,7 @@ import { read, type ApiError } from '@/api/http'
 import { toApiError } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -156,14 +157,14 @@ function open(row: ActionRow) {
       </p>
 
       <div v-if="waitingCount || reviewCount" class="my-actions__summary">
-        <el-tag v-if="waitingCount" type="warning" effect="light" class="my-actions__chip" @click="status = 'proposed'">
+        <AppTag v-if="waitingCount" tone="wait" size="default" class="my-actions__chip" @click="status = 'proposed'">
           <el-icon><Clock /></el-icon>
           {{ t('actions.mine.waiting', { n: waitingCount }) }}
-        </el-tag>
-        <el-tag v-if="reviewCount" type="primary" effect="light">
+        </AppTag>
+        <AppTag v-if="reviewCount" tone="indigo" size="default">
           <el-icon><View /></el-icon>
           {{ t('actions.mine.awaitingReview', { n: reviewCount }) }}
-        </el-tag>
+        </AppTag>
       </div>
 
       <div v-if="!error" class="app-toolbar my-actions__toolbar">

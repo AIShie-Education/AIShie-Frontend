@@ -4,6 +4,8 @@
 // type and its name, saying where its text version stands (done, waiting,
 // being transcribed, failed); the one shown is pressed. A version of one
 // file names it alone.
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import { useI18n } from 'vue-i18n'
 import type { DocumentFile } from '@/api/types'
 import { FILE_ICON, fileKind } from '@/utils/files'
@@ -43,9 +45,9 @@ function chip(f: DocumentFile) {
       <span class="text-file__n" aria-hidden="true">{{ i + 1 }}</span>
       <el-icon aria-hidden="true"><component :is="icon(f)" /></el-icon>
       <span class="text-file__name">{{ f.filename }}</span>
-      <el-tag v-if="chip(f)" :type="chip(f)!.type" size="small" disable-transitions class="text-file__status">
+      <AppTag v-if="chip(f)" :tone="toneOf(chip(f)!.type)" class="text-file__status">
         {{ chip(f)!.label }}
-      </el-tag>
+      </AppTag>
     </button>
   </div>
   <p v-else-if="selected" class="text-files__one">

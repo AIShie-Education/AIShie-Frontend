@@ -20,7 +20,8 @@ import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Collection, Document, Filter, Key, Operation, Setting, User } from '@element-plus/icons-vue'
 import AgentSeatIcon from './AgentSeatIcon.vue'
-import AppTag, { type TagTone } from './AppTag.vue'
+import AppTag from './AppTag.vue'
+import type { TagTone } from './tags'
 import LevelIcon from './LevelIcon.vue'
 
 export type Vocabulary =

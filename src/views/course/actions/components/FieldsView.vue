@@ -10,6 +10,8 @@ import { PERMS, type Perm } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal, formatPercent, isUuid, shortId } from '@/utils/format'
 import { presetLabel } from '@/views/course/members/components/seat'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import IdText from '@/components/IdText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -313,9 +315,9 @@ function json(v: unknown) {
           <MaybeLink :to="routeFor(courseId, 'component_id', obj[k] as string)">{{ componentName(obj[k]) ?? '' }}</MaybeLink>
           <IdText :id="obj[k] as string" />
         </span>
-        <el-tag v-else-if="kindOf(k, obj[k]) === 'decision'" size="small" :type="decisionTag(obj[k]).type">
+        <AppTag v-else-if="kindOf(k, obj[k]) === 'decision'" :tone="toneOf(decisionTag(obj[k]).type)">
           {{ decisionTag(obj[k]).label }}
-        </el-tag>
+        </AppTag>
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'reviewState'" vocab="reviewState" :value="obj[k] as string" />
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'actionStatus'" vocab="actionStatus" :value="obj[k] as string" />
         <StatusTag v-else-if="kindOf(k, obj[k]) === 'state'" vocab="submissionState" :value="obj[k] as string" />

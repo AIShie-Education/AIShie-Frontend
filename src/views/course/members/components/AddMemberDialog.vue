@@ -28,6 +28,7 @@ import { useSessionStore } from '@/stores/session'
 import { capToCeilings, newSeatCeilings } from '@/utils/ceilings'
 import { isUuid, shortId } from '@/utils/format'
 import { isLoginId } from '@/utils/loginId'
+import AppTag from '@/components/AppTag.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
 import PermEditor from '@/components/PermEditor.vue'
@@ -722,9 +723,9 @@ function capToMine() {
           <template #title>
             <span class="add-member__perms-title">
               {{ t('members.add.perms') }}
-              <el-tag v-if="changedCount" size="small" type="warning" round>
+              <AppTag v-if="changedCount" tone="wait">
                 {{ t('members.add.permsChanged', { n: changedCount }) }}
-              </el-tag>
+              </AppTag>
               <span v-else class="app-muted">{{ t('members.add.permsAsPreset') }}</span>
             </span>
           </template>

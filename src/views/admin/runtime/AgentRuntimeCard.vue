@@ -20,6 +20,8 @@ import { read } from '@/api/http'
 import type { ListItem, ToolOut } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useWrite } from '@/composables/useWrite'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import TimeText from '@/components/TimeText.vue'
 import CopyBlock from '@/views/account/components/agents/CopyBlock.vue'
@@ -163,9 +165,9 @@ function forget() {
           <div class="agent-runtime-card__main">
             <div class="agent-runtime-card__head">
               <span class="agent-runtime-card__label">{{ c.label?.trim() || t('admin.credentials.unlabelled') }}</span>
-              <el-tag :type="STATE_TAG[stateOf(c)]" size="small" disable-transitions>
+              <AppTag :tone="toneOf(STATE_TAG[stateOf(c)])">
                 {{ t(`runtimeAdmin.agentRuntime.state.${stateOf(c)}`) }}
-              </el-tag>
+              </AppTag>
             </div>
             <div class="agent-runtime-card__meta">
               <code class="agent-runtime-card__code">{{ masked(c.token_prefix) }}</code>

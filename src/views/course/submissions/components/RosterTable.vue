@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import type { ApiError } from '@/api/http'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -227,7 +228,7 @@ const emptyText = computed(() =>
               <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
             </div>
             <div v-else-if="isProposed(row)" class="roster-action">
-              <el-tag type="warning" size="small" disable-transitions>{{ t('enums.actionStatus.proposed') }}</el-tag>
+              <AppTag tone="wait">{{ t('enums.actionStatus.proposed') }}</AppTag>
               <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
                 {{ t('submissions.roster.myActions') }}
               </router-link>
@@ -287,7 +288,7 @@ const emptyText = computed(() =>
               </el-button>
             </div>
             <div v-else-if="isProposed(row)" class="roster-action roster-action--end">
-              <el-tag type="warning" size="small" disable-transitions>{{ t('enums.actionStatus.proposed') }}</el-tag>
+              <AppTag tone="wait">{{ t('enums.actionStatus.proposed') }}</AppTag>
               <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
                 {{ t('submissions.roster.myActions') }}
               </router-link>

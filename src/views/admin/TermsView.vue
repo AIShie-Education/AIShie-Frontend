@@ -11,6 +11,8 @@ import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -36,9 +38,9 @@ function stateOf(x: Term): TermState {
   if (x.ends_on < today) return 'ended'
   return 'current'
 }
-const STATE_TAG: Record<TermState, 'success' | 'primary' | 'info'> = {
+const STATE_TAG: Record<TermState, 'success' | 'info'> = {
   current: 'success',
-  upcoming: 'primary',
+  upcoming: 'info',
   ended: 'info',
 }
 
@@ -168,9 +170,9 @@ async function save() {
           </el-table-column>
           <el-table-column :label="t('common.labels.status')" :min-width="narrow ? 90 : 110">
             <template #default="{ row }">
-              <el-tag :type="STATE_TAG[stateOf(row)]" size="small" disable-transitions>
+              <AppTag :tone="toneOf(STATE_TAG[stateOf(row)])">
                 {{ t(`adminSetup.terms.state.${stateOf(row)}`) }}
-              </el-tag>
+              </AppTag>
             </template>
           </el-table-column>
           <el-table-column

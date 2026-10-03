@@ -6,6 +6,7 @@
 import { computed, reactive, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import { Link } from '@element-plus/icons-vue'
 import { read } from '@/api/http'
 import { isUuid } from '@/utils/format'
 import { ROLES, type Member, type MemberSummary } from '@/api/types'
@@ -13,12 +14,13 @@ import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AgentName from '@/components/AgentName.vue'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AsyncState from '@/components/AsyncState.vue'
-import HostingTag from '@/components/HostingTag.vue'
+import AskableDot from '@/components/AskableDot.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import RoleTag from '@/components/RoleTag.vue'
@@ -235,9 +237,9 @@ function rowClass({ row }: { row: MemberSummary }) {
           </el-radio-button>
         </el-radio-group>
         <span class="app-toolbar__spacer" />
-        <el-tag v-if="linkFilter" closable type="primary" effect="plain" size="large" @close="clearLinkFilter">
-          <el-icon class="members__tab-icon"><Link /></el-icon>{{ t('join.filtered') }}
-        </el-tag>
+        <AppTag v-if="linkFilter" variant="outline" :icon="Link" size="large" closable @close="clearLinkFilter">
+          {{ t('join.filtered') }}
+        </AppTag>
         <el-select v-model="roleFilter" class="members__role" :placeholder="t('members.filters.anyRole')" clearable>
           <el-option value="" :label="t('members.filters.anyRole')" />
           <el-option v-for="r in ROLES" :key="r" :value="r" :label="t(`enums.role.${r}`)" />
@@ -273,6 +275,7 @@ function rowClass({ row }: { row: MemberSummary }) {
               <div class="members__name">
                 <!-- The avatar, the name and its "AI" never part: the name is cut short instead. -->
                 <span v-if="row.kind === 'agent'" class="members__agent">
+                  <AskableDot :hosting="row.hosting" :site-chat="row.site_chat" />
                   <AgentAvatar :name="row.display_name" size="small" />
                   <AgentName :name="row.display_name" ellipsis class="members__name-text" />
                 </span>
@@ -290,19 +293,16 @@ function rowClass({ row }: { row: MemberSummary }) {
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
                 </el-tooltip>
                 <AgentBadge v-if="row.kind === 'agent'" :owner-name="row.owner_name" :mine="mine(row)" no-ai />
-                <HostingTag v-if="row.kind === 'agent'" :hosting="row.hosting" :site-chat="row.site_chat" />
                 <el-tooltip v-if="row.join_link_id" :content="t('join.viaHint')" placement="top">
-                  <el-tag size="small" type="info" effect="plain" class="members__via" tabindex="0">
-                    <el-icon><Link /></el-icon>{{ t('join.via') }}
-                  </el-tag>
+                  <AppTag variant="outline" :icon="Link" class="members__via" tabindex="0">{{ t('join.via') }}</AppTag>
                 </el-tooltip>
               </div>
               <div v-if="narrow" class="members__stack">
                 <RoleTag :member="row" />
                 <StatusTag v-if="row.status !== 'active'" vocab="memberStatus" :value="row.status" />
-                <el-tag v-if="row.status !== 'removed' && isExpired(row.expires_at)" size="small" type="info">
+                <AppTag v-if="row.status !== 'removed' && isExpired(row.expires_at)">
                   {{ t('members.expired') }}
-                </el-tag>
+                </AppTag>
               </div>
             </template>
           </el-table-column>
@@ -313,9 +313,9 @@ function rowClass({ row }: { row: MemberSummary }) {
             <template #default="{ row }">
               <div class="members__tags">
                 <StatusTag vocab="memberStatus" :value="row.status" />
-                <el-tag v-if="row.status !== 'removed' && isExpired(row.expires_at)" size="small" type="info">
+                <AppTag v-if="row.status !== 'removed' && isExpired(row.expires_at)">
                   {{ t('members.expired') }}
-                </el-tag>
+                </AppTag>
               </div>
             </template>
           </el-table-column>
@@ -428,11 +428,6 @@ function rowClass({ row }: { row: MemberSummary }) {
 .members__kind-icon {
   flex-shrink: 0;
   color: var(--el-text-color-secondary);
-}
-.members__via :deep(.el-tag__content) {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
 }
 .members__login-id {
   font-family: var(--app-font-mono);

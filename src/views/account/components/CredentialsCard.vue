@@ -8,10 +8,13 @@ import { computed, h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Monitor } from '@element-plus/icons-vue'
 import type { ApiError } from '@/api/http'
 import type { Credential } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -215,12 +218,12 @@ async function revoke(c: Credential) {
             <div class="creds-item__head">
               <span class="creds-item__title">{{ title(c) }}</span>
               <StatusTag vocab="credentialKind" :value="c.kind" />
-              <el-tag v-if="state !== 'active'" :type="STATE_TAG[state]" size="small" disable-transitions>
+              <AppTag v-if="state !== 'active'" :tone="toneOf(STATE_TAG[state])">
                 {{ t(`account.credentials.state.${state}`) }}
-              </el-tag>
-              <el-tag v-if="current" type="warning" effect="dark" size="small" disable-transitions>
+              </AppTag>
+              <AppTag v-if="current" variant="outline" :icon="Monitor">
                 {{ t('account.credentials.thisBrowser') }}
-              </el-tag>
+              </AppTag>
             </div>
             <div class="creds-item__meta">
               <span v-if="c.kind === 'api_token' && c.token_prefix">

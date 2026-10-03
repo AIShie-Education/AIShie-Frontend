@@ -19,6 +19,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useBackCloses } from '@/composables/useBackCloses'
 import { useWrite } from '@/composables/useWrite'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import TimeText from '@/components/TimeText.vue'
 import { DRAWER_SIZE } from '../setup/presets'
@@ -166,7 +167,7 @@ async function remove(a: Appointment) {
                     t('common.labels.youTag')
                   }}</span></span
                 >
-                <el-tag v-if="a.removed_at" type="info" size="small" disable-transitions>{{ t('deptAdmin.admins.ended') }}</el-tag>
+                <AppTag v-if="a.removed_at">{{ t('deptAdmin.admins.ended') }}</AppTag>
               </div>
               <div class="admins-drawer__meta">
                 <i18n-t keypath="deptAdmin.admins.appointedBy" tag="div" scope="global">

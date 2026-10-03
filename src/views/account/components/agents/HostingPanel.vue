@@ -19,6 +19,7 @@
 // hosted yet needs host_by_id and a way to give it a model, own_key or
 // school_key, since a hosted agent without a model never runs. An agent
 // hosted already shows as hosted whatever the features say.
+import AppTag from '@/components/AppTag.vue'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -174,9 +175,9 @@ watch(
     <section v-else class="app-card hosting-offer">
       <h2 class="app-card__title hosting-offer__title">
         <span>{{ t('hosting.offer.title') }}</span>
-        <el-tag type="warning" effect="plain" disable-transitions class="hosting-offer__tag">
+        <AppTag tone="wait" size="default" class="hosting-offer__tag">
           {{ t('hosting.offer.notHosted') }}
-        </el-tag>
+        </AppTag>
       </h2>
       <el-alert
         v-if="!rt.available.value"

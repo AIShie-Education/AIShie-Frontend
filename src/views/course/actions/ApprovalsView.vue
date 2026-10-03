@@ -20,7 +20,9 @@ import { ApiError, read } from '@/api/http'
 import { usePaged } from '@/composables/useAsync'
 import { usePageTitle } from '@/router/title'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import LevelIcon from '@/components/LevelIcon.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import ActionCard from './components/ActionCard.vue'
@@ -212,7 +214,9 @@ function toggleRules() {
           :content="t('actions.approvals.decisionsNeedApprovalHelp')"
           placement="bottom"
         >
-          <el-tag type="warning" effect="plain">{{ t('actions.approvals.decisionsNeedApproval') }}</el-tag>
+          <AppTag size="default" class="app-level-tag is-confirm_required" tabindex="0">
+            <LevelIcon level="confirm_required" />{{ t('actions.approvals.decisionsNeedApproval') }}
+          </AppTag>
         </el-tooltip>
       </template>
       <el-button

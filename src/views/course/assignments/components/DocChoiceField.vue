@@ -11,6 +11,7 @@ import type { DocumentSummary } from '@/api/types'
 import type { UploadedFile } from '@/api/http'
 import { useCourseStore } from '@/stores/course'
 import { titleFromFileName } from '@/utils/format'
+import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
@@ -99,9 +100,9 @@ function onUploaded(f: UploadedFile) {
         >
           <div class="doc-choice__option">
             <span class="doc-choice__option-title">{{ d.title }}</span>
-            <el-tag v-if="!d.published_version_id" size="small" type="warning" disable-transitions>
+            <AppTag v-if="!d.published_version_id" tone="wait">
               {{ t('assignments.form.doc.unpublishedTag') }}
-            </el-tag>
+            </AppTag>
           </div>
         </el-option>
       </el-select>

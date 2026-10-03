@@ -12,6 +12,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { TenantQuota } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import { formatMoney } from '@/utils/format'
@@ -57,7 +58,6 @@ function replace(q: TenantQuota) {
   tenants.value = tenants.value.map((x) => (x.tenant_id === q.tenant_id ? q : x))
 }
 
-const SOURCE_TAG = { site: 'primary', config: 'info', none: 'info' } as const
 
 // --- Editing ----------------------------------------------------------------------------
 const editing = shallowRef<TenantQuota | null>(null)
@@ -182,15 +182,9 @@ function serverText(q: TenantQuota): string {
                 t('runtimeAdmin.tenants.agents', { n: row.agents }, row.agents)
               }}</span>
               <template v-if="narrow">
-                <el-tag
-                  :type="SOURCE_TAG[row.source as 'site']"
-                  effect="plain"
-                  size="small"
-                  disable-transitions
-                  class="tenant-cell__source tenant-cell__source--narrow"
-                >
+                <AppTag variant="outline" class="tenant-cell__source tenant-cell__source--narrow">
                   {{ t(`runtimeAdmin.tenants.sources.${row.source}`) }}
-                </el-tag>
+                </AppTag>
                 <span class="tenant-cell__meta">
                   {{ answersText(row.per_day.answers) }} · {{ usdText(row.per_day.usd) }}
                 </span>
@@ -222,15 +216,9 @@ function serverText(q: TenantQuota): string {
         </el-table-column>
         <el-table-column v-if="!narrow" :label="t('runtimeAdmin.tenants.source')" min-width="120">
           <template #default="{ row }">
-            <el-tag
-              :type="SOURCE_TAG[row.source as 'site']"
-              effect="plain"
-              size="small"
-              disable-transitions
-              class="tenant-cell__source"
-            >
+            <AppTag variant="outline" class="tenant-cell__source">
               {{ t(`runtimeAdmin.tenants.sources.${row.source}`) }}
-            </el-tag>
+            </AppTag>
           </template>
         </el-table-column>
         <el-table-column v-if="!narrow" :label="t('runtimeAdmin.money.answersDay')" min-width="120" align="right">

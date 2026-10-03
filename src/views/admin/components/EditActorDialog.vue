@@ -6,6 +6,7 @@
 // typed themselves, registering through a join link, is marked unverified,
 // and one set here is vouched for. The kind and the platform role never
 // change.
+import AppTag from '@/components/AppTag.vue'
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
@@ -142,9 +143,9 @@ async function submit() {
         <template #label>
           {{ t('admin.loginId.label') }}
           <span v-if="!actor.login_id" class="app-muted">({{ t('common.labels.optional') }})</span>
-          <el-tag v-if="vouchesLoginId" size="small" type="warning" effect="plain" class="edit-actor__tag">
+          <AppTag v-if="vouchesLoginId" tone="wait" class="edit-actor__tag">
             {{ t('admin.loginId.unverified') }}
-          </el-tag>
+          </AppTag>
         </template>
         <el-input
           v-model="form.login_id"

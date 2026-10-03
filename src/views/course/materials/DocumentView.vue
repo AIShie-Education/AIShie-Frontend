@@ -47,6 +47,7 @@ import { useRuntime } from '@/composables/useRuntime'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { versionFilesOf } from '@/utils/documentFiles'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -470,9 +471,9 @@ function noteSource(): PrintRequest {
       <template v-if="doc" #tags>
         <StatusTag vocab="documentKind" :value="doc.kind" />
         <StatusTag v-if="doc.status !== 'active'" vocab="documentStatus" :value="doc.status" />
-        <el-tag v-else-if="courseLevel && !doc.published_version_id" type="warning" size="small" disable-transitions>
+        <AppTag v-else-if="courseLevel && !doc.published_version_id" tone="wait">
           {{ t('materials.document.notPublished') }}
-        </el-tag>
+        </AppTag>
       </template>
       <template v-if="doc && (canWrite || canPurge)" #default>
         <template v-if="canWrite && active">
@@ -584,18 +585,18 @@ function noteSource(): PrintRequest {
                   <!-- An owned file has exactly one version, and nothing to publish. -->
                   <template v-if="courseLevel">
                     <span class="doc-content__seq">{{ t('materials.document.version', { seq: shown.seq }) }}</span>
-                    <el-tag v-if="shown.purged" type="danger" size="small" effect="dark" disable-transitions>
+                    <AppTag v-if="shown.purged" tone="danger">
                       {{ t('materials.document.tombstone.tag') }}
-                    </el-tag>
-                    <el-tag v-if="shown.published" type="success" size="small" disable-transitions>
+                    </AppTag>
+                    <AppTag v-if="shown.published" tone="done">
                       {{ t('materials.document.published') }}
-                    </el-tag>
-                    <el-tag v-else-if="showVersions" type="warning" size="small" disable-transitions>
+                    </AppTag>
+                    <AppTag v-else-if="showVersions" tone="wait">
                       {{ t('materials.document.notPublished') }}
-                    </el-tag>
-                    <el-tag v-if="latest && latest.id === shown.id" size="small" effect="plain" disable-transitions>
+                    </AppTag>
+                    <AppTag v-if="latest && latest.id === shown.id" variant="outline">
                       {{ t('materials.document.latest') }}
-                    </el-tag>
+                    </AppTag>
                   </template>
                   <el-button
                     v-if="canPurge && courseLevel && !shown.purged"
@@ -742,9 +743,9 @@ function noteSource(): PrintRequest {
                         >
                       </template>
                     </i18n-t>
-                    <el-tag v-if="owner && !owner.published_at" size="small" type="info" class="doc-facts__tag">
+                    <AppTag v-if="owner && !owner.published_at" tone="wait" class="doc-facts__tag">
                       {{ t('materials.document.unpublishedAssignment') }}
-                    </el-tag>
+                    </AppTag>
                     <span v-if="!owner" class="app-muted">{{ t('materials.document.notUsed') }}</span>
                   </dd>
                 </template>

@@ -11,6 +11,8 @@ import { componentLabel } from '@/views/course/scheme/components/schemeModel'
 import { useCourseStore } from '@/stores/course'
 import { presetLabel } from '@/views/course/members/components/seat'
 import { seatPurpose } from '@/utils/agents'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import IdText from '@/components/IdText.vue'
@@ -220,9 +222,9 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       <span v-else-if="Array.isArray(p.grade_ids)" class="action-target__part">
         {{ t('actions.summary.grades', { n: (p.grade_ids as unknown[]).length }, (p.grade_ids as unknown[]).length) }}
       </span>
-      <el-tag v-if="p.treat_ungraded_as_zero" size="small" type="warning" effect="plain">
+      <AppTag v-if="p.treat_ungraded_as_zero" tone="wait">
         {{ t('actions.summary.ungradedZero') }}
-      </el-tag>
+      </AppTag>
     </template>
 
     <!-- Submissions -->
@@ -352,12 +354,12 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
 
     <!-- A decision or review about another action -->
     <template v-else-if="type === 'action.decide' || type === 'action.review' || type === 'action.withdraw'">
-      <el-tag v-if="type === 'action.withdraw'" size="small" type="info" effect="plain">
+      <AppTag v-if="type === 'action.withdraw'">
         {{ t('actions.summary.withdrawn') }}
-      </el-tag>
-      <el-tag v-else-if="type === 'action.decide'" size="small" :type="decisionTag(p.decision).type" effect="plain">
+      </AppTag>
+      <AppTag v-else-if="type === 'action.decide'" :tone="toneOf(decisionTag(p.decision).type)">
         {{ decisionTag(p.decision).label }}
-      </el-tag>
+      </AppTag>
       <StatusTag v-else vocab="reviewState" :value="str(p.outcome)" />
       <template v-if="aboutAction">
         <i18n-t keypath="actions.summary.by" tag="span" scope="global" class="action-target__by">

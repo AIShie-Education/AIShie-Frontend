@@ -15,6 +15,8 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { TranscriptionJob, TranscriptionJobFilter } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { formatMoney, shortId } from '@/utils/format'
+import AppTag from '@/components/AppTag.vue'
+import { toneOf } from '@/components/tags'
 import LoadMore from '@/components/LoadMore.vue'
 import TimeText from '@/components/TimeText.vue'
 import { textReasonText } from '@/views/course/materials/components/textVersion'
@@ -163,25 +165,20 @@ const empty = computed(() => loaded.value && !jobs.value.length)
           <template #default="{ row }">
             <div class="job-cell" :data-job="row.id">
               <div class="job-cell__head">
-                <el-tag
-                  :type="JOB_STATUS_TAG[row.status as TranscriptionJob['status']] ?? 'info'"
-                  size="small"
-                  disable-transitions
-                  class="job-cell__status"
-                >
+                <AppTag :tone="toneOf(JOB_STATUS_TAG[row.status as TranscriptionJob['status']] ?? 'info')" class="job-cell__status">
                   {{
                     te(`runtimeAdmin.transcription.jobs.status.${row.status}`)
                       ? t(`runtimeAdmin.transcription.jobs.status.${row.status}`)
                       : row.status
                   }}
-                </el-tag>
+                </AppTag>
                 <router-link :to="linkTo(row)" class="job-cell__doc">
                   {{ titleOf(row) || shortId(row.document_id) }}
                 </router-link>
                 <span v-if="fileOf(row)" class="job-cell__file">{{ fileOf(row) }}</span>
-                <el-tag v-if="row.backfill" size="small" type="info" effect="plain" disable-transitions>
+                <AppTag v-if="row.backfill" variant="outline">
                   {{ t('runtimeAdmin.transcription.jobs.backfill') }}
-                </el-tag>
+                </AppTag>
               </div>
               <span v-if="reasonOf(row)" class="job-cell__reason">{{ reasonOf(row) }}</span>
               <span class="job-cell__meta">

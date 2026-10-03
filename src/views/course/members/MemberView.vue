@@ -8,6 +8,7 @@
 import { computed, h, ref, useTemplateRef, watch, type VNode } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
+import { User } from '@element-plus/icons-vue'
 import { ApiError, read } from '@/api/http'
 import { DELEGATE_NEVER_PERMS, PERMS, type AutonomyLevel, type Member, type Perm, type PermLevels } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
@@ -15,6 +16,7 @@ import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
+import AppTag from '@/components/AppTag.vue'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AgentBadge from '@/components/AgentBadge.vue'
 import AgentName from '@/components/AgentName.vue'
@@ -388,11 +390,10 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
       <template #tags>
         <template v-if="m">
           <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" size="default" />
-          <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" :site-chat="m.site_chat" size="default" />
           <RoleTag :member="m" size="default" hide-none />
           <StatusTag vocab="memberStatus" :value="m.status" size="default" />
-          <el-tag v-if="expired" type="info">{{ t('members.expired') }}</el-tag>
-          <el-tag v-if="isSelf" type="primary" effect="plain">{{ t('common.labels.you') }}</el-tag>
+          <AppTag v-if="expired" size="default">{{ t('members.expired') }}</AppTag>
+          <AppTag v-if="isSelf" variant="outline" :icon="User" size="default">{{ t('common.labels.you') }}</AppTag>
         </template>
       </template>
       <template v-if="m && showManage">
@@ -526,7 +527,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
                 <span v-else>{{ m.display_name }}</span>
                 <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" no-ai />
                 <StatusTag v-else vocab="actorKind" :value="m.kind" />
-                <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" />
+                <HostingTag v-if="m.kind === 'agent'" :hosting="m.hosting" :site-chat="m.site_chat" />
               </span>
             </el-descriptions-item>
             <el-descriptions-item v-if="m.kind === 'human'" :label="t('members.loginId')">
@@ -546,7 +547,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.status')">
               <StatusTag vocab="memberStatus" :value="m.status" />
-              <el-tag v-if="expired" size="small" type="info" class="member__gap">{{ t('members.expired') }}</el-tag>
+              <AppTag v-if="expired" class="member__gap">{{ t('members.expired') }}</AppTag>
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.role')">
               <span class="member__role">

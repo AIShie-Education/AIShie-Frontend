@@ -6,6 +6,8 @@
 // posted total it changes, which the dialog says, and how many it wrote. A
 // place that may hold assignments the caller cannot see is offered with a
 // caution.
+import { Location } from '@element-plus/icons-vue'
+import AppTag from '@/components/AppTag.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
@@ -156,9 +158,7 @@ async function submit() {
             <div class="md-option" :style="{ paddingLeft: `${o.node.depth * 14}px` }">
               <span class="md-option__name">
                 {{ nameOf(o.node) }}
-                <el-tag v-if="o.current" size="small" type="info" disable-transitions>{{
-                  t('scheme.move.current')
-                }}</el-tag>
+                <AppTag v-if="o.current" variant="outline" :icon="Location">{{ t('scheme.move.current') }}</AppTag>
               </span>
               <span v-if="o.why && !o.current" class="md-option__why">{{ o.why }}</span>
             </div>

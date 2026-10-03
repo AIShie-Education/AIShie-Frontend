@@ -13,6 +13,7 @@ import { useAsync, usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
+import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -200,6 +201,7 @@ function refresh() {
           class="assignments-view__table"
           :empty-text="t('assignments.list.noMatch')"
           :default-sort="{ prop: 'due_at', order: 'ascending' }"
+          :row-class-name="({ row }: { row: AssignmentSummary }) => (row.published_at ? '' : 'app-row-unpublished')"
           @row-click="open"
         >
           <el-table-column
@@ -217,9 +219,9 @@ function refresh() {
                 >
                   {{ row.title }}
                 </router-link>
-                <el-tag v-if="!row.published_at" type="warning" size="small" effect="plain" disable-transitions>
+                <AppTag v-if="!row.published_at" tone="wait">
                   {{ t('assignments.state.unpublished') }}
-                </el-tag>
+                </AppTag>
               </div>
               <div class="assignments-view__sub app-muted">{{ componentLabel(row) }}</div>
               <div v-if="narrow" class="assignments-view__meta">
@@ -245,12 +247,12 @@ function refresh() {
             <template #default="{ row }">
               <div v-if="row.due_at" class="assignments-view__due">
                 <TimeText :value="row.due_at" relative />
-                <el-tag v-if="overdue(row)" type="danger" size="small" disable-transitions>
+                <AppTag v-if="overdue(row)" tone="danger">
                   {{ t('assignments.state.overdue') }}
-                </el-tag>
-                <el-tag v-else-if="isPast(row.due_at)" type="info" size="small" disable-transitions>
+                </AppTag>
+                <AppTag v-else-if="isPast(row.due_at)">
                   {{ t('assignments.state.pastDue') }}
-                </el-tag>
+                </AppTag>
               </div>
               <span v-else class="app-muted">{{ t('common.time.noDue') }}</span>
             </template>

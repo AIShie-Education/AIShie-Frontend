@@ -24,6 +24,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import { formatCountdown } from '@/utils/countdown'
+import AppTag from '@/components/AppTag.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import DepartmentPicker from './departments/DepartmentPicker.vue'
 import CoursePicker from './export/CoursePicker.vue'
@@ -343,7 +344,7 @@ const scopeOptions = computed(() =>
     >
       <h2 id="export-outcome-title" class="app-card__title">
         <span>{{ t('auditExport.outcome.title') }}</span>
-        <el-tag v-if="run.exported.replayed" size="small" type="info">{{ t('auditExport.outcome.replayed') }}</el-tag>
+        <AppTag v-if="run.exported.replayed">{{ t('auditExport.outcome.replayed') }}</AppTag>
       </h2>
       <ExportSummary :record="outcome" />
       <el-alert

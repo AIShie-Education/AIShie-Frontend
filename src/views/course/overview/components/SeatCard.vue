@@ -7,6 +7,7 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -117,9 +118,9 @@ function scopeText(which: 'student' | 'assignment'): string {
         <dd>
           <template v-if="m.expires_at">
             <TimeText :value="m.expires_at" />
-            <el-tag v-if="expired" type="danger" size="small" class="seat__expired">{{
+            <AppTag v-if="expired" tone="danger" class="seat__expired">{{
               t('overview.seat.expired')
-            }}</el-tag>
+            }}</AppTag>
           </template>
           <span v-else>{{ t('common.labels.never') }}</span>
         </dd>

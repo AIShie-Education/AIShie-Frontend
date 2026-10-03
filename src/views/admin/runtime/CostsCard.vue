@@ -15,6 +15,7 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { CostGroup, CostGroupBy, CostLine, CostReport, CostSum, KeySource } from '@/api/runtime-types'
 import { COST_GROUPS } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import { formatList, formatMoney, formatNumber } from '@/utils/format'
@@ -223,15 +224,9 @@ function toPrices() {
           <el-table-column v-if="!narrow" :label="t('runtimeAdmin.usage.modelCalls')" min-width="110" align="right">
             <template #default="{ row }">
               <span class="cost-cell__num">{{ n(callsOf(row)?.calls) }}</span>
-              <el-tag
-                v-if="callsOf(row)?.unpriced_calls"
-                type="warning"
-                size="small"
-                disable-transitions
-                class="cost-cell__unpriced"
-              >
+              <AppTag v-if="callsOf(row)?.unpriced_calls" tone="wait" class="cost-cell__unpriced">
                 {{ t('runtimeAdmin.costs.unpricedShort', { n: n(callsOf(row)?.unpriced_calls) }) }}
-              </el-tag>
+              </AppTag>
             </template>
           </el-table-column>
           <el-table-column v-if="!narrow" :label="t('runtimeAdmin.costs.tokens')" min-width="160" align="right">
@@ -252,15 +247,9 @@ function toPrices() {
               <span v-for="l in otherLines(row)" :key="l.kind" class="cost-cell__other">
                 {{ t('common.pair', { label: kindName(l.kind), value: formatMoney(l.cost_usd) }) }}
               </span>
-              <el-tag
-                v-if="narrow && callsOf(row)?.unpriced_calls"
-                type="warning"
-                size="small"
-                disable-transitions
-                class="cost-cell__unpriced"
-              >
+              <AppTag v-if="narrow && callsOf(row)?.unpriced_calls" tone="wait" class="cost-cell__unpriced">
                 {{ t('runtimeAdmin.costs.unpricedShort', { n: n(callsOf(row)?.unpriced_calls) }) }}
-              </el-tag>
+              </AppTag>
             </template>
           </el-table-column>
         </el-table>

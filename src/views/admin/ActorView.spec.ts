@@ -180,14 +180,16 @@ describe('an actor’s page', () => {
     expect(headings(w)).toContain('API token')
     expect(buttons(w)).toContain('Issue token')
     expect(headings(w)).toContain('Tokens and sign-ins')
-    expect(w.find('.page-header .hosting-tag').text()).toBe('MCP access')
+    // Once, among its facts: not again in the header.
+    expect(w.find('.page-header .hosting-tag').exists()).toBe(false)
+    expect(w.findAll('.hosting-tag').map((t) => t.text())).toEqual(['MCP access'])
     expect(w.text()).toContain('its tokens are issued here, for whatever reaches it over MCP')
   })
 
   it('offers an agent hosted on AIshie no token, and lists the runtime’s as issued to it', async () => {
     credentials = [apiToken({ issued_to: 'agent_runtime', issued_by_actor_id: SERVICE, issued_by_name: 'agent runtime', label: 'agent runtime' })]
     const w = await open(HOSTED)
-    expect(w.find('.page-header .hosting-tag').text()).toBe('Hosted on AIshie')
+    expect(w.findAll('.hosting-tag').map((t) => t.text())).toEqual(['Hosted on AIshie'])
     expect(buttons(w)).not.toContain('Issue token')
     expect(w.find('.token__runtime').text()).toContain('the site’s agent service alone is issued its one token')
     const token = w.find('.creds-token')
