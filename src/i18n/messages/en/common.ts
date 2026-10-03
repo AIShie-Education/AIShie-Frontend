@@ -59,6 +59,8 @@ export default {
     all: 'All',
     you: 'You',
     youTag: '(you)',
+    // A member the caller's seat may not look up (MemberName): no id, which would tell them nothing.
+    someMember: 'Someone in the course',
     andMore: '{n} more',
     never: 'Never',
     points: 'Points',

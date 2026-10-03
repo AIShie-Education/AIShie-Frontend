@@ -323,15 +323,18 @@ export default {
     summaryNone: '依据：{n}项你无法打开的课程教材',
     label: '这条回答依据的课程教材',
     quoted: '《{title}》',
-    // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
+    // A source, and where in it the answer read (its file, page or slide, version), or that it read another version.
     entry: '{title}· {where}',
     page: '第{n}页',
     slide: '第{n}张幻灯片',
     version: '第{seq}版',
     openFile: '打开文件中回答所依据之处',
     openVersion: '打开这份教材的这个版本',
-    earlier: '较早的版本',
-    earlierTip: '这条回答依据的是这份教材较早的版本，你现在无法打开；这里打开的是教材当前的版本。',
+    // A version the reader may not open, older or newer than the one they may (other_version): said after its link, which opens the material as it is now.
+    other: '另一个版本',
+    otherLine: '{link}{note}',
+    otherNote: '（打开的是当前的版本）',
+    otherTip: '这条回答依据的是这份教材的另一个版本，你无法打开；这里打开的是教材当前的版本。',
     restricted: '一份你无法打开的课程教材',
     none: '未引用课程教材',
     noneTip: '智能体表示这条回答没有依据任何课程教材。',

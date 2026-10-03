@@ -323,15 +323,18 @@ export default {
     summaryNone: '依據：{n}項你無法開啟的課程教材',
     label: '這則回答依據的課程教材',
     quoted: '《{title}》',
-    // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
+    // A source, and where in it the answer read (its file, page or slide, version), or that it read another version.
     entry: '{title}· {where}',
     page: '第{n}頁',
     slide: '第{n}張投影片',
     version: '第{seq}版',
     openFile: '開啟檔案中回答所依據之處',
     openVersion: '開啟這份教材的這個版本',
-    earlier: '較早的版本',
-    earlierTip: '這則回答依據的是這份教材較早的版本，你現在無法開啟；這裡開啟的是教材目前的版本。',
+    // A version the reader may not open, older or newer than the one they may (other_version): said after its link, which opens the material as it is now.
+    other: '另一個版本',
+    otherLine: '{link}{note}',
+    otherNote: '（開啟的是目前的版本）',
+    otherTip: '這則回答依據的是這份教材的另一個版本，你無法開啟；這裡開啟的是教材目前的版本。',
     restricted: '一份你無法開啟的課程教材',
     none: '未引用課程教材',
     noneTip: '代理表示這則回答沒有依據任何課程教材。',

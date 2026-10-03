@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import { defineComponent, h } from 'vue'
@@ -7,6 +7,8 @@ import { i18n, setLocale } from '@/i18n'
 import { read } from '@/api/http'
 import EventItem from './EventItem.vue'
 import { useCourseStore } from '@/stores/course'
+import { useSessionStore } from '@/stores/session'
+import { forgetMyAgents } from '@/views/course/actions/components/myAgents'
 import { ensureEventWho, forgetActionWho } from './actors'
 import { whoReachOf, type CourseEvent } from './feed'
 
@@ -38,7 +40,11 @@ function event(type: string, kind: string | undefined): CourseEvent {
   }
 }
 
-function mountItem(e: CourseEvent, perms: Record<string, string> = {}) {
+function mountItem(
+  e: CourseEvent,
+  perms: Record<string, string> = {},
+  opts: { compact?: boolean; links?: boolean } = {},
+) {
   setActivePinia(createPinia())
   if (Object.keys(perms).length) {
     const course = useCourseStore()
@@ -46,10 +52,16 @@ function mountItem(e: CourseEvent, perms: Record<string, string> = {}) {
     course.perms = perms as never
   }
   return mount(EventItem, {
-    props: { event: e, courseId: COURSE },
+    props: { event: e, courseId: COURSE, compact: opts.compact },
     global: {
       plugins: [i18n, ElementPlus],
-      stubs: { ElTooltip: TooltipStub, RouterLink: true, MemberName: true, TimeText: true },
+      // With links, a link is an <a> with its words, where it leads in its props.
+      stubs: {
+        ElTooltip: TooltipStub,
+        RouterLink: opts.links ? RouterLinkStub : true,
+        MemberName: true,
+        TimeText: true,
+      },
     },
   })
 }
@@ -191,9 +203,43 @@ describe('EventItem, a proposal sent back for changes, and its revision', () => 
   })
 
   it('says a proposal revises an earlier one', async () => {
-    const w = mountItem(ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }))
+    const w = mountItem(
+      ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }),
+      {},
+      { links: true },
+    )
     await flushPromises()
     expect(w.text()).toContain('Revises an earlier proposal')
+    // Someone who does not read the action log is not offered that one to open.
+    expect(w.find('.event-item__fact-link').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('links a decider to the proposal it revises, with its id', async () => {
+    const w = mountItem(
+      ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }),
+      { action_decide: 'autonomous' },
+      { links: true },
+    )
+    await flushPromises()
+    const fact = w.find('.event-item__fact-link')
+    expect(fact.exists()).toBe(true)
+    const link = fact.findComponent(RouterLinkStub)
+    expect(link.text()).toBe('Revises an earlier proposal')
+    expect(link.props('to')).toEqual({ name: 'course-action', params: { courseId: COURSE, actionId: 'p1' } })
+    expect(fact.find('.id-text').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('says it without a link in the overview’s short list, even to a decider', async () => {
+    const w = mountItem(
+      ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }),
+      { action_decide: 'autonomous' },
+      { links: true, compact: true },
+    )
+    await flushPromises()
+    expect(w.text()).toContain('Revises an earlier proposal')
+    expect(w.find('.event-item__fact-link').exists()).toBe(false)
     w.unmount()
   })
 
@@ -201,6 +247,32 @@ describe('EventItem, a proposal sent back for changes, and its revision', () => 
     const w = mountItem(ev('action.proposed', { target_type: 'submission' }))
     await flushPromises()
     expect(w.text()).not.toContain('Revises')
+    w.unmount()
+  })
+
+  it('says what a proposal is about in words, bringing in an agent and answering a question too', async () => {
+    for (const [target, words] of [
+      ['actor', 'about a person or agent'],
+      ['conversation', 'about a conversation'],
+      ['conversation_message', 'about a message'],
+    ]) {
+      const w = mountItem(ev('action.proposed', { target_type: target }))
+      await flushPromises()
+      expect(w.find('.event-item__facts').text()).toBe(words)
+      w.unmount()
+    }
+    setLocale('zh-Hant')
+    const zh = mountItem(ev('action.proposed', { target_type: 'actor' }))
+    await flushPromises()
+    expect(zh.find('.event-item__facts').text()).toBe('對象：一位人員或代理')
+    zh.unmount()
+  })
+
+  it('leaves unsaid a kind of target it has no words for, rather than Core’s own name for it', async () => {
+    const w = mountItem(ev('action.proposed', { target_type: 'course_join_link' }))
+    await flushPromises()
+    expect(w.text()).not.toContain('course_join_link')
+    expect(w.find('.event-item__facts').exists()).toBe(false)
     w.unmount()
   })
 })
@@ -691,6 +763,147 @@ describe('EventItem, an agent seated as someone’s delegate', () => {
     const w = mountItem(e)
     await flushPromises()
     expect(w.find('.event-item__facts').text()).toBe('Assistant')
+    w.unmount()
+  })
+})
+
+describe('EventItem, a chat’s news', () => {
+  const chat = (type: string): CourseEvent => ({
+    seq: 50,
+    type,
+    occurred_at: '2026-10-01T10:00:00Z',
+    subject_type: 'conversation',
+    subject_id: 'cv-1',
+    action_id: 'act-ask',
+    payload: { conversation_id: 'cv-1', opener_member_id: 'm-yuki', respondent_member_id: 'm-tutor' },
+  })
+
+  // A link that says where it goes.
+  const LinkStub = defineComponent({
+    name: 'RouterLink',
+    props: { to: { type: Object, default: null } },
+    setup:
+      (p, { slots }) =>
+      () =>
+        h('a', { 'data-to': JSON.stringify(p.to) }, slots.default?.()),
+  })
+
+  it('says it is about a conversation, in words, and opens it, never Core’s name for it', async () => {
+    for (const [locale, words] of [
+      ['en', 'Conversation'],
+      ['zh-Hant', '對話'],
+      ['zh-Hans', '对话'],
+    ] as const) {
+      setLocale(locale)
+      for (const type of ['conversation.message_posted', 'conversation.opened']) {
+        setActivePinia(createPinia())
+        for (const compact of [false, true]) {
+          const w = mount(EventItem, {
+            props: { event: chat(type), courseId: COURSE, compact },
+            global: {
+              plugins: [i18n, ElementPlus],
+              stubs: { ElTooltip: TooltipStub, RouterLink: LinkStub, MemberName: true, TimeText: true },
+            },
+          })
+          await flushPromises()
+          const subject = w.find('.event-item__subject')
+          expect(subject.text()).toBe(words)
+          // In the chat, on this conversation (feed.spec.ts), in the activity and the overview's short list alike.
+          expect(JSON.parse(subject.attributes('data-to')!)).toEqual({
+            name: 'course-conversations',
+            params: { courseId: COURSE, conversationId: 'cv-1' },
+          })
+          expect(w.text()).not.toMatch(/\bconversation\b/)
+          w.unmount()
+        }
+      }
+    }
+  })
+
+  it('leaves unsaid a kind of subject it has no words for, rather than Core’s own name for it', async () => {
+    const w = mountItem({
+      seq: 51,
+      type: 'course.join_link_created',
+      occurred_at: '2026-10-01T10:00:00Z',
+      subject_type: 'course_join_link',
+      subject_id: 'l-1',
+      payload: {},
+    })
+    await flushPromises()
+    expect(w.text()).not.toContain('course_join_link')
+    expect(w.find('.event-item__subject').exists()).toBe(false)
+    w.unmount()
+  })
+})
+
+describe('EventItem, a student’s own agent brought in', () => {
+  const STUDENT = { member_read: 'denied', action_decide: 'denied', document_read: 'autonomous' }
+  const seated = (principal: string): CourseEvent => ({
+    seq: 60,
+    type: 'member.added',
+    occurred_at: '2026-10-01T10:00:00Z',
+    subject_type: 'course_member',
+    subject_id: 'm-helper',
+    action_id: 'act-seat',
+    payload: {
+      actor_id: 'a-helper',
+      role: 'assistant',
+      delegate: true,
+      principal_member_id: principal,
+      answers_course: false,
+    },
+  })
+  let asked: string[] = []
+  beforeEach(() => {
+    forgetActionWho()
+    forgetMyAgents()
+    asked = []
+    vi.mocked(read).mockImplementation((async (name: string) => {
+      asked.push(name)
+      if (name === 'agent.list') return { agents: [{ actor_id: 'a-helper', display_name: 'Yuki revision helper' }] }
+      if (name === 'action.list_mine') return { actions: [] }
+      throw new Error('forbidden')
+    }) as unknown as typeof read)
+  })
+  function mountAsYuki(e: CourseEvent) {
+    setActivePinia(createPinia())
+    const session = useSessionStore()
+    session.me = { id: 'a-yuki', kind: 'human', display_name: 'Yuki Tanaka' } as never
+    const course = useCourseStore()
+    course.courseId = COURSE
+    course.permsSource = 'exact'
+    course.perms = STUDENT as never
+    course.membership = { member_id: 'm-yuki' } as never
+    // MemberName itself, not a stub: what she reads.
+    return mount(EventItem, {
+      props: { event: e, courseId: COURSE },
+      global: { plugins: [i18n, ElementPlus], stubs: { ElTooltip: TooltipStub, RouterLink: true, TimeText: true } },
+    })
+  }
+
+  it('names it by the name she gave it, not as someone in the course', async () => {
+    for (const [locale, kind] of [
+      ['en', 'Personal agent'],
+      ['zh-Hant', '個人代理'],
+    ] as const) {
+      setLocale(locale)
+      const w = mountAsYuki(seated('m-yuki'))
+      await flushPromises()
+      const subject = w.find('.event-item__subject')
+      expect(subject.text()).toContain('Yuki revision helper')
+      expect(subject.find('.ai-badge').exists()).toBe(true)
+      expect(subject.text()).not.toContain(i18n.global.t('common.labels.someMember'))
+      expect(w.find('.event-item__facts').text()).toBe(kind)
+      w.unmount()
+    }
+    expect(asked.filter((n) => n === 'agent.list')).toEqual(['agent.list'])
+  })
+
+  it('asks nothing of her agents for a seat that is not hers, and names nobody it cannot', async () => {
+    const w = mountAsYuki(seated('m-ken'))
+    await flushPromises()
+    expect(asked).not.toContain('agent.list')
+    expect(w.find('.event-item__subject').text()).toBe('Someone in the course')
     w.unmount()
   })
 })

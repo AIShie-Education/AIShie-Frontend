@@ -527,6 +527,19 @@ describe('agents only', () => {
     expect(agentPurpose(r('agent', true))).toBe('personal')
     expect(agentPurpose(r('agent'))).toBe('course')
   })
+
+  it('calls a course agent one, the caller’s own included, as the Agents tab does', () => {
+    expect(agentPurpose({ ...r('agent', true), answers_course: true })).toBe('course')
+    expect(agentPurpose({ ...r('agent', true), answers_course: false })).toBe('personal')
+    expect(agentPurpose({ ...r('agent'), answers_course: true })).toBe('course')
+  })
+
+  it('calls an agent the course seated itself a course agent, though Core says it answers no course', () => {
+    // Core's answers_course is a delegate's: false for any agent that is nobody's delegate.
+    expect(agentPurpose({ ...r('agent'), answers_course: false })).toBe('course')
+    expect(agentPurpose({ ...r('agent'), answers_course: null })).toBe('course')
+    expect(agentPurpose({ ...r('agent', true), answers_course: null })).toBe('personal')
+  })
 })
 
 describe('site chat', () => {

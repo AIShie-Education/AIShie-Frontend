@@ -5,7 +5,9 @@
 // respondent_member_id), the latest activity first, and each one read as
 // course staff read it: nothing written, nothing marked read, and a message
 // withdrawn where the seat decides actions for its opener (Core checks).
-// A drawer over the page (the whole screen on a phone), which back closes.
+// A drawer over the page (the whole screen on a phone), which back closes;
+// back from a conversation open in it goes to the list first, as the
+// conversation's own Back button does.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConversationView } from '@/api/types'
@@ -40,6 +42,13 @@ useBackCloses(
 const shown = ref<string | null>(null)
 watch(
   () => props.agent?.id,
+  () => (shown.value = null),
+)
+// Over the list, at every width, as the log is over the page: after the
+// log's own (declared first), so that the log opened again on a conversation
+// has the conversation's entry on top.
+useBackCloses(
+  () => props.modelValue && !!shown.value,
   () => (shown.value = null),
 )
 

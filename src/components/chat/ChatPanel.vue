@@ -252,14 +252,15 @@ onBeforeUnmount(() => {
 })
 
 // The course the page shows is the one asked in; on a phone the sheet covers
-// the page, and gives way to wherever a link in it leads.
+// the page, and gives way to wherever a link in it leads, though not to the
+// page under it writing its own address (a search, as it is typed).
 watch(
   () => (typeof route.params.courseId === 'string' ? route.params.courseId : null),
   (id) => chat.followPage(id),
   { immediate: true },
 )
 watch(
-  () => route.fullPath,
+  () => route.path,
   () => {
     if (sheet.value && chat.open) chat.setOpen(false)
   },

@@ -41,9 +41,10 @@ const PAGES_AT_ONCE = 10
 
 /**
  * A chat's messages are actions too, and would bury everything else: they are
- * left out (action.list_mine's exclude_types) unless the person asks for them.
+ * left out (action.list_mine's exclude_types) unless the person asks for them,
+ * and so is marking a conversation read, which opening an answer does.
  */
-const CHAT_TYPES = ['conversation.ask', 'conversation.answer']
+const CHAT_TYPES = ['conversation.ask', 'conversation.answer', 'conversation.mark_read']
 const showChat = ref(false)
 
 const items = ref<ActionRow[]>([])

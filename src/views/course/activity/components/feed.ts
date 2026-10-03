@@ -323,6 +323,7 @@ export type SubjectKind =
   | 'action'
   | 'component'
   | 'course'
+  | 'conversation'
   | 'other'
 
 export function subjectKind(e: CourseEvent): SubjectKind {
@@ -343,6 +344,9 @@ export function subjectKind(e: CourseEvent): SubjectKind {
       return 'component'
     case 'course':
       return 'course'
+    // A chat's news, which Core tells its two participants alone.
+    case 'conversation':
+      return 'conversation'
     case 'document': {
       const kind = payloadString(e, 'kind')
       if (kind === 'submission' || e.type.startsWith('submission.')) return 'submissionFile'
@@ -427,6 +431,10 @@ export function subjectRoute(e: CourseEvent, courseId: string, reach: Reach): Ro
       return id ? { name: 'course-action', params: { courseId, actionId: id } } : null
     case 'component':
       return { name: 'course-scheme', params: { courseId } }
+    case 'conversation':
+      // Opens the chat on it, beside the page (router: course-conversations). Its news is its
+      // participants' alone, so whoever reads it here may read it there.
+      return id ? { name: 'course-conversations', params: { courseId, conversationId: id } } : null
   }
   return null
 }

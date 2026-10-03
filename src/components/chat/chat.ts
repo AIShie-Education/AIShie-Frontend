@@ -213,11 +213,20 @@ export function closedReasonOf(reason: string | null | undefined): ClosedReason 
 // --- Only agents are asked ---------------------------------------------------------
 
 /**
- * What an agent one may ask is to the caller: their own personal assistant
- * (seated as their delegate), or the course's (anyone else's that answers
- * them: a course agent, or an agent the course seated itself).
+ * What an agent one may ask is: a course agent, which answers the course's
+ * students too, whoever brought it in, the caller included; or a personal
+ * agent, which answers its owner alone. Called the same here as on the
+ * course's Agents tab and a member's page, whose agent it is said apart
+ * (AgentBadge). answers_course tells the two apart only for a delegate (the
+ * caller's own, here): Core says false for any agent that is nobody's
+ * delegate (Member.AnswersOthers needs a principal), such as one the course
+ * seated itself, which answers whoever may ask it, and so is the course's.
+ * Anyone else's agent one may ask answers others too. Where Core says
+ * nothing of answers_course, as one from before it did not, the caller's own
+ * delegate is taken to be personal.
  */
-export function agentPurpose(r: { is_my_delegate: boolean }): 'personal' | 'course' {
+export function agentPurpose(r: { is_my_delegate: boolean; answers_course?: boolean | null }): 'personal' | 'course' {
+  if (r.is_my_delegate && typeof r.answers_course === 'boolean') return r.answers_course ? 'course' : 'personal'
   return r.is_my_delegate ? 'personal' : 'course'
 }
 

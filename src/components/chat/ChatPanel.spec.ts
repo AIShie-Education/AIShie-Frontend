@@ -657,8 +657,13 @@ describe('ChatPanel', () => {
     expect(chat.open).toBe(false)
     expect(chat.screen).toBe('conversation')
 
-    // A link followed from it leads to its page, which the sheet gives way to.
+    // The page under it writing its own address (a search, as it is typed) leaves it open.
     chat.setOpen(true)
+    await router.replace({ query: { q: 'root' } })
+    await flushPromises()
+    expect(chat.open).toBe(true)
+
+    // A link followed from it leads to its page, which the sheet gives way to.
     await router.push('/courses/k1/grades')
     await flushPromises()
     expect(chat.open).toBe(false)

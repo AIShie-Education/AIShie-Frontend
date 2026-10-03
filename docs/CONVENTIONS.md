@@ -437,23 +437,32 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   a whole sentence.
 - **A proposal sent back for changes.** Wherever a proposal is decided (`DecidePanel`), *Request
   changes* (要求修改) is offered beside Approve and Reject, under the same rules as Reject:
-  `action.decide` with `decision: 'request_changes'` and the note as `reason`. The note is
-  required, 1 to 2000 characters and not spaces alone: the confirm button stays off until there is
-  one, and Core's refusals of it (`note_required`, `note_too_long`) are worded under
-  `actions.decision.refusal`. The proposal ends in `changes_requested`, a final state that is no
-  failure: its tag is `warning`, amber, as it waits on its proposer to propose again, not a
-  rejection's `danger`. Its button is outlined, as Reject's is, and pressed in while its form is
-  open, whose confirm button is the one primary. Its
-  note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and
-  who asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal
-  it revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the
-  queue, *My actions* and the action's page, as the feed does from the revision's
-  `action.proposed`; the earlier one says nothing of it. `action.changes_requested` is listed in
-  the feed with its decision, as `action.rejected` is. An agent's answer in a conversation
-  (`conversation.answer`) is not offered for changes yet (`offersChanges`): only the site's agent
-  runtime answers in the site, and one that does not know of requests for changes leaves an
-  answer sent back waiting for good (Core's `docs/deploying.md`, Migration 0028). That condition
-  goes once the runtime that revises one runs wherever this front end does.
+  `action.decide` with `decision: 'request_changes'` and the note as `reason`. The note is required,
+  1 to 2000 characters and not spaces alone: the confirm button stays off until there is one, and
+  Core's refusals of it (`note_required`, `note_too_long`) are worded under
+  `actions.decision.refusal`. Opening Request changes or Reject puts the focus in the form's field,
+  which is named for what it asks (`actions.decision.fieldLabel`, never by its placeholder alone),
+  `aria-required` while a note is required, and described by the hint and the line saying a note is
+  needed; the confirm button comes right after it for Tab (the row is drawn Cancel first, with
+  `row-reverse`) and, while the note is missing, is `aria-disabled` and described by that line, not
+  `disabled`, so that Tab still reaches it and it says why: type, Tab, Enter sends it. The proposal
+  ends in `changes_requested`, a final state that is no failure: its tag is `warning`, amber, as it
+  waits on its proposer to propose again, not a rejection's `danger`. Its button is outlined, as
+  Reject's is, and pressed in while its form is open, whose confirm button is the one primary. Its
+  note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and who
+  asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal it
+  revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the queue,
+  *My actions* and the action's page, as the feed does from the revision's `action.proposed`; the
+  earlier one says nothing of it. Its icon hangs beside the text, which wraps under itself, so it
+  stays on the line of the link's first word. On the action's page, under the label "Revises", the
+  link names only the earlier proposal (`labelled`), and beside it is what to change in it, in *My
+  actions*' words (`actions.outcome.changesLabel`): read with `action.get` by whoever read the
+  revision so, a decider or the owner of the agent that proposed it (a revision revises its own
+  proposer's), with `action_decide` or without. `action.changes_requested` is listed in the feed
+  with its decision, as `action.rejected` is. Every proposal is offered for changes, an agent's
+  answer in a conversation too, which the site's agent runtime answers again once sent back
+  (AIShie-Agent-Runtime#52): this front end is deployed beside a runtime that does, never ahead of
+  it.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous
@@ -550,7 +559,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
   for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
   its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
-  of seat. What is new or unread, and a count of what waits for the reader's decision, is indigo. A
+  of seat, how an agent runs (`HostingTag`). Whether an agent can be asked is neutral too, never
+  green as "online" is; only its not running, which wants its owner, is amber. What is new or
+  unread, and a count of what waits for the reader's decision, is indigo. A
   level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
   `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
   confirm_required a raised hand on the indigo's tint; pending_review an eye, outlined in ink;
@@ -590,11 +601,22 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   posting, its override in its place. Of grade.list, mostly superseded totals with their working,
   only what the matrix needs of the live grades is kept (`slimGrade`). Rows are the students within
   the seat's student scope, removed ones (marked, and left out of the averages) when asked for; a
-  seat limited to listed assignments has no totals or components. A scheme that cannot be read is
-  an error, never every assignment shown as not counted. Drafts, missing work and work to grade are
-  said in words, never by colour alone. The search, the filter and the order are in the address
-  (`?q=`, `?show=`, `?sort=`), and `GradebookView` keeps the page alive (`KeepAlive`) while a
-  student's own gradebook is open, so that coming back finds it as it was, read again behind it.
+  seat limited to listed assignments has no totals or components. A seat that may not read the
+  member list (a tutor agent's) has a row, by member ID, for each student it is shown work or
+  grades of and each one an assignment's roster lists (`submission.roster`), so that one with
+  nothing yet is a click away too. A scheme, an assignment list or a member list that cannot be read
+  is an error with a Retry and nothing to export, never every assignment shown as not counted nor
+  the class named by member ID. Drafts, missing work and work to grade are said in words, never by
+  colour alone, and so is the posted grade a draft would replace, under it. A score is given to two
+  decimal places at most (`shortScore`, `classFigure`), every place in its tooltip and for a screen
+  reader, so that a flag beside it stays in its cell. Refresh reads the class again under the rows
+  as they are, never taking them away. The search, the filter and the order are in the address
+  (`?q=`, `?show=`, `?sort=`; a search typed and not yet there is written into the address of the
+  page as it is left), and `GradebookView` keeps the page alive (`KeepAlive`) while a student's own
+  gradebook is open, so that coming back finds it as it was, laid out for the width it comes back
+  to (`useContainerWidth` measures again as a kept page comes back), with the students opened
+  meanwhile read again behind it (`student_member_id`, `mergeStudents`), and the whole term only
+  where it was read more than five minutes before.
   It is not an `el-table`: `GradeMatrix` is a table in a box of its own, its header row and names
   sticky, whose rows are all 44 px and of which only those near the screen are drawn (300 × 30
   stays smooth), in a box as tall as the window has room for below where it begins; where its
@@ -618,7 +640,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   48 large) and its fields' text 16 px, below which iOS zooms into a field it focuses; a component
   that sets the text size of a field one types into (`MarkdownEditor`'s 13 px monospace, the PDF
   viewer's page number) outweighs that rule, and so sets 16 px under `pointer: coarse` itself. A
-  control of the app's own that is pressed often is at least 40 px there. Never set `maximum-scale` or
+  control of the app's own that is pressed often is at least 40 px there: a course's tabs (44), the
+  grades' own tabs (40) and the links of the phone's menu (44) among them. Never set `maximum-scale` or
   `user-scalable` in the viewport: zooming is the reader's.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
@@ -627,14 +650,21 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   is dismissed first, as cancelled), and closed by its own means (its button, Escape, a click beside
   it) it goes back over its entry, so that history is as it was. It is used by the file viewer, the
   phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider screen stays open from
-  page to page, and back moves between them), the agent's conversation log, the invite link put up
+  page to page, and back moves between them), the agent's conversation log and the conversation
+  open in it (back goes back to the log's list first, as its Back button does), the invite link put up
   full screen, and the administrators' drawers of a preset and of a department's administrators
   (full width on a phone, `DRAWER_SIZE`), who can read a conversation, the chat pane's dialog
   opened over the sheet or the log, and About (`AboutDialog`), which on a phone opens over the
   menu from the account's row at its bottom; a new drawer or dialog that fills a phone's screen, or that opens
   over one of these, uses it too. The router (`installBackCloses`) goes back over the overlays' entries before it adds a page's,
   so that a link followed from one takes its place, and over those a page left before it was
-  reloaded; going back to a page's own entry leaves it where it was scrolled.
+  reloaded; going back to a page's own entry leaves it where it was scrolled. An address the page
+  writes while an overlay is open (`router.replace`, a search as it is typed) is the one it keeps
+  once the overlay closes, and the menu and the chat's sheet close as the page changes
+  (`route.path`), not as it writes its own address. An overlay opened while a page a link leads to
+  is still on its way adds its entry at once, as any does: back closes it and the page shown stays
+  (the page on its way is dropped, as back drops one still loading), closed otherwise it lets that
+  page land, and still open as the page lands its entry makes way for the page's and comes after it.
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
@@ -682,7 +712,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   newer grade or of its rubric's version. What they may be asked to quote stays: the action that made
   a grade, an action's own page (its id, its actor's and its target's), and their account's ID on
   Account. Where a person cannot be named to them (a student may not read the member list),
-  `<MemberName>` still shows a short member ID, a grade's grader say, until Core names them.
+  `<MemberName>` says "someone in the course" (「一位成員」), a grade's grader say, until Core names
+  them: never a hash in a line that says who acted ("→ 430c5829 approved"), and no member ID in a
+  `title` either, which a touch screen or a keyboard cannot reach and a screen reader reads out
+  whole. What they quote instead is the action, its ID on its page (a grade's, under the grade),
+  which tells whoever reads the action log who it was. Where the name is known otherwise, pass it
+  (`:agent`): a student's own agent by the name in its proposal or in her agents (agent.list), the
+  agent a conversation is with by the name `conversation.get` gives it.
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
@@ -928,16 +964,24 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the agent writes it; the posted answer takes its place.
 - **What an answer relied on** (its `sources`, AIShie-Core#69, `MessageSource`) is under its words
   and files (`ChatMessageSources`, each source a `ChatMessageSource`), as Core shows it to the reader
-  now: one named on a quiet line (「依據：《title》· 第 3 頁」), several summed up by the first with a
-  title and how many, the line opening to list them. A whole source opens the version read: with a
-  file, that file in the viewer among the version's (`document.get` with its `version_id`, read on
-  the click), at the page or slide named (`openPreview`'s `page`, which `PdfView` opens at, a
-  slide's in its PDF); without one, the document's page at `?version=`. `other_version` leads to the
-  document as it is now and says the answer read an earlier version; `restricted` is said to be a
-  course material the reader cannot open, with no title and no link. An empty list is the neutral
-  pill 「未引用課程教材」; no `sources` (or `null`) is an answer that did not say, and shows nothing.
-  A proposed answer keeps its sources by id alone: the queue and the action's page count them
-  (`AnswerSources`).
+  now: one named on a quiet line (「依據：《title》· lecture2.pdf · 第3頁」: Core takes a page or a
+  slide only with a `file_id`, so the file is always named before it), several summed up by the
+  first with a title and how many, the line opening to list them; a title with no spaces (one taken
+  from a file's name) breaks anywhere, in the summary as on the line, so that nothing in the chat
+  scrolls sideways. A whole source opens the version read: with a file, that file in the viewer
+  among the version's (`document.get` with its `version_id`, read on the click), at the page or
+  slide named (`openPreview`'s `page`, which `PdfView` opens at, a slide's in its PDF); without
+  one, the document's page at `?version=`. `other_version` is a version the reader may not open,
+  older or newer than the one they may (a draft, or one published before an earlier one was
+  published again): it is "another version" (「另一個版本」), never an earlier one, and its link,
+  to the document as it is now, says so beside it, not only in its tooltip ("(opens it as it is
+  now)", 「（開啟的是目前的版本）」); `restricted` is said to be a course material the reader cannot
+  open, with no title and no link. An empty list is the neutral pill 「未引用課程教材」, which takes
+  focus and says that the agent said so in a tooltip on hover, focus or a tap; no `sources` (or
+  `null`) is an answer that did not say, and shows nothing. A proposed answer keeps its sources by
+  id alone: the queue and the action's page count the course materials, each `document_id` once
+  (two pages of one lecture are one material), on a line whose tooltip, on hover, focus or a tap,
+  says each is checked again on approval (`AnswerSources`).
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

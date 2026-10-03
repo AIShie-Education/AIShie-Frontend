@@ -8,6 +8,7 @@ import {
   demo,
   hostOnRuntime,
   openChat,
+  openCourseTab,
   signIn,
   signInAsRoot,
   type CoreReply,
@@ -18,10 +19,15 @@ import {
 // over the page instead of leaving it: the file viewer, the chat's sheet, the
 // menu, an administrator's drawer, the top one first where one is open over
 // another (a message box, or who can read a conversation, asked over the chat
-// or an agent's conversation log first of all; a menu left open in the log
-// goes with it). Closed by its own button, an overlay goes back over the
-// entry it added, so that back from there leaves the page, as it would have
-// before it opened; a link followed from the menu takes the menu's place in
+// or an agent's conversation log first of all; in the log, the conversation
+// open over its list, and a menu left open in it goes with it). Closed by its
+// own button, an overlay goes back over the entry it added, so that back from
+// there leaves the page, as it would have before it opened; a link followed
+// from the menu takes the menu's place in history; a search the page writes
+// to its address while the menu is open stays there once the menu closes; an
+// overlay opened while the page a link leads to is still loading is closed by
+// back all the same, and the page shown stays, while one closed otherwise
+// lets that page land, and one still open when it lands comes after it in
 // history; and a page reloaded with an overlay open leaves none behind. On a
 // wider screen the chat is a window that stays open from page to page, and
 // back moves between them.
@@ -66,6 +72,30 @@ async function openReaders(page: Page, pane: Locator) {
 
 function menuButton(page: Page) {
   return page.getByRole('button', { name: 'Menu', exact: true })
+}
+
+/**
+ * Holds back the code of a view (`MembersView`), as a slow connection does on
+ * a first visit: a link to its page is on its way until `release` lets the
+ * code through, and resolves once it has come.
+ */
+async function holdCode(page: Page, view: string) {
+  const isIt = (url: URL) => new RegExp(`/${view}[.-]`).test(url.pathname)
+  let asked!: () => void
+  const requested = new Promise<void>((resolve) => (asked = resolve))
+  let open!: () => void
+  const released = new Promise<void>((resolve) => (open = resolve))
+  await page.route(isIt, async (route) => {
+    asked()
+    await released
+    await route.continue()
+  })
+  const release = async () => {
+    const arrived = page.waitForResponse((res) => isIt(new URL(res.url())))
+    open()
+    await arrived
+  }
+  return { requested, release }
 }
 
 test.describe('on a phone, back', () => {
@@ -154,6 +184,90 @@ test.describe('on a phone, back', () => {
     await page.keyboard.press('Escape')
     await expect(menu).toBeHidden()
     await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+  })
+
+  test('closes the menu opened while the page a link leads to is still loading, and the page shown stays; closed with Escape, that page lands', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await twoPages(page, '/', coursePath())
+    const url = page.url()
+    const menu = page.getByRole('dialog', { name: 'Menu' })
+    const members = await holdCode(page, 'MembersView')
+
+    // Members tapped, nothing seems to happen, and the menu is opened meanwhile.
+    await openCourseTab(page, 'Members')
+    await members.requested
+    await menuButton(page).click()
+    await expect(menu).toBeVisible()
+    await page.goBack()
+    await expect(menu).toBeHidden()
+    expect(page.url()).toBe(url)
+    await atPagesOwnEntry(page)
+    await expect(page.locator('.course-head')).toBeVisible()
+    // Back dropped the page on its way: its code come, it does not land.
+    await members.release()
+    await page.waitForTimeout(500)
+    expect(page.url()).toBe(url)
+
+    // Closed with Escape instead, the menu lets the page land, after the course's.
+    const activity = await holdCode(page, 'ActivityView')
+    await openCourseTab(page, 'Activity')
+    await activity.requested
+    await menuButton(page).click()
+    await expect(menu).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+    await activity.release()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('activity')}$`))
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(url)
+    // Back from the course leaves it, as it would have before the menu opened.
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+  })
+
+  test('leaves the menu open as the page writes a search to its address, which stays there once the menu closes with Escape or back', async ({
+    page,
+  }) => {
+    await signInAsRoot(page)
+    await twoPages(page, '/', '/admin/actors')
+    const menu = page.getByRole('dialog', { name: 'Menu' })
+    const expanded = page.locator('.app-header__menu')
+    const search = page.locator('.actors__search input')
+    await expect(search).toBeVisible()
+
+    // Typed, and the menu opened at once: 300 ms after typing stops the search reaches the address, under the menu.
+    await search.fill('root')
+    await menuButton(page).dispatchEvent('click')
+    await expect(menu).toBeVisible()
+    await expect(page).toHaveURL(/\/admin\/actors\?q=root$/)
+    await expect(expanded).toHaveAttribute('aria-expanded', 'true')
+    await expect(search).toHaveValue('root')
+    // Closed with Escape, it goes back over its entry, and the page keeps its address.
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+    await atPagesOwnEntry(page)
+    await expect(page).toHaveURL(/\/admin\/actors\?q=root$/)
+    await expect(search).toHaveValue('root')
+    await expect(page.locator('.actors__search')).toBeVisible()
+
+    // Closed with back: the same.
+    await search.fill('ro')
+    await menuButton(page).dispatchEvent('click')
+    await expect(menu).toBeVisible()
+    await expect(page).toHaveURL(/\/admin\/actors\?q=ro$/)
+    await expect(expanded).toHaveAttribute('aria-expanded', 'true')
+    await page.goBack()
+    await expect(menu).toBeHidden()
+    await atPagesOwnEntry(page)
+    await expect(page).toHaveURL(/\/admin\/actors\?q=ro$/)
+    await expect(search).toHaveValue('ro')
+
+    // Back from the page leaves it, as it would have before the menu opened.
     await page.goBack()
     await expect(page).toHaveURL(/\/$/)
   })
@@ -281,7 +395,7 @@ test.describe('on a phone, back', () => {
     }
   })
 
-  test('with who can read a conversation open over an agent’s conversation log, closes that, then the log, its ⋯ menu with it, then leaves the page', async ({
+  test('with who can read a conversation open over an agent’s conversation log, closes that, then the conversation, then the log, then leaves the page', async ({
     page,
   }) => {
     const d = demo()
@@ -307,22 +421,30 @@ test.describe('on a phone, back', () => {
       await signIn(page, d.actors.instructor)
       await twoPages(page, '/', coursePath('agents'))
       const agents = page.url()
-      await page
-        .locator('.agent-row')
-        .filter({ hasText: name })
-        .getByRole('button', { name: 'Conversation log' })
-        .click()
       const log = page.locator('.agent-log')
+      const openLog = () =>
+        page.locator('.agent-row').filter({ hasText: name }).getByRole('button', { name: 'Conversation log' }).click()
+      const row = log.locator('.log-row').filter({ hasText: title })
+      const message = log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })
+      await openLog()
       await expect(log.getByText(`Conversation log: ${name}`)).toBeVisible()
-      await log.locator('.log-row').filter({ hasText: title }).click()
-      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      await row.click()
+      await expect(message).toBeVisible()
 
       const readers = await openReaders(page, log)
       await page.goBack()
       await expect(readers).toBeHidden()
-      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      await expect(message).toBeVisible()
       expect(page.url()).toBe(agents)
 
+      // Back from the conversation: the log's list, as the log's own Back button leads to, the log still open.
+      await page.goBack()
+      await expect(row).toBeVisible()
+      await expect(message).toHaveCount(0)
+      await expect(log.getByText(`Conversation log: ${name}`)).toBeVisible()
+      expect(page.url()).toBe(agents)
+
+      // Back again closes the log.
       await page.goBack()
       await expect(log).toBeHidden()
       await atPagesOwnEntry(page)
@@ -330,19 +452,26 @@ test.describe('on a phone, back', () => {
       // Closed with the log, it does not come back over the page.
       await expect(readers).toBeHidden()
 
-      // Opened again on the conversation, with its ⋯ menu open: back takes the menu with the log, leaving neither over the page.
-      await page
-        .locator('.agent-row')
-        .filter({ hasText: name })
-        .getByRole('button', { name: 'Conversation log' })
-        .click()
-      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      // Opened on the conversation and closed by its own button: neither leaves an entry.
+      await openLog()
+      await row.click()
+      await expect(message).toBeVisible()
+      await log.locator('.el-drawer__close-btn').click()
+      await expect(log).toBeHidden()
+      await atPagesOwnEntry(page)
+
+      // Opened again, on the conversation still, with its ⋯ menu open: back takes the menu with the conversation, to the list.
+      await openLog()
+      await expect(message).toBeVisible()
       await log.getByRole('button', { name: 'Conversation options' }).click()
       const menu = page.locator('.chat-pane__menu:visible')
       await expect(menu.getByRole('menuitem', { name: 'Who can read this' })).toBeVisible()
       await page.goBack()
-      await expect(log).toBeHidden()
+      await expect(row).toBeVisible()
       await expect(menu).toHaveCount(0)
+      expect(page.url()).toBe(agents)
+      await page.goBack()
+      await expect(log).toBeHidden()
       await atPagesOwnEntry(page)
       expect(page.url()).toBe(agents)
 
@@ -400,6 +529,50 @@ test.describe('on a wider screen, back', () => {
     await expect(chatWindow(page)).toBeVisible()
     await chatWindow(page).locator('.chat-panel__minimize').click()
     await expect(chatWindow(page)).toHaveCount(0)
+  })
+
+  test('closes the file viewer opened while the page a link leads to is still loading, and the page shown stays; left open, the viewer comes after that page as it lands', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await twoPages(page, coursePath(), syllabusPath())
+    const url = page.url()
+    const members = await holdCode(page, 'MembersView')
+
+    await openCourseTab(page, 'Members')
+    await members.requested
+    const viewer = await openSyllabus(page)
+    await page.goBack()
+    await expect(viewer).toBeHidden()
+    expect(page.url()).toBe(url)
+    await atPagesOwnEntry(page)
+    await expect(page.locator('.version-file[data-file="syllabus.txt"]')).toBeVisible()
+    await members.release()
+    await page.waitForTimeout(500)
+    expect(page.url()).toBe(url)
+
+    // Left open, the viewer stays over the page that lands, with its entry after that page's.
+    const activity = await holdCode(page, 'ActivityView')
+    await openCourseTab(page, 'Activity')
+    await activity.requested
+    await openSyllabus(page)
+    await activity.release()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('activity')}$`))
+    await expect(viewer).toBeVisible()
+    await page.goBack()
+    await expect(viewer).toBeHidden()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('activity')}$`))
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(url)
+    // Forward reaches the page that landed.
+    await page.goForward()
+    await expect(page).toHaveURL(new RegExp(`${coursePath('activity')}$`))
+    await atPagesOwnEntry(page)
+    await page.goBack()
+    await expect(page).toHaveURL(url)
+    await page.goBack()
+    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
   })
 })
 

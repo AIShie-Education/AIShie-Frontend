@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 import {
   call,
   coursePath,
@@ -7,16 +7,22 @@ import {
   expectToasted,
   hostOnRuntime,
   keepToasts,
+  openCourseTab,
+  registerPerson,
   signIn,
   type CoreReply,
+  type DemoActor,
 } from './support'
 
 // A teacher sends an agent's proposed grade back for changes, with a note of
-// what to change, instead of rejecting it (AIShie-Core#68). The agent, which
-// does not sign in to the app, reads the note through Core and proposes again,
-// naming the proposal it revises (the Revises header); the queue and the
-// revision's page link to the earlier one. A course agent's answer is not
-// sent back yet: the site's runtime of today would leave it waiting for good.
+// what to change, instead of rejecting it (AIShie-Core#68), from the keyboard
+// alone. The agent, which does not sign in to the app, reads the note through
+// Core and proposes again, naming the proposal it revises (the Revises
+// header); the queue and the revision's page link to the earlier one, which
+// stays on its line at a phone's width. A student who owns an agent, and
+// decides nothing else, reads beside its revision what she asked it to
+// change. A course agent's answer in a conversation is sent back as any
+// proposal is, and its conversation waits for an answer again.
 
 const STAMP = Date.now().toString(36)
 const FEEDBACK = `First try (${STAMP}): the code runs.`
@@ -25,12 +31,57 @@ const REVISED = `Second try (${STAMP}): two edge cases fail, so 8.`
 const TUTOR = `Answers-on-approval tutor ${STAMP}`
 const QUESTION = `Is 0 °C 32 °F? (${STAMP})`
 const ANSWER = `Yes: 0 × 9/5 + 32 = 32 (${STAMP}).`
+const ANSWER_NOTE = `Show the working, step by step (${STAMP}).`
+const ANSWER_REVISED = `Yes. 0 × 9/5 = 0, and 0 + 32 = 32 (${STAMP}).`
+const DRAFTER = `Sam's drafter ${STAMP}`
+const DRAFT = `c_to_f drafted by Sam's agent (${STAMP})`
+const DRAFT_NOTE = `Handle negative temperatures too (${STAMP}).`
+const DRAFT_REVISED = `c_to_f, negatives handled, drafted by Sam's agent (${STAMP})`
 let proposalId = ''
 let revisionId = ''
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
   return r.body.result
+}
+
+/** An action's status as Core has it, read as whoever may read it. */
+async function statusOf(token: string, id: string) {
+  const got = await call(token, 'GET', `/v1/courses/${demo().course.id}/actions/${id}`)
+  return got.body.result?.status as string | undefined
+}
+
+/** Takes back a proposal that still waits, as whoever may (its proposer, or its agent's owner). */
+async function withdrawIfWaiting(reader: string, withdrawer: string, id: string) {
+  if (!id || (await statusOf(reader, id)) !== 'proposed') return
+  const out = await call(withdrawer, 'POST', `/v1/courses/${demo().course.id}/actions/${id}/withdraw`, {})
+  expect(out.body.status, JSON.stringify(out.body)).toBe('executed')
+}
+
+/**
+ * Where a revision's line puts its icon: beside the first line of its link's
+ * words, its middle within that line's height, and to its left.
+ */
+async function iconOnFirstLine(line: Locator) {
+  const at = await line.evaluate((el) => {
+    const icon = el.querySelector('.el-icon')!.getBoundingClientRect()
+    const words = document.createRange()
+    words.selectNodeContents(el.querySelector('a')!)
+    const first = words.getClientRects()[0]!
+    const lines = new Set([...words.getClientRects()].map((r) => Math.round(r.top))).size
+    return {
+      middle: icon.top + icon.height / 2,
+      top: first.top,
+      bottom: first.bottom,
+      right: icon.right,
+      left: first.left,
+      lines,
+    }
+  })
+  expect(at.middle, JSON.stringify(at)).toBeGreaterThan(at.top)
+  expect(at.middle, JSON.stringify(at)).toBeLessThan(at.bottom)
+  expect(at.right, JSON.stringify(at)).toBeLessThanOrEqual(at.left)
+  return at
 }
 
 /** A write as the agent makes it, naming the proposal it revises: Core's Revises header. */
@@ -50,21 +101,17 @@ async function proposeRevising(token: string, path: string, body: unknown, revis
 
 test.describe.serial('sending a proposal back for changes, and its revision', () => {
   test.afterAll(async () => {
-    // The run's course is shared by every spec: the revision, if it still
-    // waits, is taken back by the agent.
-    if (!revisionId) return
+    // The run's course is shared by every spec: whatever of the grader's still
+    // waits (the first proposal, if a test failed before it was sent back, or
+    // the revision) is taken back by the agent, or a spec after this one would
+    // find it in the queue.
     const d = demo()
-    const mine = await call(d.actors.grader.token, 'GET', `/v1/courses/${d.course.id}/actions/mine?limit=200`)
-    const revision = (mine.body.result?.actions as { id: string; status: string }[] | undefined)?.find(
-      (a) => a.id === revisionId,
-    )
-    if (revision?.status !== 'proposed') return
-    const withdraw = `/v1/courses/${d.course.id}/actions/${revisionId}/withdraw`
-    const out = await call(d.actors.grader.token, 'POST', withdraw, {})
-    expect(out.body.status, JSON.stringify(out.body)).toBe('executed')
+    const I = d.actors.instructor.token
+    await withdrawIfWaiting(I, d.actors.grader.token, proposalId)
+    await withdrawIfWaiting(I, d.actors.grader.token, revisionId)
   })
 
-  test('the instructor sends the grader’s proposal back with a note; an empty note is refused, here and by Core', async ({
+  test('the instructor sends the grader’s proposal back with a note, from the keyboard; an empty note is refused, here and by Core', async ({
     page,
   }) => {
     await keepToasts(page)
@@ -97,19 +144,38 @@ test.describe.serial('sending a proposal back for changes, and its revision', ()
     await expect(card).toContainText('grader-v2')
     await expect(card).toContainText('7 / 10')
 
-    await card.getByRole('button', { name: 'Request changes' }).click()
+    // Request changes, from the keyboard: the focus goes to the note's field,
+    // named for what it asks, required, and described by what it needs.
+    await card.getByRole('button', { name: 'Request changes' }).focus()
+    await page.keyboard.press('Enter')
     await expect(card).toContainText('The proposer is told what to change, and may propose it again')
+    const note = card.getByRole('textbox', { name: 'What to change' })
+    await expect(note).toBeFocused()
+    await expect(note).toHaveAttribute('placeholder', 'What should change? (required: the proposer reads it)')
+    await expect(note).toHaveAttribute('aria-required', 'true')
+    await expect(note).toHaveAccessibleDescription(/a request for changes needs a note/)
+    // Nothing is sent without a note, nor with spaces alone; the confirm
+    // button says why, where Tab reaches it.
     const send = card.locator('.decide-panel__confirm').getByRole('button', { name: 'Send back for changes' })
-    const note = card.getByPlaceholder('What should change? (required: the proposer reads it)')
-    // Nothing is sent without a note, nor with spaces alone.
     await expect(send).toBeDisabled()
-    await expect(card).toContainText('a request for changes needs a note')
-    await note.fill('   ')
+    await expect(send).toHaveAccessibleDescription(
+      'Say what should change: a request for changes needs a note, of up to 2000 characters.',
+    )
+    await page.keyboard.type('   ')
     await expect(send).toBeDisabled()
-    await note.fill(NOTE)
+    await page.keyboard.press('Tab')
+    await expect(send).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(note).toBeFocused()
+    await note.fill('')
+    await page.keyboard.type(NOTE)
     await expect(card.locator('.el-input__count')).toContainText(`${NOTE.length} / 2000`)
     await expect(send).toBeEnabled()
-    await send.click()
+    await expect(note).not.toHaveAccessibleDescription(/needs a note/)
+    // Type, Tab, Enter.
+    await page.keyboard.press('Tab')
+    await expect(send).toBeFocused()
+    await page.keyboard.press('Enter')
     await expectToasted(page, 'Sent back for changes')
 
     // Gone from the queue, and listed as decided just now.
@@ -163,38 +229,171 @@ test.describe.serial('sending a proposal back for changes, and its revision', ()
     const back = card.getByRole('link', { name: 'Revises an earlier proposal that was sent back' })
     await expect(back).toBeVisible()
 
-    // The revision's own page says what was asked of the one it revises.
+    // The revision's own page says, once, that it revises the earlier one,
+    // and what to change in it, in the words My actions uses.
     await card.getByRole('link', { name: 'Details' }).click()
     await expect(page).toHaveURL(new RegExp(`/actions/${revisionId}$`))
     const facts = page.locator('.action-view__facts')
-    await expect(facts).toContainText('Revises an earlier proposal that was sent back')
-    await expect(facts).toContainText(`What was asked: ${NOTE}`)
+    const revises = facts.locator('div').filter({ has: page.locator('dt', { hasText: /^Revises$/ }) })
+    await expect(revises.locator('dd')).toContainText('An earlier proposal that was sent back')
+    await expect(revises.locator('dd')).toContainText(`What to change: ${NOTE}`)
+    expect((await facts.innerText()).match(/Revises/g)).toHaveLength(1)
+    await expect(facts).not.toContainText('What was asked')
 
-    await facts.getByRole('link', { name: 'Revises an earlier proposal that was sent back' }).click()
+    await revises.getByRole('link', { name: 'An earlier proposal that was sent back' }).click()
     await expect(page).toHaveURL(new RegExp(`/actions/${proposalId}$`))
     await expect(page.locator('.page-header')).toContainText('Changes requested')
     await expect(page.getByText(`What to change: ${NOTE}`)).toBeVisible()
     // The earlier one says nothing of what revised it.
     await expect(page.locator('.action-view__facts')).not.toContainText('Revises')
 
-    // The course's activity lists the request for changes.
+    // The course's activity lists this proposal's request for changes.
     await page.goto(coursePath('activity'))
-    await expect(page.getByText('Proposal sent back for changes').first()).toBeVisible()
+    const sentBack = page
+      .locator('.event-item')
+      .filter({ hasText: 'Proposal sent back for changes' })
+      .filter({ has: page.locator(`a.event-item__subject[href$="/actions/${proposalId}"]`) })
+    await expect(sentBack).toHaveCount(1)
+    await expect(sentBack).toBeVisible()
+  })
+
+  test('at a phone’s width, the queue card’s revision line keeps its icon beside its words', async ({ page }) => {
+    const d = demo()
+    await page.setViewportSize({ width: 375, height: 812 })
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath('approvals'))
+    const card = page.locator('.action-card').filter({ hasText: REVISED })
+    await expect(card).toHaveCount(1)
+    const line = card.locator('.revises-line')
+    await expect(line).toBeVisible()
+    // The words wrap at this width, and the icon stays with the first line of them.
+    const at = await iconOnFirstLine(line)
+    expect(at.lines, JSON.stringify(at)).toBeGreaterThan(1)
+
+    await page.goto(coursePath(`actions/${revisionId}`))
+    await iconOnFirstLine(page.locator('.action-view__facts .revises-line'))
   })
 })
 
-test.describe('a course agent’s answer, which the runtime of today does not revise', () => {
-  const w = { tutorId: '', tutorToken: '', answerId: '' }
+test.describe.serial('the owner of the agent that revises, who decides nothing else', () => {
+  const sam = {
+    who: null as (DemoActor & { member_id: string }) | null,
+    agent: { actor_id: '', token: '' },
+    proposalId: '',
+    revisionId: '',
+  }
+
+  test.afterAll(async () => {
+    if (!sam.who) return
+    // What still waits is taken back by her agent, which is suspended.
+    await withdrawIfWaiting(sam.who.token, sam.agent.token, sam.proposalId)
+    await withdrawIfWaiting(sam.who.token, sam.agent.token, sam.revisionId)
+    if (sam.agent.actor_id) await call(sam.who.token, 'POST', `/v1/me/agents/${sam.agent.actor_id}/suspend`, {})
+  })
+
+  test('a student sends her agent’s draft back from the keyboard, and reads what to change beside its revision', async ({
+    page,
+  }) => {
+    await keepToasts(page)
+    const d = demo()
+    const c = d.course.id
+    // Sam, a student of the course, who decides nothing, brings in an agent
+    // of her own, which writes her work only by proposal.
+    const email = `sam+${STAMP}@revises.test`
+    const person = await registerPerson(`Sam Ho ${STAMP}`, { email })
+    const seat = await call(d.actors.instructor.token, 'POST', `/v1/courses/${c}/members`, {
+      actor_id: person.actor_id,
+      preset: 'student',
+    })
+    expect(seat.body.status, JSON.stringify(seat.body)).toBe('executed')
+    sam.who = { ...person, email, member_id: seat.body.result.member_id }
+    const agent = await call(person.token, 'POST', '/v1/me/agents', { display_name: DRAFTER, hosting: 'mcp' })
+    sam.agent.actor_id = agent.body.result.actor_id
+    const tok = await call(person.token, 'POST', `/v1/me/agents/${sam.agent.actor_id}/tokens`, {
+      label: `e2e ${STAMP}`,
+    })
+    sam.agent.token = tok.body.result.token
+    const req = await call(person.token, 'POST', `/v1/courses/${c}/delegates`, {
+      actor_id: sam.agent.actor_id,
+      preset: 'delegate',
+      answers_course: false,
+      perms: { submission_write: 'confirm_required' },
+    })
+    expect(req.body.status, JSON.stringify(req.body)).toBe('proposed')
+    const seated = await call(
+      d.actors.instructor.token,
+      'POST',
+      `/v1/courses/${c}/actions/${req.body.action_id}/decide`,
+      {
+        decision: 'approve',
+      },
+    )
+    expect(seated.body.result?.outcome, JSON.stringify(seated.body)).toBe('executed')
+    const draft = await call(sam.agent.token, 'POST', `/v1/courses/${c}/submissions`, {
+      assignment_id: d.course.assignments.hw1,
+      student_member_id: sam.who.member_id,
+      body: DRAFT,
+    })
+    expect(draft.body.status, JSON.stringify(draft.body)).toBe('proposed')
+    sam.proposalId = draft.body.action_id!
+
+    // She sends it back, as its owner: Request changes, type, Tab, Enter.
+    await signIn(page, sam.who)
+    await page.goto(coursePath())
+    await openCourseTab(page, 'Your agents’ proposals')
+    const card = page.locator('.action-card').filter({ hasText: DRAFTER })
+    await expect(card).toHaveCount(1)
+    await card.getByRole('button', { name: 'Request changes' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(card.getByRole('textbox', { name: 'What to change' })).toBeFocused()
+    await page.keyboard.type(DRAFT_NOTE)
+    await page.keyboard.press('Tab')
+    await expect(card.getByRole('button', { name: 'Send back for changes' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expectToasted(page, 'Sent back for changes, as its owner')
+    expect(await statusOf(sam.who.token, sam.proposalId)).toBe('changes_requested')
+
+    // Her agent proposes the draft again, naming the one it revises.
+    const again = await proposeRevising(
+      sam.agent.token,
+      `/v1/courses/${c}/submissions`,
+      { assignment_id: d.course.assignments.hw1, student_member_id: sam.who.member_id, body: DRAFT_REVISED },
+      sam.proposalId,
+    )
+    expect(again.body.status, JSON.stringify(again.body)).toBe('proposed')
+    sam.revisionId = again.body.action_id!
+
+    // Its page, which she reads as its agent's owner, says what she asked it to change.
+    await page.goto(coursePath(`actions/${sam.revisionId}`))
+    await expect(page.locator('.page-header')).toContainText('Awaiting approval')
+    // Read with action.get, as its agent's owner: not from her own actions.
+    await expect(page.getByText('This is your own agent’s action.')).toBeVisible()
+    const facts = page.locator('.action-view__facts')
+    await expect(facts).toContainText('An earlier proposal that was sent back')
+    await expect(facts).toContainText(`What to change: ${DRAFT_NOTE}`)
+  })
+})
+
+test.describe('a course agent’s answer in a conversation, sent back for changes as any proposal is', () => {
+  const w = { tutorId: '', tutorToken: '', answerId: '', revisionId: '' }
 
   test.afterAll(async () => {
     const d = demo()
-    // The answer, if it still waits, is taken back by the agent; the agent is
-    // suspended, as a person may have five agents at once, for the specs after it.
-    if (w.answerId) await call(w.tutorToken, 'POST', `/v1/courses/${d.course.id}/actions/${w.answerId}/withdraw`, {})
-    if (w.tutorId) await call(d.actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
+    const I = d.actors.instructor.token
+    // What still waits (the answer, if a test failed before it was sent back,
+    // or its revision) is taken back by the agent; the agent is suspended, as
+    // a person may have five agents at once, for the specs after it.
+    if (w.tutorToken) {
+      await withdrawIfWaiting(I, w.tutorToken, w.answerId)
+      await withdrawIfWaiting(I, w.tutorToken, w.revisionId)
+    }
+    if (w.tutorId) await call(I, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
-  test('is approved or rejected, and not sent back for changes', async ({ page }) => {
+  test('is sent back with a note, its conversation waits for an answer again, and the answer that revises it says so', async ({
+    page,
+  }) => {
+    await keepToasts(page)
     const d = demo()
     const c = d.course.id
     const I = d.actors.instructor.token
@@ -238,10 +437,38 @@ test.describe('a course agent’s answer, which the runtime of today does not re
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
     await courseTab(page, 'Approvals').click()
-    const card = page.locator('.action-card').filter({ hasText: TUTOR })
+    const card = page.locator('.action-card').filter({ hasText: ANSWER })
     await expect(card).toHaveCount(1)
-    await expect(card.getByRole('button', { name: 'Approve' })).toBeVisible()
-    await expect(card.getByRole('button', { name: 'Reject' })).toBeVisible()
-    await expect(card.getByRole('button', { name: 'Request changes' })).toHaveCount(0)
+    await expect(card).toContainText(TUTOR)
+    await expect(card.locator('.decide-panel__buttons button')).toHaveText(['Approve', 'Request changes', 'Reject'])
+    await card.getByRole('button', { name: 'Request changes' }).click()
+    await card.getByRole('textbox', { name: 'What to change' }).fill(ANSWER_NOTE)
+    await card.getByRole('button', { name: 'Send back for changes' }).click()
+    await expectToasted(page, /^Sent back for changes/)
+    await expect(card).toHaveCount(0)
+
+    // The answer ends there, with the note; nothing was posted, and the
+    // conversation waits for an answer again, in the agent's inbox.
+    const got = await call(I, 'GET', `/v1/courses/${c}/actions/${w.answerId}`)
+    expect(got.body.result?.status, JSON.stringify(got.body)).toBe('changes_requested')
+    expect(got.body.result?.result?.decision?.reason).toBe(ANSWER_NOTE)
+    const after = await call(d.actors.yuki.token, 'GET', `/v1/courses/${c}/conversations/${conv.conversation_id}`)
+    expect(after.body.result?.state, JSON.stringify(after.body)).toBe('awaiting_answer')
+    const inbox = await call(w.tutorToken, 'GET', `/v1/courses/${c}/conversations/inbox`)
+    expect((inbox.body.result?.conversations ?? []).map((x: { id: string }) => x.id)).toContain(conv.conversation_id)
+
+    // The agent answers again, naming the answer it revises, as the runtime does.
+    const again = await proposeRevising(
+      w.tutorToken,
+      `/v1/courses/${c}/conversations/${conv.conversation_id}/answer`,
+      { in_reply_to_message_id: conv.message_id, body: ANSWER_REVISED },
+      w.answerId,
+    )
+    expect(again.body.status, JSON.stringify(again.body)).toBe('proposed')
+    w.revisionId = again.body.action_id!
+    await page.reload()
+    const revision = page.locator('.action-card').filter({ hasText: ANSWER_REVISED })
+    await expect(revision).toHaveCount(1)
+    await expect(revision.getByRole('link', { name: 'Revises an earlier proposal that was sent back' })).toBeVisible()
   })
 })

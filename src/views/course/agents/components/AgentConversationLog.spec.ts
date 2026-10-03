@@ -160,6 +160,83 @@ describe('AgentConversationLog', () => {
     expect(writes).toEqual([])
   })
 
+  it('goes back from a conversation to the list with back, and closes with back from there; opened again on one, the same', async () => {
+    const depth = () => (history.state as { aishieOverlay?: { depth: number } } | null)?.aishieOverlay?.depth ?? 0
+    const settled = async (check: () => void) => {
+      await vi.waitFor(check, { timeout: 5_000 })
+      await new Promise((r) => setTimeout(r, 20))
+      check()
+    }
+    // The ⋯ menu, which the conversation's pane closes as the log does.
+    const Dropdown = defineComponent({
+      name: 'ElDropdown',
+      setup(_, { slots, expose }) {
+        expose({ handleClose: () => {} })
+        return () => h('span', slots.default?.())
+      },
+    })
+    const w = mount(AgentConversationLog, {
+      props: {
+        modelValue: true,
+        'onUpdate:modelValue': (v: boolean) => w.setProps({ modelValue: v }),
+        courseId: 'k1',
+        agent: { id: 'tutor', display_name: 'Course tutor' },
+      },
+      attachTo: document.body,
+      global: {
+        plugins: [i18n, ElementPlus],
+        components: icons,
+        stubs: {
+          ElTooltip: Passthrough('ElTooltip'),
+          ElPopover: Passthrough('ElPopover'),
+          ElDropdown: Dropdown,
+          RouterLink: true,
+        },
+      },
+    })
+    await flushPromises()
+    const drawer = document.body.querySelector('.agent-log')!
+    const conversation = () => drawer.querySelector('.chat-pane__name')
+    const rows = () => [...drawer.querySelectorAll<HTMLButtonElement>('.log-row')]
+    await settled(() => expect(depth()).toBe(1))
+
+    rows()[1]!.click()
+    await flushPromises()
+    expect(conversation()).not.toBeNull()
+    await settled(() => expect(depth()).toBe(2))
+    // Back: the list again, in the log still open.
+    history.back()
+    await settled(() => expect(rows()).toHaveLength(2))
+    expect(conversation()).toBeNull()
+    expect(depth()).toBe(1)
+    expect(w.props('modelValue')).toBe(true)
+    // Back again: the log closes.
+    history.back()
+    await settled(() => expect(w.props('modelValue')).toBe(false))
+    expect(depth()).toBe(0)
+
+    // Opened, on a conversation, closed by its own button: both entries are gone back over.
+    await w.setProps({ modelValue: true })
+    await settled(() => expect(depth()).toBe(1))
+    rows()[0]!.click()
+    await flushPromises()
+    await settled(() => expect(depth()).toBe(2))
+    await w.setProps({ modelValue: false })
+    await settled(() => expect(depth()).toBe(0))
+
+    // Opened again, it shows that conversation, whose entry is the top one: back goes to the list first.
+    await w.setProps({ modelValue: true })
+    await flushPromises()
+    expect(conversation()).not.toBeNull()
+    await settled(() => expect(depth()).toBe(2))
+    history.back()
+    await settled(() => expect(rows()).toHaveLength(2))
+    expect(w.props('modelValue')).toBe(true)
+    history.back()
+    await settled(() => expect(w.props('modelValue')).toBe(false))
+    expect(depth()).toBe(0)
+  })
+
   it('reads another agent’s conversations afresh when it shows that agent', async () => {
     const w = mount(AgentConversationLog, {
       props: { modelValue: true, courseId: 'k1', agent: { id: 'tutor', display_name: 'Course tutor' } },

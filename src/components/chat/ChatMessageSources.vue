@@ -7,9 +7,15 @@
 // steps of an answer in the making do (ChatDraftSteps).
 //
 // An answer that said it relied on no course material (an empty list) shows
-// a neutral pill instead. One that did not say (no sources: every answer from
-// before Core kept them, and an agent that does not say) shows nothing, which
+// a neutral pill instead, which says on hover, focus or a tap that the agent
+// said so. One that did not say (no sources: every answer from before Core
+// kept them, and an agent that does not say) shows nothing, which
 // ChatMessage decides.
+//
+// A title with no spaces (one taken from a file's name,
+// "COMP1001_Lecture04_Lists_Tuples_and_Dictionaries") breaks wherever it
+// must, on the line and in the summary alike: nothing in the chat scrolls
+// sideways, on a phone or in the chat's window.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { MessageSource } from '@/api/types'
@@ -36,16 +42,17 @@ const summary = computed(() => {
 
 <template>
   <div class="chat-sources">
-    <el-tag
+    <el-tooltip
       v-if="!sources.length"
-      type="info"
-      size="small"
-      disable-transitions
-      class="chat-sources__none"
-      :title="t('chat.sources.noneTip')"
+      :content="t('chat.sources.noneTip')"
+      :trigger="['hover', 'focus']"
+      placement="top"
+      popper-class="app-tip-wrap"
     >
-      {{ t('chat.sources.none') }}
-    </el-tag>
+      <el-tag type="info" size="small" disable-transitions class="chat-sources__none" tabindex="0">
+        {{ t('chat.sources.none') }}
+      </el-tag>
+    </el-tooltip>
     <i18n-t
       v-else-if="sources.length === 1"
       keypath="chat.sources.basedOn"
@@ -63,7 +70,7 @@ const summary = computed(() => {
         :aria-controls="listId"
         @click="open = !open"
       >
-        <span>{{ summary }}</span>
+        <span class="chat-sources__summary-text">{{ summary }}</span>
         <el-icon class="chat-sources__chevron" :class="{ 'is-open': open }" aria-hidden="true"><ArrowRight /></el-icon>
       </button>
       <ol v-if="open" :id="listId" class="chat-sources__list" :aria-label="t('chat.sources.label')">
@@ -107,6 +114,10 @@ const summary = computed(() => {
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+.chat-sources__summary-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .chat-sources__summary:hover {
   color: var(--app-ink);

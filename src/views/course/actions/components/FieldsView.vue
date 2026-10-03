@@ -22,6 +22,7 @@ import {
   exactDecimal,
   fieldLabel,
   isObject,
+  payloadOf,
   presetOf,
   routeFor,
   str,
@@ -36,6 +37,8 @@ const props = defineProps<{
   exclude?: string[]
   /** The action this is the payload of, where it is one: some fields mean more in its light. */
   action?: ActionRow
+  /** The action this is the result of, where it is one: the seat it made is named as its proposal named it. */
+  resultOf?: ActionRow
 }>()
 const { t } = useI18n()
 const course = useCourseStore()
@@ -136,6 +139,19 @@ const preset = computed(() => presetOf(presets.value?.value, obj.value))
 const actionType = computed(() => props.action?.action_type)
 /** A proposal to publish a version, still to be decided: how it stands against what is read now matters. */
 const checkVersion = computed(() => actionType.value === 'document.publish' && props.action?.status === 'proposed')
+
+/**
+ * The agent a member.add_delegate seated (its result's member_id), by the
+ * name Core wrote into its proposal (agent_display_name), where the member
+ * list cannot name it: a student's own agent, which the action's target names
+ * the same.
+ */
+function seatedAgent(k: string): { name: string } | undefined {
+  const a = props.resultOf
+  if (k !== 'member_id' || a?.action_type !== 'member.add_delegate') return undefined
+  const name = str(payloadOf(a).agent_display_name)
+  return name ? { name } : undefined
+}
 
 function label(k: string): string {
   // member.add's permissions are changes laid over the preset, not the seat's whole grant.
@@ -284,7 +300,7 @@ function json(v: unknown) {
           </MaybeLink>
         </span>
         <MaybeLink v-else-if="kindOf(k, obj[k]) === 'member'" :to="course.can('member_read') ? routeFor(courseId, 'member_id', obj[k] as string) : null">
-          <MemberName :id="obj[k] as string" />
+          <MemberName :id="obj[k] as string" :agent="seatedAgent(k)" />
         </MaybeLink>
         <TimeText v-else-if="kindOf(k, obj[k]) === 'time'" :value="obj[k] as string" />
         <span v-else-if="kindOf(k, obj[k]) === 'assignment'" class="fields-view__inline">

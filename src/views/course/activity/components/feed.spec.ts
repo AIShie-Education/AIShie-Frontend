@@ -34,4 +34,12 @@ describe('subjectRoute', () => {
       params: { courseId: COURSE, studentMemberId: 's2' },
     })
   })
+  it('opens a chat’s news in the chat, on its conversation, for anyone who reads it (its participants)', () => {
+    const e = ev('conversation.message_posted', 'conversation', { subject_id: 'cv1' })
+    expect(subjectKind(e)).toBe('conversation')
+    expect(subjectRoute(e, COURSE, { readsMembers: false, decides: false })).toEqual({
+      name: 'course-conversations',
+      params: { courseId: COURSE, conversationId: 'cv1' },
+    })
+  })
 })

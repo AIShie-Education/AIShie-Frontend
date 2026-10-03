@@ -25,7 +25,8 @@ import { DRAWER_SIZE } from '../setup/presets'
 import PersonLookup from '../components/PersonLookup.vue'
 
 const open = defineModel<boolean>({ default: false })
-// Full width on a phone (DRAWER_SIZE): back closes it rather than leaving the page.
+// Back closes it, on a phone (where it is full width, DRAWER_SIZE) as on a desktop: it is laid over
+// the page, which it never outlives.
 useBackCloses(open, () => (open.value = false))
 const props = defineProps<{ dept: DepartmentNode | null }>()
 const emit = defineEmits<{ changed: [] }>()
