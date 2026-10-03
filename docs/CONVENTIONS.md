@@ -437,23 +437,32 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   a whole sentence.
 - **A proposal sent back for changes.** Wherever a proposal is decided (`DecidePanel`), *Request
   changes* (要求修改) is offered beside Approve and Reject, under the same rules as Reject:
-  `action.decide` with `decision: 'request_changes'` and the note as `reason`. The note is
-  required, 1 to 2000 characters and not spaces alone: the confirm button stays off until there is
-  one, and Core's refusals of it (`note_required`, `note_too_long`) are worded under
-  `actions.decision.refusal`. The proposal ends in `changes_requested`, a final state that is no
-  failure: its tag is `warning`, amber, as it waits on its proposer to propose again, not a
-  rejection's `danger`. Its button is outlined, as Reject's is, and pressed in while its form is
-  open, whose confirm button is the one primary. Its
-  note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and
-  who asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal
-  it revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the
-  queue, *My actions* and the action's page, as the feed does from the revision's
-  `action.proposed`; the earlier one says nothing of it. `action.changes_requested` is listed in
-  the feed with its decision, as `action.rejected` is. An agent's answer in a conversation
-  (`conversation.answer`) is not offered for changes yet (`offersChanges`): only the site's agent
-  runtime answers in the site, and one that does not know of requests for changes leaves an
-  answer sent back waiting for good (Core's `docs/deploying.md`, Migration 0028). That condition
-  goes once the runtime that revises one runs wherever this front end does.
+  `action.decide` with `decision: 'request_changes'` and the note as `reason`. The note is required,
+  1 to 2000 characters and not spaces alone: the confirm button stays off until there is one, and
+  Core's refusals of it (`note_required`, `note_too_long`) are worded under
+  `actions.decision.refusal`. Opening Request changes or Reject puts the focus in the form's field,
+  which is named for what it asks (`actions.decision.fieldLabel`, never by its placeholder alone),
+  `aria-required` while a note is required, and described by the hint and the line saying a note is
+  needed; the confirm button comes right after it for Tab (the row is drawn Cancel first, with
+  `row-reverse`) and, while the note is missing, is `aria-disabled` and described by that line, not
+  `disabled`, so that Tab still reaches it and it says why: type, Tab, Enter sends it. The proposal
+  ends in `changes_requested`, a final state that is no failure: its tag is `warning`, amber, as it
+  waits on its proposer to propose again, not a rejection's `danger`. Its button is outlined, as
+  Reject's is, and pressed in while its form is open, whose confirm button is the one primary. Its
+  note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and who
+  asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal it
+  revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the queue,
+  *My actions* and the action's page, as the feed does from the revision's `action.proposed`; the
+  earlier one says nothing of it. Its icon hangs beside the text, which wraps under itself, so it
+  stays on the line of the link's first word. On the action's page, under the label "Revises", the
+  link names only the earlier proposal (`labelled`), and beside it is what to change in it, in *My
+  actions*' words (`actions.outcome.changesLabel`): read with `action.get` by whoever read the
+  revision so, a decider or the owner of the agent that proposed it (a revision revises its own
+  proposer's), with `action_decide` or without. `action.changes_requested` is listed in the feed
+  with its decision, as `action.rejected` is. Every proposal is offered for changes, an agent's
+  answer in a conversation too, which the site's agent runtime answers again once sent back
+  (AIShie-Agent-Runtime#52): this front end is deployed beside a runtime that does, never ahead of
+  it.
 - **Offer only what may be chosen.** Every view of a seat (`member.get`, `member.list`,
   `me.memberships`, `member.delegate_defaults`) says its ceilings: the most it may hold of each
   permission whoever grants it (`perm_ceilings`), and why where that is below autonomous

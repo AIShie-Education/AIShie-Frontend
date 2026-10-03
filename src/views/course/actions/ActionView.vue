@@ -2,7 +2,7 @@
 // One action in full (action.get): what was asked, who asked, at what level it
 // was authorized, what became of it, who decided or reviewed it, and when; and
 // the proposal it revises, if it revises one sent back for changes, with what
-// was asked of it where the caller may read that one.
+// to change in it, which whoever reads this one with action.get reads too.
 // action.get needs action_decide, or owning the agent that did it; anyone else
 // sees an action of their own from action.list_mine instead, which carries the
 // same fields. Whether it is the caller's to decide is what the queue says of
@@ -259,10 +259,15 @@ const errorDetails = computed(() => {
 })
 /** A rejection's reason, or a request for changes' note. */
 const rejection = computed(() => (action.value ? storedDecision(action.value) : null))
-// A revision: the proposal it revises, sent back for changes, and what was
-// asked of it, for a decider (who reads any action).
+// A revision: the proposal it revises, sent back for changes, and what to
+// change in it. Whoever read the revision with action.get reads that one too:
+// a decider reads any action, and the owner of the agent that proposed the
+// revision reads its agent's, the earlier one among them (a revision revises
+// its own proposer's), whether or not they hold action_decide.
 const revised = useLookup(() =>
-  action.value?.revises_action_id ? specs.action(props.courseId, action.value.revises_action_id) : null,
+  action.value?.revises_action_id && canDecide.value
+    ? specs.action(props.courseId, action.value.revises_action_id, { ownersAgent: ownersAgent.value })
+    : null,
 )
 const revisedNote = computed(() => {
   const a = revised.value?.value as ActionRow | undefined
@@ -414,8 +419,8 @@ const errorTitle = computed(() => {
                 <div v-if="action.revises_action_id">
                   <dt>{{ t('actions.fields.revises') }}</dt>
                   <dd class="action-view__target">
-                    <RevisesLine :course-id="courseId" :action-id="action.revises_action_id" />
-                    <span v-if="revisedNote">{{ t('actions.revises.asked', { note: revisedNote }) }}</span>
+                    <RevisesLine :course-id="courseId" :action-id="action.revises_action_id" labelled />
+                    <span v-if="revisedNote">{{ t('actions.outcome.changesLabel', { note: revisedNote }) }}</span>
                   </dd>
                 </div>
                 <div>

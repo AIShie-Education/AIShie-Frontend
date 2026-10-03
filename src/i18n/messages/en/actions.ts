@@ -15,7 +15,7 @@ export default {
     emptyReview: 'Nothing is waiting for review.',
     oldestFirst: 'Both lists show the oldest first.',
     decisionsNeedApproval: 'Your decisions here also need approval',
-    decisionsNeedApprovalHelp: 'Your seat decides at the "needs approval" level: each approval or rejection you make becomes a proposal itself, which someone else confirms.',
+    decisionsNeedApprovalHelp: 'Your seat decides at the "needs approval" level: each time you approve, send back for changes or reject, your decision becomes a proposal itself, which someone else confirms.',
     recent: 'Decided just now',
     recentHelp: 'Leaving this page clears this list. Every decision stays in the course’s action log.',
     clearRecent: 'Clear',
@@ -393,6 +393,14 @@ export default {
     rejectPlaceholder: 'Why? (optional, but it helps whoever proposed it)',
     requestChangesPlaceholder: 'What should change? (required: the proposer reads it)',
     notePlaceholder: 'Note (optional)',
+    // The field's name, which a screen reader says: the placeholder is none.
+    fieldLabel: {
+      approve: 'Reason for approving',
+      reject: 'Reason for rejecting',
+      requestChanges: 'What to change',
+      escalate: 'Reason for escalating',
+      reviewed: 'Note on your review',
+    },
     escalatePlaceholder: 'Why escalate? (optional; kept with your review, which the course’s activity links to)',
     approveHint: 'Carried out now, as the proposer. If they may no longer do it, or the proposal is too old, it is cancelled instead.',
     rejectHint: 'Nothing is carried out. The proposer is told.',
@@ -412,7 +420,7 @@ export default {
       ownEscalation: 'You escalated this; it is for someone else to look at.',
       archived: 'The course is archived: nothing can be decided in it.',
       waiting: 'Your decision on this is already waiting for approval.',
-      closesOwnEscalation: 'Approving this would close an escalation you raised, which is for someone else to do. You can still reject it.',
+      closesOwnEscalation: 'Approving this would close an escalation you raised, which is for someone else to do. You can still send it back for changes or reject it.',
       ownAgent:
         'This was done by your own party — the person whose agent you are, or another of their agents — and a person and their agents count as one, so someone else deals with it.',
       ownAgentLevel: 'Decided by {who}: you could not do this yourself without someone’s confirmation, or approving it now would be refused.',
@@ -510,7 +518,8 @@ export default {
   },
   revises: {
     line: 'Revises an earlier proposal that was sent back',
-    asked: 'What was asked: {note}',
+    // The same, under the label "Revises" (fields.revises).
+    earlier: 'An earlier proposal that was sent back',
   },
   link: {
     details: 'Details',

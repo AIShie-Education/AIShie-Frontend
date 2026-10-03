@@ -1,7 +1,6 @@
 <script setup lang="ts">
-// Approve or reject a proposal (action.decide), or send it back for changes
-// (an agent's answer in a conversation not yet: offersChanges, below), or
-// review an action that ran pending review (action.review), with a reason
+// Approve or reject a proposal (action.decide), or send it back for changes,
+// or review an action that ran pending review (action.review), with a reason
 // or note, right where it is listed. The reason is optional, but for a request
 // for changes, whose note says what to change: 1 to 2000 characters, not
 // spaces alone, or Core refuses it. Core refuses anyone deciding or reviewing
@@ -9,7 +8,7 @@
 // why. The owner of the agent that did it decides it where they could have
 // done it themselves, and then as their own doing of it: at once, whatever
 // they hold of action_decide, so it never becomes a proposal of theirs.
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, useId, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
 import StatusTag from '@/components/StatusTag.vue'
@@ -94,25 +93,36 @@ const choice = ref<Choice | null>(null)
 const text = ref('')
 
 /** A request for changes says what to change: it is not sent without a note. */
-const noteMissing = computed(() => choice.value === 'request_changes' && !text.value.trim())
+const noteRequired = computed(() => choice.value === 'request_changes')
+const noteMissing = computed(() => noteRequired.value && !text.value.trim())
 
-/**
- * An agent's answer in a conversation is not sent back for changes yet. Only
- * the site's runtime runs an agent people ask in the site, and a runtime that
- * does not know of requests for changes leaves an answer sent back waiting for
- * good: until the one that does (AIShie-Agent-Runtime#52) runs wherever this
- * front end does, the answer is rejected with a reason, which the agent
- * answers again with (Core's docs/deploying.md, Migration 0028).
- */
-const offersChanges = computed(() => props.action.action_type !== 'conversation.answer')
+// The form's field is named for what it asks (its placeholder is no name),
+// and described by the line saying what the choice does and, while a note is
+// needed and missing, the line saying so; the confirm button is described by
+// that line too, and stays where Tab reaches it (aria-disabled, not disabled).
+const uid = useId()
+const hintId = `${uid}-hint`
+const missingId = `${uid}-missing`
+const describedBy = computed(() => (noteMissing.value ? `${hintId} ${missingId}` : hintId))
+const field = useTemplateRef<{ focus: () => void }>('field')
 
 const decide = useWrite('action.decide')
 const review = useWrite('action.review')
 const pending = computed(() => decide.pending.value || review.pending.value)
 
-function open(c: Choice) {
+/**
+ * Opens the form for a choice. Where it asks for words (what to change, or why
+ * it is rejected) the field takes the focus, so that the keyboard goes on from
+ * there: type, Tab to the confirm button, Enter. Approving and reviewing keep
+ * it on their button: their note is seldom written, and a phone would open
+ * its keyboard over the form.
+ */
+async function open(c: Choice) {
   if (choice.value !== c) text.value = ''
   choice.value = c
+  if (c !== 'request_changes' && c !== 'reject') return
+  await nextTick()
+  field.value?.focus()
 }
 function cancel() {
   choice.value = null
@@ -133,6 +143,19 @@ const hint = computed(() => {
       return t('actions.decision.escalateHint')
   }
   return ''
+})
+const fieldLabel = computed(() => {
+  switch (choice.value) {
+    case 'approve':
+      return t('actions.decision.fieldLabel.approve')
+    case 'reject':
+      return t('actions.decision.fieldLabel.reject')
+    case 'request_changes':
+      return t('actions.decision.fieldLabel.requestChanges')
+    case 'escalated':
+      return t('actions.decision.fieldLabel.escalate')
+  }
+  return t('actions.decision.fieldLabel.reviewed')
 })
 const placeholder = computed(() => {
   switch (choice.value) {
@@ -184,9 +207,13 @@ function sayUnlessStale(out: WriteOutcome<unknown> | null, err: ApiError | null)
 
 async function confirm() {
   const c = choice.value
-  if (!c) return
+  if (!c || pending.value) return
   const note = text.value.trim() || undefined
-  if (c === 'request_changes' && !note) return
+  // Pressed with no note: nothing is sent, and the field takes the focus.
+  if (c === 'request_changes' && !note) {
+    field.value?.focus()
+    return
+  }
   if (c === 'approve' || c === 'reject' || c === 'request_changes') {
     const out = await decide.run(
       { course_id: props.courseId, action_id: props.action.id, decision: c, reason: note },
@@ -277,7 +304,6 @@ function tell(
           <span>{{ t('actions.decision.approve') }}</span>
         </el-button>
         <el-button
-          v-if="offersChanges"
           :size="size"
           :class="{ 'is-chosen': choice === 'request_changes' }"
           :aria-pressed="choice === 'request_changes'"
@@ -333,25 +359,39 @@ function tell(
     </p>
 
     <div v-if="choice && !blocked" class="decide-panel__form">
-      <p class="decide-panel__hint">{{ hint }}</p>
+      <p :id="hintId" class="decide-panel__hint">{{ hint }}</p>
       <p v-if="asOwner" class="decide-panel__hint decide-panel__hint--owner">{{ t('actions.decision.asOwner') }}</p>
       <el-input
+        ref="field"
         v-model="text"
         type="textarea"
         :autosize="{ minRows: 2, maxRows: 6 }"
         :placeholder="placeholder"
+        :aria-label="fieldLabel"
+        :aria-required="noteRequired ? 'true' : undefined"
+        :aria-describedby="describedBy"
         maxlength="2000"
         show-word-limit
       />
-      <p v-if="noteMissing" class="decide-panel__hint">{{ t('actions.decision.noteRequired') }}</p>
+      <p v-if="noteMissing" :id="missingId" class="decide-panel__hint">{{ t('actions.decision.noteRequired') }}</p>
       <p v-if="needsApproval" class="decide-panel__hint decide-panel__hint--warn">
         {{ t('actions.decision.willBeProposal') }}
       </p>
+      <!-- The confirm button comes first, where Tab goes from the field; the
+           row is drawn the other way round, Cancel on its left. -->
       <div class="decide-panel__confirm">
-        <el-button :size="size" :disabled="pending" @click="cancel">{{ t('common.actions.cancel') }}</el-button>
-        <el-button type="primary" :size="size" :loading="pending" :disabled="noteMissing" @click="confirm">
+        <el-button
+          type="primary"
+          :size="size"
+          :loading="pending"
+          :class="{ 'is-disabled': noteMissing }"
+          :aria-disabled="noteMissing ? 'true' : undefined"
+          :aria-describedby="noteMissing ? missingId : undefined"
+          @click="confirm"
+        >
           {{ confirmLabel }}
         </el-button>
+        <el-button :size="size" :disabled="pending" @click="cancel">{{ t('common.actions.cancel') }}</el-button>
       </div>
     </div>
   </div>
@@ -426,7 +466,8 @@ function tell(
 }
 .decide-panel__confirm {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
   gap: 8px;
   flex-wrap: wrap;
 }
