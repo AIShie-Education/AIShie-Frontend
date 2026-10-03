@@ -601,11 +601,22 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   posting, its override in its place. Of grade.list, mostly superseded totals with their working,
   only what the matrix needs of the live grades is kept (`slimGrade`). Rows are the students within
   the seat's student scope, removed ones (marked, and left out of the averages) when asked for; a
-  seat limited to listed assignments has no totals or components. A scheme that cannot be read is
-  an error, never every assignment shown as not counted. Drafts, missing work and work to grade are
-  said in words, never by colour alone. The search, the filter and the order are in the address
-  (`?q=`, `?show=`, `?sort=`), and `GradebookView` keeps the page alive (`KeepAlive`) while a
-  student's own gradebook is open, so that coming back finds it as it was, read again behind it.
+  seat limited to listed assignments has no totals or components. A seat that may not read the
+  member list (a tutor agent's) has a row, by member ID, for each student it is shown work or
+  grades of and each one an assignment's roster lists (`submission.roster`), so that one with
+  nothing yet is a click away too. A scheme, an assignment list or a member list that cannot be read
+  is an error with a Retry and nothing to export, never every assignment shown as not counted nor
+  the class named by member ID. Drafts, missing work and work to grade are said in words, never by
+  colour alone, and so is the posted grade a draft would replace, under it. A score is given to two
+  decimal places at most (`shortScore`, `classFigure`), every place in its tooltip and for a screen
+  reader, so that a flag beside it stays in its cell. Refresh reads the class again under the rows
+  as they are, never taking them away. The search, the filter and the order are in the address
+  (`?q=`, `?show=`, `?sort=`; a search typed and not yet there is written into the address of the
+  page as it is left), and `GradebookView` keeps the page alive (`KeepAlive`) while a student's own
+  gradebook is open, so that coming back finds it as it was, laid out for the width it comes back
+  to (`useContainerWidth` measures again as a kept page comes back), with the students opened
+  meanwhile read again behind it (`student_member_id`, `mergeStudents`), and the whole term only
+  where it was read more than five minutes before.
   It is not an `el-table`: `GradeMatrix` is a table in a box of its own, its header row and names
   sticky, whose rows are all 44 px and of which only those near the screen are drawn (300 × 30
   stays smooth), in a box as tall as the window has room for below where it begins; where its

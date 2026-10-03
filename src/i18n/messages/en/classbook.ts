@@ -49,6 +49,7 @@ export default {
   },
   draftOver: 'A draft, not posted yet; {score} is posted.',
   draftOnly: 'A draft, not posted yet.',
+  postedUnder: 'Posted {score}',
   waiting: 'Work handed in since this grade waits to be graded.',
   counts: {
     drafts: '{n} draft | {n} drafts',
@@ -56,8 +57,10 @@ export default {
     toGrade: '{n} to grade',
   },
   legend: {
-    posted: 'A number alone is a posted grade: what the student sees.',
-    draft: '“Draft” marks a grade not posted yet: the student does not see it, and it counts in no total.',
+    posted:
+      'A number alone is a posted grade: what the student sees. A score is given here to two decimal places at most; the grade itself, and the export, give every place.',
+    draft:
+      '“Draft” marks a grade not posted yet: the student does not see it, and it counts in no total. Under it, “Posted” gives the grade it would replace, which still counts.',
     missing:
       '“Missing” is work recorded as handed in with nothing, “To grade” work handed in and not graded yet (beside a grade, work handed in since it), and a dash nothing at all.',
     totals:
