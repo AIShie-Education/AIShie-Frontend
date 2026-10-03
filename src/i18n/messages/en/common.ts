@@ -32,6 +32,8 @@ export default {
     select: 'Select',
     signOut: 'Sign out',
   },
+  // A label and its value, as the language writes them: "Model calls: 380", 「模型呼叫：380」.
+  pair: '{label}: {value}',
   labels: {
     id: 'ID',
     scoped: 'scoped',
@@ -56,6 +58,8 @@ export default {
     empty: 'Nothing here yet',
     all: 'All',
     you: 'You',
+    youTag: '(you)',
+    andMore: '{n} more',
     never: 'Never',
     points: 'Points',
     score: 'Score',
@@ -199,7 +203,7 @@ export default {
     limitVersion: 'One file, up to {size} | Up to {files} files, {size} each, {total} in all',
     list: 'Files being uploaded',
     progressOf: 'Upload of “{name}”',
-    percent: '{n} %',
+    percent: '{n}%',
     of: '{loaded} of {total}',
     speed: '{speed}/s',
     left: {
@@ -247,7 +251,7 @@ export default {
     },
     announce: {
       added: 'One file added. | {n} files added.',
-      progress: '“{name}”: {percent} % uploaded.',
+      progress: '“{name}”: {percent}% uploaded.',
       done: '“{name}” uploaded.',
       failed: '“{name}” was not uploaded: {reason}',
       cancelled: 'Uploading “{name}” was cancelled.',

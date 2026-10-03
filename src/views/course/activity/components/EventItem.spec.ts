@@ -308,7 +308,7 @@ describe('EventItem, a message posted in a conversation', () => {
     )
     await flushPromises()
     expect(w.text()).toContain('With 2 files')
-    expect(tips(w)).toEqual(['notes.pdf, plot.png'])
+    expect(tips(w)).toEqual(['notes.pdf and plot.png'])
     w.unmount()
   })
 

@@ -31,6 +31,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useContainerWidth } from '@/composables/useContainerWidth'
+import { formatPct } from '@/utils/format'
 import { openPdf, TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from './pdfjs'
 import { clampZoom, CSS_UNITS, fitWidthOf, nearFit, pinchZoom, wheelZoom, zoomStep } from './pdfZoom'
 
@@ -607,11 +608,11 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
           type="button"
           class="pdf-view__percent"
           :disabled="!pageCount"
-          :aria-label="t('preview.zoom.actual', { n: percent })"
+          :aria-label="t('preview.zoom.actual', { n: formatPct(percent / 100) })"
           :title="t('preview.zoom.actualTip')"
           @click="actualSize"
         >
-          {{ percent }} %
+          {{ formatPct(percent / 100) }}
         </button>
         <el-button
           text
@@ -709,6 +710,12 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   font: inherit;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+/* On a touch screen, 16 px, below which iOS zooms into a field it focuses. */
+@media (pointer: coarse) {
+  .pdf-view__page-input {
+    font-size: 16px;
+  }
 }
 .pdf-view__page-input:focus-visible {
   outline: 2px solid var(--app-focus);

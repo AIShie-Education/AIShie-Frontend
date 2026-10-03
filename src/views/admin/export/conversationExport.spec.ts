@@ -439,7 +439,7 @@ describe('refusals', () => {
     )
     setLocale('zh-Hant')
     expect(exportErrorText(tooLarge)).toBe(
-      '此匯出將包含 4,210 段對話中的 120,000 則訊息及 300 MB 文字，超出上限（100,000 則訊息、256 MB）。請縮小範圍：',
+      '此匯出將包含4,210段對話中的120,000則訊息及300 MB文字，超出上限（100,000則訊息、256 MB）。請縮小範圍：',
     )
     setLocale('zh-Hans')
     expect(exportErrorText(tooLarge)).toContain('请缩小范围')

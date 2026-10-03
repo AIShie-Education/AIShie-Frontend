@@ -347,7 +347,7 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   412 reads it again and keeps what the administrator changed over it. A key's trial that failed
   (`key_test_failed`) says what the provider answered (`keyTrialOf`). Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
-  cent at least (`usdShown`) and typed as decimals (`usdProblem`), empty for no limit. A refusal
+  cent at least, as US dollars (`formatMoney`, "US$0.0184") and typed as decimals (`usdProblem`), empty for no limit. A refusal
   that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
   models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
   agents' lines. Costs are shown by `lines` kind: a document's transcription is a line of its own
@@ -423,7 +423,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   required, 1 to 2000 characters and not spaces alone: the confirm button stays off until there is
   one, and Core's refusals of it (`note_required`, `note_too_long`) are worded under
   `actions.decision.refusal`. The proposal ends in `changes_requested`, a final state that is no
-  failure: its tag is `warning`, as a proposal's that waits is, not a rejection's `danger`. Its
+  failure: its tag is `warning`, amber, as it waits on its proposer to propose again, not a
+  rejection's `danger`. Its button is outlined, as Reject's is, and pressed in while its form is
+  open, whose confirm button is the one primary. Its
   note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and
   who asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal
   it revises (`revises_action_id`, Core's `Revises` header), which `RevisesLine` links to in the
@@ -494,6 +496,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - Tags for Core's vocabularies: `<StatusTag vocab="submissionState" :value="s.state" />` — see
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
+- **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
+  approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
+  for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
+  its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
+  of seat. What is new or unread, and a count of what waits for the reader's decision, is indigo. A
+  level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
+  `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
+  confirm_required a raised hand on the indigo's tint; pending_review an eye, outlined in ink;
+  autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
+  The 「需批准」 beside an action the caller's seat must have approved is that level too:
+  `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
@@ -501,8 +514,21 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
+- **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else: `type="primary"`
+  (solid indigo) for the one main action of a view or a dialog, approving and publishing among them;
+  no type (outlined, the ink's text) for everything beside it, rejecting, requesting changes and
+  cancelling among them, rejecting being the safe choice, not a destructive one; `type="danger" plain` (a red outline) for a
+  destructive action on a page (archive, remove, revoke), which asks first; and solid red alone for
+  the last step of that confirmation (`confirmButtonClass: 'el-button--danger'`, or a dialog's
+  button that does it at once). `success`, `warning` and `info` are outcomes' colours, for tags,
+  never a button's. A disabled button has no hue, whatever its rank. What cannot be taken back is
+  not put beside what is done every day: it goes in the toolbar's ⋯ menu (`MoreFilled`), at its far
+  end, as undoing final grades is beside posting them.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
-  mobile width in mind (`min-width` on columns, not fixed widths everywhere).
+  mobile width in mind (`min-width` on columns, not fixed widths everywhere). A table has no ground of its own:
+  it lies on its card (`styles/element.css`), white being a field's alone, and a column of figures is
+  right-aligned, where its digits line up (`tabular-nums`; `data-num` elsewhere). `el-descriptions`
+  with `border` is drawn as rows parted by a thin line on the card, not a boxed grid.
 - **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`
   in `views/course/grades/components/`; a student, or a chosen student, has `GradebookView` as before)
   is students by assignments, read from what the seat may read alone (every page of `grade.list`
@@ -537,7 +563,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   window's, a table or a card per row included (below): the side bar can leave a page narrow on a
   wide window. Only what belongs to the window asks it, with `@/composables/useMediaQuery`:
   `usePhoneScreen()` (640 px or narrower) for a dialog or a drawer laid over the page that fills a
-  phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch.
+  phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch. On a
+  touch screen (`pointer: coarse`, `styles/element.css`) Element Plus's controls are 44 px (40 small,
+  48 large) and its fields' text 16 px, below which iOS zooms into a field it focuses; a component
+  that sets the text size of a field one types into (`MarkdownEditor`'s 13 px monospace, the PDF
+  viewer's page number) outweighs that rule, and so sets 16 px under `pointer: coarse` itself. A
+  control of the app's own that is pressed often is at least 40 px there. Never set `maximum-scale` or
+  `user-scalable` in the viewport: zooming is the reader's.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
   component. Opening adds an entry to history at the page's own address, back closes the overlay
@@ -613,15 +645,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   opens a collapsed side bar. `useSideBarStore()` (`@/stores/sidebar`) holds the view and whether it is
   open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
-  no activity bar: the header's menu button opens the views in a drawer, as tabs along its top, and
-  following a link in it closes it, as back does.
+  no activity bar: the brand's mark at the header's left (`AppMark`, 24 px in a 44 px button named
+  「選單」) opens the views in a drawer, with the wordmark (`AppWordmark`) at its top and the views as
+  tabs under it, and following a link in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
   account's settings, the language and the theme, each a submenu with the choice in use checked, and
   signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
-  title alone (and, on a phone, the menu's button): nothing else is offered there.
+  title and, at its right end, the chat's button (on a phone, the menu's button before the title and no
+  chat's button): nothing else is offered there.
 - A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,
   mounted by `AppLayout`) reads `index.html` again (`cache: 'no-store'`) every five minutes and when the
   tab is shown again, and compares the entry script it names (`/assets/index-<hash>.js`) with the one
@@ -631,14 +665,21 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - The chat with agents is one window over every signed-in page (`src/components/chat/ChatPanel.vue`,
   mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
   agent. Nothing runs along the window's right edge: the header and the page reach it. The chat's
-  entry is a round button floating at the bottom right of every page (`.app-chat-fab`, on a desktop as
-  on a phone), 16 px from the screen's edges and above a phone's safe area, with the count of answers
-  not read and, from 900 px up, a tooltip saying its shortcut; the header holds only the page's title,
-  and the activity bar only the side bar's views. The page keeps room below its last item for the
-  button (`.has-chat-fab`: its size and twice its inset), so that a list's last item, its pages or a
-  button are never under it; a page that pins something to the bottom of the screen keeps it clear of
-  the button too. The button opens the chat in its corner, and is gone while the chat is open; Ctrl/⌘+J
-  opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
+  entry (`.app-chat-entry`, `#chat-panel-toggle`), with the count of answers not read in the indigo,
+  is, from 900 px up, an icon button at the header's right end (`.app-header__chat`), with a tooltip
+  saying its shortcut: nothing floats over the page, whose rows keep their actions, times and status
+  at their right end in sight. It stays while the chat is open (`aria-expanded`, on the indigo's
+  tint), and pressed again minimizes it. On a phone (up to 899 px) it is a 48 px round button
+  floating at the bottom right (`.app-chat-fab`), 16 px from the screen's edges and above the safe
+  area, in the thumb's reach: it slides out of the way while the page is scrolled down and comes back
+  as soon as it is scrolled up, reaches its top, or the button takes focus (at once, with no slide,
+  where motion is reduced), and the page keeps room below its last item for it (`.has-chat-fab`,
+  88 px and the safe area), so that a list's last item, its pages or a button are never under it; a
+  page that pins something to the bottom of the screen keeps it clear of the button too, and so does
+  a toolbar whose action at its right end would be under it when the page opens (`.has-chat-fab`
+  `.grades-view__post`: the button's column kept clear). The
+  activity bar holds only the side bar's views. The button opens the chat in its corner (a phone's
+  button is gone while the sheet is open); Ctrl/⌘+J opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
   width, which stays as it is, and usable, behind it (a dialog, not a modal one: `role="dialog"`,
   `aria-modal="false"`, named by its title bar). It is 400 × 600 px (`WINDOW_WIDTH`, `WINDOW_HEIGHT`),
   16 px from the viewport's bottom right corner, and clear of the header where the viewport is too
@@ -655,7 +696,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   lays over it, with a shadow all round (`--app-z-panel`, `--app-shadow-window`; the layers are in
   `styles/tokens.css`). Minimized (its button, Escape from within it, or Ctrl/⌘+J), it opens again on
   what it showed; closed, on a new conversation in the course it asks in (the chat store's `close`);
-  either way focus goes back to the round button. Files dropped anywhere on the window, its title bar
+  either way focus goes back to the chat's button. Files dropped anywhere on the window, its title bar
   too, go to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
   screen, a modal dialog with no edge to drag, closed with its one button, Escape or back, keeping what it
   showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
@@ -819,6 +860,21 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   their fixtures use the same, so that none is copied into the page from them.
 - Core's error messages are English and are shown as they are, after a translated lead
   (`errorMessage()` does this).
+- **No punctuation in templates.** What joins words is the language's, so it is in the messages:
+  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), a label and
+  its value `common.pair` ("Model calls: 380", 「模型呼叫：380」; `<i18n-t keypath="common.pair">`
+  where the value is a component). Numbers go through `@/utils/format`: a percentage through
+  `formatPct` (a fraction; the gradebook's `formatPct` for a percentage Core worked out), money
+  through `formatMoney` ("US$0.0184": a "$" alone reads as Hong Kong's), a list through
+  `formatList` ("a, b, and c", 「甲、乙和丙」), never `"%"` written after a number nor
+  `.join(', ')`. The dot between a course's code and its section is `<span class="app-sep">·</span>`
+  with no spaces, so that a Chinese typeface does not make it a full-width one.
+- **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
+  never 「{owner} 的代理」, nor around a figure written in the message: 「1個學期 | {n}個學期」, never
+  「1 個學期」 (`src/i18n/spacing.spec.ts` refuses both). The page puts the room between Han
+  and Latin letters or figures itself (`text-autospace` under `html:lang(zh)`, `styles/main.css`),
+  which also keeps a paragraph from leaving one character alone on its last line (`text-wrap`).
+  Small capitals' tracking (a side bar's headings) is 0 in Chinese.
 - Some vocabularies are keyed by Core's own dotted names (`enums.event`: `grade.posted`, …).
   vue-i18n splits a key path on dots, so look those up with a bracketed segment:
   ``t(`enums.event['${type}']`)``.

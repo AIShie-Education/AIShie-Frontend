@@ -279,9 +279,10 @@ defineExpose({ reload: () => list.reload() })
                   <template v-else-if="issuer?.by === 'other'">
                     <router-link :to="{ name: 'admin-actor', params: { actorId: issuer.id } }" class="creds__issuer">
                       <template v-if="issuer.name">{{ issuer.name }}</template>
-                      <IdText v-else :id="issuer.id" />
-                    </router-link>
-                    <span v-if="issuer.id === session.me?.id" class="app-muted"> ({{ t('common.labels.you') }})</span>
+                      <IdText v-else :id="issuer.id" /> </router-link
+                    ><span v-if="issuer.id === session.me?.id" class="app-muted app-you">{{
+                      t('common.labels.youTag')
+                    }}</span>
                   </template>
                   <span v-else class="app-muted">{{ t('admin.credentials.issuerUnknown') }}</span>
                 </span>
@@ -342,9 +343,10 @@ defineExpose({ reload: () => list.reload() })
               <template v-else-if="row.issuer?.by === 'other'">
                 <router-link :to="{ name: 'admin-actor', params: { actorId: row.issuer.id } }" class="creds__issuer">
                   <template v-if="row.issuer.name">{{ row.issuer.name }}</template>
-                  <IdText v-else :id="row.issuer.id" />
-                </router-link>
-                <span v-if="row.issuer.id === session.me?.id" class="app-muted"> ({{ t('common.labels.you') }})</span>
+                  <IdText v-else :id="row.issuer.id" /> </router-link
+                ><span v-if="row.issuer.id === session.me?.id" class="app-muted app-you">{{
+                  t('common.labels.youTag')
+                }}</span>
               </template>
               <span v-else class="app-muted">{{ t('admin.credentials.issuerUnknown') }}</span>
             </template>

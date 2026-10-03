@@ -177,7 +177,10 @@ onBeforeUnmount(() => observer?.disconnect())
         <header class="course-head">
           <div class="course-head__text">
             <div class="course-head__code">
-              {{ course.course.code }}<template v-if="course.course.section"> · {{ course.course.section }}</template>
+              {{ course.course.code
+              }}<template v-if="course.course.section"
+                ><span class="app-sep">·</span>{{ course.course.section }}</template
+              >
             </div>
             <h1 class="course-head__title">{{ course.course.title }}</h1>
           </div>

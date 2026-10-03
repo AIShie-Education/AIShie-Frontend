@@ -30,7 +30,9 @@ const rows = computed(() =>
       <ul v-else class="seats-list">
         <li v-for="s in rows" :key="s.member_id" class="seat">
           <router-link :to="{ name: 'course-overview', params: { courseId: s.course_id } }" class="seat__course">
-            <span class="seat__code">{{ s.code }}<template v-if="s.section"> · {{ s.section }}</template></span>
+            <span class="seat__code"
+              >{{ s.code }}<template v-if="s.section"><span class="app-sep">·</span>{{ s.section }}</template></span
+            >
             <span class="seat__title">{{ s.title }}</span>
           </router-link>
           <div class="seat__tags">

@@ -3,7 +3,7 @@ export default {
   panel: {
     title: '对话',
     toggle: '与智能体对话',
-    toggleUnread: '与智能体对话：{n} 条未读',
+    toggleUnread: '与智能体对话：{n}条未读',
     toggleTip: '与智能体对话（{key}）',
     course: '课程',
     new: '新对话',
@@ -18,7 +18,7 @@ export default {
     backToHistory: '返回过往对话',
     backToAgents: '返回智能体列表',
     pickTitle: '向智能体提问',
-    pickHint: '你在 {course} 可以提问的智能体：课程自己的智能体，以及你的个人助理。',
+    pickHint: '你在{course}可以提问的智能体：课程自己的智能体，以及你的个人助理。',
     noCourses: '你的课程都不允许你向智能体提问。',
   },
   history: {
@@ -52,7 +52,7 @@ export default {
   older: '较早的消息',
   olderFailed: '无法加载，请再试一次。',
   empty: {
-    opener: '还没有任何消息。在下方向 {name} 提出你的问题吧。',
+    opener: '还没有任何消息。在下方向{name}提出你的问题吧。',
     other: '还没有任何消息。',
   },
   // The line in the messages while an answer is awaited: the agent at work, and for how long.
@@ -61,32 +61,32 @@ export default {
     seconds: '{s}s',
     minutes: '{m}m {s}s',
   },
-  typing: '正在等待 {name}…',
+  typing: '正在等待{name}…',
   held: '等待批准中：获批准后才会在这里显示。',
   myActions: '我的操作',
   trouble: '连接到服务器时遇到问题，正在重试…',
   new: {
-    intro: '开始与 {name} 对话。发送第一条消息即会发起对话。',
+    intro: '开始与{name}对话。发送第一条消息即会发起对话。',
     yourAgent: '这是你自己的智能体：它代表你行事，权限永不超过你的席位。',
   },
   proposed: {
     title: '等待批准',
-    body: '你与 {name} 的对话需经批准后才会开始。你可以在“我的操作”中查看进度。',
+    body: '你与{name}的对话需经批准后才会开始。你可以在“我的操作”中查看进度。',
   },
   // What the line above the composer says.
   state: {
     waitingApproval: '每条回复都须经批准，你才会看到。',
     answerPending: '有一条回复正在等待批准。',
-    withdrawn: '你撤回了问题，{name} 不会回答它。',
-    start: '有任何关于课程的问题，都可以问 {name}。',
+    withdrawn: '你撤回了问题，{name}不会回答它。',
+    start: '有任何关于课程的问题，都可以问{name}。',
     overseeing: '你正以课程教职员的身份阅读这段对话。',
     readOnly: '现在由智能体在对话中回答问题，你可以阅读这段对话。',
   },
   // Why an answer may not come.
   availability: {
-    gone: '{name} 已不在这门课程中。请改为与其他人开始新的对话。',
-    paused: '{name} 在这门课程中已被暂停，目前无法回复。',
-    notAnswering: '{name} 目前不回答问题。',
+    gone: '{name}已不在这门课程中。请改为与其他人开始新的对话。',
+    paused: '{name}在这门课程中已被暂停，目前无法回复。',
+    notAnswering: '{name}目前不回答问题。',
   },
   blocked: {
     archived: '这门课程已归档，无法再发言。',
@@ -98,7 +98,7 @@ export default {
   },
   composer: {
     label: '你的消息',
-    askPlaceholder: '向 {name} 提问…',
+    askPlaceholder: '向{name}提问…',
     send: '发送',
     sendTip: '发送（Enter）· Shift+Enter 换行',
     stop: '停止',
@@ -106,24 +106,24 @@ export default {
     // The list a slash opens (commands), and what the empty box hints at.
     commands: '指令',
     hintCommands: '/ 指令',
-    hintMentions: "{'@'} 引用作业或教材",
-    count: '{n} / {max} 字',
+    hintMentions: "{'@'}引用作业或教材",
+    count: '{n} / {max}字',
   },
   // Files a message carries: attached in the composer (the paperclip, dropped on the chat panel, or pasted),
   // each uploaded at once, as a chip; and in the messages, each with its icon, name, size and a download.
   attach: {
     button: '添加附件',
-    buttonTip: '添加附件：最多 {n} 个，每个最大 {size}',
-    full: '每条消息最多附 {n} 个文件',
+    buttonTip: '添加附件：最多{n}个，每个最大{size}',
+    full: '每条消息最多附{n}个文件',
     chips: '要发送的文件',
     dropHere: '松开即添加到你的消息',
     // The empty box, once files are attached: it invites the question; and sending them with no words asks for one.
-    placeholder: '想让 {name} 就这个文件做些什么？',
-    needText: '请写一句话和文件一起发送，让 {name} 知道你想要什么：一个问题，或要看哪里。',
+    placeholder: '想让{name}就这个文件做些什么？',
+    needText: '请写一句话和文件一起发送，让{name}知道你想要什么：一个问题，或要看哪里。',
     waiting: '正在等待文件上传完成…',
     failed: '有文件未能上传：重试或移除后才能发送。',
     tooLarge: '有文件太大，无法发送：移除后才能发送其余的。',
-    tooMany: '每条消息最多附 {max} 个文件：有 {skipped} 个没有加入。',
+    tooMany: '每条消息最多附{max}个文件：有{skipped}个没有加入。',
     folders: '文件夹无法添加：请改为添加里面的文件。',
     again: '正在重新上传：完成后再发送一次即可。',
     reattach: '它的文件已随之撤回：如要发送，请重新添加。',
@@ -132,10 +132,10 @@ export default {
     list: '附件',
     download: '下载“{name}”',
     downloadTip: '下载',
-    held: '附 {n} 个文件：{names}',
+    held: '附{n}个文件：{names}',
     // Core's refusals because of a message's files, or of a file (details.reason).
     refusal: {
-      too_many_attachments: '每条消息最多附 {max_files} 个文件：请移除一些再发送。',
+      too_many_attachments: '每条消息最多附{max_files}个文件：请移除一些再发送。',
       bad_filename: '有文件的名称无法照原样发送：名称太长，或含有不允许的字符。请把文件改名后再添加。',
       duplicate_attachment: '同一个文件添加了两次：请移除其中一个再发送。',
       attachments_need_body: '文件要和消息一起发送：请写一句话。',
@@ -145,7 +145,7 @@ export default {
       not_uploaded: '有文件尚未上传完成。',
       upload_too_old: '这些文件上传得太久，不能等待批准。',
       file_too_large: '有文件超过消息可附的大小（{max}）：请移除它，或改附较小的文件。',
-      conversation_attachments_full: '这个对话的文件已达上限（共 {max_total}）：如要发送更多，请开始新对话。',
+      conversation_attachments_full: '这个对话的文件已达上限（共{max_total}）：如要发送更多，请开始新对话。',
       no_file_storage: '本站没有设置存放文件的地方，所以无法发送文件：请联系网站管理员。',
       retracted: '这个文件已随消息撤回。',
       not_a_member: '你已不在这门课程，所以无法在此发送文件。',
@@ -182,7 +182,7 @@ export default {
   // An answer in the making (the draft: ChatDraft, ChatDraftSteps): the agent's steps, running and done, with
   // what each works on (target) or without, and the answer's text, or that it shows once confirmed.
   draft: {
-    consulted: '已查阅 {n} 项',
+    consulted: '已查阅{n}项',
     stepsLabel: '智能体正在做的事',
     done: '已完成',
     running: '进行中',
@@ -233,8 +233,8 @@ export default {
       tool: {
         running: '正在使用工具…',
         done: '已使用工具',
-        runningTarget: '正在使用 {target}…',
-        doneTarget: '已使用 {target}',
+        runningTarget: '正在使用{target}…',
+        doneTarget: '已使用{target}',
       },
     },
   },
@@ -260,22 +260,22 @@ export default {
     edit: '编辑',
     editTip: '撤回这条问题，放回输入框修改后再发送',
     retractedByYou: '你已撤回这条消息。',
-    retractedBy: '{name} 已撤回这条消息。',
+    retractedBy: '{name}已撤回这条消息。',
     retractedByStaff: '课程教职员已撤回这条消息。',
     reason: '原因：{reason}',
   },
   // Under an answer: the course materials it relied on (AIShie-Core#69), each as the reader may open it now.
   sources: {
     basedOn: '依据：{source}',
-    summary: '依据：{title}· {n} 项',
-    summaryNone: '依据：{n} 项你无法打开的课程教材',
+    summary: '依据：{title}· {n}项',
+    summaryNone: '依据：{n}项你无法打开的课程教材',
     label: '这条回答依据的课程教材',
     quoted: '《{title}》',
     // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
     entry: '{title}· {where}',
-    page: '第 {n} 页',
-    slide: '第 {n} 张幻灯片',
-    version: '第 {seq} 版',
+    page: '第{n}页',
+    slide: '第{n}张幻灯片',
+    version: '第{seq}版',
     openFile: '打开文件中回答所依据之处',
     openVersion: '打开这份教材的这个版本',
     earlier: '较早的版本',
@@ -285,22 +285,22 @@ export default {
     noneTip: '智能体表示这条回答没有依据任何课程教材。',
   },
   reasonPlaceholder: '原因（选填）',
-  reasonTooLong: '最多 {max} 字',
+  reasonTooLong: '最多{max}字',
   // The ⋯ menu in a conversation's header: who can read it, how its answers arrive, closing it.
   menu: {
     label: '对话选项',
   },
   // A question awaiting its answer, taken back to the composer: to edit it, or to stop waiting.
   edit: {
-    done: '问题已撤回并放回输入框，修改后再发送即可。{name} 不会回答已撤回的问题，已开始写的回答也会停下。',
+    done: '问题已撤回并放回输入框，修改后再发送即可。{name}不会回答已撤回的问题，已开始写的回答也会停下。',
   },
   stop: {
-    done: '已停止：问题已撤回并放回输入框。{name} 不会回答已撤回的问题，已开始写的回答也会停下。',
+    done: '已停止：问题已撤回并放回输入框。{name}不会回答已撤回的问题，已开始写的回答也会停下。',
   },
   retract: {
     title: '要撤回这条消息吗？',
     bodyMine: '这条消息的内容将不再在此显示，但写入它的操作记录仍会保留原文。',
-    bodyStaff: '{name} 的这条消息将不再在此显示，但写入它的操作记录仍会保留原文。',
+    bodyStaff: '{name}的这条消息将不再在此显示，但写入它的操作记录仍会保留原文。',
     confirm: '撤回',
     done: '消息已撤回',
   },

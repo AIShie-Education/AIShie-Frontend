@@ -230,6 +230,11 @@ function onTabKey(e: KeyboardEvent) {
   text-transform: uppercase;
   color: var(--app-ink-3);
 }
+/* Chinese has no capitals, and its characters are not spaced out. */
+html:lang(zh) .side-bar__title,
+html:lang(zh) .side-bar .side-heading {
+  letter-spacing: 0;
+}
 .side-bar .side-note {
   margin: 4px 10px;
   font-size: 13px;

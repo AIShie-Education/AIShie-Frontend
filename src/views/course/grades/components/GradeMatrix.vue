@@ -9,7 +9,7 @@
 import { computed, onActivated, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { formatNumber } from '@/utils/format'
+import { formatNumber, formatPct as fractionPct } from '@/utils/format'
 import { formatPct, formatScore } from './grading'
 import type { ColumnSummary, MatrixCell, MatrixColumn, MatrixRow, MatrixStudent, SortBy } from './classMatrix'
 import { NO_CELL } from './classMatrix'
@@ -224,7 +224,7 @@ function gradesOf(col: MatrixColumn) {
 function mean(col: MatrixColumn): string {
   const m = props.summaries.get(col.key)?.mean
   if (m === null || m === undefined) return '—'
-  return col.kind === 'total' ? `${formatNumber(m, 2)}%` : formatNumber(m, 2)
+  return col.kind === 'total' ? fractionPct(m / 100, 2) : formatNumber(m, 2)
 }
 function meanHint(col: MatrixColumn): string {
   const s = props.summaries.get(col.key)

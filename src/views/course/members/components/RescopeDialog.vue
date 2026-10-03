@@ -11,6 +11,7 @@ import type { ToolIn } from '@/api/http'
 import type { Member, PermLevels } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import StatusTag from '@/components/StatusTag.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import MemberName from '@/components/MemberName.vue'
 import MemberSelect from '@/components/MemberSelect.vue'
@@ -272,9 +273,7 @@ async function submit() {
 
     <template #footer>
       <div class="rescope__footer">
-        <el-tag v-if="course.needsApproval('member_manage')" type="warning" effect="plain">
-          {{ t('enums.level.confirm_required') }}
-        </el-tag>
+        <StatusTag v-if="course.needsApproval('member_manage')" vocab="level" value="confirm_required" size="default" />
         <span v-if="!changed" class="app-muted rescope__nothing">{{ t('members.rescope.nothing') }}</span>
         <span class="app-toolbar__spacer" />
         <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>

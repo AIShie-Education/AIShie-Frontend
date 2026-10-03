@@ -24,6 +24,7 @@ import { useContainerNarrow, useTableRelayout } from '@/composables/useContainer
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isUuid, shortId } from '@/utils/format'
+import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
@@ -373,6 +374,7 @@ async function undoFinal() {
         type: 'warning',
         confirmButtonText: t('grades.undoFinal.confirmButton'),
         cancelButtonText: t('common.actions.cancel'),
+        confirmButtonClass: 'el-button--danger',
       },
     )
   } catch {
@@ -558,8 +560,6 @@ watch(
                   <span>
                     <el-button
                       size="small"
-                      type="warning"
-                      plain
                       :disabled="!course.writable"
                       :loading="undoWrite.pending.value"
                       @click="undoFinal"
@@ -568,26 +568,24 @@ watch(
                     </el-button>
                   </span>
                 </el-tooltip>
-                <el-tag
+                <StatusTag
                   v-if="canUndoFinal && course.needsApproval('grade_post')"
+                  vocab="level"
+                  value="confirm_required"
                   size="small"
-                  type="warning"
-                  effect="plain"
-                >
-                  {{ t('enums.level.confirm_required') }}
-                </el-tag>
+                />
               </div>
             </el-alert>
             <p v-if="rootSnapshot" class="gradebook__snapshot">
-              {{ t('grades.gradebook.lastWritten') }}
-              <router-link
-                :to="{
-                  name: 'course-grade',
-                  params: { courseId, gradeId: rootSnapshot.id },
-                }"
-              >
-                {{ formatPct(rootSnapshot.override?.score ?? rootSnapshot.score) }}
-              </router-link>
+              <!-- One item of the line's flex: its gap would put a space after the colon. -->
+              <i18n-t keypath="common.pair" tag="span" scope="global">
+                <template #label>{{ t('grades.gradebook.lastWritten') }}</template>
+                <template #value>
+                  <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: rootSnapshot.id } }">{{
+                    formatPct(rootSnapshot.override?.score ?? rootSnapshot.score)
+                  }}</router-link>
+                </template>
+              </i18n-t>
               <span v-if="rootSnapshot.override" class="app-muted">{{
                 t('grades.override.computed', { value: formatPct(rootSnapshot.score) })
               }}</span>

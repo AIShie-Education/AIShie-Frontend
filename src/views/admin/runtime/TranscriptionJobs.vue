@@ -14,12 +14,11 @@ import { read } from '@/api/http'
 import { runtimeAdmin } from '@/api/runtime'
 import type { TranscriptionJob, TranscriptionJobFilter } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
-import { shortId } from '@/utils/format'
+import { formatMoney, shortId } from '@/utils/format'
 import LoadMore from '@/components/LoadMore.vue'
 import TimeText from '@/components/TimeText.vue'
 import { textReasonText } from '@/views/course/materials/components/textVersion'
 import RuntimeAsync from './RuntimeAsync.vue'
-import { usdShown } from './runtimeAdmin'
 import { JOB_STATUS_TAG } from './transcription'
 
 const { t, te, n } = useI18n()
@@ -118,7 +117,7 @@ function linkTo(j: TranscriptionJob) {
 
 const reasonOf = (j: TranscriptionJob) => textReasonText(j.reason, t, te)
 const costOf = (j: TranscriptionJob) =>
-  j.cost_usd === null ? t('runtimeAdmin.transcription.jobs.unpriced') : `$${usdShown(j.cost_usd)}`
+  j.cost_usd === null ? t('runtimeAdmin.transcription.jobs.unpriced') : formatMoney(j.cost_usd)
 const empty = computed(() => loaded.value && !jobs.value.length)
 </script>
 

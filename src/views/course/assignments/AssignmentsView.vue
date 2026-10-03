@@ -158,7 +158,7 @@ function refresh() {
       </template>
     </el-alert>
     <div v-if="writer && course.needsApproval('assignment_write')" class="app-form-hint assignments-view__approval">
-      <el-tag type="warning" size="small" disable-transitions>{{ t('enums.level.confirm_required') }}</el-tag>
+      <StatusTag vocab="level" value="confirm_required" size="small" />
       {{ t('assignments.list.approvalHint') }}
     </div>
 

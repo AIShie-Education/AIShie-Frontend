@@ -193,13 +193,13 @@ test.describe.serial('records that change after the fact', () => {
     await inTraditionalChinese(page)
     await page.goto(`/courses/${courseId}/members/${uma.member_id}`)
     await page.getByRole('button', { name: '更改角色' }).click()
-    const zh = page.getByRole('dialog', { name: `更改 ${uma.display_name} 的名冊角色` })
+    const zh = page.getByRole('dialog', { name: `更改${uma.display_name}的名冊角色` })
     await expect(zh).toContainText('這只會更改名冊角色')
     await zh.locator('.role-dialog__role').filter({ hasText: '學生' }).click()
     await expect(zh).toContainText('將加入名冊')
     await photograph(page, 'role-change-zh-Hant')
     await zh.getByRole('button', { name: '改為學生' }).click()
-    await expectToasted(page, `${uma.display_name} 現在是學生`)
+    await expectToasted(page, `${uma.display_name}現在是學生`)
   })
 
   test('an instructor renames the course and describes it; its code and term are the administrators’', async ({
@@ -275,13 +275,13 @@ test.describe.serial('records that change after the fact', () => {
     const edit = page.getByRole('dialog', { name: /Midterm/ })
     await edit.locator('.el-form-item').filter({ hasText: '滿分' }).first().locator('input').fill('100')
     const zh = edit.locator('.existing-grades')
-    await expect(zh).toContainText('已輸入 2 份成績')
-    await expect(zh.locator('[data-choice="rescale"]')).toContainText('例如 40/50 會變成 80/100')
-    await expect(zh.locator('[data-choice="keep_scores"]')).toContainText('例如 40/50（80%）會變成 40/100（40%）')
+    await expect(zh).toContainText('已輸入2份成績')
+    await expect(zh.locator('[data-choice="rescale"]')).toContainText('例如40/50會變成80/100')
+    await expect(zh.locator('[data-choice="keep_scores"]')).toContainText('例如40/50（80%）會變成40/100（40%）')
     await zh.locator('[data-choice="keep_scores"]').click()
     await photograph(page, 'points-change-zh-Hant')
     await edit.getByRole('button', { name: '儲存' }).click()
-    await expectToasted(page, /^已儲存評分項目：重新記錄了 \d+ 項總分。$/)
+    await expectToasted(page, /^已儲存評分項目：重新記錄了\d+項總分。$/)
   })
 
   test('a grader overrides a student’s course total with a reason and comments on it; the student sees neither who nor why', async ({
@@ -345,11 +345,20 @@ test.describe.serial('records that change after the fact', () => {
     await expect(page.locator('.gradebook__total')).toContainText('已覆寫')
     await expect(page.locator('.gradebook__total')).toContainText('計算所得')
     await photograph(page, 'total-override-zh-Hant')
+    // 「…總分：」 and the figure after it are one item of the line's flex: no gap after the full-width colon.
+    const gap = await page.locator('.gradebook__snapshot a').evaluate((link) => {
+      let colon = link.previousSibling
+      while (colon && !(colon.nodeType === Node.TEXT_NODE && colon.textContent!.trim())) colon = colon.previousSibling
+      const label = document.createRange()
+      label.selectNodeContents(colon!)
+      return link.getBoundingClientRect().left - label.getBoundingClientRect().right
+    })
+    expect(gap).toBeLessThan(1)
     await page.locator('.gradebook__snapshot a').click()
     await expect(page.locator('.grade-view__override')).toContainText('原因：Moderated at the exam board')
 
     // Taking it off: the total worked out counts again.
-    await page.getByRole('button', { name: '總分: ' + '課程總成績' }).click()
+    await page.getByRole('button', { name: '總分：課程總成績' }).click()
     await page.locator('.el-dropdown-menu:visible').getByText('取消覆寫').click()
     await page.getByRole('dialog', { name: '取消覆寫？' }).getByRole('button', { name: '取消覆寫' }).click()
     await expectToasted(page, '已取消覆寫。')
@@ -361,15 +370,30 @@ test.describe.serial('records that change after the fact', () => {
     await asInstructor(page, `/gradebook/${tia.member_id}`)
     await expect(page.locator('.gradebook__final')).toContainText('written as final grades')
     await page.goto(`/courses/${courseId}/grades`)
-    await page.getByRole('button', { name: 'Undo final grades…' }).click()
+    await page.getByRole('button', { name: 'More posting actions' }).click()
+    await page.getByRole('menuitem', { name: 'Undo final grades…' }).click()
     const dialog = page.getByRole('dialog', { name: 'Undo final grades' })
     await expect(dialog).toContainText('Grades themselves are not touched')
     await dialog.getByText('Every student whose totals count ungraded work as zero').click()
     await dialog.getByRole('button', { name: 'Undo final grades' }).click()
-    await page
+    // The last step is solid red, held down too: never the indigo of the primary button it is drawn from.
+    const last = page
       .getByRole('dialog', { name: 'Undo final grades?' })
       .getByRole('button', { name: 'Undo final grades' })
-      .click()
+    // Its colour is read at once, with no transition from the hover's (the same red) under way.
+    const red = await last.evaluate((el) => {
+      el.style.transition = 'none'
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--el-color-danger-dark-2)'
+      el.append(probe)
+      const colour = getComputedStyle(probe).color
+      probe.remove()
+      return colour
+    })
+    await last.hover()
+    await page.mouse.down()
+    expect(await last.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(red)
+    await page.mouse.up()
     await expectToasted(page, /^1 student’s totals no longer count ungraded work as zero: \d+ totals written again\.$/)
 
     await page.goto(`/courses/${courseId}/gradebook/${tia.member_id}`)
@@ -378,7 +402,8 @@ test.describe.serial('records that change after the fact', () => {
 
     // Nothing is left to undo: Core refuses, and says so in words.
     await page.goto(`/courses/${courseId}/grades`)
-    await page.getByRole('button', { name: 'Undo final grades…' }).click()
+    await page.getByRole('button', { name: 'More posting actions' }).click()
+    await page.getByRole('menuitem', { name: 'Undo final grades…' }).click()
     await page
       .getByRole('dialog', { name: 'Undo final grades' })
       .getByRole('button', { name: 'Undo final grades' })
@@ -468,8 +493,8 @@ test.describe.serial('records that change after the fact', () => {
     await purge.getByText('我明白此操作會永久移除內容').click()
     await photograph(admin, 'purge-dialog-zh-Hant')
     await purge.getByRole('button', { name: '清除' }).click()
-    await expectToasted(admin, /^已清除：\d+ 個版本，從儲存空間刪除了 \d+ 個檔案。$/)
-    await expect(admin.locator('.tombstone--document')).toContainText('由 你 清除')
+    await expectToasted(admin, /^已清除：\d+個版本，從儲存空間刪除了\d+個檔案。$/)
+    await expect(admin.locator('.tombstone--document')).toContainText('由你清除')
     await expect(admin.locator('.tombstone--document')).toContainText('原因：整份講義誤傳')
     await photograph(admin, 'tombstone-zh-Hant')
     await admin.close()

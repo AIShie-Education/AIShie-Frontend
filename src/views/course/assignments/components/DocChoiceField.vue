@@ -11,6 +11,7 @@ import type { DocumentSummary } from '@/api/types'
 import type { UploadedFile } from '@/api/http'
 import { useCourseStore } from '@/stores/course'
 import { titleFromFileName } from '@/utils/format'
+import StatusTag from '@/components/StatusTag.vue'
 import DocumentTextField from '@/components/DocumentTextField.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import type { DocChoice } from './types'
@@ -120,7 +121,7 @@ function onUploaded(f: UploadedFile) {
 
     <div v-else-if="model.mode === 'new'" class="doc-choice__body doc-choice__new">
       <div v-if="course.needsApproval('document_write')" class="app-form-hint doc-choice__approval">
-        <el-tag type="warning" size="small" disable-transitions>{{ t('enums.level.confirm_required') }}</el-tag>
+        <StatusTag vocab="level" value="confirm_required" size="small" />
         <span>{{ t('assignments.form.doc.newNeedsApproval') }}</span>
       </div>
       <el-input
