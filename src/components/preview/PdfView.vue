@@ -14,12 +14,15 @@
 // read is the first at the top, the last at the end, and otherwise the one
 // at the top third of the screen; a page gone to is read until the reader
 // scrolls the pages from there or zooms them, and is gone to again as the
-// viewer fits the zoom to a new width. The previous and next page buttons
-// move the pages or are disabled: Next at the end, both where the pages do
-// not scroll (pdfPages.ts). Two fingers, anywhere on it, the bar too, pinch
-// the pages larger or smaller (a touchpad's pinch, which comes as a wheel
-// with Ctrl held, too), about the point between them, and the browser does
-// not zoom the screen as well; a pinch that ends near the width fits it again.
+// viewer moves them: as the pages area changes size (a phone turned on its
+// side, a window made shorter), the zoom fitted to its new width or kept as
+// set by hand, and as a page turns out to be of another size than the first.
+// The previous and next page buttons move the pages or are disabled: Next at
+// the end, both where the pages do not scroll (pdfPages.ts). Two fingers,
+// anywhere on it, the bar too, pinch the pages larger or smaller (a
+// touchpad's pinch, which comes as a wheel with Ctrl held, too), about the
+// point between them, and the browser does not zoom the screen as well; a
+// pinch that ends near the width fits it again.
 //
 // Where the view is narrow (a phone, 640 px or less of its own width, as the
 // viewer is the whole screen up to a window that wide) or short (a phone on
@@ -168,8 +171,15 @@ async function draw(page: number) {
   const w = viewport.width / at
   const h = viewport.height / at
   if (s && (Math.abs(s.w - w) > 0.5 || Math.abs(s.h - h) > 0.5)) {
+    // The pages after it move as it takes its own size, and where they end
+    // with them: a page gone to is gone to again, where they now put it, as
+    // when the area changes size (resized). Left where it was, it would be
+    // read off the screen; or, where the browser keeps what it shows in place
+    // as they move (scroll anchoring), let go, and another page read.
+    const held = holding()
     sizes.value[page - 1] = { w, h }
     await nextTick()
+    if (held !== null) goTo(held)
     // The pages have moved, and where they end with them.
     onScroll()
     if (drawn.get(page) !== entry || disposed) return
@@ -301,12 +311,17 @@ let tracking = 0
  * Where going to a page left the pages scrolled: a page near the end, which
  * cannot come to the top of the screen, is still the page read until they
  * are scrolled from there or zoomed (setZoom), and gone to again as the
- * viewer fits the zoom to the width again (refit). Pages that do not scroll
- * stay where they were as they are zoomed in, at the top: kept, the page
- * gone to would be read where it is not, and Prev would change the number
- * without moving them.
+ * pages area changes size (resized) or a page turns out to be of another
+ * size than the first (draw). Pages that do not scroll stay where they were
+ * as they are zoomed in, at the top: kept, the page gone to would be read
+ * where it is not, and Prev would change the number without moving them.
  */
 let heldAt: number | null = null
+/** The page gone to, while the pages are where going to it left them (heldAt); null once they are not. */
+function holding(): number | null {
+  const el = scroller.value
+  return heldAt !== null && el && Math.abs(el.scrollTop - heldAt) < 1 ? current.value : null
+}
 /** Reads, at the next frame, where the pages are: the page read (pageInView), whether they are at the end, and whether they scroll at all. */
 function onScroll() {
   if (tracking) return
@@ -375,7 +390,7 @@ async function setZoom(next: number, at?: { x: number; y: number }) {
   const z = clampZoom(next)
   if (!el || Math.abs(z - zoom.value) < 0.001) return
   // Zoomed, the pages are read where they are, whether or not they moved: a
-  // page gone to is let go (refit, the viewer's own zoom, goes to it again).
+  // page gone to is let go (resized, the viewer's own zoom, goes to it again).
   heldAt = null
   const box = at ? el.getBoundingClientRect() : null
   const ax = at && box ? at.x - box.left - el.clientLeft : 0
@@ -399,21 +414,23 @@ async function setZoom(next: number, at?: { x: number; y: number }) {
   redraw = window.setTimeout(schedule, 150)
 }
 /**
- * Fits the zoom to the pages area's width again, as it changes size (a
- * window made narrower, a phone turned on its side, a scroll bar come): the
- * viewer's doing, not the reader's, so a page gone to is gone to again, where
- * the pages now put it (at the end, for one that cannot come to the top), and
- * is still the page read. Kept where the zoom left it instead, a page near the
- * end would be read off the screen: the zoom keeps the top of the screen as
- * far from the page's top, in its heights, and at the end that is pages above
- * it.
+ * The pages area has changed size (a window made narrower or shorter, a phone
+ * turned on its side, a scroll bar come): fitted to the width, the zoom is
+ * fitted to it again. It is the viewer's doing, not the reader's, so a page
+ * gone to is gone to again, where the pages now put it (at the end, for one
+ * that cannot come to the top), and is still the page read, whether the zoom
+ * is fitted again or was set by hand. Kept where it was instead, a page near
+ * the end would be read off the screen: the zoom keeps the top of the screen
+ * as far from the page's top, in its heights, and at the end that is pages
+ * above it; and the end of a shorter area lies further down, so that a page
+ * left where it was is below the screen, or under the bar.
  */
-async function refit() {
-  const el = scroller.value
-  const held = heldAt !== null && !!el && Math.abs(el.scrollTop - heldAt) < 1
-  const page = current.value
-  await setZoom(widthZoom())
-  if (held) goTo(page)
+async function resized() {
+  const held = holding()
+  if (fitWidth.value) await setZoom(widthZoom())
+  if (held !== null) goTo(held)
+  // Taller or shorter, the pages end elsewhere on the screen.
+  onScroll()
 }
 function zoomIn() {
   fitWidth.value = false
@@ -575,11 +592,7 @@ onMounted(async () => {
   if (props.page && props.page > 1) goTo(props.page)
   observe()
   if (scroller.value && typeof ResizeObserver !== 'undefined') {
-    resizer = new ResizeObserver(() => {
-      if (fitWidth.value) void refit()
-      // Taller or shorter, the pages end elsewhere on the screen.
-      onScroll()
-    })
+    resizer = new ResizeObserver(() => void resized())
     resizer.observe(scroller.value)
   }
 })

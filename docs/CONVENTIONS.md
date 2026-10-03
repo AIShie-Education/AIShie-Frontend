@@ -206,7 +206,9 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   reads is the first at the top, the last at the end, and otherwise the one at the top third of what
   is seen; a page gone to is read until the reader scrolls the pages from there or zooms them (even
   where the zoom leaves them where they were), and is gone to again, where the pages now put it, as
-  the viewer fits the zoom to a new width (a phone turned on its side). Its previous and next page
+  the pages area changes size (a phone turned on its side, a window made shorter), the zoom fitted
+  to the new width or kept as it was set by hand, and as a page turns out to be of another size than
+  the first. Its previous and next page
   buttons always move the pages or are disabled: the last pages, which cannot come to the top, are
   one stop, the end, which Next goes to and is disabled at, and Prev goes back from to the last page
   that moves them; pages that do not scroll at all, all on the screen at once, are one stop too,
