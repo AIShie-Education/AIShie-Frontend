@@ -60,6 +60,7 @@ export default {
     action: 'Action',
     component: 'Grading scheme',
     gradebook: 'Gradebook',
+    conversation: 'Conversation',
   },
   target: {
     submission: 'a submission',
@@ -72,6 +73,9 @@ export default {
     action: 'an action',
     gradebook: 'the gradebook',
     upload: 'an upload',
+    actor: 'a person or agent',
+    conversation: 'a conversation',
+    conversation_message: 'a message',
   },
   fact: {
     onTarget: 'about {target}',

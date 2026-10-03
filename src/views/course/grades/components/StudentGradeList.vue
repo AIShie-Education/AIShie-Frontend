@@ -4,9 +4,12 @@
 // work, work to grade), which opens on the list of their grades, column by
 // column, and a way to their own gradebook. A matrix of students by
 // assignments does not fit such a width; a list a student at a time does.
+// Scores are shown as the table shows them, to two decimal places at most,
+// every place for a screen reader; a draft says the posted grade it would
+// replace under it.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { formatPct, formatScore } from './grading'
+import { classFigure, formatScore } from './grading'
 import type { MatrixCell, MatrixColumn, MatrixRow, MatrixStudent } from './classMatrix'
 import { NO_CELL } from './classMatrix'
 
@@ -32,17 +35,24 @@ const totalColumn = computed(() => props.columns.find((c) => c.isRoot) ?? null)
 /** What each student's line opens on: every column but the course total, which the line shows. */
 const listed = computed(() => props.columns.filter((c) => !c.isRoot))
 
-function scoreText(cell: MatrixCell, col: MatrixColumn): string {
-  if (cell.score === null) return ''
-  return col.kind === 'total'
-    ? formatPct(cell.score)
-    : `${formatScore(cell.score)} ${t('classbook.outOf', { n: formatScore(col.outOf) })}`
+/** A cell's score as shown (to two places at most), and with every place where that is longer. */
+function scoreText(cell: MatrixCell, col: MatrixColumn): { text: string; full: string | null } {
+  if (cell.score === null) return { text: '', full: null }
+  const f = classFigure(cell.score, col.kind === 'total')
+  if (col.kind === 'total') return f
+  const of = ` ${t('classbook.outOf', { n: formatScore(col.outOf) })}`
+  return { text: f.text + of, full: f.full && f.full + of }
 }
 /** The course total shown on the line, or null where there is none. */
-function totalOf(row: MatrixRow): string | null {
+function totalOf(row: MatrixRow): { text: string; full: string | null } | null {
   const c = totalColumn.value
   const cell = c ? row.cells[c.key] : undefined
   return c && cell ? scoreText(cell, c) : null
+}
+/** For a draft over a posted grade, the posted score it would replace. */
+function postedOf(cell: MatrixCell): { text: string; full: string | null } | null {
+  if (cell.state !== 'draft' || cell.postedScore === null || cell.postedScore === undefined) return null
+  return classFigure(cell.postedScore)
 }
 const cellOf = (row: MatrixRow, col: MatrixColumn) => row.cells[col.key] ?? NO_CELL
 /** Paused or removed, said beside the name; nothing for a student who is simply in the class. */
@@ -90,8 +100,9 @@ const bodyId = (id: string) => `sgl-body-${id}`
             ><span aria-hidden="true">–</span><span class="sgl__sr">{{ t('classbook.state.none') }}</span></span
           >
           <span v-else class="sgl__total-value">
-            {{ totalOf(r)
-            }}<template v-if="r.cells[totalColumn.key]?.overridden"
+            <span :aria-hidden="totalOf(r)!.full ? 'true' : undefined">{{ totalOf(r)!.text }}</span
+            ><span v-if="totalOf(r)!.full" class="sgl__sr">{{ totalOf(r)!.full }}</span
+            ><template v-if="r.cells[totalColumn.key]?.overridden"
               ><span aria-hidden="true">*</span
               ><span class="sgl__sr">{{ t('classbook.state.overridden') }}</span></template
             >
@@ -118,22 +129,37 @@ const bodyId = (id: string) => `sgl-body-${id}`
             </span>
             <span class="sgl__value">
               <template v-if="cellOf(r, c).gradeId">
-                <router-link
-                  :to="{ name: 'course-grade', params: { courseId, gradeId: cellOf(r, c).gradeId } }"
-                  class="sgl__score"
-                  :class="{ 'is-draft': cellOf(r, c).state === 'draft' }"
-                  >{{ scoreText(cellOf(r, c), c) }}</router-link
-                >
-                <template v-if="cellOf(r, c).overridden"
-                  ><span aria-hidden="true">*</span
-                  ><span class="sgl__sr">{{ t('classbook.state.overridden') }}</span></template
-                >
-                <span v-if="cellOf(r, c).state === 'draft'" class="sgl__flag is-draft">{{
-                  t('classbook.state.draft')
-                }}</span>
-                <span v-if="cellOf(r, c).waiting" class="sgl__flag is-wait" :title="t('classbook.waiting')">{{
-                  t('classbook.state.toGrade')
-                }}</span>
+                <span class="sgl__line">
+                  <router-link
+                    :to="{ name: 'course-grade', params: { courseId, gradeId: cellOf(r, c).gradeId } }"
+                    class="sgl__score"
+                    :class="{ 'is-draft': cellOf(r, c).state === 'draft' }"
+                    ><span :aria-hidden="scoreText(cellOf(r, c), c).full ? 'true' : undefined">{{
+                      scoreText(cellOf(r, c), c).text
+                    }}</span
+                    ><span v-if="scoreText(cellOf(r, c), c).full" class="sgl__sr">{{
+                      scoreText(cellOf(r, c), c).full
+                    }}</span></router-link
+                  >
+                  <template v-if="cellOf(r, c).overridden"
+                    ><span aria-hidden="true">*</span
+                    ><span class="sgl__sr">{{ t('classbook.state.overridden') }}</span></template
+                  >
+                  <span v-if="cellOf(r, c).state === 'draft'" class="sgl__flag is-draft">{{
+                    t('classbook.state.draft')
+                  }}</span>
+                  <span v-if="cellOf(r, c).waiting" class="sgl__flag is-wait" :title="t('classbook.waiting')">{{
+                    t('classbook.state.toGrade')
+                  }}</span>
+                </span>
+                <span v-if="postedOf(cellOf(r, c))" class="sgl__posted">
+                  <span :aria-hidden="postedOf(cellOf(r, c))!.full ? 'true' : undefined">{{
+                    t('classbook.postedUnder', { score: postedOf(cellOf(r, c))!.text })
+                  }}</span>
+                  <span v-if="postedOf(cellOf(r, c))!.full" class="sgl__sr">{{
+                    t('classbook.postedUnder', { score: postedOf(cellOf(r, c))!.full })
+                  }}</span>
+                </span>
               </template>
               <span v-else-if="cellOf(r, c).state === 'missing'" class="sgl__flag is-missing">{{
                 t('classbook.state.missing')
@@ -270,6 +296,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   font-weight: 600;
 }
 .sgl__what {
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -280,12 +307,33 @@ const bodyId = (id: string) => `sgl-body-${id}`
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }
+/*
+ * What a column says of the student: its own width first, the column's name
+ * the rest; where that is more than the line has room for (a long score, a
+ * draft's flag and work to grade), its flags wrap under it rather than run
+ * past the screen.
+ */
 .sgl__value {
-  flex-shrink: 0;
-  display: inline-flex;
+  flex: 0 1 auto;
+  max-width: 70%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.sgl__line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 4px;
-  font-variant-numeric: tabular-nums;
+}
+.sgl__posted {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 .sgl__score.is-draft {
   font-style: italic;

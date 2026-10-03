@@ -174,12 +174,44 @@ export function visibleStudents(
   return out
 }
 
-/** Every student Core showed grades or work of, by id: the rows where the member list cannot be read. */
-export function studentsSeen(grades: readonly GradeLite[], submissions: readonly SubmissionLite[] | null): string[] {
+/**
+ * Every student Core showed grades or work of, by id, and those an
+ * assignment's roster lists (who may have handed nothing in yet): the rows
+ * where the member list cannot be read.
+ */
+export function studentsSeen(
+  grades: readonly GradeLite[],
+  submissions: readonly SubmissionLite[] | null,
+  roster: readonly string[] | null = null,
+): string[] {
   const ids = new Set<string>()
   for (const g of grades) ids.add(g.student_member_id)
   for (const s of submissions ?? []) ids.add(s.student_member_id)
+  for (const id of roster ?? []) ids.add(id)
   return [...ids]
+}
+
+/** What the matrix is worked out from: every grade and submission read (submissions null where the seat reads none). */
+export interface TermRead {
+  grades: GradeLite[]
+  submissions: SubmissionLite[] | null
+}
+
+/**
+ * The term as kept, with some students' grades and submissions read again
+ * (coming back from their own gradebooks) in place of what was kept of
+ * them; everyone else's as it was.
+ */
+export function mergeStudents<T extends TermRead>(kept: T, ids: readonly string[], again: readonly TermRead[]): T {
+  const these = new Set(ids)
+  const grades = kept.grades.filter((g) => !these.has(g.student_member_id))
+  for (const a of again) grades.push(...a.grades)
+  let submissions = kept.submissions
+  if (submissions) {
+    submissions = submissions.filter((s) => !these.has(s.student_member_id))
+    for (const a of again) submissions.push(...(a.submissions ?? []))
+  }
+  return { ...kept, grades, submissions }
 }
 
 // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import {
   csvText,
   filterRows,
   matrixCsv,
+  mergeStudents,
   slimGrade,
   sortRows,
   studentsSeen,
@@ -413,6 +414,54 @@ describe('who is a row', () => {
 
   it('is, for a seat that sees only its own, itself', () => {
     expect(ids(visibleStudents(members, { student_scope: 'self', member_id: 'ken' }))).toEqual(['ken'])
+  })
+
+  it('is, where the member list cannot be read, every student seen and every one an assignment’s roster lists', () => {
+    const submissions: SubmissionLite[] = [
+      { id: 's1', assignment_id: 'a1', student_member_id: 'ken', attempt: 1, state: 'submitted' },
+    ]
+    expect(studentsSeen([grade({ student_member_id: 'mei', score: 1 })], submissions, ['yuki', 'ken'])).toEqual([
+      'mei',
+      'ken',
+      'yuki',
+    ])
+  })
+})
+
+describe('reading some students again', () => {
+  it('puts what was read again of them in place of what was kept, everyone else’s as it was', () => {
+    const kept = {
+      grades: [
+        slimGrade(grade({ id: 'g-yuki', student_member_id: 'yuki', assignment_id: 'a1', score: 7 }))!,
+        slimGrade(grade({ id: 'g-ken', student_member_id: 'ken', assignment_id: 'a1', score: 6 }))!,
+        slimGrade(grade({ id: 'g-mei', student_member_id: 'mei', assignment_id: 'a1', score: 5 }))!,
+      ],
+      submissions: [
+        { id: 's-yuki', assignment_id: 'a1', student_member_id: 'yuki', attempt: 1, state: 'submitted' },
+        { id: 's-ken', assignment_id: 'a1', student_member_id: 'ken', attempt: 1, state: 'submitted' },
+      ],
+      roster: ['yuki', 'ken', 'mei'],
+    }
+    const again = [
+      // Yuki's grade taken off, and a draft over it on a second attempt.
+      {
+        grades: [slimGrade(grade({ id: 'g-yuki-2', student_member_id: 'yuki', assignment_id: 'a1', score: 9 }))!],
+        submissions: [
+          { id: 's-yuki', assignment_id: 'a1', student_member_id: 'yuki', attempt: 1, state: 'submitted' },
+          { id: 's-yuki-2', assignment_id: 'a1', student_member_id: 'yuki', attempt: 2, state: 'submitted' },
+        ],
+      },
+      // Mei's grade gone.
+      { grades: [], submissions: [] },
+    ]
+    const merged = mergeStudents(kept, ['yuki', 'mei'], again)
+    expect(merged.grades.map((g) => g.id).sort()).toEqual(['g-ken', 'g-yuki-2'])
+    expect(merged.submissions!.map((x) => x.id).sort()).toEqual(['s-ken', 's-yuki', 's-yuki-2'])
+    expect(merged.roster).toBe(kept.roster)
+    // What was kept is not changed: it is what is shown until the merge takes its place.
+    expect(kept.grades).toHaveLength(3)
+    // A seat that reads no submissions reads none again.
+    expect(mergeStudents({ grades: [], submissions: null }, ['yuki'], again).submissions).toBeNull()
   })
 })
 

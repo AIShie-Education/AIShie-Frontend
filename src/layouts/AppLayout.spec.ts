@@ -243,6 +243,21 @@ describe('on a phone', () => {
     expect(top.querySelector('svg.app-wordmark')?.getAttribute('aria-label')).toBe('aishie')
   })
 
+  it('keeps the menu open as the page writes its own address, and closes it as another page is shown', async () => {
+    const { w, router } = await mountAs('autonomous', { phone: true })
+    const menu = w.get('.app-header .app-header__menu')
+    await menu.trigger('click')
+    await flushPromises()
+    expect(menu.attributes('aria-expanded')).toBe('true')
+    // A search written to the address as it is typed, say.
+    await router.replace({ query: { q: 'root' } })
+    await flushPromises()
+    expect(menu.attributes('aria-expanded')).toBe('true')
+    await router.push('/account')
+    await flushPromises()
+    expect(menu.attributes('aria-expanded')).toBe('false')
+  })
+
   it('has a floating button instead, with no tooltip, which opens the sheet and is gone while it is open', async () => {
     const { w, chat } = await mountAs('autonomous', { phone: true })
     expect(w.find('.app-rail').exists()).toBe(false)

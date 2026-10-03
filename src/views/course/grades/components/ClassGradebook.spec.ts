@@ -3,7 +3,8 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import ElementPlus from 'element-plus'
 import * as Icons from '@element-plus/icons-vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { Comment, defineComponent, h, KeepAlive } from 'vue'
+import { createMemoryHistory, createRouter, useRoute } from 'vue-router'
 import { i18n, setLocale } from '@/i18n'
 import { ApiError } from '@/api/http'
 import { fakeContainerWidths } from '@/composables/containerWidthFakes'
@@ -83,8 +84,18 @@ function paged<T extends { id: string }>(items: T[], args: { after?: string; lim
 }
 
 let seat: Record<string, unknown> = {}
-/** The member list as Core gives it; a test may change it. */
+/** The member list as Core gives it; a test may change it, or make it fail. */
 let roster = students
+let memberList: (args: { after?: string; limit?: number }) => unknown = (args) => {
+  const p = paged(roster, args)
+  return { members: p.items, next: p.next }
+}
+/** Grades a test adds to the class's. */
+let moreGrades: typeof grades = []
+/** submission.roster's answer, by assignment; a test may give one. */
+let assignmentRoster: (assignment: string) => unknown = () => {
+  throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+}
 /** component.tree's answer; a test may make it fail. */
 let scheme: () => unknown = () => ({
   components: [
@@ -96,6 +107,14 @@ let scheme: () => unknown = () => ({
 let assignmentList: () => unknown = () => ({ assignments, next: null })
 beforeEach(() => {
   roster = students
+  memberList = (args) => {
+    const p = paged(roster, args)
+    return { members: p.items, next: p.next }
+  }
+  moreGrades = []
+  assignmentRoster = () => {
+    throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+  }
   assignmentList = () => ({ assignments, next: null })
   scheme = () => ({
     components: [
@@ -116,20 +135,20 @@ beforeEach(() => {
   })
   seat = { member_id: 'm-sato', role: 'instructor', assignment_scope: 'all', student_scope: 'all' }
   read.mockReset()
-  read.mockImplementation(async (tool: string, args: { after?: string; limit?: number }) => {
+  read.mockImplementation(async (tool: string, args: { after?: string; limit?: number; assignment_id?: string }) => {
     switch (tool) {
-      case 'member.list': {
-        const p = paged(roster, args)
-        return { members: p.items, next: p.next }
-      }
+      case 'member.list':
+        return memberList(args)
       case 'assignment.list':
         return assignmentList()
       case 'component.tree':
         return scheme()
       case 'grade.list': {
-        const p = paged(grades, args)
+        const p = paged([...grades, ...moreGrades], args)
         return { grades: p.items, next: p.next }
       }
+      case 'submission.roster':
+        return assignmentRoster(args.assignment_id!)
       case 'submission.list':
         return { submissions: [], next: null }
     }
@@ -144,7 +163,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountClass(opts: { query?: Record<string, string>; settle?: string } = {}) {
+async function mountClass(opts: { query?: Record<string, string>; settle?: string; keptAlive?: boolean } = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({ me: { id: 'actor-sato', kind: 'human', display_name: 'Sato' } } as never)
@@ -160,8 +179,16 @@ async function mountClass(opts: { query?: Record<string, string>; settle?: strin
   for (const name of ['course-grade', 'course-grades', 'course-gradebook'])
     router.addRoute({ path: `/${name}/:courseId/:gradeId?/:studentMemberId?`, name, component: stub })
   await router.push({ path: '/', query: opts.query ?? {} })
-  const w = mount(ClassGradebook, {
-    props: { courseId: COURSE },
+  // As GradebookView has it: kept alive, out of the page, while a student's gradebook is open.
+  const Kept = defineComponent({
+    setup() {
+      const route = useRoute()
+      return () =>
+        h('div', [h(KeepAlive, null, [route.path === '/' ? h(ClassGradebook, { courseId: COURSE }) : h(Comment)])])
+    },
+  })
+  const w = mount(opts.keptAlive ? Kept : ClassGradebook, {
+    props: opts.keptAlive ? {} : { courseId: COURSE },
     attachTo: document.body,
     global: {
       plugins: [
@@ -352,6 +379,218 @@ describe('the whole class’s gradebook', () => {
     await sizes.resize('.classbook__toolbar', 400)
     await flushPromises()
     expect(w.find('.sgl__item .sgl__name').text()).toBe('Student 000')
+  })
+
+  it('says it could not read the member list, rather than name the class by member ID, and reads it again', async () => {
+    memberList = () => {
+      throw new ApiError({ status: 503, code: 'unavailable', message: 'Core is busy' })
+    }
+    const { w } = await mountClass({ settle: '.el-result' })
+    expect(w.find('.matrix__table').exists()).toBe(false)
+    expect(w.text()).not.toContain('Student m0000')
+    expect(w.find('.el-result').text()).toContain('Retry')
+    const exportButton = () => w.findAll('button').find((b) => b.text() === 'Export CSV')!
+    expect(exportButton().attributes('disabled')).toBeDefined()
+    memberList = (args) => {
+      const p = paged(roster, args)
+      return { members: p.items, next: p.next }
+    }
+    await w.find('.el-result button').trigger('click')
+    await vi.waitFor(
+      async () => {
+        await flushPromises()
+        expect(w.find('.classbook__count').text()).toBe('300 students')
+      },
+      { timeout: 20_000 },
+    )
+    expect(rowNames(w)[0]).toBe('Student 000')
+    expect(exportButton().attributes('disabled')).toBeUndefined()
+  })
+
+  it('where the seat may not read the member list, has a row for every student an assignment’s roster lists', async () => {
+    seat = { ...seat, role: 'assistant', student_scope: 'listed' }
+    memberList = () => {
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    }
+    // Listed to three students: two with grades, and one with nothing yet.
+    const listed = [students[0]!.id, students[1]!.id, 'm-new']
+    assignmentRoster = (assignment) => {
+      expect(assignment).toBe(assignments[0]!.id)
+      return {
+        students: listed.map((id) => ({ student_member_id: id, state: id === 'm-new' ? 'not_started' : 'submitted' })),
+        next: null,
+      }
+    }
+    const scoped = new Set(listed)
+    read.mockImplementation(async (tool: string, args: { after?: string; limit?: number; assignment_id?: string }) => {
+      switch (tool) {
+        case 'member.list':
+          return memberList(args)
+        case 'assignment.list':
+          return { assignments, next: null }
+        case 'component.tree':
+          return scheme()
+        case 'grade.list': {
+          const p = paged(
+            grades.filter((g) => scoped.has(g.student_member_id)),
+            args,
+          )
+          return { grades: p.items, next: p.next }
+        }
+        case 'submission.list':
+          return { submissions: [], next: null }
+        case 'submission.roster':
+          return assignmentRoster(args.assignment_id!)
+      }
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    })
+    const { w } = await mountClass()
+    expect(w.find('.classbook__count').text()).toBe('3 students')
+    const names = rowNames(w)
+    expect(names).toHaveLength(3)
+    // Named by member ID, as the seat may not read names; the one with nothing yet among them, to open.
+    expect(names).toContain('Student mnew')
+    const newcomer = w.findAll('a.matrix__student').find((a) => a.text().includes('mnew'))!
+    expect(newcomer.attributes('href')).toContain('/m-new')
+  })
+
+  it('keeps its rows, counted as before, while Refresh reads the class again', async () => {
+    const { w } = await mountClass()
+    const scroller = w.find('.matrix').element as HTMLElement
+    scroller.scrollTop = 100 * 44
+    await w.find('.matrix').trigger('scroll')
+    await flushPromises()
+    const table = w.find('.matrix__table').element
+    // The member list read again is held until the test lets it go.
+    let answer: () => void = () => undefined
+    memberList = (args) =>
+      new Promise((done) => {
+        answer = () => {
+          const p = paged(roster, args)
+          done({ members: p.items, next: p.next })
+        }
+      })
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Refresh')!
+      .trigger('click')
+    await flushPromises()
+    expect(w.find('.matrix__table').element).toBe(table)
+    expect(w.find('.classbook__count').text()).toBe('300 students')
+    expect(rowNames(w)).toContain('Student 100')
+    memberList = (args) => {
+      const p = paged(roster, args)
+      return { members: p.items, next: p.next }
+    }
+    answer()
+    await vi.waitFor(
+      async () => {
+        await flushPromises()
+        expect(w.find('.classbook__reading').exists()).toBe(false)
+      },
+      { timeout: 20_000 },
+    )
+    expect(w.find('.matrix__table').element).toBe(table)
+    expect(scroller.scrollTop).toBe(100 * 44)
+    expect(w.find('.classbook__count').text()).toBe('300 students')
+  })
+
+  it('says the posted grade under a draft in the cell, and gives a long score to two places, every place said too', async () => {
+    moreGrades = [
+      {
+        ...grades[0]!,
+        id: 'g-draft',
+        score: 72.3333,
+        state: 'draft',
+        created_at: '2026-09-05T00:00:00Z',
+      },
+    ]
+    const { w } = await mountClass()
+    // Student 000's HW1: a posted 0, with a draft of 72.3333 over it.
+    const cell = w.findAll('.matrix__row')[0]!.findAll('td')[1]!
+    expect(cell.classes()).toContain('has-posted')
+    expect(cell.find('.matrix__score').text()).toBe('72.33')
+    expect(cell.find('.matrix__score').attributes('aria-hidden')).toBe('true')
+    expect(cell.find('.matrix__value .matrix__sr').text()).toBe('72.3333')
+    expect(cell.find('.matrix__flag.is-draft').text()).toBe('Draft')
+    expect(cell.find('.matrix__posted').text()).toBe('Posted 0')
+    expect(cell.find('a').attributes('title')).toBe('72.3333 A draft, not posted yet; 0 is posted.')
+    expect(cell.find('.matrix__none').exists()).toBe(false)
+    // A posted score with no draft over it says nothing more.
+    expect(w.findAll('.matrix__row')[1]!.findAll('td')[1]!.text()).toBe('1')
+
+    setLocale('zh-Hant')
+    await flushPromises()
+    expect(cell.find('.matrix__posted').text()).toBe('已發佈0')
+  })
+
+  it('keeps a search typed just before a student is opened, for Back to find in the address', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { w, router } = await mountClass({ query: { sort: '-t:root' } })
+      await w.find('input[aria-label="Search by name or number"]').setValue('Student 01')
+      // At once, before typing is taken as paused.
+      expect(router.currentRoute.value.query).toEqual({ sort: '-t:root' })
+      await router.push({ name: 'course-gradebook', params: { courseId: COURSE, studentMemberId: students[10]!.id } })
+      router.back()
+      await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/'))
+      expect(router.currentRoute.value.query).toEqual({ q: 'Student 01', sort: '-t:root' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('leaves the address Back or Forward goes to as it is, a search typed just before or not', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { w, router } = await mountClass({ query: { sort: '-t:root' }, keptAlive: true })
+      /** Where the history is: the address the browser shows. */
+      const address = () => router.options.history.location
+      const student = (i: number) =>
+        router.resolve({ name: 'course-gradebook', params: { courseId: COURSE, studentMemberId: students[i]!.id } })
+          .fullPath
+      /** Arrived at a page, and it laid out. */
+      const at = async (fullPath: string) => {
+        for (let i = 0; i < 20 && router.currentRoute.value.fullPath !== fullPath; i++) await flushPromises()
+        expect(router.currentRoute.value.fullPath).toBe(fullPath)
+        await flushPromises()
+      }
+      const type = (text: string) => w.find('input[aria-label="Search by name or number"]').setValue(text)
+
+      // A student, Back to the class, typed, and Forward at once.
+      await router.push(student(10))
+      router.back()
+      await at('/?sort=-t:root')
+      await type('Student 01')
+      router.forward()
+      await at(student(10))
+      // The student's page, under its own address.
+      expect(address()).toBe(student(10))
+      // Nor written there once typing is taken as paused: the class is out of the page.
+      vi.advanceTimersByTime(500)
+      await flushPromises()
+      expect(address()).toBe(student(10))
+      // Neither entry lost: the class's as it was left, the student's after it.
+      router.back()
+      await at('/?sort=-t:root')
+      router.forward()
+      await at(student(10))
+
+      // The class again (Whole class), typed, and Back at once: the student's page, under its own address.
+      await router.push('/')
+      await at('/?sort=-t:root')
+      await type('Student 02')
+      router.back()
+      await at(student(10))
+      expect(address()).toBe(student(10))
+      vi.advanceTimersByTime(500)
+      await flushPromises()
+      expect(address()).toBe(student(10))
+      router.back()
+      await at('/?sort=-t:root')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('gives a seat listed to some assignments no totals: none is in its scope', async () => {

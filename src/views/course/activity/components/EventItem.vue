@@ -18,6 +18,7 @@ import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { typeLabel } from '@/views/course/actions/components/actionText'
+import { useMyAgents } from '@/views/course/actions/components/myAgents'
 import { seatPurpose } from '@/utils/agents'
 import { CORE_ROOT_NAME } from '@/views/course/scheme/components/schemeModel'
 import { ensureEventWho, eventWho } from './actors'
@@ -90,10 +91,30 @@ const componentId = computed(() =>
 const whoReach = computed(() => whoReachOf(course))
 const who = computed(() => (props.compact ? [] : eventWho(props.courseId, props.event, whoReach.value)))
 
+/**
+ * The caller's own agent, seated as her delegate (member.added names its
+ * principal, principal_member_id, and its actor, actor_id): named by the name
+ * she gave it (agent.list), where the member list cannot name it, rather than
+ * as "someone in the course". Only an agent of hers is in her agents.
+ */
+const myAgents = useMyAgents()
+const ownAgentActor = computed(() => {
+  const e = props.event
+  const me = course.myMemberId
+  return kind.value === 'member' && !!me && payloadString(e, 'principal_member_id') === me
+    ? payloadString(e, 'actor_id')
+    : undefined
+})
+const subjectAgent = computed(() => {
+  const name = myAgents.nameOf(ownAgentActor.value)
+  return name ? { name } : undefined
+})
+
 onMounted(() => {
   if (kind.value === 'material') void ensureDocumentTitles(props.courseId)
   if (componentId.value) void ensureComponentNames(props.courseId)
   if (!props.compact) ensureEventWho(props.courseId, props.event, whoReach.value)
+  if (ownAgentActor.value) void myAgents.ensure()
 })
 const component = computed(() => componentName(componentId.value))
 
@@ -142,10 +163,14 @@ const subjectText = computed(() => {
       // The root, still under the name Core gave it, in the reader's words.
       return c.root && c.name === CORE_ROOT_NAME ? t('activity.subject.courseTotal') : c.name
     }
+    case 'conversation':
+      return t('activity.subject.conversation')
     case 'course':
       return ''
   }
-  return e.subject_type
+  // A kind of subject this app has no words for is left unsaid, rather than
+  // shown as Core's own name for it ("course_join_link"): the event's title says what happened.
+  return ''
 })
 
 // The assignment is shown on its own only when it is not the subject itself.
@@ -214,12 +239,12 @@ const facts = computed<Fact[]>(() => {
       out.push({ kind: 'text', text: t('activity.fact.decidedByOwner'), tone: 'success' })
     if (byOwner && BY_ACTION[type] === 'byReview')
       out.push({ kind: 'text', text: t('activity.fact.reviewedByOwner'), tone: 'success' })
+    // What it is about, in words: a kind of target this app has no words for is
+    // left unsaid rather than shown as Core's own name for it ("actor").
     const target = payloadString(e, 'target_type')
-    if (type === 'action.proposed' && target) {
-      out.push({
-        kind: 'text',
-        text: t('activity.fact.onTarget', { target: label('activity.target', target) ?? target }),
-      })
+    const targetKey = target ? mapKey('activity.target', target) : null
+    if (type === 'action.proposed' && targetKey && te(targetKey)) {
+      out.push({ kind: 'text', text: t('activity.fact.onTarget', { target: t(targetKey) }) })
     }
     // A proposal that revises one of its proposer's sent back for changes;
     // that one opens for those who read the action log.
@@ -449,9 +474,11 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
       <div class="event-item__line">
         <template v-if="kind === 'member' && event.subject_id">
           <router-link v-if="subjectTo" :to="subjectTo" class="event-item__subject">
-            <MemberName :id="event.subject_id" show-kind />
+            <MemberName :id="event.subject_id" show-kind :agent="subjectAgent" />
           </router-link>
-          <span v-else class="event-item__subject"><MemberName :id="event.subject_id" show-kind /></span>
+          <span v-else class="event-item__subject">
+            <MemberName :id="event.subject_id" show-kind :agent="subjectAgent" />
+          </span>
         </template>
         <template v-else-if="subjectText">
           <router-link v-if="subjectLink" :to="subjectLink" class="event-item__subject">{{ subjectText }}</router-link>

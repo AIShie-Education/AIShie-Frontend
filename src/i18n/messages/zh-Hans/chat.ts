@@ -251,7 +251,59 @@ export default {
     respondentAnswersOthers: '回答的一方也会回答其他成员：它会记住每个人写的内容，并可能把这里写的内容转述给他们',
     auditExport: '网站及课程所属部门的管理员可导出用于审计，包括已撤回的消息',
     sharedNote: '对方也会回答其他成员：你在这里写的内容，它可能会转述给他们。',
-    note: '每条消息都经由一项操作写入，其记录会保留原文，即使消息已被撤回。',
+  },
+  // Who reads a conversation and where an agent sends it (AIShie-Frontend#79; components/chat/privacy.ts):
+  // a short line under the composer, its points on a new conversation the first time, the whole notice behind More.
+  privacy: {
+    more: '详情',
+    moreLabel: '详情：谁会阅读这段对话、内容会发送到哪里',
+    title: '谁会阅读，内容会发送到哪里',
+    routeTitle: '内容会发送到哪里生成回答',
+    keptTitle: '会保留什么',
+    firstTitle: '提问之前',
+    gotIt: '知道了',
+    agentReaders:
+      '课程中负责审批操作的智能体也可以阅读这段对话。它把读到的内容发送到哪里，取决于它的托管方式：经 AIshie 的运行环境发送给它的 AI 模型，或发送给其拥有者自己的工具。',
+    line: {
+      model:
+        '课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员，都可以阅读这段对话。{name}会把内容发送给{provider}来生成回答。',
+      modelFallback:
+        '课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员，都可以阅读这段对话。{name}会把内容发送给{provider}来生成回答；学校的模型无法回答时，则发送给{fallbackProvider}。',
+      runtime:
+        '课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员，都可以阅读这段对话。{name}会把内容发送给其 AI 模型的供应商来生成回答。',
+      mcp: '课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员，都可以阅读这段对话。{name}通过其拥有者自己的工具回答。',
+      unknown:
+        '课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员，都可以阅读这段对话；内容会发送给{name}的 AI 模型来生成回答。',
+    },
+    points: {
+      readers: '课程教职员和课程中负责审批操作的智能体可以阅读这段对话，网站和部门管理员还可以导出用于审计。',
+      model: '{name}会把你在这里写的内容发送给其 AI 模型的供应商{provider}来生成回答。',
+      modelFallback:
+        '{name}会把你在这里写的内容发送给其 AI 模型的供应商{provider}来生成回答；学校的模型无法回答时，则发送给{fallbackProvider}。',
+      runtime: '{name}会把你在这里写的内容发送给其 AI 模型的供应商来生成回答。',
+      mcp: '{name}由其拥有者自己的工具使用，这些工具可能把你写的内容发送给它们使用的任何 AI 服务。',
+      unknown: '你在这里写的内容会发送给{name}的 AI 模型来生成回答。',
+      kept: '这里的内容不会被删除：你撤回的消息会被隐藏，但仍会保留。',
+    },
+    route: {
+      hosted:
+        '{name}由 AIshie 托管。为了生成回答，AIshie 的运行环境会把这段对话的消息、消息附带的文件，以及{name}在课程中读取的内容发送给它的 AI 模型。',
+      school: '该模型是学校方案中{provider}的{model}。',
+      own: '该模型是{provider}的{model}，使用你自己的 API 密钥。',
+      fallback: '学校的模型无法回答时（今天的额度已用完，或模型出错），会改由你自己的模型回答：{provider}的{model}。',
+      unknownModel:
+        '该模型是为{name}选定的模型，来自学校方案或其拥有者自己的密钥，因此内容会发送给该模型的供应商。此页面无法显示是哪一家供应商。',
+      mcp: '{name}使用 MCP 访问：它由其拥有者自己的工具使用，这些工具会从 AIshie 读取这段对话并回答。它们把读到的内容发送到哪里，由拥有者决定，AIshie 无从得知。',
+      unknown:
+        '{name}通过 AI 模型回答：AIshie 的运行环境或其拥有者自己的工具，会把这里写的内容发送给该模型，也就是发送给其供应商。此页面无法显示是哪一家。',
+    },
+    kept: {
+      notDeleted: '对话永远不会被删除。已关闭的对话仍可阅读。',
+      withdrawn:
+        '撤回的消息会在这里隐藏，但仍会保留：其文字保留在写入它的操作记录和用于审计的导出文件中；其文件保留在网站上，导出文件只列出文件，不包含其内容。',
+      withdrawnModel: '消息撤回后，AIshie 的运行环境不会再把它发送给{name}的模型；之前已发送的内容无法收回。',
+      ocr: 'AIshie 的运行环境从附带的图片或扫描版 PDF 中识别出的文字，最多会保留180天，即使消息已撤回。',
+    },
   },
   message: {
     retract: '撤回',
@@ -271,15 +323,18 @@ export default {
     summaryNone: '依据：{n}项你无法打开的课程教材',
     label: '这条回答依据的课程教材',
     quoted: '《{title}》',
-    // A source, and where in it the answer read (its file, page or slide, version), or that it was an earlier version.
+    // A source, and where in it the answer read (its file, page or slide, version), or that it read another version.
     entry: '{title}· {where}',
     page: '第{n}页',
     slide: '第{n}张幻灯片',
     version: '第{seq}版',
     openFile: '打开文件中回答所依据之处',
     openVersion: '打开这份教材的这个版本',
-    earlier: '较早的版本',
-    earlierTip: '这条回答依据的是这份教材较早的版本，你现在无法打开；这里打开的是教材当前的版本。',
+    // A version the reader may not open, older or newer than the one they may (other_version): said after its link, which opens the material as it is now.
+    other: '另一个版本',
+    otherLine: '{link}{note}',
+    otherNote: '（打开的是当前的版本）',
+    otherTip: '这条回答依据的是这份教材的另一个版本，你无法打开；这里打开的是教材当前的版本。',
     restricted: '一份你无法打开的课程教材',
     none: '未引用课程教材',
     noneTip: '智能体表示这条回答没有依据任何课程教材。',

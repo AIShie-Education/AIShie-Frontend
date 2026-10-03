@@ -123,6 +123,11 @@ function filled(nodes: VNode[] | undefined): boolean {
 .page-header.is-quiet .page-header__main {
   flex: 1 1 320px;
 }
+/* As narrow as the header leaves it, never as wide as its widest line: else a row that keeps to one
+   line (the grades' own tabs) would widen the page past the screen, rather than scroll on its own. */
+.page-header__text {
+  min-width: 0;
+}
 /* The grades' own tabs, and the subtitle after them on the same line where it fits. */
 .page-header__text.has-subnav {
   display: flex;

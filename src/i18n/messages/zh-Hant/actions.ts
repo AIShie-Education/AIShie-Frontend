@@ -13,7 +13,7 @@ export default {
     emptyReview: '目前沒有待覆核的操作。',
     oldestFirst: '兩份清單都把最舊的排在最前。',
     decisionsNeedApproval: '你在這裡的決定同樣需要批准',
-    decisionsNeedApprovalHelp: '你的席位在「批准與覆核」上屬於「需批准」等級：你每次批准或駁回，本身都會成為一項提案，須由另一位成員確認。',
+    decisionsNeedApprovalHelp: '你的席位在「批准與覆核」上屬於「需批准」等級：你每次批准、要求修改或駁回，本身都會成為一項提案，須由另一位成員確認。',
     recent: '剛剛處理的項目',
     recentHelp: '離開此頁後這份清單便會清空，但每項決定都會永久保留在課程的操作紀錄中。',
     clearRecent: '清除',
@@ -216,6 +216,7 @@ export default {
       answer: '回覆提問',
       close: '結束對話',
       retract: '撤回訊息',
+      mark_read: '標示對話為已讀',
     },
     component: {
       create: '新增評分項目',
@@ -336,7 +337,7 @@ export default {
     older: '所回覆的訊息在對話較早的部分。',
     unreadable: '無法向你顯示所回覆的訊息。',
     reply: '回覆',
-    // The course materials the reply says it relied on, as the proposal keeps them: by id alone, so counted.
+    // The course materials the reply says it relied on, as the proposal keeps them: by id alone, so counted, each material once.
     sources: '依據{n}項課程教材',
     sourcesTip: '代理以編號列出這些教材。批准回覆時會再次檢查每一項，每位讀者看到的是他們各自可開啟的部分。',
     noSources: '未引用課程教材',
@@ -381,6 +382,13 @@ export default {
     rejectPlaceholder: '為甚麼？（選填，但對提出者很有幫助）',
     requestChangesPlaceholder: '需要修改甚麼？（必填：提出者會看到）',
     notePlaceholder: '備註（選填）',
+    fieldLabel: {
+      approve: '批准的原因',
+      reject: '駁回的原因',
+      requestChanges: '需要修改的地方',
+      escalate: '升級的原因',
+      reviewed: '覆核備註',
+    },
     escalatePlaceholder: '為何要升級？（選填；會記錄在你的覆核中，課程動態會連結到該項覆核）',
     approveHint: '會立即以提出者的身分執行。若對方已無權這樣做，或提案已過期，則會改為取消。',
     rejectHint: '不會執行任何事，提出者會收到通知。',
@@ -400,7 +408,7 @@ export default {
       ownEscalation: '這是你升級的，須由其他人查看。',
       archived: '課程已封存，無法作出任何決定。',
       waiting: '你對此的決定已在等待批准。',
-      closesOwnEscalation: '批准此項會了結你自己提出的升級，這應由其他人處理；你仍可駁回。',
+      closesOwnEscalation: '批准此項會了結你自己提出的升級，這應由其他人處理；你仍可要求修改或駁回。',
       ownAgent: '這是由你所屬的一方做的——你所代表的人，或他們的另一個代理。一個人與其代理視為同一方，因此須由其他人處理。',
       ownAgentLevel: '由{who}決定：這件事你自己做也需要他人確認，或現在批准會被拒絕。',
       ownAgentLevelReview: '由{who}覆核：這件事你自己做也需要他人確認。',
@@ -496,7 +504,7 @@ export default {
   },
   revises: {
     line: '修訂一項先前被退回修改的提案',
-    asked: '當時的要求：{note}',
+    earlier: '一項先前被退回修改的提案',
   },
   link: {
     details: '詳情',

@@ -134,8 +134,12 @@ export function useSpecs() {
           read('document.versions', { course_id: courseId, document_id: documentId }).then((o) => o.versions ?? []),
       }
     },
-    action(courseId: string, id: string | null | undefined) {
-      if (!id || !may('action_decide')) return null
+    /**
+     * An action, for a decider; or, with ownersAgent, one of the caller's own
+     * agent's, which its owner reads without action_decide.
+     */
+    action(courseId: string, id: string | null | undefined, opts: { ownersAgent?: boolean } = {}) {
+      if (!id || !(may('action_decide') || opts.ownersAgent)) return null
       return { key: `${courseId}:action:${id}`, load: () => read('action.get', { course_id: courseId, action_id: id }) }
     },
     components(courseId: string) {

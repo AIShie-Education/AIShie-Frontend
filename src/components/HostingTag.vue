@@ -5,7 +5,11 @@
 // agent hosted on AIshie, given whether people can ask it now (Core's
 // site_chat), a second tag says so: it can be asked on the site, or it is not
 // running. Given no hosting this app knows (a person, an older Core), it
-// shows nothing, so it can sit beside any actor or member.
+// shows nothing, so it can sit beside any actor or member. How it runs is a
+// kind, and whether it can be asked is not an outcome: both are neutral, as
+// categories are (docs/CONVENTIONS.md, "Colour"), and an agent is never shown
+// "online" in green. Only "not running", which wants someone to see to it,
+// takes the amber of what waits for a person.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { hostingOf } from '@/utils/agents'
@@ -32,7 +36,7 @@ const askable = computed<'on' | 'off' | null>(() =>
   <span v-if="mode" class="hosting-tag" :class="`is-${mode}`">
     <el-tooltip :content="t(`common.agent.hosting.${mode}Help`)" placement="top">
       <el-tag
-        :type="mode === 'runtime' ? 'success' : 'info'"
+        type="info"
         effect="plain"
         :size="size ?? 'small'"
         class="hosting-tag__mode"
@@ -45,7 +49,7 @@ const askable = computed<'on' | 'off' | null>(() =>
     </el-tooltip>
     <el-tooltip v-if="askable" :content="t(`common.agent.askable.${askable}Help`)" placement="top">
       <el-tag
-        :type="askable === 'on' ? 'success' : 'warning'"
+        :type="askable === 'on' ? 'info' : 'warning'"
         :effect="askable === 'on' ? 'light' : 'plain'"
         :size="size ?? 'small'"
         class="hosting-tag__askable"

@@ -213,6 +213,13 @@ function onTabKey(e: KeyboardEvent) {
 .side-bar .side-item:focus-visible {
   outline-offset: -2px;
 }
+/* On a touch screen (the phone's menu, with the course's tabs in it) a link is pressed often: 44 px
+   (docs/CONVENTIONS.md). */
+@media (pointer: coarse) {
+  .side-bar .side-item {
+    min-height: 44px;
+  }
+}
 .side-bar .side-link {
   margin-top: 8px;
 }

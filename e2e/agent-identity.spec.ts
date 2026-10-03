@@ -8,6 +8,7 @@ import {
   inTraditionalChinese,
   openChat,
   registerPerson,
+  root,
   signIn,
   type CoreReply,
 } from './support'
@@ -25,13 +26,28 @@ import {
 // its "AI", and never makes the page scroll sideways.
 
 const STAMP = Date.now().toString(36)
-const w = { submission: '', proposal: '', tutorId: '', hyphenId: '', helperId: '' }
+const w = {
+  submission: '',
+  proposal: '',
+  tutorId: '',
+  tutorSeat: '',
+  hyphenId: '',
+  helperId: '',
+  seatAction: '',
+  botId: '',
+  botSeat: '',
+}
 // A course agent with a long name, which the chat's header must cut short without losing its "AI".
 const LONG = `Introduction to Programming weekly revision and practice tutor ${STAMP}`
 // One with a long name and no spaces, which must still wrap in its row, its "AI" with it.
 const HYPHEN = `cs101-introduction-to-programming-weekly-revision-tutor-${STAMP}`
 // A student's own agent, which drafts his HW1.
 const HELPER = `Ben’s revision helper ${STAMP}`
+// The conversation he opens with the course agent of the long name.
+const LOOPS = `Loops ${STAMP}`
+const LOOPS_ASKED = `How does a while loop end? (${STAMP})`
+// An agent nobody owns, which the course seats itself to tutor him: a course agent, though nobody's delegate.
+const BOT = `Course Q&A bot ${STAMP}`
 let ada: Awaited<ReturnType<typeof registerPerson>>
 let ben: Awaited<ReturnType<typeof registerPerson>>
 
@@ -76,14 +92,14 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       await call(I, 'POST', '/v1/me/agents', { display_name: LONG, hosting: 'runtime' }),
       'agent.create',
     ).actor_id
-    done(
+    w.tutorSeat = done(
       await call(I, 'POST', `/v1/courses/${c}/delegates`, {
         actor_id: w.tutorId,
         preset: 'course_tutor',
         answers_course: true,
       }),
       'member.add_delegate',
-    )
+    ).member_id
     await hostOnRuntime(w.tutorId)
     // Its course agent with a long name and no spaces, for the chat's list of agents and the course's Agents.
     w.hyphenId = done(
@@ -121,6 +137,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       perms: { submission_write: 'confirm_required' },
     })
     expect(asked.body.status, JSON.stringify(asked.body)).toBe('proposed')
+    w.seatAction = asked.body.action_id!
     done(
       await call(I, 'POST', `/v1/courses/${c}/actions/${asked.body.action_id}/decide`, { decision: 'approve' }),
       'action.decide (seating)',
@@ -153,6 +170,33 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       'action.decide (hand-in)',
     )
     expect(handedIn.outcome, JSON.stringify(handedIn)).toBe('executed')
+
+    // He asks the course agent of the long name, in a conversation he names.
+    done(
+      await call(ben.token, 'POST', `/v1/courses/${c}/conversations`, {
+        respondent_member_id: w.tutorSeat,
+        title: LOOPS,
+        body: LOOPS_ASKED,
+      }),
+      'conversation.open',
+    )
+
+    // The course seats an agent nobody owns to tutor him, hosted on AIshie: nobody's delegate, so Core
+    // says it answers no course (answers_course is a delegate's), though it is the course's.
+    w.botId = done(
+      await call(root().token, 'POST', '/v1/actors', { kind: 'agent', display_name: BOT, hosting: 'runtime' }),
+      'actor.register',
+    ).actor_id
+    w.botSeat = done(
+      await call(I, 'POST', `/v1/courses/${c}/members`, {
+        actor_id: w.botId,
+        preset: 'tutor',
+        student_scope: 'listed',
+        listed_students: [seat.member_id],
+      }),
+      'member.add (bot)',
+    ).member_id
+    await hostOnRuntime(w.botId)
   })
 
   // A person may have five agents at once: this run's are suspended when they are done with, for the specs after it.
@@ -160,6 +204,9 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     for (const id of [w.tutorId, w.hyphenId])
       if (id) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${id}/suspend`, {})
     if (w.helperId && ben) await call(ben.token, 'POST', `/v1/me/agents/${w.helperId}/suspend`, {})
+    const I = demo().actors.instructor.token
+    if (w.botSeat) await call(I, 'POST', `/v1/courses/${demo().course.id}/members/${w.botSeat}/remove`, {})
+    if (w.botId) await call(root().token, 'POST', `/v1/actors/${w.botId}/suspend`, {})
   })
 
   test('agents as a kind take the seat icon, and a proposal’s proposer its avatar and “AI”', async ({ page }) => {
@@ -262,6 +309,89 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     const rows = page.locator('.event-item')
     await expect(rows.first()).toBeVisible()
     for (const row of await rows.all()) await expect(row.locator('.event-item__who .ai-badge').first()).toBeVisible()
+  })
+
+  test('a student is shown no id for whoever she cannot name, in her activity or her own actions', async ({ page }) => {
+    await signIn(page, ben)
+    await page.goto(coursePath('activity'))
+    // His request to bring in his agent, which the instructor approved: someone in the course, not an id.
+    const seating = page
+      .locator('.event-item__who')
+      .filter({ hasText: new RegExp(`Ben ${STAMP}\\(you\\)\\s*proposed\\s*→`) })
+      .first()
+    await expect(seating).toContainText(
+      new RegExp(`Ben ${STAMP}\\(you\\)\\s*proposed\\s*→\\s*Someone in the course\\s*approved`),
+    )
+    await expect(page.locator('.event-item__who .id-text')).toHaveCount(0)
+
+    // His agent, the member it added, by the name he gave it: not someone in the course, who approved it.
+    const added = page.locator('.event-item').filter({ has: seating }).filter({ hasText: 'Member added' })
+    await expect(added.locator('.event-item__subject')).toContainText(new RegExp(`${HELPER}\\s*AI`))
+    await expect(added.locator('.event-item__subject')).not.toContainText('Someone in the course')
+    await expect(added.locator('.event-item__facts')).toHaveText('Personal agent')
+    // And no hover-only id behind anyone he cannot name: the line holds no member id at all.
+    await expect(page.locator('.member-name.is-unnamed[title]')).toHaveCount(0)
+
+    // His own actions: his agent brought in, by the name its avatar is drawn from, and who decided it.
+    await page.goto(coursePath('my-actions'))
+    const row = page.locator('tr').filter({ hasText: 'Bring in an agent' }).filter({ hasText: HELPER }).first()
+    await expect(row.locator('.action-target')).toContainText(HELPER)
+    await expect(row).toContainText('Someone in the course')
+    await expect(row.locator('.id-text')).toHaveCount(0)
+    // The conversation he started, with the agent he asked by name.
+    const started = page.locator('tr').filter({ hasText: 'Start a conversation' }).filter({ hasText: LOOPS }).first()
+    await expect(started.locator('.action-target')).toContainText(new RegExp(`→\\s*${LONG}\\s*AI`))
+    await expect(started.locator('.action-target')).not.toContainText('Someone in the course')
+
+    // What came of bringing it in names the seat it made as the request named the agent.
+    await page.goto(coursePath(`actions/${w.seatAction}`))
+    const made = page
+      .locator('.fields-view')
+      .filter({ has: page.locator('dt', { hasText: /^Member$/ }) })
+      .last()
+    await expect(made.locator('dd')).toHaveText(HELPER)
+  })
+
+  test('a chat’s news says it is about a conversation, in words, and opens it', async ({ page }) => {
+    await signIn(page, ben)
+    await inTraditionalChinese(page)
+    await page.goto(coursePath('activity'))
+    for (const title of ['開始對話', '新訊息']) {
+      const ev = page
+        .locator('.event-item')
+        .filter({ has: page.locator('.event-item__title', { hasText: title }) })
+        .first()
+      await expect(ev.locator('.event-item__subject')).toHaveText('對話')
+      await expect(ev).not.toContainText('conversation')
+    }
+    // The course's overview's recent activity says the same.
+    await page.goto(coursePath())
+    const recent = page
+      .locator('.event-item')
+      .filter({ has: page.locator('.event-item__title', { hasText: '新訊息' }) })
+      .first()
+    await expect(recent.locator('.event-item__subject')).toHaveText('對話')
+    // It opens the chat on that conversation, beside the page.
+    await recent.locator('.event-item__subject').click()
+    const panel = page.locator('#chat-panel')
+    await expect(panel).toBeVisible()
+    await expect(panel).toContainText(LOOPS_ASKED)
+    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
+  })
+
+  test('the chat calls an agent the course seated itself a course agent, which answers others too', async ({
+    page,
+  }) => {
+    await signIn(page, ben)
+    await page.goto(coursePath())
+    const panel = await openChat(page)
+    const row = panel.locator('.resp-row').filter({ hasText: BOT })
+    await expect(row).toContainText('Course agent')
+    await expect(row).not.toContainText('Personal agent')
+    await expect(row).toContainText('It answers other members too')
+    // And so its draft says, once chosen.
+    await row.click()
+    await expect(panel.locator('.chat-pane__shared')).toContainText('may repeat to them')
   })
 
   test('a draft grade names the agent that drafted it, and marks what it filled in until it is changed', async ({

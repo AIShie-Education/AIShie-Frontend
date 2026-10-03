@@ -10,7 +10,7 @@ import { computed, onActivated, onBeforeUnmount, onMounted, ref, useTemplateRef,
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { formatNumber, formatPct as fractionPct } from '@/utils/format'
-import { formatPct, formatScore } from './grading'
+import { classFigure, formatScore } from './grading'
 import type { ColumnSummary, MatrixCell, MatrixColumn, MatrixRow, MatrixStudent, SortBy } from './classMatrix'
 import { NO_CELL } from './classMatrix'
 
@@ -164,26 +164,40 @@ function onClick(e: MouseEvent) {
 // The rows drawn, each cell's words worked out once
 // ---------------------------------------------------------------------------
 
+/**
+ * A cell's words, worked out once. A score is shown to two decimal places at
+ * most, a cell being 104 px: every place it has (full, where that is
+ * longer) is in the cell's tooltip and what a screen reader says.
+ */
 interface CellView {
   key: string
   col: MatrixColumn
   cell: MatrixCell
   text: string
+  full: string | null
+  /** For a draft over a posted grade, the posted score it would replace, said under it. */
+  posted: { text: string; full: string | null } | null
   title: string
 }
-function scoreText(cell: MatrixCell, col: MatrixColumn): string {
-  if (cell.score === null) return ''
-  return col.kind === 'total' ? formatPct(cell.score) : formatScore(cell.score)
+function figure(cell: MatrixCell, col: MatrixColumn): { text: string; full: string | null } {
+  if (cell.score === null) return { text: '', full: null }
+  return classFigure(cell.score, col.kind === 'total')
 }
-function cellTitle(cell: MatrixCell, text: string): string {
+function postedUnder(cell: MatrixCell): CellView['posted'] {
+  if (cell.state !== 'draft' || cell.postedScore === null || cell.postedScore === undefined) return null
+  return classFigure(cell.postedScore)
+}
+function cellTitle(cell: MatrixCell, shown: { text: string; full: string | null }): string {
   const said: string[] = []
-  if (cell.state === 'draft')
+  if (cell.state === 'draft') {
+    if (shown.full) said.push(shown.full)
     said.push(
       cell.postedScore !== null && cell.postedScore !== undefined
         ? t('classbook.draftOver', { score: formatScore(cell.postedScore) })
         : t('classbook.draftOnly'),
     )
-  else if (cell.overridden) said.push(`${text} · ${t('classbook.state.overridden')}`)
+  } else if (cell.overridden) said.push(`${shown.full ?? shown.text} · ${t('classbook.state.overridden')}`)
+  else if (shown.full) said.push(shown.full)
   if (cell.waiting) said.push(t('classbook.waiting'))
   return said.join(' ')
 }
@@ -201,8 +215,8 @@ const drawn = computed(() =>
     bookTo: bookLink.value.fullPath.replace(ID, row.student.id),
     cells: props.columns.map<CellView>((col) => {
       const cell = row.cells[col.key] ?? NO_CELL
-      const text = scoreText(cell, col)
-      return { key: col.key, col, cell, text, title: cellTitle(cell, text) }
+      const shown = figure(cell, col)
+      return { key: col.key, col, cell, ...shown, posted: postedUnder(cell), title: cellTitle(cell, shown) }
     }),
   })),
 )
@@ -327,25 +341,36 @@ function meanHint(col: MatrixColumn): string {
             :class="[
               `is-${v.cell.state}`,
               `is-${v.col.kind}`,
-              { 'is-root': v.col.isRoot, 'is-waiting': v.cell.waiting },
+              { 'is-root': v.col.isRoot, 'is-waiting': v.cell.waiting, 'has-posted': !!v.posted },
             ]"
           >
-            <a
-              v-if="v.cell.gradeId"
-              :href="href(gradeLink, v.cell.gradeId)"
-              :data-to="gradeLink.fullPath.replace(ID, v.cell.gradeId)"
-              class="matrix__value"
-              :title="v.title || t('classbook.openGrade')"
-            >
-              <span class="matrix__score">{{ v.text }}</span>
-              <template v-if="v.cell.overridden">
-                <span class="matrix__star" aria-hidden="true">*</span>
-                <span class="matrix__sr">{{ t('classbook.state.overridden') }}</span>
-              </template>
-              <span v-if="v.cell.state === 'draft'" class="matrix__flag is-draft">{{
-                t('classbook.state.draft')
-              }}</span>
-            </a>
+            <template v-if="v.cell.gradeId">
+              <a
+                :href="href(gradeLink, v.cell.gradeId)"
+                :data-to="gradeLink.fullPath.replace(ID, v.cell.gradeId)"
+                class="matrix__value"
+                :title="v.title || t('classbook.openGrade')"
+              >
+                <span class="matrix__score" :aria-hidden="v.full ? 'true' : undefined">{{ v.text }}</span>
+                <span v-if="v.full" class="matrix__sr">{{ v.full }}</span>
+                <template v-if="v.cell.overridden">
+                  <span class="matrix__star" aria-hidden="true">*</span>
+                  <span class="matrix__sr">{{ t('classbook.state.overridden') }}</span>
+                </template>
+                <span v-if="v.cell.state === 'draft'" class="matrix__flag is-draft">{{
+                  t('classbook.state.draft')
+                }}</span>
+              </a>
+              <!-- The posted grade a draft would replace: in words, on a line of its own, never in the tooltip alone. -->
+              <span v-if="v.posted" class="matrix__posted">
+                <span :aria-hidden="v.posted.full ? 'true' : undefined">{{
+                  t('classbook.postedUnder', { score: v.posted.text })
+                }}</span>
+                <span v-if="v.posted.full" class="matrix__sr">{{
+                  t('classbook.postedUnder', { score: v.posted.full })
+                }}</span>
+              </span>
+            </template>
             <span v-else-if="v.cell.state === 'missing'" class="matrix__flag is-missing">{{
               t('classbook.state.missing')
             }}</span>
@@ -623,6 +648,20 @@ function meanHint(col: MatrixColumn): string {
   font-style: italic;
   color: var(--el-text-color-regular);
 }
+/*
+ * A score is shown to two places at most, so that it fits beside its flag;
+ * one longer still (a thousand points and more) is cut short, its whole in
+ * the tooltip, rather than push the flag out of the cell.
+ */
+.matrix__score {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.matrix__star,
+.matrix__flag {
+  flex-shrink: 0;
+}
 .matrix__flag {
   display: inline-block;
   padding: 0 5px;
@@ -662,6 +701,34 @@ function meanHint(col: MatrixColumn): string {
   display: block;
   width: fit-content;
   margin: 1px 0 0 auto;
+}
+/*
+ * The posted grade under a draft, on a line of its own, as work waiting is.
+ * Both under one score are three lines of 14 px, which fit the row's 44.
+ */
+.matrix__posted {
+  display: block;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--el-text-color-secondary);
+}
+.matrix__cell.has-posted {
+  line-height: 18px;
+}
+.matrix__cell.has-posted .matrix__flag {
+  line-height: 16px;
+}
+.matrix__cell.has-posted.is-waiting {
+  line-height: 14px;
+}
+.matrix__cell.has-posted.is-waiting .matrix__flag {
+  line-height: 12px;
+}
+.matrix__cell.has-posted.is-waiting .matrix__posted {
+  line-height: 13px;
+}
+.matrix__cell.has-posted.is-waiting .matrix__also {
+  margin-top: 0;
 }
 .matrix__none {
   color: var(--el-text-color-placeholder);
