@@ -203,6 +203,32 @@ describe('EventItem, a proposal sent back for changes, and its revision', () => 
     expect(w.text()).not.toContain('Revises')
     w.unmount()
   })
+
+  it('says what a proposal is about in words, bringing in an agent and answering a question too', async () => {
+    for (const [target, words] of [
+      ['actor', 'about a person or agent'],
+      ['conversation', 'about a conversation'],
+      ['conversation_message', 'about a message'],
+    ]) {
+      const w = mountItem(ev('action.proposed', { target_type: target }))
+      await flushPromises()
+      expect(w.find('.event-item__facts').text()).toBe(words)
+      w.unmount()
+    }
+    setLocale('zh-Hant')
+    const zh = mountItem(ev('action.proposed', { target_type: 'actor' }))
+    await flushPromises()
+    expect(zh.find('.event-item__facts').text()).toBe('對象：一位人員或代理')
+    zh.unmount()
+  })
+
+  it('leaves unsaid a kind of target it has no words for, rather than Core’s own name for it', async () => {
+    const w = mountItem(ev('action.proposed', { target_type: 'course_join_link' }))
+    await flushPromises()
+    expect(w.text()).not.toContain('course_join_link')
+    expect(w.find('.event-item__facts').exists()).toBe(false)
+    w.unmount()
+  })
 })
 
 describe('EventItem, the flexible records', () => {

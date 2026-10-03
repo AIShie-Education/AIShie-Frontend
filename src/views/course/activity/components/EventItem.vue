@@ -214,12 +214,12 @@ const facts = computed<Fact[]>(() => {
       out.push({ kind: 'text', text: t('activity.fact.decidedByOwner'), tone: 'success' })
     if (byOwner && BY_ACTION[type] === 'byReview')
       out.push({ kind: 'text', text: t('activity.fact.reviewedByOwner'), tone: 'success' })
+    // What it is about, in words: a kind of target this app has no words for is
+    // left unsaid rather than shown as Core's own name for it ("actor").
     const target = payloadString(e, 'target_type')
-    if (type === 'action.proposed' && target) {
-      out.push({
-        kind: 'text',
-        text: t('activity.fact.onTarget', { target: label('activity.target', target) ?? target }),
-      })
+    const targetKey = target ? mapKey('activity.target', target) : null
+    if (type === 'action.proposed' && targetKey && te(targetKey)) {
+      out.push({ kind: 'text', text: t('activity.fact.onTarget', { target: t(targetKey) }) })
     }
     // A proposal that revises one of its proposer's sent back for changes;
     // that one opens for those who read the action log.

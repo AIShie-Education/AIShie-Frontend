@@ -72,6 +72,9 @@ export default {
     action: '一項操作',
     gradebook: '成績冊',
     upload: '一個上傳檔案',
+    actor: '一位人員或代理',
+    conversation: '一段對話',
+    conversation_message: '一則訊息',
   },
   fact: {
     onTarget: '對象：{target}',
