@@ -385,7 +385,10 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   list does not tell. A row says on itself, in words and in its switch's name, that a limit leaves
   it out (never by fading it), and links its policies there, not in a tooltip; the order's buttons
   are a finger's size on a touch screen, hand the focus on as one goes, and say the place taken
-  aloud. "Clear the upstream routing" sends none, and a server that does not take it yet
+  aloud. Its table's six columns fit the dialog at its widest (712 px of body); in a narrower window,
+  and on any touch screen, whose order's column they would leave too narrow, each row's price, tools
+  and uptime fold under its name, as on a phone's card, so that nothing is behind a sideways scroll.
+  "Clear the upstream routing" sends none, and a server that does not take it yet
   (`unknown_field` at `/openrouter`) is answered with "Save without upstream routing", done only
   when asked. Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the

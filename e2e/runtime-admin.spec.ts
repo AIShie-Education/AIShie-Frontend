@@ -23,8 +23,10 @@ import {
 // receives and the page never shows, and revoking it again; and adds a
 // model of OpenRouter's with its upstream routing, chosen from the upstream
 // providers the played runtime lists (OpenRouter itself is never called),
-// sets their order from the keyboard and on a phone, and adds one without it
-// on a runtime that does not take upstream routing yet.
+// sets their order from the keyboard, on a phone, and where the table folds
+// each upstream provider's figures under its name (a window narrower than
+// it, a touch screen), and adds one without it on a runtime that does not
+// take upstream routing yet.
 // What the page said of each write is checked from the messages it kept
 // (keepToasts), as a message closes itself after 3 s, which a busy machine
 // can let pass before the check.
@@ -732,6 +734,11 @@ async function newOpenRouterOffer(page: Page, runtime: ReturnType<typeof playRun
 const upstreamRow = (section: Locator, slug: string) =>
   section.locator('.or-table .el-table__body tr').filter({ has: section.page().locator(`[data-slug="${slug}"]`) })
 
+/** The section's table where it scrolls sideways, which nothing should make it. */
+const tableScroller = (section: Locator) => section.locator('.or-table .el-table__body-wrapper .el-scrollbar__wrap')
+/** How far the section's table is wider than the dialog shows of it, in px: 0 where it fits. */
+const sideways = (section: Locator) => tableScroller(section).evaluate((el) => el.scrollWidth - el.clientWidth)
+
 /**
  * Whether a row, and everything drawn in it, is at full strength: nothing
  * faded, it or what it is in (a switch's own box, which it draws in its
@@ -813,6 +820,9 @@ test.describe('a model of OpenRouter’s upstream routing, from the keyboard', (
       const box = (await button(name).boundingBox())!
       expect(Math.min(box.width, box.height), name).toBeGreaterThanOrEqual(24)
     }
+    // The table's six columns fit the dialog: nothing in it scrolls sideways.
+    await expect(section.locator('.or-table .el-table__header th')).toHaveCount(6)
+    expect(await sideways(section)).toBe(0)
 
     // Only ZDR endpoints: DeepInfra, on, is left out, which its row and its switch say, faded nowhere.
     await section.locator('.or-zdr').click()
@@ -899,6 +909,60 @@ test.describe('a model of OpenRouter’s upstream routing, on a phone', () => {
     expect(await wordsBelowAA(page, '.or-routing')).toEqual([])
   })
 })
+
+// Where the dialog is narrower than the table's six columns, and on any touch
+// screen, whose order's buttons need a wider column than the dialog has
+// beside the rest, an upstream provider's price, tools and uptime fold under
+// its name: the table never scrolls sideways, and the order is in sight.
+for (const { width, height, touch } of [
+  { width: 768, height: 1024, touch: true },
+  { width: 1024, height: 768, touch: true },
+  { width: 700, height: 900, touch: false },
+]) {
+  test.describe(`a model of OpenRouter’s upstream routing, ${width} px wide${touch ? ', on a touch screen' : ''}`, () => {
+    test.use({ viewport: { width, height }, isMobile: touch, hasTouch: touch })
+
+    test('the table fits the dialog, each upstream provider’s figures under its name, and its order’s buttons whole in sight', async ({
+      page,
+    }) => {
+      const runtime = playRuntime(page)
+      const { section } = await newOpenRouterOffer(
+        page,
+        runtime,
+        `fold-${width}-${STAMP}`,
+        `School AI (Llama, ${width})`,
+      )
+      await expect(section.locator('.or-table [data-slug]')).toHaveCount(5)
+      await expect(section.locator('.or-table .el-table__header th')).toHaveText([
+        'Upstream provider',
+        'Use',
+        'Try first',
+      ])
+      const deepinfra = upstreamRow(section, 'deepinfra/turbo')
+      await expect(deepinfra.locator('.or-figures')).toHaveText(
+        'Input / output, per million tokens: US$0.10 / US$0.32 · 20% off · Calls tools: Yes · Uptime, 30 min / 1 day: 98.8% / 98.5%',
+      )
+
+      const press = (target: Locator) => (touch ? target.tap() : target.click())
+      await press(upstreamRow(section, 'groq').locator('.or-try-first'))
+      await press(deepinfra.locator('.or-try-first'))
+      await expect(deepinfra.locator('.or-order__position')).toHaveText('No. 2')
+      expect(await sideways(section)).toBe(0)
+      // Each of the order's buttons is whole within what the table shows, a finger's size on a touch screen.
+      const shown = (await tableScroller(section).boundingBox())!
+      for (const cls of ['.or-order__up', '.or-order__down', '.or-order__remove']) {
+        const box = (await deepinfra.locator(cls).boundingBox())!
+        expect(Math.min(box.width, box.height), cls).toBeGreaterThanOrEqual(touch ? 44 : 24)
+        expect(box.x, cls).toBeGreaterThanOrEqual(shown.x)
+        expect(box.x + box.width, cls).toBeLessThanOrEqual(shown.x + shown.width)
+      }
+      await photograph(page, `openrouter-routing-${width}${touch ? '-touch' : ''}`)
+      await press(deepinfra.locator('.or-order__remove'))
+      await expect(deepinfra.locator('.or-try-first')).toBeVisible()
+      await expect(upstreamRow(section, 'groq').locator('.or-order__position')).toHaveText('No. 1')
+    })
+  })
+}
 
 test.describe('a price’s day, with an agent runtime, read west of UTC', () => {
   const ZONE = 'America/New_York'

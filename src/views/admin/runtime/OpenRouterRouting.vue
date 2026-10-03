@@ -33,6 +33,7 @@ import TimeText from '@/components/TimeText.vue'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { OpenRouterEndpoints, OpenRouterSortBy, ProviderOffer } from '@/api/runtime-types'
 import { OPENROUTER_SORTS } from '@/api/runtime-types'
+import { useTableRelayout } from '@/composables/useContainerWidth'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { USD_SIGN, formatCount, formatList, formatMoney, formatPct, regionName } from '@/utils/format'
 import { joinParts } from '@/utils/parts'
@@ -86,6 +87,30 @@ const { t } = useI18n()
 const phone = useMediaQuery('(max-width: 639px)')
 // On a touch screen the order's buttons are a finger's size, and their column wider for them.
 const touch = useMediaQuery('(pointer: coarse)')
+/**
+ * The table's columns' least widths, in px, which add up to the 712 px of
+ * the dialog's body at its widest: OfferDialog's 760 less 24 px of padding a
+ * side. The order's holds its place and three buttons of 24 px on one line.
+ */
+const COLUMN = { provider: 178, price: 148, tools: 70, uptime: 108, use: 72, order: 136 } as const
+const FULL_TABLE = Object.values(COLUMN).reduce((a, b) => a + b, 0)
+/**
+ * What the window has beside the body where the dialog is narrower than its
+ * 760 px: 24 px it leaves the dialog (styles/main.css), and the padding.
+ */
+const DIALOG_FRAME = 24 + 2 * 24
+/** The order's column on a touch screen: three buttons of 44 px, its place above them where it is narrow. */
+const ORDER_TOUCH = 160
+/** The first column's, where it holds the figures as well. */
+const PROVIDER_FOLDED = 240
+// Where the dialog's body is narrower than the six columns (a window under
+// 784 px), and on any touch screen, whose order would take the table to 736
+// px of the body's 712 at most, an upstream provider's price, tools and
+// uptime go under its name, as on a phone's card: nothing is behind a
+// sideways scroll, least of all the order.
+const fold = useMediaQuery(`(max-width: ${FULL_TABLE + DIALOG_FRAME - 1}px), (pointer: coarse)`)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, [fold, touch])
 const root = useTemplateRef<HTMLElement>('root')
 
 /** What a screen reader is told of a change made here that moves nothing it reads (the order, a clearing). */
@@ -251,6 +276,15 @@ function uptime(row: RoutingRow): string {
   if (!e) return ''
   const pct = (u: number | null) => (u === null ? '—' : formatPct(u / 100))
   return t('runtimeAdmin.openrouter.uptimePair', { m30: pct(e.uptime_30m), d1: pct(e.uptime_1d) })
+}
+/** Its price, what changes it, its tools and its uptime, each named: a card's line, and the folded table's. */
+function figures(row: RoutingRow): string {
+  return joinParts([
+    t('common.pair', { label: t('runtimeAdmin.openrouter.colPrice'), value: price(row) }),
+    ...priceNotes(row),
+    t('common.pair', { label: t('runtimeAdmin.openrouter.colTools'), value: tools(row) }),
+    t('common.pair', { label: t('runtimeAdmin.openrouter.colUptime'), value: uptime(row) }),
+  ])
 }
 const rowClass = ({ row }: { row: RoutingRow }) => (excluded(row) ? 'or-row is-excluded' : 'or-row')
 
@@ -557,16 +591,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
             }}</AppTag>
           </div>
           <p v-if="facts(row)" class="or-facts">{{ facts(row) }}</p>
-          <p v-if="row.endpoint" class="or-card__figures">
-            {{
-              joinParts([
-                t('common.pair', { label: t('runtimeAdmin.openrouter.colPrice'), value: price(row) }),
-                ...priceNotes(row),
-                t('common.pair', { label: t('runtimeAdmin.openrouter.colTools'), value: tools(row) }),
-                t('common.pair', { label: t('runtimeAdmin.openrouter.colUptime'), value: uptime(row) }),
-              ])
-            }}
-          </p>
+          <p v-if="row.endpoint" class="or-figures or-card__figures">{{ figures(row) }}</p>
           <p v-if="excluded(row)" class="or-excluded">{{ reason(row) }}</p>
           <p v-if="links(row).length" class="or-links">
             <template v-for="(l, i) in links(row)" :key="l.url"
@@ -630,8 +655,19 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
         </li>
       </ul>
 
-      <el-table v-else :data="rows" row-key="slug" :row-class-name="rowClass" class="or-table">
-        <el-table-column :label="t('runtimeAdmin.openrouter.colProvider')" min-width="190">
+      <el-table
+        v-else
+        ref="tableRef"
+        :data="rows"
+        row-key="slug"
+        :row-class-name="rowClass"
+        class="or-table"
+        :class="{ 'or-table--folded': fold }"
+      >
+        <el-table-column
+          :label="t('runtimeAdmin.openrouter.colProvider')"
+          :min-width="fold ? PROVIDER_FOLDED : COLUMN.provider"
+        >
           <template #default="{ row }">
             <div class="or-name" :data-slug="row.slug">
               <strong class="or-name__provider">{{ name(row) }}</strong>
@@ -651,6 +687,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
               }}</AppTag>
             </div>
             <p v-if="facts(row)" class="or-facts">{{ facts(row) }}</p>
+            <p v-if="fold && row.endpoint" class="or-figures">{{ figures(row) }}</p>
             <p v-if="excluded(row)" class="or-excluded">{{ reason(row) }}</p>
             <p v-if="links(row).length" class="or-links">
               <template v-for="(l, i) in links(row)" :key="l.url"
@@ -662,7 +699,12 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
             </p>
           </template>
         </el-table-column>
-        <el-table-column :label="t('runtimeAdmin.openrouter.colPrice')" min-width="148" align="right">
+        <el-table-column
+          v-if="!fold"
+          :label="t('runtimeAdmin.openrouter.colPrice')"
+          :min-width="COLUMN.price"
+          align="right"
+        >
           <template #default="{ row }">
             <el-tooltip
               v-if="priceNotes(row).length"
@@ -678,17 +720,22 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
             <span v-else class="or-price">{{ price(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('runtimeAdmin.openrouter.colTools')" min-width="70">
+        <el-table-column v-if="!fold" :label="t('runtimeAdmin.openrouter.colTools')" :min-width="COLUMN.tools">
           <template #default="{ row }">
             <span class="or-tools">{{ tools(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('runtimeAdmin.openrouter.colUptime')" min-width="108" align="right">
+        <el-table-column
+          v-if="!fold"
+          :label="t('runtimeAdmin.openrouter.colUptime')"
+          :min-width="COLUMN.uptime"
+          align="right"
+        >
           <template #default="{ row }">
             <span class="or-uptime">{{ uptime(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('runtimeAdmin.openrouter.colUse')" min-width="72">
+        <el-table-column :label="t('runtimeAdmin.openrouter.colUse')" :min-width="COLUMN.use">
           <template #default="{ row }">
             <span v-if="row.coveredBy" class="or-covered">{{
               t('runtimeAdmin.openrouter.covered', { slug: row.coveredBy })
@@ -702,7 +749,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
             />
           </template>
         </el-table-column>
-        <el-table-column :label="t('runtimeAdmin.openrouter.colOrder')" :min-width="touch ? 160 : 136">
+        <el-table-column :label="t('runtimeAdmin.openrouter.colOrder')" :min-width="touch ? ORDER_TOUCH : COLUMN.order">
           <template #default="{ row }">
             <div class="or-order-cell" :data-order="row.slug">
               <span v-if="row.position" class="or-order">
@@ -1046,6 +1093,12 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
   font-size: var(--app-text-xs);
   color: var(--app-ink-3);
 }
+/* Its price, tools and uptime, under its facts: on a card, and in the table where it folds. */
+.or-figures {
+  margin: 2px 0 0;
+  font-size: var(--app-text-xs);
+  color: var(--app-ink-2);
+}
 /* A pair of figures breaks at its slash, never inside a figure. */
 .or-price,
 .or-uptime {
@@ -1116,9 +1169,7 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
   border-radius: var(--app-radius-control);
 }
 .or-card__figures {
-  margin: 4px 0 0;
-  font-size: var(--app-text-xs);
-  color: var(--app-ink-2);
+  margin-top: 4px;
 }
 .or-card__controls {
   display: flex;

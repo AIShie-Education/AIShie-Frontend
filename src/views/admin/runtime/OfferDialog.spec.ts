@@ -1178,6 +1178,45 @@ describe('a model of OpenRouter’s, and its upstream routing', () => {
     )
   })
 
+  it('folds an upstream provider’s price, tools and uptime under its name on a touch screen', async () => {
+    vi.stubGlobal('matchMedia', (media: string) => ({
+      matches: media.includes('pointer: coarse'),
+      media,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+    }))
+    const { w } = await openRouted(llama())
+    await settle()
+    expect(w.find('.or-table').classes()).toContain('or-table--folded')
+    expect(w.findAll('.or-table .el-table__header th').map((th) => th.text())).toEqual([
+      'Upstream provider',
+      'Use',
+      'Try first',
+    ])
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-figures').text()).toBe(
+      'Input / output, per million tokens: US$0.10 / US$0.32 · Calls tools: Yes · Uptime, 30 min / 1 day: 98.8% / 98.5%',
+    )
+    expect(w.find('.or-table .or-price').exists()).toBe(false)
+  })
+
+  it('has a column each for the price, tools and uptime where the dialog holds them, with a mouse', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    expect(w.find('.or-table').classes()).not.toContain('or-table--folded')
+    expect(w.findAll('.or-table .el-table__header th').map((th) => th.text())).toEqual([
+      'Upstream provider',
+      'Input / output, per million tokens',
+      'Calls tools',
+      'Uptime, 30 min / 1 day',
+      'Use',
+      'Try first',
+    ])
+    expect(w.find('.or-table .or-figures').exists()).toBe(false)
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-price').text()).toBe('US$0.10 / US$0.32')
+  })
+
   it('reads in Traditional Chinese, the words never saying how the server is built', async () => {
     setLocale('zh-Hant')
     const { w } = await openRouted(llama())
