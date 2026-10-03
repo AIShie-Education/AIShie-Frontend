@@ -140,10 +140,12 @@ function shown(p: Perm): AutonomyLevel | undefined {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
+/* In the third ink, not the placeholder's, which does not read at AA on a changed row (the waiting
+   pill's ground). */
 .perm-editor__key {
   font-family: var(--app-font-mono);
   font-size: 11px;
-  color: var(--el-text-color-placeholder);
+  color: var(--el-text-color-secondary);
 }
 .perm-editor__value {
   flex-shrink: 0;
