@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import { defineComponent, h } from 'vue'
@@ -38,7 +38,11 @@ function event(type: string, kind: string | undefined): CourseEvent {
   }
 }
 
-function mountItem(e: CourseEvent, perms: Record<string, string> = {}) {
+function mountItem(
+  e: CourseEvent,
+  perms: Record<string, string> = {},
+  opts: { compact?: boolean; links?: boolean } = {},
+) {
   setActivePinia(createPinia())
   if (Object.keys(perms).length) {
     const course = useCourseStore()
@@ -46,10 +50,16 @@ function mountItem(e: CourseEvent, perms: Record<string, string> = {}) {
     course.perms = perms as never
   }
   return mount(EventItem, {
-    props: { event: e, courseId: COURSE },
+    props: { event: e, courseId: COURSE, compact: opts.compact },
     global: {
       plugins: [i18n, ElementPlus],
-      stubs: { ElTooltip: TooltipStub, RouterLink: true, MemberName: true, TimeText: true },
+      // With links, a link is an <a> with its words, where it leads in its props.
+      stubs: {
+        ElTooltip: TooltipStub,
+        RouterLink: opts.links ? RouterLinkStub : true,
+        MemberName: true,
+        TimeText: true,
+      },
     },
   })
 }
@@ -191,9 +201,43 @@ describe('EventItem, a proposal sent back for changes, and its revision', () => 
   })
 
   it('says a proposal revises an earlier one', async () => {
-    const w = mountItem(ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }))
+    const w = mountItem(
+      ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }),
+      {},
+      { links: true },
+    )
     await flushPromises()
     expect(w.text()).toContain('Revises an earlier proposal')
+    // Someone who does not read the action log is not offered that one to open.
+    expect(w.find('.event-item__fact-link').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('links a decider to the proposal it revises, with its id', async () => {
+    const w = mountItem(
+      ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }),
+      { action_decide: 'autonomous' },
+      { links: true },
+    )
+    await flushPromises()
+    const fact = w.find('.event-item__fact-link')
+    expect(fact.exists()).toBe(true)
+    const link = fact.findComponent(RouterLinkStub)
+    expect(link.text()).toBe('Revises an earlier proposal')
+    expect(link.props('to')).toEqual({ name: 'course-action', params: { courseId: COURSE, actionId: 'p1' } })
+    expect(fact.find('.id-text').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('says it without a link in the overview’s short list, even to a decider', async () => {
+    const w = mountItem(
+      ev('action.proposed', { target_type: 'submission', revises_action_id: 'p1' }),
+      { action_decide: 'autonomous' },
+      { links: true, compact: true },
+    )
+    await flushPromises()
+    expect(w.text()).toContain('Revises an earlier proposal')
+    expect(w.find('.event-item__fact-link').exists()).toBe(false)
     w.unmount()
   })
 

@@ -380,3 +380,23 @@ describe('ApprovalsView’s rules', () => {
     expect(toggle().getAttribute('aria-expanded')).toBe('true')
   })
 })
+
+describe('ApprovalsView, a seat whose decisions themselves need approval', () => {
+  it.each([
+    ['en', 'each time you approve, send back for changes or reject, your decision becomes a proposal itself'],
+    ['zh-Hant', '你每次批准、要求修改或駁回，本身都會成為一項提案'],
+    ['zh-Hans', '你每次批准、要求修改或拒绝，本身都会成为一项提议'],
+  ] as const)('names each of the three decisions in its tag’s help (%s)', async (locale, words) => {
+    setLocale(locale)
+    answer([], [])
+    const w = await mountAs('instructor')
+    useCourseStore().perms = { ...useCourseStore().perms, action_decide: 'confirm_required' } as never
+    await flushPromises()
+    // The tag in the header, and the help on it.
+    const tag = w
+      .findAllComponents({ name: 'ElTooltip' })
+      .find((x) => x.text().includes(i18n.global.t('actions.approvals.decisionsNeedApproval')))
+    expect(tag).toBeDefined()
+    expect(tag!.props('content')).toContain(words)
+  })
+})

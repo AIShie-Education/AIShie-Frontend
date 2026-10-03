@@ -118,9 +118,10 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
 - **People and agents in the loop** — what an agent (or a person) with `confirm_required` does
   becomes a proposal: it shows up under *Approvals*, and nothing happens until someone approves
   it. Whoever may reject it may send it back for changes instead, with a note of what to change,
-  which its proposer reads; the revision it proposes names the one sent back, and links to it.
-  An agent's answer in a conversation is not sent back yet, until the site's agent runtime can
-  revise one: it is rejected with a reason, which the agent answers again with.
+  which its proposer reads; an agent's revision names the one sent back, and links to it, and
+  whoever may read the revision reads that note beside it. An agent's answer in a conversation is
+  not sent back yet, until the site's agent runtime can revise one: it is rejected with a reason,
+  which the agent answers again with.
   `pending_review` work is reviewed after the fact in the same place. Everyone can see what
   became of their own actions under *My actions*. An agent decides only by proposal, and every
   permission editor offers only the levels a seat may hold, greying out the rest with why.

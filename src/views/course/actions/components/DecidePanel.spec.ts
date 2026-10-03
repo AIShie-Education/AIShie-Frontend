@@ -86,14 +86,20 @@ afterEach(() => {
 })
 
 /** The teacher, who decides here at once, with the grading agent and the tutor (someone else's) seated. */
-function mountAsTeacher(action: ActionRow = PROPOSAL) {
+function mountAsTeacher(action: ActionRow = PROPOSAL, opts: { archived?: boolean; waiting?: string } = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({ me: { id: 'actor-teacher', kind: 'human', display_name: 'Teacher' } } as never)
   const course = useCourseStore()
   course.$patch({
     courseId: COURSE,
-    course: { id: COURSE, code: 'CS101', section: 'A', title: 'Programming', status: 'active' } as never,
+    course: {
+      id: COURSE,
+      code: 'CS101',
+      section: 'A',
+      title: 'Programming',
+      status: opts.archived ? 'archived' : 'active',
+    } as never,
     membership: { member_id: 'teacher', role: 'instructor' } as never,
     perms: { action_decide: 'autonomous', member_read: 'autonomous' },
     permsSource: 'exact',
@@ -106,7 +112,7 @@ function mountAsTeacher(action: ActionRow = PROPOSAL) {
   ]
   course.members = new Map(seats.map((m) => [m.id, m]))
   const w = mount(DecidePanel, {
-    props: { action, courseId: COURSE, mode: 'decide' },
+    props: { action, courseId: COURSE, mode: 'decide', waiting: opts.waiting },
     attachTo: document.body,
     global: {
       plugins: [
@@ -123,10 +129,19 @@ function mountAsTeacher(action: ActionRow = PROPOSAL) {
 
 const buttons = () => [...document.body.querySelectorAll<HTMLButtonElement>('.decide-panel button')]
 const button = (name: string) => buttons().find((b) => b.textContent?.trim() === name)
-const confirmButton = () =>
+const confirmButton = (name = 'Send back for changes') =>
   [...document.body.querySelectorAll<HTMLButtonElement>('.decide-panel__confirm button')].find(
-    (b) => b.textContent?.trim() === 'Send back for changes',
+    (b) => b.textContent?.trim() === name,
   )
+const field = () => document.body.querySelector<HTMLTextAreaElement>('.decide-panel__form textarea')!
+/** What an element's aria-describedby points at, in words. */
+const description = (el: Element) =>
+  (el.getAttribute('aria-describedby') ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? `(no #${id})`)
+/** Off, as a screen reader and Playwright's toBeDisabled take it, while Tab still reaches it. */
+const off = (b: HTMLButtonElement) => b.getAttribute('aria-disabled') === 'true' && !b.disabled
 
 async function type(text: string) {
   const area = document.body.querySelector<HTMLTextAreaElement>('.decide-panel__form textarea')!
@@ -150,14 +165,152 @@ describe('DecidePanel, asking for changes', () => {
     expect(form.textContent).toContain('a request for changes needs a note')
     // The count of what is written, out of 2000.
     expect(form.querySelector('.el-input__count')!.textContent).toContain('2000')
-    expect(confirmButton()!.disabled).toBe(true)
+    expect(off(confirmButton()!)).toBe(true)
     // Spaces alone are no note.
     await type('   \n ')
-    expect(confirmButton()!.disabled).toBe(true)
+    expect(off(confirmButton()!)).toBe(true)
     confirmButton()!.click()
     await flushPromises()
     expect(write).not.toHaveBeenCalled()
   })
+
+  it('puts the focus in the field, named for what it asks, required, and described by what it needs', async () => {
+    mountAsTeacher()
+    await flushPromises()
+    button('Request changes')!.click()
+    await flushPromises()
+    expect(document.activeElement).toBe(field())
+    expect(field().getAttribute('aria-label')).toBe('What to change')
+    expect(field().getAttribute('aria-required')).toBe('true')
+    expect(description(field())).toEqual([
+      'Nothing is carried out. The proposer is told what to change, and may propose it again.',
+      'Say what should change: a request for changes needs a note, of up to 2000 characters.',
+    ])
+    // Once there is a note, the field says no more that one is needed.
+    await type('Test the empty list.')
+    expect(description(field())).toEqual([
+      'Nothing is carried out. The proposer is told what to change, and may propose it again.',
+    ])
+  })
+
+  it('says why its confirm button is off, which Tab reaches right after the field, and which sends nothing', async () => {
+    mountAsTeacher()
+    await flushPromises()
+    button('Request changes')!.click()
+    await flushPromises()
+    const send = confirmButton()!
+    expect(off(send)).toBe(true)
+    expect(send.classList).toContain('is-disabled')
+    expect(description(send)).toEqual([
+      'Say what should change: a request for changes needs a note, of up to 2000 characters.',
+    ])
+    // Tab goes from the field to the confirm button, then to Cancel.
+    const focusable = [
+      ...document.body.querySelectorAll<HTMLElement>('.decide-panel__form textarea, .decide-panel__form button'),
+    ]
+    expect(focusable.map((e) => e.textContent?.trim() || e.tagName)).toEqual([
+      'TEXTAREA',
+      'Send back for changes',
+      'Cancel',
+    ])
+    // Pressed all the same: nothing is sent, and the focus goes back to the field.
+    send.focus()
+    send.click()
+    await flushPromises()
+    expect(write).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(field())
+    await type('Test the empty list.')
+    expect(send.getAttribute('aria-disabled')).toBeNull()
+    expect(send.getAttribute('aria-describedby')).toBeNull()
+    expect(send.classList).not.toContain('is-disabled')
+  })
+
+  it('puts the focus in the field when Reject opens it too, which needs no note', async () => {
+    mountAsTeacher()
+    await flushPromises()
+    button('Reject')!.click()
+    await flushPromises()
+    expect(document.activeElement).toBe(field())
+    expect(field().getAttribute('aria-label')).toBe('Reason for rejecting')
+    expect(field().getAttribute('aria-required')).toBeNull()
+    expect(description(field())).toEqual(['Nothing is carried out. The proposer is told.'])
+    expect(off(confirmButton('Reject')!)).toBe(false)
+    expect(confirmButton('Reject')!.disabled).toBe(false)
+  })
+
+  it('leaves the focus on Approve, whose reason is seldom written, with its field named all the same', async () => {
+    mountAsTeacher()
+    await flushPromises()
+    button('Approve')!.focus()
+    button('Approve')!.click()
+    await flushPromises()
+    expect(document.activeElement).toBe(button('Approve'))
+    expect(field().getAttribute('aria-label')).toBe('Reason for approving')
+  })
+
+  it.each([
+    ['their own proposal', { ...PROPOSAL, member_id: 'teacher', actor_id: 'actor-teacher' }, {}],
+    ['someone else’s party’s, as the queue says', { ...PROPOSAL, yours_to_decide: false }, {}],
+    ['in an archived course', PROPOSAL, { archived: true }],
+    ['while their decision on it waits for approval', PROPOSAL, { waiting: 'd9' }],
+  ] as const)('is off whenever Reject is: %s', async (_, action, opts) => {
+    mountAsTeacher(action as ActionRow, opts)
+    await flushPromises()
+    expect(button('Reject')!.disabled).toBe(true)
+    expect(button('Request changes')!.disabled).toBe(true)
+  })
+
+  it('is off whenever Reject is: while a decision is being sent', async () => {
+    mountAsTeacher()
+    await flushPromises()
+    button('Reject')!.click()
+    await flushPromises()
+    write.mockReturnValueOnce(new Promise(() => undefined))
+    confirmButton('Reject')!.click()
+    await flushPromises()
+    expect(button('Reject')!.disabled).toBe(true)
+    expect(button('Request changes')!.disabled).toBe(true)
+  })
+
+  it.each([
+    ['en', 'You can still send it back for changes or reject it.'],
+    ['zh-Hant', '你仍可要求修改或駁回。'],
+    ['zh-Hans', '你仍可要求修改或拒绝。'],
+  ] as const)(
+    'stays on, with Reject, where approving would close the caller’s own escalation, and is named there (%s)',
+    async (locale, words) => {
+      setLocale(locale)
+      // Someone's proposal to close, by review, the escalation the teacher raised.
+      read.mockImplementation(async (tool: string, args: { action_id?: string }) => {
+        if (tool === 'agent.list') return { agents: [] }
+        if (tool === 'action.get' && args.action_id === 'x1')
+          return {
+            ...PROPOSAL,
+            id: 'x1',
+            status: 'executed',
+            review_state: 'escalated',
+            reviewed_by_member_id: 'teacher',
+          }
+        throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+      })
+      mountAsTeacher({
+        ...PROPOSAL,
+        id: 'r1',
+        actor_id: 'actor-grader',
+        member_id: 'grader',
+        action_type: 'action.review',
+        target_type: 'action',
+        target_id: 'x1',
+        payload: { action_id: 'x1', outcome: 'reviewed' },
+      } as ActionRow)
+      await flushPromises()
+      const [approve, changes, reject] = buttons()
+      expect(approve!.disabled).toBe(true)
+      expect(changes!.disabled).toBe(false)
+      expect(reject!.disabled).toBe(false)
+      expect(document.body.querySelector('.decide-panel__blocked')!.textContent).toContain(words)
+    },
+  )
 
   it('ranks Request changes as Reject: outlined, pressed in while its form is open, whose confirm is the one primary', async () => {
     mountAsTeacher()
@@ -176,7 +329,7 @@ describe('DecidePanel, asking for changes', () => {
     expect(hue(button('Request changes'))).toEqual([])
     await type('Test the empty list.')
     expect(hue(confirmButton())).toEqual(['el-button--primary'])
-    expect(confirmButton()!.disabled).toBe(false)
+    expect(off(confirmButton()!)).toBe(false)
   })
 
   it('is not offered on an agent’s answer, which the runtime of today would leave waiting for good', async () => {
@@ -200,7 +353,7 @@ describe('DecidePanel, asking for changes', () => {
     expect(document.body.querySelector('.decide-panel__form')!.textContent).not.toContain(
       'a request for changes needs a note',
     )
-    expect(confirmButton()!.disabled).toBe(false)
+    expect(off(confirmButton()!)).toBe(false)
     write.mockResolvedValueOnce({
       status: 'executed',
       actionId: 'd1',
@@ -247,9 +400,9 @@ describe('DecidePanel, asking for changes', () => {
   })
 
   it.each([
-    ['zh-Hant', '要求修改', '退回修改'],
-    ['zh-Hans', '要求修改', '退回修改'],
-  ] as const)('is worded in %s', async (locale, offer, confirm) => {
+    ['zh-Hant', '要求修改', '退回修改', '需要修改的地方'],
+    ['zh-Hans', '要求修改', '退回修改', '需要修改的地方'],
+  ] as const)('is worded in %s', async (locale, offer, confirm, label) => {
     setLocale(locale)
     mountAsTeacher()
     await flushPromises()
@@ -257,5 +410,6 @@ describe('DecidePanel, asking for changes', () => {
     b.click()
     await flushPromises()
     expect(document.body.querySelector('.decide-panel__confirm')!.textContent).toContain(confirm)
+    expect(field().getAttribute('aria-label')).toBe(label)
   })
 })
