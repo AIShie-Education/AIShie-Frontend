@@ -241,7 +241,6 @@ async function test() {
   }
 }
 
-const TEST_TONE = { ok: 'success', key_refused: 'error', model_not_found: 'warning', key_accepted: 'warning', unreachable: 'warning' } as const
 const testText = computed(() => {
   const r = lastTest.value
   if (!r) return ''
@@ -539,9 +538,10 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
         </template>
       </el-form>
 
+      <!-- Its type in the template, where lint reads it: a key that works is green, a refused one red, the rest amber. -->
       <el-alert
         v-if="lastTest"
-        :type="TEST_TONE[lastTest.result]"
+        :type="lastTest.result === 'ok' ? 'success' : lastTest.result === 'key_refused' ? 'error' : 'warning'"
         :closable="false"
         show-icon
         :title="testText"
