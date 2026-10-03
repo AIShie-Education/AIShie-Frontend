@@ -1060,8 +1060,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   percentage Core worked out), money through `formatMoney` ("US$0.0184": a "$" alone reads as Hong
   Kong's), a count where it may pass a thousand through `formatCount` ("1,284"), a list through
   `formatList` ("a, b, and c", 「甲、乙和丙」; `formatList(items, 'or')` for one of them, "@a.edu or
-  @b.edu"), never `"%"` written after a number, `"$"` before one, nor `.join(', ')`.
-  `src/i18n/punctuation.spec.ts` reads every component and module and refuses these.
+  @b.edu"), never `"%"` written after a number, `"$"` before one, nor `.join(', ')`. A list's or a
+  number's words follow the language where they are worked out in a `computed`: Intl is not reactive,
+  so the computed reads `ui.locale` (`computed(() => (ui.locale, formatList(items, 'or')))`), as
+  `<TimeText>` does. `src/i18n/punctuation.spec.ts` reads every component and module and refuses
+  these.
 - **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
   never 「{owner} 的代理」, nor around a figure written in the message: 「1個學期 | {n}個學期」, never
   「1 個學期」 (`src/i18n/spacing.spec.ts` refuses both). The page puts the room between Han

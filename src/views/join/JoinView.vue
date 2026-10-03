@@ -69,7 +69,10 @@ const courseLine = computed(() => {
   return c ? courseCodeText(c.code, c.section) : ''
 })
 const domains = computed(() => preview.value?.allowed_email_domains ?? [])
-const domainList = computed(() => formatList(domains.value.map((d) => `@${d}`), 'or'))
+const atDomains = computed(() => domains.value.map((d) => `@${d}`))
+// One of them, as the page's language says "or" (Intl's, which is not reactive: the language
+// is read here, so that the list is written again when it changes).
+const domainList = computed(() => (ui.locale, formatList(atDomains.value, 'or')))
 // How long the link has left. Once its time is up it is said to have
 // expired, as Core will say when asked again, which it is.
 const { text: timeLeft, ended: timeUp } = useCountdown(() =>
