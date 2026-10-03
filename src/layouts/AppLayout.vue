@@ -45,11 +45,13 @@ const route = useRoute()
 const { t } = useI18n()
 
 const narrow = useMediaQuery(`(max-width: ${SIDEBAR_DRAWER_MAX_WIDTH}px)`)
-// The phone's menu closes as a link in it is followed, and with back.
+// The phone's menu closes as a link in it is followed, and with back. It
+// stays open while the page writes its own address (a search as it is
+// typed), since the page stays where it is.
 const drawer = ref(false)
 useBackCloses(drawer, () => (drawer.value = false), { when: narrow })
 watch(
-  () => route.fullPath,
+  () => route.path,
   () => (drawer.value = false),
 )
 

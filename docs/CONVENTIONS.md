@@ -627,14 +627,19 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   is dismissed first, as cancelled), and closed by its own means (its button, Escape, a click beside
   it) it goes back over its entry, so that history is as it was. It is used by the file viewer, the
   phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider screen stays open from
-  page to page, and back moves between them), the agent's conversation log, the invite link put up
+  page to page, and back moves between them), the agent's conversation log and the conversation
+  open in it (back goes back to the log's list first, as its Back button does), the invite link put up
   full screen, and the administrators' drawers of a preset and of a department's administrators
   (full width on a phone, `DRAWER_SIZE`), who can read a conversation, the chat pane's dialog
   opened over the sheet or the log, and About (`AboutDialog`), which on a phone opens over the
   menu from the account's row at its bottom; a new drawer or dialog that fills a phone's screen, or that opens
   over one of these, uses it too. The router (`installBackCloses`) goes back over the overlays' entries before it adds a page's,
   so that a link followed from one takes its place, and over those a page left before it was
-  reloaded; going back to a page's own entry leaves it where it was scrolled.
+  reloaded; going back to a page's own entry leaves it where it was scrolled. An address the page
+  writes while an overlay is open (`router.replace`, a search as it is typed) is the one it keeps
+  once the overlay closes, and the menu and the chat's sheet close as the page changes
+  (`route.path`), not as it writes its own address. An overlay opened while a page a link leads to
+  is still on its way adds its entry once that page has landed.
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be

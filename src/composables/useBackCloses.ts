@@ -1,5 +1,5 @@
 import { onScopeDispose, toValue, watch, type MaybeRefOrGetter } from 'vue'
-import type { Router } from 'vue-router'
+import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 
 // Back closes what is laid over the page (the file viewer, the chat's sheet,
@@ -28,6 +28,15 @@ import { ElMessageBox } from 'element-plus'
 // An entry nothing is open for any more (forward into an overlay back closed,
 // or left by a page before it was reloaded) is gone back over as it is come
 // to, so that back is never pressed for nothing.
+//
+// The page may write its own address while an overlay is open (a search box's
+// text, 300 ms after typing stops, with router.replace): the router writes it
+// to the overlay's entry, the one shown. Back from there, or the overlay
+// closed, comes to an entry under it at the address from before, and the
+// router writes the address shown to that entry as well instead of going
+// there (installBackCloses), so that the page keeps what it wrote. An overlay
+// opened while a page is on its way (a link followed, still loading) adds its
+// entry once that page has landed, after the page's own rather than under it.
 
 /** Where the depth is kept in an entry's state, beside the router's own. */
 const KEY = 'aishieOverlay'
@@ -49,12 +58,18 @@ interface Layer {
 
 /** The overlays with an entry, from the bottom: the one at i has the entry of depth i + 1. */
 const layers: Layer[] = []
+/** Overlays opened while a page was on its way, whose entries wait for it to land. */
+const waiting = new Set<Layer>()
 /** What moves through history, one after another. */
 let queue: Promise<void> = Promise.resolve()
 let queued = 0
 /** The step through history this is waiting for, which the next popstate ends. */
 let stepping: (() => void) | null = null
 let listening = false
+/** How deep the entry history is at, as last seen here: the one back or forward leaves, when it comes. */
+let at = 0
+/** A page on its way (a link followed), settled once it has landed or gone nowhere. */
+let navigating: Promise<void> | null = null
 
 function markerOf(state: unknown): Marker | null {
   const m = (state as Record<string, unknown> | null)?.[KEY] as Partial<Marker> | undefined
@@ -134,6 +149,7 @@ function onPopState() {
     for (let d = depth + 1; d <= layers.length; d++) {
       history.pushState({ ...(history.state as object | null), [KEY]: { load: LOAD, depth: d } }, '')
     }
+    at = layers.length
     return
   }
   // Back past them: each overlay above the entry come to closes, the top one first.
@@ -151,7 +167,13 @@ function onPopState() {
   // Come to an entry nothing is open for, or to one an overlay closed from under another kept: on, to one that is.
   const stray = strayHere()
   const closed = dropClosed()
-  if (stray + closed) void enqueue(() => go(-(stray + closed)))
+  if (stray + closed) {
+    void enqueue(() => {
+      // Left from an entry nothing is open for: its address, which may be an old one, is not the page's.
+      if (stray) at = 0
+      return go(-(stray + closed))
+    })
+  }
 }
 
 function listen() {
@@ -164,19 +186,41 @@ function listen() {
 function opened(close: () => void): Layer {
   listen()
   const layer: Layer = { open: true, close }
+  add(layer)
+  return layer
+}
+
+/**
+ * Adds an overlay's entry, after whatever moves through history before it,
+ * and after the entry of a page on its way: the page lands first, so that
+ * its entry comes before the overlay's rather than after it, where back
+ * would take two steps for one and forward could never reach it. Closed
+ * meanwhile (as the menu is by the page it leads to), it adds none.
+ */
+function add(layer: Layer) {
   void enqueue(() => {
     if (!layer.open) return
-    const state = { ...(history.state as object | null), [KEY]: { load: LOAD, depth: layers.length + 1 } }
-    history.pushState(state, '')
+    if (navigating) {
+      // Waited for outside the queue, which a link followed meanwhile goes through.
+      waiting.add(layer)
+      void navigating.then(() => {
+        waiting.delete(layer)
+        add(layer)
+      })
+      return
+    }
+    const depth = layers.length + 1
+    history.pushState({ ...(history.state as object | null), [KEY]: { load: LOAD, depth } }, '')
     layers.push(layer)
+    at = depth
   })
-  return layer
 }
 
 /** An overlay closed by its own means: back over its entry, if it is the top one, and over any closed under it. */
 function closed(layer: Layer) {
   if (!layer.open) return
   layer.open = false
+  waiting.delete(layer)
   void enqueue(async () => {
     // Never added (closed before its turn), or already gone back over.
     if (!layers.includes(layer)) return
@@ -189,9 +233,9 @@ function closed(layer: Layer) {
   })
 }
 
-/** Whether an overlay has an entry, or history is still moving. */
+/** Whether an overlay has an entry or waits to add one, or history is still moving. */
 function busy(): boolean {
-  return layers.length > 0 || queued > 0
+  return layers.length > 0 || waiting.size > 0 || queued > 0
 }
 
 /** Goes back over every overlay's entry, closing them; resolves once history is at the page's own. */
@@ -199,9 +243,10 @@ export function closeAllOverlays(): Promise<void> {
   return enqueue(async () => {
     const depth = depthHere()
     if (depth) await go(-depth)
-    // Any left (history was not on their entries): closed as they are.
-    while (layers.length) {
-      const layer = layers.pop()!
+    // Any left (history was not on their entries), and those yet to add theirs: closed as they are.
+    const left = [...layers.splice(0).reverse(), ...waiting]
+    waiting.clear()
+    for (const layer of left) {
       if (layer.open) {
         layer.open = false
         layer.close()
@@ -244,14 +289,51 @@ export function useBackCloses(
  * open), so that the page takes their place in history; and goes back over
  * the entries a load before this one left (a page reloaded with an overlay
  * open), so that back from here is never pressed for nothing.
+ *
+ * Back from an overlay's entry to one under it keeps the address shown,
+ * which the page may have written while the overlay was open: the router
+ * writes it to the entry come to, rather than going to the address that
+ * entry had. And while a page a link leads to is on its way, an overlay
+ * opened waits for it to land before it adds its entry.
  */
 export function installBackCloses(router: Router) {
   if (typeof window === 'undefined') return
   listen()
   const left = strayHere()
   if (left) void enqueue(() => go(-left))
+
   const push = router.push.bind(router)
-  router.push = (to) => (busy() ? closeAllOverlays().then(() => push(to)) : push(to))
+  const follow: Router['push'] = (to) => {
+    const nav = push(to)
+    const landed = nav.then(
+      () => {},
+      () => {},
+    )
+    navigating = landed
+    void landed.then(() => {
+      if (navigating === landed) navigating = null
+    })
+    return nav
+  }
+  router.push = (to) => (busy() ? closeAllOverlays().then(() => follow(to)) : follow(to))
+
+  // Every step through history, as the router sees it before it moves: the
+  // route shown, if back came down from an overlay's entry to one under it at
+  // the same place (the router's position in history, which an overlay's
+  // entry has from the page's), to be kept there.
+  let kept: RouteLocationNormalizedLoaded | null = null
+  router.options.history.listen((_to, _from, info) => {
+    const from = at
+    at = depthHere()
+    kept = info.delta === 0 && from > at ? router.currentRoute.value : null
+  })
+  router.beforeEach((to, from) => {
+    const shown = kept
+    kept = null
+    if (shown !== from || !from.matched.length || to.fullPath === from.fullPath) return
+    // The entry come to takes the address shown, as router.replace writes it.
+    return { path: from.path, query: from.query, hash: from.hash, replace: true }
+  })
 }
 
 /**

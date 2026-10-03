@@ -18,13 +18,15 @@ import {
 // over the page instead of leaving it: the file viewer, the chat's sheet, the
 // menu, an administrator's drawer, the top one first where one is open over
 // another (a message box, or who can read a conversation, asked over the chat
-// or an agent's conversation log first of all; a menu left open in the log
-// goes with it). Closed by its own button, an overlay goes back over the
-// entry it added, so that back from there leaves the page, as it would have
-// before it opened; a link followed from the menu takes the menu's place in
-// history; and a page reloaded with an overlay open leaves none behind. On a
-// wider screen the chat is a window that stays open from page to page, and
-// back moves between them.
+// or an agent's conversation log first of all; in the log, the conversation
+// open over its list, and a menu left open in it goes with it). Closed by its
+// own button, an overlay goes back over the entry it added, so that back from
+// there leaves the page, as it would have before it opened; a link followed
+// from the menu takes the menu's place in history; a search the page writes
+// to its address while the menu is open stays there once the menu closes; and
+// a page reloaded with an overlay open leaves none behind. On a wider screen
+// the chat is a window that stays open from page to page, and back moves
+// between them.
 
 const tag = Date.now().toString(36)
 
@@ -157,6 +159,48 @@ test.describe('on a phone, back', () => {
     await expect(page).toHaveURL(/\/$/)
   })
 
+  test('leaves the menu open as the page writes a search to its address, which stays there once the menu closes with Escape or back', async ({
+    page,
+  }) => {
+    await signInAsRoot(page)
+    await twoPages(page, '/', '/admin/actors')
+    const menu = page.getByRole('dialog', { name: 'Menu' })
+    const expanded = page.locator('.app-header__menu')
+    const search = page.locator('.actors__search input')
+    await expect(search).toBeVisible()
+
+    // Typed, and the menu opened at once: 300 ms after typing stops the search reaches the address, under the menu.
+    await search.fill('root')
+    await menuButton(page).dispatchEvent('click')
+    await expect(menu).toBeVisible()
+    await expect(page).toHaveURL(/\/admin\/actors\?q=root$/)
+    await expect(expanded).toHaveAttribute('aria-expanded', 'true')
+    await expect(search).toHaveValue('root')
+    // Closed with Escape, it goes back over its entry, and the page keeps its address.
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+    await atPagesOwnEntry(page)
+    await expect(page).toHaveURL(/\/admin\/actors\?q=root$/)
+    await expect(search).toHaveValue('root')
+    await expect(page.locator('.actors__search')).toBeVisible()
+
+    // Closed with back: the same.
+    await search.fill('ro')
+    await menuButton(page).dispatchEvent('click')
+    await expect(menu).toBeVisible()
+    await expect(page).toHaveURL(/\/admin\/actors\?q=ro$/)
+    await expect(expanded).toHaveAttribute('aria-expanded', 'true')
+    await page.goBack()
+    await expect(menu).toBeHidden()
+    await atPagesOwnEntry(page)
+    await expect(page).toHaveURL(/\/admin\/actors\?q=ro$/)
+    await expect(search).toHaveValue('ro')
+
+    // Back from the page leaves it, as it would have before the menu opened.
+    await page.goBack()
+    await expect(page).toHaveURL(/\/$/)
+  })
+
   test('with About open over the menu, closes About, then the menu, then leaves the page', async ({ page }) => {
     await signIn(page, demo().actors.yuki)
     await twoPages(page, '/', coursePath())
@@ -280,7 +324,7 @@ test.describe('on a phone, back', () => {
     }
   })
 
-  test('with who can read a conversation open over an agent’s conversation log, closes that, then the log, its ⋯ menu with it, then leaves the page', async ({
+  test('with who can read a conversation open over an agent’s conversation log, closes that, then the conversation, then the log, then leaves the page', async ({
     page,
   }) => {
     const d = demo()
@@ -306,22 +350,30 @@ test.describe('on a phone, back', () => {
       await signIn(page, d.actors.instructor)
       await twoPages(page, '/', coursePath('agents'))
       const agents = page.url()
-      await page
-        .locator('.agent-row')
-        .filter({ hasText: name })
-        .getByRole('button', { name: 'Conversation log' })
-        .click()
       const log = page.locator('.agent-log')
+      const openLog = () =>
+        page.locator('.agent-row').filter({ hasText: name }).getByRole('button', { name: 'Conversation log' }).click()
+      const row = log.locator('.log-row').filter({ hasText: title })
+      const message = log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })
+      await openLog()
       await expect(log.getByText(`Conversation log: ${name}`)).toBeVisible()
-      await log.locator('.log-row').filter({ hasText: title }).click()
-      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      await row.click()
+      await expect(message).toBeVisible()
 
       const readers = await openReaders(page, log)
       await page.goBack()
       await expect(readers).toBeHidden()
-      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      await expect(message).toBeVisible()
       expect(page.url()).toBe(agents)
 
+      // Back from the conversation: the log's list, as the log's own Back button leads to, the log still open.
+      await page.goBack()
+      await expect(row).toBeVisible()
+      await expect(message).toHaveCount(0)
+      await expect(log.getByText(`Conversation log: ${name}`)).toBeVisible()
+      expect(page.url()).toBe(agents)
+
+      // Back again closes the log.
       await page.goBack()
       await expect(log).toBeHidden()
       await atPagesOwnEntry(page)
@@ -329,19 +381,26 @@ test.describe('on a phone, back', () => {
       // Closed with the log, it does not come back over the page.
       await expect(readers).toBeHidden()
 
-      // Opened again on the conversation, with its ⋯ menu open: back takes the menu with the log, leaving neither over the page.
-      await page
-        .locator('.agent-row')
-        .filter({ hasText: name })
-        .getByRole('button', { name: 'Conversation log' })
-        .click()
-      await expect(log.locator('.chat-msg').filter({ hasText: 'Which end comes out first?' })).toBeVisible()
+      // Opened on the conversation and closed by its own button: neither leaves an entry.
+      await openLog()
+      await row.click()
+      await expect(message).toBeVisible()
+      await log.locator('.el-drawer__close-btn').click()
+      await expect(log).toBeHidden()
+      await atPagesOwnEntry(page)
+
+      // Opened again, on the conversation still, with its ⋯ menu open: back takes the menu with the conversation, to the list.
+      await openLog()
+      await expect(message).toBeVisible()
       await log.getByRole('button', { name: 'Conversation options' }).click()
       const menu = page.locator('.chat-pane__menu:visible')
       await expect(menu.getByRole('menuitem', { name: 'Who can read this' })).toBeVisible()
       await page.goBack()
-      await expect(log).toBeHidden()
+      await expect(row).toBeVisible()
       await expect(menu).toHaveCount(0)
+      expect(page.url()).toBe(agents)
+      await page.goBack()
+      await expect(log).toBeHidden()
       await atPagesOwnEntry(page)
       expect(page.url()).toBe(agents)
 
