@@ -213,6 +213,40 @@ test.describe('at phone width', () => {
     for (const h of await heights('.app-nav-drawer .side-item')) expect(h).toBeGreaterThanOrEqual(40)
   })
 
+  test('on a phone narrower than the grades’ own tabs, their row scrolls on its own, and the page does not', async ({
+    page,
+  }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    // 280 px is a folding phone's cover screen; at 320 the row, 304 px in English, still overruns the gutter.
+    for (const width of [280, 300, 320]) {
+      await page.setViewportSize({ width, height: 700 })
+      await page.goto(coursePath('scheme'))
+      const grades = page.getByRole('navigation', { name: 'Grades sections' })
+      await expect(grades.getByRole('link')).toHaveText(['All grades', 'Gradebook', 'Grading scheme'])
+      await expect(page.locator('.page-header__subtitle')).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+      await expectFits(page, `the grading scheme at ${width} px`)
+      const row = await grades.evaluate((n) => {
+        const before = { scroll: n.scrollWidth, client: n.clientWidth, right: n.getBoundingClientRect().right }
+        n.scrollLeft = n.scrollWidth
+        return { ...before, left: n.scrollLeft }
+      })
+      // Within the page's 16 px gutter, the subtitle under it too.
+      expect(row.right, `the row's right edge at ${width} px`).toBeLessThanOrEqual(width - 16 + 0.5)
+      const subtitle = (await page.locator('.page-header__subtitle').boundingBox())!
+      expect(subtitle.x + subtitle.width).toBeLessThanOrEqual(width - 16 + 0.5)
+      // Too narrow for the row: it scrolls sideways, to its last tab, and stays one row.
+      expect(row.scroll, `the row at ${width} px`).toBeGreaterThan(row.client)
+      expect(row.left).toBeGreaterThan(0)
+      const tops = await grades
+        .getByRole('link')
+        .evaluateAll((els) => [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))])
+      expect(tops).toHaveLength(1)
+      await expect(grades.getByRole('link', { name: 'Grading scheme' })).toBeInViewport({ ratio: 1 })
+    }
+  })
+
   test('the top bar’s way up cuts the course’s code short, rather than run it under the tab, on a narrow phone', async ({
     page,
   }) => {
