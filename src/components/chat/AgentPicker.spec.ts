@@ -137,6 +137,22 @@ describe('AgentPicker', () => {
     expect(row.text()).toContain('It answers other members too')
   })
 
+  it('calls an agent the course seated itself, nobody’s delegate, a course agent, first, and says it answers others too', async () => {
+    // Core says answers_course false of any agent that is nobody's delegate.
+    respondents = [
+      { ...tutor, member_id: 'mine', display_name: 'A helper', is_my_delegate: true, answers_course: false },
+      { ...tutor, member_id: 'seated', display_name: 'Course Q&A bot', answers_course: false },
+    ]
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    const rows = w.findAll('button.resp-row')
+    expect(rows.map((b) => b.find('.resp-row__name').text())).toEqual(['Course Q&A botAI', 'A helperAI'])
+    expect(rows[0]!.text()).toContain('Course agent')
+    expect(rows[0]!.text()).not.toContain('Personal agent')
+    expect(rows[0]!.text()).toContain('It answers other members too')
+    expect(rows[1]!.text()).toContain('Personal agent')
+  })
+
   it('makes each row one control: nothing in it takes focus, and what the tooltips say describes it', async () => {
     respondents = [
       { ...tutor, last_seen_at: null },

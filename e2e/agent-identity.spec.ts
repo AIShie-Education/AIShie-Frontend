@@ -8,6 +8,7 @@ import {
   inTraditionalChinese,
   openChat,
   registerPerson,
+  root,
   signIn,
   type CoreReply,
 } from './support'
@@ -25,13 +26,23 @@ import {
 // its "AI", and never makes the page scroll sideways.
 
 const STAMP = Date.now().toString(36)
-const w = { submission: '', proposal: '', tutorId: '', hyphenId: '', helperId: '' }
+const w = {
+  submission: '',
+  proposal: '',
+  tutorId: '',
+  hyphenId: '',
+  helperId: '',
+  botId: '',
+  botSeat: '',
+}
 // A course agent with a long name, which the chat's header must cut short without losing its "AI".
 const LONG = `Introduction to Programming weekly revision and practice tutor ${STAMP}`
 // One with a long name and no spaces, which must still wrap in its row, its "AI" with it.
 const HYPHEN = `cs101-introduction-to-programming-weekly-revision-tutor-${STAMP}`
 // A student's own agent, which drafts his HW1.
 const HELPER = `Ben’s revision helper ${STAMP}`
+// An agent nobody owns, which the course seats itself to tutor him: a course agent, though nobody's delegate.
+const BOT = `Course Q&A bot ${STAMP}`
 let ada: Awaited<ReturnType<typeof registerPerson>>
 let ben: Awaited<ReturnType<typeof registerPerson>>
 
@@ -153,6 +164,23 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       'action.decide (hand-in)',
     )
     expect(handedIn.outcome, JSON.stringify(handedIn)).toBe('executed')
+
+    // The course seats an agent nobody owns to tutor him, hosted on AIshie: nobody's delegate, so Core
+    // says it answers no course (answers_course is a delegate's), though it is the course's.
+    w.botId = done(
+      await call(root().token, 'POST', '/v1/actors', { kind: 'agent', display_name: BOT, hosting: 'runtime' }),
+      'actor.register',
+    ).actor_id
+    w.botSeat = done(
+      await call(I, 'POST', `/v1/courses/${c}/members`, {
+        actor_id: w.botId,
+        preset: 'tutor',
+        student_scope: 'listed',
+        listed_students: [seat.member_id],
+      }),
+      'member.add (bot)',
+    ).member_id
+    await hostOnRuntime(w.botId)
   })
 
   // A person may have five agents at once: this run's are suspended when they are done with, for the specs after it.
@@ -160,6 +188,9 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     for (const id of [w.tutorId, w.hyphenId])
       if (id) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${id}/suspend`, {})
     if (w.helperId && ben) await call(ben.token, 'POST', `/v1/me/agents/${w.helperId}/suspend`, {})
+    const I = demo().actors.instructor.token
+    if (w.botSeat) await call(I, 'POST', `/v1/courses/${demo().course.id}/members/${w.botSeat}/remove`, {})
+    if (w.botId) await call(root().token, 'POST', `/v1/actors/${w.botId}/suspend`, {})
   })
 
   test('agents as a kind take the seat icon, and a proposal’s proposer its avatar and “AI”', async ({ page }) => {
@@ -283,6 +314,21 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     await expect(row.locator('.action-target')).toContainText(HELPER)
     await expect(row).toContainText('Someone in the course')
     await expect(row.locator('.id-text')).toHaveCount(0)
+  })
+
+  test('the chat calls an agent the course seated itself a course agent, which answers others too', async ({
+    page,
+  }) => {
+    await signIn(page, ben)
+    await page.goto(coursePath())
+    const panel = await openChat(page)
+    const row = panel.locator('.resp-row').filter({ hasText: BOT })
+    await expect(row).toContainText('Course agent')
+    await expect(row).not.toContainText('Personal agent')
+    await expect(row).toContainText('It answers other members too')
+    // And so its draft says, once chosen.
+    await row.click()
+    await expect(panel.locator('.chat-pane__shared')).toContainText('may repeat to them')
   })
 
   test('a draft grade names the agent that drafted it, and marks what it filled in until it is changed', async ({
