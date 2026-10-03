@@ -264,6 +264,27 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     for (const row of await rows.all()) await expect(row.locator('.event-item__who .ai-badge').first()).toBeVisible()
   })
 
+  test('a student is shown no id for whoever she cannot name, in her activity or her own actions', async ({ page }) => {
+    await signIn(page, ben)
+    await page.goto(coursePath('activity'))
+    // His request to bring in his agent, which the instructor approved: someone in the course, not an id.
+    const seating = page
+      .locator('.event-item__who')
+      .filter({ hasText: new RegExp(`Ben ${STAMP}\\(you\\)\\s*proposed\\s*→`) })
+      .first()
+    await expect(seating).toContainText(
+      new RegExp(`Ben ${STAMP}\\(you\\)\\s*proposed\\s*→\\s*Someone in the course\\s*approved`),
+    )
+    await expect(page.locator('.event-item__who .id-text')).toHaveCount(0)
+
+    // His own actions: his agent brought in, by the name its avatar is drawn from, and who decided it.
+    await page.goto(coursePath('my-actions'))
+    const row = page.locator('tr').filter({ hasText: 'Bring in an agent' }).filter({ hasText: HELPER }).first()
+    await expect(row.locator('.action-target')).toContainText(HELPER)
+    await expect(row).toContainText('Someone in the course')
+    await expect(row.locator('.id-text')).toHaveCount(0)
+  })
+
   test('a draft grade names the agent that drafted it, and marks what it filled in until it is changed', async ({
     page,
   }) => {

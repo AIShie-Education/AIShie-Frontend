@@ -683,7 +683,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   newer grade or of its rubric's version. What they may be asked to quote stays: the action that made
   a grade, an action's own page (its id, its actor's and its target's), and their account's ID on
   Account. Where a person cannot be named to them (a student may not read the member list),
-  `<MemberName>` still shows a short member ID, a grade's grader say, until Core names them.
+  `<MemberName>` says "someone in the course" (「一位成員」), a grade's grader say, with the member
+  ID on hover alone for them to quote, until Core names them: never a hash in a line that says who
+  acted ("→ 430c5829 approved"). Where the name is known otherwise, pass it (`:agent`, a student's
+  own agent by the name in its proposal or in her agents).
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.

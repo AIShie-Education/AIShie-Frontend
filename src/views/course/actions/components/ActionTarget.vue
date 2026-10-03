@@ -245,8 +245,9 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
     </template>
     <template v-else-if="type === 'member.add_delegate'">
       <AgentAvatar v-if="agentName" :name="agentName" size="small" />
+      <!-- Named as the proposal named it where the member list cannot be read: the avatar beside it says the same name. -->
       <MaybeLink v-if="seatedId" :to="link ? routeFor(courseId, 'member_id', seatedId) : null" class="action-target__part">
-        <MemberName :id="seatedId" />
+        <MemberName :id="seatedId" :agent="agentName ? { name: agentName } : undefined" />
       </MaybeLink>
       <span v-else class="action-target__part action-target__name">
         <template v-if="agentName">{{ agentName }}</template>
