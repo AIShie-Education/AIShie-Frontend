@@ -118,9 +118,12 @@ test.describe('language', () => {
     }
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans')
     await expect(page.locator('.app-header').getByRole('button', { name: '与智能体对话' })).toBeVisible()
-    // Simplified glyphs, from Noto Sans SC: the SC faces are fetched, the TC ones never.
+    // Simplified glyphs, from Noto Sans SC (after Plex for Latin letters and figures): the SC faces are
+    // fetched, the TC ones never, not for the language menu's 「繁體中文」 on the English page either.
     await expect.poll(() => fonts.includes('sc'), { message: 'an SC face is fetched' }).toBe(true)
-    expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"?Noto Sans SC/)
+    expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(
+      /^"?AIshie Latin"?, "?Noto Sans SC/,
+    )
     expect(fonts).not.toContain('tc')
 
     await chooseLanguage(page, 'English')
