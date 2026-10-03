@@ -96,7 +96,7 @@ const closed = computed(() => c.value?.status === 'closed')
     <h3 class="answer-proposal__head">{{ t('actions.answer.question') }}</h3>
     <div v-if="question" class="answer-proposal__message">
       <div class="answer-proposal__meta">
-        {{ c?.opener.display_name }} · <TimeText :value="question.created_at" relative />
+        {{ c?.opener.display_name }}{{ t('common.sep') }}<TimeText :value="question.created_at" relative />
       </div>
       <p v-if="question.retracted" class="answer-proposal__muted">{{ t('actions.answer.retracted') }}</p>
       <MarkdownView v-else :source="question.body ?? ''" />

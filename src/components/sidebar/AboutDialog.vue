@@ -31,7 +31,9 @@ async function webVersion(): Promise<string | null> {
     const v = (await res.json()) as { version?: unknown; commit?: unknown }
     const version = typeof v.version === 'string' ? v.version : null
     const commit = typeof v.commit === 'string' ? v.commit : null
-    return version && commit && !version.includes(commit) ? `${version} (${commit})` : (version ?? commit)
+    return version && commit && !version.includes(commit)
+      ? t('common.aside', { text: version, aside: commit })
+      : (version ?? commit)
   } catch {
     return null
   }

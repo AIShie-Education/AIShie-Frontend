@@ -66,7 +66,8 @@ const forbidden = computed(() => props.forbidden || !!props.error?.isForbidden)
             <div class="sub-grades__score">
               <span class="sub-grades__value">{{ formatDecimal(g.score, 4) }}</span>
               <span v-if="pointsPossible !== undefined && pointsPossible !== null" class="app-muted">
-                / {{ formatDecimal(pointsPossible, 4) }} · {{ formatPercent(g.score, pointsPossible) }}
+                / {{ formatDecimal(pointsPossible, 4) }}{{ t('common.sep')
+                }}{{ formatPercent(g.score, pointsPossible) }}
               </span>
             </div>
             <StatusTag vocab="gradeState" :value="g.state" />

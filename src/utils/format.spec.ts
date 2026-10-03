@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   downloadName,
+  formatCount,
+  formatDateTime,
   formatList,
   formatMoney,
   formatPct,
@@ -52,6 +54,7 @@ describe('the time of day, in the reader’s time zone and in UTC', () => {
     vi.stubEnv('TZ', 'Asia/Hong_Kong')
     setNumberLocale('en')
     expect(formatTime('2026-10-02T00:00:00Z')).toBe('08:00')
+    expect(formatDateTime('2026-10-08T15:59:00Z')).toBe('2026-10-08 23:59')
     expect(timeZoneName('2026-10-02T00:00:00Z')).toBe('Hong Kong Standard Time')
     setNumberLocale('zh-TW')
     expect(timeZoneName('2026-10-02T00:00:00Z')).toBe('香港標準時間')
@@ -90,35 +93,65 @@ describe('the time of day, in the reader’s time zone and in UTC', () => {
   })
 })
 
-describe('percentages, money and lists, in the page’s language', () => {
+describe('percentages, money, counts and lists, in the page’s language', () => {
   afterEach(() => setNumberLocale(undefined))
 
-  it.each(['en', 'zh-TW', 'zh-CN'])('writes a percentage with no space before its sign, in %s', (tag) => {
+  // The page's three languages, as Intl names them (i18n's intlLocale).
+  const LANGS = ['en', 'zh-TW', 'zh-CN'] as const
+
+  it.each(LANGS)('writes a percentage with no space before its sign, in %s', (tag) => {
     setNumberLocale(tag)
     expect(formatPct(0.8846, 2)).toBe('88.46%')
     expect(formatPct(0.47, 0)).toBe('47%')
+    expect(formatPct(1.05)).toBe('105%')
     expect(formatPercent('9.125', '10')).toBe('91.3%')
+    expect(formatPercent(null, '10')).toBe('—')
   })
 
-  it('writes dollars as US dollars, to the cent from a dollar up and to three figures below it', () => {
-    setNumberLocale('zh-TW')
-    expect(formatMoney('0.018400')).toBe('US$0.0184')
-    expect(formatMoney('2.118200')).toBe('US$2.12')
-    expect(formatMoney('100')).toBe('US$100.00')
-    expect(formatMoney('0.5')).toBe('US$0.50')
-    expect(formatMoney('0')).toBe('US$0.00')
-    expect(formatMoney('1234.5')).toBe('US$1,234.50')
-    expect(formatMoney(null)).toBe('—')
-    setNumberLocale('en')
-    expect(formatMoney('0.998100')).toBe('US$0.998')
+  it.each(LANGS)(
+    'writes dollars as US dollars, to the cent from a dollar up and to three figures below it, in %s',
+    (tag) => {
+      setNumberLocale(tag)
+      expect(formatMoney('0.018400')).toBe('US$0.0184')
+      expect(formatMoney('0.998100')).toBe('US$0.998')
+      expect(formatMoney('0.004213')).toBe('US$0.00421')
+      expect(formatMoney('2.118200')).toBe('US$2.12')
+      expect(formatMoney('100')).toBe('US$100.00')
+      expect(formatMoney('0.5')).toBe('US$0.50')
+      expect(formatMoney('0')).toBe('US$0.00')
+      expect(formatMoney(0)).toBe('US$0.00')
+      expect(formatMoney('1234.5')).toBe('US$1,234.50')
+      expect(formatMoney(null)).toBe('—')
+      expect(formatMoney('')).toBe('—')
+    },
+  )
+
+  it.each(LANGS)('writes a price someone typed with every figure it has, at least the cents, in %s', (tag) => {
+    setNumberLocale(tag)
+    expect(formatMoney('1.875', { exact: true })).toBe('US$1.875')
+    expect(formatMoney('0.075000', { exact: true })).toBe('US$0.075')
+    expect(formatMoney('0.4', { exact: true })).toBe('US$0.40')
+    expect(formatMoney('3', { exact: true })).toBe('US$3.00')
+    expect(formatMoney('0.000125', { exact: true })).toBe('US$0.000125')
+  })
+
+  it.each(LANGS)('writes a count with its thousands grouped, in %s', (tag) => {
+    setNumberLocale(tag)
+    expect(formatCount(1284)).toBe('1,284')
+    expect(formatCount(0)).toBe('0')
+    expect(formatCount(null)).toBe('—')
   })
 
   it.each([
-    ['en', 'Traditional Chinese, Simplified Chinese, and English'],
-    ['zh-TW', 'Traditional Chinese、Simplified Chinese和English'],
-  ])('joins a list as the language does, in %s', (tag, list) => {
+    ['en', 'Traditional Chinese, Simplified Chinese, and English', '@a.edu, @b.edu, or @c.edu', '@a.edu or @b.edu'],
+    ['zh-TW', 'Traditional Chinese、Simplified Chinese和English', '@a.edu、@b.edu或@c.edu', '@a.edu或@b.edu'],
+    ['zh-CN', 'Traditional Chinese、Simplified Chinese和English', '@a.edu、@b.edu或@c.edu', '@a.edu或@b.edu'],
+  ])('joins a list as the language does, all of it or one of it, in %s', (tag, all, oneOfThree, oneOfTwo) => {
     setNumberLocale(tag)
-    expect(formatList(['Traditional Chinese', 'Simplified Chinese', 'English'])).toBe(list)
+    expect(formatList(['Traditional Chinese', 'Simplified Chinese', 'English'])).toBe(all)
+    expect(formatList(['@a.edu', '@b.edu', '@c.edu'], 'or')).toBe(oneOfThree)
+    expect(formatList(['@a.edu', '@b.edu'], 'or')).toBe(oneOfTwo)
+    expect(formatList(['@a.edu'], 'or')).toBe('@a.edu')
     expect(formatList([])).toBe('')
   })
 })

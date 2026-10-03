@@ -132,14 +132,14 @@ watch(offersFilter, (on) => {
             <StatusTag vocab="role" :value="m.role" />
             <span v-if="facts.get(m.course_id)?.term" class="app-muted">{{ facts.get(m.course_id)?.term }}</span>
             <span v-if="m.expires_at" class="app-muted">
-              {{ t('home.expires', { t: '' }) }}<TimeText :value="m.expires_at" relative />
+              {{ t('home.expires', { t: '' }) }}<TimeText :value="m.expires_at" relative cutoff />
             </span>
           </div>
           <p v-if="facts.get(m.course_id)?.next" class="course-card__due">
             <el-icon aria-hidden="true"><Calendar /></el-icon>
             <i18n-t keypath="home.nextDue" tag="span" scope="global">
               <template #title>{{ facts.get(m.course_id)!.next!.title }}</template>
-              <template #when><TimeText :value="facts.get(m.course_id)!.next!.dueAt" relative /></template>
+              <template #when><TimeText :value="facts.get(m.course_id)!.next!.dueAt" relative cutoff /></template>
             </i18n-t>
           </p>
           <!-- What waits for the caller here, as the course's overview says it (AttentionCard). -->

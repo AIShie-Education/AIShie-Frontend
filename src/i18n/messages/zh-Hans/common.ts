@@ -34,10 +34,22 @@ export default {
   },
   // A label and its value, as the language writes them: "Model calls: 380", 「模型呼叫：380」.
   pair: '{label}：{value}',
+  // What goes between the parts of a line of facts about one thing: "PDF · 1.2 MB", "Yuki · Homework 1".
+  sep: ' · ',
+  // A word about something, after it in brackets: "Due 2026-10-08 23:59 (in 5 days)".
+  aside: '{text}（{aside}）',
+  // The same word alone, in its brackets, after something drawn apart: " (30%)", with the space before it
+  // that the language puts there (none before 「（30%）」).
+  bracketed: '（{text}）',
+  // A course's code and its section where only a string will do (a label read out, a QR code's name, an
+  // option in a list); a page draws them with span.app-sep instead.
+  courseCode: '{code}·{section}',
   labels: {
     id: 'ID',
     scoped: '受范围限制',
     scopedHelp: '只限于席位范围内的学生与作业',
+    // What a scoped permission covers, then that the seat's scope bounds it.
+    scopedTip: '{help}——{scoped}',
     pasteMemberId: '粘贴成员 ID',
     changed: '已更改',
     name: '名称',
@@ -54,6 +66,8 @@ export default {
     yes: '是',
     no: '否',
     optional: '选填',
+    // After a field's label, its own word, with the space the language puts before it: "Email (optional)".
+    optionalTag: '（选填）',
     loading: '加载中…',
     empty: '尚无内容',
     all: '全部',
@@ -188,7 +202,9 @@ export default {
     ago: '{t}前',
     due: '截止{t}',
     noDue: '无截止日期',
-    dailyReset: '{zone} {time}',
+    zoned: '{zone} {time}',
+    // A cut-off with its zone, and how far off it is: "2026-10-08 23:59 (Hong Kong Standard Time), in 5 days".
+    cutoff: '{at}（{rel}）',
   },
   pagination: {
     loadMore: '加载更多',
@@ -211,7 +227,6 @@ export default {
     limitVersion: '最多{files}个文件，每个最大{size}，合计最大{total}',
     list: '正在上传的文件',
     progressOf: '“{name}”的上传进度',
-    percent: '{n}%',
     of: '{loaded}／{total}',
     speed: '{speed}/秒',
     left: {
@@ -255,7 +270,7 @@ export default {
     },
     announce: {
       added: '已添加{n}个文件。',
-      progress: '“{name}”已上传{percent}%。',
+      progress: '“{name}”已上传{percent}。',
       done: '“{name}”已上传。',
       failed: '“{name}”未能上传：{reason}',
       cancelled: '已取消上传“{name}”。',

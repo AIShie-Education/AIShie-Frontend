@@ -18,6 +18,7 @@ import { problemsOf } from '@/views/account/components/agents/hosting'
 import PriceDialog from './PriceDialog.vue'
 import UnpricedNotice from './UnpricedNotice.vue'
 import { adminErrorText } from './runtimeAdmin'
+import { formatMoney } from '@/utils/format'
 
 const props = defineProps<{
   table: PriceTable
@@ -186,15 +187,19 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
               </el-tag>
             </span>
             <span class="price-cell__meta">
-              {{ row.provider }} · <code>{{ row.id }}</code> ·
-              <span class="price-cell__from">{{ t('runtimeAdmin.prices.fromDay', { day: row.from }) }}</span>
+              {{ row.provider }}{{ t('common.sep') }}<code>{{ row.id }}</code
+              >{{ t('common.sep')
+              }}<span class="price-cell__from">{{ t('runtimeAdmin.prices.fromDay', { day: row.from }) }}</span>
             </span>
             <span v-if="row.overridden" class="price-cell__replaced">{{ t('runtimeAdmin.prices.overridden') }}</span>
             <template v-if="narrow">
               <span class="price-cell__meta price-cell__all">
-                <span v-for="k in PRICE_KEYS" :key="k" class="price-cell__price"
-                  >{{ t(`runtimeAdmin.prices.short.${k}`) }} ${{ row.usd_per_mtok[k] }}</span
-                >
+                <span v-for="k in PRICE_KEYS" :key="k" class="price-cell__price">{{
+                  t('runtimeAdmin.prices.shortPrice', {
+                    kind: t(`runtimeAdmin.prices.short.${k}`),
+                    price: formatMoney(row.usd_per_mtok[k], { exact: true }),
+                  })
+                }}</span>
               </span>
               <div v-if="row.source === 'site'" class="price-cell__actions">
                 <el-button link type="primary" :disabled="!!busy" class="price-cell__edit" @click="openEdit(row)">
@@ -217,7 +222,9 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
           align="right"
         >
           <template #default="{ row }">
-            <span class="price-cell__num" :class="`price-cell__${k}`">${{ row.usd_per_mtok[k] }}</span>
+            <span class="price-cell__num" :class="`price-cell__${k}`">{{
+              formatMoney(row.usd_per_mtok[k], { exact: true })
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column :label="t('runtimeAdmin.offers.actions')" min-width="104">
@@ -303,9 +310,14 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
 .price-cell__meta code {
   word-break: break-all;
 }
-/* Narrow, the four prices on a line of their own, apart. */
-.price-cell__price + .price-cell__price {
-  margin-left: 8px;
+/* Narrow, the four prices on a line of their own, apart, each whole: one that does not fit goes to the next line. */
+.price-cell__all {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 8px;
+}
+.price-cell__price {
+  white-space: nowrap;
 }
 .price-cell__num {
   font-variant-numeric: tabular-nums;

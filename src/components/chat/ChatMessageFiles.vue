@@ -19,6 +19,7 @@ import { attachmentPreviewFiles, openPreview } from '@/components/preview/viewer
 import { formatBytes } from '@/utils/format'
 import { renditionStage } from '@/utils/rendition'
 import { downloadAttachment, FILE_ICON, fileKind, hasThumbnail, REFUSAL_SCOPE, thumbnailOf } from './attachments'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -29,7 +30,7 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const kindOf = (f: MessageAttachment) => fileKind(f.content_type, f.filename)
-const meta = (f: MessageAttachment) => `${t(`common.fileKind.${kindOf(f)}`)} · ${formatBytes(f.byte_size)}`
+const meta = (f: MessageAttachment) => joinParts([t(`common.fileKind.${kindOf(f)}`), formatBytes(f.byte_size)])
 /** Its PDF rendition is done: it is previewed as that PDF. */
 const hasPdf = (f: MessageAttachment) => renditionStage(f.rendition) === 'done'
 
@@ -104,7 +105,12 @@ async function download(f: MessageAttachment) {
       <button
         type="button"
         class="msg-file__open"
-        :aria-label="`${t('preview.open', { name: f.filename })} (${meta(f)}${hasPdf(f) ? ' · PDF' : ''})`"
+        :aria-label="
+          t('common.aside', {
+            text: t('preview.open', { name: f.filename }),
+            aside: joinParts([meta(f), hasPdf(f) && 'PDF']),
+          })
+        "
         :title="t('common.pair', { label: t('preview.openTip'), value: f.filename })"
         @click="preview(f)"
       >

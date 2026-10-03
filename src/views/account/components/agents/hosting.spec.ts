@@ -275,15 +275,15 @@ describe('seat sentences', () => {
 
   it('read naturally in Traditional Chinese', () => {
     setLocale('zh-Hant')
-    expect(seatSentences(seat(), t)[0]).toBe('在CS101 · A作為你的代表：讀取課程資料和學生作業；只回答你。')
+    expect(seatSentences(seat(), t)[0]).toBe('在CS101·A作為你的代表：讀取課程資料和學生作業；只回答你。')
     expect(seatSentences(seat({ reads_work: false, reads_material: false, kind: 'member' }), t)[0]).toBe(
-      'CS101 · A的成員：讀取不到任何內容。',
+      'CS101·A的成員：讀取不到任何內容。',
     )
   })
 
   it('read naturally in Simplified Chinese', () => {
     setLocale('zh-Hans')
-    expect(seatSentences(seat(), t)[0]).toBe('在CS101 · A作为你的代表：读取课程教材和学生作业；只回答你。')
+    expect(seatSentences(seat(), t)[0]).toBe('在CS101·A作为你的代表：读取课程教材和学生作业；只回答你。')
     expect(seatSentences(seat({ kind: 'course_tutor', section: '', reads_work: false }), t)[0]).toBe(
       'CS101的辅导智能体：回答所有学生；读取课程教材。',
     )

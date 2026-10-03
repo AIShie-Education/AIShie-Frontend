@@ -160,8 +160,10 @@ async function save() {
               <div class="term-cell">
                 <span class="term-name">{{ row.name }}</span>
                 <span v-if="narrow" class="term-meta">
-                  <span class="term-day">{{ row.starts_on }} – {{ row.ends_on }}</span> ·
-                  <span class="term-length">{{ lengthOf(row) }}</span>
+                  <span class="term-day">{{
+                    t('admin.courses.termDates', { from: row.starts_on, to: row.ends_on })
+                  }}</span
+                  >{{ t('common.sep') }}<span class="term-length">{{ lengthOf(row) }}</span>
                 </span>
               </div>
             </template>

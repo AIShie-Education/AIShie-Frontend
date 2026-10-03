@@ -153,7 +153,7 @@ const expiresAt = computed(() => str(p.value.expires_at))
       <div>
         <dt>{{ t('actions.fields.expires_at') }}</dt>
         <dd>
-          <TimeText v-if="expiresAt" :value="expiresAt" />
+          <TimeText v-if="expiresAt" :value="expiresAt" cutoff />
           <span v-else class="delegate-grant__muted">{{ t('actions.delegate.noExpiry', { owner: ownerText }) }}</span>
         </dd>
       </div>

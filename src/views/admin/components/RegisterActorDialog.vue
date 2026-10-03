@@ -231,14 +231,14 @@ async function submit() {
       </el-form-item>
       <el-form-item v-if="form.kind === 'human'" prop="email">
         <template #label>
-          {{ t('admin.register.email') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.register.email') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <el-input v-model="form.email" type="email" maxlength="320" autocomplete="off" />
         <div class="app-form-hint register__block">{{ t('admin.register.emailHint') }}</div>
       </el-form-item>
       <el-form-item v-if="form.kind === 'human'" prop="login_id">
         <template #label>
-          {{ t('admin.loginId.label') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.loginId.label') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <el-input
           v-model="form.login_id"
@@ -258,7 +258,7 @@ async function submit() {
       </el-form-item>
       <el-form-item v-if="form.kind === 'agent'">
         <template #label>
-          {{ t('admin.register.owner') }} <span class="app-muted">({{ t('common.labels.optional') }})</span>
+          {{ t('admin.register.owner') }}<span class="app-muted">{{ t('common.labels.optionalTag') }}</span>
         </template>
         <OwnerSelect v-model="form.owner" @picked="(a) => (owner = a)" />
         <div class="app-form-hint register__block">

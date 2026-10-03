@@ -306,7 +306,7 @@ async function submit() {
         <div>
           <dt>{{ t('members.columns.expires') }}</dt>
           <dd>
-            <TimeText v-if="defaults.data.value.expires_at" :value="defaults.data.value.expires_at" />
+            <TimeText v-if="defaults.data.value.expires_at" :value="defaults.data.value.expires_at" cutoff />
             <span v-else>{{ t('courseAgents.addDialog.noEnd') }}</span>
           </dd>
         </div>

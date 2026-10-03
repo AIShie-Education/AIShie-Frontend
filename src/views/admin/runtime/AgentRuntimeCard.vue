@@ -185,7 +185,7 @@ function forget() {
               </span>
               <span v-if="c.expires_at">
                 <span class="agent-runtime-card__k">{{ t('runtimeAdmin.agentRuntime.expires') }}</span>
-                <TimeText :value="c.expires_at" />
+                <TimeText :value="c.expires_at" cutoff />
               </span>
               <span v-if="c.revoked_at">
                 <span class="agent-runtime-card__k">{{ t('runtimeAdmin.agentRuntime.revokedAt') }}</span>

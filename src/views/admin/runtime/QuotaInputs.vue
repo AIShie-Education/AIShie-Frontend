@@ -4,7 +4,7 @@
 import { useI18n } from 'vue-i18n'
 import type { DailyQuota } from '@/api/runtime-types'
 import { QUOTA_MAX, type QuotaFields } from './runtimeAdmin'
-import { formatMoney } from '@/utils/format'
+import { formatMoney, USD_SIGN } from '@/utils/format'
 
 const model = defineModel<QuotaFields>({ required: true })
 defineProps<{
@@ -51,7 +51,7 @@ const { t } = useI18n()
         :aria-label="t('runtimeAdmin.money.usdOf', { what: label })"
         class="quota-inputs__input"
       >
-        <template #prepend>$</template>
+        <template #prepend>{{ USD_SIGN }}</template>
       </el-input>
       <div v-if="server !== undefined" class="app-form-hint">
         {{

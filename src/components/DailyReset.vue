@@ -19,7 +19,7 @@ const now = useNow()
 const at = computed(() => nextDailyReset(props.since, now.value))
 // Recomputed when the language changes, so that the zone's name follows it.
 const shown = computed(
-  () => (ui.locale, t('common.time.dailyReset', { time: formatTime(at.value), zone: timeZoneName(at.value) })),
+  () => (ui.locale, t('common.time.zoned', { time: formatTime(at.value), zone: timeZoneName(at.value) })),
 )
 </script>
 

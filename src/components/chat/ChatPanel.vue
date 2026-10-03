@@ -70,6 +70,7 @@ import {
   type WindowBox,
 } from './panel'
 import { courseLabel } from './seat'
+import { joinParts } from '@/utils/parts'
 
 const { t } = useI18n()
 const chat = useChatStore()
@@ -416,7 +417,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
           v-for="m in chat.courses"
           :key="m.course_id"
           :value="m.course_id"
-          :label="`${courseLabel(m, chat.courses)} · ${m.title}`"
+          :label="joinParts([courseLabel(m, chat.courses), m.title])"
         />
       </el-select>
       <span v-else class="chat-panel__spacer" />

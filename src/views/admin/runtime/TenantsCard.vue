@@ -19,6 +19,7 @@ import { problemsOf } from '@/views/account/components/agents/hosting'
 import QuotaInputs from './QuotaInputs.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { adminErrorText, quotaFieldsOf, quotaFieldsProblems, quotaInputOf, type QuotaFields } from './runtimeAdmin'
+import { joinParts } from '@/utils/parts'
 
 const { t } = useI18n()
 // Every column where the card has the 690 px they take; with less, a
@@ -192,12 +193,12 @@ function serverText(q: TenantQuota): string {
                   {{ t(`runtimeAdmin.tenants.sources.${row.source}`) }}
                 </el-tag>
                 <span class="tenant-cell__meta">
-                  {{ answersText(row.per_day.answers) }} · {{ usdText(row.per_day.usd) }}
+                  {{ joinParts([answersText(row.per_day.answers), usdText(row.per_day.usd)]) }}
                 </span>
                 <span v-if="row.source === 'site' && row.config_per_day" class="tenant-cell__server">
                   {{
                     t('runtimeAdmin.tenants.server', {
-                      v: `${answersText(row.config_per_day.answers)} · ${usdText(row.config_per_day.usd)}`,
+                      v: joinParts([answersText(row.config_per_day.answers), usdText(row.config_per_day.usd)]),
                     })
                   }}
                 </span>

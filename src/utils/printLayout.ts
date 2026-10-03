@@ -17,6 +17,7 @@
 // for its fonts and images, and calls the frame's print(); the frame goes
 // once the print window closes, and the focus goes back where it was. Its
 // title is the PDF's file name.
+import { i18n } from '@/i18n'
 import { renderMarkdown } from './markdown'
 
 /** What is laid out: the text, and what is said above it. */
@@ -74,7 +75,10 @@ export interface PrintEntry {
 export function entriesHtml(entries: PrintEntry[]): string {
   return entries
     .map((e) => {
-      const when = e.when ? ` <span class="print-entry__when">· ${escapeHtml(e.when)}</span>` : ''
+      // The dot before when is the language's (common.sep), its spaces with it.
+      const when = e.when
+        ? `<span class="print-entry__when">${escapeHtml(i18n.global.t('common.sep') + e.when)}</span>`
+        : ''
       const body = e.note
         ? `<p class="print-entry__note"><em>${escapeHtml(e.note)}</em></p>`
         : e.markdown

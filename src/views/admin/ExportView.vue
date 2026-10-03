@@ -56,6 +56,7 @@ import {
   type RememberedExport,
   type ScopeKind,
 } from './export/conversationExport'
+import { zonedText } from '@/utils/parts'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -355,7 +356,7 @@ const scopeOptions = computed(() =>
       >
         <i18n-t keypath="auditExport.privacy.body" tag="p" scope="global" class="export-outcome__privacy-body">
           <template #time
-            ><strong>{{ dayjs(outcome.expires_at).format('LLL') }}</strong></template
+            ><strong>{{ zonedText(outcome.expires_at) }}</strong></template
           >
         </i18n-t>
       </el-alert>

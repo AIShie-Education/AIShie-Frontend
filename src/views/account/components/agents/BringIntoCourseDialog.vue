@@ -25,6 +25,7 @@ import AsyncState from '@/components/AsyncState.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import TimeText from '@/components/TimeText.vue'
 import { assignmentReach, courseChoices, grantedPerms, studentReach, toPermLevels } from './agents'
+import { courseCodeText } from '@/utils/parts'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ agent: AgentFull }>()
@@ -112,7 +113,7 @@ function assignmentsText(): string {
 }
 
 function courseName(m: { code: string; section: string }): string {
-  return m.section ? `${m.code} · ${m.section}` : m.code
+  return courseCodeText(m.code, m.section)
 }
 
 // --- Bringing it in ---------------------------------------------------------------------
@@ -218,7 +219,7 @@ async function submit() {
               <dd>{{ assignmentsText() }}</dd>
               <dt>{{ t('agents.bring.ends') }}</dt>
               <dd>
-                <TimeText v-if="defaults.expires_at" :value="defaults.expires_at" />
+                <TimeText v-if="defaults.expires_at" :value="defaults.expires_at" cutoff />
                 <template v-else>{{ t('agents.bring.noEnd') }}</template>
               </dd>
               <dt>{{ t('agents.bring.may') }}</dt>

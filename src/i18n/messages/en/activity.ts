@@ -30,7 +30,7 @@ export default {
   olderFailed: 'Could not load older activity',
   runMore: 'and {n} more like this',
   runLess: 'Show fewer',
-  runSince: 'earliest',
+  runSince: 'earliest {time}',
   today: 'Today',
   yesterday: 'Yesterday',
   viaAction: 'The action behind it',

@@ -76,7 +76,7 @@ function revoke() {
         </dd>
         <dt>{{ t('agents.tokens.expires') }}</dt>
         <dd>
-          <TimeText v-if="issued.expires_at" :value="issued.expires_at" />
+          <TimeText v-if="issued.expires_at" :value="issued.expires_at" cutoff />
           <span v-else>{{ t('agents.tokens.noExpiry') }}</span>
         </dd>
       </dl>

@@ -30,7 +30,7 @@ import { filesFrom, useDropTarget, usePageDrop } from '@/composables/useFileDrop
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useUploadQueue, type UploadItem, type UploadQueue } from '@/composables/useUploadQueue'
 import { useUploadText } from '@/composables/useUploadText'
-import { formatBytes } from '@/utils/format'
+import { formatBytes, formatPct } from '@/utils/format'
 
 const model = defineModel<UploadedFile[]>({ default: () => [] })
 /** True while any file is still to upload. */
@@ -259,7 +259,7 @@ watch(
       if (before === now) continue
       said.set(item.id, now)
       if (item.status === 'uploading' && quarter > 0 && quarter < 4 && before?.startsWith('uploading')) {
-        lines.push(t('common.upload.announce.progress', { name: item.name, percent: quarter * 25 }))
+        lines.push(t('common.upload.announce.progress', { name: item.name, percent: formatPct(quarter / 4, 0) }))
       } else if (item.status === 'done') {
         lines.push(t('common.upload.announce.done', { name: item.name }))
       } else if (item.status === 'failed') {

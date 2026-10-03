@@ -20,6 +20,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import { formatList, formatMoney, formatNumber } from '@/utils/format'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { COST_SPAN_DAYS, costRange, utcToday } from './runtimeAdmin'
+import { joinParts } from '@/utils/parts'
 
 const { t, te } = useI18n()
 // A phone's layout, a group's model calls under it and its tokens left out (the
@@ -171,7 +172,7 @@ function toPrices() {
         </p>
         <el-alert v-if="unpricedTotal" type="warning" :closable="false" show-icon class="costs-card__unpriced">
           <template #title>
-            {{ t('runtimeAdmin.costs.unpriced', { n: n(unpricedTotal) }, unpricedTotal) }}
+            {{ t('runtimeAdmin.costs.unpriced', { n: n(unpricedTotal), zero: formatMoney(0) }, unpricedTotal) }}
           </template>
           <el-button size="small" class="costs-card__to-prices" @click="toPrices">
             {{ t('runtimeAdmin.costs.toPrices') }}
@@ -202,12 +203,14 @@ function toPrices() {
                   <code v-else-if="row.tenant_id" class="cost-cell__id">{{ row.tenant_id }}</code>
                 </template>
                 <template v-else-if="report.group === 'model'">
-                  <span class="cost-cell__model">{{ row.provider }} · {{ row.model }}</span>
+                  <span class="cost-cell__model">{{ joinParts([row.provider, row.model]) }}</span>
                   <span class="cost-cell__meta">
-                    {{ row.key_source ? t(`runtimeAdmin.costs.keySources.${row.key_source}`) : '' }}
-                    <template v-if="row.offers?.length">
-                      · {{ t('runtimeAdmin.costs.offers', { ids: formatList(row.offers) }) }}</template
-                    >
+                    {{
+                      joinParts([
+                        row.key_source && t(`runtimeAdmin.costs.keySources.${row.key_source}`),
+                        row.offers?.length && t('runtimeAdmin.costs.offers', { ids: formatList(row.offers) }),
+                      ])
+                    }}
                   </span>
                 </template>
                 <template v-else-if="report.group === 'key_source'">

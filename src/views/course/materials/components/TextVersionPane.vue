@@ -50,6 +50,7 @@ import {
   textStatus,
   type WholeText,
 } from './textVersion'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -189,7 +190,7 @@ function printSource(): PrintRequest {
     lines: [
       props.docTitle,
       courseLine(props.courseId),
-      `${t('materials.document.version', { seq: props.seq })} · ${when}`,
+      joinParts([t('materials.document.version', { seq: props.seq }), when]),
     ],
     body: { markdown: body.value },
     footer: t('preview.print.textVersionNote'),

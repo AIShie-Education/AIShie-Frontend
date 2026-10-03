@@ -66,6 +66,7 @@ import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintL
 import type { DocumentFile } from '@/api/types'
 import TextFilePicker from './components/TextFilePicker.vue'
 import { textTabShown } from './components/textVersion'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string; documentId: string }>()
 const { t } = useI18n()
@@ -455,7 +456,7 @@ function noteSource(): PrintRequest {
   const v = shown.value!
   const when = dateLine(v.created_at)
   // An owned file has one version, which needs no number.
-  const version = courseLevel.value ? `${t('materials.document.version', { seq: v.seq })} · ${when}` : when
+  const version = courseLevel.value ? joinParts([t('materials.document.version', { seq: v.seq }), when]) : when
   return {
     title: d.title,
     lines: [courseLine(props.courseId), version],

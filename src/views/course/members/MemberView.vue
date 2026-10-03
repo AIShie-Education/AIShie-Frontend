@@ -454,10 +454,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
           @close="proposedAction = null"
         >
           <router-link :to="{ name: 'course-action', params: { courseId, actionId: proposedAction } }">
-            {{ t('members.proposed.view') }}
-          </router-link>
-          ·
-          <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+            {{ t('members.proposed.view') }} </router-link
+          >{{ t('common.sep')
+          }}<router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
             t('members.proposed.mine')
           }}</router-link>
         </el-alert>
@@ -577,10 +576,13 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
               </div>
             </el-descriptions-item>
             <el-descriptions-item :label="t('members.columns.expires')">
-              <template v-if="m.expires_at">
-                <TimeText :value="m.expires_at" />
-                <span class="app-muted member__gap">(<TimeText :value="m.expires_at" relative />)</span>
-              </template>
+              <!-- A cut-off: the time with its zone, the exact UTC on hover. -->
+              <i18n-t v-if="m.expires_at" keypath="common.time.cutoff" tag="span" scope="global">
+                <template #at><TimeText :value="m.expires_at" cutoff /></template>
+                <template #rel
+                  ><span class="app-muted"><TimeText :value="m.expires_at" relative /></span
+                ></template>
+              </i18n-t>
               <span v-else>{{ t('members.detail.noExpiry') }}</span>
               <div v-if="m.expires_at && live" class="member__hint">{{ t('members.detail.expiresHelp') }}</div>
             </el-descriptions-item>

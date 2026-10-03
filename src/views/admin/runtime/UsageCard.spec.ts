@@ -43,7 +43,7 @@ describe('UsageCard', () => {
     const w = await card()
     expect(s.to('GET', ADMIN.usage)).toHaveLength(1)
     expect(w.find('.usage-card__answers').text()).toBe('262')
-    expect(w.find('.usage-card__of').text()).toBe('of 5000 a day')
+    expect(w.find('.usage-card__of').text()).toBe('of 5,000 a day')
     expect(w.find('.usage-card__calls').text()).toBe('700')
     expect(w.find('.usage-card__cost').text()).toBe('US$2.12')
     expect(w.find('.usage-card__limits').text()).toBe('Up to 150 a day per owner, and 20 per person asking.')
@@ -131,7 +131,7 @@ describe('UsageCard', () => {
   it('reads in Traditional Chinese', async () => {
     setLocale('zh-Hant')
     const w = await card()
-    expect(w.find('.usage-card__of').text()).toBe('每日上限5000')
+    expect(w.find('.usage-card__of').text()).toBe('每日上限5,000')
     expect(rows(w)[0][1]).toBe('150 / 150 今日已用完')
   })
 })

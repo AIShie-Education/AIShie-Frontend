@@ -100,7 +100,7 @@ function finish() {
         <div>
           <dt>{{ t('admin.token.expires') }}</dt>
           <dd>
-            <TimeText v-if="issued.expires_at" :value="issued.expires_at" />
+            <TimeText v-if="issued.expires_at" :value="issued.expires_at" cutoff />
             <span v-else>{{ t('admin.token.noExpiry') }}</span>
           </dd>
         </div>

@@ -82,6 +82,7 @@ import ImageView from './ImageView.vue'
 import TextView from './TextView.vue'
 import { ObjectUrls } from './objectUrls'
 import { closePreview, previewState, showPreviewAt, type PreviewFile } from './viewer'
+import { joinParts } from '@/utils/parts'
 
 // pdf.js and all it brings come with this, and only once a PDF is opened.
 const PdfView = defineAsyncComponent(() => import('./PdfView.vue'))
@@ -115,8 +116,11 @@ const meta = computed(() => {
   const f = file.value
   if (!f) return ''
   const pages = shownRendition.value?.page_count
-  const pdf = pdfReady.value && pages ? ` · ${t('preview.rendition.pages', { n: pages }, pages)}` : ''
-  return `${t(`common.fileKind.${iconKind.value}`)} · ${formatBytes(f.byteSize)}${pdf}`
+  return joinParts([
+    t(`common.fileKind.${iconKind.value}`),
+    formatBytes(f.byteSize),
+    pdfReady.value && pages ? t('preview.rendition.pages', { n: pages }, pages) : null,
+  ])
 })
 const many = computed(() => state.files.length > 1)
 

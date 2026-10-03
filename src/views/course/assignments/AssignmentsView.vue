@@ -244,7 +244,7 @@ function refresh() {
           >
             <template #default="{ row }">
               <div v-if="row.due_at" class="assignments-view__due">
-                <TimeText :value="row.due_at" relative />
+                <TimeText :value="row.due_at" relative cutoff />
                 <el-tag v-if="overdue(row)" type="danger" size="small" disable-transitions>
                   {{ t('assignments.state.overdue') }}
                 </el-tag>

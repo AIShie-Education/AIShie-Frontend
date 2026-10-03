@@ -502,7 +502,7 @@ describe('ChatPane', () => {
     const html = src.body.html as string
     // Who wrote each, in order; the person's words as they are, escaped; the agent's as Markdown.
     const who = [...html.matchAll(/print-entry__who">([^<]*)</g)].map((m) => m[1])
-    expect(who).toEqual(['You ', 'Course tutor ', 'You '])
+    expect(who).toEqual(['You', 'Course tutor', 'You'])
     expect(html).toContain('What is &lt;b&gt;recursion&lt;/b&gt;?')
     expect(html).toContain('<strong>A function</strong> that calls itself.')
     expect(html).toContain('Files: notes.pdf')

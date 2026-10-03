@@ -94,7 +94,9 @@ async function find() {
 function choose(who: NonNullable<typeof found.value>) {
   found.value = who
   model.value = who.id
-  label.value = who.name ? `${who.name} (${who.by})` : t('auditExport.participant.byId', { id: who.id })
+  label.value = who.name
+    ? t('common.aside', { text: who.name, aside: who.by })
+    : t('auditExport.participant.byId', { id: who.id })
   typed.value = ''
 }
 

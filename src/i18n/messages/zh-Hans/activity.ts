@@ -30,7 +30,7 @@ export default {
   olderFailed: '无法加载较早的动态',
   runMore: '另有{n}条相同的动态',
   runLess: '收起',
-  runSince: '最早一条',
+  runSince: '最早一条{time}',
   today: '今天',
   yesterday: '昨天',
   viaAction: '相关操作',

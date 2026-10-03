@@ -19,6 +19,7 @@ import type { MessageSource } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
 import { documentPreviewFiles, openPreview } from '@/components/preview/viewer'
 import { versionFilesOf } from '@/utils/documentFiles'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   /** The conversation's course: the document is read there. */
@@ -39,13 +40,11 @@ const title = computed(() => t('chat.sources.quoted', { title: s.value.title ?? 
 const where = computed(() => {
   if (shownAs.value === 'other') return t('chat.sources.other')
   const v = s.value
-  return [
+  return joinParts([
     v.file_id ? v.filename : null,
     v.page ? t('chat.sources.page', { n: v.page }) : v.slide ? t('chat.sources.slide', { n: v.slide }) : null,
     v.published === false && v.seq ? t('chat.sources.version', { seq: v.seq }) : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  ])
 })
 const label = computed(() =>
   where.value ? t('chat.sources.entry', { title: title.value, where: where.value }) : title.value,

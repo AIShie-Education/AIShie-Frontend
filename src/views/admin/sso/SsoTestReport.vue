@@ -10,6 +10,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { problemReason, reportRead, type SsoReport } from './ssoAdmin'
+import { formatList } from '@/utils/format'
 
 const props = defineProps<{ report: SsoReport }>()
 const { t } = useI18n()
@@ -110,7 +111,7 @@ const supported = computed(() =>
         <template v-for="s in supported" :key="s.key">
           <dt>{{ t(`ssoAdmin.test.support.${s.key}`) }}</dt>
           <dd>
-            <span v-if="s.values.length">{{ s.values.join(', ') }}</span>
+            <span v-if="s.values.length">{{ formatList(s.values) }}</span>
             <span v-else class="app-muted">{{ t('ssoAdmin.test.notSaid') }}</span>
           </dd>
         </template>

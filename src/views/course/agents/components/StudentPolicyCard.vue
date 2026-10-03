@@ -21,6 +21,7 @@ import {
   type LevelTally,
   type StudentAgentPolicy,
 } from './courseAgents'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -69,7 +70,7 @@ function describe(tally: LevelTally, name: (l: AutonomyLevel) => string): string
   const parts = (Object.entries(tally.counts) as [AutonomyLevel, number][])
     .sort((a, b) => levelRank(a[0]) - levelRank(b[0]))
     .map(([l, n]) => `${name(l)} ${n}`)
-  return t('courseAgents.policy.mixed', { summary: parts.join(' · ') })
+  return t('courseAgents.policy.mixed', { summary: joinParts(parts) })
 }
 const agentsText = computed(() =>
   describe(agents.value, (l) => {

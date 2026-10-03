@@ -130,7 +130,7 @@ defineExpose({ revokeById })
               </span>
               <span>
                 <span class="token__k">{{ t('agents.tokens.expires') }}</span>
-                <TimeText v-if="c.expires_at" :value="c.expires_at" />
+                <TimeText v-if="c.expires_at" :value="c.expires_at" cutoff />
                 <template v-else>{{ t('agents.tokens.noExpiry') }}</template>
               </span>
               <span v-if="issuer(c)">

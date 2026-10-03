@@ -43,7 +43,7 @@ const elapsed = computed(() => {
     <ChatSpinner class="chat-status__glyph" />
     <span class="chat-status__label">{{ label }}</span>
     <span v-if="elapsed" class="chat-status__time" aria-hidden="true">{{ elapsed }}</span>
-    <span v-if="sub" class="chat-status__sub">· {{ sub }}</span>
+    <span v-if="sub" class="chat-status__sub">{{ t('common.sep').trimStart() }}{{ sub }}</span>
   </div>
 </template>
 

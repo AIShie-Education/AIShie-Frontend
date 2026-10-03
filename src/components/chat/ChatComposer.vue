@@ -36,6 +36,7 @@ import { attachmentRefusalText, type ChatAttachments } from './attachments'
 import ChatAttachmentChips from './ChatAttachmentChips.vue'
 import { BODY_MAX, bodyProblem, charCount, isSendKey } from './chat'
 import { matchMentions, triggerAt, type ComposerTrigger, type Mention } from './mentions'
+import { joinParts } from '@/utils/parts'
 
 export interface ComposerCommand {
   /** What is typed after the slash. */
@@ -309,7 +310,7 @@ const hint = computed(() => {
   const parts: string[] = []
   if (props.commands?.length) parts.push(t('chat.composer.hintCommands'))
   if (props.loadMentions) parts.push(t('chat.composer.hintMentions'))
-  return parts.join(' · ')
+  return joinParts(parts)
 })
 
 defineExpose({ focus: () => input.value?.focus() })

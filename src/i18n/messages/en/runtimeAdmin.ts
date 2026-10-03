@@ -209,7 +209,8 @@ export default {
       platform_role_required: 'Only AIshie’s platform administrators issue or revoke the transcription credential.',
     },
     today: {
-      title: 'Today (UTC)',
+      title: 'Today',
+      reset: 'The counts start again at {reset}.',
       pages: 'Pages',
       of: 'of {n}',
       documents: 'Documents',
@@ -432,6 +433,8 @@ export default {
       cache_write: 'cache write',
       output: 'out',
     },
+    // A price in a narrow row, after its kind's short name: "in US$0.40".
+    shortPrice: '{kind} {price}',
     source: 'Source',
     sources: {
       site: 'Site',
@@ -445,7 +448,7 @@ export default {
     providerPlaceholder: 'Choose or type a provider',
     providerHint: 'As the agent service names it: lower-case letters, digits and _, such as openai or openai_compatible.',
     modelHint: 'Exactly, or a pattern where * is any text, such as gpt-4.1*.',
-    fromHint: 'The day (UTC) the price starts. It may be in the future.',
+    fromHint: 'The price starts at {start}, as the day begins. It may be in the future.',
     perMTok: 'Dollars per million tokens',
     input: 'Input',
     output: 'Output',
@@ -564,7 +567,7 @@ export default {
     all: 'Everything',
     offers: 'offers: {ids}',
     unpriced:
-      'No call went without a price. | One call had no price when it was made, and is counted as US$0. | {n} calls had no price when they were made, and are counted as US$0.',
+      'No call went without a price. | One call had no price when it was made, and is counted as {zero}. | {n} calls had no price when they were made, and are counted as {zero}.',
     unpricedShort: '{n} unpriced',
     toPrices: 'Go to the prices',
     empty: 'Nothing was recorded in these days.',

@@ -12,6 +12,7 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { formatDate } from '@/utils/format'
 import { printDocument, type PrintSource } from '@/utils/printLayout'
+import { joinParts } from '@/utils/parts'
 
 const t = (key: string, args: Record<string, unknown> = {}) => i18n.global.t(key, args)
 
@@ -25,7 +26,7 @@ export function courseLine(courseId: string | null | undefined): string | null {
   const open = useCourseStore().course
   const course = seat ?? (open?.id === courseId ? open : null)
   if (!course) return null
-  return course.code && course.code !== course.title ? `${course.code} · ${course.title}` : course.title
+  return course.code && course.code !== course.title ? joinParts([course.code, course.title]) : course.title
 }
 
 /** The date a header says: when the text was written, or today. */

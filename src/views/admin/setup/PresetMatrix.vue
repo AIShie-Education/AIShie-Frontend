@@ -30,7 +30,7 @@ function metaLabel(key: string): string {
 /** What a permission covers, and for a scoped one that a seat's scope bounds it (the marker's meaning). */
 function permTip(p: Perm): string {
   const help = t(`enums.permHelp.${p}`)
-  return SCOPED_PERMS.includes(p) ? `${help} — ${t('common.labels.scopedHelp')}` : help
+  return SCOPED_PERMS.includes(p) ? t('common.labels.scopedTip', { help, scoped: t('common.labels.scopedHelp') }) : help
 }
 
 function rowClass({ row }: { row: Row }): string {
@@ -73,8 +73,8 @@ function rowClass({ row }: { row: Row }): string {
           <span class="matrix-head__name">{{ presetLabel(p) }}</span>
           <span class="matrix-head__where">
             {{ isBuiltin(p) ? t('adminSetup.presets.builtin') : (deptName(p.dept_id) ?? t('adminSetup.presets.own')) }}
-            <template v-if="hasOwnLabel(p)">
-              · <code class="matrix-head__key">{{ p.name }}</code></template
+            <template v-if="hasOwnLabel(p)"
+              >{{ t('common.sep') }}<code class="matrix-head__key">{{ p.name }}</code></template
             >
           </span>
         </button>

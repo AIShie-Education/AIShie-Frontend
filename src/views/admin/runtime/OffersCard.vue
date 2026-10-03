@@ -19,6 +19,7 @@ import OfferDialog from './OfferDialog.vue'
 import OfferKey from './OfferKey.vue'
 import OfferStatus from './OfferStatus.vue'
 import { adminErrorText } from './runtimeAdmin'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   plan: SchoolPlan
@@ -196,10 +197,10 @@ function openEdit(o: PlanOffer) {
         <template #default="{ row }">
           <div class="offer-cell" :data-offer="rowKey(row)">
             <span class="offer-cell__label">{{ row.label }}</span>
-            <span class="offer-cell__model">{{ providerName(row.provider) }} · {{ row.model }}</span>
+            <span class="offer-cell__model">{{ joinParts([providerName(row.provider), row.model]) }}</span>
             <span class="offer-cell__meta">
               <code class="offer-cell__id">{{ row.id }}</code>
-              <template v-if="where(row)"> · {{ where(row) }}</template>
+              <template v-if="where(row)">{{ t('common.sep') }}{{ where(row) }}</template>
             </span>
             <template v-if="narrow">
               <OfferStatus :offer="row" />

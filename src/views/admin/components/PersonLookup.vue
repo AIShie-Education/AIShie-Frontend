@@ -153,14 +153,13 @@ defineExpose({ find, show, clear })
       >
         <template v-if="!person.can_sign_in" #meta>
           <span>{{ t('deptAdmin.lookup.notSignedIn') }}</span>
-          <template v-if="person.invite_expires_at">
-            ·
-            <i18n-t
+          <template v-if="person.invite_expires_at"
+            >{{ t('common.sep') }}<i18n-t
               :keypath="Date.parse(person.invite_expires_at) > Date.now() ? 'deptAdmin.lookup.invitePending' : 'deptAdmin.lookup.inviteExpired'"
               tag="span"
               scope="global"
             >
-              <template #date><TimeText :value="person.invite_expires_at" /></template>
+              <template #date><TimeText :value="person.invite_expires_at" cutoff /></template>
             </i18n-t>
           </template>
         </template>

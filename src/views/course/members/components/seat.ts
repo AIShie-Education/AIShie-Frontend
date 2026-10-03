@@ -16,7 +16,8 @@ import {
 import { useCourseStore } from '@/stores/course'
 import { i18n } from '@/i18n'
 import { ceilingRefusalText } from '@/utils/ceilings'
-import { formatDateTime, shortId } from '@/utils/format'
+import { shortId } from '@/utils/format'
+import { zonedText } from '@/utils/parts'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
 const te = (key: string): boolean => (i18n.global as unknown as { te: (k: string) => boolean }).te(key)
@@ -282,7 +283,7 @@ export function grantProblems(after: Shape): string[] {
   if (mine.expires_at) {
     const mineEnds = new Date(mine.expires_at).getTime()
     if (!after.expiresAt || new Date(after.expiresAt).getTime() > mineEnds) {
-      out.push(t('members.grant.outlives', { t: formatDateTime(mine.expires_at) }))
+      out.push(t('members.grant.outlives', { t: zonedText(mine.expires_at) }))
     }
   }
   return out
@@ -311,7 +312,7 @@ const EXPLAIN: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/list assignments that are in your own scope/, () => t('members.refusal.assignmentsOutside')],
   [
     /your own membership ends at (\S+); you cannot give one that lasts longer/,
-    (m) => t('members.refusal.outlives', { t: formatDateTime(m[1]!) }),
+    (m) => t('members.refusal.outlives', { t: zonedText(m[1]!) }),
   ],
   [/not on your own membership/, () => t('members.refusal.ownSeat')],
   [/not on the membership you are a delegate of/, () => t('members.refusal.ownPrincipal')],
@@ -324,7 +325,7 @@ const EXPLAIN: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/a delegate reaches no further than its principal/, () => t('members.refusal.principalScope')],
   [
     /a delegate lasts no longer than its principal, whose membership ends at (\S+)/,
-    (m) => t('members.refusal.principalExpiry', { t: formatDateTime(m[1]!) }),
+    (m) => t('members.refusal.principalExpiry', { t: zonedText(m[1]!) }),
   ],
   [/a delegate never holds (\w+)/, (m) => t('members.refusal.delegateNever', { perm: permName(m[1]!) })],
   [/already has a seat in this course/, () => t('members.refusal.alreadySeated')],

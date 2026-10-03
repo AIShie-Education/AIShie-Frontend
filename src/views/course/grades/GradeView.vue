@@ -494,7 +494,7 @@ const backLink = computed(() => ({
               (row: GradeSummary) => router.push({ name: 'course-grade', params: { courseId, gradeId: row.id } })
             "
           >
-            <el-table-column :label="t('grades.columns.score')" min-width="130">
+            <el-table-column :label="t('grades.columns.score')" min-width="130" align="right">
               <template #default="{ row }">
                 <ScoreText :score="row.score" :out-of="outOf" :as-percent="isComputed" hide-percent />
               </template>

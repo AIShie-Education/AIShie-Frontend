@@ -116,7 +116,7 @@ function scopeText(which: 'student' | 'assignment'): string {
         <dt>{{ t('overview.seat.expires') }}</dt>
         <dd>
           <template v-if="m.expires_at">
-            <TimeText :value="m.expires_at" />
+            <TimeText :value="m.expires_at" cutoff />
             <el-tag v-if="expired" type="danger" size="small" class="seat__expired">{{
               t('overview.seat.expired')
             }}</el-tag>

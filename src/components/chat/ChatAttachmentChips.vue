@@ -11,6 +11,7 @@ import type { UploadItem } from '@/composables/useUploadQueue'
 import { useUploadText } from '@/composables/useUploadText'
 import { formatBytes } from '@/utils/format'
 import { FILE_ICON, fileKind, REFUSAL_SCOPE, type ChatAttachments } from './attachments'
+import { joinParts } from '@/utils/parts'
 
 const props = defineProps<{
   attachments: ChatAttachments
@@ -18,7 +19,7 @@ const props = defineProps<{
   disabled?: boolean
 }>()
 const { t } = useI18n()
-const { percent, statusText, failText } = useUploadText({
+const { percent, percentText, statusText, failText } = useUploadText({
   maxBytes: () => props.attachments.limits.value?.maxBytes,
   reasons: REFUSAL_SCOPE,
 })
@@ -72,7 +73,7 @@ watch(
         class="chat-chip"
         :class="`is-${item.status}`"
         :data-file="item.name"
-        :title="`${item.name} · ${statusText(item)}`"
+        :title="joinParts([item.name, statusText(item)])"
       >
         <span class="chat-chip__icon" aria-hidden="true">
           <el-icon v-if="item.status === 'uploading' || item.status === 'queued'" class="is-loading"
@@ -85,8 +86,10 @@ watch(
           <span class="chat-chip__name">{{ item.name }}</span>
           <span class="chat-chip__meta">
             {{ formatBytes(item.size)
-            }}<template v-if="moving(item)"> · {{ t('common.upload.percent', { n: percent(item) }) }}</template
-            ><template v-else-if="item.status === 'cancelled'"> · {{ t('common.upload.status.cancelled') }}</template>
+            }}<template v-if="moving(item)">{{ t('common.sep') }}{{ percentText(item) }}</template
+            ><template v-else-if="item.status === 'cancelled'"
+              >{{ t('common.sep') }}{{ t('common.upload.status.cancelled') }}</template
+            >
           </span>
         </span>
         <button

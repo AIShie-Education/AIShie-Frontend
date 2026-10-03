@@ -46,7 +46,7 @@ const presetText = computed(() =>
 /** What a permission covers, and for a scoped one that the seat's scope bounds it. */
 function permTip(p: Perm): string {
   const help = t(`enums.permHelp.${p}`)
-  return SCOPED_PERMS.includes(p) ? `${help} — ${t('common.labels.scopedHelp')}` : help
+  return SCOPED_PERMS.includes(p) ? t('common.labels.scopedTip', { help, scoped: t('common.labels.scopedHelp') }) : help
 }
 const open = ref<string[]>([])
 const ceilings = computed(() => ceilingsOf(course.membership))

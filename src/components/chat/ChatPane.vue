@@ -101,6 +101,7 @@ import ChatStatusLine from './ChatStatusLine.vue'
 import ChatDraft from './ChatDraft.vue'
 import AskableText from './AskableText.vue'
 import { attachmentsFor, rememberSent, sentFilesOf } from './attachments'
+import { joinParts } from '@/utils/parts'
 
 const props = withDefaults(
   defineProps<{
@@ -700,7 +701,7 @@ async function transcript(): Promise<PrintRequest> {
     lines: [
       v?.title ? t('preview.print.conversationWith', { name }) : null,
       courseLine(props.courseId),
-      `${dateLine(list[0]?.created_at ?? v?.created_at)} · ${t('preview.print.messages', { n }, n)}`,
+      joinParts([dateLine(list[0]?.created_at ?? v?.created_at), t('preview.print.messages', { n }, n)]),
       complete ? null : t('preview.print.partial'),
     ],
     body: {
@@ -831,8 +832,9 @@ const closedLine = computed(() => {
         <AgentAvatar v-if="other?.kind === 'agent' && role !== 'overseer'" :name="other.name" size="small" />
         <span class="chat-pane__name">
           <template v-if="courseLabel"
-            ><span class="chat-pane__course">{{ courseLabel }}</span> ·
-          </template>
+            ><span class="chat-pane__course">{{ courseLabel }}</span
+            >{{ t('common.sep') }}</template
+          >
           <template v-if="role === 'overseer' && view">
             {{ t('chat.between', { opener: view.opener.display_name, respondent: view.respondent.display_name }) }}
           </template>

@@ -19,7 +19,6 @@ import TimeText from '@/components/TimeText.vue'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
-import { formatDateTime } from '@/utils/format'
 import {
   ROSTER_STATES,
   countByState,
@@ -33,6 +32,7 @@ import {
   wasProposed,
   type RosterEntry,
 } from './roster'
+import { zonedText } from '@/utils/parts'
 
 const props = defineProps<{
   courseId: string
@@ -101,8 +101,7 @@ async function markMissing(row: RosterEntry) {
   const title = course.assignmentTitle(assignmentId) ?? t('submissions.roster.confirm.thisAssignment')
   const lines = [t('submissions.roster.confirm.body', { name, assignment: title })]
   const due = assignment.value?.due_at
-  if (due && dayjs(due).isAfter(dayjs()))
-    lines.push(t('submissions.roster.confirm.notDue', { due: formatDateTime(due) }))
+  if (due && dayjs(due).isAfter(dayjs())) lines.push(t('submissions.roster.confirm.notDue', { due: zonedText(due) }))
   if (needsApproval.value) lines.push(t('submissions.roster.confirm.needsApproval'))
   // One paragraph a sentence: joined with spaces, Chinese would get a stray
   // one after each 。.

@@ -12,6 +12,7 @@ import { countdownParts } from '@/utils/countdown'
 import { downloadQrPng } from '@/utils/qr'
 import { qrFileName } from '@/utils/joinLink'
 import { formatNumber } from '@/utils/format'
+import { courseCodeText } from '@/utils/parts'
 
 const props = defineProps<{
   /** The whole link, https://<site>/join/<token>. */
@@ -38,7 +39,7 @@ const spoken = computed(() => {
 })
 const copied = ref(false)
 const downloading = ref(false)
-const courseLabel = computed(() => [props.code, props.section].filter(Boolean).join(' · '))
+const courseLabel = computed(() => courseCodeText(props.code, props.section))
 
 async function copy() {
   try {

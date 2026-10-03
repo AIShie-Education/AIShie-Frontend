@@ -15,6 +15,7 @@ import { useUiStore } from '@/stores/ui'
 import type { JoinRegistration } from '@/api/http'
 import { MAX_LOGIN_ID } from '@/utils/loginId'
 import { emailProblem, loginIdProblem, MAX_NAME, nameProblem, passwordProblems, type Problem } from '../join'
+import { formatList } from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
@@ -32,7 +33,12 @@ const ui = useUiStore()
 
 const formRef = ref<FormInstance>()
 const form = reactive({ name: '', loginId: '', email: '', password: '', repeat: '' })
-const domainList = computed(() => props.domains.map((d) => `@${d}`).join(', '))
+const domainList = computed(() =>
+  formatList(
+    props.domains.map((d) => `@${d}`),
+    'or',
+  ),
+)
 
 /** A rule that says the problem check finds, in the page's language. */
 function rule(check: (v: string) => Problem) {
@@ -125,8 +131,8 @@ defineExpose({ clearPasswords })
     </el-form-item>
     <el-form-item prop="email">
       <template #label>
-        {{ t('join.page.email') }}
-        <span v-if="!emailRequired" class="app-muted">({{ t('common.labels.optional') }})</span>
+        {{ t('join.page.email')
+        }}<span v-if="!emailRequired" class="app-muted">{{ t('common.labels.optionalTag') }}</span>
       </template>
       <el-input
         v-model="form.email"

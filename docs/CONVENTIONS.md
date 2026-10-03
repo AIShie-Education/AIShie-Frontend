@@ -266,7 +266,14 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   `el-input-number` for scores (it rounds and floats).
 - **Timestamps** are RFC 3339 strings. Show with `<TimeText :value />` (absolute, relative on hover,
   or `relative`). Send with `dayjs(x).toISOString()`; date-only fields (term `starts_on`) as
-  `YYYY-MM-DD`.
+  `YYYY-MM-DD`. Every time is on one clock, the reader's (Core keeps no school's time zone); UTC is
+  never said in words, only on hover. A **cut-off**, a time something stops being taken (an
+  assignment's due date, when a seat, a join link, an invitation, a token or an export ends), is
+  `<TimeText :value cutoff />`: its time zone named in the page's language ("2026-10-08 23:59 (Hong
+  Kong Standard Time)", 「香港標準時間 2026-10-08 23:59」, `common.time.zoned`) and the exact instant in
+  UTC on hover; shown `relative`, the zoned time and the UTC are both on hover. In a sentence, a
+  cut-off is `zonedText` (`@/utils/parts`); where a time is picked for one (the assignment's due
+  date), the hint names the zone it is picked in.
 - Optional fields: omit them (`undefined`) rather than sending `null`, unless the tool says `null`
   means something. Some updates have explicit `clear_*` flags (`clear_due_at`, `clear_component`,
   `clear_points_possible`, `clear_expiry`): use those to unset.
@@ -354,7 +361,11 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   412 reads it again and keeps what the administrator changed over it. A key's trial that failed
   (`key_test_failed`) says what the provider answered (`keyTrialOf`). Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
-  cent at least, as US dollars (`formatMoney`, "US$0.0184") and typed as decimals (`usdProblem`), empty for no limit. A refusal
+  cent at least, as US dollars (`formatMoney`, "US$0.0184"; a price someone typed with every figure
+  it has, `formatMoney(v, { exact: true })`, "US$1.875") and typed as decimals (`usdProblem`), empty
+  for no limit. A price's day is a UTC day, said by when it starts on the reader's clock (`<TimeText
+  cutoff>` of its 00:00 UTC), and a count "today" by when it starts again (`<DailyReset>`), never as
+  "(UTC)" in a title. A refusal
   that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
   models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
   agents' lines. Costs are shown by `lines` kind: a document's transcription is a line of its own
@@ -1034,14 +1045,23 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   underscored tool name, a setting or a family of them such as `OIDC_*`); a message only an operator reads, or
   one that sets up an agent's MCP client, is let through there by its key, saying why.
 - **No punctuation in templates.** What joins words is the language's, so it is in the messages:
-  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), a label and
-  its value `common.pair` ("Model calls: 380", 「模型呼叫：380」; `<i18n-t keypath="common.pair">`
-  where the value is a component). Numbers go through `@/utils/format`: a percentage through
-  `formatPct` (a fraction; the gradebook's `formatPct` for a percentage Core worked out), money
-  through `formatMoney` ("US$0.0184": a "$" alone reads as Hong Kong's), a list through
-  `formatList` ("a, b, and c", 「甲、乙和丙」), never `"%"` written after a number nor
-  `.join(', ')`. The dot between a course's code and its section is `<span class="app-sep">·</span>`
-  with no spaces, so that a Chinese typeface does not make it a full-width one.
+  "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), "(optional)"
+  after a field's label `common.labels.optionalTag` (its English space inside the message, so that a
+  label reads "Email (optional)" aloud too), a label and its value `common.pair` ("Model calls: 380",
+  「模型呼叫：380」; `<i18n-t keypath="common.pair">` where the value is a component), a word about
+  something in brackets after it `common.aside` ("Week 1.pdf (2 MB)", 「Week 1.pdf（2 MB）」) or,
+  drawn apart from it, `common.bracketed`, and the parts of a line of facts `common.sep` ("PDF ·
+  1.2 MB": `{{ t('common.sep') }}` between them in a template, `joinParts` from `@/utils/parts` in
+  a string). A course's code and section is `<span class="app-sep">·</span>` with no spaces, so
+  that a Chinese typeface does not make it a full-width one, and `courseCodeText` where only a
+  string will do (a label read aloud, a QR code's name, an option). A dot that is an element of its
+  own, a divider drawn `aria-hidden`, is a drawing and may stay. Numbers go through
+  `@/utils/format`: a percentage through `formatPct` (a fraction; the gradebook's `formatPct` for a
+  percentage Core worked out), money through `formatMoney` ("US$0.0184": a "$" alone reads as Hong
+  Kong's), a count where it may pass a thousand through `formatCount` ("1,284"), a list through
+  `formatList` ("a, b, and c", 「甲、乙和丙」; `formatList(items, 'or')` for one of them, "@a.edu or
+  @b.edu"), never `"%"` written after a number, `"$"` before one, nor `.join(', ')`.
+  `src/i18n/punctuation.spec.ts` reads every component and module and refuses these.
 - **Chinese messages put no space around a placeholder** beside a Han character: 「{owner}的代理」,
   never 「{owner} 的代理」, nor around a figure written in the message: 「1個學期 | {n}個學期」, never
   「1 個學期」 (`src/i18n/spacing.spec.ts` refuses both). The page puts the room between Han

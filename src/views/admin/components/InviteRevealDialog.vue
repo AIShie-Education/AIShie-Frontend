@@ -105,14 +105,14 @@ function finish() {
           <dd class="reveal__email">
             <template v-if="issued.login_id">
               <code>{{ issued.login_id }}</code>
-              <template v-if="issued.email"> · {{ issued.email }}</template>
+              <template v-if="issued.email">{{ t('common.sep') }}{{ issued.email }}</template>
             </template>
             <template v-else>{{ issued.email }}</template>
           </dd>
         </div>
         <div>
           <dt>{{ t('admin.invite.expires') }}</dt>
-          <dd><TimeText :value="issued.expires_at" /></dd>
+          <dd><TimeText :value="issued.expires_at" cutoff /></dd>
         </div>
       </dl>
 

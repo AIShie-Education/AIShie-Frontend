@@ -21,6 +21,8 @@ import AppWordmark from '@/components/AppWordmark.vue'
 import { emailDomainAllowed, tokenFromRoute } from '@/utils/joinLink'
 import JoinRegisterForm from './components/JoinRegisterForm.vue'
 import { closedReason, joinRefusal, type ClosedReason } from './join'
+import { courseCodeText } from '@/utils/parts'
+import { formatList } from '@/utils/format'
 
 const props = defineProps<{ token: string }>()
 const { t } = useI18n()
@@ -64,10 +66,10 @@ watch(token, () => void load(), { immediate: true })
 
 const courseLine = computed(() => {
   const c = preview.value?.course
-  return c ? [c.code, c.section].filter(Boolean).join(' · ') : ''
+  return c ? courseCodeText(c.code, c.section) : ''
 })
 const domains = computed(() => preview.value?.allowed_email_domains ?? [])
-const domainList = computed(() => domains.value.map((d) => `@${d}`).join(', '))
+const domainList = computed(() => formatList(domains.value.map((d) => `@${d}`), 'or'))
 // How long the link has left. Once its time is up it is said to have
 // expired, as Core will say when asked again, which it is.
 const { text: timeLeft, ended: timeUp } = useCountdown(() =>

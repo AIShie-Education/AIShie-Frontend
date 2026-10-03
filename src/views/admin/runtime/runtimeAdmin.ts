@@ -165,7 +165,7 @@ export function keyTrialDetail(trial: KeyTrial, t: T): string {
   const parts: string[] = []
   if (trial.httpStatus !== null) parts.push(t('runtimeAdmin.offer.trialStatus', { status: trial.httpStatus }))
   if (trial.providerCode) parts.push(t('runtimeAdmin.offer.trialCode', { code: trial.providerCode }))
-  return parts.join(' · ')
+  return parts.join(t('common.sep'))
 }
 
 // --- OCR's languages -------------------------------------------------------------------

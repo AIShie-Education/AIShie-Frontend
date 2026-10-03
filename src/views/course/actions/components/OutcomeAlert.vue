@@ -96,7 +96,8 @@ const asOwner = computed(() => {
       <template v-if="done.kind === 'decided'">
         <p v-if="why" class="outcome-alert__line">{{ why }}</p>
         <p v-if="error" class="outcome-alert__line outcome-alert__core">
-          {{ t('actions.outcome.coreSays') }}: {{ error.message }} <code>{{ error.code }}</code>
+          {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) }}
+          <code>{{ error.code }}</code>
         </p>
         <template v-if="inner">
           <p class="outcome-alert__line outcome-alert__inner">
@@ -105,7 +106,8 @@ const asOwner = computed(() => {
           </p>
           <p v-if="innerWhy" class="outcome-alert__line">{{ innerWhy }}</p>
           <p v-if="inner.error" class="outcome-alert__line outcome-alert__core">
-            {{ t('actions.outcome.coreSays') }}: {{ inner.error.message }} <code>{{ inner.error.code }}</code>
+            {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: inner.error.message }) }}
+            <code>{{ inner.error.code }}</code>
           </p>
           <ResultIds v-if="inner.outcome === 'executed'" :course-id="courseId" :result="inner.result" />
         </template>

@@ -25,6 +25,7 @@ import EditCourseDialog from './components/EditCourseDialog.vue'
 import MoveCourseDialog from './components/MoveCourseDialog.vue'
 import SeatInstructorCard from './components/SeatInstructorCard.vue'
 import { findCourse, useCanonicalId } from './components/adminShared'
+import { courseCodeText } from '@/utils/parts'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -63,9 +64,7 @@ async function onMoved() {
 
 const seat = computed(() => session.membershipFor(id.value))
 const archived = computed(() => course.value?.status === 'archived')
-const codeLabel = computed(() =>
-  course.value ? `${course.value.code}${course.value.section ? ` · ${course.value.section}` : ''}` : '',
-)
+const codeLabel = computed(() => (course.value ? courseCodeText(course.value.code, course.value.section) : ''))
 
 const activateW = useWrite('course.activate')
 const archiveW = useWrite('course.archive')
