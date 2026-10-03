@@ -570,11 +570,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   The 「需批准」 beside an action the caller's seat must have approved is that level too:
   `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
 - **Ink** comes in three steps, 1.5:1 or more apart: `--app-ink` for text, `--app-ink-2` for what is
-  secondary to it, `--app-ink-3` for the meta beside it (a time, a column's heading, a hint); the
-  placeholder's ink is quieter still, for a field's placeholder. Every colour in `styles/tokens.css`
-  has its dark value, is painted with somewhere, and reads at AA on the grounds it is drawn on, in both
-  themes: `styles/contrast.spec.ts` measures each pairing, so a new colour, or text on a new ground,
-  goes there too.
+  secondary to it, `--app-ink-3` for the meta beside it (a time, a column's heading, a hint, a
+  permission's key); the placeholder's ink is quieter still, for a field's placeholder. The three
+  inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
+  fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
+  fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
+  may be drawn on one of those, as a key is on a changed row, takes the third ink; any other rule
+  that writes in the placeholder's is named in `PLACEHOLDER_INK`, with its grounds. Every colour in
+  `styles/tokens.css` has its dark value, is painted with somewhere, and reads at AA on the grounds it
+  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
+  (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
+  colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
