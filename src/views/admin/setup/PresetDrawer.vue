@@ -10,7 +10,8 @@ import { useBackCloses } from '@/composables/useBackCloses'
 import { DRAWER_SIZE, allowedCount, isBuiltin, permLevels, presetDescription, presetLabel } from './presets'
 
 const open = defineModel<boolean>({ default: false })
-// Full width on a phone (DRAWER_SIZE): back closes it rather than leaving the page.
+// Back closes it, on a phone (where it is full width, DRAWER_SIZE) as on a desktop: it is laid over
+// the page, which it never outlives.
 useBackCloses(open, () => (open.value = false))
 const props = defineProps<{ preset: Preset | null; deptName: string | null; canEdit: boolean }>()
 const emit = defineEmits<{ edit: [preset: Preset]; copy: [preset: Preset] }>()
