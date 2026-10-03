@@ -26,7 +26,8 @@ import {
 // the pages; a page gone to stays the page read, and on the screen, as the
 // viewer fits the zoom to a new width or the phone is turned on its side;
 // where the pages do not scroll at all (a deck of two slides), neither Prev
-// nor Next has anywhere to take them, and both are disabled.
+// nor Next has anywhere to take them, and both are disabled; zoomed in until
+// they scroll, a page typed there is let go, and each moves the pages again.
 // Where the bar has no room for all it holds, it leaves something out, never
 // cutting a digit of the count short: a document of 150 pages zoomed by hand
 // on a phone, in English and in Traditional Chinese, and one of 1,200 pages
@@ -607,6 +608,29 @@ test.describe('on a phone', () => {
     await expect(field).toHaveValue('2')
     await expect(prev).toBeDisabled()
     await expect(next).toBeDisabled()
+
+    // Zoomed in until they scroll, they stay at the top, and the page typed is let go: the first is read
+    // there, Prev is disabled, and Next moves the pages to the second; Prev then moves them back.
+    for (let i = 0; i < 8 && (await room()) < 1; i++) {
+      await zoomIn.click()
+      await settled(page)
+    }
+    expect(await room()).toBeGreaterThanOrEqual(1)
+    expect(await pages.evaluate((el) => el.scrollTop)).toBeLessThan(1)
+    await expect(field).toHaveValue('1')
+    await expect(prev).toBeDisabled()
+    await expect(next).toBeEnabled()
+    await next.click()
+    await settled(page)
+    await expect(field).toHaveValue('2')
+    const second = await pages.evaluate((el) => el.scrollTop)
+    expect(second).toBeGreaterThan(0)
+    await expect(next).toBeDisabled()
+    await expect(prev).toBeEnabled()
+    await prev.click()
+    await settled(page)
+    await expect(field).toHaveValue('1')
+    expect(await pages.evaluate((el) => el.scrollTop)).toBeLessThan(second - 1)
   })
 })
 

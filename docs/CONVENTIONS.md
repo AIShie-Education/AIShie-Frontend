@@ -204,12 +204,13 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   pinch of two fingers (begun anywhere on the view, its bar too) or a touchpad's zooming the pages
   and not the screen, the text selectable, and one page control, none for a page alone. The page it
   reads is the first at the top, the last at the end, and otherwise the one at the top third of what
-  is seen; a page gone to is read while the pages stay there, and is gone to again, where the pages
-  now put it, as the viewer fits the zoom to a new width (a phone turned on its side). Its previous
-  and next page buttons always move the pages or are disabled: the last pages, which cannot come to
-  the top, are one stop, the end, which Next goes to and is disabled at, and Prev goes back from to
-  the last page that moves them; pages that do not scroll at all, all on the screen at once, are one
-  stop too, where both are disabled (`pdfPages.ts`). On a phone (640 px or less of the view's own
+  is seen; a page gone to is read until the reader scrolls the pages from there or zooms them (even
+  where the zoom leaves them where they were), and is gone to again, where the pages now put it, as
+  the viewer fits the zoom to a new width (a phone turned on its side). Its previous and next page
+  buttons always move the pages or are disabled: the last pages, which cannot come to the top, are
+  one stop, the end, which Next goes to and is disabled at, and Prev goes back from to the last page
+  that moves them; pages that do not scroll at all, all on the screen at once, are one stop too,
+  where both are disabled (`pdfPages.ts`). On a phone (640 px or less of the view's own
   width, or 400 px or less of its own height) the page control and the zoom are one compact bar at
   the bottom, within a thumb's reach, its buttons and its per cent 36 px tall or more, fitted to the
   width saying so rather than its per cent (zoomed by hand, its per cent again; where the bar has no

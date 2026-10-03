@@ -12,14 +12,14 @@
 // keeps as they change until it is zoomed by hand. It opens at its first
 // page, or at the one it is given (the page an answer relied on). The page
 // read is the first at the top, the last at the end, and otherwise the one
-// at the top third of the screen; a page gone to is read until the pages are
-// scrolled from there, by the reader, and is gone to again as the viewer
-// fits the zoom to a new width. The previous and next page buttons move the
-// pages or are disabled: Next at the end, both where the pages do not scroll
-// (pdfPages.ts). Two fingers, anywhere on it, the bar too, pinch the pages
-// larger or smaller (a touchpad's pinch, which comes as a wheel with Ctrl
-// held, too), about the point between them, and the browser does not zoom
-// the screen as well; a pinch that ends near the width fits it again.
+// at the top third of the screen; a page gone to is read until the reader
+// scrolls the pages from there or zooms them, and is gone to again as the
+// viewer fits the zoom to a new width. The previous and next page buttons
+// move the pages or are disabled: Next at the end, both where the pages do
+// not scroll (pdfPages.ts). Two fingers, anywhere on it, the bar too, pinch
+// the pages larger or smaller (a touchpad's pinch, which comes as a wheel
+// with Ctrl held, too), about the point between them, and the browser does
+// not zoom the screen as well; a pinch that ends near the width fits it again.
 //
 // Where the view is narrow (a phone, 640 px or less of its own width, as the
 // viewer is the whole screen up to a window that wide) or short (a phone on
@@ -300,8 +300,11 @@ let tracking = 0
 /**
  * Where going to a page left the pages scrolled: a page near the end, which
  * cannot come to the top of the screen, is still the page read until they
- * are scrolled from there (and gone to again as the viewer fits the zoom to
- * the width again: refit).
+ * are scrolled from there or zoomed (setZoom), and gone to again as the
+ * viewer fits the zoom to the width again (refit). Pages that do not scroll
+ * stay where they were as they are zoomed in, at the top: kept, the page
+ * gone to would be read where it is not, and Prev would change the number
+ * without moving them.
  */
 let heldAt: number | null = null
 /** Reads, at the next frame, where the pages are: the page read (pageInView), whether they are at the end, and whether they scroll at all. */
@@ -371,6 +374,9 @@ async function setZoom(next: number, at?: { x: number; y: number }) {
   const el = scroller.value
   const z = clampZoom(next)
   if (!el || Math.abs(z - zoom.value) < 0.001) return
+  // Zoomed, the pages are read where they are, whether or not they moved: a
+  // page gone to is let go (refit, the viewer's own zoom, goes to it again).
+  heldAt = null
   const box = at ? el.getBoundingClientRect() : null
   const ax = at && box ? at.x - box.left - el.clientLeft : 0
   const ay = at && box ? at.y - box.top - el.clientTop : 0
