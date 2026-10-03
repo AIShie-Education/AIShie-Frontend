@@ -6,7 +6,6 @@ export default {
     filter: '按标题筛选',
     show: {
       label: '显示哪些作业',
-      all: '全部',
       published: '已发布',
       unpublished: '未发布',
     },

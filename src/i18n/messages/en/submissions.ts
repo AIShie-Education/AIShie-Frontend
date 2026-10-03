@@ -26,7 +26,6 @@ export default {
     unavailable:
       'This server cannot list the students who have not started, so only the work that exists is shown here.',
     summary: {
-      total: '{n} student | {n} students',
       label: 'Where each student stands',
       partial: 'The counts cover the students loaded so far.',
     },

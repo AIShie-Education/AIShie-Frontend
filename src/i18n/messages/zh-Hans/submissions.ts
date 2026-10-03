@@ -24,7 +24,6 @@ export default {
   roster: {
     unavailable: '这个服务器无法列出尚未开始的学生，因此这里只显示已有的提交。',
     summary: {
-      total: '共{n}位学生',
       label: '各学生的进度',
       partial: '以上数字只计算目前已加载的学生。',
     },

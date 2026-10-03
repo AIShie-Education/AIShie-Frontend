@@ -24,7 +24,6 @@ export default {
   roster: {
     unavailable: '這個伺服器無法列出尚未開始的學生，因此這裡只顯示已有的提交。',
     summary: {
-      total: '共{n}位學生',
       label: '各學生的進度',
       partial: '以上數字只計算目前已載入的學生。',
     },

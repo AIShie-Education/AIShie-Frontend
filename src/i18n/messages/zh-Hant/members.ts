@@ -15,7 +15,6 @@ export default {
   loginIdHelp: '除電子郵件外，亦可以此登入；只有管理員可以更改。',
   tabs: {
     label: '人員或代理',
-    all: '全部',
     people: '人員',
     agents: '代理',
   },

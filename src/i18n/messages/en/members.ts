@@ -16,7 +16,6 @@ export default {
   loginIdHelp: 'What they sign in with, as well as an email; only an administrator changes it.',
   tabs: {
     label: 'People or agents',
-    all: 'All',
     people: 'People',
     agents: 'Agents',
   },

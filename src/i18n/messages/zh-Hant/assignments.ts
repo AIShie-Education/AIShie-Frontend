@@ -6,7 +6,6 @@ export default {
     filter: '按標題篩選',
     show: {
       label: '顯示哪些作業',
-      all: '全部',
       published: '已發佈',
       unpublished: '未發佈',
     },

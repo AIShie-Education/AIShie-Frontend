@@ -62,7 +62,6 @@ export default {
     capped: '当前显示你最早的{n}项操作。列表按时间由旧到新排列，较新的操作尚未加载。',
     loadRest: '加载较新的操作',
     showChat: '包括对话消息',
-    waiting: '{n}项等待决定',
     awaitingReview: '{n}项等待审核',
     columns: {
       action: '操作',

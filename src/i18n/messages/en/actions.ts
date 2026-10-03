@@ -69,7 +69,6 @@ export default {
     capped: 'Showing your first {n} actions. They are listed oldest first, so newer ones are still to load.',
     loadRest: 'Load newer',
     showChat: 'Include chat messages',
-    waiting: '{n} waiting for a decision',
     awaitingReview: '{n} awaiting review',
     columns: {
       action: 'Action',
