@@ -515,6 +515,36 @@ export async function photograph(page: Page, name: string) {
   await page.screenshot({ path: resolve(dir, `${name}.png`), fullPage: false })
 }
 
+/**
+ * The file viewer's line of what the file is and what it is of wraps, if it
+ * does, never after a dot: each dot stays with what follows it. It is laid
+ * out in lines by where each character is shown.
+ */
+export async function expectNoLineEndsInADot(viewer: Locator) {
+  const lines = await viewer.locator('.file-viewer__meta').evaluate((p) => {
+    const lines: { top: number; text: string }[] = []
+    const walk = document.createTreeWalker(p, NodeFilter.SHOW_TEXT)
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const text = n.textContent ?? ''
+      for (let i = 0; i < text.length; i++) {
+        if (!text[i]!.trim()) continue
+        const range = document.createRange()
+        range.setStart(n, i)
+        range.setEnd(n, i + 1)
+        const r = range.getClientRects()[0]
+        if (!r) continue
+        const line = lines.at(-1)
+        if (line && r.top < line.top + 5) line.text += text[i]
+        else lines.push({ top: r.top, text: text[i]! })
+      }
+    }
+    return lines.map((l) => l.text)
+  })
+  expect(lines.length, lines.join(' / ')).toBeGreaterThan(0)
+  for (const line of lines) expect(line, lines.join(' / ')).not.toMatch(/·$/)
+  return lines
+}
+
 /** Reads the app in Traditional Chinese from the next page load on. */
 export async function inTraditionalChinese(page: Page) {
   await page.addInitScript(() => {

@@ -6,6 +6,7 @@ import {
   call,
   coursePath,
   demo,
+  expectNoLineEndsInADot,
   expectToasted,
   hostOnRuntime,
   inTraditionalChinese,
@@ -208,6 +209,11 @@ async function openFile(page: Page, file: FileSpec) {
   const dialog = viewer(page, file.name)
   await expect(dialog).toBeVisible()
   return dialog
+}
+
+/** How wide an element is shown: 1 px or less for one said only to a screen reader. */
+function shownWidth(el: Locator) {
+  return el.evaluate((e) => e.getBoundingClientRect().width)
 }
 
 /** How many of a canvas's pixels are drawn in something other than white. */
@@ -546,17 +552,35 @@ test.describe.serial('the file viewer', () => {
       expect(r.x + r.width, name).toBeLessThanOrEqual(390)
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+    // With no count of pages on the screen, the file's place among the others is, by the arrows; what the
+    // file is and what it is of wrap beside them, never leaving a dot at the end of a line.
+    await expect(dialog.locator('.file-viewer__position')).toHaveText('3 of 6')
+    expect(await shownWidth(dialog.locator('.file-viewer__position'))).toBeGreaterThan(20)
+    expect(await expectNoLineEndsInADot(dialog)).toHaveLength(2)
     await photograph(page, 'preview-phone-markdown')
 
-    // The PDF, fitted to the phone's width.
+    // The picture, its place shown too.
     await dialog.getByRole('button', { name: 'Previous file' }).click()
-    await viewer(page, PICTURE.name).getByRole('button', { name: 'Previous file' }).click()
+    const picture = viewer(page, PICTURE.name)
+    await expect(picture.locator('.image-view__img')).toBeVisible()
+    await expect(picture.locator('.file-viewer__position')).toHaveText('2 of 6')
+    expect(await shownWidth(picture.locator('.file-viewer__position'))).toBeGreaterThan(20)
+    await expectNoLineEndsInADot(picture)
+    await photograph(page, 'preview-phone-image')
+
+    // The PDF, fitted to the phone's width: its bar counts its pages, the one count on the screen, and its
+    // place among the files is said only to a screen reader.
+    await picture.getByRole('button', { name: 'Previous file' }).click()
     const pdf = viewer(page, SLIDES.name)
     const page1 = pdf.locator('.pdf-page[data-page="1"]')
     await expect.poll(() => inked(page1.locator('canvas'))).toBeGreaterThan(500)
     const p = (await page1.boundingBox())!
     expect(p.x).toBeGreaterThanOrEqual(0)
     expect(p.x + p.width).toBeLessThanOrEqual(390)
+    await expect(pdf.locator('.pdf-view__of')).toHaveText('of 2')
+    await expect(pdf.locator('.file-viewer__position')).toHaveText('1 of 6')
+    expect(await shownWidth(pdf.locator('.file-viewer__position'))).toBeLessThanOrEqual(1)
+    await expectNoLineEndsInADot(pdf)
     await photograph(page, 'preview-phone-pdf')
     await pdf.getByRole('button', { name: 'Close the preview' }).click()
     await expect(pdf).toBeHidden()

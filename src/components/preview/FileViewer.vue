@@ -82,7 +82,6 @@ import ImageView from './ImageView.vue'
 import TextView from './TextView.vue'
 import { ObjectUrls } from './objectUrls'
 import { closePreview, previewState, showPreviewAt, type PreviewFile } from './viewer'
-import { joinParts } from '@/utils/parts'
 
 // pdf.js and all it brings come with this, and only once a PDF is opened.
 const PdfView = defineAsyncComponent(() => import('./PdfView.vue'))
@@ -112,15 +111,20 @@ const shownRendition = computed(() => rendition.value ?? file.value?.rendition ?
 /** Its PDF is there, to download beside it ("Download PDF"). */
 const pdfReady = computed(() => renditionStage(shownRendition.value) === 'done' && !!file.value?.readRendition)
 const pdfName = computed(() => pdfNameOf(file.value?.filename ?? ''))
+/**
+ * What it is, its size, and its PDF's pages where it has one: each kept whole
+ * on its line, and the dot before each kept with it, so that a line of them
+ * that wraps never ends in a dot.
+ */
 const meta = computed(() => {
   const f = file.value
   if (!f) return ''
   const pages = shownRendition.value?.page_count
-  return joinParts([
-    t(`common.fileKind.${iconKind.value}`),
-    formatBytes(f.byteSize),
-    pdfReady.value && pages ? t('preview.rendition.pages', { n: pages }, pages) : null,
-  ])
+  const facts = [t(`common.fileKind.${iconKind.value}`), formatBytes(f.byteSize)]
+  if (pdfReady.value && pages) facts.push(t('preview.rendition.pages', { n: pages }, pages))
+  // The language's separator, the space after its dot unbreakable, so that the dot stays with what follows it.
+  const sep = t('common.sep').replace(/ $/, '\u00a0')
+  return facts.map((fact) => fact.replace(/ /g, '\u00a0')).join(sep)
 })
 const many = computed(() => state.files.length > 1)
 
@@ -144,6 +148,23 @@ type View =
   /** It has none: it failed, or was skipped, and why. */
   | { as: 'notConverted'; state: string; reason: RenditionReason | 'other' }
 const view = shallowRef<View>({ as: 'loading' })
+/** The count of pages of the PDF shown, once it is read; null until then. */
+const pdfPages = ref<number | null>(null)
+/**
+ * A PDF is shown whose bar counts its pages (all but one of a single page):
+ * where the viewer fills the screen, that is the one count on it, and the
+ * file's place among the others is said only to a screen reader. While a
+ * file that comes as a PDF loads, too, so that its place is not shown only
+ * to be taken away again, moving what is beside it.
+ */
+const pagesCounted = computed(() => {
+  const v = view.value
+  if (v.as === 'pdf') return pdfPages.value !== 1
+  const f = file.value
+  return (
+    v.as === 'loading' && !!f && (kind.value === 'pdf' || (!!f.readRendition && renditionStage(f.rendition) === 'done'))
+  )
+})
 /** Bumped for each file shown: what was asked for another is dropped as it comes. */
 const generation = ref(0)
 const urls = new ObjectUrls()
@@ -166,6 +187,7 @@ function release() {
   generation.value++
   urls.revokeAll()
   rendition.value = null
+  pdfPages.value = null
   view.value = { as: 'loading' }
 }
 
@@ -533,7 +555,7 @@ function onClosed() {
 <template>
   <el-dialog
     :model-value="state.open"
-    :class="[dialogClass, { 'is-phone': phone, 'is-full': phone || short }]"
+    :class="[dialogClass, { 'is-phone': phone, 'is-full': phone || short, 'is-paged': pagesCounted }]"
     :fullscreen="phone || short"
     width="min(1200px, calc(100vw - 48px))"
     top="3vh"
@@ -553,11 +575,10 @@ function onClosed() {
             {{ file.filename }}
           </h2>
           <p class="file-viewer__meta">
-            <span>{{ meta }}</span>
-            <template v-if="state.title && state.title !== file.filename">
-              <span class="file-viewer__dot" aria-hidden="true">·</span>
-              <span class="file-viewer__of">{{ state.title }}</span>
-            </template>
+            <span class="file-viewer__facts">{{ meta }}</span>
+            <span v-if="state.title && state.title !== file.filename" class="file-viewer__of"
+              ><span class="file-viewer__dot" aria-hidden="true">·</span>{{ state.title }}</span
+            >
           </p>
           <div class="file-viewer__actions">
             <el-button
@@ -643,6 +664,7 @@ function onClosed() {
         :name="file.filename"
         :page="state.page"
         @failed="onPdfFailed"
+        @pages="(n: number) => (pdfPages = n)"
       />
       <ImageView
         v-else-if="view.as === 'image'"
@@ -810,11 +832,15 @@ function onClosed() {
   font-variant-numeric: tabular-nums;
   min-width: 0;
 }
+/* What it is of, the dot before it kept with it: a line never ends in one. */
 .file-viewer__of {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 40ch;
+}
+.file-viewer__of .file-viewer__dot {
+  margin-inline-end: 6px;
 }
 .file-viewer__actions {
   display: flex;
@@ -968,10 +994,11 @@ function onClosed() {
 }
 /*
  * The whole screen (a phone, upright or on its side): the previous and the
- * next file two arrows by the close button, their position said only to a
- * screen reader, so that the one count on the screen is the pages' (#82).
+ * next file two arrows by the close button, and, where a PDF's bar counts its
+ * pages, their position said only to a screen reader, so that the one count
+ * on the screen is the pages' (#82). Any other file shows its place, "2 of 3".
  */
-.file-viewer.is-full .file-viewer__position {
+.file-viewer.is-full.is-paged .file-viewer__position {
   position: absolute;
   width: 1px;
   height: 1px;
