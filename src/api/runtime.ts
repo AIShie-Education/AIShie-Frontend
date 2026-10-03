@@ -34,8 +34,9 @@
 // as the contract's §5.14 says; this client retries accordingly.
 //
 // The runtime's administrators have routes of their own (runtimeAdmin, at
-// the end): OCR, the school's plan's offers, quotas and use, pricing, and
-// the transcriber of documents' text versions.
+// the end): OCR, the school's plan's offers, quotas and use, pricing, the
+// transcriber of documents' text versions, and OpenRouter's upstream
+// providers for an offer's routing.
 //
 // The route and field names the contract fixes are here and in
 // runtime-types.ts, and nowhere else in the app.
@@ -58,6 +59,7 @@ import type {
   OfferCreate,
   OfferDeleted,
   OfferPatch,
+  OpenRouterEndpoints,
   PauseAnswer,
   PlanOffer,
   PriceCreate,
@@ -117,6 +119,7 @@ export const RUNTIME_ROUTES = {
   costs: '/admin/costs',
   transcriptionCredential: '/admin/transcription/credential',
   transcriptionJobs: '/admin/transcription/jobs',
+  openRouterEndpoints: '/admin/openrouter/endpoints',
 } as const
 
 /** Headers of the contract beyond plain HTTP's. */
@@ -790,4 +793,18 @@ export const runtimeAdmin = {
     }),
   transcriptionJobs: (query: TranscriptionJobQuery = {}) =>
     runtimeRequest<TranscriptionJobList>('GET', RUNTIME_ROUTES.transcriptionJobs, { query: { ...query } }),
+  /**
+   * The upstream providers OpenRouter lists for one of its models
+   * (author/slug), read by the runtime with no key, and the price table's
+   * price for it; signal aborts it when the model typed changes. Not sent
+   * again by itself: the runtime answers 503 openrouter_unavailable only
+   * after its own wait for OpenRouter (up to 15 s), and the page offers to
+   * try again.
+   */
+  openRouterEndpoints: (model: string, signal?: AbortSignal) =>
+    runtimeRequest<OpenRouterEndpoints>('GET', RUNTIME_ROUTES.openRouterEndpoints, {
+      query: { model },
+      signal,
+      retry: false,
+    }),
 }

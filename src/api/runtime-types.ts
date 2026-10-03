@@ -445,6 +445,9 @@ export const RUNTIME_ERROR_REASONS = [
   'transcription_unavailable',
   'offer_no_file_input',
   'credential_rejected',
+  // OpenRouter's upstream providers (admin/openrouter/endpoints)
+  'openrouter_unavailable',
+  'openrouter_model_not_found',
 ] as const
 
 export type RuntimeErrorReason = (typeof RUNTIME_ERROR_REASONS)[number]
@@ -555,6 +558,12 @@ export interface PlanOffer {
   status: OfferStatus
   /** The runtime's price table prices this model today. */
   priced: boolean
+  /**
+   * OpenRouter's upstream routing (its provider object, canonical), sent
+   * with every call on an offer of OpenRouter's; null for none, and for any
+   * other provider's. A runtime from before it leaves it out: read as null.
+   */
+  openrouter: OpenRouterRouting | null
   /** Hosted agents whose settings name this offer (on it now, or held or falling back while it is withdrawn). */
   agents: number
   // The site's offers only; null for runtime.yaml's:
@@ -615,6 +624,8 @@ export interface OfferCreate extends OwnModelChoice {
   key: string
   /** Keep the key without trying it (key_status untested). */
   skip_key_test?: boolean
+  /** OpenRouter's upstream routing, canonical: an offer of OpenRouter's alone, left out for none. */
+  openrouter?: OpenRouterRouting
 }
 
 /** PATCH admin/school-plan/offers/{id}, merge-patch: a member left out is unchanged, null goes back to the default. */
@@ -633,6 +644,112 @@ export interface OfferPatch {
   /** A new key: tried (unless skip_key_test), and the old one destroyed. */
   key?: string
   skip_key_test?: boolean
+  /** The whole routing in place of the one kept (never merged member by member), or null to remove it. */
+  openrouter?: OpenRouterRouting | null
+}
+
+// ---------------------------------------------------------------------------
+// OpenRouter's upstream routing (its provider object) on an offer of
+// OpenRouter's, and the upstream providers that serve one of its models
+// (GET admin/openrouter/endpoints). The names are OpenRouter's.
+// ---------------------------------------------------------------------------
+
+export type OpenRouterSortBy = 'price' | 'throughput' | 'latency' | 'exacto'
+export const OPENROUTER_SORTS: readonly OpenRouterSortBy[] = ['price', 'throughput', 'latency', 'exacto']
+/** The precisions OpenRouter names, in the order the page offers them. */
+export const OPENROUTER_QUANTIZATIONS = [
+  'fp4',
+  'mxfp4',
+  'nvfp4',
+  'fp6',
+  'fp8',
+  'mxfp8',
+  'fp16',
+  'bf16',
+  'fp32',
+  'int4',
+  'int8',
+  'unknown',
+] as const
+export type OpenRouterQuantization = (typeof OPENROUTER_QUANTIZATIONS)[number]
+export interface Percentiles {
+  p50?: number
+  p75?: number
+  p90?: number
+  p99?: number
+}
+
+/** OpenRouter's provider routing, canonical: only the members set, in OpenRouter's order. */
+export interface OpenRouterRouting {
+  order?: string[]
+  allow_fallbacks?: boolean
+  require_parameters?: boolean
+  data_collection?: 'allow' | 'deny'
+  zdr?: boolean
+  enforce_distillable_text?: boolean
+  only?: string[]
+  ignore?: string[]
+  quantizations?: OpenRouterQuantization[]
+  sort?: OpenRouterSortBy | { by: OpenRouterSortBy; partition: 'model' | 'none' }
+  preferred_min_throughput?: number | Percentiles
+  preferred_max_latency?: number | Percentiles
+  /** Decimal strings when answered; a string or number when sent. */
+  max_price?: { prompt?: USDInput; completion?: USDInput; request?: USDInput; image?: USDInput }
+}
+
+/** One upstream provider's endpoint serving the model, as OpenRouter lists it (prices before its discount). */
+export interface OpenRouterEndpoint {
+  /** What order, only and ignore name. */
+  slug: string
+  /** The provider's slug as OpenRouter's providers list has it, or null. */
+  provider: string | null
+  provider_name: string
+  /** "unknown" where OpenRouter gives none. */
+  quantization: string
+  usd_per_mtok: { input: USD | null; output: USD | null; cache_read: USD | null; cache_write: USD | null }
+  usd_per_request: USD | null
+  usd_per_image: USD | null
+  /** A fraction, 0 to 1. */
+  discount: number
+  /** Input tokens above which a long context costs more, or null. */
+  higher_above_tokens: number | null
+  context_length: number
+  max_output_tokens: number | null
+  max_prompt_tokens: number | null
+  tools: boolean
+  tool_choice: boolean
+  reasoning: boolean
+  /** Null where OpenRouter's list of ZDR endpoints could not be read. */
+  zdr: boolean | null
+  /** 0 is normal; below 0, degraded. */
+  status: number
+  /** Percent, 0 to 100, or null. */
+  uptime_30m: number | null
+  uptime_1d: number | null
+  latency: Required<Percentiles> | null
+  throughput: Required<Percentiles> | null
+  /** ISO 3166, or null. */
+  headquarters: string | null
+  datacenters: string[]
+  privacy_policy_url: string | null
+  terms_of_service_url: string | null
+  status_page_url: string | null
+}
+
+/** GET admin/openrouter/endpoints?model=author/slug. */
+export interface OpenRouterEndpoints {
+  model: string
+  name: string
+  fetched_at: string
+  /** OpenRouter could not be reached now: this is the last list read, at most an hour old. */
+  stale: boolean
+  /** The price table's price for (openrouter, the model as asked) today, or null. */
+  price: {
+    version: string
+    usd_per_mtok: { input: USD; cache_read: USD; cache_write: USD; output: USD }
+  } | null
+  /** In OpenRouter's order. */
+  endpoints: OpenRouterEndpoint[]
 }
 
 /** DELETE admin/school-plan/offers/{id}. */
