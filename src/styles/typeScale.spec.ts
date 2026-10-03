@@ -94,6 +94,12 @@ const EXCEPTIONS: { file: string; values: RegExp; where?: RegExp; why: string }[
     why: 'code in a chat message, as in rendered Markdown',
   },
   {
+    file: '/src/styles/fonts-latin.css',
+    values: /^600$/,
+    where: /^@font-face$/,
+    why: "the weight a typeface's file holds (Plex's and Source Serif's 600), which its @font-face names for the browser to pick it by: a description of the face, not a weight text is set in",
+  },
+  {
     file: '/src/views/course/members/components/JoinLinkFullscreen.vue',
     values: /^clamp\(\d+px, \d+(?:\.\d+)?vw, \d+px\)$/,
     why: 'a join code shown full screen to a room, sized to the screen it is projected on',

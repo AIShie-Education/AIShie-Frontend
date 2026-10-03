@@ -111,10 +111,11 @@ function rowClass({ row }: { row: Row }): string {
   color: var(--el-text-color-secondary);
   font-size: var(--app-text-xs);
 }
+/* In the third ink, not the placeholder's, which does not read at AA on a hovered row. */
 .matrix-label__key {
   font-family: var(--app-font-mono);
   font-size: var(--app-text-mark);
-  color: var(--el-text-color-placeholder);
+  color: var(--el-text-color-secondary);
 }
 .matrix-head {
   display: inline-flex;

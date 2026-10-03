@@ -558,7 +558,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
-  for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
+  for changes, late, not published). A category is neutral, in the neutral pill's colours
+  (`--app-neutral-bg`, the ground's second shade in the light theme, under `--app-neutral-fg`), told apart by
   its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
   of seat, how an agent runs (`HostingTag`). Whether an agent can be asked is neutral too, never
   green as "online" is; only its not running, which wants its owner, is amber. What is new or
@@ -569,6 +570,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
   The 「需批准」 beside an action the caller's seat must have approved is that level too:
   `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
+- **Ink** comes in three steps, 1.5:1 or more apart: `--app-ink` for text, `--app-ink-2` for what is
+  secondary to it, `--app-ink-3` for the meta beside it (a time, a column's heading, a hint, a
+  permission's key); the placeholder's ink is quieter still, for a field's placeholder. The three
+  inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
+  fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
+  fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
+  may be drawn on one of those, as a key is on a changed row, takes the third ink; any other rule
+  that writes in the placeholder's is named in `PLACEHOLDER_INK`, with its grounds. Every colour in
+  `styles/tokens.css` has its dark value, is painted with somewhere, and reads at AA on the grounds it
+  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
+  (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
+  colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
@@ -1055,6 +1068,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<html lang>` and the typefaces it chooses (`styles/tokens.css`, `styles/fonts.ts`) and saves
   `aishie.locale`. Element Plus follows the same `ui.locale` through `App.vue`'s
   `<el-config-provider>` (`elementLocale` in `i18n/elementPlus.ts`), as does the menu's check mark.
+  Each option of the menu and the selects names its language in itself, and says which it is in
+  (`:lang="l.value"`), for a screen reader (`src/i18n/languageMenus.spec.ts`).
+- **Typefaces follow the script, not the page's language alone.** A page in Chinese sets Latin
+  letters, figures and their punctuation (Latin-1, the en dash, the bullet, the minus sign) in Plex
+  and Source Serif, as an English page does, through the stacks' first family, `'AIshie Latin'`
+  (`styles/fonts-latin.css`), and the rest in Noto TC or SC: Han and full-width punctuation, the
+  quotation marks, the ellipsis and the em dash, which Chinese doubles (「——」). A page in English
+  sets the Chinese it shows (a name, a course's title, what is typed into a field) in Noto TC, loaded
+  the first time it shows any (`styles/fonts.ts`); a language's own name marked with its `lang` does
+  not count. Buttons and fields take the stacks as the rest of the page does (`styles/main.css`), not
+  the browser's own face for them. No stack names PMingLiU or SimSun, which have no bold, and Noto
+  comes before any Chinese face of the system's (`src/styles/stacks.spec.ts`).
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
