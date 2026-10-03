@@ -20,6 +20,7 @@ import { ApiError, read } from '@/api/http'
 import { usePaged } from '@/composables/useAsync'
 import { usePageTitle } from '@/router/title'
 import { useCourseStore } from '@/stores/course'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LevelIcon from '@/components/LevelIcon.vue'
@@ -235,7 +236,8 @@ function toggleRules() {
       </el-button>
     </PageHeader>
 
-    <section v-show="rulesOpen" id="approvals-rules" class="approvals__rules" :aria-label="t('actions.approvals.rules')">
+    <!-- What the page does, said once: a note, as every explanation is. -->
+    <AppNote v-show="rulesOpen" id="approvals-rules" class="approvals__rules" :aria-label="t('actions.approvals.rules')">
       <!-- Said above both tabs, so each tab's rule starts with the tab's name. -->
       <ul class="approvals__rules-list">
         <i18n-t
@@ -260,7 +262,7 @@ function toggleRules() {
           <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{ t('actions.mine.title') }}</router-link>
         </template>
       </i18n-t>
-    </section>
+    </AppNote>
 
     <section v-if="recent.length" class="app-card approvals__recent">
       <h2 class="app-card__title">
@@ -358,13 +360,6 @@ function toggleRules() {
 <style scoped>
 .approvals__rules {
   margin-bottom: 16px;
-  padding: 12px 16px;
-  border-left: 3px solid var(--app-indigo-line);
-  border-radius: 0 var(--app-radius-item) var(--app-radius-item) 0;
-  background: color-mix(in srgb, var(--app-indigo-tint) 50%, transparent);
-  font-size: var(--app-text-md);
-  line-height: var(--app-lh-text);
-  color: var(--app-ink-2);
 }
 .approvals__rules-list {
   margin: 0 0 4px;
@@ -446,10 +441,13 @@ function toggleRules() {
 .approvals__card {
   position: relative;
 }
+/* Over the tabs' header, which runs the card's width under it (its padding keeps the tabs clear of the
+   button): without the layer, the header takes every click and tap meant for Refresh. */
 .approvals__toolbar {
   position: absolute;
   top: 24px;
   right: 24px;
+  z-index: 1;
 }
 .approvals__tabs :deep(.el-tabs__header) {
   padding-right: 136px;

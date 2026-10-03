@@ -22,6 +22,8 @@ const props = defineProps<{
   }
   size?: 'small' | 'default' | 'large'
   hideNone?: boolean
+  /** Without its icon, where the row shows it already (StatusTag's `no-icon`). */
+  noIcon?: boolean
 }>()
 
 const purpose = computed(() => {
@@ -32,8 +34,8 @@ const purpose = computed(() => {
 </script>
 
 <template>
-  <StatusTag v-if="purpose === undefined" vocab="role" :value="member.role" :size="size" />
-  <StatusTag v-else-if="purpose" vocab="seatPurpose" :value="purpose" :size="size" />
+  <StatusTag v-if="purpose === undefined" vocab="role" :value="member.role" :size="size" :no-icon="noIcon" />
+  <StatusTag v-else-if="purpose" vocab="seatPurpose" :value="purpose" :size="size" :no-icon="noIcon" />
   <span v-else-if="!hideNone" class="role-tag__none">—</span>
 </template>
 

@@ -18,6 +18,22 @@ describe('RoleTag', () => {
     expect(tag({ role: 'assistant', kind: 'human' })).toBe('Assistant')
   })
 
+  it('is an outline with its icon, and without it where its row shows the icon already', () => {
+    const ta = { role: 'ta', kind: 'human' }
+    const delegate = { ...agent, principal_member_id: 'm-sato', answers_course: true }
+    for (const member of [ta, delegate]) {
+      const w = mount(RoleTag, { props: { member }, global })
+      expect(w.find('.app-tag--outline').exists()).toBe(true)
+      expect(w.find('.app-tag__icon').exists()).toBe(true)
+      w.unmount()
+      const bare = mount(RoleTag, { props: { member, noIcon: true }, global })
+      expect(bare.find('.app-tag--outline').exists()).toBe(true)
+      expect(bare.find('.app-tag__icon').exists()).toBe(false)
+      expect(bare.text()).toBe(member === ta ? 'Teaching assistant' : 'Course agent')
+      bare.unmount()
+    }
+  })
+
   it('leaves the dash out among a page header’s tags, where it would read as a separator', () => {
     const w = mount(RoleTag, { props: { member: agent, hideNone: true }, global })
     expect(w.text()).toBe('')

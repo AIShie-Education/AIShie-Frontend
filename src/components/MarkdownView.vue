@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { renderMarkdown } from '@/utils/markdown'
 import { copyText } from '@/utils/clipboard'
+import AppEmpty from './AppEmpty.vue'
 // Typeset TeX and highlighted code (utils/markdownMath.ts, markdownCode.ts).
 import 'katex/dist/katex.min.css'
 import '@/styles/markdown-rich.css'
@@ -49,12 +50,6 @@ async function onClick(e: MouseEvent) {
 <template>
   <!-- eslint-disable-next-line vue/no-v-html -- sanitised in renderMarkdown -->
   <div v-if="html" class="markdown-body" :class="{ 'has-code-tools': codeTools }" @click="onClick" v-html="html" />
-  <p v-else class="markdown-empty">{{ empty ?? '' }}</p>
+  <!-- Nothing written: said as every empty place says it (AppEmpty), in its size and ink. -->
+  <AppEmpty v-else-if="empty" :text="empty" class="markdown-empty" />
 </template>
-
-<style scoped>
-.markdown-empty {
-  color: var(--el-text-color-secondary);
-  margin: 0;
-}
-</style>

@@ -88,6 +88,15 @@ function filled(nodes: VNode[] | undefined): boolean {
 .page-header__back:hover {
   background: var(--app-ground-2);
 }
+/* On a touch screen, a finger's size (40 px, docs/CONVENTIONS.md): the way back is pressed on every page under
+   another. It reaches 4 px past the 32 px it takes in the row, so that the arrow and the title stay put. */
+@media (pointer: coarse) {
+  .page-header__back {
+    width: 40px;
+    height: 40px;
+    margin: -4px;
+  }
+}
 .page-header__title {
   margin: 0;
   font-size: var(--app-text-2xl);

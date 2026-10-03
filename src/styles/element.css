@@ -426,6 +426,23 @@ html.dark .el-card {
   .el-select-v2 .el-select__wrapper {
     font-size: var(--app-text-lg);
   }
+  /* A filter's chip is pressed as often as a course's tab: a finger's height,
+     whichever row it is in (FilterChips, the activity's families). */
+  .el-check-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+  /* A number field's steps at its right end are two halves of 15 px, which no
+     finger hits: here the field is one to type into, with the screen's keypad,
+     as a field without steps is (docs/CONVENTIONS.md, Forms). */
+  .el-input-number.is-controls-right .el-input-number__increase,
+  .el-input-number.is-controls-right .el-input-number__decrease {
+    display: none;
+  }
+  .el-input-number.is-controls-right .el-input .el-input__wrapper {
+    padding-right: 15px;
+  }
 }
 
 /* Buttons, by rank (docs/CONVENTIONS.md, "Buttons"), the same on every page:
@@ -678,4 +695,12 @@ html.dark .el-card {
 }
 .el-descriptions__body .el-descriptions__table.is-bordered .el-descriptions__cell.is-vertical-content {
   padding-top: 2px;
+}
+
+/* A collapse (All permissions, the raw JSON of an action, a dialog's
+   advanced settings): its header and what it opens on lie on the card, as a
+   table does, between its lines; Element Plus gives both a white band. */
+.el-collapse {
+  --el-collapse-header-bg-color: transparent;
+  --el-collapse-content-bg-color: transparent;
 }

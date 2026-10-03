@@ -95,6 +95,21 @@ describe('ActionTarget, a conversation she started', () => {
     }
   })
 
+  it('quotes her question in the language’s own quotation marks, upright', async () => {
+    asStudent()
+    for (const [locale, quoted] of [
+      ['en', '“How do loops end?”'],
+      ['zh-Hant', '「How do loops end?」'],
+      ['zh-Hans', '“How do loops end?”'],
+    ] as const) {
+      setLocale(locale)
+      const w = mount(ActionTarget, { props: { action: opened, courseId: COURSE }, global })
+      await flushPromises()
+      expect(w.find('.action-target__quote').text()).toBe(quoted)
+      w.unmount()
+    }
+  })
+
   it('says someone in the course where the conversation cannot be read', async () => {
     asStudent()
     conversationGet = async () => Promise.reject(new Error('forbidden'))

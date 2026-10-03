@@ -91,10 +91,4 @@ function choose(v: V | '') {
   margin-left: 2px;
   font-weight: normal;
 }
-/* A finger's size on a touch screen, as the course's tabs are. */
-@media (pointer: coarse) {
-  .filter-chip {
-    min-height: 40px;
-  }
-}
 </style>

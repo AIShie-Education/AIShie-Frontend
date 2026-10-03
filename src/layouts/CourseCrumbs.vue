@@ -100,6 +100,13 @@ const sub = computed(() =>
 .course-crumbs a:hover {
   color: var(--app-indigo);
 }
+/* On a touch screen, the way up is a finger's height (44 px or more, as the header's own buttons are), its
+   words where they were: 12 px above and below a line of 20 px or more. */
+@media (pointer: coarse) {
+  .course-crumbs a {
+    padding-block: 12px;
+  }
+}
 .course-crumbs__course {
   flex: 0 1 auto;
 }

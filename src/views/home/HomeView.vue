@@ -5,6 +5,7 @@ import { read } from '@/api/http'
 import type { Course } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
 import { useAsync } from '@/composables/useAsync'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -111,7 +112,7 @@ watch(offersFilter, (on) => {
         </router-link>
       </template>
       <!-- With courses to show below, "no seat yet" is a line, not a whole page. -->
-      <p v-if="!courses.length" class="home-none">{{ t('home.noCourses') }}</p>
+      <AppEmpty v-if="!courses.length" :text="t('home.noCourses')" class="home-none" />
       <div v-else class="app-grid">
         <router-link
           v-for="m in courses"
@@ -203,10 +204,6 @@ watch(offersFilter, (on) => {
 </template>
 
 <style scoped>
-.home-none {
-  margin: 0;
-  color: var(--el-text-color-secondary);
-}
 .home-unseated {
   margin-top: 32px;
 }

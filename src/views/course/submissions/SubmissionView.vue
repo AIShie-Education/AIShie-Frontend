@@ -382,8 +382,11 @@ function onGraded() {
   color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
+/* In the interface's size, as every other page's facts are (an assignment's, a document's, a seat's): with none of
+   its own it was the browser's 16 px. */
 .facts__item dd {
   margin: 0;
+  font-size: var(--app-text-md);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
