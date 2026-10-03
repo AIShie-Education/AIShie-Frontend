@@ -64,7 +64,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     agentId = page.url().split('/').pop()!
 
     // Hosted on AIshie, for good, as Core holds it: the page offers no token.
-    await expect(page.locator('.page-header')).toContainText('Hosted on AIshie')
+    await expect(page.locator('.agent-view__desc')).toContainText('Hosted on AIshie')
     await expect(page.getByRole('button', { name: 'New token' })).toHaveCount(0)
     await expect(page.locator('.tokens-card')).toHaveCount(0)
     const got = await call(d.actors.mei.token, 'GET', `/v1/me/agents/${agentId}`)

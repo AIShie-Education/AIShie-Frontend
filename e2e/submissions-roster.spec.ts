@@ -71,10 +71,17 @@ test('the instructor sees who has not started on an assignment, and marks them m
   await pickOption(page, page.locator('.app-toolbar .assignment-select'), TITLE)
   await expect(page).toHaveURL(new RegExp(`assignment=${assignmentId}`))
   await expect(page.locator('.submissions-hint')).toHaveCount(0)
+  // The counts by state are the roster's filter: all of them first.
   const summary = page.locator('.roster-summary')
-  await expect(summary).toContainText('2 students')
-  await expect(summary).toContainText('Not started')
-  await expect(summary).toContainText('Submitted')
+  await expect(summary.getByRole('radio', { name: 'All 2' })).toHaveAttribute('aria-checked', 'true')
+  await expect(summary.getByRole('radio', { name: 'Not started 1' })).toBeVisible()
+  await expect(summary.getByRole('radio', { name: 'Submitted 1' })).toBeVisible()
+  // Pressed, one state's students alone, and pressed again all of them.
+  await summary.getByRole('radio', { name: 'Submitted 1' }).click()
+  await expect(page.locator('.roster-table .el-table__row')).toHaveCount(1)
+  await expect(page.locator('.roster-table .el-table__row')).toContainText('Yuki Tanaka')
+  await summary.getByRole('radio', { name: 'Submitted 1' }).click()
+  await expect(page.locator('.roster-table .el-table__row')).toHaveCount(2)
 
   const yuki = page.locator('.roster-table .el-table__row').filter({ hasText: 'Yuki Tanaka' })
   const ken = page.locator('.roster-table .el-table__row').filter({ hasText: 'Ken Wong' })
