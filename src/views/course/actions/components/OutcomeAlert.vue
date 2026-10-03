@@ -4,14 +4,16 @@
 // cancelled (and why it could no longer be carried out), or itself waiting
 // for approval; a proposal taken back; and, where the caller decided as the
 // owner of the agent that proposed it, that it was their own doing
-// (by_owner).
+// (by_owner). An outcome in a colour is an alert (docs/CONVENTIONS.md, "Notes
+// and alerts"): carried out or reviewed in green, failed in red, cancelled,
+// sent back or escalated in amber. One that is none of those (rejected, a
+// decision waiting for approval, taken back) is a note, as the action's own
+// page says a rejection, never Element Plus's grey box with its ⓘ.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import IdText from '@/components/IdText.vue'
-import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
-import MaybeLink from './MaybeLink.vue'
-import ResultIds from './ResultIds.vue'
-import { isObject, reasonText, routeFor } from './actionText'
+import AppNote from '@/components/AppNote.vue'
+import OutcomeLines from './OutcomeLines.vue'
+import { isObject } from './actionText'
 import type { DecideResult, Done } from './decide'
 
 const props = defineProps<{ courseId: string; done: Done; closable?: boolean }>()
@@ -21,34 +23,34 @@ const { t } = useI18n()
 /** What a decision may come to: the proposal's status after it. */
 const OUTCOMES = ['executed', 'failed', 'rejected', 'changes_requested', 'cancelled']
 
-const view = computed(() => {
+/** How it is drawn: an alert of an outcome's colour, or a note. */
+type Tone = 'success' | 'warning' | 'error' | 'note'
+const view = computed<{ tone: Tone; title: string }>(() => {
   const d = props.done
   switch (d.kind) {
     case 'decided': {
       const o = d.out.outcome
       // What finally happened: a decision about a decision ends in the outcome of the one beneath.
       const last = inner.value?.outcome ?? o
-      const type =
+      const tone =
         last === 'executed'
           ? 'success'
           : last === 'failed'
             ? 'error'
             : last === 'cancelled' || last === 'changes_requested'
               ? 'warning'
-              : 'info'
-      return { type, title: t(`actions.outcome.${OUTCOMES.includes(o) ? o : 'executed'}`) }
+              : 'note'
+      return { tone, title: t(`actions.outcome.${OUTCOMES.includes(o) ? o : 'executed'}`) }
     }
     case 'proposed':
-      return { type: 'info', title: t('actions.outcome.proposed') }
+      return { tone: 'note', title: t('actions.outcome.proposed') }
     case 'reviewed':
-      return { type: d.state === 'escalated' ? 'warning' : 'success', title: t(`actions.outcome.${d.state}`) }
+      return { tone: d.state === 'escalated' ? 'warning' : 'success', title: t(`actions.outcome.${d.state}`) }
     case 'withdrawn':
-      return { type: 'info', title: t('actions.outcome.withdrawn') }
+      return { tone: 'note', title: t('actions.outcome.withdrawn') }
   }
-  return { type: 'info', title: '' }
+  return { tone: 'note', title: '' }
 })
-const error = computed(() => (props.done.kind === 'decided' ? (props.done.out.error ?? null) : null))
-const why = computed(() => reasonText(error.value))
 
 /**
  * A decision about a decision carries out that decision, whose own outcome
@@ -63,89 +65,27 @@ const inner = computed<DecideResult | null>(() => {
   }
   return null
 })
-const innerWhy = computed(() => reasonText(inner.value?.error ?? null))
-/** Decided, reviewed or taken back as the owner of the agent that did it. */
-const asOwner = computed(() => {
-  const d = props.done
-  if (d.kind === 'decided') return d.out.by_owner === true
-  if (d.kind === 'reviewed' || d.kind === 'withdrawn') return d.byOwner === true
-  return false
-})
 </script>
 
 <template>
+  <AppNote
+    v-if="view.tone === 'note'"
+    :title="view.title"
+    :closable="!!closable"
+    class="outcome-alert"
+    @close="emit('close')"
+  >
+    <OutcomeLines :course-id="courseId" :done="done" :inner="inner" />
+  </AppNote>
   <el-alert
-    :type="view.type as 'success' | 'warning' | 'info' | 'error'"
+    v-else
+    :type="view.tone === 'success' ? 'success' : view.tone === 'error' ? 'error' : 'warning'"
     :title="view.title"
     show-icon
     :closable="!!closable"
     class="outcome-alert"
     @close="emit('close')"
   >
-    <div class="outcome-alert__body">
-      <p v-if="asOwner" class="outcome-alert__line outcome-alert__owner">
-        <el-icon><AgentSeatIcon /></el-icon>
-        {{
-          done.kind === 'withdrawn'
-            ? t('actions.outcome.withdrawnAsOwner')
-            : done.kind === 'reviewed'
-              ? t('actions.outcome.reviewedAsOwner')
-              : t('actions.outcome.decidedAsOwner')
-        }}
-      </p>
-      <template v-if="done.kind === 'decided'">
-        <p v-if="why" class="outcome-alert__line">{{ why }}</p>
-        <p v-if="error" class="outcome-alert__line outcome-alert__core">
-          {{ t('actions.outcome.coreSays') }}: {{ error.message }} <code>{{ error.code }}</code>
-        </p>
-        <template v-if="inner">
-          <p class="outcome-alert__line outcome-alert__inner">
-            {{ t('actions.outcome.inner', { what: t(`actions.outcome.${inner.outcome}`) }) }}
-            <MaybeLink :to="routeFor(courseId, 'action', inner.action_id)"><IdText :id="inner.action_id" /></MaybeLink>
-          </p>
-          <p v-if="innerWhy" class="outcome-alert__line">{{ innerWhy }}</p>
-          <p v-if="inner.error" class="outcome-alert__line outcome-alert__core">
-            {{ t('actions.outcome.coreSays') }}: {{ inner.error.message }} <code>{{ inner.error.code }}</code>
-          </p>
-          <ResultIds v-if="inner.outcome === 'executed'" :course-id="courseId" :result="inner.result" />
-        </template>
-        <ResultIds v-else-if="done.out.outcome === 'executed'" :course-id="courseId" :result="done.out.result" />
-      </template>
-      <template v-else-if="done.kind === 'proposed'">
-        <p class="outcome-alert__line">{{ t('actions.decision.willBeProposal') }}</p>
-        <span class="outcome-alert__line">
-          <router-link :to="{ name: 'course-action', params: { courseId, actionId: done.actionId } }">
-            {{ t('actions.decision.viewDecision') }}
-          </router-link>
-          <IdText :id="done.actionId" />
-        </span>
-      </template>
-    </div>
+    <OutcomeLines :course-id="courseId" :done="done" :inner="inner" />
   </el-alert>
 </template>
-
-<style scoped>
-.outcome-alert__body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.outcome-alert__line {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.outcome-alert__inner {
-  font-weight: 500;
-}
-.outcome-alert__core {
-  word-break: break-word;
-}
-.outcome-alert__core code {
-  font-family: var(--app-font-mono);
-  font-size: 11px;
-  opacity: 0.8;
-}
-</style>

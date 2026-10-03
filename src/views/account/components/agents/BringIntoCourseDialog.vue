@@ -196,14 +196,16 @@ async function submit() {
         <h3 class="bring__step">{{ t('agents.bring.preview') }}</h3>
         <AsyncState :loading="preview.loading.value && !defaults" :error="preview.error.value" @retry="preview.reload">
           <div v-if="defaults" class="bring__preview" :class="{ 'is-loading': preview.loading.value }">
+            <!-- What bringing it in will do is a note, a request for approval too (never amber); a seat that may not, an error. -->
             <el-alert
-              v-if="level"
-              :type="level === 'confirm_required' ? 'warning' : level === 'denied' ? 'error' : 'success'"
+              v-if="level === 'denied'"
+              type="error"
               :closable="false"
               show-icon
-              :title="t(`agents.bring.level.${level}`)"
+              :title="t('agents.bring.level.denied')"
               class="bring__alert"
             />
+            <AppNote v-else-if="level" class="bring__alert">{{ t(`agents.bring.level.${level}`) }}</AppNote>
             <dl class="bring__facts">
               <dt>{{ t('agents.bring.answers') }}</dt>
               <dd>{{ purpose === 'course' ? t('agents.bring.answersCourse') : t('agents.bring.answersYou') }}</dd>

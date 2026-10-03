@@ -196,21 +196,20 @@ function showCurrent() {
   void router.replace({ name: 'course-document', params: { courseId: props.courseId, documentId: props.documentId } })
 }
 
-// What everyone else reads, told to those who see more than that.
+// What everyone else reads, told to those who see more than that: a note
+// (docs/CONVENTIONS.md, "Notes and alerts"), as what explains is; a warning
+// only where nothing is published, so that nobody else reads it at all.
 const readersNote = computed(() => {
   const d = doc.value
   const v = shown.value
   if (!d || !v || !showVersions.value || !active.value) return null
   if (unreleased.value) {
-    return {
-      type: 'info' as const,
-      text: t(`materials.document.readers.unreleased.${d.kind as 'instructions' | 'rubric'}`),
-    }
+    return { warn: false, text: t(`materials.document.readers.unreleased.${d.kind as 'instructions' | 'rubric'}`) }
   }
-  if (!d.published_version_id) return { type: 'warning' as const, text: t('materials.document.readers.none') }
-  if (v.published) return { type: 'success' as const, text: t('materials.document.readers.this') }
+  if (!d.published_version_id) return { warn: true, text: t('materials.document.readers.none') }
+  if (v.published) return { warn: false, text: t('materials.document.readers.this') }
   return {
-    type: 'info' as const,
+    warn: false,
     text: publishedVersion.value
       ? t('materials.document.readers.other', { seq: publishedVersion.value.seq })
       : t('materials.document.readers.otherUnknown'),
@@ -561,13 +560,14 @@ function noteSource(): PrintRequest {
           </template>
         </el-alert>
         <el-alert
-          v-else-if="readersNote"
-          :type="readersNote.type"
+          v-else-if="readersNote?.warn"
+          type="warning"
           :closable="false"
           show-icon
           class="doc-view__alert"
           :title="readersNote.text"
         />
+        <AppNote v-else-if="readersNote" class="doc-view__alert">{{ readersNote.text }}</AppNote>
 
         <div class="doc-layout app-columns">
           <main class="doc-layout__main app-column">
