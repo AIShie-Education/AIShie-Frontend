@@ -16,6 +16,7 @@ import type { GradeSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -333,7 +334,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
 
     <!-- A seat that enters grades without reading them: its grades are on each submission and in My actions. -->
     <section v-if="!readsGrades" class="app-card">
-      <el-empty :description="t('grades.noRead.title')">
+      <AppEmpty :text="t('grades.noRead.title')" page>
         <p v-if="course.can('grade_submit')" class="app-form-hint grades-view__no-read">
           {{ t('grades.noRead.submit') }}
         </p>
@@ -351,7 +352,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
             </el-button>
           </router-link>
         </div>
-      </el-empty>
+      </AppEmpty>
     </section>
 
     <section v-else class="app-card">

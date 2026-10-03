@@ -8,6 +8,7 @@
 // priced by, so a change applies to calls from now on, and recorded costs
 // keep their price. The plan's models no row prices today are listed first,
 // each with "Add a price": a quota in dollars cannot hold them.
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -159,7 +160,7 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
       </ul>
     </el-alert>
 
-    <el-empty v-if="!rows.length" :description="t('runtimeAdmin.prices.empty')" class="prices-card__empty" />
+    <AppEmpty v-if="!rows.length" :text="t('runtimeAdmin.prices.empty')" class="prices-card__empty" />
     <el-table v-else ref="tableRef" :data="rows" :row-key="rowKey" class="prices-card__table">
       <el-table-column :label="t('runtimeAdmin.prices.model')" min-width="230">
         <template #default="{ row }">

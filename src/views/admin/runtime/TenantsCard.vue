@@ -12,6 +12,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { TenantQuota } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -163,7 +164,7 @@ function serverText(q: TenantQuota): string {
     </h2>
     <p class="tenants-card__intro">{{ t('runtimeAdmin.tenants.intro') }}</p>
     <RuntimeAsync :loading="loading && !loaded" :error="loaded ? null : loadError" @retry="load()">
-      <el-empty v-if="!tenants.length" :description="t('runtimeAdmin.tenants.empty')" class="tenants-card__empty" />
+      <AppEmpty v-if="!tenants.length" :text="t('runtimeAdmin.tenants.empty')" class="tenants-card__empty" />
       <el-table v-else ref="tableRef" :data="tenants" row-key="tenant_id" class="tenants-card__table">
         <el-table-column :label="t('runtimeAdmin.tenants.tenant')" min-width="200">
           <template #default="{ row }">

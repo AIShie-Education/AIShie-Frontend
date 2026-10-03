@@ -25,6 +25,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import OperatorDetail from './components/OperatorDetail.vue'
@@ -271,7 +272,7 @@ function openTest(p: SsoProvider) {
             @close="error = null"
           />
 
-          <el-empty v-if="!providers.length" :description="t('ssoAdmin.list.empty')" class="sso-admin__empty" />
+          <AppEmpty v-if="!providers.length" :text="t('ssoAdmin.list.empty')" class="sso-admin__empty" />
           <el-table v-else ref="tableRef" :data="providers" row-key="id" class="sso-admin__table">
             <el-table-column :label="t('ssoAdmin.list.provider')" :min-width="narrow ? 220 : 240">
               <template #default="{ row }">

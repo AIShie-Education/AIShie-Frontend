@@ -15,6 +15,7 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { TranscriptionJob, TranscriptionJobFilter } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { formatMoney, shortId } from '@/utils/format'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import LoadMore from '@/components/LoadMore.vue'
@@ -154,12 +155,7 @@ const empty = computed(() => loaded.value && !jobs.value.length)
       </el-button>
     </div>
     <RuntimeAsync :loading="loading && !loaded" :error="loaded ? null : error" @retry="load()">
-      <el-empty
-        v-if="empty"
-        :image-size="64"
-        :description="t('runtimeAdmin.transcription.jobs.empty')"
-        class="transcription-jobs__empty"
-      />
+      <AppEmpty v-if="empty" :text="t('runtimeAdmin.transcription.jobs.empty')" class="transcription-jobs__empty" />
       <el-table v-else ref="tableRef" :data="jobs" row-key="id" class="transcription-jobs__table">
         <el-table-column :label="t('runtimeAdmin.transcription.jobs.document')" min-width="220">
           <template #default="{ row }">

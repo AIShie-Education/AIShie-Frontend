@@ -19,6 +19,7 @@ import { notifyError } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useUiStore } from '@/stores/ui'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -337,8 +338,8 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           <el-button link type="primary" @click="markSeen">{{ t('activity.markSeen') }}</el-button>
         </div>
 
-        <el-empty v-if="!events.length" :description="t('activity.empty')" />
-        <el-empty v-else-if="!shown.length" :description="t('activity.emptyFiltered')" :image-size="80" />
+        <AppEmpty v-if="!events.length" :text="t('activity.empty')" />
+        <AppEmpty v-else-if="!shown.length" :text="t('activity.emptyFiltered')" />
 
         <section v-for="day in days" :key="day.key" class="activity__day">
           <h3 class="activity__day-title">{{ day.label }}</h3>

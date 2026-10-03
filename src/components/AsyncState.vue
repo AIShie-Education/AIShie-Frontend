@@ -1,16 +1,21 @@
 <script setup lang="ts">
 // Loading, error and empty states around content that comes from Core. A
-// refusal (403) is shown as a lack of permission, not as a failure.
+// refusal (403) is shown as a lack of permission, not as a failure. Nothing
+// to show is an AppEmpty: one line inside the card it is in, or, given
+// `empty-page`, the line icon over the words where it fills the page.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
 import { errorMessage } from '@/composables/useErrors'
+import AppEmpty from './AppEmpty.vue'
 
 const props = defineProps<{
   loading?: boolean
   error?: ApiError | null
   empty?: boolean
   emptyText?: string
+  /** Nothing to show fills the page (or a panel), not a card's line. */
+  emptyPage?: boolean
   /** Keep showing the content while reloading, when there is some. */
   overlay?: boolean
 }>()
@@ -36,9 +41,9 @@ const notFound = computed(() => !!props.error && props.error.isNotFound)
         <el-button type="primary" @click="emit('retry')">{{ t('common.actions.retry') }}</el-button>
       </template>
     </el-result>
-    <el-empty v-else-if="empty && !loading" :description="emptyText ?? t('common.labels.empty')">
-      <slot name="empty" />
-    </el-empty>
+    <AppEmpty v-else-if="empty && !loading" :text="emptyText ?? t('common.labels.empty')" :page="emptyPage">
+      <template v-if="$slots.empty" #default><slot name="empty" /></template>
+    </AppEmpty>
     <div v-else v-loading="!!(loading && overlay)">
       <slot />
     </div>

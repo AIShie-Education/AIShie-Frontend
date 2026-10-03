@@ -15,6 +15,7 @@ import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -210,11 +211,11 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
             @changed="onChanged"
             @log="openLog"
           />
-          <el-empty v-else :image-size="64" :description="t(`courseAgents.groups.${g.group}.empty`)">
+          <AppEmpty v-else :text="t(`courseAgents.groups.${g.group}.empty`)">
             <el-button v-if="canManage && canAdd && course.writable" type="primary" plain @click="addOpen = true">
               {{ t('courseAgents.add') }}
             </el-button>
-          </el-empty>
+          </AppEmpty>
           <p v-if="g.group === 'course' && g.rows.length" class="app-form-hint course-agents__foot">
             {{ t('courseAgents.replies.help') }}
           </p>

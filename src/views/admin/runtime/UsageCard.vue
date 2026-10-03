@@ -13,6 +13,7 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { OwnerPlanUse } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import DailyReset from '@/components/DailyReset.vue'
 import IdText from '@/components/IdText.vue'
@@ -108,7 +109,7 @@ const schoolSpent = computed(() => {
           </template>
         </p>
 
-        <el-empty v-if="!owners.length" :description="t('runtimeAdmin.usage.empty')" class="usage-card__empty" />
+        <AppEmpty v-if="!owners.length" :text="t('runtimeAdmin.usage.empty')" class="usage-card__empty" />
         <el-table v-else ref="tableRef" :data="owners" row-key="tenant_id" class="usage-card__table">
           <el-table-column :label="t('runtimeAdmin.usage.owner')" min-width="200">
             <template #default="{ row }">

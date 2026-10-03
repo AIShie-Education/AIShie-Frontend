@@ -19,6 +19,13 @@ describe('the element-look lint rule', () => {
     expect(await problems('<el-tag>x</el-tag>', 'src/components/SomeBadge.vue')).toHaveLength(1)
   })
 
+  it('refuses Element Plus’s empty box anywhere, and points to AppEmpty', async () => {
+    expect(await problems('<el-empty description="Nothing" :image-size="64" />')).toEqual([
+      expect.stringContaining('AppEmpty'),
+    ])
+    expect(await problems('<el-empty />', 'src/components/AsyncState.vue')).toHaveLength(1)
+  })
+
   it('lets AppTag, which draws every tag, use one', async () => {
     expect(await problems('<el-tag>x</el-tag>', 'src/components/AppTag.vue')).toEqual([])
     expect(await problems('<AppTag tone="wait">x</AppTag>')).toEqual([])

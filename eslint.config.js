@@ -48,6 +48,11 @@ const ELEMENT_LOOK = {
     message:
       'A tag is an AppTag (a state, an identity, a count, or the usual state, quiet) or a StatusTag for Core’s vocabularies, never an el-tag with an effect of its own (docs/CONVENTIONS.md, "Tags").',
   },
+  'el-empty': {
+    allowedIn: [],
+    message:
+      'Nothing to show is an AppEmpty (one line in a card, or the line icon where it fills the page), or AsyncState’s empty-text, never Element Plus’s grey box (docs/CONVENTIONS.md, "Empty places").',
+  },
 }
 /** An element's attribute as a template writes it, bound or not: `type="info"`, `:type="t"`. */
 const attributeOf = (node, name) =>

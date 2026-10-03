@@ -15,6 +15,7 @@ import { isRuntimeError, isVersionMismatch, runtimeAdmin } from '@/api/runtime'
 import type { PlanOffer, ProviderOffer, SchoolPlan } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { providerLabel } from '@/views/account/components/agents/hosting'
+import AppEmpty from '@/components/AppEmpty.vue'
 import OfferDialog from './OfferDialog.vue'
 import OfferKey from './OfferKey.vue'
 import OfferStatus from './OfferStatus.vue'
@@ -190,7 +191,7 @@ function openEdit(o: PlanOffer) {
       @close="error = null"
     />
 
-    <el-empty v-if="!offers.length" :description="t('runtimeAdmin.offers.empty')" class="offers-card__empty" />
+    <AppEmpty v-if="!offers.length" :text="t('runtimeAdmin.offers.empty')" class="offers-card__empty" />
     <el-table v-else ref="tableRef" :data="offers" :row-key="rowKey" class="offers-card__table">
       <el-table-column :label="t('runtimeAdmin.offers.model')" :min-width="narrow ? 240 : 230">
         <template #default="{ row }">

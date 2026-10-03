@@ -25,6 +25,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { runtime } from '@/api/runtime'
 import { useAsync } from '@/composables/useAsync'
 import { useRuntime } from '@/composables/useRuntime'
+import AppEmpty from '@/components/AppEmpty.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import OperatorDetail from './components/OperatorDetail.vue'
 import AgentRuntimeCard from './runtime/AgentRuntimeCard.vue'
@@ -74,16 +75,19 @@ watch(
     <section v-if="!rt.checked.value" v-loading="true" class="app-card runtime-admin__checking" />
     <section v-else-if="!rt.available.value" class="app-card runtime-admin__none">
       <el-result
-        :icon="unreachable ? 'warning' : 'info'"
-        :title="t(unreachable ? 'runtimeAdmin.state.unreachableTitle' : 'runtimeAdmin.state.absentTitle')"
-        :sub-title="t(unreachable ? 'runtimeAdmin.state.unreachable' : 'runtimeAdmin.state.absent')"
+        v-if="unreachable"
+        icon="warning"
+        :title="t('runtimeAdmin.state.unreachableTitle')"
+        :sub-title="t('runtimeAdmin.state.unreachable')"
       >
-        <template v-if="unreachable" #extra>
+        <template #extra>
           <el-button type="primary" class="runtime-admin__retry" @click="rt.refresh()">
             {{ t('common.actions.retry') }}
           </el-button>
         </template>
       </el-result>
+      <!-- No agent service beside this server is not a fault: nothing to show here. -->
+      <AppEmpty v-else page :title="t('runtimeAdmin.state.absentTitle')" :text="t('runtimeAdmin.state.absent')" />
     </section>
     <section v-else-if="!me.data.value" class="app-card runtime-admin__me">
       <RuntimeAsync :loading="me.loading.value || !me.error.value" :error="me.error.value" @retry="me.reload" />

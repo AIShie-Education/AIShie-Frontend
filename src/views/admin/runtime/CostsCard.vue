@@ -15,6 +15,7 @@ import { runtimeAdmin } from '@/api/runtime'
 import type { CostGroup, CostGroupBy, CostLine, CostReport, CostSum, KeySource } from '@/api/runtime-types'
 import { COST_GROUPS } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import IdText from '@/components/IdText.vue'
 import LoadMore from '@/components/LoadMore.vue'
@@ -179,7 +180,7 @@ function toPrices() {
           </el-button>
         </el-alert>
 
-        <el-empty v-if="!rows.length" :description="t('runtimeAdmin.costs.empty')" class="costs-card__empty" />
+        <AppEmpty v-if="!rows.length" :text="t('runtimeAdmin.costs.empty')" class="costs-card__empty" />
         <el-table v-else ref="tableRef" :data="rows" row-key="key" class="costs-card__table">
           <el-table-column :label="t(`runtimeAdmin.costs.groupColumn.${report.group}`)" min-width="200">
             <template #default="{ row }">

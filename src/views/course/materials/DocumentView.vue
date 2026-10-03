@@ -47,6 +47,7 @@ import { useRuntime } from '@/composables/useRuntime'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { versionFilesOf } from '@/utils/documentFiles'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
@@ -687,14 +688,14 @@ function noteSource(): PrintRequest {
                   />
                 </div>
               </template>
-              <el-empty
+              <AppEmpty
                 v-else
-                :description="showVersions ? t('materials.document.emptyDoc') : t('materials.document.noVersion')"
+                :text="showVersions ? t('materials.document.emptyDoc') : t('materials.document.noVersion')"
               >
                 <el-button v-if="canWrite && active" type="primary" :disabled="writeDisabled" @click="openVersion()">
                   {{ t('materials.document.addFirst') }}
                 </el-button>
-              </el-empty>
+              </AppEmpty>
             </section>
           </main>
 

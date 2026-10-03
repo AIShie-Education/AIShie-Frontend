@@ -25,6 +25,7 @@ import { useContainerNarrow, useTableRelayout } from '@/composables/useContainer
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { isUuid, shortId } from '@/utils/format'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
@@ -469,7 +470,7 @@ watch(
     </section>
 
     <section v-if="!student" class="app-card">
-      <el-empty :description="t('grades.gradebook.pickFirst')" />
+      <AppEmpty :text="t('grades.gradebook.pickFirst')" page />
     </section>
 
     <!-- Reloading the same student's figures keeps them under a spinner; another student's are not shown. -->

@@ -16,6 +16,7 @@ import { useSessionStore } from '@/stores/session'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useContainerWidth } from '@/composables/useContainerWidth'
 import { useMediaQuery } from '@/composables/useMediaQuery'
+import AppEmpty from '@/components/AppEmpty.vue'
 import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
 import { findCourse } from '@/views/admin/components/adminShared'
 import AsyncState from '@/components/AsyncState.vue'
@@ -176,19 +177,17 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 
 <template>
   <div class="course-layout">
-    <el-result
+    <AppEmpty
       v-if="adminWithoutSeat"
-      icon="info"
+      page
       :title="t('layout.course.adminNoSeat.title')"
-      :sub-title="session.isAdmin ? t('layout.course.adminNoSeat.body') : t('deptAdmin.noSeat.body')"
+      :text="session.isAdmin ? t('layout.course.adminNoSeat.body') : t('deptAdmin.noSeat.body')"
       class="course-layout__no-seat"
     >
-      <template #extra>
-        <router-link :to="{ name: 'admin-course', params: { courseId } }">
-          <el-button type="primary">{{ t('layout.course.adminNoSeat.action') }}</el-button>
-        </router-link>
-      </template>
-    </el-result>
+      <router-link :to="{ name: 'admin-course', params: { courseId } }">
+        <el-button type="primary">{{ t('layout.course.adminNoSeat.action') }}</el-button>
+      </router-link>
+    </AppEmpty>
     <AsyncState
       v-else
       :loading="course.loading && !ready"
@@ -327,12 +326,6 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   .course-layout {
     margin-top: -12px;
   }
-}
-.course-layout__no-seat :deep(.el-result__subtitle) {
-  max-width: 60ch;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
 }
 /* Which course: its code, its name in the sans, and its status, on one line. A long name gives way, cut
    short with an ellipsis (the top bar, its title and the side bar say it in full); the code and the status

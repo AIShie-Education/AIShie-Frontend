@@ -6,6 +6,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@element-plus/icons-vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import TimeText from '@/components/TimeText.vue'
@@ -59,10 +60,9 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
     <div v-if="endedCount" class="join-list__toolbar">
       <el-switch v-model="showEnded" :active-text="t('join.links.list.showEnded', { n: endedCount })" />
     </div>
-    <el-empty
+    <AppEmpty
       v-if="!shown.length"
-      :image-size="64"
-      :description="links.length ? t('join.links.list.noneLive') : t('join.links.list.empty')"
+      :text="links.length ? t('join.links.list.noneLive') : t('join.links.list.empty')"
     />
     <ul v-else class="join-list__items">
       <li

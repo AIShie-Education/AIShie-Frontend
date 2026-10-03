@@ -30,6 +30,7 @@ import { notifyError } from '@/composables/useErrors'
 import { usePolling } from '@/composables/usePolling'
 import { announce, useWrite } from '@/composables/useWrite'
 import { pageHeadings } from '@/utils/markdown'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import StatusTag from '@/components/StatusTag.vue'
@@ -568,11 +569,10 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
             }}
           </p>
         </el-alert>
-        <el-empty
+        <AppEmpty
           v-else
-          :image-size="64"
           class="text-pane__none"
-          :description="
+          :text="
             !canWrite
               ? t('materials.document.text.none.reader')
               : !transcriptionOn
