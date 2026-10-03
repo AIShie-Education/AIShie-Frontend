@@ -14,6 +14,7 @@ import type {
   OfferCreate,
   OfferPatch,
   OfferStatus,
+  OpenRouterRouting,
   PlanOffer,
   PlanQuotas,
   PriceCreate,
@@ -47,7 +48,10 @@ type T = (key: string, params?: Record<string, unknown>) => string
 export function isNotOffered(e: unknown): boolean {
   if (!isRuntimeError(e)) return false
   if (e.status === 405) return true
-  return e.status === 404 && !['offer_not_found', 'agent_not_found', 'runtime_absent'].includes(e.reason)
+  return (
+    e.status === 404 &&
+    !['offer_not_found', 'agent_not_found', 'runtime_absent', 'openrouter_model_not_found'].includes(e.reason)
+  )
 }
 
 /** Whether the runtime did not answer, or could not: no answer, a gateway's error, or its own 5xx. */
@@ -104,6 +108,8 @@ const ADMIN_REASONS: ReadonlySet<string> = new Set([
   'transcription_unavailable',
   'offer_no_file_input',
   'credential_rejected',
+  'openrouter_unavailable',
+  'openrouter_model_not_found',
 ])
 
 /** The words for a refusal of one of this page's calls, in the reader's language. */
@@ -245,13 +251,21 @@ export function formFromOffer(o: PlanOffer, providers: readonly ProviderOffer[])
   return formFromModel({ ...o, price_known: o.priced }, providers)
 }
 
-export type OfferField = FormField | 'id' | 'label' | 'enabled'
+export type OfferField = FormField | 'id' | 'label' | 'enabled' | 'openrouter'
 
-/** The field of the offer's form a JSON Pointer from the runtime names (details.field), or null. */
+/**
+ * The field of the offer's form a JSON Pointer from the runtime names
+ * (details.field), or null. Anything under /openrouter is the upstream
+ * routing's section, which places it by its member (openRouter.ts,
+ * routingErrorAt): asked first, since /openrouter/order/2's last segment
+ * names no field.
+ */
 export function offerFieldOf(pointer: unknown): OfferField | null {
   if (pointer === '/id') return 'id'
   if (pointer === '/label') return 'label'
   if (pointer === '/enabled') return 'enabled'
+  if (pointer === '/openrouter' || (typeof pointer === 'string' && pointer.startsWith('/openrouter/')))
+    return 'openrouter'
   return fieldOfPointer(pointer)
 }
 
@@ -293,13 +307,22 @@ export function offerProblems(opts: {
   return out
 }
 
-/** A new offer, as POST admin/school-plan/offers takes it: the model's members for its provider alone. */
+/** The provider whose offers take upstream routing (openrouter). */
+const ROUTED = 'openrouter'
+
+/**
+ * A new offer, as POST admin/school-plan/offers takes it: the model's
+ * members for its provider alone, and for OpenRouter's its upstream routing
+ * (canonical), left out when it has none.
+ */
 export function offerCreateFrom(opts: {
   meta: OfferMeta
   form: ModelForm
   provider: ProviderOffer
   key: string
   skipKeyTest: boolean
+  /** The routing, canonical (openRouter.ts); null or left out for none. */
+  routing?: OpenRouterRouting | null
 }): OfferCreate {
   const body: OfferCreate = {
     id: opts.meta.id.trim(),
@@ -309,6 +332,7 @@ export function offerCreateFrom(opts: {
     key: opts.key,
   }
   if (opts.skipKeyTest) body.skip_key_test = true
+  if (opts.provider.provider === ROUTED && opts.routing) body.openrouter = opts.routing
   return body
 }
 
@@ -317,7 +341,10 @@ export function offerCreateFrom(opts: {
  * as it was read (initial), so that a label changed alone keeps the key's
  * trial, and a model the form merely shows the same way is never sent. A
  * provider changed sends the new one's model and endpoint as its kind takes
- * them; key is a new key, or null to keep the one kept.
+ * them; key is a new key, or null to keep the one kept. An offer of
+ * OpenRouter's sends its whole routing (null when cleared) only where its
+ * canonical form differs from the one read (routingRead); one moved to
+ * another provider sends none, and the runtime drops it.
  */
 export function offerPatchFrom(opts: {
   offer: PlanOffer
@@ -327,6 +354,10 @@ export function offerPatchFrom(opts: {
   provider: ProviderOffer | undefined
   key: string | null
   skipKeyTest: boolean
+  /** The routing now, canonical (openRouter.ts), null for none. */
+  routing?: OpenRouterRouting | null
+  /** The routing as it was read, canonical, null for none. */
+  routingRead?: OpenRouterRouting | null
 }): OfferPatch {
   const { offer, initial, form, provider } = opts
   const p: OfferPatch = {}
@@ -356,6 +387,11 @@ export function offerPatchFrom(opts: {
   if (opts.key !== null) {
     p.key = opts.key
     if (opts.skipKeyTest) p.skip_key_test = true
+  }
+  if (provider?.provider === ROUTED && form.provider === ROUTED && opts.routing !== undefined) {
+    const now = opts.routing ?? null
+    const read = offer.provider === ROUTED ? (opts.routingRead ?? null) : null
+    if (JSON.stringify(now) !== JSON.stringify(read)) p.openrouter = now
   }
   return p
 }

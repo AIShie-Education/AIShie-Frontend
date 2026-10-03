@@ -16,6 +16,12 @@
 // An edit sends only what changed from the offer as read, at its version
 // (If-Match). When it has changed meanwhile (412), it is read again, what
 // the administrator changed is kept over it, and they are told so.
+//
+// An offer of OpenRouter's has its upstream routing beside the model
+// (OpenRouterRouting, openRouter.ts): a new one starts with no data kept,
+// every setting of a call taken and fallbacks allowed; one edited sends its
+// whole routing, canonical, only where it changed. The dialog is wider
+// while that section shows, for its table of upstream providers.
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import DataFlowNotice from '@/components/DataFlowNotice.vue'
@@ -52,6 +58,19 @@ import {
   type UnpricedItem,
 } from './runtimeAdmin'
 import UnpricedNotice from './UnpricedNotice.vue'
+import OpenRouterRouting from './OpenRouterRouting.vue'
+import {
+  NEW_OFFER_ROUTING,
+  OPENROUTER,
+  canonicalRouting,
+  emptyRoutingForm,
+  formFromRouting,
+  routingErrorAt,
+  routingFromForm,
+  routingProblems,
+  type RoutingForm,
+} from './openRouter'
+import type { OpenRouterRouting as Routing } from '@/api/runtime-types'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{
@@ -85,8 +104,17 @@ const keyMode = ref<'keep' | 'new'>('new')
 const skipKeyTest = ref(false)
 const advanced = ref<string[]>([])
 
+/** OpenRouter's upstream routing, for an offer of OpenRouter's. */
+const routing = reactive<RoutingForm>(emptyRoutingForm())
+/** The routing as the offer was read, canonical: what an edit is compared with. */
+let routingRead: Routing | null = null
+/** What is wrong with the routing, by where its section says it (openRouter.ts, RoutingErrorKey). */
+const routingErrors = reactive<Record<string, string>>({})
+
 const saving = ref(false)
 const error = shallowRef<unknown>(null)
+/** Words of the dialog's own for the error above the form, in place of the refusal's. */
+const errorWords = ref('')
 const trial = shallowRef<KeyTrial | null>(null)
 const fieldErrors = reactive<Partial<Record<OfferField, string>>>({})
 const notice = ref('')
@@ -99,9 +127,25 @@ const models = computed(() => provider.value?.suggested_models ?? [])
 /** Editing, with the provider the key was given for: the key may be kept. */
 const canKeep = computed(() => !!base.value?.key_hint && form.provider === base.value.provider)
 const sendingKey = computed(() => !canKeep.value || keyMode.value === 'new')
+/** The upstream routing's section shows: an offer of OpenRouter's. */
+const routed = computed(() => !!provider.value && form.provider === OPENROUTER)
+/** The routing as it would be sent now, canonical; null for none. */
+const routingNow = computed(() => (routed.value ? routingFromForm(routing) : null))
+
+/**
+ * The routing's form for a provider: an offer of OpenRouter's read has its
+ * own; a new one, or one moved to OpenRouter, the new offer's.
+ */
+function routingFor(p: string, read: PlanOffer | null): RoutingForm {
+  if (p !== OPENROUTER) return emptyRoutingForm()
+  if (read && read.provider === OPENROUTER) return formFromRouting(read.openrouter ?? null)
+  return formFromRouting(NEW_OFFER_ROUTING)
+}
 
 function resetMessages() {
   error.value = null
+  errorWords.value = ''
+  for (const k of Object.keys(routingErrors)) delete routingErrors[k]
   trial.value = null
   notice.value = ''
   unpriced.value = []
@@ -126,6 +170,8 @@ function start() {
     if (providers.value.length === 1) Object.assign(form, defaultsFor(form, providers.value[0]))
   }
   initial = { ...form }
+  routingRead = o?.provider === OPENROUTER ? canonicalRouting(o.openrouter) : null
+  Object.assign(routing, routingFor(form.provider, o))
   keyMode.value = canKeep.value ? 'keep' : 'new'
 }
 
@@ -151,6 +197,7 @@ function onProvider(p: string) {
   const same = !!b && b.provider === p
   Object.assign(form, same ? formFromOffer(b, providers.value) : defaultsFor(form, o))
   if (!same) form.model = ''
+  Object.assign(routing, routingFor(p, same ? b : null))
   keyMode.value = canKeep.value ? 'keep' : 'new'
   resetMessages()
 }
@@ -196,6 +243,8 @@ function patchNow(): OfferPatch {
     provider: provider.value,
     key: sendingKey.value ? key.value : null,
     skipKeyTest: skipKeyTest.value,
+    routing: routingNow.value,
+    routingRead,
   })
 }
 /** Editing the model without a new key: the key kept was tried with another, and will show as untested. */
@@ -240,14 +289,53 @@ function shows(f: OfferField): boolean {
       return kind === 'bedrock_region'
     case 'enabled':
     case 'offer':
+    case 'openrouter':
       return false
     default:
       return true
   }
 }
 
+/** The words for a refusal of the routing, said in its section: a member's own where it has them. */
+function routingText(e: unknown, at: NonNullable<ReturnType<typeof routingErrorAt>>): string {
+  if (!isRuntimeError(e)) return adminErrorText(e, t)
+  if (e.reason === 'invalid_field') {
+    const own =
+      at.member === 'preferred_min_throughput'
+        ? 'runtimeAdmin.openrouter.invalid.throughput'
+        : at.member === 'preferred_max_latency'
+          ? 'runtimeAdmin.openrouter.invalid.latency'
+          : at.member === 'max_price'
+            ? 'runtimeAdmin.openrouter.invalid.price'
+            : 'hosting.errors.invalid_field'
+    return at.slug ? t('common.pair', { label: at.slug, value: t(own) }) : t(own)
+  }
+  return fieldText(e, '')
+}
+
+/**
+ * A refusal of the routing (details.field under /openrouter): an older
+ * server's that does not take it said above the form in words of its own;
+ * any other in the section, where it places it by its member.
+ */
+function showRoutingError(e: unknown): boolean {
+  if (!isRuntimeError(e)) return false
+  const field = e.details?.field
+  if (offerFieldOf(field) !== 'openrouter') return false
+  if (e.reason === 'unknown_field' && field === '/openrouter') {
+    error.value = e
+    errorWords.value = t('runtimeAdmin.offer.routingUnsupported')
+    return true
+  }
+  const at = routingErrorAt(field, routing)
+  if (!routed.value || !at || !['invalid_field', 'missing_field', 'unknown_field'].includes(e.reason)) return false
+  routingErrors[at.key] = routingText(e, at)
+  return true
+}
+
 /** Shows a refusal where it belongs: a failed trial with what the provider said, on its field, or above the form. */
 function showError(e: unknown, sent: string) {
+  if (showRoutingError(e)) return
   const failed = keyTrialOf(e)
   if (failed) {
     trial.value = failed
@@ -287,6 +375,8 @@ async function rebase() {
   if (!b) return
   const fresh = (await runtimeAdmin.offer(b.id)).data
   const freshForm = formFromOffer(fresh, providers.value)
+  // The routing changed here is kept; one left as read takes the fresh one.
+  const routingKept = JSON.stringify(routingNow.value) !== JSON.stringify(routed.value ? routingRead : null)
   for (const k of Object.keys(form) as (keyof ModelForm)[]) {
     if (form[k] === initial[k]) (form as Record<string, unknown>)[k] = freshForm[k]
   }
@@ -294,6 +384,8 @@ async function rebase() {
   if (meta.enabled === b.enabled) meta.enabled = fresh.enabled
   base.value = fresh
   initial = freshForm
+  routingRead = fresh.provider === OPENROUTER ? canonicalRouting(fresh.openrouter) : null
+  if (!routingKept) Object.assign(routing, routingFor(form.provider, fresh))
   if (!canKeep.value) keyMode.value = 'new'
 }
 
@@ -312,14 +404,23 @@ async function save() {
   for (const [f, k] of Object.entries(problems))
     fieldErrors[f as OfferField] = t(k as string, { provider: providerName.value })
   if (problems.maxOutputTokens) advanced.value = ['advanced']
-  if (Object.keys(problems).length || !provider.value) return
+  const routingWrong = routed.value ? routingProblems(routing) : {}
+  for (const [at, k] of Object.entries(routingWrong)) routingErrors[at] = t(k)
+  if (Object.keys(problems).length || Object.keys(routingWrong).length || !provider.value) return
 
   const sent = sendingKey.value ? key.value : ''
   saving.value = true
   try {
     if (creating.value) {
       const r = await runtimeAdmin.createOffer(
-        offerCreateFrom({ meta, form, provider: provider.value, key: sent, skipKeyTest: skipKeyTest.value }),
+        offerCreateFrom({
+          meta,
+          form,
+          provider: provider.value,
+          key: sent,
+          skipKeyTest: skipKeyTest.value,
+          routing: routingNow.value,
+        }),
       )
       done(
         r.data,
@@ -371,14 +472,16 @@ function onGone(e: unknown): boolean {
 const title = computed(() =>
   props.offer ? t('runtimeAdmin.offer.editTitle', { label: props.offer.label }) : t('runtimeAdmin.offer.createTitle'),
 )
-const errorText = computed(() => (error.value ? adminErrorText(error.value, t, { provider: providerName.value }) : ''))
+const errorText = computed(() =>
+  error.value ? errorWords.value || adminErrorText(error.value, t, { provider: providerName.value }) : '',
+)
 </script>
 
 <template>
   <el-dialog
     v-model="open"
     :title="title"
-    width="600px"
+    :width="routed ? '760px' : '600px'"
     destroy-on-close
     :close-on-click-modal="!saving"
     class="offer-dialog"
@@ -585,6 +688,18 @@ const errorText = computed(() => (error.value ? adminErrorText(error.value, t, {
               </el-form-item>
             </el-collapse-item>
           </el-collapse>
+
+          <template v-if="routed">
+            <h3 class="offer-form__section">{{ t('runtimeAdmin.openrouter.title') }}</h3>
+            <OpenRouterRouting
+              :routing="routing"
+              :model="form.model"
+              :max-output-tokens="form.maxOutputTokens"
+              :errors="routingErrors"
+              :providers="providers"
+              class="offer-form__routing"
+            />
+          </template>
 
           <DataFlowNotice class="offer-dialog__alert offer-dialog__data-flow">
             {{ t('runtimeAdmin.offer.warning', { provider: providerName }) }}

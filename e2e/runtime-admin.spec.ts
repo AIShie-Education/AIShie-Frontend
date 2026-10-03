@@ -9,10 +9,12 @@ import { call, demo, expectToasted, keepToasts, photograph, root, showSideView, 
 // model to the school's plan, turns it off, adds a price, and sets OCR's
 // languages; and sets up the transcriber of documents' text versions,
 // giving it a credential the real Core issues, which the played runtime
-// receives and the page never shows, and revoking it again. What the page
-// said of each write is checked from the messages it kept (keepToasts), as
-// a message closes itself after 3 s, which a busy machine can let pass
-// before the check.
+// receives and the page never shows, and revoking it again; and adds a
+// model of OpenRouter's with its upstream routing, chosen from the upstream
+// providers the played runtime lists (OpenRouter itself is never called).
+// What the page said of each write is checked from the messages it kept
+// (keepToasts), as a message closes itself after 3 s, which a busy machine
+// can let pass before the check.
 
 const STAMP = Date.now().toString(36)
 
@@ -35,9 +37,107 @@ test.describe('without an agent runtime', () => {
   })
 })
 
+/** The model the played runtime lists OpenRouter's upstream providers for. */
+const LLAMA = 'meta-llama/llama-3.3-70b-instruct'
+
+/** One upstream provider's endpoint, as the runtime answers GET admin/openrouter/endpoints. */
+function upstream(over: Record<string, unknown>) {
+  return {
+    slug: 'groq',
+    provider: 'groq',
+    provider_name: 'Groq',
+    quantization: 'unknown',
+    usd_per_mtok: { input: '0.590000', output: '0.790000', cache_read: null, cache_write: null },
+    usd_per_request: null,
+    usd_per_image: null,
+    discount: 0,
+    higher_above_tokens: null,
+    context_length: 131072,
+    max_output_tokens: 32768,
+    max_prompt_tokens: null,
+    tools: true,
+    tool_choice: true,
+    reasoning: false,
+    zdr: true,
+    status: 0,
+    uptime_30m: 99.26,
+    uptime_1d: 99.1,
+    latency: null,
+    throughput: null,
+    headquarters: 'US',
+    datacenters: ['US'],
+    privacy_policy_url: 'https://groq.com/privacy-policy/',
+    terms_of_service_url: 'https://groq.com/terms-of-use/',
+    status_page_url: 'https://groqstatus.com/',
+    ...over,
+  }
+}
+
+/** The four upstream providers (five endpoints: Google Vertex's base slug and one region) the unit tests' fixture has. */
+const UPSTREAMS = {
+  model: LLAMA,
+  name: 'Meta: Llama 3.3 70B Instruct',
+  fetched_at: new Date().toISOString(),
+  stale: false,
+  price: null,
+  endpoints: [
+    upstream({}),
+    upstream({
+      slug: 'deepinfra/turbo',
+      provider: 'deepinfra',
+      provider_name: 'DeepInfra',
+      quantization: 'fp8',
+      usd_per_mtok: { input: '0.100000', output: '0.320000', cache_read: null, cache_write: null },
+      max_output_tokens: 16384,
+      zdr: false,
+      uptime_30m: 98.85,
+      uptime_1d: 98.48,
+    }),
+    upstream({
+      slug: 'cloudflare/fp8',
+      provider: 'cloudflare',
+      provider_name: 'Cloudflare',
+      quantization: 'fp8',
+      usd_per_mtok: { input: '0.293000', output: '2.253000', cache_read: null, cache_write: null },
+      context_length: 24000,
+      max_output_tokens: 21600,
+      tools: false,
+      tool_choice: false,
+      zdr: false,
+      uptime_30m: 99.43,
+      uptime_1d: 99.2,
+    }),
+    upstream({
+      slug: 'google-vertex',
+      provider: 'google-vertex',
+      provider_name: 'Google',
+      usd_per_mtok: { input: '0.720000', output: '0.720000', cache_read: '0.360000', cache_write: null },
+      context_length: 128000,
+      max_output_tokens: 115200,
+      zdr: false,
+      uptime_30m: null,
+      uptime_1d: null,
+    }),
+    upstream({
+      slug: 'google-vertex/us-central1',
+      provider: 'google-vertex',
+      provider_name: 'Google',
+      usd_per_mtok: { input: '0.720000', output: '0.720000', cache_read: '0.360000', cache_write: null },
+      context_length: 128000,
+      max_output_tokens: 8192,
+      zdr: false,
+      status: -1,
+      uptime_30m: null,
+      uptime_1d: null,
+    }),
+  ],
+}
+
 /** A runtime from its contract, answering in the browser; what it was sent is kept. */
 function playRuntime(page: Page) {
   const sent: { method: string; path: string; body: any; ifMatch?: string }[] = []
+  /** A refusal the next offer's PATCH is answered with, once. */
+  let refuseNextPatch: { status: number; code: string; reason: string; field: string } | null = null
   const offers: any[] = [
     {
       id: 'standard',
@@ -55,6 +155,7 @@ function playRuntime(page: Page) {
       enabled: true,
       status: 'offered',
       priced: true,
+      openrouter: null,
       agents: 2,
       key_hint: null,
       key_status: null,
@@ -175,6 +276,14 @@ function playRuntime(page: Page) {
       key_prefix: 'sk-',
       suggested_models: [{ model: 'gpt-4.1-mini', priced: true }],
     },
+    {
+      provider: 'openrouter',
+      label: 'OpenRouter',
+      adapters: ['openai_chat'],
+      endpoint: { kind: 'fixed', base_url: 'https://openrouter.ai/api/v1' },
+      key_prefix: 'sk-or-',
+      suggested_models: [],
+    },
   ]
   const answer = (route: Route, status: number, json: unknown) => route.fulfill({ status, json })
 
@@ -257,10 +366,23 @@ function playRuntime(page: Page) {
       return answer(route, 200, transcription)
     }
     if (path === '/admin/transcription/jobs') return answer(route, 200, { jobs, next: null })
+    // OpenRouter's upstream providers, for the one model it lists here; any other it has not.
+    if (path === '/admin/openrouter/endpoints') {
+      const model = new URL(req.url()).searchParams.get('model')
+      if (model === LLAMA) return answer(route, 200, UPSTREAMS)
+      return answer(route, 404, {
+        error: {
+          code: 'not_found',
+          message: 'OpenRouter has no such model',
+          details: { reason: 'openrouter_model_not_found', field: 'model' },
+        },
+      })
+    }
     if (path === '/admin/school-plan/offers' && method === 'POST') {
       const o = {
         ...offers[0],
         ...body,
+        openrouter: body.openrouter ?? null,
         source: 'site',
         endpoint: null,
         agents: 0,
@@ -275,7 +397,15 @@ function playRuntime(page: Page) {
     }
     const m = path.match(/^\/admin\/school-plan\/offers\/([^/]+)$/)
     if (m && method === 'PATCH') {
+      if (refuseNextPatch) {
+        const r = refuseNextPatch
+        refuseNextPatch = null
+        return answer(route, r.status, {
+          error: { code: r.code, message: 'refused', details: { reason: r.reason, field: r.field } },
+        })
+      }
       const o = offers.find((x) => x.id === m[1] && x.source === 'site')
+      // The routing sent replaces the one kept, null removing it.
       Object.assign(o, body, { status: body.enabled === false ? 'disabled' : 'offered', version: o.version + 1 })
       return answer(route, 200, o)
     }
@@ -284,6 +414,9 @@ function playRuntime(page: Page) {
 
   return {
     sent,
+    refuseNextPatch(r: { status: number; code: string; reason: string; field: string }) {
+      refuseNextPatch = r
+    },
     async install() {
       await page.route('**/runtime/api/v1/**', handle)
       await page.route('**/v1/auth/assertion', (route) =>
@@ -393,6 +526,153 @@ test.describe('with an agent runtime', () => {
     expect(runtime.sent.filter((x) => x.path === '/admin/settings' && x.method === 'PATCH').map((x) => x.body)).toEqual(
       [{ ocr: { languages: ['chi_tra', 'eng', 'jpn'] } }, { ocr: { languages: null } }],
     )
+  })
+})
+
+test.describe('a model of OpenRouter’s, with an agent runtime', () => {
+  test('root adds one with its upstream routing, chosen from OpenRouter’s list, and finds it as it was saved', async ({
+    page,
+  }) => {
+    const runtime = playRuntime(page)
+    await runtime.install()
+    await keepToasts(page)
+    await signInAsRoot(page)
+    await page.goto('/admin/runtime')
+    const offers = page.locator('.offers-card')
+    await offers.getByRole('button', { name: 'Add a model' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Add a model to the school’s plan' })
+    await dialog.getByLabel('ID', { exact: true }).fill(`llama-${STAMP}`)
+    await dialog.getByLabel('Name shown to owners').fill('School AI (Llama)')
+    await dialog.locator('.offer-form__provider').click()
+    await page
+      .locator('.el-select-dropdown:visible .el-select-dropdown__item')
+      .filter({ hasText: 'OpenRouter' })
+      .click()
+
+    // The section, wider for its table, asks for the model before it can list anything.
+    const section = dialog.locator('.or-routing')
+    await expect(dialog.getByRole('heading', { name: 'OpenRouter upstream routing' })).toBeVisible()
+    await expect(section.locator('.or-state--need')).toHaveText(
+      'Enter the model, such as meta-llama/llama-3.3-70b-instruct, to list its upstream providers.',
+    )
+    expect(Math.round((await page.locator('.offer-dialog').boundingBox())!.width)).toBe(760)
+
+    // A model OpenRouter has not is said on the section; the one typed after it is listed.
+    const model = dialog.getByLabel('Model', { exact: true })
+    await model.fill('meta-llama/llama-nope')
+    await expect(section.locator('.or-state--not-found')).toContainText(
+      'OpenRouter has no model meta-llama/llama-nope. Check the model’s ID.',
+    )
+    await model.fill(LLAMA)
+    const rows = section.locator('.or-table .el-table__body tr')
+    await expect(rows).toHaveCount(5)
+    await expect(section.locator('.or-table [data-slug]')).toHaveText([
+      /^Groq\s*groq/,
+      /^DeepInfra\s*deepinfra\/turbo/,
+      /^Cloudflare\s*cloudflare\/fp8/,
+      /^Google\s*google-vertex/,
+      /^Google\s*google-vertex\/us-central1/,
+    ])
+    await expect(rows.nth(0)).toContainText('ZDR')
+    await expect(rows.nth(4)).toContainText('Not running normally')
+    await expect(rows.nth(2).locator('.or-tools')).toHaveText('No')
+    await dialog.getByLabel('The school’s API key').fill(`sk-or-e2e${STAMP}${'0'.repeat(24)}`)
+
+    // Only Groq and Cloudflare may answer; Cloudflare calls no tools, and the page says so.
+    await section.locator('.or-mode').getByText('Only those turned on').click()
+    await expect(section.locator('.or-warn-none')).toContainText('every call would fail')
+    // A switch is clicked where it is drawn: its input is hidden under it.
+    const flip = (name: string) =>
+      section
+        .locator('.el-switch')
+        .filter({ has: page.getByRole('switch', { name }) })
+        .click()
+    await flip('Use Groq (groq)')
+    await flip('Use Cloudflare (cloudflare/fp8)')
+    await expect(section.locator('.or-warn-none')).toHaveCount(0)
+    await expect(section.locator('.or-note-no-tools')).toHaveText(
+      'Cloudflare cannot call tools, so agents’ calls skip them.',
+    )
+
+    // Groq first: OpenRouter's own sorting is then not used, and the page says so.
+    await rows.nth(0).getByRole('button', { name: 'Try first' }).click()
+    await expect(rows.nth(0).locator('.or-order__position')).toHaveText('No. 1')
+    await expect(section.locator('.or-sort__hint')).toHaveText(
+      'Not used while some upstream providers are tried first.',
+    )
+
+    const routing = {
+      order: ['groq'],
+      allow_fallbacks: true,
+      require_parameters: true,
+      data_collection: 'deny',
+      only: ['groq', 'cloudflare/fp8'],
+    }
+    await section.getByRole('button', { name: 'What is sent to OpenRouter' }).click()
+    await expect(section.locator('.or-preview .json-view')).toHaveText(JSON.stringify({ provider: routing }, null, 2))
+    await photograph(page, 'openrouter-routing')
+
+    // The dialog's own Add, not the one that adds a slug ("Add by slug").
+    await dialog.locator('footer').getByRole('button', { name: 'Add', exact: true }).click()
+    await expectToasted(page, 'School AI (Llama) is on the school’s plan.')
+    await expect(dialog).toBeHidden()
+    const made = runtime.sent.find((x) => x.method === 'POST' && x.path === '/admin/school-plan/offers')!
+    expect(JSON.stringify(made.body.openrouter)).toBe(
+      '{"order":["groq"],"allow_fallbacks":true,"require_parameters":true,"data_collection":"deny","only":["groq","cloudflare/fp8"]}',
+    )
+
+    // The plan says the model has upstream routing, and shows what is sent.
+    const row = offers.locator('tr').filter({ has: page.locator(`[data-offer="site:llama-${STAMP}"]`) })
+    await row.getByRole('button', { name: 'Upstream routing' }).click()
+    const popover = page.locator('.el-popover:visible')
+    await expect(popover).toContainText('Sent to OpenRouter with each call')
+    await expect(popover.locator('.json-view')).toHaveText(JSON.stringify({ provider: routing }, null, 2))
+    await page.keyboard.press('Escape')
+
+    // Opened again, it is as it was saved.
+    await row.getByRole('button', { name: 'Edit' }).click()
+    const edit = page.getByRole('dialog', { name: 'Edit School AI (Llama)' })
+    const again = edit.locator('.or-routing')
+    await expect(again.getByRole('radio', { name: 'Only those turned on' })).toBeChecked()
+    await expect(again.getByRole('switch', { name: 'Use Groq (groq)' })).toBeChecked()
+    await expect(again.getByRole('switch', { name: 'Use Cloudflare (cloudflare/fp8)' })).toBeChecked()
+    await expect(again.getByRole('switch', { name: 'Use DeepInfra (deepinfra/turbo)' })).not.toBeChecked()
+    await expect(again.locator('.or-table .el-table__body tr').nth(0).locator('.or-order__position')).toHaveText(
+      'No. 1',
+    )
+    await expect(again.getByRole('switch', { name: 'Only upstream providers that keep no data' })).toBeChecked()
+    await expect(
+      again.getByRole('switch', { name: 'Only upstream providers that take every setting of a call' }),
+    ).toBeChecked()
+    await again.getByRole('button', { name: 'What is sent to OpenRouter' }).click()
+    await expect(again.locator('.or-preview .json-view')).toHaveText(JSON.stringify({ provider: routing }, null, 2))
+
+    // A highest price the server refuses is said under its own field, and nothing is saved.
+    const input = again.locator('.or-max-prompt')
+    await input.locator('input').fill('0.6')
+    runtime.refuseNextPatch({
+      status: 400,
+      code: 'invalid_argument',
+      reason: 'invalid_field',
+      field: '/openrouter/max_price/prompt',
+    })
+    await edit.getByRole('button', { name: 'Save' }).click()
+    await expect(input.locator('.el-form-item__error')).toHaveText(
+      'Dollars: 0 or more, up to 1,000,000, at most 6 decimal places.',
+    )
+    await expect(edit).toBeVisible()
+    // Mended, it is sent alone: the whole routing, and nothing else of the offer.
+    await input.locator('input').fill('0.59')
+    await expect(input.locator('.el-form-item__error')).toHaveCount(0)
+    await edit.getByRole('button', { name: 'Save' }).click()
+    await expectToasted(page, 'School AI (Llama) is saved.')
+    const patches = runtime.sent.filter(
+      (x) => x.method === 'PATCH' && x.path === `/admin/school-plan/offers/llama-${STAMP}`,
+    )
+    expect(patches.map((x) => x.body)).toEqual([
+      { openrouter: { ...routing, max_price: { prompt: '0.6' } } },
+      { openrouter: { ...routing, max_price: { prompt: '0.59' } } },
+    ])
   })
 })
 

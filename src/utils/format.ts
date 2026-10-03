@@ -95,6 +95,18 @@ export function formatList(items: readonly string[], type: 'and' | 'or' = 'and')
   }
 }
 
+/**
+ * A country or region by its ISO 3166 code, named in the page's language
+ * ("United States", 「美國」); the code itself where Intl has no name for it.
+ */
+export function regionName(code: string): string {
+  try {
+    return new Intl.DisplayNames(numberLocale ? [numberLocale] : undefined, { type: 'region' }).of(code) ?? code
+  } catch {
+    return code
+  }
+}
+
 /** A count in the page's language: 1,284 people, never 1284. */
 export function formatCount(n: number | null | undefined): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return '—'

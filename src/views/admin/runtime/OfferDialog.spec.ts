@@ -7,11 +7,14 @@ import OfferDialog from './OfferDialog.vue'
 import {
   ADMIN,
   OFFERS,
+  OPENROUTER,
+  OPENROUTER_MODEL,
   Servers,
   adminState,
   json,
   newKey,
   newToken,
+  openRouterEndpointsFixture,
   refusal,
   siteOffer,
   withAdmin,
@@ -490,5 +493,505 @@ describe('editing a model of the site’s', () => {
     const { w } = await open(fast())
     expect(w.find('.el-dialog__title').text()).toBe('編輯School AI (fast)')
     expect(w.find('.offer-form__keymode').text()).toContain('保留金鑰sk-…3f9a')
+  })
+})
+
+describe('a model of OpenRouter’s, and its upstream routing', () => {
+  const PROVIDERS = [...OFFERS, OPENROUTER]
+  const DEFAULTS = { allow_fallbacks: true, require_parameters: true, data_collection: 'deny' }
+  /** One of the site's offers of OpenRouter's, on the plan. */
+  function llama(over: Partial<PlanOffer> = {}): PlanOffer {
+    const o = siteOffer({
+      id: 'llama',
+      label: 'School AI (Llama)',
+      provider: 'openrouter',
+      adapter: 'openai_chat',
+      model: OPENROUTER_MODEL,
+      key_hint: 'sk-or-…3f9a',
+      openrouter: { ...DEFAULTS } as PlanOffer['openrouter'],
+      ...over,
+    })
+    state.plan.offers.push(o)
+    return o
+  }
+  const openRouted = (offer: PlanOffer | null = null) => open(offer, { providers: PROVIDERS })
+  /** Typing the model: the list is asked for once the typing has stopped (600 ms). */
+  async function typeModel(vm: Vm, model: string) {
+    vm.form.model = model
+    await flushPromises()
+    await new Promise((r) => setTimeout(r, 650))
+    await settle()
+  }
+  const rowOf = (w: VueWrapper, slug: string) =>
+    w.findAll('.or-table tr.el-table__row').find((r) => r.find(`[data-slug="${slug}"]`).exists())!
+  const slugs = (w: VueWrapper) => w.findAll('.or-table [data-slug]').map((x) => x.attributes('data-slug'))
+  async function flip(w: VueWrapper, slug: string) {
+    await rowOf(w, slug).find('.or-use').trigger('click')
+    await flushPromises()
+  }
+  async function only(w: VueWrapper) {
+    await w.find('.or-mode input[value="only"]').setValue(true)
+    await flushPromises()
+  }
+  const preview = (w: VueWrapper) => JSON.parse(w.find('.or-preview .json-view').text())
+  const lastPatch = () => JSON.parse(s.to('PATCH', ADMIN.offer).at(-1)!.body!)
+
+  it('shows its section for OpenRouter alone, and the dialog wider for it', async () => {
+    const { w, vm } = await openRouted()
+    vm.onProvider('openai')
+    await flushPromises()
+    expect(w.find('.or-routing').exists()).toBe(false)
+    expect(w.find('.offer-dialog').attributes('style')).toContain('600px')
+    vm.onProvider('openrouter')
+    await flushPromises()
+    expect(w.find('.or-routing').exists()).toBe(true)
+    expect(w.findAll('.offer-form__section').map((h) => h.text())).toEqual(['Model', 'OpenRouter upstream routing'])
+    expect(w.find('.offer-dialog').attributes('style')).toContain('760px')
+    expect(w.find('.or-state--need').text()).toBe(
+      'Enter the model, such as meta-llama/llama-3.3-70b-instruct, to list its upstream providers.',
+    )
+  })
+
+  it('starts a new offer with no data kept, every setting taken and fallbacks allowed, and sends them', async () => {
+    const { w, vm } = await openRouted()
+    vm.meta.id = 'llama'
+    vm.meta.label = 'School AI (Llama)'
+    vm.onProvider('openrouter')
+    await typeModel(vm, OPENROUTER_MODEL)
+    vm.key = newKey()
+    await flushPromises()
+    expect(preview(w)).toEqual({ provider: DEFAULTS })
+    expect(w.find('.or-deny-data').classes()).toContain('is-checked')
+    expect(w.find('.or-require-parameters').classes()).toContain('is-checked')
+    expect(w.find('.or-fallbacks').classes()).toContain('is-checked')
+    expect(w.find('.or-zdr').classes()).not.toContain('is-checked')
+    // The list was asked for the model typed, once.
+    const asked = s.to('GET', ADMIN.openrouterEndpoints)
+    expect(asked.map((c) => c.url)).toEqual([
+      '/runtime/api/v1/admin/openrouter/endpoints?model=meta-llama%2Fllama-3.3-70b-instruct',
+    ])
+    await save(w)
+    const body = JSON.parse(s.to('POST', ADMIN.offers)[0].body!)
+    expect(JSON.stringify(body.openrouter)).toBe(
+      '{"allow_fallbacks":true,"require_parameters":true,"data_collection":"deny"}',
+    )
+    expect(body).toMatchObject({ provider: 'openrouter', adapter: 'openai_chat', model: OPENROUTER_MODEL })
+  })
+
+  it('lists the upstream providers from the runtime, with what OpenRouter says of each', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    expect(slugs(w)).toEqual([
+      'groq',
+      'deepinfra/turbo',
+      'cloudflare/fp8',
+      'google-vertex',
+      'google-vertex/us-central1',
+    ])
+    const groq = rowOf(w, 'groq')
+    expect(groq.find('.or-name__provider').text()).toBe('Groq')
+    expect(groq.find('.or-zdr-tag').text()).toBe('ZDR')
+    expect(groq.find('.or-facts').text()).toBe('131,072 tokens of context · up to 32,768 out · Based in United States')
+    expect(groq.find('.or-price').text()).toBe('US$0.59 / US$0.79')
+    expect(groq.find('.or-tools').text()).toBe('Yes')
+    expect(groq.find('.or-uptime').text()).toBe('99.3% / 99.1%')
+    expect(groq.find('.or-use').attributes('aria-label') ?? groq.find('.or-use input').attributes('aria-label')).toBe(
+      'Use Groq (groq)',
+    )
+    expect(rowOf(w, 'deepinfra/turbo').find('.or-facts').text()).toContain('FP8 · 131,072 tokens of context')
+    expect(rowOf(w, 'cloudflare/fp8').find('.or-tools').text()).toBe('No')
+    expect(rowOf(w, 'google-vertex').find('.or-uptime').text()).toBe('— / —')
+    expect(rowOf(w, 'google-vertex/us-central1').find('.or-degraded').text()).toBe('Not running normally')
+    expect(w.find('.or-listed').text()).toMatch(/^As OpenRouter listed them at 2026-09-30 \d\d:\d\d\.$/)
+  })
+
+  it('skips an upstream provider turned off, and allows only those turned on in the other mode', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    await flip(w, 'deepinfra/turbo')
+    expect(preview(w).provider.ignore).toEqual(['deepinfra/turbo'])
+    await flip(w, 'deepinfra/turbo')
+    expect(preview(w).provider.ignore).toBeUndefined()
+    await only(w)
+    expect(w.find('.or-mode__hint').text()).toBe(
+      'Turn on each upstream provider that may answer. The fewer there are, the less is left to fall back on when one is down.',
+    )
+    expect(w.findAll('.or-use.is-checked')).toHaveLength(0)
+    await flip(w, 'groq')
+    await flip(w, 'cloudflare/fp8')
+    expect(preview(w).provider.only).toEqual(['groq', 'cloudflare/fp8'])
+  })
+
+  it('tries one first, which clears the sort and turns the sort off while any is tried first', async () => {
+    const { w } = await openRouted(llama({ openrouter: { ...DEFAULTS, sort: 'price' } as PlanOffer['openrouter'] }))
+    await settle()
+    expect(w.find('.or-sort__hint').text()).toBe(
+      'Any choice but OpenRouter’s own tries them strictly in that order, with no load balancing.',
+    )
+    expect(preview(w).provider.sort).toBe('price')
+    await rowOf(w, 'groq').find('.or-try-first').trigger('click')
+    await flushPromises()
+    expect(rowOf(w, 'groq').find('.or-order__position').text()).toBe('No. 1')
+    expect(preview(w).provider).toEqual({ order: ['groq'], ...DEFAULTS })
+    expect(w.find('.or-sort__hint').text()).toBe('Not used while some upstream providers are tried first.')
+    expect(w.find('.or-sort .el-select__wrapper').classes()).toContain('is-disabled')
+    await rowOf(w, 'deepinfra/turbo').find('.or-try-first').trigger('click')
+    await rowOf(w, 'deepinfra/turbo').find('.or-order__up').trigger('click')
+    await flushPromises()
+    expect(preview(w).provider.order).toEqual(['deepinfra/turbo', 'groq'])
+    await rowOf(w, 'deepinfra/turbo').find('.or-order__remove').trigger('click')
+    await flushPromises()
+    expect(preview(w).provider.order).toEqual(['groq'])
+  })
+
+  it('turns a provider’s endpoints off and on with its base slug, showing them as included in it', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    await flip(w, 'google-vertex')
+    const region = rowOf(w, 'google-vertex/us-central1')
+    expect(region.find('.or-use').exists()).toBe(false)
+    expect(region.find('.or-covered').text()).toBe('Included in google-vertex')
+    expect(preview(w).provider.ignore).toEqual(['google-vertex'])
+    await flip(w, 'google-vertex')
+    expect(rowOf(w, 'google-vertex/us-central1').find('.or-use').classes()).toContain('is-checked')
+  })
+
+  it('warns when nothing may answer, when none of those that may calls tools, and names those that do not', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    await only(w)
+    expect(w.find('.or-warn-none').text()).toBe(
+      'No upstream provider this routing allows serves this model now: every call would fail. Allow more, or loosen a limit.',
+    )
+    await flip(w, 'cloudflare/fp8')
+    expect(w.find('.or-warn-none').exists()).toBe(false)
+    expect(w.find('.or-warn-no-tools').text()).toBe(
+      'None of the upstream providers allowed can call tools: agents on this model could not read the course or act in it.',
+    )
+    expect(w.find('.or-note-no-tools').exists()).toBe(false)
+    await flip(w, 'groq')
+    expect(w.find('.or-warn-no-tools').exists()).toBe(false)
+    expect(w.find('.or-note-no-tools').text()).toBe('Cloudflare cannot call tools, so agents’ calls skip them.')
+    // A limit that leaves Groq out: dimmed, and the warning back.
+    ;(w.vm as unknown as { routing: { zdr: boolean | null; quantizations: string[] } }).routing.quantizations = ['fp8']
+    await flushPromises()
+    expect(rowOf(w, 'groq').classes()).toContain('is-excluded')
+    expect(w.find('.or-warn-no-tools').exists()).toBe(true)
+  })
+
+  it.each([
+    [
+      'OpenRouter could not be reached',
+      () => refusal(503, 'unavailable', 'openrouter_unavailable', { http_status: null }),
+      '.or-state--unavailable',
+      'OpenRouter could not be reached to list the upstream providers. They can still be added by slug.',
+    ],
+    [
+      'a runtime from before the list',
+      () => refusal(404, 'not_found', 'no_route'),
+      '.or-state--not-offered',
+      'This server cannot list OpenRouter’s upstream providers yet. They can still be added by slug.',
+    ],
+  ])('says when the list cannot be read: %s', async (_, answer, cls, words) => {
+    state.openrouter[OPENROUTER_MODEL] = answer()
+    const { w } = await openRouted(llama())
+    await settle()
+    expect(w.find(cls).text()).toContain(words)
+    expect(w.find('.or-table').exists()).toBe(false)
+    if (cls === '.or-state--unavailable') {
+      state.openrouter[OPENROUTER_MODEL] = openRouterEndpointsFixture()
+      await w.find('.or-retry').trigger('click')
+      await settle()
+      expect(slugs(w)).toHaveLength(5)
+      expect(w.find(cls).exists()).toBe(false)
+    }
+  })
+
+  it('says OpenRouter has no such model, or lists none for it, on the section', async () => {
+    const { w, vm } = await openRouted(llama())
+    await settle()
+    await typeModel(vm, 'meta-llama/nope')
+    expect(w.find('.or-state--not-found').text()).toBe('OpenRouter has no model meta-llama/nope. Check the model’s ID.')
+    // The model's own field says nothing: the runtime does not refuse it for this.
+    expect(fieldError(w, '.offer-form__model')).toBe('')
+    state.openrouter['meta-llama/empty'] = openRouterEndpointsFixture({ model: 'meta-llama/empty', endpoints: [] })
+    await typeModel(vm, 'meta-llama/empty')
+    expect(w.find('.or-state--none').text()).toBe('OpenRouter lists no upstream provider for meta-llama/empty now.')
+    await typeModel(vm, 'not-a-model-id')
+    expect(w.find('.or-state--need').exists()).toBe(true)
+  })
+
+  it('adds a slug by hand as a row, lower-cased, refusing one that is not a slug or listed already', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    const input = w.find('.or-add__input input')
+    await input.setValue('Bad Slug')
+    expect((input.element as HTMLInputElement).value).toBe('bad slug')
+    await w.find('.or-add__button').trigger('click')
+    await settle()
+    expect(fieldError(w, '.or-add__input')).toBe(
+      'Lower-case letters, digits and -, then any /part, such as deepinfra/turbo.',
+    )
+    await input.setValue('groq')
+    await w.find('.or-add__button').trigger('click')
+    await settle()
+    expect(fieldError(w, '.or-add__input')).toBe('Already listed.')
+    await input.setValue('Together')
+    await w.find('.or-add__button').trigger('click')
+    await settle()
+    const row = rowOf(w, 'together')
+    expect(row.find('.or-not-listed').text()).toBe('Not serving this model now')
+    expect(row.find('.or-use').classes()).toContain('is-checked')
+  })
+
+  it('says what is wrong with a speed or a highest price on its own field, and sends nothing', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    const r = (
+      w.vm as unknown as {
+        routing: {
+          throughput: Record<string, number | null>
+          latency: Record<string, number | null>
+          maxPrice: Record<string, string>
+        }
+      }
+    ).routing
+    r.throughput.p90 = 0
+    r.latency.p50 = 900
+    r.maxPrice.prompt = '1.2345678'
+    await save(w)
+    expect(fieldError(w, '.or-throughput-p90')).toBe('More than 0, up to 100,000.')
+    expect(fieldError(w, '.or-latency-p50')).toBe('More than 0, up to 600 seconds.')
+    expect(fieldError(w, '.or-max-prompt')).toBe('Dollars: 0 or more, up to 1,000,000, at most 6 decimal places.')
+    expect(s.to('PATCH', ADMIN.offer)).toHaveLength(0)
+    // Mended, its words go.
+    r.maxPrice.prompt = '1.5'
+    await settle()
+    expect(fieldError(w, '.or-max-prompt')).toBe('')
+  })
+
+  it('wants one at least where only those turned on may answer', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    await only(w)
+    await save(w)
+    expect(w.find('.or-table__error').text()).toBe(
+      'Turn on at least one upstream provider, or choose “All, except those turned off”.',
+    )
+    expect(s.to('PATCH', ADMIN.offer)).toHaveLength(0)
+  })
+
+  it.each([
+    [
+      '/openrouter/max_price/prompt',
+      '.or-max-prompt',
+      'Dollars: 0 or more, up to 1,000,000, at most 6 decimal places.',
+    ],
+    ['/openrouter/preferred_max_latency/p90', '.or-latency-p90', 'More than 0, up to 600 seconds.'],
+  ])('puts a refusal at %s under its own input', async (pointer, cls, words) => {
+    const { w } = await openRouted(llama())
+    await settle()
+    const r = (
+      w.vm as unknown as { routing: { maxPrice: Record<string, string>; latency: Record<string, number | null> } }
+    ).routing
+    r.maxPrice.prompt = '0.5'
+    s.once('PATCH', ADMIN.offer, () => refusal(400, 'invalid_argument', 'invalid_field', { field: pointer }))
+    await save(w)
+    expect(fieldError(w, cls)).toBe(words)
+    expect(w.find('.offer-dialog__error').exists()).toBe(false)
+    expect(w.emitted('saved')).toBeUndefined()
+  })
+
+  it('puts a refusal of a slug on the table’s line, naming it', async () => {
+    const { w } = await openRouted(
+      llama({ openrouter: { ...DEFAULTS, only: ['groq', 'cloudflare/fp8'] } as PlanOffer['openrouter'] }),
+    )
+    await settle()
+    ;(w.vm as unknown as { routing: { zdr: boolean | null } }).routing.zdr = true
+    s.once('PATCH', ADMIN.offer, () =>
+      refusal(400, 'invalid_argument', 'invalid_field', { field: '/openrouter/only/1' }),
+    )
+    await save(w)
+    expect(w.find('.or-table__error').text()).toBe('cloudflare/fp8: This value is not accepted here.')
+  })
+
+  it('says a server that does not take upstream routing yet, above the form', async () => {
+    const { w, vm } = await openRouted()
+    vm.meta.id = 'llama'
+    vm.meta.label = 'School AI (Llama)'
+    vm.onProvider('openrouter')
+    vm.form.model = OPENROUTER_MODEL
+    vm.key = newKey()
+    await flushPromises()
+    s.once('POST', ADMIN.offers, () => refusal(400, 'invalid_argument', 'unknown_field', { field: '/openrouter' }))
+    await save(w)
+    expect(w.find('.offer-dialog__error').text()).toBe(
+      'This server does not take upstream routing yet. Save without it, or ask the server’s operator to update.',
+    )
+  })
+
+  it('sends the whole routing alone when only the routing changed, and nothing when it did not', async () => {
+    let { w } = await openRouted(llama())
+    await settle()
+    await save(w)
+    expect(s.to('PATCH', ADMIN.offer)).toHaveLength(0)
+    w.unmount()
+    ;({ w } = await openRouted(state.plan.offers.find((o) => o.id === 'llama')!))
+    await settle()
+    await w.find('.or-zdr').trigger('click')
+    await flushPromises()
+    await save(w)
+    expect(JSON.stringify(lastPatch())).toBe(
+      '{"openrouter":{"allow_fallbacks":true,"require_parameters":true,"data_collection":"deny","zdr":true}}',
+    )
+    // The key's trial stands: a routing changed alone is not what the key was tried with.
+    expect(w.emitted('saved')?.[0]?.[0]).toMatchObject({ key_status: 'tested', openrouter: { zdr: true } })
+    expect(lastMessage()?.message).toBe('School AI (Llama) is saved.')
+  })
+
+  it('sends null when the routing is cleared, and keeps what it does not offer as read', async () => {
+    const { w } = await openRouted(
+      llama({
+        openrouter: {
+          enforce_distillable_text: true,
+          sort: { by: 'price', partition: 'none' },
+        } as PlanOffer['openrouter'],
+      }),
+    )
+    await settle()
+    expect(preview(w)).toEqual({
+      provider: { enforce_distillable_text: true, sort: { by: 'price', partition: 'none' } },
+    })
+    const r = (w.vm as unknown as { routing: { enforceDistillableText: boolean | null; sortBy: string } }).routing
+    r.sortBy = 'latency'
+    await flushPromises()
+    expect(preview(w).provider.sort).toEqual({ by: 'latency', partition: 'none' })
+    r.sortBy = ''
+    r.enforceDistillableText = null
+    await flushPromises()
+    expect(w.find('.or-preview__empty').text()).toBe('Nothing: OpenRouter routes each call as it does by default.')
+    await save(w)
+    expect(lastPatch()).toEqual({ openrouter: null })
+  })
+
+  it('hides the section and sends no routing when the offer moves to another provider', async () => {
+    const { w, vm } = await openRouted(llama())
+    await settle()
+    vm.onProvider('openai')
+    vm.form.model = 'gpt-5'
+    const key = newKey()
+    vm.key = key
+    await flushPromises()
+    expect(w.find('.or-routing').exists()).toBe(false)
+    await save(w)
+    expect(lastPatch()).toEqual({ provider: 'openai', adapter: 'openai_chat', model: 'gpt-5', key })
+    // Back to OpenRouter, its routing as read is back.
+    vm.onProvider('openrouter')
+    await flushPromises()
+    expect(w.find('.or-routing').exists()).toBe(true)
+  })
+
+  it('on 412 keeps the routing changed here over the one changed meanwhile, and takes theirs where it was not', async () => {
+    const o = llama()
+    let { w } = await openRouted(o)
+    await settle()
+    await w.find('.or-zdr').trigger('click')
+    await flushPromises()
+    const i = state.plan.offers.indexOf(o)
+    state.plan.offers[i] = { ...o, openrouter: { ...DEFAULTS, only: ['groq'] } as PlanOffer['openrouter'], version: 6 }
+    await save(w)
+    expect(w.find('.offer-dialog__notice').exists()).toBe(true)
+    expect(preview(w).provider).toEqual({ ...DEFAULTS, zdr: true })
+    await save(w)
+    expect(s.to('PATCH', ADMIN.offer).at(-1)!.headers['If-Match']).toBe('"6"')
+    expect(lastPatch()).toEqual({ openrouter: { ...DEFAULTS, zdr: true } })
+    w.unmount()
+
+    // The name changed here, the routing meanwhile: theirs stands.
+    const fresh = state.plan.offers[i]
+    ;({ w } = await openRouted(fresh))
+    await settle()
+    ;(w.vm as unknown as Vm).meta.label = 'Llama'
+    state.plan.offers[i] = { ...fresh, openrouter: { data_collection: 'deny' }, version: (fresh.version ?? 0) + 5 }
+    await save(w)
+    expect(preview(w)).toEqual({ provider: { data_collection: 'deny' } })
+    await save(w)
+    expect(lastPatch()).toEqual({ label: 'Llama' })
+  })
+
+  it('warns when the price table counts less than an upstream provider allowed charges, and sets the price from here', async () => {
+    state.openrouter[OPENROUTER_MODEL] = openRouterEndpointsFixture({
+      price: {
+        version: 'site-20260930T081200Z/llama',
+        usd_per_mtok: { input: '0.500000', cache_read: '0.500000', cache_write: '0.500000', output: '0.800000' },
+      },
+    })
+    const { w } = await openRouted(llama())
+    await settle()
+    expect(w.find('.or-highest').text()).toBe(
+      'The upstream providers allowed charge up to US$0.72 for input and US$2.253 for output, per million tokens.',
+    )
+    expect(w.find('.or-table-price').text()).toBe(
+      'The school’s price table counts US$0.50 for input and US$0.80 for output.',
+    )
+    expect(w.find('.or-table-low').exists()).toBe(true)
+    await w.find('.or-set-price').trigger('click')
+    await flushPromises()
+    const dialog = document.body.querySelector('.price-dialog') as HTMLElement
+    const value = (cls: string) => (dialog.querySelector(`${cls} input`) as HTMLInputElement).value
+    expect(value('.price-form__model')).toBe(OPENROUTER_MODEL)
+    expect(value('.price-form__input')).toBe('0.72')
+    expect(value('.price-form__output')).toBe('2.253')
+    expect(value('.price-form__cacheRead')).toBe('0.36')
+    // A cap below the table's price takes the warning away.
+    ;(w.vm as unknown as { routing: { maxPrice: Record<string, string> } }).routing.maxPrice.prompt = '0.5'
+    ;(w.vm as unknown as { routing: { maxPrice: Record<string, string> } }).routing.maxPrice.completion = '0.8'
+    await flushPromises()
+    expect(w.find('.or-table-low').exists()).toBe(false)
+    expect(w.find('.or-highest').text()).toContain('US$0.10 for input and US$0.32 for output')
+  })
+
+  it('says the price table has none where it has none', async () => {
+    const { w } = await openRouted(llama())
+    await settle()
+    expect(w.find('.or-table-none').text()).toBe('The school’s price table has no price for this model.')
+    expect(w.find('.or-table-low').exists()).toBe(false)
+  })
+
+  it('is a card per upstream provider in a phone’s window', async () => {
+    vi.stubGlobal('matchMedia', (media: string) => ({
+      matches: media.includes('max-width: 639px') || media.includes('max-width: 640px'),
+      media,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+    }))
+    const { w } = await openRouted(llama())
+    await settle()
+    expect(w.find('.or-table').exists()).toBe(false)
+    const cards = w.findAll('.or-card')
+    expect(cards.map((c) => c.attributes('data-slug'))).toEqual([
+      'groq',
+      'deepinfra/turbo',
+      'cloudflare/fp8',
+      'google-vertex',
+      'google-vertex/us-central1',
+    ])
+    expect(cards[0].find('.or-card__figures').text()).toBe(
+      'Input / output, per million tokens: US$0.59 / US$0.79 · Calls tools: Yes · Uptime, 30 min / 1 day: 99.3% / 99.1%',
+    )
+    await cards[0].find('.or-try-first').trigger('click')
+    await flushPromises()
+    expect(w.find('.or-card .or-order__position').text()).toBe('No. 1')
+  })
+
+  it('reads in Traditional Chinese, the words never saying how the server is built', async () => {
+    setLocale('zh-Hant')
+    const { w } = await openRouted(llama())
+    await settle()
+    expect(w.findAll('.offer-form__section').map((h) => h.text())).toContain('OpenRouter 上游路由')
+    expect(rowOf(w, 'groq').find('.or-tools').text()).toBe('是')
+    expect(w.find('.or-listed').text()).toMatch(/^OpenRouter 於.+列出。$/)
   })
 })

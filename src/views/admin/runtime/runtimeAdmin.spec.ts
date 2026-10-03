@@ -39,7 +39,7 @@ import {
   retestsKey,
   sameLanguages,
 } from './runtimeAdmin'
-import { configOffer, newToken, priceRow, siteOffer } from './adminFakes'
+import { OPENROUTER, configOffer, newToken, priceRow, siteOffer } from './adminFakes'
 
 const g = i18n.global as unknown as {
   t: (key: string, params: Record<string, unknown>) => string
@@ -65,6 +65,8 @@ describe('whether a section is there', () => {
     expect(isNotOffered(err('method_not_allowed', {}, 405))).toBe(true)
     // An offer gone, or the whole runtime gone, is something else.
     expect(isNotOffered(err('offer_not_found', {}, 404))).toBe(false)
+    // OpenRouter has no such model: the route is there.
+    expect(isNotOffered(err('openrouter_model_not_found', { field: 'model' }, 404))).toBe(false)
     expect(isNotOffered(err('runtime_absent', {}, 404))).toBe(false)
     expect(isNotOffered(err('not_admin', {}, 403))).toBe(false)
     expect(isNotOffered(new ApiError({ status: 404, code: 'not_found', message: 'Core' }))).toBe(false)
@@ -99,6 +101,8 @@ describe('the words for the administrators’ refusals', () => {
       'A quota in dollars would hold agents whose models have no price. Add prices for them, or keep the quota in answers only.',
     ],
     price_not_found: [{}, 'This price is no longer in the table: someone deleted it meanwhile.'],
+    openrouter_unavailable: [{ http_status: 502 }, 'OpenRouter could not be reached. Try again in a moment.'],
+    openrouter_model_not_found: [{ field: 'model' }, 'OpenRouter has no model of this ID.'],
     price_read_only: [
       {},
       'The server’s price file sets this price, so it cannot be changed here. Add one of the site’s for the same model and day to stand before it.',
@@ -330,6 +334,36 @@ describe('an offer’s form', () => {
     })
   })
 
+  it('adds OpenRouter’s upstream routing to a new offer of OpenRouter’s alone, and none when there is none', () => {
+    const routing = { allow_fallbacks: true, require_parameters: true, data_collection: 'deny' as const }
+    const form = { ...defaultsFor(emptyModelForm(), OPENROUTER), model: 'meta-llama/llama-3.3-70b-instruct' }
+    const made = offerCreateFrom({
+      meta,
+      form,
+      provider: OPENROUTER,
+      key: 'sk-or-0123456789',
+      skipKeyTest: false,
+      routing,
+    })
+    expect(made).toEqual({
+      id: 'fast',
+      label: 'School AI (fast)',
+      provider: 'openrouter',
+      adapter: 'openai_chat',
+      model: 'meta-llama/llama-3.3-70b-instruct',
+      enabled: true,
+      key: 'sk-or-0123456789',
+      openrouter: routing,
+    })
+    expect(
+      offerCreateFrom({ meta, form, provider: OPENROUTER, key: 'sk-or-0123456789', skipKeyTest: false, routing: null }),
+    ).not.toHaveProperty('openrouter')
+    const other = { ...defaultsFor(emptyModelForm(), openai), model: 'gpt-4.1-mini' }
+    expect(
+      offerCreateFrom({ meta, form: other, provider: openai, key: 'sk-0123456789', skipKeyTest: false, routing }),
+    ).not.toHaveProperty('openrouter')
+  })
+
   describe('changes', () => {
     const offer = siteOffer({ max_output_tokens: 2048 })
     const initial = formFromOffer(offer, OFFERS)
@@ -385,6 +419,78 @@ describe('an offer’s form', () => {
       })
     })
 
+    describe('of OpenRouter’s upstream routing', () => {
+      const routing = { allow_fallbacks: true, require_parameters: true, data_collection: 'deny' as const }
+      const routed = siteOffer({
+        provider: 'openrouter',
+        model: 'meta-llama/llama-3.3-70b-instruct',
+        openrouter: routing,
+      })
+      const start = formFromOffer(routed, [...OFFERS, OPENROUTER])
+      const change = (over: Partial<Parameters<typeof offerPatchFrom>[0]> = {}) =>
+        offerPatchFrom({
+          offer: routed,
+          initial: start,
+          meta,
+          form: { ...start },
+          provider: OPENROUTER,
+          key: null,
+          skipKeyTest: false,
+          routing,
+          routingRead: routing,
+          ...over,
+        })
+
+      it('send nothing when it is the same', () => {
+        expect(change()).toEqual({})
+        expect(change({ routing: { ...routing } })).toEqual({})
+      })
+
+      it('send the whole routing when it changed, never member by member, and without retrying the key', () => {
+        const now = { order: ['groq'], ...routing, only: ['groq'] }
+        const p = change({ routing: now })
+        expect(p).toEqual({ openrouter: now })
+        expect(retestsKey(p)).toBe(false)
+      })
+
+      it('send null when it was cleared', () => {
+        expect(change({ routing: null })).toEqual({ openrouter: null })
+      })
+
+      it('send none when the offer moves to another provider: the runtime drops it', () => {
+        const form = { ...defaultsFor(start, openai), model: 'gpt-4.1-mini' }
+        expect(change({ form, provider: openai, key: 'sk-0123456789', routing: null })).toEqual({
+          provider: 'openai',
+          adapter: 'openai_chat',
+          model: 'gpt-4.1-mini',
+          key: 'sk-0123456789',
+        })
+      })
+
+      it('send the routing with a move to OpenRouter, the offer having none before', () => {
+        const form = { ...defaultsFor(initial, OPENROUTER), model: 'meta-llama/llama-3.3-70b-instruct' }
+        expect(
+          offerPatchFrom({
+            offer,
+            initial,
+            meta,
+            form,
+            provider: OPENROUTER,
+            key: 'sk-or-0123456789',
+            skipKeyTest: false,
+            routing,
+            routingRead: null,
+          }),
+        ).toEqual({
+          provider: 'openrouter',
+          adapter: 'openai_chat',
+          model: 'meta-llama/llama-3.3-70b-instruct',
+          key: 'sk-or-0123456789',
+          openrouter: routing,
+        })
+      })
+    })
+
     it('send an endpoint changed, and only for the kind that takes one', () => {
       const kimi = siteOffer({ provider: 'moonshot', endpoint: 'global', model: 'kimi-k2' })
       const start = formFromOffer(kimi, OFFERS)
@@ -409,6 +515,11 @@ describe('an offer’s form', () => {
     expect(offerFieldOf('/max_output_tokens')).toBe('maxOutputTokens')
     expect(offerFieldOf('/key')).toBe('key')
     expect(offerFieldOf(7)).toBeNull()
+    // The routing's section places its own, by member: never a field by the pointer's last segment.
+    expect(offerFieldOf('/openrouter')).toBe('openrouter')
+    expect(offerFieldOf('/openrouter/only/2')).toBe('openrouter')
+    expect(offerFieldOf('/openrouter/max_price/prompt')).toBe('openrouter')
+    expect(offerFieldOf('/openrouterx')).toBeNull()
   })
 })
 

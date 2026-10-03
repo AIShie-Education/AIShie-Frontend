@@ -112,6 +112,36 @@ describe('the models on the plan', () => {
     expect(shadowed.find('.offer-status__unpriced').text()).toBe('No price')
   })
 
+  it('says which models have OpenRouter’s upstream routing, and shows what is sent, the server’s too', async () => {
+    const routing = {
+      order: ['groq'],
+      allow_fallbacks: true,
+      data_collection: 'deny' as const,
+      only: ['groq', 'cloudflare'],
+    }
+    state.plan.offers = [
+      configOffer({ provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct', openrouter: { zdr: true } }),
+      siteOffer({ provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct', openrouter: routing }),
+      siteOffer({ id: 'plain', label: 'Plain' }),
+    ]
+    const w = await panel()
+    expect(rowOf(w, 'site:plain').find('.offer-cell__routing').exists()).toBe(false)
+    for (const [key, sent] of [
+      ['config:standard', { zdr: true }],
+      ['site:fast', routing],
+    ] as const) {
+      const row = rowOf(w, key)
+      expect(row.find('.offer-cell__meta').text()).toMatch(/ · Upstream routing$/)
+      await row.find('.offer-cell__routing').trigger('click')
+      await settle()
+      // The popover the link opened, as it names it.
+      const popover = document.getElementById(row.find('.offer-cell__routing').attributes('aria-describedby')!)!
+      expect(popover.getAttribute('aria-hidden')).toBe('false')
+      expect(popover.querySelector('.el-popover__title')?.textContent).toBe('Sent to OpenRouter with each call')
+      expect(JSON.parse(popover.querySelector('.json-view')!.textContent!)).toEqual({ provider: sent })
+    }
+  })
+
   it('says a model the runtime no longer allows is not offered', async () => {
     state.plan.offers = [siteOffer({ status: 'model_not_allowed' })]
     const w = await panel()

@@ -68,6 +68,8 @@ export default {
       'This model reads neither PDFs nor images, so it cannot transcribe. Choose a model of the plan that reads files.',
     credential_rejected:
       'AIshie did not accept the credential when the agent service tried it, so the agent service did not keep it.',
+    openrouter_unavailable: 'OpenRouter could not be reached. Try again in a moment.',
+    openrouter_model_not_found: 'OpenRouter has no model of this ID.',
   },
 
   // Reading scanned files and images (OCR).
@@ -292,6 +294,8 @@ export default {
     gone: 'It was deleted meanwhile.',
     changedMeanwhile:
       'This model changed meanwhile, in another tab or by another administrator. The list shows it as it is now: try again.',
+    routing: 'Upstream routing',
+    routingTitle: 'Sent to OpenRouter with each call',
   },
 
   // Adding or editing a model of the plan.
@@ -341,6 +345,8 @@ export default {
       label: 'One line of up to 80 characters.',
       keyRequired: 'Enter the school’s API key for {provider}.',
     },
+    routingUnsupported:
+      'This server does not take upstream routing yet. Save without it, or ask the server’s operator to update.',
   },
 
   // Amounts of money, and quotas in answers and dollars side by side.
@@ -628,5 +634,134 @@ export default {
     transcribeOff: 'TRANSCRIBE=off in the agent service’s environment.',
     adminActorIds: 'The agent service’s ADMIN_ACTOR_IDS.',
     serverFile: 'The agent service’s runtime.yaml.',
+  },
+
+  // OpenRouter's upstream routing on an offer of OpenRouter's: which of the upstream providers serving its model may
+  // answer, which are tried first, and on what terms. The words never say how the server is built.
+  openrouter: {
+    title: 'OpenRouter upstream routing',
+    intro:
+      'OpenRouter passes each call to one of the upstream providers that serve this model. Choose which of them may answer, which to try first, and on what terms. Left as it is, OpenRouter chooses by price and uptime.',
+    data: 'Data',
+    denyData: 'Only upstream providers that keep no data',
+    denyDataHint:
+      'Leaves out upstream providers that may store what is sent to them and train models on it. Recommended for a school.',
+    zdr: 'Only zero-data-retention (ZDR) endpoints',
+    zdrHint:
+      'Stricter still: only endpoints that keep nothing of a call once it is answered. Fewer upstream providers qualify; the list marks those that do.',
+    upstreams: 'Upstream providers',
+    mode: 'Which may answer',
+    modeAll: 'All, except those turned off',
+    modeOnly: 'Only those turned on',
+    modeOnlyHint:
+      'Turn on each upstream provider that may answer. The fewer there are, the less is left to fall back on when one is down.',
+    colProvider: 'Upstream provider',
+    colPrice: 'Input / output, per million tokens',
+    colTools: 'Calls tools',
+    colUptime: 'Uptime, 30 min / 1 day',
+    colUse: 'Use',
+    colOrder: 'Try first',
+    pricePair: '{input} / {output}',
+    uptimePair: '{m30} / {d1}',
+    yes: 'Yes',
+    no: 'No',
+    use: 'Use {name} ({slug})',
+    tryFirst: 'Try first',
+    position: 'No. {n}',
+    moveUp: 'Try earlier',
+    moveDown: 'Try later',
+    unorder: 'Do not try first',
+    context: '{n} tokens of context',
+    maxOutput: 'up to {n} out',
+    based: 'Based in {country}',
+    zdrTag: 'ZDR',
+    degraded: 'Not running normally',
+    notListed: 'Not serving this model now',
+    covered: 'Included in {slug}',
+    discount: '{pct} off',
+    higherAbove: 'Costs more above {n} input tokens',
+    privacy: 'Privacy policy',
+    terms: 'Terms of service',
+    statusPage: 'Service status',
+    excludedBy: 'Left out by: {controls}',
+    addSlug: 'Add by slug',
+    addSlugPlaceholder: 'such as deepinfra/turbo or google-vertex',
+    addSlugHint: 'A slug without “/” names every endpoint of its provider, its regions and variants included.',
+    add: 'Add',
+    alsoSkipped: 'Also skipped: {slugs}',
+    loading: 'Reading OpenRouter’s upstream providers for {model}…',
+    needModel: 'Enter the model, such as meta-llama/llama-3.3-70b-instruct, to list its upstream providers.',
+    unavailable: 'OpenRouter could not be reached to list the upstream providers. They can still be added by slug.',
+    modelNotFound: 'OpenRouter has no model {model}. Check the model’s ID.',
+    none: 'OpenRouter lists no upstream provider for {model} now.',
+    listed: 'As OpenRouter listed them at {time}.',
+    stale: 'OpenRouter could not be reached just now; this list is from {time}.',
+    notOffered: 'This server cannot list OpenRouter’s upstream providers yet. They can still be added by slug.',
+    choosing: 'Choosing among them',
+    fallbacks: 'If those tried first cannot answer, let OpenRouter use others',
+    fallbacksHint:
+      'Off: a call goes only to those tried first (with none chosen, to the one OpenRouter picks first), and fails when they cannot answer.',
+    requireParameters: 'Only upstream providers that take every setting of a call',
+    requireParametersHint:
+      'Agents call tools. On, an upstream provider that cannot call tools, or would ignore a setting such as the reasoning effort, is never used. Recommended.',
+    sort: 'Choose among them by',
+    sortBy: {
+      default: 'OpenRouter’s balance of price and uptime',
+      price: 'Lowest price',
+      throughput: 'Fastest output',
+      latency: 'Quickest to start answering',
+      exacto: 'Best at calling tools (Exacto)',
+    },
+    sortHint: 'Any choice but OpenRouter’s own tries them strictly in that order, with no load balancing.',
+    sortWithOrder: 'Not used while some upstream providers are tried first.',
+    speed: 'Preferred speed',
+    speedHint:
+      'Upstream providers that miss these are tried last, not left out. Over the last 5 minutes: p90 means 9 calls in 10 do at least this well.',
+    throughput: 'Output of at least, tokens a second',
+    latency: 'First token within, seconds',
+    pct: {
+      p50: 'Median (p50)',
+      p75: 'p75',
+      p90: 'p90',
+      p99: 'p99',
+    },
+    limits: 'Limits',
+    quantizations: 'Precision the model runs at',
+    quantizationsHint:
+      'Only upstream providers that run the model at one of these. None chosen: any. Lower precision costs less and may answer worse.',
+    quant: {
+      unknown: 'Not stated',
+    },
+    maxPrice: 'Highest price accepted',
+    maxPriceHint: 'Upstream providers that charge more are left out; with none left, the call fails.',
+    maxPrompt: 'Input, per million tokens',
+    maxCompletion: 'Output, per million tokens',
+    maxRequest: 'Per call',
+    maxImage: 'Per image',
+    warnNone:
+      'No upstream provider this routing allows serves this model now: every call would fail. Allow more, or loosen a limit.',
+    warnNoTools:
+      'None of the upstream providers allowed can call tools: agents on this model could not read the course or act in it.',
+    noteSomeNoTools: '{names} cannot call tools, so agents’ calls skip them.',
+    preview: 'What is sent to OpenRouter',
+    previewEmpty: 'Nothing: OpenRouter routes each call as it does by default.',
+    prices: 'Prices',
+    pricesNote:
+      'OpenRouter charges what the upstream provider that answered charges. Quotas in dollars and the costs report count every call at the price table’s price for this model, whichever upstream provider answered.',
+    highest:
+      'The upstream providers allowed charge up to {input} for input and {output} for output, per million tokens.',
+    table: 'The school’s price table counts {input} for input and {output} for output.',
+    tableNone: 'The school’s price table has no price for this model.',
+    tableLow:
+      'Quotas in dollars count the price table’s price, which is below what some upstream providers allowed charge: the school could spend more than its quotas say. Raise the price to at least the highest, or set a highest price accepted.',
+    setPrice: 'Set the price',
+    invalid: {
+      slug: 'Lower-case letters, digits and -, then any /part, such as deepinfra/turbo.',
+      slugTwice: 'Already listed.',
+      onlyNone: 'Turn on at least one upstream provider, or choose “All, except those turned off”.',
+      throughput: 'More than 0, up to 100,000.',
+      latency: 'More than 0, up to 600 seconds.',
+      price: 'Dollars: 0 or more, up to 1,000,000, at most 6 decimal places.',
+    },
   },
 }
