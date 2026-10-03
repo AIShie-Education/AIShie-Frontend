@@ -46,6 +46,13 @@
 // this page (uploaded again: an upload is attached once); otherwise it says
 // to attach them again.
 //
+// Under the composer, one muted line says who else can read the
+// conversation and where the agent sends what is written in it, with "More"
+// for the whole notice (privacy.ts, AIShie-Frontend#79), which the ⋯ menu's
+// "Who can read this" opens too; the first time the person starts a
+// conversation, in this browser, its points are on the new conversation
+// instead, until they say they have seen them or send.
+//
 // The ⋯ menu also downloads the conversation as a PDF (下載為 PDF): every
 // message, read back to the first, laid out for paper under who wrote it and
 // when, through the browser's print window (usePrintLayout).
@@ -62,6 +69,7 @@ import { useNow } from '@/composables/useNow'
 import { useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
 import { useDropTarget } from '@/composables/useFileDrop'
+import { useSessionStore } from '@/stores/session'
 import { courseLine, dateLine, usePrintLayout, type PrintRequest } from '@/composables/usePrintLayout'
 import { formatDateTime, formatList } from '@/utils/format'
 import { entriesHtml } from '@/utils/printLayout'
@@ -100,6 +108,9 @@ import ChatMessage from './ChatMessage.vue'
 import ChatStatusLine from './ChatStatusLine.vue'
 import ChatDraft from './ChatDraft.vue'
 import AskableText from './AskableText.vue'
+import ChatPrivacyNotice from './ChatPrivacyNotice.vue'
+import { notePrivacySeen, privacyNotice, privacySeen, type AnswerHosting } from './privacy'
+import { useAnswerModels } from './useAnswerModels'
 import { attachmentsFor, rememberSent, sentFilesOf } from './attachments'
 
 const props = withDefaults(
@@ -268,6 +279,72 @@ const sharedNote = computed(
   () => role.value === 'opener' && visibleLines.value.some((l) => 'key' in l && l.key === 'respondentAnswersOthers'),
 )
 
+// --- Who reads it, and where it goes (privacy.ts) -------------------------------------
+/**
+ * How the agent is run, as far as the pane knows: a new conversation's
+ * respondent says; of one under way, whom the opener may ask says it while
+ * the agent is offered, and Core's refusal says it once it is not.
+ */
+const hosting = computed<AnswerHosting>(() => {
+  const of = (h: string | null | undefined): AnswerHosting => (h === 'runtime' || h === 'mcp' ? h : null)
+  if (isDraft.value) return of(props.respondent?.hosting)
+  const memberId = view.value?.respondent.member_id
+  const offer = memberId ? offers.items.value.find((r) => r.member_id === memberId) : undefined
+  if (offer) return of(offer.hosting)
+  if (notAskableWhy.value === 'mcp_agent') return 'mcp'
+  if (notAskableWhy.value === 'agent_not_hosted') return 'runtime'
+  return null
+})
+/** The caller's own agent: the runtime tells its owner which model it answers with. */
+const answer = useAnswerModels({
+  courseId: props.courseId,
+  name: () => (other.value?.kind === 'agent' ? other.value.name : null),
+  mine: () => role.value === 'opener' && !!other.value?.mine && hosting.value === 'runtime',
+})
+const privacy = computed(() =>
+  privacyNotice({
+    name: other.value?.name ?? '',
+    agent: other.value?.kind === 'agent',
+    visibleTo: conv?.visibleTo.value,
+    answersOthers: answersOthers.value,
+    hosting: hosting.value,
+    models: answer.models.value,
+    providerName: answer.providerName,
+  }),
+)
+/** The whole notice, from "More" and the ⋯ menu. */
+const privacyOpen = ref(false)
+const session = useSessionStore()
+const actorId = computed(() => session.me?.id ?? null)
+/** The points, shown on a new conversation the first time the person starts one here. */
+const firstSeen = ref(privacySeen(actorId.value))
+function seenPrivacy() {
+  notePrivacySeen(actorId.value)
+  firstSeen.value = true
+}
+/** Got it: the points give way to the line, and the new conversation to its ways to begin, at its foot. */
+function gotPrivacy() {
+  seenPrivacy()
+  void nextTick(toBottom)
+}
+/** The one asking, with an agent: they are told, where they ask, who reads it and where it goes. */
+const asksAgent = computed(() => role.value === 'opener' && other.value?.kind === 'agent')
+const showsFirstPoints = computed(
+  () => isDraft.value && asksAgent.value && !firstSeen.value && !openProposed.value && !refusedElsewhere.value,
+)
+/**
+ * The line under the composer, where the caller asks: once how the agent is
+ * run is known (whom they may ask read), and not while the first time's
+ * points say it already.
+ */
+const showsPrivacyLine = computed(
+  () =>
+    asksAgent.value &&
+    showsComposer.value &&
+    !showsFirstPoints.value &&
+    !(needsOffer.value && !offers.loaded.value && !offers.error.value),
+)
+
 // --- Messages -------------------------------------------------------------------------
 
 function authorName(m: ConversationMessage): string {
@@ -342,7 +419,23 @@ watch(
   },
   { flush: 'post' },
 )
-onMounted(() => void nextTick(toBottom))
+/**
+ * The first time's points, brought into view whole on a new conversation:
+ * scrolled down until their foot (More, Got it) shows, never past their top.
+ */
+const firstPoints = ref<HTMLElement | null>(null)
+function revealFirstPoints() {
+  const el = scroller.value
+  const box = firstPoints.value
+  if (!el || !box) return
+  const view = el.getBoundingClientRect()
+  const b = box.getBoundingClientRect()
+  const below = b.bottom - view.bottom
+  if (below > 0) el.scrollTop += Math.min(below, Math.max(0, b.top - view.top))
+}
+// A conversation opens on its newest message, a new one on its ways to
+// begin; the first time, on the points instead, whole.
+onMounted(() => void nextTick(showsFirstPoints.value ? revealFirstPoints : toBottom))
 
 async function older() {
   if (!conv) return
@@ -464,6 +557,7 @@ async function send() {
     draft.value = ''
     files.clear()
     noteSent(body)
+    seenPrivacy()
     emit('changed')
     if (out.status === 'proposed') {
       openProposed.value = true
@@ -668,11 +762,10 @@ watch(
     if (!on) menu.value?.handleClose()
   },
 )
-/** Who can read it, opened from the menu: over the chat's sheet or an agent's log, back closes it first. */
-const readersOpen = ref(false)
-useBackCloses(readersOpen, () => (readersOpen.value = false))
+// Who reads it and where it goes, opened from the menu or "More": over the chat's sheet or an agent's log, back closes it first.
+useBackCloses(privacyOpen, () => (privacyOpen.value = false))
 function onMenu(command: string) {
-  if (command === 'readers') readersOpen.value = true
+  if (command === 'readers') privacyOpen.value = true
   else if (command === 'print') void printer.print(transcript)
 }
 
@@ -883,21 +976,14 @@ const closedLine = computed(() => {
     </header>
 
     <el-dialog
-      v-model="readersOpen"
-      :title="t('chat.visibleTo.title')"
-      width="min(380px, calc(100vw - 32px))"
+      v-model="privacyOpen"
+      :title="t(other?.kind === 'agent' ? 'chat.privacy.title' : 'chat.visibleTo.title')"
+      width="min(440px, calc(100vw - 32px))"
       append-to-body
       align-center
       class="chat-pane__readers"
     >
-      <div class="chat-pane__readers-body">
-        <ul>
-          <li v-for="(line, i) in visibleLines" :key="i">
-            {{ 'key' in line ? t(`chat.visibleTo.${line.key}`) : line.text }}
-          </li>
-        </ul>
-        <p class="app-muted">{{ t('chat.visibleTo.note') }}</p>
-      </div>
+      <ChatPrivacyNotice :notice="privacy" />
     </el-dialog>
 
     <div ref="scroller" class="chat-pane__messages" @scroll.passive="onScroll">
@@ -975,6 +1061,25 @@ const closedLine = computed(() => {
           <p class="chat-pane__start-title">{{ t('chat.new.intro', { name: respondent.display_name }) }}</p>
           <p v-if="respondent.is_my_delegate" class="app-muted">{{ t('chat.new.yourAgent') }}</p>
           <p v-if="sharedNote" class="chat-pane__shared">{{ t('chat.visibleTo.sharedNote') }}</p>
+          <section
+            v-if="showsFirstPoints"
+            ref="firstPoints"
+            class="chat-pane__privacy-first"
+            aria-labelledby="chat-pane-privacy-first"
+          >
+            <h3 id="chat-pane-privacy-first" class="chat-pane__privacy-first-title">
+              <el-icon aria-hidden="true"><Lock /></el-icon>{{ t('chat.privacy.firstTitle') }}
+            </h3>
+            <ul>
+              <li v-for="p in privacy.points" :key="p.key">{{ t(`chat.privacy.${p.key}`, p.params) }}</li>
+            </ul>
+            <div class="chat-pane__privacy-first-actions">
+              <el-button link type="primary" size="small" @click="privacyOpen = true">
+                {{ t('chat.privacy.more') }}
+              </el-button>
+              <el-button size="small" @click="gotPrivacy">{{ t('chat.privacy.gotIt') }}</el-button>
+            </div>
+          </section>
           <div
             v-if="!writeBlocked"
             class="chat-pane__suggestions"
@@ -1035,6 +1140,17 @@ const closedLine = computed(() => {
           @stop="stop"
           @command="onCommand"
         />
+        <p v-if="showsPrivacyLine" class="chat-pane__privacy">
+          <span class="chat-pane__privacy-text">{{ t(`chat.privacy.${privacy.line.key}`, privacy.line.params) }}</span>
+          <el-button
+            link
+            size="small"
+            class="chat-pane__privacy-more"
+            :aria-label="t('chat.privacy.moreLabel')"
+            @click="privacyOpen = true"
+            >{{ t('chat.privacy.more') }}</el-button
+          >
+        </p>
       </template>
     </footer>
   </div>
@@ -1132,15 +1248,59 @@ const closedLine = computed(() => {
 .chat-pane__intro .chat-pane__shared {
   margin-top: 8px;
 }
-.chat-pane__readers-body ul {
-  margin: 0 0 12px;
-  padding-left: 18px;
-  line-height: 1.6;
-}
-.chat-pane__readers-body p {
-  margin: 0;
+/* Under the composer: who else reads it and where it goes, with More for the whole notice. */
+.chat-pane__privacy {
+  margin: 6px 2px 0;
   font-size: 12px;
   line-height: 1.5;
+  color: var(--el-text-color-secondary);
+  overflow-wrap: anywhere;
+}
+.chat-pane__privacy-more.el-button {
+  height: auto;
+  margin-left: 4px;
+  padding: 0;
+  font-size: 12px;
+  vertical-align: baseline;
+}
+/* The first time: its points on the new conversation, under who it is with. */
+.chat-pane__privacy-first {
+  width: min(100%, 360px);
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--el-fill-color-light);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  color: var(--el-text-color-regular);
+}
+.chat-pane__privacy-first-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+.chat-pane__privacy-first ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.chat-pane__privacy-first li + li {
+  margin-top: 2px;
+}
+.chat-pane__privacy-first-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+.chat-pane__privacy-first-actions .el-button + .el-button {
+  margin-left: 0;
 }
 .chat-pane__messages {
   flex: 1;
