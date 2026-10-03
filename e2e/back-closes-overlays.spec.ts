@@ -60,11 +60,12 @@ async function openSyllabus(page: Page) {
   return viewer
 }
 
-/** Who can read the conversation shown in `pane`, asked from its ⋯ menu. */
+/** Who can read the conversation shown in `pane`, and where it goes, asked from its ⋯ menu. */
 async function openReaders(page: Page, pane: Locator) {
   await pane.getByRole('button', { name: 'Conversation options' }).click()
   await page.locator('.chat-pane__menu:visible').getByRole('menuitem', { name: 'Who can read this' }).click()
-  const readers = page.getByRole('dialog', { name: 'Who can read this conversation' })
+  // With an agent, the notice also says where the conversation goes (chat.privacy.title).
+  const readers = page.getByRole('dialog', { name: /^(Who can read this conversation|Who reads this, and where it goes)$/ })
   await expect(readers).toBeVisible()
   return readers
 }
