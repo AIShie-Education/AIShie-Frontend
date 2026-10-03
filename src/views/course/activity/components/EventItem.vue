@@ -556,7 +556,10 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   justify-content: center;
   color: var(--event-accent);
-  background: var(--app-ground-2);
+  /* A category's ground, the neutral pill's: the ground's second shade in the
+     light theme; in the dark one a step above the card, from which the second
+     shade, just below it, hardly stands out. */
+  background: var(--app-neutral-bg);
   font-size: 15px;
 }
 .event-item.is-compact .event-item__icon {
