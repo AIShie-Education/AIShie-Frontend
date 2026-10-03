@@ -79,10 +79,10 @@ function templateCode(template: string): string {
 function parts(path: string, text: string): { template: string; code: string; script: string } {
   if (!path.endsWith('.vue')) return { template: '', code: '', script: text }
   const template = text
-    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, blank)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>|<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi, blank)
     // The dot written as an entity is the dot.
     .replace(/&middot;|&#183;|&#x0*b7;/gi, '·')
-  const script = text.replace(/<template>[\s\S]*<\/template>|<style[\s\S]*?<\/style>/g, blank)
+  const script = text.replace(/<template>[\s\S]*<\/template>|<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi, blank)
   return { template, code: templateCode(template), script }
 }
 
