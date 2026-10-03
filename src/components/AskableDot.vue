@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // Whether an agent can be asked now, in a list of agents: a dot before its
 // name (docs/CONVENTIONS.md, "Tags"), not a chip, so that a row keeps to its
-// two. An agent is never "online" in green: the dot is the ink's, solid
-// while it can be asked, a ring while it is paused, and amber only where
+// two. An agent is never "online" in green. Its shape says whether it can be
+// asked, never its hue alone: a solid dot in the ink while it can, a ring
+// while it cannot, in the third ink while it is paused, and in amber where
 // AIshie does not run an agent hosted on it, which wants its owner. Its words
 // are its accessible name and its tooltip; inside a control (a row that is
 // a button), `hint-id` keeps it out of the tab order and puts the tooltip's
@@ -89,12 +90,15 @@ const help = computed(() => {
   background: var(--app-ink-2);
   border: 1.5px solid var(--app-ink-2);
 }
-.askable-dot.is-paused {
+/* A ring, not a dot: it cannot be asked now. Told from a dot by its shape, in either theme. */
+.askable-dot.is-paused,
+.askable-dot.is-off {
   background: transparent;
   border-color: var(--app-ink-3);
 }
+/* Not running, which wants its owner: the ring in amber, a little heavier. */
 .askable-dot.is-off {
-  background: var(--app-wait-fg);
+  border-width: 2px;
   border-color: var(--app-wait-fg);
 }
 </style>

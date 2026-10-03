@@ -284,7 +284,8 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await expect(page.locator('.agent-view__desc .hosting-tag__mode')).toHaveText('Hosted on AIshie')
 
     // Core holds each as chosen. My agents says whether each can be asked, by a dot before its name, and
-    // leaves how each runs to its page: the one hosted on AIshie, not running yet, has an amber dot.
+    // leaves how each runs to its page: the one hosted on AIshie, not running yet, has an amber ring, and
+    // says so in words beside its name, to its owner, who must see to it.
     const mine = done(await call(hana().token, 'GET', '/v1/me/agents'), 'agent.list').agents as {
       actor_id: string
       hosting: string
@@ -300,6 +301,9 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await expect(mcpItem.locator('.askable-dot')).toHaveCount(0)
     await expect(rtItem).not.toContainText('Hosted on AIshie')
     await expect(rtItem.locator('.askable-dot')).toHaveAttribute('aria-label', 'Not running')
+    await expect(rtItem.locator('.askable-dot')).toHaveClass(/is-off/)
+    await expect(rtItem.locator('.agents-item__off')).toHaveText('Not running')
+    await expect(mcpItem.locator('.agents-item__off')).toHaveCount(0)
   })
 
   test('how it runs is never changed: its page offers no way, and Core refuses one', async ({ page }) => {

@@ -69,6 +69,12 @@ function open(a: AgentSummary) {
 }
 
 const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByAdmin: 'danger' } as const
+/**
+ * Hosted on AIshie, which does not run it now: its dot is an amber ring, and
+ * its owner, who must see to it, is told so in words beside it too.
+ */
+const notRunning = (a: AgentSummary) =>
+  agentStanding(a) === 'active' && hostingOf(a.hosting) === 'runtime' && a.site_chat === false
 
 // --- Hosting one of them on AIshie ----------------------------------------------------
 const rt = useRuntime()
@@ -147,6 +153,7 @@ function onHosted(_: unknown, actorId: string) {
                 >
                   <AgentName :name="a.display_name" />
                 </router-link>
+                <span v-if="notRunning(a)" class="agents-item__off">{{ t('common.agent.askable.off') }}</span>
                 <AppTag v-if="agentStanding(a) !== 'active'" :tone="toneOf(STANDING_TAG[agentStanding(a)])">
                   {{ t(`agents.standing.${agentStanding(a)}`) }}
                 </AppTag>
@@ -237,6 +244,10 @@ function onHosted(_: unknown, actorId: string) {
 }
 .agents-item__name:hover {
   text-decoration: underline;
+}
+.agents-item__off {
+  font-size: 13px;
+  color: var(--app-wait-fg);
 }
 .agents-item__meta {
   display: flex;
