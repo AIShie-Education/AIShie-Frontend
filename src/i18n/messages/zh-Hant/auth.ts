@@ -1,18 +1,19 @@
 export default {
   title: '登入',
-  welcome: '歡迎使用 AIshie',
   email: '電子郵件',
   loginOrEmail: '學號／工號或電子郵件',
   password: '密碼',
   signIn: '登入',
   sso: '以{provider}登入',
   ssoDefault: '單一登入',
-  or: '或',
+  // Where single sign-on is offered, the password form is behind a link (and back).
+  usePassword: '改用學號／密碼登入',
+  useEmailPassword: '改用電子郵件及密碼登入',
+  useSso: '改用其他方式登入',
   failed: '電子郵件或密碼不正確。',
   failedLogin: '學號／工號或電子郵件，或密碼不正確。',
   expired: '登入已過期，請重新登入。',
   serverDown: '目前無法連線到伺服器。',
-  serverVersion: '伺服器{version}',
   invite: {
     title: '設定密碼',
     intro: '請為你的 AIshie 帳戶設定密碼；如你原本已有密碼，新密碼會取代它。設定後便會立即登入。',

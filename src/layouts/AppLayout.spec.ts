@@ -348,7 +348,7 @@ describe('the account menu', () => {
     expect(menu.querySelector('.account-menu__email')?.textContent).toBe('ada@example.edu')
     expect(menu.querySelector('.account-menu__role')?.textContent?.trim()).toBe('Root')
     expect(menu.getAttribute('aria-labelledby')).toBe('account-menu-name')
-    expect(itemNames(menu)).toEqual(['Account settings', 'Language', 'Theme', 'Sign out'])
+    expect(itemNames(menu)).toEqual(['Account settings', 'Language', 'Theme', 'About AIshie', 'Sign out'])
     // No agents here: they are the side bar's.
     expect(menu.textContent).not.toContain('My agents')
     expect(document.activeElement?.textContent).toContain('Account settings')
@@ -427,7 +427,7 @@ describe('the account menu', () => {
     expect(w.get('#account-button').attributes('aria-label')).toBe('帳戶：Ada')
     await w.get('#account-button').trigger('click')
     await flushPromises()
-    expect(itemNames(menuOf())).toEqual(['帳戶設定', '語言', '主題', '登出'])
+    expect(itemNames(menuOf())).toEqual(['帳戶設定', '語言', '主題', '關於 AIshie', '登出'])
   })
 
   it('sets the theme chosen: light, dark, or the system’s', async () => {
@@ -495,7 +495,7 @@ describe('the account menu', () => {
     await flushPromises()
     const menu = drawer.querySelector<HTMLElement>('#account-menu-drawer')!
     expect(menu.classList).toContain('is-drawer')
-    expect(itemNames(menu)).toEqual(['Account settings', 'Language', 'Theme', 'Sign out'])
+    expect(itemNames(menu)).toEqual(['Account settings', 'Language', 'Theme', 'About AIshie', 'Sign out'])
     const theme = menu.querySelector<HTMLElement>('[data-opens="theme"]')!
     theme.click()
     await flushPromises()

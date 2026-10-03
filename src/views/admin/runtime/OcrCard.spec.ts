@@ -141,7 +141,7 @@ describe('OcrCard', () => {
   it.each([
     [
       'operator_off',
-      'The server’s operator has turned OCR off (OCR=off), so it never runs, whatever is set here. What you set is kept for when it is turned on.',
+      'The server has turned this off, so it never runs, whatever is set here. What you set is kept for when it is turned on; ask the server’s operator.',
     ],
     [
       'not_installed',
@@ -163,6 +163,20 @@ describe('OcrCard', () => {
     expect(w.find('.ocr-card__enabled').classes()).toContain('is-disabled')
     expect(w.find('.ocr-card__choices').exists()).toBe(false)
     expect(w.find('.ocr-card__kept').text()).toBe('Kept for when OCR can run: 繁體中文 and English')
+  })
+
+  it('turned off by the server, says in each language to ask its operator, as the ⓘ beside it does', async () => {
+    state.settings = ocrSettings({ available: false, unavailable_reason: 'operator_off', available_languages: [] })
+    for (const [locale, ask] of [
+      ['en', 'ask the server’s operator'],
+      ['zh-Hant', '請聯絡伺服器營運者'],
+      ['zh-Hans', '请联系服务器运维方'],
+    ] as const) {
+      setLocale(locale)
+      const w = await card()
+      expect(w.find('.ocr-card__unavailable .el-alert__title').text()).toContain(ask)
+      w.unmount()
+    }
   })
 
   it('may turn off, where OCR cannot run, what the site had on', async () => {
@@ -194,7 +208,7 @@ describe('OcrCard', () => {
     s.on('GET', ADMIN.settings, () => noRoute())
     const w = await card()
     expect(w.find('.runtime-async__not-offered').text()).toBe(
-      'This runtime does not offer this yet: it comes with a newer version of the agent runtime.',
+      'This agent service does not offer this yet: it comes with a newer version of the agent service.',
     )
     expect(w.find('.el-alert--error').exists()).toBe(false)
   })

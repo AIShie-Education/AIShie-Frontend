@@ -19,6 +19,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useZIndex } from 'element-plus'
 import StatusTag from '@/components/StatusTag.vue'
+import AboutDialog from './AboutDialog.vue'
 import { LOCALES, type Locale } from '@/i18n'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore, type Theme } from '@/stores/ui'
@@ -172,6 +173,16 @@ function onSubItem(which: Sub) {
   else void openSub(which, true)
 }
 
+const about = ref(false)
+function showAbout() {
+  // The menu item goes with the menu, so focus returns to the account button
+  // once the dialog closes.
+  hide(false)
+  about.value = true
+}
+function aboutClosed() {
+  trigger.value?.focus()
+}
 function goAccount() {
   hide(false)
   void router.push({ name: 'account' })
@@ -387,6 +398,12 @@ defineExpose({ show, hide })
           </div>
         </div>
 
+        <button type="button" class="account-menu__item" role="menuitem" data-item tabindex="-1" @click="showAbout">
+          <!-- Navigation's icons are outlined: Element Plus has no outlined "i", and its outlined "!" turned over is one. -->
+          <el-icon class="account-menu__about-icon" aria-hidden="true"><Warning /></el-icon>
+          <span class="account-menu__label">{{ t('layout.about.item') }}</span>
+        </button>
+
         <div class="account-menu__sep" role="separator" />
         <button type="button" class="account-menu__item" role="menuitem" data-item tabindex="-1" @click="signOut">
           <el-icon aria-hidden="true"><SwitchButton /></el-icon>
@@ -394,6 +411,7 @@ defineExpose({ show, hide })
         </button>
       </div>
     </Teleport>
+    <AboutDialog v-model="about" @closed="aboutClosed" />
   </div>
 </template>
 
@@ -567,6 +585,9 @@ defineExpose({ show, hide })
 .account-menu__item .el-icon {
   flex-shrink: 0;
   color: var(--app-ink-3);
+}
+.account-menu__about-icon {
+  transform: rotate(180deg);
 }
 .account-menu__item:hover,
 .account-menu__item:focus-visible,

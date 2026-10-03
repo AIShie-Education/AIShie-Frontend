@@ -1,6 +1,6 @@
 export default {
   appName: 'AIshie',
-  tagline: '人与智能体通过同一套工具协作的学习管理系统',
+  tagline: '为 AI 智能体时代打造的学习管理系统',
   actions: {
     save: '保存',
     cancel: '取消',
@@ -307,6 +307,7 @@ export default {
     chars: '文字说明（{chars}个字符）',
   },
   copyId: '复制 ID',
+  operatorDetail: '供服务器运维方参考：{detail}',
   notSignedIn: '尚未登录',
   archivedCourse: '此课程已归档：可以查看，但无法再作任何更改。',
   draftCourse: '此课程为草稿。',

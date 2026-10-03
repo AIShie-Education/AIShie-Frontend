@@ -54,6 +54,7 @@ test.describe('the account menu', () => {
       'Account settings',
       /Language\s*English$/,
       /Theme\s*System$/,
+      'About AIshie',
       'Sign out',
     ])
     await expect(menu).not.toContainText('My agents')
@@ -147,6 +148,46 @@ test.describe('the account menu', () => {
     await menu.locator('[data-opens="theme"]').click()
     await themesEn.getByRole('menuitemradio', { name: 'System' }).click()
     await expect(page.locator('html')).not.toHaveClass(/\bdark\b/)
+  })
+
+  test('opens About over the whole window, and closes back on its button', async ({ page }) => {
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    await page.goto(coursePath())
+    await expect(page.locator('.course-head')).toBeVisible()
+    const button = accountButton(page)
+    await button.focus()
+    await page.keyboard.press('ArrowUp')
+    const menu = accountMenu(page)
+    await page.keyboard.press('ArrowUp')
+    await expect(menu.getByRole('menuitem', { name: 'About AIshie' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    const dialog = page.locator('.about-dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText('The LMS for the agent era')
+    // Modal: its overlay is what lies over the side bar, the header and the page, not they over it.
+    const url = page.url()
+    for (const [x, y] of [
+      [150, 140],
+      [700, 28],
+      [1300, 600],
+    ] as const) {
+      const over = await page.evaluate(([x, y]) => {
+        const el = document.elementFromPoint(x, y)
+        return !!el?.closest('.el-overlay')
+      }, [x, y] as const)
+      expect(over, `the overlay at ${x},${y}`).toBe(true)
+    }
+    // Escape closes it, and focus is on the account button again.
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(button).toBeFocused()
+    // A click beside it, over the side bar, closes it and follows nothing there.
+    await (await openAccountMenu(page)).getByRole('menuitem', { name: 'About AIshie' }).click()
+    await expect(dialog).toBeVisible()
+    await page.mouse.click(150, 140)
+    await expect(dialog).toBeHidden()
+    expect(page.url()).toBe(url)
   })
 
   test('says a platform role beside the name', async ({ page }) => {

@@ -52,29 +52,29 @@ afterEach(() => setLocale('en'))
 
 // The contract's words (§9.5), in English.
 const EN: Record<string, string> = {
-  assertion_missing: 'Could not sign you in to the school’s runtime. Reload the page and try again.',
-  assertion_malformed: 'Could not sign you in to the school’s runtime. Reload the page and try again.',
-  assertion_invalid: 'Could not sign you in to the school’s runtime. Reload the page and try again.',
-  assertion_expired: 'Could not sign you in to the school’s runtime. Reload the page and try again.',
-  keys_unavailable: 'The school’s runtime is not available right now. Try again in a minute.',
-  store_unavailable: 'The school’s runtime is not available right now. Try again in a minute.',
-  core_unavailable: 'The runtime could not reach AIshie. Try again in a minute.',
+  assertion_missing: 'Could not sign you in to the school’s agent service. Reload the page and try again.',
+  assertion_malformed: 'Could not sign you in to the school’s agent service. Reload the page and try again.',
+  assertion_invalid: 'Could not sign you in to the school’s agent service. Reload the page and try again.',
+  assertion_expired: 'Could not sign you in to the school’s agent service. Reload the page and try again.',
+  keys_unavailable: 'The school’s agent service is not available right now. Try again in a minute.',
+  store_unavailable: 'The school’s agent service is not available right now. Try again in a minute.',
+  core_unavailable: 'The agent service could not reach AIshie. Try again in a minute.',
   rate_limited: 'Too many tries. Wait 12 seconds.',
-  runtime_misconfigured: 'The school’s runtime is not set up to host agents. Tell your administrator.',
+  runtime_misconfigured: 'The school’s agent service is not set up to host agents. Tell your administrator.',
   mcp_agent: 'This agent has MCP access: it is used from your own tools, and is never hosted here.',
   agent_suspended: 'This agent is suspended in AIshie. Reactivate it first.',
   owner_suspended: 'Its owner is suspended in AIshie, so it cannot be hosted. Ask an administrator.',
   owner_changed: 'AIshie no longer counts this agent as yours: delete it here.',
   core_too_old: 'This AIshie server is too old for hosting. Tell your administrator.',
   operator_agent: 'The school’s operator already runs this agent.',
-  agent_not_found: 'This agent is no longer on the school’s runtime.',
+  agent_not_found: 'This agent is no longer on the school’s agent service.',
   version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
   school_key_not_offered: 'The school’s plan is not offered here.',
   unknown_offer: 'The school no longer offers this model. Choose another.',
   own_key_required: 'Enter your API key for OpenAI.',
   own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for OpenAI.',
   model_denied: 'The school does not allow this model. Choose another.',
-  settings_rejected: 'The runtime cannot run these settings.',
+  settings_rejected: 'The agent service cannot run these settings.',
   key_malformed:
     'That does not look like an API key from OpenAI. Paste the key exactly as OpenAI gave it, with no spaces.',
   unknown_provider: 'Choose one of the providers offered.',
@@ -82,22 +82,22 @@ const EN: Record<string, string> = {
   unknown_endpoint: 'Choose one of the endpoints offered.',
   invalid_field: 'This value is not accepted here.',
   // This client's own.
-  network: 'The school’s runtime could not be reached. Check your connection and try again.',
-  runtime_unavailable: 'The school’s runtime is not available right now. Try again in a minute.',
-  invalid_response: 'The school’s runtime is not available right now. Try again in a minute.',
-  account_refused: 'Hosting on the school’s runtime is not available for this account.',
-  runtime_absent: 'The school’s runtime is not available on this server. Reload the page.',
+  network: 'The school’s agent service could not be reached. Check your connection and try again.',
+  runtime_unavailable: 'The school’s agent service is not available right now. Try again in a minute.',
+  invalid_response: 'The school’s agent service is not available right now. Try again in a minute.',
+  account_refused: 'Hosting on the school’s agent service is not available for this account.',
+  runtime_absent: 'The school’s agent service is not available on this server. Reload the page.',
 }
 
 // Refused names (A.3.1, A.3.2): a page out of step with the runtime, said with the name refused.
 const NAMED: Record<string, [string, string]> = {
   unknown_field: [
     '/model/Own',
-    'The school’s runtime did not take this request: it has no field “/model/Own”. Reload the page and try again.',
+    'The school’s agent service did not take this request: it has no field “/model/Own”. Reload the page and try again.',
   ],
   unknown_parameter: [
     'revoke',
-    'The school’s runtime did not take this request: it takes no “revoke” in the address. Reload the page and try again.',
+    'The school’s agent service did not take this request: it takes no “revoke” in the address. Reload the page and try again.',
   ],
 }
 
@@ -154,7 +154,7 @@ describe('the words for each error reason', () => {
     expect(te(key), key).toBe(true)
   })
 
-  it.each(Object.entries(NAMED))('%s names what the runtime refused, in every language', (reason, [field, words]) => {
+  it.each(Object.entries(NAMED))('%s names what the agent service refused, in every language', (reason, [field, words]) => {
     const e = err(reason, { field })
     expect(hostingErrorText(e, t)).toBe(words)
     setLocale('zh-Hant')
@@ -199,7 +199,7 @@ describe('the words for each error reason', () => {
 
   it('word agent_not_found as said of hosting one of one’s agents, when asked to', () => {
     const e = err('agent_not_found', {}, 404)
-    expect(hostingErrorText(e, t)).toBe('This agent is no longer on the school’s runtime.')
+    expect(hostingErrorText(e, t)).toBe('This agent is no longer on the school’s agent service.')
     expect(hostingErrorText(e, t, { notYours: true })).toBe('AIshie does not count this as one of your agents.')
     expect(hostingErrorText(err('mcp_agent', {}, 422), t, { notYours: true })).toBe(EN.mcp_agent)
   })

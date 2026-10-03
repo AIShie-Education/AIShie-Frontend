@@ -10,6 +10,14 @@ export default {
     button: '帳戶：{name}',
     settings: '帳戶設定',
   },
+  // 帳戶選單中的「關於 AIshie」（AboutDialog）：正在運行的版本。
+  about: {
+    item: '關於 AIshie',
+    title: '關於',
+    web: '網頁應用程式',
+    server: '伺服器',
+    unknown: '未知',
+  },
   // A newer build deployed since this tab loaded the app (NewVersionNotice): load it, or later.
   newVersion: {
     available: '已有新版本',

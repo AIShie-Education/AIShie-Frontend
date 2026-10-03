@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import {
   call,
@@ -66,7 +68,8 @@ async function freshSignInPage(browser: Browser): Promise<Page> {
     } catch {}
   })
   await page.goto('/login')
-  await expect(page.locator('input[name=password]')).toBeVisible()
+  // The password form, or, where single sign-on is offered, the link to it beneath the providers.
+  await expect(page.locator('input[name=password]:visible, button.login__use-password:visible').first()).toBeVisible()
   return page
 }
 
@@ -160,10 +163,13 @@ test('root adds a provider, tests it and switches it on; a person signs in throu
   await expect(row.locator('.sso-status__status')).toHaveText('Offered')
   await photograph(page, 'sso-list')
 
-  // The sign-in page shows its button beside the password; the person signs in through it.
+  // The sign-in page shows its button first, as the page's primary, and the password behind a
+  // link; the person signs in through it.
   const signIn = await freshSignInPage(browser)
   await expect(ssoButton(signIn)).toBeVisible()
-  await expect(signIn.locator('button[type=submit]')).toHaveText('Sign in')
+  await expect(ssoButton(signIn)).toHaveClass(/el-button--primary/)
+  await expect(signIn.locator('input[name=password]')).toBeHidden()
+  await expect(signIn.getByRole('button', { name: 'Use your student number and password instead' })).toBeVisible()
   await photograph(signIn, 'sso-sign-in')
   await ssoButton(signIn).click()
   await expect(signIn).not.toHaveURL(/\/login/)
@@ -175,6 +181,26 @@ test('root adds a provider, tests it and switches it on; a person signs in throu
   // Linked by the email the provider vouched for: one account signs in through it now.
   await page.getByRole('button', { name: 'Refresh' }).click()
   await expect(row.locator('.sso-cell__count')).toHaveText('1')
+})
+
+test('scripts/shot.mjs still signs in with a password while a provider comes first', async ({ baseURL }, info) => {
+  // The README's tool for looking at a page by eye follows the link to the password form, as a person does.
+  const out = info.outputPath('shot.png')
+  const run = spawnSync(
+    process.execPath,
+    ['scripts/shot.mjs', '--as', 'instructor', '--path', '/', '--out', out, '--base', baseURL!],
+    {
+      env: {
+        ...process.env,
+        DEMO_FILE: fileURLToPath(new URL('./.demo.json', import.meta.url)),
+        DEMO_PASSWORD: process.env.E2E_PASSWORD,
+      },
+      encoding: 'utf8',
+      timeout: 90_000,
+    },
+  )
+  expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0)
+  expect(run.stdout).toContain(`instructor → / → ${out}`)
 })
 
 test('switched off, its button leaves the sign-in page; deleted, its one account is unlinked', async ({

@@ -148,7 +148,7 @@ test('on a Core without the directory, an administrator finds people by their ID
 
   // People & agents: no list, a way to open someone by ID, and Register as before.
   await page.goto('/admin/actors')
-  await expect(page.getByText('This Core cannot list people and agents yet')).toBeVisible()
+  await expect(page.getByText('This server cannot list people and agents yet')).toBeVisible()
   await expect(page.locator('.page-header').getByRole('button', { name: 'Register' })).toBeVisible()
   const idBox = page.getByPlaceholder('Actor ID')
   await idBox.fill('not an id')
@@ -168,7 +168,7 @@ test('on a Core without the directory, an administrator finds people by their ID
   await page.goto(`/admin/courses/${courseId}`)
   // Root is seated already: the card lists the instructors, and opens the form on asking.
   await page.getByRole('button', { name: 'Seat another instructor' }).click()
-  const noSearch = page.getByText('This Core cannot search by name or email yet (it needs updating)')
+  const noSearch = page.getByText('This server cannot search by name or email yet (it needs updating)')
   const seat = page.locator('#seat-actor')
   await seat.click()
   await page.keyboard.type('sam')
@@ -196,7 +196,7 @@ test('on a Core without the directory, an administrator finds people by their ID
   const dialog = page.getByRole('dialog', { name: 'Add a member' })
   const idField = dialog.getByPlaceholder('e.g. 01a0d79f-13c6-70da-a7cc-f009b1efe423')
   await expect(idField).toBeVisible()
-  const noSearchHere = dialog.getByText('This Core cannot search by name or email yet (it needs updating)')
+  const noSearchHere = dialog.getByText('This server cannot search by name or email yet (it needs updating)')
   expect(await noSearchHere.count()).toBe(0)
   expect(await dialog.getByText('Find by name or email').count()).toBe(0)
   await idField.fill(samId)

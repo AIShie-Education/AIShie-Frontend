@@ -10,6 +10,14 @@ export default {
     button: 'Account: {name}',
     settings: 'Account settings',
   },
+  // About AIshie, from the account menu (AboutDialog): which versions are running.
+  about: {
+    item: 'About AIshie',
+    title: 'About',
+    web: 'Web app',
+    server: 'Server',
+    unknown: 'Not known',
+  },
   // A newer build deployed since this tab loaded the app (NewVersionNotice): load it, or later.
   newVersion: {
     available: 'A new version is available',

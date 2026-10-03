@@ -63,6 +63,13 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   key only until Core answers or the form changes, and not through `useWrite`, which keeps the
   arguments it sent to compare with. The sign-in page shows a button for each of
   `ssoButtons(authMethods())`: Core's `sso_providers`, or the one `sso` of a Core from before them.
+  Where there is one, single sign-on comes first, its first button the page's primary, and the
+  password form is behind a link ("Use your student number and password instead"), and back; the
+  page waits a moment (400 ms) for Core to say, so as not to show the form and take it away, and
+  keeps a form already typed in. The four pages before the app (signing in, an invitation, a join
+  link, a password of one's own) are one card on the flat ground, `.app-auth-page` with its
+  `__lang`, `__card` and `__wordmark` (`styles/main.css`), under the public site's line
+  (`common.tagline`).
 - **Exporting conversations for audit** is *匯出對話* (`/admin/conversation-exports`, `admin-export`,
   `ExportView.vue`, and its parts in `src/views/admin/export/`), for platform administrators and
   department administrators alike (meta `admin: 'departments'`, the side bar's last entry), through
@@ -417,6 +424,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   approving now would refuse), with the refusal it would meet (`details.refusal`) in the reader's
   words where the app has them, and Core's alone for a bare `forbidden`; `reasonText()` says either
   in the same words where a decision refused so is listed, as the failed action Core records.
+  In the queues, an agent's action that is not its owner's to decide says so to the owner in one
+  sentence naming who decides (the people whose seat decides, by name where the member list is
+  readable, else "the course's teaching staff"), with no Approve or Reject to press: for a proposal,
+  both reasons the queue's `yours_to_decide` false may stand for (their own level or reach, or
+  approving it now would be refused), until Core says which; in the review queue, the first alone
+  ("Reviewed by …"). The approvals page says its rules once, in a disclosure under its title
+  (「規則」, with a chevron), open the first time it is shown in this browser and closed on each visit
+  after that unless the person left it open (`aishie.approvalsRules`); where the browser keeps
+  nothing, closed. It is not said again over each tab, so a rule about one tab begins with that
+  tab's name ("Awaiting review: everything listed there has already happened…"), and every rule is
+  a whole sentence.
 - **A proposal sent back for changes.** Wherever a proposal is decided (`DecidePanel`), *Request
   changes* (要求修改) is offered beside Approve and Reject, under the same rules as Reject:
   `action.decide` with `decision: 'request_changes'` and the note as `reason`. The note is
@@ -611,8 +629,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider screen stays open from
   page to page, and back moves between them), the agent's conversation log, the invite link put up
   full screen, and the administrators' drawers of a preset and of a department's administrators
-  (full width on a phone, `DRAWER_SIZE`), and who can read a conversation, the chat pane's dialog
-  opened over the sheet or the log; a new drawer or dialog that fills a phone's screen, or that opens
+  (full width on a phone, `DRAWER_SIZE`), who can read a conversation, the chat pane's dialog
+  opened over the sheet or the log, and About (`AboutDialog`), which on a phone opens over the
+  menu from the account's row at its bottom; a new drawer or dialog that fills a phone's screen, or that opens
   over one of these, uses it too. The router (`installBackCloses`) goes back over the overlays' entries before it adds a page's,
   so that a link followed from one takes its place, and over those a page left before it was
   reloaded; going back to a page's own entry leaves it where it was scrolled.
@@ -657,6 +676,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   stacked, nothing grows. Leave `align-items` off such a grid, or it wins over `.app-columns`.
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
+  `<IdText>` is quiet (12 px, the third ink, its copy button on hover): an id is for an administrator
+  to find or paste, beside a name, never a chip as heavy as an email. A student's seat shows no member
+  ID (the course overview's seat card, their seats on Account), nor does their grade show the ids of a
+  newer grade or of its rubric's version. What they may be asked to quote stays: the action that made
+  a grade, an action's own page (its id, its actor's and its target's), and their account's ID on
+  Account. Where a person cannot be named to them (a student may not read the member list),
+  `<MemberName>` still shows a short member ID, a grade's grader say, until Core names them.
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
@@ -732,7 +758,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
-  account's settings, the language and the theme, each a submenu with the choice in use checked, and
+  account's settings, the language and the theme, each a submenu with the choice in use checked, About AIshie
+  (`AboutDialog`: the web app's version from `/version.json` and the server's from `/healthz`, the only place
+  either is shown; the sign-in page names none; `append-to-body`, as the activity bar's sticky layer would
+  hold it under the side bar and the header, and focus returns to the account button as it closes) and
   signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
   title (on a course's pages, the way up to it: the course and the tab) and, at its right end, the
@@ -948,6 +977,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   their fixtures use the same, so that none is copied into the page from them.
 - Core's error messages are English and are shown as they are, after a translated lead
   (`errorMessage()` does this).
+- **Say what happens, not what does it.** No message names Core, the runtime, a tool (`actor.list`), a field of
+  an answer (`details.reason`) or a setting of the server (`OCR=off`, `SECRETS_KEY`, `runtime.yaml`): a teacher
+  who has never heard of Core takes it for a second authority deciding behind the first. Say what happens: "the
+  system checks the permissions again" (「系統會再檢查一次權限」), "the agent service" (「執行環境」, 「运行环境」),
+  "The server has turned this off; ask the server's operator" (「伺服器已停用此功能，請聯絡伺服器營運者」), "This
+  server cannot … yet". What only the server's operator acts on (a setting, a command) goes in a tooltip beside
+  the words: `<OperatorDetail :text>` (`src/views/admin/components`), its text in `runtimeAdmin.flags` or
+  `ssoAdmin.flags`. The one exception is a task only the operator does, whose steps are the command and the
+  path they follow (issuing the agent service's credential by hand, `AgentRuntimeCard`): those stay inline, in
+  `<code>`. `src/i18n/copy.spec.ts` scans every message in every language for these words (a dotted or an
+  underscored tool name, a setting or a family of them such as `OIDC_*`); a message only an operator reads, or
+  one that sets up an agent's MCP client, is let through there by its key, saying why.
 - **No punctuation in templates.** What joins words is the language's, so it is in the messages:
   "(you)" after a name is `common.labels.youTag` (「（你）」, with the `app-you` class), a label and
   its value `common.pair` ("Model calls: 380", 「模型呼叫：380」; `<i18n-t keypath="common.pair">`

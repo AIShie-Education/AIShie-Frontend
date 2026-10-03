@@ -252,7 +252,7 @@ test.describe.serial('student and staff numbers, and temporary passwords', () =>
     await expect(page.getByText('That is the temporary password you were given. Choose one of your own.')).toBeVisible()
 
     // In Traditional Chinese, from the page's own language menu.
-    await pickOption(page, page.locator('.change-pw__lang .el-select'), '繁體中文')
+    await pickOption(page, page.locator('.app-auth-page__lang .el-select'), '繁體中文')
     await expect(page.getByRole('heading', { name: '設定你自己的密碼' })).toBeVisible()
     await expect(page.getByText('這是你獲發的臨時密碼，請設定你自己的密碼。')).toBeVisible()
     await photograph(page, 'forced-change-zh-Hant')

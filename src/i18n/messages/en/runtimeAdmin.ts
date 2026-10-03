@@ -7,7 +7,7 @@
 export default {
   title: 'AI and documents',
   subtitle:
-    'The school’s agent runtime: the AI models the school provides and pays for, and how scanned documents are read.',
+    'The school’s agent service: the AI models the school provides and pays for, and how scanned documents are read.',
   tabs: {
     plan: 'School AI plan',
     pricing: 'Pricing',
@@ -19,29 +19,29 @@ export default {
 
   // The page, and each section, where there is nothing to set.
   state: {
-    absentTitle: 'This server has no agent runtime',
+    absentTitle: 'This server has no agent service',
     absent:
-      'The school’s AI plan and the reading of scanned documents are settings of the agent runtime, and nothing answers as one on this server. Its operator sets one up beside AIshie.',
-    unreachableTitle: 'The agent runtime cannot be reached',
+      'The school’s AI plan and the reading of scanned documents are settings of the agent service, and nothing answers as one on this server. Its operator sets one up beside AIshie.',
+    unreachableTitle: 'The agent service cannot be reached',
     unreachable: 'It may be restarting, or down. Try again in a minute.',
-    notAdminTitle: 'You are not one of this runtime’s administrators',
+    notAdminTitle: 'You are not one of this agent service’s administrators',
     notAdmin:
-      'Its operator chooses who administers it, from among AIshie’s administrators (the runtime’s ADMIN_ACTOR_IDS). Ask them to add you.',
-    notOffered: 'This runtime does not offer this yet: it comes with a newer version of the agent runtime.',
+      'Its operator chooses who administers it, from among AIshie’s administrators. Ask them to add you.',
+    notOffered: 'This agent service does not offer this yet: it comes with a newer version of the agent service.',
     reloadFailed: 'Could not read it again: this may be out of date.',
   },
 
   // The runtime's refusals, by reason.
   errors: {
-    not_admin: 'Only the runtime’s administrators may do this, and your account is not one of them.',
+    not_admin: 'Only the agent service’s administrators may do this, and your account is not one of them.',
     ocr_unavailable:
       'OCR cannot run on this server now, so it cannot be turned on or given languages. It can still be turned off, or set back to the server’s languages.',
     offer_not_found: 'This model is no longer on the plan: someone deleted it meanwhile.',
     offer_exists: {
-      config: 'The server’s runtime.yaml already has a model with this ID. Choose another.',
+      config: 'The server’s settings already have a model with this ID. Choose another.',
       site: 'The plan already has a model with this ID. Choose another, or edit that one.',
     },
-    offer_read_only: 'The server’s operator set this model in runtime.yaml, so it cannot be changed here.',
+    offer_read_only: 'The server’s operator set this model in the server’s settings, so it cannot be changed here.',
     offer_not_priced:
       'A quota in dollars needs a price today for every model of the school’s plan, and this would leave one without. Add a price for it, then try again.',
     model_not_priced:
@@ -56,25 +56,25 @@ export default {
     key_required: 'Another provider needs its own key: enter the school’s key for {provider}.',
     key_test_failed: 'The key did not pass its trial, so nothing was saved.',
     model_denied:
-      'The server’s model lists (allowed_models and denied_models in runtime.yaml) do not allow this model on the school’s key. Choose another, or ask the operator.',
+      'The server’s model lists do not allow this model on the school’s key. Choose another, or ask the operator.',
     version_mismatch:
       'This changed meanwhile, in another tab or by another administrator. Here it is as it is now: check it and try again.',
-    bad_if_match: 'The runtime did not take this change as sent. Reload the page and try again.',
-    missing_field: 'The runtime did not take this: “{field}” is missing. Reload the page and try again.',
-    invalid_field: 'The runtime did not take this: “{field}” is not accepted. Check it and try again.',
+    bad_if_match: 'The agent service did not take this change as sent. Reload the page and try again.',
+    missing_field: 'The agent service did not take this: “{field}” is missing. Reload the page and try again.',
+    invalid_field: 'The agent service did not take this: “{field}” is not accepted. Check it and try again.',
     transcription_unavailable:
       'Transcription cannot run on this server now, so it cannot be turned on. It can still be turned off, and set for when it can run.',
     offer_no_file_input:
       'This model reads neither PDFs nor images, so it cannot transcribe. Choose a model of the plan that reads files.',
     credential_rejected:
-      'Core did not accept the credential when the runtime tried it, so the runtime did not keep it.',
+      'AIshie did not accept the credential when the agent service tried it, so the agent service did not keep it.',
   },
 
   // Reading scanned files and images (OCR).
   ocr: {
     title: 'Reading scanned documents (OCR)',
     intro:
-      'When a model cannot read a file itself, the runtime recognizes the text of scanned PDFs and images for it, in the languages chosen here.',
+      'When a model cannot read a file itself, the agent service recognizes the text of scanned PDFs and images for it, in the languages chosen here.',
     state: {
       on: 'On',
       off: 'Off',
@@ -82,7 +82,7 @@ export default {
     },
     unavailable: {
       operator_off:
-        'The server’s operator has turned OCR off (OCR=off), so it never runs, whatever is set here. What you set is kept for when it is turned on.',
+        'The server has turned this off, so it never runs, whatever is set here. What you set is kept for when it is turned on; ask the server’s operator.',
       not_installed:
         'OCR’s programs or languages are not installed on this server, so it cannot run. What you set is kept for when they are.',
     },
@@ -116,7 +116,7 @@ export default {
   transcription: {
     title: 'Transcribing documents (text versions)',
     intro:
-      'The runtime transcribes each version of the courses’ files (slides, PDFs, Word) into Markdown once, with a model of the school’s plan, on the school’s key: a text version every model reads, and that readers and staff see beside the file.',
+      'The agent service transcribes each version of the courses’ files (slides, PDFs, Word) into Markdown once, with a model of the school’s plan, on the school’s key: a text version every model reads, and that readers and staff see beside the file.',
     state: {
       off: 'Off',
       running: 'Running',
@@ -125,7 +125,7 @@ export default {
     },
     blocked: {
       no_credential: 'no credential',
-      credential_rejected: 'Core refused its credential',
+      credential_rejected: 'AIshie refused its credential',
       no_offer: 'no model chosen',
       offer_unavailable: 'its model is not available',
       quota_exhausted: 'today’s pages are used up',
@@ -133,9 +133,9 @@ export default {
     },
     unavailable: {
       operator_off:
-        'The server’s operator has turned transcription off (TRANSCRIBE=off), so it never runs, whatever is set here. What you set is kept for when it is turned on.',
+        'The server has turned transcription off, so it never runs, whatever is set here. What you set is kept for when it is turned on; ask the server’s operator.',
       core_too_old:
-        'The Core this runtime talks to has no transcription queue yet, so it cannot run. What you set is kept for when it has one.',
+        'The server this agent service talks to has no transcription queue yet, so it cannot run. What you set is kept for when it has one.',
     },
     enabled: 'Transcribe documents into text versions',
     enabledHint:
@@ -166,46 +166,46 @@ export default {
     },
     neverChanged: 'Not changed here: as the server’s operator set it.',
     credential: {
-      title: 'Credential with AIshie Core',
+      title: 'Credential with AIshie',
       status: {
         none: 'None',
         ok: 'Accepted',
         untested: 'Not tried yet',
         rejected: 'Refused',
       },
-      lastSeen: 'Last accepted by Core',
-      givenBy: 'Given to the runtime by {who}, {when}',
-      given: 'Given to the runtime {when}',
+      lastSeen: 'Last accepted by AIshie',
+      givenBy: 'Given to the agent service by {who}, {when}',
+      given: 'Given to the agent service {when}',
       neverSeen: 'Not used yet',
-      rejected: 'Core refused this credential: it was revoked or has expired. Issue a new one.',
-      issue: 'Issue and give to the runtime',
+      rejected: 'AIshie refused this credential: it was revoked or has expired. Issue a new one.',
+      issue: 'Issue and give to the agent service',
       replace: 'Replace',
       withdraw: 'Revoke',
-      hint: 'Issuing makes a credential of the transcription service in Core and gives it straight to the runtime, which tries it first: it is never shown here, nor kept in this browser. The service’s other credentials are then revoked.',
+      hint: 'Issuing makes a credential of the transcription service in AIshie and gives it straight to the agent service, which tries it first: it is never shown here, nor kept in this browser. The service’s other credentials are then revoked.',
       replaceAllTitle: 'Replace every credential?',
       replaceAllBody:
-        'The transcription service already has {n} credentials, as many as Core allows. The new one replaces them all: each stops working at once, the runtime’s too until it takes the new one.',
+        'The transcription service already has {n} credentials, as many as AIshie allows. The new one replaces them all: each stops working at once, the agent service’s too until it takes the new one.',
       replaceAll: 'Replace them all',
-      handedOver: 'The runtime has a new credential.',
+      handedOver: 'The agent service has a new credential.',
       unrevoked:
-        'One of the service’s other credentials could not be revoked in Core, and may still work. | {n} of the service’s other credentials could not be revoked in Core, and may still work.',
+        'One of the service’s other credentials could not be revoked in AIshie, and may still work. | {n} of the service’s other credentials could not be revoked in AIshie, and may still work.',
       withdrawTitle: 'Revoke the transcription credential?',
       withdrawBody:
-        'The runtime forgets it and Core revokes it: nothing is transcribed until a new one is issued. Work under way stops.',
+        'The agent service forgets it and AIshie revokes it: nothing is transcribed until a new one is issued. Work under way stops.',
       withdrawn: 'The credential is revoked.',
       notRevoked:
-        'The runtime has forgotten it, but Core could not revoke it: it may still work. Try again from here later.',
+        'The agent service has forgotten it, but AIshie could not revoke it: it may still work. Try again from here later.',
       refused: {
         rejected:
-          'Core did not accept the credential when the runtime tried it, so the runtime did not keep it. The credential just issued was revoked.',
+          'AIshie did not accept the credential when the agent service tried it, so the agent service did not keep it. The credential just issued was revoked.',
         notService:
-          'Core did not take the credential as the transcription service’s, so the runtime did not keep it. The credential just issued was revoked.',
+          'AIshie did not take the credential as the transcription service’s, so the agent service did not keep it. The credential just issued was revoked.',
       },
     },
     // Core's refusals of the service's credentials, by reason.
     coreRefusal: {
       too_many_credentials:
-        'The transcription service holds as many credentials as Core allows. Revoke one, or replace them all.',
+        'The transcription service holds as many credentials as AIshie allows. Revoke one, or replace them all.',
       platform_role_required: 'Only AIshie’s platform administrators issue or revoke the transcription credential.',
     },
     today: {
@@ -260,16 +260,16 @@ export default {
       model_not_allowed: 'Not allowed',
     },
     why: {
-      config: 'Set by the server’s operator, in runtime.yaml.',
+      config: 'Set by the server’s operator, in the server’s settings.',
       disabled: 'Owners do not see it. Agents on it use their owner’s own model, or wait.',
-      id_taken: 'runtime.yaml has a model with the same ID, which owners get instead.',
-      model_not_allowed: 'runtime.yaml’s model lists no longer allow its model, so it is not offered.',
+      id_taken: 'The server’s settings have a model with the same ID, which owners get instead.',
+      model_not_allowed: 'The server’s model lists no longer allow its model, so it is not offered.',
     },
     config: 'Read-only',
     configKey: 'On the server',
     always: 'Always',
     unpriced: 'No price',
-    unpricedHint: 'The runtime’s price table has no price for this model.',
+    unpricedHint: 'The agent service’s price table has no price for this model.',
     tested: 'Tested',
     untested: 'Not tested',
     untestedHint: 'Kept without a trial, or its model changed since.',
@@ -310,7 +310,7 @@ export default {
     keyPlaceholder: 'The school’s API key for {provider}',
     keyPlaceholderPrefix: 'The school’s API key for {provider} ({prefix}…)',
     keyHint:
-      'It goes to the runtime, which keeps it sealed. Nobody sees it again, here or anywhere: only its end is shown. Before it is kept, the runtime tries it with one short call to {provider}.',
+      'It goes to the agent service, which keeps it sealed. Nobody sees it again, here or anywhere: only its end is shown. Before it is kept, the agent service tries it with one short call to {provider}.',
     keyOtherProvider: 'Another provider needs its own key.',
     skipTest: 'Keep the key without trying it',
     skipTestWarning:
@@ -319,8 +319,8 @@ export default {
       'The key kept was tried with another model. Saved like this, it shows as not tested: replace it to try it with this one.',
     warning:
       'Owners’ questions, and the course material and work their agents read, go to {provider} under the school’s key and the school’s agreement with {provider}.',
-    noProviders: 'The runtime offers no provider for a key. Its operator can offer models in runtime.yaml.',
-    providersFailed: 'Could not read the providers the runtime offers.',
+    noProviders: 'The agent service offers no provider for a key. Its operator can offer models in the server’s settings.',
+    providersFailed: 'Could not read the providers the agent service offers.',
     add: 'Add',
     created: '{label} is on the school’s plan.',
     createdUntested: '{label} is on the school’s plan. Its key was not tried.',
@@ -372,12 +372,12 @@ export default {
     default: 'Server default: {n}',
     defaultNone: 'Server default: no ceiling',
     set: 'Set here, in place of the server’s defaults.',
-    defaults: 'The server’s defaults (runtime.yaml), as its operator set them.',
+    defaults: 'The server’s defaults, as its operator set them.',
     dollars: 'Quotas in dollars, where there are any, stay in force beside these.',
     reset: 'Use the server’s defaults',
     resetTitle: 'Use the server’s defaults?',
     resetBody:
-      'The quotas go back to runtime.yaml’s. Per owner: {owner}. Per person asking: {asker}. For the whole school: {day}.',
+      'The quotas go back to the server’s settings. Per owner: {owner}. Per person asking: {asker}. For the whole school: {day}.',
     resetBodyUsd: 'In dollars, per owner: {owner}. Per person asking: {asker}. For the whole school: {day}.',
     usdNeedsPrices:
       'A quota in dollars counts what the school’s key cost, by the price table: every model of the plan needs a price for it.',
@@ -402,7 +402,7 @@ export default {
       'This cost leaves out the transcription of documents, which the whole school’s ceiling in dollars counts too.',
     owner: 'Owner',
     operator: 'The operator’s agents',
-    unknownOwner: 'Someone the runtime has not seen yet',
+    unknownOwner: 'Someone the agent service has not seen yet',
     empty: 'Nobody has used the school’s plan today.',
     spent: 'Used up for today',
   },
@@ -443,7 +443,7 @@ export default {
     editTitle: 'Edit the price of {model}',
     provider: 'Provider',
     providerPlaceholder: 'Choose or type a provider',
-    providerHint: 'As the runtime names it: lower-case letters, digits and _, such as openai or openai_compatible.',
+    providerHint: 'As the agent service names it: lower-case letters, digits and _, such as openai or openai_compatible.',
     modelHint: 'Exactly, or a pattern where * is any text, such as gpt-4.1*.',
     fromHint: 'The day (UTC) the price starts. It may be in the future.',
     perMTok: 'Dollars per million tokens',
@@ -477,19 +477,19 @@ export default {
   tenants: {
     title: 'Quotas per person',
     intro:
-      'What all of one person’s agents (or one of the operator’s tenants) may use of the school’s key a day, beside the plan’s quotas. The server’s runtime.yaml sets some; one set here replaces it until it is reset.',
-    empty: 'The runtime knows no tenant yet.',
+      'What all of one person’s agents (or one of the operator’s tenants) may use of the school’s key a day, beside the plan’s quotas. The server’s settings set some; one set here replaces it until it is reset.',
+    empty: 'The agent service knows no tenant yet.',
     tenant: 'Person or tenant',
     agents: 'No agent | One agent | {n} agents',
     source: 'Set by',
     sources: {
       site: 'Set here',
-      config: 'runtime.yaml',
+      config: 'Server settings',
       none: 'None',
     },
     server: 'server: {v}',
-    serverNone: 'runtime.yaml sets it none.',
-    serverQuota: 'runtime.yaml’s: {answers} a day, and {usd}.',
+    serverNone: 'The server’s settings set it none.',
+    serverQuota: 'The server’s settings: {answers} a day, and {usd}.',
     editTitle: 'Quota for {who}',
     editIntro:
       'Answers and dollars a day on the school’s key, across all their agents. Leave one empty for no limit, but not both.',
@@ -511,13 +511,13 @@ export default {
     perAsker: 'Per person asking',
     perAskerHint: 'One agent, in one course, for one person.',
     set: 'Set here, in place of the server’s defaults.',
-    defaults: 'The server’s defaults (runtime.yaml), as its operator set them.',
+    defaults: 'The server’s defaults, as its operator set them.',
     hostedOnly:
-      'These hold agents hosted here. The server’s own configured agents keep the budgets runtime.yaml gives them.',
+      'These hold agents hosted here. The server’s own configured agents keep the budgets its settings give them.',
     saved: 'The agents’ budgets are saved.',
     restored: 'The agents’ budgets are the server’s defaults again.',
     resetTitle: 'Use the server’s defaults?',
-    resetBody: 'The budgets set here are removed, and runtime.yaml’s hold hosted agents again.',
+    resetBody: 'The budgets set here are removed, and the server’s settings hold hosted agents again.',
   },
 
   // What things cost.
@@ -572,12 +572,12 @@ export default {
 
   // The agent runtime's own credential for AIshie Core: the site service agent_runtime (AgentRuntimeCard).
   agentRuntime: {
-    title: 'The agent runtime’s credential for AIshie',
+    title: 'The agent service’s credential for AIshie',
     intro:
-      'AIshie’s agent runtime calls AIshie with a credential of its own (aissvc_…, its service agent_runtime): with it, and nothing else, it checks who owns an agent and is issued, and revokes, the one token of each agent it hosts. Without a live one it hosts no agent.',
+      'AIshie’s agent service connects to AIshie with a credential of its own: with it, and nothing else, it checks who owns an agent and is issued, and revokes, the one token of each agent it hosts. Without a live one it hosts no agent.',
     setup:
-      'Setting up the server makes it and gives it to the runtime. To rotate it, run {command} on the server: it issues a new one, revokes the others, and restarts the runtime with it.',
-    none: 'There is no live credential, so the runtime hosts no agent. Run {command} on the server.',
+      'Setting up the server makes it and gives it to the agent service. To rotate it, run {command} on the server: it issues a new one, revokes the others, and restarts the agent service with it.',
+    none: 'There is no live credential, so the agent service hosts no agent. Run {command} on the server.',
     showInactive: 'Show revoked and expired ({n})',
     state: {
       live: 'Live',
@@ -594,29 +594,36 @@ export default {
     revoke: 'Revoke',
     revokeTitle: 'Revoke this credential?',
     revokeBody:
-      'If the runtime uses it, it hosts no agent until it is given another: run {command} on the server. The tokens of the agents it hosts are not revoked.',
+      'If the agent service uses it, it hosts no agent until it is given another: run {command} on the server. The tokens of the agents it hosts are not revoked.',
     revoked: 'The credential is revoked.',
     issue: 'Issue a credential',
-    issueTitle: 'Issue a credential for the agent runtime',
+    issueTitle: 'Issue a credential for the agent service',
     issueBody:
-      'One issued here is shown once and given to the runtime by nobody: put it in the runtime’s secret core/agent_runtime on the server, and restart the runtime. {command} on the server does all of that, and is the usual way.',
+      'One issued here is shown once and given to the agent service by nobody: put it in the agent service’s secret core/agent_runtime on the server, and restart the agent service. {command} on the server does all of that, and is the usual way.',
     label: 'Label',
     labelHint: 'What it is for, so it can be recognised later.',
     replace: 'Revoke its other credentials',
     replaceHint:
-      'They stop working at once, the runtime’s too until it is given this one. The agents’ tokens are not revoked.',
+      'They stop working at once, the agent service’s too until it is given this one. The agents’ tokens are not revoked.',
     submit: 'Issue',
     issuedTitle: 'Copy the credential now',
     once: 'This is the only time it is shown: AIshie keeps only its hash.',
     replayed: 'This repeated an earlier request, so the credential is not shown again. If it was not copied, revoke it and issue another.',
     credential: 'Credential',
     where:
-      'Put it in the runtime’s secret core/agent_runtime on the server (/etc/aishie/runtime/secrets/core/agent_runtime), readable by the runtime alone, and restart the runtime.',
+      'Put it in the agent service’s secret core/agent_runtime on the server (/etc/aishie/runtime/secrets/core/agent_runtime), readable by the agent service alone, and restart the agent service.',
     done: 'I have copied it',
     // Core's refusals of the service's credentials, by reason.
     coreRefusal: {
       too_many_credentials:
-        'The agent runtime holds as many credentials as AIshie allows. Revoke one, or revoke the others as you issue this one.',
+        'The agent service holds as many credentials as AIshie allows. Revoke one, or revoke the others as you issue this one.',
     },
+  },
+  // What only the server's operator acts on, named in a tooltip beside the words (OperatorDetail).
+  flags: {
+    ocrOff: 'OCR=off in the agent service’s environment.',
+    transcribeOff: 'TRANSCRIBE=off in the agent service’s environment.',
+    adminActorIds: 'The agent service’s ADMIN_ACTOR_IDS.',
+    serverFile: 'The agent service’s runtime.yaml.',
   },
 }

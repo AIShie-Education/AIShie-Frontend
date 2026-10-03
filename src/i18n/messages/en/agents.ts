@@ -79,8 +79,8 @@ export default {
   // Whether people can ask it on the site (agent.get's site_chat), as its hosting decides.
   siteChat: {
     title: 'Questions on the site',
-    on: 'People in its courses can ask it on the site: AIshie’s runtime runs it now.',
-    off: 'Nobody can ask it on the site just now: AIshie’s runtime is not running it. Host it, or resume it, on this page.',
+    on: 'People in its courses can ask it on the site: AIshie’s agent service runs it now.',
+    off: 'Nobody can ask it on the site just now: AIshie’s agent service is not running it. Host it, or resume it, on this page.',
     suspended: 'Nobody can ask it on the site while it is suspended.',
     mcp: 'Nobody can ask it on the site: it has MCP access, and is used from your own tools. An agent people ask here is one created as hosted on AIshie.',
     stop: 'To stop people asking it, pause its hosting, or suspend it.',

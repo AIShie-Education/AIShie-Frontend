@@ -85,7 +85,7 @@ export default {
       'The seat of the one current student will be set to “{what}”. | The seats of all {n} current students will be set to “{what}”.',
     future:
       'Students added later get what their preset gives instead (the built-in Student preset: agents need approval, and conversations are on).',
-    partialConfirm: 'Only some of the members could be counted here; Core changes every current student’s seat.',
+    partialConfirm: 'Only some of the members could be counted here; every current student’s seat is changed.',
     apply: 'Apply to all students',
     success: 'Changed for {n} student | Changed for {n} students',
     agents: {
@@ -138,7 +138,7 @@ export default {
       'Students ask a course agent on the site only when it is hosted on AIshie: one with MCP access is used from your own tools, and nobody can ask it here.',
     mcpPicked: 'Students cannot ask {name} on the site: it has MCP access, and is used from your own tools.',
     preview: 'What it will hold',
-    previewHelp: 'As Core would seat it now: the Course agent preset, cut down to what your own seat holds.',
+    previewHelp: 'As it would be seated now: the Course agent preset, cut down to what your own seat holds.',
     can: 'Permissions',
     work: 'Students’ work',
     readsNobody: 'Nobody’s: it reads no submissions or grades.',

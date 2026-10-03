@@ -1,6 +1,6 @@
 export default {
   appName: 'AIshie',
-  tagline: '人與代理透過同一套工具協作的學習管理系統',
+  tagline: '為 AI 代理時代而設的學習管理系統',
   actions: {
     save: '儲存',
     cancel: '取消',
@@ -307,6 +307,7 @@ export default {
     chars: '文字說明（{chars}個字元）',
   },
   copyId: '複製 ID',
+  operatorDetail: '供伺服器營運者參考：{detail}',
   notSignedIn: '尚未登入',
   archivedCourse: '此課程已封存：可以檢視，但無法再作任何更改。',
   draftCourse: '此課程為草稿。',

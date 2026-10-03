@@ -20,6 +20,7 @@ import type { PlanQuotas, ProviderOffer, QuotasPut, SchoolPlan } from '@/api/run
 import DailyReset from '@/components/DailyReset.vue'
 import { formatMoney } from '@/utils/format'
 import { problemsOf } from '@/views/account/components/agents/hosting'
+import OperatorDetail from '../components/OperatorDetail.vue'
 import ChangedBy from './ChangedBy.vue'
 import UnpricedNotice from './UnpricedNotice.vue'
 import {
@@ -276,7 +277,9 @@ function undo() {
         <span>{{ t('runtimeAdmin.quotas.set') }}</span>
         <ChangedBy :by="plan.quotas_updated_by" :at="plan.quotas_updated_at" class="app-muted" />
       </template>
-      <span v-else>{{ t('runtimeAdmin.quotas.defaults') }}</span>
+      <span v-else
+        >{{ t('runtimeAdmin.quotas.defaults') }}<OperatorDetail :text="t('runtimeAdmin.flags.serverFile')"
+      /></span>
     </p>
     <p v-if="dollars" class="app-form-hint quotas-card__dollars">{{ t('runtimeAdmin.quotas.usdNeedsPrices') }}</p>
     <p v-else class="app-form-hint quotas-card__dollars">{{ t('runtimeAdmin.quotas.dollars') }}</p>

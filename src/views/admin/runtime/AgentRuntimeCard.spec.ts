@@ -69,9 +69,9 @@ function items(w: VueWrapper) {
 describe('AgentRuntimeCard', () => {
   it('lists the agent runtime’s credentials, and says setup makes one and aishie runtime-credential rotates it', async () => {
     const w = await card()
-    expect(w.find('.agent-runtime-card__title').text()).toContain('The agent runtime’s credential for AIshie')
+    expect(w.find('.agent-runtime-card__title').text()).toContain('The agent service’s credential for AIshie')
     expect(w.find('.agent-runtime-card__setup').text()).toBe(
-      'Setting up the server makes it and gives it to the runtime. To rotate it, run aishie runtime-credential on the server: it issues a new one, revokes the others, and restarts the runtime with it.',
+      'Setting up the server makes it and gives it to the agent service. To rotate it, run aishie runtime-credential on the server: it issues a new one, revokes the others, and restarts the agent service with it.',
     )
     const [one] = items(w)
     expect(one.text()).toContain('runtime')
@@ -86,7 +86,7 @@ describe('AgentRuntimeCard', () => {
     credentials = [credential({ live: false, revoked_at: '2026-10-01T00:00:00Z' })]
     const w = await card()
     expect(w.find('.agent-runtime-card__none').text()).toBe(
-      'There is no live credential, so the runtime hosts no agent. Run aishie runtime-credential on the server.',
+      'There is no live credential, so the agent service hosts no agent. Run aishie runtime-credential on the server.',
     )
     // The revoked one is shown only when asked.
     expect(items(w)).toHaveLength(0)
@@ -183,7 +183,7 @@ describe('AgentRuntimeCard', () => {
     await flushPromises()
     const { ElMessage } = await import('element-plus')
     expect(JSON.stringify(vi.mocked(ElMessage).mock.calls)).toContain(
-      'The agent runtime holds as many credentials as AIshie allows.',
+      'The agent service holds as many credentials as AIshie allows.',
     )
   })
 })

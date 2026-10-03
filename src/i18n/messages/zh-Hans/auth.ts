@@ -1,18 +1,19 @@
 export default {
   title: '登录',
-  welcome: '欢迎使用 AIshie',
   email: '邮箱',
   loginOrEmail: '学号／工号或邮箱',
   password: '密码',
   signIn: '登录',
   sso: '以{provider}登录',
   ssoDefault: '单点登录',
-  or: '或',
+  // Where single sign-on is offered, the password form is behind a link (and back).
+  usePassword: '改用学号／密码登录',
+  useEmailPassword: '改用邮箱及密码登录',
+  useSso: '改用其他方式登录',
   failed: '邮箱或密码不正确。',
   failedLogin: '学号／工号或邮箱，或密码不正确。',
   expired: '登录已过期，请重新登录。',
   serverDown: '目前无法连接到服务器。',
-  serverVersion: '服务器{version}',
   invite: {
     title: '设置密码',
     intro: '请为你的 AIshie 账号设置密码；如果你已有密码，新密码将替换它。设置后即会登录。',

@@ -27,6 +27,7 @@ import { useContainerNarrow, useTableRelayout } from '@/composables/useContainer
 import { useWrite } from '@/composables/useWrite'
 import AsyncState from '@/components/AsyncState.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import OperatorDetail from './components/OperatorDetail.vue'
 import RedirectUri from './sso/RedirectUri.vue'
 import SsoProviderDialog from './sso/SsoProviderDialog.vue'
 import SsoStatus from './sso/SsoStatus.vue'
@@ -248,9 +249,10 @@ function openTest(p: SsoProvider) {
           :closable="false"
           show-icon
           :title="t('ssoAdmin.refusal.secrets_key_missing')"
-          :description="t('ssoAdmin.noSecretsKey')"
           class="sso-admin__alert sso-admin__no-key"
-        />
+        >
+          {{ t('ssoAdmin.noSecretsKey') }}<OperatorDetail :text="t('ssoAdmin.flags.secretsKey')" />
+        </el-alert>
 
         <section class="app-card sso-admin__redirect">
           <RedirectUri :uri="redirectUri" />

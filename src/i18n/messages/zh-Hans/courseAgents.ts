@@ -77,7 +77,7 @@ export default {
     mixed: '学生的设置不尽相同：{summary}。',
     confirm: '这位现有学生的席位将设为“{what}”。 | 全部{n}位现有学生的席位将设为“{what}”。',
     future: '以后加入的学生则按其权限预设处理（内置“学生”预设：带入智能体需审批，对话开启）。',
-    partialConfirm: '这里只能计算部分成员；Core 会更改每一位现有学生的席位。',
+    partialConfirm: '这里只能计算部分成员；更改会应用到每一位现有学生的席位。',
     apply: '应用到所有学生',
     success: '已为{n}位学生更改 | 已为{n}位学生更改',
     agents: {
@@ -128,7 +128,7 @@ export default {
     hostingHelp: '只有站内托管的课程智能体，学生才能在站内向它提问；MCP 访问的智能体由你自己的工具使用，站内无法向它提问。',
     mcpPicked: '学生无法在站内向{name}提问：它是 MCP 访问，由你自己的工具使用。',
     preview: '它将拥有的权限',
-    previewHelp: '按 Core 当前的安排：“课程智能体”预设，并限制在你自己席位的权限之内。',
+    previewHelp: '按当前的安排：“课程智能体”预设，并限制在你自己席位的权限之内。',
     can: '权限',
     work: '学生作业',
     readsNobody: '不阅读任何人的作业或成绩。',

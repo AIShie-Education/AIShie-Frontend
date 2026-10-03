@@ -8,15 +8,15 @@ export default {
   offer: {
     title: 'Hosted on AIshie',
     notHosted: 'Not hosted yet',
-    body: 'AIshie’s runtime runs this agent once you choose the model it answers with; then people in its courses can ask it on the site. You never handle a token.',
+    body: 'AIshie’s agent service runs this agent once you choose the model it answers with; then people in its courses can ask it on the site. You never handle a token.',
     bodySchool:
-      'AIshie’s runtime runs this agent once you choose the school’s plan, or a model with your own API key; then people in its courses can ask it on the site. You never handle a token.',
+      'AIshie’s agent service runs this agent once you choose the school’s plan, or a model with your own API key; then people in its courses can ask it on the site. You never handle a token.',
     host: 'Set up hosting',
     hostSuspended: 'The agent is suspended: reactivate it first.',
     absent:
-      'AIshie’s agent runtime is not available on this server, so this agent cannot run here yet. Tell your administrator.',
-    notById: 'The school’s runtime cannot host agents at the moment: it is not set up to. Tell your administrator.',
-    noModel: 'The school’s runtime offers no model to choose at the moment, so it cannot host agents now.',
+      'AIshie’s agent service is not available on this server, so this agent cannot run here yet. Tell your administrator.',
+    notById: 'The school’s agent service cannot host agents at the moment: it is not set up to. Tell your administrator.',
+    noModel: 'The school’s agent service offers no model to choose at the moment, so it cannot host agents now.',
   },
 
   // Hosting one of one's agents by its id: the wizard's first step, before "Model and key".
@@ -28,9 +28,9 @@ export default {
       agent: 'Agent',
       model: 'Model and key',
     },
-    body: 'The school’s runtime runs the agent as it is seated in AIshie, and people in its courses can ask it on the site. The runtime is issued the agent’s token itself: you never see one. Next you choose a model and give your API key.',
+    body: 'The school’s agent service runs the agent as it is seated in AIshie, and people in its courses can ask it on the site. The agent service is issued the agent’s token itself: you never see one. Next you choose a model and give your API key.',
     bodySchool:
-      'The school’s runtime runs the agent as it is seated in AIshie, and people in its courses can ask it on the site. The runtime is issued the agent’s token itself: you never see one. Next you choose the school’s plan, or a model with your own API key.',
+      'The school’s agent service runs the agent as it is seated in AIshie, and people in its courses can ask it on the site. The agent service is issued the agent’s token itself: you never see one. Next you choose the school’s plan, or a model with your own API key.',
     agent: 'Agent',
     agentPlaceholder: 'Choose one of your agents',
     none: 'None of your agents is waiting to be hosted. Only an agent created as “Hosted on AIshie” can be: one with MCP access is used from your own tools.',
@@ -52,7 +52,7 @@ export default {
     not_attempted: 'Its token was not revoked ({why}).',
     why: {
       core_unavailable: 'AIshie could not be reached',
-      runtime_misconfigured: 'the school’s runtime is not set up to',
+      runtime_misconfigured: 'the school’s agent service is not set up to',
       core_too_old: 'this AIshie server is too old',
       operator_agent: 'the school’s operator runs this agent',
       unknown: 'for a reason it did not say',
@@ -85,10 +85,10 @@ export default {
     keyPlaceholder: 'Your API key for {provider}',
     keyPlaceholderPrefix: 'Your API key for {provider} ({prefix}…)',
     keyNotStored:
-      'The key goes to the school’s runtime, which keeps it encrypted for this agent. This page never keeps it or shows it again.',
+      'The key goes to the school’s agent service, which keeps it encrypted for this agent. This page never keeps it or shows it again.',
     advanced: 'Advanced',
     maxOutputTokens: 'Most output tokens per answer',
-    maxOutputTokensHint: 'From 256 to 32000. Leave it empty for the runtime’s default.',
+    maxOutputTokensHint: 'From 256 to 32000. Leave it empty for the agent service’s default.',
     reasoningEffort: 'Reasoning effort',
     reasoningDefault: 'The model’s default',
     effort: {
@@ -99,10 +99,10 @@ export default {
     },
     warning:
       'Your questions, and the course material and work your agent reads, go to {provider} under your key and that provider’s terms. Only your own agent ever uses this key.',
-    noProviders: 'The school’s runtime offers no provider for your own key.',
+    noProviders: 'The school’s agent service offers no provider for your own key.',
     test: 'Test key',
     later: 'Later',
-    saved: 'Saved. The runtime is starting your agent with these settings.',
+    saved: 'Saved. The agent service is starting your agent with these settings.',
     confirmUntestedTitle: 'Save a key that did not pass?',
     confirmUntested: 'The key did not pass the test ({result}). Save anyway?',
     saveAnyway: 'Save anyway',
@@ -132,7 +132,7 @@ export default {
     fallbackOn: 'Answer with my own key once the school allowance is used up',
     fallbackHint:
       'Optional. Without it, once today’s allowance is used up your agent tells people “Today’s school AI allowance is used up. Please try again tomorrow.”',
-    saved: 'Saved. The runtime is starting your agent on the school’s plan.',
+    saved: 'Saved. The agent service is starting your agent on the school’s plan.',
   },
 
   // One token's test of a key (POST /keys/test).
@@ -162,11 +162,11 @@ export default {
     },
     starting: {
       title: 'Starting',
-      body: 'The runtime is starting your agent with its latest settings. This takes a few seconds.',
+      body: 'The agent service is starting your agent with its latest settings. This takes a few seconds.',
     },
     running: {
       title: 'Running',
-      body: 'Your agent runs on the school’s runtime and answers in its courses.',
+      body: 'Your agent runs on the school’s agent service and answers in its courses.',
     },
     paused: {
       title: 'Paused',
@@ -174,32 +174,32 @@ export default {
     },
     needs_token: {
       title: 'Needs a new token',
-      body: 'The token the runtime held for your agent was revoked in AIshie, by you or an administrator. Connect it again to have the runtime issued a new one; you never see it.',
+      body: 'The token the agent service held for your agent was revoked in AIshie, by you or an administrator. Connect it again to have the agent service issued a new one; you never see it.',
     },
     error: {
       title: 'Not running',
-      body: 'The runtime is not running your agent.',
+      body: 'The agent service is not running your agent.',
     },
     stopped: {
       title: 'Restarting',
-      body: 'The runtime stopped your agent while it restarts or hands it to another worker. It starts again by itself.',
+      body: 'The agent service stopped your agent while it restarts or hands it to another worker. It starts again by itself.',
     },
   },
 
   // Why it needs a token or does not run (problem.reason).
   problem: {
-    token_refused: 'AIshie revoked the token the runtime held for it.',
+    token_refused: 'AIshie revoked the token the agent service held for it.',
     settings_rejected: 'Its settings do not work here: {detail}. Change the model or key.',
-    runtime_misconfigured: 'The school’s runtime is not set up to run hosted agents. Tell your administrator.',
+    runtime_misconfigured: 'The school’s agent service is not set up to run hosted agents. Tell your administrator.',
     operator_agent: 'The school’s operator already runs this agent, so this copy does not run.',
     actor_in_use: 'Another agent here already uses this agent’s identity.',
-    token_other_agent: 'The token the runtime held belongs to another agent. Connect it again.',
-    owner_changed: 'AIshie does not count this agent as yours, so the runtime stopped it. Delete it here.',
+    token_other_agent: 'The token the agent service held belongs to another agent. Connect it again.',
+    owner_changed: 'AIshie does not count this agent as yours, so the agent service stopped it. Delete it here.',
     core_too_old: 'This AIshie server cannot say who owns an agent. Tell your administrator.',
     agent_suspended: 'The agent is suspended in AIshie. Reactivate it and it starts again by itself.',
     owner_suspended: 'Its owner is suspended in AIshie. It starts again by itself once they are reactivated.',
     mcp_agent:
-      'AIshie says this agent has MCP access: it is used from its owner’s own tools, so the runtime cannot host it. Delete it here.',
+      'AIshie says this agent has MCP access: it is used from its owner’s own tools, so the agent service cannot host it. Delete it here.',
     agent_not_found: 'AIshie has no such agent any more. Delete it here.',
     failing: 'It could not start and will try again shortly: {detail}.',
     offer_withdrawn:
@@ -248,14 +248,14 @@ export default {
     pause: 'Pause',
     resume: 'Resume',
     pauseHint: 'Stops the agent here; it stays active in AIshie.',
-    paused: 'Paused on the school’s runtime',
-    resumed: 'Resumed on the school’s runtime',
+    paused: 'Paused on the school’s agent service',
+    resumed: 'Resumed on the school’s agent service',
     more: 'More',
-    delete: 'Delete from the school’s runtime',
-    renewed: 'The runtime is being issued a new token for {name}.',
+    delete: 'Delete from the school’s agent service',
+    renewed: 'The agent service is being issued a new token for {name}.',
     ownKeyOff:
-      'The school’s runtime does not take a model and key of your own at the moment, so they cannot be changed here.',
-    renewOff: 'The school’s runtime cannot host agents by their id at the moment, so it cannot be connected again here.',
+      'The school’s agent service does not take a model and key of your own at the moment, so they cannot be changed here.',
+    renewOff: 'The school’s agent service cannot host agents by their id at the moment, so it cannot be connected again here.',
     plan: 'Plan',
     schoolPlan: 'School plan (paid by the school)',
     fallback: 'Fallback',
@@ -274,30 +274,30 @@ export default {
 
   // Deleting it from the runtime.
   delete: {
-    title: 'Delete {name} from the school’s runtime?',
-    body: 'The runtime stops this agent and forgets its settings and your key, and its token is revoked in AIshie: nobody can ask it on the site until you host it again. The agent stays in AIshie.',
+    title: 'Delete {name} from the school’s agent service?',
+    body: 'The agent service stops this agent and forgets its settings and your key, and its token is revoked in AIshie: nobody can ask it on the site until you host it again. The agent stays in AIshie.',
     proposals:
       'One answer still waiting for approval stays in AIshie. | {n} answers still waiting for approval stay in AIshie.',
     submit: 'Delete',
-    done: '{name} is no longer on the school’s runtime',
+    done: '{name} is no longer on the school’s agent service',
   },
 
   // The runtime's errors, by reason (§9.5).
   errors: {
     details: 'Details',
-    assertion: 'Could not sign you in to the school’s runtime. Reload the page and try again.',
-    unavailable: 'The school’s runtime is not available right now. Try again in a minute.',
-    network: 'The school’s runtime could not be reached. Check your connection and try again.',
-    core_unavailable: 'The runtime could not reach AIshie. Try again in a minute.',
+    assertion: 'Could not sign you in to the school’s agent service. Reload the page and try again.',
+    unavailable: 'The school’s agent service is not available right now. Try again in a minute.',
+    network: 'The school’s agent service could not be reached. Check your connection and try again.',
+    core_unavailable: 'The agent service could not reach AIshie. Try again in a minute.',
     rate_limited: 'Too many tries. Wait {seconds} seconds.',
-    runtime_misconfigured: 'The school’s runtime is not set up to host agents. Tell your administrator.',
+    runtime_misconfigured: 'The school’s agent service is not set up to host agents. Tell your administrator.',
     mcp_agent: 'This agent has MCP access: it is used from your own tools, and is never hosted here.',
     agent_suspended: 'This agent is suspended in AIshie. Reactivate it first.',
     owner_suspended: 'Its owner is suspended in AIshie, so it cannot be hosted. Ask an administrator.',
     owner_changed: 'AIshie no longer counts this agent as yours: delete it here.',
     core_too_old: 'This AIshie server is too old for hosting. Tell your administrator.',
     operator_agent: 'The school’s operator already runs this agent.',
-    agent_not_found: 'This agent is no longer on the school’s runtime.',
+    agent_not_found: 'This agent is no longer on the school’s agent service.',
     agent_not_yours: 'AIshie does not count this as one of your agents.',
     version_mismatch: 'This agent changed in another tab or window. Check the latest settings and save again.',
     changedMeanwhile:
@@ -307,7 +307,7 @@ export default {
     own_key_required: 'Enter your API key for {provider}.',
     own_key_provider_mismatch: 'Your saved key is for another provider. Enter a key for {provider}.',
     model_denied: 'The school does not allow this model. Choose another.',
-    settings_rejected: 'The runtime cannot run these settings.',
+    settings_rejected: 'The agent service cannot run these settings.',
     key_malformed:
       'That does not look like an API key from {provider}. Paste the key exactly as {provider} gave it, with no spaces.',
     key_is_aishie_token:
@@ -317,14 +317,14 @@ export default {
     unknown_endpoint: 'Choose one of the endpoints offered.',
     invalid_field: 'This value is not accepted here.',
     unknown_field:
-      'The school’s runtime did not take this request: it has no field “{field}”. Reload the page and try again.',
+      'The school’s agent service did not take this request: it has no field “{field}”. Reload the page and try again.',
     unknown_parameter:
-      'The school’s runtime did not take this request: it takes no “{field}” in the address. Reload the page and try again.',
+      'The school’s agent service did not take this request: it takes no “{field}” in the address. Reload the page and try again.',
   },
 
   // Hosting that is not for this person, or not here after all.
   unavailable: {
-    account: 'Hosting on the school’s runtime is not available for this account.',
-    absent: 'The school’s runtime is not available on this server. Reload the page.',
+    account: 'Hosting on the school’s agent service is not available for this account.',
+    absent: 'The school’s agent service is not available on this server. Reload the page.',
   },
 }

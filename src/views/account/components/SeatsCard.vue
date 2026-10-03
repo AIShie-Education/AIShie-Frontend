@@ -48,7 +48,8 @@ const rows = computed(() =>
               <TimeText v-if="s.expires_at" :value="s.expires_at" />
               <template v-else>{{ t('account.seats.noExpiry') }}</template>
             </span>
-            <span class="seat__id">
+            <!-- A seat's id is for those who manage a course, not on a student's seat. -->
+            <span v-if="s.role !== 'student'" class="seat__id">
               <span class="seat__k">{{ t('account.seats.memberId') }}</span>
               <IdText :id="s.member_id" />
             </span>

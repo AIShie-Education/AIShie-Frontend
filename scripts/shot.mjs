@@ -96,6 +96,9 @@ page.on('response', async (r) => {
 })
 
 await page.goto(`${base}/login`)
+// Where single sign-on is offered, the password form is behind a link beneath its buttons.
+await page.locator('input[name=login]:visible, button.login__use-password:visible').first().waitFor()
+if (await page.locator('button.login__use-password').isVisible()) await page.click('button.login__use-password')
 await page.fill('input[name=login]', who.email)
 await page.fill('input[name=password]', who.password)
 await Promise.all([page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 15000 }), page.click('button[type=submit]')])

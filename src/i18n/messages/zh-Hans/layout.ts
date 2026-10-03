@@ -10,6 +10,14 @@ export default {
     button: '账号：{name}',
     settings: '账号设置',
   },
+  // 账号菜单中的“关于 AIshie”（AboutDialog）：正在运行的版本。
+  about: {
+    item: '关于 AIshie',
+    title: '关于',
+    web: '网页应用',
+    server: '服务器',
+    unknown: '未知',
+  },
   // A newer build deployed since this tab loaded the app (NewVersionNotice): load it, or later.
   newVersion: {
     available: '已有新版本',

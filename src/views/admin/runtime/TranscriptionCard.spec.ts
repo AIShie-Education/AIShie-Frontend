@@ -71,7 +71,7 @@ describe('TranscriptionCard', () => {
     expect((find(w, 'concurrency').find('input').element as HTMLInputElement).value).toBe('2')
     expect(find(w, 'credential-status').text()).toBe('Accepted')
     expect(find(w, 'hint').text()).toBe('aissvc_held00000000…')
-    expect(find(w, 'seen').text()).toContain('Last accepted by Core')
+    expect(find(w, 'seen').text()).toContain('Last accepted by AIshie')
     expect(find(w, 'issue').text()).toBe('Replace')
     expect(find(w, 'withdraw').exists()).toBe(true)
     expect(find(w, 'pages').text()).toBe('120')
@@ -110,7 +110,7 @@ describe('TranscriptionCard', () => {
     const w = await card()
     expect(find(w, 'state').text()).toBe('Blocked: no credential')
     expect(find(w, 'credential-status').text()).toBe('None')
-    expect(find(w, 'issue').text()).toBe('Issue and give to the runtime')
+    expect(find(w, 'issue').text()).toBe('Issue and give to the agent service')
     expect(find(w, 'withdraw').exists()).toBe(false)
   })
 
@@ -161,10 +161,24 @@ describe('TranscriptionCard', () => {
     expect(find(w, 'enabled').classes()).toContain('is-disabled')
   })
 
+  it('turned off by the server, says in each language to ask its operator, as the ⓘ beside it does', async () => {
+    state.settings.transcription = transcriptionOff({ available: false, unavailable_reason: 'operator_off' })
+    for (const [locale, ask] of [
+      ['en', 'ask the server’s operator'],
+      ['zh-Hant', '請聯絡伺服器營運者'],
+      ['zh-Hans', '请联系服务器运维方'],
+    ] as const) {
+      setLocale(locale)
+      const w = await card()
+      expect(find(w, 'unavailable').find('.el-alert__title').text()).toContain(ask)
+      w.unmount()
+    }
+  })
+
   it('says quietly that an older runtime does not transcribe', async () => {
     state.settings = ocrSettings()
     const w = await card()
-    expect(find(w, 'not-offered').text()).toContain('This runtime does not offer this yet')
+    expect(find(w, 'not-offered').text()).toContain('This agent service does not offer this yet')
   })
 
   it('issues a credential and gives it to the runtime, which the page never shows', async () => {
@@ -179,7 +193,7 @@ describe('TranscriptionCard', () => {
     expect(live()).not.toContain('cred-stray')
     expect(find(w, 'credential-status').text()).toBe('Accepted')
     expect(find(w, 'state').text()).toBe('Running')
-    expect(lastMessage()).toMatchObject({ type: 'success', message: 'The runtime has a new credential.' })
+    expect(lastMessage()).toMatchObject({ type: 'success', message: 'The agent service has a new credential.' })
     expect(document.body.innerHTML).not.toContain(token)
     expect(document.body.innerHTML).not.toContain(token.slice(-43))
   })
@@ -189,7 +203,7 @@ describe('TranscriptionCard', () => {
     const w = await card()
     await find(w, 'issue').trigger('click')
     await flushPromises()
-    expect(find(w, 'credential-error').text()).toContain('Core did not accept the credential when the runtime tried it')
+    expect(find(w, 'credential-error').text()).toContain('AIshie did not accept the credential when the agent service tried it')
     expect(live()).toEqual(['cred-held'])
     expect(document.body.innerHTML).not.toContain(state.service.issued[0])
   })
@@ -268,7 +282,7 @@ describe('TranscriptionCard', () => {
     })
     const w = await card()
     expect(find(w, 'state').text()).toBe('受阻：沒有憑證')
-    expect(find(w, 'issue').text()).toBe('發放並交給 runtime')
+    expect(find(w, 'issue').text()).toBe('發放並交給執行環境')
     expect(find(w, 'credential-status').text()).toBe('未設定')
   })
 })

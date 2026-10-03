@@ -58,10 +58,24 @@ export async function signIn(
     } catch {}
   })
   await page.goto('/login')
+  await usePasswordForm(page)
   await page.fill('input[name=login]', who.email)
   await page.fill('input[name=password]', password)
   await page.click('button[type=submit]')
   await expect(page).not.toHaveURL(/\/login/)
+}
+
+/**
+ * Where single sign-on is offered, the sign-in page puts it first and the
+ * password form behind a link: this follows the link where there is one.
+ */
+export async function usePasswordForm(page: Page) {
+  const form = page.locator('input[name=login]')
+  const instead = page.locator('button.login__use-password')
+  // The form stays in the page while hidden behind the link: one of the two is shown.
+  await expect(page.locator('input[name=login]:visible, button.login__use-password:visible').first()).toBeVisible()
+  if (await instead.isVisible()) await instead.click()
+  await expect(form).toBeVisible()
 }
 
 /**

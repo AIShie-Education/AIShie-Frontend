@@ -85,7 +85,7 @@ describe('the models on the plan', () => {
     expect(config.find('.offer-cell__model').text()).toBe('OpenAI · gpt-4.1-mini')
     expect(config.find('.offer-status__status').text()).toBe('Offered')
     expect(config.find('.offer-status__config').text()).toBe('Read-only')
-    expect(config.text()).toContain('Set by the server’s operator, in runtime.yaml.')
+    expect(config.text()).toContain('Set by the server’s operator, in the server’s settings.')
     expect(config.find('.offer-key__server').text()).toBe('On the server')
     expect(config.find('.offer-cell__count').text()).toBe('14')
     // Nothing to change on it.
@@ -108,7 +108,7 @@ describe('the models on the plan', () => {
 
     const shadowed = rowOf(w, 'site:standard')
     expect(shadowed.find('.offer-status__status').text()).toBe('Shadowed')
-    expect(shadowed.text()).toContain('runtime.yaml has a model with the same ID, which owners get instead.')
+    expect(shadowed.text()).toContain('The server’s settings have a model with the same ID, which owners get instead.')
     expect(shadowed.find('.offer-status__unpriced').text()).toBe('No price')
   })
 
@@ -116,7 +116,7 @@ describe('the models on the plan', () => {
     state.plan.offers = [siteOffer({ status: 'model_not_allowed' })]
     const w = await panel()
     expect(rowOf(w, 'site:fast').find('.offer-status__status').text()).toBe('Not allowed')
-    expect(w.text()).toContain('runtime.yaml’s model lists no longer allow its model, so it is not offered.')
+    expect(w.text()).toContain('The server’s model lists no longer allow its model, so it is not offered.')
   })
 
   it('turns one off at the version read, saying first what becomes of its agents', async () => {
@@ -190,7 +190,7 @@ describe('the models on the plan', () => {
     await rowOf(w, 'site:kimi').find('.offer-cell__enabled').trigger('click')
     await settle()
     expect(w.find('.offers-card__error').text()).toContain(
-      'The server’s model lists (allowed_models and denied_models in runtime.yaml) do not allow this model',
+      'The server’s model lists do not allow this model',
     )
   })
 
@@ -251,7 +251,7 @@ describe('the models on the plan', () => {
   it('says who may, to someone the runtime does not count among its administrators', async () => {
     s.on('GET', ADMIN.plan, () => refusal(403, 'forbidden', 'not_admin'))
     const w = await panel()
-    expect(w.find('.runtime-async__not-admin').text()).toContain('You are not one of this runtime’s administrators')
+    expect(w.find('.runtime-async__not-admin').text()).toContain('You are not one of this agent service’s administrators')
   })
 
   it('offers to try again when the runtime could not answer', async () => {
@@ -272,7 +272,7 @@ describe('the models on the plan', () => {
     await flushPromises()
     expect(w.find('.runtime-async__error').exists()).toBe(true)
     expect(s.to('GET', ADMIN.plan)).toHaveLength(3)
-    expect(w.find('.runtime-async__error').text()).toContain('The school’s runtime is not available right now.')
+    expect(w.find('.runtime-async__error').text()).toContain('The school’s agent service is not available right now.')
     fail = false
     await w.find('.runtime-async__error button').trigger('click')
     await flushPromises()
@@ -338,7 +338,7 @@ describe('the daily quotas', () => {
     await w.find('.quotas-card__reset').trigger('click')
     await flushPromises()
     expect(vi.mocked(ElMessageBox.confirm).mock.calls[0][0]).toBe(
-      'The quotas go back to runtime.yaml’s. Per owner: 100. Per person asking: 20. For the whole school: No ceiling. In dollars, per owner: No ceiling. Per person asking: US$0.50. For the whole school: No ceiling.',
+      'The quotas go back to the server’s settings. Per owner: 100. Per person asking: 20. For the whole school: No ceiling. In dollars, per owner: No ceiling. Per person asking: US$0.50. For the whole school: No ceiling.',
     )
   })
 
@@ -484,13 +484,13 @@ describe('the daily quotas', () => {
     await w.find('.quotas-card__reset').trigger('click')
     await flushPromises()
     expect(vi.mocked(ElMessageBox.confirm).mock.calls[0][0]).toBe(
-      'The quotas go back to runtime.yaml’s. Per owner: 100. Per person asking: 20. For the whole school: No ceiling.',
+      'The quotas go back to the server’s settings. Per owner: 100. Per person asking: 20. For the whole school: No ceiling.',
     )
     expect(s.to('DELETE', ADMIN.quotas)).toHaveLength(1)
     expect((inputOf(w, 'per_owner_day').element as HTMLInputElement).value).toBe('100')
     expect(w.find('.quotas-card__usd').exists()).toBe(false)
     expect(w.find('.quotas-card__source').text()).toBe(
-      'The server’s defaults (runtime.yaml), as its operator set them.',
+      'The server’s defaults, as its operator set them.',
     )
     expect(w.find('.quotas-card__reset').exists()).toBe(false)
   })

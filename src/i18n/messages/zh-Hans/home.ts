@@ -1,6 +1,8 @@
 export default {
   greeting: '你好，{name}',
-  subtitle: '你所在的课程',
+  subtitle: '你本学期的课程',
+  // The next published assignment due in a course, on its card: its title, and when (relative).
+  nextDue: '下一个截止：{title}，{when}',
   noCourses: '你尚未加入任何课程。',
   noCoursesAdmin: '你尚未加入任何课程。作为管理员，你可以创建课程并指派讲师。',
   goAdmin: '前往管理页面',

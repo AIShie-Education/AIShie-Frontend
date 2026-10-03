@@ -13,6 +13,7 @@ import type { AgentBudgets } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
 import DailyReset from '@/components/DailyReset.vue'
 import { problemsOf } from '@/views/account/components/agents/hosting'
+import OperatorDetail from '../components/OperatorDetail.vue'
 import ChangedBy from './ChangedBy.vue'
 import QuotaInputs from './QuotaInputs.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
@@ -165,7 +166,9 @@ async function reset() {
             <span>{{ t('runtimeAdmin.budgets.set') }}</span>
             <ChangedBy :by="data.updated_by" :at="data.updated_at" class="app-muted" />
           </template>
-          <span v-else>{{ t('runtimeAdmin.budgets.defaults') }}</span>
+          <span v-else
+            >{{ t('runtimeAdmin.budgets.defaults') }}<OperatorDetail :text="t('runtimeAdmin.flags.serverFile')"
+          /></span>
         </p>
         <p class="app-form-hint budgets-card__note">{{ t('runtimeAdmin.budgets.hostedOnly') }}</p>
         <el-alert

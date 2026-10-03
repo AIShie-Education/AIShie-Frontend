@@ -33,7 +33,7 @@ const props = withDefaults(
   { size: 'default' },
 )
 const emit = defineEmits<{ done: [Done] }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const course = useCourseStore()
 const specs = useSpecs()
 const rules = useJudgeRules()
@@ -47,6 +47,44 @@ const blocked = computed(() => {
 const approveBlocked = computed(() =>
   props.mode === 'decide' && !blocked.value ? rules.approveBlock(props.action, about.value?.value ?? null) : null,
 )
+/**
+ * The caller's own agent's, which is not theirs to decide (they could not do
+ * it themselves without someone's confirmation, or, for a proposal, approving
+ * it now would be refused): one sentence says who decides or reviews it, and
+ * nothing is offered to press.
+ */
+const decidedElsewhere = computed(() => blocked.value === 'ownAgentLevel')
+/**
+ * Who decides in the course, by name, where the member list says (people
+ * whose seat decides, other than the caller), a few at most; else in words.
+ */
+const MAX_NAMED = 3
+const deciders = computed(() => {
+  const names = [...course.members.values()]
+    .filter(
+      (m) =>
+        m.kind === 'human' &&
+        m.status === 'active' &&
+        m.id !== course.myMemberId &&
+        !!m.perms?.action_decide &&
+        m.perms.action_decide !== 'denied',
+    )
+    .map((m) => m.display_name)
+  if (!names.length || names.length > MAX_NAMED) return t('actions.decision.teachingStaff')
+  try {
+    return new Intl.ListFormat(locale.value, { type: 'conjunction' }).format(names)
+  } catch {
+    return names.join(', ')
+  }
+})
+const blockedText = computed(() => {
+  const b = blocked.value ?? approveBlocked.value
+  if (!b) return ''
+  // In the review queue it has run: someone else reviews it, and only the
+  // owner's own level or reach is why (a refusal on approving is a proposal's).
+  const key = b === 'ownAgentLevel' && props.mode === 'review' ? 'ownAgentLevelReview' : b
+  return t(`actions.decision.blocked.${key}`, { who: deciders.value })
+})
 /** The caller's own agent's: decided as its owner, at once (by_owner). */
 const asOwner = computed(() => rules.isOwnAgent(props.action))
 const needsApproval = computed(() => course.needsApproval('action_decide') && !asOwner.value)
@@ -225,7 +263,7 @@ function tell(
 
 <template>
   <div class="decide-panel">
-    <div class="decide-panel__buttons">
+    <div v-if="!decidedElsewhere" class="decide-panel__buttons">
       <template v-if="mode === 'decide'">
         <el-button
           :type="!choice || choice === 'approve' ? 'primary' : undefined"
@@ -291,7 +329,7 @@ function tell(
 
     <p v-if="blocked || approveBlocked" class="decide-panel__blocked">
       <el-icon><Lock /></el-icon>
-      <span>{{ t(`actions.decision.blocked.${blocked ?? approveBlocked}`) }}</span>
+      <span>{{ blockedText }}</span>
     </p>
 
     <div v-if="choice && !blocked" class="decide-panel__form">
