@@ -18,7 +18,10 @@
 // The search, the filter and the order are kept in the address (?q=, ?show=,
 // ?sort=), so that Back finds them again; GradebookView keeps this page alive
 // while a student's own gradebook is open, so that coming back to the class
-// finds it as it was left, and reads it again behind what is shown.
+// finds it as it was left, laid out for the width it comes back to, and
+// reads again behind what is shown the students opened meanwhile (the whole
+// term, where what is shown was read more than five minutes before). Refresh
+// reads it all again under the rows as they are.
 import {
   computed,
   onActivated,
@@ -31,7 +34,7 @@ import {
   watch,
 } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, type LocationQuery } from 'vue-router'
 import { ApiError, read } from '@/api/http'
 import type { Component } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
@@ -48,6 +51,7 @@ import {
   buildMatrix,
   filterRows,
   matrixCsv,
+  mergeStudents,
   slimGrade,
   sortRows,
   studentsSeen,
@@ -58,6 +62,7 @@ import {
   type RowFilter,
   type SortBy,
   type SubmissionLite,
+  type TermRead,
 } from './classMatrix'
 
 const props = defineProps<{ courseId: string }>()
@@ -78,7 +83,9 @@ const active = ref(true)
 onActivated(() => (active.value = true))
 onDeactivated(() => (active.value = false))
 // Out of the page the toolbar is 0 px wide: the layout it was left in is
-// kept for when it comes back, not the phone's.
+// kept for when it comes back, not the phone's. Put back, it is laid out for
+// the width it has then, which useContainerWidth has measured again by now:
+// the window may have been resized while a student's gradebook was open.
 const narrow = ref(false)
 watch(
   measuredNarrow,
@@ -87,6 +94,7 @@ watch(
   },
   { immediate: true },
 )
+onActivated(() => (narrow.value = measuredNarrow.value))
 
 /** Grades on components, and totals, are within a seat's scope only over the whole course. */
 const spansAssignments = computed(() => course.membership?.assignment_scope !== 'listed')
@@ -97,6 +105,8 @@ const spansAssignments = computed(() => course.membership?.assignment_scope !== 
 
 const PAGE = 200
 const progress = reactive({ grades: 0, submissions: 0 })
+/** Read again in full where what is shown was asked for longer ago than this, coming back from a student's gradebook. */
+const STALE_MS = 5 * 60_000
 
 /** Every page of a list, keeping of each item what keep makes of it (null: nothing); count is told how many were read. */
 async function readEvery<T, K>(
@@ -120,49 +130,90 @@ async function readEvery<T, K>(
   }
 }
 
+/** Every grade and submission of the term, or of one student alone; the term's are counted as they come. */
+async function readTerm(student?: string): Promise<TermRead> {
+  const only = student ? { student_member_id: student } : {}
+  const [grades, submissions] = await Promise.all([
+    // Most of a term's grade.list is superseded totals, each with its
+    // feedback and working: the little the matrix needs is kept of each
+    // live grade, and nothing of a superseded one.
+    readEvery(
+      (after) =>
+        read('grade.list', { course_id: props.courseId, limit: PAGE, after, ...only }).then((o) => ({
+          items: o.grades,
+          next: o.next,
+        })),
+      slimGrade,
+      (n) => {
+        if (!student) progress.grades = n
+      },
+    ),
+    // Without submissions, a cell without a grade says nothing of whether work was handed in.
+    course.can('submission_read')
+      ? readEvery(
+          (after) =>
+            read('submission.list', { course_id: props.courseId, limit: PAGE, after, ...only }).then((o) => ({
+              items: o.submissions,
+              next: o.next,
+            })),
+          (s): SubmissionLite => ({
+            id: s.id,
+            assignment_id: s.assignment_id,
+            student_member_id: s.student_member_id,
+            attempt: s.attempt,
+            state: s.state,
+          }),
+          (n) => {
+            if (!student) progress.submissions = n
+          },
+        ).catch((e: unknown) => {
+          if (e instanceof ApiError && e.isForbidden) return null
+          throw e
+        })
+      : Promise.resolve(null),
+  ])
+  return { grades, submissions }
+}
+
+/**
+ * Where the member list cannot be read (a tutor agent's seat), every student
+ * the seat reaches, by member ID, from an assignment's roster
+ * (submission.roster), which lists those who have handed nothing in, as
+ * grades and submissions cannot: so that each is a row, to open. Null where
+ * the member list can be read, or there is no roster to read.
+ */
+async function readRoster(): Promise<string[] | null> {
+  await Promise.all([course.ensureMembers(), course.ensureAssignments()])
+  if (course.membersState !== 'forbidden' || !course.can('submission_read')) return null
+  const first = [...course.assignments.values()].find((a) => !!a.published_at)
+  if (!first) return null
+  return readEvery(
+    (after) =>
+      read('submission.roster', { course_id: props.courseId, assignment_id: first.id, limit: PAGE, after }).then(
+        (o) => ({ items: o.students, next: o.next }),
+      ),
+    (s) => s.student_member_id,
+    () => undefined,
+  ).catch((e: unknown) => {
+    if (e instanceof ApiError && (e.isForbidden || e.isNotFound)) return null
+    throw e
+  })
+}
+
+/** When the whole term was last asked for, and how many times: what was read of a student before then is older. */
+let termAskedAt = 0
+let termAsked = 0
 const data = useAsync(
   async () => {
+    termAskedAt = Date.now()
+    termAsked++
     progress.grades = 0
     progress.submissions = 0
     if (course.level('grade_read') === 'denied') {
       throw new ApiError({ status: 403, code: 'forbidden', message: 'not permitted' })
     }
-    const [grades, submissions] = await Promise.all([
-      // Most of a term's grade.list is superseded totals, each with its
-      // feedback and working: the little the matrix needs is kept of each
-      // live grade, and nothing of a superseded one.
-      readEvery(
-        (after) =>
-          read('grade.list', { course_id: props.courseId, limit: PAGE, after }).then((o) => ({
-            items: o.grades,
-            next: o.next,
-          })),
-        slimGrade,
-        (n) => (progress.grades = n),
-      ),
-      // Without submissions, a cell without a grade says nothing of whether work was handed in.
-      course.can('submission_read')
-        ? readEvery(
-            (after) =>
-              read('submission.list', { course_id: props.courseId, limit: PAGE, after }).then((o) => ({
-                items: o.submissions,
-                next: o.next,
-              })),
-            (s): SubmissionLite => ({
-              id: s.id,
-              assignment_id: s.assignment_id,
-              student_member_id: s.student_member_id,
-              attempt: s.attempt,
-              state: s.state,
-            }),
-            (n) => (progress.submissions = n),
-          ).catch((e: unknown) => {
-            if (e instanceof ApiError && e.isForbidden) return null
-            throw e
-          })
-        : Promise.resolve(null),
-    ])
-    return { grades, submissions }
+    const [term, roster] = await Promise.all([readTerm(), readRoster()])
+    return { ...term, roster }
   },
   // What is shown stays while it is read again.
   { keepData: true },
@@ -202,7 +253,25 @@ const assignmentsKnown = computed(
     (course.assignmentsState === 'loading' && assignmentsSeen.value),
 )
 const assignmentsFailed = computed(() => (course.assignmentsState === 'error' ? course.assignmentsError : null))
-const failed = computed(() => data.error.value ?? lookups.tree.error.value ?? assignmentsFailed.value)
+
+/**
+ * The member list, which names the rows: kept (by the store) while it is
+ * read again, so that a refresh does not take the rows away. Where it could
+ * not be read, the page says so, with a Retry and nothing to export, rather
+ * than name the class by member ID; only where the seat may not read it are
+ * the rows the students Core shows it work or grades of.
+ */
+const membersSeen = ref(course.membersState === 'loaded')
+watch(
+  () => course.membersState,
+  (s) => {
+    if (s === 'loaded') membersSeen.value = true
+  },
+)
+const membersFailed = computed(() => (course.membersState === 'error' ? course.membersError : null))
+const failed = computed(
+  () => data.error.value ?? lookups.tree.error.value ?? assignmentsFailed.value ?? membersFailed.value,
+)
 /** Everything the matrix is made of has been read. */
 const ready = computed(() => !!data.data.value && !!scheme.value && assignmentsKnown.value && !failed.value)
 
@@ -222,6 +291,57 @@ function refreshQuietly() {
   void Promise.all([data.reload(), lookups.tree.reload()]).finally(() => (quiet.value = false))
 }
 
+/**
+ * The students whose own gradebooks were opened from here, or from one
+ * another, since the class was last shown: what may have changed there is
+ * theirs alone (a total overridden, final grades undone).
+ */
+const opened = new Set<string>()
+watch(
+  () => route.params.studentMemberId,
+  (id) => {
+    if (typeof id === 'string' && id) opened.add(id)
+  },
+)
+const rereading = ref(false)
+/**
+ * Back from students' gradebooks: theirs read again (both lists take a
+ * student), and put in place of what was kept of them, rather than every
+ * page of the term once for each student. The whole term only where what is
+ * shown was asked for more than five minutes before.
+ */
+async function refreshOpened() {
+  // The whole term is being read: those opened are read once it has been,
+  // since it may have read them before they changed.
+  if (data.loading.value || rereading.value) return
+  if (!data.data.value || Date.now() - termAskedAt > STALE_MS) {
+    opened.clear()
+    refreshQuietly()
+    return
+  }
+  if (!opened.size) return
+  const ids = [...opened]
+  opened.clear()
+  const asked = termAsked
+  rereading.value = true
+  try {
+    const again = await Promise.all(ids.map((id) => readTerm(id)))
+    const kept = data.data.value
+    // Read in full meanwhile (Refresh): newer than this.
+    if (kept && asked === termAsked) data.data.value = mergeStudents(kept, ids, again)
+  } catch {
+    // The whole term instead, which says what went wrong if it goes wrong again.
+    if (asked === termAsked) refreshQuietly()
+  } finally {
+    rereading.value = false
+  }
+  // Another opened while these were read, and come back from.
+  if (active.value && opened.size) void refreshOpened()
+}
+watch(data.loading, (busy) => {
+  if (!busy && active.value && opened.size) void refreshOpened()
+})
+
 const loading = computed(
   () =>
     (data.loading.value && !quiet.value) ||
@@ -235,7 +355,12 @@ const loading = computed(
 // ---------------------------------------------------------------------------
 
 const includeRemoved = ref(false)
-const rosterRead = computed(() => course.membersState === 'loaded')
+/** The member list has been read: as it was, while it is read again. */
+const rosterRead = computed(
+  () =>
+    course.membersState === 'loaded' ||
+    ((course.membersState === 'idle' || course.membersState === 'loading') && membersSeen.value),
+)
 const anyRemoved = computed(
   () => rosterRead.value && [...course.members.values()].some((m) => m.role === 'student' && m.status === 'removed'),
 )
@@ -243,9 +368,7 @@ const anyRemoved = computed(
 const students = computed<MatrixStudent[]>(() => {
   const d = data.data.value
   if (!d) return []
-  const seen = new Set(studentsSeen(d.grades, d.submissions))
-  // Not named until the member list has been read, or found unreadable.
-  if (course.membersState === 'idle' || course.membersState === 'loading') return []
+  const seen = new Set(studentsSeen(d.grades, d.submissions, d.roster))
   if (rosterRead.value) {
     const seat = course.seat ?? course.membership
     return visibleStudents(
@@ -258,7 +381,10 @@ const students = computed<MatrixStudent[]>(() => {
       { includeRemoved: includeRemoved.value, seen },
     )
   }
-  // The member list cannot be read (a tutor agent's seat): the students Core showed work or grades of.
+  // Not named until the member list has been read, or found unreadable.
+  if (course.membersState !== 'forbidden') return []
+  // The member list cannot be read (a tutor agent's seat): the students Core
+  // showed work or grades of, and every one an assignment's roster lists.
   return [...seen].map((id) => ({ id, name: course.memberName(id), loginId: null, status: 'unknown' }))
 })
 
@@ -310,11 +436,9 @@ function fromAddress() {
 }
 fromAddress()
 
-let typing: ReturnType<typeof setTimeout> | undefined
-function toAddress() {
-  clearTimeout(typing)
-  if (!active.value) return
-  const want = {
+/** What the address says of the page as it is now: undefined for what is said by leaving it out. */
+function wanted() {
+  return {
     q: query.value.trim() ? query.value : undefined,
     show: filter.value === 'all' ? undefined : filter.value,
     sort:
@@ -322,9 +446,20 @@ function toAddress() {
         ? undefined
         : `${sort.value.dir === 'desc' ? '-' : ''}${sort.value.key}`,
   }
-  const q = route.query
-  if (want.q === one(q.q) && want.show === one(q.show) && want.sort === one(q.sort)) return
-  void router.replace({ query: { ...q, ...want } })
+}
+function saysAlready(q: LocationQuery, want: ReturnType<typeof wanted>) {
+  return want.q === one(q.q) && want.show === one(q.show) && want.sort === one(q.sort)
+}
+
+/** A search typed and not yet in the address: written there once typing pauses. */
+let typing: ReturnType<typeof setTimeout> | undefined
+function toAddress() {
+  clearTimeout(typing)
+  typing = undefined
+  if (!active.value) return
+  const want = wanted()
+  if (saysAlready(route.query, want)) return
+  void router.replace({ query: { ...route.query, ...want } })
 }
 // What is typed goes into the address once typing pauses; the rest at once.
 watch(query, () => {
@@ -332,7 +467,25 @@ watch(query, () => {
   typing = setTimeout(toAddress, 400)
 })
 watch([filter, sort], toAddress)
-onBeforeUnmount(() => clearTimeout(typing))
+// Left before typing paused (a student opened at once): what was typed is
+// written into the address of the page being left, so that Back finds it
+// there. Not by router.replace, a navigation of its own, which would cancel
+// the one under way: the history's entry is replaced, as router.replace
+// would, before the navigation adds its own after it.
+const stopLeaving = router.beforeEach((to, from) => {
+  if (typing === undefined || !active.value || to.path === from.path) return
+  clearTimeout(typing)
+  typing = undefined
+  const want = wanted()
+  if (saysAlready(from.query, want)) return
+  router.options.history.replace(
+    router.resolve({ path: from.path, query: { ...from.query, ...want }, hash: from.hash }).fullPath,
+  )
+})
+onBeforeUnmount(() => {
+  clearTimeout(typing)
+  stopLeaving()
+})
 
 let shownOnce = false
 onActivated(() => {
@@ -345,7 +498,7 @@ onActivated(() => {
   const q = route.query
   if (one(q.q) || one(q.show) || one(q.sort)) fromAddress()
   else toAddress()
-  refreshQuietly()
+  void refreshOpened()
 })
 
 const filtered = computed(() => filterRows(matrix.value, query.value, filter.value))
@@ -468,7 +621,7 @@ function exportCsv() {
         <el-checkbox v-if="anyRemoved" v-model="includeRemoved">{{ t('classbook.removed') }}</el-checkbox>
         <span class="app-toolbar__spacer" />
         <span v-if="ready" class="app-muted classbook__count" aria-live="polite">{{ countText }}</span>
-        <el-button :loading="loading || quiet" @click="reload">
+        <el-button :loading="loading || quiet || rereading" @click="reload">
           <el-icon><Refresh /></el-icon>
           <span>{{ t('common.actions.refresh') }}</span>
         </el-button>

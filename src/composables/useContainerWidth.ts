@@ -1,6 +1,8 @@
 import {
   computed,
+  getCurrentInstance,
   nextTick,
+  onActivated,
   onScopeDispose,
   ref,
   toValue,
@@ -73,6 +75,16 @@ export function useContainerWidth(target: Readonly<Ref<Element | null | undefine
     },
     { immediate: true, flush: 'post' },
   )
+  // Kept alive (KeepAlive) and put back in the page: measured again at once,
+  // before the page is painted. Out of the page it measured nothing, and
+  // the window may have been resized meanwhile, which it could not follow;
+  // the observer would say so only once the frame is over. A component's
+  // own onActivated, registered after this, finds the width as it is now.
+  if (getCurrentInstance())
+    onActivated(() => {
+      const el = target.value
+      if (el) settle(laidOutWidth(el))
+    })
   onScopeDispose(() => {
     clearTimeout(later)
     window.removeEventListener('resize', onResize)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatScore, fractionPercent, mulDecimals, percentOf, plainDecimal, shares } from './grading'
+import { formatScore, fractionPercent, mulDecimals, percentOf, plainDecimal, shares, shortScore } from './grading'
 
 describe('plainDecimal', () => {
   it('keeps every place and drops trailing zeros', () => {
@@ -28,6 +28,23 @@ describe('formatScore', () => {
     expect(formatScore('78')).toBe('78')
     expect(formatScore(0.0001)).toBe('0.0001')
     expect(formatScore(null)).toBe('—')
+  })
+})
+
+describe('shortScore', () => {
+  it('gives a score of more than two places to two, half away from zero, and nothing for one that has no more', () => {
+    expect(shortScore(72.3333)).toBe('72.33')
+    expect(shortScore('9.125')).toBe('9.13')
+    expect(shortScore(-9.125)).toBe('-9.13')
+    expect(shortScore(77.7778)).toBe('77.78')
+    // Trailing zeros of the rounding are not shown: 72.3999 is 72.4, not 72.40.
+    expect(shortScore(72.3999)).toBe('72.4')
+    expect(shortScore(99.999)).toBe('100')
+    expect(shortScore(1e-7)).toBe('0')
+    expect(shortScore(72.25)).toBeNull()
+    expect(shortScore('12.50')).toBeNull()
+    expect(shortScore(6)).toBeNull()
+    expect(shortScore(null)).toBeNull()
   })
 })
 

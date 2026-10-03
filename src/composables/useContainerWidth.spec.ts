@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, effectScope, h, nextTick, onMounted, ref } from 'vue'
+import { KeepAlive, defineComponent, effectScope, h, nextTick, onActivated, onMounted, ref } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { fakeContainerWidths } from './containerWidthFakes'
 import { useContainerNarrow, useContainerWidth, useTableRelayout } from './useContainerWidth'
@@ -105,6 +105,48 @@ describe('useContainerWidth', () => {
     expect(out.value).toBe(1000)
     await new Promise((done) => setTimeout(done))
     expect(out.value).toBe(1000)
+  })
+
+  it('measures again, at once, as a page kept alive comes back, the window having been resized while it was away', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+    // Laid out 390 px wide; out of the page, nothing.
+    let laidOut = 390
+    const seen: (number | null)[] = []
+    const Page = defineComponent({
+      setup() {
+        const el = ref<HTMLElement | null>(null)
+        const width = useContainerWidth(el)
+        onMounted(() => {
+          const e = el.value!
+          e.getBoundingClientRect = () => ({ width: e.isConnected ? laidOut : 0 }) as DOMRect
+        })
+        // What a page's own hook, registered after, finds as it comes back.
+        onActivated(() => seen.push(width.value))
+        return () => h('div', { ref: el, class: 'page' })
+      },
+    })
+    const shown = ref(true)
+    const w = mount(defineComponent({ render: () => h(KeepAlive, {}, shown.value ? [h(Page)] : []) }), {
+      attachTo: document.body,
+    })
+    await flushPromises()
+    expect(seen).toEqual([390])
+    shown.value = false
+    await flushPromises()
+    // Resized while away: it measures nothing then.
+    laidOut = 1280
+    window.dispatchEvent(new Event('resize'))
+    shown.value = true
+    await flushPromises()
+    expect(seen).toEqual([390, 1280])
+    w.unmount()
   })
 
   it('stops observing with its scope', async () => {

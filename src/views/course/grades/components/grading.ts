@@ -183,7 +183,9 @@ export function breakdownForApi(rows: BreakdownRow[]): BreakdownItem[] | undefin
 //
 // Core keeps scores, points and weights as exact decimals and sends them as
 // JSON numbers, whose shortest form is the decimal Core wrote. They are shown
-// with every place they have: 9.125 is never 9.13. Percentages are rounded
+// with every place they have: 9.125 is never 9.13, save in the class's
+// gradebook, whose cells have no room for them: there a score is given to two
+// places (shortScore), with every place beside it. Percentages are rounded
 // to two places, half away from zero, as Core rounds the totals it writes
 // down (gradecalc.Percent), so a percentage worked out here reads the same as
 // one Core stored.
@@ -279,6 +281,31 @@ export function formatScore(v: Decimal | null | undefined): string {
   const s = plainDecimal(v)
   if (s === null) return formatDecimal(v)
   return formatDecimal(s, Math.min(s.split('.')[1]?.length ?? 0, 20))
+}
+
+/**
+ * A score to at most two decimal places, as plain digits (72.3333 →
+ * "72.33"), half away from zero, for where there is no room for every
+ * place: the class's gradebook, whose table's cells are 104 px. Wherever it
+ * is shown, the score with every place goes beside it, in the tooltip and
+ * for a screen reader. Null where it has no more places than that, and is
+ * shown as it is.
+ */
+export function shortScore(v: Decimal | null | undefined): string | null {
+  const x = scaled(v)
+  if (!x || x.scale <= 2) return null
+  return unscale(divRound(x.n * 100n, 10n ** BigInt(x.scale)), 2)
+}
+
+/**
+ * A score as the class's gradebook shows it, a total's as a percentage: to
+ * two decimal places at most (text), and with every place (full) where that
+ * is shorter, to go beside it.
+ */
+export function classFigure(v: Decimal | null | undefined, percent = false): { text: string; full: string | null } {
+  const format = percent ? formatPct : formatScore
+  const short = shortScore(v)
+  return short === null ? { text: format(v), full: null } : { text: format(short), full: format(v) }
 }
 
 /** A percentage Core already worked out (a computed total, gradebook percent): "91.25%", every decimal place kept. */

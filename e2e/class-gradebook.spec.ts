@@ -185,8 +185,8 @@ test.describe('the whole class’s gradebook', () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await openClass(page)
-    await expect(order(page)).resolves.toEqual(['Ada Lovelace', 'Ben Okafor', 'Cleo Chan', 'Dev Patel', 'Eve Santos'])
     await expect(page.locator('.classbook__count')).toHaveText('5 students')
+    await expect(order(page)).resolves.toEqual(['Ada Lovelace', 'Ben Okafor', 'Cleo Chan', 'Dev Patel', 'Eve Santos'])
 
     // The course total first, then the bucket's work and its total, then the midterm.
     const heads = (await matrix(page).locator('thead th .matrix__head-title').allInnerTexts()).map((s) => s.trim())
@@ -345,6 +345,18 @@ test.describe('the whole class’s gradebook', () => {
     const hw1Line = cleo.locator('.sgl__grade').filter({ hasText: 'HW1 Loops' })
     await expect(hw1Line).toContainText('Missing')
     await expect(cleo.locator('.sgl__grade').filter({ hasText: 'HW2 Lists' })).toContainText('15 / 20')
+    // Refresh reads the class again under the list as it is: the line opened stays open.
+    const refresh = page.getByRole('button', { name: 'Refresh' })
+    await Promise.all([page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/members')), refresh.click()])
+    await expect(refresh).not.toHaveClass(/is-loading/)
+    await expect(cleo.getByRole('button').first()).toHaveAttribute('aria-expanded', 'true')
+    await expect(hw1Line).toContainText('Missing')
+    // Ben's draft over nothing posted says no posted grade.
+    const ben = items.filter({ hasText: name('ben') })
+    await ben.getByRole('button').first().click()
+    await expect(ben.locator('.sgl__grade').filter({ hasText: 'HW1 Loops' })).toContainText('Draft')
+    await expect(ben.locator('.sgl__grade').filter({ hasText: 'HW1 Loops' })).not.toContainText('Posted')
+    await ben.getByRole('button').first().click()
     await cleo.evaluate((el) => el.scrollIntoView({ block: 'start' }))
     await photograph(page, 'class-gradebook-390-open-light')
     await page.emulateMedia({ colorScheme: 'dark' })
@@ -359,14 +371,16 @@ test.describe('the whole class’s gradebook', () => {
   })
 })
 
-// A class of its own, of 32 students by eight homeworks out of 100: more
+// A class of its own, of 33 students by eight homeworks out of 100: more
 // than the box holds either way, for where it is scrolled to. Fay has a
 // posted 61.75 on HW1 with a draft 72.25 over it, and work handed in since;
-// Gus a posted 72.25 with work handed in since. The rest have nothing.
+// Gus a posted 72.25 with work handed in since; Hal a posted 6 on HW2 with a
+// draft 72.3333 over it. The rest have nothing.
 test.describe('a class larger than the screen', () => {
   let bigId = ''
   let bigHw1 = ''
-  const big: Record<'fay' | 'gus', DemoActor & { member_id: string }> = {} as never
+  let bigHw2 = ''
+  const big: Record<'fay' | 'gus' | 'hal', DemoActor & { member_id: string }> = {} as never
 
   test.beforeAll(async () => {
     const d = demo()
@@ -395,10 +409,12 @@ test.describe('a class larger than the screen', () => {
       })
       await ok(I, 'POST', `/v1/courses/${bigId}/assignments/${a.id}/publish`, {})
       if (i === 1) bigHw1 = a.id
+      if (i === 2) bigHw2 = a.id
     }
     for (const [key, display] of [
       ['fay', 'Fay Wong'],
       ['gus', 'Gus Ruiz'],
+      ['hal', 'Hal Ito'],
     ] as const) {
       const who = await registerPerson(`${display} ${STAMP}`, { email: `${key}+${STAMP}@book.test` })
       const seat = await ok(I, 'POST', `/v1/courses/${bigId}/members`, { actor_id: who.actor_id, preset: 'student' })
@@ -413,24 +429,30 @@ test.describe('a class larger than the screen', () => {
       })
       await ok(I, 'POST', `/v1/courses/${bigId}/members`, { actor_id: who.actor_id, preset: 'student' })
     }
-    const at = (who: { token: string }) =>
-      call(who.token, 'POST', `/v1/courses/${bigId}/submissions`, { assignment_id: bigHw1, body: 'My work' }).then(
-        async (s) => {
-          expect(s.body.status, JSON.stringify(s.body)).toBe('executed')
-          const id = (s.body.result.submission_id ?? s.body.result.id) as string
-          await ok(who.token, 'POST', `/v1/courses/${bigId}/submissions/${id}/submit`, {})
-          return id
-        },
-      )
-    const gradeOn = async (submission_id: string, score: number) =>
-      (await ok(I, 'POST', `/v1/courses/${bigId}/grades`, { no_rubric: true, submission_id, score })).grade_id as string
-    const fayPosted = await gradeOn(await at(big.fay), 61.75)
-    const gusPosted = await gradeOn(await at(big.gus), 72.25)
-    await ok(I, 'POST', `/v1/courses/${bigId}/grades/post`, { grade_ids: [fayPosted, gusPosted] })
-    await gradeOn(await at(big.fay), 72.25)
-    await at(big.fay)
-    await at(big.gus)
+    const fayPosted = await gradeOn(await handInBig(big.fay), 61.75)
+    const gusPosted = await gradeOn(await handInBig(big.gus), 72.25)
+    const halPosted = await gradeOn(await handInBig(big.hal, bigHw2), 6)
+    await ok(I, 'POST', `/v1/courses/${bigId}/grades/post`, { grade_ids: [fayPosted, gusPosted, halPosted] })
+    await gradeOn(await handInBig(big.fay), 72.25)
+    await handInBig(big.fay)
+    await handInBig(big.gus)
+    await gradeOn(await handInBig(big.hal, bigHw2), 72.3333)
   })
+
+  /** Work handed in on an assignment of the larger class (HW1 unless said). */
+  const handInBig = (who: { token: string }, assignment = bigHw1) =>
+    call(who.token, 'POST', `/v1/courses/${bigId}/submissions`, { assignment_id: assignment, body: 'My work' }).then(
+      async (s) => {
+        expect(s.body.status, JSON.stringify(s.body)).toBe('executed')
+        const id = (s.body.result.submission_id ?? s.body.result.id) as string
+        await ok(who.token, 'POST', `/v1/courses/${bigId}/submissions/${id}/submit`, {})
+        return id
+      },
+    )
+  /** A grade entered, and left a draft. */
+  const gradeOn = async (submission_id: string, score: number) =>
+    (await ok(instructor().token, 'POST', `/v1/courses/${bigId}/grades`, { no_rubric: true, submission_id, score }))
+      .grade_id as string
 
   const box = (page: Page) => page.locator('.matrix')
   const where = (page: Page) => box(page).evaluate((el) => ({ top: el.scrollTop, left: el.scrollLeft }))
@@ -440,10 +462,25 @@ test.describe('a class larger than the screen', () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await signIn(page, instructor())
-    for (const [locale, draft, toGrade] of [
-      ['en', 'Draft', 'To grade'],
-      ['zh-Hant', '草稿', '待評分'],
-      ['zh-Hans', '草稿', '待评分'],
+    /** Nothing is cut off, and every row is still 44 px (the drawing of the rows near the screen counts on it). */
+    const fits = async (locale: string) => {
+      const cut = await matrix(page)
+        .locator('td.matrix__cell')
+        .evaluateAll((tds) =>
+          tds
+            .filter((td) => td.scrollWidth > td.clientWidth || td.scrollHeight > td.clientHeight)
+            .map((td) => td.textContent),
+        )
+      expect(cut, locale).toEqual([])
+      const heights = await matrix(page)
+        .locator('tr.matrix__row')
+        .evaluateAll((rs) => [...new Set(rs.map((r) => r.getBoundingClientRect().height))])
+      expect(heights, locale).toEqual([44])
+    }
+    for (const [locale, draft, toGrade, posted] of [
+      ['en', 'Draft', 'To grade', (n: string) => `Posted ${n}`],
+      ['zh-Hant', '草稿', '待評分', (n: string) => `已發佈${n}`],
+      ['zh-Hans', '草稿', '待评分', (n: string) => `已发布${n}`],
     ] as const) {
       await page.addInitScript((l) => {
         try {
@@ -457,29 +494,73 @@ test.describe('a class larger than the screen', () => {
       await expect(fay).toContainText('72.25')
       await expect(fay).toContainText(draft)
       await expect(fay).toContainText(toGrade)
+      // The posted grade a draft would replace is said in the cell, not only in its tooltip.
+      await expect(fay).toContainText(posted('61.75'))
       await expect(gus).toContainText('72.25')
       await expect(gus).toContainText(toGrade)
-      // Nothing is cut off, and every row is still 44 px (the drawing of the rows near the screen counts on it).
-      const cut = await matrix(page)
-        .locator('td.matrix__cell')
-        .evaluateAll((tds) =>
-          tds
-            .filter((td) => td.scrollWidth > td.clientWidth || td.scrollHeight > td.clientHeight)
-            .map((td) => td.textContent),
-        )
-      expect(cut, locale).toEqual([])
-      const heights = await matrix(page)
-        .locator('tr.matrix__row')
-        .evaluateAll((rs) => [...new Set(rs.map((r) => r.getBoundingClientRect().height))])
-      expect(heights, locale).toEqual([44])
+      await expect(gus).not.toContainText(posted('72.25'))
+      await fits(locale)
       // Fay's 61.75 still counts until her draft is posted: (61.75 + 72.25) / 2.
       await expect(matrix(page).locator('tfoot td').nth(1)).toHaveText('67')
-      if (locale !== 'zh-Hant') {
-        await photograph(page, `class-gradebook-waiting-1280-${locale}-light`)
-        await page.emulateMedia({ colorScheme: 'dark' })
-        await photograph(page, `class-gradebook-waiting-1280-${locale}-dark`)
-        await page.emulateMedia({ colorScheme: 'light' })
-      }
+      await photograph(page, `class-gradebook-waiting-1280-${locale}-light`)
+      await page.emulateMedia({ colorScheme: 'dark' })
+      await photograph(page, `class-gradebook-waiting-1280-${locale}-dark`)
+      await page.emulateMedia({ colorScheme: 'light' })
+
+      // A long draft (72.3333) over a posted 6: to two places in the cell,
+      // every place in its tooltip and for a screen reader, and its flag
+      // still in the cell.
+      await page.goto(`/courses/${bigId}/gradebook?sort=-a:${bigHw2}`)
+      const hal = matrix(page).locator('tbody tr').filter({ hasText: big.hal.display_name }).locator('td').nth(2)
+      await expect(hal.locator('.matrix__score')).toHaveText('72.33')
+      await expect(hal).toContainText(draft)
+      await expect(hal).toContainText(posted('6'))
+      await expect(hal.locator('.matrix__sr').first()).toHaveText('72.3333')
+      await expect(hal.locator('a')).toHaveAttribute('title', /72\.3333/)
+      await fits(locale)
+      await photograph(page, `class-gradebook-long-draft-1280-${locale}-light`)
+      await page.emulateMedia({ colorScheme: 'dark' })
+      await photograph(page, `class-gradebook-long-draft-1280-${locale}-dark`)
+      await page.emulateMedia({ colorScheme: 'light' })
+    }
+  })
+
+  test('says the posted grade under a draft in words on a phone, and fits a long draft there', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await signIn(page, instructor())
+    for (const [locale, draft, posted] of [
+      ['en', 'Draft', 'Posted 6'],
+      ['zh-Hant', '草稿', '已發佈6'],
+    ] as const) {
+      await page.addInitScript((l) => {
+        try {
+          localStorage.setItem('aishie.locale', l)
+        } catch {}
+      }, locale)
+      await page.goto(`/courses/${bigId}/gradebook?q=${encodeURIComponent(big.hal.display_name)}`)
+      const hal = page.locator('.sgl__item').filter({ hasText: big.hal.display_name })
+      await expect(hal).toHaveCount(1)
+      await hal.locator('.sgl__head').click()
+      const hw2 = hal.locator('.sgl__grade').nth(1)
+      await expect(hw2).toContainText('HW2')
+      // To two places, as the table shows it; every place for a screen reader.
+      await expect(hw2.locator('.sgl__score')).toContainText('72.33 / 100')
+      await expect(hw2.locator('.sgl__score .sgl__sr')).toHaveText('72.3333 / 100')
+      await expect(hw2).toContainText(draft)
+      await expect(hw2).toContainText(posted)
+      // Nothing wider than its line, nor than the screen.
+      const over = await page
+        .locator('.sgl__grade, .sgl__value')
+        .evaluateAll((els) => els.filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent))
+      expect(over, locale).toEqual([])
+      const box = await hw2.locator('.sgl__value').boundingBox()
+      expect(box!.x + box!.width, locale).toBeLessThanOrEqual(390 - 16)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), locale).toBeLessThanOrEqual(390)
+      await hw2.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+      await photograph(page, `class-gradebook-long-draft-390-${locale}-light`)
+      await page.emulateMedia({ colorScheme: 'dark' })
+      await photograph(page, `class-gradebook-long-draft-390-${locale}-dark`)
+      await page.emulateMedia({ colorScheme: 'light' })
     }
   })
 
@@ -520,6 +601,130 @@ test.describe('a class larger than the screen', () => {
     await expect.poll(() => where(page)).toEqual(left)
     // And it scrolls on from there: the rows near the screen are drawn.
     await expect(matrix(page).locator(`tbody tr[aria-rowindex="${Math.floor(left.top / 44) + 4}"]`)).toBeVisible()
+  })
+
+  test('keeps its rows, and where they were scrolled, while Refresh reads the class again', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, instructor())
+    await page.goto(`/courses/${bigId}/gradebook`)
+    await expect(matrix(page)).toBeVisible()
+    await box(page).hover()
+    await page.mouse.wheel(0, 400)
+    await page.mouse.wheel(100, 0)
+    await expect.poll(async () => Object.values(await where(page)).every((n) => n > 0)).toBe(true)
+    await page.waitForTimeout(300)
+    const left = await where(page)
+    // Whatever the page does from now on is watched: the table taken out of
+    // the page, and every count of students it shows.
+    await page.evaluate(() => {
+      const w = window as unknown as { gone: number; counts: string[] }
+      w.gone = 0
+      w.counts = []
+      new MutationObserver((changes) => {
+        for (const c of changes)
+          for (const n of c.removedNodes)
+            if (n instanceof Element && (n.matches('.matrix') || n.querySelector('.matrix'))) w.gone++
+        w.counts.push(document.querySelector('.classbook__count')?.textContent ?? '')
+      }).observe(document.body, { childList: true, subtree: true, characterData: true })
+    })
+    const refresh = page.getByRole('button', { name: 'Refresh' })
+    await Promise.all([page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/members')), refresh.click()])
+    await expect(refresh).not.toHaveClass(/is-loading/)
+    await expect(page.locator('.classbook__reading')).toHaveCount(0)
+    await page.waitForTimeout(300)
+    const seen = await page.evaluate(() => {
+      const w = window as unknown as { gone: number; counts: string[] }
+      return { gone: w.gone, counts: w.counts }
+    })
+    expect(seen.gone).toBe(0)
+    expect(new Set(seen.counts)).toEqual(new Set(['33 students']))
+    expect(await where(page)).toEqual(left)
+  })
+
+  test('comes back laid out for the window it comes back to', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await signIn(page, instructor())
+    await page.goto(`/courses/${bigId}/gradebook`)
+    const fay = page.locator('.sgl__item').filter({ hasText: big.fay.display_name })
+    await fay.locator('.sgl__head').click()
+    await fay.getByRole('link', { name: `Open ${big.fay.display_name}’s gradebook` }).click()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goBack()
+    await expect(matrix(page)).toBeVisible()
+    await expect(page.locator('.sgl__item')).toHaveCount(0)
+
+    // And the other way: the table left, the list found on a phone.
+    await matrix(page).locator('tbody tr').filter({ hasText: big.fay.display_name }).locator('.matrix__student').click()
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goBack()
+    await expect(page.locator('.sgl__item').first()).toBeVisible()
+    await expect(matrix(page)).toHaveCount(0)
+  })
+
+  test('keeps a search typed just before a student is opened', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, instructor())
+    await page.goto(`/courses/${bigId}/gradebook?sort=-a:${bigHw1}`)
+    await expect(matrix(page)).toBeVisible()
+    // Typed, and the student opened at once: in the same task, well within
+    // the 400 ms the address waits for typing to pause.
+    await page.evaluate((who) => {
+      const input = document.querySelector<HTMLInputElement>('.classbook__search input')!
+      input.value = 'Gus'
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      const link = [...document.querySelectorAll<HTMLAnchorElement>('a.matrix__student')].find((a) =>
+        a.textContent?.includes(who),
+      )!
+      link.click()
+    }, big.gus.display_name)
+    await expect(page).toHaveURL(new RegExp(`/gradebook/${big.gus.member_id}$`))
+    await expect(page.locator('.gradebook__total')).toBeVisible()
+    await page.goBack()
+    await expect(matrix(page)).toBeVisible()
+    await expect(page.getByPlaceholder('Search by name or number')).toHaveValue('Gus')
+    await expect(page).toHaveURL(/[?&]q=Gus(&|$)/)
+    await expect(page).toHaveURL(new RegExp(`[?&]sort=-a(:|%3A)${bigHw1}(&|$)`))
+    await expect(order(page)).resolves.toEqual(['Gus Ruiz'])
+  })
+
+  test('reads again only the students opened, coming back to the class from each', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, instructor())
+    /** Each read of grades or submissions: the list, and whose, or 'all'. */
+    const reads: string[] = []
+    page.on('request', (r) => {
+      const u = new URL(r.url())
+      const m = /\/v1\/courses\/[^/]+\/(grades|submissions)$/.exec(u.pathname)
+      if (m) reads.push(`${m[1]}:${u.searchParams.get('student_member_id') ?? 'all'}`)
+    })
+    await page.goto(`/courses/${bigId}/gradebook`)
+    await expect(page.locator('.classbook__count')).toHaveText('33 students')
+    await expect(page.getByRole('button', { name: 'Refresh' })).not.toHaveClass(/is-loading/)
+    expect(reads).toContain('grades:all')
+    reads.length = 0
+
+    const search = page.getByPlaceholder('Search by name or number')
+    for (const who of [big.fay, big.gus, big.hal]) {
+      await search.fill(who.display_name)
+      await expect(order(page)).resolves.toEqual([who.display_name.replace(` ${STAMP}`, '')])
+      await matrix(page).locator('.matrix__student').click()
+      await expect(page.locator('.gradebook__total')).toBeVisible()
+      // Graded while their gradebook is open: found when the class is come back to.
+      if (who === big.gus) await gradeOn(await handInBig(big.gus, bigHw2), 50)
+      await page.goBack()
+      await expect(matrix(page)).toBeVisible()
+      // Read again behind what is shown, Refresh turning meanwhile.
+      await expect(page.getByRole('button', { name: 'Refresh' })).not.toHaveClass(/is-loading/)
+    }
+    await search.fill(big.gus.display_name)
+    const gusHw2 = matrix(page).locator('tbody tr').filter({ hasText: big.gus.display_name }).locator('td').nth(2)
+    await expect(gusHw2).toContainText('50')
+    await expect(gusHw2).toContainText('Draft')
+    // Not the whole term again, once for each student: only theirs.
+    expect(reads.filter((r) => r.endsWith(':all'))).toEqual([])
+    for (const who of [big.fay, big.gus, big.hal]) expect(reads).toContain(`grades:${who.member_id}`)
   })
 
   test('fits its box to the window again without a loop of ResizeObservers the browser reports', async ({ page }) => {
