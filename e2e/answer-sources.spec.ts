@@ -1,4 +1,5 @@
 /// <reference lib="dom" />
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import {
   call,
@@ -21,21 +22,42 @@ import {
 // the lecture (which opens the PDF in the viewer at page 2), the neutral pill,
 // and nothing. On a phone, an answer that relied on the lecture's last page
 // opens it there, the viewer filling the screen with its one bar at the
-// bottom, as the phone's viewer is. Both may read rubrics at first, and an
-// answer that relied on HW1's rubric and the lecture names the rubric first;
-// once the student may no longer read rubrics, the rubric is a course material
-// she cannot open, with no title and no link. Once the lecture has a new
-// version, an answer that read the old one leads to the lecture as it is now,
-// and says it read an earlier version. An answer waiting for approval says in
-// the approval queue how many course materials it names. Against a Core whose
-// answers keep no sources, there is nothing to show.
+// bottom, as the phone's viewer is. On a phone 375 px wide, an answer that
+// relied on notes whose title has no spaces (as a file's name gives one) sums
+// them up on a line that wraps, and nothing in the chat scrolls sideways; a
+// tap on the pill says the agent said so. Both may read rubrics at first, and
+// an answer that relied on HW1's rubric and the lecture names the rubric
+// first; once the student may no longer read rubrics, the rubric is a course
+// material she cannot open, with no title and no link. Once the lecture has a
+// new version, an answer that read the old one leads to the lecture as it is
+// now, and says beside its link that it read another version; so does one
+// that read the new version once the old one is published again, since the
+// version read may be newer. An answer waiting for approval says in the
+// approval queue how many course materials it names, two pages of the lecture
+// being one, and why on focus.
+//
+// The Core pinned in .github/core-image keeps sources (api/catalogue.json, its
+// catalogue, says so): a Core whose catalogue does not say so, or one this
+// cannot read, fails the run. The tests skip only where the pin itself keeps
+// none.
 
 const STAMP = Date.now().toString(36)
 const TUTOR = `Sources tutor ${STAMP}`
 const LECTURE = `Week 4 — Lists (e2e ${STAMP})`
 const PDF_NAME = `lists-${STAMP}.pdf`
+/** A title with no spaces, longer than 50 characters, as a file's name gives one. */
+const NOTES = `COMP1001_Lecture04_Lists_Tuples_and_Dictionaries_${STAMP}`
 const Q = (n: number) => `Question ${n} about lists (${STAMP})`
 const A = (n: number) => `Answer ${n}: a list keeps its order (${STAMP}).`
+
+type Catalogue = { tools?: { name: string; input_schema?: { properties?: Record<string, unknown> } }[] }
+/** Whether a catalogue's conversation.answer takes the sources an answer relied on. */
+const takesSources = (catalogue: Catalogue) =>
+  !!catalogue.tools?.find((t) => t.name === 'conversation.answer')?.input_schema?.properties?.sources
+/** Whether the Core pinned in .github/core-image does: its catalogue, which CI checks against the pin. */
+const pinTakesSources = takesSources(
+  JSON.parse(readFileSync(new URL('../api/catalogue.json', import.meta.url), 'utf8')),
+)
 
 const w = {
   sources: false,
@@ -146,9 +168,14 @@ test.describe.serial('what an answer relied on', () => {
     const d = demo()
     const I = d.actors.instructor.token
     const c = d.course.id
-    const tools = await fetch(`${d.core}/v1/tools`).then((r) => r.json())
-    const answerTool = (tools.tools ?? []).find((t: { name: string }) => t.name === 'conversation.answer')
-    w.sources = !!answerTool?.input_schema?.properties?.sources
+    const res = await fetch(`${d.core}/v1/tools`)
+    expect(res.ok, `GET /v1/tools: HTTP ${res.status}`).toBe(true)
+    w.sources = takesSources(await res.json())
+    // Against the pin, which takes them, a catalogue that does not say so fails the run: it is not skipped.
+    expect(
+      w.sources || !pinTakesSources,
+      'the pinned Core’s conversation.answer takes sources (api/catalogue.json), but this Core’s catalogue says nothing of them',
+    ).toBe(true)
     if (!w.sources) return
 
     // A course agent of the instructor's, hosted on AIshie: any student it is within may ask it.
@@ -229,7 +256,7 @@ test.describe.serial('what an answer relied on', () => {
   })
 
   test.beforeEach(() => {
-    test.skip(!w.sources, 'this Core keeps no sources with an answer (conversation.answer takes none)')
+    test.skip(!w.sources, 'the pinned Core keeps no sources with an answer (its conversation.answer takes none)')
   })
 
   test('names the lecture an answer relied on, opening its PDF at the page; a pill for none; nothing where it did not say', async ({
@@ -268,6 +295,14 @@ test.describe.serial('what an answer relied on', () => {
       'href',
       `${coursePath(`documents/${w.lectureId}`)}?version=${w.lectureVersion}`,
     )
+
+    // The pill says why on focus, not only on hover: the agent said so.
+    const noneTip = page
+      .locator('.el-popper')
+      .filter({ hasText: 'The agent said this answer relied on no course material.' })
+    await expect(noneTip).toBeHidden()
+    await answerIn(panel, 2).locator('.chat-sources__none').focus()
+    await expect(noneTip).toBeVisible()
   })
 
   // A narrow, tall phone (a folded Galaxy Z Fold 5's cover screen), on which the lecture's
@@ -323,22 +358,100 @@ test.describe.serial('what an answer relied on', () => {
     })
   })
 
-  test('says in the approval queue how many course materials an answer waiting there names', async ({ page }) => {
+  // A phone 375 px wide, on which a title with no spaces would push the summary of several
+  // sources past the chat's right edge, and the chevron with it.
+  test.describe('on a phone 375 px wide', () => {
+    const PHONE = { width: 375, height: 812 }
+    test.use({ viewport: PHONE, isMobile: true, hasTouch: true })
+
+    test('wraps a summary whose title has no spaces, so that nothing in the chat scrolls sideways; a tap on the pill says why', async ({
+      page,
+    }) => {
+      const d = demo()
+      const I = d.actors.instructor.token
+      const c = d.course.id
+      const notes = done(
+        await call(I, 'POST', `/v1/courses/${c}/documents`, {
+          kind: 'material',
+          title: NOTES,
+          body_md: `Lists keep their order (${STAMP}).`,
+        }),
+        'document.create',
+      )
+      done(await call(I, 'POST', `/v1/courses/${c}/documents/${notes.document_id}/publish`, {}), 'document.publish')
+      done(
+        await answer(7, await ask(7), [
+          { document_id: notes.document_id, version_id: notes.version_id },
+          lecturePage2(),
+        ]),
+        'conversation.answer (the notes, then the lecture)',
+      )
+      await signIn(page, w.student!)
+      const panel = await openConversation(page)
+      const scroller = panel.locator('.chat-pane__messages')
+      /** Nothing in the messages runs past their right edge, which the screen's is. */
+      const fits = async (what: string) => {
+        const [scrollWidth, clientWidth, right] = await scroller.evaluate((el) => [
+          el.scrollWidth,
+          el.clientWidth,
+          el.getBoundingClientRect().right,
+        ])
+        expect(scrollWidth, `${what}: the messages' scrollWidth`).toBeLessThanOrEqual(clientWidth)
+        expect(Math.round(right), `${what}: the messages' right edge`).toBeLessThanOrEqual(PHONE.width)
+      }
+
+      const msg = answerIn(panel, 7)
+      const summary = msg.locator('.chat-sources__summary')
+      await summary.scrollIntoViewIfNeeded()
+      await expect(summary).toHaveText(`Based on: “${NOTES}” · 2 items`)
+      await fits('the summary, closed')
+      // The summary wraps within the messages, its chevron with it.
+      const box = (await summary.boundingBox())!
+      const chevron = (await summary.locator('.chat-sources__chevron').boundingBox())!
+      const edge = (await scroller.boundingBox())!
+      expect(box.x + box.width).toBeLessThanOrEqual(edge.x + edge.width)
+      expect(chevron.x + chevron.width).toBeLessThanOrEqual(edge.x + edge.width)
+      await summary.tap()
+      await expect(msg.locator('.chat-sources__item')).toHaveText([`“${NOTES}”`, `“${LECTURE}” · ${PDF_NAME} · page 2`])
+      await fits('the summary, open')
+      await photograph(page, 'answer-sources-375')
+
+      // A tap on the pill says that the agent said it relied on none.
+      const pill = answerIn(panel, 2).locator('.chat-sources__none')
+      const noneTip = page
+        .locator('.el-popper')
+        .filter({ hasText: 'The agent said this answer relied on no course material.' })
+      await expect(noneTip).toBeHidden()
+      await pill.tap()
+      await expect(noneTip).toBeVisible()
+      const tip = (await noneTip.boundingBox())!
+      expect(tip.x).toBeGreaterThanOrEqual(0)
+      expect(tip.x + tip.width).toBeLessThanOrEqual(PHONE.width)
+      await photograph(page, 'answer-sources-375-pill')
+    })
+  })
+
+  test('says in the approval queue how many course materials an answer waiting there names, two pages of one being one, and why on focus', async ({
+    page,
+  }) => {
     const d = demo()
     // Its answers now wait for someone's approval.
     await perms(w.tutorSeat, { conversation_answer: 'confirm_required' })
-    const proposed = await answer(5, await ask(5), [
-      lecturePage2(),
-      { document_id: w.rubricId, version_id: w.rubricVersion },
-    ])
+    const proposed = await answer(5, await ask(5), [lecturePage2(), { ...lecturePage2(), page: 3 }])
     expect(proposed.body.status, JSON.stringify(proposed.body)).toBe('proposed')
     try {
       await signIn(page, d.actors.instructor)
       await page.goto(coursePath('approvals'))
       const card = page.locator('.action-card').filter({ hasText: A(5) })
-      await expect(card.locator('.answer-sources')).toHaveText('Based on 2 course materials')
+      const line = card.locator('.answer-sources')
+      await expect(line).toHaveText('Based on 1 course material')
+      // Why it only counts them, on focus as on hover.
+      const tip = page.locator('.el-popper').filter({ hasText: 'Each is checked again when the reply is approved' })
+      await expect(tip).toBeHidden()
+      await line.focus()
+      await expect(tip).toBeVisible()
       await card.getByRole('link', { name: /Details/ }).click()
-      await expect(page.locator('.answer-proposal .answer-sources')).toHaveText('Based on 2 course materials')
+      await expect(page.locator('.answer-proposal .answer-sources')).toHaveText('Based on 1 course material')
     } finally {
       // Taken back by its owner, and the agent answers at once again.
       done(
@@ -389,23 +502,54 @@ test.describe.serial('what an answer relied on', () => {
     await photograph(page, 'answer-sources-restricted')
   })
 
-  test('leads an answer that read an earlier version to the lecture as it is now, saying so', async ({ page }) => {
+  test('leads an answer that read another version, older or newer, to the lecture as it is now, saying so beside the link', async ({
+    page,
+  }) => {
     const d = demo()
-    done(
-      await call(d.actors.instructor.token, 'POST', `/v1/courses/${d.course.id}/documents/${w.lectureId}/versions`, {
+    const I = d.actors.instructor.token
+    const lecture = `/v1/courses/${d.course.id}/documents/${w.lectureId}`
+    const v2 = done(
+      await call(I, 'POST', `${lecture}/versions`, {
         body_md: `Revised: the slides are now in the notes (${STAMP}).`,
         publish: true,
       }),
       'document.add_version',
     )
+    // An answer that read the second version, published. She may ask the agent again once it, too, may no longer read
+    // rubrics: an agent that may do what she may not is not hers to ask.
+    await perms(w.tutorSeat, { rubric_read: 'denied' })
+    done(
+      await answer(8, await ask(8), [{ document_id: w.lectureId, version_id: v2.version_id }]),
+      'conversation.answer (the second version)',
+    )
     await signIn(page, w.student!)
-    const panel = await openConversation(page)
+    let panel = await openConversation(page)
+    const another = `Based on: “${LECTURE}” · another version (opens it as it is now)`
     const line = answerIn(panel, 1).locator('.chat-sources')
-    await expect(line).toHaveText(`Based on: “${LECTURE}” · an earlier version`)
+    await expect(line).toHaveText(another)
+    await expect(answerIn(panel, 8).locator('.chat-sources')).toHaveText(`Based on: “${LECTURE}”`)
     const link = line.getByRole('link')
+    await expect(link).toHaveText(`“${LECTURE}” · another version`)
     await expect(link).toHaveAttribute('href', coursePath(`documents/${w.lectureId}`))
+    await page.mouse.move(0, 400)
+    await photograph(page, 'answer-sources-another-version')
     await link.click()
     await expect(page).toHaveURL(new RegExp(`${coursePath(`documents/${w.lectureId}`)}$`))
     await expect(page.getByText(`Revised: the slides are now in the notes (${STAMP}).`)).toBeVisible()
+
+    // The first version is published again: the second, which the answer read, is newer than what she may open,
+    // and is not called earlier; the first answer's version is hers to open again.
+    done(
+      await call(I, 'POST', `${lecture}/publish`, { version_id: w.lectureVersion }),
+      'document.publish (the first again)',
+    )
+    panel = await openConversation(page)
+    await expect(answerIn(panel, 8).locator('.chat-sources')).toHaveText(another)
+    await expect(answerIn(panel, 8).locator('.chat-sources').getByRole('link')).toHaveAttribute(
+      'href',
+      coursePath(`documents/${w.lectureId}`),
+    )
+    await expect(line).toHaveText(`Based on: “${LECTURE}” · ${PDF_NAME} · page 2`)
+    expect((await panel.locator('.chat-sources').allTextContents()).join('\n')).not.toMatch(/earlier/i)
   })
 })

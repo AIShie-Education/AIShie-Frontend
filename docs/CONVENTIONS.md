@@ -918,16 +918,24 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the agent writes it; the posted answer takes its place.
 - **What an answer relied on** (its `sources`, AIShie-Core#69, `MessageSource`) is under its words
   and files (`ChatMessageSources`, each source a `ChatMessageSource`), as Core shows it to the reader
-  now: one named on a quiet line (「依據：《title》· 第 3 頁」), several summed up by the first with a
-  title and how many, the line opening to list them. A whole source opens the version read: with a
-  file, that file in the viewer among the version's (`document.get` with its `version_id`, read on
-  the click), at the page or slide named (`openPreview`'s `page`, which `PdfView` opens at, a
-  slide's in its PDF); without one, the document's page at `?version=`. `other_version` leads to the
-  document as it is now and says the answer read an earlier version; `restricted` is said to be a
-  course material the reader cannot open, with no title and no link. An empty list is the neutral
-  pill 「未引用課程教材」; no `sources` (or `null`) is an answer that did not say, and shows nothing.
-  A proposed answer keeps its sources by id alone: the queue and the action's page count them
-  (`AnswerSources`).
+  now: one named on a quiet line (「依據：《title》· lecture2.pdf · 第3頁」: Core takes a page or a
+  slide only with a `file_id`, so the file is always named before it), several summed up by the
+  first with a title and how many, the line opening to list them; a title with no spaces (one taken
+  from a file's name) breaks anywhere, in the summary as on the line, so that nothing in the chat
+  scrolls sideways. A whole source opens the version read: with a file, that file in the viewer
+  among the version's (`document.get` with its `version_id`, read on the click), at the page or
+  slide named (`openPreview`'s `page`, which `PdfView` opens at, a slide's in its PDF); without
+  one, the document's page at `?version=`. `other_version` is a version the reader may not open,
+  older or newer than the one they may (a draft, or one published before an earlier one was
+  published again): it is "another version" (「另一個版本」), never an earlier one, and its link,
+  to the document as it is now, says so beside it, not only in its tooltip ("(opens it as it is
+  now)", 「（開啟的是目前的版本）」); `restricted` is said to be a course material the reader cannot
+  open, with no title and no link. An empty list is the neutral pill 「未引用課程教材」, which takes
+  focus and says that the agent said so in a tooltip on hover, focus or a tap; no `sources` (or
+  `null`) is an answer that did not say, and shows nothing. A proposed answer keeps its sources by
+  id alone: the queue and the action's page count the course materials, each `document_id` once
+  (two pages of one lecture are one material), on a line whose tooltip, on hover, focus or a tap,
+  says each is checked again on approval (`AnswerSources`).
 - A time on Core's clock that is counted down (an invite link's ten minutes): `useCountdown(() => at)`
   from `@/composables/useCountdown` gives `text` (mm:ss), `remaining` and `ended`, all on Core's
   clock as its answers' `Date` headers tell it (`@/api/clock`), so that a classroom computer whose

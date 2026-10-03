@@ -345,7 +345,7 @@ export default {
     older: 'The message it answers is further back in the conversation.',
     unreadable: 'The message it answers cannot be shown to you.',
     reply: 'The reply',
-    // The course materials the reply says it relied on, as the proposal keeps them: by id alone, so counted.
+    // The course materials the reply says it relied on, as the proposal keeps them: by id alone, so counted, each material once.
     sources: 'Based on {n} course material | Based on {n} course materials',
     sourcesTip:
       'The agent names them by id. Each is checked again when the reply is approved, and every reader is shown them as they may open them.',
