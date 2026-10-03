@@ -557,7 +557,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
-  for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
+  for changes, late, not published). A category is neutral, in the neutral pill's colours
+  (`--app-neutral-bg`, the ground's second shade in the light theme, under `--app-neutral-fg`), told apart by
   its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
   of seat, how an agent runs (`HostingTag`). Whether an agent can be asked is neutral too, never
   green as "online" is; only its not running, which wants its owner, is amber. What is new or
@@ -568,6 +569,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
   The 「需批准」 beside an action the caller's seat must have approved is that level too:
   `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
+- **Ink** comes in three steps, 1.5:1 or more apart: `--app-ink` for text, `--app-ink-2` for what is
+  secondary to it, `--app-ink-3` for the meta beside it (a time, a column's heading, a hint, a
+  permission's key); the placeholder's ink is quieter still, for a field's placeholder. The three
+  inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
+  fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
+  fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
+  may be drawn on one of those, as a key is on a changed row, takes the third ink; any other rule
+  that writes in the placeholder's is named in `PLACEHOLDER_INK`, with its grounds. Every colour in
+  `styles/tokens.css` has its dark value, is painted with somewhere, and reads at AA on the grounds it
+  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
+  (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
+  colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
