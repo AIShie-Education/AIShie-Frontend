@@ -82,7 +82,8 @@
      any, and named before the system's Chinese fonts; in the sans, after the
      system's UI fonts, which have no Chinese but have the arrows and symbols
      Plex lacks, drawn for Latin text as Noto's are not. No stack names
-     PMingLiU, which has no bold: a browser would make a false one of it. */
+     PMingLiU, which has no bold: a browser would make a false one of it
+     (src/styles/stacks.spec.ts reads the stacks as written). */
   --app-font-sans:
     'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei',
     'Helvetica Neue', Arial, sans-serif;
