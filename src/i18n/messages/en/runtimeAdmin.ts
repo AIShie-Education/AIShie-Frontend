@@ -448,7 +448,7 @@ export default {
     providerPlaceholder: 'Choose or type a provider',
     providerHint: 'As the agent service names it: lower-case letters, digits and _, such as openai or openai_compatible.',
     modelHint: 'Exactly, or a pattern where * is any text, such as gpt-4.1*.',
-    fromHint: 'The price starts at {start}, as the day begins. It may be in the future.',
+    fromHint: 'The price starts at {start}, when the day chosen begins in UTC. It may be in the future.',
     perMTok: 'Dollars per million tokens',
     input: 'Input',
     output: 'Output',

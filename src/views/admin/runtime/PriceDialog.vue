@@ -243,7 +243,8 @@ const title = computed(() =>
           :clearable="false"
           class="price-form__from"
         />
-        <!-- The runtime's days are UTC days: when the day chosen starts, on the reader's clock, the UTC on hover. -->
+        <!-- The runtime's days are UTC days, and the hint says so: when the day chosen begins in UTC, on
+             the reader's clock (not when their own day begins, east or west of UTC), the UTC on hover. -->
         <i18n-t
           keypath="runtimeAdmin.prices.fromHint"
           tag="div"

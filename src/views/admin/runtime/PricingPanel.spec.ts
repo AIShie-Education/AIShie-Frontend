@@ -123,6 +123,26 @@ describe('the price table', () => {
     expect(w.find('[data-price="site:gpt-4.1-nano-2026-09-30"]').exists()).toBe(true)
   })
 
+  it.each([
+    ['Asia/Hong_Kong', '2026-10-03 08:00 (Hong Kong Standard Time)'],
+    // West of UTC, the day chosen begins on the evening before it.
+    ['America/New_York', '2026-10-02 20:00 (Eastern Daylight Time)'],
+  ])('says that a price’s day is UTC’s, and when it starts on the clock of a reader in %s', async (zone, start) => {
+    vi.stubEnv('TZ', zone)
+    const w = await panel()
+    await w.find('.prices-card__add').trigger('click')
+    await flushPromises()
+    const vm = w.findComponent({ name: 'PriceDialog' }).vm as unknown as { form: Record<string, string> }
+    vm.form.from = '2026-10-03'
+    await flushPromises()
+    const hint = dialog().querySelector('.price-form__from-hint')!
+    expect(hint.querySelector('.time-text--zoned')!.textContent!.trim()).toBe(start)
+    expect(hint.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+      `The price starts at ${start}, when the day chosen begins in UTC. It may be in the future.`,
+    )
+    vi.unstubAllEnvs()
+  })
+
   it('says a price taken for the same model and day on the day', async () => {
     const w = await panel()
     s.once('POST', ADMIN.prices, () => refusal(409, 'conflict', 'price_exists', { field: '/from', id: 'mini' }))

@@ -410,7 +410,7 @@ export default {
     providerPlaceholder: '選擇或輸入供應商',
     providerHint: '按執行環境的命名：小寫字母、數字和 _，例如 openai 或 openai_compatible。',
     modelHint: '完整名稱，或以 * 代表任何文字的模式，例如 gpt-4.1*。',
-    fromHint: '價格由{start}起生效，即這一天開始之時；可以是將來的日子。',
+    fromHint: '價格由{start}起生效，即所選日子在 UTC 開始之時；可以是將來的日子。',
     perMTok: '每百萬 token 美元',
     input: '輸入',
     output: '輸出',

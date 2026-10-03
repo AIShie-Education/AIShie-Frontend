@@ -267,13 +267,14 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
 - **Timestamps** are RFC 3339 strings. Show with `<TimeText :value />` (absolute, relative on hover,
   or `relative`). Send with `dayjs(x).toISOString()`; date-only fields (term `starts_on`) as
   `YYYY-MM-DD`. Every time is on one clock, the reader's (Core keeps no school's time zone); UTC is
-  never said in words, only on hover. A **cut-off**, a time something stops being taken (an
-  assignment's due date, when a seat, a join link, an invitation, a token or an export ends), is
-  `<TimeText :value cutoff />`: its time zone named in the page's language ("2026-10-08 23:59 (Hong
-  Kong Standard Time)", 「香港標準時間 2026-10-08 23:59」, `common.time.zoned`) and the exact instant in
-  UTC on hover; shown `relative`, the zoned time and the UTC are both on hover. In a sentence, a
-  cut-off is `zonedText` (`@/utils/parts`); where a time is picked for one (the assignment's due
-  date), the hint names the zone it is picked in.
+  said only on hover, but where a day someone picks is UTC's (a price's day), which the words say. A
+  **cut-off**, a time something stops being taken (an assignment's due date, when a seat, a join
+  link, an invitation, a token or an export ends), is `<TimeText :value cutoff />`: its time zone
+  named in the page's language ("2026-10-08 23:59 (Hong Kong Standard Time)", 「香港標準時間
+  2026-10-08 23:59」, `common.time.zoned`) and the exact instant in UTC on hover; shown `relative`,
+  the zoned time and the UTC are both on hover. In a sentence, a cut-off is `zonedText`
+  (`@/utils/parts`); where a time is picked for one (the assignment's due date), the hint names the
+  zone it is picked in.
 - Optional fields: omit them (`undefined`) rather than sending `null`, unless the tool says `null`
   means something. Some updates have explicit `clear_*` flags (`clear_due_at`, `clear_component`,
   `clear_points_possible`, `clear_expiry`): use those to unset.
@@ -363,9 +364,11 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
   cent at least, as US dollars (`formatMoney`, "US$0.0184"; a price someone typed with every figure
   it has, `formatMoney(v, { exact: true })`, "US$1.875") and typed as decimals (`usdProblem`), empty
-  for no limit. A price's day is a UTC day, said by when it starts on the reader's clock (`<TimeText
-  cutoff>` of its 00:00 UTC), and a count "today" by when it starts again (`<DailyReset>`), never as
-  "(UTC)" in a title. A refusal
+  for no limit. A price's day is a UTC day: its hint says so in words, and when that day begins on
+  the reader's clock (`<TimeText cutoff>` of its 00:00 UTC), never that it is when the day begins,
+  which is so only in UTC (east of it the price starts in the morning, west of it the evening
+  before). A count "today" is said by when it starts again (`<DailyReset>`), never as "(UTC)" in a
+  title. A refusal
   that a quota in dollars needs prices (`offer_not_priced`, with `details.offers`) lists those
   models with "Add a price" (`<UnpricedNotice>`, `<PriceDialog>`); `model_not_priced` lists its
   agents' lines. Costs are shown by `lines` kind: a document's transcription is a line of its own
