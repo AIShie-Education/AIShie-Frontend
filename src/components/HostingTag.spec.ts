@@ -26,6 +26,16 @@ describe('HostingTag', () => {
     expect(tags({ hosting: 'runtime', siteChat: null })).toEqual(['Hosted on AIshie'])
   })
 
+  it('is neutral, as a kind is: no green for how it runs or for being askable, the amber only for not running', () => {
+    const types = (props: { hosting: string; siteChat?: boolean }) =>
+      mount(HostingTag, { props, global })
+        .findAll('.el-tag')
+        .map((t) => ['success', 'warning', 'danger', 'primary', 'info'].find((k) => t.classes(`el-tag--${k}`)))
+    expect(types({ hosting: 'runtime', siteChat: true })).toEqual(['info', 'info'])
+    expect(types({ hosting: 'mcp' })).toEqual(['info'])
+    expect(types({ hosting: 'runtime', siteChat: false })).toEqual(['info', 'warning'])
+  })
+
   it('says nothing of whether one with MCP access runs: nobody asks it here', () => {
     expect(tags({ hosting: 'mcp', siteChat: false })).toEqual(['MCP access'])
   })

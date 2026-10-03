@@ -550,7 +550,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
   for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
   its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
-  of seat. What is new or unread, and a count of what waits for the reader's decision, is indigo. A
+  of seat, how an agent runs (`HostingTag`). Whether an agent can be asked is neutral too, never
+  green as "online" is; only its not running, which wants its owner, is amber. What is new or
+  unread, and a count of what waits for the reader's decision, is indigo. A
   level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
   `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
   confirm_required a raised hand on the indigo's tint; pending_review an eye, outlined in ink;

@@ -77,7 +77,7 @@ defineExpose({ refresh })
               <AskableText :who="r" :name="r.display_name" :hint-id="`resp-${r.member_id}-ask`" />
               <StatusTag v-if="r.answer_level !== 'autonomous'" vocab="answerLevel" :value="r.answer_level" />
             </span>
-            <span v-if="!r.is_my_delegate" class="resp-row__note">{{ t('chat.respondents.sharedHint') }}</span>
+            <span v-if="agentPurpose(r) === 'course'" class="resp-row__note">{{ t('chat.respondents.sharedHint') }}</span>
             <span v-if="offline(r)" class="resp-row__warn">
               {{ t('chat.respondents.offlineHint') }}
             </span>

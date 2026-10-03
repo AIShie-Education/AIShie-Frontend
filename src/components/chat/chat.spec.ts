@@ -527,6 +527,12 @@ describe('agents only', () => {
     expect(agentPurpose(r('agent', true))).toBe('personal')
     expect(agentPurpose(r('agent'))).toBe('course')
   })
+
+  it('calls a course agent one, the caller’s own included, as the Agents tab does', () => {
+    expect(agentPurpose({ ...r('agent', true), answers_course: true })).toBe('course')
+    expect(agentPurpose({ ...r('agent', true), answers_course: false })).toBe('personal')
+    expect(agentPurpose({ ...r('agent'), answers_course: true })).toBe('course')
+  })
 })
 
 describe('site chat', () => {

@@ -126,6 +126,17 @@ describe('AgentPicker', () => {
     expect(rows[1]!.text()).not.toContain('It answers other members too')
   })
 
+  it('calls a course agent of the caller’s own a course agent, as its page does, and says it answers others too', async () => {
+    respondents = [{ ...tutor, member_id: 'own-tutor', display_name: 'CS101 tutor', is_my_delegate: true }]
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    const row = w.find('button.resp-row')
+    expect(row.text()).toContain('Your agent')
+    expect(row.text()).toContain('Course agent')
+    expect(row.text()).not.toContain('Personal agent')
+    expect(row.text()).toContain('It answers other members too')
+  })
+
   it('makes each row one control: nothing in it takes focus, and what the tooltips say describes it', async () => {
     respondents = [
       { ...tutor, last_seen_at: null },
