@@ -1116,6 +1116,13 @@ describe('the administrators’ calls', () => {
       '/runtime/api/v1/admin/transcription/jobs?status=failed&limit=50&after=j-9',
       undefined,
     ],
+    [
+      'openRouterEndpoints',
+      () => rt.runtimeAdmin.openRouterEndpoints('meta-llama/llama-3.3-70b-instruct:nitro'),
+      'GET',
+      '/runtime/api/v1/admin/openrouter/endpoints?model=meta-llama%2Fllama-3.3-70b-instruct%3Anitro',
+      undefined,
+    ],
   ] as const)('%s goes where the contract says', async (_, call, method, url, body) => {
     runtimeAnswers.push(json(200, OFFER, { ETag: '"2"' }))
     const out = await call()
@@ -1137,6 +1144,35 @@ describe('the administrators’ calls', () => {
     runtimeAnswers.push(empty(502), json(200, {}))
     await pastRetries(rt.runtimeAdmin.deleteTranscriptionCredential())
     expect(runtimeCalls()).toHaveLength(3)
+  })
+
+  it('asks OpenRouter’s upstream providers once, the runtime having waited for OpenRouter already', async () => {
+    runtimeAnswers.push(
+      json(503, {
+        error: {
+          code: 'unavailable',
+          message: 'OpenRouter could not be reached',
+          details: { reason: 'openrouter_unavailable', http_status: null },
+        },
+      }),
+    )
+    const err = await failure(rt.runtimeAdmin.openRouterEndpoints('meta-llama/llama-3.3-70b-instruct'))
+    expect(err).toMatchObject({ status: 503, reason: 'openrouter_unavailable' })
+    expect(runtimeCalls()).toHaveLength(1)
+  })
+
+  it('aborts the list asked for a model typed before', async () => {
+    const ctrl = new AbortController()
+    const aborted = () => new DOMException('aborted', 'AbortError')
+    runtimeAnswers.push(() =>
+      ctrl.signal.aborted
+        ? Promise.reject(aborted())
+        : new Promise<Response>((_, reject) => ctrl.signal.addEventListener('abort', () => reject(aborted()))),
+    )
+    const asked = rt.runtimeAdmin.openRouterEndpoints('meta-llama/llama-3.3-70b', ctrl.signal)
+    ctrl.abort()
+    await expect(asked).rejects.toMatchObject({ name: 'AbortError' })
+    expect(runtimeCalls()).toHaveLength(1)
   })
 
   it('names a price’s version when changing it, and when deleting it if asked to', async () => {

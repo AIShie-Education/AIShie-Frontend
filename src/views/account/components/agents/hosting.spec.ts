@@ -129,6 +129,8 @@ const GENERIC = [
   'transcription_unavailable',
   'offer_no_file_input',
   'credential_rejected',
+  'openrouter_unavailable',
+  'openrouter_model_not_found',
 ]
 
 describe('the words for each error reason', () => {

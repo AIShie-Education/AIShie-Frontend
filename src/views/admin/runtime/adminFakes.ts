@@ -6,13 +6,18 @@
 // runtime keeps them, and answered as its contract has them; so are the
 // transcriber's settings, credential and jobs, and Core's credentials of the
 // transcription service (issued at random as a test runs: no token is
-// written in any file).
+// written in any file). OpenRouter's upstream providers for a model are
+// answered from state.openrouter, by model: OpenRouter itself is never
+// called.
 import type {
   AgentBudgets,
   CostGroup,
   CostReport,
   OcrSettings,
+  OpenRouterEndpoint,
+  OpenRouterEndpoints,
   PlanOffer,
+  ProviderOffer,
   PriceRow,
   PriceTable,
   RuntimeSettings,
@@ -55,6 +60,138 @@ export const ADMIN = {
   serviceCredentials: /^\/v1\/services\/document_text\/credentials$/,
   serviceRevoke: /^\/v1\/services\/document_text\/credentials\/([^/]+)\/revoke$/,
   document: /^\/v1\/courses\/([^/]+)\/documents\/([^/]+)$/,
+  openrouterEndpoints: /^\/runtime\/api\/v1\/admin\/openrouter\/endpoints$/,
+}
+
+/**
+ * OpenRouter as the runtime offers it for a key (GET /models): here, and not
+ * among hostingFakes' OFFERS, so that the hosting pages' tests stand as they
+ * are. A test of an offer of OpenRouter's passes [...OFFERS, OPENROUTER].
+ */
+export const OPENROUTER: ProviderOffer = {
+  provider: 'openrouter',
+  label: 'OpenRouter',
+  adapters: ['openai_chat'],
+  endpoint: { kind: 'fixed', base_url: 'https://openrouter.ai/api/v1' },
+  key_prefix: 'sk-or-',
+  suggested_models: [{ model: 'meta-llama/llama-3.3-70b-instruct', priced: false }],
+}
+
+/** The model the fixture lists upstream providers for. */
+export const OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct'
+
+/** One upstream provider's endpoint, as the runtime answers it: listed prices, before any discount. */
+export function openRouterEndpoint(over: Partial<OpenRouterEndpoint> = {}): OpenRouterEndpoint {
+  return {
+    slug: 'groq',
+    provider: 'groq',
+    provider_name: 'Groq',
+    quantization: 'unknown',
+    usd_per_mtok: { input: '0.590000', output: '0.790000', cache_read: null, cache_write: null },
+    usd_per_request: null,
+    usd_per_image: null,
+    discount: 0,
+    higher_above_tokens: null,
+    context_length: 131072,
+    max_output_tokens: 32768,
+    max_prompt_tokens: null,
+    tools: true,
+    tool_choice: true,
+    reasoning: false,
+    zdr: true,
+    status: 0,
+    uptime_30m: 99.26,
+    uptime_1d: 99.1,
+    latency: null,
+    throughput: null,
+    headquarters: 'US',
+    datacenters: ['US'],
+    privacy_policy_url: 'https://groq.com/privacy-policy/',
+    terms_of_service_url: 'https://groq.com/terms-of-use/',
+    status_page_url: 'https://groqstatus.com/',
+    ...over,
+  }
+}
+
+/**
+ * GET admin/openrouter/endpoints's answer for OPENROUTER_MODEL, from the
+ * contract's shape and OpenRouter's own list: Groq (calls tools, ZDR),
+ * DeepInfra's turbo (calls tools, FP8), Cloudflare (no tools), and Google
+ * Vertex's base slug beside one of its regions, to try coverage; the price
+ * table has no price for it unless said.
+ */
+export function openRouterEndpointsFixture(over: Partial<OpenRouterEndpoints> = {}): OpenRouterEndpoints {
+  return {
+    model: OPENROUTER_MODEL,
+    name: 'Meta: Llama 3.3 70B Instruct',
+    fetched_at: AT,
+    stale: false,
+    price: null,
+    endpoints: [
+      openRouterEndpoint(),
+      openRouterEndpoint({
+        slug: 'deepinfra/turbo',
+        provider: 'deepinfra',
+        provider_name: 'DeepInfra',
+        quantization: 'fp8',
+        usd_per_mtok: { input: '0.100000', output: '0.320000', cache_read: null, cache_write: null },
+        max_output_tokens: 16384,
+        zdr: false,
+        uptime_30m: 98.85,
+        uptime_1d: 98.48,
+        privacy_policy_url: 'https://deepinfra.com/privacy',
+        terms_of_service_url: 'https://deepinfra.com/terms',
+        status_page_url: 'https://status.deepinfra.com/',
+      }),
+      openRouterEndpoint({
+        slug: 'cloudflare/fp8',
+        provider: 'cloudflare',
+        provider_name: 'Cloudflare',
+        quantization: 'fp8',
+        usd_per_mtok: { input: '0.293000', output: '2.253000', cache_read: null, cache_write: null },
+        context_length: 24000,
+        max_output_tokens: 21600,
+        tools: false,
+        tool_choice: false,
+        zdr: false,
+        uptime_30m: 99.43,
+        uptime_1d: 99.2,
+        privacy_policy_url: 'https://www.cloudflare.com/privacypolicy/',
+        terms_of_service_url: 'https://www.cloudflare.com/website-terms/',
+        status_page_url: 'https://www.cloudflarestatus.com/',
+      }),
+      openRouterEndpoint({
+        slug: 'google-vertex',
+        provider: 'google-vertex',
+        provider_name: 'Google',
+        usd_per_mtok: { input: '0.720000', output: '0.720000', cache_read: '0.360000', cache_write: null },
+        context_length: 128000,
+        max_output_tokens: 115200,
+        zdr: false,
+        uptime_30m: null,
+        uptime_1d: null,
+        privacy_policy_url: 'https://cloud.google.com/terms/cloud-privacy-notice',
+        terms_of_service_url: 'https://cloud.google.com/terms/',
+        status_page_url: 'https://status.cloud.google.com/',
+      }),
+      openRouterEndpoint({
+        slug: 'google-vertex/us-central1',
+        provider: 'google-vertex',
+        provider_name: 'Google',
+        usd_per_mtok: { input: '0.720000', output: '0.720000', cache_read: '0.360000', cache_write: null },
+        context_length: 128000,
+        max_output_tokens: 8192,
+        zdr: false,
+        status: -1,
+        uptime_30m: null,
+        uptime_1d: null,
+        privacy_policy_url: 'https://cloud.google.com/terms/cloud-privacy-notice',
+        terms_of_service_url: 'https://cloud.google.com/terms/',
+        status_page_url: 'https://status.cloud.google.com/',
+      }),
+    ],
+    ...over,
+  }
 }
 
 /** runtime.yaml's offer: the operator's, read-only here. */
@@ -75,6 +212,7 @@ export function configOffer(over: Partial<PlanOffer> = {}): PlanOffer {
     enabled: true,
     status: 'offered',
     priced: true,
+    openrouter: null,
     agents: 14,
     key_hint: null,
     key_status: null,
@@ -105,6 +243,7 @@ export function siteOffer(over: Partial<PlanOffer> = {}): PlanOffer {
     enabled: true,
     status: 'offered',
     priced: true,
+    openrouter: null,
     agents: 3,
     key_hint: 'sk-…3f9a',
     key_status: 'tested',
@@ -475,6 +614,12 @@ export interface AdminState {
     /** The tokens the runtime was given. */
     received: string[]
   }
+  /**
+   * OpenRouter's upstream providers by model, as the runtime answers them,
+   * or its refusal (refusal(503, 'unavailable', 'openrouter_unavailable')); a
+   * model not here is one OpenRouter has not (404 openrouter_model_not_found).
+   */
+  openrouter: Record<string, OpenRouterEndpoints | Response>
 }
 
 /**
@@ -682,6 +827,13 @@ export function withAdmin(s: Servers, state: AdminState): Servers {
     })
     return json(200, state.plan)
   })
+  s.on('GET', ADMIN.openrouterEndpoints, (c) => {
+    const model = new URLSearchParams(c.url.split('?')[1] ?? '').get('model') ?? ''
+    const a = state.openrouter[model]
+    if (!a) return refusal(404, 'not_found', 'openrouter_model_not_found', { field: 'model' })
+    if (a instanceof Response) return a.clone()
+    return json(200, a, { 'Cache-Control': 'no-store' })
+  })
   s.on('POST', ADMIN.offers, (c) => {
     const b = body(c.body)
     const o = siteOffer({
@@ -697,6 +849,7 @@ export function withAdmin(s: Servers, state: AdminState): Servers {
       reasoning_effort: b.reasoning_effort ?? null,
       enabled: b.enabled ?? true,
       status: b.enabled === false ? 'disabled' : 'offered',
+      openrouter: b.openrouter ?? null,
       agents: 0,
       key_hint: 'sk-…new1',
       key_status: b.skip_key_test ? 'untested' : 'tested',
@@ -724,7 +877,9 @@ export function withAdmin(s: Servers, state: AdminState): Servers {
     state.plan.offers[i] = o
     const { key, skip_key_test, ...rest } = body(c.body)
     const model = ['provider', 'adapter', 'model', 'endpoint', 'resource', 'region'].some((k) => k in rest)
+    // The routing as sent replaces the one kept (null removes it); a move to another provider drops it.
     Object.assign(o, rest)
+    if (o.provider !== 'openrouter') o.openrouter = null
     if (key) {
       o.key_hint = 'sk-…new2'
       o.key_status = skip_key_test ? 'untested' : 'tested'
@@ -934,6 +1089,7 @@ export function adminState(over: Partial<AdminState> = {}): AdminState {
       }),
     ],
     service: { credentials: [serviceCredential()], issued: [], received: [] },
+    openrouter: { [OPENROUTER_MODEL]: openRouterEndpointsFixture() },
     ...over,
   }
 }

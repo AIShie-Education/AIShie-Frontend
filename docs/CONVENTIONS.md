@@ -375,7 +375,22 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   own-model form's pieces (`hosting.ts`: `ModelForm`, `choiceFrom`, `formProblems`, `keyProblem`),
   and an edit sends only what changed from the offer as read (`offerPatchFrom`), at its version: a
   412 reads it again and keeps what the administrator changed over it. A key's trial that failed
-  (`key_test_failed`) says what the provider answered (`keyTrialOf`). Who changed a setting is
+  (`key_test_failed`) says what the provider answered (`keyTrialOf`). An offer of OpenRouter's has
+  its upstream routing in a section of its own (`OpenRouterRouting.vue`): OpenRouter's `provider`
+  object, typed `OpenRouterRouting` and worked on in `openRouter.ts`, whose preview is the canonical object the
+  runtime stores and sends (`routingFromForm`, sent whole, and on an edit only where it changed),
+  whose upstream providers are listed from `runtimeAdmin.openRouterEndpoints` (asked as the model
+  is typed, the request before aborted), and whose warnings (nothing may answer, no tools, prices
+  above the price table's) are computed from that list, never claimed for data policy, which the
+  list does not tell. A row says on itself, in words and in its switch's name, that a limit leaves
+  it out (never by fading it), and links its policies there, not in a tooltip; the order's buttons
+  are a finger's size on a touch screen, hand the focus on as one goes, and say the place taken
+  aloud. Its table's six columns fit the dialog at its widest (712 px of body); in a narrower window,
+  and on any touch screen, whose order's column they would leave too narrow, each row's price, tools
+  and uptime fold under its name, as on a phone's card, so that nothing is behind a sideways scroll.
+  "Clear the upstream routing" sends none, and a server that does not take it yet
+  (`unknown_field` at `/openrouter`) is answered with "Save without upstream routing", done only
+  when asked. Who changed a setting is
   named from Core (`<ChangedBy>`, `actor.get`). Dollars come as six-place strings, are shown to the
   cent at least, as US dollars (`formatMoney`, "US$0.0184"; a price someone typed with every figure
   it has, `formatMoney(v, { exact: true })`, "US$1.875") and typed as decimals (`usdProblem`), empty

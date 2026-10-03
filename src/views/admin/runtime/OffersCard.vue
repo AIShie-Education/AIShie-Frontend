@@ -7,7 +7,9 @@
 // whose owners have a model of their own behind it go on with that, the
 // others wait for their owners to choose again. A change names the version
 // read (If-Match); one made meanwhile elsewhere (412) reads the plan again
-// and says so.
+// and says so. An offer with OpenRouter's upstream routing says so beside
+// its ID, and shows what is sent on asking: runtime.yaml's as well, which
+// has no dialog.
 import { computed, ref, shallowRef, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -16,6 +18,7 @@ import type { PlanOffer, ProviderOffer, SchoolPlan } from '@/api/runtime-types'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { providerLabel } from '@/views/account/components/agents/hosting'
 import AppEmpty from '@/components/AppEmpty.vue'
+import JsonView from '@/components/JsonView.vue'
 import RefreshButton from '@/components/RefreshButton.vue'
 import OfferDialog from './OfferDialog.vue'
 import OfferKey from './OfferKey.vue'
@@ -195,6 +198,25 @@ function openEdit(o: PlanOffer) {
             <span class="offer-cell__meta">
               <code class="offer-cell__id">{{ row.id }}</code>
               <template v-if="where(row)">{{ t('common.sep') }}{{ where(row) }}</template>
+              <template v-if="row.openrouter"
+                >{{ t('common.sep')
+                }}<el-popover
+                  trigger="click"
+                  :width="360"
+                  placement="bottom-start"
+                  :title="t('runtimeAdmin.offers.routingTitle')"
+                >
+                  <template #reference>
+                    <el-button link type="primary" size="small" class="offer-cell__routing">{{
+                      t('runtimeAdmin.offers.routing')
+                    }}</el-button>
+                  </template>
+                  <JsonView
+                    :value="{ provider: row.openrouter }"
+                    max-height="320px"
+                    class="offer-cell__routing-json"
+                  /> </el-popover
+              ></template>
             </span>
             <template v-if="narrow">
               <OfferStatus :offer="row" />
@@ -303,6 +325,12 @@ function openEdit(o: PlanOffer) {
   font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
   word-break: break-word;
+}
+.offer-cell__routing.el-button {
+  height: auto;
+  padding: 0;
+  font-size: inherit;
+  vertical-align: baseline;
 }
 .offer-cell__count {
   font-variant-numeric: tabular-nums;
