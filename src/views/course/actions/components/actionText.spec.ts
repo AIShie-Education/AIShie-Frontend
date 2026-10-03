@@ -25,10 +25,12 @@ import {
   routeFor,
   storedDecision,
   storedError,
+  typeLabel,
   useJudgeRules,
   type ActionRow,
 } from './actionText'
 import { forgetMyAgents } from './myAgents'
+import { setLocale } from '@/i18n'
 
 const COURSE = 'c1'
 
@@ -285,5 +287,17 @@ describe('excerpt', () => {
     expect(excerpt('x'.repeat(100), 10)).toBe(`${'x'.repeat(9)}…`)
     expect(excerpt('   ')).toBeUndefined()
     expect(excerpt(42)).toBeUndefined()
+  })
+})
+
+describe('typeLabel', () => {
+  it('says in words that a conversation was marked read, which a student does each time she reads an answer', () => {
+    setLocale('en')
+    expect(typeLabel('conversation.mark_read')).toBe('Mark a conversation read')
+    setLocale('zh-Hant')
+    expect(typeLabel('conversation.mark_read')).toBe('標示對話為已讀')
+    setLocale('zh-Hans')
+    expect(typeLabel('conversation.mark_read')).toBe('将对话标记为已读')
+    setLocale('en')
   })
 })

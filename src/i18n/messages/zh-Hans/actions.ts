@@ -216,6 +216,7 @@ export default {
       answer: '回复提问',
       close: '结束对话',
       retract: '撤回消息',
+      mark_read: '将对话标记为已读',
     },
     component: {
       create: '添加评分项',

@@ -478,6 +478,13 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 .course-tabs__more-wrap {
   flex: 0 0 auto;
 }
+/* On a touch screen a tab, pressed as often as anything, is 44 px, as Element Plus's controls are there
+   (docs/CONVENTIONS.md: a control of the app's own pressed often is at least 40 px). */
+@media (pointer: coarse) {
+  .course-tabs__item {
+    height: 44px;
+  }
+}
 .course-tabs__caret {
   font-size: 12px;
 }
@@ -513,6 +520,11 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 }
 .course-tabs__menu .el-dropdown-menu__item .el-icon {
   margin-right: 0;
+}
+@media (pointer: coarse) {
+  .course-tabs__menu-link {
+    min-height: 44px;
+  }
 }
 .course-tabs__menu .el-dropdown-menu__item.is-active {
   color: var(--app-indigo);

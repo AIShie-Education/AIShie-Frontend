@@ -223,6 +223,7 @@ export default {
       answer: 'Answer a question',
       close: 'Close a conversation',
       retract: 'Withdraw a message',
+      mark_read: 'Mark a conversation read',
     },
     component: {
       create: 'Add a grading component',

@@ -550,7 +550,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
   for changes, late, not published). A category is neutral, the ground's second shade under the third ink, told apart by
   its icon's shape: the activity feed's kinds of event, roles and platform roles, kinds of actor and
-  of seat. What is new or unread, and a count of what waits for the reader's decision, is indigo. A
+  of seat, how an agent runs (`HostingTag`). Whether an agent can be asked is neutral too, never
+  green as "online" is; only its not running, which wants its owner, is amber. What is new or
+  unread, and a count of what waits for the reader's decision, is indigo. A
   level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
   `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
   confirm_required a raised hand on the indigo's tint; pending_review an eye, outlined in ink;
@@ -618,7 +620,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   48 large) and its fields' text 16 px, below which iOS zooms into a field it focuses; a component
   that sets the text size of a field one types into (`MarkdownEditor`'s 13 px monospace, the PDF
   viewer's page number) outweighs that rule, and so sets 16 px under `pointer: coarse` itself. A
-  control of the app's own that is pressed often is at least 40 px there. Never set `maximum-scale` or
+  control of the app's own that is pressed often is at least 40 px there: a course's tabs (44), the
+  grades' own tabs (40) and the links of the phone's menu (44) among them. Never set `maximum-scale` or
   `user-scalable` in the viewport: zooming is the reader's.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
@@ -682,7 +685,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   newer grade or of its rubric's version. What they may be asked to quote stays: the action that made
   a grade, an action's own page (its id, its actor's and its target's), and their account's ID on
   Account. Where a person cannot be named to them (a student may not read the member list),
-  `<MemberName>` still shows a short member ID, a grade's grader say, until Core names them.
+  `<MemberName>` says "someone in the course" (「一位成員」), a grade's grader say, until Core names
+  them: never a hash in a line that says who acted ("→ 430c5829 approved"), and no member ID in a
+  `title` either, which a touch screen or a keyboard cannot reach and a screen reader reads out
+  whole. What they quote instead is the action, its ID on its page (a grade's, under the grade),
+  which tells whoever reads the action log who it was. Where the name is known otherwise, pass it
+  (`:agent`): a student's own agent by the name in its proposal or in her agents (agent.list), the
+  agent a conversation is with by the name `conversation.get` gives it.
 - `<MemberSelect :statuses="['active', 'paused']">` for lists Core takes paused members in;
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.

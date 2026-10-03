@@ -59,6 +59,8 @@ export default {
     all: '全部',
     you: '你',
     youTag: '（你）',
+    // A member the caller's seat may not look up (MemberName): no id, which would tell them nothing.
+    someMember: '一位成员',
     andMore: '另外{n}个',
     never: '从不',
     points: '分数',

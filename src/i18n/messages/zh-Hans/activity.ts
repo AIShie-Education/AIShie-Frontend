@@ -60,6 +60,7 @@ export default {
     action: '操作',
     component: '评分结构',
     gradebook: '成绩册',
+    conversation: '对话',
   },
   target: {
     submission: '一份提交',
@@ -72,6 +73,9 @@ export default {
     action: '一项操作',
     gradebook: '成绩册',
     upload: '一个上传文件',
+    actor: '一位人员或智能体',
+    conversation: '一段对话',
+    conversation_message: '一条消息',
   },
   fact: {
     onTarget: '对象：{target}',

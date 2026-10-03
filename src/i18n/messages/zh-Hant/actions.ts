@@ -216,6 +216,7 @@ export default {
       answer: '回覆提問',
       close: '結束對話',
       retract: '撤回訊息',
+      mark_read: '標示對話為已讀',
     },
     component: {
       create: '新增評分項目',

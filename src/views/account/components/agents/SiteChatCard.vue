@@ -15,7 +15,9 @@ const props = defineProps<{ agent: AgentFull }>()
 const { t } = useI18n()
 
 const state = computed(() => siteChatState(props.agent))
-const TAG = { on: 'success', off: 'warning', suspended: 'info', mcp: 'info' } as const
+// Neutral while it can be asked, as the chat and the course's agents say it: an agent is never shown
+// "online" in green (docs/CONVENTIONS.md). Not running, which wants its owner, is the amber of what waits.
+const TAG = { on: 'info', off: 'warning', suspended: 'info', mcp: 'info' } as const
 const label = computed(() => {
   switch (state.value) {
     case 'on':
