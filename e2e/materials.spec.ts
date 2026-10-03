@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { coursePath, courseTab, demo, expectToasted, keepToasts, signIn } from './support'
+import { coursePath, openCourseTab, demo, expectToasted, keepToasts, signIn } from './support'
 
 const TITLE = `Week 3 — Loops (e2e ${Date.now().toString(36)})`
 const BODY = [
@@ -22,7 +22,7 @@ test.describe.serial('course material', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Materials').click()
+    await openCourseTab(page, 'Materials')
     // The instructor also sees the unpublished Week 2, marked as such.
     const week2 = page.locator('.material-row').filter({ hasText: 'Week 2 — Variables and types' })
     await expect(week2).toContainText('Not published')
@@ -59,7 +59,7 @@ test.describe.serial('course material', () => {
     await expect(page.getByRole('button', { name: 'Publish this version' })).toHaveCount(0)
     await expect(page.locator('.doc-content__meta')).toContainText('Published')
 
-    await courseTab(page, 'Materials').click()
+    await openCourseTab(page, 'Materials')
     await expect(row).toContainText('Published')
   })
 
@@ -67,7 +67,7 @@ test.describe.serial('course material', () => {
     const d = demo()
     await signIn(page, d.actors.yuki)
     await page.goto(coursePath())
-    await courseTab(page, 'Materials').click()
+    await openCourseTab(page, 'Materials')
     await expect(page.getByText('The course material that has been published', { exact: false })).toBeVisible()
 
     const row = page.locator('.material-row').filter({ hasText: TITLE })

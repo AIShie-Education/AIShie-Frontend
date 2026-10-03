@@ -430,12 +430,6 @@ function exportCsv() {
 <template>
   <div class="classbook">
     <PageHeader :title="t('grades.gradebook.title')" :subtitle="t('classbook.subtitle')">
-      <router-link :to="{ name: 'course-grades', params: { courseId } }">
-        <el-button>
-          <el-icon><Medal /></el-icon>
-          <span>{{ t('classbook.allGrades') }}</span>
-        </el-button>
-      </router-link>
       <el-button :disabled="!ready || !shown.length" @click="exportCsv">
         <el-icon><Download /></el-icon>
         <span>{{ t('classbook.export') }}</span>

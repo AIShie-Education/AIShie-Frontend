@@ -278,7 +278,11 @@ test.describe('on a phone', () => {
     await expect(menu.locator('.app-nav-drawer__brand').getByRole('img', { name: 'aishie' })).toBeVisible()
     expect(Math.round(top.y)).toBe(Math.round(brand.y + brand.height))
     const panel = menu.getByRole('tabpanel')
-    await expect(panel.locator(`a.side-course[href="${coursePath()}"]`)).toHaveAttribute('aria-current', 'page')
+    // The course the page is in, its tabs under it: the Overview tab is the page, the course the one it is in.
+    await expect(panel.locator(`a.side-course[href="${coursePath()}"]`)).toHaveAttribute('aria-current', 'true')
+    await expect(
+      panel.getByRole('navigation', { name: /^Sections of / }).getByRole('link', { name: 'Overview' }),
+    ).toHaveAttribute('aria-current', 'page')
     expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(390)
 
     await tabs.getByRole('tab', { name: 'Agents' }).click()

@@ -20,7 +20,6 @@ export default {
     stateFilterHint: '狀態篩選只套用於目前已載入的資料；如要查看更多，請載入更多。',
     empty: '尚未有任何成績',
     emptyFiltered: '沒有符合篩選條件的成績',
-    gradebook: '成績冊',
   },
   noRead: {
     title: '此席位不能查看成績',
@@ -31,7 +30,6 @@ export default {
   mine: {
     title: '我的成績',
     subtitle: '已向你發佈的成績。成績在發佈前不會顯示。',
-    gradebook: '我的成績冊',
     empty: '目前尚未有成績向你發佈',
   },
   post: {
@@ -185,7 +183,6 @@ export default {
     title: '成績冊',
     subtitle: '學生在整個評分結構中的表現，按已發佈的成績即時計算。',
     subtitleOwn: '你在整個評分結構中的表現，按你已發佈的成績即時計算。',
-    toGrades: '成績',
     pickStudent: '選擇學生',
     pasteMemberId: '選擇學生，或貼上成員 ID',
     noSeenStudents: '尚未見到任何學生：請貼上成員 ID',

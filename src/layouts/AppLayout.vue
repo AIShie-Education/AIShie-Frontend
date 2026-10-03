@@ -7,8 +7,8 @@
 // page's title and, at its right end, the chat's button; and the page, which
 // runs to the window's right edge. The chat with the courses' agents opens
 // from that button, with how many answers are not read, in a window over the
-// page (ChatPanel). On a phone there is no activity bar: the brand's mark at
-// the header's left opens the views in a drawer, the wordmark at its top and
+// page (ChatPanel). On a phone there is no activity bar: three lines at the
+// header's left open the views in a drawer, the wordmark at its top and
 // tabs under it, with the account at its bottom, and the chat opens from a
 // round button floating at the bottom right, which goes out of the way while
 // the page is scrolled down, as a sheet over the page. A newer build
@@ -17,7 +17,9 @@
 // list of files is shown in the file viewer (FileViewer), over the page,
 // whose code is fetched the first time a file is opened. Back closes the
 // phone's menu, the chat's sheet and the file viewer, the top one first,
-// rather than leaving the page (useBackCloses).
+// rather than leaving the page (useBackCloses). On a course's pages the top
+// bar is the way back up, the course and the tab (CourseCrumbs), rather than
+// the page's name again.
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -25,7 +27,6 @@ import { useChatStore } from '@/stores/chat'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import { shortcutLabel } from '@/components/chat/panel'
 import AccountMenu from '@/components/sidebar/AccountMenu.vue'
-import AppMark from '@/components/AppMark.vue'
 import AppWordmark from '@/components/AppWordmark.vue'
 import NewVersionNotice from '@/components/NewVersionNotice.vue'
 import { previewState } from '@/components/preview/viewer'
@@ -36,6 +37,8 @@ import { useSideBarStore } from '@/stores/sidebar'
 import { useBackCloses } from '@/composables/useBackCloses'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { titleKey } from '@/router/title'
+import { useCourseStore } from '@/stores/course'
+import CourseCrumbs from './CourseCrumbs.vue'
 
 const chat = useChatStore()
 const route = useRoute()
@@ -114,6 +117,12 @@ const pageTitle = computed(() => {
   const key = titleKey(route)
   return key ? t(key) : ''
 })
+// On a course's pages, once the course is read: its breadcrumb.
+const course = useCourseStore()
+const crumbsCourse = computed(() => {
+  const id = route.params.courseId
+  return typeof id === 'string' && route.path.startsWith('/courses/') && course.courseId === id ? course.course : null
+})
 </script>
 
 <template>
@@ -145,7 +154,7 @@ const pageTitle = computed(() => {
     <el-container direction="vertical" class="app-main-wrap">
       <el-header class="app-header" height="56px">
         <div class="app-header__left">
-          <!-- On a phone, the brand's mark opens the menu. -->
+          <!-- On a phone, three lines open the menu: 20 px, in a 44 px square a thumb hits. -->
           <button
             v-if="narrow"
             type="button"
@@ -155,9 +164,10 @@ const pageTitle = computed(() => {
             :aria-expanded="drawer"
             @click="drawer = true"
           >
-            <AppMark decorative />
+            <el-icon :size="20" aria-hidden="true"><Expand /></el-icon>
           </button>
-          <span class="app-header__title">{{ pageTitle }}</span>
+          <CourseCrumbs v-if="crumbsCourse" :course="crumbsCourse" class="app-header__crumbs" />
+          <span v-else class="app-header__title">{{ pageTitle }}</span>
         </div>
         <!-- From 900 px up, the chat's button, at the header's right end. -->
         <!-- No trigger keys: by default the tooltip takes Enter and Space for itself, and the button would not open the chat from the keyboard. -->
@@ -258,7 +268,7 @@ const pageTitle = computed(() => {
   gap: 8px;
   min-width: 0;
 }
-/* On a phone, the brand's mark is the menu's button: 24 px, in a 44 px square a thumb hits. */
+/* On a phone, the menu's button: three lines, 20 px, in a 44 px square a thumb hits. */
 .app-header__menu {
   display: flex;
   align-items: center;
@@ -271,10 +281,8 @@ const pageTitle = computed(() => {
   border: none;
   border-radius: var(--app-radius-control);
   background: none;
+  color: var(--el-text-color-regular);
   cursor: pointer;
-}
-.app-header__menu :deep(.app-mark) {
-  height: 24px;
 }
 .app-header__menu:hover {
   background-color: var(--app-ground-2);

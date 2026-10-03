@@ -4,7 +4,7 @@ import {
   call,
   chatBadge,
   chatButton,
-  courseTab,
+  openCourseTab,
   coursePath,
   demo,
   dropFiles,
@@ -393,7 +393,7 @@ test.describe.serial('the chat panel', () => {
     // Escape, from within it, minimizes it; from the page it is the page's.
     await page.keyboard.press('Control+j')
     await expect(panelOf(page)).toBeVisible()
-    await page.locator('.course-head h1').first().click()
+    await page.locator('.course-head__title').first().click()
     await page.keyboard.press('Escape')
     await expect(panelOf(page)).toBeVisible()
     await panelOf(page).getByRole('button', { name: 'History', exact: true }).focus()
@@ -459,10 +459,10 @@ test.describe.serial('the chat panel', () => {
     await photograph(page, 'chat-panel-conversation')
 
     // Moving around the course, and out of it: the panel stays, on the conversation.
-    await courseTab(page, 'Materials').click()
+    await openCourseTab(page, 'Materials')
     await expect(page).toHaveURL(new RegExp(`${coursePath('materials')}$`))
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await courseTab(page, 'Assignments').click()
+    await openCourseTab(page, 'Assignments')
     await expect(page).toHaveURL(new RegExp(`${coursePath('assignments')}$`))
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
     await (await showSideView(page, 'Courses')).getByRole('link', { name: 'My courses' }).click()
@@ -656,7 +656,7 @@ test.describe.serial('the chat panel', () => {
     await drag(page, 'left', -80, 0)
     expect(await placed(page)).toMatchObject({ width: 400, height: 460, right: 0, bottom: 0 })
     // The page behind it is still there to use: the course's tabs lead on.
-    await courseTab(page, 'Materials').click()
+    await openCourseTab(page, 'Materials')
     await expect(page).toHaveURL(new RegExp(`${coursePath('materials')}$`))
     await expect(panelOf(page)).toBeVisible()
 

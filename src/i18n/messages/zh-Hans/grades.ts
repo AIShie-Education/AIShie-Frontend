@@ -20,7 +20,6 @@ export default {
     stateFilterHint: '状态筛选只应用于当前已加载的行；如要查看更多，请加载更多。',
     empty: '还没有任何成绩',
     emptyFiltered: '没有符合筛选条件的成绩',
-    gradebook: '成绩册',
   },
   noRead: {
     title: '此席位不能查看成绩',
@@ -31,7 +30,6 @@ export default {
   mine: {
     title: '我的成绩',
     subtitle: '已向你发布的成绩。成绩在发布前不会显示。',
-    gradebook: '我的成绩册',
     empty: '目前还没有向你发布的成绩',
   },
   post: {
@@ -185,7 +183,6 @@ export default {
     title: '成绩册',
     subtitle: '学生在整个评分结构中的表现，按已发布的成绩实时计算。',
     subtitleOwn: '你在整个评分结构中的表现，按你已发布的成绩实时计算。',
-    toGrades: '成绩',
     pickStudent: '选择学生',
     pasteMemberId: '选择学生，或粘贴成员 ID',
     noSeenStudents: '暂无可选的学生：请粘贴成员 ID',

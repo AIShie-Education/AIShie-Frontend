@@ -1,7 +1,6 @@
 // 全班成績冊：學生 × 作業，連同總分。
 export default {
   subtitle: '一次看清全班：每位學生在每份作業的成績，以及發佈成績時記下的總分。',
-  allGrades: '所有成績',
   wholeClass: '全班',
   export: '匯出 CSV',
   search: '按姓名或學號搜尋',

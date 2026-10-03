@@ -59,7 +59,6 @@ const canPost = computed(() => !mine.value && readsGrades.value && course.can('g
 const canEnter = computed(
   () => !mine.value && readsGrades.value && spansAssignments.value && course.can('grade_submit'),
 )
-const canGradebook = computed(() => mine.value || (course.can('grade_read') && spansAssignments.value))
 
 // ---------------------------------------------------------------------------
 // Filters, kept in the query
@@ -259,21 +258,6 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   }
   await paged.reload()
 }
-
-const gradebookLink = computed(() =>
-  mine.value
-    ? {
-        name: 'course-gradebook',
-        params: {
-          courseId: props.courseId,
-          studentMemberId: course.myMemberId ?? undefined,
-        },
-      }
-    : {
-        name: 'course-gradebook',
-        params: { courseId: props.courseId, studentMemberId: student.value },
-      },
-)
 </script>
 
 <template>
@@ -282,12 +266,6 @@ const gradebookLink = computed(() =>
       :title="mine ? t('grades.mine.title') : t('grades.title')"
       :subtitle="mine ? t('grades.mine.subtitle') : t('grades.list.subtitle')"
     >
-      <router-link v-if="canGradebook" :to="gradebookLink">
-        <el-button>
-          <el-icon><Tickets /></el-icon>
-          <span>{{ mine ? t('grades.mine.gradebook') : t('grades.list.gradebook') }}</span>
-        </el-button>
-      </router-link>
       <!-- One primary to a view: where the posting toolbar is shown, posting is it. -->
       <el-button
         v-if="canEnter"

@@ -115,7 +115,7 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
       class="side-item side-link"
       :class="{ 'is-active': route.name === 'account-agents' }"
     >
-      <el-icon aria-hidden="true"><Grid /></el-icon>
+      <el-icon aria-hidden="true"><Cpu /></el-icon>
       <span>{{ t('common.nav.agents') }}</span>
     </router-link>
 

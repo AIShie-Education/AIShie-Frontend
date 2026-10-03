@@ -7,18 +7,20 @@
 // On a phone (mode 'drawer') it is the menu the header's button opens: the
 // views are tabs along its top, and the one chosen is below them. Following a
 // link in it says so ('follow'), for the menu to close.
-import { computed } from 'vue'
+import { computed, provide } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSideBarStore } from '@/stores/sidebar'
 import SideAdmin from './SideAdmin.vue'
 import SideAgents from './SideAgents.vue'
 import SideCourses from './SideCourses.vue'
-import { SIDEBAR_WIDTH, VIEW_META, type SideView } from './frame'
+import { SIDE_IN_DRAWER, SIDEBAR_WIDTH, VIEW_META, type SideView } from './frame'
 
 const props = withDefaults(defineProps<{ mode?: 'docked' | 'drawer' }>(), { mode: 'docked' })
 const emit = defineEmits<{ follow: [] }>()
 const { t } = useI18n()
 const side = useSideBarStore()
+// In the phone's menu, the courses list the tabs of the course the page is in.
+provide(SIDE_IN_DRAWER, props.mode === 'drawer')
 
 const BODIES = { courses: SideCourses, agents: SideAgents, admin: SideAdmin } as const
 const title = computed(() => t(VIEW_META[side.shown].label))

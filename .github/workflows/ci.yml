@@ -73,6 +73,7 @@ jobs:
           fi
       - run: npm run typecheck
       - run: npm run check:i18n
+      - run: npm run lint
       - run: npm test
       - run: npm run build
       # The one build. The end-to-end tests run on these files, and a deploy

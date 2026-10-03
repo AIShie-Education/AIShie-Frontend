@@ -486,7 +486,39 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 
 - Every page starts with `<PageHeader :title :subtitle :back>` with its primary actions in the
   default slot, then content in `.app-card` sections (`.app-card__title` for a section heading).
-  Actions that are all `v-if`'d away leave no empty row.
+  Actions that are all `v-if`'d away leave no empty row. Its title is the page's one `<h1>`: nothing
+  else the app draws on a page is one (headings inside rendered material, a document's or an
+  assignment's Markdown, are the author's, and are left as they wrote them).
+- **A course's pages** (`CourseLayout`): the top bar is the way back up, not the page's name again
+  (`CourseCrumbs`: "CS101·A Introduction to Programming › Materials", the course leading to its
+  overview, the tab to its page where the page is one under it, and only the last step marked as the
+  page, `aria-current`); then a line of context, the course's code, its name in the sans and its
+  status, never a heading, on one line (a long name is cut short with an ellipsis; only on a phone's
+  page does it wrap, to two lines at most); then the tabs, one row (above). A page's title that only
+  names the tab chosen is not shown again: `PageHeader` keeps it for screen readers, and its
+  subtitle and actions share one row (`coursePage.ts`, by the title's
+  words, so title a tab's page with the tab's own name). A page's own title (a document, a member)
+  shows as before. The tabs, which a seat is offered, and which one a page belongs to are
+  `useCourseNav()` (`src/layouts/courseNav.ts`), which the strip, the top bar and the phone's menu
+  all read; the phone's menu lists the course's tabs under the course the page is in. The gradebook
+  and the grading scheme are pages of the Grades tab, all three read with `grade_read`: their
+  header shows the grades' own tabs (`CourseSubTabs`) in the title's place, the student a page is
+  about going with the way to the other; the first is All grades (a student's, My grades), never
+  Grades again. A new tab goes in `COURSE_TABS`, in the order most used, and the target stays: on a
+  laptop's screen (1280 × 800), with the side bar open, a course page starts its content within
+  200 px of the window's top. Inside a course the page's header has 12 px under it, not 20. Known
+  to miss it, by a line of their own: an assignment, a submission and a proposal, whose header has
+  a back link, a title and a line of facts beside their actions (about 220 px), and the Submissions
+  and Grading scheme pages (205 and 215 px), whose subtitle takes a second line; in English, whose
+  subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a pixel or so
+  (201 px); do not add to them.
+- **Navigation's icons are outlined, never filled**: the activity bar, the side bar, the phone's
+  header, a course's tabs and More's menu, the grades' tabs. A filled glyph among outlined ones
+  reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
+  do not say so (`Stamp`, `List`, `Grid`, `Menu`), are refused in navigation's files
+  (`src/layouts`, `src/components/sidebar`) by `npm run lint` (`eslint.config.js`), however they are
+  named: imported, as a string, or as a tag in a template. Another solid glyph found among them goes
+  on that list.
 - A page inside a course whose route does not say which tab it belongs to calls
   `useCourseTab(() => routeName)` (`@/composables/useCourseTab`) with the route whose tab to highlight
   (a document that is an assignment's instructions → `'course-assignments'`). A page that is another
@@ -588,8 +620,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
   left less than about 420 px (the overview at 800 px of page, an assignment at 740, two cards of an
-  actor's page at 856). A course's tabs wrap onto two rows from 720 px of page, and scroll sideways
-  below. What the template itself switches follows the same width: `useContainerNarrow(el, max)`
+  actor's page at 856). A course's tabs keep to one row at any width, never wrapped: as many as fit
+  by the strip's own width show (`fitTabs`, from each tab's width laid out unseen), and only those
+  that do not fit are under More (更多 ▾) in the last place, each still a link (its address to open
+  in a new tab or to copy), More marked as the tab chosen while the page is one of them. On a phone,
+  where the side bar is the menu's drawer and the page is a phone's (592 px), every tab is in the
+  strip, which scrolls sideways, each end fading over 16 px; beside the docked side bar the strip
+  never scrolls, however narrow the page, since a mouse might not reach its end. What the template itself switches follows the same width: `useContainerNarrow(el, max)`
   from `@/composables/useContainerWidth` says whether an element is `max` px wide or less, as
   `@container (max-width: …)` would, for el-descriptions' columns, which of a table's columns show,
   or a table or a card per row (the administration's courses, departments, people and an actor's
@@ -645,17 +682,19 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   opens a collapsed side bar. `useSideBarStore()` (`@/stores/sidebar`) holds the view and whether it is
   open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
-  no activity bar: the brand's mark at the header's left (`AppMark`, 24 px in a 44 px button named
-  「選單」) opens the views in a drawer, with the wordmark (`AppWordmark`) at its top and the views as
-  tabs under it, and following a link in it closes it, as back does.
+  no activity bar: three lines at the header's left (`Expand`, an outlined icon, 20 px in a 44 px
+  button named 「選單」) open the views in a drawer, with the wordmark (`AppWordmark`) at its top and
+  the views as tabs under it (the course the page is in with its tabs under it), and following a link
+  in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
   side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
   account's settings, the language and the theme, each a submenu with the choice in use checked, and
   signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
-  title and, at its right end, the chat's button (on a phone, the menu's button before the title and no
-  chat's button): nothing else is offered there.
+  title (on a course's pages, the way up to it: the course and the tab) and, at its right end, the
+  chat's button (on a phone, the menu's button before the title and no chat's button): nothing else
+  is offered there.
 - A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,
   mounted by `AppLayout`) reads `index.html` again (`cache: 'no-store'`) every five minutes and when the
   tab is shown again, and compares the entry script it names (`/assets/index-<hash>.js`) with the one

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { call, coursePath, courseTab, demo, expectToasted, keepToasts, pickOption, signIn } from './support'
+import { call, coursePath, openCourseTab, demo, expectToasted, keepToasts, pickOption, signIn } from './support'
 
 // Core's schema §5, told through the app: a grading agent proposes a grade,
 // the instructor approves it, posts it, and the student sees it.
@@ -9,7 +9,7 @@ test.describe.serial('the worked example', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Approvals').click()
+    await openCourseTab(page, 'Approvals')
     await expect(page).toHaveURL(new RegExp(`${coursePath('approvals')}$`))
 
     // The grader's proposal waits, with what it proposes: 9.5 out of 10 for Yuki.
@@ -39,7 +39,7 @@ test.describe.serial('the worked example', () => {
     await expect(page.locator('.grade-view__score')).toContainText('9.5 / 10')
 
     // Nothing is left waiting.
-    await courseTab(page, 'Approvals').click()
+    await openCourseTab(page, 'Approvals')
     await expect(page.getByText('Nothing is waiting for approval.')).toBeVisible()
   })
 
@@ -47,7 +47,11 @@ test.describe.serial('the worked example', () => {
     const d = demo()
     await signIn(page, d.actors.yuki)
     await page.goto(coursePath('grades'))
-    await expect(page.getByRole('heading', { name: 'My grades' })).toBeVisible()
+    // The page is the Grades tab's My grades, as the grades' own tabs mark it: its title is left to screen readers.
+    await expect(
+      page.getByRole('navigation', { name: 'Grades sections' }).getByRole('link', { name: 'My grades' }),
+    ).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
     await expect(page.getByText('No grades have been posted to you yet')).toBeVisible()
     await page.goto(coursePath(`assignments/${d.course.assignments.hw1}`))
     const attempt = page.locator('.my-work__attempt').filter({ hasText: 'Attempt 1' })
@@ -58,7 +62,7 @@ test.describe.serial('the worked example', () => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
-    await courseTab(page, 'Grades').click()
+    await openCourseTab(page, 'Grades')
 
     const yukiRow = page.locator('.el-table__row').filter({ hasText: 'Yuki Tanaka' }).filter({ hasText: 'HW1' })
     await expect(yukiRow).toHaveCount(1)
@@ -81,8 +85,12 @@ test.describe.serial('the worked example', () => {
     const d = demo()
     await signIn(page, d.actors.yuki)
     await page.goto(coursePath())
-    await courseTab(page, 'Grades').click()
-    await expect(page.getByRole('heading', { name: 'My grades' })).toBeVisible()
+    await openCourseTab(page, 'Grades')
+    // The page is the Grades tab's My grades, as the grades' own tabs mark it: its title is left to screen readers.
+    await expect(
+      page.getByRole('navigation', { name: 'Grades sections' }).getByRole('link', { name: 'My grades' }),
+    ).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
     const row = page.locator('.el-table__row').filter({ hasText: 'HW1 — Temperature converter' })
     await expect(row).toHaveCount(1)
     await expect(row).toContainText('9.5')
@@ -98,10 +106,10 @@ test.describe.serial('the worked example', () => {
     const attempt = page.locator('.my-work__attempt').filter({ hasText: 'Attempt 1' })
     await expect(attempt.locator('.my-work__grade')).toContainText('9.5 / 10')
 
-    // Her gradebook counts it: HW1 at 95%.
+    // Her gradebook, a tab of Grades, counts it: HW1 at 95%.
     await page.goto(coursePath('grades'))
-    await page.getByRole('button', { name: 'My gradebook' }).click()
-    await expect(page).toHaveURL(new RegExp(`/gradebook/${d.actors.yuki.member_id}$`))
+    await openCourseTab(page, 'Gradebook')
+    await expect(page).toHaveURL(new RegExp(`${coursePath('gradebook')}$`))
     const hw1 = page.locator('.el-table__row').filter({ hasText: 'HW1 — Temperature converter' })
     await expect(hw1).toContainText('95%')
     await expect(hw1).toContainText('9.5')

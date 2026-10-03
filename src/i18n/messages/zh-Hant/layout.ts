@@ -24,6 +24,8 @@ export default {
     showArchived: '顯示已封存（{n}）',
     noCourses: '你尚未加入任何課程。',
     noMatch: '沒有符合的課程。',
+    // In the phone's menu, the tabs of the course the page is in, listed under it.
+    courseTabs: '{course}的分頁',
     // Courses an administrator administers without a seat in them, which open on their administration page.
     unseated: '你管理但尚未加入',
     unseatedMore: '在管理頁查看全部（{n}）',
@@ -43,6 +45,16 @@ export default {
   },
   course: {
     nav: '課程分頁',
+    // The top bar's way back up on a course's pages: the course, then the tab (CourseCrumbs).
+    crumbs: '目前位置',
+    // The strip's last place, a menu of the tabs that do not fit; with the tab chosen among them, it says which.
+    more: '更多',
+    moreCurrent: '更多（目前：{tab}）',
+    // The grades' own tabs, under the Grades tab: All grades (a student's own, My grades), the gradebook, the scheme.
+    // Not "Grades" again, which the tab strip and the top bar already say.
+    gradesNav: '成績分頁',
+    allGrades: '全部成績',
+    myGrades: '我的成績',
     overview: '概覽',
     materials: '教材',
     assignments: '作業',

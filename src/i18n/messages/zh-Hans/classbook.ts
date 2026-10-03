@@ -1,7 +1,6 @@
 // 全班成绩册：学生 × 作业，连同总分。
 export default {
   subtitle: '一次看清全班：每位学生在每份作业上的成绩，以及发布成绩时记下的总分。',
-  allGrades: '所有成绩',
   wholeClass: '全班',
   export: '导出 CSV',
   search: '按姓名或学号搜索',

@@ -227,11 +227,14 @@ describe('the header', () => {
 })
 
 describe('on a phone', () => {
-  it('opens the menu from the brand’s mark at the header’s left, with the wordmark at the menu’s top', async () => {
+  it('opens the menu from three lines at the header’s left, with the wordmark at the menu’s top', async () => {
     const { w } = await mountAs('autonomous', { phone: true })
     const menu = w.get('.app-header .app-header__menu')
     expect(menu.attributes('aria-label')).toBe('Menu')
-    expect(menu.find('svg.app-mark').attributes('aria-hidden')).toBe('true')
+    expect(menu.attributes('aria-expanded')).toBe('false')
+    // The three lines are drawn, not read: the button's name says what it is.
+    expect(menu.get('.el-icon').attributes('aria-hidden')).toBe('true')
+    expect(menu.find('svg.app-mark').exists()).toBe(false)
     expect(w.get('.app-header__left').element.firstElementChild).toBe(menu.element)
     await menu.trigger('click')
     await flushPromises()
