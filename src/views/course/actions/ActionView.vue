@@ -33,6 +33,7 @@ import ActionTimeline from './components/ActionTimeline.vue'
 import AnswerProposal from './components/AnswerProposal.vue'
 import DecidePanel from './components/DecidePanel.vue'
 import DelegateGrant from './components/DelegateGrant.vue'
+import DeletionProposal from './components/DeletionProposal.vue'
 import FieldsView from './components/FieldsView.vue'
 import MaybeLink from './components/MaybeLink.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
@@ -435,9 +436,28 @@ const errorTitle = computed(() => {
               <DelegateGrant :action="action" :course-id="courseId" />
             </section>
 
+            <section v-if="action.action_type === 'assignment.delete' && !action.redacted" class="app-card">
+              <h2 class="app-card__title">{{ t('actions.deletion.title') }}</h2>
+              <DeletionProposal :action="action" :course-id="courseId" />
+            </section>
+
             <section class="app-card">
               <h2 class="app-card__title">{{ t('actions.detail.what') }}</h2>
               <p class="action-view__help">{{ t('actions.detail.whatHelp') }}</p>
+              <!-- Emptied when what it was about was deleted with its assignment (assignment.delete). -->
+              <AppNote v-if="action.redacted" class="action-view__notice">
+                <i18n-t v-if="action.redacted.at" keypath="actions.redacted.noteAt" tag="span" scope="global">
+                  <template #at><TimeText :value="action.redacted.at" /></template>
+                </i18n-t>
+                <span v-else>{{ t('actions.redacted.note') }}</span>
+                <router-link
+                  v-if="actionRoute(action.redacted.by_action_id)"
+                  :to="actionRoute(action.redacted.by_action_id)!"
+                  class="action-view__deletion"
+                >
+                  {{ t('actions.redacted.deletion') }}
+                </router-link>
+              </AppNote>
               <div v-if="isAboutAction(action)" class="action-view__about">
                 <span class="action-view__about-label">{{ t('actions.detail.about') }}</span>
                 <template v-if="aboutAction">
@@ -577,6 +597,9 @@ const errorTitle = computed(() => {
 }
 .action-view__notice {
   margin-bottom: 16px;
+}
+.action-view__deletion {
+  margin-left: 6px;
 }
 .action-view__decide {
   margin-bottom: 16px;

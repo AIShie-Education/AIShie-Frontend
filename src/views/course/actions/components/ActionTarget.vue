@@ -199,6 +199,16 @@ const everyRole = computed(() => {
   return role ? t('actions.summary.everyRole', { role: t(`enums.role.${role}`) }) : null
 })
 
+/**
+ * An assignment, by the title the action gave it, or the one a deletion of
+ * it answered with once it was carried out (assignment.delete), or as the
+ * course lists it now.
+ */
+const deletedIt = computed(() => type.value === 'assignment.delete' && props.action.status === 'executed')
+const assignmentName = computed(() => {
+  const r = props.action.result
+  return str(p.value.title) ?? (deletedIt.value && isObject(r) ? str(r.title) : undefined) ?? assignmentTitle.value
+})
 const targetRoute = computed(() => (props.link ? routeFor(props.courseId, tt.value, tid.value) : null))
 const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
 </script>
@@ -309,8 +319,13 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
 
     <!-- Assignments -->
     <template v-else-if="group === 'assignment'">
-      <MaybeLink v-if="str(p.title) || assignmentTitle" :to="targetRoute" class="action-target__part action-target__name">
-        {{ str(p.title) ?? assignmentTitle }}
+      <!-- One deleted for good has no page to go to. -->
+      <MaybeLink
+        v-if="assignmentName"
+        :to="deletedIt ? null : targetRoute"
+        class="action-target__part action-target__name"
+      >
+        {{ assignmentName }}
       </MaybeLink>
       <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
     </template>
@@ -384,6 +399,8 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
     <template v-else>
       <span class="action-target__part">{{ targetTypeLabel(tt) }} <IdText v-if="tid" :id="tid" /></span>
     </template>
+    <!-- Emptied when what it was about was deleted with its assignment: it says nothing more. -->
+    <span v-if="action.redacted" class="action-target__muted">{{ t('actions.redacted.short') }}</span>
   </span>
 </template>
 

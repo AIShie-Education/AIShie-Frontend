@@ -238,6 +238,8 @@ export default {
     'assignment.updated': '更新作业',
     'assignment.published': '发布作业',
     'assignment.unpublished': '取消发布作业',
+    'assignment.deleted': '作业已删除',
+    'assignment.deleted_unreleased': '已删除未发布的作业',
     'assignment.due_passed': '已过截止日期',
     'component.created': '创建评分项',
     'component.updated': '更新评分项',

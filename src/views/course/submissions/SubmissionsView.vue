@@ -16,6 +16,7 @@ import { read } from '@/api/http'
 import type { SubmissionSummary } from '@/api/types'
 import RosterTable from './components/RosterTable.vue'
 import { lacksRoster, type RosterEntry } from './components/roster'
+import AppNote from '@/components/AppNote.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -29,6 +30,7 @@ import TimeText from '@/components/TimeText.vue'
 import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
+import { useDeletedFilter } from '@/views/course/assignments/components/useDeletedFilter'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -61,6 +63,9 @@ watch([assignment, student], ([a, s]) => {
   if (query.assignment === fromQuery('assignment') && query.student === fromQuery('student')) return
   void router.replace({ query })
 })
+
+/** The assignment filtered by was deleted for good: the filter is dropped, and a note says so. */
+const filterGone = useDeletedFilter(() => props.courseId, assignment)
 
 const studentFilter = computed(() => (isStudent.value ? undefined : student.value || undefined))
 
@@ -163,6 +168,10 @@ function open(row: SubmissionSummary) {
         </el-button>
       </router-link>
     </PageHeader>
+
+    <AppNote v-if="filterGone" class="submissions-gone" closable @close="filterGone = false">
+      {{ t('assignments.delete.filterGone') }}
+    </AppNote>
 
     <div v-if="!list.error.value?.isForbidden" ref="toolbar" class="app-toolbar">
       <AssignmentSelect
@@ -279,6 +288,9 @@ function open(row: SubmissionSummary) {
 </template>
 
 <style scoped>
+.submissions-gone {
+  margin-bottom: 16px;
+}
 .submissions-filter {
   width: 260px;
   max-width: 100%;

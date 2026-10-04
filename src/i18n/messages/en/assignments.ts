@@ -238,4 +238,63 @@ export default {
     noGrade: 'No grade yet',
     viewSubmission: 'View',
   },
+  // Deleting an assignment for good (assignment.delete), from its page's ⋯ menu or its row's in the list.
+  delete: {
+    menu: 'Delete…',
+    more: 'More actions for “{title}”',
+    title: 'Delete assignment',
+    lead: '“{title}” will be deleted for good, with everything listed below. This cannot be undone.',
+    loading: 'Counting what goes with it…',
+    goes: 'What goes with it',
+    submissions: 'Submissions: {n} ({parts})',
+    handedIn: '{n} handed in',
+    drafts: '{n} draft | {n} drafts',
+    missing: '{n} recorded as missing',
+    grades: 'Grades: {n} ({parts})',
+    posted: '{n} posted',
+    unposted: '{n} not yet posted',
+    files: 'Files: {n}, deleted from storage',
+    proposals: 'Proposals waiting for approval: {n}, which will be cancelled',
+    totals:
+      'Totals worked out again: {n} student’s posted totals, with the change recorded | Totals worked out again: {n} students’ posted totals, with the change recorded',
+    nothing: 'Nobody has started on it: only the assignment itself goes.',
+    documentsStay: {
+      instructions: 'Its instructions stay in the course as they are.',
+      rubric: 'Its rubric stays in the course as it is.',
+      both: 'Its instructions and rubric stay in the course as they are.',
+    },
+    published:
+      'Students can see it now. It will disappear from their list, and the course feed will tell them it was deleted.',
+    approval: 'Deleting will wait for someone to approve it, and goes ahead only if nothing has been added by then.',
+    typeTitle: 'To confirm, type the assignment’s title',
+    typeMismatch: 'That is not its title.',
+    confirm: 'Delete for good',
+    done: 'Deleted “{title}”.',
+    doneWith: 'Deleted “{title}”, with {parts}.',
+    doneSubmissions: '{n} submission | {n} submissions',
+    doneGrades: '{n} grade | {n} grades',
+    doneFiles: '{n} file | {n} files',
+    proposed: 'Deleting “{title}” is waiting for approval.',
+    gone: 'This assignment was deleted.',
+    goneAt: 'It was deleted {at}.',
+    goneHint: 'Its work and grades went with it.',
+    backToList: 'Back to assignments',
+    filterGone: 'That assignment was deleted; showing all assignments.',
+    refusal: {
+      confirm_stale: 'Something was added after this was shown. Check what goes with it again.',
+      people_only: 'An agent cannot delete an assignment that has work or grades; a person must.',
+      student_out_of_scope: 'Your seat does not reach every student whose work or total this changes.',
+      // Refused here only for what deleting it reaches beyond it: the totals, worked out again over every
+      // assignment (one published that counts in the grade), which a seat listed for some assignments does not
+      // reach. One the seat does not reach at all is refused before anything is counted.
+      assignment_out_of_scope:
+        'Deleting it works out students’ totals again, and a total spans every assignment in the course; your seat reaches only the assignments listed on it. Someone whose seat reaches every assignment can delete it.',
+      no_file_storage: 'This server has no file storage configured, so its files cannot be removed.',
+      course_archived: 'The course is archived: nothing in it can be deleted.',
+      deleted: 'It has already been deleted.',
+    },
+    otherRefusal: 'It cannot be deleted by you now.',
+    // A deletion that rewrites no total refused for the assignment itself: the seat's list no longer has it.
+    notListed: 'This assignment is not among those your seat reaches.',
+  },
 }

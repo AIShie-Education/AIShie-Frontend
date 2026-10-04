@@ -17,6 +17,7 @@ import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
@@ -33,6 +34,7 @@ import ProposalNotice from './components/ProposalNotice.vue'
 import ScoreText from './components/ScoreText.vue'
 import UndoFinalDialog from './components/UndoFinalDialog.vue'
 import { useGradeLookups, type PostRow } from './components/grading'
+import { useDeletedFilter } from '@/views/course/assignments/components/useDeletedFilter'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -86,6 +88,8 @@ watch([assignment, student], ([a, s]) => {
     },
   })
 })
+/** The assignment filtered by was deleted for good: the filter is dropped, and a note says so. */
+const filterGone = useDeletedFilter(() => props.courseId, assignment)
 const one = (v: string | string[] | undefined) => (typeof v === 'string' && v ? v : undefined)
 const assignmentModel = computed({
   get: () => assignment.value,
@@ -286,6 +290,10 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
         />
       </el-button>
     </PageHeader>
+
+    <AppNote v-if="filterGone" class="grades-view__gone" closable @close="filterGone = false">
+      {{ t('assignments.delete.filterGone') }}
+    </AppNote>
 
     <ProposalNotice
       v-if="proposal"
@@ -588,6 +596,9 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
 </template>
 
 <style scoped>
+.grades-view__gone {
+  margin-bottom: 16px;
+}
 .grades-view__approval {
   margin-left: 6px;
 }

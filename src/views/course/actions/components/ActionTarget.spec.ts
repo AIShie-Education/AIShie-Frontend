@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
@@ -151,6 +151,53 @@ describe('FieldsView, what came of bringing in her own agent', () => {
     const w = mount(FieldsView, { props: { courseId: COURSE, value: seat.result }, global })
     await flushPromises()
     expect(w.find('.fields-view__value').text()).toBe('Someone in the course')
+    w.unmount()
+  })
+})
+
+describe('ActionTarget, an assignment deleted for good', () => {
+  const linked = { ...global, stubs: { RouterLink: RouterLinkStub } }
+
+  it('names the deletion by the title its result gives, with no link to the page that is gone', async () => {
+    asStudent()
+    const w = mount(ActionTarget, {
+      props: {
+        action: row({
+          action_type: 'assignment.delete',
+          target_type: 'assignment',
+          target_id: 'asg-gone',
+          payload: { course_id: COURSE, assignment_id: 'asg-gone', confirm: {} },
+          result: { deleted: true, assignment_id: 'asg-gone', title: 'Quiz 3', removed: {} },
+        }),
+        courseId: COURSE,
+        link: true,
+      },
+      global: linked,
+    })
+    await flushPromises()
+    expect(w.text()).toContain('Quiz 3')
+    expect(w.findAllComponents(RouterLinkStub)).toEqual([])
+    w.unmount()
+  })
+
+  it('says an action emptied by the deletion has nothing more to say', async () => {
+    asStudent()
+    const w = mount(ActionTarget, {
+      props: {
+        action: row({
+          action_type: 'submission.submit',
+          target_type: 'submission',
+          target_id: 'sub-gone',
+          payload: {},
+          result: undefined,
+          redacted: { by_action_id: 'act-del', at: '2026-10-04T00:00:00Z' },
+        }),
+        courseId: COURSE,
+      },
+      global,
+    })
+    await flushPromises()
+    expect(w.text()).toContain('Details removed')
     w.unmount()
   })
 })

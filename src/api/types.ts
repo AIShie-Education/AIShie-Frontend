@@ -138,6 +138,15 @@ export type MemberSummary = ListItem<'member.list', 'members'>
 export type Component = ListItem<'component.tree', 'components'>
 export type Assignment = ToolOut<'assignment.get'>
 export type AssignmentSummary = ListItem<'assignment.list', 'assignments'>
+/**
+ * What deleting an assignment for good would take with it, counted, and
+ * whether the caller may (assignment.delete_preview): its counts go back to
+ * assignment.delete unchanged, as confirm.
+ */
+export type AssignmentDeletePreview = ToolOut<'assignment.delete_preview'>
+export type DeletionCounts = AssignmentDeletePreview['counts']
+/** What went with an assignment deleted for good (assignment.delete). */
+export type AssignmentDeleteOut = ToolOut<'assignment.delete'>
 export type DocumentFull = ToolOut<'document.get'>
 export type DocumentSummary = ListItem<'document.list', 'documents'>
 export type DocumentVersion = ListItem<'document.versions', 'versions'>

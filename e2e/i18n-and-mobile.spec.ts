@@ -186,6 +186,50 @@ test.describe('at phone width', () => {
     }
   })
 
+  test('the assignments’ table fits a phone’s width, and a tablet’s, with no scroll of its own, each row’s ⋯ at its title’s right', async ({
+    page,
+  }) => {
+    // The page fitting is not enough: a table holds what is wider than it in a scroller of its own, and a column
+    // fixed at its right covers what is under it. Whoever writes assignments has a ⋯ on each row; where there is
+    // no room for a column of it, on a phone or a tablet held upright, it is in the title's cell, and the due date
+    // keeps the rest of the width.
+    const d = demo()
+    await signIn(page, d.actors.instructor)
+    for (const [width, heads] of [
+      [360, ['Assignment', 'Due']],
+      [375, ['Assignment', 'Due']],
+      [390, ['Assignment', 'Due']],
+      [414, ['Assignment', 'Due']],
+      [768, ['Assignment', 'Due', 'Points', 'Published']],
+    ] as const) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(coursePath('assignments'))
+      const table = page.locator('.assignments-view__table')
+      await expect(table.locator('.el-table__row').first()).toBeVisible()
+      await expect
+        .poll(() => table.locator('thead th').allInnerTexts().then((hs) => hs.map((h) => h.trim())))
+        .toEqual(heads)
+      await expect(table.locator('.el-table-fixed-column--right')).toHaveCount(0)
+      await expect(table.locator('.el-table__row').first().locator('.assignments-view__cell .assignments-view__more')).toBeVisible()
+      await expect
+        .poll(
+          () =>
+            table
+              .locator('.el-table__body-wrapper .el-scrollbar__wrap')
+              .first()
+              .evaluate((w) => w.scrollWidth - w.clientWidth),
+          { message: `the assignments’ table at ${width} px scrolls sideways by` },
+        )
+        .toBeLessThanOrEqual(1)
+      // Each due date is whole: no cell's words run past it.
+      const clipped = await table
+        .locator('.el-table__body td .cell')
+        .evaluateAll((cells) => cells.filter((c) => c.scrollWidth > c.clientWidth + 1).map((c) => c.textContent?.trim()))
+      expect(clipped, `cells cut short at ${width} px`).toEqual([])
+      await expectFits(page, `the assignments at ${width} px`)
+    }
+  })
+
   test('a course’s tabs, the grades’ own tabs and the menu’s are big enough for a finger, the grades’ on one row', async ({
     page,
   }) => {

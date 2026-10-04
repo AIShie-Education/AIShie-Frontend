@@ -907,3 +907,43 @@ describe('EventItem, a student’s own agent brought in', () => {
     w.unmount()
   })
 })
+
+describe('EventItem, an assignment deleted for good', () => {
+  const deleted = (type: string): CourseEvent => ({
+    seq: 9,
+    type,
+    occurred_at: '2026-10-04T00:00:00Z',
+    subject_type: 'assignment',
+    subject_id: 'asg-gone',
+    payload: { title: 'Quiz 3' },
+  })
+
+  it.each([
+    ['assignment.deleted', 'Assignment deleted'],
+    ['assignment.deleted_unreleased', 'Unpublished assignment deleted'],
+  ])('names %s by the title it carries, leading nowhere', async (type, title) => {
+    const w = mountItem(deleted(type), {}, { links: true })
+    await flushPromises()
+    expect(w.find('.event-item__title').text()).toBe(title)
+    expect(w.find('.event-item__subject').text()).toBe('“Quiz 3”')
+    // It is gone: nothing links to its page.
+    expect(
+      w.findAllComponents(RouterLinkStub).filter((l) => JSON.stringify(l.props('to')).includes('asg-gone')),
+    ).toEqual([])
+    w.unmount()
+  })
+
+  it('says a proposal was cancelled because its assignment was deleted', async () => {
+    const w = mountItem({
+      seq: 10,
+      type: 'action.cancelled',
+      occurred_at: '2026-10-04T00:00:00Z',
+      subject_type: 'action',
+      subject_id: 'act-1',
+      payload: { action_type: 'grade.submit', reason: 'target_deleted', by_action_id: 'act-del' },
+    })
+    await flushPromises()
+    expect(w.text()).toContain('Its assignment was deleted')
+    w.unmount()
+  })
+})

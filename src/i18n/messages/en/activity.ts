@@ -127,6 +127,7 @@ export default {
     proposal_expired: 'Waited too long',
     reauthorization_failed: 'The proposer may no longer do this',
     target_gone: 'What it was about is gone',
+    target_deleted: 'Its assignment was deleted',
     member_removed: 'The proposer left the course',
     tool_removed: 'This kind of action no longer exists',
     withdrawn: 'Taken back by the proposer',

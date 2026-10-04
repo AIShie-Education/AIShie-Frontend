@@ -86,7 +86,10 @@ afterEach(() => {
 })
 
 /** The teacher, who decides here at once, with the grading agent and the tutor (someone else's) seated. */
-function mountAsTeacher(action: ActionRow = PROPOSAL, opts: { archived?: boolean; waiting?: string } = {}) {
+function mountAsTeacher(
+  action: ActionRow = PROPOSAL,
+  opts: { archived?: boolean; waiting?: string; perms?: Record<string, string>; mode?: 'decide' | 'review' } = {},
+) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({ me: { id: 'actor-teacher', kind: 'human', display_name: 'Teacher' } } as never)
@@ -101,7 +104,7 @@ function mountAsTeacher(action: ActionRow = PROPOSAL, opts: { archived?: boolean
       status: opts.archived ? 'archived' : 'active',
     } as never,
     membership: { member_id: 'teacher', role: 'instructor' } as never,
-    perms: { action_decide: 'autonomous', member_read: 'autonomous' },
+    perms: { action_decide: 'autonomous', member_read: 'autonomous', ...opts.perms },
     permsSource: 'exact',
     membersState: 'loaded',
   } as never)
@@ -112,7 +115,7 @@ function mountAsTeacher(action: ActionRow = PROPOSAL, opts: { archived?: boolean
   ]
   course.members = new Map(seats.map((m) => [m.id, m]))
   const w = mount(DecidePanel, {
-    props: { action, courseId: COURSE, mode: 'decide', waiting: opts.waiting },
+    props: { action, courseId: COURSE, mode: opts.mode ?? 'decide', waiting: opts.waiting },
     attachTo: document.body,
     global: {
       plugins: [
@@ -423,5 +426,157 @@ describe('DecidePanel, asking for changes', () => {
     await flushPromises()
     expect(document.body.querySelector('.decide-panel__confirm')!.textContent).toContain(confirm)
     expect(field().getAttribute('aria-label')).toBe(label)
+  })
+})
+
+/** A teaching assistant's deletion of a quiz for good, waiting: what its proposer was shown, and confirmed. */
+const NONE = { submissions: 0, handed_in: 0, drafts: 0, missing: 0, grades: 0, posted: 0, files: 0, proposals: 0, totals: 0 }
+const DELETION = {
+  id: 'p3',
+  actor_id: 'actor-ta',
+  member_id: 'ta',
+  action_type: 'assignment.delete',
+  target_type: 'assignment',
+  target_id: 'asg-1',
+  payload: {
+    course_id: COURSE,
+    assignment_id: 'asg-1',
+    confirm: { ...NONE, submissions: 1, drafts: 1, totals: 12 },
+  },
+  authz_result: 'confirm_required',
+  status: 'proposed',
+  review_state: 'none',
+  created_at: '2026-10-04T10:00:00Z',
+  yours_to_decide: true,
+} as unknown as ActionRow
+const stake = () => document.body.querySelector<HTMLElement>('.deletion-stake')
+const stakeLines = () => [...(stake()?.querySelectorAll('li') ?? [])].map((li) => li.textContent?.trim())
+
+describe('DecidePanel, a deletion of an assignment for good', () => {
+  it('says, where Approve is pressed, that approving deletes it for good, with what goes with it', async () => {
+    mountAsTeacher(DELETION)
+    await flushPromises()
+    expect(stake()!.textContent).toContain(
+      'Approving deletes this assignment for good, with what goes with it. This cannot be undone.',
+    )
+    // Without writing assignments, what would go now is not read: what the proposer was shown is listed.
+    expect(read).not.toHaveBeenCalledWith('assignment.delete_preview', expect.anything())
+    expect(stakeLines()).toEqual([
+      'Submissions: 1 (1 draft)',
+      'Totals worked out again: 12 students’ posted totals, with the change recorded',
+    ])
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['Approve', 'Request changes', 'Reject'])
+  })
+
+  it('confirms approving it in solid red, as the last step of what cannot be taken back', async () => {
+    mountAsTeacher(DELETION)
+    await flushPromises()
+    button('Approve')!.click()
+    await flushPromises()
+    const confirm = confirmButton('Approve and delete for good')!
+    expect(confirm).toBeTruthy()
+    expect(confirm.classList).toContain('el-button--danger')
+    expect(confirm.classList).not.toContain('el-button--primary')
+    write.mockResolvedValueOnce({
+      status: 'executed',
+      actionId: 'd3',
+      reviewState: 'none',
+      replayed: false,
+      result: { action_id: 'p3', outcome: 'executed' },
+    })
+    confirm.click()
+    await flushPromises()
+    expect(write).toHaveBeenCalledWith(
+      'action.decide',
+      { course_id: COURSE, action_id: 'p3', decision: 'approve', reason: undefined },
+      expect.anything(),
+    )
+  })
+
+  it('confirms approving it as any approval where the decision itself waits for approval', async () => {
+    mountAsTeacher(DELETION, { perms: { action_decide: 'confirm_required' } })
+    await flushPromises()
+    button('Approve')!.click()
+    await flushPromises()
+    expect(confirmButton('Approve and delete for good')).toBeUndefined()
+    expect(confirmButton('Approve now')!.classList).toContain('el-button--primary')
+  })
+
+  it('lists what would go now, for whoever writes assignments, and says approving would fail where more would go', async () => {
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'agent.list') return { agents: [] }
+      if (tool === 'assignment.delete_preview')
+        return {
+          assignment_id: 'asg-1',
+          title: 'Quiz 3',
+          published: true,
+          in_grade: true,
+          counts: { ...NONE, submissions: 1, drafts: 1, totals: 12 },
+          refusal: null,
+        }
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    })
+    mountAsTeacher(DELETION, { perms: { assignment_write: 'autonomous' } })
+    await flushPromises()
+    expect(read).toHaveBeenCalledWith('assignment.delete_preview', { course_id: COURSE, assignment_id: 'asg-1' })
+    expect(stake()!.textContent).not.toContain('Approving will fail')
+
+    // More now than the proposer was shown: a grade given since.
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'agent.list') return { agents: [] }
+      if (tool === 'assignment.delete_preview')
+        return {
+          assignment_id: 'asg-1',
+          title: 'Quiz 3',
+          published: true,
+          in_grade: true,
+          counts: { ...NONE, submissions: 1, handed_in: 1, grades: 1, totals: 12 },
+          refusal: null,
+        }
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    })
+    for (const w of mounted.splice(0)) w.unmount()
+    mountAsTeacher(DELETION, { perms: { assignment_write: 'autonomous' } })
+    await flushPromises()
+    expect(stake()!.textContent).toContain('Approving will fail: more has been added since this was proposed.')
+    // What it was proposed with, which is all approving it could take.
+    expect(stakeLines()).toEqual([
+      'Submissions: 1 (1 draft)',
+      'Totals worked out again: 12 students’ posted totals, with the change recorded',
+    ])
+  })
+
+  it('says it was deleted already, where it was', async () => {
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'agent.list') return { agents: [] }
+      throw new ApiError({ status: 404, code: 'not_found', message: 'deleted', details: { reason: 'deleted' } })
+    })
+    mountAsTeacher(DELETION, { perms: { assignment_write: 'autonomous' } })
+    await flushPromises()
+    expect(stake()!.textContent).toContain('The assignment has been deleted already.')
+    expect(stake()!.textContent).not.toContain('Approving deletes')
+  })
+
+  it('is not said of any other proposal, nor of a deletion in the review queue', async () => {
+    mountAsTeacher()
+    await flushPromises()
+    expect(stake()).toBeNull()
+    for (const w of mounted.splice(0)) w.unmount()
+    mountAsTeacher({ ...DELETION, status: 'executed', review_state: 'pending' } as ActionRow, { mode: 'review' })
+    await flushPromises()
+    expect(stake()).toBeNull()
+  })
+
+  it.each([
+    ['zh-Hant', '批准會永久刪除此作業及一併刪除的內容，無法復原。', '批准並永久刪除'],
+    ['zh-Hans', '批准会永久删除此作业及一并删除的内容，无法恢复。', '批准并永久删除'],
+  ] as const)('is worded in %s', async (locale, lead, confirm) => {
+    setLocale(locale)
+    mountAsTeacher(DELETION)
+    await flushPromises()
+    expect(stake()!.textContent).toContain(lead)
+    buttons()[0]!.click()
+    await flushPromises()
+    expect(confirmButton(confirm)).toBeTruthy()
   })
 })

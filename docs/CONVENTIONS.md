@@ -268,6 +268,42 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   `print()`; its title is the PDF's name. The button says what it does, 「下載為 PDF」, with
   「在列印視窗選擇『另存為 PDF』」 in its tooltip, to a screen reader, and as the window opens. No PDF
   is made in the page.
+- **Deleting an assignment for good** (`assignment.delete`, AIShie-Core #73) is offered to whoever
+  writes assignments in its ⋯ menu (`AssignmentMoreMenu`): its page's header, at the far end, and
+  its row in the list, which the menu opens no row of (in a column of its own, at the row's end,
+  where the table has room for it beside the rest; at the title's right where it has not, a phone's
+  width and a tablet's held upright among them: a column fixed at the table's right that does not
+  fit makes the table scroll sideways under it, and covers the due date); off, saying why, in an
+  archived course or while a deletion of it asked for from that page waits for approval.
+  `DeleteAssignmentDialog` first reads what goes with it (`assignment.delete_preview`) and lists
+  only the counts that are not nought, in words (`goesLines`), with what stays (its instructions and
+  rubric), what students are told (one that is published) and that it waits for approval where it
+  will; where anyone has started on it (a submission of any kind, or a grade, `hasWork`) its title
+  is typed to confirm, compared as the page shows it (`titleAsRead`: both in Unicode's compatibility
+  form, NFKC, with what shows nothing taken out and every run of white space, a line break, a
+  no-break or a full-width space among them, one space, none at either end), so that what is seen,
+  copied or typed with an input method matches whatever the title was saved with. The counts go back
+  unchanged as `confirm`; `confirm_stale` reads them again, says so and asks for the title again,
+  and Core's other refusals, and what the preview says it would refuse (`refusal`), are said in the
+  dialog by reason (`assignments.delete.refusal`), its button off. `assignment_out_of_scope` there
+  is what the deletion reaches beyond the assignment: the totals, worked out again over every
+  assignment (one published that counts in the grade), which a seat listed for some assignments does
+  not reach, and its words say so; one the seat does not reach at all is refused before anything is
+  counted. Deleted, the toast names it and what went (`doneWith`), the course's assignments are read
+  again (`course.invalidate('assignments')`), and its page goes back to the list. Afterwards Core
+  answers anything naming it, or its work, `not_found` with `reason: deleted` (`isDeletedError`),
+  which a refusal anywhere says in the app's words (`common.errors`, as `target_deleted` is, a call
+  retried under the key of an action the deletion emptied): its page says it was deleted, and when,
+  with the way back to the list; the submissions and grades pages drop a filter by it and say so
+  (`useDeletedFilter`); the feed names `assignment.deleted` by the title it carries, with no link;
+  an action emptied by the deletion (`redacted`) says its details were removed; a deletion waiting
+  for approval says, wherever Approve is pressed (`DecidePanel`: a card in the approvals queue and
+  its page's Decide card alike, `DeletionAtStake`), that approving deletes it for good and cannot be
+  undone, with what goes, and that approving would fail where more would go now, its confirm in
+  solid red ("Approve and delete for good") where approving carries it out at once; a deletion's
+  action shows what it was confirmed with, beside what would go now while it waits
+  (`DeletionProposal`, which warns that approving would fail where more would go); and a total's
+  working says of its line only that it was an assignment since deleted.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
   page. `usePaged(after => read(...).then(o => ({ items: o.assignments, next: o.next })))` and
   `<LoadMore :has-more :loading @more="loadMore" />`.

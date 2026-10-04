@@ -8,6 +8,10 @@
 // why. The owner of the agent that did it decides it where they could have
 // done it themselves, and then as their own doing of it: at once, whatever
 // they hold of action_decide, so it never becomes a proposal of theirs.
+// A deletion of an assignment for good waiting here says what approving it
+// takes, and that it cannot be undone (DeletionAtStake), wherever it is
+// decided from; approving it is confirmed in solid red, the last step of
+// what cannot be taken back.
 import { computed, nextTick, ref, useId, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
@@ -17,6 +21,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import type { ApiError, WriteOutcome } from '@/api/http'
 import { isAboutAction, reasonText, useJudgeRules, type ActionRow } from './actionText'
+import DeletionAtStake from './DeletionAtStake.vue'
 import type { Decision, Done } from './decide'
 import { useLookup, useSpecs } from './lookups'
 import { formatList } from '@/utils/format'
@@ -89,6 +94,17 @@ const needsApproval = computed(() => course.needsApproval('action_decide') && !a
 type Choice = Decision | 'reviewed' | 'escalated'
 const choice = ref<Choice | null>(null)
 const text = ref('')
+
+/** A deletion of an assignment for good, waiting for approval: what approving it takes is said here. */
+const deletion = computed(
+  () =>
+    props.mode === 'decide' &&
+    props.action.action_type === 'assignment.delete' &&
+    props.action.status === 'proposed' &&
+    !props.action.redacted,
+)
+/** Approving it deletes the assignment for good, now: its confirm is the last step of that. */
+const deletesNow = computed(() => deletion.value && choice.value === 'approve' && !needsApproval.value)
 
 /** A request for changes says what to change: it is not sent without a note. */
 const noteRequired = computed(() => choice.value === 'request_changes')
@@ -171,7 +187,7 @@ const placeholder = computed(() => {
 const confirmLabel = computed(() => {
   switch (choice.value) {
     case 'approve':
-      return t('actions.decision.confirmApprove')
+      return deletesNow.value ? t('actions.decision.confirmApproveDelete') : t('actions.decision.confirmApprove')
     case 'reject':
       return t('actions.decision.confirmReject')
     case 'request_changes':
@@ -288,6 +304,7 @@ function tell(
 
 <template>
   <div class="decide-panel">
+    <DeletionAtStake v-if="deletion" :action="action" :course-id="courseId" />
     <div v-if="!decidedElsewhere" class="decide-panel__buttons">
       <template v-if="mode === 'decide'">
         <el-button
@@ -379,7 +396,7 @@ function tell(
            row is drawn the other way round, Cancel on its left. -->
       <div class="decide-panel__confirm">
         <el-button
-          type="primary"
+          :type="deletesNow ? 'danger' : 'primary'"
           :size="size"
           :loading="pending"
           :class="{ 'is-disabled': noteMissing }"

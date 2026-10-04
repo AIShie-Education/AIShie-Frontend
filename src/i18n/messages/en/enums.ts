@@ -242,6 +242,8 @@ export default {
     'assignment.updated': 'Assignment updated',
     'assignment.published': 'Assignment published',
     'assignment.unpublished': 'Assignment unpublished',
+    'assignment.deleted': 'Assignment deleted',
+    'assignment.deleted_unreleased': 'Unpublished assignment deleted',
     'assignment.due_passed': 'Due date passed',
     'component.created': 'Grading component created',
     'component.updated': 'Grading component updated',

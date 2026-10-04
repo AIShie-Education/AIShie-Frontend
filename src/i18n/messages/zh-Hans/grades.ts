@@ -174,6 +174,7 @@ export default {
     points: '{n}分',
     shareHint: '在结果中所占的份额：只有计入的项（已有结果且未被剔除）才会分摊。',
     dropped: '已剔除',
+    deleted: '已删除的作业',
     kindAssignment: '作业',
     kindComponent: '评分项',
     hintFinal: '以最终成绩记录：未评分的作业以零分计算。',

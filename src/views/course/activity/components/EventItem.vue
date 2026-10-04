@@ -78,8 +78,16 @@ const subjectTo = computed(() => subjectRoute(props.event, props.courseId, reach
 function unknownAssignment(id: string | null | undefined): boolean {
   return !!id && course.assignmentsState === 'loaded' && !course.assignments.has(id)
 }
+/**
+ * An assignment deleted for good (assignment.deleted, or _unreleased for one
+ * students never saw): it is gone, so the event names it by the title it
+ * carries, and leads nowhere.
+ */
+const deletedAssignment = computed(() => props.event.type.startsWith('assignment.deleted'))
 const subjectLink = computed(() =>
-  kind.value === 'assignment' && unknownAssignment(props.event.subject_id) ? null : subjectTo.value,
+  kind.value === 'assignment' && (deletedAssignment.value || unknownAssignment(props.event.subject_id))
+    ? null
+    : subjectTo.value,
 )
 
 /** The grading component the event names: its subject, or the total's component. */
@@ -136,8 +144,11 @@ const assignmentTo = computed<RouteLocationRaw | null>(() =>
 const subjectText = computed(() => {
   const e = props.event
   switch (kind.value) {
-    case 'assignment':
+    case 'assignment': {
+      const deleted = deletedAssignment.value ? payloadString(e, 'title') : undefined
+      if (deleted) return t('common.quoted', { text: deleted })
       return course.assignmentTitle(e.subject_id) ?? t('activity.subject.assignment')
+    }
     case 'submission':
       return t('activity.subject.submission')
     case 'gradebook':

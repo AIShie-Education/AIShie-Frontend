@@ -59,6 +59,19 @@ export interface ActionGetOut {
   member_id?: null | string
   payload: unknown
   /**
+   * set when what the action was about was deleted for good (assignment.delete): its payload and result were emptied then, and say nothing
+   */
+  redacted?: null | {
+    /**
+     * when it did
+     */
+    at?: null | string
+    /**
+     * the assignment.delete that emptied it
+     */
+    by_action_id: string
+  }
+  /**
    * what the call returned; for a rejected proposal, or one sent back for changes, the decision: decision.reason is why, or what to change
    */
   result?: {
@@ -114,6 +127,19 @@ export interface ActionListMineOut {
         member_id?: null | string
         payload: unknown
         /**
+         * set when what the action was about was deleted for good (assignment.delete): its payload and result were emptied then, and say nothing
+         */
+        redacted?: null | {
+          /**
+           * when it did
+           */
+          at?: null | string
+          /**
+           * the assignment.delete that emptied it
+           */
+          by_action_id: string
+        }
+        /**
          * what the call returned; for a rejected proposal, or one sent back for changes, the decision: decision.reason is why, or what to change
          */
         result?: {
@@ -167,6 +193,19 @@ export interface ActionListPendingReviewOut {
         member_id?: null | string
         payload: unknown
         /**
+         * set when what the action was about was deleted for good (assignment.delete): its payload and result were emptied then, and say nothing
+         */
+        redacted?: null | {
+          /**
+           * when it did
+           */
+          at?: null | string
+          /**
+           * the assignment.delete that emptied it
+           */
+          by_action_id: string
+        }
+        /**
          * what the call returned; for a rejected proposal, or one sent back for changes, the decision: decision.reason is why, or what to change
          */
         result?: {
@@ -219,6 +258,19 @@ export interface ActionListProposedOut {
         id: string
         member_id?: null | string
         payload: unknown
+        /**
+         * set when what the action was about was deleted for good (assignment.delete): its payload and result were emptied then, and say nothing
+         */
+        redacted?: null | {
+          /**
+           * when it did
+           */
+          at?: null | string
+          /**
+           * the assignment.delete that emptied it
+           */
+          by_action_id: string
+        }
         /**
          * what the call returned; for a rejected proposal, or one sent back for changes, the decision: decision.reason is why, or what to change
          */
@@ -1313,6 +1365,141 @@ export interface AssignmentCreateIn {
 }
 export interface AssignmentCreateOut {
   id: string
+}
+
+/** assignment.delete (write): Delete an assignment for good. It cannot be undone: the assignment, every submission to it with its files, and every grade given on them with its feedback files go; its instructions and rubric are left in the course as they are; proposals about it waiting are cancelled; and the posted totals it counted in are worked out again without it, the change recorded. Read assignment.delete_preview first and send its counts back unchanged as confirm: if more would go than you were shown, the call is refused (confirm_stale), and you read the preview again. An agent deletes only an assignment nobody has started on, with no submission of any kind and no grade (people_only); a person deletes one with work. It reaches every student whose work or total it changes. An archived course refuses it. */
+export interface AssignmentDeleteIn {
+  assignment_id: string
+  /**
+   * the counts assignment.delete_preview gave, sent back unchanged: what you were shown goes, and if more would go now, the call is refused (confirm_stale)
+   */
+  confirm: {
+    /**
+     * of those, drafts
+     */
+    drafts: number
+    /**
+     * files deleted from storage: those handed in and given as feedback, every version's; their PDF renditions go too and are not counted. The instructions' and the rubric's are not among them: those stay in the course
+     */
+    files: number
+    /**
+     * live grades given on them, drafts and posted; the history of each goes with it and is not counted
+     */
+    grades: number
+    /**
+     * of those, handed in, on time or late
+     */
+    handed_in: number
+    /**
+     * of those, recorded as missing
+     */
+    missing: number
+    /**
+     * of those, posted
+     */
+    posted: number
+    /**
+     * proposals about it waiting for a decision, which are cancelled
+     */
+    proposals: number
+    /**
+     * every submission to it: every attempt and state, handed in, a draft, or recorded as missing
+     */
+    submissions: number
+    /**
+     * students whose posted totals are worked out again without it, the change recorded
+     */
+    totals: number
+  }
+  /**
+   * the course this call is about
+   */
+  course_id: string
+}
+export interface AssignmentDeleteOut {
+  assignment_id: string
+  deleted: boolean
+  /**
+   * files queued to be deleted from storage, their PDF renditions among them, once the deletion is in
+   */
+  files_queued: number
+  proposals_cancelled: number
+  removed: {
+    files: number
+    grades: number
+    submissions: number
+  }
+  /**
+   * how many posted totals were written down again
+   */
+  snapshots: number
+  title: string
+}
+
+/** assignment.delete_preview (read): What deleting an assignment for good would take with it, counted: its submissions, its grades, the files handed in and given as feedback, the proposals about it waiting, and the students whose totals are worked out again; never names a person. Its instructions and rubric are left in the course as they are. refusal says what assignment.delete would refuse you right now, or is null. Send counts back unchanged as confirm to assignment.delete. */
+export interface AssignmentDeletePreviewIn {
+  assignment_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+}
+export interface AssignmentDeletePreviewOut {
+  assignment_id: string
+  /**
+   * what goes with it; send these back unchanged as confirm to assignment.delete. Its instructions and rubric are not counted: they stay in the course as they are
+   */
+  counts: {
+    /**
+     * of those, drafts
+     */
+    drafts: number
+    /**
+     * files deleted from storage: those handed in and given as feedback, every version's; their PDF renditions go too and are not counted. The instructions' and the rubric's are not among them: those stay in the course
+     */
+    files: number
+    /**
+     * live grades given on them, drafts and posted; the history of each goes with it and is not counted
+     */
+    grades: number
+    /**
+     * of those, handed in, on time or late
+     */
+    handed_in: number
+    /**
+     * of those, recorded as missing
+     */
+    missing: number
+    /**
+     * of those, posted
+     */
+    posted: number
+    /**
+     * proposals about it waiting for a decision, which are cancelled
+     */
+    proposals: number
+    /**
+     * every submission to it: every attempt and state, handed in, a draft, or recorded as missing
+     */
+    submissions: number
+    /**
+     * students whose posted totals are worked out again without it, the change recorded
+     */
+    totals: number
+  }
+  /**
+   * it counts toward a component of the grading scheme
+   */
+  in_grade: boolean
+  /**
+   * students can see it, and the feed will tell them it was deleted
+   */
+  published: boolean
+  /**
+   * what assignment.delete would refuse right now for you (people_only, student_out_of_scope, course_archived, no_file_storage, ...), or null
+   */
+  refusal: null | string
+  title: string
 }
 
 /** assignment.get (read): One assignment: what it is worth, when it is due, and the documents holding its instructions and rubric. */
@@ -6778,6 +6965,8 @@ export interface ToolMap {
   'agent.update': { in: AgentUpdateIn; out: AgentUpdateOut; kind: 'write' }
   'agent.withdraw': { in: AgentWithdrawIn; out: AgentWithdrawOut; kind: 'write' }
   'assignment.create': { in: AssignmentCreateIn; out: AssignmentCreateOut; kind: 'write' }
+  'assignment.delete': { in: AssignmentDeleteIn; out: AssignmentDeleteOut; kind: 'write' }
+  'assignment.delete_preview': { in: AssignmentDeletePreviewIn; out: AssignmentDeletePreviewOut; kind: 'read' }
   'assignment.get': { in: AssignmentGetIn; out: AssignmentGetOut; kind: 'read' }
   'assignment.list': { in: AssignmentListIn; out: AssignmentListOut; kind: 'read' }
   'assignment.publish': { in: AssignmentPublishIn; out: AssignmentPublishOut; kind: 'write' }
@@ -6958,6 +7147,8 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'agent.update': { method: 'POST', path: '/v1/me/agents/{actor_id}', kind: 'write' },
   'agent.withdraw': { method: 'POST', path: '/v1/me/agents/{actor_id}/courses/{course_id}/withdraw', kind: 'write' },
   'assignment.create': { method: 'POST', path: '/v1/courses/{course_id}/assignments', kind: 'write' },
+  'assignment.delete': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/delete', kind: 'write' },
+  'assignment.delete_preview': { method: 'GET', path: '/v1/courses/{course_id}/assignments/{assignment_id}/delete-preview', kind: 'read' },
   'assignment.get': { method: 'GET', path: '/v1/courses/{course_id}/assignments/{assignment_id}', kind: 'read' },
   'assignment.list': { method: 'GET', path: '/v1/courses/{course_id}/assignments', kind: 'read' },
   'assignment.publish': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/publish', kind: 'write' },

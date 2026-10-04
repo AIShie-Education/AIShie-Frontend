@@ -236,3 +236,19 @@ describe('errorMessage, with words of the page’s own for a reason', () => {
     )
   })
 })
+
+describe('errorMessage, of an assignment deleted for good', () => {
+  it('says so wherever it, or its work, is named afterwards, in each language', () => {
+    const e = refusal('not_found', { reason: 'deleted', deleted_at: '2026-10-04T00:00:00Z' })
+    expect(errorMessage(e)).toBe('This assignment, or the work in it, has been deleted for good.')
+    setLocale('zh-Hant')
+    expect(errorMessage(e)).toBe('此作業或其中的提交已被永久刪除。')
+    setLocale('zh-Hans')
+    expect(errorMessage(e)).toBe('此作业或其中的提交已被永久删除。')
+  })
+
+  it('says a call retried under the key of an action it emptied was about what was deleted', () => {
+    const e = refusal('not_found', { reason: 'target_deleted', by_action_id: 'a-del' })
+    expect(errorMessage(e)).toBe('What this was about was deleted for good with its assignment.')
+  })
+})
