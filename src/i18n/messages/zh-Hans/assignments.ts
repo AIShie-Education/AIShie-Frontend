@@ -265,11 +265,13 @@ export default {
       confirm_stale: '显示之后有新增内容，请再次确认会一并删除的内容。',
       people_only: '智能体不能删除已有提交或成绩的作业，必须由人删除。',
       student_out_of_scope: '你的权限范围未涵盖所有会受影响的学生。',
-      assignment_out_of_scope: '你的权限范围未涵盖此作业。',
+      assignment_out_of_scope:
+        '删除它会重新计算学生的总分，而总分涵盖课程内所有作业；你的席位只涵盖列表上的作业。须由席位涵盖所有作业的人删除。',
       no_file_storage: '此服务器未配置文件存储空间，无法移除其文件。',
       course_archived: '课程已归档：其中的内容都不能删除。',
       deleted: '它已经被删除。',
     },
     otherRefusal: '你目前不能删除它。',
+    notListed: '此作业不在你的席位涵盖的作业之内。',
   },
 }

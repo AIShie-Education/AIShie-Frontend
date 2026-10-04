@@ -6,7 +6,7 @@
 // course as they are. The dialog first asks Core what would go with it
 // (assignment.delete_preview) and lists the counts that are not nought; once
 // anyone has started on it (a submission of any kind, or a grade), its title
-// is typed to confirm. The counts go back to Core unchanged as confirm, and a
+// is typed to confirm, as the page shows it (titleMatches). The counts go back to Core unchanged as confirm, and a
 // deletion that would take more than was shown is refused (confirm_stale):
 // the dialog then counts again, says so, and asks for the title again. Core's
 // other refusals are said here, in the dialog, by reason.
@@ -21,7 +21,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatList } from '@/utils/format'
 import AppNote from '@/components/AppNote.vue'
-import { hasWork, isDeletedError, nothingGoes, titleMatches } from './deletion'
+import { goesLines, hasWork, isDeletedError, nothingGoes, titleAsRead, titleMatches } from './deletion'
 
 const open = defineModel<boolean>({ required: true })
 const props = defineProps<{
@@ -91,6 +91,12 @@ watch(
 const counts = computed(() => preview.value?.counts ?? null)
 /** Its title, as Core has it now: the one typed to confirm. */
 const title = computed(() => preview.value?.title ?? props.assignment.title)
+/**
+ * The title as it is drawn, each run of white space one space: a field's
+ * placeholder would drop a line break altogether, joining the words either
+ * side of it, which are then typed apart (titleMatches).
+ */
+const shownTitle = computed(() => title.value.replace(/\s+/gu, ' ').trim())
 
 /** The lines of what goes with it, those whose count is not nought, in the reader's words. */
 const lines = computed<string[]>(() => {
@@ -98,36 +104,7 @@ const lines = computed<string[]>(() => {
   if (!c) return []
   // Intl's list is the language's, and Intl is not reactive.
   void locale.value
-  const out: string[] = []
-  const parts = (pairs: [number, string][]) =>
-    formatList(pairs.filter(([n]) => n > 0).map(([n, key]) => t(key, { n }, n)))
-  if (c.submissions > 0) {
-    out.push(
-      t('assignments.delete.submissions', {
-        n: c.submissions,
-        parts: parts([
-          [c.handed_in, 'assignments.delete.handedIn'],
-          [c.drafts, 'assignments.delete.drafts'],
-          [c.missing, 'assignments.delete.missing'],
-        ]),
-      }),
-    )
-  }
-  if (c.grades > 0) {
-    out.push(
-      t('assignments.delete.grades', {
-        n: c.grades,
-        parts: parts([
-          [c.posted, 'assignments.delete.posted'],
-          [c.grades - c.posted, 'assignments.delete.unposted'],
-        ]),
-      }),
-    )
-  }
-  if (c.files > 0) out.push(t('assignments.delete.files', { n: c.files }))
-  if (c.proposals > 0) out.push(t('assignments.delete.proposals', { n: c.proposals }))
-  if (c.totals > 0) out.push(t('assignments.delete.totals', { n: c.totals }, c.totals))
-  return out
+  return goesLines(c, (key, named, n) => (n === undefined ? t(key, named) : t(key, named, n)))
 })
 
 /** Its instructions and rubric, which stay in the course. */
@@ -139,8 +116,24 @@ const documentsStay = computed(() => {
   return null
 })
 
+/**
+ * Whether deleting it works the totals out again (one published that counts
+ * in the grade). A total spans every assignment, which a seat listed for
+ * some assignments does not reach: Core then refuses the deletion for the
+ * assignments (assignment_out_of_scope) whatever the seat's list holds, and
+ * that is the only time the preview does, as one the seat does not reach at
+ * all is refused before anything is counted (previewError).
+ */
+const rewritesTotals = computed(() => !preview.value || (preview.value.published && preview.value.in_grade))
+/**
+ * A refusal for the assignments of a deletion that works out no total: for
+ * the assignment itself, taken off the seat's list since it was counted.
+ */
+const notListed = (reason: unknown) => reason === 'assignment_out_of_scope' && !rewritesTotals.value
+
 /** What Core says it would refuse right now, in words. */
 function refusalWords(reason: string): string {
+  if (notListed(reason)) return t('assignments.delete.notListed')
   const own = `${REASONS}.${reason}`
   if (te(own)) return t(own)
   const deny = `actions.denyReason.${reason}`
@@ -155,13 +148,16 @@ const refusedText = computed(() => {
   const e = refused.value
   if (!e) return null
   if (preview.value?.refusal && e.details?.reason === preview.value.refusal) return null
+  if (notListed(e.details?.reason)) return t('assignments.delete.notListed')
   return errorMessage(e, { reasons: REASONS })
 })
 
 // --- Confirming ----------------------------------------------------------------
 const needsTitle = computed(() => hasWork(counts.value))
 const titleOk = computed(() => !needsTitle.value || titleMatches(typed.value, title.value))
-const mismatch = computed(() => needsTitle.value && touched.value && typed.value.trim() !== '' && !titleOk.value)
+const mismatch = computed(
+  () => needsTitle.value && touched.value && titleAsRead(typed.value) !== '' && !titleOk.value,
+)
 const needsApproval = computed(() => course.needsApproval('assignment_write'))
 const canDelete = computed(
   () => !!preview.value && !counting.value && !preview.value.refusal && course.writable && titleOk.value,
@@ -245,7 +241,7 @@ async function submit() {
     class="delete-assignment"
   >
     <el-alert type="warning" :closable="false" show-icon class="delete-assignment__alert">
-      <template #title>{{ t('assignments.delete.lead', { title }) }}</template>
+      <template #title>{{ t('assignments.delete.lead', { title: shownTitle }) }}</template>
     </el-alert>
 
     <el-alert v-if="stale" type="warning" :closable="false" show-icon class="delete-assignment__alert">
@@ -301,7 +297,7 @@ async function submit() {
             name="confirm-title"
             autocomplete="off"
             spellcheck="false"
-            :placeholder="title"
+            :placeholder="shownTitle"
             @blur="touched = true"
           />
         </el-form-item>

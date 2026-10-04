@@ -6,6 +6,7 @@
 // assignment is told it was deleted (not_found, reason deleted).
 import { ApiError, read } from '@/api/http'
 import type { DeletionCounts } from '@/api/types'
+import { formatList } from '@/utils/format'
 
 /** The counts Core takes back as confirm, in the order the dialog lists them. */
 export const COUNT_KEYS = [
@@ -40,14 +41,78 @@ export function hasWork(c: Pick<DeletionCounts, 'submissions' | 'grades'> | null
   return !!c && c.submissions + c.grades > 0
 }
 
+/** The reader's words for a key, with its named values, and the count its plural goes by where it has one (vue-i18n's t). */
+export type CountWords = (key: string, named: Record<string, unknown>, plural?: number) => string
+
+/**
+ * What goes with it, a line for each count that is not nought, in the
+ * reader's words (assignments.delete.*): the submissions and the grades each
+ * broken down into their parts that are not nought, each part pluralised on
+ * its own. The dialog lists them before deleting it, and a deletion waiting
+ * for approval lists them where it is approved (DeletionAtStake).
+ */
+export function goesLines(c: DeletionCounts, t: CountWords): string[] {
+  const out: string[] = []
+  const parts = (pairs: [number, string][]) =>
+    formatList(pairs.filter(([n]) => n > 0).map(([n, key]) => t(key, { n }, n)))
+  if (c.submissions > 0) {
+    out.push(
+      t('assignments.delete.submissions', {
+        n: c.submissions,
+        parts: parts([
+          [c.handed_in, 'assignments.delete.handedIn'],
+          [c.drafts, 'assignments.delete.drafts'],
+          [c.missing, 'assignments.delete.missing'],
+        ]),
+      }),
+    )
+  }
+  if (c.grades > 0) {
+    out.push(
+      t('assignments.delete.grades', {
+        n: c.grades,
+        parts: parts([
+          [c.posted, 'assignments.delete.posted'],
+          [c.grades - c.posted, 'assignments.delete.unposted'],
+        ]),
+      }),
+    )
+  }
+  if (c.files > 0) out.push(t('assignments.delete.files', { n: c.files }))
+  if (c.proposals > 0) out.push(t('assignments.delete.proposals', { n: c.proposals }))
+  if (c.totals > 0) out.push(t('assignments.delete.totals', { n: c.totals }, c.totals))
+  return out
+}
+
 /** Nothing at all goes with it but the assignment. */
 export function nothingGoes(c: DeletionCounts | null | undefined): boolean {
   return !!c && COUNT_KEYS.every((k) => !c[k])
 }
 
-/** The title typed to confirm is the assignment's, spaces at either end aside. */
+/**
+ * A title as it reads on the page, which is what is typed to confirm: in
+ * Unicode's compatibility form (NFKC: a full-width letter or space is its
+ * ordinary one), with the characters that show nothing taken out (a
+ * zero-width space, a soft hyphen: Unicode's format characters), and every
+ * run of white space of any kind (spaces, a line break, a tab, a no-break
+ * or an ideographic space) one space, as HTML draws it; none at either end.
+ */
+export function titleAsRead(s: string): string {
+  return s
+    .normalize('NFKC')
+    .replace(/\p{Cf}/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim()
+}
+
+/**
+ * The title typed to confirm is the assignment's as the page shows it
+ * (titleAsRead): what is seen on the page, typed or copied from it, matches,
+ * whatever white space the title was saved with.
+ */
 export function titleMatches(typed: string, title: string): boolean {
-  return typed.trim() !== '' && typed.trim() === title.trim()
+  const t = titleAsRead(typed)
+  return t !== '' && t === titleAsRead(title)
 }
 
 /**

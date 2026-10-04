@@ -214,14 +214,28 @@ describe('the assignments', () => {
       ],
       next: null,
     })
-    const sizes = fakeContainerWidths({ '.page-header': 593 })
+    const sizes = fakeContainerWidths({ '.page-header': 776 })
     const w = await mountPage(AssignmentsView, '/assignments')
+    expect(heads(w, '.assignments-view__table')).toContain('Points')
+    // Whoever writes assignments has each row's ⋯ in a column of its own, at the row's end, where the table has
+    // room for it beside the rest: 776 px of page.
+    expect(heads(w, '.assignments-view__table')).toEqual(['Assignment', 'Due', 'Points', 'Published', 'Actions'])
+    expect(w.find('.assignments-view__more').exists()).toBe(false)
+    // Where it has not, the ⋯ is at the title's right, and the rest of the columns stay.
+    await sizes.resize('.page-header', 775)
+    await flushPromises()
+    expect(heads(w, '.assignments-view__table')).toEqual(['Assignment', 'Due', 'Points', 'Published'])
+    expect(w.findAll('.assignments-view__cell .assignments-view__more .assignment-more')).toHaveLength(1)
+    await sizes.resize('.page-header', 593)
+    await flushPromises()
     expect(heads(w, '.assignments-view__table')).toContain('Points')
     await sizes.resize('.page-header', 592)
     await flushPromises()
-    // And, for whoever writes assignments, the ⋯ of each row, with no heading where it is narrow.
-    expect(heads(w, '.assignments-view__table')).toEqual(['Assignment', 'Due', ''])
+    // Narrow, the ⋯ is at the title's right as well, where a column of it would push the due date out of a phone's
+    // width.
+    expect(heads(w, '.assignments-view__table')).toEqual(['Assignment', 'Due'])
     expect(w.find('.assignments-view__meta').exists()).toBe(true)
+    expect(w.findAll('.assignments-view__cell .assignments-view__more .assignment-more')).toHaveLength(1)
   })
 })
 

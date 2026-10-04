@@ -20,7 +20,12 @@ import {
 // sees it, is told it was deleted, and her total is worked out again
 // without it (50%). An empty quiz goes from the list's ⋯ with no title to
 // type; one that gets a draft while its dialog is open is refused as stale,
-// and the dialog counts again and asks for its title.
+// and the dialog counts again and asks for its title. A title saved with two
+// spaces and a line break is typed as the page shows it. A teaching assistant
+// listed for one quiz is told why she may not delete it: its totals span
+// every assignment. Another, whose deleting waits for approval, proposes one,
+// and Sato reads on the approvals queue that approving deletes it for good,
+// with what goes, before he approves it in red.
 //
 // With E2E_SHOTS set to a directory, the dialog, the list's menu and the
 // page of a deleted assignment are photographed there.
@@ -31,9 +36,15 @@ const DOOMED = `Quiz ${STAMP} — to delete`
 const EMPTY = `Quiz ${STAMP} — never started`
 const RACED = `Quiz ${STAMP} — started meanwhile`
 const ZH = `Quiz ${STAMP} — 中文`
+/** Saved through the API with two spaces and a line break, as a form that trims only its ends lets in. */
+const SPACED = `Quiz ${STAMP}  spaced\nout`
+/** As the page draws it, each run of white space one space. */
+const SPACED_SHOWN = `Quiz ${STAMP} spaced out`
+const LISTED = `Quiz ${STAMP} — listed`
+const PROPOSED = `Quiz ${STAMP} — proposed`
 let courseId = ''
 let bucket = ''
-const ids: Record<'kept' | 'doomed' | 'empty' | 'raced' | 'zh', string> = {} as never
+const ids: Record<'kept' | 'doomed' | 'empty' | 'raced' | 'zh' | 'spaced' | 'listed' | 'proposed', string> = {} as never
 /** Ada's total for the quizzes while the doomed quiz counted: superseded once it is deleted. */
 let earlierTotal = ''
 let ada: DemoActor & { member_id: string }
@@ -278,5 +289,114 @@ test.describe.serial('deleting an assignment for good', () => {
     await photograph(page, 'delete-assignment-dialog-zh-hant')
     await box.getByRole('button', { name: '取消' }).click()
     await expect(box).toBeHidden()
+  })
+
+  test('a title saved with two spaces and a line break is typed as the page shows it', async ({ page }) => {
+    ids.spaced = await quiz(SPACED, { publish: true })
+    await ok(ada.token, 'POST', `/v1/courses/${courseId}/submissions`, { assignment_id: ids.spaced, body: 'A start' })
+    await keepToasts(page)
+    await signIn(page, instructor())
+    await page.goto(`/courses/${courseId}/assignments/${ids.spaced}`)
+    await chooseDelete(page, SPACED_SHOWN, header(page))
+    const box = deleteDialog(page)
+    await expect(box).toContainText(`“${SPACED_SHOWN}” will be deleted for good`)
+    const field = box.getByLabel('To confirm, type the assignment’s title')
+    await expect(field).toHaveAttribute('placeholder', SPACED_SHOWN)
+    const button = box.getByRole('button', { name: 'Delete for good' })
+    await expect(button).toBeDisabled()
+    // Words run together, as the field makes of a line break dropped into it, are not the title.
+    await field.fill(`Quiz ${STAMP}  spacedout`)
+    await expect(button).toBeDisabled()
+    // What the page shows, typed; and with the full-width space a Chinese input method types.
+    await field.fill(SPACED_SHOWN)
+    await expect(button).toBeEnabled()
+    await field.fill(`Quiz ${STAMP}\u3000spaced out`)
+    await expect(button).toBeEnabled()
+    await button.click()
+    await expectToasted(page, `Deleted “${SPACED_SHOWN}”, with 1 submission.`)
+    await expect(page).toHaveURL(new RegExp(`/courses/${courseId}/assignments$`))
+  })
+
+  test('a teaching assistant listed for a quiz that counts is told why she may not delete it', async ({ page }) => {
+    ids.listed = await quiz(LISTED, { publish: true })
+    const tam = await registerPerson(`Tam ${STAMP}`, { email: `tam+${STAMP}@delete.test` })
+    await ok(instructor().token, 'POST', `/v1/courses/${courseId}/members`, {
+      actor_id: tam.actor_id,
+      preset: 'ta',
+      perms: { assignment_write: 'autonomous' },
+      assignment_scope: 'listed',
+      listed_assignments: [ids.listed],
+    })
+    await signIn(page, tam)
+    await page.goto(`/courses/${courseId}/assignments/${ids.listed}`)
+    await expect(header(page)).toContainText(LISTED)
+    await chooseDelete(page, LISTED, header(page))
+    const box = deleteDialog(page)
+    // Her seat reaches this quiz; what deleting it reaches beyond it, every student's total over every assignment,
+    // it does not.
+    await expect(box).toContainText(
+      'Deleting it works out students’ totals again, and a total spans every assignment in the course; your seat reaches only the assignments listed on it.',
+    )
+    await expect(box).not.toContainText('does not reach this assignment')
+    await expect(box.getByRole('button', { name: 'Delete for good' })).toBeDisabled()
+    await photograph(page, 'delete-assignment-listed-seat')
+    await box.getByRole('button', { name: 'Cancel' }).click()
+    await expect(box).toBeHidden()
+  })
+
+  test('a deletion waiting for approval says on the approvals queue what goes, for good, and is approved in red', async ({
+    page,
+  }) => {
+    ids.proposed = await quiz(PROPOSED, { publish: true })
+    await ok(ada.token, 'POST', `/v1/courses/${courseId}/submissions`, { assignment_id: ids.proposed, body: 'A start' })
+    const tia = await registerPerson(`Tia ${STAMP}`, { email: `tia+${STAMP}@delete.test` })
+    await ok(instructor().token, 'POST', `/v1/courses/${courseId}/members`, {
+      actor_id: tia.actor_id,
+      preset: 'ta',
+      perms: { assignment_write: 'confirm_required' },
+    })
+    const counted = await ok(tia.token, 'GET', `/v1/courses/${courseId}/assignments/${ids.proposed}/delete-preview`)
+    const asked = await call(tia.token, 'POST', `/v1/courses/${courseId}/assignments/${ids.proposed}/delete`, {
+      confirm: counted.counts,
+    })
+    expect(asked.body.status, JSON.stringify(asked.body)).toBe('proposed')
+
+    await keepToasts(page)
+    await signIn(page, instructor())
+    await page.goto(`/courses/${courseId}/approvals`)
+    const card = page.locator('.action-card').filter({ hasText: PROPOSED })
+    await expect(card).toContainText('Delete an assignment')
+    const stake = card.locator('.deletion-stake')
+    await expect(stake).toContainText(
+      'Approving deletes this assignment for good, with what goes with it. This cannot be undone.',
+    )
+    await expect(stake.locator('li')).toHaveText([
+      'Submissions: 1 (1 draft)',
+      'Totals worked out again: 1 student’s posted totals, with the change recorded',
+    ])
+    // Its own page says so in the Decide card, first on the page, as well.
+    await card.getByRole('link', { name: 'Details' }).click()
+    const decide = page.locator('.action-view__decide')
+    await expect(decide.locator('.deletion-stake')).toContainText(
+      'Approving deletes this assignment for good, with what goes with it. This cannot be undone.',
+    )
+    await expect(decide.locator('.deletion-stake li')).toHaveText([
+      'Submissions: 1 (1 draft)',
+      'Totals worked out again: 1 student’s posted totals, with the change recorded',
+    ])
+    await decide.getByRole('button', { name: 'Approve', exact: true }).click()
+    await expect(decide.getByRole('button', { name: 'Approve and delete for good' })).toHaveClass(/el-button--danger/)
+    await photograph(page, 'delete-assignment-approve-page')
+
+    await page.goto(`/courses/${courseId}/approvals`)
+    await card.getByRole('button', { name: 'Approve', exact: true }).click()
+    const confirm = card.getByRole('button', { name: 'Approve and delete for good' })
+    await expect(confirm).toHaveClass(/el-button--danger/)
+    await photograph(page, 'delete-assignment-approve')
+    await confirm.click()
+    await expectToasted(page, 'Approved and carried out')
+    await expect(page.locator('.action-card').filter({ hasText: PROPOSED })).toHaveCount(0)
+    const got = await call(instructor().token, 'GET', `/v1/courses/${courseId}/assignments/${ids.proposed}`)
+    expect(got.body.error?.details?.reason, JSON.stringify(got.body)).toBe('deleted')
   })
 })

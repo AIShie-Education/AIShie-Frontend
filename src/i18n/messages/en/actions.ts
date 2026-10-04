@@ -400,6 +400,8 @@ export default {
     reviewed: 'Mark reviewed',
     escalate: 'Escalate',
     confirmApprove: 'Approve now',
+    // Approving a deletion of an assignment for good: the last step of what cannot be taken back.
+    confirmApproveDelete: 'Approve and delete for good',
     confirmReject: 'Reject',
     confirmRequestChanges: 'Send back for changes',
     confirmReviewed: 'Mark reviewed',
@@ -478,6 +480,8 @@ export default {
     confirmed: 'Confirmed',
     now: 'Now',
     staleProposal: 'Approving will fail: more has been added since this was proposed.',
+    // Said where Approve is pressed, above what goes with it.
+    approveLead: 'Approving deletes this assignment for good, with what goes with it. This cannot be undone.',
     gone: 'The assignment has been deleted already.',
     nothing: 'Nobody had started on it: only the assignment itself goes.',
     documentsStay: 'Its instructions and rubric stay in the course as they are.',

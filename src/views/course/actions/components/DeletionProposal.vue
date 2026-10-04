@@ -7,33 +7,18 @@
 // that would take more than was confirmed (confirm_stale).
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { read } from '@/api/http'
-import type { AssignmentDeletePreview, DeletionCounts } from '@/api/types'
-import { useAsync } from '@/composables/useAsync'
-import { useCourseStore } from '@/stores/course'
 import { formatCount } from '@/utils/format'
-import { COUNT_KEYS, confirmOf, countsGrown, isDeletedError } from '@/views/course/assignments/components/deletion'
+import { COUNT_KEYS } from '@/views/course/assignments/components/deletion'
 import type { ActionRow } from './actionText'
+import { useDeletionNow } from './deletionNow'
 
 const props = defineProps<{ action: ActionRow; courseId: string }>()
 const { t } = useI18n()
-const course = useCourseStore()
 
-const was = computed(() => confirmOf(props.action.payload))
-const waiting = computed(() => props.action.status === 'proposed')
-const assignmentId = computed(() => props.action.target_id ?? undefined)
-
-const now = useAsync<AssignmentDeletePreview | null>(
-  async () => {
-    const id = assignmentId.value
-    if (!waiting.value || !id || !course.can('assignment_write')) return null
-    return read('assignment.delete_preview', { course_id: props.courseId, assignment_id: id })
-  },
-  { watch: [waiting, assignmentId] },
+const { was, waiting, current, grown, gone } = useDeletionNow(
+  () => props.action,
+  () => props.courseId,
 )
-const gone = computed(() => !!now.error.value && isDeletedError(now.error.value))
-const current = computed<DeletionCounts | null>(() => now.data.value?.counts ?? null)
-const grown = computed(() => !!current.value && countsGrown(was.value, current.value))
 
 interface Row {
   key: (typeof COUNT_KEYS)[number]

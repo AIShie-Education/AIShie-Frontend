@@ -57,6 +57,17 @@ async function noSideways(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
 }
 
+/**
+ * Whether a table's own body scrolls sideways, which the page's width does not show: an el-table holds what is
+ * wider than it in a scroller of its own, under any column fixed at its right.
+ */
+async function tableScrollsSideways(page: Page, table: string) {
+  return page
+    .locator(`${table} .el-table__body-wrapper .el-scrollbar__wrap`)
+    .first()
+    .evaluate((w) => w.scrollWidth > w.clientWidth + 1)
+}
+
 /** A table's column headings, in order. */
 async function headings(table: Locator) {
   return (await table.locator('thead th').allInnerTexts()).map((h) => h.trim())
@@ -572,21 +583,36 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     // What switched where a window was a phone's (640 px, 592 of page) switches where the page is as narrow: in
     // 900 px of window with the side bar open, 544 px of page, and not in 1000 (644), nor in 900 with the side bar
     // collapsed. The assignments: points and the rest under the title, and, for whoever writes assignments, the ⋯
-    // of each row, with no heading there.
+    // of each row at the title's right, not in a column of its own, so that the table itself does not scroll
+    // sideways either.
     await page.goto(coursePath('assignments'))
     await expect(page.locator('.assignments-view__table')).toBeVisible()
     await layout(page, 900, 800, { side: true })
     expect(await pageWidth(page)).toBe(900 - 48 - 260)
-    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due', ''])
+    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due'])
+    await expect(page.locator('.assignments-view__cell .assignments-view__more').first()).toBeVisible()
     expect(await noSideways(page)).toBe(true)
+    await expect.poll(() => tableScrollsSideways(page, '.assignments-view__table')).toBe(false)
     await page.mouse.move(0, 400)
     await photograph(page, 'layout-assignments-900')
     await layout(page, 1000, 800, { side: true })
     await expect.poll(() => headingsOf(page, '.assignments-view__table')).toContain('Points')
+    // In 644 px of page, the columns are all there, but a column of the ⋯ is not: it would make the table scroll
+    // sideways under it, further than its other columns do. In 804, there is room for its column too.
+    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual([
+      'Assignment',
+      'Due',
+      'Points',
+      'Published',
+    ])
+    await expect(page.locator('.assignments-view__cell .assignments-view__more').first()).toBeVisible()
     await layout(page, 900, 800, { side: false })
     await expect.poll(() => headingsOf(page, '.assignments-view__table')).toContain('Points')
+    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toContain('Actions')
+    await expect(page.locator('.assignments-view__more')).toHaveCount(0)
+    await expect.poll(() => tableScrollsSideways(page, '.assignments-view__table')).toBe(false)
     await layout(page, 900, 800, { side: true })
-    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due', ''])
+    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due'])
 
     // The grades: a card each in 544 px of page.
     await page.goto(coursePath('grades'))

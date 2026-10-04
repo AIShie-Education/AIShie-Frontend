@@ -284,11 +284,17 @@ export default {
       confirm_stale: 'Something was added after this was shown. Check what goes with it again.',
       people_only: 'An agent cannot delete an assignment that has work or grades; a person must.',
       student_out_of_scope: 'Your seat does not reach every student whose work or total this changes.',
-      assignment_out_of_scope: 'Your seat does not reach this assignment.',
+      // Refused here only for what deleting it reaches beyond it: the totals, worked out again over every
+      // assignment (one published that counts in the grade), which a seat listed for some assignments does not
+      // reach. One the seat does not reach at all is refused before anything is counted.
+      assignment_out_of_scope:
+        'Deleting it works out students’ totals again, and a total spans every assignment in the course; your seat reaches only the assignments listed on it. Someone whose seat reaches every assignment can delete it.',
       no_file_storage: 'This server has no file storage configured, so its files cannot be removed.',
       course_archived: 'The course is archived: nothing in it can be deleted.',
       deleted: 'It has already been deleted.',
     },
     otherRefusal: 'It cannot be deleted by you now.',
+    // A deletion that rewrites no total refused for the assignment itself: the seat's list no longer has it.
+    notListed: 'This assignment is not among those your seat reaches.',
   },
 }

@@ -49,12 +49,21 @@ const scheme = useScheme(() => props.courseId)
 // header's: the card's padding changes at that width too), not the window's:
 // the side bar takes from it.
 const header = useTemplateRef<InstanceType<typeof PageHeader>>('header')
-const narrow = useContainerNarrow(
-  computed(() => header.value?.$el as HTMLElement | undefined),
-  592,
-)
+const headerEl = computed(() => header.value?.$el as HTMLElement | undefined)
+const narrow = useContainerNarrow(headerEl, 592)
+/**
+ * Where each row's ⋯ is, for whoever writes assignments: in a column of its
+ * own at the row's end where the table has room for it beside the rest (the
+ * wide layout's 630 px of columns at their least and its 96, in a card whose
+ * padding takes 50 px of the page's width: 776 px of page), and at the
+ * title's right where it has not, a phone's width among them. A column fixed
+ * at the table's right that does not fit makes the table scroll sideways on
+ * its own, under the column, which then covers what is beneath it: the due
+ * date, on a phone.
+ */
+const menuInTitle = useContainerNarrow(headerEl, 775)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
-useTableRelayout(tableRef, narrow)
+useTableRelayout(tableRef, [narrow, menuInTitle])
 
 // A student's own work: the newest attempt at each assignment, and which
 // assignments they have handed something in for (a later attempt may be a
@@ -256,29 +265,40 @@ function refresh() {
             sortable
           >
             <template #default="{ row }">
-              <div class="assignments-view__title">
-                <router-link
-                  :to="{ name: 'course-assignment', params: { courseId, assignmentId: row.id } }"
-                  class="assignments-view__link"
-                  @click.stop
-                >
-                  {{ row.title }}
-                </router-link>
-                <AppTag v-if="!row.published_at" tone="wait">
-                  {{ t('assignments.state.unpublished') }}
-                </AppTag>
-              </div>
-              <div class="assignments-view__sub app-muted">{{ componentLabel(row) }}</div>
-              <div v-if="narrow" class="assignments-view__meta">
-                <span class="app-muted">{{
-                  t('assignments.list.pointsShort', { n: formatDecimal(row.points_possible) })
-                }}</span>
-                <template v-if="isStudent">
-                  <template v-if="myLatest(row)">
-                    <StatusTag vocab="submissionState" :value="myLatest(row)!.state" />
-                  </template>
-                  <span v-else-if="!mine.loading.value" class="app-muted">{{ t('assignments.state.notStarted') }}</span>
-                </template>
+              <div class="assignments-view__cell">
+                <div class="assignments-view__main">
+                  <div class="assignments-view__title">
+                    <router-link
+                      :to="{ name: 'course-assignment', params: { courseId, assignmentId: row.id } }"
+                      class="assignments-view__link"
+                      @click.stop
+                    >
+                      {{ row.title }}
+                    </router-link>
+                    <AppTag v-if="!row.published_at" tone="wait">
+                      {{ t('assignments.state.unpublished') }}
+                    </AppTag>
+                  </div>
+                  <div class="assignments-view__sub app-muted">{{ componentLabel(row) }}</div>
+                  <div v-if="narrow" class="assignments-view__meta">
+                    <span class="app-muted">{{
+                      t('assignments.list.pointsShort', { n: formatDecimal(row.points_possible) })
+                    }}</span>
+                    <template v-if="isStudent">
+                      <template v-if="myLatest(row)">
+                        <StatusTag vocab="submissionState" :value="myLatest(row)!.state" />
+                      </template>
+                      <span v-else-if="!mine.loading.value" class="app-muted">{{
+                        t('assignments.state.notStarted')
+                      }}</span>
+                    </template>
+                  </div>
+                </div>
+                <!-- Where the table has no room for a column of it (menuInTitle), the ⋯ is at the title's right.
+                     Its menu opens no row. -->
+                <div v-if="writer && menuInTitle" class="assignments-view__more" @click.stop>
+                  <AssignmentMoreMenu :title="row.title" :why="deleteWhy(row)" size="small" @delete="askDelete(row)" />
+                </div>
               </div>
             </template>
           </el-table-column>
@@ -333,11 +353,11 @@ function refresh() {
               <span v-else class="app-muted">{{ t('assignments.detail.notPublished') }}</span>
             </template>
           </el-table-column>
-          <!-- Deleting for good, at the row's end: its menu opens no row. -->
+          <!-- Deleting for good, at the row's end, where the table has room for it: its menu opens no row. -->
           <el-table-column
-            v-if="writer"
-            :label="narrow ? '' : t('common.labels.actions')"
-            :width="narrow ? 56 : 96"
+            v-if="writer && !menuInTitle"
+            :label="t('common.labels.actions')"
+            :width="96"
             fixed="right"
             align="center"
           >
@@ -384,6 +404,18 @@ function refresh() {
 }
 .assignments-view__table :deep(.el-table__row) {
   cursor: pointer;
+}
+.assignments-view__cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.assignments-view__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.assignments-view__more {
+  flex: none;
 }
 .assignments-view__title {
   display: flex;

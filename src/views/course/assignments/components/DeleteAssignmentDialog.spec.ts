@@ -8,7 +8,7 @@ import { ApiError } from '@/api/http'
 import type { AssignmentDeletePreview, DeletionCounts } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import DeleteAssignmentDialog from './DeleteAssignmentDialog.vue'
-import { countsGrown, confirmOf, hasWork, isDeletedError, nothingGoes, titleMatches } from './deletion'
+import { countsGrown, confirmOf, hasWork, isDeletedError, nothingGoes, titleAsRead, titleMatches } from './deletion'
 
 // What Core answers: the previews, in turn (the last one again), and the
 // deletion; and every write asked for.
@@ -104,14 +104,17 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountDialog(level: 'autonomous' | 'confirm_required' = 'autonomous') {
+async function mountDialog(
+  level: 'autonomous' | 'confirm_required' = 'autonomous',
+  assignment: typeof ASSIGNMENT = ASSIGNMENT,
+) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const course = useCourseStore()
   course.permsSource = 'exact'
   course.perms = { assignment_write: level } as never
   const wrapper = mount(DeleteAssignmentDialog, {
-    props: { courseId: COURSE, modelValue: true, assignment: ASSIGNMENT },
+    props: { courseId: COURSE, modelValue: true, assignment },
     attachTo: document.body,
     global: { plugins: [pinia, i18n, ElementPlus], components: icons },
   })
@@ -204,6 +207,27 @@ describe('DeleteAssignmentDialog, an assignment with work and grades', () => {
     wrapper.unmount()
   })
 
+  it('takes the title as the page shows it, whatever white space it was saved with', async () => {
+    // Two spaces, a line break and an ideographic space, saved through the API or a form that trims only its ends:
+    // drawn, each run is one space, and that is what is seen, copied and typed.
+    const saved = 'Week 3  quiz\nX\u3000(final)'
+    previews = [preview(WORK, { title: saved })]
+    const wrapper = await mountDialog('autonomous', { ...ASSIGNMENT, title: saved })
+    expect(dialog().textContent).toContain('“Week 3 quiz X (final)” will be deleted for good')
+    expect(titleField()!.placeholder).toBe('Week 3 quiz X (final)')
+    expect(deleteButton().disabled).toBe(true)
+
+    await type('Week 3 quiz X (final)')
+    expect(deleteButton().disabled).toBe(false)
+    // A full-width space, as a Chinese input method types one, or a no-break space, is a space too.
+    await type('Week 3\u3000quiz\u00a0X (final)')
+    expect(deleteButton().disabled).toBe(false)
+    // Words run together are not the title.
+    await type('Week 3 quizX (final)')
+    expect(deleteButton().disabled).toBe(true)
+    wrapper.unmount()
+  })
+
   it('counts again when more has come since it was shown, says so, and asks for the title again', async () => {
     previews = [preview(), preview({ submissions: 1, drafts: 1 })]
     answer = new ApiError({
@@ -253,6 +277,36 @@ describe('DeleteAssignmentDialog, refusals and approval', () => {
     expect(dialog().textContent).toContain('Your seat does not reach every student whose work or total this changes.')
     expect(titleField()).toBeNull()
     expect(deleteButton().disabled).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('says that a seat listed for some assignments cannot work every total out again, where that is why', async () => {
+    // A published assignment that counts in the grade: deleting it works every student's total out again, across
+    // every assignment, which a seat listed for this one alone does not reach (and the only reason the preview
+    // refuses it for the assignments: one the seat does not reach at all is not counted).
+    previews = [preview(WORK, { refusal: 'assignment_out_of_scope' })]
+    const wrapper = await mountDialog()
+    expect(dialog().textContent).toContain(
+      'Deleting it works out students’ totals again, and a total spans every assignment in the course; your seat reaches only the assignments listed on it.',
+    )
+    expect(dialog().textContent).not.toContain('does not reach this assignment')
+    expect(deleteButton().disabled).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('says the assignment itself is out of reach where the deletion would work out no total', async () => {
+    // Counted while it was on the seat's list, and refused for the assignment once it was taken off it.
+    previews = [preview({}, { published: false })]
+    answer = new ApiError({
+      status: 403,
+      code: 'forbidden',
+      message: 'out of scope',
+      details: { reason: 'assignment_out_of_scope' },
+    })
+    const wrapper = await mountDialog()
+    await press()
+    expect(dialog().textContent).toContain('This assignment is not among those your seat reaches.')
+    expect(dialog().textContent).not.toContain('a total spans every assignment')
     wrapper.unmount()
   })
 
@@ -308,6 +362,17 @@ describe('deletion helpers', () => {
     expect(titleMatches(' Quiz 3 ', 'Quiz 3')).toBe(true)
     expect(titleMatches('quiz 3', 'Quiz 3')).toBe(false)
     expect(titleMatches('', '')).toBe(false)
+    expect(titleMatches(' \u3000 ', ' ')).toBe(false)
+    // As the page shows it: white space of any kind, a run of it one space; nothing that shows nothing; the
+    // compatibility form of each character.
+    expect(titleMatches('Week 1 quiz X', 'Week 1\nquiz X')).toBe(true)
+    expect(titleMatches('Week 1 quiz X', 'Week 1 \t\r\n quiz X')).toBe(true)
+    expect(titleMatches('Week 1quiz X', 'Week 1\nquiz X')).toBe(false)
+    expect(titleMatches('第三週 測驗', '第三週\u3000測驗')).toBe(true)
+    expect(titleMatches('Quiz 3', 'Quiz\u200b 3')).toBe(true)
+    expect(titleMatches('Ｑｕｉｚ ３', 'Quiz 3')).toBe(true)
+    expect(titleMatches('Cafe\u0301', 'Café')).toBe(true)
+    expect(titleAsRead('  a \u00a0\u2003 b\n')).toBe('a b')
     // Smaller is no reason to refuse; larger is.
     expect(countsGrown({ ...NONE, drafts: 2, submissions: 2 }, { ...NONE, drafts: 1, submissions: 1 })).toBe(false)
     expect(countsGrown(NONE, { ...NONE, grades: 1 })).toBe(true)

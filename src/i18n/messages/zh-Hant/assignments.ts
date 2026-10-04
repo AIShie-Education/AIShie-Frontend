@@ -265,11 +265,13 @@ export default {
       confirm_stale: '顯示之後有新增內容，請再次確認會一併刪除的內容。',
       people_only: '代理不能刪除已有提交或成績的作業，必須由人刪除。',
       student_out_of_scope: '你的權限範圍未涵蓋所有會受影響的學生。',
-      assignment_out_of_scope: '你的權限範圍未涵蓋此作業。',
+      assignment_out_of_scope:
+        '刪除它會重新計算學生的總分，而總分涵蓋課程內所有作業；你的席位只涵蓋清單上的作業。須由席位涵蓋所有作業的人刪除。',
       no_file_storage: '此伺服器未設定檔案儲存空間，無法移除其檔案。',
       course_archived: '課程已封存：其中的內容都不能刪除。',
       deleted: '它已經被刪除。',
     },
     otherRefusal: '你目前不能刪除它。',
+    notListed: '此作業不在你的席位涵蓋的作業之內。',
   },
 }
