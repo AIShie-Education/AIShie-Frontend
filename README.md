@@ -10,7 +10,8 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
 ## What is in it
 
 - **Courses** — material with versions and publishing; assignments with pinned instructions and
-  rubrics; students' drafts, files and hand-in; grading with rubric, per-criterion breakdown and
+  rubrics, deleted for good with their work once what goes with them is confirmed; students'
+  drafts, files and hand-in; grading with rubric, per-criterion breakdown and
   feedback files; posting, regrading and the gradebook; the grading scheme; members with their
   permissions and scope; the course's activity feed.
 - **Uploading files** — a document is made from files first (一份文件含多個檔案): new material,

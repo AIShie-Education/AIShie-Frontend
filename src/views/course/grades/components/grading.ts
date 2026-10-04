@@ -128,6 +128,12 @@ export interface WorkingItem {
   /** The child's weight, or the assignment's points. */
   weight: Decimal
   dropped?: boolean
+  /**
+   * An assignment deleted for good since (assignment.delete): Core keeps the
+   * total's number but empties its line, which says nothing of the grade it
+   * was, neither its fraction nor its points.
+   */
+  deleted?: boolean
 }
 
 /** What a computed total's breakdown holds: the working and the policy it was worked out under. */

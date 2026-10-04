@@ -34,6 +34,11 @@ const SHARED_REASONS = new Map<string, string>([
   ['owner_not_autonomous', 'common.errors.ownerNotAutonomous'],
   // owner_would_be_refused, an owner deciding their agent's proposal that
   // approving now would refuse, is said with that refusal: ownerWouldBeRefused.
+  // An assignment deleted for good, or its work, named by any call since
+  // (not_found), and a call retried under the key of an action the deletion
+  // emptied.
+  ['deleted', 'common.errors.assignmentDeleted'],
+  ['target_deleted', 'common.errors.deletedWithAssignment'],
 ])
 
 const STATUS_OF: Record<string, number> = { forbidden: 403, not_found: 404, conflict: 409, failed_precondition: 422 }

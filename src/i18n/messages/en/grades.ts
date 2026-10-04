@@ -183,6 +183,7 @@ export default {
     points: '{n} pts',
     shareHint: 'Its share of the result: only what counted — with a result, not dropped — shares it.',
     dropped: 'Dropped',
+    deleted: 'An assignment since deleted',
     kindAssignment: 'Assignment',
     kindComponent: 'Component',
     hintFinal: 'Written as a final grade: ungraded work counted as zero.',

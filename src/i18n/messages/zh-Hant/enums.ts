@@ -238,6 +238,8 @@ export default {
     'assignment.updated': '更新作業',
     'assignment.published': '發佈作業',
     'assignment.unpublished': '取消發佈作業',
+    'assignment.deleted': '作業已刪除',
+    'assignment.deleted_unreleased': '已刪除未發佈的作業',
     'assignment.due_passed': '已過截止日期',
     'component.created': '建立評分項目',
     'component.updated': '更新評分項目',

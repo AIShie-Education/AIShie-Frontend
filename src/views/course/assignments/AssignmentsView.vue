@@ -2,7 +2,8 @@
 // The course's assignments (assignment.list): what is set, when it is due,
 // what it is worth and where it counts. Students also see where their own
 // work stands on each; those who write assignments see which are not
-// published yet, and create new ones here.
+// published yet, and create new ones here, and delete one for good from its
+// row's ⋯ menu (DeleteAssignmentDialog).
 import { computed, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -23,6 +24,8 @@ import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import AssignmentFormDialog from './components/AssignmentFormDialog.vue'
+import AssignmentMoreMenu from './components/AssignmentMoreMenu.vue'
+import DeleteAssignmentDialog from './components/DeleteAssignmentDialog.vue'
 import { allSubmissions, latestByAssignment, useScheme } from './components/useAssignmentData'
 
 const props = defineProps<{ courseId: string }>()
@@ -139,8 +142,35 @@ function onSaved(r: { status: 'executed' | 'proposed'; id?: string }) {
   void list.reload()
 }
 
+// --- Deleting one for good ---------------------------------------------------------
+const deleting = ref<AssignmentSummary | null>(null)
+const deleteOpen = ref(false)
+/** Deletions asked for from this page that wait for approval, by assignment: not to be asked for twice. */
+const deleteProposed = ref(new Set<string>())
+/** The deletion waiting for approval that the note above the list says. */
+const deleteNote = ref<string | null>(null)
+function askDelete(a: AssignmentSummary) {
+  deleting.value = a
+  deleteOpen.value = true
+}
+function deleteWhy(a: AssignmentSummary): string | null {
+  if (!course.writable) return t('common.archivedCourse')
+  return deleteProposed.value.has(a.id) ? t('assignments.delete.proposed', { title: a.title }) : null
+}
+function onDeleted() {
+  course.invalidate('assignments')
+  void list.reload()
+}
+function onDeleteProposed() {
+  const a = deleting.value
+  if (!a) return
+  deleteProposed.value = new Set(deleteProposed.value).add(a.id)
+  deleteNote.value = t('assignments.delete.proposed', { title: a.title })
+}
+
 function refresh() {
   now.value = Date.now()
+  deleteProposed.value = new Set()
   void list.reload()
   void mine.reload()
   void scheme.reload()
@@ -160,6 +190,12 @@ function refresh() {
 
     <AppNote v-if="proposed" class="assignments-view__alert" @close="proposed = false" closable>
       {{ t('assignments.list.proposed') }}
+      <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
+        t('assignments.list.viewMyActions')
+      }}</router-link>
+    </AppNote>
+    <AppNote v-if="deleteNote" class="assignments-view__alert" @close="deleteNote = null" closable>
+      {{ deleteNote }}
       <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
         t('assignments.list.viewMyActions')
       }}</router-link>
@@ -297,12 +333,35 @@ function refresh() {
               <span v-else class="app-muted">{{ t('assignments.detail.notPublished') }}</span>
             </template>
           </el-table-column>
+          <!-- Deleting for good, at the row's end: its menu opens no row. -->
+          <el-table-column
+            v-if="writer"
+            :label="narrow ? '' : t('common.labels.actions')"
+            :width="narrow ? 56 : 96"
+            fixed="right"
+            align="center"
+          >
+            <template #default="{ row }">
+              <div @click.stop>
+                <AssignmentMoreMenu :title="row.title" :why="deleteWhy(row)" size="small" @delete="askDelete(row)" />
+              </div>
+            </template>
+          </el-table-column>
         </el-table>
         <LoadMore :has-more="list.hasMore.value" :loading="list.loading.value" @more="list.loadMore" />
       </AsyncState>
     </section>
 
     <AssignmentFormDialog v-if="writer" v-model:visible="formOpen" :course-id="courseId" @saved="onSaved" />
+    <DeleteAssignmentDialog
+      v-if="writer && deleting"
+      v-model="deleteOpen"
+      :course-id="courseId"
+      :assignment="deleting"
+      @deleted="onDeleted"
+      @proposed="onDeleteProposed"
+      @gone="onDeleted"
+    />
   </div>
 </template>
 

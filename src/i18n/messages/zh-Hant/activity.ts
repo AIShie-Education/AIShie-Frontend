@@ -126,6 +126,7 @@ export default {
     proposal_expired: '等候過久',
     reauthorization_failed: '提出者已無權執行',
     target_gone: '所涉及的對象已不存在',
+    target_deleted: '所屬作業已被刪除',
     member_removed: '提出者已離開課程',
     tool_removed: '此類操作已不再存在',
     withdrawn: '提出者已撤回',

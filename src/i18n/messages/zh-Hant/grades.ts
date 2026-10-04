@@ -174,6 +174,7 @@ export default {
     points: '{n}分',
     shareHint: '在結果中所佔的份額：只有計入的項目（已有結果且未被剔除）才會分攤。',
     dropped: '已剔除',
+    deleted: '已刪除的作業',
     kindAssignment: '作業',
     kindComponent: '評分項目',
     hintFinal: '以最終成績記錄：未評分的作業以零分計算。',

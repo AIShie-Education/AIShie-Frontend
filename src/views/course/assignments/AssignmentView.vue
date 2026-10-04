@@ -5,9 +5,12 @@
 // .publish), and take back a publication made by mistake (.unpublish) while
 // nobody has started on it; those who read the class's work see where it
 // stands and go on to the submissions and grades pages. A student works on it
-// here: see MyWorkPanel.
+// here: see MyWorkPanel. Those who write assignments delete one for good
+// from the header's ⋯ menu (DeleteAssignmentDialog), and come back to the
+// list; an assignment deleted since its link was given says so.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessageBox } from 'element-plus'
 import { read } from '@/api/http'
@@ -27,20 +30,28 @@ import Tombstone from '@/views/course/materials/components/Tombstone.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import TimeText from '@/components/TimeText.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AssignmentFormDialog from './components/AssignmentFormDialog.vue'
+import AssignmentMoreMenu from './components/AssignmentMoreMenu.vue'
+import DeleteAssignmentDialog from './components/DeleteAssignmentDialog.vue'
 import MyWorkPanel from './components/MyWorkPanel.vue'
 import WorkSummary from './components/WorkSummary.vue'
 import { useScheme } from './components/useAssignmentData'
+import { deletedAt, isDeletedError } from './components/deletion'
 
 const props = defineProps<{ courseId: string; assignmentId: string }>()
 const { t } = useI18n()
 const course = useCourseStore()
+const router = useRouter()
 
 const state = useAsync<Assignment>(
   () => read('assignment.get', { course_id: props.courseId, assignment_id: props.assignmentId }),
   { watch: [() => props.assignmentId], keepData: true },
 )
 const assignment = computed(() => (state.data.value?.id === props.assignmentId ? state.data.value : undefined))
+/** Core's word that it was deleted for good: the page says so, and leads back to the list. */
+const deleted = computed(() => (state.error.value && isDeletedError(state.error.value) ? state.error.value : null))
+const deletedWhen = computed(() => deletedAt(deleted.value))
 const scheme = useScheme(() => props.courseId)
 
 const writer = computed(() => course.can('assignment_write'))
@@ -210,6 +221,32 @@ function onInstructionsChanged() {
   void instructions.reload()
 }
 
+// --- Deleting it for good ------------------------------------------------------------
+const deleteOpen = ref(false)
+/** Deleting it, asked for from this page, waits for approval: not to be asked for twice. */
+const deleteProposed = ref(false)
+/** Why it cannot be deleted from here now, which the menu says; null while it can. */
+const deleteWhy = computed(() => {
+  if (!course.writable) return t('common.archivedCourse')
+  if (deleteProposed.value && assignment.value)
+    return t('assignments.delete.proposed', { title: assignment.value.title })
+  return null
+})
+function onDeleted() {
+  // Every list of assignments the course keeps leaves it out from now on.
+  course.invalidate('assignments')
+  void router.replace({ name: 'course-assignments', params: { courseId: props.courseId } })
+}
+function onDeleteProposed() {
+  deleteProposed.value = true
+  if (assignment.value) pendingNote.value = t('assignments.delete.proposed', { title: assignment.value.title })
+}
+/** It was deleted elsewhere meanwhile: read it again, and the page says so. */
+function onGone() {
+  course.invalidate('assignments')
+  void state.reload()
+}
+
 const summary = ref<InstanceType<typeof WorkSummary> | null>(null)
 const work = ref<InstanceType<typeof MyWorkPanel> | null>(null)
 function refresh() {
@@ -217,6 +254,7 @@ function refresh() {
   publishProposed.value = false
   unpublishProposed.value = false
   instructionsProposed.value = false
+  deleteProposed.value = false
   void state.reload()
   void instructions.reload()
   summary.value?.reload()
@@ -298,6 +336,8 @@ function refresh() {
           class="assignment-view__approval"
           size="small"
         />
+        <!-- What cannot be taken back is not beside what is done every day: it is in the ⋯ menu, at the far end. -->
+        <AssignmentMoreMenu :title="assignment.title" :why="deleteWhy" @delete="deleteOpen = true" />
       </template>
     </PageHeader>
 
@@ -308,7 +348,17 @@ function refresh() {
       </router-link>
     </AppNote>
 
-    <AsyncState :loading="state.loading.value && !assignment" :error="state.error.value" @retry="state.reload">
+    <AppEmpty v-if="deleted" page :title="t('assignments.delete.gone')" :text="t('assignments.delete.goneHint')">
+      <p v-if="deletedWhen" class="assignment-view__gone-at">
+        <i18n-t keypath="assignments.delete.goneAt" tag="span" scope="global">
+          <template #at><TimeText :value="deletedWhen" /></template>
+        </i18n-t>
+      </p>
+      <router-link :to="{ name: 'course-assignments', params: { courseId } }">
+        <el-button type="primary">{{ t('assignments.delete.backToList') }}</el-button>
+      </router-link>
+    </AppEmpty>
+    <AsyncState v-else :loading="state.loading.value && !assignment" :error="state.error.value" @retry="state.reload">
       <template v-if="assignment">
         <AppNote v-if="writer && !assignment.published_at" class="assignment-view__alert">
           {{ t('assignments.detail.unpublishedAlert') }}
@@ -500,6 +550,15 @@ function refresh() {
           :assignment="assignment"
           @saved="onSaved"
         />
+        <DeleteAssignmentDialog
+          v-if="writer"
+          v-model="deleteOpen"
+          :course-id="courseId"
+          :assignment="assignment"
+          @deleted="onDeleted"
+          @proposed="onDeleteProposed"
+          @gone="onGone"
+        />
       </template>
     </AsyncState>
   </div>
@@ -589,6 +648,9 @@ function refresh() {
   .assignment-view__side {
     order: -1;
   }
+}
+.assignment-view__gone-at {
+  margin: 0 0 12px;
 }
 @media (max-width: 640px) {
   .app-card {

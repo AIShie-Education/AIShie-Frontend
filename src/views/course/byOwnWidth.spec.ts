@@ -219,7 +219,8 @@ describe('the assignments', () => {
     expect(heads(w, '.assignments-view__table')).toContain('Points')
     await sizes.resize('.page-header', 592)
     await flushPromises()
-    expect(heads(w, '.assignments-view__table')).toEqual(['Assignment', 'Due'])
+    // And, for whoever writes assignments, the ⋯ of each row, with no heading where it is narrow.
+    expect(heads(w, '.assignments-view__table')).toEqual(['Assignment', 'Due', ''])
     expect(w.find('.assignments-view__meta').exists()).toBe(true)
   })
 })

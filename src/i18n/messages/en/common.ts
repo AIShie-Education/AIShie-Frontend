@@ -186,6 +186,9 @@ export default {
       'Only the two taking part in a conversation mark it read: reading it as course staff keeps no place in it.',
     hostedByRuntime:
       'This agent is hosted on AIshie: the site’s agent service alone holds its token, and none is issued to anyone else.',
+    // An assignment deleted for good (AIShie-Core #73), met by anything that named it or its work.
+    assignmentDeleted: 'This assignment, or the work in it, has been deleted for good.',
+    deletedWithAssignment: 'What this was about was deleted for good with its assignment.',
     hostingFixed: 'How an agent runs is chosen when it is created, and never changed: create another agent for the other way.',
   },
   // A seat's ceilings (perm_ceilings): the most it may hold of a permission, whoever grants it.
