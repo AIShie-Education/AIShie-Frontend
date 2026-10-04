@@ -48,9 +48,12 @@ const state = useAsync<Assignment>(
   () => read('assignment.get', { course_id: props.courseId, assignment_id: props.assignmentId }),
   { watch: [() => props.assignmentId], keepData: true },
 )
-const assignment = computed(() => (state.data.value?.id === props.assignmentId ? state.data.value : undefined))
 /** Core's word that it was deleted for good: the page says so, and leads back to the list. */
 const deleted = computed(() => (state.error.value && isDeletedError(state.error.value) ? state.error.value : null))
+/** The assignment as last read, unless it has been deleted since (its page then shows nothing of it). */
+const assignment = computed(() =>
+  !deleted.value && state.data.value?.id === props.assignmentId ? state.data.value : undefined,
+)
 const deletedWhen = computed(() => deletedAt(deleted.value))
 const scheme = useScheme(() => props.courseId)
 

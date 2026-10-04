@@ -171,7 +171,16 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     await expect(ip.getByRole('button', { name: 'New assignment' })).toBeDisabled()
     await ip.goto(coursePath(`assignments/${d.course.assignments.hw2}`))
     await expect(ip.locator('.page-header').getByRole('button', { name: 'Edit' })).toBeDisabled()
-    await expect(ip.locator('.page-header').getByRole('button', { name: 'Publish' })).toBeDisabled()
+    await expect(ip.locator('.page-header').getByRole('button', { name: 'Publish', exact: true })).toBeDisabled()
+    // Nor can it be deleted: its ⋯ menu's item is off, and says why.
+    await ip
+      .locator('.page-header')
+      .getByRole('button', { name: /^More actions for/ })
+      .click()
+    const del = ip.getByRole('menuitem', { name: /^Delete…/ })
+    await expect(del).toHaveAttribute('aria-disabled', 'true')
+    await expect(del).toContainText('This course is archived')
+    await ip.keyboard.press('Escape')
 
     await ip.goto(coursePath(`submissions/${d.course.submissions.yuki_hw1}`))
     await expect(ip.getByText('The course is archived: grades can no longer be entered.')).toBeVisible()

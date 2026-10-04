@@ -571,12 +571,13 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
 
     // What switched where a window was a phone's (640 px, 592 of page) switches where the page is as narrow: in
     // 900 px of window with the side bar open, 544 px of page, and not in 1000 (644), nor in 900 with the side bar
-    // collapsed. The assignments: points and the rest under the title.
+    // collapsed. The assignments: points and the rest under the title, and, for whoever writes assignments, the ⋯
+    // of each row, with no heading there.
     await page.goto(coursePath('assignments'))
     await expect(page.locator('.assignments-view__table')).toBeVisible()
     await layout(page, 900, 800, { side: true })
     expect(await pageWidth(page)).toBe(900 - 48 - 260)
-    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due'])
+    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due', ''])
     expect(await noSideways(page)).toBe(true)
     await page.mouse.move(0, 400)
     await photograph(page, 'layout-assignments-900')
@@ -585,7 +586,7 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await layout(page, 900, 800, { side: false })
     await expect.poll(() => headingsOf(page, '.assignments-view__table')).toContain('Points')
     await layout(page, 900, 800, { side: true })
-    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due'])
+    await expect.poll(() => headingsOf(page, '.assignments-view__table')).toEqual(['Assignment', 'Due', ''])
 
     // The grades: a card each in 544 px of page.
     await page.goto(coursePath('grades'))
