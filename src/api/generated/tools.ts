@@ -1338,7 +1338,7 @@ export interface AgentWithdrawOut {
   cancelled_proposals: number
 }
 
-/** assignment.create (write): Create an assignment. It starts unpublished: students do not see it, and cannot submit to it, until assignment.publish. title and points_possible are required. */
+/** assignment.create (write): Create an assignment. It starts unpublished: students do not see it, and cannot submit to it, until assignment.publish. title and points_possible are required. Naming a group set (group_set_id) makes it a group assignment: each group of the set hands one piece of work in, graded once for the group. */
 export interface AssignmentCreateIn {
   /**
    * the bucket this counts toward; omit for practice work that is not part of the grade
@@ -1349,6 +1349,10 @@ export interface AssignmentCreateIn {
    */
   course_id: string
   due_at?: null | string
+  /**
+   * make it a group assignment of this group set of the course, not archived: each group of it hands one piece of work in. Changed only while it has no submission of any kind (assignment_has_work)
+   */
+  group_set_id?: null | string
   /**
    * a document of kind instructions, in this course
    */
@@ -1367,7 +1371,7 @@ export interface AssignmentCreateOut {
   id: string
 }
 
-/** assignment.delete (write): Delete an assignment for good. It cannot be undone: the assignment, every submission to it with its files, and every grade given on them with its feedback files go; its instructions and rubric are left in the course as they are; proposals about it waiting are cancelled; and the posted totals it counted in are worked out again without it, the change recorded. Read assignment.delete_preview first and send its counts back unchanged as confirm: if more would go than you were shown, the call is refused (confirm_stale), and you read the preview again. An agent deletes only an assignment nobody has started on, with no submission of any kind and no grade (people_only); a person deletes one with work. It reaches every student whose work or total it changes. An archived course refuses it. */
+/** assignment.delete (write): Delete an assignment for good. It cannot be undone: the assignment, every submission to it with its files, every grade given on them with its feedback files, and its peer form with every peer evaluation go; its instructions and rubric are left in the course as they are; proposals about it waiting are cancelled; and the posted totals it counted in are worked out again without it, the change recorded. Read assignment.delete_preview first and send its counts back unchanged as confirm: if more would go than you were shown, the call is refused (confirm_stale), and you read the preview again. An agent deletes only an assignment nobody has started on, with no submission of any kind, no grade and no peer evaluation (people_only); a person deletes one with work. It reaches every student whose work, peer evaluation or total it changes. An archived course refuses it. */
 export interface AssignmentDeleteIn {
   assignment_id: string
   /**
@@ -1379,11 +1383,11 @@ export interface AssignmentDeleteIn {
      */
     drafts: number
     /**
-     * files deleted from storage: those handed in and given as feedback, every version's; their PDF renditions go too and are not counted. The instructions' and the rubric's are not among them: those stay in the course
+     * files deleted from storage: those handed in and given as feedback, a group grade's among them, every version's; their PDF renditions go too and are not counted. The instructions' and the rubric's are not among them: those stay in the course
      */
     files: number
     /**
-     * live grades given on them, drafts and posted; the history of each goes with it and is not counted
+     * live grades given on them, drafts and posted, each member's of a group's work; the history of each goes with it and is not counted
      */
     grades: number
     /**
@@ -1395,6 +1399,10 @@ export interface AssignmentDeleteIn {
      */
     missing: number
     /**
+     * peer evaluations of its groups' members, the current sheets; each one's earlier sheets and its peer form go with them. A confirm that leaves it out is taken as 0
+     */
+    peer_reviews?: number
+    /**
      * of those, posted
      */
     posted: number
@@ -1403,7 +1411,7 @@ export interface AssignmentDeleteIn {
      */
     proposals: number
     /**
-     * every submission to it: every attempt and state, handed in, a draft, or recorded as missing
+     * every submission to it: every attempt and state, handed in, a draft, or recorded as missing; a group's work counts once
      */
     submissions: number
     /**
@@ -1427,6 +1435,7 @@ export interface AssignmentDeleteOut {
   removed: {
     files: number
     grades: number
+    peer_reviews?: number
     submissions: number
   }
   /**
@@ -1436,7 +1445,7 @@ export interface AssignmentDeleteOut {
   title: string
 }
 
-/** assignment.delete_preview (read): What deleting an assignment for good would take with it, counted: its submissions, its grades, the files handed in and given as feedback, the proposals about it waiting, and the students whose totals are worked out again; never names a person. Its instructions and rubric are left in the course as they are. refusal says what assignment.delete would refuse you right now, or is null. Send counts back unchanged as confirm to assignment.delete. */
+/** assignment.delete_preview (read): What deleting an assignment for good would take with it, counted: its submissions, its grades, the files handed in and given as feedback, the peer evaluations of its groups' members, the proposals about it waiting, and the students whose totals are worked out again; never names a person. Its instructions and rubric are left in the course as they are. refusal says what assignment.delete would refuse you right now, or is null. Send counts back unchanged as confirm to assignment.delete. */
 export interface AssignmentDeletePreviewIn {
   assignment_id: string
   /**
@@ -1455,11 +1464,11 @@ export interface AssignmentDeletePreviewOut {
      */
     drafts: number
     /**
-     * files deleted from storage: those handed in and given as feedback, every version's; their PDF renditions go too and are not counted. The instructions' and the rubric's are not among them: those stay in the course
+     * files deleted from storage: those handed in and given as feedback, a group grade's among them, every version's; their PDF renditions go too and are not counted. The instructions' and the rubric's are not among them: those stay in the course
      */
     files: number
     /**
-     * live grades given on them, drafts and posted; the history of each goes with it and is not counted
+     * live grades given on them, drafts and posted, each member's of a group's work; the history of each goes with it and is not counted
      */
     grades: number
     /**
@@ -1471,6 +1480,10 @@ export interface AssignmentDeletePreviewOut {
      */
     missing: number
     /**
+     * peer evaluations of its groups' members, the current sheets; each one's earlier sheets and its peer form go with them. A confirm that leaves it out is taken as 0
+     */
+    peer_reviews?: number
+    /**
      * of those, posted
      */
     posted: number
@@ -1479,7 +1492,7 @@ export interface AssignmentDeletePreviewOut {
      */
     proposals: number
     /**
-     * every submission to it: every attempt and state, handed in, a draft, or recorded as missing
+     * every submission to it: every attempt and state, handed in, a draft, or recorded as missing; a group's work counts once
      */
     submissions: number
     /**
@@ -1502,7 +1515,7 @@ export interface AssignmentDeletePreviewOut {
   title: string
 }
 
-/** assignment.get (read): One assignment: what it is worth, when it is due, and the documents holding its instructions and rubric. */
+/** assignment.get (read): One assignment: what it is worth, when it is due, and the documents holding its instructions and rubric. A group assignment names its group set, and the caller's group in it (my_group). */
 export interface AssignmentGetIn {
   assignment_id: string
   /**
@@ -1516,8 +1529,19 @@ export interface AssignmentGetOut {
    */
   component_id?: null | string
   due_at?: null | string
+  /**
+   * a group assignment's group set: each group of it hands one piece of work in
+   */
+  group_set_id?: null | string
   id: string
   instructions_document_id?: null | string
+  /**
+   * assignment.get, on a group assignment: the caller's group in its set now (for a student's own agent, its student's), absent when in none
+   */
+  my_group?: null | {
+    group_id: string
+    name: string
+  }
   /**
    * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
    */
@@ -1554,8 +1578,19 @@ export interface AssignmentListOut {
          */
         component_id?: null | string
         due_at?: null | string
+        /**
+         * a group assignment's group set: each group of it hands one piece of work in
+         */
+        group_set_id?: null | string
         id: string
         instructions_document_id?: null | string
+        /**
+         * assignment.get, on a group assignment: the caller's group in its set now (for a student's own agent, its student's), absent when in none
+         */
+        my_group?: null | {
+          group_id: string
+          name: string
+        }
         /**
          * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
          */
@@ -1594,7 +1629,7 @@ export interface AssignmentUnpublishOut {
   ok: boolean
 }
 
-/** assignment.update (write): Change an assignment. What it is worth and where it counts may change after grades are entered for it: a change of points says what becomes of them (existing_grades: rescale or keep_scores), and needs grade_submit and grade_post as well; moving it to another component, or out of the grade, needs nothing more. Either rewrites, at once, the posted totals it changes, with history, and so must reach every student who has one, over the whole course. A grade proposed out of the old points is refused when it is approved. */
+/** assignment.update (write): Change an assignment. What it is worth and where it counts may change after grades are entered for it: a change of points says what becomes of them (existing_grades: rescale or keep_scores), and needs grade_submit and grade_post as well; moving it to another component, or out of the grade, needs nothing more. Either rewrites, at once, the posted totals it changes, with history, and so must reach every student who has one, over the whole course. A grade proposed out of the old points is refused when it is approved. Whether it is group work, and of which set (group_set_id, clear_group_set), changes only while nobody has started on it (assignment_has_work), and it is made individual work only once its peer form is switched off (peer_form_exists). */
 export interface AssignmentUpdateIn {
   assignment_id: string
   /**
@@ -1602,6 +1637,10 @@ export interface AssignmentUpdateIn {
    */
   clear_component?: boolean
   clear_due_at?: boolean
+  /**
+   * make it individual work again; only while it has no submission of any kind (assignment_has_work)
+   */
+  clear_group_set?: boolean
   /**
    * the bucket this counts toward; omit for practice work that is not part of the grade
    */
@@ -1615,6 +1654,10 @@ export interface AssignmentUpdateIn {
    * rescale or keep_scores: what becomes of grades already entered when points_possible changes, required once any has been. rescale converts each score in proportion (45 of 50 becomes 90 of 100) in a new grade that replaces it, the old one kept; keep_scores leaves each score as it is, out of the new points. Either rewrites the totals it changes, and needs grade_submit and grade_post as well
    */
   existing_grades?: null | string
+  /**
+   * make it a group assignment of this group set of the course, not archived: each group of it hands one piece of work in. Changed only while it has no submission of any kind (assignment_has_work)
+   */
+  group_set_id?: null | string
   /**
    * a document of kind instructions, in this course
    */
@@ -3641,9 +3684,13 @@ export interface DocumentCreateIn {
         upload_token: string
       }[]
   /**
-   * required for kind feedback: the grade this file belongs to
+   * for kind feedback: the grade this file belongs to; or group_grade_id
    */
   grade_id?: null | string
+  /**
+   * for kind feedback on a group's work: the group grade this file belongs to, the group's shared feedback, which each member reads once their grade from it is posted
+   */
+  group_grade_id?: null | string
   /**
    * material, instructions, rubric, submission or feedback
    */
@@ -4472,6 +4519,185 @@ export interface EventListOut {
   next_seq: number
 }
 
+/** grade.adjust (write): Adjust one member's grade given from a group grade: a score of their own (replace), plus or minus the group's (delta), with a reason, which the member reads with their grade, or none, taking an adjustment away. A draft gets a new draft in its place (gated as grade.submit); a posted grade a new posted grade, the old kept as history and the member's totals written again (gated as grade.regrade, the lower of grade_submit and grade_post); a draft posted while the call is being made is refused (posted_meanwhile), and called again is gated as a regrade. The score is held to zero and, unless the group grade allows extra, to the points possible. Your adjustment wins over peer evaluation's; with none, peer evaluation counts where its form counts and its window has closed. A grade not given from a group grade is refused (not_from_a_group_grade). */
+export interface GradeAdjustIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * a member's live grade given from a group grade, a draft or posted
+   */
+  grade_id: string
+  /**
+   * replace: a score of their own; delta: plus or minus the group's; none: no adjustment of yours, their score the group's, moved by peer evaluation where it counts
+   */
+  kind: string
+  /**
+   * replace: their score; delta: what is added to the group's score, below zero to take away
+   */
+  points?: null | number | string
+  /**
+   * why, 1 to 500 characters: shown to the member, and kept
+   */
+  reason?: null | string
+}
+export interface GradeAdjustOut {
+  /**
+   * the member's adjustment now: yours, or, with none, peer evaluation's where it counts
+   */
+  adjustment?: null | {
+    /**
+     * who made it; for those who grade
+     */
+    by_member_id?: null | string
+    /**
+     * peer: what it was worked out from
+     */
+    detail?: null | {
+      /**
+       * what the member received against an even share: 1 is even
+       */
+      factor: number | string
+      /**
+       * the peer form's version it was worked out under; for those who grade
+       */
+      form_version?: null | number
+      /**
+       * how many raters rated them; for those who grade
+       */
+      raters?: null | number
+      /**
+       * the percentage of the grade peer evaluation moved
+       */
+      weight: number
+    }
+    /**
+     * replace, delta, or peer: peer evaluation, counted at the form's weight
+     */
+    kind: string
+    /**
+     * replace: their score; delta and peer: what was added to the group's score
+     */
+    points: number | string
+    reason?: null | string
+  }
+  /**
+   * false when the grade already said this: nothing was done
+   */
+  changed: boolean
+  /**
+   * the member's grade now
+   */
+  grade_id: string
+  /**
+   * with a peer form that counts: counted, or window_open, its window still open and nothing counted yet
+   */
+  peer?: string
+  /**
+   * the grade it replaced; absent when nothing changed
+   */
+  replaces?: null | string
+  /**
+   * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
+   */
+  score: number | string
+  /**
+   * how many of the member's posted totals were written down again
+   */
+  snapshots: number
+}
+
+/** grade.apply_peer (write): Count peer evaluation in an assignment's grades now: every live grade given from a group grade whose peer adjustment would change is written again — a draft as a draft, a posted grade posted, the old kept and the member's totals written again — with what the member received, against an even share, moving their score from the group's at the form's weight. A grader's own adjustment (replace or delta) is left as it is: it wins. For after the window closes, or the weight changes; and, once the form no longer counts (switched off, or a weight of 0), to take every peer adjustment counted before away, each member given the group's score. Refused while the window is open (window_open), or when the form does not count and no grade has a peer adjustment (peer_not_counted). Gated as a regrade, the lower of grade_submit and grade_post; it reaches every member whose grade it writes. A proposal records each member's factor, and approving it is refused if a grade it would replace, or the form, has changed since (grades_changed). */
+export interface GradeApplyPeerIn {
+  assignment_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * filled in when it is proposed, never by a call: the form's version then
+   */
+  form_version?: null | number
+  /**
+   * filled in when it is proposed, never by a call: each grade it writes again, and the member's factor; approving it is refused if any has changed since, or the form has (grades_changed)
+   */
+  grades?:
+    | null
+    | {
+        /**
+         * absent: the member's peer adjustment taken away, nobody having rated them or the form no longer counting
+         */
+        factor?: null | number | string
+        grade_id: string
+        student_member_id: string
+      }[]
+}
+export interface GradeApplyPeerOut {
+  /**
+   * how many of the members' posted totals were written down again
+   */
+  snapshots: number
+  written:
+    | null
+    | {
+        /**
+         * its peer adjustment; absent when it has none now
+         */
+        adjustment?: null | {
+          /**
+           * who made it; for those who grade
+           */
+          by_member_id?: null | string
+          /**
+           * peer: what it was worked out from
+           */
+          detail?: null | {
+            /**
+             * what the member received against an even share: 1 is even
+             */
+            factor: number | string
+            /**
+             * the peer form's version it was worked out under; for those who grade
+             */
+            form_version?: null | number
+            /**
+             * how many raters rated them; for those who grade
+             */
+            raters?: null | number
+            /**
+             * the percentage of the grade peer evaluation moved
+             */
+            weight: number
+          }
+          /**
+           * replace, delta, or peer: peer evaluation, counted at the form's weight
+           */
+          kind: string
+          /**
+           * replace: their score; delta and peer: what was added to the group's score
+           */
+          points: number | string
+          reason?: null | string
+        }
+        /**
+         * the score it replaced
+         */
+        before: number | string
+        grade_id: string
+        /**
+         * a posted grade written posted, the member's totals written again; otherwise a draft written as a draft
+         */
+        posted: boolean
+        replaces: string
+        /**
+         * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
+         */
+        score: number | string
+        student_member_id: string
+      }[]
+}
+
 /** grade.clear_override (write): Take a person's override off one student's total: the total worked out counts again, and what is rolled up above it is written again now. The override stays on record in the total's history. Gated as grade.override_total is. A total with no override is left as it is. */
 export interface GradeClearOverrideIn {
   /**
@@ -4530,7 +4756,7 @@ export interface GradeCommentTotalOut {
   snapshots: number
 }
 
-/** grade.get (read): One grade in full: score, feedback, per-criterion breakdown, the rubric version it was given against, and the action that made it. */
+/** grade.get (read): One grade in full: score, feedback, per-criterion breakdown, the rubric version it was given against, and the action that made it. A member's grade from a group grade says the group's score and the member's own adjustment, and its feedback files include the group's. */
 export interface GradeGetIn {
   /**
    * the course this call is about
@@ -4558,6 +4784,57 @@ export interface GradeGetOut {
         title: string
       }[]
   grader_member_id: string
+  /**
+   * for a grade given from a group grade: the group, its score, and this member's adjustment, if any
+   */
+  group?: null | {
+    /**
+     * how this member's score differs from the group's, and why; absent when it does not
+     */
+    adjustment?: null | {
+      /**
+       * who made it; for those who grade
+       */
+      by_member_id?: null | string
+      /**
+       * peer: what it was worked out from
+       */
+      detail?: null | {
+        /**
+         * what the member received against an even share: 1 is even
+         */
+        factor: number | string
+        /**
+         * the peer form's version it was worked out under; for those who grade
+         */
+        form_version?: null | number
+        /**
+         * how many raters rated them; for those who grade
+         */
+        raters?: null | number
+        /**
+         * the percentage of the grade peer evaluation moved
+         */
+        weight: number
+      }
+      /**
+       * replace, delta, or peer: peer evaluation, counted at the form's weight
+       */
+      kind: string
+      /**
+       * replace: their score; delta and peer: what was added to the group's score
+       */
+      points: number | string
+      reason?: null | string
+    }
+    group_grade_id: string
+    group_id?: null | string
+    group_name?: null | string
+    /**
+     * the group's score; the member's own is the grade's score
+     */
+    score: number | string
+  }
   id: string
   /**
    * for a computed total: nothing beneath it counts any more, so it has no value, and its score of 0 means nothing
@@ -4640,6 +4917,57 @@ export interface GradeListOut {
               title: string
             }[]
         grader_member_id: string
+        /**
+         * for a grade given from a group grade: the group, its score, and this member's adjustment, if any
+         */
+        group?: null | {
+          /**
+           * how this member's score differs from the group's, and why; absent when it does not
+           */
+          adjustment?: null | {
+            /**
+             * who made it; for those who grade
+             */
+            by_member_id?: null | string
+            /**
+             * peer: what it was worked out from
+             */
+            detail?: null | {
+              /**
+               * what the member received against an even share: 1 is even
+               */
+              factor: number | string
+              /**
+               * the peer form's version it was worked out under; for those who grade
+               */
+              form_version?: null | number
+              /**
+               * how many raters rated them; for those who grade
+               */
+              raters?: null | number
+              /**
+               * the percentage of the grade peer evaluation moved
+               */
+              weight: number
+            }
+            /**
+             * replace, delta, or peer: peer evaluation, counted at the form's weight
+             */
+            kind: string
+            /**
+             * replace: their score; delta and peer: what was added to the group's score
+             */
+            points: number | string
+            reason?: null | string
+          }
+          group_grade_id: string
+          group_id?: null | string
+          group_name?: null | string
+          /**
+           * the group's score; the member's own is the grade's score
+           */
+          score: number | string
+        }
         id: string
         /**
          * for a computed total: nothing beneath it counts any more, so it has no value, and its score of 0 means nothing
@@ -4746,8 +5074,28 @@ export interface GradePostOut {
   snapshots: number
 }
 
-/** grade.regrade (write): Replace a posted grade. The old grade is kept and marked superseded, the new one is posted at once, and the student's totals are written down again if they changed. */
+/** grade.regrade (write): Replace a posted grade. The old grade is kept and marked superseded, the new one is posted at once, and the student's totals are written down again if they changed. A member's grade given from a group grade regrades the group's as a whole: a new group grade, and a new posted grade for each member whose grade came from the old one, adjustments carried unless named, and for each member added to the work since with no grade on it; refused while any grade from it is still a draft (group_grade_partly_posted). It reaches every member then. A proposal of it records the grades it replaces, and is refused on approval if one has been replaced since (grades_changed). One member alone is changed with grade.adjust. */
 export interface GradeRegradeIn {
+  /**
+   * a member's grade from a group grade: members whose new grade differs from the group's, as in grade.submit; each other member's adjustment is carried from their grade. A proposal records every member's, as it will be written
+   */
+  adjustments?:
+    | null
+    | {
+        /**
+         * replace: a score of their own; delta: plus or minus the group's; none: no adjustment, taking away one carried from their earlier grade
+         */
+        kind: string
+        /**
+         * replace: their score; delta: what is added to the group's score, below zero to take away
+         */
+        points?: null | number | string
+        /**
+         * why, 1 to 500 characters: shown to the member, and kept
+         */
+        reason?: null | string
+        student_member_id: string
+      }[]
   /**
    * permit a score above the points possible
    */
@@ -4789,6 +5137,10 @@ export interface GradeRegradeIn {
    */
   grade_id: string
   /**
+   * a member's grade from a group grade: the members whose grades it writes, those whose grade came from the group grade and any added to the work since with none on it; if given, they must be. A proposal records them, and is refused on approval if they have changed (members_changed)
+   */
+  members?: null | string[]
+  /**
    * that the grader was shown no rubric; filled in when the grade is proposed and no rubric is published, and the grade then records none, whatever is published before it is approved. A call giving it is refused if a rubric is published
    */
   no_rubric?: boolean
@@ -4796,6 +5148,10 @@ export interface GradeRegradeIn {
    * the points possible the score is out of; defaults to what the work is worth now. A proposal records it, and is refused on approval if the work has been rescaled since
    */
   out_of?: null | number | string
+  /**
+   * a member's grade from a group grade: the posted grades it replaces, each member's from the group grade, as they are when the call is made; if given, they must be. A proposal records them, and is refused on approval if one has been replaced since, by an adjustment or otherwise (grades_changed)
+   */
+  replaces_grades?: null | string[]
   /**
    * the rubric version the grader was shown; defaults to the published one. A proposal records it, or no_rubric if none was published when it was made
    */
@@ -4811,12 +5167,89 @@ export interface GradeRegradeOut {
    * the new grade
    */
   grade_id: string
+  /**
+   * a member's grade from a group grade: the group's new grade
+   */
+  group_grade_id?: null | string
+  /**
+   * a member's grade from a group grade: each member's new posted grade from it
+   */
+  member_grades?:
+    | null
+    | {
+        adjustment?: null | {
+          /**
+           * who made it; for those who grade
+           */
+          by_member_id?: null | string
+          /**
+           * peer: what it was worked out from
+           */
+          detail?: null | {
+            /**
+             * what the member received against an even share: 1 is even
+             */
+            factor: number | string
+            /**
+             * the peer form's version it was worked out under; for those who grade
+             */
+            form_version?: null | number
+            /**
+             * how many raters rated them; for those who grade
+             */
+            raters?: null | number
+            /**
+             * the percentage of the grade peer evaluation moved
+             */
+            weight: number
+          }
+          /**
+           * replace, delta, or peer: peer evaluation, counted at the form's weight
+           */
+          kind: string
+          /**
+           * replace: their score; delta and peer: what was added to the group's score
+           */
+          points: number | string
+          reason?: null | string
+        }
+        grade_id: string
+        /**
+         * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
+         */
+        score: number | string
+        student_member_id: string
+      }[]
+  /**
+   * as grade.submit says it
+   */
+  peer?: string
   replaces: string
   snapshots: number
 }
 
-/** grade.submit (write): Write a draft grade for a submission, or for a student on a directly graded component. A draft is not visible to the student until it is posted with grade.post. A new draft replaces any earlier draft for the same work. */
+/** grade.submit (write): Write a draft grade for a submission, or for a student on a directly graded component. A draft is not visible to the student until it is posted with grade.post. A new draft replaces any earlier draft for the same work. A group's work is graded once: a group grade, the shared record with its feedback and files, and a draft for each member of the work given from it, the group's score unless the member is adjusted (adjustments: a score of their own, or plus or minus, each with a reason), an adjustment carried from their earlier grade otherwise; a member you do not adjust is moved by peer evaluation where its form counts and its window has closed (peer). Each member's draft is posted with grade.post, and changed alone with grade.adjust. Once a grade on a group's work is posted, a new group grade for it is refused (group_grade_posted): it is changed with grade.regrade, which also gives a member added to the work since a grade from it. A member's draft posted while the call is being made refuses it the same way, and one adjusted meanwhile refuses it as grades_changed: look again, and call again. */
 export interface GradeSubmitIn {
+  /**
+   * a group's work: members whose grade differs from the group's — a score of their own (replace) or plus or minus (delta), each with a reason — or none, taking away one carried from their earlier grade. Each member's adjustment is otherwise carried from their earlier grade on the work. A proposal records every member's, as it will be written
+   */
+  adjustments?:
+    | null
+    | {
+        /**
+         * replace: a score of their own; delta: plus or minus the group's; none: no adjustment, taking away one carried from their earlier grade
+         */
+        kind: string
+        /**
+         * replace: their score; delta: what is added to the group's score, below zero to take away
+         */
+        points?: null | number | string
+        /**
+         * why, 1 to 500 characters: shown to the member, and kept
+         */
+        reason?: null | string
+        student_member_id: string
+      }[]
   /**
    * permit a score above the points possible
    */
@@ -4862,6 +5295,10 @@ export interface GradeSubmitIn {
    */
   for_missing?: null | boolean
   /**
+   * a group's work: whose work it is, its members; if given, they must be. A proposal records them, and is refused on approval if they have changed (members_changed)
+   */
+  members?: null | string[]
+  /**
    * that the grader was shown no rubric; filled in when the grade is proposed and no rubric is published, and the grade then records none, whatever is published before it is approved. A call giving it is refused if a rubric is published
    */
   no_rubric?: boolean
@@ -4887,7 +5324,67 @@ export interface GradeSubmitIn {
   submission_id?: null | string
 }
 export interface GradeSubmitOut {
-  grade_id: string
+  /**
+   * the grade written; absent for a group's work, whose members' grades are in member_grades
+   */
+  grade_id?: string
+  /**
+   * a group's work: the group grade, the shared record of what the group was given
+   */
+  group_grade_id?: null | string
+  /**
+   * a group's work: each member's draft grade from it, with their score and adjustment
+   */
+  member_grades?:
+    | null
+    | {
+        adjustment?: null | {
+          /**
+           * who made it; for those who grade
+           */
+          by_member_id?: null | string
+          /**
+           * peer: what it was worked out from
+           */
+          detail?: null | {
+            /**
+             * what the member received against an even share: 1 is even
+             */
+            factor: number | string
+            /**
+             * the peer form's version it was worked out under; for those who grade
+             */
+            form_version?: null | number
+            /**
+             * how many raters rated them; for those who grade
+             */
+            raters?: null | number
+            /**
+             * the percentage of the grade peer evaluation moved
+             */
+            weight: number
+          }
+          /**
+           * replace, delta, or peer: peer evaluation, counted at the form's weight
+           */
+          kind: string
+          /**
+           * replace: their score; delta and peer: what was added to the group's score
+           */
+          points: number | string
+          reason?: null | string
+        }
+        grade_id: string
+        /**
+         * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
+         */
+        score: number | string
+        student_member_id: string
+      }[]
+  /**
+   * a group's work with a peer form that counts: counted, each member not adjusted by you moved by what they received; window_open, its window still open and nothing counted yet
+   */
+  peer?: string
 }
 
 /** grade.undo_ungraded_as_zero (write): Undo treat_ungraded_as_zero for one student, or for every student it was applied to: their totals are written again, at once, leaving ungraded work out as a grade so far, and later posts and regrades no longer count it as zero until someone posts as final again. A total with nothing left beneath it says it has none. Gated as posting as final is: grade_post, reaching every student it is about, with an assignment scope of the whole course. Grades themselves are not touched, and the totals it replaces stay in the history. */
@@ -4962,6 +5459,552 @@ export interface GradebookGetOut {
         percent: null | number | string
       }[]
   student_member_id: string
+}
+
+/** group_set.create (write): Make a group set (分組) in the course, to hold groups that group assignments use: one set serves any number of assignments. Groups are added with group.create or group.split; students are placed with group.set_members, or sign themselves up while signup_open, until signup_closes_at. */
+export interface GroupSetCreateIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * at most 2000 characters
+   */
+  description?: null | string
+  /**
+   * 1 to 100 characters on one line, unique among the course's sets not archived
+   */
+  name: string
+  /**
+   * when sign-up closes; none for no deadline
+   */
+  signup_closes_at?: null | string
+  /**
+   * let students sign themselves up to its groups
+   */
+  signup_open?: boolean
+}
+export interface GroupSetCreateOut {
+  id: string
+}
+
+/** group_set.get (read): One group set as group_set.list shows it, and, to those who may read the member list, the students in no group of it by name; to those who read submissions or the member list, each group's latest work for each assignment of the set, for the groups their student scope reaches; and with include_history, every stay in its groups, joined and left, by whom and how. */
+export interface GroupSetGetIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * every stay in a group of the set, ended or not, to those who may read the member list
+   */
+  include_history?: boolean
+  set_id: string
+}
+export interface GroupSetGetOut {
+  archived_at?: null | string
+  /**
+   * the assignments using this set, within the caller's assignment scope; one not published only to those who write assignments
+   */
+  assignments:
+    | null
+    | {
+        assignment_id: string
+        published: boolean
+        title: string
+      }[]
+  created_at: string
+  description?: null | string
+  groups:
+    | null
+    | {
+        archived_at?: null | string
+        /**
+         * the most members sign-up takes it to; absent for no limit
+         */
+        capacity?: null | number
+        created_at: string
+        /**
+         * at its capacity: sign-up takes nobody more
+         */
+        full: boolean
+        id: string
+        /**
+         * its members now, those the caller's student scope reaches, to those who may read the member list; to a student, their own group's
+         */
+        members?:
+          | null
+          | {
+              display_name?: null | string
+              joined_at?: null | string
+              /**
+               * assigned, split or signup
+               */
+              joined_how?: null | string
+              member_id: string
+            }[]
+        name: string
+        /**
+         * how many students count as its members now
+         */
+        size: number
+        /**
+         * group_set.get only: its latest work for each assignment of the set that the caller may read, to those who read submissions or the member list, for a group whose members their student scope reaches; a member is shown the group's draft and the attempts they are part of
+         */
+        work?:
+          | null
+          | {
+              assignment_id: string
+              attempt: number
+              /**
+               * draft, submitted, late or missing
+               */
+              state: string
+              /**
+               * its latest attempt
+               */
+              submission_id: string
+              title: string
+            }[]
+      }[]
+  /**
+   * group_set.get with include_history only: every stay in a group of the set, ended or not, the newest first, of students the caller's scope reaches; to those who may read the member list
+   */
+  history?:
+    | null
+    | {
+        display_name: string
+        group_id: string
+        id: string
+        joined_at: string
+        joined_by_member_id: string
+        /**
+         * assigned, split or signup
+         */
+        joined_how: string
+        left_at?: null | string
+        left_by_member_id?: null | string
+        /**
+         * moved, unassigned, split, left or switched
+         */
+        left_how?: null | string
+        member_id: string
+      }[]
+  id: string
+  /**
+   * the group of this set the caller is in now, or, for a student's own agent, its student
+   */
+  my_group_id?: null | string
+  name: string
+  signup: {
+    /**
+     * when sign-up closes, if it has a deadline
+     */
+    closes_at?: null | string
+    /**
+     * whether a student may sign up now
+     */
+    joinable: boolean
+    /**
+     * whether the teacher has opened the set's groups for students to sign up
+     */
+    open: boolean
+    /**
+     * why not: signup_closed, set_archived or course_archived
+     */
+    reason?: null | string
+  }
+  /**
+   * group_set.get only: those students, by name
+   */
+  unassigned?:
+    | null
+    | {
+        display_name?: null | string
+        joined_at?: null | string
+        /**
+         * assigned, split or signup
+         */
+        joined_how?: null | string
+        member_id: string
+      }[]
+  /**
+   * how many of the course's students the caller's scope reaches are in no group of this set; to those who may read the member list
+   */
+  unassigned_count?: null | number
+  updated_at: string
+}
+
+/** group_set.list (read): The course's group sets (分組, such as project groups or lab groups), the oldest first, each with its groups (name, capacity, size now), whether students may sign up now and why not, the assignments using it, and the caller's own group in it (my_group_id). Members' names come to those who may read the member list, for the students their scope reaches, with how many are in no group; a student is shown their own group's members. */
+export interface GroupSetListIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * list archived sets too
+   */
+  include_archived?: boolean
+}
+export interface GroupSetListOut {
+  sets:
+    | null
+    | {
+        archived_at?: null | string
+        /**
+         * the assignments using this set, within the caller's assignment scope; one not published only to those who write assignments
+         */
+        assignments:
+          | null
+          | {
+              assignment_id: string
+              published: boolean
+              title: string
+            }[]
+        created_at: string
+        description?: null | string
+        groups:
+          | null
+          | {
+              archived_at?: null | string
+              /**
+               * the most members sign-up takes it to; absent for no limit
+               */
+              capacity?: null | number
+              created_at: string
+              /**
+               * at its capacity: sign-up takes nobody more
+               */
+              full: boolean
+              id: string
+              /**
+               * its members now, those the caller's student scope reaches, to those who may read the member list; to a student, their own group's
+               */
+              members?:
+                | null
+                | {
+                    display_name?: null | string
+                    joined_at?: null | string
+                    /**
+                     * assigned, split or signup
+                     */
+                    joined_how?: null | string
+                    member_id: string
+                  }[]
+              name: string
+              /**
+               * how many students count as its members now
+               */
+              size: number
+              /**
+               * group_set.get only: its latest work for each assignment of the set that the caller may read, to those who read submissions or the member list, for a group whose members their student scope reaches; a member is shown the group's draft and the attempts they are part of
+               */
+              work?:
+                | null
+                | {
+                    assignment_id: string
+                    attempt: number
+                    /**
+                     * draft, submitted, late or missing
+                     */
+                    state: string
+                    /**
+                     * its latest attempt
+                     */
+                    submission_id: string
+                    title: string
+                  }[]
+            }[]
+        /**
+         * group_set.get with include_history only: every stay in a group of the set, ended or not, the newest first, of students the caller's scope reaches; to those who may read the member list
+         */
+        history?:
+          | null
+          | {
+              display_name: string
+              group_id: string
+              id: string
+              joined_at: string
+              joined_by_member_id: string
+              /**
+               * assigned, split or signup
+               */
+              joined_how: string
+              left_at?: null | string
+              left_by_member_id?: null | string
+              /**
+               * moved, unassigned, split, left or switched
+               */
+              left_how?: null | string
+              member_id: string
+            }[]
+        id: string
+        /**
+         * the group of this set the caller is in now, or, for a student's own agent, its student
+         */
+        my_group_id?: null | string
+        name: string
+        signup: {
+          /**
+           * when sign-up closes, if it has a deadline
+           */
+          closes_at?: null | string
+          /**
+           * whether a student may sign up now
+           */
+          joinable: boolean
+          /**
+           * whether the teacher has opened the set's groups for students to sign up
+           */
+          open: boolean
+          /**
+           * why not: signup_closed, set_archived or course_archived
+           */
+          reason?: null | string
+        }
+        /**
+         * group_set.get only: those students, by name
+         */
+        unassigned?:
+          | null
+          | {
+              display_name?: null | string
+              joined_at?: null | string
+              /**
+               * assigned, split or signup
+               */
+              joined_how?: null | string
+              member_id: string
+            }[]
+        /**
+         * how many of the course's students the caller's scope reaches are in no group of this set; to those who may read the member list
+         */
+        unassigned_count?: null | number
+        updated_at: string
+      }[]
+}
+
+/** group_set.update (write): Rename a group set, describe it, open or close sign-up to its groups and set its deadline, or archive it, which closes its sign-up and hides it from new assignments while those using it go on working, or bring it back. An archived set changes in nothing else until it is brought back. */
+export interface GroupSetUpdateIn {
+  /**
+   * true archives it: hidden from new assignments, its sign-up closed, assignments using it working as before; false brings it back
+   */
+  archived?: null | boolean
+  /**
+   * sign-up has no deadline
+   */
+  clear_signup_closes_at?: boolean
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * empty takes it away
+   */
+  description?: null | string
+  name?: null | string
+  set_id: string
+  signup_closes_at?: null | string
+  signup_open?: null | boolean
+}
+export interface GroupSetUpdateOut {
+  /**
+   * false when it already said this: nothing was done
+   */
+  changed: boolean
+}
+
+/** group.create (write): Add groups to a group set, each with a name and, if sign-up is to stop at a size, a capacity. A set that is archived takes none. */
+export interface GroupCreateIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * 1 to 100 groups to add
+   */
+  groups:
+    | null
+    | {
+        /**
+         * 1 to 500: the most members sign-up takes it to; none for no limit. It does not bind the teacher
+         */
+        capacity?: null | number
+        /**
+         * 1 to 100 characters on one line, unique among the set's groups not archived
+         */
+        name: string
+      }[]
+  set_id: string
+}
+export interface GroupCreateOut {
+  /**
+   * in the order given
+   */
+  group_ids: null | string[]
+}
+
+/** group.set_members (write): Place students in groups of a set by hand, or take them out of its groups: each student named goes to the group given, or out of every group of the set when none is; all or none. Capacity does not bind the teacher: the result names any group now over it. A placement that moves a student out of, or into, a group with work for an assignment of the set — a draft included — is refused (group_has_work, naming each work) unless the call says affects_work: a draft follows the group, and work handed in keeps who it was handed in for. It reaches every student named. */
+export interface GroupSetMembersIn {
+  /**
+   * place them although a group they leave or join has work for an assignment of the set: a draft follows the group, and work handed in keeps who it was handed in for. Without it, such a placement is refused (group_has_work), naming each work. A proposal records it as given
+   */
+  affects_work?: boolean
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * 1 to 500 students, each placed in a group of the set or taken out of its groups; all or none
+   */
+  placements:
+    | null
+    | {
+        /**
+         * the group to place them in; absent takes them out of every group of the set
+         */
+        group_id?: null | string
+        student_member_id: string
+      }[]
+  set_id: string
+}
+export interface GroupSetMembersOut {
+  /**
+   * the students whose group changed; one already where they were placed is left as they were
+   */
+  moved:
+    | null
+    | {
+        from_group_id?: null | string
+        group_id?: null | string
+        student_member_id: string
+      }[]
+  /**
+   * groups now above their capacity: capacity binds sign-up, not the teacher
+   */
+  over_capacity: null | string[]
+}
+
+/** group.sign_up (write): A student signs themselves up to a group of a set the teacher opened: joins it, switches to it from their group, or, with no group_id, leaves their group. Only while the set's sign-up is open and before its deadline (signup_closed), to a group below its capacity (group_full), and never out of or into a group that has handed work in for an assignment of the set (your_group_has_work, group_has_work): who did handed-in work is the teacher's to change. Such a refusal names, of that work, what the caller may read: a student is shown nothing of another group's, nor of their own group's handed in before they joined. A student's own agent signs up for its student by proposal, which the student confirms. */
+export interface GroupSignUpIn {
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * the group to join, or to switch to from one's own; absent leaves one's group
+   */
+  group_id?: null | string
+  set_id: string
+  /**
+   * the student signing up; defaults to the caller, or, for a student's own agent, its student
+   */
+  student_member_id?: null | string
+}
+export interface GroupSignUpOut {
+  /**
+   * false when they were already where they asked to be
+   */
+  changed: boolean
+  /**
+   * the group they are in now; absent when in none
+   */
+  group_id?: null | string
+  /**
+   * the group they left
+   */
+  left_group_id?: null | string
+}
+
+/** group.split (write): Split the course's students at random into groups of a set, by size (groups of up to n) or by count (until the set has n groups), from the students in no group (unassigned) or from everyone (all), which empties every group with no work first. Groups with work for an assignment of the set are never touched: they keep their members and are named in kept. New groups are made as needed, named name_prefix and a number. The deal depends only on the seed, the students and the groups, so the same seed deals the same way; it is worked out whole first, and refused (no_room) if anyone would have nowhere to go. Adjust it afterwards with group.set_members, or split again. It reaches every student of the course. */
+export interface GroupSplitIn {
+  /**
+   * size: groups of up to n students; count: until the set has n groups
+   */
+  by: string
+  /**
+   * 1 to 500: the capacity of the groups it makes
+   */
+  capacity?: null | number
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * unassigned: deal the students in no group of the set; all: empty every group with no work first, and deal everyone not in a group with work
+   */
+  from: string
+  /**
+   * 1 to 500
+   */
+  n: number
+  /**
+   * new groups are called this and the lowest number not in use; default 'Group '
+   */
+  name_prefix?: null | string
+  /**
+   * 1 to 64 printable ASCII characters: the same seed deals the same way. Made up and returned when absent; a proposal records it
+   */
+  seed?: null | string
+  set_id: string
+}
+export interface GroupSplitOut {
+  created:
+    | null
+    | {
+        group_id: string
+        name: string
+      }[]
+  /**
+   * stays ended to be dealt again (from all)
+   */
+  emptied: number
+  kept:
+    | null
+    | {
+        group_id: string
+        /**
+         * has_work: it has work for an assignment of the set, and kept its members
+         */
+        reason: string
+      }[]
+  placed:
+    | null
+    | {
+        group_id: string
+        student_member_id: string
+      }[]
+  /**
+   * the seed it was dealt with: the same seed, students and groups deal the same way
+   */
+  seed: string
+}
+
+/** group.update (write): Rename a group, set or take away its capacity — setting it to the group's size closes it to sign-up — or archive it, only while nobody is in it (group_not_empty) and it has no work for any assignment (group_has_work), or bring it back. */
+export interface GroupUpdateIn {
+  /**
+   * true archives it, only while nobody is in it and it has no work; false brings it back
+   */
+  archived?: null | boolean
+  /**
+   * 1 to 500
+   */
+  capacity?: null | number
+  /**
+   * no limit
+   */
+  clear_capacity?: boolean
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  group_id: string
+  name?: null | string
+}
+export interface GroupUpdateOut {
+  /**
+   * false when it already said this: nothing was done
+   */
+  changed: boolean
 }
 
 /** me.conversations (read): Your conversations with agents, as the one who asked, in every course you are seated in (or in course_id's), the newest activity first, for a chat panel: each with its course, its agent, its state as conversation.get says it, when it was last active, whether the agent has written since you last read it (unread; conversation.mark_read), and whether you may ask in its course now. It lists what conversation.list lists of yours in each course: nothing from a seat that is removed, paused or expired. Page with after = the next of the page before. */
@@ -5924,6 +6967,590 @@ export interface MemoryWriteOut {
   version: number
 }
 
+/** peer_form.get (read): An assignment's peer form, if it has one: how members of a group evaluate each other (rating on criteria, or splitting 100 points), the window, the weight it counts at in each member's grade, and who sees what: those who grade read every sheet with who wrote it, as does the action log; a student reads their own sheet, their own average once it closes if the form shares it, and their own grade's adjustment where it counts, never another's sheet, what was said of them, or who rated them. For a student in a group's circle (or a student's own agent), their task: the circle, whom they evaluate, the window's state, their current sheet; one who joined their group after its work was handed in has none, and is told nothing of that work. Whether a sheet has been written (in_use) is told only to those who write assignments or grade, since it would tell a group that another has handed in. */
+export interface PeerFormGetIn {
+  assignment_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+}
+export interface PeerFormGetOut {
+  /**
+   * null when the assignment has none
+   */
+  form: null | {
+    assignment_id: string
+    closes_at: string
+    criteria?:
+      | null
+      | {
+          /**
+           * at most 1000 characters
+           */
+          description?: null | string
+          /**
+           * 1 to 32 of a-z, 0-9 and _, unique in the form: the ratings name it
+           */
+          key: string
+          /**
+           * what is rated, 1 to 200 characters
+           */
+          label: string
+          /**
+           * 0.1 to 10: its weight in what a rater gives a member, against the others'; 1 if omitted
+           */
+          weight?: null | number | string
+        }[]
+    /**
+     * false: no sheet is written, and it does not count; what was written is kept
+     */
+    enabled: boolean
+    /**
+     * to those who write assignments or grade: a sheet has been written, so its kind, criteria, scale and self-evaluation no longer change (form_in_use). Absent for anyone else, a student or their own agent included: on a form that opens on hand-in it would tell one group that another has handed in
+     */
+    in_use?: null | boolean
+    /**
+     * rating: each member rated on each criterion, a whole number on the scale; share: each rater splits 100 points among those they evaluate
+     */
+    kind: string
+    /**
+     * on_hand_in: for each group once it has handed work in; at: at opens_at
+     */
+    opens: string
+    opens_at?: null | string
+    scale_max?: null | number
+    scale_min?: null | number
+    /**
+     * members evaluate themselves too
+     */
+    self_evaluation: boolean
+    /**
+     * none, or own_average: after it closes, a member reads their own average from two peers or more, never a comment
+     */
+    share_with_students: string
+    /**
+     * what a student reads: own_sheet, their own current sheet; own_average, their own average once it closes; own_adjustment, their own grade's peer adjustment, where it counts. Never another's sheet, what was said of them, or who rated them
+     */
+    students_see: null | string[]
+    updated_at: string
+    /**
+     * changed by every change: peer_form.set is made over it
+     */
+    version: number
+    /**
+     * who reads every sheet, with who wrote it: graders, those who grade; action_record, those who decide actions, in the action log
+     */
+    visible_to: null | string[]
+    /**
+     * the percentage of each member's grade what they received moves; 0: reference only
+     */
+    weight: number
+  }
+  /**
+   * for a student in a group's circle, or a student's own agent: the student's part. Absent for one in none, such as one who joined their group after its work was handed in, who is told nothing of that work
+   */
+  task?: null | {
+    /**
+     * who evaluates whom: the members of the group's latest work handed in or recorded missing, or, with none, its members now
+     */
+    circle:
+      | null
+      | {
+          display_name: string
+          member_id: string
+        }[]
+    group_id: string
+    group_name: string
+    own_average?: null | {
+      /**
+       * a rating form: the average from peers on each criterion, to two places
+       */
+      averages?: {
+        /**
+         * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
+         */
+        [k: string]: number | string | undefined
+      }
+      /**
+       * a share form: what peers gave, against an even share, as a percentage; 100 is even
+       */
+      share_percent?: null | number | string
+    }
+    /**
+     * their current sheet, if they have written one
+     */
+    sheet?: null | {
+      comment?: null | string
+      entries:
+        | null
+        | {
+            comment?: null | string
+            ratings?: {
+              [k: string]: number | undefined
+            }
+            share?: null | number
+            student_member_id: string
+          }[]
+      /**
+       * the group whose circle it was written in
+       */
+      group_id: string
+      rater_member_id: string
+      /**
+       * to those who grade
+       */
+      rater_name?: null | string
+      review_id: string
+      submitted_at: string
+    }
+    /**
+     * whom the student's sheet covers, exactly: every other member of the circle, and themselves with self-evaluation on
+     */
+    to_evaluate: null | string[]
+    window: {
+      closes_at: string
+      /**
+       * on_hand_in or at
+       */
+      opens: string
+      opens_at?: null | string
+      /**
+       * not_open, open or closed
+       */
+      state: string
+    }
+  }
+}
+
+/** peer_form.set (write): Make or change a group assignment's peer form, over the version you read (version, or If-Match; omitted, only a new form is made): how members of each group evaluate each other's contribution, rating each on criteria (kind rating, criteria and a scale) or splitting 100 points among them (kind share), themselves too with self_evaluation; when (opens on_hand_in, for each group once it has handed work in, or at opens_at; closes_at); at what weight it moves each member's grade (0 for reference only), and whether a member reads their own average after it closes (share_with_students). Once a sheet is written its kind, criteria, scale and self-evaluation are fixed (form_in_use); its dates, weight and sharing still change, and enabled false stops it, keeping what was written. A change rewrites no grade: grade.apply_peer does. Refused on an individual assignment (not_a_group_assignment). */
+export interface PeerFormSetIn {
+  /**
+   * a group assignment
+   */
+  assignment_id: string
+  /**
+   * when no more sheets are written, for every group; what counts in grades is worked out once it has passed
+   */
+  closes_at: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * rating: 1 to 10 criteria
+   */
+  criteria?:
+    | null
+    | {
+        /**
+         * at most 1000 characters
+         */
+        description?: null | string
+        /**
+         * 1 to 32 of a-z, 0-9 and _, unique in the form: the ratings name it
+         */
+        key: string
+        /**
+         * what is rated, 1 to 200 characters
+         */
+        label: string
+        /**
+         * 0.1 to 10: its weight in what a rater gives a member, against the others'; 1 if omitted
+         */
+        weight?: null | number | string
+      }[]
+  /**
+   * false stops new sheets and stops it counting, keeping what was written; grade.apply_peer then takes away the peer adjustments counted before. True if omitted on a new form, and as it was on a form there is
+   */
+  enabled?: null | boolean
+  /**
+   * rating: each member rated on each criterion, a whole number on the scale; share: each rater splits 100 points among those they evaluate
+   */
+  kind: string
+  /**
+   * on_hand_in: for each group once it has handed work in; at: at opens_at
+   */
+  opens: string
+  /**
+   * with opens at; before closes_at
+   */
+  opens_at?: null | string
+  /**
+   * rating: above scale_min, at most 10
+   */
+  scale_max?: null | number
+  /**
+   * rating: 0 or 1
+   */
+  scale_min?: null | number
+  /**
+   * members evaluate themselves too; false if omitted on a new form, and as it was on a form there is. A pair is moderated only with it on
+   */
+  self_evaluation?: null | boolean
+  /**
+   * none, or own_average: after it closes a member reads their own average from two peers or more; none if omitted on a new form, and as it was on a form there is
+   */
+  share_with_students?: null | string
+  /**
+   * the version you read (peer_form.get), 0 for none: the change is made only over it (version_mismatch). Omitted, only a new form is made. Over REST the If-Match header may carry it. A proposal records it
+   */
+  version?: null | number
+  /**
+   * 0 to 100: the percentage of each member's grade what they received moves; 0 for reference only. A change rewrites no grade until grade.apply_peer, which at 0 takes away the peer adjustments counted before
+   */
+  weight: number
+}
+export interface PeerFormSetOut {
+  assignment_id: string
+  closes_at: string
+  criteria?:
+    | null
+    | {
+        /**
+         * at most 1000 characters
+         */
+        description?: null | string
+        /**
+         * 1 to 32 of a-z, 0-9 and _, unique in the form: the ratings name it
+         */
+        key: string
+        /**
+         * what is rated, 1 to 200 characters
+         */
+        label: string
+        /**
+         * 0.1 to 10: its weight in what a rater gives a member, against the others'; 1 if omitted
+         */
+        weight?: null | number | string
+      }[]
+  /**
+   * false: no sheet is written, and it does not count; what was written is kept
+   */
+  enabled: boolean
+  /**
+   * to those who write assignments or grade: a sheet has been written, so its kind, criteria, scale and self-evaluation no longer change (form_in_use). Absent for anyone else, a student or their own agent included: on a form that opens on hand-in it would tell one group that another has handed in
+   */
+  in_use?: null | boolean
+  /**
+   * rating: each member rated on each criterion, a whole number on the scale; share: each rater splits 100 points among those they evaluate
+   */
+  kind: string
+  /**
+   * on_hand_in: for each group once it has handed work in; at: at opens_at
+   */
+  opens: string
+  opens_at?: null | string
+  scale_max?: null | number
+  scale_min?: null | number
+  /**
+   * members evaluate themselves too
+   */
+  self_evaluation: boolean
+  /**
+   * none, or own_average: after it closes, a member reads their own average from two peers or more, never a comment
+   */
+  share_with_students: string
+  /**
+   * what a student reads: own_sheet, their own current sheet; own_average, their own average once it closes; own_adjustment, their own grade's peer adjustment, where it counts. Never another's sheet, what was said of them, or who rated them
+   */
+  students_see: null | string[]
+  updated_at: string
+  /**
+   * changed by every change: peer_form.set is made over it
+   */
+  version: number
+  /**
+   * who reads every sheet, with who wrote it: graders, those who grade; action_record, those who decide actions, in the action log
+   */
+  visible_to: null | string[]
+  /**
+   * the percentage of each member's grade what they received moves; 0: reference only
+   */
+  weight: number
+}
+
+/** peer_review.results (read): Peer evaluation's results for an assignment, for those who grade, for each group whose circle lies wholly within your student scope (or one group's): for each member whether they wrote a sheet and when, who rated them, what their peers gave them (the average on each criterion, or each share), what they gave themselves, their factor against an even share and the score it would give at the form's weight, their live grade, and flags (low, high, self_above_peers; as a rater, uniform and missing); and every sheet with who wrote it, its entries and comments. Evidence for grading: never tell a student what a peer said of them. */
+export interface PeerReviewResultsIn {
+  assignment_id: string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * one group's alone
+   */
+  group_id?: null | string
+}
+export interface PeerReviewResultsOut {
+  form: {
+    assignment_id: string
+    closes_at: string
+    criteria?:
+      | null
+      | {
+          /**
+           * at most 1000 characters
+           */
+          description?: null | string
+          /**
+           * 1 to 32 of a-z, 0-9 and _, unique in the form: the ratings name it
+           */
+          key: string
+          /**
+           * what is rated, 1 to 200 characters
+           */
+          label: string
+          /**
+           * 0.1 to 10: its weight in what a rater gives a member, against the others'; 1 if omitted
+           */
+          weight?: null | number | string
+        }[]
+    /**
+     * false: no sheet is written, and it does not count; what was written is kept
+     */
+    enabled: boolean
+    /**
+     * to those who write assignments or grade: a sheet has been written, so its kind, criteria, scale and self-evaluation no longer change (form_in_use). Absent for anyone else, a student or their own agent included: on a form that opens on hand-in it would tell one group that another has handed in
+     */
+    in_use?: null | boolean
+    /**
+     * rating: each member rated on each criterion, a whole number on the scale; share: each rater splits 100 points among those they evaluate
+     */
+    kind: string
+    /**
+     * on_hand_in: for each group once it has handed work in; at: at opens_at
+     */
+    opens: string
+    opens_at?: null | string
+    scale_max?: null | number
+    scale_min?: null | number
+    /**
+     * members evaluate themselves too
+     */
+    self_evaluation: boolean
+    /**
+     * none, or own_average: after it closes, a member reads their own average from two peers or more, never a comment
+     */
+    share_with_students: string
+    /**
+     * what a student reads: own_sheet, their own current sheet; own_average, their own average once it closes; own_adjustment, their own grade's peer adjustment, where it counts. Never another's sheet, what was said of them, or who rated them
+     */
+    students_see: null | string[]
+    updated_at: string
+    /**
+     * changed by every change: peer_form.set is made over it
+     */
+    version: number
+    /**
+     * who reads every sheet, with who wrote it: graders, those who grade; action_record, those who decide actions, in the action log
+     */
+    visible_to: null | string[]
+    /**
+     * the percentage of each member's grade what they received moves; 0: reference only
+     */
+    weight: number
+  }
+  /**
+   * each group whose circle lies wholly within your student scope
+   */
+  groups:
+    | null
+    | {
+        /**
+         * pair_without_self_evaluation: a pair with self-evaluation off, whose factors are always 1
+         */
+        flags: null | string[]
+        group_id: string
+        /**
+         * the group's score as it stands, from its live group grade
+         */
+        group_score?: null | number | string
+        members:
+          | null
+          | {
+              /**
+               * a rating form: the average from their peers on each criterion
+               */
+              averages?: {
+                /**
+                 * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
+                 */
+                [k: string]: number | string | undefined
+              }
+              display_name: string
+              /**
+               * what they received against an even share from the same raters: 1 is even, and 1 when nobody rated them
+               */
+              factor: number | string
+              /**
+               * low (factor below 0.8), high (above 1.2), self_above_peers (gave themselves 0.3 or more above what their peers gave them); as a rater, uniform (gave everyone the same) and missing (no sheet)
+               */
+              flags: null | string[]
+              /**
+               * their live grade on the work now
+               */
+              grade?: null | {
+                /**
+                 * replace or delta: a grader's own, which peer evaluation does not change; peer: peer evaluation's
+                 */
+                adjustment_kind?: null | string
+                grade_id: string
+                /**
+                 * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
+                 */
+                score: number | string
+                /**
+                 * draft or posted
+                 */
+                state: string
+              }
+              member_id: string
+              /**
+               * the factor from their peers alone
+               */
+              peer_factor?: null | number | string
+              /**
+               * the raters whose sheets rate them, themselves among them with self-evaluation
+               */
+              rated_by: null | string[]
+              /**
+               * what the factor gives at the form's weight from the group's score, held to zero and the points possible; absent before the group is graded
+               */
+              score?: null | number | string
+              /**
+               * what they gave themselves, with self-evaluation on
+               */
+              self?: null | {
+                comment?: null | string
+                ratings?: {
+                  [k: string]: number | undefined
+                }
+                share?: null | number
+                student_member_id: string
+              }
+              /**
+               * what they gave themselves against an even share
+               */
+              self_factor?: null | number | string
+              /**
+               * a share form: what each peer gave them
+               */
+              shares?:
+                | null
+                | {
+                    rater_member_id: string
+                    share: number
+                  }[]
+              /**
+               * whether they have a current sheet
+               */
+              submitted: boolean
+              submitted_at?: null | string
+            }[]
+        name: string
+        /**
+         * a decimal number; a string is accepted where exactness matters, with at most 40 digits either side of the point and an exponent of at most two digits
+         */
+        points_possible: number | string
+        /**
+         * every current sheet of the circle, with who wrote it, its entries and comments
+         */
+        sheets:
+          | null
+          | {
+              comment?: null | string
+              entries:
+                | null
+                | {
+                    comment?: null | string
+                    ratings?: {
+                      [k: string]: number | undefined
+                    }
+                    share?: null | number
+                    student_member_id: string
+                  }[]
+              /**
+               * the group whose circle it was written in
+               */
+              group_id: string
+              rater_member_id: string
+              /**
+               * to those who grade
+               */
+              rater_name?: null | string
+              review_id: string
+              submitted_at: string
+            }[]
+        /**
+         * the work whose members are the circle; absent while it has none handed in or recorded missing
+         */
+        submission_id?: null | string
+        window: {
+          closes_at: string
+          /**
+           * on_hand_in or at
+           */
+          opens: string
+          opens_at?: null | string
+          /**
+           * not_open, open or closed
+           */
+          state: string
+        }
+      }[]
+}
+
+/** peer_review.submit (write): A student's peer evaluation of the members of their group: one entry for each member they evaluate (peer_form.get's task.to_evaluate), each a rating of every criterion or a share of 100 points, the shares adding up to 100, with comments if they like. Only by the student, a person: an agent writes none, its owner's or any other's (people_only). Only while the window is open for their group (window_not_open, window_closed), and only by a member of the group's circle (not_in_circle). Written again while it is open, the new sheet replaces the old, which is kept. Those who grade read it, with who wrote it; no other student does. */
+export interface PeerReviewSubmitIn {
+  assignment_id: string
+  /**
+   * on the group's work as a whole, at most 2000 characters; read by those who grade
+   */
+  comment?: null | string
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * one for each member the rater evaluates (peer_form.get's task.to_evaluate), and nobody else
+   */
+  entries:
+    | null
+    | {
+        /**
+         * at most 1000 characters; read by those who grade, never by the member
+         */
+        comment?: null | string
+        /**
+         * a rating form: a whole number on the scale for every criterion, by its key
+         */
+        ratings?: {
+          [k: string]: number | undefined
+        }
+        /**
+         * a share form: 0 to 100; the sheet's shares add up to exactly 100
+         */
+        share?: null | number
+        /**
+         * a member of the circle the rater evaluates
+         */
+        student_member_id: string
+      }[]
+}
+export interface PeerReviewSubmitOut {
+  /**
+   * until when it may be written again
+   */
+  closes_at: string
+  group_id: string
+  /**
+   * the rater's sheet it replaced, kept as history
+   */
+  replaces?: null | string
+  review_id: string
+}
+
 /** preset.create (write): Define a permission preset for a department, alongside the built-ins. It may share a built-in's name. */
 export interface PresetCreateIn {
   /**
@@ -6680,7 +8307,7 @@ export interface SsoUpdateOut {
   version: null | number
 }
 
-/** submission.create (write): Start a draft submission to a published assignment. A draft can be edited freely; nothing is handed in until submission.submit. Once an attempt has been submitted it never changes, and submitting again means creating a new attempt here. */
+/** submission.create (write): Start a draft submission to a published assignment. A draft can be edited freely; nothing is handed in until submission.submit. Once an attempt has been submitted it never changes, and submitting again means creating a new attempt here. On a group assignment it starts the group's work: the caller's group, or the group named; a student in no group of its set is refused (no_group), saying whether they may sign up. */
 export interface SubmissionCreateIn {
   assignment_id: string
   body?: null | string
@@ -6689,16 +8316,24 @@ export interface SubmissionCreateIn {
    */
   course_id: string
   /**
-   * whose work this is; defaults to the caller
+   * on a group assignment, the group whose work this starts; defaults to the group of the student named, or of the caller
+   */
+  group_id?: null | string
+  /**
+   * whose work this is; defaults to the caller. On a group assignment, the work of this student's group
    */
   student_member_id?: null | string
 }
 export interface SubmissionCreateOut {
   attempt: number
+  /**
+   * the group whose work it is, on a group assignment
+   */
+  group_id?: null | string
   submission_id: string
 }
 
-/** submission.get (read): One submission in full, with its text and the version of the instructions it was submitted under. */
+/** submission.get (read): One submission in full, with its text and the version of the instructions it was submitted under. A group's work says its group and whose work it is (members), and every draft its revision, to name when editing it. */
 export interface SubmissionGetIn {
   /**
    * the course this call is about
@@ -6720,17 +8355,47 @@ export interface SubmissionGetOut {
         document_id: string
         title: string
       }[]
+  /**
+   * the group whose work it is, on a group assignment
+   */
+  group_id?: null | string
+  group_name?: null | string
   id: string
   /**
    * the exact version of the instructions in force when it was submitted
    */
   instructions_version_id?: null | string
   /**
+   * a group's work: whose it is — its group's members now while it is a draft, and those it was handed in or recorded missing for once it is not
+   */
+  members?:
+    | null
+    | {
+        /**
+         * to the work's own members, and to those who may read the member list
+         */
+        display_name?: null | string
+        member_id: string
+      }[]
+  revised_at?: null | string
+  revised_by_member_id?: null | string
+  /**
+   * counts each change of a draft's text: name it as base_revision in submission.update_draft
+   */
+  revision: number
+  /**
    * draft, submitted, late or missing
    */
   state: string
-  student_member_id: string
+  /**
+   * whose work it is, for a student's own; absent for a group's
+   */
+  student_member_id?: null | string
   submitted_at?: null | string
+  /**
+   * the seat whose hand-in it was
+   */
+  submitted_by_member_id?: null | string
 }
 
 /** submission.list (read): Submissions in the course that fall within the caller's scope: a student sees their own, a tutor those of the students they are listed for, a grader those for the assignments they are listed for. Bodies are left out of the list; read one with submission.get. */
@@ -6745,9 +8410,16 @@ export interface SubmissionListIn {
    */
   course_id: string
   /**
+   * a group's work
+   */
+  group_id?: null | string
+  /**
    * at most this many items; default 50, maximum 200
    */
   limit?: number
+  /**
+   * the work this student is part of: their own, or a group's
+   */
   student_member_id?: null | string
 }
 export interface SubmissionListOut {
@@ -6768,28 +8440,65 @@ export interface SubmissionListOut {
               document_id: string
               title: string
             }[]
+        /**
+         * the group whose work it is, on a group assignment
+         */
+        group_id?: null | string
+        group_name?: null | string
         id: string
         /**
          * the exact version of the instructions in force when it was submitted
          */
         instructions_version_id?: null | string
         /**
+         * a group's work: whose it is — its group's members now while it is a draft, and those it was handed in or recorded missing for once it is not
+         */
+        members?:
+          | null
+          | {
+              /**
+               * to the work's own members, and to those who may read the member list
+               */
+              display_name?: null | string
+              member_id: string
+            }[]
+        revised_at?: null | string
+        revised_by_member_id?: null | string
+        /**
+         * counts each change of a draft's text: name it as base_revision in submission.update_draft
+         */
+        revision: number
+        /**
          * draft, submitted, late or missing
          */
         state: string
-        student_member_id: string
+        /**
+         * whose work it is, for a student's own; absent for a group's
+         */
+        student_member_id?: null | string
         submitted_at?: null | string
+        /**
+         * the seat whose hand-in it was
+         */
+        submitted_by_member_id?: null | string
       }[]
 }
 
-/** submission.record_missing (write): Record that a student has handed in nothing for a published assignment: they get a 'missing' submission, which can be graded (a zero, say). Only for a student with no submission at all, not even a draft. If they hand work in afterwards it takes the missing row over, as it does after a due date passes, unless a grade has been entered or proposed for it: then the work is a new attempt, and the missing row keeps its grade. */
+/** submission.record_missing (write): Record that a student, or on a group assignment a group (group_id), has handed in nothing for a published assignment: they get a 'missing' submission, which can be graded (a zero, say). Only where there is no submission at all, not even a draft. A group's is recorded for its members now, less any another group's work for the assignment names. If work is handed in afterwards it takes the missing row over, as it does after a due date passes, unless a grade has been entered or proposed for it: then the work is a new attempt, and the missing row keeps its grade. */
 export interface SubmissionRecordMissingIn {
   assignment_id: string
   /**
    * the course this call is about
    */
   course_id: string
-  student_member_id: string
+  /**
+   * the group, on a group assignment
+   */
+  group_id?: null | string
+  /**
+   * the student, on an individual assignment
+   */
+  student_member_id?: null | string
 }
 export interface SubmissionRecordMissingOut {
   submission_id: string
@@ -6812,6 +8521,35 @@ export interface SubmissionRosterIn {
   limit?: number
 }
 export interface SubmissionRosterOut {
+  /**
+   * on a group assignment, the first page only: each group of its set, not archived, with a member the caller's scope reaches, and where its latest work the caller may read stands; a member is shown the group's draft and the attempts they are part of
+   */
+  groups?:
+    | null
+    | {
+        attempt?: null | number
+        group_id: string
+        /**
+         * its members now that the caller's student scope reaches; names to those who may read the member list
+         */
+        members:
+          | null
+          | {
+              /**
+               * to the work's own members, and to those who may read the member list
+               */
+              display_name?: null | string
+              member_id: string
+            }[]
+        name: string
+        /**
+         * not_started, draft, submitted, late or missing: its latest attempt's that the caller may read, not_started for none
+         */
+        state: string
+        submission_id?: null | string
+        submitted_at?: null | string
+        submitted_by_member_id?: null | string
+      }[]
   next?: null | string
   students:
     | null
@@ -6822,11 +8560,15 @@ export interface SubmissionRosterOut {
          */
         display_name?: null | string
         /**
+         * on a group assignment, the student's group in its set now
+         */
+        group_id?: null | string
+        /**
          * active or paused; only for a caller who may read the member list
          */
         member_status?: null | string
         /**
-         * not_started (no submission at all), draft, submitted, late or missing: the latest attempt's
+         * not_started (no submission at all), draft, submitted, late or missing: the latest attempt's; on a group assignment, of the work the student is part of, or their group's draft, and no_group for a student in no group of its set
          */
         state: string
         student_member_id: string
@@ -6838,7 +8580,7 @@ export interface SubmissionRosterOut {
       }[]
 }
 
-/** submission.set_lateness (write): Correct whether a submitted attempt counts as late — an extension granted, a clock that was wrong. It is the only thing about a submitted attempt that can change, and it is for graders, not for the student. */
+/** submission.set_lateness (write): Correct whether a submitted attempt counts as late — an extension granted, a clock that was wrong. It is the only thing about a submitted attempt that can change, and it is for graders, not for the student. A group's work is corrected for the group, reaching every member of it. */
 export interface SubmissionSetLatenessIn {
   /**
    * the course this call is about
@@ -6854,7 +8596,33 @@ export interface SubmissionSetLatenessOut {
   ok: boolean
 }
 
-/** submission.submit (write): Hand a draft in. It is marked late if the due date has passed, the version of the instructions in force right now is recorded with it, and from this moment it never changes. A hand-in that waits for approval counts from when it was asked for: it is judged late or not, and recorded under the instructions then in force, as of that moment. It hands in the draft as it was then, and is refused on approval if the draft has changed meanwhile, so propose it only after any change to the draft that is waiting for approval has been decided. */
+/** submission.set_members (write): Correct whose work a group's submission is, once it is handed in or recorded missing: add a student the group handed it in without (one the teacher forgot to place, say), whom no other group's work for the assignment names (part_of_other_work), or take off a member with no grade entered or proposed on it (member_graded). At least one member stays (group_empty). Gated as correcting lateness is: who handed work in with whom is not a student's to declare. It reaches every member before and after. */
+export interface SubmissionSetMembersIn {
+  /**
+   * students to make part of it: current students of the course whom no other group's work for the assignment names
+   */
+  add?: null | string[]
+  /**
+   * the course this call is about
+   */
+  course_id: string
+  /**
+   * members to take off it: none with a grade entered or proposed on it
+   */
+  remove?: null | string[]
+  /**
+   * a group's work handed in or recorded missing
+   */
+  submission_id: string
+}
+export interface SubmissionSetMembersOut {
+  /**
+   * whose work it is now
+   */
+  members: null | string[]
+}
+
+/** submission.submit (write): Hand a draft in. It is marked late if the due date has passed, the version of the instructions in force right now is recorded with it, and from this moment it never changes. A hand-in that waits for approval counts from when it was asked for: it is judged late or not, and recorded under the instructions then in force, as of that moment. It hands in the draft as it was then, and is refused on approval if the draft has changed meanwhile, so propose it only after any change to the draft that is waiting for approval has been decided. A group's draft is handed in by any member, for the group's members now (members), leaving out and naming (left_out) any whom another group's work for the assignment names already, and that work only to a caller who may read it; a proposal of it is refused on approval if the members have changed. */
 export interface SubmissionSubmitIn {
   /**
    * the text being handed in; if given, the draft must hold exactly this. A proposal records it, and is refused on approval if the draft has changed since
@@ -6872,9 +8640,29 @@ export interface SubmissionSubmitIn {
    * the version of the instructions the work is handed in under; if given, it must be the one students read now. A proposal records it, and is handed in under it when approved
    */
   instructions_version_id?: null | string
+  /**
+   * a group's draft: the members it is handed in for, its group's now; if given, they must be. A proposal records them, and is refused on approval if the group's members have changed since (members_changed)
+   */
+  members?: null | string[]
   submission_id: string
 }
 export interface SubmissionSubmitOut {
+  /**
+   * members of the group it was not handed in for: another group's work for the assignment names them. That work is named only to a caller who may read it
+   */
+  left_out:
+    | null
+    | {
+        member_id: string
+        /**
+         * the other group's work that names them, if you may read it; left out if you may not
+         */
+        submission_id?: null | string
+      }[]
+  /**
+   * whose work it is, as it was handed in: its student, or the group's members now
+   */
+  members: null | string[]
   /**
    * submitted, or late if the due date had passed
    */
@@ -6882,8 +8670,12 @@ export interface SubmissionSubmitOut {
   submitted_at: string
 }
 
-/** submission.update_draft (write): Replace the text of a draft submission. Only drafts change; a submitted attempt is frozen. */
+/** submission.update_draft (write): Replace the text of a draft submission. Only drafts change; a submitted attempt is frozen. Each change counts a revision. A group's draft is written by its members together, so an edit to it names the revision it was made over (base_revision), and is refused if the draft has changed since (draft_changed), saying what it is now and who changed it. */
 export interface SubmissionUpdateDraftIn {
+  /**
+   * the revision of the draft this text was written over (revision, in submission.get). Required for a group's draft, which its members write together: if it has changed since, the edit is refused (draft_changed), saying what it is now. Optional on a student's own draft
+   */
+  base_revision?: null | number
   body: string
   /**
    * the course this call is about
@@ -6893,6 +8685,10 @@ export interface SubmissionUpdateDraftIn {
 }
 export interface SubmissionUpdateDraftOut {
   ok: boolean
+  /**
+   * the draft's revision now
+   */
+  revision: number
 }
 
 /** term.create (write): Create a term: a named span of dates that course offerings belong to. */
@@ -7038,6 +8834,8 @@ export interface ToolMap {
   'document.upload_url': { in: DocumentUploadUrlIn; out: DocumentUploadUrlOut; kind: 'read' }
   'document.versions': { in: DocumentVersionsIn; out: DocumentVersionsOut; kind: 'read' }
   'event.list': { in: EventListIn; out: EventListOut; kind: 'read' }
+  'grade.adjust': { in: GradeAdjustIn; out: GradeAdjustOut; kind: 'write' }
+  'grade.apply_peer': { in: GradeApplyPeerIn; out: GradeApplyPeerOut; kind: 'write' }
   'grade.clear_override': { in: GradeClearOverrideIn; out: GradeClearOverrideOut; kind: 'write' }
   'grade.comment_total': { in: GradeCommentTotalIn; out: GradeCommentTotalOut; kind: 'write' }
   'grade.get': { in: GradeGetIn; out: GradeGetOut; kind: 'read' }
@@ -7048,6 +8846,15 @@ export interface ToolMap {
   'grade.submit': { in: GradeSubmitIn; out: GradeSubmitOut; kind: 'write' }
   'grade.undo_ungraded_as_zero': { in: GradeUndoUngradedAsZeroIn; out: GradeUndoUngradedAsZeroOut; kind: 'write' }
   'gradebook.get': { in: GradebookGetIn; out: GradebookGetOut; kind: 'read' }
+  'group_set.create': { in: GroupSetCreateIn; out: GroupSetCreateOut; kind: 'write' }
+  'group_set.get': { in: GroupSetGetIn; out: GroupSetGetOut; kind: 'read' }
+  'group_set.list': { in: GroupSetListIn; out: GroupSetListOut; kind: 'read' }
+  'group_set.update': { in: GroupSetUpdateIn; out: GroupSetUpdateOut; kind: 'write' }
+  'group.create': { in: GroupCreateIn; out: GroupCreateOut; kind: 'write' }
+  'group.set_members': { in: GroupSetMembersIn; out: GroupSetMembersOut; kind: 'write' }
+  'group.sign_up': { in: GroupSignUpIn; out: GroupSignUpOut; kind: 'write' }
+  'group.split': { in: GroupSplitIn; out: GroupSplitOut; kind: 'write' }
+  'group.update': { in: GroupUpdateIn; out: GroupUpdateOut; kind: 'write' }
   'me.conversations': { in: MeConversationsIn; out: MeConversationsOut; kind: 'read' }
   'me.get': { in: MeGetIn; out: MeGetOut; kind: 'read' }
   'me.memberships': { in: MeMembershipsIn; out: MeMembershipsOut; kind: 'read' }
@@ -7071,6 +8878,10 @@ export interface ToolMap {
   'memory.search': { in: MemorySearchIn; out: MemorySearchOut; kind: 'read' }
   'memory.update': { in: MemoryUpdateIn; out: MemoryUpdateOut; kind: 'write' }
   'memory.write': { in: MemoryWriteIn; out: MemoryWriteOut; kind: 'write' }
+  'peer_form.get': { in: PeerFormGetIn; out: PeerFormGetOut; kind: 'read' }
+  'peer_form.set': { in: PeerFormSetIn; out: PeerFormSetOut; kind: 'write' }
+  'peer_review.results': { in: PeerReviewResultsIn; out: PeerReviewResultsOut; kind: 'read' }
+  'peer_review.submit': { in: PeerReviewSubmitIn; out: PeerReviewSubmitOut; kind: 'write' }
   'preset.create': { in: PresetCreateIn; out: PresetCreateOut; kind: 'write' }
   'preset.list': { in: PresetListIn; out: PresetListOut; kind: 'read' }
   'preset.update': { in: PresetUpdateIn; out: PresetUpdateOut; kind: 'write' }
@@ -7090,6 +8901,7 @@ export interface ToolMap {
   'submission.record_missing': { in: SubmissionRecordMissingIn; out: SubmissionRecordMissingOut; kind: 'write' }
   'submission.roster': { in: SubmissionRosterIn; out: SubmissionRosterOut; kind: 'read' }
   'submission.set_lateness': { in: SubmissionSetLatenessIn; out: SubmissionSetLatenessOut; kind: 'write' }
+  'submission.set_members': { in: SubmissionSetMembersIn; out: SubmissionSetMembersOut; kind: 'write' }
   'submission.submit': { in: SubmissionSubmitIn; out: SubmissionSubmitOut; kind: 'write' }
   'submission.update_draft': { in: SubmissionUpdateDraftIn; out: SubmissionUpdateDraftOut; kind: 'write' }
   'term.create': { in: TermCreateIn; out: TermCreateOut; kind: 'write' }
@@ -7220,6 +9032,8 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'document.upload_url': { method: 'GET', path: '/v1/courses/{course_id}/upload-url', kind: 'read' },
   'document.versions': { method: 'GET', path: '/v1/courses/{course_id}/documents/{document_id}/versions', kind: 'read' },
   'event.list': { method: 'GET', path: '/v1/courses/{course_id}/events', kind: 'read' },
+  'grade.adjust': { method: 'POST', path: '/v1/courses/{course_id}/grades/{grade_id}/adjust', kind: 'write' },
+  'grade.apply_peer': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/apply-peer', kind: 'write' },
   'grade.clear_override': { method: 'POST', path: '/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/clear-override', kind: 'write' },
   'grade.comment_total': { method: 'POST', path: '/v1/courses/{course_id}/gradebook/{student_member_id}/totals/{component_id}/comment', kind: 'write' },
   'grade.get': { method: 'GET', path: '/v1/courses/{course_id}/grades/{grade_id}', kind: 'read' },
@@ -7230,6 +9044,15 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'grade.submit': { method: 'POST', path: '/v1/courses/{course_id}/grades', kind: 'write' },
   'grade.undo_ungraded_as_zero': { method: 'POST', path: '/v1/courses/{course_id}/grades/undo-ungraded-as-zero', kind: 'write' },
   'gradebook.get': { method: 'GET', path: '/v1/courses/{course_id}/gradebook/{student_member_id}', kind: 'read' },
+  'group_set.create': { method: 'POST', path: '/v1/courses/{course_id}/group-sets', kind: 'write' },
+  'group_set.get': { method: 'GET', path: '/v1/courses/{course_id}/group-sets/{set_id}', kind: 'read' },
+  'group_set.list': { method: 'GET', path: '/v1/courses/{course_id}/group-sets', kind: 'read' },
+  'group_set.update': { method: 'POST', path: '/v1/courses/{course_id}/group-sets/{set_id}', kind: 'write' },
+  'group.create': { method: 'POST', path: '/v1/courses/{course_id}/group-sets/{set_id}/groups', kind: 'write' },
+  'group.set_members': { method: 'POST', path: '/v1/courses/{course_id}/group-sets/{set_id}/members', kind: 'write' },
+  'group.sign_up': { method: 'POST', path: '/v1/courses/{course_id}/group-sets/{set_id}/sign-up', kind: 'write' },
+  'group.split': { method: 'POST', path: '/v1/courses/{course_id}/group-sets/{set_id}/split', kind: 'write' },
+  'group.update': { method: 'POST', path: '/v1/courses/{course_id}/groups/{group_id}', kind: 'write' },
   'me.conversations': { method: 'GET', path: '/v1/me/conversations', kind: 'read' },
   'me.get': { method: 'GET', path: '/v1/me', kind: 'read' },
   'me.memberships': { method: 'GET', path: '/v1/me/memberships', kind: 'read' },
@@ -7253,6 +9076,10 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'memory.search': { method: 'GET', path: '/v1/me/memory/search', kind: 'read' },
   'memory.update': { method: 'POST', path: '/v1/me/memory/entries/{memory_id}', kind: 'write' },
   'memory.write': { method: 'POST', path: '/v1/me/memory/entries', kind: 'write' },
+  'peer_form.get': { method: 'GET', path: '/v1/courses/{course_id}/assignments/{assignment_id}/peer-form', kind: 'read' },
+  'peer_form.set': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/peer-form', kind: 'write' },
+  'peer_review.results': { method: 'GET', path: '/v1/courses/{course_id}/assignments/{assignment_id}/peer-results', kind: 'read' },
+  'peer_review.submit': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/peer-reviews', kind: 'write' },
   'preset.create': { method: 'POST', path: '/v1/presets', kind: 'write' },
   'preset.list': { method: 'GET', path: '/v1/presets', kind: 'read' },
   'preset.update': { method: 'POST', path: '/v1/presets/{preset_id}', kind: 'write' },
@@ -7272,6 +9099,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'submission.record_missing': { method: 'POST', path: '/v1/courses/{course_id}/assignments/{assignment_id}/missing', kind: 'write' },
   'submission.roster': { method: 'GET', path: '/v1/courses/{course_id}/assignments/{assignment_id}/roster', kind: 'read' },
   'submission.set_lateness': { method: 'POST', path: '/v1/courses/{course_id}/submissions/{submission_id}/lateness', kind: 'write' },
+  'submission.set_members': { method: 'POST', path: '/v1/courses/{course_id}/submissions/{submission_id}/members', kind: 'write' },
   'submission.submit': { method: 'POST', path: '/v1/courses/{course_id}/submissions/{submission_id}/submit', kind: 'write' },
   'submission.update_draft': { method: 'POST', path: '/v1/courses/{course_id}/submissions/{submission_id}', kind: 'write' },
   'term.create': { method: 'POST', path: '/v1/terms', kind: 'write' },
