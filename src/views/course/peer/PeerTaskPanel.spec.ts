@@ -283,3 +283,20 @@ describe('PeerTaskPanel, a student in no group’s circle', () => {
     w.unmount()
   })
 })
+
+describe('PeerTaskPanel, in Chinese', () => {
+  it('says it in Traditional and in Simplified Chinese, the total with the language’s own marks', async () => {
+    for (const [locale, title, total, open] of [
+      ['zh-Hant', '組員互評', '合計：60／100', '開放中'],
+      ['zh-Hans', '组员互评', '合计：60／100', '开放中'],
+    ] as const) {
+      setLocale(locale)
+      const w = await mountPanel()
+      await share(w, 'm-ken').setValue('60')
+      expect(w.text()).toContain(title)
+      expect(w.text()).toContain(open)
+      expect(w.find('[data-test="peer-total"]').text()).toContain(total)
+      w.unmount()
+    }
+  })
+})

@@ -41,6 +41,8 @@ let groups: { alpha: string; beta: string } = { alpha: '', beta: '' }
 type Person = DemoActor & { member_id: string }
 const people: Record<'ada' | 'ben' | 'cleo' | 'dev' | 'eve' | 'tia', Person> = {} as never
 const name = (k: keyof typeof people) => people[k].display_name
+/** Alpha's work on the group project, once handed in. */
+let alphaWork = ''
 /** The members' grades from Alpha's group grade, by person. */
 const grades: Partial<Record<keyof typeof people, string>> = {}
 
@@ -293,6 +295,56 @@ test.describe.serial('peer evaluation', () => {
     expect(mine.form.in_use).toBeUndefined()
   })
 
+  test('a form that opens on hand-in opens for a group once it has handed in, and a student rates on every criterion', async ({
+    page,
+  }) => {
+    // Beta hands its lab report in; Alpha has not.
+    const sub = await ok(people.dev.token, 'POST', `/v1/courses/${courseId}/submissions`, {
+      assignment_id: lab,
+      body: 'Our lab report',
+    })
+    await ok(people.dev.token, 'POST', `/v1/courses/${courseId}/submissions/${sub.submission_id}/submit`, {})
+
+    await keepToasts(page)
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, people.eve)
+    await page.goto(`/courses/${courseId}/assignments/${lab}`)
+    await expect(task(page)).toContainText('Open')
+    await expect(task(page)).toContainText(
+      'Rate each of the other members of Beta on each criterion, from 1 (lowest) to 5 (highest).',
+    )
+    await expect(task(page).locator('.peer-task__rated h3')).toHaveText([name('dev')])
+    await page.locator('[data-test="peer-submit"]').click()
+    await expect(task(page)).toContainText(`Rate ${name('dev')} on Contribution to the work.`)
+    for (const [criterion, n] of [
+      ['Contribution to the work', '4'],
+      ['Communication and teamwork', '5'],
+      ['Reliability: did their part on time', '3'],
+    ] as const) {
+      await task(page)
+        .getByRole('radiogroup', { name: `${criterion}, for ${name('dev')}` })
+        .getByText(n, { exact: true })
+        .click()
+    }
+    await photograph(page, 'peer-task-rating')
+    await page.locator('[data-test="peer-submit"]').click()
+    await expectToasted(page, 'Your evaluation was submitted. You can change it until it closes.')
+    const mine = await ok(people.eve.token, 'GET', `/v1/courses/${courseId}/assignments/${lab}/peer-form`)
+    expect(mine.task.sheet.entries).toEqual([
+      {
+        student_member_id: people.dev.member_id,
+        ratings: { contribution: 4, teamwork: 5, reliability: 3 },
+      },
+    ])
+
+    // Alpha has not handed its lab report in: it is not open for them yet.
+    await page.context().clearCookies()
+    await signIn(page, people.cleo)
+    await page.goto(`/courses/${courseId}/assignments/${lab}`)
+    await expect(task(page)).toContainText('Not open yet')
+    await expect(task(page)).toContainText('Opens once your group hands its work in')
+  })
+
   test('the teacher reads each group’s results, each factor in plain words, the flags and who wrote nothing, and downloads them', async ({
     page,
   }) => {
@@ -311,6 +363,7 @@ test.describe.serial('peer evaluation', () => {
       body: 'Our report',
     })
     await ok(people.ada.token, 'POST', `/v1/courses/${courseId}/submissions/${sub.submission_id}/submit`, {})
+    alphaWork = sub.submission_id
     const graded = await ok(instructor().token, 'POST', `/v1/courses/${courseId}/grades`, {
       submission_id: sub.submission_id,
       score: 80,
@@ -488,5 +541,25 @@ test.describe.serial('peer evaluation', () => {
     await expectNoSidewaysScroll(page, 'a student’s closed evaluation on a phone')
     await task(page).scrollIntoViewIfNeeded()
     await photograph(page, 'peer-task-closed-phone-zh')
+  })
+
+  test('a student of another group opening a group’s work sees none of it, its grades or its peer evaluation', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, people.eve)
+    await page.goto(`/courses/${courseId}/submissions/${alphaWork}`)
+    await expect(page.getByText(/You do not have permission to see this\.|Not found/).first()).toBeVisible()
+    await expect(page.locator('[data-test="peer-submission-panel"]')).toHaveCount(0)
+    for (const other of ['ada', 'ben', 'cleo'] as const)
+      await expect(page.locator('body')).not.toContainText(name(other))
+    await expect(page.locator('body')).not.toContainText('83.2')
+    await expect(page.locator('body')).not.toContainText('Ada led the work')
+    const refused = await call(
+      people.eve.token,
+      'GET',
+      `/v1/courses/${courseId}/assignments/${project}/peer-results?group_id=${groups.alpha}`,
+    )
+    expect(refused.status).toBe(403)
   })
 })

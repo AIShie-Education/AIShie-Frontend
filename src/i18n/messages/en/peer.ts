@@ -211,6 +211,7 @@ export default {
     form: 'The form',
     count: 'Count in grades',
     csv: 'Download CSV',
+    csvNotice: 'Downloaded, the results leave the site with every member’s name and what they received: keep the file where only those who grade can read it.',
     filter: {
       label: 'Groups',
       flagged: 'Flagged',

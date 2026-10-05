@@ -20,6 +20,7 @@ import { formatList, formatPct } from '@/utils/format'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import FilterChips from '@/components/FilterChips.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import RefreshButton from '@/components/RefreshButton.vue'
@@ -157,6 +158,10 @@ function exportCsv() {
       </template>
     </PageHeader>
 
+    <!-- What the CSV takes with it, beside the button that downloads it. -->
+    <DataFlowNotice v-if="data && groups.length" compact class="peer-results__flow">
+      {{ t('peer.results.csvNotice') }}
+    </DataFlowNotice>
     <AppNote v-if="outcome" closable class="peer-results__note" @close="outcome = null">
       <template v-if="outcome.status === 'proposed'">
         {{ t('peer.apply.proposed') }}
@@ -230,6 +235,9 @@ function exportCsv() {
 }
 .peer-results__approval {
   align-self: center;
+}
+.peer-results__flow {
+  margin-bottom: 12px;
 }
 .peer-results__note {
   margin-bottom: 16px;

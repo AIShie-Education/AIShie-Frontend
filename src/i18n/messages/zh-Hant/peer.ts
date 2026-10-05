@@ -191,6 +191,7 @@ export default {
     form: '互評設定',
     count: '計入成績',
     csv: '下載CSV',
+    csvNotice: '下載後，結果連同每位組員的名字和所得評價便會離開本網站：請把檔案存放在只有評分人員能閱讀的地方。',
     filter: {
       label: '小組',
       flagged: '有標記',

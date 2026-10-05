@@ -244,7 +244,7 @@ defineExpose({ reload: () => state.reload() })
     <p v-else-if="averageWithheld" class="app-form-hint peer-task__para">{{ t('peer.task.averageWithheld') }}</p>
 
     <!-- The evaluation. -->
-    <div class="peer-task__status">
+    <div v-if="win !== 'not_open' || sheet" class="peer-task__status">
       <i18n-t v-if="sheet" keypath="peer.task.submittedAt" tag="span" scope="global">
         <template #at><TimeText :value="sheet.submitted_at" /></template>
       </i18n-t>

@@ -192,6 +192,7 @@ export default {
     form: '互评设置',
     count: '计入成绩',
     csv: '下载CSV',
+    csvNotice: '下载后，结果连同每位组员的名字和所得评价便会离开本网站：请把文件存放在只有评分人员能查看的地方。',
     filter: {
       label: '小组',
       flagged: '有标记',
