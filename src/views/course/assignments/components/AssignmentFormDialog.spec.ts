@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus, { ElMessage, ElNotification } from 'element-plus'
 import { i18n, setLocale } from '@/i18n'
+import { ApiError } from '@/api/http'
 import type { DocumentSummary } from '@/api/types'
 import AssignmentFormDialog from './AssignmentFormDialog.vue'
 import type { DocChoice } from './types'
@@ -12,6 +13,8 @@ let writes: { tool: string; args: Record<string, unknown> }[] = []
 let answers: Record<string, unknown> = {}
 let rubrics: DocumentSummary[] = []
 let grades: Record<string, unknown>[] = []
+let sets: Record<string, unknown>[] = []
+let started: Record<string, unknown>[] = []
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
@@ -20,12 +23,16 @@ vi.mock('@/api/http', async (orig) => {
       if (tool === 'document.list') return { documents: rubrics }
       if (tool === 'component.tree') return { components: [] }
       if (tool === 'grade.list') return { grades }
+      if (tool === 'group_set.list') return { sets }
+      if (tool === 'submission.list') return { submissions: started }
       throw new Error(`no answer for ${tool}`)
     }),
     write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
       writes.push({ tool, args })
       if (!(tool in answers)) throw new Error(`no answer for ${tool}`)
-      return answers[tool]
+      const answer = answers[tool]
+      if (answer instanceof real.ApiError) throw answer
+      return answer
     }),
   }
 })
@@ -49,6 +56,8 @@ beforeEach(() => {
   writes = []
   rubrics = []
   grades = []
+  sets = []
+  started = []
   answers = { 'document.create': executed({ document_id: 'doc-r', version_id: 'ver-r' }) }
   vi.mocked(ElMessage).mockClear()
   vi.mocked(ElNotification).mockClear()
@@ -228,6 +237,110 @@ describe('AssignmentFormDialog, points changed after grading', () => {
     await save(wrapper)
     await flushPromises()
     expect(writes[0].args).toEqual({ course_id: COURSE, assignment_id: 'asg-e', points_possible: '50' })
+    wrapper.unmount()
+  })
+})
+
+describe('AssignmentFormDialog, group work', () => {
+  const set = (id: string, name: string, over: Record<string, unknown> = {}) => ({
+    id,
+    name,
+    signup: { open: false, joinable: false },
+    created_at: '2026-09-01T00:00:00Z',
+    updated_at: '2026-09-01T00:00:00Z',
+    groups: [
+      { id: `${id}-1`, name: 'Alpha', size: 2, full: false, created_at: '2026-09-01T00:00:00Z' },
+      { id: `${id}-2`, name: 'Beta', size: 1, full: false, created_at: '2026-09-01T00:00:00Z' },
+    ],
+    assignments: [],
+    ...over,
+  })
+  const GROUP_ESSAY = {
+    id: 'asg-g',
+    title: 'Group essay',
+    points_possible: 10,
+    published_at: '2026-09-02T00:00:00Z',
+    group_set_id: 'set-p',
+  }
+  const press = (w: Awaited<ReturnType<typeof mountDialog>>, label: string) =>
+    w
+      .findAll('button')
+      .find((b) => b.text() === label)!
+      .trigger('click')
+  const groupField = (w: Awaited<ReturnType<typeof mountDialog>>) => w.find('.assignment-form__group')
+
+  it('makes a new assignment group work of the set chosen, the one set there is chosen already', async () => {
+    sets = [set('set-p', 'Project groups')]
+    answers['assignment.create'] = executed({ id: 'asg-1' })
+    const wrapper = await mountDialog()
+    const vm = wrapper.vm as unknown as Vm & { form: { group: boolean; groupSetId: string } }
+    vm.form.title = 'Group essay'
+    vm.form.points = '10'
+    await groupField(wrapper).find('input[type="checkbox"]').setValue(true)
+    await flushPromises()
+    expect(vm.form.groupSetId).toBe('set-p')
+    expect(groupField(wrapper).text()).toContain('a student in no group of it hands nothing in')
+    await press(wrapper, 'Create')
+    await flushPromises()
+    expect(writes).toEqual([
+      {
+        tool: 'assignment.create',
+        args: expect.objectContaining({ title: 'Group essay', group_set_id: 'set-p' }),
+      },
+    ])
+    wrapper.unmount()
+  })
+
+  it('makes it individual work again, while nobody has started on it', async () => {
+    sets = [set('set-p', 'Project groups')]
+    answers['assignment.update'] = executed({ ok: true, rescaled: 0, snapshots: 0 })
+    const wrapper = await mountDialog(GROUP_ESSAY)
+    const box = groupField(wrapper).find('input[type="checkbox"]')
+    expect((box.element as HTMLInputElement).checked).toBe(true)
+    await box.setValue(false)
+    await press(wrapper, 'Save')
+    await flushPromises()
+    expect(writes).toEqual([
+      { tool: 'assignment.update', args: { course_id: COURSE, assignment_id: 'asg-g', clear_group_set: true } },
+    ])
+    wrapper.unmount()
+  })
+
+  it('keeps it as it is once anyone has started on it, saying why', async () => {
+    sets = [set('set-p', 'Project groups', { archived_at: '2026-09-03T00:00:00Z' }), set('set-l', 'Lab groups')]
+    started = [{ id: 'sub-1', assignment_id: 'asg-g', attempt: 1, state: 'draft', revision: 1 }]
+    const wrapper = await mountDialog(GROUP_ESSAY)
+    const field = groupField(wrapper)
+    expect(field.text()).toContain('Someone has started on it, so whether it is group work')
+    expect(field.find('input[type="checkbox"]').attributes('disabled')).toBeDefined()
+    // Its set, archived since, is still the one shown.
+    expect(field.text()).toContain('Project groups (archived)')
+    wrapper.unmount()
+  })
+
+  it('says Core’s refusal because someone has started, and locks the field from then on', async () => {
+    sets = [set('set-p', 'Project groups'), set('set-l', 'Lab groups')]
+    answers['assignment.update'] = new ApiError({
+      status: 412,
+      code: 'failed_precondition',
+      message: 'the assignment has submissions',
+      details: { reason: 'assignment_has_work' },
+    })
+    const wrapper = await mountDialog(GROUP_ESSAY)
+    const vm = wrapper.vm as unknown as Vm & { form: { groupSetId: string } }
+    vm.form.groupSetId = 'set-l'
+    await flushPromises()
+    await press(wrapper, 'Save')
+    await flushPromises()
+    expect(writes.map((w) => w.args)).toEqual([{ course_id: COURSE, assignment_id: 'asg-g', group_set_id: 'set-l' }])
+    expect(
+      vi
+        .mocked(ElMessage)
+        .mock.calls.map(([o]) => (o as { message: string }).message)
+        .join(' '),
+    ).toContain('Someone has started on this assignment (a draft, a hand-in or a record of missing work)')
+    expect(groupField(wrapper).text()).toContain('Someone has started on it, so whether it is group work')
+    expect(vm.form.groupSetId).toBe('set-p')
     wrapper.unmount()
   })
 })

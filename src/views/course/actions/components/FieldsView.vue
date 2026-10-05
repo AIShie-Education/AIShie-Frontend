@@ -172,6 +172,8 @@ function kindOf(k: string, v: unknown): string {
   if (k === 'files' && Array.isArray(v) && v.every((f) => isObject(f) && ('upload_token' in f || 'filename' in f)))
     return 'versionFiles'
   if (k === 'listed_students' && Array.isArray(v)) return 'memberList'
+  // Whom a group's work is for: a hand-in proposed for the group's members then.
+  if (k === 'members' && Array.isArray(v) && v.every((x) => typeof x === 'string')) return 'memberList'
   if (k === 'listed_assignments' && Array.isArray(v)) return 'assignmentList'
   if (DECIMALS.has(k) && (typeof v === 'number' || typeof v === 'string')) return 'decimal'
   if (TEXT.has(k) && typeof v === 'string') return 'markdown'

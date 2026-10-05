@@ -106,6 +106,8 @@ export default {
     student_member_id: 'Student',
     component_id: 'Grading component',
     assignment_id: 'Assignment',
+    group_set_id: 'Group set',
+    clear_group_set: 'Made individual work',
     grade_id: 'Grade',
     grade_ids: 'Grades',
     document_id: 'Document',

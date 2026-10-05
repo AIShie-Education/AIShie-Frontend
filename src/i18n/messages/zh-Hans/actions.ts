@@ -99,6 +99,8 @@ export default {
     student_member_id: '学生',
     component_id: '评分项',
     assignment_id: '作业',
+    group_set_id: '分组',
+    clear_group_set: '改为个人作业',
     grade_id: '成绩',
     grade_ids: '成绩',
     document_id: '文档',
