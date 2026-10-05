@@ -16,7 +16,13 @@ import OutcomeLines from './OutcomeLines.vue'
 import { isObject } from './actionText'
 import type { DecideResult, Done } from './decide'
 
-const props = defineProps<{ courseId: string; done: Done; closable?: boolean }>()
+const props = defineProps<{
+  courseId: string
+  done: Done
+  closable?: boolean
+  /** The kind of action decided, where known: its refusals are said in the words of the pages that do it. */
+  actionType?: string | null
+}>()
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 
@@ -75,7 +81,7 @@ const inner = computed<DecideResult | null>(() => {
     class="outcome-alert"
     @close="emit('close')"
   >
-    <OutcomeLines :course-id="courseId" :done="done" :inner="inner" />
+    <OutcomeLines :course-id="courseId" :done="done" :inner="inner" :action-type="actionType" />
   </AppNote>
   <el-alert
     v-else
@@ -86,6 +92,6 @@ const inner = computed<DecideResult | null>(() => {
     class="outcome-alert"
     @close="emit('close')"
   >
-    <OutcomeLines :course-id="courseId" :done="done" :inner="inner" />
+    <OutcomeLines :course-id="courseId" :done="done" :inner="inner" :action-type="actionType" />
   </el-alert>
 </template>

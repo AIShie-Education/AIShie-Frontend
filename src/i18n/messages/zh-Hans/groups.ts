@@ -116,6 +116,7 @@ export default {
     archiveHasWork: '此小组已有作业，因此需要保留。',
     archiveTitle: '归档小组',
     archiveConfirm: '{name}将从此分组和报名名单中隐藏，之后可以恢复。',
+    archiveUnseenWork: '如果此小组有你看不到的此分组作业（例如草稿），就会保持不变。',
     archived: '已归档{name}。',
     restored: '已恢复{name}。',
   },
@@ -224,6 +225,7 @@ export default {
     allPlaced: '所有学生都已分组。',
     noGroups: '此分组暂时没有小组。',
     noGroupsForm: '此分组暂时没有小组：可以添加小组，或把全班随机分组。',
+    namesHidden: '只有可以查看成员名单的人才能看到各小组的组员。',
     dragHint: '你也可以把学生拖到小组里。',
   },
   // Who was in which group when.
@@ -297,7 +299,10 @@ export default {
     byCount: '分组共{n}个小组',
     seedHint: '批准后会按此种子分配学生。',
     newGroups: '新小组',
-    namedLike: '名称如{example}',
+    namedLikeIfAny: '如需添加小组，名称会如{example}',
+    noneMade: '没有',
+    noneKept: '没有',
+    students: '{n}名学生',
     capacity: '上限{n}人',
     placementsLabel: '学生分到哪里',
     placements: '为{n}名学生分组',
@@ -307,7 +312,6 @@ export default {
     signUp: '自行报名',
     joins: '{student}加入{group}',
     leaves: '{student}退出所在小组',
-    theirStudent: '其学生',
     archive: '归档',
     signupOn: '学生可以自行报名',
     signupOff: '学生不能自行报名',
@@ -320,14 +324,26 @@ export default {
     hideHistory: '隐藏记录',
     historyFailed: '无法读取分组记录。',
     noHistory: '从未加入此分组的任何小组。',
+    outOfScope: '此学生不在你的权限范围内，因此你看不到他的分组。',
+    notShown: '没有你看得到的小组',
+    noHistoryShown: '你看不到他在此分组的任何记录。',
+  },
+  // An action about groups' fields, on its page (GroupFieldValue).
+  fields: {
+    work: '小组的作业',
+    workOf: '{group}：{assignment}',
+    made: '添加的小组',
+    joined: '加入',
+    movedFrom: '{student}从{from}分到{group}',
+    movedOut: '{student}移出{from}',
+    kept: '{names}：已有此分组的作业',
   },
   // The server's refusals, by reason.
   refusal: {
     name_taken: '已有同名的项目（不区分大小写）：未归档的项目名称不能重复。',
     signup_closed: '报名已截止，现由老师安排分组。',
     group_full: '该小组已满员。',
-    group_has_work: '该小组已提交此分组的作业，组员的更改现由老师处理。',
-    your_group_has_work: '你的小组已提交此分组的作业，组员的更改现由老师处理。',
+    group_has_work: '涉及的小组已有此分组的作业（包括草稿）。',
     group_archived: '该小组已归档。',
     set_archived: '此分组已归档，请先恢复。',
     course_archived: '本课程已归档，课程内容不能更改。',
@@ -336,5 +352,19 @@ export default {
     no_room: '名额不足：所有可分配的小组都已满员。请提高人数上限，或改为按每组人数分组。',
     bad_split: '无法按此设置分组：请检查小组或学生的数量，以及随机种子。',
     student_out_of_scope: '随机分组会分配本课程的所有学生，但你的权限范围未能覆盖所有学生。',
+  },
+  // A refusal's words where one kind of action means something of its own by it (groupRefusalScopes).
+  refusalOf: {
+    signUp: {
+      group_has_work: '该小组已提交此分组的作业，组员的更改现由老师处理。',
+      your_group_has_work: '你的小组已提交此分组的作业，组员的更改现由老师处理。',
+    },
+    update: {
+      group_has_work: '该小组已有此分组的作业（即使只是草稿）：有作业的小组须保留，不能归档。',
+    },
+    setMembers: {
+      group_has_work:
+        '这些学生离开或加入的小组已有此分组的作业（包括草稿），而此操作未说明作业如何处理：请在分组页面重新安排。',
+    },
   },
 }

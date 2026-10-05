@@ -58,3 +58,22 @@ export function groupEventFacts(
 export function isGroupAction(type: string | null | undefined): boolean {
   return !!type && (type.startsWith('group.') || type.startsWith('group_set.'))
 }
+
+/**
+ * The words of a refusal one of them meets that are its own (a reason two
+ * tools give for different things: group_has_work is a sign-up into a group
+ * that handed work in, archiving a group with work, a draft perhaps, or
+ * placing students without saying what becomes of a group's work).
+ */
+const REFUSALS_OF: Record<string, string> = {
+  'group.sign_up': 'groups.refusalOf.signUp',
+  'group.update': 'groups.refusalOf.update',
+  'group.set_members': 'groups.refusalOf.setMembers',
+}
+
+/** Where the words for an action about groups' refusals are, by reason: its own first, then the groups pages'. */
+export function groupRefusalScopes(type: string | null | undefined): string[] {
+  if (!type || !isGroupAction(type)) return []
+  const own = REFUSALS_OF[type]
+  return own ? [own, 'groups.refusal'] : ['groups.refusal']
+}

@@ -20,6 +20,13 @@ export type Stay = NonNullable<GroupSet['history']>[number]
 /** Where the group pages keep words for the server's refusals, by reason. */
 export const GROUP_REFUSALS = 'groups.refusal'
 
+/**
+ * What the server calls a split's new groups, before their number, when the
+ * split gives no prefix (an agent's, say): AIShie-Core's defaultSplitPrefix,
+ * in no reader's language but the server's.
+ */
+export const SERVER_SPLIT_PREFIX = 'Group '
+
 /** The groups of a set that are not archived, in the order the server lists them. */
 export function liveGroups(set: Pick<GroupSet, 'groups'>): Group[] {
   return (set.groups ?? []).filter((g) => !g.archived_at)
@@ -28,6 +35,36 @@ export function liveGroups(set: Pick<GroupSet, 'groups'>): Group[] {
 /** The groups of a set that are archived. */
 export function archivedGroups(set: Pick<GroupSet, 'groups'>): Group[] {
   return (set.groups ?? []).filter((g) => !!g.archived_at)
+}
+
+/** The part of the reader's seat that says which students it reaches (the course store's membership and seat). */
+export interface ReaderScope {
+  /** all or listed; unknown where the seat was not read. */
+  student_scope?: string | null
+  /** Whom a listed scope lists, where the seat itself was read (member.get). */
+  listed_students?: readonly string[] | null
+  /** The seat is someone's delegate: it reaches no student its principal's does not, which cannot be read here. */
+  delegate?: boolean
+}
+
+/**
+ * Whether the reader's student scope reaches a student: what the server
+ * shows of a student's groups (their group's members, their history) is what
+ * it reaches. Null where that cannot be told here: a listed seat whose list
+ * was not read, or a delegate, whose principal's reach caps its own.
+ */
+export function scopeReaches(seat: ReaderScope | null | undefined, memberId: string): boolean | null {
+  if (!seat?.student_scope) return null
+  if (seat.student_scope === 'listed') {
+    if (!seat.listed_students) return null
+    if (!seat.listed_students.includes(memberId)) return false
+  } else if (seat.student_scope !== 'all') return null
+  return seat.delegate ? null : true
+}
+
+/** Whether the reader's student scope surely reaches every student: then every group's work is shown them. */
+export function reachesEveryStudent(seat: ReaderScope | null | undefined): boolean {
+  return seat?.student_scope === 'all' && !seat.delegate
 }
 
 /** Whether a group has work for an assignment of its set, as far as the reader is shown. */

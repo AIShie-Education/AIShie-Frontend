@@ -3,6 +3,7 @@ import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import { i18n, setLocale } from '@/i18n'
+import { useCourseStore } from '@/stores/course'
 import EventItem from '@/views/course/activity/components/EventItem.vue'
 import { categoryOf, subjectKind, subjectRoute, type CourseEvent } from '@/views/course/activity/components/feed'
 import GroupProposal from './GroupProposal.vue'
@@ -90,6 +91,30 @@ describe('the course’s feed, of groups', () => {
     w.unmount()
   })
 
+  it('reads the names again for a group made since they were read, and names it', async () => {
+    read.mockImplementation(async (tool: string) => {
+      if (tool !== 'group_set.list') throw new Error(`no ${tool} here`)
+      return {
+        sets: [
+          {
+            id: 'set-1',
+            name: 'Project groups',
+            signup: { open: false, joinable: false },
+            created_at: T0,
+            updated_at: T0,
+            assignments: [],
+            groups: [{ id: 'g9', name: 'Lab 2', size: 1, full: false, created_at: T0 }],
+          },
+        ],
+      }
+    })
+    const w = mountItem(ev('group.member_added', 'group', 'g9', { set_id: 'set-1', group_id: 'g9', how: 'assigned' }))
+    await flushPromises()
+    expect(read).toHaveBeenCalledTimes(1)
+    expect(w.find('.event-item__subject').text()).toBe('Lab 2, Project groups')
+    w.unmount()
+  })
+
   it('says what changed of a set: sign-up closed, a deadline', async () => {
     const w = mountItem(
       ev('group_set.updated', 'group_set', 'set-1', {
@@ -141,10 +166,55 @@ describe('an action about groups, where it is decided', () => {
     expect(w.text()).toContain('Groups of up to 4 students')
     expect(w.text()).toContain('Everyone: empty the groups and deal them all again')
     expect(w.find('.group-proposal__seed').text()).toBe('QK3M7ZP2VX9D')
-    expect(w.text()).toContain('Named like Group 1')
+    expect(w.text()).toContain('Approving it deals the students as this seed deals them.')
+    // Whether it makes any depends on the groups when it is approved.
+    expect(w.text()).toContain('Any it makes are named like Group 1')
+    // The queue's card says what it does; ActionTarget beside it names the set.
     const card = mountProposal(action('group.split', { set_id: 'set-1', by: 'count', n: 6, from: 'unassigned' }), true)
     await flushPromises()
-    expect(card.text()).toBe('Project groups6 groups in the set')
+    expect(card.text()).toBe('6 groups in the set')
+  })
+
+  it('says, of a split carried out, what it made, placed and left alone, and promises nothing of approving it', async () => {
+    const done = {
+      ...(action('group.split', { set_id: 'set-1', by: 'size', n: 3, from: 'all', seed: 'QK3M7ZP2VX9D' }) as object),
+      status: 'executed',
+      result: {
+        seed: 'QK3M7ZP2VX9D',
+        created: [{ group_id: 'g3', name: 'Group 3' }],
+        placed: [
+          { student_member_id: 'm-ana', group_id: 'g2' },
+          { student_member_id: 'm-ben', group_id: 'g3' },
+        ],
+        kept: [{ group_id: 'g1', reason: 'has_work' }],
+        emptied: 1,
+      },
+    }
+    const w = mountProposal(done as never)
+    await flushPromises()
+    expect(w.text()).not.toContain('Approving it')
+    expect(w.text()).toContain('New groupsGroup 3')
+    expect(w.text()).toContain('Placed2 students')
+    expect(w.text()).toContain('Taken out to be dealt again1 student')
+    expect(w.text()).toContain('Left aloneGroup 1')
+    // One by count that made none says so, and no capacity for groups it did not make.
+    const none = mountProposal({
+      ...(action('group.split', { set_id: 'set-1', by: 'count', n: 2, from: 'unassigned', capacity: 4 }) as object),
+      status: 'executed',
+      result: { seed: 'AAAA', created: [], placed: [], kept: [], emptied: 0 },
+    } as never)
+    await flushPromises()
+    expect(none.text()).toContain('New groupsNone')
+    expect(none.text()).not.toContain('capacity 4')
+    expect(none.text()).toContain('Left aloneNone')
+  })
+
+  it('names the groups a split without a prefix makes as the server names them, in any language', async () => {
+    setLocale('zh-Hant')
+    const w = mountProposal(action('group.split', { set_id: 'set-1', by: 'size', n: 4, from: 'unassigned' }))
+    await flushPromises()
+    expect(w.text()).toContain('如需新增小組，名稱會如Group 1')
+    setLocale('en')
   })
 
   it('lists who goes where, and says when it moves students of a group with work', async () => {
@@ -165,5 +235,35 @@ describe('an action about groups, where it is decided', () => {
     const w = mountProposal(action('group.sign_up', { set_id: 'set-1', group_id: 'g1', student_member_id: 'm-ana' }))
     await flushPromises()
     expect(w.text()).toContain('m-ana joins Group 1')
+  })
+
+  it('names the student signing themselves up, who names nobody: the one who asked, or the student whose agent did', async () => {
+    const own = {
+      ...(action('group.sign_up', { set_id: 'set-1', group_id: 'g1' }) as object),
+      member_id: 'm-cy',
+      status: 'failed',
+    }
+    const w = mountProposal(own as never)
+    await flushPromises()
+    expect(w.text()).toContain('m-cy joins Group 1')
+    expect(w.text()).not.toContain('Their student')
+    // A student's own agent, as the member list says.
+    const viaAgent = { ...own, member_id: 'm-agent' }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useCourseStore().$patch({
+      courseId: COURSE,
+      membersState: 'loaded',
+      members: new Map([['m-agent', { id: 'm-agent', principal_member_id: 'm-cy' }]]),
+    } as never)
+    const agent = mount(GroupProposal, {
+      props: { action: viaAgent as never, courseId: COURSE },
+      global: {
+        plugins: [pinia, i18n, ElementPlus],
+        stubs: { RouterLink: RouterLinkStub, MemberName: { props: ['id'], template: '<span>{{ id }}</span>' } },
+      },
+    })
+    await flushPromises()
+    expect(agent.text()).toContain('m-cy joins Group 1')
   })
 })

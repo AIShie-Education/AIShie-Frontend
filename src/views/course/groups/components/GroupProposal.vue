@@ -1,32 +1,56 @@
 <script setup lang="ts">
 // What an action about groups does, in words, where it is decided or read
-// (ActionView, and the approvals queue's ActionCard, `compact`): the set it
-// is about, by name; a random split by size or by count, from whom, with the
-// seed it was pinned to, so that approving it deals as proposed; each
-// student placed and where, and whether it moves students of a group with
-// work; a student signed up (by their own agent, which only proposes it);
-// the groups added or changed; a set made or changed, its sign-up opened or
-// closed. Names come from the course's sets (groupNames.ts) and the member
-// list, as far as the reader may see them.
+// (ActionView, and the approvals queue's ActionCard, `compact`, where
+// ActionTarget names the set beside it): the set it is about, by name; a
+// random split by size or by count, from whom, with the seed it was pinned
+// to, so that approving it deals as proposed, and once made what it made,
+// placed and left alone (its result); each student placed and where, and
+// whether it moves students of a group with work; a student signing up,
+// themselves or by their own agent, which only proposes it; the groups added
+// or changed; a set made or changed, its sign-up opened or closed. Names come
+// from the course's sets (groupNames.ts) and the member list, as far as the
+// reader may see them.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MemberName from '@/components/MemberName.vue'
 import TimeText from '@/components/TimeText.vue'
+import { useCourseStore } from '@/stores/course'
 import { useUiStore } from '@/stores/ui'
 import { formatList } from '@/utils/format'
-import { payloadOf, str, type ActionRow } from '@/views/course/actions/components/actionText'
+import { isObject, payloadOf, str, type ActionRow } from '@/views/course/actions/components/actionText'
+import { groupIdsIn } from './groupFields'
+import { SERVER_SPLIT_PREFIX } from './groupModel'
 import { ensureGroupNames, groupName, groupSetName } from './groupNames'
 
 const props = defineProps<{ action: ActionRow; courseId: string; compact?: boolean }>()
 const { t } = useI18n()
+const course = useCourseStore()
 const ui = useUiStore()
-onMounted(() => void ensureGroupNames(props.courseId))
 
 const type = computed(() => props.action.action_type)
 const p = computed(() => payloadOf(props.action))
-const setId = computed(
-  () => str(p.value.set_id) ?? (type.value.startsWith('group_set.') ? props.action.target_id : null),
+/** What it came to, once carried out. */
+const result = computed(() =>
+  props.action.status === 'executed' && isObject(props.action.result) ? props.action.result : null,
 )
+const proposed = computed(() => props.action.status === 'proposed')
+const setId = computed(
+  () =>
+    str(p.value.set_id) ??
+    (type.value.startsWith('group_set.') ? props.action.target_id : null) ??
+    (type.value === 'group_set.create' ? str(result.value?.id) : null) ??
+    null,
+)
+onMounted(() => {
+  void ensureGroupNames(props.courseId, [
+    setId.value,
+    props.action.target_id,
+    ...groupIdsIn(p.value),
+    ...groupIdsIn(result.value),
+  ])
+  if (type.value === 'group.sign_up') void course.ensureMembers()
+})
+
 const setName = computed(() => groupSetName(setId.value) ?? str(p.value.name) ?? null)
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 const nameOfGroup = (id: unknown) => (typeof id === 'string' && groupName(id)?.name) || t('groups.event.aGroup')
@@ -56,10 +80,57 @@ const newGroups = computed(() => {
       ),
   )
 })
-/** A split's groups, as it would name them: the prefix and a number. */
-const splitNames = computed(() => {
-  const prefix = typeof p.value.name_prefix === 'string' ? p.value.name_prefix : t('groups.split.defaultPrefix')
-  return t('groups.proposal.namedLike', { example: `${prefix}1`.trim() })
+
+// --- A random split ------------------------------------------------------------
+/**
+ * The groups it makes: once made, those it made (none, where the set had
+ * groups enough); before, how any it makes will be named, the prefix it
+ * gives or, where it gives none (an agent's, say), the server's own.
+ */
+const madeNames = computed(() =>
+  result.value && Array.isArray(result.value.created)
+    ? result.value.created.filter(isObject).map((c) => String(c.name ?? ''))
+    : null,
+)
+const splitMade = computed(() => {
+  void ui.locale
+  const made = madeNames.value
+  if (made) return made.length ? formatList(made) : t('groups.proposal.noneMade')
+  const prefix = typeof p.value.name_prefix === 'string' ? p.value.name_prefix : SERVER_SPLIT_PREFIX
+  return t('groups.proposal.namedLikeIfAny', { example: `${prefix}1`.trim() })
+})
+/** What a split carried out came to: how many it placed, the groups it left alone, how many it took out to deal again. */
+const splitDone = computed(() => {
+  void ui.locale
+  const r = result.value
+  if (!r || type.value !== 'group.split') return null
+  const placed = Array.isArray(r.placed) ? r.placed.length : 0
+  const kept = Array.isArray(r.kept) ? r.kept.filter(isObject).map((k) => nameOfGroup(k.group_id)) : []
+  return {
+    placed: t('groups.proposal.students', { n: placed }, placed),
+    kept: kept.length ? formatList(kept) : t('groups.proposal.noneKept'),
+    emptied: num(r.emptied) ? t('groups.proposal.students', { n: num(r.emptied) }, num(r.emptied)!) : null,
+  }
+})
+
+// --- Sign-up -------------------------------------------------------------------
+/**
+ * Whom a sign-up is for: the student it names; else the one who asked, a
+ * student signing themselves up, or, where that was a student's own agent,
+ * its student (its principal), as the member list says, or as the caller is
+ * where the list is not theirs to read and the agent is theirs.
+ */
+const signer = computed<string | null>(() => {
+  const named = str(p.value.student_member_id)
+  if (named) return named
+  const by = props.action.member_id ?? null
+  if (!by) return null
+  if (by === course.myMemberId) return course.principalMemberId ?? by
+  const seat = course.members.get(by)
+  if (seat) return seat.principal_member_id ?? by
+  // A reader who may not read the member list is shown only their own actions and their own agents'.
+  if (course.membersState === 'forbidden' && course.myMemberId) return course.myMemberId
+  return by
 })
 
 /** What the queue's card says in one line. */
@@ -81,15 +152,8 @@ const line = computed(() => {
 </script>
 
 <template>
-  <div class="group-proposal" :class="{ 'is-compact': compact }">
-    <template v-if="compact">
-      <span v-if="setId" class="group-proposal__set">
-        <router-link :to="{ name: 'course-group-set', params: { courseId, setId } }">{{
-          setName ?? t('groups.event.aSet')
-        }}</router-link>
-      </span>
-      <span v-if="line" class="group-proposal__line">{{ line }}</span>
-    </template>
+  <div v-if="!compact || line" class="group-proposal" :class="{ 'is-compact': compact }">
+    <span v-if="compact" class="group-proposal__line">{{ line }}</span>
     <dl v-else class="group-proposal__facts">
       <div v-if="setId">
         <dt>{{ t('groups.proposal.set') }}</dt>
@@ -111,22 +175,36 @@ const line = computed(() => {
           <dt>{{ t('groups.split.from') }}</dt>
           <dd>{{ p.from === 'all' ? t('groups.split.fromAll') : t('groups.split.fromUnassigned') }}</dd>
         </div>
-        <div v-if="str(p.seed)">
+        <div v-if="str(p.seed) || str(result?.seed)">
           <dt>{{ t('groups.split.seed') }}</dt>
           <dd>
-            <code class="group-proposal__seed">{{ p.seed }}</code>
-            <span class="group-proposal__hint">{{ t('groups.proposal.seedHint') }}</span>
+            <code class="group-proposal__seed">{{ str(result?.seed) ?? p.seed }}</code>
+            <span v-if="proposed" class="group-proposal__hint">{{ t('groups.proposal.seedHint') }}</span>
           </dd>
         </div>
         <div>
           <dt>{{ t('groups.proposal.newGroups') }}</dt>
           <dd>
-            {{ splitNames
-            }}<template v-if="num(p.capacity)">{{
+            {{ splitMade
+            }}<template v-if="num(p.capacity) && madeNames?.length !== 0">{{
               t('common.bracketed', { text: t('groups.proposal.capacity', { n: num(p.capacity) }) })
             }}</template>
           </dd>
         </div>
+        <template v-if="splitDone">
+          <div>
+            <dt>{{ t('actions.fields.placed') }}</dt>
+            <dd>{{ splitDone.placed }}</dd>
+          </div>
+          <div v-if="splitDone.emptied">
+            <dt>{{ t('actions.fields.emptied') }}</dt>
+            <dd>{{ splitDone.emptied }}</dd>
+          </div>
+          <div>
+            <dt>{{ t('actions.fields.kept') }}</dt>
+            <dd>{{ splitDone.kept }}</dd>
+          </div>
+        </template>
       </template>
 
       <template v-else-if="type === 'group.set_members'">
@@ -162,10 +240,7 @@ const line = computed(() => {
               tag="span"
               scope="global"
             >
-              <template #student>
-                <MemberName v-if="str(p.student_member_id)" :id="str(p.student_member_id)" />
-                <span v-else>{{ t('groups.proposal.theirStudent') }}</span>
-              </template>
+              <template #student><MemberName :id="signer" /></template>
               <template #group>{{ nameOfGroup(p.group_id) }}</template>
             </i18n-t>
           </dd>
@@ -225,9 +300,6 @@ const line = computed(() => {
 
 <style scoped>
 .group-proposal.is-compact {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--app-space-xs) var(--app-space-sm);
   font-size: var(--app-text-sm);
 }
 .group-proposal__line {

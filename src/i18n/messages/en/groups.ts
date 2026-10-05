@@ -117,6 +117,10 @@ export default {
     archiveHasWork: 'It has work for an assignment, so it stays.',
     archiveTitle: 'Archive group',
     archiveConfirm: '{name} is hidden from this set and from sign-up. You can bring it back.',
+    // Said with archiveConfirm to a reader whose seat does not reach every student: a group's work is shown to those
+    // who reach one of its members, so an empty group's is not shown them.
+    archiveUnseenWork:
+      'If it has work for an assignment of this set that you are not shown, a draft perhaps, it stays as it is.',
     archived: 'Archived {name}.',
     restored: 'Brought back {name}.',
   },
@@ -230,6 +234,8 @@ export default {
     allPlaced: 'Everyone is in a group.',
     noGroups: 'This set has no groups yet.',
     noGroupsForm: 'This set has no groups yet: add some, or split the class at random.',
+    // To staff whose seat does not read the member list: the server names no group's members to them.
+    namesHidden: 'Who is in each group is shown to those who may read the member list.',
     dragHint: 'You can also drag a student onto a group.',
   },
   // Who was in which group when.
@@ -303,7 +309,11 @@ export default {
     byCount: '{n} group in the set | {n} groups in the set',
     seedHint: 'Approving it deals the students as this seed deals them.',
     newGroups: 'New groups',
-    namedLike: 'Named like {example}',
+    // A split still to be made: whether it makes any depends on the groups then.
+    namedLikeIfAny: 'Any it makes are named like {example}',
+    noneMade: 'None',
+    noneKept: 'None',
+    students: '{n} student | {n} students',
     capacity: 'capacity {n}',
     placementsLabel: 'Who goes where',
     placements: '{n} student placed | {n} students placed',
@@ -314,7 +324,6 @@ export default {
     signUp: 'Sign-up',
     joins: '{student} joins {group}',
     leaves: '{student} leaves their group',
-    theirStudent: 'Their student',
     archive: 'Archive',
     signupOn: 'Students may sign themselves up',
     signupOff: 'Students do not sign themselves up',
@@ -327,16 +336,28 @@ export default {
     hideHistory: 'Hide history',
     historyFailed: 'The history could not be read.',
     noHistory: 'Never in a group of this set.',
+    // The reader's seat does not reach this student: the server shows them none of the student's groups.
+    outOfScope: 'This student is not among the students your seat reaches, so their groups are not shown to you.',
+    // The reader's seat may not reach this student, and the page cannot tell (a delegate's principal's reach).
+    notShown: 'In no group shown to you',
+    noHistoryShown: 'None of their time in this set’s groups is shown to you.',
+  },
+  // An action about groups' fields, on its page (GroupFieldValue).
+  fields: {
+    work: 'Work of the group',
+    workOf: '{group}: {assignment}',
+    made: 'Groups added',
+    joined: 'Joined',
+    movedFrom: '{student} to {group}, from {from}',
+    movedOut: '{student} out of {from}',
+    kept: '{names}: it has work for an assignment of this set | {names}: they have work for an assignment of this set',
   },
   // The server's refusals, by reason.
   refusal: {
     name_taken: 'Another one here is called that, in any case: names are unique among those not archived.',
     signup_closed: 'Sign-up is closed: your teacher places students now.',
     group_full: 'That group is full.',
-    group_has_work:
-      'That group has handed work in for an assignment of this set: who did it is your teacher’s to change now.',
-    your_group_has_work:
-      'Your group has handed work in for an assignment of this set: who did it is your teacher’s to change now.',
+    group_has_work: 'A group this touches has work for an assignment of this set, a draft included.',
     group_archived: 'That group is archived.',
     set_archived: 'This group set is archived: bring it back first.',
     course_archived: 'The course is archived: nothing in it changes.',
@@ -346,5 +367,25 @@ export default {
       'There is no room for everyone: every group that takes students is full. Raise their capacity, or split by size.',
     bad_split: 'That split cannot be made: check the number of groups or students, and the seed.',
     student_out_of_scope: 'A split deals every student of the course, and your seat does not reach them all.',
+  },
+  // A refusal's words where one kind of action means something of its own by it (groupRefusalScopes).
+  refusalOf: {
+    // A student signing up, or their agent for them.
+    signUp: {
+      group_has_work:
+        'That group has handed work in for an assignment of this set: who did it is your teacher’s to change now.',
+      your_group_has_work:
+        'Your group has handed work in for an assignment of this set: who did it is your teacher’s to change now.',
+    },
+    // Archiving a group.
+    update: {
+      group_has_work:
+        'That group has work for an assignment of this set, if only a draft: a group with work stays, and is not archived.',
+    },
+    // Placing students without saying what becomes of a group's work (a request approved after work was begun).
+    setMembers: {
+      group_has_work:
+        'A group these students leave or join has work for an assignment of this set, a draft included, and this did not say what becomes of it: place them again from the set’s page.',
+    },
   },
 }

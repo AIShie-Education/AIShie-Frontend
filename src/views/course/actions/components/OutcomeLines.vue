@@ -19,11 +19,13 @@ const props = defineProps<{
   done: Done
   /** Of a decision about a decision: the one beneath, as the result says it (OutcomeAlert reads it). */
   inner: DecideResult | null
+  /** The kind of action decided, where known: its refusals are said in the words of the pages that do it. */
+  actionType?: string | null
 }>()
 const { t } = useI18n()
 
 const error = computed(() => (props.done.kind === 'decided' ? (props.done.out.error ?? null) : null))
-const why = computed(() => reasonText(error.value))
+const why = computed(() => reasonText(error.value, props.actionType))
 const innerWhy = computed(() => reasonText(props.inner?.error ?? null))
 /** Decided, reviewed or taken back as the owner of the agent that did it. */
 const asOwner = computed(() => {

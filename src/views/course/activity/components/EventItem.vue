@@ -124,7 +124,12 @@ const subjectAgent = computed(() => {
 
 onMounted(() => {
   if (kind.value === 'material') void ensureDocumentTitles(props.courseId)
-  if (kind.value === 'group' || kind.value === 'groupSet') void ensureGroupNames(props.courseId)
+  if (kind.value === 'group' || kind.value === 'groupSet')
+    void ensureGroupNames(props.courseId, [
+      props.event.subject_id,
+      payloadString(props.event, 'set_id'),
+      payloadString(props.event, 'from_group_id'),
+    ])
   if (componentId.value) void ensureComponentNames(props.courseId)
   if (!props.compact) ensureEventWho(props.courseId, props.event, whoReach.value)
   if (ownAgentActor.value) void myAgents.ensure()

@@ -255,7 +255,7 @@ function actionRoute(id: string | null | undefined) {
 }
 
 const error = computed(() => (action.value ? storedError(action.value) : null))
-const errorWhy = computed(() => reasonText(error.value))
+const errorWhy = computed(() => reasonText(error.value, action.value?.action_type))
 const errorDetails = computed(() => {
   const d = error.value?.details
   if (!d) return null
@@ -349,6 +349,7 @@ const errorTitle = computed(() => {
           v-if="lastDone"
           :course-id="courseId"
           :done="lastDone"
+          :action-type="action?.action_type"
           closable
           class="action-view__notice"
           @close="lastDone = null"
@@ -521,7 +522,7 @@ const errorTitle = computed(() => {
                     {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) }}
                     <code>{{ error.code }}</code>
                   </p>
-                  <FieldsView v-if="errorDetails" :course-id="courseId" :value="errorDetails" />
+                  <FieldsView v-if="errorDetails" :course-id="courseId" :value="errorDetails" :action-type="action.action_type" />
                 </div>
               </el-alert>
 

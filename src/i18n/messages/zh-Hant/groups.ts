@@ -116,6 +116,7 @@ export default {
     archiveHasWork: '此小組已有作業，因此須保留。',
     archiveTitle: '封存小組',
     archiveConfirm: '{name}會從此分組及報名名單中隱藏，之後可以恢復。',
+    archiveUnseenWork: '如此小組有你看不到的此分組作業（例如草稿），便會保持不變。',
     archived: '已封存{name}。',
     restored: '已恢復{name}。',
   },
@@ -224,6 +225,7 @@ export default {
     allPlaced: '所有學生均已分組。',
     noGroups: '此分組暫時沒有小組。',
     noGroupsForm: '此分組暫時沒有小組：可以新增小組，或把全班隨機分組。',
+    namesHidden: '只有可查看成員名單的人才會看到各小組的組員。',
     dragHint: '你也可以把學生拖到小組裏。',
   },
   // Who was in which group when.
@@ -297,7 +299,10 @@ export default {
     byCount: '分組共{n}個小組',
     seedHint: '批准後會按此種子分配學生。',
     newGroups: '新小組',
-    namedLike: '名稱如{example}',
+    namedLikeIfAny: '如需新增小組，名稱會如{example}',
+    noneMade: '沒有',
+    noneKept: '沒有',
+    students: '{n}名學生',
     capacity: '上限{n}人',
     placementsLabel: '學生分到哪裏',
     placements: '為{n}名學生分組',
@@ -307,7 +312,6 @@ export default {
     signUp: '自行報名',
     joins: '{student}加入{group}',
     leaves: '{student}退出所屬小組',
-    theirStudent: '其學生',
     archive: '封存',
     signupOn: '學生可自行報名',
     signupOff: '學生不可自行報名',
@@ -320,14 +324,26 @@ export default {
     hideHistory: '隱藏記錄',
     historyFailed: '無法讀取分組記錄。',
     noHistory: '從未加入此分組的任何小組。',
+    outOfScope: '此學生不在你的權限範圍內，因此你看不到他的分組。',
+    notShown: '沒有你看得到的小組',
+    noHistoryShown: '你看不到他在此分組的任何記錄。',
+  },
+  // An action about groups' fields, on its page (GroupFieldValue).
+  fields: {
+    work: '小組的作業',
+    workOf: '{group}：{assignment}',
+    made: '新增的小組',
+    joined: '加入',
+    movedFrom: '{student}由{from}分到{group}',
+    movedOut: '{student}移出{from}',
+    kept: '{names}：已有此分組的作業',
   },
   // The server's refusals, by reason.
   refusal: {
     name_taken: '已有同名的項目（不分大小寫）：未封存的項目名稱不可重複。',
     signup_closed: '報名已截止，現由老師安排分組。',
     group_full: '該小組已額滿。',
-    group_has_work: '該小組已提交此分組的作業，組員的更改現由老師處理。',
-    your_group_has_work: '你的小組已提交此分組的作業，組員的更改現由老師處理。',
+    group_has_work: '涉及的小組已有此分組的作業（包括草稿）。',
     group_archived: '該小組已封存。',
     set_archived: '此分組已封存，請先恢復。',
     course_archived: '本課程已封存，課程內容不能更改。',
@@ -336,5 +352,19 @@ export default {
     no_room: '名額不足：所有可分配的小組都已額滿。請提高人數上限，或改為按每組人數分組。',
     bad_split: '無法按此設定分組：請檢查小組或學生的數目，以及隨機種子。',
     student_out_of_scope: '隨機分組會分配本課程的所有學生，但你的權限範圍未能涵蓋所有學生。',
+  },
+  // A refusal's words where one kind of action means something of its own by it (groupRefusalScopes).
+  refusalOf: {
+    signUp: {
+      group_has_work: '該小組已提交此分組的作業，組員的更改現由老師處理。',
+      your_group_has_work: '你的小組已提交此分組的作業，組員的更改現由老師處理。',
+    },
+    update: {
+      group_has_work: '該小組已有此分組的作業（即使只是草稿）：有作業的小組須保留，不可封存。',
+    },
+    setMembers: {
+      group_has_work:
+        '這些學生離開或加入的小組已有此分組的作業（包括草稿），而此操作未說明作業如何處理：請在分組頁面重新安排。',
+    },
   },
 }
