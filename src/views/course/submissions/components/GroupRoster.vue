@@ -3,7 +3,10 @@
 // its set with its members now, where its latest work stands, and when and
 // by whom it was handed in; a group with someone in it and no work at all is
 // recorded as having handed in nothing (submission.record_missing with
-// group_id), for its members now. Under the groups, the students in no
+// group_id), for its members now, by someone whose seat reaches every one of
+// them: a seat listed to some students is shown only those of each group's
+// members, and is told how many more there are (the group's size, from its
+// set). Under the groups, the students in no
 // group of the set, who hand nothing in and are not recorded as missing:
 // the teacher places them in a group, on the set's page. By student, the
 // roster's own table, each student with their group. The page loads the
@@ -13,7 +16,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import type { ApiError } from '@/api/http'
+import { read, type ApiError } from '@/api/http'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
@@ -23,6 +26,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -37,7 +41,9 @@ import {
   groupRosterView,
   mayMarkGroupMissing,
   NO_GROUP,
+  unreachedMembers,
   workMembersIfOthers,
+  type GroupReach,
   type RosterGroup,
 } from './rosterByGroup'
 import { ROSTER_STATES, rememberProposal, rosterName, showsSeatStatus, wasProposed, type RosterEntry } from './roster'
@@ -93,16 +99,49 @@ const assignment = computed(() => course.assignments.get(props.assignmentId) ?? 
 const published = computed<boolean | null>(() => (assignment.value ? !!assignment.value.published_at : null))
 const needsApproval = computed(() => course.needsApproval('grade_submit'))
 
+// --- How far the caller's seat reaches into each group -----------------------------
+/**
+ * The caller's seat reaches every student, and is nobody's delegate (whose
+ * principal's seat may reach fewer): the members the roster names are all
+ * of each group's.
+ */
+const reachesAll = computed(() => (course.seat ?? course.membership)?.student_scope === 'all' && !course.isDelegate)
+/**
+ * Each group's size now, from its set (group_set.get, read by whoever reads
+ * the course), where the seat may reach only some students: read again with
+ * the roster's groups. Not known, nothing is recorded missing from here.
+ */
+const sizes = useAsync<Map<string, number>>(
+  async () => {
+    if (reachesAll.value || !props.setId || props.groups === null) return new Map()
+    const set = await read('group_set.get', { course_id: props.courseId, set_id: props.setId })
+    return new Map((set.groups ?? []).map((g) => [g.id, g.size]))
+  },
+  { watch: [() => props.setId, () => props.groups, reachesAll], keepData: true },
+)
+const reach = computed<GroupReach>(() => (reachesAll.value ? null : (sizes.data.value ?? new Map())))
+/** How many of a group's members the roster does not name, the seat not reaching them. */
+const unreached = (g: RosterGroup) => unreachedMembers(g, reach.value)
+
 const keyOf = (g: RosterGroup, assignmentId = props.assignmentId) =>
   groupProposalKey(props.courseId, assignmentId, g.group_id)
 const isProposed = (g: RosterGroup) => g.state === 'not_started' && wasProposed(keyOf(g))
-const markable = (g: RosterGroup) =>
-  mayMarkGroupMissing(g, {
+function markContext(g: RosterGroup) {
+  return {
     canGrade: course.can('grade_submit'),
     writable: course.writable,
     published: published.value,
     proposed: isProposed(g),
-  })
+  }
+}
+const markable = (g: RosterGroup) => mayMarkGroupMissing(g, { ...markContext(g), reach: reach.value })
+/** A group that would be recorded missing from here but for members the seat does not reach. */
+const outOfReach = (g: RosterGroup) => unreached(g) > 0 && mayMarkGroupMissing(g, { ...markContext(g), reach: null })
+/** How many members the seat does not reach, and, where that is why, that the group is not recorded missing from here. */
+function unreachedLine(g: RosterGroup): string {
+  const n = unreached(g)
+  return t(outOfReach(g) ? 'groupWork.roster.unreachedMissing' : 'groupWork.roster.unreached', { n }, n)
+}
 
 const { run, lastError } = useWrite('submission.record_missing')
 const busy = ref<string | null>(null)
@@ -230,6 +269,9 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
               <div class="group-cards__members">
                 <template v-if="g.members?.length">{{ namesOf(g.members) }}</template>
                 <span v-else class="app-muted">{{ t('groupWork.roster.nobody') }}</span>
+                <div v-if="unreached(g)" class="group-roster__work-of group-roster__unreached">
+                  {{ unreachedLine(g) }}
+                </div>
                 <div v-if="workLine(g)" class="group-roster__work-of">{{ workLine(g) }}</div>
               </div>
               <div class="group-cards__meta">
@@ -277,6 +319,9 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
             <template #default="{ row }">
               <span v-if="row.members?.length" class="group-roster__members">{{ namesOf(row.members) }}</span>
               <span v-else class="app-muted">{{ t('groupWork.roster.nobody') }}</span>
+              <div v-if="unreached(row)" class="group-roster__work-of group-roster__unreached">
+                {{ unreachedLine(row) }}
+              </div>
               <div v-if="workLine(row)" class="group-roster__work-of">{{ workLine(row) }}</div>
             </template>
           </el-table-column>

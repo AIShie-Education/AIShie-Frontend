@@ -24,15 +24,19 @@ import {
 // form's group set fixed. Nobody reads another group's work or grades:
 // Mei is refused Alpha's submission, and Yuki sees her grade, never Ken's.
 // In Traditional Chinese, and at a phone's width, too.
+// On a second group assignment, a TA listed for Mei and Fay records Gamma
+// missing, and not Beta, whose Ken they do not reach.
 //
 // With E2E_SHOTS set to a directory, the pages are photographed there.
 
 const STAMP = Date.now().toString(36)
 const SET = `Project groups ${STAMP}`
 const TITLE = `Group essay ${STAMP}`
+const SECOND = `Group plan ${STAMP}`
 let courseId = ''
 let setId = ''
 let assignmentId = ''
+let secondId = ''
 let alphaWork = ''
 const groups: Record<'alpha' | 'beta' | 'gamma', string> = { alpha: '', beta: '', gamma: '' }
 type Student = DemoActor & { member_id: string }
@@ -431,4 +435,47 @@ test.describe.serial('group work', () => {
     expect(await sideways()).toBeLessThanOrEqual(0)
     await photograph(page, 'group-work-phone-roster')
   })
+  test('a TA listed for Mei and Fay records Gamma missing, and not Beta, whose Ken they do not reach', async ({
+    page,
+  }) => {
+    await keepToasts(page)
+    const S = sato().token
+    const ta = demo().actors.ta
+    await ok(S, 'POST', `/v1/courses/${courseId}/members`, {
+      actor_id: ta.actor_id,
+      preset: 'ta',
+      student_scope: 'listed',
+      listed_students: [students.mei.member_id, students.fay.member_id],
+    })
+    secondId = (
+      await ok(S, 'POST', `/v1/courses/${courseId}/assignments`, {
+        title: SECOND,
+        points_possible: 10,
+        group_set_id: setId,
+      })
+    ).id
+    await ok(S, 'POST', `/v1/courses/${courseId}/assignments/${secondId}/publish`, {})
+
+    await as(page, ta)
+    await page.goto(coursePath(`submissions?assignment=${secondId}`))
+    const table = page.locator('.group-roster__table')
+    const row = (name: string) => table.locator('.el-table__row').filter({ hasText: name })
+    // Beta is Mei and Ken now: the TA is shown Mei, told of one more, and offered nothing.
+    await expect(row('Beta')).toContainText('Mei Chan')
+    await expect(row('Beta')).toContainText(
+      '1 more member your seat does not reach, so someone whose seat reaches every member records the group as missing',
+    )
+    await expect(row('Beta').getByRole('button', { name: 'Record missing' })).toHaveCount(0)
+    // Alpha, Yuki alone now, is nobody the TA reaches.
+    await expect(row('Alpha')).toHaveCount(0)
+    await photograph(page, 'group-work-roster-listed')
+
+    await row('Gamma').getByRole('button', { name: 'Record missing' }).click()
+    const confirm = page.getByRole('dialog', { name: 'Record Gamma as missing?' })
+    await expect(confirm).toContainText(`for its members now: Fay ${STAMP}`)
+    await confirm.getByRole('button', { name: 'Record missing' }).click()
+    await expectToasted(page, 'Gamma recorded as missing.')
+    await expect(row('Gamma')).toContainText('Missing')
+  })
+
 })

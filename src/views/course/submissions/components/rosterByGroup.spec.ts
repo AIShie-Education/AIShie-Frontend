@@ -6,6 +6,8 @@ import {
   groupsFor,
   mayMarkGroupMissing,
   NO_GROUP,
+  reachesWholeGroup,
+  unreachedMembers,
   workGroupIfOther,
   workMembersIfOthers,
 } from './rosterByGroup'
@@ -73,6 +75,23 @@ describe('the roster by group', () => {
     expect(mayMarkGroupMissing(beta, { ...ctx, published: false })).toBe(false)
     expect(mayMarkGroupMissing(beta, { ...ctx, published: null })).toBe(true)
     expect(mayMarkGroupMissing(beta, { ...ctx, proposed: true })).toBe(false)
+  })
+
+  it('offers it to a seat listed to some students only where it reaches every member, which the group’s size says', () => {
+    // A tutor listed for Mei: the roster names Mei alone of Beta, which has Mei and Ken now.
+    const sizes = new Map([['g-beta', 2]])
+    expect(mayMarkGroupMissing(beta, { ...ctx, reach: sizes })).toBe(false)
+    expect(unreachedMembers(beta, sizes)).toBe(1)
+    // Listed for both: the roster names both.
+    const both = { ...beta, members: [{ member_id: 'm-mei' }, { member_id: 'm-ken' }] }
+    expect(mayMarkGroupMissing(both, { ...ctx, reach: sizes })).toBe(true)
+    expect(unreachedMembers(both, sizes)).toBe(0)
+    // The size not known yet: not offered, and nothing said of others.
+    expect(reachesWholeGroup(beta, new Map())).toBe(false)
+    expect(unreachedMembers(beta, new Map())).toBe(0)
+    // A seat that reaches every student is named every member.
+    expect(reachesWholeGroup(beta, null)).toBe(true)
+    expect(mayMarkGroupMissing(beta, { ...ctx, reach: null })).toBe(true)
   })
 
   it('keeps a group’s proposal apart from a student’s, and sorts groups by their numbers', () => {

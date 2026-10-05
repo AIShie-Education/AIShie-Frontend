@@ -10,12 +10,26 @@ import GroupRoster from './GroupRoster.vue'
 import type { RosterGroup } from './rosterByGroup'
 import type { RosterEntry } from './roster'
 
-// Every write asked for, and what Core answers it with.
+// Every write asked for, and what Core answers it with; every read, and the group set's sizes.
 let writes: { tool: string; args: Record<string, unknown> }[] = []
+let reads: string[] = []
+let sizes: Record<string, number> = {}
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
     ...real,
+    read: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+      reads.push(tool)
+      if (tool === 'group_set.get' && args.set_id === 'set-gone')
+        throw new real.ApiError({ status: 404, code: 'not_found', message: 'no such group set' })
+      if (tool === 'group_set.get')
+        return {
+          id: 'set-1',
+          name: 'Project groups',
+          groups: Object.entries(sizes).map(([id, size]) => ({ id, size })),
+        }
+      throw new Error(`no answer for ${tool}`)
+    }),
     write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
       writes.push({ tool, args })
       return { status: 'executed', actionId: 'act-1', reviewState: 'none', result: { submission_id: 's-new' } }
@@ -92,16 +106,24 @@ beforeEach(() => {
   }))
   setLocale('en')
   writes = []
+  reads = []
+  sizes = {}
   confirm.mockClear()
 })
 afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountRoster(props: Partial<InstanceType<typeof GroupRoster>['$props']> = {}) {
+/** The teacher's seat, which reaches every student; or a TA's, listed to some. */
+const TEACHER = { member_id: 'm-sato', role: 'instructor', status: 'active', student_scope: 'all' }
+async function mountRoster(
+  props: Partial<InstanceType<typeof GroupRoster>['$props']> = {},
+  seat: Record<string, unknown> = TEACHER,
+) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const course = useCourseStore()
+  course.membership = seat as never
   course.assignments = new Map([
     [ASSIGNMENT, { id: ASSIGNMENT, title: 'Group essay', points_possible: 10, published_at: '2026-10-01T00:00:00Z' }],
   ]) as never
@@ -171,6 +193,47 @@ describe('the roster by group', () => {
       },
     ])
     expect(w.emitted('changed')).toHaveLength(1)
+    w.unmount()
+  })
+
+  it('to a seat that reaches every student, records missing without reading the set', async () => {
+    const w = await mountRoster()
+    expect(reads).toEqual([])
+    expect(rowOf(w, 'Gamma').find('button').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('to a TA listed to some students, records missing only a group whose every member they reach', async () => {
+    // Listed for Fay and Yuki: Gamma has Fay alone, the roster says; its set says it has Fay and Ken now.
+    // Zeta has Yuki alone, as its set says too.
+    sizes = { 'g-gamma': 2, 'g-zeta': 1, 'g-alpha': 1 }
+    const zeta = {
+      group_id: 'g-zeta',
+      name: 'Zeta',
+      members: [{ member_id: 'm-yuki', display_name: 'Yuki Tanaka' }],
+      state: 'not_started',
+    }
+    const ta = { member_id: 'm-ta', role: 'ta', status: 'active', student_scope: 'listed' }
+    const w = await mountRoster({ groups: [groups[1]!, groups[2]!, zeta] }, ta)
+    expect(reads).toEqual(['group_set.get'])
+    expect(rowOf(w, 'Gamma').find('button').exists()).toBe(false)
+    expect(rowOf(w, 'Gamma').text()).toContain(
+      '1 more member your seat does not reach, so someone whose seat reaches every member records the group as missing',
+    )
+    expect(rowOf(w, 'Zeta').find('.group-roster__unreached').exists()).toBe(false)
+    await rowOf(w, 'Zeta').find('button').trigger('click')
+    await flushPromises()
+    const [message] = confirm.mock.calls[0] as [{ children: { children: string }[] }]
+    expect(message.children[0]!.children).toContain('for its members now: Yuki Tanaka')
+    expect(writes.map((x) => x.args.group_id)).toEqual(['g-zeta'])
+    w.unmount()
+  })
+
+  it('to a TA whose group sizes cannot be read, records nothing missing', async () => {
+    const ta = { member_id: 'm-ta', role: 'ta', status: 'active', student_scope: 'listed' }
+    const w = await mountRoster({ setId: 'set-gone' }, ta)
+    expect(reads).toEqual(['group_set.get'])
+    expect(rowOf(w, 'Gamma').find('button').exists()).toBe(false)
     w.unmount()
   })
 

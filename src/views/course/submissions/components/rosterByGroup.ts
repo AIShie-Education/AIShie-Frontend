@@ -6,7 +6,10 @@
 // no_group for a student in no group of the set, who hands nothing in and is
 // not recorded as missing. A group that has not started, with someone in
 // it, can be recorded as having handed in nothing (submission.record_missing
-// with group_id), for its members now.
+// with group_id), for its members now, by someone whose seat reaches every
+// one of them: a seat listed to some students is shown only those of each
+// group's members, and the group's size, from its set, says whether that is
+// all of them.
 import type { RosterGroup } from '@/views/course/assignments/components/groupWork'
 import { countByState, type MarkContext, type RosterEntry, type StateCount } from './roster'
 
@@ -48,14 +51,48 @@ export function groupRosterView(
 }
 
 /**
- * Whether to offer recording a group as missing: one with no work at all
- * (not even a draft) and someone in it, for a published assignment, by
- * someone who may enter grades, in a course that can still change.
+ * How far the caller's seat reaches into the groups: the roster names only
+ * the members their student scope reaches. Null where it reaches every
+ * student (and, a delegate's, so does its principal's), so that the members
+ * named are all of them; else each group's size now, as its set gives it
+ * (an empty map while that is not known).
  */
-export function mayMarkGroupMissing(g: Pick<RosterGroup, 'state' | 'members'>, ctx: MarkContext): boolean {
+export type GroupReach = ReadonlyMap<string, number> | null
+
+/**
+ * How many of a group's members now the roster does not name, the caller's
+ * seat not reaching them; 0 where it names them all, or that is not known.
+ */
+export function unreachedMembers(g: Pick<RosterGroup, 'group_id' | 'members'>, reach: GroupReach): number {
+  const size = reach?.get(g.group_id)
+  return size === undefined ? 0 : Math.max(0, size - (g.members ?? []).length)
+}
+
+/**
+ * Whether the caller's seat reaches every member of the group now: Core
+ * records a group missing only for someone who reaches each one it is
+ * recorded for (scope over all its members, as grading it is).
+ */
+export function reachesWholeGroup(g: Pick<RosterGroup, 'group_id' | 'members'>, reach: GroupReach): boolean {
+  if (reach === null) return true
+  const size = reach.get(g.group_id)
+  return size !== undefined && size === (g.members ?? []).length
+}
+
+/**
+ * Whether to offer recording a group as missing: one with no work at all
+ * (not even a draft) and someone in it, every one of whom the caller's seat
+ * reaches, for a published assignment, by someone who may enter grades, in a
+ * course that can still change.
+ */
+export function mayMarkGroupMissing(
+  g: Pick<RosterGroup, 'group_id' | 'state' | 'members'>,
+  ctx: MarkContext & { reach?: GroupReach },
+): boolean {
   return (
     g.state === 'not_started' &&
     (g.members ?? []).length > 0 &&
+    reachesWholeGroup(g, ctx.reach ?? null) &&
     ctx.canGrade &&
     ctx.writable &&
     ctx.published !== false &&

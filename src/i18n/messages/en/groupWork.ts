@@ -118,6 +118,11 @@ export default {
     noGroupNote:
       'They hand nothing in for this assignment and are not recorded as missing. Place each in a group of the set: a group of one is a group.',
     noGroupMore: 'More students may be on pages not loaded yet.',
+    // Under a group's members, to a seat listed to some students: those of its members it does not reach.
+    unreached: '{n} more member your seat does not reach | {n} more members your seat does not reach',
+    // The same, where it is why the group cannot be recorded missing from here: that takes every member.
+    unreachedMissing:
+      '{n} more member your seat does not reach, so someone whose seat reaches every member records the group as missing | {n} more members your seat does not reach, so someone whose seat reaches every member records the group as missing',
     openSet: 'Open the group set',
     recordMissing: 'Record missing',
     confirmTitle: 'Record {group} as missing?',

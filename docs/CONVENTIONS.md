@@ -325,7 +325,10 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   where the app has one. A group assignment's roster (`GroupRoster`, `rosterByGroup.ts`) is by group:
   its members now and, where they differ, whom its work is for; the students in no group under the
   groups (`WorkStateTag`, amber, never missing); a group with someone in it and no work recorded
-  missing for its members now (`submission.record_missing` with `group_id`). By student, each row
+  missing for its members now (`submission.record_missing` with `group_id`), offered only to a seat
+  that reaches every one of them, as Core requires: a seat listed to some students is shown only those
+  of each group's members, and the group's size from its set (`group_set.get`) says how many more
+  there are, and whether that is all of them (`reachesWholeGroup`). By student, each row
   says its group, and whose work it is where the student has moved since. Its words are in
   `groupWork`.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
