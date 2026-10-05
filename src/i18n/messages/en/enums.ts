@@ -300,6 +300,8 @@ export default {
     'member.rescoped': 'Member scope changed',
     'member.role_changed': 'Roster role changed',
     'member.password_reset': 'Student’s password reset',
+    'peer_form.updated': 'Peer evaluation changed',
+    'peer_review.submitted': 'Peer evaluation submitted',
     'submission.submitted': 'Work handed in',
     'submission.lateness_changed': 'Lateness corrected',
     'submission.missing': 'Marked missing',

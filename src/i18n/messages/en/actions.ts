@@ -267,6 +267,7 @@ export default {
     grade: {
       submit: 'Enter a grade',
       post: 'Post grades',
+      apply_peer: 'Count peer evaluation in grades',
       regrade: 'Regrade',
       override_total: 'Override a total',
       clear_override: 'Take off a total’s override',
@@ -286,6 +287,12 @@ export default {
       remove_orphan: 'Remove an agent no longer tied to its owner',
       set_role: 'Change a seat’s roster role',
       reset_password: 'Reset a student’s password',
+    },
+    peer_form: {
+      set: 'Set up peer evaluation',
+    },
+    peer_review: {
+      submit: 'Submit a peer evaluation',
     },
     submission: {
       create: 'Start a submission',

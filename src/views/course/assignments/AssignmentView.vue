@@ -36,6 +36,8 @@ import AssignmentMoreMenu from './components/AssignmentMoreMenu.vue'
 import DeleteAssignmentDialog from './components/DeleteAssignmentDialog.vue'
 import MyWorkPanel from './components/MyWorkPanel.vue'
 import WorkSummary from './components/WorkSummary.vue'
+import PeerSettingsCard from '@/views/course/peer/PeerSettingsCard.vue'
+import PeerTaskPanel from '@/views/course/peer/PeerTaskPanel.vue'
 import { useScheme } from './components/useAssignmentData'
 import { deletedAt, isDeletedError } from './components/deletion'
 
@@ -252,6 +254,12 @@ function onGone() {
 
 const summary = ref<InstanceType<typeof WorkSummary> | null>(null)
 const work = ref<InstanceType<typeof MyWorkPanel> | null>(null)
+// A group assignment's peer evaluation: a student's own, and its settings for the teaching staff.
+const peerTask = ref<InstanceType<typeof PeerTaskPanel> | null>(null)
+const peerSettings = ref<InstanceType<typeof PeerSettingsCard> | null>(null)
+const seesPeer = computed(
+  () => !isStudent.value && (writer.value || course.can('grade_submit') || course.can('grade_post')),
+)
 function refresh() {
   // What was proposed may have been decided since; Core says if it is still waiting.
   publishProposed.value = false
@@ -262,6 +270,8 @@ function refresh() {
   void instructions.reload()
   summary.value?.reload()
   work.value?.reload()
+  peerTask.value?.reload()
+  peerSettings.value?.reload()
 }
 </script>
 
@@ -464,6 +474,12 @@ function refresh() {
               :instructions-version-id="instructionsDoc?.published_version_id ?? null"
               @instructions-changed="onInstructionsChanged"
             />
+            <PeerTaskPanel
+              v-if="isStudent && assignment.group_set_id"
+              ref="peerTask"
+              :course-id="courseId"
+              :assignment="assignment"
+            />
           </div>
 
           <aside class="assignment-view__side app-column">
@@ -543,6 +559,13 @@ function refresh() {
               </div>
               <p class="app-form-hint">{{ t('assignments.detail.workHint') }}</p>
             </section>
+
+            <PeerSettingsCard
+              v-if="seesPeer && assignment.group_set_id"
+              ref="peerSettings"
+              :course-id="courseId"
+              :assignment="assignment"
+            />
           </aside>
         </div>
 

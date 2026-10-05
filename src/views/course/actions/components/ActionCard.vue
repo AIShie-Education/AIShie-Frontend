@@ -19,6 +19,7 @@ import ActionTarget from './ActionTarget.vue'
 import AnswerSources from './AnswerSources.vue'
 import DecidePanel from './DecidePanel.vue'
 import RevisesLine from './RevisesLine.vue'
+import PeerProposal from '@/views/course/peer/PeerProposal.vue'
 import { payloadOf, str, typeLabel, useJudgeRules, type ActionRow } from './actionText'
 import type { Done } from './decide'
 
@@ -126,6 +127,8 @@ const excerpt = computed(() => {
     <div v-if="message" class="action-card__message"><MarkdownView :source="message" /></div>
     <p v-else-if="excerpt" class="action-card__excerpt">{{ excerpt }}</p>
     <AnswerSources v-if="message && action.action_type === 'conversation.answer'" :payload="p" />
+    <!-- Counting peer evaluation in grades: each member's factor, as the proposal recorded it. -->
+    <PeerProposal v-if="action.action_type === 'grade.apply_peer'" :action="action" :course-id="courseId" />
 
     <footer class="action-card__foot">
       <DecidePanel

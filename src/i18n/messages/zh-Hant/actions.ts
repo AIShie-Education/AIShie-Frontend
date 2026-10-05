@@ -260,6 +260,7 @@ export default {
     grade: {
       submit: '輸入成績',
       post: '發佈成績',
+      apply_peer: '把組員互評計入成績',
       regrade: '重新評分',
       override_total: '覆寫總分',
       clear_override: '取消總分覆寫',
@@ -279,6 +280,12 @@ export default {
       remove_orphan: '移除已與擁有者脫鈎的代理',
       set_role: '更改席位的名冊角色',
       reset_password: '重設學生密碼',
+    },
+    peer_form: {
+      set: '設定組員互評',
+    },
+    peer_review: {
+      submit: '交出組員互評',
     },
     submission: {
       create: '開始提交',

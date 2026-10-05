@@ -1,3 +1,4 @@
+import peerRoutes from './peer'
 import type { NavigationGuardWithThis, RouteRecordRaw } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
 
@@ -57,6 +58,8 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: { title: 'assignments.detail.title' },
   },
+  // An assignment's peer evaluation (modules/peer.ts).
+  ...peerRoutes,
   {
     path: 'submissions',
     name: 'course-submissions',

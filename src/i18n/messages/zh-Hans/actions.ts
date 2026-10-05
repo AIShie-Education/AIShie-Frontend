@@ -260,6 +260,7 @@ export default {
     grade: {
       submit: '输入成绩',
       post: '发布成绩',
+      apply_peer: '把组员互评计入成绩',
       regrade: '重新评分',
       override_total: '覆写总分',
       clear_override: '取消总分覆写',
@@ -279,6 +280,12 @@ export default {
       remove_orphan: '移除已与拥有者脱钩的智能体',
       set_role: '更改席位的名册角色',
       reset_password: '重置学生密码',
+    },
+    peer_form: {
+      set: '设置组员互评',
+    },
+    peer_review: {
+      submit: '提交组员互评',
     },
     submission: {
       create: '开始提交',
