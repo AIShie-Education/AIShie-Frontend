@@ -181,6 +181,20 @@ describe('PeerTaskPanel, a share form while it is open', () => {
     w.unmount()
   })
 
+  it('opens a comment about a member with the focus in it, saying that member never reads it', async () => {
+    const w = await mountPanel()
+    const add = w.findAll('button').find((b) => b.text() === 'Add a comment about Ken Wong')!
+    ;(add.element as HTMLButtonElement).focus()
+    await add.trigger('click')
+    await flushPromises()
+    const box = w.find('textarea[aria-label="Comment about Ken Wong, for your teachers"]')
+    expect(box.exists()).toBe(true)
+    // The button it replaced is gone: the focus is in the field, not back at the page's top.
+    expect(document.activeElement).toBe(box.element)
+    expect(box.attributes('placeholder')).toBe('Only your teachers read this, never Ken Wong.')
+    w.unmount()
+  })
+
   it('splits evenly at a press', async () => {
     const w = await mountPanel()
     await w
@@ -267,6 +281,15 @@ describe('PeerTaskPanel, a rating form with self-evaluation', () => {
     )
     expect(w.findAll('.peer-task__rated h3').map((h) => h.text())).toEqual(['Ken Wong', 'Mei Chan', 'Yuki Tanaka(you)'])
     expect(w.findAll('.peer-task__rated').at(0)!.findAll('.el-radio-button')).toHaveLength(10)
+    // A comment about oneself names nobody who must not read it.
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Add a comment about Yuki Tanaka')!
+      .trigger('click')
+    await flushPromises()
+    const own = w.find('textarea[aria-label="Comment about Yuki Tanaka, for your teachers"]')
+    expect(own.attributes('placeholder')).toBe('Only your teachers read this.')
+    expect(document.activeElement).toBe(own.element)
     await w.find('form').trigger('submit')
     await flushPromises()
     expect(writes).toEqual([])
@@ -286,9 +309,9 @@ describe('PeerTaskPanel, a student in no group’s circle', () => {
 
 describe('PeerTaskPanel, in Chinese', () => {
   it('says it in Traditional and in Simplified Chinese, the total with the language’s own marks', async () => {
-    for (const [locale, title, total, open] of [
-      ['zh-Hant', '組員互評', '合計：60／100', '開放中'],
-      ['zh-Hans', '组员互评', '合计：60／100', '开放中'],
+    for (const [locale, title, total, open, add, placeholder] of [
+      ['zh-Hant', '組員互評', '合計：60／100', '開放中', '為Ken Wong加上評語', '只有你的老師會看到，Ken Wong看不到。'],
+      ['zh-Hans', '组员互评', '合计：60／100', '开放中', '给Ken Wong添加评语', '只有你的老师会看到，Ken Wong看不到。'],
     ] as const) {
       setLocale(locale)
       const w = await mountPanel()
@@ -296,6 +319,12 @@ describe('PeerTaskPanel, in Chinese', () => {
       expect(w.text()).toContain(title)
       expect(w.text()).toContain(open)
       expect(w.find('[data-test="peer-total"]').text()).toContain(total)
+      await w
+        .findAll('button')
+        .find((b) => b.text() === add)!
+        .trigger('click')
+      await flushPromises()
+      expect(w.find('.peer-task__comment textarea').attributes('placeholder')).toBe(placeholder)
       w.unmount()
     }
   })

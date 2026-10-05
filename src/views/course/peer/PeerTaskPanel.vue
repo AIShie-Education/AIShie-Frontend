@@ -12,7 +12,7 @@
 // them is ever read here: Core gives a student none of it. A peer
 // evaluation is a person's own judgment of their classmates: an agent, the
 // student's own included, writes none, and is not offered to.
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { Assignment } from '@/api/types'
@@ -131,8 +131,23 @@ function splitEvenly() {
   const shares = evenShares(draft.value.entries.length)
   draft.value.entries.forEach((e, i) => (e.share = String(shares[i])))
 }
-function openComment(id: string) {
+/** A member's comment field, by the id it is focused by. */
+const commentId = (id: string) => `peer-comment-${id}`
+/**
+ * Opens a member's comment field in place of the button that asked for it,
+ * and moves the focus into it: the button is gone, and the focus would
+ * otherwise fall back to the page's top.
+ */
+async function openComment(id: string) {
   commenting.value = new Set([...commenting.value, id])
+  await nextTick()
+  document.getElementById(commentId(id))?.focus()
+}
+/** Who reads a comment about a member: their teachers, never that member; about oneself, their teachers. */
+function commentPlaceholder(id: string): string {
+  return id === me.value
+    ? t('peer.task.commentSelfPlaceholder')
+    : t('peer.task.commentPlaceholder', { name: nameOf(id) })
 }
 
 const submitW = useWrite('peer_review.submit')
@@ -280,8 +295,9 @@ defineExpose({ reload: () => state.reload() })
               :autosize="{ minRows: 2, maxRows: 6 }"
               :maxlength="MAX_ENTRY_COMMENT"
               :disabled="!canWrite"
+              :id="commentId(e.memberId)"
               :aria-label="t('peer.task.commentFor', { name: nameOf(e.memberId) })"
-              :placeholder="t('peer.task.commentPlaceholder')"
+              :placeholder="commentPlaceholder(e.memberId)"
               class="peer-task__comment"
             />
             <el-button
@@ -337,8 +353,9 @@ defineExpose({ reload: () => state.reload() })
               :autosize="{ minRows: 2, maxRows: 6 }"
               :maxlength="MAX_ENTRY_COMMENT"
               :disabled="!canWrite"
+              :id="commentId(e.memberId)"
               :aria-label="t('peer.task.commentFor', { name: nameOf(e.memberId) })"
-              :placeholder="t('peer.task.commentPlaceholder')"
+              :placeholder="commentPlaceholder(e.memberId)"
               class="peer-task__comment"
             />
             <el-button

@@ -127,8 +127,13 @@ const excerpt = computed(() => {
     <div v-if="message" class="action-card__message"><MarkdownView :source="message" /></div>
     <p v-else-if="excerpt" class="action-card__excerpt">{{ excerpt }}</p>
     <AnswerSources v-if="message && action.action_type === 'conversation.answer'" :payload="p" />
-    <!-- Counting peer evaluation in grades: each member's factor, as the proposal recorded it. -->
-    <PeerProposal v-if="action.action_type === 'grade.apply_peer'" :action="action" :course-id="courseId" />
+    <!-- Counting peer evaluation in grades, each member's factor as the proposal recorded it; or a
+         student's evaluation, what it gives each member. -->
+    <PeerProposal
+      v-if="(action.action_type === 'grade.apply_peer' || action.action_type === 'peer_review.submit') && !action.redacted"
+      :action="action"
+      :course-id="courseId"
+    />
 
     <footer class="action-card__foot">
       <DecidePanel

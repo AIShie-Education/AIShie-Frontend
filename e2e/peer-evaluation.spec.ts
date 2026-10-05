@@ -21,13 +21,21 @@ import {
 // splits her points, the page refusing a sheet that does not add up; Ben
 // splits evenly on a phone, in Traditional Chinese; Dev, of Beta, sees
 // nobody of Alpha and none of their evaluations, and is refused the results.
+// Dev, whose handing in waits for approval for a while, rates Eve on the
+// lab report, and Sato reads whom each rating went to before approving it.
 // Once Alpha has handed in and been graded 80, Sato reads each member's
 // factor in words beside the score it gives, the flags and who wrote
-// nothing, and downloads the results; the form closes; Tia, a teaching
-// assistant whose posting waits for approval, proposes counting it in
-// grades, which leaves Sato's own adjustment of Cleo's grade as it is; Sato
-// reads each member's factor on the approvals queue and approves it; and
-// Ada, on a phone, reads her own average and nothing anyone wrote of her.
+// nothing, and downloads the results; Beta is graded 80 too, and the form
+// closes; Tam, a teaching assistant who reaches Alpha's students only, is
+// told counting writes every group's grades, and Core refuses him for
+// Beta's; Tia, a teaching assistant whose posting waits for approval,
+// proposes counting it in grades, which leaves Sato's own adjustment of
+// Cleo's grade as it is; Sato reads each member's factor on the approvals
+// queue and approves it; Ada, on a phone, reads her own average and nothing
+// anyone wrote of her; and, on a poster whose form has self-evaluation on,
+// Ada alone evaluates, herself above the others, and Sato reads that her
+// factor is her own evaluation alone, and no score once the form is for
+// reference only.
 //
 // With E2E_SHOTS set to a directory, the pages are photographed there.
 
@@ -38,8 +46,9 @@ let courseId = ''
 let project = ''
 let lab = ''
 let groups: { alpha: string; beta: string } = { alpha: '', beta: '' }
+let setId = ''
 type Person = DemoActor & { member_id: string }
-const people: Record<'ada' | 'ben' | 'cleo' | 'dev' | 'eve' | 'tia', Person> = {} as never
+const people: Record<'ada' | 'ben' | 'cleo' | 'dev' | 'eve' | 'tia' | 'tam', Person> = {} as never
 const name = (k: keyof typeof people) => people[k].display_name
 /** Alpha's work on the group project, once handed in. */
 let alphaWork = ''
@@ -91,8 +100,19 @@ test.beforeAll(async () => {
     perms: { grade_post: 'confirm_required' },
   })
   people.tia = { ...tia, member_id: tiaSeat.member_id as string }
+  // A teaching assistant who enters and posts grades for Alpha's students alone.
+  const tam = await registerPerson(`Tam Lee ${STAMP}`, { email: `tam+${STAMP}@peer.test` })
+  const tamSeat = await ok(I, 'POST', `/v1/courses/${courseId}/members`, {
+    actor_id: tam.actor_id,
+    preset: 'ta',
+    perms: { grade_submit: 'autonomous', grade_post: 'autonomous' },
+    student_scope: 'listed',
+    listed_students: [people.ada.member_id, people.ben.member_id, people.cleo.member_id],
+  })
+  people.tam = { ...tam, member_id: tamSeat.member_id as string }
 
   const set = await ok(I, 'POST', `/v1/courses/${courseId}/group-sets`, { name: `Project groups ${STAMP}` })
+  setId = set.id
   const made2 = await ok(I, 'POST', `/v1/courses/${courseId}/group-sets/${set.id}/groups`, {
     groups: [{ name: 'Alpha' }, { name: 'Beta' }],
   })
@@ -229,12 +249,16 @@ test.describe.serial('peer evaluation', () => {
     await expect(task(page)).toContainText('The points add up to 90: they must add up to exactly 100.')
     await shareInput(page, 'cleo').fill('40')
     await expect(page.locator('[data-test="peer-total"]')).toContainText('Adds up to 100')
+    // Asked for from the keyboard, the comment field takes the focus from the button it replaces.
     await task(page)
       .getByRole('button', { name: `Add a comment about ${name('ben')}` })
-      .click()
-    await task(page)
-      .getByRole('textbox', { name: `Comment about ${name('ben')}, for your teachers` })
-      .fill('Ben did the most')
+      .focus()
+    await page.keyboard.press('Enter')
+    const comment = task(page).getByRole('textbox', { name: `Comment about ${name('ben')}, for your teachers` })
+    await expect(comment).toBeFocused()
+    await expect(comment).toHaveAttribute('placeholder', `Only your teachers read this, never ${name('ben')}.`)
+    await page.keyboard.type('Ben did the most')
+    await expect(comment).toHaveValue('Ben did the most')
     await photograph(page, 'peer-task-share')
     await page.locator('[data-test="peer-submit"]').click()
     await expectToasted(page, 'Your evaluation was submitted. You can change it until it closes.')
@@ -345,6 +369,77 @@ test.describe.serial('peer evaluation', () => {
     await expect(task(page)).toContainText('Opens once your group hands its work in')
   })
 
+  test('a student whose handing in waits for approval sends their evaluation, and the approver reads whom each rating went to', async ({
+    page,
+  }) => {
+    const I = instructor().token
+    await ok(I, 'POST', `/v1/courses/${courseId}/members/${people.dev.member_id}/perms`, {
+      perms: { submission_write: 'confirm_required' },
+    })
+    await keepToasts(page)
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, people.dev)
+    await page.goto(`/courses/${courseId}/assignments/${lab}`)
+    await expect(task(page).locator('.peer-task__rated h3')).toHaveText([name('eve')])
+    for (const [criterion, n] of [
+      ['Contribution to the work', '2'],
+      ['Communication and teamwork', '3'],
+      ['Reliability: did their part on time', '4'],
+    ] as const) {
+      await task(page)
+        .getByRole('radiogroup', { name: `${criterion}, for ${name('eve')}` })
+        .getByText(n, { exact: true })
+        .click()
+    }
+    await task(page)
+      .getByRole('button', { name: `Add a comment about ${name('eve')}` })
+      .click()
+    const comment = task(page).getByRole('textbox', { name: `Comment about ${name('eve')}, for your teachers` })
+    await expect(comment).toBeFocused()
+    await comment.fill('Eve wrote the method')
+    await page.locator('[data-test="peer-submit"]').click()
+    await expect(task(page)).toContainText('Your evaluation waits for approval before it counts as sent.')
+
+    // Sato reads it on the approvals queue, by name and by criterion, and on its page.
+    await page.context().clearCookies()
+    await signIn(page, instructor())
+    await page.goto(`/courses/${courseId}/approvals`)
+    const card = page.locator('.action-card').filter({ hasText: 'Submit a peer evaluation' })
+    await expect(card).toBeVisible()
+    const sheet = card.locator('[data-test="peer-proposal-sheet"]')
+    await expect(sheet).toContainText(name('eve'))
+    await expect(sheet).toContainText(
+      'Contribution to the work 2 · Communication and teamwork 3 · Reliability: did their part on time 4',
+    )
+    await expect(sheet).toContainText('“Eve wrote the method”')
+    await photograph(page, 'peer-sheet-proposal')
+    await card.getByRole('link', { name: 'Details' }).click()
+    const section = page.locator('.app-card').filter({ hasText: 'The evaluation it submits' })
+    await expect(section.locator('[data-test="peer-proposal-sheet"]')).toContainText(name('eve'))
+    await expect(section).toContainText('no other student reads it')
+    await section.scrollIntoViewIfNeeded()
+    // Nobody is named by an id, nor a rating by Core's field, where it is read.
+    await expect(page.getByText(people.eve.member_id).filter({ visible: true })).toHaveCount(0)
+    await expect(page.getByText('student_member_id').filter({ visible: true })).toHaveCount(0)
+    await photograph(page, 'peer-sheet-proposal-page')
+
+    await page.goto(`/courses/${courseId}/approvals`)
+    await card.getByRole('button', { name: 'Approve', exact: true }).click()
+    await card.getByRole('button', { name: 'Approve now' }).click()
+    await expectToasted(page, 'Approved and carried out')
+    const mine = await ok(people.dev.token, 'GET', `/v1/courses/${courseId}/assignments/${lab}/peer-form`)
+    expect(mine.task.sheet.entries).toEqual([
+      {
+        student_member_id: people.eve.member_id,
+        ratings: { contribution: 2, teamwork: 3, reliability: 4 },
+        comment: 'Eve wrote the method',
+      },
+    ])
+    await ok(I, 'POST', `/v1/courses/${courseId}/members/${people.dev.member_id}/perms`, {
+      perms: { submission_write: 'autonomous' },
+    })
+  })
+
   test('the teacher reads each group’s results, each factor in plain words, the flags and who wrote nothing, and downloads them', async ({
     page,
   }) => {
@@ -449,6 +544,55 @@ test.describe.serial('peer evaluation', () => {
     await expect(page.locator('.fair-share')).toContainText('1即平均份額，1.2即比平均多20%')
     await expectNoSidewaysScroll(page, 'the results on a phone')
     await photograph(page, 'peer-results-phone-zh')
+  })
+
+  test('a teaching assistant who reaches one group is told counting writes every group’s grades, and why Core refuses him', async ({
+    page,
+  }) => {
+    // Beta hands its project in and is graded 80 while the form is open, so
+    // that counting it, once it closes, writes Dev's grade again (with what
+    // Eve gave him); then the form closes.
+    const I = instructor().token
+    const sub = await ok(people.eve.token, 'POST', `/v1/courses/${courseId}/submissions`, {
+      assignment_id: project,
+      body: 'Our report too',
+    })
+    await ok(people.eve.token, 'POST', `/v1/courses/${courseId}/submissions/${sub.submission_id}/submit`, {})
+    await ok(I, 'POST', `/v1/courses/${courseId}/grades`, { submission_id: sub.submission_id, score: 80, no_rubric: true })
+    const now = await ok(I, 'GET', `/v1/courses/${courseId}/assignments/${project}/peer-form`)
+    await ok(I, 'POST', `/v1/courses/${courseId}/assignments/${project}/peer-form`, {
+      kind: 'share',
+      opens: 'at',
+      opens_at: new Date(Date.now() - 3 * hour).toISOString(),
+      closes_at: new Date(Date.now() - 60 * 1000).toISOString(),
+      weight: 20,
+      share_with_students: 'own_average',
+      version: now.form.version,
+    })
+
+    await keepToasts(page)
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, people.tam)
+    await page.goto(`/courses/${courseId}/assignments/${project}/peer`)
+    await expect(page.locator(`[data-test="peer-group-${groups.alpha}"]`)).toBeVisible()
+    await expect(page.locator(`[data-test="peer-group-${groups.beta}"]`)).toHaveCount(0)
+    await page.locator('[data-test="peer-count"]').click()
+    const dialog = page.getByRole('dialog', { name: 'Count peer evaluation in grades' })
+    await expect(dialog.locator('[data-test="peer-apply-scoped"]')).toContainText(
+      'This lists only the groups whose members are all within your reach.',
+    )
+    await photograph(page, 'peer-apply-scoped')
+    await dialog.locator('[data-test="peer-apply-confirm"]').click()
+    // Refused, and recorded as such.
+    await expect(page.locator('.el-notification')).toContainText(
+      'Counting it would change grades of students beyond your reach, in groups not listed here, so nothing was written. Someone who reaches every student can count it.',
+    )
+    await photograph(page, 'peer-apply-refused')
+    // Nothing was written: Alpha's grades are as they were.
+    const after = await ok(I, 'GET', `/v1/courses/${courseId}/assignments/${project}/peer-results`)
+    const alpha = after.groups.find((g: { group_id: string }) => g.group_id === groups.alpha)
+    for (const m of alpha.members as { grade: { score: number; adjustment_kind?: string } }[])
+      expect(m.grade.adjustment_kind).toBeUndefined()
   })
 
   test('counting it in grades leaves a teacher’s own adjustment, and a proposal of it shows each member’s factor', async ({
@@ -561,5 +705,85 @@ test.describe.serial('peer evaluation', () => {
       `/v1/courses/${courseId}/assignments/${project}/peer-results?group_id=${groups.alpha}`,
     )
     expect(refused.status).toBe(403)
+  })
+
+  test('with self-evaluation on, a factor says it counts what the member gave themselves; on a form for reference only, no score is shown', async ({
+    page,
+  }) => {
+    // A poster for the same groups, its form splitting 100 points with
+    // self-evaluation on, at 20 %; Ada alone evaluates, giving herself 60 and
+    // the others 20 each; Alpha hands it in and is graded 80.
+    const I = instructor().token
+    const poster = await ok(I, 'POST', `/v1/courses/${courseId}/assignments`, {
+      title: `Poster ${STAMP}`,
+      points_possible: 100,
+      group_set_id: setId,
+      due_at: new Date(Date.now() + 7 * 24 * hour).toISOString(),
+    })
+    await ok(I, 'POST', `/v1/courses/${courseId}/assignments/${poster.id}/publish`, {})
+    const form = {
+      kind: 'share',
+      self_evaluation: true,
+      opens: 'at',
+      opens_at: new Date(Date.now() - hour).toISOString(),
+      closes_at: new Date(Date.now() + 2 * hour).toISOString(),
+      weight: 20,
+      share_with_students: 'none',
+    }
+    await ok(I, 'POST', `/v1/courses/${courseId}/assignments/${poster.id}/peer-form`, { ...form, version: 0 })
+    await ok(people.ada.token, 'POST', `/v1/courses/${courseId}/assignments/${poster.id}/peer-reviews`, {
+      entries: [
+        { student_member_id: people.ada.member_id, share: 60 },
+        { student_member_id: people.ben.member_id, share: 20 },
+        { student_member_id: people.cleo.member_id, share: 20 },
+      ],
+    })
+    const sub = await ok(people.ada.token, 'POST', `/v1/courses/${courseId}/submissions`, {
+      assignment_id: poster.id,
+      body: 'Our poster',
+    })
+    await ok(people.ada.token, 'POST', `/v1/courses/${courseId}/submissions/${sub.submission_id}/submit`, {})
+    await ok(I, 'POST', `/v1/courses/${courseId}/grades`, { submission_id: sub.submission_id, score: 80, no_rubric: true })
+
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, instructor())
+    await page.goto(`/courses/${courseId}/assignments/${poster.id}/peer`)
+    const alpha = page.locator(`[data-test="peer-group-${groups.alpha}"]`)
+    const ada = alpha.locator(`[data-test="peer-member-${people.ada.member_id}"]`)
+    // Core's factor for her is her own share alone, 0.6 against an even third.
+    await expect(ada).toContainText('180% of an even share, from their own evaluation alone')
+    await expect(ada).toContainText('No peer has rated them')
+    await expect(ada).not.toContainText('Nobody has rated them')
+    await expect(ada).toContainText('Score at 20%')
+    await expect(ada).toContainText('92.8')
+    await expect(ada).toContainText('12.8 above the group’s')
+    await expect(alpha.locator(`[data-test="peer-member-${people.ben.member_id}"]`)).toContainText(
+      '60% of an even share, from 1 peer',
+    )
+    await ada.scrollIntoViewIfNeeded()
+    await photograph(page, 'peer-results-self')
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Download CSV' }).click(),
+    ])
+    const lines = readFileSync(await download.path(), 'utf8').slice(1).split('\r\n')
+    expect(lines[0]).toBe(
+      'Group,Member,Wrote an evaluation,Written at,Peers who rated them,Average share received,Gave themselves (against an even share),Factor (their own evaluation included),Factor from peers alone,Score at 20%,Group score,Grade now,Flags',
+    )
+    expect(lines.find((l) => l.includes(name('ada')))).toMatch(
+      new RegExp(`^Alpha,${name('ada')},Yes,[^,]+,0,,1.8,1.8,,92.8,80,80 \\(draft\\),High$`),
+    )
+
+    // For reference only: every score would be the group's, and none is shown.
+    const now = await ok(I, 'GET', `/v1/courses/${courseId}/assignments/${poster.id}/peer-form`)
+    await ok(I, 'POST', `/v1/courses/${courseId}/assignments/${poster.id}/peer-form`, {
+      ...form,
+      weight: 0,
+      version: now.form.version,
+    })
+    await page.reload()
+    await expect(ada).toContainText('180% of an even share, from their own evaluation alone')
+    await expect(ada).not.toContainText('Score')
+    await expect(ada).not.toContainText('92.8')
   })
 })

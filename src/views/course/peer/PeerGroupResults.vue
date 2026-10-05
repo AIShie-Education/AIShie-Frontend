@@ -3,10 +3,12 @@
 // (peer_review.results): each member of its circle, whether they wrote an
 // evaluation, what their peers gave them, what they gave themselves, their
 // factor said in words (what they received against an even share from the
-// same raters), the score it gives at the form's weight beside the group's,
-// their grade now, and Core's flags; and every evaluation written, with who
-// wrote it and their comments. On the assignment's results page and on the
-// group's submission.
+// same raters, their own evaluation among them where self-evaluation counts
+// it, as Core's factor has it), the score it gives at the form's weight
+// beside the group's (none on a form for reference only, whose weight of 0
+// gives everyone the group's), their grade now, and Core's flags; and every
+// evaluation written, with who wrote it and their comments. On the
+// assignment's results page and on the group's submission.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUiStore } from '@/stores/ui'
@@ -26,7 +28,7 @@ import {
   type PeerGroupResult,
   type PeerMemberResult,
 } from './peer'
-import { flagsOf, membersOf, missingIn, peerRaters } from './peerResults'
+import { flagsOf, membersOf, missingIn, peerRaters, ratedSelf } from './peerResults'
 
 const props = withDefaults(
   defineProps<{
@@ -49,6 +51,8 @@ const names = computed(() => new Map(members.value.map((m) => [m.member_id, m.di
 const nameOf = (id: string) => names.value.get(id) ?? t('common.labels.someMember')
 const win = computed(() => windowState(props.group.window.state))
 const counts = computed(() => formCounts(props.form))
+/** A weight above 0: the score Core works out moves from the group's (counted, or if it were). */
+const weighted = computed(() => Number(props.form.weight) > 0)
 const weightPct = computed(() => (ui.locale, formatPct(props.form.weight / 100, 0)))
 const missing = computed(() => (ui.locale, formatList(missingIn(props.group).map((m) => m.display_name))))
 const pair = computed(() => (props.group.flags ?? []).includes('pair_without_self_evaluation'))
@@ -61,11 +65,24 @@ function pct(v: number | string | null | undefined): string {
 function exact(v: number | string | null | undefined): string {
   return formatDecimal(v ?? null, 4)
 }
-/** A member's factor in words: what they received against an even share from the same raters. */
+/**
+ * A member's factor in words: what they received against an even share from
+ * the same raters. With self-evaluation on, Core's factor counts what they
+ * gave themselves as one of those raters', and the words say so.
+ */
 function factorWords(m: PeerMemberResult): string {
-  const raters = peerRaters(m)
-  if (!raters) return t('peer.results.nobodyRated')
-  return t('peer.results.factorWords', { pct: pct(m.factor), n: raters }, raters)
+  const peers = peerRaters(m)
+  if (ratedSelf(m)) {
+    if (!peers) return t('peer.results.factorSelfOnly', { pct: pct(m.factor) })
+    return t('peer.results.factorWithSelf', { pct: pct(m.factor), n: peers }, peers)
+  }
+  if (!peers) return t('peer.results.nobodyRated')
+  return t('peer.results.factorWords', { pct: pct(m.factor), n: peers }, peers)
+}
+/** Their factor from their peers alone, where their own evaluation is in the one above and peers rated them too. */
+function peerOnly(m: PeerMemberResult): string | null {
+  if (!ratedSelf(m) || !peerRaters(m) || !Number.isFinite(num(m.peer_factor))) return null
+  return t('peer.results.peerFactor', { pct: pct(m.peer_factor) })
 }
 /** What the score is beside the group's: the change at the form's weight. */
 function change(m: PeerMemberResult): string | null {
@@ -139,7 +156,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
             <dd>
               <template v-if="rating">
                 <span v-if="!m.averages || !Object.keys(m.averages).length" class="app-muted">{{
-                  t('peer.results.nobodyRated')
+                  t('peer.results.noPeerRated')
                 }}</span>
                 <ul v-else class="peer-member__list">
                   <li v-for="c in criteria" :key="c.key">
@@ -150,7 +167,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
                 </ul>
               </template>
               <template v-else>
-                <span v-if="!(m.shares ?? []).length" class="app-muted">{{ t('peer.results.nobodyRated') }}</span>
+                <span v-if="!(m.shares ?? []).length" class="app-muted">{{ t('peer.results.noPeerRated') }}</span>
                 <ul v-else class="peer-member__list">
                   <li v-for="s in m.shares ?? []" :key="s.rater_member_id">
                     {{ t('peer.results.shareFrom', { n: s.share, name: nameOf(s.rater_member_id) }, s.share) }}
@@ -177,10 +194,18 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
               <el-tooltip :content="t('peer.results.factorExact', { f: exact(m.factor) })" placement="top">
                 <span tabindex="0" class="peer-member__factor">{{ factorWords(m) }}</span>
               </el-tooltip>
+              <div v-if="peerOnly(m)" class="app-form-hint">{{ peerOnly(m) }}</div>
             </dd>
           </div>
-          <div class="peer-member__fact">
-            <dt>{{ counts ? t('peer.results.scoreAt', { weight: weightPct }) : t('peer.results.scoreIfCounted') }}</dt>
+          <!-- At a weight of 0 every score is the group's: there is nothing to say of it. -->
+          <div v-if="weighted" class="peer-member__fact">
+            <dt>
+              {{
+                counts
+                  ? t('peer.results.scoreAt', { weight: weightPct })
+                  : t('peer.results.scoreIfCounted', { weight: weightPct })
+              }}
+            </dt>
             <dd>
               <template v-if="m.score !== null && m.score !== undefined">
                 <span class="peer-member__figure">{{ formatDecimal(m.score) }}</span>

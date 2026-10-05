@@ -6,6 +6,7 @@ import {
   missingIn,
   peerCsv,
   peerRaters,
+  ratedSelf,
   type PeerCsvWords,
 } from './peerResults'
 import type { PeerResults } from './peer'
@@ -154,6 +155,8 @@ describe('the results as CSV', () => {
     criterion: (l) => `${l} avg`,
     self: 'Self',
     factor: 'Factor',
+    factorSelf: 'Factor with self',
+    peerFactor: 'Peer factor',
     score: 'Score at 20%',
     groupScore: 'Group score',
     grade: 'Grade',
@@ -178,5 +181,74 @@ describe('the results as CSV', () => {
     expect(lines[3]).toBe("Alpha,'=Yuki,Yes,2026-10-05T11:30:00Z,2,60,1.2,83.2,80,80,")
     expect(lines[4]).toBe('Beta,Ana,Yes,,1,,1,,,,')
     expect(lines.at(-1)).toBe('')
+  })
+
+  it('says, with self-evaluation on, that the factor counts what they gave themselves, beside the factor from peers alone', () => {
+    const csv = peerCsv(selfResults(), words)
+    const lines = csv.slice(1).split('\r\n')
+    expect(lines[0]).toBe(
+      'Group,Member,Wrote,Written at,Raters,Average share,Self,Factor with self,Peer factor,Score at 20%,Group score,Grade,Flags',
+    )
+    // Rated by herself alone: no peer, her factor 1.5, none from peers.
+    expect(lines[1]).toBe('Alpha,Amy,Yes,2026-10-05T11:00:00Z,0,,1.5,1.5,,100,80,80 draft,HIGH')
+    // Rated by Amy alone, who gave her a quarter.
+    expect(lines[2]).toBe('Alpha,Bo,No,,1,25,,0.75,0.75,70,80,80 draft,LOW and MISSING')
+  })
+
+  it('leaves the score out on a form for reference only, where it is the group’s', () => {
+    const lines = peerCsv(results({ weight: 0 }), words).slice(1).split('\r\n')
+    expect(lines[0]).toBe('Group,Member,Wrote,Written at,Raters,Average share,Factor,Group score,Grade,Flags')
+    expect(lines[1]).toBe('Alpha,Ken Wong,Yes,2026-10-05T11:00:00Z,2,45,0.9,80,80 draft,UNIFORM')
+  })
+})
+
+// As Core b5d6b43 answered for a share form with self-evaluation on, at 50 %,
+// where only Amy wrote an evaluation (herself 50, Bo 25, Cy 25), the group
+// graded 80: her factor counts her own share, rated_by naming her alone.
+function selfResults(): PeerResults {
+  const r = results({ weight: 50 })
+  r.form.self_evaluation = true
+  r.groups = [
+    {
+      ...r.groups![0],
+      members: [
+        {
+          member_id: 'm-amy',
+          display_name: 'Amy',
+          submitted: true,
+          submitted_at: '2026-10-05T11:00:00Z',
+          rated_by: ['m-amy'],
+          self: { student_member_id: 'm-amy', share: 50 },
+          factor: '1.5',
+          self_factor: '1.5',
+          score: '100',
+          grade: { grade_id: 'gr-amy', score: 80, state: 'draft' },
+          flags: ['high'],
+        },
+        {
+          member_id: 'm-bo',
+          display_name: 'Bo',
+          submitted: false,
+          rated_by: ['m-amy'],
+          shares: [{ rater_member_id: 'm-amy', share: 25 }],
+          factor: '0.75',
+          peer_factor: '0.75',
+          score: '70',
+          grade: { grade_id: 'gr-bo', score: 80, state: 'draft' },
+          flags: ['low', 'missing'],
+        },
+      ],
+    },
+  ]
+  return r
+}
+
+describe('a member’s own evaluation in their factor', () => {
+  it('is in it where they rated themselves', () => {
+    const [amy, bo] = selfResults().groups![0].members!
+    expect(ratedSelf(amy)).toBe(true)
+    expect(peerRaters(amy)).toBe(0)
+    expect(ratedSelf(bo)).toBe(false)
+    expect(peerRaters(bo)).toBe(1)
   })
 })

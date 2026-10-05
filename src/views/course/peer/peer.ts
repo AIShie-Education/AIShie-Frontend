@@ -108,14 +108,28 @@ export function windowState(s: string | null | undefined): WindowState {
   return s === 'open' || s === 'closed' ? s : 'not_open'
 }
 
-/** The actions about peer evaluation whose page shows what they propose in words (PeerProposal). */
-export function isPeerAction(type: string | null | undefined): boolean {
-  return type === 'grade.apply_peer' || type === 'peer_form.set'
+/**
+ * The actions about peer evaluation whose page, and whose card in a queue,
+ * show what they propose in words (PeerProposal): counting it in grades, a
+ * form, and a student's evaluation sent where their handing in waits for
+ * approval.
+ */
+export const PEER_ACTIONS = ['grade.apply_peer', 'peer_form.set', 'peer_review.submit'] as const
+export type PeerAction = (typeof PEER_ACTIONS)[number]
+
+export function isPeerAction(type: string | null | undefined): type is PeerAction {
+  return (PEER_ACTIONS as readonly string[]).includes(type ?? '')
+}
+
+/** The heading of what such an action proposes, under peer.proposal.title. */
+export function peerActionTitle(type: PeerAction): 'apply' | 'form' | 'sheet' {
+  return type === 'grade.apply_peer' ? 'apply' : type === 'peer_form.set' ? 'form' : 'sheet'
 }
 
 /** The fields of such an action's payload that PeerProposal says, which the page's list of fields leaves out. */
 export function peerFieldsShown(type: string | null | undefined): string[] {
   if (type === 'grade.apply_peer') return ['grades', 'form_version']
+  if (type === 'peer_review.submit') return ['entries', 'comment']
   if (type === 'peer_form.set')
     return [
       'kind',

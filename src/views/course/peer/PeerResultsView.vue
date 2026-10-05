@@ -29,6 +29,7 @@ import ApplyPeerDialog from './ApplyPeerDialog.vue'
 import FairShareExplainer from './FairShareExplainer.vue'
 import PeerFormSummary from './PeerFormSummary.vue'
 import PeerGroupResults from './PeerGroupResults.vue'
+import { formCounts } from './peer'
 import { flaggedGroup, missingIn, peerCsv } from './peerResults'
 
 const props = defineProps<{ courseId: string; assignmentId: string }>()
@@ -96,7 +97,11 @@ function exportCsv() {
     criterion: (label) => t('peer.csv.criterion', { label }),
     self: t('peer.csv.self'),
     factor: t('peer.csv.factor'),
-    score: t('peer.csv.score', { weight: (ui.locale, formatPct(r.form.weight / 100, 0)) }),
+    factorSelf: t('peer.csv.factorSelf'),
+    peerFactor: t('peer.csv.peerFactor'),
+    score: t(formCounts(r.form) ? 'peer.csv.score' : 'peer.csv.scoreIfCounted', {
+      weight: (ui.locale, formatPct(r.form.weight / 100, 0)),
+    }),
     groupScore: t('peer.csv.groupScore'),
     grade: t('peer.csv.grade'),
     flags: t('peer.csv.flags'),

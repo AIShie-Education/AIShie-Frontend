@@ -12,6 +12,13 @@
 // Where the caller's seat proposes it, the factors as they are now are
 // recorded with the proposal, and approving it is refused if any of these
 // grades, or the form, has changed by then: the dialog says so.
+//
+// It lists the groups the results do: those whose members are all within
+// the caller's reach. Core, though, writes again every grade of the
+// assignment it would change, in every group, and refuses the whole of it
+// (student_out_of_scope) if any of those is beyond the caller's reach. A
+// seat that reaches only some students is told so before it counts, and
+// the refusal is said in those words.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWrite } from '@/composables/useWrite'
@@ -40,6 +47,11 @@ const rows = computed(() => applyPreview(props.results))
 const changing = computed(() => rows.value.filter((r) => r.outcome === 'changes').length)
 const weight = computed(() => (ui.locale, formatPct(form.value.weight / 100, 0)))
 const needsApproval = computed(() => course.needsApprovalAll(['grade_submit', 'grade_post']))
+/** The seat reaches only some students: the list may leave out grades counting it would write. */
+const someStudents = computed(() => {
+  const scope = (course.seat ?? course.membership)?.student_scope
+  return !!scope && scope !== 'all'
+})
 
 function delta(before: number | string | null, after: number | string | null): string {
   const d = Math.round((Number(after) - Number(before)) * 100) / 100
@@ -51,7 +63,7 @@ const applyW = useWrite('grade.apply_peer')
 async function apply() {
   const out = await applyW.run(
     { course_id: props.courseId, assignment_id: props.assignmentId },
-    { success: false, reasons: 'peer.refusal' },
+    { success: false, reasons: ['peer.apply.refusal', 'peer.refusal'] },
   )
   if (!out) return
   const written = out.status === 'executed' ? (out.result.written ?? []).length : 0
@@ -110,6 +122,9 @@ async function apply() {
     <p class="peer-apply__count">
       {{ changing ? t('peer.apply.changing', { n: changing }, changing) : t('peer.apply.nothing') }}
     </p>
+    <AppNote v-if="someStudents" class="peer-apply__note" data-test="peer-apply-scoped">{{
+      t('peer.apply.someStudents')
+    }}</AppNote>
     <AppNote v-if="needsApproval" plain class="peer-apply__note">{{ t('peer.apply.approval') }}</AppNote>
 
     <template #footer>

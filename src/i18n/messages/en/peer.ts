@@ -163,6 +163,7 @@ export default {
     addComment: 'Add a comment about {name}',
     commentFor: 'Comment about {name}, for your teachers',
     commentPlaceholder: 'Only your teachers read this, never {name}.',
+    commentSelfPlaceholder: 'Only your teachers read this.',
     overall: 'Comment on the group’s work (optional)',
     overallPlaceholder: 'Only your teachers read this.',
     changeUntil: 'You can change it until it closes: the last one you submit counts.',
@@ -231,15 +232,20 @@ export default {
     notWritten: 'Not written',
     received: 'Received',
     nobodyRated: 'Nobody has rated them',
+    noPeerRated: 'No peer has rated them',
     shareFrom: '{n} point from {name} | {n} points from {name}',
     averagePair: '{criterion}: {n} on average',
     self: 'Gave themselves',
     selfFactor: '{pct} of an even share',
     factor: 'Factor',
     factorWords: '{pct} of an even share, from {n} peer | {pct} of an even share, from {n} peers',
+    factorWithSelf:
+      '{pct} of an even share, from {n} peer and themselves | {pct} of an even share, from {n} peers and themselves',
+    factorSelfOnly: '{pct} of an even share, from their own evaluation alone',
+    peerFactor: 'From their peers alone: {pct} of an even share',
     factorExact: 'Factor {f}',
     scoreAt: 'Score at {weight}',
-    scoreIfCounted: 'Score if it counted',
+    scoreIfCounted: 'Score at {weight} if it counted',
     scoreWhenGraded: 'Worked out once the group is graded',
     noChange: 'the group’s score',
     up: '{n} above the group’s',
@@ -278,6 +284,13 @@ export default {
     nothing: 'No grade would change now.',
     approval:
       'Your seat proposes this, and someone approves it. The factors as they are now are recorded with it, and approving is refused if any of these grades, or the form, changes before then.',
+    someStudents:
+      'This lists only the groups whose members are all within your reach. Counting writes again every grade of this assignment it would change, in other groups too, and if any of those is beyond your reach, nothing is written: someone who reaches every student can count it.',
+    // Refusals of counting it, by reason, before those of peer evaluation's.
+    refusal: {
+      student_out_of_scope:
+        'Counting it would change grades of students beyond your reach, in groups not listed here, so nothing was written. Someone who reaches every student can count it.',
+    },
     confirm: 'Count in grades',
     done: '{n} grade written again. | {n} grades written again.',
     doneNone: 'No grade needed changing.',
@@ -292,6 +305,7 @@ export default {
     title: {
       apply: 'What approving writes',
       form: 'The peer evaluation it sets',
+      sheet: 'The evaluation it submits',
     },
     applyIntro:
       'Each member’s grade is written again from their factor as recorded when this was proposed. Approving is refused if any of these grades, or the peer evaluation’s form, has changed since.',
@@ -300,6 +314,10 @@ export default {
     takenAway: 'Peer adjustment taken away: the group’s score',
     noneRecorded: 'No grade to write again was recorded.',
     formVersion: 'Recorded against version {n} of the form.',
+    sheetIntro:
+      'A student’s own evaluation of their group, for those who grade: no other student reads it, or what it says of them.',
+    givenHead: 'What it gives them',
+    self: 'self-evaluation',
     before: 'Before',
     after: 'After',
   },
@@ -336,7 +354,10 @@ export default {
     criterion: '{label} (average)',
     self: 'Gave themselves (against an even share)',
     factor: 'Factor',
+    factorSelf: 'Factor (their own evaluation included)',
+    peerFactor: 'Factor from peers alone',
     score: 'Score at {weight}',
+    scoreIfCounted: 'Score at {weight} if it counted',
     groupScore: 'Group score',
     grade: 'Grade now',
     grade_draft: '{score} (draft)',

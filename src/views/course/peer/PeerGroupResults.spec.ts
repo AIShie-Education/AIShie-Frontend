@@ -151,6 +151,119 @@ describe('PeerGroupResults', () => {
     w.unmount()
   })
 
+  it('says, with self-evaluation on, that a factor counts what the member gave themselves', () => {
+    // As Core b5d6b43 answered: a share form at 50 %, a group of three graded
+    // 80. Amy rated herself 50 and the others 25 each; Bo rated Amy 40, Cy 40
+    // and himself 20; Cy wrote nothing.
+    const form: FormLike = { ...FORM, self_evaluation: true, weight: 50 }
+    const group = {
+      ...GROUP,
+      members: [
+        {
+          member_id: 'm-amy',
+          display_name: 'Amy',
+          submitted: true,
+          submitted_at: '2026-10-05T11:00:00Z',
+          rated_by: ['m-amy', 'm-bo'],
+          shares: [{ rater_member_id: 'm-bo', share: 40 }],
+          self: { student_member_id: 'm-amy', share: 50 },
+          factor: '1.35',
+          peer_factor: '1.2',
+          self_factor: '1.5',
+          score: '94',
+          flags: ['high'],
+        },
+        {
+          member_id: 'm-bo',
+          display_name: 'Bo',
+          submitted: true,
+          submitted_at: '2026-10-05T11:10:00Z',
+          rated_by: ['m-amy', 'm-bo'],
+          shares: [{ rater_member_id: 'm-amy', share: 25 }],
+          self: { student_member_id: 'm-bo', share: 20 },
+          factor: '0.675',
+          peer_factor: '0.75',
+          self_factor: '0.6',
+          score: '67',
+          flags: ['low'],
+        },
+        {
+          member_id: 'm-cy',
+          display_name: 'Cy',
+          submitted: false,
+          rated_by: ['m-amy', 'm-bo'],
+          shares: [
+            { rater_member_id: 'm-amy', share: 25 },
+            { rater_member_id: 'm-bo', share: 40 },
+          ],
+          factor: '0.975',
+          peer_factor: '0.975',
+          score: '79',
+          flags: ['missing'],
+        },
+      ],
+    } as unknown as PeerGroupResult
+    const w = mountIt(PeerGroupResults, { courseId: 'c1', form, group })
+    const amy = member(w, 'm-amy').text()
+    expect(amy).toContain('135% of an even share, from 1 peer and themselves')
+    expect(amy).toContain('From their peers alone: 120% of an even share')
+    expect(amy).toContain('50 points')
+    expect(member(w, 'm-cy').text()).toContain('98% of an even share, from 2 peers')
+    expect(member(w, 'm-cy').text()).not.toContain('and themselves')
+    expect(member(w, 'm-cy').text()).not.toContain('From their peers alone')
+    w.unmount()
+
+    // Amy alone wrote one: herself 50, the others 25. Her factor is her own share alone.
+    const alone = {
+      ...group,
+      members: [
+        {
+          member_id: 'm-amy',
+          display_name: 'Amy',
+          submitted: true,
+          submitted_at: '2026-10-05T11:00:00Z',
+          rated_by: ['m-amy'],
+          self: { student_member_id: 'm-amy', share: 50 },
+          factor: '1.5',
+          self_factor: '1.5',
+          score: '100',
+          flags: ['high'],
+        },
+      ],
+    } as unknown as PeerGroupResult
+    const v = mountIt(PeerGroupResults, { courseId: 'c1', form, group: alone })
+    const text = member(v, 'm-amy').text()
+    expect(text).toContain('150% of an even share, from their own evaluation alone')
+    expect(text).toContain('No peer has rated them')
+    expect(text).not.toContain('Nobody has rated them')
+    expect(text).toContain('Score at 50%')
+    expect(text).toContain('20 above the group’s')
+    v.unmount()
+  })
+
+  it('says nobody rated a member whom nobody, themselves included, rated', () => {
+    const group = {
+      ...GROUP,
+      members: [{ ...GROUP.members![0], rated_by: [], shares: [], factor: 1, score: 80, flags: [] }],
+    } as unknown as PeerGroupResult
+    const w = mountIt(PeerGroupResults, { courseId: 'c1', form: FORM, group })
+    expect(member(w, 'm-ken').text()).toContain('Nobody has rated them')
+    w.unmount()
+  })
+
+  it('shows no score on a form for reference only, and the score at its weight on one switched off', () => {
+    const reference = mountIt(PeerGroupResults, { courseId: 'c1', form: { ...FORM, weight: 0 }, group: GROUP })
+    const ken = member(reference, 'm-ken').text()
+    expect(ken).not.toContain('Score')
+    expect(ken).not.toContain('the group’s score')
+    expect(ken).toContain('90% of an even share, from 2 peers')
+    reference.unmount()
+    const off = mountIt(PeerGroupResults, { courseId: 'c1', form: { ...FORM, enabled: false }, group: GROUP })
+    expect(member(off, 'm-ken').text()).toContain('Score at 20% if it counted')
+    expect(member(off, 'm-ken').text()).toContain('1.6 below the group’s')
+    off.unmount()
+  })
+
   it('says a pair without self-evaluation is never moved', () => {
     const pair = { ...GROUP, flags: ['pair_without_self_evaluation'] } as PeerGroupResult
     const w = mountIt(PeerGroupResults, { courseId: 'c1', form: FORM, group: pair })

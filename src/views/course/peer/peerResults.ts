@@ -39,6 +39,14 @@ export function peerRaters(m: Pick<PeerMemberResult, 'rated_by' | 'member_id'>):
   return (m.rated_by ?? []).filter((r) => r !== m.member_id).length
 }
 
+/**
+ * Whether a member rated themselves where it counts (self-evaluation on):
+ * Core's factor for them then counts it as one rater's, beside their peers'.
+ */
+export function ratedSelf(m: Pick<PeerMemberResult, 'rated_by' | 'member_id'>): boolean {
+  return (m.rated_by ?? []).includes(m.member_id)
+}
+
 /** What counting peer evaluation in grades would do to a member's grade now. */
 export type ApplyOutcome =
   /** Written again with another score. */
@@ -114,6 +122,11 @@ export interface PeerCsvWords {
   /** What they gave themselves, against an even share. */
   self: string
   factor: string
+  /** The factor's column with self-evaluation on, where it counts what they gave themselves. */
+  factorSelf: string
+  /** With self-evaluation on, their factor from their peers alone. */
+  peerFactor: string
+  /** The score's column, at the form's weight; left out at a weight of 0, where it is the group's. */
   score: string
   groupScore: string
   grade: string
@@ -146,20 +159,26 @@ export function averageShare(m: Pick<PeerMemberResult, 'shares'>): number | null
  * group, whether they wrote an evaluation, how many peers rated them and
  * what they received (their average on each criterion, or the average share
  * their peers gave them), what they gave themselves against an even share,
- * their factor, the score it would give, their grade now and Core's flags;
- * UTF-8 with a byte-order mark and CRLF lines, as the class's gradebook's
- * CSV is, and no cell a spreadsheet would run as a formula. What raters
- * wrote in comments is read on the page, not exported.
+ * their factor (with self-evaluation on, said to count what they gave
+ * themselves, beside their factor from peers alone), the score it would give
+ * (left out at a weight of 0, where it is the group's), their grade now and
+ * Core's flags; UTF-8 with a byte-order mark and CRLF lines, as the class's
+ * gradebook's CSV is, and no cell a spreadsheet would run as a formula. What
+ * raters wrote in comments is read on the page, not exported.
  */
 export function peerCsv(r: Pick<PeerResults, 'form' | 'groups'>, w: PeerCsvWords): string {
   const form: FormLike = r.form
   const rating = isRating(form)
   const criteria = criteriaOf(form)
+  const self = !!form.self_evaluation
+  const scored = Number(form.weight) > 0
   const head = [w.group, w.member, w.wrote, w.wroteAt, w.raters]
   if (rating) head.push(...criteria.map((c) => w.criterion(c.label)))
   else head.push(w.averageShare)
-  if (form.self_evaluation) head.push(w.self)
-  head.push(w.factor, w.score, w.groupScore, w.grade, w.flags)
+  if (self) head.push(w.self, w.factorSelf, w.peerFactor)
+  else head.push(w.factor)
+  if (scored) head.push(w.score)
+  head.push(w.groupScore, w.grade, w.flags)
   const lines = [head.map(csvText).join(',')]
   for (const g of r.groups ?? []) {
     for (const m of membersOf(g)) {
@@ -172,11 +191,11 @@ export function peerCsv(r: Pick<PeerResults, 'form' | 'groups'>, w: PeerCsvWords
       ]
       if (rating) cells.push(...criteria.map((c) => plain(m.averages?.[c.key])))
       else cells.push(plain(averageShare(m)))
-      if (form.self_evaluation) cells.push(plain(m.self_factor))
+      if (self) cells.push(plain(m.self_factor), plain(m.factor), plain(m.peer_factor))
+      else cells.push(plain(m.factor))
+      if (scored) cells.push(plain(m.score))
       const grade = m.grade
       cells.push(
-        plain(m.factor),
-        plain(m.score),
         plain(g.group_score),
         grade ? csvText(w.gradeNow(plain(grade.score), grade.state, isOwnAdjustment(grade.adjustment_kind))) : '',
         csvText(w.list(flagsOf(m).map(w.flag))),

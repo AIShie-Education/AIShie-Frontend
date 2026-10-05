@@ -282,14 +282,20 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   writes it, never an agent (`people_only`). Those who grade read every group's results on
   `/assignments/:assignmentId/peer` (`PeerResultsView`, `PeerGroupResults`) and a group's on its work's
   page (`PeerSubmissionPanel`): each member's factor said in words, as what they received against an
-  even share from the same raters ("120% of an even share, from 2 peers"), never as a bare number, the
-  score it gives at the form's weight beside the group's, Core's flags, who wrote nothing, and every
-  evaluation with who wrote it; `FairShareExplainer` says how the factor and the weight make a score,
-  with the group's own figures. Counting it in grades (`ApplyPeerDialog`, for whoever enters and posts
-  grades) shows each member's score now and after (`applyPreview`), a grader's own adjustment kept; a
-  proposal of it shows each member's factor as it recorded them (`PeerProposal`, on the approvals
-  queue's card and the action's page). Its CSV (`peerCsv`) follows the class gradebook's rules and
-  leaves the raters' comments out. A percentage in its words is a placeholder `formatPct` fills.
+  even share from the same raters ("120% of an even share, from 2 peers"), naming their own evaluation
+  where self-evaluation puts it in the factor, as Core's does ("from 1 peer and themselves", "from
+  their own evaluation alone"), never as a bare number; the score it gives at the form's weight beside
+  the group's, and none on a form for reference only, where every score is the group's; Core's flags,
+  who wrote nothing, and every evaluation with who wrote it; `FairShareExplainer` says how the factor
+  and the weight make a score, with the group's own figures. Counting it in grades (`ApplyPeerDialog`,
+  for whoever enters and posts grades) shows each member's score now and after (`applyPreview`), a
+  grader's own adjustment kept, and tells a seat that reaches only some students that Core writes
+  every group's grades it would change, refusing it whole (`student_out_of_scope`) if any is beyond
+  them. `PeerProposal` shows, on the approvals queue's card and the action's page, each member's
+  factor as a proposal of counting it recorded them, and a student's evaluation sent for approval as
+  what it gives each member, by name and by criterion. Its CSV (`peerCsv`) follows the class
+  gradebook's rules and leaves the raters' comments out. A percentage in its words is a placeholder
+  `formatPct` fills.
 - **Deleting an assignment for good** (`assignment.delete`, AIShie-Core #73) is offered to whoever
   writes assignments in its ⋯ menu (`AssignmentMoreMenu`): its page's header, at the far end, and
   its row in the list, which the menu opens no row of (in a column of its own, at the row's end,
