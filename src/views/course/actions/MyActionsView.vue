@@ -134,7 +134,7 @@ const shown = computed(() => filtered.value.slice((page.value - 1) * PER_PAGE, p
 /** A line saying why it did not happen, where it did not. */
 function outcomeNote(a: ActionRow): string | null {
   const e = storedError(a)
-  if (e) return reasonText(e) ?? t('common.pair', { label: t('actions.outcome.coreSays'), value: e.message })
+  if (e) return reasonText(e, a.action_type) ?? t('common.pair', { label: t('actions.outcome.coreSays'), value: e.message })
   const d = storedDecision(a)
   if (!d?.reason) return null
   return a.status === 'changes_requested'

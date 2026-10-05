@@ -94,10 +94,30 @@ export function storedDecision(
   return {}
 }
 
-/** Why a proposal was cancelled or an attempt refused, in words, where Core said. */
-export function reasonText(e: StoredError | null | undefined): string | null {
-  if (!e?.details) return null
+/**
+ * Where the app keeps words of its own for the refusals of an action of a
+ * kind, by Core's reason, asked first, in order (as the page that makes the
+ * call names them to useWrite): a refusal is said on the action pages as it
+ * is where it was met. A refusal met only on approval, because what was
+ * proposed changed meanwhile, is said there for an action carried out later
+ * (groupGrading.actionRefusal), the rest as the grader meets them.
+ */
+const REFUSAL_SCOPES: Record<string, readonly string[]> = {
+  'grade.submit': ['groupGrading.actionRefusal', 'groupGrading.refusal'],
+  'grade.regrade': ['groupGrading.actionRefusal', 'groupGrading.refusal'],
+  'grade.adjust': ['groupGrading.actionRefusal', 'groupGrading.refusal'],
+  'submission.set_members': ['groupGrading.actionRefusal', 'groupGrading.refusal'],
+}
+
+/** Why a proposal was cancelled or an attempt refused, in words, and whether every part of it is the app's own. */
+function explain(
+  e: StoredError | null | undefined,
+  actionType?: string | null,
+): { text: string | null; worded: boolean } {
+  if (!e?.details) return { text: null, worded: false }
   const parts: string[] = []
+  /** A part said as Core names it, the app having no words for it. */
+  let bare = false
   const reason = str(e.details.reason)
   if (reason === 'withdrawn' && e.details.by_owner === true) {
     // Taken back by the owner of the agent that proposed it.
@@ -105,10 +125,17 @@ export function reasonText(e: StoredError | null | undefined): string | null {
   } else if (reason) {
     const k1 = `actions.cancelReason.${reason}`
     const k2 = `actions.denyReason.${reason}`
-    // Otherwise in the words the app says the refusal in when it is met
-    // (owner_not_autonomous, owner_would_be_refused with the refusal approving
-    // would meet), and as Core names it where the app has none.
-    parts.push(te(k1) ? t(k1) : te(k2) ? t(k2) : (reasonMessage(new ApiError({ status: 400, ...e })) ?? reason))
+    // Otherwise in the words the app says the refusal in when it is met (the
+    // page's own, by the action's kind; owner_not_autonomous,
+    // owner_would_be_refused with the refusal approving would meet), and as
+    // Core names it where the app has none.
+    const said = te(k1)
+      ? t(k1)
+      : te(k2)
+        ? t(k2)
+        : reasonMessage(new ApiError({ status: 400, ...e }), { reasons: REFUSAL_SCOPES[actionType ?? ''] ?? [] })
+    if (!said) bare = true
+    parts.push(said ?? reason)
   }
   // A cancellation may say more of why: on a record from before owners were
   // fixed, that the agent's owner changed while its request waited.
@@ -120,9 +147,29 @@ export function reasonText(e: StoredError | null | undefined): string | null {
   const authz = str(e.details.authz_reason)
   if (authz) {
     const k = `actions.denyReason.${authz}`
+    if (!te(k)) bare = true
     parts.push(te(k) ? t(k) : authz)
   }
-  return parts.length ? parts.join(' ') : null
+  return parts.length ? { text: parts.join(' '), worded: !bare } : { text: null, worded: false }
+}
+
+/**
+ * Why a proposal was cancelled or an attempt refused, in words, where Core
+ * said: the app's own for the action's kind where it has them, else Core's
+ * name for the reason.
+ */
+export function reasonText(e: StoredError | null | undefined, actionType?: string | null): string | null {
+  return explain(e, actionType).text
+}
+
+/**
+ * Why, in the app's own words alone: null where the app has none for what
+ * Core said, which is then shown as Core said it. Where it has them, Core's
+ * own message (written for agents, naming its tools) is not shown beside.
+ */
+export function reasonWords(e: StoredError | null | undefined, actionType?: string | null): string | null {
+  const x = explain(e, actionType)
+  return x.worded ? x.text : null
 }
 
 /**

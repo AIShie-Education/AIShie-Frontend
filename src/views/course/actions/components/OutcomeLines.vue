@@ -1,17 +1,18 @@
 <script setup lang="ts">
 // What OutcomeAlert says under its title, whichever frame it is in: where the
 // caller decided as the owner of the agent that proposed it, that it was
-// their own doing (by_owner); why it failed or was cancelled, and Core's
-// words; the proposal a decision about a decision decided, and what became
-// of it; what was made; and, of a decision that itself waits for approval,
-// where to follow it.
+// their own doing (by_owner); why it failed or was cancelled, in the app's
+// words for the kind of action decided, and Core's where it has none; the
+// proposal a decision about a decision decided, and what became of it; what
+// was made; and, of a decision that itself waits for approval, where to
+// follow it.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IdText from '@/components/IdText.vue'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import MaybeLink from './MaybeLink.vue'
 import ResultIds from './ResultIds.vue'
-import { reasonText, routeFor } from './actionText'
+import { reasonText, reasonWords, routeFor } from './actionText'
 import type { DecideResult, Done } from './decide'
 
 const props = defineProps<{
@@ -19,12 +20,17 @@ const props = defineProps<{
   done: Done
   /** Of a decision about a decision: the one beneath, as the result says it (OutcomeAlert reads it). */
   inner: DecideResult | null
+  /** The kind of action decided (its action_type). */
+  actionType?: string | null
 }>()
 const { t } = useI18n()
 
 const error = computed(() => (props.done.kind === 'decided' ? (props.done.out.error ?? null) : null))
-const why = computed(() => reasonText(error.value))
+const why = computed(() => reasonText(error.value, props.actionType))
+/** Said in the app's words alone: Core's message, written for agents, is then not shown beside them. */
+const worded = computed(() => !!reasonWords(error.value, props.actionType))
 const innerWhy = computed(() => reasonText(props.inner?.error ?? null))
+const innerWorded = computed(() => !!reasonWords(props.inner?.error ?? null))
 /** Decided, reviewed or taken back as the owner of the agent that did it. */
 const asOwner = computed(() => {
   const d = props.done
@@ -48,7 +54,7 @@ const asOwner = computed(() => {
     </p>
     <template v-if="done.kind === 'decided'">
       <p v-if="why" class="outcome-alert__line">{{ why }}</p>
-      <p v-if="error" class="outcome-alert__line outcome-alert__core">
+      <p v-if="error && !worded" class="outcome-alert__line outcome-alert__core">
         {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) }}
         <code>{{ error.code }}</code>
       </p>
@@ -58,7 +64,7 @@ const asOwner = computed(() => {
           <MaybeLink :to="routeFor(courseId, 'action', inner.action_id)"><IdText :id="inner.action_id" /></MaybeLink>
         </p>
         <p v-if="innerWhy" class="outcome-alert__line">{{ innerWhy }}</p>
-        <p v-if="inner.error" class="outcome-alert__line outcome-alert__core">
+        <p v-if="inner.error && !innerWorded" class="outcome-alert__line outcome-alert__core">
           {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: inner.error.message }) }}
           <code>{{ inner.error.code }}</code>
         </p>

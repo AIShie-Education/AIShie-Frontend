@@ -204,6 +204,10 @@ export default {
       removed: '移出小組作業',
     },
   },
+  actionRefusal: {
+    members_changed: '到要執行時，這份作業的成員已有變動。請按作業現在的成員重新評分。',
+    grades_changed: '到要執行時，有組員的成績已被更改。請按成績現在的情況再評分。',
+  },
   refusal: {
     members_changed: '頁面載入之後，這份作業的成員已有變動。請重新載入，再評分。',
     group_grade_posted: '由這份小組成績而來的成績已經發佈：請重新為小組評分，或調整個別組員的成績。',

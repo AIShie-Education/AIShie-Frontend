@@ -16,9 +16,9 @@ const router = createRouter({
   ],
 })
 
-function shown(done: Done, closable = false) {
+function shown(done: Done, closable = false, actionType?: string) {
   return mount(OutcomeAlert, {
-    props: { courseId: 'k1', done, closable },
+    props: { courseId: 'k1', done, closable, actionType },
     global: { plugins: [i18n, ElementPlus, router], components: Icons },
   })
 }
@@ -66,5 +66,20 @@ describe('OutcomeAlert', () => {
     const owner = shown({ kind: 'withdrawn', byOwner: true })
     expect(owner.find('.app-note__title').text()).toBe('Withdrawn: nothing of it was carried out')
     expect(owner.find('.outcome-alert__owner').text()).toContain('as its owner')
+  })
+
+  it('says why a proposal failed in the app’s words for its kind, and Core’s only where it has none', () => {
+    const error = {
+      code: 'failed_precondition',
+      message: "the group's grade on this work is posted: regrade it with grade.regrade",
+      details: { reason: 'group_grade_posted' },
+    }
+    const worded = shown(decided({ outcome: 'failed', error }), false, 'grade.submit')
+    expect(worded.text()).toContain('A grade from this group’s grade has been posted')
+    expect(worded.text()).not.toContain('grade.regrade')
+    expect(worded.find('.outcome-alert__core').exists()).toBe(false)
+    // A kind the app has no words for: Core's, as it said them.
+    const bare = shown(decided({ outcome: 'failed', error }), false, 'document.update')
+    expect(bare.find('.outcome-alert__core').text()).toContain('grade.regrade')
   })
 })

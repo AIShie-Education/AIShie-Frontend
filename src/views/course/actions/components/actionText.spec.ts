@@ -22,6 +22,7 @@ import {
   decisionTag,
   excerpt,
   reasonText,
+  reasonWords,
   routeFor,
   storedDecision,
   storedError,
@@ -222,6 +223,40 @@ describe('reasonText', () => {
       /^You decide what your agent did only where you could have done it yourself without anyone’s confirmation\./,
     )
     expect(reasonText(storedError(failed({ reason: 'some_new_reason' })))).toBe('some_new_reason')
+  })
+})
+
+describe('reasonText, by the kind of action', () => {
+  const failed = (reason: string, message = 'core’s words, naming grade.regrade') =>
+    ({ status: 'failed', result: { error: { code: 'conflict', message, details: { reason } } } }) as unknown as ActionRow
+  it('says a refusal of grading group work in the words of the page that grades it', () => {
+    const e = storedError(failed('part_of_other_work'))
+    expect(reasonText(e, 'submission.set_members')).toBe(
+      'A student you added is part of another group’s work for this assignment.',
+    )
+    expect(reasonWords(e, 'submission.set_members')).toBe(reasonText(e, 'submission.set_members'))
+    // Not met where it was proposed, but when it was to be carried out.
+    expect(reasonText(storedError(failed('members_changed')), 'grade.submit')).toBe(
+      'Whose work this is had changed by the time it was to be carried out. Grade the work again as it is now.',
+    )
+    expect(reasonText(storedError(failed('grades_changed')), 'grade.regrade')).toMatch(
+      /^A member’s grade had changed by the time it was to be carried out\./,
+    )
+  })
+  it('is in the reader’s language', () => {
+    setLocale('zh-Hant')
+    try {
+      expect(reasonText(storedError(failed('group_grade_posted')), 'grade.submit')).toBe(
+        '由這份小組成績而來的成績已經發佈：請重新為小組評分，或調整個別組員的成績。',
+      )
+    } finally {
+      setLocale('en')
+    }
+  })
+  it('has no words of its own for another kind’s, nor for a reason it does not know: Core’s are shown then', () => {
+    expect(reasonText(storedError(failed('part_of_other_work')), 'document.update')).toBe('part_of_other_work')
+    expect(reasonWords(storedError(failed('part_of_other_work')), 'document.update')).toBeNull()
+    expect(reasonWords(storedError(failed('some_new_reason')), 'grade.submit')).toBeNull()
   })
 })
 

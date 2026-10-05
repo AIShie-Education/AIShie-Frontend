@@ -237,6 +237,14 @@ export default {
       removed: 'Taken off a group’s work',
     },
   },
+  // Refusals met on approval, as the action pages say them: the work or its grades changed after it was
+  // proposed (said for the page that was read when the grader meets them, under refusal).
+  actionRefusal: {
+    members_changed:
+      'Whose work this is had changed by the time it was to be carried out. Grade the work again as it is now.',
+    grades_changed:
+      'A member’s grade had changed by the time it was to be carried out. Grade again from the grades as they are now.',
+  },
   // Refusals, by reason.
   refusal: {
     members_changed: 'Whose work this is has changed since the page was read. Read it again, then grade.',

@@ -50,7 +50,7 @@ const STATUS_OF: Record<string, number> = { forbidden: 403, not_found: 404, conf
  * that refusal's own in the reader's language where the app has them, and
  * Core's otherwise.
  */
-function ownerWouldBeRefused(details: Record<string, unknown> | undefined): string {
+function ownerWouldBeRefused(details: Record<string, unknown> | undefined, opts: ReasonScopes = {}): string {
   const r = details?.refusal
   const refusal = r && typeof r === 'object' ? (r as Record<string, unknown>) : null
   const code = typeof refusal?.code === 'string' ? refusal.code : ''
@@ -61,7 +61,7 @@ function ownerWouldBeRefused(details: Record<string, unknown> | undefined): stri
   const e = new ApiError({ status: STATUS_OF[code] ?? 400, code, message, details: inner })
   // A bare forbidden is not the owner's want of a permission, which they
   // hold: it is a rule approving would break, said in Core's words alone.
-  const why = code === 'forbidden' && !reasonMessage(e) ? message : errorMessage(e)
+  const why = code === 'forbidden' && !reasonMessage(e, opts) ? message : errorMessage(e, opts)
   return why ? t('common.errors.ownerWouldBeRefusedWhy', { why }) : t('common.errors.ownerWouldBeRefused')
 }
 
@@ -122,7 +122,7 @@ export function reasonMessage(e: ApiError, opts: ReasonScopes = {}): string | nu
   if (ceiling) return ceiling
   const shared = SHARED_REASONS.get(reason)
   if (shared) return t(shared)
-  if (reason === 'owner_would_be_refused') return ownerWouldBeRefused(e.details)
+  if (reason === 'owner_would_be_refused') return ownerWouldBeRefused(e.details, opts)
   if (reason === 'invite_not_allowed') {
     const why = e.details?.why
     const key = `deptAdmin.errors.inviteWhy.${why}`

@@ -847,7 +847,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   alone; a member reads their own grade, never another's. Lists and gradebooks mark a grade from a
   group's and a member set apart from it (`GroupMark`; in the class's gradebook the group's two
   figures before the score and ± after it, in words to a screen reader and the tooltip). Words are
-  in `groupGrading`, refusals under `groupGrading.refusal`.
+  in `groupGrading`, refusals under `groupGrading.refusal`; the action pages (`reasonText`,
+  `reasonWords` in `actionText.ts`) say a refusal of these tools in the same words, by the action's
+  kind, those met only when a proposal is carried out (`members_changed`, `grades_changed`) under
+  `groupGrading.actionRefusal`, and show Core's own message (written for agents, naming its
+  tools) only where the app has no words for it.
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,

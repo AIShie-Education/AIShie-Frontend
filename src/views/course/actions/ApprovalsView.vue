@@ -277,7 +277,13 @@ function toggleRules() {
           </router-link>
           <ActionTarget :action="r.action" :course-id="courseId" />
         </div>
-        <OutcomeAlert :course-id="courseId" :done="r.done" closable @close="dismiss(r.key)" />
+        <OutcomeAlert
+          :course-id="courseId"
+          :done="r.done"
+          :action-type="r.action.action_type"
+          closable
+          @close="dismiss(r.key)"
+        />
       </div>
     </section>
 

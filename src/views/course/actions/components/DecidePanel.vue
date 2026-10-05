@@ -20,7 +20,7 @@ import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import type { ApiError, WriteOutcome } from '@/api/http'
-import { isAboutAction, reasonText, useJudgeRules, type ActionRow } from './actionText'
+import { isAboutAction, reasonText, reasonWords, useJudgeRules, type ActionRow } from './actionText'
 import DeletionAtStake from './DeletionAtStake.vue'
 import type { Decision, Done } from './decide'
 import { useLookup, useSpecs } from './lookups'
@@ -283,10 +283,15 @@ function tell(
       })
       break
     case 'failed':
+      // Why, in the app's words where it has them; Core's own (written for
+      // agents, naming its tools) only where it has none.
       ElNotification({
         type: 'error',
         title: t('actions.outcome.failed'),
-        message: error ? t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) : '',
+        message: error
+          ? (reasonWords(error, props.action.action_type) ??
+            t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }))
+          : '',
         duration: 8000,
       })
       break
@@ -294,7 +299,7 @@ function tell(
       ElNotification({
         type: 'warning',
         title: t('actions.outcome.cancelled'),
-        message: reasonText(error) ?? error?.message ?? '',
+        message: reasonText(error, props.action.action_type) ?? error?.message ?? '',
         duration: 8000,
       })
       break

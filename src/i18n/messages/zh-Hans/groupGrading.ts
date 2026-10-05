@@ -204,6 +204,10 @@ export default {
       removed: '移出小组作业',
     },
   },
+  actionRefusal: {
+    members_changed: '到要执行时，这份作业的成员已有变动。请按作业现在的成员重新评分。',
+    grades_changed: '到要执行时，有组员的成绩已被更改。请按成绩现在的情况再评分。',
+  },
   refusal: {
     members_changed: '页面载入之后，这份作业的成员已有变动。请重新载入，再评分。',
     group_grade_posted: '由这份小组成绩而来的成绩已经发布：请重新为小组评分，或调整个别组员的成绩。',

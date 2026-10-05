@@ -427,4 +427,54 @@ test.describe.serial('grading group work', () => {
     expect(draft.group.adjustment).toMatchObject({ kind: 'delta', reason: 'Built the model' })
     expect(Number(draft.group.adjustment.points)).toBe(8)
   })
+
+  test('a refusal of grading group work reads in the app’s words on the approvals and actions pages', async ({
+    page,
+  }) => {
+    const call = await toolCaller(w.core)
+    // The agent proposes Team B's grade again; the teacher posts Team B's drafts meanwhile.
+    const proposed = await call(w.people.grader.token, 'grade.submit', {
+      course_id: w.course.id,
+      submission_id: w.submissions.b,
+      score: 72,
+    })
+    expect(proposed.status, JSON.stringify(proposed)).toBe('proposed')
+    const drafts = (
+      await call(w.people.teacher.token, 'grade.list', { course_id: w.course.id, assignment_id: w.assignment.id })
+    ).result.grades
+      .filter(
+        (g: { state: string; submission_id: string }) => g.state === 'draft' && g.submission_id === w.submissions.b,
+      )
+      .map((g: { id: string }) => g.id)
+    const posted = await call(w.people.teacher.token, 'grade.post', { course_id: w.course.id, grade_ids: drafts })
+    expect(posted.status, JSON.stringify(posted)).toBe('executed')
+
+    await as(page, w.people.teacher)
+    await inTraditionalChinese(page)
+    await page.goto(path(`actions/${proposed.action_id}`))
+    await page.getByRole('button', { name: '批准', exact: true }).click()
+    await page.getByRole('button', { name: '立即批准' }).click()
+    const toast = page.locator('.el-notification')
+    await expect(toast).toContainText('已批准，但未能執行')
+    await expect(toast).toContainText('由這份小組成績而來的成績已經發佈')
+    await expect(toast).not.toContainText('grade.regrade')
+    // The action's result says it too, and nothing of Core's own words (which its raw JSON, on request, still has).
+    const result = page.locator('.action-view__error')
+    await expect(result).toContainText('由這份小組成績而來的成績已經發佈')
+    await expect(result).not.toContainText('grade.regrade')
+    await expect(page.locator('.outcome-alert')).not.toContainText('grade.regrade')
+
+    // Adding Ben, part of Team A's work, to Team B's: refused, and listed among the teacher's actions in words.
+    await page.goto(path(`submissions/${w.submissions.b}`))
+    await page.getByRole('button', { name: '更正成員' }).click()
+    const correct = page.getByRole('dialog', { name: '更正這份作業屬於誰' })
+    await pickOption(page, correct.locator('.el-select'), 'Ben Ho')
+    await page.keyboard.press('Escape')
+    await correct.getByRole('button', { name: '儲存' }).click()
+    await expect(page.locator('.el-notification, .el-message').filter({ hasText: '另一小組' }).first()).toBeVisible()
+    await page.goto(path('my-actions'))
+    const row = page.locator('.el-table__row').filter({ hasText: 'Ben Ho' }).first()
+    await expect(row).toContainText('你加入的學生已是另一小組在同一份作業中所交作業的成員。')
+    await expect(row).not.toContainText('part_of_other_work')
+  })
 })
