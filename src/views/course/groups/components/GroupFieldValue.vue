@@ -33,11 +33,14 @@ const group = (gid: unknown) => (typeof gid === 'string' && groupName(gid)?.name
 const groupList = (list: unknown[]) => formatList(list.map(group))
 const setRoute = (sid: string | null) => routeFor(props.courseId, 'set_id', sid)
 const str = (v: unknown) => (typeof v === 'string' ? v : null)
+/** A list with nothing in it (no group over capacity, nobody moved, no group left alone). */
+const empty = computed(() => Array.isArray(props.value) && props.value.length === 0)
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 </script>
 
 <template>
-  <MaybeLink v-if="kind === 'set'" :to="setRoute(id)">{{ groupSetName(id) ?? t('groups.event.aSet') }}</MaybeLink>
+  <span v-if="empty" class="group-field__none">{{ t('common.labels.none') }}</span>
+  <MaybeLink v-else-if="kind === 'set'" :to="setRoute(id)">{{ groupSetName(id) ?? t('groups.event.aSet') }}</MaybeLink>
   <span v-else-if="kind === 'group'">{{ group(id) }}</span>
   <span v-else-if="kind === 'groups' || kind === 'made'">{{
     kind === 'made' ? formatList(rows.map((r) => String(r.name))) : groupList(ids)
@@ -105,6 +108,9 @@ const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : n
 </template>
 
 <style scoped>
+.group-field__none {
+  color: var(--el-text-color-secondary);
+}
 .group-field__list {
   margin: 0;
   padding-inline-start: 1.25em;

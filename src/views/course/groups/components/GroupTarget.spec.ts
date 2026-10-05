@@ -209,6 +209,11 @@ describe('the fields of an action about groups', () => {
     expect(text).not.toContain('{')
     expect(text).not.toContain('has_work')
     expect(text).not.toContain('7d4ed0f3')
+    // A list with nothing in it says so.
+    const none = row({ action_type: 'group.set_members', status: 'executed', result: { moved: [], over_capacity: [] } })
+    const n = mount(FieldsView, { props: { courseId: COURSE, value: none.result, resultOf: none }, global })
+    await flushPromises()
+    expect(n.findAll('.fields-view__row').map((r) => r.text())).toEqual(['MovedNone', 'Over capacityNone'])
   })
 
   it('name the work a refusal names, by group and assignment', async () => {
