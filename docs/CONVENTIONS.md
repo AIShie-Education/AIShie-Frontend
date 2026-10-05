@@ -846,8 +846,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   from the group's (`AdjustmentText`): its reason to the member too, who set it to those who grade
   alone; a member reads their own grade, never another's. Lists and gradebooks mark a grade from a
   group's and a member set apart from it (`GroupMark`; in the class's gradebook the group's two
-  figures before the score and ± after it, in words to a screen reader and the tooltip). Words are
-  in `groupGrading`, refusals under `groupGrading.refusal`; the action pages (`reasonText`,
+  figures before the score and ± after it, in words to a screen reader and the tooltip, which
+  gives the score too; a group assignment's column is 140 px, room for the mark, a score in the
+  hundreds to two places, the ± and a draft's flag in every language). Words are in
+  `groupGrading`, refusals under `groupGrading.refusal`; the action pages (`reasonText`,
   `reasonWords` in `actionText.ts`) say a refusal of these tools in the same words, by the action's
   kind, those met only when a proposal is carried out (`members_changed`, `grades_changed`) under
   `groupGrading.actionRefusal`, and show Core's own message (written for agents, naming its

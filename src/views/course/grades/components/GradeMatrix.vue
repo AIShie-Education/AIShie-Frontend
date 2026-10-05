@@ -39,7 +39,15 @@ const ROW = 44
 /** Rows drawn beyond the screen each way, so that a quick scroll does not show blank space. */
 const OVERSCAN = 8
 const NAME_WIDTH = 208
-const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? 96 : 104)
+/**
+ * A column's width. A group assignment's is wider: its grades have the
+ * group's mark before the score, a member's set apart from the group's a ±
+ * after it, and a draft its flag, which together take 119 px for a score of
+ * two places in the hundreds ("100.25 ± 草稿"), where another assignment's
+ * cell has room for 87; it has 123, a little to spare for another machine's
+ * fonts.
+ */
+const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? 96 : c.groupWork ? 140 : 104)
 const tableWidth = computed(() => NAME_WIDTH + props.columns.reduce((s, c) => s + widthOf(c), 0))
 
 // ---------------------------------------------------------------------------
@@ -194,15 +202,18 @@ function postedUnder(cell: MatrixCell): CellView['posted'] {
 }
 function cellTitle(cell: MatrixCell, shown: { text: string; full: string | null }): string {
   const said: string[] = []
+  // A grade from a group's has its marks beside the figure: the figure is
+  // said whole here too, should the cell cut it short.
+  const sayFigure = !!shown.full || !!cell.group
   if (cell.state === 'draft') {
-    if (shown.full) said.push(shown.full)
+    if (sayFigure) said.push(shown.full ?? shown.text)
     said.push(
       cell.postedScore !== null && cell.postedScore !== undefined
         ? t('classbook.draftOver', { score: formatScore(cell.postedScore) })
         : t('classbook.draftOnly'),
     )
   } else if (cell.overridden) said.push(joinParts([shown.full ?? shown.text, t('classbook.state.overridden')]))
-  else if (shown.full) said.push(shown.full)
+  else if (sayFigure) said.push(shown.full ?? shown.text)
   if (cell.waiting) said.push(t('classbook.waiting'))
   if (cell.group) said.push(groupWords(cell))
   return said.join(' ')

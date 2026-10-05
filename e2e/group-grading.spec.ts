@@ -428,6 +428,36 @@ test.describe.serial('grading group work', () => {
     expect(Number(draft.group.adjustment.points)).toBe(8)
   })
 
+  test('the class’s gradebook shows a member’s adjusted draft whole, in English and in Chinese', async ({ page }) => {
+    // Team B's drafts: Dev's the group's 72, Eva's set apart from it (80), each with the group's mark and a draft's
+    // flag, Eva's with ± too.
+    await as(page, w.people.teacher)
+    await page.setViewportSize({ width: 1280, height: 800 })
+    for (const [locale, flag] of [
+      ['en', 'Draft'],
+      ['zh-Hant', '草稿'],
+      ['zh-Hans', '草稿'],
+    ] as const) {
+      await page.addInitScript((l) => localStorage.setItem('aishie.locale', l), locale)
+      await page.goto(path('gradebook'))
+      const eva = page.locator('.matrix__row').filter({ hasText: 'Eva Ng' }).locator('.matrix__cell.is-assignment')
+      await expect(eva.locator('.matrix__adj')).toHaveText('±')
+      await expect(eva.locator('.matrix__flag.is-draft')).toHaveText(flag)
+      await expect(eva.locator('.matrix__score')).toHaveText('80')
+      // Not cut short: the figure is whole in the cell, and in its tooltip.
+      const cut = await eva
+        .locator('.matrix__score')
+        .evaluate(
+          (el) =>
+            el.scrollWidth > el.clientWidth ||
+            el.getBoundingClientRect().right > el.closest('td')!.getBoundingClientRect().right,
+        )
+      expect(cut, `Eva’s score is cut short in ${locale}`).toBe(false)
+      await expect(eva.locator('.matrix__value')).toHaveAttribute('title', /^80 /)
+      if (locale === 'zh-Hant') await photograph(page, 'group-grading-classbook-draft-zh-Hant')
+    }
+  })
+
   test('a refusal of grading group work reads in the app’s words on the approvals and actions pages', async ({
     page,
   }) => {

@@ -114,6 +114,8 @@ export interface MatrixColumn {
   isRoot: boolean
   /** False for practice work, which counts toward nothing. */
   counted: boolean
+  /** A group assignment: its grades come from a group's, and are marked so beside the score. */
+  groupWork?: boolean
 }
 
 /**
@@ -295,6 +297,7 @@ export function buildColumns(
     outOf: a.points_possible,
     isRoot: false,
     counted,
+    groupWork: !!a.group_set_id,
   })
   const seen = new Set<string>()
   function walk(c: Component, group: string | null) {

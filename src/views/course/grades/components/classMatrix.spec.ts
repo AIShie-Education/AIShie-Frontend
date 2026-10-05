@@ -96,6 +96,13 @@ describe('buildColumns', () => {
     expect(c[5]).toMatchObject({ counted: false, group: null })
   })
 
+  it('marks a group assignment’s column, whose cells carry the group’s marks beside the score', () => {
+    const group = assignment('g1', 'Group project', { group_set_id: 'set1' })
+    const c = buildColumns([ROOT, HW], [HW1, group], { spansAssignments: true })
+    expect(c.find((x) => x.id === 'g1')).toMatchObject({ kind: 'assignment', groupWork: true })
+    expect(c.find((x) => x.id === 'a1')).toMatchObject({ kind: 'assignment', groupWork: false })
+  })
+
   it('leaves out what is not published: nothing can be handed in or graded for it', () => {
     expect(keys(cols())).not.toContain('a:a3')
   })
