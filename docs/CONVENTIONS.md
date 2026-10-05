@@ -268,6 +268,28 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   `print()`; its title is the PDF's name. The button says what it does, 「下載為 PDF」, with
   「在列印視窗選擇『另存為 PDF』」 in its tooltip, to a screen reader, and as the window opens. No PDF
   is made in the page.
+- **Peer evaluation within a group (組員互評)** (`peer_form.*`, `peer_review.*`, `grade.apply_peer`,
+  AIShie-Core #75) lives in `views/course/peer/`, with its words in `peer` and its route in
+  `router/modules/peer.ts`. A group assignment's page shows its teaching staff `PeerSettingsCard`: the
+  form in words (`PeerFormSummary`), set up and changed by whoever writes assignments in `PeerFormDialog`
+  over the version read (`setArgs`; `version_mismatch` reads it again and keeps what was typed), its
+  shape (kind, criteria, scale, self-evaluation) off once an evaluation is written (`in_use`), and who
+  sees what as the form says it (`whoSees`). A student in a group's circle fills theirs in on the same
+  page (`PeerTaskPanel`, `peerSheet.ts`): exactly whom `task.to_evaluate` names, in the circle's order,
+  themselves last; shares typed as whole numbers that must add up to 100, said as they are typed, or a
+  rating of every member on every criterion; sent again until it closes, reading the page again keeping
+  what was typed; read only once it closes, with their own average where the form shares it. A person
+  writes it, never an agent (`people_only`). Those who grade read every group's results on
+  `/assignments/:assignmentId/peer` (`PeerResultsView`, `PeerGroupResults`) and a group's on its work's
+  page (`PeerSubmissionPanel`): each member's factor said in words, as what they received against an
+  even share from the same raters ("120% of an even share, from 2 peers"), never as a bare number, the
+  score it gives at the form's weight beside the group's, Core's flags, who wrote nothing, and every
+  evaluation with who wrote it; `FairShareExplainer` says how the factor and the weight make a score,
+  with the group's own figures. Counting it in grades (`ApplyPeerDialog`, for whoever enters and posts
+  grades) shows each member's score now and after (`applyPreview`), a grader's own adjustment kept; a
+  proposal of it shows each member's factor as it recorded them (`PeerProposal`, on the approvals
+  queue's card and the action's page). Its CSV (`peerCsv`) follows the class gradebook's rules and
+  leaves the raters' comments out. A percentage in its words is a placeholder `formatPct` fills.
 - **Deleting an assignment for good** (`assignment.delete`, AIShie-Core #73) is offered to whoever
   writes assignments in its ⋯ menu (`AssignmentMoreMenu`): its page's header, at the far end, and
   its row in the list, which the menu opens no row of (in a column of its own, at the row's end,

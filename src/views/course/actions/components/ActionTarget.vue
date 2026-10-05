@@ -330,6 +330,17 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
     </template>
 
+    <!-- Peer evaluation: its form, a student's evaluation, counting it in grades. -->
+    <template v-else-if="type === 'grade.apply_peer' || group === 'peer_form' || group === 'peer_review'">
+      <MaybeLink v-if="assignmentTitle" :to="targetRoute" class="action-target__part action-target__name">
+        {{ assignmentTitle }}
+      </MaybeLink>
+      <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
+      <span v-if="type === 'grade.apply_peer' && Array.isArray(p.grades)" class="action-target__muted">
+        {{ t('actions.summary.grades', { n: (p.grades as unknown[]).length }, (p.grades as unknown[]).length) }}
+      </span>
+    </template>
+
     <!-- Grading scheme -->
     <template v-else-if="group === 'component'">
       <span v-if="str(p.name) || componentName" class="action-target__part action-target__name">
